@@ -5,6 +5,11 @@ import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
+import {
+	createCase,
+	listSharedCases,
+	listUserCases,
+} from "@/lib/services/case-fetch-service";
 import { validateInput } from "@/lib/validation/input-validation";
 import type { ActionResult } from "@/types";
 
@@ -21,137 +26,41 @@ type AssuranceCase = {
 export const fetchAssuranceCases = async (): Promise<
 	AssuranceCase[] | null
 > => {
-	const { prisma } = await import("@/lib/prisma");
-
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	// Get cases where user is creator OR has explicit permission (exclude soft-deleted)
-	const cases = await prisma.assuranceCase.findMany({
-		where: {
-			deletedAt: null,
-			OR: [
-				{ createdById: validated.userId },
-				{
-					userPermissions: {
-						some: {
-							userId: validated.userId,
-						},
-					},
-				},
-			],
-		},
-		select: {
-			id: true,
-			name: true,
-			description: true,
-			createdAt: true,
-			updatedAt: true,
-			createdById: true,
-			isDemo: true,
-		},
-		orderBy: {
-			createdAt: "desc",
-		},
-	});
-
-	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description ?? undefined,
-		createdDate: c.createdAt.toISOString(),
-		updatedDate: c.updatedAt.toISOString(),
-		owner: c.createdById ?? undefined,
-		isDemo: c.isDemo,
-		permissions: c.createdById === validated.userId ? "owner" : "view",
-	}));
+	const result = await listUserCases(validated.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return result.data;
 };
 
 export const fetchSharedAssuranceCases = async (): Promise<
 	AssuranceCase[] | null
 > => {
-	const { prisma } = await import("@/lib/prisma");
-
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	// Get cases where user has permission (direct or via team) but is NOT the creator (exclude soft-deleted)
-	const cases = await prisma.assuranceCase.findMany({
-		where: {
-			deletedAt: null,
-			AND: [
-				// User has permission (either direct or via team membership)
-				{
-					OR: [
-						// Direct user permission
-						{
-							userPermissions: {
-								some: {
-									userId: validated.userId,
-								},
-							},
-						},
-						// Team-based permission (user is member of a team with access)
-						{
-							teamPermissions: {
-								some: {
-									team: {
-										members: {
-											some: {
-												userId: validated.userId,
-											},
-										},
-									},
-								},
-							},
-						},
-					],
-				},
-				// User is NOT the creator
-				{
-					NOT: {
-						createdById: validated.userId,
-					},
-				},
-			],
-		},
-		select: {
-			id: true,
-			name: true,
-			description: true,
-			createdAt: true,
-			updatedAt: true,
-			createdById: true,
-		},
-		orderBy: {
-			createdAt: "desc",
-		},
-	});
-
-	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description ?? undefined,
-		createdDate: c.createdAt.toISOString(),
-		updatedDate: c.updatedAt.toISOString(),
-		owner: c.createdById ?? undefined,
-	}));
+	const result = await listSharedCases(validated.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return result.data;
 };
 
 export const createAssuranceCase = async (
 	input: CreateAssuranceCaseInput
 ): Promise<ActionResult<{ id: string }>> => {
-	// 1. Authenticate
 	const validated = await validateSession();
 	if (!validated) {
 		return { success: false, error: "Invalid session" };
 	}
 
-	// 2. Validate input
 	const validation = validateInput(input, createAssuranceCaseSchema);
 	if (!validation.success) {
 		return {
@@ -161,24 +70,17 @@ export const createAssuranceCase = async (
 		};
 	}
 
-	// 3. Business logic
-	const { prisma } = await import("@/lib/prisma");
+	const result = await createCase(validated.userId, {
+		name: validation.data.name,
+		description: validation.data.description,
+		colourProfile: validation.data.colourProfile,
+	});
 
-	try {
-		const newCase = await prisma.assuranceCase.create({
-			data: {
-				name: validation.data.name,
-				description: validation.data.description,
-				colourProfile: validation.data.colourProfile,
-				createdById: validated.userId,
-			},
-		});
-
-		return { success: true, data: { id: newCase.id } };
-	} catch (error) {
-		console.error("Failed to create case:", error);
-		return { success: false, error: "Failed to create case" };
+	if ("error" in result) {
+		return { success: false, error: result.error };
 	}
+
+	return { success: true, data: result.data };
 };
 
 export const fetchPublishedAssuranceCases = async (): Promise<
@@ -212,12 +114,16 @@ export async function fetchPublishedCasesForStudy(): Promise<
 	}
 
 	const { getCasesAvailableForCaseStudy } = await import(
-		"@/lib/services/publish-service"
+		"@/lib/services/case-study-service"
 	);
 
-	const cases = await getCasesAvailableForCaseStudy(validated.userId);
+	const result = await getCasesAvailableForCaseStudy(validated.userId);
 
-	return cases.map((c) => ({
+	if ("error" in result) {
+		return [];
+	}
+
+	return result.data.map((c) => ({
 		id: c.id,
 		name: c.name,
 		description: c.description,

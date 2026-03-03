@@ -16,13 +16,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 	try {
 		const { id } = await params;
 
-		const publishedCase = await getPublishedAssuranceCaseById(id);
+		const result = await getPublishedAssuranceCaseById(id);
 
-		if (!publishedCase) {
+		if ("error" in result) {
 			return apiError(notFound("Published assurance case"));
 		}
 
-		return apiSuccess(transformPublishedCaseForApi(publishedCase));
+		return apiSuccess(transformPublishedCaseForApi(result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

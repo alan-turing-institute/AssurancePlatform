@@ -2,11 +2,11 @@
 
 import type { Diagnostic } from "@codemirror/lint";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { validateTreeStructure } from "@/lib/case/tree-diff";
 import {
 	type CaseExportNested,
 	CaseExportNestedSchema,
 } from "@/lib/schemas/case-export";
-import { validateTreeStructure } from "@/lib/services/json-diff-service";
 
 /**
  * Regex patterns used for position detection - defined at top level for performance

@@ -8,7 +8,6 @@
 
 // Dialog components (TypeScript)
 export { default as AddBlockDialog } from "./add-block-dialog";
-export { default as AddBlockDialogDemo } from "./add-block-dialog-demo";
 export { default as BlockForm } from "./block-form";
 export { default as BlockPreview } from "./block-preview";
 export { default as BlockTemplates } from "./block-templates";

@@ -1,14 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
-import { apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
+import {
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
 
 type Template = {
 	name: string;
 	[key: string]: unknown;
 };
 
-export function GET() {
+export async function GET() {
 	try {
+		await requireAuth();
 		// Read files from the file system using Node.js fs module
 		const templatesDir = path.resolve(process.cwd(), "caseTemplates");
 		let files: string[];

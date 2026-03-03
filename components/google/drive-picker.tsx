@@ -2,6 +2,7 @@
 
 import { FileIcon, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 type DriveFile = {
 	id: string;
@@ -62,11 +63,12 @@ export function DrivePicker({ onFileSelect, disabled }: DrivePickerProps) {
 		<div className="max-h-64 space-y-2 overflow-y-auto">
 			{state.files.map((file) => (
 				<button
-					className={`flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors ${
+					className={cn(
+						"flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors",
 						selectedFile === file.id
 							? "border-primary bg-primary/5"
 							: "border-border hover:bg-muted"
-					}`}
+					)}
 					disabled={disabled}
 					key={file.id}
 					onClick={() => handleSelect(file)}

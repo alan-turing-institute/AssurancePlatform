@@ -6,15 +6,11 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { resetPasswordSchema } from "@/lib/schemas/auth";
 import {
 	resetPassword,
 	validateResetToken,
 } from "@/lib/services/password-reset-service";
-
-type ResetPasswordRequest = {
-	token: string;
-	password: string;
-};
 
 /**
  * GET /api/auth/reset-password?token=xxx
@@ -50,15 +46,14 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
 	try {
-		// Parse request body
-		const body = (await request.json()) as ResetPasswordRequest;
+		const body = await request.json().catch(() => null);
+		const parsed = resetPasswordSchema.safeParse(body);
 
-		if (!body.token) {
-			return apiError(validationError("Token is required"));
-		}
-
-		if (!body.password) {
-			return apiError(validationError("Password is required"));
+		if (!parsed.success) {
+			const firstError = parsed.error.errors[0];
+			return apiError(
+				validationError(firstError?.message ?? "Invalid request")
+			);
 		}
 
 		// Get client IP and user agent for audit logging
@@ -70,8 +65,8 @@ export async function POST(request: Request) {
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		const result = await resetPassword(
-			body.token,
-			body.password,
+			parsed.data.token,
+			parsed.data.password,
 			ipAddress,
 			userAgent
 		);

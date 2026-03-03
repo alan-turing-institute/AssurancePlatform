@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -7,6 +6,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { AppError, forbidden, validationError } from "@/lib/errors";
+import { backupToDriveSchema } from "@/lib/schemas/google-drive";
 import { exportCase } from "@/lib/services/case-export-service";
 import {
 	type GoogleDriveErrorCode,
@@ -14,11 +14,6 @@ import {
 	uploadBackupToDrive,
 } from "@/lib/services/google-drive-service";
 import type { ErrorCode } from "@/types/domain";
-
-const BackupSchema = z.object({
-	caseId: z.string().uuid("Invalid case ID"),
-	includeComments: z.boolean().optional().default(true),
-});
 
 /**
  * Maps Google Drive error codes to application error codes.
@@ -55,7 +50,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const parseResult = BackupSchema.safeParse(
+		const parseResult = backupToDriveSchema.safeParse(
 			await request.json().catch(() => null)
 		);
 		if (!parseResult.success) {

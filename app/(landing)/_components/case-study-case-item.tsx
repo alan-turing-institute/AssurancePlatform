@@ -11,6 +11,10 @@ const CaseStudyCaseItem = async ({
 	const publishedAssuranceCase =
 		await fetchPublishedAssuranceCaseId(assuranceCaseId);
 
+	if (!publishedAssuranceCase) {
+		return null;
+	}
+
 	return (
 		<li
 			className="relative flex flex-col justify-start gap-x-6 px-4 py-5 hover:cursor-pointer hover:bg-accent sm:px-6"

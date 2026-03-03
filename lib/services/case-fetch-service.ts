@@ -275,6 +275,164 @@ export async function fetchCaseFromPrisma(
 	};
 }
 
+// ---------------------------------------------------------------------------
+// Case list types
+// ---------------------------------------------------------------------------
+
+export type AssuranceCaseSummary = {
+	id: string;
+	name: string;
+	description?: string;
+	createdDate: string;
+	updatedDate: string;
+	owner?: string;
+	isDemo?: boolean;
+	permissions?: string;
+};
+
+// ---------------------------------------------------------------------------
+// Case list and create service functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all assurance cases the user owns or has explicit permission on.
+ * Excludes soft-deleted cases.
+ */
+export async function listUserCases(
+	userId: string
+): Promise<{ data: AssuranceCaseSummary[] } | { error: string }> {
+	try {
+		const cases = await prisma.assuranceCase.findMany({
+			where: {
+				deletedAt: null,
+				OR: [
+					{ createdById: userId },
+					{
+						userPermissions: {
+							some: { userId },
+						},
+					},
+				],
+			},
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				createdAt: true,
+				updatedAt: true,
+				createdById: true,
+				isDemo: true,
+			},
+			orderBy: { createdAt: "desc" },
+		});
+
+		return {
+			data: cases.map((c) => ({
+				id: c.id,
+				name: c.name,
+				description: c.description ?? undefined,
+				createdDate: c.createdAt.toISOString(),
+				updatedDate: c.updatedAt.toISOString(),
+				owner: c.createdById ?? undefined,
+				isDemo: c.isDemo,
+				permissions: c.createdById === userId ? "owner" : "view",
+			})),
+		};
+	} catch (error) {
+		console.error("[listUserCases]", { userId, error });
+		return { error: "Failed to fetch cases" };
+	}
+}
+
+/**
+ * Fetches cases that are shared with the user (via direct permission or team membership)
+ * but where the user is NOT the creator.
+ * Excludes soft-deleted cases.
+ */
+export async function listSharedCases(
+	userId: string
+): Promise<{ data: AssuranceCaseSummary[] } | { error: string }> {
+	try {
+		const cases = await prisma.assuranceCase.findMany({
+			where: {
+				deletedAt: null,
+				AND: [
+					{
+						OR: [
+							{
+								userPermissions: {
+									some: { userId },
+								},
+							},
+							{
+								teamPermissions: {
+									some: {
+										team: {
+											members: {
+												some: { userId },
+											},
+										},
+									},
+								},
+							},
+						],
+					},
+					{
+						NOT: { createdById: userId },
+					},
+				],
+			},
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				createdAt: true,
+				updatedAt: true,
+				createdById: true,
+			},
+			orderBy: { createdAt: "desc" },
+		});
+
+		return {
+			data: cases.map((c) => ({
+				id: c.id,
+				name: c.name,
+				description: c.description ?? undefined,
+				createdDate: c.createdAt.toISOString(),
+				updatedDate: c.updatedAt.toISOString(),
+				owner: c.createdById ?? undefined,
+			})),
+		};
+	} catch (error) {
+		console.error("[listSharedCases]", { userId, error });
+		return { error: "Failed to fetch shared cases" };
+	}
+}
+
+/**
+ * Creates a new assurance case owned by the given user.
+ */
+export async function createCase(
+	userId: string,
+	data: { name: string; description?: string; colourProfile?: string }
+): Promise<{ data: { id: string } } | { error: string }> {
+	try {
+		const newCase = await prisma.assuranceCase.create({
+			data: {
+				name: data.name,
+				description: data.description ?? "",
+				colourProfile: data.colourProfile,
+				createdById: userId,
+			},
+		});
+
+		return { data: { id: newCase.id } };
+	} catch (error) {
+		console.error("[createCase]", { userId, error });
+		return { error: "Failed to create case" };
+	}
+}
+
 /**
  * Updates case metadata.
  * Returns "Permission denied" if the user lacks EDIT access.

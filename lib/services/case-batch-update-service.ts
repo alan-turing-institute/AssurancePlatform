@@ -5,17 +5,17 @@
  * Used by the JSON editor to apply multiple changes in a single transaction.
  */
 
+import type {
+	CreateElementData,
+	ElementChange,
+	UpdateElementData,
+} from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
 import type {
 	ElementRole,
 	Prisma,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
-import type {
-	CreateElementData,
-	ElementChange,
-	UpdateElementData,
-} from "./json-diff-service";
 
 /**
  * Result of a batch update operation

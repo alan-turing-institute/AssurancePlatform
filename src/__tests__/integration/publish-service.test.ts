@@ -446,22 +446,25 @@ describe("getPublishStatus", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const status = await getPublishStatus(owner.id, testCase.id);
+		const result = await getPublishStatus(owner.id, testCase.id);
 
-		expect(status).not.toBeNull();
-		expect(status?.isPublished).toBe(false);
-		expect(status?.publishedAt).toBeNull();
-		expect(status?.linkedCaseStudyCount).toBe(0);
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.isPublished).toBe(false);
+		expect(result.data.publishedAt).toBeNull();
+		expect(result.data.linkedCaseStudyCount).toBe(0);
 	});
 
-	it("returns null when caller has no access", async () => {
+	it("returns error when caller has no access", async () => {
 		const owner = await createTestUser();
 		const stranger = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
-		const status = await getPublishStatus(stranger.id, testCase.id);
+		const result = await getPublishStatus(stranger.id, testCase.id);
 
-		expect(status).toBeNull();
+		expect("error" in result).toBe(true);
 	});
 
 	it("reflects published state after publishing", async () => {
@@ -469,10 +472,14 @@ describe("getPublishStatus", () => {
 		const testCase = await createPublishableCase(owner.id);
 		await publishAssuranceCase(owner.id, testCase.id);
 
-		const status = await getPublishStatus(owner.id, testCase.id);
+		const result = await getPublishStatus(owner.id, testCase.id);
 
-		expect(status?.isPublished).toBe(true);
-		expect(status?.publishedAt).not.toBeNull();
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.isPublished).toBe(true);
+		expect(result.data.publishedAt).not.toBeNull();
 	});
 });
 

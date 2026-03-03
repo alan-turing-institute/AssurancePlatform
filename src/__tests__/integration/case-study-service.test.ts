@@ -20,9 +20,13 @@ describe("createCaseStudy", () => {
 			description: "An in-depth study",
 		});
 
-		expect(result.id).toBeDefined();
-		expect(result.title).toBe("My Case Study");
-		expect(result.description).toBe("An in-depth study");
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.id).toBeDefined();
+		expect(result.data.title).toBe("My Case Study");
+		expect(result.data.description).toBe("An in-depth study");
 	});
 
 	it("sets the ownerId to the creating user", async () => {
@@ -35,7 +39,11 @@ describe("createCaseStudy", () => {
 			title: "Owner Test Case Study",
 		});
 
-		expect(result.ownerId).toBe(owner.id);
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.ownerId).toBe(owner.id);
 	});
 });
 
@@ -55,17 +63,25 @@ describe("updateCaseStudy", () => {
 			description: "Original description",
 		});
 
-		const updated = await updateCaseStudy(created.id, owner.id, {
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
+
+		const updated = await updateCaseStudy(created.data.id, owner.id, {
 			title: "Updated Title",
 			description: "Updated description",
 		});
 
-		expect(updated).not.toBeNull();
-		expect(updated?.title).toBe("Updated Title");
-		expect(updated?.description).toBe("Updated description");
+		expect("data" in updated).toBe(true);
+		if (!("data" in updated)) {
+			return;
+		}
+		expect(updated.data.title).toBe("Updated Title");
+		expect(updated.data.description).toBe("Updated description");
 	});
 
-	it("returns null when updated by a non-owner", async () => {
+	it("returns error when updated by a non-owner", async () => {
 		const owner = await createTestUser();
 		const other = await createTestUser();
 		const { createCaseStudy, updateCaseStudy } = await import(
@@ -76,15 +92,20 @@ describe("updateCaseStudy", () => {
 			title: "Should Not Update",
 		});
 
-		const result = await updateCaseStudy(created.id, other.id, {
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
+
+		const result = await updateCaseStudy(created.data.id, other.id, {
 			title: "Hijacked Title",
 		});
 
-		expect(result).toBeNull();
+		expect("error" in result).toBe(true);
 
 		// Verify DB was not changed
 		const unchanged = await prisma.caseStudy.findUnique({
-			where: { id: created.id },
+			where: { id: created.data.id },
 		});
 		expect(unchanged?.title).toBe("Should Not Update");
 	});
@@ -95,7 +116,7 @@ describe("updateCaseStudy", () => {
 // ============================================
 
 describe("deleteCaseStudy", () => {
-	it("deletes a case study owned by the user and returns true", async () => {
+	it("deletes a case study owned by the user and returns data", async () => {
 		const owner = await createTestUser();
 		const { createCaseStudy, deleteCaseStudy } = await import(
 			"@/lib/services/case-study-service"
@@ -105,17 +126,22 @@ describe("deleteCaseStudy", () => {
 			title: "To Delete",
 		});
 
-		const result = await deleteCaseStudy(created.id, owner.id);
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
 
-		expect(result).toBe(true);
+		const result = await deleteCaseStudy(created.data.id, owner.id);
+
+		expect("data" in result).toBe(true);
 
 		const deleted = await prisma.caseStudy.findUnique({
-			where: { id: created.id },
+			where: { id: created.data.id },
 		});
 		expect(deleted).toBeNull();
 	});
 
-	it("returns false when deleted by a non-owner", async () => {
+	it("returns error when deleted by a non-owner", async () => {
 		const owner = await createTestUser();
 		const other = await createTestUser();
 		const { createCaseStudy, deleteCaseStudy } = await import(
@@ -126,12 +152,17 @@ describe("deleteCaseStudy", () => {
 			title: "Should Survive",
 		});
 
-		const result = await deleteCaseStudy(created.id, other.id);
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
 
-		expect(result).toBe(false);
+		const result = await deleteCaseStudy(created.data.id, other.id);
+
+		expect("error" in result).toBe(true);
 
 		const stillExists = await prisma.caseStudy.findUnique({
-			where: { id: created.id },
+			where: { id: created.data.id },
 		});
 		expect(stillExists).not.toBeNull();
 	});
@@ -155,8 +186,12 @@ describe("getCaseStudiesByOwner", () => {
 
 		const results = await getCaseStudiesByOwner(owner.id);
 
-		expect(results.length).toBe(2);
-		const titles = results.map((r) => r.title);
+		expect("data" in results).toBe(true);
+		if (!("data" in results)) {
+			return;
+		}
+		expect(results.data.length).toBe(2);
+		const titles = results.data.map((r: { title: string }) => r.title);
 		expect(titles).toContain("Study A");
 		expect(titles).toContain("Study B");
 		expect(titles).not.toContain("Other's Study");
@@ -182,7 +217,11 @@ describe("getPublishedCaseStudies", () => {
 
 		const results = await getPublishedCaseStudies();
 
-		const titles = results.map((r) => r.title);
+		expect("data" in results).toBe(true);
+		if (!("data" in results)) {
+			return;
+		}
+		const titles = results.data.map((r: { title: string }) => r.title);
 		expect(titles).toContain("Published Study");
 		expect(titles).not.toContain("Draft Study");
 	});
@@ -203,21 +242,30 @@ describe("getCaseStudyById", () => {
 			title: "Findable Study",
 		});
 
-		const result = await getCaseStudyById(created.id);
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
 
-		expect(result).not.toBeNull();
-		expect(result?.id).toBe(created.id);
-		expect(result?.title).toBe("Findable Study");
+		const result = await getCaseStudyById(created.data.id, owner.id);
+
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.id).toBe(created.data.id);
+		expect(result.data.title).toBe("Findable Study");
 	});
 
-	it("returns null for a non-existent ID", async () => {
+	it("returns error for a non-existent ID", async () => {
+		const owner = await createTestUser();
 		const { getCaseStudyById } = await import(
 			"@/lib/services/case-study-service"
 		);
 
-		const result = await getCaseStudyById(999_999);
+		const result = await getCaseStudyById(999_999, owner.id);
 
-		expect(result).toBeNull();
+		expect("error" in result).toBe(true);
 	});
 });
 
@@ -237,13 +285,21 @@ describe("getPublishedCaseStudyById", () => {
 			published: true,
 		});
 
-		const result = await getPublishedCaseStudyById(created.id);
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
 
-		expect(result).not.toBeNull();
-		expect(result?.title).toBe("Public Study");
+		const result = await getPublishedCaseStudyById(created.data.id);
+
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.title).toBe("Public Study");
 	});
 
-	it("returns null for an unpublished case study", async () => {
+	it("returns error for an unpublished case study", async () => {
 		const owner = await createTestUser();
 		const { createCaseStudy, getPublishedCaseStudyById } = await import(
 			"@/lib/services/case-study-service"
@@ -254,9 +310,14 @@ describe("getPublishedCaseStudyById", () => {
 			published: false,
 		});
 
-		const result = await getPublishedCaseStudyById(created.id);
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
 
-		expect(result).toBeNull();
+		const result = await getPublishedCaseStudyById(created.data.id);
+
+		expect("error" in result).toBe(true);
 	});
 });
 
@@ -276,14 +337,21 @@ describe("publish via updateCaseStudy", () => {
 			published: false,
 		});
 
-		expect(created.publishedDate).toBeNull();
+		expect("data" in created).toBe(true);
+		if (!("data" in created)) {
+			return;
+		}
+		expect(created.data.publishedDate).toBeNull();
 
-		const updated = await updateCaseStudy(created.id, owner.id, {
+		const updated = await updateCaseStudy(created.data.id, owner.id, {
 			published: true,
 		});
 
-		expect(updated).not.toBeNull();
-		expect(updated?.publishedDate).not.toBeNull();
+		expect("data" in updated).toBe(true);
+		if (!("data" in updated)) {
+			return;
+		}
+		expect(updated.data.publishedDate).not.toBeNull();
 	});
 });
 
@@ -304,8 +372,12 @@ describe("createCaseStudyWithLinks", () => {
 			[]
 		);
 
-		expect(result.id).toBeDefined();
-		expect(result.title).toBe("Linked Study");
-		expect(result.publishedCases).toHaveLength(0);
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			return;
+		}
+		expect(result.data.id).toBeDefined();
+		expect(result.data.title).toBe("Linked Study");
+		expect(result.data.publishedCases).toHaveLength(0);
 	});
 });

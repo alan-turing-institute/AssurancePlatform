@@ -177,6 +177,40 @@ export async function registerUser(
 }
 
 /**
+ * Dismisses the migration notice for the given user.
+ * Only succeeds if the user has a valid (non-placeholder) email address.
+ */
+export async function dismissMigrationNotice(
+	userId: string
+): Promise<{ data: null } | { error: string }> {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { email: true },
+		});
+
+		if (!user) {
+			return { error: "Permission denied" };
+		}
+
+		const hasValidEmail = user.email && !user.email.includes("@placeholder");
+		if (!hasValidEmail) {
+			return { error: "Valid email required to dismiss migration notice" };
+		}
+
+		await prisma.user.update({
+			where: { id: userId },
+			data: { hasSeenMigrationNotice: true },
+		});
+
+		return { data: null };
+	} catch (error) {
+		console.error("[dismissMigrationNotice]", { userId, error });
+		return { error: "Failed to dismiss migration notice" };
+	}
+}
+
+/**
  * Gets the current user by ID.
  */
 export async function getUserById(
@@ -208,6 +242,74 @@ export async function getUserById(
 	} catch (error) {
 		console.error("Failed to get user:", error);
 		return { error: "Failed to get user" };
+	}
+}
+
+// ============================================
+// User Profile (used by /api/users/me)
+// ============================================
+
+export type UserProfileData = {
+	id: string;
+	username: string;
+	email: string;
+	firstName: string | null;
+	lastName: string | null;
+	avatarUrl: string | null;
+	groups: Array<{ id: string; name: string }>;
+};
+
+/**
+ * Fetches the user's profile including team memberships.
+ * Used by the /api/users/me route.
+ */
+export async function getUserProfile(
+	userId: string
+): Promise<{ data: UserProfileData } | { error: string }> {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: {
+				id: true,
+				username: true,
+				email: true,
+				firstName: true,
+				lastName: true,
+				avatarUrl: true,
+				teamMemberships: {
+					select: {
+						team: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+			},
+		});
+
+		if (!user) {
+			return { error: "Permission denied" };
+		}
+
+		return {
+			data: {
+				id: user.id,
+				username: user.username,
+				email: user.email,
+				firstName: user.firstName,
+				lastName: user.lastName,
+				avatarUrl: user.avatarUrl,
+				groups: user.teamMemberships.map((m) => ({
+					id: m.team.id,
+					name: m.team.name,
+				})),
+			},
+		};
+	} catch (error) {
+		console.error("[getUserProfile]", { userId, error });
+		return { error: "Failed to fetch user profile" };
 	}
 }
 

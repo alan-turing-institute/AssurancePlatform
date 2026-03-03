@@ -34,6 +34,19 @@ export type UpdateTeamSchemaInput = z.input<typeof updateTeamSchema>;
 export type UpdateTeamSchemaOutput = z.output<typeof updateTeamSchema>;
 
 /**
+ * Update team member role input
+ */
+export const updateMemberRoleSchema = z.object({
+	role: z.enum(["ADMIN", "MEMBER"], {
+		errorMap: () => ({ message: "Invalid team role" }),
+	}),
+});
+
+export type UpdateMemberRoleSchemaInput = z.input<
+	typeof updateMemberRoleSchema
+>;
+
+/**
  * Add team member input
  */
 export const addTeamMemberSchema = z.object({

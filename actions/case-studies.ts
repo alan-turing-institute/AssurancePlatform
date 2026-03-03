@@ -38,19 +38,25 @@ export const fetchCaseStudies = async () => {
 	const session = await validateSession();
 
 	if (!session) {
-		throw new Error("Unauthorised");
+		return null;
 	}
 
-	const caseStudies = await getCaseStudiesByOwner(session.userId);
-	return transformCaseStudiesForApi(caseStudies);
+	const result = await getCaseStudiesByOwner(session.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return transformCaseStudiesForApi(result.data);
 };
 
 /**
  * Fetch all published case studies (public access)
  */
 export const fetchPublishedCaseStudies = async () => {
-	const caseStudies = await getPublishedCaseStudies();
-	return transformCaseStudiesForApi(caseStudies);
+	const result = await getPublishedCaseStudies();
+	if ("error" in result) {
+		return null;
+	}
+	return transformCaseStudiesForApi(result.data);
 };
 
 /**
@@ -63,13 +69,13 @@ export const fetchPublishedCaseStudyById = async (id: number) => {
 		notFound();
 	}
 
-	const caseStudy = await getPublishedCaseStudyById(validation.data);
+	const result = await getPublishedCaseStudyById(validation.data);
 
-	if (!caseStudy) {
+	if ("error" in result) {
 		notFound();
 	}
 
-	return transformCaseStudyForApi(caseStudy);
+	return transformCaseStudyForApi(result.data);
 };
 
 /**
@@ -79,27 +85,22 @@ export const fetchCaseStudyById = async (id: number) => {
 	const session = await validateSession();
 
 	if (!session) {
-		throw new Error("Unauthorised");
+		return null;
 	}
 
 	// Validate ID
 	const validation = validateInput(id, caseStudyIdSchema);
 	if (!validation.success) {
-		throw new Error("Invalid case study ID");
+		return null;
 	}
 
-	const caseStudy = await getCaseStudyById(validation.data);
+	const result = await getCaseStudyById(validation.data, session.userId);
 
-	if (!caseStudy) {
-		throw new Error("Case study not found");
+	if ("error" in result) {
+		return null;
 	}
 
-	// Verify ownership
-	if (caseStudy.ownerId !== session.userId) {
-		throw new Error("Forbidden");
-	}
-
-	return transformCaseStudyForApi(caseStudy);
+	return transformCaseStudyForApi(result.data);
 };
 
 /**
@@ -126,7 +127,7 @@ export const createCaseStudy = async (
 
 	// 3. Business logic
 	try {
-		const caseStudy = await createCaseStudyWithLinks(
+		const createResult = await createCaseStudyWithLinks(
 			session.userId,
 			{
 				title: validation.data.title,
@@ -141,8 +142,15 @@ export const createCaseStudy = async (
 			validation.data.assurance_cases
 		);
 
+		if ("error" in createResult) {
+			return { success: false, error: createResult.error };
+		}
+
 		revalidatePath("/dashboard/case-studies");
-		return { success: true, data: transformCaseStudyForApi(caseStudy) };
+		return {
+			success: true,
+			data: transformCaseStudyForApi(createResult.data),
+		};
 	} catch (error) {
 		console.error("Error creating case study:", error);
 		return { success: false, error: "Failed to create case study" };
@@ -225,13 +233,13 @@ export const deleteCaseStudy = async (
 
 	// 3. Business logic
 	try {
-		const deleted = await deleteCaseStudyService(
+		const result = await deleteCaseStudyService(
 			validation.data,
 			session.userId
 		);
 
-		if (!deleted) {
-			return { success: false, error: "Case study not found or access denied" };
+		if ("error" in result) {
+			return { success: false, error: result.error };
 		}
 
 		revalidatePath("/dashboard/case-studies");
@@ -248,12 +256,11 @@ export const deleteCaseStudy = async (
 export const fetchPublishedAssuranceCaseId = async (
 	assuranceCaseId: string
 ) => {
-	const publishedCase =
-		await getPublishedAssuranceCaseByCaseId(assuranceCaseId);
+	const result = await getPublishedAssuranceCaseByCaseId(assuranceCaseId);
 
-	if (!publishedCase) {
-		throw new Error("Published assurance case not found");
+	if ("error" in result) {
+		return null;
 	}
 
-	return transformPublishedCaseForApi(publishedCase);
+	return transformPublishedCaseForApi(result.data);
 };

@@ -6,7 +6,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { forbidden, notFound, validationError } from "@/lib/errors";
+import { notFound, validationError } from "@/lib/errors";
 import {
 	deleteCaseStudyImage,
 	getCaseStudyById,
@@ -24,7 +24,7 @@ type RouteParams = {
  */
 export async function GET(_request: NextRequest, { params }: RouteParams) {
 	try {
-		await requireAuth();
+		const userId = await requireAuth();
 		const { id } = await params;
 		const caseStudyId = Number.parseInt(id, 10);
 
@@ -32,18 +32,18 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 			return apiError(validationError("Invalid case study ID"));
 		}
 
-		const caseStudy = await getCaseStudyById(caseStudyId);
+		const result = await getCaseStudyById(caseStudyId, userId);
 
-		if (!caseStudy) {
+		if ("error" in result) {
 			return apiError(notFound("Case study"));
 		}
 
-		if (!caseStudy.featureImage?.image) {
+		if (!result.data.featureImage?.image) {
 			return apiError(notFound("Image"));
 		}
 
 		return apiSuccess({
-			image: caseStudy.featureImage.image,
+			image: result.data.featureImage.image,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
@@ -65,14 +65,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		}
 
 		// Verify ownership
-		const caseStudy = await getCaseStudyById(caseStudyId);
+		const caseStudyResult = await getCaseStudyById(caseStudyId, userId);
 
-		if (!caseStudy) {
+		if ("error" in caseStudyResult) {
 			return apiError(notFound("Case study"));
-		}
-
-		if (caseStudy.ownerId !== userId) {
-			return apiError(forbidden());
 		}
 
 		const formData = await request.formData();
@@ -83,8 +79,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		}
 
 		// Delete old image if it exists
-		if (caseStudy.featureImage?.image) {
-			await deleteFile(caseStudy.featureImage.image);
+		if (caseStudyResult.data.featureImage?.image) {
+			await deleteFile(caseStudyResult.data.featureImage.image);
 		}
 
 		// Save the new image to local storage
@@ -95,15 +91,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		}
 
 		// Update the database with the new image path
-		const success = await updateCaseStudyImage(
+		const updateResult = await updateCaseStudyImage(
 			caseStudyId,
 			saveResult.data.path
 		);
 
-		if (!success) {
+		if ("error" in updateResult) {
 			// Clean up the saved file if database update fails
 			await deleteFile(saveResult.data.path);
-			return apiError(serviceErrorToAppError("Failed to update image"));
+			return apiError(serviceErrorToAppError(updateResult.error));
 		}
 
 		return apiSuccess({
@@ -130,26 +126,22 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 		}
 
 		// Verify ownership
-		const caseStudy = await getCaseStudyById(caseStudyId);
+		const caseStudyResult = await getCaseStudyById(caseStudyId, userId);
 
-		if (!caseStudy) {
+		if ("error" in caseStudyResult) {
 			return apiError(notFound("Case study"));
 		}
 
-		if (caseStudy.ownerId !== userId) {
-			return apiError(forbidden());
-		}
-
 		// Delete the image file if it exists
-		if (caseStudy.featureImage?.image) {
-			await deleteFile(caseStudy.featureImage.image);
+		if (caseStudyResult.data.featureImage?.image) {
+			await deleteFile(caseStudyResult.data.featureImage.image);
 		}
 
 		// Delete the database record
-		const success = await deleteCaseStudyImage(caseStudyId);
+		const deleteResult = await deleteCaseStudyImage(caseStudyId);
 
-		if (!success) {
-			return apiError(serviceErrorToAppError("Failed to delete image"));
+		if ("error" in deleteResult) {
+			return apiError(serviceErrorToAppError(deleteResult.error));
 		}
 
 		return apiSuccess({ success: true });

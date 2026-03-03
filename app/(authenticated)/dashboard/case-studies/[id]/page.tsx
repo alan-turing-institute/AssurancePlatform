@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { fetchCaseStudyById } from "@/actions/case-studies";
 import BackButton from "@/components/ui/back-button";
 import PageHeading from "@/components/ui/page-heading";
@@ -20,6 +20,10 @@ async function CaseStudyDetails({
 	const { id } = await params;
 
 	const caseStudy = await fetchCaseStudyById(Number.parseInt(id, 10));
+
+	if (!caseStudy) {
+		notFound();
+	}
 
 	return (
 		<>

@@ -3,9 +3,14 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { KNOWN_TOUR_IDS, tourCompletionSchema } from "@/lib/schemas/tour";
+import {
+	getCompletedTours,
+	markTourCompleted,
+} from "@/lib/services/tour-service";
 
 /**
  * GET /api/user/tours
@@ -14,14 +19,11 @@ import { KNOWN_TOUR_IDS, tourCompletionSchema } from "@/lib/schemas/tour";
 export async function GET() {
 	try {
 		const userId = await requireAuth();
-		const { prisma } = await import("@/lib/prisma");
-
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			select: { completedTours: true },
-		});
-
-		return apiSuccess({ completedTours: user?.completedTours ?? [] });
+		const result = await getCompletedTours(userId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess({ completedTours: result.data });
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -47,34 +49,11 @@ export async function PATCH(req: Request) {
 			);
 		}
 
-		const { tourId } = parsed.data;
-		const { prisma } = await import("@/lib/prisma");
-
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			select: { completedTours: true },
-		});
-
-		if (!user) {
-			return apiSuccess({ completedTours: [] });
+		const result = await markTourCompleted(userId, parsed.data.tourId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
-
-		// Idempotent: if already completed, just return current state
-		if (user.completedTours.includes(tourId)) {
-			return apiSuccess({ completedTours: user.completedTours });
-		}
-
-		const updated = await prisma.user.update({
-			where: { id: userId },
-			data: {
-				completedTours: {
-					push: tourId,
-				},
-			},
-			select: { completedTours: true },
-		});
-
-		return apiSuccess({ completedTours: updated.completedTours });
+		return apiSuccess({ completedTours: result.data });
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

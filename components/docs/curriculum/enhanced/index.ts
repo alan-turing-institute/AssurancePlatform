@@ -17,7 +17,6 @@ export * from "./demos";
 // Dialog Components - explicitly avoid utility re-exports to prevent collisions with utils/truncateText
 export {
 	AddBlockDialog,
-	AddBlockDialogDemo,
 	addRecentTemplate,
 	BlockForm,
 	BlockPreview,
@@ -58,7 +57,6 @@ export {
 	DataStreamEdge,
 	DependencyEdge,
 	defaultEdgeOptions,
-	EdgeDemo,
 	ErrorGlowEdge,
 	edgeStylePresets,
 	edgeTypes,
@@ -80,7 +78,6 @@ export {
 	RadialGradientEdge,
 	RainbowGradientEdge,
 	ShimmerGradientEdge,
-	SimpleEdgeShowcase,
 	SlowAnimatedEdge,
 	SlowFlowEdge,
 	SmartEdge,

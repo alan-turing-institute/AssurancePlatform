@@ -2,6 +2,7 @@
 
 import { validateSession } from "@/lib/auth/validate-session";
 import type { CommentResponse } from "@/lib/services/comment-service";
+import type { ActionResult } from "@/types";
 
 /**
  * Fetches threaded case-level comments (notes) for a given case.
@@ -26,5 +27,61 @@ export async function fetchCaseComments(
 		return result.data;
 	} catch {
 		return null;
+	}
+}
+
+/**
+ * Soft-deletes an assurance case, moving it to the trash.
+ * Requires ADMIN permission on the case.
+ */
+export async function deleteAssuranceCase(
+	caseId: string
+): Promise<ActionResult<null>> {
+	const session = await validateSession();
+	if (!session) {
+		return { success: false, error: "Unauthorised" };
+	}
+
+	try {
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		const result = await softDeleteCase(session.userId, caseId);
+
+		if (result.error) {
+			return { success: false, error: result.error };
+		}
+
+		return { success: true, data: null };
+	} catch {
+		return { success: false, error: "Failed to delete case" };
+	}
+}
+
+/**
+ * Resets all element identifiers for a case so they are sequential.
+ * Requires EDIT permission on the case.
+ */
+export async function updateCaseIdentifiers(
+	caseId: string
+): Promise<ActionResult<null>> {
+	const session = await validateSession();
+	if (!session) {
+		return { success: false, error: "Unauthorised" };
+	}
+
+	try {
+		const { resetIdentifiers } = await import(
+			"@/lib/services/identifier-service"
+		);
+		const result = await resetIdentifiers(caseId, session.userId);
+
+		if ("error" in result) {
+			return { success: false, error: result.error };
+		}
+
+		return { success: true, data: null };
+	} catch {
+		return { success: false, error: "Failed to reset identifiers" };
 	}
 }

@@ -1,6 +1,11 @@
 import type { NextRequest } from "next/server";
-import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
-import { notFound, validationError } from "@/lib/errors";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
 import { getPublishedCaseStudyById } from "@/lib/services/case-study-service";
 import { transformCaseStudyForApi } from "@/lib/services/case-study-transforms";
 
@@ -21,13 +26,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 			return apiError(validationError("Invalid case study ID"));
 		}
 
-		const caseStudy = await getPublishedCaseStudyById(caseStudyId);
+		const result = await getPublishedCaseStudyById(caseStudyId);
 
-		if (!caseStudy) {
-			return apiError(notFound("Case study"));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return apiSuccess(transformCaseStudyForApi(caseStudy));
+		return apiSuccess(transformCaseStudyForApi(result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

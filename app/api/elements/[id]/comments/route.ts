@@ -1,7 +1,9 @@
 import {
+	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuthSession,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { createElementCommentSchema } from "@/lib/schemas/comment";
@@ -21,8 +23,11 @@ export async function GET(
 	try {
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
-		const comments = await fetchElementComments(elementId, session.userId);
-		return apiSuccess(comments);
+		const result = await fetchElementComments(elementId, session.userId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -46,13 +51,16 @@ export async function POST(
 			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
 		}
 
-		const comment = await createElementComment(
+		const result = await createElementComment(
 			elementId,
 			parsed.data.content,
 			parsed.data.parentId,
 			session
 		);
-		return apiSuccess(comment, 201);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data, 201);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

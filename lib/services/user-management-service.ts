@@ -21,10 +21,7 @@ export type ChangePasswordInput = {
 	newPassword: string;
 };
 
-type ServiceResult<T = void> = Promise<
-	| { success: true; data?: T }
-	| { success: false; error: string; field?: string }
->;
+type ServiceResult<T = void> = Promise<{ data: T } | { error: string }>;
 
 // ============================================
 // Validation Helpers
@@ -115,7 +112,7 @@ function validatePassword(password: string): {
 // Profile Update
 // ============================================
 
-type ValidationError = { success: false; error: string; field: string };
+type ValidationError = { error: string };
 
 /**
  * Validates and checks uniqueness of a username.
@@ -126,11 +123,7 @@ async function validateAndCheckUsername(
 ): Promise<ValidationError | null> {
 	const validation = validateUsername(username);
 	if (!validation.valid) {
-		return {
-			success: false,
-			error: validation.error ?? "Invalid username",
-			field: "username",
-		};
+		return { error: validation.error ?? "Invalid username" };
 	}
 
 	const existingUser = await prisma.user.findFirst({
@@ -142,11 +135,7 @@ async function validateAndCheckUsername(
 	});
 
 	if (existingUser) {
-		return {
-			success: false,
-			error: "Username is already taken",
-			field: "username",
-		};
+		return { error: "Username is already taken" };
 	}
 
 	return null;
@@ -161,11 +150,7 @@ async function validateAndCheckEmail(
 ): Promise<ValidationError | null> {
 	const validation = validateEmail(email);
 	if (!validation.valid) {
-		return {
-			success: false,
-			error: validation.error ?? "Invalid email",
-			field: "email",
-		};
+		return { error: validation.error ?? "Invalid email" };
 	}
 
 	const existingUser = await prisma.user.findFirst({
@@ -177,14 +162,60 @@ async function validateAndCheckEmail(
 	});
 
 	if (existingUser) {
-		return {
-			success: false,
-			error: "Email address is already in use",
-			field: "email",
-		};
+		return { error: "Email address is already in use" };
 	}
 
 	return null;
+}
+
+type ProfileData = { username: string; firstName?: string; lastName?: string };
+
+function toProfileData(user: {
+	username: string;
+	firstName: string | null;
+	lastName: string | null;
+}): ProfileData {
+	return {
+		username: user.username,
+		firstName: user.firstName ?? undefined,
+		lastName: user.lastName ?? undefined,
+	};
+}
+
+async function validateProfileInput(
+	input: UpdateProfileInput,
+	userId: string
+): Promise<ValidationError | null> {
+	if (input.username !== undefined) {
+		const error = await validateAndCheckUsername(input.username, userId);
+		if (error) {
+			return error;
+		}
+	}
+	if (input.email !== undefined) {
+		const error = await validateAndCheckEmail(input.email, userId);
+		if (error) {
+			return error;
+		}
+	}
+	return null;
+}
+
+function buildProfileUpdateData(input: UpdateProfileInput) {
+	const data: Partial<UpdateProfileInput> = {};
+	if (input.username !== undefined) {
+		data.username = input.username;
+	}
+	if (input.firstName !== undefined) {
+		data.firstName = input.firstName;
+	}
+	if (input.lastName !== undefined) {
+		data.lastName = input.lastName;
+	}
+	if (input.email !== undefined) {
+		data.email = input.email;
+	}
+	return data;
 }
 
 /**
@@ -193,71 +224,44 @@ async function validateAndCheckEmail(
 export async function updateUserProfile(
 	userId: string,
 	input: UpdateProfileInput
-): ServiceResult<{ username: string; firstName?: string; lastName?: string }> {
+): ServiceResult<ProfileData> {
 	try {
-		// Validate username if provided
-		if (input.username !== undefined) {
-			const error = await validateAndCheckUsername(input.username, userId);
-			if (error) {
-				return error;
-			}
+		const validationError = await validateProfileInput(input, userId);
+		if (validationError) {
+			return validationError;
 		}
 
-		// Validate email if provided
-		if (input.email !== undefined) {
-			const error = await validateAndCheckEmail(input.email, userId);
-			if (error) {
-				return error;
-			}
-		}
-
-		// Build update data
-		const updateData: {
-			username?: string;
-			firstName?: string;
-			lastName?: string;
-			email?: string;
-		} = {};
-
-		if (input.username !== undefined) {
-			updateData.username = input.username;
-		}
-		if (input.firstName !== undefined) {
-			updateData.firstName = input.firstName;
-		}
-		if (input.lastName !== undefined) {
-			updateData.lastName = input.lastName;
-		}
-		if (input.email !== undefined) {
-			updateData.email = input.email;
-		}
+		const updateData = buildProfileUpdateData(input);
+		const selectFields = {
+			username: true,
+			firstName: true,
+			lastName: true,
+		} as const;
 
 		// Skip update if nothing to change
 		if (Object.keys(updateData).length === 0) {
-			return { success: true };
+			const currentUser = await prisma.user.findUnique({
+				where: { id: userId },
+				select: selectFields,
+			});
+			if (!currentUser) {
+				return { error: "User not found" };
+			}
+			return { data: toProfileData(currentUser) };
 		}
 
 		const user = await prisma.user.update({
 			where: { id: userId },
 			data: updateData,
-			select: {
-				username: true,
-				firstName: true,
-				lastName: true,
-			},
+			select: selectFields,
 		});
 
 		return {
-			success: true,
-			data: {
-				username: user.username,
-				firstName: user.firstName ?? undefined,
-				lastName: user.lastName ?? undefined,
-			},
+			data: toProfileData(user),
 		};
 	} catch (error) {
 		console.error("Error updating user profile:", error);
-		return { success: false, error: "Failed to update profile" };
+		return { error: "Failed to update profile" };
 	}
 }
 
@@ -277,11 +281,7 @@ export async function changePassword(
 		// Validate new password
 		const passwordValidation = validatePassword(input.newPassword);
 		if (!passwordValidation.valid) {
-			return {
-				success: false,
-				error: passwordValidation.error ?? "Invalid password",
-				field: "newPassword",
-			};
+			return { error: passwordValidation.error ?? "Invalid password" };
 		}
 
 		// Get user's current password hash
@@ -295,19 +295,16 @@ export async function changePassword(
 		});
 
 		if (!user) {
-			return { success: false, error: "User not found" };
+			return { error: "User not found" };
 		}
 
 		// Only local auth users can change password
 		if (user.authProvider !== "LOCAL") {
-			return {
-				success: false,
-				error: "Password change is not available for OAuth accounts",
-			};
+			return { error: "Password change is not available for OAuth accounts" };
 		}
 
 		if (!user.passwordHash) {
-			return { success: false, error: "No password set for this account" };
+			return { error: "No password set for this account" };
 		}
 
 		// Verify current password
@@ -318,11 +315,7 @@ export async function changePassword(
 		);
 
 		if (!valid) {
-			return {
-				success: false,
-				error: "Current password is incorrect",
-				field: "currentPassword",
-			};
+			return { error: "Current password is incorrect" };
 		}
 
 		// Hash new password with argon2id
@@ -340,10 +333,10 @@ export async function changePassword(
 			},
 		});
 
-		return { success: true };
+		return { data: undefined };
 	} catch (error) {
 		console.error("Error changing password:", error);
-		return { success: false, error: "Failed to change password" };
+		return { error: "Failed to change password" };
 	}
 }
 
@@ -403,21 +396,17 @@ export async function deleteAccount(
 		});
 
 		if (!user) {
-			return { success: false, error: "User not found" };
+			return { error: "User not found" };
 		}
 
 		// Verify password for local auth users
 		if (user.authProvider === "LOCAL") {
 			if (!password) {
-				return {
-					success: false,
-					error: "Password is required to delete account",
-					field: "password",
-				};
+				return { error: "Password is required to delete account" };
 			}
 
 			if (!user.passwordHash) {
-				return { success: false, error: "Cannot verify account" };
+				return { error: "Cannot verify account" };
 			}
 
 			const { valid } = await verifyPassword(
@@ -427,11 +416,7 @@ export async function deleteAccount(
 			);
 
 			if (!valid) {
-				return {
-					success: false,
-					error: "Password is incorrect",
-					field: "password",
-				};
+				return { error: "Password is incorrect" };
 			}
 		}
 
@@ -492,9 +477,9 @@ export async function deleteAccount(
 			await tx.user.delete({ where: { id: userId } });
 		});
 
-		return { success: true };
+		return { data: undefined };
 	} catch (error) {
 		console.error("Error deleting account:", error);
-		return { success: false, error: "Failed to delete account" };
+		return { error: "Failed to delete account" };
 	}
 }

@@ -4,11 +4,13 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { AppError, forbidden, notFound, validationError } from "@/lib/errors";
-
-// Throttle duration in milliseconds (30 minutes)
-const SCREENSHOT_THROTTLE_MS = 30 * 60 * 1000;
+import { validationError } from "@/lib/errors";
+import {
+	getCaseImage,
+	uploadCaseImage,
+} from "@/lib/services/case-image-service";
 
 /**
  * GET /api/cases/[id]/image
@@ -22,29 +24,11 @@ export async function GET(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const { prisma } = await import("@/lib/prisma");
-		const { canAccessCase } = await import("@/lib/permissions");
-
-		// Check user has permission to view the case
-		const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
-		if (!hasAccess) {
-			return apiError(notFound());
+		const result = await getCaseImage(userId, caseId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
-
-		// Fetch the case image
-		const caseImage = await prisma.caseImage.findUnique({
-			where: { caseId },
-			select: { imageUrl: true, uploadedAt: true },
-		});
-
-		if (!caseImage) {
-			return apiError(notFound("Image"));
-		}
-
-		return apiSuccess({
-			image: caseImage.imageUrl,
-			uploadedAt: caseImage.uploadedAt.toISOString(),
-		});
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -62,38 +46,6 @@ export async function POST(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const { prisma } = await import("@/lib/prisma");
-		const { canAccessCase } = await import("@/lib/permissions");
-		const { uploadToBlob, generateScreenshotBlobPath } = await import(
-			"@/lib/services/blob-storage-service"
-		);
-
-		// Check user has edit permission
-		const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
-		if (!hasAccess) {
-			return apiError(forbidden());
-		}
-
-		// Check throttle - only capture if last screenshot is old enough
-		const existingImage = await prisma.caseImage.findUnique({
-			where: { caseId },
-			select: { uploadedAt: true },
-		});
-
-		if (existingImage) {
-			const timeSinceLastUpload =
-				Date.now() - existingImage.uploadedAt.getTime();
-			if (timeSinceLastUpload < SCREENSHOT_THROTTLE_MS) {
-				return apiSuccess({
-					message: "Throttled",
-					nextAllowedAt: new Date(
-						existingImage.uploadedAt.getTime() + SCREENSHOT_THROTTLE_MS
-					).toISOString(),
-				});
-			}
-		}
-
-		// Parse request body
 		let body: { image?: string };
 		try {
 			body = await request.json();
@@ -106,41 +58,22 @@ export async function POST(
 			return apiError(validationError("Missing image data"));
 		}
 
-		// Convert base64 to buffer
-		const base64Data = image.includes(",") ? image.split(",")[1] : image;
-		const buffer = Buffer.from(base64Data, "base64");
-
-		// Upload to Azure Blob Storage
-		const blobPath = generateScreenshotBlobPath(caseId);
-		const uploadResult = await uploadToBlob(buffer, blobPath);
-
-		if ("error" in uploadResult) {
-			return apiError(
-				new AppError({ code: "INTERNAL", message: uploadResult.error })
-			);
+		const result = await uploadCaseImage(userId, caseId, image);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		// Upsert the case image record
-		const now = new Date();
-		await prisma.caseImage.upsert({
-			where: { caseId },
-			create: {
-				caseId,
-				imageUrl: uploadResult.data.url,
-				uploadedAt: now,
-				uploadedById: userId,
-			},
-			update: {
-				imageUrl: uploadResult.data.url,
-				uploadedAt: now,
-				uploadedById: userId,
-			},
-		});
+		if ("throttled" in result.data) {
+			return apiSuccess({
+				message: "Throttled",
+				nextAllowedAt: result.data.nextAllowedAt,
+			});
+		}
 
 		return apiSuccess({
 			success: true,
-			image: uploadResult.data.url,
-			uploadedAt: now.toISOString(),
+			image: result.data.image,
+			uploadedAt: result.data.uploadedAt,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import type { ElementChange } from "@/lib/case/tree-diff";
 import prisma from "@/lib/prisma";
-import type { ElementChange } from "@/lib/services/json-diff-service";
 import {
 	createTestCase,
 	createTestElement,

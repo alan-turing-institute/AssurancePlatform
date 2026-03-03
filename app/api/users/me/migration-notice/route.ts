@@ -3,8 +3,9 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { notFound, validationError } from "@/lib/errors";
+import { dismissMigrationNotice } from "@/lib/services/user-service";
 
 /**
  * POST /api/users/me/migration-notice
@@ -14,34 +15,10 @@ import { notFound, validationError } from "@/lib/errors";
 export async function POST() {
 	try {
 		const userId = await requireAuth();
-
-		const { prisma } = await import("@/lib/prisma");
-
-		// Fetch user to check if they have a valid email
-		const user = await prisma.user.findUnique({
-			where: { id: userId },
-			select: { email: true },
-		});
-
-		if (!user) {
-			return apiError(notFound("User"));
+		const result = await dismissMigrationNotice(userId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
-
-		// Check if email is valid (not a placeholder)
-		const hasValidEmail = user.email && !user.email.includes("@placeholder");
-
-		if (!hasValidEmail) {
-			return apiError(
-				validationError("Valid email required to dismiss migration notice")
-			);
-		}
-
-		// Update user to mark migration notice as seen
-		await prisma.user.update({
-			where: { id: userId },
-			data: { hasSeenMigrationNotice: true },
-		});
-
 		return apiSuccess({ success: true });
 	} catch (error) {
 		return apiErrorFromUnknown(error);

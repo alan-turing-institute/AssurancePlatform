@@ -4,6 +4,7 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { createCaseStudySchema } from "@/lib/schemas/case-study";
@@ -23,8 +24,11 @@ import {
 export async function GET() {
 	try {
 		const userId = await requireAuth();
-		const caseStudies = await getCaseStudiesByOwner(userId);
-		return apiSuccess(transformCaseStudiesForApi(caseStudies));
+		const result = await getCaseStudiesByOwner(userId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(transformCaseStudiesForApi(result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -72,7 +76,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		const data = parsed.data;
-		const caseStudy = await createCaseStudy(userId, {
+		const result = await createCaseStudy(userId, {
 			title: data.title,
 			description: data.description,
 			authors: data.authors,
@@ -84,7 +88,11 @@ export async function POST(request: NextRequest) {
 			image: rawData.image as string | undefined,
 		});
 
-		return apiSuccess(transformCaseStudyForApi(caseStudy), 201);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(transformCaseStudyForApi(result.data), 201);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

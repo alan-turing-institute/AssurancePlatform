@@ -32,8 +32,11 @@ export async function GET(
 	try {
 		const userId = await requireAuth();
 		const { id } = await params;
-		const data = await fetchCaseFromPrisma(id, userId);
-		return apiSuccess(data);
+		const result = await fetchCaseFromPrisma(id, userId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -66,8 +69,11 @@ export async function PUT(
 		if (!parsed.success) {
 			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
 		}
-		const data = await updateCaseWithPrisma(id, userId, parsed.data);
-		return apiSuccess(data);
+		const result = await updateCaseWithPrisma(id, userId, parsed.data);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

@@ -1,7 +1,9 @@
 import {
+	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuthSession,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import {
@@ -26,7 +28,10 @@ export async function DELETE(
 		const session = await requireAuthSession();
 		const { id: commentId } = await params;
 		const result = await deleteComment(commentId, session);
-		return apiSuccess(result);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -50,7 +55,10 @@ export async function PUT(
 		}
 
 		const result = await updateComment(commentId, parsed.data.content, session);
-		return apiSuccess(result);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -78,7 +86,10 @@ export async function PATCH(
 			parsed.data.resolved,
 			session
 		);
-		return apiSuccess(result);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

@@ -5,13 +5,13 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import type { ElementChange } from "@/lib/case/tree-diff";
 import { AppError, validationError } from "@/lib/errors";
 import { batchUpdateRequestSchema } from "@/lib/schemas/batch-update";
 import {
 	applyBatchUpdate,
 	type BatchUpdateOptions,
 } from "@/lib/services/case-batch-update-service";
-import type { ElementChange } from "@/lib/services/json-diff-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 /**

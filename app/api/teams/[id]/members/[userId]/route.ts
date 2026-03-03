@@ -5,7 +5,8 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type { UpdateMemberRoleInput } from "@/lib/services/team-member-service";
+import { validationError } from "@/lib/errors";
+import { updateMemberRoleSchema } from "@/lib/schemas/team";
 import {
 	removeMember,
 	updateMemberRole,
@@ -22,21 +23,22 @@ export async function PATCH(
 	try {
 		const currentUserId = await requireAuth();
 		const { id: teamId, userId: targetUserId } = await params;
-		const body = await request.json();
 
-		const input: UpdateMemberRoleInput = {
-			role: body.role,
-		};
+		const body: unknown = await request.json();
+		const parsed = updateMemberRoleSchema.safeParse(body);
+		if (!parsed.success) {
+			return apiError(validationError("Invalid team role"));
+		}
 
 		const result = await updateMemberRole(
 			currentUserId,
 			teamId,
 			targetUserId,
-			input
+			parsed.data
 		);
 
-		if (result.error) {
-			return apiError(serviceErrorToAppError(result.error));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error ?? ""));
 		}
 
 		return apiSuccess(result.data);
@@ -59,8 +61,8 @@ export async function DELETE(
 
 		const result = await removeMember(currentUserId, teamId, targetUserId);
 
-		if (result.error) {
-			return apiError(serviceErrorToAppError(result.error));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error ?? ""));
 		}
 
 		return apiSuccess({ success: true });

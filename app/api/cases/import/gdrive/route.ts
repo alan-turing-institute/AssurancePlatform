@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -7,6 +6,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { AppError, forbidden, validationError } from "@/lib/errors";
+import { importFromDriveSchema } from "@/lib/schemas/google-drive";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	downloadFileFromDrive,
@@ -15,10 +15,6 @@ import {
 	listBackupFiles,
 } from "@/lib/services/google-drive-service";
 import type { ErrorCode } from "@/types/domain";
-
-const ImportSchema = z.object({
-	fileId: z.string().min(1, "File ID is required"),
-});
 
 /**
  * Maps Google Drive error codes to application error codes.
@@ -55,7 +51,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const parseResult = ImportSchema.safeParse(
+		const parseResult = importFromDriveSchema.safeParse(
 			await request.json().catch(() => null)
 		);
 		if (!parseResult.success) {

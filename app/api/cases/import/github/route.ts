@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -7,6 +6,10 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { AppError, forbidden, validationError } from "@/lib/errors";
+import {
+	type GitHubImportInput,
+	GitHubImportSchema,
+} from "@/lib/schemas/github-import";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	fetchFileFromGitHub,
@@ -14,33 +17,6 @@ import {
 	parseGitHubUrl,
 } from "@/lib/services/github-api-service";
 import type { ErrorCode } from "@/types/domain";
-
-/**
- * Request body schema for GitHub import
- */
-const GitHubImportSchema = z
-	.object({
-		url: z
-			.string()
-			.min(1, "GitHub URL is required")
-			.describe("GitHub URL or shorthand path to the JSON file"),
-		owner: z
-			.string()
-			.optional()
-			.describe("Repository owner (overrides URL parsing)"),
-		repo: z
-			.string()
-			.optional()
-			.describe("Repository name (overrides URL parsing)"),
-		path: z.string().optional().describe("File path (overrides URL parsing)"),
-		branch: z
-			.string()
-			.optional()
-			.describe("Branch name (optional, uses default branch if not specified)"),
-	})
-	.describe("GitHub import request parameters");
-
-type GitHubImportInput = z.infer<typeof GitHubImportSchema>;
 
 /**
  * Parsed GitHub location

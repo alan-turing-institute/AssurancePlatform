@@ -15,6 +15,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useInviteMemberModal } from "@/hooks/use-invite-member-modal";
+import { cn } from "@/lib/utils";
 
 type TeamMember = {
 	id: string;
@@ -152,11 +153,12 @@ export function TeamMemberList({
 								</div>
 								<div className="flex items-center gap-2">
 									<span
-										className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${
+										className={cn(
+											"flex items-center gap-1 rounded-full px-2 py-1 text-xs",
 											member.role === "ADMIN" || member.role === "OWNER"
 												? "bg-primary/10 text-primary"
 												: "bg-muted text-muted-foreground"
-										}`}
+										)}
 									>
 										{member.role === "ADMIN" || member.role === "OWNER" ? (
 											<ShieldCheck className="h-3 w-3" />

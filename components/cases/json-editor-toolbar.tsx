@@ -18,7 +18,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { TreeDiffResult } from "@/lib/services/json-diff-service";
+import type { TreeDiffResult } from "@/lib/case/tree-diff";
 
 type JsonEditorToolbarProps = {
 	/** Whether the editor has unsaved changes */

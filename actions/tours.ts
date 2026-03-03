@@ -1,10 +1,10 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
-
-const KNOWN_TOUR_IDS = ["dashboard", "case-canvas", "demo-case"] as const;
-
-type KnownTourId = (typeof KNOWN_TOUR_IDS)[number];
+import {
+	getCompletedTours,
+	markTourCompleted as markTourCompletedService,
+} from "@/lib/services/tour-service";
 
 /**
  * Fetches the list of completed tour IDs for the current user.
@@ -16,14 +16,11 @@ export async function fetchCompletedTours(): Promise<string[]> {
 		return [];
 	}
 
-	const { prisma } = await import("@/lib/prisma");
-
-	const user = await prisma.user.findUnique({
-		where: { id: validated.userId },
-		select: { completedTours: true },
-	});
-
-	return user?.completedTours ?? [];
+	const result = await getCompletedTours(validated.userId);
+	if ("error" in result) {
+		return [];
+	}
+	return result.data;
 }
 
 /**
@@ -39,35 +36,9 @@ export async function markTourCompleted(
 		return null;
 	}
 
-	if (!KNOWN_TOUR_IDS.includes(tourId as KnownTourId)) {
+	const result = await markTourCompletedService(validated.userId, tourId);
+	if ("error" in result) {
 		return null;
 	}
-
-	const { prisma } = await import("@/lib/prisma");
-
-	const user = await prisma.user.findUnique({
-		where: { id: validated.userId },
-		select: { completedTours: true },
-	});
-
-	if (!user) {
-		return [];
-	}
-
-	// Idempotent: if already completed, return current state
-	if (user.completedTours.includes(tourId)) {
-		return user.completedTours;
-	}
-
-	const updated = await prisma.user.update({
-		where: { id: validated.userId },
-		data: {
-			completedTours: {
-				push: tourId,
-			},
-		},
-		select: { completedTours: true },
-	});
-
-	return updated.completedTours;
+	return result.data;
 }

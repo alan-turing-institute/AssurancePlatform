@@ -9,8 +9,13 @@ export default withAuth(
 
 		// Redirect authenticated users away from auth pages (login/register)
 		if (token?.id != null && isAuthRoute(pathname)) {
-			const redirectTo =
+			const rawRedirect =
 				req.nextUrl.searchParams.get("redirect") || "/dashboard";
+			// Prevent open redirect: only allow relative paths that don't start with //
+			const redirectTo =
+				rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
+					? rawRedirect
+					: "/dashboard";
 			return NextResponse.redirect(new URL(redirectTo, req.url));
 		}
 

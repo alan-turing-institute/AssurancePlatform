@@ -1,69 +1,20 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
-
-type CurrentUser = {
-	id: number | string;
-	username: string;
-	email: string;
-	firstName?: string;
-	lastName?: string;
-	avatar?: string | null;
-	groups?: Array<{ id: number | string; name: string }>;
-	hasSeenMigrationNotice?: boolean;
-	completedTours?: string[];
-};
+import type { CurrentUserData } from "@/lib/services/user-service";
+import { getCurrentUser } from "@/lib/services/user-service";
 
 export const fetchCurrentUser = async (): Promise<
-	CurrentUser | null | undefined
+	CurrentUserData | null | undefined
 > => {
-	const { prisma } = await import("@/lib/prisma");
-
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	const user = await prisma.user.findUnique({
-		where: { id: validated.userId },
-		select: {
-			id: true,
-			username: true,
-			email: true,
-			firstName: true,
-			lastName: true,
-			avatarUrl: true,
-			hasSeenMigrationNotice: true,
-			completedTours: true,
-			teamMemberships: {
-				select: {
-					team: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
-				},
-			},
-		},
-	});
-
-	if (!user) {
+	const result = await getCurrentUser(validated.userId);
+	if ("error" in result) {
 		return null;
 	}
-
-	return {
-		id: user.id,
-		username: user.username,
-		email: user.email,
-		firstName: user.firstName ?? undefined,
-		lastName: user.lastName ?? undefined,
-		avatar: user.avatarUrl,
-		groups: user.teamMemberships.map((m) => ({
-			id: m.team.id,
-			name: m.team.name,
-		})),
-		hasSeenMigrationNotice: user.hasSeenMigrationNotice,
-		completedTours: user.completedTours,
-	};
+	return result.data;
 };

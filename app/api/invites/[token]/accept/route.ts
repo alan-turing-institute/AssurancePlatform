@@ -7,7 +7,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { acceptInvite } from "@/lib/services/case-permission-service";
+import { acceptInvite } from "@/lib/services/case-invite-service";
 import {
 	checkAndRecordRateLimit,
 	RATE_LIMIT_CONFIGS,

@@ -1,5 +1,10 @@
-import { toDisplayType, toPrefix, toPrismaType } from "@/lib/element-types";
+import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { prisma } from "@/lib/prisma";
+import { transformToResponse } from "@/lib/transforms/element-response";
+import {
+	getDeletedDescendantIds,
+	getDescendantIds,
+} from "@/lib/utils/tree-traversal";
 import type {
 	PermissionLevel,
 	ElementType as PrismaElementType,
@@ -121,100 +126,6 @@ function applyUrlUpdates(
 		updateData.url = singleUrl;
 		updateData.urls = singleUrl ? [singleUrl] : [];
 	}
-}
-
-/**
- * Adds parent reference to response
- */
-function addParentReference(
-	response: ElementResponse,
-	parent: { id: string; elementType: string },
-	elementType: string
-): void {
-	switch (parent.elementType) {
-		case "GOAL":
-			response.goalId = parent.id;
-			break;
-		case "STRATEGY":
-			response.strategyId = parent.id;
-			break;
-		case "PROPERTY_CLAIM":
-			// Evidence expects propertyClaimId as an array
-			// Other elements get it as a string
-			if (elementType === "EVIDENCE") {
-				response.propertyClaimId = [parent.id];
-			} else {
-				response.propertyClaimId = parent.id;
-			}
-			break;
-		default:
-			// Unknown parent type - no reference added
-			break;
-	}
-}
-
-/**
- * Transforms Prisma element to API response format
- */
-function transformToResponse(element: {
-	id: string;
-	elementType: string;
-	name: string | null;
-	description: string;
-	assumption: string | null;
-	justification: string | null;
-	context: string[];
-	url: string | null;
-	urls: string[];
-	inSandbox: boolean;
-	level: number | null;
-	caseId: string;
-	parentId: string | null;
-	createdAt: Date;
-	parent?: {
-		id: string;
-		elementType: string;
-	} | null;
-}): ElementResponse {
-	const response: ElementResponse = {
-		id: element.id,
-		type: toDisplayType(element.elementType),
-		name: element.name || "",
-		description: element.description || "",
-		createdDate: element.createdAt.toISOString(),
-		inSandbox: element.inSandbox,
-		assuranceCaseId: element.caseId,
-		comments: [],
-	};
-
-	// Add parent reference
-	if (element.parent) {
-		addParentReference(response, element.parent, element.elementType);
-	}
-
-	// Add type-specific fields
-	// Handle URLs: prefer urls array, fall back to legacy url field
-	if (element.urls && element.urls.length > 0) {
-		response.urls = element.urls;
-		response.URL = element.urls[0]; // Backward compatibility: first URL
-	} else if (element.url) {
-		response.URL = element.url;
-		response.urls = [element.url]; // Backward compatibility
-	}
-	if (element.assumption) {
-		response.assumption = element.assumption;
-	}
-	if (element.justification) {
-		response.justification = element.justification;
-	}
-	if (element.context && element.context.length > 0) {
-		response.context = element.context;
-	}
-	if (element.level !== null) {
-		response.level = element.level;
-	}
-
-	return response;
 }
 
 /**
@@ -485,7 +396,7 @@ export async function getElement(
 		// Validate user has VIEW permission on the case
 		const hasAccess = await validateCaseAccess(userId, element.caseId, "VIEW");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		return { data: transformToResponse(element) };
@@ -545,6 +456,28 @@ async function calculateNewLevel(newParentId: string): Promise<number> {
 }
 
 /**
+ * Validates that setting a new parent doesn't create a circular reference.
+ * Returns an error message if invalid, undefined if valid.
+ */
+async function validateParentChange(
+	elementId: string,
+	newParentId: string
+): Promise<string | undefined> {
+	// Cannot set parent to self
+	if (elementId === newParentId) {
+		return "Cannot set element as its own parent";
+	}
+
+	// Cannot set parent to a descendant (would create circular reference)
+	const descendantIds = await getDescendantIds(elementId);
+	if (descendantIds.includes(newParentId)) {
+		return "Cannot move element to one of its descendants";
+	}
+
+	return;
+}
+
+/**
  * Updates an existing element
  */
 export async function updateElement(
@@ -570,7 +503,7 @@ export async function updateElement(
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		// Build update data from input fields
@@ -641,7 +574,7 @@ export async function deleteElement(
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		// Gather descendants and soft-delete atomically
@@ -686,7 +619,7 @@ export async function detachElement(
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		// Move to sandbox by clearing parent and setting inSandbox
@@ -703,77 +636,6 @@ export async function detachElement(
 		console.error("Failed to detach element:", error);
 		return { error: "Failed to detach element" };
 	}
-}
-
-/** Prisma transaction client type for passing to helpers */
-type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
-
-/**
- * Recursively gets all descendant element IDs for a given parent (excludes deleted)
- */
-async function getDescendantIds(
-	parentId: string,
-	tx?: TxClient
-): Promise<string[]> {
-	const db = tx ?? prisma;
-	const children = await db.assuranceElement.findMany({
-		where: { parentId, deletedAt: null },
-		select: { id: true },
-	});
-
-	const descendantIds: string[] = [];
-	for (const child of children) {
-		descendantIds.push(child.id);
-		const grandchildren = await getDescendantIds(child.id, tx);
-		descendantIds.push(...grandchildren);
-	}
-
-	return descendantIds;
-}
-
-/**
- * Recursively gets all soft-deleted descendant element IDs for restore operation
- */
-async function getDeletedDescendantIds(
-	parentId: string,
-	tx?: TxClient
-): Promise<string[]> {
-	const db = tx ?? prisma;
-	const children = await db.assuranceElement.findMany({
-		where: { parentId, deletedAt: { not: null } },
-		select: { id: true },
-	});
-
-	const descendantIds: string[] = [];
-	for (const child of children) {
-		descendantIds.push(child.id);
-		const grandchildren = await getDeletedDescendantIds(child.id, tx);
-		descendantIds.push(...grandchildren);
-	}
-
-	return descendantIds;
-}
-
-/**
- * Validates that setting a new parent doesn't create a circular reference.
- * Returns an error message if invalid, undefined if valid.
- */
-async function validateParentChange(
-	elementId: string,
-	newParentId: string
-): Promise<string | undefined> {
-	// Cannot set parent to self
-	if (elementId === newParentId) {
-		return "Cannot set element as its own parent";
-	}
-
-	// Cannot set parent to a descendant (would create circular reference)
-	const descendantIds = await getDescendantIds(elementId);
-	if (descendantIds.includes(newParentId)) {
-		return "Cannot move element to one of its descendants";
-	}
-
-	return;
 }
 
 /**
@@ -803,7 +665,7 @@ export async function attachElement(
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		// Validate parent change doesn't create circular reference
@@ -912,7 +774,7 @@ export async function restoreElement(
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, element.caseId, "EDIT");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		// Verify parent is not deleted (if exists)

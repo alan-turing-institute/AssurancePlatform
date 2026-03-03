@@ -70,15 +70,13 @@ const ActionButtons = ({
 
 		try {
 			setLoading(true);
-			const response = await fetch(`/api/cases/${assuranceCase.id}`, {
-				method: "DELETE",
-			});
+			const { deleteAssuranceCase } = await import("@/actions/cases");
+			const result = await deleteAssuranceCase(assuranceCase.id);
 
-			if (response.ok) {
+			if (result.success) {
 				router.push("/dashboard");
 			} else {
-				const data = await response.json();
-				notifyError(data.error || "Failed to delete case");
+				notifyError(result.error || "Failed to delete case");
 			}
 		} catch (_error: unknown) {
 			notifyError("Failed to delete case");
@@ -95,14 +93,13 @@ const ActionButtons = ({
 
 		try {
 			setLoading(true);
-			const response = await fetch(
-				`/api/cases/${assuranceCase.id}/update-ids`,
-				{ method: "POST" }
-			);
-			if (response.ok) {
+			const { updateCaseIdentifiers } = await import("@/actions/cases");
+			const result = await updateCaseIdentifiers(assuranceCase.id);
+
+			if (result.success) {
 				router.refresh();
 			} else {
-				notifyError("Failed to reset identifiers");
+				notifyError(result.error || "Failed to reset identifiers");
 			}
 		} catch (_error) {
 			notifyError("Failed to reset identifiers");

@@ -1,9 +1,11 @@
 import {
+	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { getCasesAvailableForCaseStudy } from "@/lib/services/publish-service";
+import { getCasesAvailableForCaseStudy } from "@/lib/services/case-study-service";
 
 /**
  * GET /api/published-assurance-cases
@@ -15,10 +17,14 @@ import { getCasesAvailableForCaseStudy } from "@/lib/services/publish-service";
 export async function GET() {
 	try {
 		const userId = await requireAuth();
-		const cases = await getCasesAvailableForCaseStudy(userId);
+		const result = await getCasesAvailableForCaseStudy(userId);
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
 
 		// Transform to API response format
-		const response = cases.map((c) => ({
+		const response = result.data.map((c) => ({
 			id: c.id,
 			name: c.name,
 			description: c.description,

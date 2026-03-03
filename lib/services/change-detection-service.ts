@@ -37,11 +37,11 @@ export async function detectChanges(
 	userId: string,
 	caseId: string,
 	includeDetails = false
-): Promise<ChangeStatus | null> {
+): Promise<{ data: ChangeStatus } | { error: string }> {
 	// Check user has at least VIEW permission
 	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
 	if (!hasAccess) {
-		return null;
+		return { error: "Permission denied" };
 	}
 
 	// Get the case with its latest published version
@@ -66,7 +66,7 @@ export async function detectChanges(
 	});
 
 	if (!assuranceCase) {
-		return null;
+		return { error: "Permission denied" };
 	}
 
 	const latestPublished = assuranceCase.publishedVersions[0];
@@ -74,9 +74,11 @@ export async function detectChanges(
 	// If not published, there are no changes to detect
 	if (!(assuranceCase.published && latestPublished)) {
 		return {
-			hasChanges: false,
-			publishedAt: null,
-			publishedId: null,
+			data: {
+				hasChanges: false,
+				publishedAt: null,
+				publishedId: null,
+			},
 		};
 	}
 
@@ -88,9 +90,11 @@ export async function detectChanges(
 	if ("error" in exportResult) {
 		// If export fails, we can't detect changes - assume no changes
 		return {
-			hasChanges: false,
-			publishedAt: latestPublished.createdAt,
-			publishedId: latestPublished.id,
+			data: {
+				hasChanges: false,
+				publishedAt: latestPublished.createdAt,
+				publishedId: latestPublished.id,
+			},
 		};
 	}
 
@@ -110,17 +114,21 @@ export async function detectChanges(
 	// Include change summary only when requested
 	if (includeDetails) {
 		return {
-			hasChanges,
-			publishedAt: latestPublished.createdAt,
-			publishedId: latestPublished.id,
-			changeSummary,
+			data: {
+				hasChanges,
+				publishedAt: latestPublished.createdAt,
+				publishedId: latestPublished.id,
+				changeSummary,
+			},
 		};
 	}
 
 	return {
-		hasChanges,
-		publishedAt: latestPublished.createdAt,
-		publishedId: latestPublished.id,
+		data: {
+			hasChanges,
+			publishedAt: latestPublished.createdAt,
+			publishedId: latestPublished.id,
+		},
 	};
 }
 
@@ -137,10 +145,10 @@ export async function hasChangesSincePublish(
 	caseId: string
 ): Promise<boolean | null> {
 	const result = await detectChanges(userId, caseId, false);
-	if (result === null) {
+	if ("error" in result) {
 		return null;
 	}
-	return result.hasChanges;
+	return result.data.hasChanges;
 }
 
 // ============================================

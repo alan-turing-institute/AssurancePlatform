@@ -5,6 +5,7 @@ import {
 } from "@/lib/services/file-storage-service";
 import type {
 	CaseStudy as PrismaCaseStudy,
+	PublishStatus as PrismaPublishStatus,
 	PublishedAssuranceCase,
 } from "@/src/generated/prisma";
 
@@ -48,7 +49,7 @@ export type CaseStudyUpdateInput = Partial<CaseStudyCreateInput> & {
  */
 export async function getCaseStudiesByOwner(
 	ownerId: string
-): Promise<CaseStudyWithRelations[]> {
+): Promise<{ data: CaseStudyWithRelations[] } | { error: string }> {
 	try {
 		const caseStudies = await prisma.caseStudy.findMany({
 			where: {
@@ -67,7 +68,7 @@ export async function getCaseStudiesByOwner(
 			},
 		});
 
-		return caseStudies as CaseStudyWithRelations[];
+		return { data: caseStudies as CaseStudyWithRelations[] };
 	} catch (error) {
 		// Handle legacy table type mismatch (BigInt owner_id vs UUID user ID)
 		if (
@@ -77,9 +78,10 @@ export async function getCaseStudiesByOwner(
 			console.warn(
 				"getCaseStudiesByOwner: Legacy table type mismatch, returning empty array"
 			);
-			return [];
+			return { data: [] };
 		}
-		throw error;
+		console.error("Failed to get case studies by owner:", error);
+		return { error: "Failed to fetch case studies" };
 	}
 }
 
@@ -87,47 +89,63 @@ export async function getCaseStudiesByOwner(
  * Get all published case studies (public)
  */
 export async function getPublishedCaseStudies(): Promise<
-	CaseStudyWithRelations[]
+	{ data: CaseStudyWithRelations[] } | { error: string }
 > {
-	const caseStudies = await prisma.caseStudy.findMany({
-		where: {
-			published: true,
-		},
-		include: {
-			publishedCases: {
-				include: {
-					publishedAssuranceCase: true,
-				},
+	try {
+		const caseStudies = await prisma.caseStudy.findMany({
+			where: {
+				published: true,
 			},
-			featureImage: true,
-		},
-		orderBy: {
-			publishedDate: "desc",
-		},
-	});
+			include: {
+				publishedCases: {
+					include: {
+						publishedAssuranceCase: true,
+					},
+				},
+				featureImage: true,
+			},
+			orderBy: {
+				publishedDate: "desc",
+			},
+		});
 
-	return caseStudies as CaseStudyWithRelations[];
+		return { data: caseStudies as CaseStudyWithRelations[] };
+	} catch (error) {
+		console.error("Failed to get published case studies:", error);
+		return { error: "Failed to fetch published case studies" };
+	}
 }
 
 /**
- * Get a case study by ID
+ * Get a case study by ID, verifying the given user is the owner.
+ * Returns the same error for not-found and forbidden to prevent enumeration.
  */
 export async function getCaseStudyById(
-	id: number
-): Promise<CaseStudyWithRelations | null> {
-	const caseStudy = await prisma.caseStudy.findUnique({
-		where: { id },
-		include: {
-			publishedCases: {
-				include: {
-					publishedAssuranceCase: true,
+	id: number,
+	userId: string
+): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+	try {
+		const caseStudy = await prisma.caseStudy.findUnique({
+			where: { id },
+			include: {
+				publishedCases: {
+					include: {
+						publishedAssuranceCase: true,
+					},
 				},
+				featureImage: true,
 			},
-			featureImage: true,
-		},
-	});
+		});
 
-	return caseStudy as CaseStudyWithRelations | null;
+		if (!caseStudy || caseStudy.ownerId !== userId) {
+			return { error: "Permission denied" };
+		}
+
+		return { data: caseStudy as CaseStudyWithRelations };
+	} catch (error) {
+		console.error("[getCaseStudyById]", { id, userId, error });
+		return { error: "Failed to fetch case study" };
+	}
 }
 
 /**
@@ -135,23 +153,32 @@ export async function getCaseStudyById(
  */
 export async function getPublishedCaseStudyById(
 	id: number
-): Promise<CaseStudyWithRelations | null> {
-	const caseStudy = await prisma.caseStudy.findFirst({
-		where: {
-			id,
-			published: true,
-		},
-		include: {
-			publishedCases: {
-				include: {
-					publishedAssuranceCase: true,
-				},
+): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+	try {
+		const caseStudy = await prisma.caseStudy.findFirst({
+			where: {
+				id,
+				published: true,
 			},
-			featureImage: true,
-		},
-	});
+			include: {
+				publishedCases: {
+					include: {
+						publishedAssuranceCase: true,
+					},
+				},
+				featureImage: true,
+			},
+		});
 
-	return caseStudy as CaseStudyWithRelations | null;
+		if (!caseStudy) {
+			return { error: "Case study not found" };
+		}
+
+		return { data: caseStudy as CaseStudyWithRelations };
+	} catch (error) {
+		console.error("Failed to get published case study by ID:", error);
+		return { error: "Failed to fetch case study" };
+	}
 }
 
 /**
@@ -160,36 +187,41 @@ export async function getPublishedCaseStudyById(
 export async function createCaseStudy(
 	ownerId: string,
 	data: CaseStudyCreateInput
-): Promise<CaseStudyWithRelations> {
-	const now = new Date();
+): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+	try {
+		const now = new Date();
 
-	const caseStudy = await prisma.caseStudy.create({
-		data: {
-			title: data.title,
-			description: data.description ?? null,
-			authors: data.authors ?? null,
-			category: data.category ?? null,
-			sector: data.sector ?? null,
-			contact: data.contact ?? null,
-			type: data.type ?? null,
-			image: data.image ?? null,
-			published: data.published ?? false,
-			publishedDate: data.published ? now : null,
-			ownerId,
-			createdOn: now,
-			lastModifiedOn: now,
-		},
-		include: {
-			publishedCases: {
-				include: {
-					publishedAssuranceCase: true,
-				},
+		const caseStudy = await prisma.caseStudy.create({
+			data: {
+				title: data.title,
+				description: data.description ?? null,
+				authors: data.authors ?? null,
+				category: data.category ?? null,
+				sector: data.sector ?? null,
+				contact: data.contact ?? null,
+				type: data.type ?? null,
+				image: data.image ?? null,
+				published: data.published ?? false,
+				publishedDate: data.published ? now : null,
+				ownerId,
+				createdOn: now,
+				lastModifiedOn: now,
 			},
-			featureImage: true,
-		},
-	});
+			include: {
+				publishedCases: {
+					include: {
+						publishedAssuranceCase: true,
+					},
+				},
+				featureImage: true,
+			},
+		});
 
-	return caseStudy as CaseStudyWithRelations;
+		return { data: caseStudy as CaseStudyWithRelations };
+	} catch (error) {
+		console.error("Failed to create case study:", error);
+		return { error: "Failed to create case study" };
+	}
 }
 
 /**
@@ -199,48 +231,53 @@ export async function updateCaseStudy(
 	id: number,
 	ownerId: string,
 	data: Partial<CaseStudyCreateInput>
-): Promise<CaseStudyWithRelations | null> {
-	// Verify ownership
-	const existing = await prisma.caseStudy.findUnique({
-		where: { id },
-	});
+): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+	try {
+		// Verify ownership
+		const existing = await prisma.caseStudy.findUnique({
+			where: { id },
+		});
 
-	if (!existing || existing.ownerId !== ownerId) {
-		return null;
-	}
+		if (!existing || existing.ownerId !== ownerId) {
+			return { error: "Permission denied" };
+		}
 
-	const now = new Date();
-	const wasPublished = existing.published;
-	const isNowPublished = data.published ?? existing.published;
+		const now = new Date();
+		const wasPublished = existing.published;
+		const isNowPublished = data.published ?? existing.published;
 
-	const caseStudy = await prisma.caseStudy.update({
-		where: { id },
-		data: {
-			title: data.title,
-			description: data.description,
-			authors: data.authors,
-			category: data.category,
-			sector: data.sector,
-			contact: data.contact,
-			type: data.type,
-			image: data.image,
-			published: data.published,
-			// Set publishedDate when first published
-			publishedDate:
-				!wasPublished && isNowPublished ? now : existing.publishedDate,
-			lastModifiedOn: now,
-		},
-		include: {
-			publishedCases: {
-				include: {
-					publishedAssuranceCase: true,
-				},
+		const caseStudy = await prisma.caseStudy.update({
+			where: { id },
+			data: {
+				title: data.title,
+				description: data.description,
+				authors: data.authors,
+				category: data.category,
+				sector: data.sector,
+				contact: data.contact,
+				type: data.type,
+				image: data.image,
+				published: data.published,
+				// Set publishedDate when first published
+				publishedDate:
+					!wasPublished && isNowPublished ? now : existing.publishedDate,
+				lastModifiedOn: now,
 			},
-			featureImage: true,
-		},
-	});
+			include: {
+				publishedCases: {
+					include: {
+						publishedAssuranceCase: true,
+					},
+				},
+				featureImage: true,
+			},
+		});
 
-	return caseStudy as CaseStudyWithRelations;
+		return { data: caseStudy as CaseStudyWithRelations };
+	} catch (error) {
+		console.error("Failed to update case study:", error);
+		return { error: "Failed to update case study" };
+	}
 }
 
 /**
@@ -249,39 +286,44 @@ export async function updateCaseStudy(
 export async function deleteCaseStudy(
 	id: number,
 	ownerId: string
-): Promise<boolean> {
-	// Verify ownership and get feature image info
-	const existing = await prisma.caseStudy.findUnique({
-		where: { id },
-		include: { featureImage: true },
-	});
+): Promise<{ data: true } | { error: string }> {
+	try {
+		// Verify ownership and get feature image info
+		const existing = await prisma.caseStudy.findUnique({
+			where: { id },
+			include: { featureImage: true },
+		});
 
-	if (!existing || existing.ownerId !== ownerId) {
-		return false;
+		if (!existing || existing.ownerId !== ownerId) {
+			return { error: "Permission denied" };
+		}
+
+		// Delete the uploaded image file if it exists
+		if (existing.featureImage?.image) {
+			await deleteFile(existing.featureImage.image);
+		}
+
+		// Also clean up the entire upload directory for this case study
+		await deleteDirectory(`case-studies/${id}`);
+
+		// Delete associated records first
+		await prisma.caseStudyPublishedCase.deleteMany({
+			where: { caseStudyId: id },
+		});
+
+		await prisma.caseStudyImage.deleteMany({
+			where: { caseStudyId: id },
+		});
+
+		await prisma.caseStudy.delete({
+			where: { id },
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to delete case study:", error);
+		return { error: "Failed to delete case study" };
 	}
-
-	// Delete the uploaded image file if it exists
-	if (existing.featureImage?.image) {
-		await deleteFile(existing.featureImage.image);
-	}
-
-	// Also clean up the entire upload directory for this case study
-	await deleteDirectory(`case-studies/${id}`);
-
-	// Delete associated records first
-	await prisma.caseStudyPublishedCase.deleteMany({
-		where: { caseStudyId: id },
-	});
-
-	await prisma.caseStudyImage.deleteMany({
-		where: { caseStudyId: id },
-	});
-
-	await prisma.caseStudy.delete({
-		where: { id },
-	});
-
-	return true;
 }
 
 /**
@@ -289,10 +331,21 @@ export async function deleteCaseStudy(
  */
 export async function getPublishedAssuranceCaseById(
 	id: string
-): Promise<PublishedAssuranceCase | null> {
-	return await prisma.publishedAssuranceCase.findUnique({
-		where: { id },
-	});
+): Promise<{ data: PublishedAssuranceCase } | { error: string }> {
+	try {
+		const record = await prisma.publishedAssuranceCase.findUnique({
+			where: { id },
+		});
+
+		if (!record) {
+			return { error: "Published case not found" };
+		}
+
+		return { data: record };
+	} catch (error) {
+		console.error("Failed to get published assurance case by ID:", error);
+		return { error: "Failed to fetch published case" };
+	}
 }
 
 /**
@@ -300,11 +353,22 @@ export async function getPublishedAssuranceCaseById(
  */
 export async function getPublishedAssuranceCaseByCaseId(
 	assuranceCaseId: string
-): Promise<PublishedAssuranceCase | null> {
-	return await prisma.publishedAssuranceCase.findFirst({
-		where: { assuranceCaseId },
-		orderBy: { createdAt: "desc" },
-	});
+): Promise<{ data: PublishedAssuranceCase } | { error: string }> {
+	try {
+		const record = await prisma.publishedAssuranceCase.findFirst({
+			where: { assuranceCaseId },
+			orderBy: { createdAt: "desc" },
+		});
+
+		if (!record) {
+			return { error: "Published case not found" };
+		}
+
+		return { data: record };
+	} catch (error) {
+		console.error("Failed to get published assurance case by case ID:", error);
+		return { error: "Failed to fetch published case" };
+	}
 }
 
 /**
@@ -313,7 +377,7 @@ export async function getPublishedAssuranceCaseByCaseId(
 export async function linkPublishedCaseToCaseStudy(
 	caseStudyId: number,
 	publishedAssuranceCaseId: string
-): Promise<boolean> {
+): Promise<{ data: true } | { error: string }> {
 	try {
 		await prisma.caseStudyPublishedCase.create({
 			data: {
@@ -321,10 +385,10 @@ export async function linkPublishedCaseToCaseStudy(
 				publishedAssuranceCaseId,
 			},
 		});
-		return true;
+		return { data: true };
 	} catch {
 		// Likely a unique constraint violation
-		return false;
+		return { error: "Link already exists" };
 	}
 }
 
@@ -334,15 +398,24 @@ export async function linkPublishedCaseToCaseStudy(
 export async function unlinkPublishedCaseFromCaseStudy(
 	caseStudyId: number,
 	publishedAssuranceCaseId: string
-): Promise<boolean> {
-	const result = await prisma.caseStudyPublishedCase.deleteMany({
-		where: {
-			caseStudyId,
-			publishedAssuranceCaseId,
-		},
-	});
+): Promise<{ data: true } | { error: string }> {
+	try {
+		const result = await prisma.caseStudyPublishedCase.deleteMany({
+			where: {
+				caseStudyId,
+				publishedAssuranceCaseId,
+			},
+		});
 
-	return result.count > 0;
+		if (result.count === 0) {
+			return { error: "Link not found" };
+		}
+
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to unlink published case from case study:", error);
+		return { error: "Failed to unlink case" };
+	}
 }
 
 /**
@@ -351,7 +424,7 @@ export async function unlinkPublishedCaseFromCaseStudy(
 export async function updateCaseStudyImage(
 	caseStudyId: number,
 	imagePath: string
-): Promise<boolean> {
+): Promise<{ data: true } | { error: string }> {
 	try {
 		await prisma.caseStudyImage.upsert({
 			where: { caseStudyId },
@@ -365,9 +438,10 @@ export async function updateCaseStudyImage(
 				uploadedAt: new Date(),
 			},
 		});
-		return true;
-	} catch {
-		return false;
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to update case study image:", error);
+		return { error: "Failed to update image" };
 	}
 }
 
@@ -376,12 +450,21 @@ export async function updateCaseStudyImage(
  */
 export async function deleteCaseStudyImage(
 	caseStudyId: number
-): Promise<boolean> {
-	const result = await prisma.caseStudyImage.deleteMany({
-		where: { caseStudyId },
-	});
+): Promise<{ data: true } | { error: string }> {
+	try {
+		const result = await prisma.caseStudyImage.deleteMany({
+			where: { caseStudyId },
+		});
 
-	return result.count > 0;
+		if (result.count === 0) {
+			return { error: "Image not found" };
+		}
+
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to delete case study image:", error);
+		return { error: "Failed to delete image" };
+	}
 }
 
 // ============================================
@@ -527,65 +610,70 @@ export async function createCaseStudyWithLinks(
 	ownerId: string,
 	data: CaseStudyCreateInput,
 	sourceCaseIds: string[]
-): Promise<CaseStudyWithRelations> {
-	const now = new Date();
+): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+	try {
+		const now = new Date();
 
-	// Resolve source case IDs to published case IDs (publishes READY_TO_PUBLISH cases)
-	const publishedCaseIds = await resolvePublishedCaseIds(
-		sourceCaseIds,
-		ownerId
-	);
+		// Resolve source case IDs to published case IDs (publishes READY_TO_PUBLISH cases)
+		const publishedCaseIds = await resolvePublishedCaseIds(
+			sourceCaseIds,
+			ownerId
+		);
 
-	// Create case study and links in a transaction
-	const caseStudy = await prisma.$transaction(async (tx) => {
-		// Create the case study
-		const created = await tx.caseStudy.create({
-			data: {
-				title: data.title,
-				description: data.description ?? null,
-				authors: data.authors ?? null,
-				category: data.category ?? null,
-				sector: data.sector ?? null,
-				contact: data.contact ?? null,
-				type: data.type ?? null,
-				image: data.image ?? null,
-				published: data.published ?? false,
-				publishedDate: data.published ? now : null,
-				ownerId,
-				createdOn: now,
-				lastModifiedOn: now,
-			},
+		// Create case study and links in a transaction
+		const caseStudy = await prisma.$transaction(async (tx) => {
+			// Create the case study
+			const created = await tx.caseStudy.create({
+				data: {
+					title: data.title,
+					description: data.description ?? null,
+					authors: data.authors ?? null,
+					category: data.category ?? null,
+					sector: data.sector ?? null,
+					contact: data.contact ?? null,
+					type: data.type ?? null,
+					image: data.image ?? null,
+					published: data.published ?? false,
+					publishedDate: data.published ? now : null,
+					ownerId,
+					createdOn: now,
+					lastModifiedOn: now,
+				},
+			});
+
+			// Create links to published cases
+			if (publishedCaseIds.length > 0) {
+				await tx.caseStudyPublishedCase.createMany({
+					data: publishedCaseIds.map((publishedCaseId) => ({
+						caseStudyId: created.id,
+						publishedAssuranceCaseId: publishedCaseId,
+					})),
+				});
+			}
+
+			// Fetch with relations
+			return tx.caseStudy.findUnique({
+				where: { id: created.id },
+				include: {
+					publishedCases: {
+						include: {
+							publishedAssuranceCase: true,
+						},
+					},
+					featureImage: true,
+				},
+			});
 		});
 
-		// Create links to published cases
-		if (publishedCaseIds.length > 0) {
-			await tx.caseStudyPublishedCase.createMany({
-				data: publishedCaseIds.map((publishedCaseId) => ({
-					caseStudyId: created.id,
-					publishedAssuranceCaseId: publishedCaseId,
-				})),
-			});
+		if (!caseStudy) {
+			return { error: "Failed to create case study" };
 		}
 
-		// Fetch with relations
-		return tx.caseStudy.findUnique({
-			where: { id: created.id },
-			include: {
-				publishedCases: {
-					include: {
-						publishedAssuranceCase: true,
-					},
-				},
-				featureImage: true,
-			},
-		});
-	});
-
-	if (!caseStudy) {
-		throw new Error("Failed to create case study");
+		return { data: caseStudy as CaseStudyWithRelations };
+	} catch (error) {
+		console.error("Failed to create case study with links:", error);
+		return { error: "Failed to create case study" };
 	}
-
-	return caseStudy as CaseStudyWithRelations;
 }
 
 /**
@@ -595,85 +683,181 @@ export async function createCaseStudyWithLinks(
  * @param ownerId - The user ID (for ownership verification)
  * @param data - Case study update data
  * @param sourceCaseIds - New array of source AssuranceCase IDs to link (optional)
- * @returns The updated case study with relations, or null if not found/not owned
+ * @returns The updated case study with relations
  */
 export async function updateCaseStudyWithLinks(
 	id: number,
 	ownerId: string,
 	data: Partial<CaseStudyCreateInput>,
 	sourceCaseIds?: string[]
-): Promise<CaseStudyWithRelations | null> {
-	// Verify ownership
-	const existing = await prisma.caseStudy.findUnique({
-		where: { id },
-	});
-
-	if (!existing || existing.ownerId !== ownerId) {
-		return null;
-	}
-
-	const now = new Date();
-	const wasPublished = existing.published;
-	const isNowPublished = data.published ?? existing.published;
-
-	// Resolve source case IDs to published case IDs if provided (publishes READY_TO_PUBLISH cases)
-	const publishedCaseIds =
-		sourceCaseIds !== undefined
-			? await resolvePublishedCaseIds(sourceCaseIds, ownerId)
-			: undefined;
-
-	// Update case study and links in a transaction
-	const caseStudy = await prisma.$transaction(async (tx) => {
-		// Update the case study
-		await tx.caseStudy.update({
+): Promise<{ data: CaseStudyWithRelations } | { error: string }> {
+	try {
+		// Verify ownership
+		const existing = await prisma.caseStudy.findUnique({
 			where: { id },
-			data: {
-				title: data.title,
-				description: data.description,
-				authors: data.authors,
-				category: data.category,
-				sector: data.sector,
-				contact: data.contact,
-				type: data.type,
-				image: data.image,
-				published: data.published,
-				publishedDate:
-					!wasPublished && isNowPublished ? now : existing.publishedDate,
-				lastModifiedOn: now,
-			},
 		});
 
-		// Update links if sourceCaseIds were provided
-		if (publishedCaseIds !== undefined) {
-			// Remove existing links
-			await tx.caseStudyPublishedCase.deleteMany({
-				where: { caseStudyId: id },
-			});
-
-			// Create new links
-			if (publishedCaseIds.length > 0) {
-				await tx.caseStudyPublishedCase.createMany({
-					data: publishedCaseIds.map((publishedCaseId) => ({
-						caseStudyId: id,
-						publishedAssuranceCaseId: publishedCaseId,
-					})),
-				});
-			}
+		if (!existing || existing.ownerId !== ownerId) {
+			return { error: "Permission denied" };
 		}
 
-		// Fetch with relations
-		return tx.caseStudy.findUnique({
-			where: { id },
-			include: {
-				publishedCases: {
-					include: {
-						publishedAssuranceCase: true,
-					},
+		const now = new Date();
+		const wasPublished = existing.published;
+		const isNowPublished = data.published ?? existing.published;
+
+		// Resolve source case IDs to published case IDs if provided (publishes READY_TO_PUBLISH cases)
+		const publishedCaseIds =
+			sourceCaseIds !== undefined
+				? await resolvePublishedCaseIds(sourceCaseIds, ownerId)
+				: undefined;
+
+		// Update case study and links in a transaction
+		const caseStudy = await prisma.$transaction(async (tx) => {
+			// Update the case study
+			await tx.caseStudy.update({
+				where: { id },
+				data: {
+					title: data.title,
+					description: data.description,
+					authors: data.authors,
+					category: data.category,
+					sector: data.sector,
+					contact: data.contact,
+					type: data.type,
+					image: data.image,
+					published: data.published,
+					publishedDate:
+						!wasPublished && isNowPublished ? now : existing.publishedDate,
+					lastModifiedOn: now,
 				},
-				featureImage: true,
+			});
+
+			// Update links if sourceCaseIds were provided
+			if (publishedCaseIds !== undefined) {
+				// Remove existing links
+				await tx.caseStudyPublishedCase.deleteMany({
+					where: { caseStudyId: id },
+				});
+
+				// Create new links
+				if (publishedCaseIds.length > 0) {
+					await tx.caseStudyPublishedCase.createMany({
+						data: publishedCaseIds.map((publishedCaseId) => ({
+							caseStudyId: id,
+							publishedAssuranceCaseId: publishedCaseId,
+						})),
+					});
+				}
+			}
+
+			// Fetch with relations
+			return tx.caseStudy.findUnique({
+				where: { id },
+				include: {
+					publishedCases: {
+						include: {
+							publishedAssuranceCase: true,
+						},
+					},
+					featureImage: true,
+				},
+			});
+		});
+
+		if (!caseStudy) {
+			return { error: "Failed to update case study" };
+		}
+
+		return { data: caseStudy as CaseStudyWithRelations };
+	} catch (error) {
+		console.error("Failed to update case study with links:", error);
+		return { error: "Failed to update case study" };
+	}
+}
+
+// ============================================
+// Publishing Workflow Helpers
+// ============================================
+
+export type CaseAvailableForStudy = {
+	id: string;
+	name: string;
+	description: string;
+	publishStatus: PrismaPublishStatus;
+	publishedAt: Date | null;
+	markedReadyAt: Date | null;
+	publishedVersionId: string | null;
+};
+
+/**
+ * Gets cases that are ready to publish OR published for a specific user.
+ * Used for case study linking - shows cases available for selection.
+ *
+ * Note: The publishedVersions relation uses a legacy Django table that may have
+ * type mismatches with UUID-based case IDs. We query it separately to handle errors.
+ */
+export async function getCasesAvailableForCaseStudy(
+	userId: string
+): Promise<{ data: CaseAvailableForStudy[] } | { error: string }> {
+	try {
+		// Query cases without publishedVersions to avoid legacy table issues
+		const cases = await prisma.assuranceCase.findMany({
+			where: {
+				createdById: userId,
+				publishStatus: {
+					in: ["READY_TO_PUBLISH", "PUBLISHED"],
+				},
+			},
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				publishStatus: true,
+				publishedAt: true,
+				markedReadyAt: true,
+			},
+			orderBy: {
+				updatedAt: "desc",
 			},
 		});
-	});
 
-	return caseStudy as CaseStudyWithRelations | null;
+		// Batch query all published versions for these cases (fixes N+1)
+		const caseIds = cases.map((c) => c.id);
+		let publishedVersionsMap = new Map<string, string>();
+
+		try {
+			const publishedVersions = await prisma.publishedAssuranceCase.findMany({
+				where: { assuranceCaseId: { in: caseIds } },
+				select: { id: true, assuranceCaseId: true, createdAt: true },
+				orderBy: { createdAt: "desc" },
+			});
+
+			// Group by assuranceCaseId and take the latest (first due to orderBy desc)
+			for (const pv of publishedVersions) {
+				if (!publishedVersionsMap.has(pv.assuranceCaseId)) {
+					publishedVersionsMap.set(pv.assuranceCaseId, pv.id);
+				}
+			}
+		} catch (innerError) {
+			// Handle legacy table type mismatch gracefully
+			console.warn("Failed to fetch published versions:", innerError);
+			publishedVersionsMap = new Map();
+		}
+
+		// Map cases to results with published version IDs
+		return {
+			data: cases.map((c) => ({
+				id: c.id,
+				name: c.name,
+				description: c.description,
+				publishStatus: c.publishStatus,
+				publishedAt: c.publishedAt,
+				markedReadyAt: c.markedReadyAt,
+				publishedVersionId: publishedVersionsMap.get(c.id) ?? null,
+			})),
+		};
+	} catch (error) {
+		console.error("Failed to get cases available for case study:", error);
+		return { error: "Failed to fetch available cases" };
+	}
 }

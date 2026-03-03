@@ -41,11 +41,11 @@ export async function GET(
 
 		const result = await detectChanges(userId, id, includeDetails);
 
-		if (result === null) {
+		if ("error" in result) {
 			return apiError(notFound("Case"));
 		}
 
-		return apiSuccess(result);
+		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

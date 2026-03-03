@@ -26,7 +26,7 @@ const DiscoverPage = async () => {
 				</div>
 			</div>
 
-			<CaseStudies caseStudies={publishedCaseStudies} />
+			<CaseStudies caseStudies={publishedCaseStudies ?? []} />
 		</>
 	);
 };

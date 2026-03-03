@@ -1,5 +1,5 @@
 /**
- * JSON Diff Service
+ * Tree Diff
  *
  * Computes differences between two assurance case tree structures.
  * Used by the JSON editor to determine what API calls are needed

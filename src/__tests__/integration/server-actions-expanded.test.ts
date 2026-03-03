@@ -188,7 +188,8 @@ describe.sequential("fetchCaseStudies", () => {
 		const { fetchCaseStudies } = await import("@/actions/case-studies");
 		const result = await fetchCaseStudies();
 
-		const titles = result.map((s) => s.title);
+		expect(result).not.toBeNull();
+		const titles = (result ?? []).map((s) => s.title);
 		expect(titles).toContain("My Study");
 	});
 
@@ -202,7 +203,8 @@ describe.sequential("fetchCaseStudies", () => {
 		const { fetchCaseStudies } = await import("@/actions/case-studies");
 		const result = await fetchCaseStudies();
 
-		const titles = result.map((s) => s.title);
+		expect(result).not.toBeNull();
+		const titles = (result ?? []).map((s) => s.title);
 		expect(titles).not.toContain("Owner's Study");
 	});
 });
@@ -223,11 +225,12 @@ describe.sequential("fetchPublishedCaseStudies", () => {
 		const { fetchPublishedCaseStudies } = await import(
 			"@/actions/case-studies"
 		);
-		// Should not throw despite no session
+		// Should not return null despite no session (public endpoint)
 		const result = await fetchPublishedCaseStudies();
 
+		expect(result).not.toBeNull();
 		expect(Array.isArray(result)).toBe(true);
-		const titles = result.map((s) => s.title);
+		const titles = (result ?? []).map((s) => s.title);
 		expect(titles).toContain("Public Study");
 	});
 
@@ -243,7 +246,7 @@ describe.sequential("fetchPublishedCaseStudies", () => {
 		);
 		const result = await fetchPublishedCaseStudies();
 
-		const titles = result.map((s) => s.title);
+		const titles = (result ?? []).map((s) => s.title);
 		expect(titles).not.toContain("Draft Study");
 	});
 });

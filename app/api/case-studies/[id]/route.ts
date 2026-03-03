@@ -4,8 +4,9 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { forbidden, notFound, validationError } from "@/lib/errors";
+import { validationError } from "@/lib/errors";
 import {
 	deleteCaseStudy,
 	getCaseStudyById,
@@ -31,18 +32,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 			return apiError(validationError("Invalid case study ID"));
 		}
 
-		const caseStudy = await getCaseStudyById(caseStudyId);
+		const result = await getCaseStudyById(caseStudyId, userId);
 
-		if (!caseStudy) {
-			return apiError(notFound("Case study"));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		// Check ownership
-		if (caseStudy.ownerId !== userId) {
-			return apiError(forbidden());
-		}
-
-		return apiSuccess(transformCaseStudyForApi(caseStudy));
+		return apiSuccess(transformCaseStudyForApi(result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -96,7 +92,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 			data = await request.json();
 		}
 
-		const caseStudy = await updateCaseStudy(caseStudyId, userId, {
+		const result = await updateCaseStudy(caseStudyId, userId, {
 			title: data.title as string | undefined,
 			description: data.description as string | undefined,
 			authors: data.authors as string | undefined,
@@ -108,11 +104,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 			image: data.image as string | undefined,
 		});
 
-		if (!caseStudy) {
-			return apiError(notFound("Case study"));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return apiSuccess(transformCaseStudyForApi(caseStudy));
+		return apiSuccess(transformCaseStudyForApi(result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -132,10 +128,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 			return apiError(validationError("Invalid case study ID"));
 		}
 
-		const deleted = await deleteCaseStudy(caseStudyId, userId);
+		const result = await deleteCaseStudy(caseStudyId, userId);
 
-		if (!deleted) {
-			return apiError(notFound("Case study"));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({ success: true });

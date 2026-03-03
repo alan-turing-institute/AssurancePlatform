@@ -1,4 +1,9 @@
-import { apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { getPublishedCaseStudies } from "@/lib/services/case-study-service";
 import { transformCaseStudiesForApi } from "@/lib/services/case-study-transforms";
 
@@ -8,8 +13,11 @@ import { transformCaseStudiesForApi } from "@/lib/services/case-study-transforms
  */
 export async function GET() {
 	try {
-		const caseStudies = await getPublishedCaseStudies();
-		return apiSuccess(transformCaseStudiesForApi(caseStudies));
+		const result = await getPublishedCaseStudies();
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(transformCaseStudiesForApi(result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

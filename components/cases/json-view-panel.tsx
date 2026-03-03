@@ -16,13 +16,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import { fetchAndRefreshCase } from "@/lib/case";
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
-import { createSnapshot } from "@/lib/services/history-service";
 import {
 	computeTreeDiff,
 	type ElementChange,
 	type TreeDiffResult,
-} from "@/lib/services/json-diff-service";
+} from "@/lib/case/tree-diff";
+import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import { createSnapshot } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";

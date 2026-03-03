@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { acceptInvite } from "@/lib/services/case-invite-service";
 import {
-	acceptInvite,
 	listCasePermissions,
 	revokeTeamPermission,
 	revokeUserPermission,

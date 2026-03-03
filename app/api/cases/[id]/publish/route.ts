@@ -6,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { notFound } from "@/lib/errors";
 import {
 	getPublishStatus,
 	publishAssuranceCase,
@@ -29,17 +28,17 @@ export async function GET(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const status = await getPublishStatus(userId, caseId);
+		const result = await getPublishStatus(userId, caseId);
 
-		if (!status) {
-			return apiError(notFound("Case"));
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		return apiSuccess({
-			is_published: status.isPublished,
-			published_id: status.publishedId,
-			published_at: status.publishedAt?.toISOString() ?? null,
-			linked_case_study_count: status.linkedCaseStudyCount,
+			is_published: result.data.isPublished,
+			published_id: result.data.publishedId,
+			published_at: result.data.publishedAt?.toISOString() ?? null,
+			linked_case_study_count: result.data.linkedCaseStudyCount,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
