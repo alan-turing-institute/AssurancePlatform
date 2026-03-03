@@ -64,6 +64,15 @@ export const usernameSchema = z
 	.transform((v) => v.trim())
 	.describe("Valid username");
 
+/**
+ * Non-empty string identifier (for non-UUID IDs like tour names)
+ */
+export const stringIdSchema = z
+	.string()
+	.min(1, "ID is required")
+	.max(100, "ID must be less than 100 characters")
+	.describe("Non-empty string identifier");
+
 // ============================================
 // Number Primitives
 // ============================================

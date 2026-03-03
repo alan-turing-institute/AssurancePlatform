@@ -37,7 +37,7 @@ export type UserResponse = {
  */
 export async function registerUser(
 	input: RegisterUserInput
-): Promise<{ data?: UserResponse; error?: string; field?: string }> {
+): Promise<{ data: UserResponse } | { error: string; field?: string }> {
 	// Validate username
 	const usernameValidation = validateUsername(input.username);
 	if (!usernameValidation.valid) {

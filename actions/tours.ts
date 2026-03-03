@@ -1,9 +1,7 @@
 "use server";
 
-import { z } from "zod";
 import { validateSession } from "@/lib/auth/validate-session";
-
-const tourIdSchema = z.string().min(1, "Tour ID is required").max(100);
+import { stringIdSchema } from "@/lib/schemas/base";
 
 /**
  * Fetches the list of completed tour IDs for the current user.
@@ -36,7 +34,7 @@ export async function markTourCompleted(
 		return null;
 	}
 
-	const idResult = tourIdSchema.safeParse(tourId);
+	const idResult = stringIdSchema.safeParse(tourId);
 	if (!idResult.success) {
 		return null;
 	}

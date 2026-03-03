@@ -227,8 +227,8 @@ export const updateCaseStudy = async (
 			assurance_cases
 		);
 
-		if (!caseStudy) {
-			return { success: false, error: "Case study not found or access denied" };
+		if ("error" in caseStudy) {
+			return { success: false, error: caseStudy.error };
 		}
 
 		revalidatePath(`/dashboard/case-studies/${id}`);

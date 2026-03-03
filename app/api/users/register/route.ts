@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 			password: password ?? "",
 		});
 
-		if (result.error) {
+		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
