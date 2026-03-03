@@ -29,23 +29,31 @@ repos:
         files: '.*'
         exclude: '(\.secrets\.baseline|pnpm-lock\.yaml|\.beads/)$'
 
-  # Frontend formatting and linting with Biome/Ultracite (optional)
+  # Frontend linting and formatting with Biome/Ultracite (staged files only)
   - repo: local
     hooks:
-      - id: ultracite-format
-        name: ultracite format (safe fixes only)
-        entry: bash -c 'npx ultracite format || true'
+      - id: ultracite-lint
+        name: ultracite lint (staged files)
+        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite lint'
         language: system
         pass_filenames: false
         files: '\.(jsx?|tsx?|json)$'
         exclude: '(node_modules|\.next|public/documentation|logs)/'
 
-  # TypeScript type checking
+      - id: ultracite-format
+        name: ultracite format (staged files, safe fixes only)
+        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite format || true'
+        language: system
+        pass_filenames: false
+        files: '\.(jsx?|tsx?|json)$'
+        exclude: '(node_modules|\.next|public/documentation|logs)/'
+
+  # TypeScript type checking (skip if no TS files staged)
   - repo: local
     hooks:
       - id: tsc
         name: TypeScript Compiler
-        entry: bash -c 'npx tsc --noEmit --skipLibCheck'
+        entry: bash -c 'git diff --cached --name-only | grep -qE "\.(ts|tsx)$" && npx tsc --noEmit --skipLibCheck || true'
         language: system
         files: '\.(ts|tsx)$'
         exclude: '\.next/'

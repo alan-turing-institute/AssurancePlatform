@@ -1,6 +1,9 @@
+import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+const cpuCount = os.cpus().length;
 
 export default defineConfig({
 	plugins: [react()],
@@ -13,7 +16,7 @@ export default defineConfig({
 		poolOptions: {
 			forks: {
 				singleFork: false,
-				maxForks: 4,
+				maxForks: Math.max(cpuCount - 1, 4),
 			},
 		},
 		include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
@@ -36,7 +39,7 @@ export default defineConfig({
 			? ["default", ["junit", { outputFile: "./test-results/junit.xml" }]]
 			: ["default"],
 		coverage: {
-			enabled: true,
+			enabled: !!process.env.COVERAGE,
 			provider: "v8",
 			reporter: ["json", "html"],
 			reportsDirectory: "./coverage",
@@ -75,7 +78,7 @@ export default defineConfig({
 				lines: 20,
 			},
 		},
-		maxConcurrency: 5,
+		maxConcurrency: 10,
 		passWithNoTests: false,
 		allowOnly: process.env.CI !== "true",
 		dangerouslyIgnoreUnhandledErrors: false,

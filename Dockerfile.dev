@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM node:20-alpine
 
 # Install dependencies needed for compatibility and native modules (argon2)
@@ -6,14 +8,11 @@ RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Copy package files
-COPY package*.json yarn.lock* pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies using preferred package manager
-RUN \
-  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  else npm ci --legacy-peer-deps; \
-  fi
+# Install dependencies with pnpm store cache for faster rebuilds
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    corepack enable pnpm && pnpm i --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -29,4 +28,4 @@ RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholde
 EXPOSE 3000
 
 # Start development server
-CMD ["sh", "-c", "if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm dev; else npm run dev; fi"]
+CMD ["sh", "-c", "corepack enable pnpm && pnpm dev"]

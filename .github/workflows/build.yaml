@@ -82,16 +82,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Prisma Client
+        uses: actions/cache@v4
+        id: prisma-cache-validate
+        with:
+          path: node_modules/.prisma/client
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma') }}
+
       - name: Generate Prisma client
+        if: steps.prisma-cache-validate.outputs.cache-hit != 'true'
         run: npx prisma generate --schema=prisma/schema.prisma
         env:
           DATABASE_URL: postgresql://build:build@localhost:5432/build
 
-      - name: Run linter
-        run: pnpm exec ultracite check
-
-      - name: Run type check
-        run: npx tsc --noEmit
+      - name: Run linter and type check (parallel)
+        run: |
+          pnpm exec ultracite check &
+          LINT_PID=$!
+          npx tsc --noEmit &
+          TSC_PID=$!
+          LINT_EXIT=0; wait $LINT_PID || LINT_EXIT=$?
+          TSC_EXIT=0; wait $TSC_PID || TSC_EXIT=$?
+          if [ $LINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi
 
       - name: Security audit
         run: pnpm audit --audit-level=high
@@ -99,7 +111,6 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    needs: validate
     timeout-minutes: 20
 
     services:
@@ -140,7 +151,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Prisma Client
+        uses: actions/cache@v4
+        id: prisma-cache-test
+        with:
+          path: node_modules/.prisma/client
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma') }}
+
       - name: Generate Prisma client
+        if: steps.prisma-cache-test.outputs.cache-hit != 'true'
         run: npx prisma generate --schema=prisma/schema.prisma
 
       - name: Create tea_dev database
@@ -164,7 +183,18 @@ jobs:
 
       - name: Re-seed database for E2E
         run: |
-          npx prisma migrate reset --force --schema=prisma/schema.prisma
+          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "
+            TRUNCATE TABLE
+              case_study_images, case_study_published_cases, published_assurance_cases,
+              case_studies, release_images, release_comments, release_snapshots, releases,
+              comments, evidence_links, case_images, case_type_assignments, case_types,
+              case_invites, case_team_permissions, case_permissions, assurance_elements,
+              assurance_cases, pattern_permissions, pattern_team_permissions,
+              pattern_elements, argument_patterns, team_members, teams,
+              github_repositories, rate_limit_attempts, security_audit_logs,
+              password_reset_attempts, users
+            CASCADE;
+          "
           npx tsx prisma/seed/dev-seed.ts
 
       - name: Build application for E2E
@@ -173,8 +203,20 @@ jobs:
           cp -r public .next/standalone/public
           cp -r .next/static .next/standalone/.next/static
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
 
       - name: Run E2E tests
         run: pnpm exec playwright test
