@@ -27,7 +27,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@azure/communication-email": "^1.1.0",
     "@azure/identity": "^4.13.0",
-    "@azure/storage-blob": "^12.27.0",
+    "@azure/storage-blob": "^12.31.0",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lint": "^6.9.2",
     "@headlessui/react": "^2.2.0",
@@ -135,7 +135,6 @@
     "jsdom": "^26.1.0",
     "msw": "^2.10.4",
     "postcss": "^8.5.1",
-
     "prisma": "^7.0.0",
     "prisma-dbml-generator": "^0.12.0",
     "semantic-release": "^24.2.0",
