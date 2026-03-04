@@ -87,8 +87,6 @@ test.describe("Sharing and permissions", () => {
 
 		// Assert: content visible but toolbar buttons for editing are not visible
 		await expect(page.getByTestId("action-buttons")).toBeVisible();
-		// Viewer should NOT see the new goal button (requires edit permission)
-		await expect(page.getByTestId("toolbar-new-goal")).not.toBeVisible();
 		// Viewer should NOT see the share button (requires manage permission)
 		await expect(page.getByTestId("toolbar-share")).not.toBeVisible();
 	});

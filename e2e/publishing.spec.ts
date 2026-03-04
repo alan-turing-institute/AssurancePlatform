@@ -69,13 +69,8 @@ test.describe("Publishing", () => {
 		await page.getByRole("button", { name: "Submit" }).click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		// Add a goal (required for publishing)
+		// Goal is auto-created with the case — wait for it to appear
 		const editor = new CaseEditorPage(page);
-		await editor.newGoalButton.click();
-		// Fill the create node form (only has Description field, name is auto-generated)
-		await page.getByLabel("Description").fill("Test goal description");
-		await page.getByRole("button", { name: "Create Goal" }).click();
-		// Wait for the goal node to appear (auto-named "G1")
 		await expect(page.getByText("G1")).toBeVisible();
 
 		// Mark as ready

@@ -8,7 +8,6 @@ export class CaseEditorPage {
 	readonly shareButton: Locator;
 	readonly statusModalTitle: Locator;
 	readonly markReadyButton: Locator;
-	readonly newGoalButton: Locator;
 	readonly focusButton: Locator;
 	readonly exportButton: Locator;
 	readonly jsonViewButton: Locator;
@@ -26,7 +25,6 @@ export class CaseEditorPage {
 		this.markReadyButton = page.getByRole("button", {
 			name: "Mark as Ready to Publish",
 		});
-		this.newGoalButton = page.getByTestId("toolbar-new-goal");
 		this.focusButton = page.getByTestId("toolbar-focus");
 		this.exportButton = page.getByTestId("toolbar-export");
 		this.jsonViewButton = page.getByTestId("toolbar-json");
