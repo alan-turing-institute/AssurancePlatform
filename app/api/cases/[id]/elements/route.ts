@@ -11,11 +11,40 @@ import type { CreateElementInput } from "@/lib/services/element-service";
 import { createElement } from "@/lib/services/element-service";
 
 /**
+ * Resolves `parentId` from the request body.
+ *
+ * The UI sends legacy relationship fields (`goalId`, `strategyId`,
+ * `propertyClaimId`) instead of a unified `parentId`. This normalises
+ * them before the payload reaches the service layer.
+ */
+function resolveParentIdFromBody(
+	body: Record<string, unknown>
+): string | undefined {
+	if (body.parentId != null) {
+		return String(body.parentId);
+	}
+	if (body.goalId != null) {
+		return String(body.goalId);
+	}
+	if (body.strategyId != null) {
+		return String(body.strategyId);
+	}
+
+	const claimId = body.propertyClaimId;
+	if (claimId != null) {
+		return String(Array.isArray(claimId) ? claimId[0] : claimId);
+	}
+
+	return;
+}
+
+/**
  * Builds element creation input from validated body.
  */
 function buildCreateInput(
 	caseId: string,
-	body: Record<string, unknown>
+	body: Record<string, unknown>,
+	rawBody: Record<string, unknown>
 ): CreateElementInput {
 	return {
 		caseId,
@@ -24,7 +53,7 @@ function buildCreateInput(
 		description: body.description as string | undefined,
 		shortDescription: body.shortDescription as string | undefined,
 		longDescription: body.longDescription as string | undefined,
-		parentId: body.parentId as string | undefined,
+		parentId: resolveParentIdFromBody(rawBody),
 		url: (body.url || body.URL) as string | undefined,
 		urls: body.urls as string[] | undefined,
 		assumption: body.assumption as string | undefined,
@@ -55,9 +84,11 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 
-		const parsed = createElementSchema.safeParse(
-			await request.json().catch(() => null)
-		);
+		const rawBody = (await request.json().catch(() => null)) as Record<
+			string,
+			unknown
+		> | null;
+		const parsed = createElementSchema.safeParse(rawBody);
 		if (!parsed.success) {
 			return apiError(
 				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
@@ -66,7 +97,8 @@ export async function POST(
 
 		const input = buildCreateInput(
 			caseId,
-			parsed.data as unknown as Record<string, unknown>
+			parsed.data as unknown as Record<string, unknown>,
+			rawBody ?? {}
 		);
 		const result = await createElement(session.userId, input);
 
