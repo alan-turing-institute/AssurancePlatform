@@ -60,7 +60,7 @@ docker-compose -f docker-compose.local.yml up -d --build
 # Access at http://localhost:3000
 ```
 
-For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.azurewebsites.net/docs/technical-guide.
+For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.azurewebsites.net/docs/technical-guide).
 
 ### Further Resources 📚
 

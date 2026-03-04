@@ -40,15 +40,28 @@ cd AssurancePlatform
 
 ### 2. Configure Environment Variables
 
-Copy the example environment file and configure it:
+Copy the example environment file:
 
 ```shell
 cp .env.example .env
 ```
 
-The default values should work for Docker development, but you may want to customise:
-- `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
-- GitHub OAuth credentials (optional)
+Then generate a secret for NextAuth.js and add it to your `.env` file:
+
+```shell
+# Generate and set NEXTAUTH_SECRET (required)
+echo "NEXTAUTH_SECRET=$(openssl rand -base64 32)" >> .env
+```
+
+The default database credentials in `.env.example` match the Docker Compose configuration and should work out of the box. You may optionally configure:
+- GitHub OAuth credentials for social login
+- `SEED_USER_PASSWORD` for test user accounts (chris, alice, bob, charlie)
+
+<Callout type="info">
+**Test Users**
+
+To log in with the seeded test users, set `SEED_USER_PASSWORD` in your `.env` file. All test users share this password. See the [code style guide](/technical-guide/contributing/code-style) for the full list of test user roles.
+</Callout>
 
 ### 3. Deploy with Docker Compose
 
