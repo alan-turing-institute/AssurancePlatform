@@ -36,6 +36,7 @@ test.describe("Publishing", () => {
 		// Create a fresh case to avoid mutating seeded data
 		await page.goto("/dashboard");
 		await page.getByRole("button", { name: "Create new case" }).click();
+		await page.getByLabel("Name").waitFor({ state: "visible" });
 		await page.getByLabel("Name").fill("Publish Test Case");
 		await page.getByLabel("Description").fill("Case for testing publish flow");
 		await page.getByRole("button", { name: "Submit" }).click();
@@ -62,6 +63,7 @@ test.describe("Publishing", () => {
 		// Create fresh case
 		await page.goto("/dashboard");
 		await page.getByRole("button", { name: "Create new case" }).click();
+		await page.getByLabel("Name").waitFor({ state: "visible" });
 		await page.getByLabel("Name").fill("Full Publish Test");
 		await page.getByLabel("Description").fill("Testing full publish flow");
 		await page.getByRole("button", { name: "Submit" }).click();

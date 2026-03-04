@@ -18,7 +18,8 @@ test.describe("Case management", () => {
 
 		await dashboard.createCaseButton.click();
 
-		// Fill the create case modal
+		// Wait for the modal to open, then fill
+		await page.getByLabel("Name").waitFor({ state: "visible" });
 		await page.getByLabel("Name").fill("E2E Test Case");
 		await page.getByLabel("Description").fill("Created by Playwright E2E test");
 		await page.getByRole("button", { name: "Submit" }).click();
@@ -56,6 +57,7 @@ test.describe("Case management", () => {
 
 		// Create a throwaway case first
 		await dashboard.createCaseButton.click();
+		await page.getByLabel("Name").waitFor({ state: "visible" });
 		await page.getByLabel("Name").fill("Delete Me Case");
 		await page.getByLabel("Description").fill("To be deleted");
 		await page.getByRole("button", { name: "Submit" }).click();
