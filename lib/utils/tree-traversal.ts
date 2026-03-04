@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 export type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 /**
- * Recursively gets all descendant element IDs for a given parent.
- * By default excludes deleted elements. Pass `{ includeDeleted: true }` to include them.
+ * Gets all descendant element IDs for a given parent using breadth-first batching.
+ * O(depth) queries instead of O(n). By default excludes deleted elements.
  */
 export async function getDescendantIds(
 	parentId: string,
@@ -13,43 +13,46 @@ export async function getDescendantIds(
 	options?: { includeDeleted?: boolean }
 ): Promise<string[]> {
 	const db = tx ?? prisma;
-	const children = await db.assuranceElement.findMany({
-		where: {
-			parentId,
-			...(options?.includeDeleted ? {} : { deletedAt: null }),
-		},
-		select: { id: true },
-	});
+	const allIds: string[] = [];
+	let frontier = [parentId];
 
-	const descendantIds: string[] = [];
-	for (const child of children) {
-		descendantIds.push(child.id);
-		const grandchildren = await getDescendantIds(child.id, tx, options);
-		descendantIds.push(...grandchildren);
+	while (frontier.length > 0) {
+		const children = await db.assuranceElement.findMany({
+			where: {
+				parentId: { in: frontier },
+				...(options?.includeDeleted ? {} : { deletedAt: null }),
+			},
+			select: { id: true },
+		});
+		const childIds = children.map((c) => c.id);
+		allIds.push(...childIds);
+		frontier = childIds;
 	}
 
-	return descendantIds;
+	return allIds;
 }
 
 /**
- * Recursively gets all soft-deleted descendant element IDs for restore operation
+ * Gets all soft-deleted descendant element IDs for restore operation using breadth-first batching.
+ * O(depth) queries instead of O(n).
  */
 export async function getDeletedDescendantIds(
 	parentId: string,
 	tx?: TxClient
 ): Promise<string[]> {
 	const db = tx ?? prisma;
-	const children = await db.assuranceElement.findMany({
-		where: { parentId, deletedAt: { not: null } },
-		select: { id: true },
-	});
+	const allIds: string[] = [];
+	let frontier = [parentId];
 
-	const descendantIds: string[] = [];
-	for (const child of children) {
-		descendantIds.push(child.id);
-		const grandchildren = await getDeletedDescendantIds(child.id, tx);
-		descendantIds.push(...grandchildren);
+	while (frontier.length > 0) {
+		const children = await db.assuranceElement.findMany({
+			where: { parentId: { in: frontier }, deletedAt: { not: null } },
+			select: { id: true },
+		});
+		const childIds = children.map((c) => c.id);
+		allIds.push(...childIds);
+		frontier = childIds;
 	}
 
-	return descendantIds;
+	return allIds;
 }

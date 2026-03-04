@@ -177,28 +177,22 @@ async function createElements(
 	idMap: Map<string, string>,
 	userId: string
 ): Promise<number> {
-	// Sort elements topologically
+	// Sort elements topologically so parents are created before children
 	const sortedElements = topologicalSort(elements);
 
-	for (const el of sortedElements) {
-		const newId = idMap.get(el.id);
-		if (!newId) {
-			continue;
-		}
+	const data = sortedElements
+		.map((el) => {
+			const newId = idMap.get(el.id);
+			if (!newId) {
+				return null;
+			}
 
-		// Resolve parentId
-		let parentId: string | null = null;
-		if (el.parentId) {
-			parentId = idMap.get(el.parentId) ?? null;
-		}
-
-		await prisma.assuranceElement.create({
-			data: {
+			return {
 				id: newId,
 				caseId,
 				elementType: el.elementType,
 				role: el.role,
-				parentId,
+				parentId: el.parentId ? (idMap.get(el.parentId) ?? null) : null,
 				name: el.name,
 				description: el.description,
 				assumption: el.assumption,
@@ -210,11 +204,13 @@ async function createElements(
 				fromPattern: el.fromPattern ?? false,
 				modifiedFromPattern: el.modifiedFromPattern ?? false,
 				createdById: userId,
-			},
-		});
-	}
+			};
+		})
+		.filter((d) => d !== null);
 
-	return sortedElements.length;
+	await prisma.assuranceElement.createMany({ data });
+
+	return data.length;
 }
 
 /**
@@ -225,24 +221,20 @@ async function createEvidenceLinks(
 	links: CaseExportV2["evidenceLinks"],
 	idMap: Map<string, string>
 ): Promise<number> {
-	let created = 0;
+	const data = links
+		.map((link) => {
+			const evidenceId = idMap.get(link.evidenceId);
+			const claimId = idMap.get(link.claimId);
+			if (evidenceId && claimId) {
+				return { evidenceId, claimId };
+			}
+			return null;
+		})
+		.filter((d) => d !== null);
 
-	for (const link of links) {
-		const evidenceId = idMap.get(link.evidenceId);
-		const claimId = idMap.get(link.claimId);
+	await prisma.evidenceLink.createMany({ data });
 
-		if (evidenceId && claimId) {
-			await prisma.evidenceLink.create({
-				data: {
-					evidenceId,
-					claimId,
-				},
-			});
-			created += 1;
-		}
-	}
-
-	return created;
+	return data.length;
 }
 
 /**
@@ -253,7 +245,12 @@ async function createComments(
 	idMap: Map<string, string>,
 	userId: string
 ): Promise<number> {
-	let created = 0;
+	const data: {
+		elementId: string;
+		authorId: string;
+		content: string;
+		createdAt: Date;
+	}[] = [];
 
 	for (const el of elements) {
 		if (!el.comments || el.comments.length === 0) {
@@ -277,19 +274,20 @@ async function createComments(
 				createdAt = new Date();
 			}
 
-			await prisma.comment.create({
-				data: {
-					elementId,
-					authorId: userId, // Import user becomes comment author
-					content: comment.content,
-					createdAt,
-				},
+			data.push({
+				elementId,
+				authorId: userId,
+				content: comment.content,
+				createdAt,
 			});
-			created += 1;
 		}
 	}
 
-	return created;
+	if (data.length > 0) {
+		await prisma.comment.createMany({ data });
+	}
+
+	return data.length;
 }
 
 /**
