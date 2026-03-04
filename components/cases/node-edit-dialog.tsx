@@ -196,6 +196,7 @@ function ContextSection({
 						variant="outline"
 					>
 						<PlusIcon className="size-4" />
+						Add
 					</Button>
 				</div>
 			)}
@@ -382,6 +383,11 @@ export default function NodeEditDialog({
 	const handleClose = () => handleOpenChange(false);
 
 	const handleSubmit = async (values: FormValues) => {
+		// Auto-add any unsaved draft context text
+		if (newContextValue.trim()) {
+			values.context = [...(values.context || []), newContextValue.trim()];
+			setNewContextValue("");
+		}
 		setLoading(true);
 		const beforeData = { ...node.data } as Record<string, unknown>;
 		const updateItem = buildUpdatePayload(values, nodeType);
