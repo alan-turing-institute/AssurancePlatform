@@ -41,11 +41,8 @@ vi.mock("next/navigation", () => ({
  * Mock to prevent test blocking on real SSE setup — not to avoid real DB testing.
  */
 vi.mock("@/lib/services/sse-connection-manager", () => ({
-	getSSEConnectionManager: vi.fn().mockReturnValue({
-		broadcast: vi.fn(),
-		subscribe: vi.fn(),
-		unsubscribe: vi.fn(),
-	}),
+	emitSSEEvent: vi.fn(),
+	sseConnectionManager: { broadcast: vi.fn() },
 }));
 
 // Default to unauthenticated before every test

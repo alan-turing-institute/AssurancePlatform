@@ -17,11 +17,8 @@ vi.mock("@/lib/auth/validate-session", () => ({
  * Mock to prevent test blocking on real SSE setup — not to avoid real DB testing.
  */
 vi.mock("@/lib/services/sse-connection-manager", () => ({
-	getSSEConnectionManager: vi.fn().mockReturnValue({
-		broadcast: vi.fn(),
-		subscribe: vi.fn(),
-		unsubscribe: vi.fn(),
-	}),
+	emitSSEEvent: vi.fn(),
+	sseConnectionManager: { broadcast: vi.fn() },
 }));
 
 const FAILED_TO_LOAD_PATTERN = /Failed to load case data/;

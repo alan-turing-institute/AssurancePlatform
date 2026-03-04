@@ -25,17 +25,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	type ReactFlowNode,
-	updateAssuranceCase,
-	updateAssuranceCaseNode,
-} from "@/lib/case";
+import { updateAssuranceCaseNode } from "@/lib/case";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
-import useStore from "@/store/store";
 
 type FormValues = NodeEditFormInput;
 
@@ -296,7 +291,6 @@ export default function NodeEditDialog({
 	onOpenChange,
 	readOnly = false,
 }: NodeEditDialogProps) {
-	const { assuranceCase, setAssuranceCase } = useStore();
 	const [loading, setLoading] = useState(false);
 	const [newContextValue, setNewContextValue] = useState("");
 	const componentId = useId();
@@ -399,26 +393,14 @@ export default function NodeEditDialog({
 			updateItem
 		);
 
-		if (updated && assuranceCase) {
+		if (updated) {
 			recordUpdate(node.data.id as number, node.type || "unknown", beforeData, {
 				...beforeData,
 				...updateItem,
 			});
-
-			const updatedCase = await updateAssuranceCase(
-				node.type || "unknown",
-				assuranceCase,
-				updateItem,
-				node.data.id,
-				{ ...node, type: node.type || "" } as ReactFlowNode
-			);
-
-			if (updatedCase) {
-				setAssuranceCase(updatedCase);
-				setLoading(false);
-				handleClose();
-				return;
-			}
+			setLoading(false);
+			handleClose();
+			return;
 		}
 		setLoading(false);
 	};

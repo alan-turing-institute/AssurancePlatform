@@ -92,17 +92,13 @@ export async function PUT(
 				"@/lib/services/sse-connection-manager"
 			);
 			const username = session.username || session.email || "Someone";
-			emitSSEEvent(
-				"element:updated",
-				result.data.assuranceCaseId,
-				{
-					element: result.data,
-					elementId,
-					elementName: result.data?.name,
-					username,
-				},
-				session.userId
-			);
+			emitSSEEvent("element:updated", result.data.assuranceCaseId, {
+				element: result.data,
+				elementId,
+				elementName: result.data?.name,
+				username,
+				userId: session.userId,
+			});
 		}
 
 		return apiSuccess(result.data);
@@ -142,16 +138,12 @@ export async function DELETE(
 				"@/lib/services/sse-connection-manager"
 			);
 			const username = session.username || session.email || "Someone";
-			emitSSEEvent(
-				"element:deleted",
-				element.caseId,
-				{
-					elementId,
-					elementName: element.name || element.description,
-					username,
-				},
-				session.userId
-			);
+			emitSSEEvent("element:deleted", element.caseId, {
+				elementId,
+				elementName: element.name || element.description,
+				username,
+				userId: session.userId,
+			});
 		}
 
 		return apiSuccess({ success: true });

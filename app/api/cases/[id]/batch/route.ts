@@ -77,16 +77,12 @@ export async function POST(
 
 		// Emit SSE event for real-time updates
 		const username = session.username ?? session.email ?? "Someone";
-		emitSSEEvent(
-			"case:updated",
-			caseId,
-			{
-				summary: result.data.summary,
-				username,
-				source: "json-editor",
-			},
-			session.userId
-		);
+		emitSSEEvent("case:updated", caseId, {
+			summary: result.data.summary,
+			username,
+			source: "json-editor",
+			userId: session.userId,
+		});
 
 		return apiSuccess({
 			success: true,

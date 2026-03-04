@@ -38,16 +38,12 @@ export async function POST(
 				"@/lib/services/sse-connection-manager"
 			);
 			const username = session.username || session.email || "Someone";
-			emitSSEEvent(
-				"element:restored",
-				element.caseId,
-				{
-					elementId,
-					elementName: element.name || element.description,
-					username,
-				},
-				session.userId
-			);
+			emitSSEEvent("element:restored", element.caseId, {
+				elementId,
+				elementName: element.name || element.description,
+				username,
+				userId: session.userId,
+			});
 		}
 
 		return apiSuccess({ success: true });

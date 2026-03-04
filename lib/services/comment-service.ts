@@ -219,7 +219,7 @@ export async function createCaseComment(
 	const response = toCommentResponse(comment);
 
 	// Emit SSE event for real-time updates
-	emitSSEEvent("comment:created", caseId, { comment: response }, userId);
+	emitSSEEvent("comment:created", caseId, { comment: response, userId });
 
 	return { data: response };
 }
@@ -330,17 +330,13 @@ export async function createElementComment(
 
 	// Emit SSE event for real-time updates
 	const username = session.username || session.email || "Someone";
-	emitSSEEvent(
-		"comment:created",
-		element.caseId,
-		{
-			comment: response,
-			elementId,
-			elementName: element.name || element.description,
-			username,
-		},
-		session.userId
-	);
+	emitSSEEvent("comment:created", element.caseId, {
+		comment: response,
+		elementId,
+		elementName: element.name || element.description,
+		username,
+		userId: session.userId,
+	});
 
 	return { data: response };
 }
@@ -372,17 +368,13 @@ export async function deleteComment(
 
 	// Emit SSE event for real-time updates
 	const username = session.username || session.email || "Someone";
-	emitSSEEvent(
-		"comment:deleted",
-		caseId,
-		{
-			commentId,
-			elementId: comment.elementId,
-			elementName,
-			username,
-		},
-		session.userId
-	);
+	emitSSEEvent("comment:deleted", caseId, {
+		commentId,
+		elementId: comment.elementId,
+		elementName,
+		username,
+		userId: session.userId,
+	});
 
 	return { data: null };
 }
@@ -433,17 +425,13 @@ export async function updateComment(
 
 	// Emit SSE event for real-time updates
 	const username = session.username || session.email || "Someone";
-	emitSSEEvent(
-		"comment:updated",
-		caseId,
-		{
-			comment: response,
-			elementId: existingComment.elementId,
-			elementName,
-			username,
-		},
-		session.userId
-	);
+	emitSSEEvent("comment:updated", caseId, {
+		comment: response,
+		elementId: existingComment.elementId,
+		elementName,
+		username,
+		userId: session.userId,
+	});
 
 	return { data: response };
 }
@@ -507,17 +495,13 @@ export async function resolveComment(
 
 	// Emit SSE event for real-time updates
 	const username = session.username || session.email || "Someone";
-	emitSSEEvent(
-		"comment:updated",
-		caseId,
-		{
-			comment: response,
-			elementId: existingComment.elementId,
-			elementName,
-			username,
-		},
-		session.userId
-	);
+	emitSSEEvent("comment:updated", caseId, {
+		comment: response,
+		elementId: existingComment.elementId,
+		elementName,
+		username,
+		userId: session.userId,
+	});
 
 	return { data: response };
 }

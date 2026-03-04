@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
 import CheckTourClient from "@/components/tour/check-tour-client";
 import { ErrorCard } from "@/components/ui/error-card";
@@ -33,6 +33,10 @@ const REFETCH_EVENTS = [
 	"element:attached",
 	"element:detached",
 	"element:moved",
+	"comment:created",
+	"comment:updated",
+	"comment:deleted",
+	"permission:changed",
 ];
 
 /** Event types that also require orphan refetch */
@@ -107,8 +111,11 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const router = useRouter();
 	const { caseId: paramsCaseId } = params;
 
-	// Session is used by NextAuth for authentication state
-	useSession();
+	const { data: session } = useSession();
+
+	// Debounce refs for SSE-triggered refetches
+	const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const orphanRefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	// Get the effective case ID
 	const effectiveCaseId =
@@ -199,19 +206,53 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		});
 	}, [effectiveCaseId, setAssuranceCase]);
 
+	// Debounced versions to prevent rapid-fire API calls from multiple SSE events
+	const debouncedRefetchCase = useCallback(() => {
+		if (refetchTimeoutRef.current) {
+			clearTimeout(refetchTimeoutRef.current);
+		}
+		refetchTimeoutRef.current = setTimeout(() => refetchCase(), 300);
+	}, [refetchCase]);
+
+	const debouncedOrphanRefetch = useCallback(() => {
+		if (orphanRefetchTimeoutRef.current) {
+			clearTimeout(orphanRefetchTimeoutRef.current);
+		}
+		orphanRefetchTimeoutRef.current = setTimeout(
+			() => loadOrphanedElementsData(),
+			300
+		);
+	}, [loadOrphanedElementsData]);
+
+	// Clean up debounce timeouts on unmount
+	useEffect(
+		() => () => {
+			if (refetchTimeoutRef.current) {
+				clearTimeout(refetchTimeoutRef.current);
+			}
+			if (orphanRefetchTimeoutRef.current) {
+				clearTimeout(orphanRefetchTimeoutRef.current);
+			}
+		},
+		[]
+	);
+
 	// Subscribe to real-time case events via SSE
 	useCaseEvents({
 		caseId: effectiveCaseId || "",
 		enabled: Boolean(effectiveCaseId) && !loading,
 		onEvent: (event) => {
-			// Show toast for all supported events
-			showEventToast(event);
+			// Suppress toasts for self-events (acting user)
+			const isSelfEvent = event.userId && event.userId === session?.user?.id;
+			if (!isSelfEvent) {
+				showEventToast(event);
+			}
 
 			// Refetch case data for element/case events
 			if (REFETCH_EVENTS.includes(event.type)) {
-				refetchCase();
+				debouncedRefetchCase();
 				if (ORPHAN_REFETCH_EVENTS.includes(event.type)) {
-					loadOrphanedElementsData();
+					debouncedOrphanRefetch();
 				}
 			}
 		},

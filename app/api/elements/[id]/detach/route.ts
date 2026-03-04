@@ -2,7 +2,7 @@ import {
 	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
-	requireAuth,
+	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { detachElement } from "@/lib/services/element-service";
@@ -16,7 +16,7 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
+		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
 		// Get caseId before detaching for SSE event
@@ -26,7 +26,7 @@ export async function POST(
 			select: { caseId: true },
 		});
 
-		const result = await detachElement(userId, elementId);
+		const result = await detachElement(session.userId, elementId);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
@@ -37,7 +37,12 @@ export async function POST(
 			const { emitSSEEvent } = await import(
 				"@/lib/services/sse-connection-manager"
 			);
-			emitSSEEvent("element:detached", element.caseId, { elementId }, userId);
+			const username = session.username ?? session.email ?? "Someone";
+			emitSSEEvent("element:detached", element.caseId, {
+				elementId,
+				username,
+				userId: session.userId,
+			});
 		}
 
 		return apiSuccess({ success: true });

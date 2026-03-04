@@ -41,7 +41,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 	onClose,
 	setUnresolvedChanges,
 }) => {
-	const { assuranceCase, setAssuranceCase } = useStore();
+	const { assuranceCase } = useStore();
 	const [loading, setLoading] = useState(false);
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -81,11 +81,6 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 				return;
 			}
 
-			setAssuranceCase({
-				...assuranceCase,
-				name: values.name ?? assuranceCase.name,
-				description: values.description,
-			});
 			onClose();
 		} catch (_error) {
 			toast({

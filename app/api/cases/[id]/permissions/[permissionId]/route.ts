@@ -2,7 +2,7 @@ import {
 	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
-	requireAuth,
+	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
@@ -25,7 +25,7 @@ export async function PATCH(
 	{ params }: { params: Promise<{ id: string; permissionId: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
+		const session = await requireAuthSession();
 		const { id: caseId, permissionId } = await params;
 
 		const parsed = updatePermissionSchema.safeParse(
@@ -43,16 +43,26 @@ export async function PATCH(
 		const isTeamPermission = parsed.data.type === "team";
 
 		const result = isTeamPermission
-			? await updateTeamPermission(userId, caseId, permissionId, {
+			? await updateTeamPermission(session.userId, caseId, permissionId, {
 					permission: parsed.data.permission,
 				})
-			: await updateUserPermission(userId, caseId, permissionId, {
+			: await updateUserPermission(session.userId, caseId, permissionId, {
 					permission: parsed.data.permission,
 				});
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("permission:changed", caseId, {
+			username,
+			userId: session.userId,
+		});
 
 		return apiSuccess(result.data);
 	} catch (error) {
@@ -71,7 +81,7 @@ export async function DELETE(
 	{ params }: { params: Promise<{ id: string; permissionId: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
+		const session = await requireAuthSession();
 		const { id: caseId, permissionId } = await params;
 
 		// Check query param for type
@@ -79,12 +89,22 @@ export async function DELETE(
 		const isTeamPermission = url.searchParams.get("type") === "team";
 
 		const result = isTeamPermission
-			? await revokeTeamPermission(userId, caseId, permissionId)
-			: await revokeUserPermission(userId, caseId, permissionId);
+			? await revokeTeamPermission(session.userId, caseId, permissionId)
+			: await revokeUserPermission(session.userId, caseId, permissionId);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("permission:changed", caseId, {
+			username,
+			userId: session.userId,
+		});
 
 		return apiSuccess({ success: true });
 	} catch (error) {

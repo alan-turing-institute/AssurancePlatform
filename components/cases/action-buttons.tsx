@@ -88,9 +88,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 			const { updateCaseIdentifiers } = await import("@/actions/cases");
 			const result = await updateCaseIdentifiers(assuranceCase.id);
 
-			if (result.success) {
-				router.refresh();
-			} else {
+			if (!result.success) {
 				notifyError(result.error || "Failed to reset identifiers");
 			}
 		} catch (_error) {

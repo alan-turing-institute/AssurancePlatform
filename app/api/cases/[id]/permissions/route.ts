@@ -3,6 +3,7 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
@@ -52,7 +53,7 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
+		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 		const body = await request.json().catch(() => null);
 
@@ -66,7 +67,7 @@ export async function POST(
 				);
 			}
 
-			const result = await shareWithTeam(userId, caseId, {
+			const result = await shareWithTeam(session.userId, caseId, {
 				teamId: parsed.data.teamId,
 				permission: parsed.data.permission,
 			});
@@ -74,6 +75,16 @@ export async function POST(
 			if ("error" in result) {
 				return apiError(serviceErrorToAppError(result.error));
 			}
+
+			// Emit SSE event for real-time updates
+			const { emitSSEEvent } = await import(
+				"@/lib/services/sse-connection-manager"
+			);
+			const username = session.username ?? session.email ?? "Someone";
+			emitSSEEvent("permission:changed", caseId, {
+				username,
+				userId: session.userId,
+			});
 
 			return apiSuccess(result.data, 201);
 		}
@@ -88,7 +99,7 @@ export async function POST(
 			);
 		}
 
-		const result = await shareByEmail(userId, caseId, {
+		const result = await shareByEmail(session.userId, caseId, {
 			email: parsed.data.email,
 			permission: parsed.data.permission,
 		});
@@ -96,6 +107,16 @@ export async function POST(
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("permission:changed", caseId, {
+			username,
+			userId: session.userId,
+		});
 
 		// Return appropriate response based on result
 		if (result.data?.already_shared) {

@@ -3,6 +3,7 @@ import {
 	apiErrorFromUnknown,
 	apiSuccess,
 	requireAuth,
+	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
@@ -62,17 +63,28 @@ export async function PUT(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
+		const session = await requireAuthSession();
 		const { id } = await params;
 		const raw = await request.json();
 		const parsed = updateAssuranceCaseSchema.safeParse(raw);
 		if (!parsed.success) {
 			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
 		}
-		const result = await updateCaseWithPrisma(id, userId, parsed.data);
+		const result = await updateCaseWithPrisma(id, session.userId, parsed.data);
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("case:updated", id, {
+			username,
+			userId: session.userId,
+		});
+
 		return apiSuccess(result.data);
 	} catch (error) {
 		return apiErrorFromUnknown(error);

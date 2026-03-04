@@ -2,7 +2,7 @@ import {
 	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
-	requireAuth,
+	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
@@ -18,7 +18,7 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
+		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
 		const body = await request.json();
@@ -30,7 +30,11 @@ export async function POST(
 			);
 		}
 
-		const result = await moveElement(userId, elementId, parsed.data.parentId);
+		const result = await moveElement(
+			session.userId,
+			elementId,
+			parsed.data.parentId
+		);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
@@ -47,12 +51,13 @@ export async function POST(
 			const { emitSSEEvent } = await import(
 				"@/lib/services/sse-connection-manager"
 			);
-			emitSSEEvent(
-				"element:moved",
-				element.caseId,
-				{ elementId, parentId: parsed.data.parentId },
-				userId
-			);
+			const username = session.username ?? session.email ?? "Someone";
+			emitSSEEvent("element:moved", element.caseId, {
+				elementId,
+				parentId: parsed.data.parentId,
+				username,
+				userId: session.userId,
+			});
 		}
 
 		return apiSuccess({ success: true });

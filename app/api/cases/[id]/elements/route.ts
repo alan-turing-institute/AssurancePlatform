@@ -111,16 +111,12 @@ export async function POST(
 			"@/lib/services/sse-connection-manager"
 		);
 		const username = session.username || session.email || "Someone";
-		emitSSEEvent(
-			"element:created",
-			caseId,
-			{
-				element: result.data,
-				elementName: result.data?.name,
-				username,
-			},
-			session.userId
-		);
+		emitSSEEvent("element:created", caseId, {
+			element: result.data,
+			elementName: result.data?.name,
+			username,
+			userId: session.userId,
+		});
 
 		return apiSuccess(result.data, 201);
 	} catch (error) {
