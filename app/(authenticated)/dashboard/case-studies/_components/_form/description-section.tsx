@@ -14,6 +14,7 @@ import TiptapEditor from "@/components/ui/tiptap-editor";
 import {
 	Tooltip,
 	TooltipContent,
+	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -48,16 +49,18 @@ export function DescriptionSection({
 					<FormItem>
 						<div className="mb-2 flex items-center gap-1">
 							<FormLabel>Description</FormLabel>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<span>
-										<InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
-									</span>
-								</TooltipTrigger>
-								<TooltipContent side="right">
-									Provide a clear and concise summary of the case study.
-								</TooltipContent>
-							</Tooltip>
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span>
+											<InfoIcon className="h-4 w-4 cursor-pointer text-muted-foreground" />
+										</span>
+									</TooltipTrigger>
+									<TooltipContent side="right">
+										Provide a clear and concise summary of the case study.
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
 						</div>
 						<FormControl>
 							<ErrorBoundary
