@@ -500,6 +500,20 @@ export async function updateElement(
 		// Handle parent change (for move operations)
 		const newParentId = resolveParentId(input);
 		if (newParentId !== undefined && newParentId !== null) {
+			// Validate new parent exists, is not deleted, and belongs to the same case
+			const newParent = await prisma.assuranceElement.findUnique({
+				where: { id: newParentId },
+				select: { caseId: true, deletedAt: true },
+			});
+
+			if (
+				!newParent ||
+				newParent.deletedAt ||
+				newParent.caseId !== existing.caseId
+			) {
+				return { error: "Element not found" };
+			}
+
 			// Validate parent change doesn't create circular reference
 			const validationError = await validateParentChange(
 				elementId,
@@ -653,6 +667,20 @@ export async function attachElement(
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Validate parent exists, is not deleted, and belongs to the same case
+		const parentElement = await prisma.assuranceElement.findUnique({
+			where: { id: parentId },
+			select: { caseId: true, deletedAt: true },
+		});
+
+		if (
+			!parentElement ||
+			parentElement.deletedAt ||
+			parentElement.caseId !== existing.caseId
+		) {
 			return { error: "Element not found" };
 		}
 

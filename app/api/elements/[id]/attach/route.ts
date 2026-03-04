@@ -6,12 +6,13 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { attachElementSchema } from "@/lib/schemas/element";
 import { attachElement } from "@/lib/services/element-service";
 
 /**
- * Extracts parent ID from request body.
+ * Resolves parent ID from request body, handling legacy field names.
  */
-function extractParentId(body: Record<string, unknown>): string | undefined {
+function resolveParentId(body: Record<string, unknown>): string | undefined {
 	const parentId =
 		body.parentId ||
 		body.parent_id ||
@@ -34,12 +35,14 @@ export async function POST(
 		const { id: elementId } = await params;
 
 		const body = await request.json();
-		const parentId = extractParentId(body);
+		const normalised = { parentId: resolveParentId(body) };
+		const parsed = attachElementSchema.safeParse(normalised);
 
-		if (!parentId) {
-			return apiError(validationError("Parent ID is required"));
+		if (!parsed.success) {
+			return apiError(validationError("Invalid parent ID format"));
 		}
 
+		const { parentId } = parsed.data;
 		const result = await attachElement(userId, elementId, parentId);
 
 		if ("error" in result) {
