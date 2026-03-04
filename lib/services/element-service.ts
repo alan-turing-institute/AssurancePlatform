@@ -703,6 +703,126 @@ export async function attachElement(
 }
 
 /**
+ * Moves an element to a new parent within the same case.
+ *
+ * Validates:
+ *  - Element exists and is not deleted
+ *  - User has EDIT permission on the case
+ *  - New parent exists, belongs to the same case, and is not deleted
+ *  - Child/parent types are compatible (see element-compatibility)
+ *  - The move does not create a circular reference
+ *
+ * Evidence elements use EvidenceLink rather than parentId.
+ */
+export async function moveElement(
+	userId: string,
+	elementId: string,
+	newParentId: string
+): ServiceResult {
+	try {
+		// Fetch element — validate exists and is not deleted
+		const element = await prisma.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { caseId: true, elementType: true, deletedAt: true },
+		});
+
+		if (!element) {
+			return { error: "Element not found" };
+		}
+
+		if (element.deletedAt) {
+			return { error: "Element not found" };
+		}
+
+		// Validate user has EDIT permission on the case (before any type-specific checks)
+		const hasAccess = await validateCaseAccess(userId, element.caseId, "EDIT");
+		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Goals cannot be moved — they are the root of the hierarchy
+		if (element.elementType === "GOAL") {
+			return { error: "Element not found" };
+		}
+
+		// Fetch new parent — validate exists, same case, not deleted
+		const newParent = await prisma.assuranceElement.findUnique({
+			where: { id: newParentId },
+			select: { caseId: true, elementType: true, deletedAt: true },
+		});
+
+		if (
+			!newParent ||
+			newParent.deletedAt ||
+			newParent.caseId !== element.caseId
+		) {
+			return { error: "Element not found" };
+		}
+
+		// Check type compatibility
+		const { canBeChildOf } = await import("@/lib/element-compatibility");
+		const elementTypeLower = element.elementType.toLowerCase();
+		const parentTypeLower = newParent.elementType.toLowerCase();
+
+		if (!canBeChildOf(elementTypeLower, parentTypeLower)) {
+			return {
+				error: `${element.elementType.toLowerCase()} cannot be a child of ${newParent.elementType.toLowerCase()}`,
+			};
+		}
+
+		// Validate the move does not create a circular reference
+		const circularError = await validateParentChange(elementId, newParentId);
+		if (circularError) {
+			return { error: circularError };
+		}
+
+		// Perform the move atomically
+		await prisma.$transaction(async (tx) => {
+			if (element.elementType === "EVIDENCE") {
+				// Evidence uses EvidenceLink rather than parentId
+				// Remove existing evidence link(s) for this evidence element
+				await tx.evidenceLink.deleteMany({
+					where: { evidenceId: elementId },
+				});
+
+				// Create new evidence link to the new parent claim
+				await tx.evidenceLink.create({
+					data: {
+						evidenceId: elementId,
+						claimId: newParentId,
+					},
+				});
+			} else {
+				// Non-evidence: update parentId directly
+				const updateData: Record<string, unknown> = { parentId: newParentId };
+
+				// Recalculate level for property claims
+				if (element.elementType === "PROPERTY_CLAIM") {
+					const parent = await tx.assuranceElement.findFirst({
+						where: { id: newParentId, deletedAt: null },
+						select: { level: true, elementType: true },
+					});
+					updateData.level =
+						parent?.elementType === "PROPERTY_CLAIM"
+							? (parent.level || 1) + 1
+							: 1;
+				}
+
+				await tx.assuranceElement.update({
+					where: { id: elementId },
+					data: updateData,
+				});
+			}
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("[moveElement]", { elementId, newParentId, userId, error });
+		return { error: "Failed to move element" };
+	}
+}
+
+/**
  * Gets all elements in sandbox for a case
  */
 export async function getSandboxElements(

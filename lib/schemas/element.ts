@@ -68,6 +68,16 @@ export const updateElementSchema = z.object({
 export type UpdateElementSchemaInput = z.input<typeof updateElementSchema>;
 export type UpdateElementSchemaOutput = z.output<typeof updateElementSchema>;
 
+/**
+ * Move element input schema
+ */
+export const moveElementSchema = z.object({
+	parentId: z.string().uuid("Invalid parent ID format"),
+});
+
+export type MoveElementSchemaInput = z.input<typeof moveElementSchema>;
+export type MoveElementSchemaOutput = z.output<typeof moveElementSchema>;
+
 // ============================================
 // Element Form Schemas (used by UI components)
 // ============================================

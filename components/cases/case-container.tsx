@@ -32,6 +32,7 @@ const REFETCH_EVENTS = [
 	"element:restored",
 	"element:attached",
 	"element:detached",
+	"element:moved",
 ];
 
 /** Event types that also require orphan refetch */
@@ -46,6 +47,7 @@ const EVENT_MESSAGE_TEMPLATES: Record<string, [string, string]> = {
 	"element:restored": ['restored "{element}"', "restored an element"],
 	"element:attached": ['attached "{element}"', "attached an element"],
 	"element:detached": ['detached "{element}"', "detached an element"],
+	"element:moved": ['moved "{element}"', "moved an element"],
 	"comment:created": ['added a comment to "{element}"', "added a comment"],
 	"comment:updated": ['updated a comment on "{element}"', "updated a comment"],
 	"comment:deleted": [

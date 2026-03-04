@@ -346,3 +346,35 @@ export const updateElementComment = async (
 		return { error };
 	}
 };
+
+/**
+ * Moves an element to a new parent in the assurance case.
+ */
+export const moveCaseElement = async (
+	elementId: number | string,
+	parentId: string
+): Promise<{ moved: boolean } | { error: string | unknown }> => {
+	try {
+		const url = `/api/elements/${elementId}/move`;
+
+		const requestOptions: RequestInit = {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ parentId }),
+		};
+		const response = await fetch(url, requestOptions);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error: errorData.error || `Something went wrong ${response.status}`,
+			};
+		}
+
+		return { moved: true };
+	} catch (error) {
+		return { error };
+	}
+};

@@ -16,6 +16,7 @@ export type SSEEventType =
 	| "element:restored"
 	| "element:attached"
 	| "element:detached"
+	| "element:moved"
 	| "permission:changed";
 
 export type SSEEvent = {

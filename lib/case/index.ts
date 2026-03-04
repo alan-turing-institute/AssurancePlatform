@@ -11,6 +11,7 @@ export {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
 	getAssuranceCaseNode,
+	moveCaseElement,
 	updateAssuranceCaseNode,
 	updateElementComment,
 } from "./api";
@@ -35,9 +36,6 @@ export { fetchAndRefreshCase } from "./fetch-and-refresh-case";
 export { compareIdentifiers, parseIdentifier } from "./identifier-utils";
 // Layout helper
 export { getLayoutedElements } from "./layout-helper";
-// Node move operations
-export type { MoveElement } from "./node-move-operations";
-export { moveEvidence, movePropertyClaim } from "./node-move-operations";
 // Node operations
 export type { OrphanElementData } from "./node-operations";
 export { deleteNode, detachNode } from "./node-operations";

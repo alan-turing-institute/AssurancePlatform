@@ -159,6 +159,7 @@ export function useCaseEvents({
 			"element:restored",
 			"element:attached",
 			"element:detached",
+			"element:moved",
 			"permission:changed",
 		];
 
