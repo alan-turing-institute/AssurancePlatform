@@ -7,14 +7,12 @@ import {
 	Info,
 	Loader2,
 	Notebook,
-	Plus,
 	RotateCw,
 	Share2,
 	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import NodeCreate from "@/components/cases/node-create";
 import { Button } from "@/components/ui/button";
 import { useExportModal, useResourcesModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
@@ -28,19 +26,13 @@ import { HistoryControls } from "./history-controls";
 import JsonViewPanel from "./json-view-panel";
 
 type ActionButtonProps = {
-	showCreateGoal: boolean;
 	actions: {
 		onLayout: (direction: "LR" | "TB" | "RL" | "BT") => Promise<void>;
 	};
 	notifyError: (message: string) => void;
 };
 
-const ActionButtons = ({
-	showCreateGoal,
-	actions,
-	notifyError,
-}: ActionButtonProps) => {
-	const [open, setOpen] = useState(false);
+const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const [alertOpen, setAlertOpen] = useState(false);
 	const [notesOpen, setNotesOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -113,28 +105,10 @@ const ActionButtons = ({
 		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
 			<div
 				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg"
-				data-show-create-goal={showCreateGoal}
 				data-testid="action-buttons"
 				data-tour="toolbar"
 			>
 				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
-					{showCreateGoal &&
-						assuranceCase &&
-						assuranceCase.permissions !== "view" &&
-						assuranceCase.permissions !== "review" && (
-							<ActionTooltip label="New Goal">
-								<Button
-									className="rounded-full p-3"
-									data-testid="toolbar-new-goal"
-									onClick={() => setOpen(true)}
-									size="icon"
-									type="button"
-								>
-									<Plus className="h-5 w-5" />
-									<span className="sr-only">Add Goal</span>
-								</Button>
-							</ActionTooltip>
-						)}
 					{assuranceCase &&
 						assuranceCase.permissions !== "view" &&
 						assuranceCase.permissions !== "review" && <HistoryControls />}
@@ -265,7 +239,6 @@ const ActionButtons = ({
 						</ActionTooltip>
 					)}
 				</div>
-				<NodeCreate isOpen={open} setOpen={setOpen} />
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
 				<ErrorBoundary
 					fallback={

@@ -127,7 +127,7 @@ export default function NodeOptionsMenu({
 		assuranceCase?.permissions === "comment"
 	);
 
-	if (readOnly) {
+	if (readOnly || nodeType === "goal") {
 		return null;
 	}
 
@@ -197,22 +197,18 @@ export default function NodeOptionsMenu({
 					</DropdownMenuTrigger>
 				</ActionTooltip>
 				<DropdownMenuContent align="start" side="top">
-					{nodeType !== "goal" && (
-						<>
-							<DropdownMenuItem
-								className="gap-2"
-								disabled={loading}
-								onSelect={(e) => {
-									e.stopPropagation();
-									setDetachDialogOpen(true);
-								}}
-							>
-								<Unplug className="h-4 w-4" />
-								Detach
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-						</>
-					)}
+					<DropdownMenuItem
+						className="gap-2"
+						disabled={loading}
+						onSelect={(e) => {
+							e.stopPropagation();
+							setDetachDialogOpen(true);
+						}}
+					>
+						<Unplug className="h-4 w-4" />
+						Detach
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						className="gap-2 text-destructive focus:text-destructive"
 						disabled={loading}

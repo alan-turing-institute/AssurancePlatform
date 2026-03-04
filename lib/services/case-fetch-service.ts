@@ -418,13 +418,28 @@ export async function createCase(
 	data: { name: string; description?: string; colourProfile?: string }
 ): ServiceResult<{ id: string }> {
 	try {
-		const newCase = await prisma.assuranceCase.create({
-			data: {
-				name: data.name,
-				description: data.description ?? "",
-				colourProfile: data.colourProfile,
-				createdById: userId,
-			},
+		const newCase = await prisma.$transaction(async (tx) => {
+			const createdCase = await tx.assuranceCase.create({
+				data: {
+					name: data.name,
+					description: data.description ?? "",
+					colourProfile: data.colourProfile,
+					createdById: userId,
+				},
+			});
+
+			await tx.assuranceElement.create({
+				data: {
+					caseId: createdCase.id,
+					elementType: "GOAL",
+					role: "TOP_LEVEL",
+					name: "G1",
+					description: "Describe your top-level assurance goal",
+					createdById: userId,
+				},
+			});
+
+			return createdCase;
 		});
 
 		return { data: { id: newCase.id } };
