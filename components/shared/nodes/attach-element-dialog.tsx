@@ -11,7 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { attachCaseElement } from "@/lib/case";
+import { attachCaseElement, fetchAndRefreshCase } from "@/lib/case";
 import { getCompatibleChildTypes } from "@/lib/element-compatibility";
 import { toastError, toastSuccess } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -43,7 +43,12 @@ export function AttachElementDialog({
 	open,
 	onOpenChange,
 }: AttachElementDialogProps) {
-	const { orphanedElements } = useStore();
+	const {
+		assuranceCase,
+		setAssuranceCase,
+		orphanedElements,
+		setOrphanedElements,
+	} = useStore();
 	const [loading, setLoading] = useState(false);
 
 	const compatibleTypes = getCompatibleChildTypes(nodeType);
@@ -51,6 +56,27 @@ export function AttachElementDialog({
 		const normalised = normaliseOrphanType(orphan.type);
 		return compatibleTypes.includes(normalised);
 	});
+
+	/** Refetch case tree and orphan list so the UI updates immediately */
+	const refetchCaseData = async () => {
+		if (!assuranceCase?.id) {
+			return;
+		}
+		const freshCase = await fetchAndRefreshCase(assuranceCase.id);
+		if (freshCase) {
+			setAssuranceCase(freshCase);
+		}
+
+		try {
+			const res = await fetch(`/api/cases/${assuranceCase.id}/sandbox`);
+			if (res.ok) {
+				const freshOrphans = await res.json();
+				setOrphanedElements(freshOrphans || []);
+			}
+		} catch {
+			// SSE will eventually sync
+		}
+	};
 
 	const handleAttach = async (orphan: (typeof orphanedElements)[0]) => {
 		setLoading(true);
@@ -85,6 +111,7 @@ export function AttachElementDialog({
 		} else {
 			toastSuccess(`Attached ${orphan.name || "element"} successfully`);
 			onOpenChange(false);
+			await refetchCaseData();
 		}
 
 		setLoading(false);

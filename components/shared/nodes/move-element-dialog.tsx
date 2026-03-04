@@ -12,9 +12,10 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { moveCaseElement } from "@/lib/case";
+import { fetchAndRefreshCase, moveCaseElement } from "@/lib/case";
 import { getCompatibleParentTypes } from "@/lib/element-compatibility";
 import { toastError, toastSuccess } from "@/lib/toast";
+import useStore from "@/store/store";
 import type { DiagramNodeType } from "./node-config";
 import { getNodeIcon } from "./node-config";
 
@@ -66,6 +67,7 @@ export function MoveElementDialog({
 	// Cast to Node[] for untyped data property access — matches codebase convention
 	const allNodes = useNodes() as Node[];
 	const allEdges = useEdges();
+	const { assuranceCase, setAssuranceCase } = useStore();
 	const [loading, setLoading] = useState(false);
 
 	// Get compatible parent types and map to ReactFlow node types
@@ -117,6 +119,14 @@ export function MoveElementDialog({
 				`Moved ${(node.data?.name as string) || "element"} to ${(target.data.name as string) || "new parent"}`
 			);
 			onOpenChange(false);
+
+			// Refetch case so the tree updates immediately (SSE excludes acting user)
+			if (assuranceCase?.id) {
+				const freshCase = await fetchAndRefreshCase(assuranceCase.id);
+				if (freshCase) {
+					setAssuranceCase(freshCase);
+				}
+			}
 		}
 
 		setLoading(false);
