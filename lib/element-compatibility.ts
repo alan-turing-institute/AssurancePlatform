@@ -93,6 +93,30 @@ export function getCompatibleParentTypes(childType: string): string[] {
  * @param parentType - Any string representation of the parent element type
  * @returns Boolean indicating compatibility
  */
+/**
+ * Normalises an orphan element type string to canonical underscore form.
+ * Handles undefined input and whitespace-separated type names.
+ *
+ * Useful for matching orphan elements (whose `type` field may use various formats)
+ * against canonical types like "property_claim", "strategy", "evidence".
+ */
+export function normaliseOrphanType(type: string | undefined): string {
+	const lower = type?.toLowerCase().replace(/\s+/g, "_") ?? "";
+	return lower === "propertyclaim" ? "property_claim" : lower;
+}
+
+/**
+ * Maps React Flow node types to canonical element types.
+ * React Flow uses short names like "property" while canonical types use "property_claim".
+ */
+export const REACTFLOW_TO_CANONICAL: Record<string, string> = {
+	property: "property_claim",
+	strategy: "strategy",
+	evidence: "evidence",
+	context: "context",
+	goal: "goal",
+};
+
 export function canBeChildOf(childType: string, parentType: string): boolean {
 	const canonicalChild = normalise(childType) as CanonicalType;
 	const canonicalParent = normalise(parentType) as CanonicalType;

@@ -11,6 +11,8 @@ import {
 	deleteAssuranceCaseNode,
 	fetchAndRefreshCase,
 } from "@/lib/case";
+import { normaliseOrphanType } from "@/lib/element-compatibility";
+import { recordAttach, recordDelete } from "@/lib/services/history-service";
 import useStore from "@/store/store";
 import type { Evidence, PropertyClaim, Strategy } from "@/types";
 
@@ -162,6 +164,14 @@ export function useOrphanActions({
 			return;
 		}
 
+		const orphanType = normaliseOrphanType(orphan.type);
+		recordAttach(orphan.id, orphanType, node.data.id as string | number, {
+			id: orphan.id,
+			name: orphan.name,
+			type: orphan.type || "",
+			description: "description" in orphan ? orphan.description : "",
+		});
+
 		await refetchCaseData();
 		setLoading(false);
 		handleClose();
@@ -177,6 +187,15 @@ export function useOrphanActions({
 					orphan.id,
 					""
 				);
+				if (deleted) {
+					const orphanType = normaliseOrphanType(orphan.type);
+					recordDelete(orphan.id, orphanType, {
+						id: orphan.id,
+						name: orphan.name,
+						type: orphan.type || "",
+						description: "description" in orphan ? orphan.description : "",
+					});
+				}
 				return { deleted, orphanId: orphan.id };
 			});
 
@@ -211,6 +230,14 @@ export function useOrphanActions({
 			);
 
 			if (deleted) {
+				const orphanType = normaliseOrphanType(orphan.type);
+				recordDelete(orphan.id, orphanType, {
+					id: orphan.id,
+					name: orphan.name,
+					type: orphan.type || "",
+					description: "description" in orphan ? orphan.description : "",
+				});
+
 				const updatedOrphanedElements = orphanedElements.filter(
 					(item) => item.id !== orphan.id
 				);

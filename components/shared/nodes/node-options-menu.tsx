@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { Node } from "reactflow";
+import { useEdges, useNodes } from "reactflow";
 import ActionTooltip from "@/components/ui/action-tooltip";
 import {
 	AlertDialog,
@@ -33,8 +34,12 @@ import {
 	type ReactFlowNode,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
-import { getCompatibleChildTypes } from "@/lib/element-compatibility";
-import { recordDelete } from "@/lib/services/history-service";
+import {
+	getCompatibleChildTypes,
+	normaliseOrphanType,
+	REACTFLOW_TO_CANONICAL,
+} from "@/lib/element-compatibility";
+import { recordDelete, recordDetach } from "@/lib/services/history-service";
 import useStore from "@/store/store";
 import type { AssuranceCase } from "@/types";
 import { AttachElementDialog } from "./attach-element-dialog";
@@ -48,23 +53,28 @@ type NodeOptionsMenuProps = {
 	nodeType: DiagramNodeType;
 };
 
-/** Map of React Flow node types to canonical element types */
-const TYPE_MAP: Record<string, string> = {
-	property: "property_claim",
-	strategy: "strategy",
-	evidence: "evidence",
-	context: "context",
-	goal: "goal",
-};
-
 /** Create orphan element from node data */
 function createOrphanElement(node: Node) {
 	return {
 		id: node.data.id as number,
-		type: TYPE_MAP[node.type ?? ""] ?? (node.data.type as string),
+		type: REACTFLOW_TO_CANONICAL[node.type ?? ""] ?? (node.data.type as string),
 		name: node.data.name as string,
 		description: (node.data.description as string) ?? "",
 	};
+}
+
+/** Derive parent data ID from edges and nodes */
+function getParentDataId(
+	nodeId: string,
+	edges: { source: string; target: string }[],
+	allNodes: Node[]
+): string {
+	const parentEdge = edges.find((e) => e.target === nodeId);
+	if (!parentEdge) {
+		return "";
+	}
+	const parentNode = allNodes.find((n) => n.id === parentEdge.source);
+	return parentNode ? String(parentNode.data.id as string | number) : "";
 }
 
 /** Process detach result and update state */
@@ -108,12 +118,6 @@ function processDeleteResult(
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
 	}
-}
-
-/** Normalise orphan type to canonical underscore form */
-function normaliseOrphanType(type: string | undefined): string {
-	const lower = type?.toLowerCase().replace(/\s+/g, "_") ?? "";
-	return lower === "propertyclaim" ? "property_claim" : lower;
 }
 
 type DestructiveActionsProps = {
@@ -267,6 +271,8 @@ export default function NodeOptionsMenu({
 		orphanedElements,
 		setOrphanedElements,
 	} = useStore();
+	const allNodes = useNodes() as Node[];
+	const allEdges = useEdges();
 	const [loading, setLoading] = useState(false);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [detachDialogOpen, setDetachDialogOpen] = useState(false);
@@ -293,6 +299,12 @@ export default function NodeOptionsMenu({
 			return;
 		}
 		setLoading(true);
+
+		// Capture parent ID before detach (needed for undo)
+		const parentDataId = getParentDataId(node.id, allEdges, allNodes);
+		const elementType =
+			REACTFLOW_TO_CANONICAL[node.type ?? ""] ?? (node.data.type as string);
+
 		const result = await detachCaseElement(
 			node as ReactFlowNode,
 			node.type ?? "",
@@ -300,6 +312,12 @@ export default function NodeOptionsMenu({
 			""
 		);
 		if (!("error" in result) && result.detached) {
+			recordDetach(
+				node.data.id as number,
+				elementType,
+				parentDataId,
+				node.data
+			);
 			processDetachResult(
 				node,
 				assuranceCase,
