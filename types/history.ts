@@ -1,12 +1,19 @@
 /**
  * History system types for undo/redo functionality.
  *
- * The history system uses a command pattern where each operation (create, update, delete)
- * is recorded with before/after snapshots, allowing operations to be reversed.
+ * The history system uses a command pattern where each operation
+ * (create, update, delete, move, detach, attach) is recorded with
+ * before/after snapshots, allowing operations to be reversed.
  */
 
 /** Operation type for history commands */
-export type OperationType = "create" | "update" | "delete";
+export type OperationType =
+	| "create"
+	| "update"
+	| "delete"
+	| "move"
+	| "detach"
+	| "attach";
 
 /**
  * Snapshot of an element's state at a point in time.
@@ -35,13 +42,16 @@ export type ElementSnapshot = {
  * - For creates: before is null, after contains the created element
  * - For updates: both before and after contain element snapshots
  * - For deletes: before contains the deleted element, after is null
+ * - For moves: both before and after contain parentId
+ * - For detaches: before contains parentId, after is null
+ * - For attaches: before is null, after contains parentId
  */
 export type HistoryCommand = {
 	type: OperationType;
 	elementId: string;
 	elementType: string;
-	before: ElementSnapshot | null; // null for create
-	after: ElementSnapshot | null; // null for delete
+	before: ElementSnapshot | null;
+	after: ElementSnapshot | null;
 };
 
 /**

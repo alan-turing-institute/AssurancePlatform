@@ -1,7 +1,11 @@
 "use client";
 
 import useHistoryStore from "@/store/history-store";
-import type { ElementSnapshot, HistoryCommand } from "@/types/history";
+import type {
+	ElementSnapshot,
+	HistoryCommand,
+	OperationType,
+} from "@/types/history";
 
 /**
  * Applies an undo operation for a single command.
@@ -43,8 +47,37 @@ export async function applyUndo(command: HistoryCommand): Promise<void> {
 			});
 			break;
 
+		case "move":
+			// Undo move = move back to original parent
+			if (command.before?.parentId) {
+				await fetch(`/api/elements/${command.elementId}/move`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ parentId: command.before.parentId }),
+				});
+			}
+			break;
+
+		case "detach":
+			// Undo detach = reattach to original parent
+			if (command.before?.parentId) {
+				await fetch(`/api/elements/${command.elementId}/attach`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ parentId: command.before.parentId }),
+				});
+			}
+			break;
+
+		case "attach":
+			// Undo attach = detach from parent
+			await fetch(
+				`/api/elements/${command.elementId}/detach?element_type=${command.elementType}`,
+				{ method: "POST" }
+			);
+			break;
+
 		default:
-			// Exhaustive check - should never reach here
 			break;
 	}
 }
@@ -89,8 +122,37 @@ export async function applyRedo(command: HistoryCommand): Promise<void> {
 			});
 			break;
 
+		case "move":
+			// Redo move = move to new parent again
+			if (command.after?.parentId) {
+				await fetch(`/api/elements/${command.elementId}/move`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ parentId: command.after.parentId }),
+				});
+			}
+			break;
+
+		case "detach":
+			// Redo detach = detach again
+			await fetch(
+				`/api/elements/${command.elementId}/detach?element_type=${command.elementType}`,
+				{ method: "POST" }
+			);
+			break;
+
+		case "attach":
+			// Redo attach = reattach to parent
+			if (command.after?.parentId) {
+				await fetch(`/api/elements/${command.elementId}/attach`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ parentId: command.after.parentId }),
+				});
+			}
+			break;
+
 		default:
-			// Exhaustive check - should never reach here
 			break;
 	}
 }
@@ -99,7 +161,7 @@ export async function applyRedo(command: HistoryCommand): Promise<void> {
  * Generates a human-readable description for a history entry.
  */
 export function generateOperationDescription(
-	type: "create" | "update" | "delete",
+	type: OperationType,
 	elementType: string,
 	elementName?: string
 ): string {
@@ -113,6 +175,12 @@ export function generateOperationDescription(
 			return `Updated ${typeLabel}${name}`;
 		case "delete":
 			return `Deleted ${typeLabel}${name}`;
+		case "move":
+			return `Moved ${typeLabel}${name}`;
+		case "detach":
+			return `Detached ${typeLabel}${name}`;
+		case "attach":
+			return `Attached ${typeLabel}${name}`;
 		default:
 			return `Modified ${typeLabel}${name}`;
 	}
@@ -260,6 +328,135 @@ export function recordDelete(
 				elementType,
 				before: snapshot,
 				after: null,
+			},
+		],
+	});
+}
+
+/**
+ * Records a move operation to the history store.
+ * Call this after successfully moving an element to a new parent.
+ */
+export function recordMove(
+	elementId: string | number,
+	elementType: string,
+	oldParentId: string | number,
+	newParentId: string | number,
+	elementName?: string
+): void {
+	const store = useHistoryStore.getState();
+
+	if (store.isApplying) {
+		return;
+	}
+
+	const description = generateOperationDescription(
+		"move",
+		elementType,
+		elementName
+	);
+
+	store.recordOperation({
+		id: crypto.randomUUID(),
+		timestamp: Date.now(),
+		description,
+		commands: [
+			{
+				type: "move",
+				elementId: String(elementId),
+				elementType,
+				before: {
+					id: String(elementId),
+					elementType,
+					name: elementName ?? "",
+					description: "",
+					parentId: String(oldParentId),
+				},
+				after: {
+					id: String(elementId),
+					elementType,
+					name: elementName ?? "",
+					description: "",
+					parentId: String(newParentId),
+				},
+			},
+		],
+	});
+}
+
+/**
+ * Records a detach operation to the history store.
+ * Call this after successfully detaching an element from its parent.
+ */
+export function recordDetach(
+	elementId: string | number,
+	elementType: string,
+	parentId: string | number,
+	elementData: Record<string, unknown>
+): void {
+	const store = useHistoryStore.getState();
+
+	if (store.isApplying) {
+		return;
+	}
+
+	const snapshot = createSnapshot({ ...elementData, id: elementId });
+	const description = generateOperationDescription(
+		"detach",
+		elementType,
+		snapshot.name
+	);
+
+	store.recordOperation({
+		id: crypto.randomUUID(),
+		timestamp: Date.now(),
+		description,
+		commands: [
+			{
+				type: "detach",
+				elementId: String(elementId),
+				elementType,
+				before: { ...snapshot, parentId: String(parentId) },
+				after: null,
+			},
+		],
+	});
+}
+
+/**
+ * Records an attach operation to the history store.
+ * Call this after successfully attaching an orphan element to a parent.
+ */
+export function recordAttach(
+	elementId: string | number,
+	elementType: string,
+	parentId: string | number,
+	elementData: Record<string, unknown>
+): void {
+	const store = useHistoryStore.getState();
+
+	if (store.isApplying) {
+		return;
+	}
+
+	const snapshot = createSnapshot({ ...elementData, id: elementId });
+	const description = generateOperationDescription(
+		"attach",
+		elementType,
+		snapshot.name
+	);
+
+	store.recordOperation({
+		id: crypto.randomUUID(),
+		timestamp: Date.now(),
+		description,
+		commands: [
+			{
+				type: "attach",
+				elementId: String(elementId),
+				elementType,
+				before: null,
+				after: { ...snapshot, parentId: String(parentId) },
 			},
 		],
 	});

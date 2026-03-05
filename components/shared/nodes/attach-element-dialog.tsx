@@ -12,7 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { attachCaseElement } from "@/lib/case";
-import { getCompatibleChildTypes } from "@/lib/element-compatibility";
+import {
+	getCompatibleChildTypes,
+	normaliseOrphanType,
+} from "@/lib/element-compatibility";
+import { recordAttach } from "@/lib/services/history-service";
 import { toastError, toastSuccess } from "@/lib/toast";
 import useStore from "@/store/store";
 import type { DiagramNodeType } from "./node-config";
@@ -30,12 +34,6 @@ const TYPE_ICONS: Record<string, typeof Database> = {
 	strategy: Route,
 	property_claim: FolderOpenDot,
 };
-
-/** Normalise orphan type string to canonical underscore form */
-function normaliseOrphanType(type: string | undefined): string {
-	const lower = type?.toLowerCase().replace(/\s+/g, "_") ?? "";
-	return lower === "propertyclaim" ? "property_claim" : lower;
-}
 
 export function AttachElementDialog({
 	node,
@@ -83,6 +81,14 @@ export function AttachElementDialog({
 		if ("error" in result) {
 			toastError("Failed to attach element");
 		} else {
+			const orphanType = normaliseOrphanType(orphan.type);
+			recordAttach(orphan.id, orphanType, node.data.id as string | number, {
+				id: orphan.id,
+				name: orphan.name,
+				type: orphan.type || "",
+				description:
+					typeof orphan.description === "string" ? orphan.description : "",
+			});
 			toastSuccess(`Attached ${orphan.name || "element"} successfully`);
 			onOpenChange(false);
 		}

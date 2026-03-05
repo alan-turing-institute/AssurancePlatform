@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { moveCaseElement } from "@/lib/case";
-import { getCompatibleParentTypes } from "@/lib/element-compatibility";
+import {
+	getCompatibleParentTypes,
+	REACTFLOW_TO_CANONICAL,
+} from "@/lib/element-compatibility";
+import { recordMove } from "@/lib/services/history-service";
 import { toastError, toastSuccess } from "@/lib/toast";
 import type { DiagramNodeType } from "./node-config";
 import { getNodeIcon } from "./node-config";
@@ -106,13 +110,31 @@ export function MoveElementDialog({
 		setLoading(true);
 
 		const elementId = node.data.id as string | number;
-		const parentId = String(target.data.id as string | number);
+		const newParentId = String(target.data.id as string | number);
 
-		const result = await moveCaseElement(elementId, parentId);
+		const result = await moveCaseElement(elementId, newParentId);
 
 		if ("error" in result) {
 			toastError("Failed to move element");
 		} else {
+			// Derive old parent's data ID from the edge-based currentParentId (ReactFlow node ID)
+			const currentParentNode = currentParentId
+				? allNodes.find((n) => n.id === currentParentId)
+				: undefined;
+			const oldParentDataId = currentParentNode
+				? String(currentParentNode.data.id as string | number)
+				: "";
+			const elementType =
+				REACTFLOW_TO_CANONICAL[node.type ?? ""] ?? (node.data.type as string);
+
+			recordMove(
+				elementId,
+				elementType,
+				oldParentDataId,
+				newParentId,
+				(node.data?.name as string) || undefined
+			);
+
 			toastSuccess(
 				`Moved ${(node.data?.name as string) || "element"} to ${(target.data.name as string) || "new parent"}`
 			);

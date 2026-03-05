@@ -18,6 +18,7 @@ import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
+import { recordCreate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import type {
@@ -97,6 +98,7 @@ export function useNewLinkForm({
 
 		if (result.data && assuranceCase) {
 			result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
+			recordCreate(result.data.id, "context", result.data);
 		}
 
 		const newContext = [
@@ -159,6 +161,7 @@ export function useNewLinkForm({
 
 		if (result.data && assuranceCase) {
 			result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
+			recordCreate(result.data.id, "strategy", result.data);
 		}
 
 		const newStrategy = [
@@ -366,6 +369,11 @@ export function useNewLinkForm({
 				assuranceCase,
 				node.data.id
 			);
+			recordCreate(
+				result.data.id as string | number,
+				"property_claim",
+				result.data as Record<string, unknown>
+			);
 		}
 
 		processClaimResult(result, node.type ?? "");
@@ -483,6 +491,12 @@ export function useNewLinkForm({
 				node.data.id
 			);
 		}
+
+		recordCreate(
+			result.data.id as string | number,
+			"evidence",
+			result.data as Record<string, unknown>
+		);
 
 		const evidenceData = result.data as unknown as Evidence;
 		const parentClaimId = evidenceData?.propertyClaimId?.[0] || 0;
