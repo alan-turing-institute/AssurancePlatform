@@ -103,6 +103,11 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 	const handleToggle2 = (e: React.MouseEvent) => {
 		e.stopPropagation();
 
+		const hasChildren = edges.some((edge) => edge.source === node.id);
+		if (!hasChildren) {
+			return;
+		}
+
 		setHidden(!hidden);
 
 		const currentNode = nodes.find((n) => n.id === node.id);
@@ -131,6 +136,11 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 			}, 500);
 		}
 	};
+
+	const hasChildren = edges.some((edge) => edge.source === node.id);
+	if (!hasChildren) {
+		return null;
+	}
 
 	return (
 		<ActionTooltip label="Show/Hide children">
