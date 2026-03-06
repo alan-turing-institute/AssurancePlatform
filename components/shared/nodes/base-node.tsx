@@ -18,6 +18,12 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
@@ -165,6 +171,7 @@ export default function BaseNode({
 	);
 
 	const descriptionText = description || "No description available";
+	const isTruncated = descriptionText.length > 180;
 
 	const handleExpandToggle = (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -223,9 +230,22 @@ export default function BaseNode({
 						onAnimationComplete={handleAnimationComplete}
 						transition={{ duration: 0.2 }}
 					>
-						<p className={buildPreviewTextClasses()}>
-							{truncateText(descriptionText)}
-						</p>
+						{isTruncated ? (
+							<TooltipProvider>
+								<Tooltip delayDuration={400}>
+									<TooltipTrigger asChild>
+										<p className={buildPreviewTextClasses()}>
+											{truncateText(descriptionText)}
+										</p>
+									</TooltipTrigger>
+									<TooltipContent className="max-w-xs">
+										<p>{descriptionText}</p>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						) : (
+							<p className={buildPreviewTextClasses()}>{descriptionText}</p>
+						)}
 					</m.div>
 				)}
 
