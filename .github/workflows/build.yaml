@@ -238,10 +238,9 @@ jobs:
           path: test-results/
           retention-days: 14
 
-  build:
+  docker-build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    needs: [validate, test]
     permissions:
       contents: read
       packages: write
@@ -249,19 +248,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # Stage A: pnpm caching for faster dependency resolution
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js with cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      # Note: Documentation is now built as part of Next.js (Nextra integration)
-      # No separate tea-docs build step needed
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -313,10 +299,59 @@ jobs:
             NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
             NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_MAIN }}
             DATABASE_URL=postgresql://build:build@localhost:5432/build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:cache
+          cache-to: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:cache,mode=max
           platforms: linux/amd64
 
+      - name: Build and push Docker image (Staging branch)
+        if: github.ref == 'refs/heads/staging'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
+            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID_STAGING }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET_STAGING }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
+            DATABASE_URL=postgresql://build:build@localhost:5432/build
+          cache-from: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:cache
+          cache-to: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:cache,mode=max
+          platforms: linux/amd64
+
+      - name: Build and push Docker image (PR/other branches)
+        if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
+            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID_STAGING }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET_STAGING }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
+            DATABASE_URL=postgresql://build:build@localhost:5432/build
+          cache-from: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:cache
+          cache-to: type=registry,ref=ghcr.io/${{ env.IMAGE_NAME }}:cache,mode=max
+          platforms: linux/amd64
+
+  deploy:
+    name: Deploy to Azure
+    runs-on: ubuntu-latest
+    needs: [validate, test, docker-build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+
+    steps:
       - name: Deploy to Azure (Production)
         if: github.ref == 'refs/heads/main'
         id: deploy-prod
@@ -379,27 +414,6 @@ jobs:
             echo "::error::Application health check did not pass after deployment"
             exit 1
           fi
-
-      - name: Build and push Docker image (Staging branch)
-        if: github.ref == 'refs/heads/staging'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
-            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID_STAGING }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET_STAGING }}
-            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
-            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
-            DATABASE_URL=postgresql://build:build@localhost:5432/build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
 
       - name: Deploy to Azure (Staging)
         if: github.ref == 'refs/heads/staging'
@@ -464,30 +478,9 @@ jobs:
             exit 1
           fi
 
-      - name: Build and push Docker image (PR/other branches)
-        if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            GITHUB_APP_CLIENT_ID=${{ secrets.GH_APP_CLIENT_ID_STAGING }}
-            GITHUB_APP_CLIENT_SECRET=${{ secrets.GH_APP_CLIENT_SECRET_STAGING }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID_STAGING }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET_STAGING }}
-            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET_STAGING }}
-            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL_STAGING }}
-            DATABASE_URL=postgresql://build:build@localhost:5432/build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
-
       # GitHub Deployment Summary
       - name: Create Deployment Summary - Success
-        if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+        if: success()
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             ENV="Production"
@@ -497,18 +490,18 @@ jobs:
             APP_URL="${{ env.STAGING_APP_URL }}"
           fi
 
-          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Environment** | ${ENV} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Health Check** | ✅ passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Health Check** | Passed |" >> $GITHUB_STEP_SUMMARY
           echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Application** | [${APP_URL}](${APP_URL}) |" >> $GITHUB_STEP_SUMMARY
 
       - name: Create Deployment Summary - Failure
-        if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+        if: failure()
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             ENV="Production"
@@ -516,7 +509,7 @@ jobs:
             ENV="Staging"
           fi
 
-          echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Failed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
