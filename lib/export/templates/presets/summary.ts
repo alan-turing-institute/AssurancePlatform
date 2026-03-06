@@ -10,7 +10,12 @@ import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import type { BrandingConfig } from "../../schemas/branding-config";
 import { DEFAULT_SECTIONS_SUMMARY } from "../../schemas/section-config";
 import type { TemplateConfig } from "../../schemas/template-config";
-import type { ContentBlock, DiagramImage, RenderedSection } from "../../types";
+import type {
+	ContentBlock,
+	DiagramImage,
+	LabelledDiagramImage,
+	RenderedSection,
+} from "../../types";
 import { ELEMENT_TYPE_LABELS } from "../../types";
 import { BaseTemplate } from "../base-template";
 import {
@@ -41,7 +46,8 @@ export class SummaryTemplate extends BaseTemplate {
 
 	protected renderSections(
 		caseData: CaseExportNested,
-		diagramImage?: DiagramImage
+		diagramImage?: DiagramImage,
+		branchDiagrams?: LabelledDiagramImage[]
 	): RenderedSection[] {
 		const sections: RenderedSection[] = [];
 		const tree = caseData.tree;
@@ -52,6 +58,23 @@ export class SummaryTemplate extends BaseTemplate {
 
 		if (this.isSectionEnabled("diagram") && diagramImage) {
 			sections.push(this.renderDiagram(caseData, diagramImage));
+
+			// Add per-branch diagram pages after the overview
+			if (branchDiagrams) {
+				for (const branch of branchDiagrams) {
+					sections.push({
+						type: "diagram",
+						title: branch.title,
+						blocks: [
+							this.image(
+								branch.data,
+								`Branch diagram: ${branch.title} — ${caseData.case.name}`,
+								branch.title
+							),
+						],
+					});
+				}
+			}
 		}
 
 		if (this.isSectionEnabled("executiveSummary")) {

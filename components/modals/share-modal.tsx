@@ -12,7 +12,8 @@ import { ImageExportSection } from "./_share-modal/image-export-section";
 import { JsonExportSection } from "./_share-modal/json-export-section";
 
 export const ShareModal = () => {
-	const { assuranceCase, nodes } = useStore();
+	const { assuranceCase, nodes, edges, layoutDirection, setNodes, setEdges } =
+		useStore();
 	const exportModal = useExportModal();
 
 	return (
@@ -44,7 +45,11 @@ export const ShareModal = () => {
 			</h2>
 			<DocumentExportSection
 				assuranceCase={assuranceCase}
+				edges={edges}
+				layoutDirection={layoutDirection}
 				nodes={nodes}
+				setEdges={setEdges}
+				setNodes={setNodes}
 				toast={toast}
 			/>
 			<Separator />

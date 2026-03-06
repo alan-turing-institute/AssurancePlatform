@@ -38,7 +38,8 @@ export class EvidenceListTemplate extends BaseTemplate {
 
 	protected renderSections(
 		caseData: CaseExportNested,
-		_diagramImage?: DiagramImage
+		_diagramImage?: DiagramImage,
+		_branchDiagrams?: import("../../types").LabelledDiagramImage[]
 	): RenderedSection[] {
 		const sections: RenderedSection[] = [];
 		const tree = caseData.tree;

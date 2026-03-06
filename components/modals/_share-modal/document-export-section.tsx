@@ -2,10 +2,15 @@
 
 import { ChevronDown, Download, Loader2 } from "lucide-react";
 import { useState } from "react";
-import type { Node } from "reactflow";
+import type { Edge, Node } from "reactflow";
 import { getDocumentExportData } from "@/actions/export-document";
 import { Checkbox } from "@/components/ui/checkbox";
-import { exportDocument } from "@/lib/case/document-export";
+import {
+	BRANCH_DIAGRAM_THRESHOLD,
+	type DiagramMode,
+	exportDocument,
+} from "@/lib/case/document-export";
+import type { LayoutDirection } from "@/lib/case/layout-helper";
 import type { ExportFormat, TemplatePreset } from "@/lib/export";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
@@ -67,6 +72,15 @@ const TEMPLATE_SECTION_DEFAULTS: Record<TemplatePreset, DocSections> = {
 		metadata: true,
 	},
 };
+
+const DEPTH_OPTIONS = [
+	{ value: "all", label: "All levels" },
+	{ value: "1", label: "1 — Goals only" },
+	{ value: "2", label: "2 — Goals + children" },
+	{ value: "3", label: "3" },
+	{ value: "4", label: "4" },
+	{ value: "5", label: "5" },
+];
 
 type DocSections = {
 	titlePage: boolean;
@@ -148,6 +162,10 @@ function TemplateDescription({ template }: TemplateDescriptionProps) {
 export type DocumentExportSectionProps = {
 	assuranceCase: AssuranceCaseResponse | null;
 	nodes: Node[];
+	edges: Edge[];
+	layoutDirection: LayoutDirection;
+	setNodes: (nodes: Node[]) => void;
+	setEdges: (edges: Edge[]) => void;
 	toast: typeof ToastFn;
 	className?: string;
 };
@@ -155,6 +173,10 @@ export type DocumentExportSectionProps = {
 export function DocumentExportSection({
 	assuranceCase,
 	nodes,
+	edges,
+	layoutDirection,
+	setNodes,
+	setEdges,
 	toast,
 	className,
 }: DocumentExportSectionProps) {
@@ -170,6 +192,10 @@ export function DocumentExportSection({
 		comments: true,
 		metadata: true,
 	});
+	const [diagramDepth, setDiagramDepth] = useState<string>("all");
+	const [diagramMode, setDiagramMode] = useState<DiagramMode>(
+		nodes.length > BRANCH_DIAGRAM_THRESHOLD ? "branches" : "single"
+	);
 
 	const handleSectionToggle = (key: keyof DocSections) => {
 		setDocSections((prev) => ({
@@ -189,6 +215,10 @@ export function DocumentExportSection({
 		}
 
 		setDocExportLoading(true);
+
+		// Capture original layout for restoration
+		const originalNodes = [...nodes];
+		const originalEdges = [...edges];
 
 		try {
 			const result = await getDocumentExportData(assuranceCase.id, {
@@ -211,7 +241,20 @@ export function DocumentExportSection({
 				template: docTemplate,
 				includeDiagram: docSections.diagram,
 				nodes,
+				edges,
+				layoutDirection,
+				applyLayout: (layoutNodes, layoutEdges) => {
+					setNodes(layoutNodes);
+					setEdges(layoutEdges);
+				},
+				restoreLayout: () => {
+					setNodes(originalNodes);
+					setEdges(originalEdges);
+				},
 				sectionOverrides: docSections,
+				maxDiagramDepth:
+					diagramDepth === "all" ? null : Number.parseInt(diagramDepth, 10),
+				diagramMode,
 			});
 
 			const formatLabels: Record<ExportFormat, string> = {
@@ -234,6 +277,9 @@ export function DocumentExportSection({
 						: "An error occurred",
 			});
 		} finally {
+			// Always restore original layout
+			setNodes(originalNodes);
+			setEdges(originalEdges);
 			setDocExportLoading(false);
 		}
 	};
@@ -300,6 +346,57 @@ export function DocumentExportSection({
 					onToggle={handleSectionToggle}
 					sections={docSections}
 				/>
+				{docSections.diagram && (
+					<div className="space-y-3 rounded-md border border-muted p-3">
+						<p className="font-medium text-muted-foreground text-xs">
+							Diagram options
+						</p>
+						<div className="flex items-center gap-4">
+							<Label className="text-xs" htmlFor="diagram-depth-select">
+								Depth
+							</Label>
+							<Select onValueChange={setDiagramDepth} value={diagramDepth}>
+								<SelectTrigger className="w-44" id="diagram-depth-select">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{DEPTH_OPTIONS.map((opt) => (
+										<SelectItem key={opt.value} value={opt.value}>
+											{opt.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex items-center gap-4">
+							<Label className="text-xs">Pages</Label>
+							<RadioGroup
+								className="flex items-center gap-4"
+								onValueChange={(v) => setDiagramMode(v as DiagramMode)}
+								value={diagramMode}
+							>
+								<div className="flex items-center space-x-2">
+									<RadioGroupItem id="diagram-mode-single" value="single" />
+									<Label
+										className="font-normal text-xs"
+										htmlFor="diagram-mode-single"
+									>
+										Single diagram
+									</Label>
+								</div>
+								<div className="flex items-center space-x-2">
+									<RadioGroupItem id="diagram-mode-branches" value="branches" />
+									<Label
+										className="font-normal text-xs"
+										htmlFor="diagram-mode-branches"
+									>
+										Per-branch pages
+									</Label>
+								</div>
+							</RadioGroup>
+						</div>
+					</div>
+				)}
 			</div>
 			<Button
 				className="my-2"

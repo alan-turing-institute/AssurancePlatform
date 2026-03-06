@@ -139,6 +139,7 @@ export {
 	type ExportResult,
 	type HeadingBlock,
 	type ImageBlock,
+	type LabelledDiagramImage,
 	type ListBlock,
 	type MetadataBlock,
 	type ParagraphBlock,

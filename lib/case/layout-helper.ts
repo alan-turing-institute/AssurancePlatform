@@ -93,7 +93,7 @@ function getActualNodeDimensions(
 /**
  * Direction mapping from React Flow convention to ELK
  */
-type LayoutDirection = "TB" | "LR" | "RL" | "BT";
+export type LayoutDirection = "TB" | "LR" | "RL" | "BT";
 type ElkDirection = "DOWN" | "RIGHT" | "LEFT" | "UP";
 
 const DIRECTION_MAP: Record<LayoutDirection, ElkDirection> = {
@@ -103,8 +103,12 @@ const DIRECTION_MAP: Record<LayoutDirection, ElkDirection> = {
 	BT: "UP",
 };
 
-type LayoutOptions = {
+export type LayoutOptions = {
 	direction: LayoutDirection;
+	/** Spacing between nodes in the same layer (default: 40) */
+	nodeSpacing?: number;
+	/** Spacing between layers (default: 60) */
+	layerSpacing?: number;
 };
 
 type LayoutedElements = {
@@ -132,6 +136,8 @@ export async function getLayoutedElements(
 ): Promise<LayoutedElements> {
 	const direction = options.direction || "TB";
 	const elkDirection = DIRECTION_MAP[direction] || "DOWN";
+	const nodeSpacing = String(options.nodeSpacing ?? 40);
+	const layerSpacing = String(options.layerSpacing ?? 60);
 
 	// Filter out hidden nodes and edges for the layout computation
 	const visibleNodes = nodes.filter(
@@ -179,9 +185,9 @@ export async function getLayoutedElements(
 			"elk.algorithm": "layered",
 			"elk.direction": elkDirection,
 			// Spacing between nodes in the same layer (horizontal for TB direction)
-			"elk.spacing.nodeNode": "40",
+			"elk.spacing.nodeNode": nodeSpacing,
 			// Spacing between layers (vertical for TB direction)
-			"elk.layered.spacing.nodeNodeBetweenLayers": "60",
+			"elk.layered.spacing.nodeNodeBetweenLayers": layerSpacing,
 			// Edge routing
 			"elk.edgeRouting": "ORTHOGONAL",
 			// Node placement strategy

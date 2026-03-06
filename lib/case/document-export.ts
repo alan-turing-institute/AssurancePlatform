@@ -2,7 +2,12 @@ import { saveAs } from "file-saver";
 import { toPng } from "html-to-image";
 import type { Options } from "html-to-image/lib/types";
 import JSZip from "jszip";
-import { getNodesBounds, getViewportForBounds, type Node } from "reactflow";
+import {
+	type Edge,
+	getNodesBounds,
+	getViewportForBounds,
+	type Node,
+} from "reactflow";
 import {
 	type BrandingConfig,
 	createTemplateFromPreset,
@@ -11,10 +16,24 @@ import {
 	exporterRegistry,
 	type TemplatePreset,
 } from "@/lib/export";
+import type { LabelledDiagramImage, TemplateInput } from "@/lib/export/types";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
+import { extractBranches } from "./branch-utils";
+import type { LayoutDirection } from "./layout-helper";
+import { getLayoutedElements } from "./layout-helper";
 
 const DATA_URL_PREFIX_REGEX = /^data:image\/png;base64,/;
 const MARKDOWN_EXTENSION_REGEX = /\.md$/;
+
+/** Landscape A4 aspect ratio (width / height = sqrt(2)) */
+const LANDSCAPE_A4_RATIO = Math.SQRT2;
+
+/** Compact spacing values for export layouts */
+const EXPORT_NODE_SPACING = 25;
+const EXPORT_LAYER_SPACING = 40;
+
+/** Node count threshold above which branch diagrams are auto-suggested */
+export const BRANCH_DIAGRAM_THRESHOLD = 15;
 
 /**
  * TEA Platform brand colour (matches the application theme).
@@ -58,6 +77,10 @@ async function getDefaultBranding(): Promise<Partial<BrandingConfig>> {
 	};
 }
 
+export type DiagramMode = "single" | "branches";
+
+type LayoutApplyFn = (layoutNodes: Node[], layoutEdges: Edge[]) => void;
+
 export type DocumentExportOptions = {
 	caseData: CaseExportNested;
 	caseName: string;
@@ -65,7 +88,13 @@ export type DocumentExportOptions = {
 	template: TemplatePreset;
 	includeDiagram: boolean;
 	nodes: Node[];
+	edges: Edge[];
+	layoutDirection: LayoutDirection;
+	applyLayout: LayoutApplyFn;
+	restoreLayout: () => void;
 	sectionOverrides?: Record<string, boolean>;
+	maxDiagramDepth?: number | null;
+	diagramMode?: DiagramMode;
 };
 
 /**
@@ -127,6 +156,151 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 }
 
 /**
+ * Wait for React to render DOM changes after a layout swap.
+ * Uses double requestAnimationFrame for reliable rendering.
+ */
+function waitForRender(): Promise<void> {
+	return new Promise((resolve) => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				resolve();
+			});
+		});
+	});
+}
+
+/**
+ * Build a map of parent → children from edges.
+ */
+function buildChildrenMap(edges: Edge[]): Map<string, string[]> {
+	const parentToChildren = new Map<string, string[]>();
+	for (const edge of edges) {
+		const children = parentToChildren.get(edge.source) ?? [];
+		children.push(edge.target);
+		parentToChildren.set(edge.source, children);
+	}
+	return parentToChildren;
+}
+
+/**
+ * Find root nodes in a graph (nodes with no incoming edges from within the set).
+ */
+function findRootNodes(nodes: Node[], edges: Edge[]): Node[] {
+	const nodeIds = new Set(nodes.map((n) => n.id));
+	const hasInternalParent = new Set<string>();
+
+	for (const edge of edges) {
+		if (nodeIds.has(edge.source) && nodeIds.has(edge.target)) {
+			hasInternalParent.add(edge.target);
+		}
+	}
+
+	return nodes.filter((n) => !hasInternalParent.has(n.id));
+}
+
+/**
+ * BFS to compute depth of each node from the given roots.
+ */
+function computeDepthMap(
+	roots: Node[],
+	childrenMap: Map<string, string[]>
+): Map<string, number> {
+	const depthMap = new Map<string, number>();
+	const queue: Array<{ id: string; depth: number }> = [];
+
+	for (const root of roots) {
+		depthMap.set(root.id, 0);
+		queue.push({ id: root.id, depth: 0 });
+	}
+
+	while (queue.length > 0) {
+		const current = queue.shift();
+		if (!current) {
+			break;
+		}
+		const children = childrenMap.get(current.id) ?? [];
+		for (const childId of children) {
+			if (!depthMap.has(childId)) {
+				depthMap.set(childId, current.depth + 1);
+				queue.push({ id: childId, depth: current.depth + 1 });
+			}
+		}
+	}
+
+	return depthMap;
+}
+
+/**
+ * Prune nodes and edges to only include elements within a given depth.
+ */
+function pruneByDepth(
+	nodes: Node[],
+	edges: Edge[],
+	maxDepth: number
+): { nodes: Node[]; edges: Edge[] } {
+	const roots = findRootNodes(nodes, edges);
+	const childrenMap = buildChildrenMap(edges);
+	const depthMap = computeDepthMap(roots, childrenMap);
+
+	const allowedIds = new Set<string>();
+	for (const [id, depth] of depthMap) {
+		if (depth <= maxDepth) {
+			allowedIds.add(id);
+		}
+	}
+
+	return {
+		nodes: nodes.filter((n) => allowedIds.has(n.id)),
+		edges: edges.filter(
+			(e) => allowedIds.has(e.source) && allowedIds.has(e.target)
+		),
+	};
+}
+
+/**
+ * Determine optimal layout direction for export based on diagram aspect ratio.
+ * If the diagram is wider than a landscape A4 page, switch to LR direction.
+ */
+function chooseExportDirection(
+	nodes: Node[],
+	currentDirection: LayoutDirection
+): LayoutDirection {
+	if (nodes.length === 0) {
+		return currentDirection;
+	}
+
+	const bounds = getNodesBounds(nodes);
+	const aspectRatio = bounds.width / Math.max(bounds.height, 1);
+
+	if (aspectRatio > LANDSCAPE_A4_RATIO) {
+		return "LR";
+	}
+
+	return currentDirection;
+}
+
+/**
+ * Create a compact export layout with reduced spacing and auto-LR.
+ * Returns the re-laid-out nodes and edges plus the chosen direction.
+ */
+async function layoutForExport(
+	nodes: Node[],
+	edges: Edge[],
+	currentDirection: LayoutDirection
+): Promise<{ nodes: Node[]; edges: Edge[]; direction: LayoutDirection }> {
+	const direction = chooseExportDirection(nodes, currentDirection);
+
+	const { nodes: layoutedNodes, edges: layoutedEdges } =
+		await getLayoutedElements(nodes, edges, {
+			direction,
+			nodeSpacing: EXPORT_NODE_SPACING,
+			layerSpacing: EXPORT_LAYER_SPACING,
+		});
+
+	return { nodes: layoutedNodes, edges: layoutedEdges, direction };
+}
+
+/**
  * Capture the diagram as a base64-encoded PNG for embedding in documents.
  */
 async function captureDiagramImage(
@@ -140,7 +314,14 @@ async function captureDiagramImage(
 		return null;
 	}
 
-	const nodesBounds = getNodesBounds(nodes);
+	const visibleNodes = nodes.filter(
+		(n) => !(n as Node & { hidden?: boolean }).hidden
+	);
+	if (visibleNodes.length === 0) {
+		return null;
+	}
+
+	const nodesBounds = getNodesBounds(visibleNodes);
 	const padding = 100;
 	const imageWidth = nodesBounds.width + padding * 2;
 	const imageHeight = nodesBounds.height + padding * 2;
@@ -171,7 +352,6 @@ async function captureDiagramImage(
 
 	try {
 		const dataUrl = await toPng(viewport, exportOptions);
-		// Extract base64 data from data URL (remove "data:image/png;base64," prefix)
 		const base64Data = dataUrl.replace(DATA_URL_PREFIX_REGEX, "");
 		return { data: base64Data, format: "png" };
 	} finally {
@@ -180,14 +360,70 @@ async function captureDiagramImage(
 }
 
 /**
- * Export an assurance case as a document (PDF or Markdown).
+ * Capture per-branch diagram images for multi-page exports.
+ * Each direct child of the root node produces one branch diagram.
+ */
+async function captureBranchDiagrams(
+	sourceNodes: Node[],
+	sourceEdges: Edge[],
+	applyLayout: LayoutApplyFn,
+	restoreLayout: () => void,
+	layoutDirection: LayoutDirection
+): Promise<LabelledDiagramImage[]> {
+	const branches = extractBranches(sourceNodes, sourceEdges);
+	if (branches.length === 0) {
+		return [];
+	}
+
+	const results: LabelledDiagramImage[] = [];
+
+	try {
+		for (const branch of branches) {
+			// Create nodes/edges with non-branch elements hidden
+			const branchNodes = sourceNodes.map((n) => ({
+				...n,
+				hidden: !branch.nodeIds.has(n.id),
+			}));
+			const branchEdges = sourceEdges.map((e) => ({
+				...e,
+				hidden: !(branch.nodeIds.has(e.source) && branch.nodeIds.has(e.target)),
+			}));
+
+			// Layout only the visible branch nodes
+			const { nodes: layoutedNodes, edges: layoutedEdges } =
+				await layoutForExport(branchNodes, branchEdges, layoutDirection);
+
+			// Push to DOM and wait for render
+			applyLayout(layoutedNodes, layoutedEdges);
+			await waitForRender();
+
+			const captured = await captureDiagramImage(layoutedNodes);
+			if (captured) {
+				results.push({
+					...captured,
+					title: branch.label,
+				});
+			}
+		}
+	} finally {
+		restoreLayout();
+		await waitForRender();
+	}
+
+	return results;
+}
+
+/**
+ * Export an assurance case as a document (PDF, Word, or Markdown).
  *
  * This function orchestrates the full export flow:
- * 1. Optionally captures the diagram as an image
- * 2. Creates a template from the selected preset
- * 3. Renders the document using the template
- * 4. Exports to the specified format
- * 5. Downloads the result
+ * 1. Optionally applies compact export layout with auto-LR direction
+ * 2. Optionally prunes by depth
+ * 3. Captures the diagram as an image (and branch diagrams if requested)
+ * 4. Creates a template from the selected preset
+ * 5. Renders the document using the template
+ * 6. Exports to the specified format
+ * 7. Downloads the result
  */
 export async function exportDocument(
 	options: DocumentExportOptions
@@ -199,15 +435,55 @@ export async function exportDocument(
 		template,
 		includeDiagram,
 		nodes,
+		edges,
+		layoutDirection,
+		applyLayout,
+		restoreLayout,
 		sectionOverrides,
+		maxDiagramDepth,
+		diagramMode = "single",
 	} = options;
 
-	// Capture diagram image if requested
 	let diagramImage: DiagramImage | undefined;
+	let branchDiagrams: LabelledDiagramImage[] | undefined;
+
 	if (includeDiagram) {
-		const captured = await captureDiagramImage(nodes);
+		// Prepare nodes/edges for export (optionally pruned by depth)
+		let exportNodes = nodes.map((n) => ({ ...n }));
+		let exportEdges = edges.map((e) => ({ ...e }));
+
+		if (maxDiagramDepth != null) {
+			const pruned = pruneByDepth(exportNodes, exportEdges, maxDiagramDepth);
+			exportNodes = pruned.nodes;
+			exportEdges = pruned.edges;
+		}
+
+		// Apply compact export layout
+		const { nodes: layoutedNodes, edges: layoutedEdges } =
+			await layoutForExport(exportNodes, exportEdges, layoutDirection);
+
+		// Push export layout to DOM and capture overview diagram
+		applyLayout(layoutedNodes, layoutedEdges);
+		await waitForRender();
+
+		const captured = await captureDiagramImage(layoutedNodes);
 		if (captured) {
 			diagramImage = captured;
+		}
+
+		// Restore before branch capture (branch capture does its own layout swaps)
+		restoreLayout();
+		await waitForRender();
+
+		// Capture branch diagrams if requested
+		if (diagramMode === "branches") {
+			branchDiagrams = await captureBranchDiagrams(
+				exportNodes,
+				exportEdges,
+				applyLayout,
+				restoreLayout,
+				layoutDirection
+			);
 		}
 	}
 
@@ -218,11 +494,13 @@ export async function exportDocument(
 	const templateInstance = createTemplateFromPreset(template, branding);
 
 	// Render the document with section overrides
-	const renderedDocument = await templateInstance.render({
+	const templateInput: TemplateInput = {
 		caseData,
 		diagramImage,
+		branchDiagrams,
 		sectionOverrides,
-	});
+	};
+	const renderedDocument = await templateInstance.render(templateInput);
 
 	// Get the appropriate exporter
 	const exporter = exporterRegistry.get(format);
@@ -247,7 +525,12 @@ export async function exportDocument(
 		diagramImage &&
 		"content" in result
 	) {
-		await exportMarkdownZip(result.content, result.filename, diagramImage);
+		await exportMarkdownZip(
+			result.content,
+			result.filename,
+			diagramImage,
+			branchDiagrams
+		);
 		return;
 	}
 
@@ -255,10 +538,21 @@ export async function exportDocument(
 	if ("blob" in result) {
 		saveAs(result.blob, result.filename);
 	} else if ("content" in result) {
-		// For text formats like Markdown, create a blob from the content
 		const blob = new Blob([result.content], { type: result.mimeType });
 		saveAs(blob, result.filename);
 	}
+}
+
+/**
+ * Convert base64 string to Uint8Array.
+ */
+function base64ToUint8Array(base64: string): Uint8Array {
+	const binaryData = atob(base64);
+	const uint8Array = new Uint8Array(binaryData.length);
+	for (let i = 0; i < binaryData.length; i++) {
+		uint8Array[i] = binaryData.charCodeAt(i);
+	}
+	return uint8Array;
 }
 
 /**
@@ -266,27 +560,33 @@ export async function exportDocument(
  *
  * Creates a ZIP containing:
  * - report.md - the markdown file with relative image reference
- * - diagram.png - the diagram image
+ * - diagram.png - the overview diagram image
+ * - branch-N-*.png - optional branch diagram images
  */
 async function exportMarkdownZip(
 	markdownContent: string,
 	markdownFilename: string,
-	diagramImage: DiagramImage
+	diagramImage: DiagramImage,
+	branchDiagrams?: LabelledDiagramImage[]
 ): Promise<void> {
 	const zip = new JSZip();
 
-	// Add markdown file
 	zip.file(markdownFilename, markdownContent);
+	zip.file("diagram.png", base64ToUint8Array(diagramImage.data));
 
-	// Convert base64 to binary and add PNG
-	const binaryData = atob(diagramImage.data);
-	const uint8Array = new Uint8Array(binaryData.length);
-	for (let i = 0; i < binaryData.length; i++) {
-		uint8Array[i] = binaryData.charCodeAt(i);
+	if (branchDiagrams) {
+		for (const [i, branch] of branchDiagrams.entries()) {
+			const safeName = branch.title
+				.toLowerCase()
+				.replace(/[^a-z0-9]+/g, "-")
+				.replace(/^-|-$/g, "");
+			zip.file(
+				`branch-${i + 1}-${safeName}.png`,
+				base64ToUint8Array(branch.data)
+			);
+		}
 	}
-	zip.file("diagram.png", uint8Array);
 
-	// Generate and download ZIP
 	const zipBlob = await zip.generateAsync({ type: "blob" });
 	const zipFilename = markdownFilename.replace(
 		MARKDOWN_EXTENSION_REGEX,
