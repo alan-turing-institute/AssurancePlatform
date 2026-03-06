@@ -13,10 +13,10 @@ import {
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { formatShortDate } from "@/lib/date";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import useStore from "@/store/store";
-import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
 import CommentsEditForm from "./comments-edit-form";
 import CommentsForm from "./comments-form";
@@ -31,7 +31,7 @@ type CommentsFeedProps = {
 };
 
 type CommentItemProps = {
-	comment: Comment;
+	comment: CommentResponse;
 	node: CommentsFeedProps["node"];
 	currentUsername: string | null | undefined;
 	canEdit: boolean;
@@ -46,7 +46,7 @@ type CommentItemProps = {
 /**
  * Renders the resolved status banner for a comment.
  */
-function ResolvedBanner({ comment }: { comment: Comment }) {
+function ResolvedBanner({ comment }: { comment: CommentResponse }) {
 	if (!comment.resolved) {
 		return null;
 	}
@@ -73,7 +73,7 @@ function CommentMeta({
 	showReplies,
 	onToggleReplies,
 }: {
-	comment: Comment;
+	comment: CommentResponse;
 	isResolved: boolean;
 	hasReplies: boolean;
 	showReplies: boolean;
@@ -328,7 +328,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 				return;
 			}
 
-			const removeFromTree = (comments: Comment[]): Comment[] =>
+			const removeFromTree = (comments: CommentResponse[]): CommentResponse[] =>
 				comments
 					.filter((c) => String(c.id) !== String(id))
 					.map((c) => ({
@@ -365,7 +365,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 
 			const updated = await response.json();
 
-			const updateInTree = (comments: Comment[]): Comment[] =>
+			const updateInTree = (comments: CommentResponse[]): CommentResponse[] =>
 				comments.map((c) => {
 					if (String(c.id) === id) {
 						return {

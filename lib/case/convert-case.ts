@@ -1,25 +1,30 @@
 import type { Edge, Node } from "reactflow";
-import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type {
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 
 // Define the structure of items that can be converted to nodes
 // Dynamic property bag: generic tree conversion spreads all fields into React Flow node data
 export type ConvertibleItem = {
-	id: number;
+	id: string;
 	name: string;
 	type: string;
 	description?: string;
 	hidden?: boolean;
 	context?: ConvertibleItem[];
-	strategies?: Strategy[];
-	propertyClaims?: PropertyClaim[];
-	evidence?: Evidence[];
+	strategies?: StrategyResponse[];
+	propertyClaims?: PropertyClaimResponse[];
+	evidence?: EvidenceResponse[];
 	[key: string]: unknown;
 };
 
 // Define the structure of the assurance case
 // Dynamic property bag: case objects include varying metadata fields (isDemo, permissions, etc.)
 export type AssuranceCaseWithGoals = {
-	goals: Goal[];
+	goals: GoalResponse[];
 	[key: string]: unknown;
 };
 

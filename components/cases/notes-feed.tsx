@@ -5,9 +5,9 @@ import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { fetchCaseComments } from "@/actions/cases";
 import { formatShortDate } from "@/lib/date";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
-import type { Comment } from "@/types";
 import { Button } from "../ui/button";
 import NotesEditForm from "./notes-edit-form";
 
@@ -20,7 +20,7 @@ export default function NotesFeed() {
 	const sortedNotes = useMemo(
 		() =>
 			[...caseNotes].sort(
-				(a: Comment, b: Comment) =>
+				(a: CommentResponse, b: CommentResponse) =>
 					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 			),
 		[caseNotes]
@@ -72,7 +72,7 @@ export default function NotesFeed() {
 				{sortedNotes.length === 0 && (
 					<p className="text-foreground/70">No notes have been added.</p>
 				)}
-				{sortedNotes.map((note: Comment, index: number) => (
+				{sortedNotes.map((note: CommentResponse, index: number) => (
 					<li key={note.id}>
 						<div className="group relative pb-8">
 							{index !== sortedNotes.length - 1 ? (

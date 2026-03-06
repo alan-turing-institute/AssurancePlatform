@@ -159,7 +159,7 @@ describe("Test Factories", () => {
 
 	describe("EvidenceFactory", () => {
 		it("creates evidence for a specific claim", () => {
-			const claimId = 42;
+			const claimId = "42";
 			const evidenceList = EvidenceFactory.createForClaim(claimId, 3);
 
 			expect(evidenceList).toHaveLength(3);

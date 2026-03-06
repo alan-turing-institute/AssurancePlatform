@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { validateSession } from "@/lib/auth/validate-session";
+import type { ActionResult } from "@/lib/errors";
 import { ProviderSchema } from "@/lib/schemas/connected-accounts";
+import type { ConnectedAccountsData } from "@/lib/services/connected-accounts-service";
 import {
 	getConnectedAccounts,
 	unlinkProvider as unlinkProviderFromService,
 } from "@/lib/services/connected-accounts-service";
-import type { ActionResult, ConnectedAccountsData } from "@/types/domain";
 
 /**
  * Fetches the current user's connected accounts information.

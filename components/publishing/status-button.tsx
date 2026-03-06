@@ -8,8 +8,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { PublishStatusType } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
-import type { PublishStatusType } from "@/types/domain";
 
 type StatusButtonProps = {
 	status: PublishStatusType;

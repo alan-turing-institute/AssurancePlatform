@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import type { ConnectedAccountsData } from "@/lib/services/connected-accounts-service";
 import {
 	validateEmail,
 	validatePassword,
 	validateUsername,
 } from "@/lib/validation/validators";
-import type { ConnectedAccountsData } from "@/types/domain";
 import type { ServiceResult } from "@/types/service";
 
 // ============================================

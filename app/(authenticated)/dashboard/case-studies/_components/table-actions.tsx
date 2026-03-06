@@ -10,9 +10,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { TableActionsProps } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import DeleteCaseButton from "./delete-button";
 import UnpublishCaseButton from "./unpublish-button";
+
+type TableActionsProps = {
+	caseStudy: CaseStudyResponse;
+	className?: string;
+};
 
 const TableActions = ({ caseStudy }: TableActionsProps) => (
 	<DropdownMenu>

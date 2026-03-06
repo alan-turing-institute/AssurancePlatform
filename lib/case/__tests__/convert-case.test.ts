@@ -1,6 +1,11 @@
 import type { Node } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type {
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import type { AssuranceCaseWithGoals, ConvertibleItem } from "../convert-case";
 import {
 	convertAssuranceCase,
@@ -15,56 +20,56 @@ describe("convert-case utilities", () => {
 
 	describe("convertAssuranceCase", () => {
 		const mockAssuranceCase: AssuranceCaseWithGoals = {
-			id: 1,
+			id: "1",
 			name: "Test Case",
 			goals: [
 				{
-					id: 1,
+					id: "1",
 					type: "goal",
 					name: "Main Goal",
 					description: "Primary objective",
 
 					keywords: "test, goal",
-					assuranceCaseId: 1,
+					assuranceCaseId: "1",
 					context: [],
 					propertyClaims: [
 						{
-							id: 2,
+							id: "2",
 							type: "property_claim",
 							name: "Property Claim",
 							description: "Supporting claim",
 
-							goalId: 1,
+							goalId: "1",
 							propertyClaimId: null,
 							level: 1,
 							claimType: "claim",
 							propertyClaims: [],
 							evidence: [
 								{
-									id: 3,
+									id: "3",
 									type: "evidence",
 									name: "Evidence Item",
 									description: "Supporting evidence",
 
 									URL: "https://example.com/evidence",
-									propertyClaimId: [2],
-								} as Evidence,
+									propertyClaimId: ["2"],
+								} as EvidenceResponse,
 							],
 							strategyId: null,
-						} as PropertyClaim,
+						} as PropertyClaimResponse,
 					],
 					strategies: [
 						{
-							id: 4,
+							id: "4",
 							type: "strategy",
 							name: "Strategy",
 							description: "Approach",
 
-							goalId: 1,
+							goalId: "1",
 							propertyClaims: [],
-						} as Strategy,
+						} as StrategyResponse,
 					],
-				} as unknown as Goal,
+				} as unknown as GoalResponse,
 			],
 		};
 
@@ -103,7 +108,7 @@ describe("convert-case utilities", () => {
 
 		it("should handle empty assurance case", async () => {
 			const emptyCase: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "Empty Case",
 				goals: [],
 			};
@@ -116,7 +121,7 @@ describe("convert-case utilities", () => {
 
 		it("should handle assurance case with no goals", async () => {
 			const caseWithoutGoals: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "No Goals Case",
 				goals: [],
 			};
@@ -146,13 +151,13 @@ describe("convert-case utilities", () => {
 
 	describe("createNodesRecursively", () => {
 		const mockGoal: ConvertibleItem = {
-			id: 1,
+			id: "1",
 			type: "goal",
 			name: "Test Goal",
 			description: "Test description",
 			context: [
 				{
-					id: 5,
+					id: "5",
 					type: "context",
 					name: "Context",
 					description: "Context description",
@@ -160,40 +165,40 @@ describe("convert-case utilities", () => {
 			],
 			propertyClaims: [
 				{
-					id: 2,
+					id: "2",
 					type: "property_claim",
 					name: "Child Claim",
 					description: "Child description",
 
-					goalId: 1,
+					goalId: "1",
 					propertyClaimId: null,
 					level: 1,
 					claimType: "claim",
 					propertyClaims: [],
 					evidence: [
 						{
-							id: 3,
+							id: "3",
 							type: "evidence",
 							name: "Evidence",
 							description: "Evidence description",
 
 							URL: "https://example.com",
-							propertyClaimId: [2],
-						} as Evidence,
+							propertyClaimId: ["2"],
+						} as EvidenceResponse,
 					],
 					strategyId: null,
-				} as PropertyClaim,
+				} as PropertyClaimResponse,
 			],
 			strategies: [
 				{
-					id: 4,
+					id: "4",
 					type: "strategy",
 					name: "Strategy",
 					description: "Strategy description",
 
-					goalId: 1,
+					goalId: "1",
 					propertyClaims: [],
-				} as Strategy,
+				} as StrategyResponse,
 			],
 		};
 
@@ -234,22 +239,22 @@ describe("convert-case utilities", () => {
 
 		it("should respect depth limits", () => {
 			const deeplyNested = {
-				id: 1,
+				id: "1",
 				type: "ConvertibleItem",
 				name: "Level 0",
 				propertyClaims: [
 					{
-						id: 2,
+						id: "2",
 						type: "property_claim",
 						name: "Level 1",
 						propertyClaims: [
 							{
-								id: 3,
+								id: "3",
 								type: "property_claim",
 								name: "Level 2",
 								propertyClaims: [
 									{
-										id: 4,
+										id: "4",
 										type: "property_claim",
 										name: "Level 3",
 										propertyClaims: [],
@@ -286,7 +291,7 @@ describe("convert-case utilities", () => {
 				0
 			);
 
-			const goalNode = nodes.find((n) => n.data.elementId === 1);
+			const goalNode = nodes.find((n) => n.data.elementId === "1");
 			expect(goalNode).toBeDefined();
 			if (goalNode) {
 				expect(goalNode.position).toBeDefined();
@@ -350,7 +355,7 @@ describe("convert-case utilities", () => {
 
 		it("should handle items with missing properties", () => {
 			const incompleteGoal = {
-				id: 1,
+				id: "1",
 				type: "goal",
 				name: "Incomplete Goal",
 				// Missing short_description and nested arrays
@@ -375,7 +380,7 @@ describe("convert-case utilities", () => {
 				id: "goal-1",
 				type: "goal",
 				position: { x: 0, y: 0 },
-				data: { parentId: null, elementId: 1, elementType: "goal" },
+				data: { parentId: null, elementId: "1", elementType: "goal" },
 			},
 			{
 				id: "claim-2",
@@ -383,7 +388,7 @@ describe("convert-case utilities", () => {
 				position: { x: 0, y: 0 },
 				data: {
 					parentId: "goal-1",
-					elementId: 2,
+					elementId: "2",
 					elementType: "property_claim",
 				},
 			},
@@ -391,19 +396,19 @@ describe("convert-case utilities", () => {
 				id: "evidence-3",
 				type: "evidence",
 				position: { x: 0, y: 0 },
-				data: { parentId: "claim-2", elementId: 3, elementType: "evidence" },
+				data: { parentId: "claim-2", elementId: "3", elementType: "evidence" },
 			},
 			{
 				id: "strategy-4",
 				type: "strategy",
 				position: { x: 0, y: 0 },
-				data: { parentId: "goal-1", elementId: 4, elementType: "strategy" },
+				data: { parentId: "goal-1", elementId: "4", elementType: "strategy" },
 			},
 			{
 				id: "context-5",
 				type: "context",
 				position: { x: 0, y: 0 },
-				data: { parentId: "goal-1", elementId: 5, elementType: "context" },
+				data: { parentId: "goal-1", elementId: "5", elementType: "context" },
 			},
 		];
 
@@ -448,13 +453,13 @@ describe("convert-case utilities", () => {
 					id: "goal-1",
 					type: "goal",
 					position: { x: 0, y: 0 },
-					data: { parentId: null, elementId: 1, elementType: "goal" },
+					data: { parentId: null, elementId: "1", elementType: "goal" },
 				},
 				{
 					id: "goal-2",
 					type: "goal",
 					position: { x: 0, y: 0 },
-					data: { parentId: null, elementId: 2, elementType: "goal" },
+					data: { parentId: null, elementId: "2", elementType: "goal" },
 				},
 			];
 
@@ -473,7 +478,7 @@ describe("convert-case utilities", () => {
 					id: "goal-1",
 					type: "goal",
 					position: { x: 0, y: 0 },
-					data: { parentId: null, elementId: 1, elementType: "goal" },
+					data: { parentId: null, elementId: "1", elementType: "goal" },
 				},
 				{
 					id: "claim-2",
@@ -481,7 +486,7 @@ describe("convert-case utilities", () => {
 					position: { x: 0, y: 0 },
 					data: {
 						parentId: "999",
-						elementId: 2,
+						elementId: "2",
 						elementType: "property_claim",
 					}, // Parent doesn't exist
 				},
@@ -509,52 +514,52 @@ describe("convert-case utilities", () => {
 	describe("Integration tests", () => {
 		it("should handle complete conversion workflow", async () => {
 			const complexCase: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "Complex Case",
 				goals: [
 					{
-						id: 1,
+						id: "1",
 						type: "goal",
 						name: "Main Goal",
 						description: "Main goal description",
 
 						keywords: "main, goal",
-						assuranceCaseId: 1,
+						assuranceCaseId: "1",
 						context: [],
 						propertyClaims: [
 							{
-								id: 2,
+								id: "2",
 								type: "property_claim",
 								name: "Claim 1",
 								description: "Claim description",
 
-								goalId: 1,
+								goalId: "1",
 								propertyClaimId: null,
 								level: 1,
 								claimType: "claim",
 								strategyId: null,
 								propertyClaims: [
 									{
-										id: 3,
+										id: "3",
 										type: "property_claim",
 										name: "Sub-claim",
 										description: "Sub-claim description",
 
-										goalId: 1,
-										propertyClaimId: 2,
+										goalId: "1",
+										propertyClaimId: "2",
 										level: 2,
 										claimType: "claim",
 										strategyId: null,
 										propertyClaims: [],
 										evidence: [
 											{
-												id: 4,
+												id: "4",
 												type: "evidence",
 												name: "Evidence 1",
 												description: "Evidence description",
 
 												URL: "https://example.com",
-												propertyClaimId: [3],
+												propertyClaimId: ["3"],
 											},
 										],
 									},
@@ -564,24 +569,24 @@ describe("convert-case utilities", () => {
 						],
 						strategies: [
 							{
-								id: 5,
+								id: "5",
 								type: "strategy",
 								name: "Strategy 1",
 								description: "Strategy description",
 
-								goalId: 1,
+								goalId: "1",
 								propertyClaims: [],
 							},
 						],
 					},
 					{
-						id: 6,
+						id: "6",
 						type: "goal",
 						name: "Secondary Goal",
 						description: "Secondary goal description",
 
 						keywords: "secondary, goal",
-						assuranceCaseId: 1,
+						assuranceCaseId: "1",
 						context: [],
 						propertyClaims: [],
 						strategies: [],
@@ -604,35 +609,35 @@ describe("convert-case utilities", () => {
 
 		it("should handle very large assurance cases efficiently", async () => {
 			const largeCase: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "Large Case",
 				goals: Array.from({ length: 10 }, (_, i) => ({
-					id: i + 1,
+					id: String(i + 1),
 					type: "goal",
 					name: `Goal ${i + 1}`,
 					description: `Goal ${i + 1} description`,
 					keywords: `goal, ${i}`,
-					assuranceCaseId: 1,
+					assuranceCaseId: "1",
 					context: [],
 					strategies: [],
 					propertyClaims: Array.from({ length: 5 }, (_j, j) => ({
-						id: i * 5 + j + 100,
+						id: String(i * 5 + j + 100),
 						type: "property_claim",
 						name: `Claim ${i}-${j}`,
 						description: `Claim ${i}-${j} description`,
-						goalId: i + 1,
+						goalId: String(i + 1),
 						propertyClaimId: null,
 						level: 1,
 						claimType: "claim",
 						strategyId: null,
 						propertyClaims: [],
 						evidence: Array.from({ length: 2 }, (_k, k) => ({
-							id: i * 10 + j * 2 + k + 1000,
+							id: String(i * 10 + j * 2 + k + 1000),
 							type: "evidence",
 							name: `Evidence ${i}-${j}-${k}`,
 							description: `Evidence ${i}-${j}-${k} description`,
 							URL: `https://example.com/evidence-${i}-${j}-${k}`,
-							propertyClaimId: [i * 5 + j + 100],
+							propertyClaimId: [String(i * 5 + j + 100)],
 						})),
 					})),
 				})),
@@ -648,27 +653,27 @@ describe("convert-case utilities", () => {
 
 		it("should maintain data integrity during conversion", async () => {
 			const caseData: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "Integrity Test",
 				goals: [
 					{
-						id: 10,
+						id: "10",
 						type: "goal",
 						name: "Test Goal",
 						description: "Goal description",
 
 						keywords: "test, goal",
-						assuranceCaseId: 1,
+						assuranceCaseId: "1",
 						context: [],
 						strategies: [],
 						propertyClaims: [
 							{
-								id: 20,
+								id: "20",
 								type: "property_claim",
 								name: "Test Claim",
 								description: "Claim description",
 
-								goalId: 10,
+								goalId: "10",
 								propertyClaimId: null,
 								level: 1,
 								claimType: "claim",
@@ -683,8 +688,8 @@ describe("convert-case utilities", () => {
 
 			const result = await convertAssuranceCase(caseData);
 
-			const goalNode = result.caseNodes.find((n) => n.data.id === 10);
-			const claimNode = result.caseNodes.find((n) => n.data.id === 20);
+			const goalNode = result.caseNodes.find((n) => n.data.id === "10");
+			const claimNode = result.caseNodes.find((n) => n.data.id === "20");
 
 			expect(goalNode?.data.name).toBe("Test Goal");
 			expect(goalNode?.data.description).toBe("Goal description");
@@ -696,17 +701,17 @@ describe("convert-case utilities", () => {
 	describe("Error handling and edge cases", () => {
 		it("should handle circular references in data", async () => {
 			const circularCase: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "Circular Case",
 				goals: [
 					{
-						id: 1,
+						id: "1",
 						type: "goal",
 						name: "Circular Goal",
 						description: "Circular goal description",
 
 						keywords: "circular, goal",
-						assuranceCaseId: 1,
+						assuranceCaseId: "1",
 						context: [],
 						strategies: [],
 						propertyClaims: [],
@@ -716,7 +721,7 @@ describe("convert-case utilities", () => {
 
 			// Create circular reference
 			circularCase.goals[0]!.propertyClaims.push(
-				circularCase.goals[0]! as unknown as PropertyClaim
+				circularCase.goals[0]! as unknown as PropertyClaimResponse
 			);
 
 			// Should not hang or crash
@@ -747,34 +752,34 @@ describe("convert-case utilities", () => {
 
 		it("should handle extremely deep nesting", async () => {
 			const deepCase: AssuranceCaseWithGoals = {
-				id: 1,
+				id: "1",
 				name: "Deep Case",
 				goals: [
 					{
-						id: 1,
+						id: "1",
 						type: "goal",
 						name: "Root Goal",
 						description: "Root goal description",
 
 						keywords: "root, goal",
-						assuranceCaseId: 1,
+						assuranceCaseId: "1",
 						context: [],
 						strategies: [],
-						propertyClaims: [] as PropertyClaim[],
+						propertyClaims: [] as PropertyClaimResponse[],
 					},
 				],
 			};
 
 			// Create 20 levels of nesting
-			let current: Goal | PropertyClaim = deepCase.goals[0]!;
+			let current: GoalResponse | PropertyClaimResponse = deepCase.goals[0]!;
 			for (let i = 0; i < 20; i++) {
-				const claim: PropertyClaim = {
-					id: i + 2,
+				const claim: PropertyClaimResponse = {
+					id: String(i + 2),
 					type: "property_claim",
 					name: `Claim Level ${i}`,
 					description: `Claim level ${i} description`,
-					goalId: 1,
-					propertyClaimId: i > 0 ? i + 1 : null,
+					goalId: "1",
+					propertyClaimId: i > 0 ? String(i + 1) : null,
 					level: i + 1,
 					claimType: "claim",
 					strategyId: null,

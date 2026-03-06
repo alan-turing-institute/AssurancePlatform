@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import type { ErrorCode } from "@/types/domain";
 import {
 	type ValidatedSession,
 	validateSession,
 } from "./auth/validate-session";
 import {
 	AppError,
+	type ErrorCode,
 	forbidden,
 	handleError,
 	notFound,

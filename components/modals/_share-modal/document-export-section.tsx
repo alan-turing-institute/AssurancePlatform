@@ -7,9 +7,9 @@ import { getDocumentExportData } from "@/actions/export-document";
 import { Checkbox } from "@/components/ui/checkbox";
 import { exportDocument } from "@/lib/case/document-export";
 import type { ExportFormat, TemplatePreset } from "@/lib/export";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import type { AssuranceCase } from "@/types";
 import { Button } from "../../ui/button";
 import { Label } from "../../ui/label";
 import { RadioGroup, RadioGroupItem } from "../../ui/radio-group";
@@ -146,7 +146,7 @@ function TemplateDescription({ template }: TemplateDescriptionProps) {
 }
 
 export type DocumentExportSectionProps = {
-	assuranceCase: AssuranceCase | null;
+	assuranceCase: AssuranceCaseResponse | null;
 	nodes: Node[];
 	toast: typeof ToastFn;
 	className?: string;

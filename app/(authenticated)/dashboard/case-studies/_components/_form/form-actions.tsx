@@ -2,12 +2,12 @@
 
 import { CloudDownload, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
-import type { CaseStudy } from "@/types/domain";
 import DeleteCaseButton from "../delete-button";
 
 export type FormActionsProps = {
-	caseStudy: CaseStudy | undefined;
+	caseStudy: CaseStudyResponse | undefined;
 	loading: boolean;
 	handlePublish: () => Promise<void>;
 	className?: string;

@@ -1,4 +1,4 @@
-import type { CaseStudy } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import { Button } from "./button";
 import PublishButton from "./publish-button";
 import RedirectButton from "./redirect-button";
@@ -16,7 +16,7 @@ type PageHeadingProps = {
 	};
 	redirect?: boolean;
 	redirectUrl?: string;
-	caseStudy?: CaseStudy;
+	caseStudy?: CaseStudyResponse;
 };
 
 export default function PageHeading({

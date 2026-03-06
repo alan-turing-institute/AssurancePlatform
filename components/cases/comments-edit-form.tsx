@@ -22,9 +22,9 @@ import {
 	type CommentFormInput,
 	commentFormSchema,
 } from "@/lib/schemas/comment";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
-import type { Comment as CaseComment } from "@/types";
 import { Textarea } from "../ui/textarea";
 
 type CommentsEditFormProps = {
@@ -34,7 +34,7 @@ type CommentsEditFormProps = {
 			id: number | string;
 		};
 	};
-	comment: CaseComment;
+	comment: CommentResponse;
 	setEdit: Dispatch<SetStateAction<boolean>>;
 };
 

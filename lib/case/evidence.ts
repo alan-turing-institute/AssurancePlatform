@@ -3,12 +3,16 @@
  * Handles adding, updating, and moving evidence
  */
 
-import type { Evidence, PropertyClaim, Strategy } from "@/types";
+import type {
+	EvidenceResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 
 // Helper function to add evidence to a specific claim
 const addEvidenceToSpecificClaim = (
-	propertyClaim: PropertyClaim,
-	newEvidence: Evidence
+	propertyClaim: PropertyClaimResponse,
+	newEvidence: EvidenceResponse
 ): void => {
 	if (!propertyClaim.evidence) {
 		propertyClaim.evidence = [];
@@ -18,9 +22,9 @@ const addEvidenceToSpecificClaim = (
 
 // Helper function to search in nested property claims for evidence
 const searchInNestedClaimsForEvidence = (
-	propertyClaims: PropertyClaim[],
-	parentId: number,
-	newEvidence: Evidence
+	propertyClaims: PropertyClaimResponse[],
+	parentId: string,
+	newEvidence: EvidenceResponse
 ): boolean => {
 	const found = addEvidenceToClaim(propertyClaims, parentId, newEvidence);
 	return found;
@@ -28,9 +32,9 @@ const searchInNestedClaimsForEvidence = (
 
 // Helper function to search in strategies for evidence
 const searchInStrategiesForEvidence = (
-	strategies: Strategy[],
-	parentId: number,
-	newEvidence: Evidence
+	strategies: StrategyResponse[],
+	parentId: string,
+	newEvidence: EvidenceResponse
 ): boolean => {
 	for (const strategy of strategies) {
 		if (strategy.propertyClaims && strategy.propertyClaims.length > 0) {
@@ -51,9 +55,9 @@ const searchInStrategiesForEvidence = (
  * Adds evidence to a specified property claim by ID.
  */
 export const addEvidenceToClaim = (
-	array: PropertyClaim[],
-	parentId: number,
-	newEvidence: Evidence
+	array: PropertyClaimResponse[],
+	parentId: string,
+	newEvidence: EvidenceResponse
 ): boolean => {
 	// Iterate through the property claims array
 	for (const propertyClaim of array) {
@@ -96,10 +100,10 @@ export const addEvidenceToClaim = (
 
 // Helper to update strategies with nested evidence immutably
 const updateStrategiesWithEvidence = (
-	strategies: Strategy[],
-	id: number,
-	newEvidence: Partial<Evidence>
-): { strategies: Strategy[]; found: boolean } => {
+	strategies: StrategyResponse[],
+	id: string,
+	newEvidence: Partial<EvidenceResponse>
+): { strategies: StrategyResponse[]; found: boolean } => {
 	let found = false;
 	const result = strategies.map((strategy) => {
 		if (found || !strategy.propertyClaims?.length) {
@@ -121,11 +125,11 @@ const updateStrategiesWithEvidence = (
 
 // Helper to process a single property claim for evidence update immutably
 const processClaimForEvidenceUpdate = (
-	claim: PropertyClaim,
-	id: number,
-	newEvidence: Partial<Evidence>,
+	claim: PropertyClaimResponse,
+	id: string,
+	newEvidence: Partial<EvidenceResponse>,
 	alreadyFound: boolean
-): { claim: PropertyClaim; found: boolean } => {
+): { claim: PropertyClaimResponse; found: boolean } => {
 	if (alreadyFound) {
 		return { claim, found: false };
 	}
@@ -175,10 +179,10 @@ const processClaimForEvidenceUpdate = (
  * Returns a NEW array reference when updates are made, ensuring React detects changes.
  */
 export const updateEvidenceNested = (
-	array: PropertyClaim[],
-	id: number,
-	newEvidence: Partial<Evidence>
-): PropertyClaim[] => {
+	array: PropertyClaimResponse[],
+	id: string,
+	newEvidence: Partial<EvidenceResponse>
+): PropertyClaimResponse[] => {
 	if (!array || array.length === 0) {
 		return array;
 	}
@@ -205,12 +209,12 @@ export const updateEvidenceNested = (
  * Uses immutable patterns - returns NEW object references to ensure React detects changes.
  */
 const removeEvidenceFromOldLocation = (
-	array: PropertyClaim[],
-	id: number
-): PropertyClaim[] =>
+	array: PropertyClaimResponse[],
+	id: string
+): PropertyClaimResponse[] =>
 	array.map((item) => {
 		// Create a new item object to avoid mutating the original
-		const newItem: PropertyClaim = { ...item };
+		const newItem: PropertyClaimResponse = { ...item };
 
 		if (newItem.evidence) {
 			newItem.evidence = newItem.evidence.filter(
@@ -248,13 +252,13 @@ const removeEvidenceFromOldLocation = (
  * Uses immutable patterns - returns NEW object references to ensure React detects changes.
  */
 const addEvidenceToNewLocation = (
-	array: PropertyClaim[],
-	evidence: Evidence,
-	newClaimId: number
-): PropertyClaim[] =>
+	array: PropertyClaimResponse[],
+	evidence: EvidenceResponse,
+	newClaimId: string
+): PropertyClaimResponse[] =>
 	array.map((item) => {
 		// Create a new item object to avoid mutating the original
-		const newItem: PropertyClaim = { ...item };
+		const newItem: PropertyClaimResponse = { ...item };
 
 		if (newItem.id === newClaimId) {
 			// Create new evidence array with the added evidence
@@ -290,9 +294,9 @@ const addEvidenceToNewLocation = (
 
 // Helper function to search for evidence in item
 const searchEvidenceInItem = (
-	item: PropertyClaim,
-	id: number
-): Evidence | null => {
+	item: PropertyClaimResponse,
+	id: string
+): EvidenceResponse | null => {
 	if (item.evidence) {
 		for (const evidence of item.evidence) {
 			if (evidence.id === id) {
@@ -305,9 +309,9 @@ const searchEvidenceInItem = (
 
 // Helper function to search in strategy property claims for evidence
 const searchInStrategyClaimsForEvidence = (
-	strategies: Strategy[],
-	id: number
-): Evidence | null => {
+	strategies: StrategyResponse[],
+	id: string
+): EvidenceResponse | null => {
 	for (const strategy of strategies) {
 		if (strategy.propertyClaims) {
 			const found = searchInNestedStructuresForEvidence(
@@ -324,9 +328,9 @@ const searchInStrategyClaimsForEvidence = (
 
 // Helper function to search a single property claim for evidence
 const searchSinglePropertyClaimForEvidence = (
-	item: PropertyClaim,
-	id: number
-): Evidence | null => {
+	item: PropertyClaimResponse,
+	id: string
+): EvidenceResponse | null => {
 	const found = searchEvidenceInItem(item, id);
 	if (found) {
 		return found;
@@ -357,9 +361,9 @@ const searchSinglePropertyClaimForEvidence = (
 
 // Helper function to search in nested structures for evidence
 const searchInNestedStructuresForEvidence = (
-	arr: PropertyClaim[],
-	id: number
-): Evidence | null => {
+	arr: PropertyClaimResponse[],
+	id: string
+): EvidenceResponse | null => {
 	for (const item of arr) {
 		const found = searchSinglePropertyClaimForEvidence(item, id);
 		if (found) {
@@ -373,10 +377,10 @@ const searchInNestedStructuresForEvidence = (
  * Updates and moves evidence to a new location within a nested structure.
  */
 export const updateEvidenceNestedMove = (
-	array: PropertyClaim[],
-	id: number,
-	newEvidence: Partial<Evidence> & { propertyClaimId: number[] }
-): PropertyClaim[] => {
+	array: PropertyClaimResponse[],
+	id: string,
+	newEvidence: Partial<EvidenceResponse> & { propertyClaimId: string[] }
+): PropertyClaimResponse[] => {
 	// Find the existing evidence item
 	const existingEvidence = searchInNestedStructuresForEvidence(array, id);
 
@@ -385,12 +389,12 @@ export const updateEvidenceNestedMove = (
 
 	// Merge existing evidence properties with updated ones
 	const updatedEvidence = {
-		...(existingEvidence as Evidence),
+		...(existingEvidence as EvidenceResponse),
 		...newEvidence,
-	} as Evidence;
+	} as EvidenceResponse;
 
 	// Add evidence to the new location
-	const newClaimId = newEvidence.propertyClaimId[0] ?? 0;
+	const newClaimId = newEvidence.propertyClaimId[0] ?? "";
 	const updatedArray = addEvidenceToNewLocation(
 		arrayWithoutOldEvidence,
 		updatedEvidence,

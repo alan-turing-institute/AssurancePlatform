@@ -14,14 +14,18 @@ import {
 } from "reactflow";
 import { create } from "zustand";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import type {
+	AssuranceCaseResponse,
+	UserResponse,
+} from "@/lib/services/case-response-types";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import { nodeTypes } from "@/store/node-types";
-import type { AssuranceCase, Comment as CaseComment, User } from "@/types";
 import { initEdges } from "./edges";
 import { initNodes } from "./nodes";
 
 // Define types for orphaned elements
 type OrphanedElement = {
-	id: number;
+	id: string;
 	type: string;
 	name: string;
 	[key: string]: unknown;
@@ -36,7 +40,7 @@ type Member = {
 };
 
 type Store = {
-	assuranceCase: AssuranceCase | null;
+	assuranceCase: AssuranceCaseResponse | null;
 	orphanedElements: OrphanedElement[];
 	nodes: Node[];
 	edges: Edge[];
@@ -44,7 +48,7 @@ type Store = {
 	onNodesChange: OnNodesChange;
 	onEdgesChange: OnEdgesChange;
 	onConnect: OnConnect;
-	setAssuranceCase: (assuranceCase: AssuranceCase | null) => void;
+	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => void;
 	setOrphanedElements: (
 		orphanedElements:
 			| OrphanedElement[]
@@ -68,12 +72,12 @@ type Store = {
 	setViewMembers: (members: Member[]) => void;
 	setEditMembers: (members: Member[]) => void;
 	setReviewMembers: (members: Member[]) => void;
-	activeUsers: User[];
-	setActiveUsers: (users: User[]) => void;
-	nodeComments: CaseComment[];
-	setNodeComments: (comments: CaseComment[]) => void;
-	caseNotes: CaseComment[];
-	setCaseNotes: (comments: CaseComment[]) => void;
+	activeUsers: UserResponse[];
+	setActiveUsers: (users: UserResponse[]) => void;
+	nodeComments: CommentResponse[];
+	setNodeComments: (comments: CommentResponse[]) => void;
+	caseNotes: CommentResponse[];
+	setCaseNotes: (comments: CommentResponse[]) => void;
 	// Comments sheet state
 	commentsSheetOpen: boolean;
 	commentsSheetNode: Node | null;
@@ -107,7 +111,7 @@ const useStore = create<Store>((set, get) => ({
 			edges: addEdge(connection, get().edges),
 		});
 	},
-	setAssuranceCase: (assuranceCase: AssuranceCase | null) => {
+	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => {
 		// Update the assurance case in the state
 		// Note: The Flow component's useEffect handles converting the case to nodes/edges
 		// via the convert() function, so we don't need to call layoutNodes here
@@ -190,11 +194,11 @@ const useStore = create<Store>((set, get) => ({
 		set({ reviewMembers: members });
 	},
 	activeUsers: [],
-	setActiveUsers(users: User[]) {
+	setActiveUsers(users: UserResponse[]) {
 		set({ activeUsers: users });
 	},
 	nodeComments: [],
-	setNodeComments: (comments: CaseComment[]) => {
+	setNodeComments: (comments: CommentResponse[]) => {
 		// Handle undefined/null comments gracefully
 		if (!(comments && Array.isArray(comments))) {
 			set({ nodeComments: [] });
@@ -207,7 +211,7 @@ const useStore = create<Store>((set, get) => ({
 		set({ nodeComments: sortedComments });
 	},
 	caseNotes: [],
-	setCaseNotes: (comments: CaseComment[]) => {
+	setCaseNotes: (comments: CommentResponse[]) => {
 		// Handle undefined/null comments gracefully
 		if (!(comments && Array.isArray(comments))) {
 			set({ caseNotes: [] });

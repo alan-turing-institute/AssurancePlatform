@@ -3,9 +3,9 @@
 import { Cloud, Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import type { AssuranceCase } from "@/types";
 import { Button } from "../../ui/button";
 
 /**
@@ -39,7 +39,7 @@ type ExportModal = {
 };
 
 export type GoogleBackupSectionProps = {
-	assuranceCase: AssuranceCase | null;
+	assuranceCase: AssuranceCaseResponse | null;
 	exportModal: ExportModal;
 	toast: typeof ToastFn;
 	className?: string;

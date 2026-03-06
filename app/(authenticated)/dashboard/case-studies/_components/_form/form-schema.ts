@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CaseStudyFormProps } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 
 export const assuranceCaseSchema = z.object({
 	id: z.string(),
@@ -30,7 +30,7 @@ export type CaseStudyFormValues = z.infer<typeof caseStudyFormSchema>;
 
 // Helper function to get default values for the form
 export const getDefaultFormValues = (
-	caseStudy?: CaseStudyFormProps["caseStudy"]
+	caseStudy?: CaseStudyResponse
 ): CaseStudyFormValues =>
 	caseStudy
 		? {

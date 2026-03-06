@@ -6,8 +6,8 @@
  */
 
 import { Octokit } from "@octokit/rest";
+import type { ErrorCode } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
-import type { ErrorCode } from "@/types/domain";
 
 // Top-level regex patterns for URL parsing
 // Matches: raw.githubusercontent.com/owner/repo/branch/path (simple format)

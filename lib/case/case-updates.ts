@@ -4,12 +4,12 @@
  */
 
 import type {
-	AssuranceCase,
-	Evidence,
-	Goal,
-	PropertyClaim,
-	Strategy,
-} from "@/types";
+	AssuranceCaseResponse,
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import { updateEvidenceNested, updateEvidenceNestedMove } from "./evidence";
 import {
 	updatePropertyClaimNested,
@@ -21,13 +21,13 @@ import type { ReactFlowNode } from "./types";
 
 // Helper function to update strategy
 const updateStrategy = (
-	assuranceCase: AssuranceCase,
-	id: number,
-	updatedItem: Partial<Strategy>
-): AssuranceCase => {
+	assuranceCase: AssuranceCaseResponse,
+	id: string,
+	updatedItem: Partial<StrategyResponse>
+): AssuranceCaseResponse => {
 	const firstGoal = assuranceCase.goals?.[0];
 	const newStrategy = (firstGoal?.strategies || []).map(
-		(strategy: Strategy) => {
+		(strategy: StrategyResponse) => {
 			if (strategy.id === id && strategy.type === "strategy") {
 				return {
 					...strategy,
@@ -53,16 +53,16 @@ const updateStrategy = (
 
 // Options type for updatePropertyClaim helper
 type UpdatePropertyClaimOptions = {
-	assuranceCase: AssuranceCase;
-	id: number;
-	updatedItem: Partial<PropertyClaim>;
+	assuranceCase: AssuranceCaseResponse;
+	id: string;
+	updatedItem: Partial<PropertyClaimResponse>;
 	move: boolean;
 };
 
 // Helper function to update property claim
 const updatePropertyClaim = (
 	options: UpdatePropertyClaimOptions
-): AssuranceCase => {
+): AssuranceCaseResponse => {
 	const { assuranceCase, id, updatedItem, move } = options;
 
 	if (!assuranceCase.goals || assuranceCase.goals.length === 0) {
@@ -80,7 +80,9 @@ const updatePropertyClaim = (
 		? updatePropertyClaimNestedMove(
 				directClaims,
 				id,
-				updatedItem as Partial<PropertyClaim> & { propertyClaimId?: number }
+				updatedItem as Partial<PropertyClaimResponse> & {
+					propertyClaimId?: string;
+				}
 			)
 		: updatePropertyClaimNested(directClaims, id, updatedItem);
 
@@ -106,7 +108,9 @@ const updatePropertyClaim = (
 			? updatePropertyClaimNestedMove(
 					strategyClaims,
 					id,
-					updatedItem as Partial<PropertyClaim> & { propertyClaimId?: number }
+					updatedItem as Partial<PropertyClaimResponse> & {
+						propertyClaimId?: string;
+					}
 				)
 			: updatePropertyClaimNested(strategyClaims, id, updatedItem);
 
@@ -130,14 +134,16 @@ const updatePropertyClaim = (
 
 // Options type for updateEvidence helper
 type UpdateEvidenceOptions = {
-	assuranceCase: AssuranceCase;
-	id: number;
-	updatedItem: Partial<Evidence>;
+	assuranceCase: AssuranceCaseResponse;
+	id: string;
+	updatedItem: Partial<EvidenceResponse>;
 	move: boolean;
 };
 
 // Helper function to update evidence
-const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
+const updateEvidence = (
+	options: UpdateEvidenceOptions
+): AssuranceCaseResponse => {
 	const { assuranceCase, id, updatedItem, move } = options;
 
 	if (!assuranceCase.goals || assuranceCase.goals.length === 0) {
@@ -155,7 +161,7 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 		? updateEvidenceNestedMove(
 				directClaims,
 				id,
-				updatedItem as Partial<Evidence> & { propertyClaimId: number[] }
+				updatedItem as Partial<EvidenceResponse> & { propertyClaimId: string[] }
 			)
 		: updateEvidenceNested(directClaims, id, updatedItem);
 
@@ -181,7 +187,9 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 			? updateEvidenceNestedMove(
 					strategyClaims,
 					id,
-					updatedItem as Partial<Evidence> & { propertyClaimId: number[] }
+					updatedItem as Partial<EvidenceResponse> & {
+						propertyClaimId: string[];
+					}
 				)
 			: updateEvidenceNested(strategyClaims, id, updatedItem);
 
@@ -213,29 +221,29 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
  */
 export const updateAssuranceCase = (
 	type: string,
-	assuranceCase: AssuranceCase,
+	assuranceCase: AssuranceCaseResponse,
 	updatedItem:
-		| Partial<Goal>
-		| Partial<Strategy>
-		| Partial<PropertyClaim>
-		| Partial<Evidence>,
-	id: number,
+		| Partial<GoalResponse>
+		| Partial<StrategyResponse>
+		| Partial<PropertyClaimResponse>
+		| Partial<EvidenceResponse>,
+	id: string,
 	_node: ReactFlowNode,
 	move = false
-): AssuranceCase => {
+): AssuranceCaseResponse => {
 	switch (type) {
 		case "strategy":
 			return updateStrategy(
 				assuranceCase,
 				id,
-				updatedItem as Partial<Strategy>
+				updatedItem as Partial<StrategyResponse>
 			);
 
 		case "property":
 			return updatePropertyClaim({
 				assuranceCase,
 				id,
-				updatedItem: updatedItem as Partial<PropertyClaim>,
+				updatedItem: updatedItem as Partial<PropertyClaimResponse>,
 				move,
 			});
 
@@ -243,7 +251,7 @@ export const updateAssuranceCase = (
 			return updateEvidence({
 				assuranceCase,
 				id,
-				updatedItem: updatedItem as Partial<Evidence>,
+				updatedItem: updatedItem as Partial<EvidenceResponse>,
 				move,
 			});
 
@@ -256,7 +264,7 @@ export const updateAssuranceCase = (
 							{
 								...defaultGoal,
 								...updatedItem,
-							} as Goal,
+							} as GoalResponse,
 						]
 					: [],
 			};

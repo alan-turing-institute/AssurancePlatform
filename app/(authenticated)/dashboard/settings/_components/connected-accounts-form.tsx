@@ -11,8 +11,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { ConnectedAccountsData } from "@/lib/services/connected-accounts-service";
 import { toast } from "@/lib/toast";
-import type { ConnectedAccountsData } from "@/types/domain";
 
 type ConnectedAccountsFormProps = {
 	data: ConnectedAccountsData | null;

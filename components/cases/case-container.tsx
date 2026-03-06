@@ -10,10 +10,10 @@ import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
-import type { AssuranceCase } from "@/types";
 import { ErrorBoundary } from "../ui/error-boundary";
 import CaseDetails from "./case-details";
 import Flow from "./flow";
@@ -144,7 +144,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				}
 
 				const result = await response.json();
-				return addHiddenProp(result) as AssuranceCase;
+				return addHiddenProp(result) as AssuranceCaseResponse;
 			} catch (_error) {
 				toastError("Failed to load case data");
 				return null;
@@ -266,7 +266,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				try {
 					const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 					const result = await fetchSingleCase(idValue);
-					setAssuranceCase((result as AssuranceCase) || null);
+					setAssuranceCase((result as AssuranceCaseResponse) || null);
 					setLoading(false);
 				} catch {
 					setLoading(false);

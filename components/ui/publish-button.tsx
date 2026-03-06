@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
-import type { CaseStudy } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 
 type PublishButtonProps = {
 	label: string;
 	published: boolean;
-	caseStudy: CaseStudy;
+	caseStudy: CaseStudyResponse;
 };
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {

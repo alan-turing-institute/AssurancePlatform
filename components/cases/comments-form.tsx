@@ -14,8 +14,8 @@ import {
 	type CommentFormInput,
 	commentFormSchema,
 } from "@/lib/schemas/comment";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import useStore from "@/store/store";
-import type { Comment } from "@/types/domain";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
@@ -75,7 +75,9 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
 			// Update comments based on whether this is a reply or top-level comment
 			if (parentId) {
 				// Find parent comment and add reply to its replies array
-				const addReplyToParent = (comments: Comment[]): Comment[] =>
+				const addReplyToParent = (
+					comments: CommentResponse[]
+				): CommentResponse[] =>
 					comments.map((comment) => {
 						if (comment.id === parentId) {
 							return {

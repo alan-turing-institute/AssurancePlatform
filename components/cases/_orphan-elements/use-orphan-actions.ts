@@ -12,11 +12,18 @@ import {
 	fetchAndRefreshCase,
 } from "@/lib/case";
 import { normaliseOrphanType } from "@/lib/element-compatibility";
+import type {
+	EvidenceResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import { recordAttach, recordDelete } from "@/lib/services/history-service";
 import useStore from "@/store/store";
-import type { Evidence, PropertyClaim, Strategy } from "@/types";
 
-export type OrphanElement = Evidence | PropertyClaim | Strategy;
+export type OrphanElement =
+	| EvidenceResponse
+	| PropertyClaimResponse
+	| StrategyResponse;
 
 type UseOrphanActionsParams = {
 	node: Node;
@@ -90,11 +97,11 @@ export function useOrphanActions({
 						case "context":
 							return null;
 						case "evidence":
-							return item as unknown as Evidence;
+							return item as unknown as EvidenceResponse;
 						case "propertyclaim":
-							return item as unknown as PropertyClaim;
+							return item as unknown as PropertyClaimResponse;
 						case "strategy":
-							return item as unknown as Strategy;
+							return item as unknown as StrategyResponse;
 						default:
 							return null;
 					}

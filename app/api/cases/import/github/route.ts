@@ -5,6 +5,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import type { ErrorCode } from "@/lib/errors";
 import { AppError, forbidden, validationError } from "@/lib/errors";
 import {
 	type GitHubImportInput,
@@ -16,7 +17,6 @@ import {
 	hasGitHubToken,
 	parseGitHubUrl,
 } from "@/lib/services/github-api-service";
-import type { ErrorCode } from "@/types/domain";
 
 /**
  * Parsed GitHub location

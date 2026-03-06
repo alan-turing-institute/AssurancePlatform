@@ -4,13 +4,13 @@ import { saveAs } from "file-saver";
 import { Download } from "lucide-react";
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import type { AssuranceCase } from "@/types";
 import { Button } from "../../ui/button";
 
 export type JsonExportSectionProps = {
-	assuranceCase: AssuranceCase | null;
+	assuranceCase: AssuranceCaseResponse | null;
 	toast: typeof ToastFn;
 	className?: string;
 };

@@ -5,6 +5,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import type { ErrorCode } from "@/lib/errors";
 import { AppError, forbidden, validationError } from "@/lib/errors";
 import { backupToDriveSchema } from "@/lib/schemas/google-drive";
 import { exportCase } from "@/lib/services/case-export-service";
@@ -13,7 +14,6 @@ import {
 	hasGoogleToken,
 	uploadBackupToDrive,
 } from "@/lib/services/google-drive-service";
-import type { ErrorCode } from "@/types/domain";
 
 /**
  * Maps Google Drive error codes to application error codes.

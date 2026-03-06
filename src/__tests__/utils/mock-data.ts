@@ -1,5 +1,8 @@
 // Mock data generators for tests
-import type { AssuranceCase, CaseStudy } from "@/types/domain";
+import type {
+	AssuranceCaseResponse,
+	CaseStudyResponse,
+} from "@/lib/services/case-response-types";
 
 export const mockUser = {
 	id: 1,
@@ -129,12 +132,12 @@ export const createMockUser = (overrides: Partial<typeof mockUser> = {}) => ({
 });
 
 export const createMockAssuranceCase = (
-	overrides: Partial<AssuranceCase> = {}
-): AssuranceCase =>
+	overrides: Partial<AssuranceCaseResponse> = {}
+): AssuranceCaseResponse =>
 	({
 		...mockAssuranceCase,
 		...overrides,
-	}) as AssuranceCase;
+	}) as AssuranceCaseResponse;
 
 export const createMockGoal = (overrides: Partial<typeof mockGoal> = {}) => ({
 	...mockGoal,
@@ -177,12 +180,12 @@ export const createMockComment = (
 });
 
 export const createMockCaseStudy = (
-	overrides: Partial<CaseStudy> = {}
-): CaseStudy =>
+	overrides: Partial<CaseStudyResponse> = {}
+): CaseStudyResponse =>
 	({
 		...mockCaseStudy,
 		...overrides,
-	}) as CaseStudy;
+	}) as CaseStudyResponse;
 
 // Mock team data
 export const mockTeam = {

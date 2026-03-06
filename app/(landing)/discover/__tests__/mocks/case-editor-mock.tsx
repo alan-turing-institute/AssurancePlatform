@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { AssuranceCase } from "@/types/domain";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
 type CaseEditorMockProps = {
-	caseData: AssuranceCase;
+	caseData: AssuranceCaseResponse;
 };
 
 export const CaseEditorMock = ({ caseData }: CaseEditorMockProps) => {

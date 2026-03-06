@@ -15,13 +15,13 @@ import {
 	type CommentFormInput,
 	commentFormSchema,
 } from "@/lib/schemas/comment";
+import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
-import type { Comment } from "@/types";
 import { Textarea } from "../ui/textarea";
 
 type NotesEditFormProps = {
-	note: Comment;
+	note: CommentResponse;
 	setEdit: Dispatch<SetStateAction<boolean | undefined>>;
 };
 

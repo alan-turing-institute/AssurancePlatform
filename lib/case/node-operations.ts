@@ -4,24 +4,27 @@ import {
 	type ReactFlowNode,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
+import type {
+	AssuranceCaseResponse,
+	PropertyClaimResponse,
+} from "@/lib/services/case-response-types";
 import { recordDelete } from "@/lib/services/history-service";
-import type { AssuranceCase, PropertyClaim } from "@/types";
 
 /**
  * Type for orphan element data
  */
 export type OrphanElementData = {
-	id: number;
+	id: string;
 	type: string;
 	name: string;
 	description: string;
-	propertyClaimId?: number | null;
+	propertyClaimId?: string | null;
 };
 
 type DeleteNodeOptions = {
 	node: ReactFlowNode;
-	assuranceCase: AssuranceCase;
-	setAssuranceCase: (ac: AssuranceCase) => void;
+	assuranceCase: AssuranceCaseResponse;
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void;
 	setLoading: (loading: boolean) => void;
 	setDeleteOpen: (open: boolean) => void;
 	handleClose: () => void;
@@ -30,8 +33,8 @@ type DeleteNodeOptions = {
 
 type DetachNodeOptions = {
 	node: ReactFlowNode;
-	assuranceCase: AssuranceCase;
-	setAssuranceCase: (ac: AssuranceCase) => void;
+	assuranceCase: AssuranceCaseResponse;
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void;
 	setLoading: (loading: boolean) => void;
 	setDeleteOpen: (open: boolean) => void;
 	handleClose: () => void;
@@ -56,11 +59,11 @@ const TYPE_MAP: Record<string, string> = {
  */
 const createEvidenceOrphan = (
 	ev: {
-		id: number;
+		id: string;
 		name: string;
 		description?: string;
 	},
-	parentClaimId: number
+	parentClaimId: string
 ): OrphanElementData => ({
 	id: ev.id,
 	type: TYPE_MAP.evidence ?? "evidence",
@@ -72,7 +75,9 @@ const createEvidenceOrphan = (
 /**
  * Helper to collect all orphan elements from a property claim (including children)
  */
-const collectOrphanElements = (claim: PropertyClaim): OrphanElementData[] => {
+const collectOrphanElements = (
+	claim: PropertyClaimResponse
+): OrphanElementData[] => {
 	const elements: OrphanElementData[] = [];
 
 	// Add the claim itself
@@ -120,17 +125,17 @@ export const deleteNode = async (options: DeleteNodeOptions): Promise<void> => {
 	setLoading(true);
 	const deleted = await deleteAssuranceCaseNode(
 		node.type ?? "",
-		node.data.id as number,
+		node.data.id as string,
 		sessionKey
 	);
 
 	if (deleted && assuranceCase) {
 		// Record delete operation for undo/redo
-		recordDelete(node.data.id as number, node.type ?? "", node.data);
+		recordDelete(node.data.id as string, node.type ?? "", node.data);
 
 		const updatedAssuranceCase = await removeAssuranceCaseNode(
 			assuranceCase,
-			node.data.id as number,
+			node.data.id as string,
 			node.data.type as string
 		);
 		if (updatedAssuranceCase) {
@@ -161,7 +166,7 @@ export const detachNode = async (options: DetachNodeOptions): Promise<void> => {
 	const result = await detachCaseElement(
 		node,
 		node.type ?? "",
-		node.data.id as number,
+		node.data.id as string,
 		sessionKey
 	);
 
@@ -176,13 +181,13 @@ export const detachNode = async (options: DetachNodeOptions): Promise<void> => {
 
 		if (node.type === "property" && node.data) {
 			// For property claims, collect the claim and all its children
-			const claimData = node.data as unknown as PropertyClaim;
+			const claimData = node.data as unknown as PropertyClaimResponse;
 			newOrphanElements = collectOrphanElements(claimData);
 		} else {
 			// For other types, just add the single element
 			newOrphanElements = [
 				{
-					id: node.data.id as number,
+					id: node.data.id as string,
 					type: (TYPE_MAP[node.type ?? ""] ??
 						(node.data.type as string)) as string,
 					name: node.data.name as string,
@@ -193,7 +198,7 @@ export const detachNode = async (options: DetachNodeOptions): Promise<void> => {
 
 		const updatedAssuranceCase = removeAssuranceCaseNode(
 			assuranceCase,
-			node.data.id as number,
+			node.data.id as string,
 			node.data.type as string
 		);
 		if (updatedAssuranceCase) {

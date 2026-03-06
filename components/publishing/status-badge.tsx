@@ -1,8 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import type { PublishStatusType } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
-import type { PublishStatusType } from "@/types/domain";
 
 type StatusBadgeProps = {
 	status: PublishStatusType;

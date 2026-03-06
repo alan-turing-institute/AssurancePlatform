@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { validateSession } from "@/lib/auth/validate-session";
+import type { ActionResult } from "@/lib/errors";
 import {
 	caseStudyIdSchema,
 	createCaseStudySchema,
@@ -12,7 +13,6 @@ import {
 	validateFormData,
 	validateInput,
 } from "@/lib/validation/input-validation";
-import type { ActionResult } from "@/types";
 
 /**
  * Fetch all case studies owned by the current user

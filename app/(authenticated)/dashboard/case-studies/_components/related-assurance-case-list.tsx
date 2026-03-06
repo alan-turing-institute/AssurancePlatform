@@ -2,30 +2,34 @@
 
 import { InfoIcon, MoveRightIcon } from "lucide-react";
 import Link from "next/link";
+import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 import { fetchPublishedCasesForStudy } from "@/actions/assurance-cases";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type {
-	AssuranceCase,
-	RelatedAssuranceCaseListProps,
-} from "@/types/domain";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
+
+type RelatedAssuranceCaseListProps = {
+	selectedAssuranceCases: string[];
+	setSelectedAssuranceCases: Dispatch<SetStateAction<string[]>>;
+	className?: string;
+};
 
 const RelatedAssuranceCaseList = ({
 	selectedAssuranceCases,
 	setSelectedAssuranceCases,
-}: Omit<RelatedAssuranceCaseListProps, "published">) => {
-	const [assuranceCasesList, setAssuranceCasesList] = useState<AssuranceCase[]>(
-		[]
-	);
+}: RelatedAssuranceCaseListProps) => {
+	const [assuranceCasesList, setAssuranceCasesList] = useState<
+		AssuranceCaseResponse[]
+	>([]);
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
 		const getCases = async () => {
 			try {
 				const cases = await fetchPublishedCasesForStudy();
-				setAssuranceCasesList(cases as unknown as AssuranceCase[]);
+				setAssuranceCasesList(cases as unknown as AssuranceCaseResponse[]);
 			} finally {
 				setIsLoading(false);
 			}
@@ -90,7 +94,7 @@ const RelatedAssuranceCaseList = ({
 					>
 						<div>
 							{assuranceCasesList
-								.sort((a: AssuranceCase, b: AssuranceCase) => {
+								.sort((a: AssuranceCaseResponse, b: AssuranceCaseResponse) => {
 									const aSelected = selectedAssuranceCases.includes(a.id);
 									const bSelected = selectedAssuranceCases.includes(b.id);
 									if (aSelected === bSelected) {
@@ -98,7 +102,7 @@ const RelatedAssuranceCaseList = ({
 									}
 									return aSelected ? -1 : 1;
 								})
-								.map((assuranceCase: AssuranceCase) => (
+								.map((assuranceCase: AssuranceCaseResponse) => (
 									<div
 										className="mb-2 w-full rounded-md border transition-colors hover:bg-muted"
 										key={assuranceCase.id}

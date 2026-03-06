@@ -1,6 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { AssuranceCase } from "@/types/domain";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
 type PublicCaseViewMockProps = {
 	caseId: number;
@@ -8,7 +8,7 @@ type PublicCaseViewMockProps = {
 
 export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 	const router = useRouter();
-	const [caseData, setCaseData] = useState<AssuranceCase | null>(null);
+	const [caseData, setCaseData] = useState<AssuranceCaseResponse | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [successMessage, setSuccessMessage] = useState("");

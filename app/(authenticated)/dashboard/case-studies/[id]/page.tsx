@@ -4,7 +4,7 @@ import BackButton from "@/components/ui/back-button";
 import PageHeading from "@/components/ui/page-heading";
 import { validateSession } from "@/lib/auth/validate-session";
 import { formatFullDate, formatShortDate } from "@/lib/date";
-import type { CaseStudy } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import CaseStudyForm from "../_components/case-study-form";
 
 async function CaseStudyDetails({
@@ -122,7 +122,7 @@ async function CaseStudyDetails({
 
 export default CaseStudyDetails;
 
-function PublishedBanner({ caseStudy }: { caseStudy: CaseStudy }) {
+function PublishedBanner({ caseStudy }: { caseStudy: CaseStudyResponse }) {
 	return (
 		<div className="flex items-center gap-x-6 bg-success px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
 			<div className="w-full text-sm text-success-foreground leading-6">

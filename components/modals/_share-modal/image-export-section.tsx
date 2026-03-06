@@ -4,9 +4,9 @@ import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { Node } from "reactflow";
 import { exportDiagramImage } from "@/lib/case/image-export";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import type { AssuranceCase } from "@/types";
 import { Button } from "../../ui/button";
 import { Label } from "../../ui/label";
 import { RadioGroup, RadioGroupItem } from "../../ui/radio-group";
@@ -19,7 +19,7 @@ import {
 } from "../../ui/select";
 
 export type ImageExportSectionProps = {
-	assuranceCase: AssuranceCase | null;
+	assuranceCase: AssuranceCaseResponse | null;
 	nodes: Node[];
 	toast: typeof ToastFn;
 	className?: string;

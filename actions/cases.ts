@@ -1,9 +1,9 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import type { ActionResult } from "@/lib/errors";
 import { uuidSchema } from "@/lib/schemas/base";
 import type { CommentResponse } from "@/lib/services/comment-service";
-import type { ActionResult } from "@/types";
 
 /**
  * Fetches threaded case-level comments (notes) for a given case.

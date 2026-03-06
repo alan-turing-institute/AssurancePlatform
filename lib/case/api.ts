@@ -212,9 +212,9 @@ export const attachCaseElement = async (
 	const payload: {
 		parentId?: string | number;
 		elementType?: string;
-		goalId?: number | null;
-		strategyId?: number | null;
-		propertyClaimId?: number | null;
+		goalId?: string | null;
+		strategyId?: string | null;
+		propertyClaimId?: string | null;
 	} = {
 		parentId: parent.data.id,
 		elementType: orphan.type.toLowerCase(),

@@ -18,16 +18,16 @@ import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
+import type {
+	AssuranceCaseResponse,
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import { recordCreate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
-import type {
-	AssuranceCase,
-	Evidence,
-	Goal,
-	PropertyClaim,
-	Strategy,
-} from "@/types";
 
 type UseNewLinkFormProps = {
 	node: Node;
@@ -113,13 +113,13 @@ export function useNewLinkForm({
 						{
 							...(assuranceCase.goals?.[0] || {}),
 							context: newContext,
-						} as Goal,
+						} as GoalResponse,
 					],
 				}
 			: null;
 
 		if (updatedAssuranceCase) {
-			setAssuranceCase(updatedAssuranceCase as AssuranceCase);
+			setAssuranceCase(updatedAssuranceCase as AssuranceCaseResponse);
 		}
 		reset();
 		setLoading(false);
@@ -176,13 +176,13 @@ export function useNewLinkForm({
 						{
 							...(assuranceCase.goals?.[0] || {}),
 							strategies: newStrategy,
-						} as Goal,
+						} as GoalResponse,
 					],
 				}
 			: null;
 
 		if (updatedAssuranceCase) {
-			setAssuranceCase(updatedAssuranceCase as AssuranceCase);
+			setAssuranceCase(updatedAssuranceCase as AssuranceCaseResponse);
 		}
 		reset();
 		setLoading(false);
@@ -211,7 +211,7 @@ export function useNewLinkForm({
 
 	/** Updates assurance case state when a claim belongs to a strategy */
 	const handleStrategyClaimUpdate = (result: {
-		data: PropertyClaim;
+		data: PropertyClaimResponse;
 		error?: unknown;
 	}) => {
 		if (!assuranceCase?.goals) {
@@ -259,7 +259,7 @@ export function useNewLinkForm({
 	};
 
 	/** Updates assurance case state when a claim belongs directly to a goal */
-	const handleGoalClaimUpdate = (result: { data: PropertyClaim }) => {
+	const handleGoalClaimUpdate = (result: { data: PropertyClaimResponse }) => {
 		const newPropertyClaim = [
 			...(assuranceCase?.goals?.[0]?.propertyClaims || []),
 			result.data,
@@ -272,13 +272,13 @@ export function useNewLinkForm({
 						{
 							...(assuranceCase.goals?.[0] || {}),
 							propertyClaims: newPropertyClaim,
-						} as Goal,
+						} as GoalResponse,
 					],
 				}
 			: null;
 
 		if (updatedAssuranceCase) {
-			setAssuranceCase(updatedAssuranceCase as AssuranceCase);
+			setAssuranceCase(updatedAssuranceCase as AssuranceCaseResponse);
 		}
 	};
 
@@ -289,20 +289,20 @@ export function useNewLinkForm({
 	): void => {
 		if (nodeType === "strategy") {
 			handleStrategyClaimUpdate(
-				result as { data: PropertyClaim; error?: unknown }
+				result as { data: PropertyClaimResponse; error?: unknown }
 			);
 		} else if (nodeType === "property") {
 			handlePropertyClaim(result);
 		} else if (nodeType === "goal") {
-			handleGoalClaimUpdate(result as { data: PropertyClaim });
+			handleGoalClaimUpdate(result as { data: PropertyClaimResponse });
 		}
 	};
 
 	/** Searches strategies' property claims for a parent claim */
 	const findAndAddClaimInStrategies = (
-		strategies: Strategy[],
-		parentId: number,
-		newClaim: PropertyClaim
+		strategies: StrategyResponse[],
+		parentId: string,
+		newClaim: PropertyClaimResponse
 	): boolean => {
 		for (const strategy of strategies) {
 			const strategyPropertyClaims = strategy.propertyClaims || [];
@@ -327,9 +327,13 @@ export function useNewLinkForm({
 			return;
 		}
 
-		const goalsClone: Goal[] = JSON.parse(JSON.stringify(assuranceCase.goals));
-		const parentId = (result.data as PropertyClaim)?.propertyClaimId || 0;
-		const newClaim = (result.data as PropertyClaim) || ({} as PropertyClaim);
+		const goalsClone: GoalResponse[] = JSON.parse(
+			JSON.stringify(assuranceCase.goals)
+		);
+		const parentId =
+			(result.data as PropertyClaimResponse)?.propertyClaimId || "";
+		const newClaim =
+			(result.data as PropertyClaimResponse) || ({} as PropertyClaimResponse);
 
 		const goalPropertyClaims = goalsClone[0]?.propertyClaims || [];
 		const strategies = goalsClone[0]?.strategies || [];
@@ -404,9 +408,9 @@ export function useNewLinkForm({
 
 	/** Searches strategies' property claims for a claim to attach evidence to */
 	const checkPropertyClaimsInStrategies = (
-		strategies: Strategy[] | undefined,
-		parentClaimId: number,
-		evidence: Evidence
+		strategies: StrategyResponse[] | undefined,
+		parentClaimId: string,
+		evidence: EvidenceResponse
 	): boolean => {
 		if (!strategies) {
 			return false;
@@ -421,9 +425,9 @@ export function useNewLinkForm({
 
 	/** Searches a single goal's property claims (direct and via strategies) */
 	const checkPropertyClaimsInGoal = (
-		goal: Goal,
-		parentClaimId: number,
-		evidence: Evidence
+		goal: GoalResponse,
+		parentClaimId: string,
+		evidence: EvidenceResponse
 	): boolean => {
 		if (
 			goal.propertyClaims &&
@@ -441,16 +445,18 @@ export function useNewLinkForm({
 
 	/** Searches all goals to find the claim and attach evidence */
 	const addEvidenceToGoals = (
-		goals: Goal[],
-		parentClaimId: number,
-		evidence: Evidence
+		goals: GoalResponse[],
+		parentClaimId: string,
+		evidence: EvidenceResponse
 	): boolean =>
 		goals.some((goal) =>
 			checkPropertyClaimsInGoal(goal, parentClaimId, evidence)
 		);
 
 	/** Updates assurance case state with a modified goals structure */
-	const updateAssuranceCaseWithModifiedGoals = (modifiedGoals: Goal[]) => {
+	const updateAssuranceCaseWithModifiedGoals = (
+		modifiedGoals: GoalResponse[]
+	) => {
 		if (!assuranceCase) {
 			return;
 		}
@@ -458,7 +464,7 @@ export function useNewLinkForm({
 		setAssuranceCase({
 			...assuranceCase,
 			goals: modifiedGoals,
-		} as AssuranceCase);
+		} as AssuranceCaseResponse);
 	};
 
 	/** Handles creation of an evidence node linked to a property claim */
@@ -498,8 +504,8 @@ export function useNewLinkForm({
 			result.data as Record<string, unknown>
 		);
 
-		const evidenceData = result.data as unknown as Evidence;
-		const parentClaimId = evidenceData?.propertyClaimId?.[0] || 0;
+		const evidenceData = result.data as unknown as EvidenceResponse;
+		const parentClaimId = evidenceData?.propertyClaimId?.[0] || "";
 
 		const goalsClone = JSON.parse(JSON.stringify(assuranceCase?.goals || []));
 

@@ -39,9 +39,9 @@ import {
 	normaliseOrphanType,
 	REACTFLOW_TO_CANONICAL,
 } from "@/lib/element-compatibility";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { recordDelete, recordDetach } from "@/lib/services/history-service";
 import useStore from "@/store/store";
-import type { AssuranceCase } from "@/types";
 import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
@@ -56,7 +56,7 @@ type NodeOptionsMenuProps = {
 /** Create orphan element from node data */
 function createOrphanElement(node: Node) {
 	return {
-		id: node.data.id as number,
+		id: node.data.id as string,
 		type: REACTFLOW_TO_CANONICAL[node.type ?? ""] ?? (node.data.type as string),
 		name: node.data.name as string,
 		description: (node.data.description as string) ?? "",
@@ -80,17 +80,17 @@ function getParentDataId(
 /** Process detach result and update state */
 function processDetachResult(
 	node: Node,
-	assuranceCase: AssuranceCase,
-	orphanedElements: Array<{ id: number; type: string; name: string }>,
-	setAssuranceCase: (ac: AssuranceCase) => void,
+	assuranceCase: AssuranceCaseResponse,
+	orphanedElements: Array<{ id: string; type: string; name: string }>,
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void,
 	setOrphanedElements: (
-		elements: Array<{ id: number; type: string; name: string }>
+		elements: Array<{ id: string; type: string; name: string }>
 	) => void
 ) {
 	const newOrphanElement = createOrphanElement(node);
 	const updatedAssuranceCase = removeAssuranceCaseNode(
 		assuranceCase,
-		node.data.id as number,
+		node.data.id as string,
 		node.data.type as string
 	);
 
@@ -106,13 +106,13 @@ function processDetachResult(
 /** Process delete result and update state */
 function processDeleteResult(
 	node: Node,
-	assuranceCase: AssuranceCase,
-	setAssuranceCase: (ac: AssuranceCase) => void
+	assuranceCase: AssuranceCaseResponse,
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void
 ) {
-	recordDelete(node.data.id as number, node.type ?? "", node.data);
+	recordDelete(node.data.id as string, node.type ?? "", node.data);
 	const updatedAssuranceCase = removeAssuranceCaseNode(
 		assuranceCase,
-		node.data.id as number,
+		node.data.id as string,
 		node.data.type as string
 	);
 	if (updatedAssuranceCase) {
@@ -308,12 +308,12 @@ export default function NodeOptionsMenu({
 		const result = await detachCaseElement(
 			node as ReactFlowNode,
 			node.type ?? "",
-			node.data.id as number,
+			node.data.id as string,
 			""
 		);
 		if (!("error" in result) && result.detached) {
 			recordDetach(
-				node.data.id as number,
+				node.data.id as string,
 				elementType,
 				parentDataId,
 				node.data
@@ -337,7 +337,7 @@ export default function NodeOptionsMenu({
 		setLoading(true);
 		const deleted = await deleteAssuranceCaseNode(
 			node.type ?? "",
-			node.data.id as number,
+			node.data.id as string,
 			""
 		);
 		if (deleted) {

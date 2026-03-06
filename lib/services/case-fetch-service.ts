@@ -2,6 +2,12 @@ import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
+import type {
+	AssuranceCaseResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import type { Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -58,7 +64,7 @@ function mapPermissionToFrontend(
 function buildGoalStructure(
 	goal: CaseElement,
 	allElements: CaseElement[]
-): Record<string, unknown> {
+): GoalResponse {
 	const children = allElements.filter((el) => el.parentId === goal.id);
 
 	const strategies = children
@@ -76,17 +82,17 @@ function buildGoalStructure(
 	return {
 		id: goal.id,
 		type: "goal",
-		name: goal.name,
-		description: goal.description || "",
+		name: goal.name ?? "",
+		description: goal.description ?? "",
 		keywords: "",
 		createdDate: goal.createdAt.toISOString(),
-		assuranceCaseId: goal.caseId,
+		assuranceCaseId: goal.caseId ?? "",
 		context: goal.context || [],
 		strategies,
 		propertyClaims,
-		comments: goal.comments || [],
-		assumption: goal.assumption || "",
-		justification: goal.justification || "",
+		comments: [],
+		assumption: goal.assumption ?? "",
+		justification: goal.justification ?? "",
 		inSandbox: goal.inSandbox,
 	};
 }
@@ -95,7 +101,7 @@ function buildStrategyStructure(
 	strategy: CaseElement,
 	allElements: CaseElement[],
 	goalId: string
-): Record<string, unknown> {
+): StrategyResponse {
 	const children = allElements.filter((el) => el.parentId === strategy.id);
 
 	const propertyClaims = children
@@ -108,14 +114,14 @@ function buildStrategyStructure(
 	return {
 		id: strategy.id,
 		type: "strategy",
-		name: strategy.name,
-		description: strategy.description || "",
+		name: strategy.name ?? "",
+		description: strategy.description ?? "",
 		createdDate: strategy.createdAt.toISOString(),
 		goalId,
 		propertyClaims,
-		comments: strategy.comments || [],
-		assumption: strategy.assumption || "",
-		justification: strategy.justification || "",
+		comments: [],
+		assumption: strategy.assumption ?? "",
+		justification: strategy.justification ?? "",
 		context: strategy.context || [],
 		inSandbox: strategy.inSandbox,
 	};
@@ -126,7 +132,7 @@ function buildPropertyClaimStructure(
 	allElements: CaseElement[],
 	goalId: string | null,
 	strategyId: string | null
-): Record<string, unknown> {
+): PropertyClaimResponse {
 	const children = allElements.filter((el) => el.parentId === claim.id);
 
 	// Get evidence from EvidenceLink table (evidence uses many-to-many links, not parentId)
@@ -138,13 +144,13 @@ function buildPropertyClaimStructure(
 		.map((ev) => ({
 			id: ev.id,
 			type: "evidence",
-			name: ev.name,
-			description: ev.description || "",
+			name: ev.name ?? "",
+			description: ev.description ?? "",
 			createdDate: ev.createdAt.toISOString(),
-			URL: ev.url || "",
+			URL: ev.url ?? "",
 			urls: ev.urls || [],
 			propertyClaimId: [claim.id],
-			comments: ev.comments || [],
+			comments: [],
 			inSandbox: ev.inSandbox,
 		}));
 
@@ -158,19 +164,19 @@ function buildPropertyClaimStructure(
 	return {
 		id: claim.id,
 		type: "property_claim",
-		name: claim.name,
-		description: claim.description || "",
+		name: claim.name ?? "",
+		description: claim.description ?? "",
 		createdDate: claim.createdAt.toISOString(),
 		goalId,
 		strategyId,
 		propertyClaimId: claim.parentId,
-		level: claim.level || 1,
+		level: claim.level ?? 1,
 		claimType: "Project claim",
 		propertyClaims: nestedClaims,
 		evidence,
-		comments: claim.comments || [],
-		assumption: claim.assumption || "",
-		justification: claim.justification || "",
+		comments: [],
+		assumption: claim.assumption ?? "",
+		justification: claim.justification ?? "",
 		context: claim.context || [],
 		inSandbox: claim.inSandbox,
 	};
@@ -210,7 +216,7 @@ function buildCaseUpdateData(
 export async function fetchCaseFromPrisma(
 	caseId: string,
 	userId: string
-): ServiceResult<Record<string, unknown>> {
+): ServiceResult<AssuranceCaseResponse> {
 	// Check if user has access to this case (handles owner, direct, and team permissions)
 	const permissionResult = await getCasePermission({
 		userId,
@@ -254,15 +260,20 @@ export async function fetchCaseFromPrisma(
 		data: {
 			id: caseData.id,
 			name: caseData.name,
-			description: caseData.description,
+			description: caseData.description ?? undefined,
 			createdDate: caseData.createdAt.toISOString(),
-			colourProfile: caseData.colourProfile,
-			owner: caseData.createdById,
+			colourProfile: caseData.colourProfile ?? undefined,
+			owner: caseData.createdById ?? undefined,
 			goals,
 			permissions,
+			type: "assurance_case",
+			comments: [],
 			// Publish status fields
 			published: caseData.publishStatus === "PUBLISHED",
-			publishStatus: caseData.publishStatus,
+			publishStatus: caseData.publishStatus as
+				| "DRAFT"
+				| "READY_TO_PUBLISH"
+				| "PUBLISHED",
 			publishedAt: caseData.publishedAt?.toISOString() ?? null,
 			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
 			// Case study integration
@@ -271,7 +282,10 @@ export async function fetchCaseFromPrisma(
 			// Demo/tutorial flag
 			isDemo: caseData.isDemo,
 			// Layout preference
-			layoutDirection: caseData.layoutDirection,
+			layoutDirection: (caseData.layoutDirection ?? undefined) as
+				| "TB"
+				| "LR"
+				| undefined,
 		},
 	};
 }
@@ -457,7 +471,7 @@ export async function updateCaseWithPrisma(
 	id: string,
 	userId: string,
 	body: UpdateAssuranceCaseInput
-): ServiceResult<Record<string, unknown>> {
+): ServiceResult<AssuranceCaseResponse> {
 	// Check permission
 	const hasAccess = await canAccessCase({ userId, caseId: id }, "EDIT");
 	if (!hasAccess) {
@@ -474,10 +488,16 @@ export async function updateCaseWithPrisma(
 		data: {
 			id: updated.id,
 			name: updated.name,
-			description: updated.description,
+			description: updated.description ?? undefined,
 			createdDate: updated.createdAt.toISOString(),
-			colourProfile: updated.colourProfile,
-			layoutDirection: updated.layoutDirection,
+			colourProfile: updated.colourProfile ?? undefined,
+			layoutDirection: (updated.layoutDirection ?? undefined) as
+				| "TB"
+				| "LR"
+				| undefined,
+			type: "assurance_case",
+			comments: [],
+			permissions: "edit",
 		},
 	};
 }

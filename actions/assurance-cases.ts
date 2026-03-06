@@ -1,12 +1,12 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import type { ActionResult } from "@/lib/errors";
 import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
 import { validateInput } from "@/lib/validation/input-validation";
-import type { ActionResult } from "@/types";
 
 type AssuranceCase = {
 	id: number | string;

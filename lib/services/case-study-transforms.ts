@@ -7,7 +7,7 @@
  */
 
 import type { PublishedAssuranceCase } from "@/src/generated/prisma";
-import type { CaseStudy as CaseStudyApiResponse } from "@/types/domain";
+import type { CaseStudyResponse } from "./case-response-types";
 import type { CaseStudyWithRelations } from "./case-study-service";
 
 export type PublishedAssuranceCaseResponse = {
@@ -24,7 +24,7 @@ export type PublishedAssuranceCaseResponse = {
  */
 function transformCaseStudyForResponse(
 	caseStudy: CaseStudyWithRelations
-): CaseStudyApiResponse {
+): CaseStudyResponse {
 	return {
 		id: caseStudy.id,
 		title: caseStudy.title,
@@ -47,7 +47,7 @@ function transformCaseStudyForResponse(
  */
 export function transformCaseStudiesForApi(
 	caseStudies: CaseStudyWithRelations[]
-): CaseStudyApiResponse[] {
+): CaseStudyResponse[] {
 	return caseStudies.map(transformCaseStudyForResponse);
 }
 
@@ -56,7 +56,7 @@ export function transformCaseStudiesForApi(
  */
 export function transformCaseStudyForApi(
 	caseStudy: CaseStudyWithRelations
-): CaseStudyApiResponse {
+): CaseStudyResponse {
 	return transformCaseStudyForResponse(caseStudy);
 }
 

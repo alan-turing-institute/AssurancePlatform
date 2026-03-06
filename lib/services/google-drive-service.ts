@@ -6,8 +6,8 @@
  */
 
 import { google } from "googleapis";
+import type { ErrorCode } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
-import type { ErrorCode } from "@/types/domain";
 
 const FOLDER_NAME = "TEA Platform Backups";
 const MIME_TYPE_JSON = "application/json";

@@ -7,7 +7,7 @@
 
 import type { Mock } from "vitest";
 import { vi } from "vitest";
-import type { AssuranceCase } from "@/types/domain";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
 /**
  * WebSocket ready states
@@ -605,7 +605,7 @@ export async function waitForConnection(
  * Create a mock assurance case update message
  */
 export function createAssuranceCaseUpdate(
-	assuranceCase: Partial<AssuranceCase>,
+	assuranceCase: Partial<AssuranceCaseResponse>,
 	userId?: string
 ): WebSocketMessage {
 	return {

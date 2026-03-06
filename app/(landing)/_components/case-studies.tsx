@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/select";
 import { formatShortDate } from "@/lib/date";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
-import type { CaseStudiesProps, CaseStudy } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
+
+type CaseStudiesProps = {
+	caseStudies: CaseStudyResponse[];
+	className?: string;
+};
 
 function CaseStudies({ caseStudies }: CaseStudiesProps) {
 	const [searchKeyword, setSearchKeyword] = useState("");
@@ -23,15 +28,15 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 	const sectors = Array.from(
 		new Set(
 			caseStudies
-				.map((caseStudy: CaseStudy) => caseStudy.sector)
+				.map((caseStudy: CaseStudyResponse) => caseStudy.sector)
 				.filter(Boolean)
 		)
 	);
 
 	const filteredCaseStudies = caseStudies
-		.filter((caseStudy: CaseStudy) => caseStudy.published)
+		.filter((caseStudy: CaseStudyResponse) => caseStudy.published)
 		.filter(
-			(caseStudy: CaseStudy) =>
+			(caseStudy: CaseStudyResponse) =>
 				(searchKeyword === "" ||
 					caseStudy.title
 						.toLowerCase()
@@ -77,7 +82,7 @@ function CaseStudies({ caseStudies }: CaseStudiesProps) {
 			<div className="mx-auto max-w-7xl px-6 pb-28 lg:px-8">
 				<div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-3">
 					{filteredCaseStudies.length > 0 ? (
-						filteredCaseStudies.map((caseStudy: CaseStudy) => (
+						filteredCaseStudies.map((caseStudy: CaseStudyResponse) => (
 							<article
 								className="flex flex-col items-start justify-start"
 								key={caseStudy.id}

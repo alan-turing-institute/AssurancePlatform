@@ -8,8 +8,8 @@ import { createCaseStudy, updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Form } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import { toast } from "@/lib/toast";
-import type { CaseStudyFormProps } from "@/types/domain";
 import { AuthorSection } from "./_form/author-section";
 import { BasicInformationSection } from "./_form/basic-information-section";
 import { DescriptionSection } from "./_form/description-section";
@@ -23,6 +23,11 @@ import {
 import { useAuthorManagement } from "./_form/use-author-management";
 import { useCaseStudyImage } from "./_form/use-case-study-image";
 import RelatedAssuranceCaseList from "./related-assurance-case-list";
+
+type CaseStudyFormProps = {
+	caseStudy?: CaseStudyResponse;
+	className?: string;
+};
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 	const router = useRouter();

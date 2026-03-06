@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { validateSession } from "@/lib/auth/validate-session";
 import { formatShortDate } from "@/lib/date";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
-import type { CaseStudy } from "@/types/domain";
+import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import TableActions from "./_components/table-actions";
 
 async function CaseStudiesPage() {
@@ -89,7 +89,7 @@ async function CaseStudiesPage() {
 									</td>
 								</tr>
 							)}
-							{caseStudies.map((caseStudy: CaseStudy) => (
+							{caseStudies.map((caseStudy: CaseStudyResponse) => (
 								<tr key={caseStudy.id}>
 									<td className="w-full max-w-0 py-4 pr-3 pl-4 font-medium text-foreground text-sm sm:w-auto sm:max-w-none sm:pl-0">
 										<Link

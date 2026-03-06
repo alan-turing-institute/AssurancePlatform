@@ -1,4 +1,4 @@
-import type { AssuranceCase } from "@/types";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { addHiddenProp } from "./tree-utils";
 
 /**
@@ -11,11 +11,11 @@ import { addHiddenProp } from "./tree-utils";
  */
 export async function fetchAndRefreshCase(
 	caseId: string
-): Promise<AssuranceCase | null> {
+): Promise<AssuranceCaseResponse | null> {
 	const response = await fetch(`/api/cases/${caseId}`);
 	if (!response.ok) {
 		return null;
 	}
 	const caseData = await response.json();
-	return addHiddenProp(caseData) as AssuranceCase;
+	return addHiddenProp(caseData) as AssuranceCaseResponse;
 }

@@ -1,4 +1,22 @@
-import type { ActionResult, ErrorCode } from "@/types/domain";
+/**
+ * Classifies errors for consistent handling across API routes, server actions, and services.
+ */
+export type ErrorCode =
+	| "UNAUTHORISED"
+	| "FORBIDDEN"
+	| "NOT_FOUND"
+	| "VALIDATION"
+	| "CONFLICT"
+	| "RATE_LIMITED"
+	| "INTERNAL";
+
+/**
+ * Standard result type for Server Actions.
+ * Use this for all mutation Server Actions to provide consistent error handling.
+ */
+export type ActionResult<T> =
+	| { success: true; data: T }
+	| { success: false; error: string; fieldErrors?: Record<string, string> };
 
 const STATUS_MAP: Record<ErrorCode, number> = {
 	UNAUTHORISED: 401,

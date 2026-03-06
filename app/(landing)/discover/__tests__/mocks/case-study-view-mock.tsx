@@ -1,6 +1,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { AssuranceCase, CaseStudy } from "@/types/domain";
+import type {
+	AssuranceCaseResponse,
+	CaseStudyResponse,
+} from "@/lib/services/case-response-types";
 
 type CaseStudyViewMockProps = {
 	caseStudyId: number;
@@ -8,8 +11,8 @@ type CaseStudyViewMockProps = {
 
 export const CaseStudyViewMock = ({ caseStudyId }: CaseStudyViewMockProps) => {
 	const router = useRouter();
-	const [caseStudy, setCaseStudy] = useState<CaseStudy | null>(null);
-	const [linkedCases, setLinkedCases] = useState<AssuranceCase[]>([]);
+	const [caseStudy, setCaseStudy] = useState<CaseStudyResponse | null>(null);
+	const [linkedCases, setLinkedCases] = useState<AssuranceCaseResponse[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
