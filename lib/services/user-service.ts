@@ -21,7 +21,7 @@ export type RegisterUserInput = {
 // OUTPUT INTERFACES
 // ============================================
 
-export type UserResponse = {
+export type RegisteredUserResponse = {
 	id: string;
 	username: string;
 	email: string;
@@ -37,7 +37,9 @@ export type UserResponse = {
  */
 export async function registerUser(
 	input: RegisterUserInput
-): Promise<{ data: UserResponse } | { error: string; field?: string }> {
+): Promise<
+	{ data: RegisteredUserResponse } | { error: string; field?: string }
+> {
 	// Validate username
 	const usernameValidation = validateUsername(input.username);
 	if (!usernameValidation.valid) {
@@ -154,7 +156,9 @@ export async function dismissMigrationNotice(
 /**
  * Gets the current user by ID.
  */
-export async function getUserById(userId: string): ServiceResult<UserResponse> {
+export async function getUserById(
+	userId: string
+): ServiceResult<RegisteredUserResponse> {
 	try {
 		const user = await prisma.user.findUnique({
 			where: { id: userId },

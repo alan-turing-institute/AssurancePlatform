@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { updateCaseStudy } from "@/actions/case-studies";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
@@ -13,57 +12,6 @@ type PublishButtonProps = {
 };
 
 const PublishButton = ({ label, published, caseStudy }: PublishButtonProps) => {
-	const _router = useRouter();
-
-	// const handlePublish = async () => {
-	//   if(published) {
-	//     // Then handle the unpblish
-	//     const unPublishCaseStudy = {
-	//       ...caseStudy,
-	//       published: false,
-	//     }
-
-	//     const unpublished = await updateCaseStudy(data?.key, unPublishCaseStudy)
-
-	//     if(unpublished) {
-	//       toast({
-	//         title: 'Successfully Unpublished',
-	//         description: 'You have unpublished your case study!',
-	//       });
-	//       router.back()
-	//     } else {
-	//       toast({
-	//         variant: "destructive",
-	//         title: 'Failed to Update',
-	//         description: 'Something went wrong!',
-	//       });
-	//     }
-	//   } else {
-	//     // Then handle the publish
-	//     const publishCaseStudy = {
-	//       ...caseStudy,
-	//       published_date: new Date().toISOString(),
-	//       published: true,
-	//     }
-
-	//     const published = await updateCaseStudy(data?.key, publishCaseStudy)
-
-	//     if(published) {
-	//       toast({
-	//         title: 'Successfully Published',
-	//         description: 'You have published your case study!',
-	//       });
-	//       router.back()
-	//     } else {
-	//       toast({
-	//         variant: "destructive",
-	//         title: 'Failed to Update',
-	//         description: 'Something went wrong!',
-	//       });
-	//     }
-	//   }
-	// }
-
 	const handlePublish = async () => {
 		const formData = new FormData();
 		formData.append("id", caseStudy.id.toString());
