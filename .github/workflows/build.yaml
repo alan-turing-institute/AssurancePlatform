@@ -58,7 +58,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/tea-app
+  # Docker registry requires lowercase. github.repository returns mixed case
+  # (alan-turing-institute/AssurancePlatform), so we hardcode the lowercase form.
+  IMAGE_NAME: alan-turing-institute/assuranceplatform/tea-app
   PROD_APP_URL: https://assuranceplatform.azurewebsites.net
   STAGING_APP_URL: https://staging-assuranceplatform.azurewebsites.net
 
