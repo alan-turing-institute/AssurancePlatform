@@ -395,4 +395,109 @@ describe("PDFExporter", () => {
 			expect(result.success).toBe(true);
 		});
 	});
+
+	describe("large document handling", () => {
+		it("should export a large document with 97+ elements without overflow", async () => {
+			const document = createSampleDocument();
+			document.metadata.elementCount = 97;
+
+			// Build 97 element blocks simulating a large assurance case:
+			// 1 goal, 6 strategies, 45 property claims, 45 evidence items
+			const blocks: RenderedSection["blocks"] = [];
+
+			function getElementInfo(i: number) {
+				if (i < 1) {
+					return { type: "GOAL" as const, depth: 0 };
+				}
+				if (i < 7) {
+					return { type: "STRATEGY" as const, depth: 1 };
+				}
+				if (i < 52) {
+					return { type: "PROPERTY_CLAIM" as const, depth: 2 };
+				}
+				return { type: "EVIDENCE" as const, depth: 3 };
+			}
+
+			for (let i = 0; i < 97; i++) {
+				const info = getElementInfo(i);
+
+				blocks.push({
+					type: "element",
+					depth: info.depth,
+					node: {
+						id: `element-${i}`,
+						type: info.type,
+						name: `${info.type[0]}${i}`,
+						description: `Description for element ${i}. This text adds layout content to exercise the react-pdf layout engine.`,
+						inSandbox: false,
+						children: [],
+					},
+				});
+			}
+
+			document.sections = [
+				{
+					type: "assurance-case-structure",
+					title: "Assurance Case Structure",
+					blocks,
+				},
+			];
+
+			const result = await exporter.export(document, {
+				caseName: "Large Test Case",
+			});
+
+			expect(result.success).toBe(true);
+			if (result.success && "blob" in result) {
+				expect(result.blob).toBeInstanceOf(Blob);
+				expect(result.blob.size).toBeGreaterThan(0);
+			}
+		}, 30_000);
+
+		it("should export a document with multiple large sections", async () => {
+			const document = createSampleDocument();
+			document.metadata.elementCount = 120;
+
+			// Two large sections that would overflow in a single <Page>
+			const makeBlocks = (
+				prefix: string,
+				count: number
+			): RenderedSection["blocks"] =>
+				Array.from({ length: count }, (_, i) => ({
+					type: "element" as const,
+					depth: 1,
+					node: {
+						id: `${prefix}-${i}`,
+						type: "PROPERTY_CLAIM" as const,
+						name: `${prefix.toUpperCase()}${i}`,
+						description: `Claim ${i} in section ${prefix}.`,
+						inSandbox: false,
+						children: [],
+					},
+				}));
+
+			document.sections = [
+				{
+					type: "assurance-case-structure",
+					title: "Assurance Case Structure",
+					blocks: makeBlocks("structure", 60),
+				},
+				{
+					type: "evidence",
+					title: "Evidence",
+					blocks: makeBlocks("evidence", 60),
+				},
+			];
+
+			const result = await exporter.export(document, {
+				caseName: "Multi Section Case",
+			});
+
+			expect(result.success).toBe(true);
+			if (result.success && "blob" in result) {
+				expect(result.blob).toBeInstanceOf(Blob);
+				expect(result.blob.size).toBeGreaterThan(0);
+			}
+		}, 30_000);
+	});
 });

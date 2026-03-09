@@ -17,6 +17,7 @@ import {
 	Text,
 	View,
 } from "@react-pdf/renderer";
+import type { ReactNode } from "react";
 import type { TreeNode } from "@/lib/schemas/case-export";
 import type {
 	ContentBlock,
@@ -25,6 +26,29 @@ import type {
 	ResolvedBranding,
 } from "../types";
 import { getElementTitle } from "../utils";
+
+/**
+ * Maximum content blocks per page to prevent react-pdf layout
+ * engine Y-position overflow on large documents.
+ */
+const MAX_BLOCKS_PER_PAGE = 30;
+
+/**
+ * Split a section's blocks into page-sized chunks.
+ */
+function splitSectionBlocks(
+	blocks: ContentBlock[],
+	max: number
+): ContentBlock[][] {
+	if (blocks.length <= max) {
+		return [blocks];
+	}
+	const chunks: ContentBlock[][] = [];
+	for (let i = 0; i < blocks.length; i += max) {
+		chunks.push(blocks.slice(i, i + max));
+	}
+	return chunks;
+}
 
 /**
  * Create styles based on branding configuration.
@@ -747,36 +771,6 @@ function PDFFooterBranding({
 }
 
 /**
- * Render a section to PDF components.
- */
-function PDFSection({
-	section,
-	styles,
-}: {
-	section: RenderedSection;
-	styles: PDFStyles;
-}) {
-	if (section.blocks.length === 0) {
-		return null;
-	}
-
-	return (
-		<View>
-			{section.type !== "title-page" && section.title && (
-				<Text style={styles.h2}>{section.title}</Text>
-			)}
-			{section.blocks.map((block, blockIndex) => (
-				<PDFBlock
-					block={block}
-					key={getBlockKey(block, blockIndex)}
-					styles={styles}
-				/>
-			))}
-		</View>
-	);
-}
-
-/**
  * Render the title page.
  */
 function PDFTitlePage({
@@ -859,6 +853,35 @@ function PDFDiagramPage({
 }
 
 /**
+ * Portrait content page with standard footer.
+ * Wraps content in an A4 page with page numbers — mirrors the
+ * pattern used by PDFTitlePage and PDFDiagramPage.
+ */
+function PDFContentPage({
+	children,
+	branding,
+	styles,
+}: {
+	children: ReactNode;
+	branding: ResolvedBranding;
+	styles: PDFStyles;
+}) {
+	return (
+		<Page size="A4" style={styles.page}>
+			{children}
+			<View fixed style={styles.footer}>
+				<PDFFooterBranding branding={branding} styles={styles} />
+				<Text
+					render={({ pageNumber, totalPages }) =>
+						`Page ${pageNumber} of ${totalPages}`
+					}
+				/>
+			</View>
+		</Page>
+	);
+}
+
+/**
  * Main PDF document component.
  */
 export function PDFDocumentComponent({ document }: PDFDocumentProps) {
@@ -890,24 +913,37 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 				/>
 			))}
 
-			{/* Content Pages (portrait) */}
-			<Page size="A4" style={styles.page}>
-				{contentSections.map((section) => (
-					<PDFSection
-						key={`section-${section.type}`}
-						section={section}
+			{/* Content Pages (portrait, one page per section, large sections split) */}
+			{contentSections.map((section) => {
+				if (section.blocks.length === 0) {
+					return null;
+				}
+
+				const chunks = splitSectionBlocks(section.blocks, MAX_BLOCKS_PER_PAGE);
+
+				return chunks.map((chunk, chunkIndex) => (
+					<PDFContentPage
+						branding={document.branding}
+						key={`section-${section.type}-${chunkIndex}`}
 						styles={styles}
-					/>
-				))}
-				<View fixed style={styles.footer}>
-					<PDFFooterBranding branding={document.branding} styles={styles} />
-					<Text
-						render={({ pageNumber, totalPages }) =>
-							`Page ${pageNumber} of ${totalPages}`
-						}
-					/>
-				</View>
-			</Page>
+					>
+						{section.title && (
+							<Text style={styles.h2}>
+								{chunkIndex === 0
+									? section.title
+									: `${section.title} (continued)`}
+							</Text>
+						)}
+						{chunk.map((block, blockIndex) => (
+							<PDFBlock
+								block={block}
+								key={getBlockKey(block, blockIndex)}
+								styles={styles}
+							/>
+						))}
+					</PDFContentPage>
+				));
+			})}
 		</Document>
 	);
 }
