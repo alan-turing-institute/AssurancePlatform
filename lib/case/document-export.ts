@@ -79,7 +79,11 @@ async function getDefaultBranding(): Promise<Partial<BrandingConfig>> {
 
 export type DiagramMode = "single" | "branches";
 
-type LayoutApplyFn = (layoutNodes: Node[], layoutEdges: Edge[]) => void;
+export type LayoutApplyFn = (
+	layoutNodes: Node[],
+	layoutEdges: Edge[],
+	direction?: LayoutDirection
+) => void;
 
 export type DocumentExportOptions = {
 	caseData: CaseExportNested;
@@ -157,13 +161,18 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 
 /**
  * Wait for React to render DOM changes after a layout swap.
- * Uses double requestAnimationFrame for reliable rendering.
+ * Uses triple requestAnimationFrame to allow:
+ *   1. React to process state updates (nodes, edges, layoutDirection)
+ *   2. The flow.tsx useEffect to fire updateNodeInternals (handle repositioning)
+ *   3. React Flow to recalculate edge paths with updated handle positions
  */
-function waitForRender(): Promise<void> {
+export function waitForRender(): Promise<void> {
 	return new Promise((resolve) => {
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => {
-				resolve();
+				requestAnimationFrame(() => {
+					resolve();
+				});
 			});
 		});
 	});
@@ -233,7 +242,7 @@ function computeDepthMap(
 /**
  * Prune nodes and edges to only include elements within a given depth.
  */
-function pruneByDepth(
+export function pruneByDepth(
 	nodes: Node[],
 	edges: Edge[],
 	maxDepth: number
@@ -283,7 +292,7 @@ function chooseExportDirection(
  * Create a compact export layout with reduced spacing and auto-LR.
  * Returns the re-laid-out nodes and edges plus the chosen direction.
  */
-async function layoutForExport(
+export async function layoutForExport(
 	nodes: Node[],
 	edges: Edge[],
 	currentDirection: LayoutDirection
@@ -390,11 +399,14 @@ async function captureBranchDiagrams(
 			}));
 
 			// Layout only the visible branch nodes
-			const { nodes: layoutedNodes, edges: layoutedEdges } =
-				await layoutForExport(branchNodes, branchEdges, layoutDirection);
+			const {
+				nodes: layoutedNodes,
+				edges: layoutedEdges,
+				direction,
+			} = await layoutForExport(branchNodes, branchEdges, layoutDirection);
 
-			// Push to DOM and wait for render
-			applyLayout(layoutedNodes, layoutedEdges);
+			// Push to DOM (including direction for correct handle positioning)
+			applyLayout(layoutedNodes, layoutedEdges, direction);
 			await waitForRender();
 
 			const captured = await captureDiagramImage(layoutedNodes);
@@ -459,11 +471,14 @@ export async function exportDocument(
 		}
 
 		// Apply compact export layout
-		const { nodes: layoutedNodes, edges: layoutedEdges } =
-			await layoutForExport(exportNodes, exportEdges, layoutDirection);
+		const {
+			nodes: layoutedNodes,
+			edges: layoutedEdges,
+			direction,
+		} = await layoutForExport(exportNodes, exportEdges, layoutDirection);
 
-		// Push export layout to DOM and capture overview diagram
-		applyLayout(layoutedNodes, layoutedEdges);
+		// Push export layout to DOM (including direction for correct handle positioning)
+		applyLayout(layoutedNodes, layoutedEdges, direction);
 		await waitForRender();
 
 		const captured = await captureDiagramImage(layoutedNodes);

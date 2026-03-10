@@ -10,7 +10,7 @@ import {
 	type DiagramMode,
 	exportDocument,
 } from "@/lib/case/document-export";
-import type { LayoutDirection } from "@/lib/case/layout-helper";
+import { DEPTH_OPTIONS } from "@/lib/case/export-constants";
 import type { ExportFormat, TemplatePreset } from "@/lib/export";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
@@ -72,15 +72,6 @@ const TEMPLATE_SECTION_DEFAULTS: Record<TemplatePreset, DocSections> = {
 		metadata: true,
 	},
 };
-
-const DEPTH_OPTIONS = [
-	{ value: "all", label: "All levels" },
-	{ value: "1", label: "1 — Goals only" },
-	{ value: "2", label: "2 — Goals + children" },
-	{ value: "3", label: "3" },
-	{ value: "4", label: "4" },
-	{ value: "5", label: "5" },
-];
 
 type DocSections = {
 	titlePage: boolean;
@@ -163,9 +154,10 @@ export type DocumentExportSectionProps = {
 	assuranceCase: AssuranceCaseResponse | null;
 	nodes: Node[];
 	edges: Edge[];
-	layoutDirection: LayoutDirection;
+	layoutDirection: "TB" | "LR";
 	setNodes: (nodes: Node[]) => void;
 	setEdges: (edges: Edge[]) => void;
+	setLayoutDirection: (dir: "TB" | "LR") => void;
 	toast: typeof ToastFn;
 	className?: string;
 };
@@ -177,6 +169,7 @@ export function DocumentExportSection({
 	layoutDirection,
 	setNodes,
 	setEdges,
+	setLayoutDirection,
 	toast,
 	className,
 }: DocumentExportSectionProps) {
@@ -216,9 +209,10 @@ export function DocumentExportSection({
 
 		setDocExportLoading(true);
 
-		// Capture original layout for restoration
+		// Capture original layout and direction for restoration
 		const originalNodes = [...nodes];
 		const originalEdges = [...edges];
+		const originalDirection = layoutDirection;
 
 		try {
 			const result = await getDocumentExportData(assuranceCase.id, {
@@ -243,13 +237,17 @@ export function DocumentExportSection({
 				nodes,
 				edges,
 				layoutDirection,
-				applyLayout: (layoutNodes, layoutEdges) => {
+				applyLayout: (layoutNodes, layoutEdges, direction) => {
 					setNodes(layoutNodes);
 					setEdges(layoutEdges);
+					if (direction === "TB" || direction === "LR") {
+						setLayoutDirection(direction);
+					}
 				},
 				restoreLayout: () => {
 					setNodes(originalNodes);
 					setEdges(originalEdges);
+					setLayoutDirection(originalDirection);
 				},
 				sectionOverrides: docSections,
 				maxDiagramDepth:
@@ -277,9 +275,10 @@ export function DocumentExportSection({
 						: "An error occurred",
 			});
 		} finally {
-			// Always restore original layout
+			// Always restore original layout and direction
 			setNodes(originalNodes);
 			setEdges(originalEdges);
+			setLayoutDirection(originalDirection);
 			setDocExportLoading(false);
 		}
 	};

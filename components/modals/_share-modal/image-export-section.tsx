@@ -2,8 +2,12 @@
 
 import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
-import type { Node } from "reactflow";
-import { exportDiagramImage } from "@/lib/case/image-export";
+import type { Edge, Node } from "reactflow";
+import { DEPTH_OPTIONS } from "@/lib/case/export-constants";
+import {
+	exportDiagramImage,
+	exportFilteredDiagramImage,
+} from "@/lib/case/image-export";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -21,6 +25,11 @@ import {
 export type ImageExportSectionProps = {
 	assuranceCase: AssuranceCaseResponse | null;
 	nodes: Node[];
+	edges: Edge[];
+	layoutDirection: "TB" | "LR";
+	setNodes: (nodes: Node[]) => void;
+	setEdges: (edges: Edge[]) => void;
+	setLayoutDirection: (dir: "TB" | "LR") => void;
 	toast: typeof ToastFn;
 	className?: string;
 };
@@ -28,11 +37,17 @@ export type ImageExportSectionProps = {
 export function ImageExportSection({
 	assuranceCase,
 	nodes,
+	edges,
+	layoutDirection,
+	setNodes,
+	setEdges,
+	setLayoutDirection,
 	toast,
 	className,
 }: ImageExportSectionProps) {
 	const [imageFormat, setImageFormat] = useState<"svg" | "png">("png");
 	const [imageScale, setImageScale] = useState<"1" | "2" | "3">("2");
+	const [diagramDepth, setDiagramDepth] = useState<string>("all");
 	const [imageExportLoading, setImageExportLoading] = useState(false);
 
 	const handleImageExport = async () => {
@@ -47,14 +62,47 @@ export function ImageExportSection({
 
 		setImageExportLoading(true);
 
+		// Capture original layout and direction for restoration
+		const originalNodes = [...nodes];
+		const originalEdges = [...edges];
+		const originalDirection = layoutDirection;
+
 		try {
-			await exportDiagramImage({
-				format: imageFormat,
-				scale:
-					imageFormat === "png" ? (Number(imageScale) as 1 | 2 | 3) : undefined,
-				caseName: assuranceCase.name,
-				nodes,
-			});
+			const scale =
+				imageFormat === "png" ? (Number(imageScale) as 1 | 2 | 3) : undefined;
+			const maxDepth =
+				diagramDepth === "all" ? null : Number.parseInt(diagramDepth, 10);
+
+			if (maxDepth != null) {
+				await exportFilteredDiagramImage({
+					format: imageFormat,
+					scale,
+					caseName: assuranceCase.name,
+					nodes,
+					edges,
+					layoutDirection,
+					applyLayout: (layoutNodes, layoutEdges, direction) => {
+						setNodes(layoutNodes);
+						setEdges(layoutEdges);
+						if (direction === "TB" || direction === "LR") {
+							setLayoutDirection(direction);
+						}
+					},
+					restoreLayout: () => {
+						setNodes(originalNodes);
+						setEdges(originalEdges);
+						setLayoutDirection(originalDirection);
+					},
+					maxDepth,
+				});
+			} else {
+				await exportDiagramImage({
+					format: imageFormat,
+					scale,
+					caseName: assuranceCase.name,
+					nodes,
+				});
+			}
 
 			toast({
 				variant: "success",
@@ -71,6 +119,10 @@ export function ImageExportSection({
 						: "An error occurred",
 			});
 		} finally {
+			// Always restore original layout in case of error during filtered export
+			setNodes(originalNodes);
+			setEdges(originalEdges);
+			setLayoutDirection(originalDirection);
 			setImageExportLoading(false);
 		}
 	};
@@ -122,6 +174,23 @@ export function ImageExportSection({
 						</Select>
 					</div>
 				)}
+				<div className="flex items-center gap-4">
+					<Label className="text-sm" htmlFor="image-depth-select">
+						Depth
+					</Label>
+					<Select onValueChange={setDiagramDepth} value={diagramDepth}>
+						<SelectTrigger className="w-44" id="image-depth-select">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{DEPTH_OPTIONS.map((opt) => (
+								<SelectItem key={opt.value} value={opt.value}>
+									{opt.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 			</div>
 			<Button
 				className="my-2"

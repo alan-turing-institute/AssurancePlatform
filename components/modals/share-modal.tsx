@@ -12,8 +12,15 @@ import { ImageExportSection } from "./_share-modal/image-export-section";
 import { JsonExportSection } from "./_share-modal/json-export-section";
 
 export const ShareModal = () => {
-	const { assuranceCase, nodes, edges, layoutDirection, setNodes, setEdges } =
-		useStore();
+	const {
+		assuranceCase,
+		nodes,
+		edges,
+		layoutDirection,
+		setNodes,
+		setEdges,
+		setLayoutDirection,
+	} = useStore();
 	const exportModal = useExportModal();
 
 	return (
@@ -28,17 +35,22 @@ export const ShareModal = () => {
 				Export Raw JSON
 			</h2>
 			<JsonExportSection assuranceCase={assuranceCase} toast={toast} />
-			<Separator />
+			<Separator className="my-6" />
 			<h2 className="mb-2 flex items-center justify-start gap-2">
 				<ImageIcon className="h-4 w-4" />
 				Export as Image
 			</h2>
 			<ImageExportSection
 				assuranceCase={assuranceCase}
+				edges={edges}
+				layoutDirection={layoutDirection}
 				nodes={nodes}
+				setEdges={setEdges}
+				setLayoutDirection={setLayoutDirection}
+				setNodes={setNodes}
 				toast={toast}
 			/>
-			<Separator />
+			<Separator className="my-6" />
 			<h2 className="mb-2 flex items-center justify-start gap-2">
 				<FileText className="h-4 w-4" />
 				Export Report
@@ -49,10 +61,11 @@ export const ShareModal = () => {
 				layoutDirection={layoutDirection}
 				nodes={nodes}
 				setEdges={setEdges}
+				setLayoutDirection={setLayoutDirection}
 				setNodes={setNodes}
 				toast={toast}
 			/>
-			<Separator />
+			<Separator className="my-6" />
 			<h2 className="mb-2 flex items-center justify-start gap-2">
 				<Cloud className="h-4 w-4" />
 				Backup to Google Drive
