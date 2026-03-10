@@ -160,22 +160,47 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 }
 
 /**
+ * Collect a fingerprint of every edge SVG path currently in the DOM.
+ * Used to detect when React Flow has finished recalculating edge routes.
+ */
+function edgePathFingerprint(): string {
+	const paths = document.querySelectorAll(".react-flow__edge-path");
+	return Array.from(paths)
+		.map((el) => (el as SVGPathElement).getAttribute("d") ?? "")
+		.join("|");
+}
+
+/**
  * Wait for React Flow to fully settle after a layout swap.
  *
  * Two rAFs ensure React has committed the state update and flushed effects
- * (including the updateNodeInternals call in flow.tsx). The subsequent
- * setTimeout gives React Flow enough time to re-measure handles, recompute
- * edge paths, and fire any remaining onNodesChange dimension events back
- * to the store.
+ * (including the updateNodeInternals call in flow.tsx). Then we poll edge
+ * SVG paths until two consecutive reads match — meaning node handles have
+ * repositioned and edge paths have finished recalculating.
+ *
+ * Falls back to a maximum wait of ~2 s to prevent hanging.
  */
-export function waitForRender(delayMs = 200): Promise<void> {
-	return new Promise((resolve) => {
+export async function waitForRender(): Promise<void> {
+	// Double rAF: React commits the state update + useEffect fires
+	await new Promise<void>((resolve) => {
 		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				setTimeout(resolve, delayMs);
-			});
+			requestAnimationFrame(() => resolve());
 		});
 	});
+
+	// Poll for edge path stability
+	const maxAttempts = 20;
+	const intervalMs = 100;
+	let previous = edgePathFingerprint();
+
+	for (let i = 0; i < maxAttempts; i++) {
+		await new Promise<void>((r) => setTimeout(r, intervalMs));
+		const current = edgePathFingerprint();
+		if (current === previous) {
+			return;
+		}
+		previous = current;
+	}
 }
 
 /**
@@ -289,21 +314,25 @@ function chooseExportDirection(
 }
 
 /**
- * Create a compact export layout with reduced spacing and auto-LR.
- * Returns the re-laid-out nodes and edges plus the chosen direction.
+ * Create an export layout with auto-LR direction detection.
+ *
+ * By default uses compact spacing for document embeds. Pass custom spacing
+ * values (e.g. the ELK defaults of 40/60) for standalone image exports
+ * where edge clarity matters more than compactness.
  */
 export async function layoutForExport(
 	nodes: Node[],
 	edges: Edge[],
-	currentDirection: LayoutDirection
+	currentDirection: LayoutDirection,
+	spacing?: { nodeSpacing?: number; layerSpacing?: number }
 ): Promise<{ nodes: Node[]; edges: Edge[]; direction: LayoutDirection }> {
 	const direction = chooseExportDirection(nodes, currentDirection);
 
 	const { nodes: layoutedNodes, edges: layoutedEdges } =
 		await getLayoutedElements(nodes, edges, {
 			direction,
-			nodeSpacing: EXPORT_NODE_SPACING,
-			layerSpacing: EXPORT_LAYER_SPACING,
+			nodeSpacing: spacing?.nodeSpacing ?? EXPORT_NODE_SPACING,
+			layerSpacing: spacing?.layerSpacing ?? EXPORT_LAYER_SPACING,
 		});
 
 	return { nodes: layoutedNodes, edges: layoutedEdges, direction };

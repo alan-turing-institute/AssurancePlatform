@@ -275,12 +275,16 @@ export async function exportFilteredDiagramImage(
 	exportNodes = pruned.nodes;
 	exportEdges = pruned.edges;
 
-	// Apply compact export layout
+	// Use default (editor) spacing for standalone image exports — wider layer
+	// gaps give smoothstep edges more room and produce cleaner paths.
 	const {
 		nodes: layoutedNodes,
 		edges: layoutedEdges,
 		direction,
-	} = await layoutForExport(exportNodes, exportEdges, layoutDirection);
+	} = await layoutForExport(exportNodes, exportEdges, layoutDirection, {
+		nodeSpacing: 40,
+		layerSpacing: 60,
+	});
 
 	// Push to DOM (including direction for correct handle positioning)
 	applyLayout(layoutedNodes, layoutedEdges, direction);
