@@ -427,12 +427,15 @@ async function captureBranchDiagrams(
 				hidden: !(branch.nodeIds.has(e.source) && branch.nodeIds.has(e.target)),
 			}));
 
-			// Layout only the visible branch nodes
+			// Layout only the visible branch nodes (default spacing for cleaner edges)
 			const {
 				nodes: layoutedNodes,
 				edges: layoutedEdges,
 				direction,
-			} = await layoutForExport(branchNodes, branchEdges, layoutDirection);
+			} = await layoutForExport(branchNodes, branchEdges, layoutDirection, {
+				nodeSpacing: 40,
+				layerSpacing: 60,
+			});
 
 			// Push to DOM (including direction for correct handle positioning)
 			applyLayout(layoutedNodes, layoutedEdges, direction);
@@ -499,12 +502,15 @@ export async function exportDocument(
 			exportEdges = pruned.edges;
 		}
 
-		// Apply compact export layout
+		// Apply export layout with default spacing for cleaner edge routing
 		const {
 			nodes: layoutedNodes,
 			edges: layoutedEdges,
 			direction,
-		} = await layoutForExport(exportNodes, exportEdges, layoutDirection);
+		} = await layoutForExport(exportNodes, exportEdges, layoutDirection, {
+			nodeSpacing: 40,
+			layerSpacing: 60,
+		});
 
 		// Push export layout to DOM (including direction for correct handle positioning)
 		applyLayout(layoutedNodes, layoutedEdges, direction);

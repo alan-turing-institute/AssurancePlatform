@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Download, Loader2 } from "lucide-react";
+import { ChevronDown, Download, Info, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { Edge, Node } from "reactflow";
 import { getDocumentExportData } from "@/actions/export-document";
@@ -25,6 +25,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../ui/select";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "../../ui/tooltip";
 
 /**
  * Section labels for display in the customisation panel
@@ -368,7 +374,22 @@ export function DocumentExportSection({
 							</Select>
 						</div>
 						<div className="flex items-center gap-4">
-							<Label className="text-xs">Pages</Label>
+							<div className="flex items-center gap-1">
+								<Label className="text-xs">Pages</Label>
+								<TooltipProvider>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+										</TooltipTrigger>
+										<TooltipContent side="top">
+											<p className="max-w-52">
+												Per-branch splits the diagram by each top-level branch,
+												creating a separate page per branch for readability.
+											</p>
+										</TooltipContent>
+									</Tooltip>
+								</TooltipProvider>
+							</div>
 							<RadioGroup
 								className="flex items-center gap-4"
 								onValueChange={(v) => setDiagramMode(v as DiagramMode)}
