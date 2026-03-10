@@ -160,19 +160,19 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 }
 
 /**
- * Wait for React to render DOM changes after a layout swap.
- * Uses triple requestAnimationFrame to allow:
- *   1. React to process state updates (nodes, edges, layoutDirection)
- *   2. The flow.tsx useEffect to fire updateNodeInternals (handle repositioning)
- *   3. React Flow to recalculate edge paths with updated handle positions
+ * Wait for React Flow to fully settle after a layout swap.
+ *
+ * Two rAFs ensure React has committed the state update and flushed effects
+ * (including the updateNodeInternals call in flow.tsx). The subsequent
+ * setTimeout gives React Flow enough time to re-measure handles, recompute
+ * edge paths, and fire any remaining onNodesChange dimension events back
+ * to the store.
  */
-export function waitForRender(): Promise<void> {
+export function waitForRender(delayMs = 200): Promise<void> {
 	return new Promise((resolve) => {
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					resolve();
-				});
+				setTimeout(resolve, delayMs);
 			});
 		});
 	});

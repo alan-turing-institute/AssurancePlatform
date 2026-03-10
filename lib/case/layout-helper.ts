@@ -218,13 +218,17 @@ export async function getLayoutedElements(
 		}
 	}
 
-	// Apply positions to nodes (only visible nodes get new positions)
+	// Apply positions to nodes (only visible nodes get new positions).
+	// positionAbsolute must be set alongside position because getNodesBounds
+	// prefers positionAbsolute — stale values from a prior layout would cause
+	// incorrect bounds during export capture.
 	const layoutedNodes = nodes.map((node) => {
 		const newPosition = positionMap.get(node.id);
 		if (newPosition) {
 			return {
 				...node,
 				position: newPosition,
+				positionAbsolute: newPosition,
 			};
 		}
 		return node;
