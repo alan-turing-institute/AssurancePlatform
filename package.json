@@ -131,7 +131,7 @@
     "@vitest/coverage-v8": "^4.0.15",
     "@vitest/ui": "^4.0.15",
     "axe-core": "^4.10.3",
-    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "conventional-changelog-conventionalcommits": "^9.3.0",
     "jsdom": "^26.1.0",
     "msw": "^2.10.4",
     "postcss": "^8.5.1",
