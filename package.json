@@ -31,7 +31,7 @@
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lint": "^6.9.2",
     "@headlessui/react": "^2.2.0",
-    "@heroicons/react": "^2.1.1",
+    "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.3.4",
     "@octokit/rest": "^22.0.1",
     "@prisma/adapter-pg": "^7.0.1",
