@@ -11,6 +11,33 @@ All notable changes to the TEA Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.3.1...v0.3.2) (2026-01-19)
+
+### 🐛 Bug Fixes
+
+* exclude api/cron from auth middleware ([b5f64f7](https://github.com/alan-turing-institute/AssurancePlatform/commit/b5f64f79b6e9841bf1ff21a7c103d146133d1cff))
+
+## [0.3.1](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.3.0...v0.3.1) (2026-01-19)
+
+### 🐛 Bug Fixes
+
+* also install dotenv for prisma.config.ts ([0a8dd0d](https://github.com/alan-turing-institute/AssurancePlatform/commit/0a8dd0dd84feeca8e3af446b5071ce7961af6999))
+* copy all Prisma v7 packages from pnpm store ([e0491f2](https://github.com/alan-turing-institute/AssurancePlatform/commit/e0491f2633482d0c495dc59be3e4a71107f443ff))
+* copy Prisma from builder stage for correct user permissions ([b4a728d](https://github.com/alan-turing-institute/AssurancePlatform/commit/b4a728df9c1be264a9662665f68fe8efe85b555f))
+* dereference pnpm symlinks for Prisma CLI in Docker ([cc0389c](https://github.com/alan-turing-institute/AssurancePlatform/commit/cc0389cd9b38d528fb06a90150514e72598f5575))
+* grant tea_app permissions after database reset ([e1b4893](https://github.com/alan-turing-institute/AssurancePlatform/commit/e1b4893b2b2d270baabb55ae576a9f1ecfb2d4b2))
+* include @prisma/engines in runtime Prisma CLI ([926cac8](https://github.com/alan-turing-institute/AssurancePlatform/commit/926cac88672c7db0b36f3d672af8cf79961b288f))
+* increase Node.js memory limit for Docker build ([6a429b5](https://github.com/alan-turing-institute/AssurancePlatform/commit/6a429b5ac88fd65e4362f16331b300a67ccb04e4))
+* install Prisma in isolated directory to avoid npm conflicts ([0ecca5a](https://github.com/alan-turing-institute/AssurancePlatform/commit/0ecca5a560aff80d524c811b79af97a373126b56))
+* install Prisma to /opt/prisma to avoid node_modules conflicts ([330f684](https://github.com/alan-turing-institute/AssurancePlatform/commit/330f684311f149a959472d53e2fab5245dfe77ed))
+* install Prisma with npm in runner stage ([b056e8c](https://github.com/alan-turing-institute/AssurancePlatform/commit/b056e8cccbaf5fb8711a995eb46739ea817a5ace))
+* set NODE_PATH for prisma to find dotenv ([ddb3b92](https://github.com/alan-turing-institute/AssurancePlatform/commit/ddb3b92baacbcbf7440f89a991738022ba6239ec))
+
+### 🔧 CI/CD
+
+* ignore beads/docs changes in seed workflow ([da087bd](https://github.com/alan-turing-institute/AssurancePlatform/commit/da087bd2d34a9478630b5d01e3e3c10cde830661))
+* use GitHub secret for seed user password ([b666b33](https://github.com/alan-turing-institute/AssurancePlatform/commit/b666b3345bbe00b497892e915c51c58225259f60))
+
 ## [0.3.0](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.2.0...v0.3.0) (2026-01-18)
 
 ### ✨ Features
