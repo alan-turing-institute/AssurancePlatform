@@ -72,7 +72,7 @@
     "argon2": "^0.44.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cmdk": "1.0.0",
+    "cmdk": "1.1.1",
     "date-fns": "^4.1.0",
     "docx": "^9.5.1",
     "dotenv": "^16.4.5",
