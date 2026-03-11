@@ -286,7 +286,7 @@ jobs:
 
       - name: Build and push Docker image (Production - main branch)
         if: github.ref == 'refs/heads/main'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -307,7 +307,7 @@ jobs:
 
       - name: Build and push Docker image (Staging branch)
         if: github.ref == 'refs/heads/staging'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -328,7 +328,7 @@ jobs:
 
       - name: Build and push Docker image (PR/other branches)
         if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/staging'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
