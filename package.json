@@ -98,7 +98,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-dropzone": "^14.3.8",
-    "react-hook-form": "^7.51.1",
+    "react-hook-form": "^7.71.2",
     "reactflow": "^11.11.4",
     "sanitize-html": "^2.17.0",
     "sharp": "^0.33.5",

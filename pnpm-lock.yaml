@@ -58,7 +58,7 @@ importers:
         version: 2.1.1(react@18.3.1)
       '@hookform/resolvers':
         specifier: ^3.3.4
-        version: 3.3.4(react-hook-form@7.51.1(react@18.3.1))
+        version: 3.3.4(react-hook-form@7.71.2(react@18.3.1))
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
@@ -255,8 +255,8 @@ importers:
         specifier: ^14.3.8
         version: 14.3.8(react@18.3.1)
       react-hook-form:
-        specifier: ^7.51.1
-        version: 7.51.1(react@18.3.1)
+        specifier: ^7.71.2
+        version: 7.71.2(react@18.3.1)
       reactflow:
         specifier: ^11.11.4
         version: 11.11.4(@types/react@18.3.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -7056,11 +7056,11 @@ packages:
     peerDependencies:
       react: '>= 16.8 || 18.0.0'
 
-  react-hook-form@7.51.1:
-    resolution: {integrity: sha512-ifnBjl+kW0ksINHd+8C/Gp6a4eZOdWyvRv0UBaByShwU8JbVx5hTcTWEcd5VdybvmPTATkVVXk9npXArHmo56w==}
-    engines: {node: '>=12.22.0'}
+  react-hook-form@7.71.2:
+    resolution: {integrity: sha512-1CHvcDYzuRUNOflt4MOq3ZM46AronNJtQ1S7tnX6YN4y72qhgiUItpacZUAQ0TyWYci3yz1X+rXaSxiuEm86PA==}
+    engines: {node: '>=18.0.0'}
     peerDependencies:
-      react: ^16.8.0 || ^17 || ^18
+      react: ^16.8.0 || ^17 || ^18 || ^19
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -8273,6 +8273,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -9274,9 +9275,9 @@ snapshots:
     dependencies:
       hono: 4.12.5
 
-  '@hookform/resolvers@3.3.4(react-hook-form@7.51.1(react@18.3.1))':
+  '@hookform/resolvers@3.3.4(react-hook-form@7.71.2(react@18.3.1))':
     dependencies:
-      react-hook-form: 7.51.1(react@18.3.1)
+      react-hook-form: 7.71.2(react@18.3.1)
 
   '@iconify/types@2.0.0': {}
 
@@ -16230,7 +16231,7 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
-  react-hook-form@7.51.1(react@18.3.1):
+  react-hook-form@7.71.2(react@18.3.1):
     dependencies:
       react: 18.3.1
 
