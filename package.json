@@ -78,7 +78,7 @@
     "dotenv": "^16.4.5",
     "elkjs": "^0.11.0",
     "file-saver": "^2.0.5",
-    "framer-motion": "^12.23.25",
+    "framer-motion": "^12.35.2",
     "googleapis": "^170.0.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",

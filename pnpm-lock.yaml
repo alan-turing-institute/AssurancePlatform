@@ -195,8 +195,8 @@ importers:
         specifier: ^2.0.5
         version: 2.0.5
       framer-motion:
-        specifier: ^12.23.25
-        version: 12.23.25(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^12.35.2
+        version: 12.35.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       googleapis:
         specifier: ^170.0.0
         version: 170.0.0
@@ -4905,22 +4905,8 @@ packages:
   fp-ts@2.16.0:
     resolution: {integrity: sha512-bLq+KgbiXdTEoT1zcARrWEpa5z6A/8b7PcDW7Gef3NSisQ+VS7ll2Xbf1E+xsgik0rWub/8u0qP/iTTjj+PhxQ==}
 
-  framer-motion@12.23.25:
-    resolution: {integrity: sha512-gUHGl2e4VG66jOcH0JHhuJQr6ZNwrET9g31ZG0xdXzT0CznP7fHX4P8Bcvuc4MiUB90ysNnWX2ukHRIggkl6hQ==}
-    peerDependencies:
-      '@emotion/is-prop-valid': '*'
-      react: ^18.0.0 || ^19.0.0
-      react-dom: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@emotion/is-prop-valid':
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
-
-  framer-motion@12.34.3:
-    resolution: {integrity: sha512-v81ecyZKYO/DfpTwHivqkxSUBzvceOpoI+wLfgCgoUIKxlFKEXdg0oR9imxwXumT4SFy8vRk9xzJ5l3/Du/55Q==}
+  framer-motion@12.35.2:
+    resolution: {integrity: sha512-dhfuEMaNo0hc+AEqyHiIfiJRNb9U9UQutE9FoKm5pjf7CMitp9xPEF1iWZihR1q86LBmo6EJ7S8cN8QXEy49AA==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -6155,14 +6141,8 @@ packages:
   mlly@1.8.0:
     resolution: {integrity: sha512-l8D9ODSRWLe2KHJSifWGwBqpTZXIXTeo8mlKjY+E2HAakaTeNpqAyBZ8GSqLzHgw4XmHmC8whvpjJNMbFZN7/g==}
 
-  motion-dom@12.23.23:
-    resolution: {integrity: sha512-n5yolOs0TQQBRUFImrRfs/+6X4p3Q4n1dUEqt/H58Vx7OW6RF+foWEgmTVDhIWJIMXOuNNL0apKH2S16en9eiA==}
-
-  motion-dom@12.34.3:
-    resolution: {integrity: sha512-sYgFe+pR9aIM7o4fhs2aXtOI+oqlUd33N9Yoxcgo1Fv7M20sRkHtCmzE/VRNIcq7uNJ+qio+Xubt1FXH3pQ+eQ==}
-
-  motion-utils@12.23.6:
-    resolution: {integrity: sha512-eAWoPgr4eFEOFfg2WjIsMoqJTW6Z8MTUCgn/GZ3VRpClWBdnbjryiA3ZSNLyxCTmCQx4RmYX6jX1iWHbenUPNQ==}
+  motion-dom@12.35.2:
+    resolution: {integrity: sha512-pWXFMTwvGDbx1Fe9YL5HZebv2NhvGBzRtiNUv58aoK7+XrsuaydQ0JGRKK2r+bTKlwgSWwWxHbP5249Qr/BNpg==}
 
   motion-utils@12.29.2:
     resolution: {integrity: sha512-G3kc34H2cX2gI63RqU+cZq+zWRRPSsNIOjpdl9TN4AQwC4sgwYPl/Q/Obf/d53nOm569T0fYK+tcoSV50BWx8A==}
@@ -8273,6 +8253,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -13699,18 +13680,9 @@ snapshots:
 
   fp-ts@2.16.0: {}
 
-  framer-motion@12.23.25(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  framer-motion@12.35.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      motion-dom: 12.23.23
-      motion-utils: 12.23.6
-      tslib: 2.8.1
-    optionalDependencies:
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-
-  framer-motion@12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
-    dependencies:
-      motion-dom: 12.34.3
+      motion-dom: 12.35.2
       motion-utils: 12.29.2
       tslib: 2.8.1
     optionalDependencies:
@@ -15320,21 +15292,15 @@ snapshots:
       pkg-types: 1.3.1
       ufo: 1.6.1
 
-  motion-dom@12.23.23:
-    dependencies:
-      motion-utils: 12.23.6
-
-  motion-dom@12.34.3:
+  motion-dom@12.35.2:
     dependencies:
       motion-utils: 12.29.2
-
-  motion-utils@12.23.6: {}
 
   motion-utils@12.29.2: {}
 
   motion@12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      framer-motion: 12.34.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      framer-motion: 12.35.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       tslib: 2.8.1
     optionalDependencies:
       react: 18.3.1
