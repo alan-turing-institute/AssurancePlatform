@@ -34,7 +34,7 @@
     "@heroicons/react": "^2.1.1",
     "@hookform/resolvers": "^3.3.4",
     "@octokit/rest": "^22.0.1",
-    "@prisma/adapter-pg": "^7.0.1",
+    "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.0.0",
     "@prisma/client-runtime-utils": "^7.0.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
