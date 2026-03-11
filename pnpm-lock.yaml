@@ -144,8 +144,8 @@ importers:
         specifier: ^2.26.0
         version: 2.26.0(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))
       '@tiptap/extension-placeholder':
-        specifier: ^2.26.0
-        version: 2.26.0(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))(@tiptap/pm@2.26.0)
+        specifier: ^3.20.1
+        version: 3.20.1(@tiptap/extensions@3.20.1(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))(@tiptap/pm@2.26.0))
       '@tiptap/extension-text-align':
         specifier: ^2.26.0
         version: 2.26.0(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))
@@ -3286,11 +3286,10 @@ packages:
     peerDependencies:
       '@tiptap/core': ^2.7.0
 
-  '@tiptap/extension-placeholder@2.26.0':
-    resolution: {integrity: sha512-YHQiR+EsYpsXbOrePeJ7ULsA4xtgagY8MwJU67gETK2H1R9Radcj/gmb5bm6WX7+mePHmvTT/owvTT6F1AqBww==}
+  '@tiptap/extension-placeholder@3.20.1':
+    resolution: {integrity: sha512-k+jfbCugYGuIFBdojukgEopGazIMOgHrw46FnyN2X/6ICOIjQP2rh2ObslrsUOsJYoEevxCsNF9hZl1HvWX66g==}
     peerDependencies:
-      '@tiptap/core': ^2.7.0
-      '@tiptap/pm': ^2.7.0
+      '@tiptap/extensions': ^3.20.1
 
   '@tiptap/extension-strike@2.26.0':
     resolution: {integrity: sha512-x1kJj0YaApqQUKlOInqsiUsVHnhndRLsOMsIgwlgOM1wqsNDmYzNrZV2MvNYyrd4FYXdXZABYMd/EF0U/bVSPQ==}
@@ -3311,6 +3310,12 @@ packages:
     resolution: {integrity: sha512-M7+S3b2nnaGN8oMV+eXfSUkgw1q0yaXlVe1h6Ug6HWzdFKr/ei9YFG0zW6cBnXW5KoQQfL9ep1FVQKgdrCsPcg==}
     peerDependencies:
       '@tiptap/core': ^2.7.0
+
+  '@tiptap/extensions@3.20.1':
+    resolution: {integrity: sha512-JRc/v+OBH0qLTdvQ7HvHWTxGJH73QOf1MC0R8NhOX2QnAbg2mPFv1h+FjGa2gfLGuCXBdWQomjekWkUKbC4e5A==}
+    peerDependencies:
+      '@tiptap/core': ^3.20.1
+      '@tiptap/pm': ^3.20.1
 
   '@tiptap/pm@2.26.0':
     resolution: {integrity: sha512-vcrvWHzVTZxPOpELycsWzsJVVqGT/PqVpz+yEkeflCc3e/oGlim/OXjpvHn6ObzKZRDqk0v/PGH3NTr7CcmXsA==}
@@ -8273,6 +8278,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -11902,10 +11908,9 @@ snapshots:
     dependencies:
       '@tiptap/core': 2.26.0(@tiptap/pm@2.26.0)
 
-  '@tiptap/extension-placeholder@2.26.0(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))(@tiptap/pm@2.26.0)':
+  '@tiptap/extension-placeholder@3.20.1(@tiptap/extensions@3.20.1(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))(@tiptap/pm@2.26.0))':
     dependencies:
-      '@tiptap/core': 2.26.0(@tiptap/pm@2.26.0)
-      '@tiptap/pm': 2.26.0
+      '@tiptap/extensions': 3.20.1(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))(@tiptap/pm@2.26.0)
 
   '@tiptap/extension-strike@2.26.0(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))':
     dependencies:
@@ -11922,6 +11927,11 @@ snapshots:
   '@tiptap/extension-text@2.26.0(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))':
     dependencies:
       '@tiptap/core': 2.26.0(@tiptap/pm@2.26.0)
+
+  '@tiptap/extensions@3.20.1(@tiptap/core@2.26.0(@tiptap/pm@2.26.0))(@tiptap/pm@2.26.0)':
+    dependencies:
+      '@tiptap/core': 2.26.0(@tiptap/pm@2.26.0)
+      '@tiptap/pm': 2.26.0
 
   '@tiptap/pm@2.26.0':
     dependencies:

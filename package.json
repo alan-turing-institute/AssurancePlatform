@@ -61,7 +61,7 @@
     "@tailwindcss/typography": "^0.5.15",
     "@tiptap/extension-color": "^2.26.0",
     "@tiptap/extension-list-item": "^2.26.0",
-    "@tiptap/extension-placeholder": "^2.26.0",
+    "@tiptap/extension-placeholder": "^3.20.1",
     "@tiptap/extension-text-align": "^2.26.0",
     "@tiptap/extension-text-style": "^2.26.0",
     "@tiptap/react": "^2.26.0",
