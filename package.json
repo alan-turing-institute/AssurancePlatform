@@ -141,7 +141,7 @@
     "tailwindcss": "^4.1.18",
     "tsx": "^4.20.6",
     "typescript": "^5.7.2",
-    "ultracite": "6.3.6",
+    "ultracite": "7.2.5",
     "vitest": "^4.0.15",
     "vitest-axe": "^0.1.0"
   },
