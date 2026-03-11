@@ -4,12 +4,12 @@
  */
 
 import type {
-	AssuranceCase,
-	Evidence,
-	Goal,
-	PropertyClaim,
-	Strategy,
-} from "@/types";
+	AssuranceCaseResponse,
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import { updateEvidenceNested, updateEvidenceNestedMove } from "./evidence";
 import {
 	updatePropertyClaimNested,
@@ -21,13 +21,14 @@ import type { ReactFlowNode } from "./types";
 
 // Helper function to update strategy
 const updateStrategy = (
-	assuranceCase: AssuranceCase,
-	id: number,
-	updatedItem: Partial<Strategy>
-): AssuranceCase => {
-	const newStrategy = (assuranceCase.goals?.[0]?.strategies || []).map(
-		(strategy: Strategy) => {
-			if (strategy.id === id && strategy.type === "Strategy") {
+	assuranceCase: AssuranceCaseResponse,
+	id: string,
+	updatedItem: Partial<StrategyResponse>
+): AssuranceCaseResponse => {
+	const firstGoal = assuranceCase.goals?.[0];
+	const newStrategy = (firstGoal?.strategies || []).map(
+		(strategy: StrategyResponse) => {
+			if (strategy.id === id && strategy.type === "strategy") {
 				return {
 					...strategy,
 					...updatedItem,
@@ -39,10 +40,10 @@ const updateStrategy = (
 
 	return {
 		...assuranceCase,
-		goals: assuranceCase.goals
+		goals: firstGoal
 			? [
 					{
-						...assuranceCase.goals[0],
+						...firstGoal,
 						strategies: newStrategy,
 					},
 				]
@@ -52,16 +53,16 @@ const updateStrategy = (
 
 // Options type for updatePropertyClaim helper
 type UpdatePropertyClaimOptions = {
-	assuranceCase: AssuranceCase;
-	id: number;
-	updatedItem: Partial<PropertyClaim>;
+	assuranceCase: AssuranceCaseResponse;
+	id: string;
+	updatedItem: Partial<PropertyClaimResponse>;
 	move: boolean;
 };
 
 // Helper function to update property claim
 const updatePropertyClaim = (
 	options: UpdatePropertyClaimOptions
-): AssuranceCase => {
+): AssuranceCaseResponse => {
 	const { assuranceCase, id, updatedItem, move } = options;
 
 	if (!assuranceCase.goals || assuranceCase.goals.length === 0) {
@@ -69,14 +70,19 @@ const updatePropertyClaim = (
 	}
 
 	const goal = assuranceCase.goals[0];
+	if (!goal) {
+		return assuranceCase;
+	}
 
 	// Try updating in goal's direct property claims first
-	const directClaims = goal.property_claims || [];
+	const directClaims = goal.propertyClaims || [];
 	const updatedDirectClaims = move
 		? updatePropertyClaimNestedMove(
 				directClaims,
 				id,
-				updatedItem as Partial<PropertyClaim> & { property_claim_id?: number }
+				updatedItem as Partial<PropertyClaimResponse> & {
+					propertyClaimId?: string;
+				}
 			)
 		: updatePropertyClaimNested(directClaims, id, updatedItem);
 
@@ -86,7 +92,7 @@ const updatePropertyClaim = (
 	if (directClaims.length > 0 && updatedDirectClaims !== directClaims) {
 		return {
 			...assuranceCase,
-			goals: [{ ...goal, property_claims: updatedDirectClaims }],
+			goals: [{ ...goal, propertyClaims: updatedDirectClaims }],
 		};
 	}
 
@@ -97,18 +103,20 @@ const updatePropertyClaim = (
 		if (foundInStrategies) {
 			return strategy;
 		}
-		const strategyClaims = strategy.property_claims || [];
+		const strategyClaims = strategy.propertyClaims || [];
 		const updatedStrategyClaims = move
 			? updatePropertyClaimNestedMove(
 					strategyClaims,
 					id,
-					updatedItem as Partial<PropertyClaim> & { property_claim_id?: number }
+					updatedItem as Partial<PropertyClaimResponse> & {
+						propertyClaimId?: string;
+					}
 				)
 			: updatePropertyClaimNested(strategyClaims, id, updatedItem);
 
 		if (updatedStrategyClaims !== strategyClaims) {
 			foundInStrategies = true;
-			return { ...strategy, property_claims: updatedStrategyClaims };
+			return { ...strategy, propertyClaims: updatedStrategyClaims };
 		}
 		return strategy;
 	});
@@ -126,14 +134,16 @@ const updatePropertyClaim = (
 
 // Options type for updateEvidence helper
 type UpdateEvidenceOptions = {
-	assuranceCase: AssuranceCase;
-	id: number;
-	updatedItem: Partial<Evidence>;
+	assuranceCase: AssuranceCaseResponse;
+	id: string;
+	updatedItem: Partial<EvidenceResponse>;
 	move: boolean;
 };
 
 // Helper function to update evidence
-const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
+const updateEvidence = (
+	options: UpdateEvidenceOptions
+): AssuranceCaseResponse => {
 	const { assuranceCase, id, updatedItem, move } = options;
 
 	if (!assuranceCase.goals || assuranceCase.goals.length === 0) {
@@ -141,14 +151,17 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 	}
 
 	const goal = assuranceCase.goals[0];
+	if (!goal) {
+		return assuranceCase;
+	}
 
 	// Try updating in goal's direct property claims first
-	const directClaims = goal.property_claims || [];
+	const directClaims = goal.propertyClaims || [];
 	const updatedDirectClaims = move
 		? updateEvidenceNestedMove(
 				directClaims,
 				id,
-				updatedItem as Partial<Evidence> & { property_claim_id: number[] }
+				updatedItem as Partial<EvidenceResponse> & { propertyClaimId: string[] }
 			)
 		: updateEvidenceNested(directClaims, id, updatedItem);
 
@@ -158,7 +171,7 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 	if (directClaims.length > 0 && updatedDirectClaims !== directClaims) {
 		return {
 			...assuranceCase,
-			goals: [{ ...goal, property_claims: updatedDirectClaims }],
+			goals: [{ ...goal, propertyClaims: updatedDirectClaims }],
 		};
 	}
 
@@ -169,18 +182,20 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
 		if (foundInStrategies) {
 			return strategy;
 		}
-		const strategyClaims = strategy.property_claims || [];
+		const strategyClaims = strategy.propertyClaims || [];
 		const updatedStrategyClaims = move
 			? updateEvidenceNestedMove(
 					strategyClaims,
 					id,
-					updatedItem as Partial<Evidence> & { property_claim_id: number[] }
+					updatedItem as Partial<EvidenceResponse> & {
+						propertyClaimId: string[];
+					}
 				)
 			: updateEvidenceNested(strategyClaims, id, updatedItem);
 
 		if (updatedStrategyClaims !== strategyClaims) {
 			foundInStrategies = true;
-			return { ...strategy, property_claims: updatedStrategyClaims };
+			return { ...strategy, propertyClaims: updatedStrategyClaims };
 		}
 		return strategy;
 	});
@@ -204,32 +219,31 @@ const updateEvidence = (options: UpdateEvidenceOptions): AssuranceCase => {
  *
  * Note: Context is now a string[] attribute on elements, not a separate element type.
  */
-// biome-ignore lint/nursery/useMaxParams: Pre-existing function used across codebase, refactoring deferred
 export const updateAssuranceCase = (
 	type: string,
-	assuranceCase: AssuranceCase,
+	assuranceCase: AssuranceCaseResponse,
 	updatedItem:
-		| Partial<Goal>
-		| Partial<Strategy>
-		| Partial<PropertyClaim>
-		| Partial<Evidence>,
-	id: number,
+		| Partial<GoalResponse>
+		| Partial<StrategyResponse>
+		| Partial<PropertyClaimResponse>
+		| Partial<EvidenceResponse>,
+	id: string,
 	_node: ReactFlowNode,
 	move = false
-): AssuranceCase => {
+): AssuranceCaseResponse => {
 	switch (type) {
 		case "strategy":
 			return updateStrategy(
 				assuranceCase,
 				id,
-				updatedItem as Partial<Strategy>
+				updatedItem as Partial<StrategyResponse>
 			);
 
 		case "property":
 			return updatePropertyClaim({
 				assuranceCase,
 				id,
-				updatedItem: updatedItem as Partial<PropertyClaim>,
+				updatedItem: updatedItem as Partial<PropertyClaimResponse>,
 				move,
 			});
 
@@ -237,21 +251,23 @@ export const updateAssuranceCase = (
 			return updateEvidence({
 				assuranceCase,
 				id,
-				updatedItem: updatedItem as Partial<Evidence>,
+				updatedItem: updatedItem as Partial<EvidenceResponse>,
 				move,
 			});
 
-		default:
+		default: {
+			const defaultGoal = assuranceCase.goals?.[0];
 			return {
 				...assuranceCase,
-				goals: assuranceCase.goals
+				goals: defaultGoal
 					? [
 							{
-								...assuranceCase.goals[0],
+								...defaultGoal,
 								...updatedItem,
-							} as Goal,
+							} as GoalResponse,
 						]
 					: [],
 			};
+		}
 	}
 };

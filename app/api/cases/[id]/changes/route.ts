@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
+import { notFound } from "@/lib/errors";
 import { detectChanges } from "@/lib/services/change-detection-service";
 
 /**
@@ -27,34 +31,22 @@ export async function GET(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id } = await params;
-
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	// Parse query parameters
-	const url = new URL(request.url);
-	const includeDetails = url.searchParams.get("includeDetails") === "true";
-
 	try {
-		const result = await detectChanges(session.user.id, id, includeDetails);
+		const userId = await requireAuth();
+		const { id } = await params;
 
-		if (result === null) {
-			return NextResponse.json(
-				{ error: "Case not found or access denied" },
-				{ status: 404 }
-			);
+		// Parse query parameters
+		const url = new URL(request.url);
+		const includeDetails = url.searchParams.get("includeDetails") === "true";
+
+		const result = await detectChanges(userId, id, includeDetails);
+
+		if ("error" in result) {
+			return apiError(notFound("Case"));
 		}
 
-		return NextResponse.json(result);
+		return apiSuccess(result.data);
 	} catch (error) {
-		console.error("[changes API] Error detecting changes:", error);
-		return NextResponse.json(
-			{ error: "Failed to detect changes" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

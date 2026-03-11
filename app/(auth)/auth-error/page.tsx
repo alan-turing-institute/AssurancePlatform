@@ -3,25 +3,25 @@ import { Button } from "@/components/ui/button";
 
 export default function AuthErrorPage() {
 	return (
-		<div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8 dark:bg-gray-900">
+		<div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-12 sm:px-6 lg:px-8">
 			<div className="w-full max-w-md space-y-8 text-center">
 				<div>
-					<h2 className="mt-6 font-bold text-3xl text-gray-900 tracking-tight dark:text-white">
+					<h2 className="mt-6 font-bold text-3xl text-foreground tracking-tight">
 						Authentication Error
 					</h2>
-					<p className="mt-2 text-gray-600 text-sm dark:text-gray-400">
+					<p className="mt-2 text-muted-foreground text-sm">
 						We encountered an issue with your authentication session.
 					</p>
 				</div>
 
 				<div className="mt-8 space-y-4">
-					<div className="rounded-md bg-yellow-50 p-4 dark:bg-yellow-900/20">
+					<div className="rounded-md bg-warning/10 p-4">
 						<div className="flex">
 							<div className="ml-3">
-								<h3 className="font-medium text-sm text-yellow-800 dark:text-yellow-200">
+								<h3 className="font-medium text-sm text-warning">
 									Session Issue Detected
 								</h3>
-								<div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+								<div className="mt-2 text-sm text-warning">
 									<p>
 										Your session appears to be in an invalid state. This can
 										happen when:
@@ -50,7 +50,7 @@ export default function AuthErrorPage() {
 						</Link>
 					</div>
 
-					<p className="text-gray-500 text-xs dark:text-gray-400">
+					<p className="text-muted-foreground text-xs">
 						If this problem persists, please try clearing your browser cookies
 						or contact support.
 					</p>

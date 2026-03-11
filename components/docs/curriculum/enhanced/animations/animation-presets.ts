@@ -72,7 +72,7 @@ export const TIMING = {
 	verySlow: 750,
 } as const;
 
-export const EASING: Record<string, EasingValue> = {
+export const EASING = {
 	// Standard CSS easing
 	linear: "linear",
 	easeIn: "easeIn",
@@ -93,13 +93,13 @@ export const EASING: Record<string, EasingValue> = {
 	anticipate: [0.36, 0, 0.66, -0.56],
 	backOut: [0.34, 1.56, 0.64, 1],
 	backIn: [0.36, 0, 0.66, -0.56],
-};
+} as const satisfies Record<string, EasingValue>;
 
 // ========================================================================
 // Spring Physics Configurations
 // ========================================================================
 
-export const SPRING: Record<string, SpringConfig> = {
+export const SPRING = {
 	// Gentle springs
 	gentle: {
 		type: "spring",
@@ -171,13 +171,13 @@ export const SPRING: Record<string, SpringConfig> = {
 		damping: 60,
 		mass: 1.5,
 	},
-};
+} satisfies Record<string, SpringConfig>;
 
 // ========================================================================
 // Entry Animation Presets
 // ========================================================================
 
-export const ENTRY_ANIMATIONS: Record<string, AnimationPreset> = {
+export const ENTRY_ANIMATIONS = {
 	// Fade animations
 	fadeIn: {
 		initial: { opacity: 0 },
@@ -267,13 +267,13 @@ export const ENTRY_ANIMATIONS: Record<string, AnimationPreset> = {
 		exit: { rotateY: 90, opacity: 0 },
 		transition: { duration: TIMING.medium / 1000, ease: EASING.backOut },
 	},
-};
+} satisfies Record<string, AnimationPreset>;
 
 // ========================================================================
 // Exit Animation Presets
 // ========================================================================
 
-export const EXIT_ANIMATIONS: Record<string, AnimationPreset> = {
+export const EXIT_ANIMATIONS = {
 	fadeOut: {
 		initial: { opacity: 1 },
 		exit: { opacity: 0 },
@@ -303,13 +303,13 @@ export const EXIT_ANIMATIONS: Record<string, AnimationPreset> = {
 		exit: { height: 0, opacity: 0 },
 		transition: { duration: TIMING.normal / 1000, ease: EASING.easeInOut },
 	},
-};
+} satisfies Record<string, AnimationPreset>;
 
 // ========================================================================
 // Interaction Animation Presets
 // ========================================================================
 
-export const INTERACTION_ANIMATIONS: Record<string, InteractionPreset> = {
+export const INTERACTION_ANIMATIONS = {
 	// Hover effects
 	hover: {
 		scale: 1.05,
@@ -365,13 +365,13 @@ export const INTERACTION_ANIMATIONS: Record<string, InteractionPreset> = {
 		rotate: [-5, 5, -5, 5, 0],
 		transition: { duration: TIMING.medium / 1000 },
 	},
-};
+} satisfies Record<string, InteractionPreset>;
 
 // ========================================================================
 // Loading Animation Presets
 // ========================================================================
 
-export const LOADING_ANIMATIONS: Record<string, LoadingPreset> = {
+export const LOADING_ANIMATIONS = {
 	// Pulse animation
 	pulse: {
 		scale: [1, 1.05, 1],
@@ -432,13 +432,13 @@ export const LOADING_ANIMATIONS: Record<string, LoadingPreset> = {
 			ease: EASING.easeInOut,
 		},
 	},
-};
+} satisfies Record<string, LoadingPreset>;
 
 // ========================================================================
 // Collapse/Expand Animation Presets
 // ========================================================================
 
-export const COLLAPSE_ANIMATIONS: Record<string, CollapseVariants> = {
+export const COLLAPSE_ANIMATIONS = {
 	// Height-based collapse
 	height: {
 		collapsed: {
@@ -494,13 +494,13 @@ export const COLLAPSE_ANIMATIONS: Record<string, CollapseVariants> = {
 			transition: SPRING.medium,
 		},
 	},
-};
+} satisfies Record<string, CollapseVariants>;
 
 // ========================================================================
 // Stagger Animation Presets
 // ========================================================================
 
-export const STAGGER_ANIMATIONS: Record<string, StaggerConfig> = {
+export const STAGGER_ANIMATIONS = {
 	// Fast stagger
 	fast: {
 		staggerChildren: 0.05,
@@ -524,13 +524,13 @@ export const STAGGER_ANIMATIONS: Record<string, StaggerConfig> = {
 		staggerChildren: 0.1,
 		staggerDirection: -1,
 	},
-};
+} satisfies Record<string, StaggerConfig>;
 
 // ========================================================================
 // Edge/Connection Animation Presets
 // ========================================================================
 
-export const EDGE_ANIMATIONS: Record<string, LoadingPreset> = {
+export const EDGE_ANIMATIONS = {
 	// Draw animation
 	draw: {
 		pathLength: [0, 1],
@@ -572,16 +572,13 @@ export const EDGE_ANIMATIONS: Record<string, LoadingPreset> = {
 			ease: EASING.easeInOut,
 		},
 	},
-};
+} satisfies Record<string, LoadingPreset>;
 
 // ========================================================================
 // Handle Animation Presets
 // ========================================================================
 
-export const HANDLE_ANIMATIONS: Record<
-	string,
-	AnimationPreset | InteractionPreset
-> = {
+export const HANDLE_ANIMATIONS = {
 	// Appear animation
 	appear: {
 		initial: { scale: 0, opacity: 0 },
@@ -624,13 +621,13 @@ export const HANDLE_ANIMATIONS: Record<
 		opacity: [0.5, 0],
 		transition: { duration: TIMING.slow / 1000, ease: EASING.easeOut },
 	},
-};
+} satisfies Record<string, AnimationPreset | InteractionPreset>;
 
 // ========================================================================
 // Notification/Toast Animation Presets
 // ========================================================================
 
-export const NOTIFICATION_ANIMATIONS: Record<string, AnimationPreset> = {
+export const NOTIFICATION_ANIMATIONS = {
 	slideInRight: {
 		initial: { x: 400, opacity: 0 },
 		animate: { x: 0, opacity: 1 },
@@ -651,13 +648,13 @@ export const NOTIFICATION_ANIMATIONS: Record<string, AnimationPreset> = {
 		exit: { scale: 0.5, opacity: 0 },
 		transition: SPRING.bouncy,
 	},
-};
+} satisfies Record<string, AnimationPreset>;
 
 // ========================================================================
 // Modal/Dialog Animation Presets
 // ========================================================================
 
-export const MODAL_ANIMATIONS: Record<string, AnimationPreset> = {
+export const MODAL_ANIMATIONS = {
 	backdrop: {
 		initial: { opacity: 0 },
 		animate: { opacity: 1 },
@@ -685,7 +682,7 @@ export const MODAL_ANIMATIONS: Record<string, AnimationPreset> = {
 		exit: { scale: 0, opacity: 0 },
 		transition: SPRING.bouncy,
 	},
-};
+} satisfies Record<string, AnimationPreset>;
 
 // ========================================================================
 // Performance Presets

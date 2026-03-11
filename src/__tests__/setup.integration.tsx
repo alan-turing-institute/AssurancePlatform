@@ -1,18 +1,56 @@
-// Setup file for integration tests
-import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
-import { server } from "./mocks/server";
+import { Pool } from "pg";
+import { afterAll, afterEach } from "vitest";
 
-// Establish API mocking before all tests
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-
-// Reset any request handlers that we may add during the tests,
-// so they don't affect other tests
-afterEach(() => {
-	server.resetHandlers();
-	cleanup();
+// Create a dedicated pool for cleanup (NOT through Prisma)
+const cleanupPool = new Pool({
+	connectionString: process.env.DATABASE_URL,
+	max: 1,
 });
 
-// Clean up after the tests are finished
-afterAll(() => server.close());
+// Truncate all tables after each test
+afterEach(async () => {
+	const client = await cleanupPool.connect();
+	try {
+		// Truncate all application tables in one statement with CASCADE
+		await client.query(`
+      TRUNCATE TABLE
+        case_study_images,
+        case_study_published_cases,
+        published_assurance_cases,
+        case_studies,
+        release_images,
+        release_comments,
+        release_snapshots,
+        releases,
+        comments,
+        evidence_links,
+        case_images,
+        case_type_assignments,
+        case_types,
+        case_invites,
+        case_team_permissions,
+        case_permissions,
+        assurance_elements,
+        assurance_cases,
+        pattern_permissions,
+        pattern_team_permissions,
+        pattern_elements,
+        argument_patterns,
+        team_members,
+        teams,
+        github_repositories,
+        rate_limit_attempts,
+        security_audit_logs,
+        password_reset_attempts,
+        users
+      CASCADE
+    `);
+	} finally {
+		client.release();
+	}
+});
+
+// Cleanup pool on process exit
+afterAll(async () => {
+	await cleanupPool.end();
+});

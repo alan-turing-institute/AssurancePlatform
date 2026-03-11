@@ -1,33 +1,32 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import type { ErrorCode } from "@/lib/errors";
+import { AppError, forbidden, validationError } from "@/lib/errors";
+import { importFromDriveSchema } from "@/lib/schemas/google-drive";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	downloadFileFromDrive,
-	type GoogleDriveError,
 	type GoogleDriveErrorCode,
 	hasGoogleToken,
 	listBackupFiles,
 } from "@/lib/services/google-drive-service";
 
-const ImportSchema = z.object({
-	fileId: z.string().min(1, "File ID is required"),
-});
-
 /**
- * Maps Google Drive error codes to HTTP status codes.
+ * Maps Google Drive error codes to application error codes.
  */
-function getStatusForDriveError(code: GoogleDriveErrorCode): number {
-	const statusMap: Record<GoogleDriveErrorCode, number> = {
-		NO_TOKEN: 403,
-		TOKEN_EXPIRED: 401,
-		REFRESH_FAILED: 401,
-		NOT_FOUND: 404,
-		FORBIDDEN: 403,
-		API_ERROR: 500,
-	};
-	return statusMap[code] ?? 500;
-}
+const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
+	NO_TOKEN: "FORBIDDEN",
+	TOKEN_EXPIRED: "UNAUTHORISED",
+	REFRESH_FAILED: "UNAUTHORISED",
+	NOT_FOUND: "NOT_FOUND",
+	FORBIDDEN: "FORBIDDEN",
+	API_ERROR: "INTERNAL",
+};
 
 /**
  * POST /api/cases/import/gdrive
@@ -40,82 +39,64 @@ function getStatusForDriveError(code: GoogleDriveErrorCode): number {
  * @tag Cases
  */
 export async function POST(request: Request) {
-	const validated = await validateSession();
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const hasToken = await hasGoogleToken(validated.userId);
-	if (!hasToken) {
-		return NextResponse.json(
-			{
-				error: "Google not connected",
-				code: "NO_TOKEN",
-				message: "Please sign in with Google to import from Google Drive.",
-			},
-			{ status: 403 }
-		);
-	}
-
-	const parseResult = ImportSchema.safeParse(
-		await request.json().catch(() => null)
-	);
-	if (!parseResult.success) {
-		return NextResponse.json(
-			{ error: "Invalid request", validationErrors: parseResult.error.errors },
-			{ status: 400 }
-		);
-	}
-
-	const { fileId } = parseResult.data;
-
-	// Download file from Drive
-	let fileContent: string;
-	let fileName: string;
 	try {
-		const result = await downloadFileFromDrive(validated.userId, fileId);
-		fileContent = result.content;
-		fileName = result.name;
+		const userId = await requireAuth();
+
+		const hasToken = await hasGoogleToken(userId);
+		if (!hasToken) {
+			return apiError(
+				forbidden(
+					"Google not connected. Please sign in with Google to import from Google Drive."
+				)
+			);
+		}
+
+		const parseResult = importFromDriveSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parseResult.success) {
+			return apiError(validationError("Invalid request"));
+		}
+
+		const { fileId } = parseResult.data;
+
+		// Download file from Drive
+		const downloadResult = await downloadFileFromDrive(userId, fileId);
+
+		if ("error" in downloadResult) {
+			const code =
+				DRIVE_ERROR_MAP[downloadResult.driveError.code] ?? "INTERNAL";
+			return apiError(new AppError({ code, message: downloadResult.error }));
+		}
+
+		const fileContent = downloadResult.data.content;
+		const fileName = downloadResult.data.name;
+
+		// Parse JSON
+		let jsonData: unknown;
+		try {
+			jsonData = JSON.parse(fileContent);
+		} catch {
+			return apiError(validationError(`${fileName} is not valid JSON.`));
+		}
+
+		// Import the case
+		const importResult = await importCase(userId, jsonData);
+		if ("error" in importResult) {
+			return apiError(serviceErrorToAppError(importResult.error));
+		}
+
+		return apiSuccess({
+			id: importResult.data.caseId,
+			name: importResult.data.caseName,
+			elementCount: importResult.data.elementCount,
+			evidenceLinkCount: importResult.data.evidenceLinkCount,
+			warnings: importResult.data.warnings,
+			source: { type: "gdrive", fileId, fileName },
+		});
 	} catch (error) {
-		const driveError = error as GoogleDriveError;
-		const status = getStatusForDriveError(driveError.code);
-		return NextResponse.json(
-			{ error: driveError.message, code: driveError.code },
-			{ status }
-		);
+		return apiErrorFromUnknown(error);
 	}
-
-	// Parse JSON
-	let jsonData: unknown;
-	try {
-		jsonData = JSON.parse(fileContent);
-	} catch {
-		return NextResponse.json(
-			{ error: "Invalid JSON file", message: `${fileName} is not valid JSON.` },
-			{ status: 400 }
-		);
-	}
-
-	// Import the case
-	const importResult = await importCase(validated.userId, jsonData);
-	if (!importResult.success) {
-		return NextResponse.json(
-			{
-				error: importResult.error,
-				validationErrors: importResult.validationErrors,
-			},
-			{ status: 400 }
-		);
-	}
-
-	return NextResponse.json({
-		id: importResult.caseId,
-		name: importResult.caseName,
-		elementCount: importResult.elementCount,
-		evidenceLinkCount: importResult.evidenceLinkCount,
-		warnings: importResult.warnings,
-		source: { type: "gdrive", fileId, fileName },
-	});
 }
 
 /**
@@ -128,20 +109,21 @@ export async function POST(request: Request) {
  * @tag Cases
  */
 export async function GET() {
-	const validated = await validateSession();
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const hasToken = await hasGoogleToken(validated.userId);
-	if (!hasToken) {
-		return NextResponse.json({ connected: false, files: [] });
-	}
-
 	try {
-		const files = await listBackupFiles(validated.userId);
-		return NextResponse.json({ connected: true, files });
-	} catch {
-		return NextResponse.json({ connected: true, files: [] });
+		const userId = await requireAuth();
+
+		const hasToken = await hasGoogleToken(userId);
+		if (!hasToken) {
+			return apiSuccess({ connected: false, files: [] });
+		}
+
+		try {
+			const files = await listBackupFiles(userId);
+			return apiSuccess({ connected: true, files });
+		} catch {
+			return apiSuccess({ connected: true, files: [] });
+		}
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
 }

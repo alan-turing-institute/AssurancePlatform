@@ -3,13 +3,15 @@ import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from "next-auth";
 import { Toaster } from "@/components/ui/sonner";
-import { authOptions } from "@/lib/auth-options";
+import { authOptions } from "@/lib/auth/config";
 import { cn } from "@/lib/utils";
 import { ModalProvider } from "@/providers/modal-provider";
 import SessionProvider from "@/providers/session-provider";
+import { ThemePresetProvider } from "@/providers/theme-preset-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { TourProvider } from "@/providers/tour-provider";
 
-export const fontSans = FontSans({
+const fontSans = FontSans({
 	subsets: ["latin"],
 	variable: "--font-sans",
 });
@@ -42,9 +44,11 @@ export default async function RootLayout({
 						disableTransitionOnChange
 						enableSystem
 					>
-						{children}
-						<ModalProvider />
-						<Toaster />
+						<ThemePresetProvider>
+							<TourProvider>{children}</TourProvider>
+							<ModalProvider />
+							<Toaster />
+						</ThemePresetProvider>
 					</ThemeProvider>
 				</SessionProvider>
 			</body>

@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type Dispatch, type SetStateAction, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -12,35 +11,33 @@ import {
 	FormItem,
 	FormMessage,
 } from "@/components/ui/form";
-import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
-import type { Comment } from "@/types";
+import {
+	type CommentFormInput,
+	commentFormSchema,
+} from "@/lib/schemas/comment";
+import type { CommentResponse } from "@/lib/services/comment-service";
+import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 import { Textarea } from "../ui/textarea";
 
 type NotesEditFormProps = {
-	note: Comment;
+	note: CommentResponse;
 	setEdit: Dispatch<SetStateAction<boolean | undefined>>;
 };
-
-const formSchema = z.object({
-	comment: z.string().min(2).max(500),
-});
 
 const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
 	const { caseNotes, setCaseNotes } = useStore();
 	const [loading, setLoading] = useState<boolean>(false);
-	const { toast } = useToast();
-
 	const { id, content } = note;
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<CommentFormInput>({
+		resolver: zodResolver(commentFormSchema),
 		defaultValues: {
 			comment: content,
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: CommentFormInput) {
 		setLoading(true);
 
 		try {

@@ -1,7 +1,12 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import type { UpdatePermissionInput } from "@/lib/services/case-permission-service";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { updatePermissionSchema } from "@/lib/schemas/permission";
 import {
 	revokeTeamPermission,
 	revokeUserPermission,
@@ -19,49 +24,49 @@ export async function PATCH(
 	request: Request,
 	{ params }: { params: Promise<{ id: string; permissionId: string }> }
 ) {
-	const { id: caseId, permissionId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	try {
-		const body = await request.json();
+		const session = await requireAuthSession();
+		const { id: caseId, permissionId } = await params;
 
-		const input: UpdatePermissionInput = {
-			permission: body.permission,
-		};
-
-		// Determine if this is a user or team permission
-		const isTeamPermission = body.type === "team";
-
-		const result = isTeamPermission
-			? await updateTeamPermission(session.user.id, caseId, permissionId, input)
-			: await updateUserPermission(
-					session.user.id,
-					caseId,
-					permissionId,
-					input
-				);
-
-		if (result.error) {
-			let status = 400;
-			if (result.error === "Permission denied") {
-				status = 403;
-			} else if (result.error === "Permission not found") {
-				status = 404;
-			}
-			return NextResponse.json({ error: result.error }, { status });
+		const parsed = updatePermissionSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(
+					parsed.error.errors[0]?.message ?? "Invalid input"
+				)
+			);
 		}
 
-		return NextResponse.json(result.data);
-	} catch (error) {
-		console.error("Error updating permission:", error);
-		return NextResponse.json(
-			{ error: "Failed to update permission" },
-			{ status: 500 }
+		// Determine if this is a user or team permission
+		const isTeamPermission = parsed.data.type === "team";
+
+		const result = isTeamPermission
+			? await updateTeamPermission(session.userId, caseId, permissionId, {
+					permission: parsed.data.permission,
+				})
+			: await updateUserPermission(session.userId, caseId, permissionId, {
+					permission: parsed.data.permission,
+				});
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
 		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("permission:changed", caseId, {
+			username,
+			userId: session.userId,
+		});
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -75,30 +80,34 @@ export async function DELETE(
 	request: Request,
 	{ params }: { params: Promise<{ id: string; permissionId: string }> }
 ) {
-	const { id: caseId, permissionId } = await params;
-	const session = await getServerSession(authOptions);
+	try {
+		const session = await requireAuthSession();
+		const { id: caseId, permissionId } = await params;
 
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
+		// Check query param for type
+		const url = new URL(request.url);
+		const isTeamPermission = url.searchParams.get("type") === "team";
 
-	// Check query param for type
-	const url = new URL(request.url);
-	const isTeamPermission = url.searchParams.get("type") === "team";
+		const result = isTeamPermission
+			? await revokeTeamPermission(session.userId, caseId, permissionId)
+			: await revokeUserPermission(session.userId, caseId, permissionId);
 
-	const result = isTeamPermission
-		? await revokeTeamPermission(session.user.id, caseId, permissionId)
-		: await revokeUserPermission(session.user.id, caseId, permissionId);
-
-	if (result.error) {
-		let status = 400;
-		if (result.error === "Permission denied") {
-			status = 403;
-		} else if (result.error === "Permission not found") {
-			status = 404;
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
-		return NextResponse.json({ error: result.error }, { status });
-	}
 
-	return NextResponse.json({ success: true });
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("permission:changed", caseId, {
+			username,
+			userId: session.userId,
+		});
+
+		return apiSuccess({ success: true });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }

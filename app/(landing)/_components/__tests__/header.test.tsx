@@ -126,11 +126,20 @@ describe("Header", () => {
 		it("should render header with logo", () => {
 			render(<Header />);
 
-			const logo = screen.getByAltText("TEA Platform Logo");
-			expect(logo).toBeInTheDocument();
-			expect(logo).toHaveAttribute("src", "/images/logos/tea-logo-full-light.png");
-			expect(logo).toHaveAttribute("width", "183");
-			expect(logo).toHaveAttribute("height", "48");
+			const logos = screen.getAllByAltText("TEA Platform Logo");
+			expect(logos).toHaveLength(2);
+			// Light mode logo
+			expect(logos[0]).toHaveAttribute(
+				"src",
+				"/images/logos/tea-logo-full-light.png"
+			);
+			expect(logos[0]).toHaveAttribute("width", "183");
+			expect(logos[0]).toHaveAttribute("height", "48");
+			// Dark mode logo
+			expect(logos[1]).toHaveAttribute(
+				"src",
+				"/images/logos/tea-logo-full-dark.png"
+			);
 		});
 
 		it("should render navigation links", () => {
@@ -232,7 +241,7 @@ describe("Header", () => {
 			const githubLink = screen.getByRole("link", { name: GITHUB_REGEX });
 			const discoverLink = screen.getByRole("link", { name: DISCOVER_REGEX });
 
-			expect(documentationLink).toHaveAttribute("href", "/documentation");
+			expect(documentationLink).toHaveAttribute("href", "/docs");
 			expect(githubLink).toHaveAttribute(
 				"href",
 				"https://github.com/alan-turing-institute/AssurancePlatform"
@@ -249,7 +258,7 @@ describe("Header", () => {
 			const githubLink = screen.getByRole("link", { name: GITHUB_REGEX });
 			const discoverLink = screen.getByRole("link", { name: DISCOVER_REGEX });
 
-			expect(documentationLink).toHaveAttribute("target", "_blank");
+			expect(documentationLink).toHaveAttribute("target", "_self");
 			expect(githubLink).toHaveAttribute("target", "_blank");
 			expect(discoverLink).toHaveAttribute("target", "_self");
 		});
@@ -416,9 +425,11 @@ describe("Header", () => {
 		it("should have alt text for logo images", () => {
 			render(<Header />);
 
-			const logoImage = screen.getByAltText("TEA Platform Logo");
-			expect(logoImage).toBeInTheDocument();
-			expect(logoImage).toHaveAttribute("alt", "TEA Platform Logo");
+			const logos = screen.getAllByAltText("TEA Platform Logo");
+			expect(logos).toHaveLength(2);
+			for (const logo of logos) {
+				expect(logo).toHaveAttribute("alt", "TEA Platform Logo");
+			}
 		});
 
 		it("should have proper aria-hidden attributes for decorative elements", () => {
@@ -446,7 +457,9 @@ describe("Header", () => {
 
 			// Check desktop navigation links
 			const desktopNavLinks = navigationLinks.filter((link) =>
-				link.className.includes("font-semibold text-gray-900 text-sm leading-6")
+				link.className.includes(
+					"font-semibold text-foreground text-sm leading-6"
+				)
 			);
 			expect(desktopNavLinks.length).toBeGreaterThan(0);
 		});
@@ -463,8 +476,10 @@ describe("Header", () => {
 				"items-center",
 				"justify-center",
 				"rounded-md",
-				"p-2.5",
-				"text-gray-700"
+				"hover:bg-accent",
+				"hover:text-accent-foreground",
+				"h-10",
+				"w-10"
 			);
 		});
 	});

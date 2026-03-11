@@ -6,6 +6,40 @@
 import type { ReactElement, ReactNode } from "react";
 import React, { cloneElement, useEffect, useRef, useState } from "react";
 
+// Common mock prop types
+type MockComponentProps = {
+	children?: ReactNode;
+	[key: string]: unknown;
+};
+
+type MockTriggerProps = {
+	children?: ReactNode;
+	asChild?: boolean;
+	[key: string]: unknown;
+};
+
+type MockRootProps = {
+	children?: ReactNode;
+	defaultOpen?: boolean;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+};
+
+type MockValueRootProps = {
+	children?: ReactNode;
+	defaultValue?: string;
+	value?: string;
+	onValueChange?: (value: string) => void;
+	[key: string]: unknown;
+};
+
+type MockSelectItemProps = {
+	children?: ReactNode;
+	value: string;
+	disabled?: boolean;
+	[key: string]: unknown;
+};
+
 // Tooltip Mock with state management
 type TooltipContextValue = {
 	open: boolean;
@@ -18,12 +52,19 @@ export const MockTooltipProvider = ({ children }: { children: ReactNode }) => (
 	<>{children}</>
 );
 
+type TooltipRootProps = {
+	children?: ReactNode;
+	defaultOpen?: boolean;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+};
+
 export const MockTooltipRoot = ({
 	children,
 	defaultOpen = false,
 	open: controlledOpen,
 	onOpenChange,
-}: any) => {
+}: TooltipRootProps) => {
 	const [open, setOpen] = useState(controlledOpen ?? defaultOpen);
 
 	useEffect(() => {
@@ -46,7 +87,18 @@ export const MockTooltipRoot = ({
 	);
 };
 
-export const MockTooltipTrigger = ({ children, asChild, ...props }: any) => {
+type TooltipTriggerProps = {
+	children?: ReactNode;
+	asChild?: boolean;
+	disabled?: boolean;
+	[key: string]: unknown;
+};
+
+export const MockTooltipTrigger = ({
+	children,
+	asChild,
+	...props
+}: TooltipTriggerProps) => {
 	const context = React.useContext(TooltipContext);
 	const ref = useRef<HTMLElement>(null);
 
@@ -69,7 +121,8 @@ export const MockTooltipTrigger = ({ children, asChild, ...props }: any) => {
 	// For disabled elements, we need to use pointer events on a wrapper
 	const isDisabled =
 		props.disabled ||
-		(React.isValidElement(children) && (children.props as any)?.disabled);
+		(React.isValidElement(children) &&
+			(children.props as Record<string, unknown>)?.disabled);
 
 	const triggerProps = {
 		onMouseEnter: isDisabled ? undefined : handleMouseEnter,
@@ -98,7 +151,11 @@ export const MockTooltipTrigger = ({ children, asChild, ...props }: any) => {
 
 		return (
 			<span {...wrapperProps}>
-				<button type="button" {...triggerProps} ref={ref as any}>
+				<button
+					type="button"
+					{...triggerProps}
+					ref={ref as React.RefObject<HTMLButtonElement>}
+				>
 					{children}
 				</button>
 			</span>
@@ -116,7 +173,19 @@ export const MockTooltipTrigger = ({ children, asChild, ...props }: any) => {
 	);
 };
 
-export const MockTooltipContent = ({ children, sideOffset, ...props }: any) => {
+type TooltipContentProps = {
+	children?: ReactNode;
+	sideOffset?: number;
+	side?: string;
+	align?: string;
+	[key: string]: unknown;
+};
+
+export const MockTooltipContent = ({
+	children,
+	sideOffset: _sideOffset,
+	...props
+}: TooltipContentProps) => {
 	const context = React.useContext(TooltipContext);
 
 	if (!context?.open) {
@@ -124,7 +193,7 @@ export const MockTooltipContent = ({ children, sideOffset, ...props }: any) => {
 	}
 
 	// Filter out Radix-specific props that shouldn't be on DOM elements
-	const { side, align, ...domProps } = props;
+	const { side: _side, align: _align, ...domProps } = props;
 
 	return (
 		<div
@@ -153,7 +222,7 @@ export const MockDialogRoot = ({
 	defaultOpen = false,
 	open: controlledOpen,
 	onOpenChange,
-}: any) => {
+}: MockRootProps) => {
 	const [open, setOpen] = useState(controlledOpen ?? defaultOpen);
 
 	useEffect(() => {
@@ -176,7 +245,11 @@ export const MockDialogRoot = ({
 	);
 };
 
-export const MockDialogTrigger = ({ children, asChild, ...props }: any) => {
+export const MockDialogTrigger = ({
+	children,
+	asChild,
+	...props
+}: MockTriggerProps) => {
 	const context = React.useContext(DialogContext);
 
 	const handleClick = () => {
@@ -185,7 +258,7 @@ export const MockDialogTrigger = ({ children, asChild, ...props }: any) => {
 
 	const triggerProps = {
 		onClick: handleClick,
-		"aria-haspopup": "dialog",
+		"aria-haspopup": "dialog" as const,
 		"aria-expanded": context?.open,
 		...props,
 	};
@@ -211,13 +284,19 @@ export const MockDialogPortal = ({ children }: { children: ReactNode }) => {
 	return <>{children}</>;
 };
 
-export const MockDialogOverlay = ({ children, ...props }: any) => (
+export const MockDialogOverlay = ({
+	children,
+	...props
+}: MockComponentProps) => (
 	<div data-testid="dialog-overlay" {...props}>
 		{children}
 	</div>
 );
 
-export const MockDialogContent = ({ children, ...props }: any) => {
+export const MockDialogContent = ({
+	children,
+	...props
+}: MockComponentProps) => {
 	const context = React.useContext(DialogContext);
 	const contentRef = useRef<HTMLDivElement>(null);
 
@@ -260,17 +339,27 @@ export const MockDialogContent = ({ children, ...props }: any) => {
 	);
 };
 
-export const MockDialogClose = ({ children, asChild, ...props }: any) => {
+type DialogCloseProps = {
+	children?: ReactNode;
+	asChild?: boolean;
+	"aria-label"?: string;
+	[key: string]: unknown;
+};
+
+export const MockDialogClose = ({
+	children,
+	asChild,
+	...props
+}: DialogCloseProps) => {
 	const context = React.useContext(DialogContext);
 
-	const handleClick = (e: React.MouseEvent) => {
+	const handleClick = (evt: React.MouseEvent) => {
 		// Call the child's onClick if it exists
-		if (
-			asChild &&
-			React.isValidElement(children) &&
-			(children.props as any).onClick
-		) {
-			(children.props as any).onClick(e);
+		if (asChild && React.isValidElement(children)) {
+			const childProps = children.props as Record<string, unknown>;
+			if (typeof childProps.onClick === "function") {
+				(childProps.onClick as (e: React.MouseEvent) => void)(evt);
+			}
 		}
 		context?.setOpen(false);
 	};
@@ -285,7 +374,7 @@ export const MockDialogClose = ({ children, asChild, ...props }: any) => {
 	if (asChild && React.isValidElement(children)) {
 		// Merge props correctly, preserving the child's existing props
 		const childProps = {
-			...(children.props as any),
+			...(children.props as Record<string, unknown>),
 			onClick: handleClick,
 		};
 		return cloneElement(children as ReactElement, childProps);
@@ -294,13 +383,16 @@ export const MockDialogClose = ({ children, asChild, ...props }: any) => {
 	return <button {...closeProps}>{children}</button>;
 };
 
-export const MockDialogTitle = ({ children, ...props }: any) => (
+export const MockDialogTitle = ({ children, ...props }: MockComponentProps) => (
 	<h2 data-testid="dialog-title" id="dialog-title" {...props}>
 		{children}
 	</h2>
 );
 
-export const MockDialogDescription = ({ children, ...props }: any) => (
+export const MockDialogDescription = ({
+	children,
+	...props
+}: MockComponentProps) => (
 	<p data-testid="dialog-description" id="dialog-description" {...props}>
 		{children}
 	</p>
@@ -310,7 +402,10 @@ export const MockDialogDescription = ({ children, ...props }: any) => (
 export const MockPopoverRoot = MockDialogRoot;
 export const MockPopoverTrigger = MockDialogTrigger;
 export const MockPopoverPortal = MockDialogPortal;
-export const MockPopoverContent = ({ children, ...props }: any) => {
+export const MockPopoverContent = ({
+	children,
+	...props
+}: MockComponentProps) => {
 	const context = React.useContext(DialogContext);
 
 	if (!context?.open) {
@@ -345,7 +440,7 @@ export const MockRadioGroupRoot = ({
 	value: controlledValue,
 	onValueChange,
 	...props
-}: any) => {
+}: MockValueRootProps) => {
 	// For controlled component, use controlledValue directly
 	// For uncontrolled, use internal state
 	const [internalValue, setInternalValue] = useState(defaultValue ?? "");
@@ -364,11 +459,22 @@ export const MockRadioGroupRoot = ({
 		<RadioGroupContext.Provider
 			value={{ value: currentValue, setValue: handleValueChange }}
 		>
-			<div aria-required={props.required} role="radiogroup" {...props}>
+			<div
+				aria-required={props.required as boolean | undefined}
+				role="radiogroup"
+				{...props}
+			>
 				{children}
 			</div>
 		</RadioGroupContext.Provider>
 	);
+};
+
+type RadioGroupItemProps = {
+	children?: ReactNode;
+	value: string;
+	disabled?: boolean;
+	[key: string]: unknown;
 };
 
 export const MockRadioGroupItem = ({
@@ -376,7 +482,7 @@ export const MockRadioGroupItem = ({
 	value: itemValue,
 	disabled,
 	...props
-}: any) => {
+}: RadioGroupItemProps) => {
 	const context = React.useContext(RadioGroupContext);
 
 	if (!context) {
@@ -393,22 +499,23 @@ export const MockRadioGroupItem = ({
 		}
 	};
 
-	// Render to match Radix UI's actual behavior
+	// Render to match Radix UI's actual behavior — use input[type=radio] for correct semantics
 	return (
-		<button
+		<input
 			aria-checked={isChecked}
+			checked={isChecked}
 			data-state={isChecked ? "checked" : "unchecked"}
 			data-value={itemValue}
 			disabled={disabled}
+			onChange={() => {
+				// onChange required for controlled input; logic handled in onClick
+			}}
 			onClick={handleClick}
 			onMouseDown={(e) => e.preventDefault()}
-			role="radio"
-			type="button" // Prevent focus issues
+			type="radio"
 			value={itemValue}
 			{...props}
-		>
-			{children}
-		</button>
+		/>
 	);
 };
 
@@ -433,7 +540,7 @@ export const MockDropdownMenuRoot = ({
 	defaultOpen = false,
 	open: controlledOpen,
 	onOpenChange,
-}: any) => {
+}: MockRootProps) => {
 	const [open, setOpen] = useState(controlledOpen ?? defaultOpen);
 
 	useEffect(() => {
@@ -460,7 +567,7 @@ export const MockDropdownMenuTrigger = ({
 	children,
 	asChild,
 	...props
-}: any) => {
+}: MockTriggerProps) => {
 	const context = React.useContext(DropdownMenuContext);
 
 	const handleClick = (e: React.MouseEvent) => {
@@ -481,7 +588,7 @@ export const MockDropdownMenuTrigger = ({
 	const triggerProps = {
 		onClick: handleClick,
 		onKeyDown: handleKeyDown,
-		"aria-haspopup": "menu",
+		"aria-haspopup": "menu" as const,
 		"aria-expanded": context?.open,
 		"data-state": context?.open ? "open" : "closed",
 		...props,
@@ -512,7 +619,10 @@ export const MockDropdownMenuPortal = ({
 	return <>{children}</>;
 };
 
-export const MockDropdownMenuContent = ({ children, ...props }: any) => {
+export const MockDropdownMenuContent = ({
+	children,
+	...props
+}: MockComponentProps) => {
 	const context = React.useContext(DropdownMenuContext);
 	const contentRef = useRef<HTMLDivElement>(null);
 
@@ -580,7 +690,13 @@ export const MockDropdownMenuContent = ({ children, ...props }: any) => {
 	}
 
 	// Filter out Radix-specific props that shouldn't be on DOM elements
-	const { side, align, sideOffset, alignOffset, ...domProps } = props;
+	const {
+		side: _side,
+		align: _align,
+		sideOffset: _sideOffset,
+		alignOffset: _alignOffset,
+		...domProps
+	} = props;
 
 	return (
 		<div
@@ -594,13 +710,22 @@ export const MockDropdownMenuContent = ({ children, ...props }: any) => {
 	);
 };
 
+type DropdownMenuItemProps = {
+	children?: ReactNode;
+	onSelect?: (event: React.MouseEvent | React.KeyboardEvent) => void;
+	disabled?: boolean;
+	asChild?: boolean;
+	textValue?: string;
+	[key: string]: unknown;
+};
+
 export const MockDropdownMenuItem = ({
 	children,
 	onSelect,
 	disabled,
 	asChild,
 	...props
-}: any) => {
+}: DropdownMenuItemProps) => {
 	const context = React.useContext(DropdownMenuContext);
 	const ref = useRef<HTMLDivElement>(null);
 
@@ -630,7 +755,7 @@ export const MockDropdownMenuItem = ({
 	const {
 		asChild: _asChild,
 		onSelect: _onSelect,
-		textValue,
+		textValue: _textValue,
 		...domProps
 	} = props;
 
@@ -662,51 +787,68 @@ export const MockDropdownMenuItem = ({
 	);
 };
 
-export const MockDropdownMenuSeparator = ({ ...props }: any) => (
-	<div aria-orientation="horizontal" role="separator" {...props} />
+export const MockDropdownMenuSeparator = ({ ...props }: MockComponentProps) => (
+	<hr {...props} />
 );
 
-export const MockDropdownMenuLabel = ({ children, ...props }: any) => (
+export const MockDropdownMenuLabel = ({
+	children,
+	...props
+}: MockComponentProps) => (
 	<div role="none" {...props}>
 		{children}
 	</div>
 );
 
-export const MockDropdownMenuGroup = ({ children, ...props }: any) => (
-	<div role="group" {...props}>
-		{children}
-	</div>
-);
+export const MockDropdownMenuGroup = ({
+	children,
+	...props
+}: MockComponentProps) => <fieldset {...props}>{children}</fieldset>;
 
 export const MockDropdownMenuSub = ({ children }: { children: ReactNode }) => (
 	<>{children}</>
 );
 
-export const MockDropdownMenuSubTrigger = ({ children, ...props }: any) => (
-	<div aria-haspopup="menu" role="menuitem" {...props}>
+export const MockDropdownMenuSubTrigger = ({
+	children,
+	...props
+}: MockComponentProps) => (
+	<div aria-haspopup="menu" role="menuitem" tabIndex={0} {...props}>
 		{children}
 	</div>
 );
 
-export const MockDropdownMenuSubContent = ({ children, ...props }: any) => (
+export const MockDropdownMenuSubContent = ({
+	children,
+	...props
+}: MockComponentProps) => (
 	<div role="menu" {...props}>
 		{children}
 	</div>
 );
 
-export const MockDropdownMenuRadioGroup = ({ children, ...props }: any) => (
-	<div role="group" {...props}>
-		{children}
-	</div>
-);
+export const MockDropdownMenuRadioGroup = ({
+	children,
+	...props
+}: MockComponentProps) => <fieldset {...props}>{children}</fieldset>;
+
+type DropdownMenuRadioItemProps = {
+	children?: ReactNode;
+	value: string;
+	checked?: boolean;
+	onSelect?: (value: string) => void;
+	disabled?: boolean;
+	[key: string]: unknown;
+};
 
 export const MockDropdownMenuRadioItem = ({
 	children,
 	value,
+	checked,
 	onSelect,
 	disabled,
 	...props
-}: any) => {
+}: DropdownMenuRadioItemProps) => {
 	const handleClick = (e: React.MouseEvent) => {
 		if (disabled) {
 			return;
@@ -717,9 +859,17 @@ export const MockDropdownMenuRadioItem = ({
 
 	return (
 		<div
+			aria-checked={checked}
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (disabled || (e.key !== "Enter" && e.key !== " ")) {
+					return;
+				}
+				e.preventDefault();
+				onSelect?.(value);
+			}}
 			role="menuitemradio"
 			tabIndex={disabled ? -1 : 0}
 			{...props}
@@ -729,13 +879,21 @@ export const MockDropdownMenuRadioItem = ({
 	);
 };
 
+type DropdownMenuCheckboxItemProps = {
+	children?: ReactNode;
+	checked?: boolean;
+	onCheckedChange?: (checked: boolean) => void;
+	disabled?: boolean;
+	[key: string]: unknown;
+};
+
 export const MockDropdownMenuCheckboxItem = ({
 	children,
 	checked,
 	onCheckedChange,
 	disabled,
 	...props
-}: any) => {
+}: DropdownMenuCheckboxItemProps) => {
 	const handleClick = (e: React.MouseEvent) => {
 		if (disabled) {
 			return;
@@ -750,6 +908,13 @@ export const MockDropdownMenuCheckboxItem = ({
 			aria-disabled={disabled}
 			data-disabled={disabled ? "" : undefined}
 			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (disabled || (e.key !== "Enter" && e.key !== " ")) {
+					return;
+				}
+				e.preventDefault();
+				onCheckedChange?.(!checked);
+			}}
 			role="menuitemcheckbox"
 			tabIndex={disabled ? -1 : 0}
 			{...props}
@@ -764,6 +929,198 @@ export const MockDropdownMenuItemIndicator = ({
 }: {
 	children: React.ReactNode;
 }) => <>{children}</>;
+
+// Select Mock with state management
+type SelectContextValue = {
+	value: string;
+	setValue: (value: string) => void;
+	open: boolean;
+	setOpen: (open: boolean) => void;
+};
+
+const SelectContext = React.createContext<SelectContextValue | null>(null);
+
+type SelectRootProps = {
+	children?: ReactNode;
+	defaultValue?: string;
+	value?: string;
+	onValueChange?: (value: string) => void;
+};
+
+export const MockSelectRoot = ({
+	children,
+	defaultValue,
+	value: controlledValue,
+	onValueChange,
+}: SelectRootProps) => {
+	const [internalValue, setInternalValue] = useState(defaultValue ?? "");
+	const [open, setOpen] = useState(false);
+	const isControlled = controlledValue !== undefined;
+	const currentValue = isControlled ? controlledValue : internalValue;
+
+	const handleValueChange = (newValue: string) => {
+		if (!isControlled) {
+			setInternalValue(newValue);
+		}
+		onValueChange?.(newValue);
+		setOpen(false);
+	};
+
+	return (
+		<SelectContext.Provider
+			value={{
+				value: currentValue,
+				setValue: handleValueChange,
+				open,
+				setOpen,
+			}}
+		>
+			{children}
+		</SelectContext.Provider>
+	);
+};
+
+export const MockSelectTrigger = ({
+	children,
+	asChild: _asChild,
+	...props
+}: MockTriggerProps) => {
+	const context = React.useContext(SelectContext);
+
+	const handleClick = () => {
+		context?.setOpen(!context.open);
+	};
+
+	return (
+		<button
+			aria-controls="mock-select-listbox"
+			aria-expanded={context?.open}
+			aria-haspopup="listbox"
+			data-state={context?.open ? "open" : "closed"}
+			onClick={handleClick}
+			role="combobox"
+			type="button"
+			{...props}
+		>
+			{children}
+		</button>
+	);
+};
+
+export const MockSelectValue = ({ placeholder }: { placeholder?: string }) => {
+	const context = React.useContext(SelectContext);
+	return <span>{context?.value || placeholder}</span>;
+};
+
+type SelectIconProps = {
+	children?: ReactNode;
+	asChild?: boolean;
+};
+
+export const MockSelectIcon = ({ children, asChild }: SelectIconProps) => {
+	if (asChild && React.isValidElement(children)) {
+		return children;
+	}
+	return <span>{children}</span>;
+};
+
+export const MockSelectPortal = ({ children }: { children: ReactNode }) => (
+	<>{children}</>
+);
+
+export const MockSelectContent = ({
+	children,
+	...props
+}: MockComponentProps) => {
+	const context = React.useContext(SelectContext);
+
+	if (!context?.open) {
+		return null;
+	}
+
+	const {
+		position: _position,
+		side: _side,
+		align: _align,
+		sideOffset: _sideOffset,
+		alignOffset: _alignOffset,
+		...domProps
+	} = props;
+
+	return (
+		<div data-testid="select-content" role="listbox" {...domProps}>
+			{children}
+		</div>
+	);
+};
+
+export const MockSelectViewport = ({
+	children,
+	...props
+}: MockComponentProps) => <div {...props}>{children}</div>;
+
+export const MockSelectItem = ({
+	children,
+	value,
+	disabled,
+	...props
+}: MockSelectItemProps) => {
+	const context = React.useContext(SelectContext);
+	const isSelected = context?.value === value;
+
+	const handleClick = () => {
+		if (!disabled) {
+			context?.setValue(value);
+		}
+	};
+
+	return (
+		<div
+			aria-disabled={disabled}
+			aria-selected={isSelected}
+			data-state={isSelected ? "checked" : "unchecked"}
+			data-value={value}
+			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (disabled || (e.key !== "Enter" && e.key !== " ")) {
+					return;
+				}
+				e.preventDefault();
+				context?.setValue(value);
+			}}
+			role="option"
+			tabIndex={disabled ? -1 : 0}
+			{...props}
+		>
+			{children}
+		</div>
+	);
+};
+
+export const MockSelectItemText = ({ children }: { children: ReactNode }) => (
+	<span>{children}</span>
+);
+
+export const MockSelectItemIndicator = ({
+	children,
+}: {
+	children: ReactNode;
+}) => <>{children}</>;
+
+export const MockSelectGroup = ({ children, ...props }: MockComponentProps) => (
+	<fieldset {...props}>{children}</fieldset>
+);
+
+export const MockSelectLabel = ({ children, ...props }: MockComponentProps) => (
+	<div {...props}>{children}</div>
+);
+
+export const MockSelectSeparator = ({ ...props }: MockComponentProps) => (
+	<hr {...props} />
+);
+
+export const MockSelectScrollUpButton = () => null;
+export const MockSelectScrollDownButton = () => null;
 
 // Menu Mock (alias for DropdownMenu components)
 export const MockMenuRoot = MockDropdownMenuRoot;

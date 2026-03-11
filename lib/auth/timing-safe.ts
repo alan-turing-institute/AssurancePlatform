@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
  * Constant-time timestamp validation.
@@ -24,4 +24,21 @@ export async function addTimingNoise(maxMs = 10): Promise<void> {
 	// Use cryptographically random bytes for the delay
 	const delay = (randomBytes(2).readUInt16BE(0) / 65_535) * maxMs;
 	await new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+/**
+ * Performs timing-safe comparison of two strings.
+ * Prevents timing attacks on secret comparison.
+ */
+export function timingSafeCompare(a: string, b: string): boolean {
+	try {
+		const bufA = Buffer.from(a);
+		const bufB = Buffer.from(b);
+		if (bufA.length !== bufB.length) {
+			return false;
+		}
+		return timingSafeEqual(bufA, bufB);
+	} catch {
+		return false;
+	}
 }

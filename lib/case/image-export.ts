@@ -1,17 +1,37 @@
 import { saveAs } from "file-saver";
 import { toPng, toSvg } from "html-to-image";
 import type { Options } from "html-to-image/lib/types";
-import { type Node, getNodesBounds, getViewportForBounds } from "reactflow";
+import {
+	type Edge,
+	getNodesBounds,
+	getViewportForBounds,
+	type Node,
+} from "reactflow";
+import {
+	type LayoutApplyFn,
+	layoutForExport,
+	pruneByDepth,
+	waitForRender,
+} from "@/lib/case/document-export";
+import type { LayoutDirection } from "@/lib/case/layout-helper";
 
 export type ImageFormat = "svg" | "png";
 export type ImageScale = 1 | 2 | 3;
 
-export interface ImageExportOptions {
+export type ImageExportOptions = {
 	format: ImageFormat;
 	scale?: ImageScale;
 	caseName: string;
 	nodes: Node[];
-}
+};
+
+export type FilteredImageExportOptions = ImageExportOptions & {
+	edges: Edge[];
+	layoutDirection: LayoutDirection;
+	applyLayout: LayoutApplyFn;
+	restoreLayout: () => void;
+	maxDepth?: number | null;
+};
 
 /**
  * Generate a filename for the exported image.
@@ -74,7 +94,7 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 	const originalStyles: Map<Element, { stroke: string; strokeWidth: string }> =
 		new Map();
 
-	edgePaths.forEach((path) => {
+	for (const path of edgePaths) {
 		const svgPath = path as SVGElement;
 		originalStyles.set(path, {
 			stroke: svgPath.getAttribute("stroke") || "",
@@ -83,11 +103,11 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 		// Apply explicit stroke styles for export (light mode)
 		svgPath.setAttribute("stroke", "#666666");
 		svgPath.setAttribute("stroke-width", "2");
-	});
+	}
 
 	// Return cleanup function
 	return () => {
-		edgePaths.forEach((path) => {
+		for (const path of edgePaths) {
 			const svgPath = path as SVGElement;
 			const original = originalStyles.get(path);
 			if (original) {
@@ -102,16 +122,19 @@ function applyExportStyles(viewport: HTMLElement): () => void {
 					svgPath.removeAttribute("stroke-width");
 				}
 			}
-		});
+		}
 	};
 }
 
 /**
- * Export the ReactFlow diagram as an image (SVG or PNG).
- * Uses ReactFlow's bounds calculation to ensure all nodes and edges are captured.
+ * Capture the current React Flow viewport as an image and trigger download.
+ * Internal helper shared by both export functions.
  */
-export async function exportDiagramImage(
-	options: ImageExportOptions
+async function captureAndDownload(
+	nodes: Node[],
+	format: ImageFormat,
+	scale: ImageScale,
+	filename: string
 ): Promise<void> {
 	const viewport = document.querySelector(
 		".react-flow__viewport"
@@ -123,18 +146,20 @@ export async function exportDiagramImage(
 		);
 	}
 
-	if (options.nodes.length === 0) {
+	if (nodes.length === 0) {
 		throw new Error("No nodes to export. The diagram appears to be empty.");
 	}
 
-	const filename = generateFilename(
-		options.caseName,
-		options.format,
-		options.scale
+	// Filter to visible nodes only
+	const visibleNodes = nodes.filter(
+		(n) => !(n as Node & { hidden?: boolean }).hidden
 	);
+	if (visibleNodes.length === 0) {
+		throw new Error("No visible nodes to export.");
+	}
 
 	// Use ReactFlow's getNodesBounds to calculate proper bounds
-	const nodesBounds = getNodesBounds(options.nodes);
+	const nodesBounds = getNodesBounds(visibleNodes);
 	const padding = 100;
 	const imageWidth = nodesBounds.width + padding * 2;
 	const imageHeight = nodesBounds.height + padding * 2;
@@ -148,8 +173,6 @@ export async function exportDiagramImage(
 		2 // maxZoom
 	);
 
-	const imageScale = options.scale || 2;
-
 	const exportOptions: Options = {
 		backgroundColor: "#ffffff",
 		width: imageWidth,
@@ -162,14 +185,14 @@ export async function exportDiagramImage(
 		},
 		filter: shouldInclude,
 		cacheBust: true,
-		pixelRatio: imageScale,
+		pixelRatio: scale,
 	};
 
 	// Apply inline styles for export (CSS variables won't work in cloned DOM)
 	const restoreStyles = applyExportStyles(viewport);
 
 	try {
-		if (options.format === "svg") {
+		if (format === "svg") {
 			const dataUrl = await toSvg(viewport, exportOptions);
 			const blob = await dataUrlToBlob(dataUrl);
 			saveAs(blob, filename);
@@ -184,5 +207,99 @@ export async function exportDiagramImage(
 	} finally {
 		// Always restore original styles
 		restoreStyles();
+	}
+}
+
+/**
+ * Export the ReactFlow diagram as an image (SVG or PNG).
+ * Captures the current viewport as-is without any layout changes.
+ */
+export async function exportDiagramImage(
+	options: ImageExportOptions
+): Promise<void> {
+	const filename = generateFilename(
+		options.caseName,
+		options.format,
+		options.scale
+	);
+
+	await captureAndDownload(
+		options.nodes,
+		options.format,
+		options.scale || 2,
+		filename
+	);
+}
+
+/**
+ * Export a filtered diagram as an image (SVG or PNG).
+ *
+ * When maxDepth is set, this function:
+ * 1. Prunes nodes/edges to the specified depth
+ * 2. Applies compact export layout (with auto-LR direction detection)
+ * 3. Pushes the layout to the DOM and waits for React to render
+ * 4. Captures the viewport as an image
+ * 5. Restores the original layout
+ *
+ * When maxDepth is null/undefined, delegates to the simple exportDiagramImage.
+ */
+export async function exportFilteredDiagramImage(
+	options: FilteredImageExportOptions
+): Promise<void> {
+	const {
+		maxDepth,
+		edges,
+		layoutDirection,
+		applyLayout,
+		restoreLayout,
+		...baseOptions
+	} = options;
+
+	// No depth filter — capture the viewport as-is
+	if (maxDepth == null) {
+		await exportDiagramImage(baseOptions);
+		return;
+	}
+
+	const filename = generateFilename(
+		options.caseName,
+		options.format,
+		options.scale
+	);
+
+	// Prune nodes/edges to the specified depth
+	let exportNodes = options.nodes.map((n) => ({ ...n }));
+	let exportEdges = edges.map((e) => ({ ...e }));
+
+	const pruned = pruneByDepth(exportNodes, exportEdges, maxDepth);
+	exportNodes = pruned.nodes;
+	exportEdges = pruned.edges;
+
+	// Use default (editor) spacing for standalone image exports — wider layer
+	// gaps give smoothstep edges more room and produce cleaner paths.
+	const {
+		nodes: layoutedNodes,
+		edges: layoutedEdges,
+		direction,
+	} = await layoutForExport(exportNodes, exportEdges, layoutDirection, {
+		nodeSpacing: 40,
+		layerSpacing: 60,
+	});
+
+	// Push to DOM (including direction for correct handle positioning)
+	applyLayout(layoutedNodes, layoutedEdges, direction);
+	await waitForRender();
+
+	try {
+		await captureAndDownload(
+			layoutedNodes,
+			options.format,
+			options.scale || 2,
+			filename
+		);
+	} finally {
+		// Always restore original layout
+		restoreLayout();
+		await waitForRender();
 	}
 }

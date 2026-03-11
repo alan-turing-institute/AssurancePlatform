@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { PDFExporter } from "../exporters/pdf-exporter";
 import type { RenderedDocument, RenderedSection } from "../types";
 
+const DATE_STAMPED_PDF_REGEX = /^test-case-\d{4}-\d{2}-\d{2}\.pdf$/;
+const SANITISED_PDF_REGEX =
+	/^test-case-with-special-characters-\d{4}-\d{2}-\d{2}\.pdf$/;
+
 /**
  * Create a minimal rendered document for testing
  */
@@ -31,7 +35,7 @@ function createSampleDocument(): RenderedDocument {
  */
 function createSampleSection(): RenderedSection {
 	return {
-		type: "overview",
+		type: "executive-summary",
 		title: "Overview",
 		blocks: [
 			{ type: "heading", level: 1, text: "Test Heading" },
@@ -79,7 +83,7 @@ describe("PDFExporter", () => {
 			if (result.success && "blob" in result) {
 				expect(result.blob).toBeInstanceOf(Blob);
 				expect(result.blob.type).toBe("application/pdf");
-				expect(result.filename).toMatch(/^test-case-\d{4}-\d{2}-\d{2}\.pdf$/);
+				expect(result.filename).toMatch(DATE_STAMPED_PDF_REGEX);
 				expect(result.mimeType).toBe("application/pdf");
 			}
 		});
@@ -106,9 +110,7 @@ describe("PDFExporter", () => {
 
 			expect(result.success).toBe(true);
 			if (result.success && "filename" in result) {
-				expect(result.filename).toMatch(
-					/^test-case-with-special-characters-\d{4}-\d{2}-\d{2}\.pdf$/
-				);
+				expect(result.filename).toMatch(SANITISED_PDF_REGEX);
 			}
 		});
 
@@ -150,7 +152,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Empty Section",
 					blocks: [],
 				},
@@ -177,7 +179,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{ type: "heading", level: 1, text: "Heading 1" },
@@ -195,7 +197,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{
@@ -220,7 +222,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{
@@ -243,7 +245,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{ type: "paragraph", text: "Before divider" },
@@ -261,7 +263,7 @@ describe("PDFExporter", () => {
 			const document = createSampleDocument();
 			document.sections = [
 				{
-					type: "overview",
+					type: "executive-summary",
 					title: "Overview",
 					blocks: [
 						{ type: "metadata", key: "Author", value: "Test User" },
@@ -392,5 +394,110 @@ describe("PDFExporter", () => {
 			const result = await exporter.export(document, { caseName: "Test Case" });
 			expect(result.success).toBe(true);
 		});
+	});
+
+	describe("large document handling", () => {
+		it("should export a large document with 97+ elements without overflow", async () => {
+			const document = createSampleDocument();
+			document.metadata.elementCount = 97;
+
+			// Build 97 element blocks simulating a large assurance case:
+			// 1 goal, 6 strategies, 45 property claims, 45 evidence items
+			const blocks: RenderedSection["blocks"] = [];
+
+			function getElementInfo(i: number) {
+				if (i < 1) {
+					return { type: "GOAL" as const, depth: 0 };
+				}
+				if (i < 7) {
+					return { type: "STRATEGY" as const, depth: 1 };
+				}
+				if (i < 52) {
+					return { type: "PROPERTY_CLAIM" as const, depth: 2 };
+				}
+				return { type: "EVIDENCE" as const, depth: 3 };
+			}
+
+			for (let i = 0; i < 97; i++) {
+				const info = getElementInfo(i);
+
+				blocks.push({
+					type: "element",
+					depth: info.depth,
+					node: {
+						id: `element-${i}`,
+						type: info.type,
+						name: `${info.type[0]}${i}`,
+						description: `Description for element ${i}. This text adds layout content to exercise the react-pdf layout engine.`,
+						inSandbox: false,
+						children: [],
+					},
+				});
+			}
+
+			document.sections = [
+				{
+					type: "assurance-case-structure",
+					title: "Assurance Case Structure",
+					blocks,
+				},
+			];
+
+			const result = await exporter.export(document, {
+				caseName: "Large Test Case",
+			});
+
+			expect(result.success).toBe(true);
+			if (result.success && "blob" in result) {
+				expect(result.blob).toBeInstanceOf(Blob);
+				expect(result.blob.size).toBeGreaterThan(0);
+			}
+		}, 30_000);
+
+		it("should export a document with multiple large sections", async () => {
+			const document = createSampleDocument();
+			document.metadata.elementCount = 120;
+
+			// Two large sections that would overflow in a single <Page>
+			const makeBlocks = (
+				prefix: string,
+				count: number
+			): RenderedSection["blocks"] =>
+				Array.from({ length: count }, (_, i) => ({
+					type: "element" as const,
+					depth: 1,
+					node: {
+						id: `${prefix}-${i}`,
+						type: "PROPERTY_CLAIM" as const,
+						name: `${prefix.toUpperCase()}${i}`,
+						description: `Claim ${i} in section ${prefix}.`,
+						inSandbox: false,
+						children: [],
+					},
+				}));
+
+			document.sections = [
+				{
+					type: "assurance-case-structure",
+					title: "Assurance Case Structure",
+					blocks: makeBlocks("structure", 60),
+				},
+				{
+					type: "evidence",
+					title: "Evidence",
+					blocks: makeBlocks("evidence", 60),
+				},
+			];
+
+			const result = await exporter.export(document, {
+				caseName: "Multi Section Case",
+			});
+
+			expect(result.success).toBe(true);
+			if (result.success && "blob" in result) {
+				expect(result.blob).toBeInstanceOf(Blob);
+				expect(result.blob.size).toBeGreaterThan(0);
+			}
+		}, 30_000);
 	});
 });

@@ -1,7 +1,5 @@
-"use server";
-
-import { canAccessCase, getCasePermission } from "@/lib/permissions";
-import { prismaNew } from "@/lib/prisma";
+import { canAccessCase } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
 import type {
@@ -26,15 +24,15 @@ import type {
 export async function getPublishStatus(
 	userId: string,
 	caseId: string
-): Promise<PublishStatus | null> {
+): Promise<{ data: PublishStatus } | { error: string }> {
 	// Check user has at least VIEW permission
 	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
 	if (!hasAccess) {
-		return null;
+		return { error: "Permission denied" };
 	}
 
 	// Get the case with its published status
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			published: true,
@@ -57,7 +55,7 @@ export async function getPublishStatus(
 	});
 
 	if (!assuranceCase) {
-		return null;
+		return { error: "Permission denied" };
 	}
 
 	// Get the most recent published version
@@ -72,10 +70,12 @@ export async function getPublishStatus(
 	}
 
 	return {
-		isPublished: assuranceCase.published,
-		publishedId: latestPublished?.id ?? null,
-		publishedAt: assuranceCase.publishedAt,
-		linkedCaseStudyCount: linkedCaseStudyIds.size,
+		data: {
+			isPublished: assuranceCase.published,
+			publishedId: latestPublished?.id ?? null,
+			publishedAt: assuranceCase.publishedAt,
+			linkedCaseStudyCount: linkedCaseStudyIds.size,
+		},
 	};
 }
 
@@ -91,18 +91,13 @@ export async function publishAssuranceCase(
 	description?: string
 ): Promise<PublishResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case to check if it exists
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -112,7 +107,7 @@ export async function publishAssuranceCase(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	// Export case content as JSON
@@ -120,16 +115,16 @@ export async function publishAssuranceCase(
 		includeComments: true,
 	});
 
-	if (!exportResult.success) {
-		return { success: false, error: exportResult.error };
+	if ("error" in exportResult) {
+		return { error: exportResult.error };
 	}
 
 	const now = new Date();
 
 	try {
 		// Create the published version and update the case in a transaction
-		const [publishedCase] = await prismaNew.$transaction([
-			prismaNew.publishedAssuranceCase.create({
+		const [publishedCase] = await prisma.$transaction([
+			prisma.publishedAssuranceCase.create({
 				data: {
 					title: assuranceCase.name,
 					content: exportResult.data,
@@ -138,7 +133,7 @@ export async function publishAssuranceCase(
 					createdAt: now,
 				},
 			}),
-			prismaNew.assuranceCase.update({
+			prisma.assuranceCase.update({
 				where: { id: caseId },
 				data: {
 					published: true,
@@ -149,13 +144,11 @@ export async function publishAssuranceCase(
 		]);
 
 		return {
-			success: true,
-			publishedId: publishedCase.id,
-			publishedAt: now,
+			data: { publishedId: publishedCase.id, publishedAt: now },
 		};
 	} catch (error) {
 		console.error("Failed to publish case:", error);
-		return { success: false, error: "Failed to publish case" };
+		return { error: "Failed to publish case" };
 	}
 }
 
@@ -171,18 +164,13 @@ export async function unpublishAssuranceCase(
 	force = false
 ): Promise<UnpublishResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case with its published versions and linked case studies
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -206,11 +194,11 @@ export async function unpublishAssuranceCase(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	if (!assuranceCase.published) {
-		return { success: false, error: "Case is not published" };
+		return { error: "Case is not published" };
 	}
 
 	// Collect all linked case studies
@@ -230,7 +218,6 @@ export async function unpublishAssuranceCase(
 	// If linked to case studies and not forcing, return warning
 	if (linkedCaseStudies.length > 0 && !force) {
 		return {
-			success: false,
 			error: "Cannot unpublish: linked to case studies",
 			linkedCaseStudies,
 		};
@@ -238,7 +225,7 @@ export async function unpublishAssuranceCase(
 
 	try {
 		// Delete all published versions and their links, then update the case
-		await prismaNew.$transaction(async (tx) => {
+		await prisma.$transaction(async (tx) => {
 			// Get all published version IDs
 			const publishedVersionIds = assuranceCase.publishedVersions.map(
 				(pv) => pv.id
@@ -273,10 +260,10 @@ export async function unpublishAssuranceCase(
 			});
 		});
 
-		return { success: true };
+		return { data: { success: true as const } };
 	} catch (error) {
 		console.error("Failed to unpublish case:", error);
-		return { success: false, error: "Failed to unpublish case" };
+		return { error: "Failed to unpublish case" };
 	}
 }
 
@@ -289,7 +276,7 @@ export async function getPublishedCasesByUser(
 ): Promise<
 	{ id: string; title: string; description: string | null; createdAt: Date }[]
 > {
-	const publishedCases = await prismaNew.publishedAssuranceCase.findMany({
+	const publishedCases = await prisma.publishedAssuranceCase.findMany({
 		where: {
 			assuranceCase: {
 				createdById: userId,
@@ -332,7 +319,7 @@ export async function getFullPublishStatus(
 	}
 
 	// Get the case with its publish status (excluding publishedVersions to avoid legacy table issues)
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			published: true,
@@ -354,7 +341,7 @@ export async function getFullPublishStatus(
 	let linkedCaseStudyCount = 0;
 
 	try {
-		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
+		const publishedVersions = await prisma.publishedAssuranceCase.findMany({
 			where: { assuranceCaseId: caseId },
 			select: {
 				id: true,
@@ -393,7 +380,8 @@ export async function getFullPublishStatus(
 	if (assuranceCase.published && latestPublished) {
 		try {
 			const changeResult = await detectChanges(userId, caseId, false);
-			hasChanges = changeResult?.hasChanges ?? false;
+			hasChanges =
+				"data" in changeResult ? changeResult.data.hasChanges : false;
 		} catch (error) {
 			console.warn("Failed to detect changes:", error);
 		}
@@ -423,18 +411,13 @@ export async function markCaseAsReady(
 	caseId: string
 ): Promise<MarkReadyResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case to check its current status
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -443,13 +426,12 @@ export async function markCaseAsReady(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	// Only allow transition from DRAFT
 	if (assuranceCase.publishStatus !== "DRAFT") {
 		return {
-			success: false,
 			error: `Cannot mark as ready: case is currently ${assuranceCase.publishStatus}`,
 		};
 	}
@@ -457,7 +439,7 @@ export async function markCaseAsReady(
 	const now = new Date();
 
 	try {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				publishStatus: "READY_TO_PUBLISH",
@@ -466,10 +448,10 @@ export async function markCaseAsReady(
 			},
 		});
 
-		return { success: true, markedReadyAt: now };
+		return { data: { markedReadyAt: now } };
 	} catch (error) {
 		console.error("Failed to mark case as ready:", error);
-		return { success: false, error: "Failed to mark case as ready" };
+		return { error: "Failed to mark case as ready" };
 	}
 }
 
@@ -484,18 +466,13 @@ export async function unmarkCaseAsReady(
 	caseId: string
 ): Promise<UnmarkReadyResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case to check its current status
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -504,19 +481,18 @@ export async function unmarkCaseAsReady(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	// Only allow transition from READY_TO_PUBLISH
 	if (assuranceCase.publishStatus !== "READY_TO_PUBLISH") {
 		return {
-			success: false,
 			error: `Cannot unmark: case is currently ${assuranceCase.publishStatus}`,
 		};
 	}
 
 	try {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				publishStatus: "DRAFT",
@@ -525,10 +501,10 @@ export async function unmarkCaseAsReady(
 			},
 		});
 
-		return { success: true };
+		return { data: { success: true as const } };
 	} catch (error) {
 		console.error("Failed to unmark case as ready:", error);
-		return { success: false, error: "Failed to unmark case as ready" };
+		return { error: "Failed to unmark case as ready" };
 	}
 }
 
@@ -544,7 +520,7 @@ export async function getReadyToPublishCases(userId: string): Promise<
 		markedReadyAt: Date | null;
 	}[]
 > {
-	const cases = await prismaNew.assuranceCase.findMany({
+	const cases = await prisma.assuranceCase.findMany({
 		where: {
 			createdById: userId,
 			publishStatus: "READY_TO_PUBLISH",
@@ -564,80 +540,6 @@ export async function getReadyToPublishCases(userId: string): Promise<
 }
 
 /**
- * Gets cases that are ready to publish OR published for a specific user.
- * Used for case study linking - shows cases available for selection.
- *
- * Note: The publishedVersions relation uses a legacy Django table that may have
- * type mismatches with UUID-based case IDs. We query it separately to handle errors.
- */
-export async function getCasesAvailableForCaseStudy(userId: string): Promise<
-	{
-		id: string;
-		name: string;
-		description: string;
-		publishStatus: PrismaPublishStatus;
-		publishedAt: Date | null;
-		markedReadyAt: Date | null;
-		publishedVersionId: string | null;
-	}[]
-> {
-	// Query cases without publishedVersions to avoid legacy table issues
-	const cases = await prismaNew.assuranceCase.findMany({
-		where: {
-			createdById: userId,
-			publishStatus: {
-				in: ["READY_TO_PUBLISH", "PUBLISHED"],
-			},
-		},
-		select: {
-			id: true,
-			name: true,
-			description: true,
-			publishStatus: true,
-			publishedAt: true,
-			markedReadyAt: true,
-		},
-		orderBy: {
-			updatedAt: "desc",
-		},
-	});
-
-	// Batch query all published versions for these cases (fixes N+1)
-	const caseIds = cases.map((c) => c.id);
-	let publishedVersionsMap = new Map<string, string>();
-
-	try {
-		const publishedVersions = await prismaNew.publishedAssuranceCase.findMany({
-			where: { assuranceCaseId: { in: caseIds } },
-			select: { id: true, assuranceCaseId: true, createdAt: true },
-			orderBy: { createdAt: "desc" },
-		});
-
-		// Group by assuranceCaseId and take the latest (first due to orderBy desc)
-		for (const pv of publishedVersions) {
-			if (!publishedVersionsMap.has(pv.assuranceCaseId)) {
-				publishedVersionsMap.set(pv.assuranceCaseId, pv.id);
-			}
-		}
-	} catch (error) {
-		// Handle legacy table type mismatch gracefully
-		console.warn("Failed to fetch published versions:", error);
-		publishedVersionsMap = new Map();
-	}
-
-	// Map cases to results with published version IDs
-	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description,
-		publishStatus: c.publishStatus,
-		publishedAt: c.publishedAt,
-		markedReadyAt: c.markedReadyAt,
-		publishedVersionId: publishedVersionsMap.get(c.id) ?? null,
-	}));
-}
-
-/**
  * Updates an existing published assurance case with current content.
  * Creates a new PublishedAssuranceCase record and migrates case study links.
  *
@@ -649,18 +551,13 @@ export async function updatePublishedCase(
 	description?: string
 ): Promise<PublishResult> {
 	// Check user has EDIT permission
-	const permissionResult = await getCasePermission({ userId, caseId });
-	if (!(permissionResult.hasAccess && permissionResult.permission)) {
-		return { success: false, error: "Permission denied" };
-	}
-
-	const { hasPermissionLevel } = await import("@/lib/permissions");
-	if (!hasPermissionLevel(permissionResult.permission, "EDIT")) {
-		return { success: false, error: "Permission denied" };
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	// Get the case and current published version
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			id: true,
@@ -685,16 +582,16 @@ export async function updatePublishedCase(
 	});
 
 	if (!assuranceCase) {
-		return { success: false, error: "Case not found" };
+		return { error: "Case not found" };
 	}
 
 	if (!assuranceCase.published || assuranceCase.publishStatus !== "PUBLISHED") {
-		return { success: false, error: "Case is not published" };
+		return { error: "Case is not published" };
 	}
 
 	const currentPublished = assuranceCase.publishedVersions[0];
 	if (!currentPublished) {
-		return { success: false, error: "No published version found" };
+		return { error: "No published version found" };
 	}
 
 	// Export current case content
@@ -702,15 +599,15 @@ export async function updatePublishedCase(
 		includeComments: true,
 	});
 
-	if (!exportResult.success) {
-		return { success: false, error: exportResult.error };
+	if ("error" in exportResult) {
+		return { error: exportResult.error };
 	}
 
 	const now = new Date();
 
 	try {
 		// Create new version and migrate links in a transaction
-		const newPublished = await prismaNew.$transaction(async (tx) => {
+		const newPublished = await prisma.$transaction(async (tx) => {
 			// Create new published version
 			const published = await tx.publishedAssuranceCase.create({
 				data: {
@@ -755,13 +652,11 @@ export async function updatePublishedCase(
 		});
 
 		return {
-			success: true,
-			publishedId: newPublished.id,
-			publishedAt: now,
+			data: { publishedId: newPublished.id, publishedAt: now },
 		};
 	} catch (error) {
 		console.error("Failed to update published case:", error);
-		return { success: false, error: "Failed to update published case" };
+		return { error: "Failed to update published case" };
 	}
 }
 
@@ -779,7 +674,6 @@ export async function transitionStatus(
 	const statusResult = await getFullPublishStatus(userId, caseId);
 	if (statusResult.error || !statusResult.data) {
 		return {
-			success: false,
 			error: statusResult.error ?? "Failed to get status",
 		};
 	}
@@ -818,7 +712,6 @@ function executeStatusTransition(
 
 		default:
 			return Promise.resolve({
-				success: false,
 				error: `Invalid status transition: ${transitionKey.replace("->", " to ")}`,
 			});
 	}
@@ -829,10 +722,10 @@ async function handleMarkAsReady(
 	caseId: string
 ): Promise<StatusTransitionResult> {
 	const result = await markCaseAsReady(userId, caseId);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
-	return { success: true, newStatus: "READY_TO_PUBLISH" };
+	return { data: { newStatus: "READY_TO_PUBLISH" } };
 }
 
 async function handleUnmarkAsReady(
@@ -840,10 +733,10 @@ async function handleUnmarkAsReady(
 	caseId: string
 ): Promise<StatusTransitionResult> {
 	const result = await unmarkCaseAsReady(userId, caseId);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
-	return { success: true, newStatus: "DRAFT" };
+	return { data: { newStatus: "DRAFT" } };
 }
 
 async function handlePublish(
@@ -852,14 +745,15 @@ async function handlePublish(
 	description?: string
 ): Promise<StatusTransitionResult> {
 	const result = await publishAssuranceCase(userId, caseId, description);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
 	return {
-		success: true,
-		newStatus: "PUBLISHED",
-		publishedId: result.publishedId,
-		publishedAt: result.publishedAt,
+		data: {
+			newStatus: "PUBLISHED",
+			publishedId: result.data.publishedId,
+			publishedAt: result.data.publishedAt,
+		},
 	};
 }
 
@@ -868,14 +762,13 @@ async function handleUnpublish(
 	caseId: string
 ): Promise<StatusTransitionResult> {
 	const result = await unpublishAssuranceCase(userId, caseId);
-	if (!result.success) {
+	if ("error" in result) {
 		return {
-			success: false,
 			error: result.error,
 			linkedCaseStudies: result.linkedCaseStudies,
 		};
 	}
-	return { success: true, newStatus: "DRAFT" };
+	return { data: { newStatus: "DRAFT" } };
 }
 
 async function handleUpdatePublished(
@@ -884,13 +777,14 @@ async function handleUpdatePublished(
 	description?: string
 ): Promise<StatusTransitionResult> {
 	const result = await updatePublishedCase(userId, caseId, description);
-	if (!result.success) {
-		return { success: false, error: result.error };
+	if ("error" in result) {
+		return { error: result.error };
 	}
 	return {
-		success: true,
-		newStatus: "PUBLISHED",
-		publishedId: result.publishedId,
-		publishedAt: result.publishedAt,
+		data: {
+			newStatus: "PUBLISHED",
+			publishedId: result.data.publishedId,
+			publishedAt: result.data.publishedAt,
+		},
 	};
 }

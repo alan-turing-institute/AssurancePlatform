@@ -207,7 +207,7 @@ describe("Form Components", () => {
 		await screen.findByText("Username must be at least 2 characters");
 
 		const usernameLabel = screen.getByText("Username");
-		expect(usernameLabel).toHaveClass("text-rose-500");
+		expect(usernameLabel).toHaveClass("text-destructive");
 	});
 
 	it("should handle controlled form field updates", async () => {

@@ -1,11 +1,11 @@
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { AssuranceCase } from "@/types/domain";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
 export const DiscoverPageMock = () => {
 	const router = useRouter();
-	const [cases, setCases] = useState<AssuranceCase[]>([]);
+	const [cases, setCases] = useState<AssuranceCaseResponse[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");

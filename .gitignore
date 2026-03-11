@@ -161,6 +161,7 @@ site/site
 build/
 .vercel
 *.tsbuildinfo
+.next-docs/
 
 # Prisma generated files
 src/generated/prisma/
@@ -183,6 +184,10 @@ pnpm-debug.log*
 
 # testing
 coverage/
+e2e/.auth/
+test-results/
+playwright-report/
+blob-report/
 
 # documentation builds - all generated documentation files
 public/documentation/
@@ -199,6 +204,7 @@ TASKS/
 
 # beads issue tracking
 .beads/last-touched
+.beads/.migration-hint-ts
 
 # IDE and editor files
 .idea/
@@ -234,6 +240,7 @@ docker-compose.prod-test.yml
 # Temporary files
 *.tmp
 *.temp
+*.bak
 .temp/
 .tmp/
 
@@ -243,3 +250,4 @@ docker-compose.prod-test.yml
 
 # Database backups
 backups/
+.patches/

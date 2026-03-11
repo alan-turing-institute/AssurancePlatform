@@ -1,9 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import type { PublishStatusType } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
-
-export type PublishStatusType = "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED";
 
 type StatusBadgeProps = {
 	status: PublishStatusType;
@@ -18,17 +17,15 @@ const statusConfig: Record<
 	DRAFT: {
 		label: "Draft",
 		className:
-			"bg-gray-500/10 text-gray-400 ring-gray-500/20 hover:bg-gray-500/20",
+			"bg-muted-foreground/10 text-muted-foreground ring-muted-foreground/20 hover:bg-muted-foreground/20",
 	},
 	READY_TO_PUBLISH: {
 		label: "Ready to Publish",
-		className:
-			"bg-amber-500/10 text-amber-500 ring-amber-500/20 hover:bg-amber-500/20",
+		className: "bg-warning/10 text-warning ring-warning/20 hover:bg-warning/20",
 	},
 	PUBLISHED: {
 		label: "Published",
-		className:
-			"bg-green-500/10 text-green-400 ring-green-500/20 hover:bg-green-500/20",
+		className: "bg-success/10 text-success ring-success/20 hover:bg-success/20",
 	},
 };
 
@@ -59,7 +56,7 @@ export function StatusBadge({
 			{hasChanges && status === "PUBLISHED" && (
 				<span
 					aria-hidden="true"
-					className="-right-1 -top-1 absolute h-2.5 w-2.5 rounded-full bg-amber-500"
+					className="-right-1 -top-1 absolute h-2.5 w-2.5 rounded-full bg-warning"
 					title="Changes pending"
 				/>
 			)}

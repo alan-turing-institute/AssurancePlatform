@@ -1,4 +1,9 @@
-import { NextResponse } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { getPublishedCaseStudies } from "@/lib/services/case-study-service";
 import { transformCaseStudiesForApi } from "@/lib/services/case-study-transforms";
 
@@ -6,15 +11,14 @@ import { transformCaseStudiesForApi } from "@/lib/services/case-study-transforms
  * GET /api/public/case-studies
  * List all published case studies (public access, no auth required)
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
 	try {
-		const caseStudies = await getPublishedCaseStudies();
-		return NextResponse.json(transformCaseStudiesForApi(caseStudies));
+		const result = await getPublishedCaseStudies();
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+		return apiSuccess(transformCaseStudiesForApi(result.data));
 	} catch (error) {
-		console.error("Error fetching published case studies:", error);
-		return NextResponse.json(
-			{ error: "Failed to fetch case studies" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

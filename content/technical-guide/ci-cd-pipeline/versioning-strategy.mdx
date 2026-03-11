@@ -41,7 +41,7 @@ During development, we use pre-release identifiers:
 
 ### Version 0.x (Research Preview)
 
-The TEA Platform is currently in research preview with version **v0.2.0**.
+The TEA Platform is currently in research preview with version **v0.3.0**.
 
 - **Version 0.x.y** indicates initial development
 - Breaking changes may occur at any time
@@ -61,8 +61,8 @@ Version 1.0.0 will be released when:
 
 ### Main Branches
 
-- **`main`** - Production releases (e.g., `v0.2.0`)
-- **`develop`** - Development builds (e.g., `v0.2.0-dev.20250112.abc123`)
+- **`main`** - Production releases (e.g., `v0.3.0`)
+- **`staging`** - Pre-production integration (e.g., `v0.3.0-dev.20250112.abc123`)
 
 ### Version Tagging
 
@@ -76,9 +76,9 @@ v0.3.0
 
 #### Development Builds
 ```bash
-# Tagged on develop branch
-v0.2.0-dev.20250112.abc123
-v0.2.0-dev.20250113.def456
+# Tagged on staging branch
+v0.3.0-dev.20250112.abc123
+v0.3.0-dev.20250113.def456
 ```
 
 ## Container Image Tagging
@@ -87,14 +87,14 @@ Our Docker images follow the same versioning strategy:
 
 ### GitHub Container Registry
 
-- **Production**: `ghcr.io/alan-turing-institute/tea-platform/backend:v0.2.0`
-- **Development**: `ghcr.io/alan-turing-institute/tea-platform/backend:v0.2.0-dev.20250112.abc123`
-- **Latest**: `ghcr.io/alan-turing-institute/tea-platform/backend:latest`
+- **Production**: `ghcr.io/alan-turing-institute/assuranceplatform:v0.3.0`
+- **Development**: `ghcr.io/alan-turing-institute/assuranceplatform:v0.3.0-dev.20250112.abc123`
+- **Latest**: `ghcr.io/alan-turing-institute/assuranceplatform:latest`
 
 ### Branch Aliases
 
 - **`latest`** - Points to the most recent production release
-- **`develop`** - Points to the most recent development build
+- **`staging`** - Points to the most recent staging build
 - **`main`** - Points to the most recent production release (same as latest)
 
 ## Release Process
@@ -108,9 +108,9 @@ Releases are automatically created through our CI/CD pipeline:
 3. **GitHub Release** created with auto-generated release notes
 4. **Deployment** to production environment
 
-### Development Releases
+### Staging Releases
 
-1. **Code pushed to `develop`** triggers development build
+1. **Code pushed to `staging`** triggers staging build
 2. **Pre-release version** generated automatically
 3. **Container images** tagged and pushed
 4. **Deployment** to staging environment
@@ -143,7 +143,7 @@ Release notes are automatically generated from commit messages using GitHub's au
 ```bash
 feat: add user authentication system (#123)
 fix: resolve memory leak in data processing (#124)
-docs: update API documentation for v0.2.0
+docs: update API documentation for v0.3.0
 chore: update dependencies to latest versions
 ```
 
@@ -156,7 +156,7 @@ Frontend package.json versions are synchronized with Git tags:
 ```json
 {
   "name": "tea-frontend",
-  "version": "0.2.0"
+  "version": "0.3.0"
 }
 ```
 
@@ -173,12 +173,12 @@ Version information is available in the application:
 ### Environments
 
 - **Production** (`main` branch)
-  - Uses stable version tags (e.g., `v0.2.0`)
+  - Uses stable version tags (e.g., `v0.3.0`)
   - Deployed to production Azure App Services
   - Available at production URLs
 
-- **Staging** (`develop` branch)
-  - Uses development version tags (e.g., `v0.2.0-dev.20250112.abc123`)
+- **Staging** (`staging` branch)
+  - Uses development version tags (e.g., `v0.3.0-dev.20250112.abc123`)
   - Deployed to staging Azure App Services
   - Available at staging URLs
 
@@ -206,7 +206,7 @@ When version changes affect development:
 Version changes are communicated through:
 
 - [GitHub releases](https://github.com/alan-turing-institute/AssurancePlatform/releases) with detailed notes
-- [Changelog](./changelog.mdx) with comprehensive version history
+- [Changelog](./changelog) with comprehensive version history
 - Platform notifications (when available)
 - Documentation updates
 - Community announcements

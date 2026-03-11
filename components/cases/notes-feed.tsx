@@ -1,12 +1,13 @@
 "use client";
 
 import { PencilLine, Trash2, User2Icon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
-import useStore from "@/data/store";
+import { fetchCaseComments } from "@/actions/cases";
 import { formatShortDate } from "@/lib/date";
-import { useToast } from "@/lib/toast";
-import type { Comment, User } from "@/types";
+import type { CommentResponse } from "@/lib/services/comment-service";
+import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import NotesEditForm from "./notes-edit-form";
 
@@ -14,81 +15,29 @@ export default function NotesFeed() {
 	const { assuranceCase, caseNotes, setCaseNotes } = useStore();
 	const [edit, setEdit] = useState<boolean>();
 	const [editId, setEditId] = useState<number | string>();
-	const [user, setUser] = useState<User | undefined>();
-	const { toast } = useToast();
-	const router = useRouter();
-
-	// Sort notes by created_at (newest first) - useMemo to avoid mutation
+	const { data: session } = useSession();
+	// Sort notes by createdAt (newest first) - useMemo to avoid mutation
 	const sortedNotes = useMemo(
 		() =>
 			[...caseNotes].sort(
-				(a: Comment, b: Comment) =>
-					new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+				(a: CommentResponse, b: CommentResponse) =>
+					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 			),
 		[caseNotes]
 	);
 
 	// Fetch case notes/comments
 	useEffect(() => {
-		const fetchCaseNotes = async () => {
-			if (!assuranceCase) {
-				return [];
-			}
+		if (!assuranceCase) {
+			return;
+		}
 
-			// Use Next.js API route which handles both Prisma and Django auth
-			const response = await fetch(`/api/cases/${assuranceCase.id}/comments`);
-
-			if (response.status === 404 || response.status === 403) {
-				// Return empty array if case not found or forbidden
-				return [];
-			}
-
-			if (response.status === 401) {
-				// Handle unauthorized access
-				router.replace("/login");
-				return [];
-			}
-
-			const comments = await response.json();
-			return comments;
-		};
-
-		fetchCaseNotes()
+		fetchCaseComments(assuranceCase.id)
 			.then((comments) => setCaseNotes(comments || []))
 			.catch(() => {
-				// Handle error silently
 				setCaseNotes([]);
 			});
-	}, [assuranceCase, setCaseNotes, router]);
-
-	// Fetch current user
-	useEffect(() => {
-		const fetchCurrentUser = async () => {
-			// Use Next.js API route which handles both Prisma and Django auth
-			const response = await fetch("/api/users/me");
-
-			if (response.status === 404 || response.status === 403) {
-				// Return undefined if user not found or forbidden
-				return;
-			}
-
-			if (response.status === 401) {
-				// Handle unauthorized access
-				router.replace("/login");
-				return;
-			}
-
-			const result = await response.json();
-			return result;
-		};
-
-		fetchCurrentUser()
-			.then((result) => setUser(result))
-			.catch(() => {
-				// Handle error silently
-				setUser(undefined);
-			});
-	}, [router]);
+	}, [assuranceCase, setCaseNotes]);
 
 	const handleNoteDelete = async (id: number | string) => {
 		try {
@@ -123,24 +72,24 @@ export default function NotesFeed() {
 				{sortedNotes.length === 0 && (
 					<p className="text-foreground/70">No notes have been added.</p>
 				)}
-				{sortedNotes.map((note: Comment, index: number) => (
+				{sortedNotes.map((note: CommentResponse, index: number) => (
 					<li key={note.id}>
 						<div className="group relative pb-8">
 							{index !== sortedNotes.length - 1 ? (
 								<span
 									aria-hidden="true"
-									className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-gray-200 dark:bg-gray-800"
+									className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-border"
 								/>
 							) : null}
-							<div className="relative flex items-start justify-start space-x-3 rounded-md p-4 group-hover:bg-gray-100/50 dark:group-hover:bg-foreground/10">
+							<div className="relative flex items-start justify-start space-x-3 rounded-md p-4 group-hover:bg-accent">
 								<div className="relative mr-4">
 									{/* <img
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-400 ring-8 ring-white"
                     src={activityItem.imageUrl}
                     alt=""
                   /> */}
-									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 ring-8 ring-white dark:ring-slate-900">
-										<User2Icon className="h-4 w-4 text-white" />
+									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary ring-8 ring-background">
+										<User2Icon className="h-4 w-4 text-primary-foreground" />
 									</div>
 
 									{/* <span className="absolute -bottom-0.5 -right-1 rounded-tl bg-white px-0.5 py-px">
@@ -155,7 +104,7 @@ export default function NotesFeed() {
 											</p>
 										</div>
 										<p className="mt-0.5 text-foreground/70 text-sm">
-											Created On: {formatShortDate(new Date(note.created_at))}
+											Created On: {formatShortDate(new Date(note.createdAt))}
 										</p>
 									</div>
 									<div className="mt-2 text-foreground text-sm">
@@ -168,7 +117,7 @@ export default function NotesFeed() {
 								</div>
 								{!edit &&
 									assuranceCase?.permissions !== "view" &&
-									user?.username === note.author && (
+									session?.user?.name === note.author && (
 										<div className="hidden items-center justify-center gap-2 group-hover:flex">
 											<Button
 												aria-label="Edit note"

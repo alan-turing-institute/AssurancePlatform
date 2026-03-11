@@ -1,20 +1,17 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Clear the mocks from the global setup to test the actual implementations
-vi.unmock("@/hooks/use-create-case-modal");
-vi.unmock("@/hooks/use-email-modal");
-vi.unmock("@/hooks/use-import-modal");
-vi.unmock("@/hooks/use-permissions-modal");
-vi.unmock("@/hooks/use-resources-modal");
-vi.unmock("@/hooks/use-export-modal");
+// Clear the mock from the global setup to test the actual implementations
+vi.unmock("@/hooks/modal-hooks");
 
-import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
-import { useEmailModal } from "@/hooks/use-email-modal";
-import { useImportModal } from "@/hooks/use-import-modal";
-import { usePermissionsModal } from "@/hooks/use-permissions-modal";
-import { useResourcesModal } from "@/hooks/use-resources-modal";
-import { useExportModal } from "@/hooks/use-export-modal";
+import {
+	useCreateCaseModal,
+	useEmailModal,
+	useExportModal,
+	useImportModal,
+	usePermissionsModal,
+	useResourcesModal,
+} from "@/hooks/modal-hooks";
 
 // Type for modal hook return value
 type ModalHookReturn = {
@@ -185,9 +182,9 @@ describe("Modal Hooks", () => {
 		];
 
 		// Reset each store to its initial state
-		stores.forEach((store) => {
+		for (const store of stores) {
 			store.setState({ isOpen: false });
-		});
+		}
 	});
 
 	// Test all modal hooks with the shared test suite

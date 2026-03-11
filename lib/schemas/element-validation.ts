@@ -124,7 +124,7 @@ export function isAttributeType(elementType: string): boolean {
 // VALIDATION TYPES
 // ============================================
 
-export type ValidationResult =
+export type ElementValidationResult =
 	| { valid: true }
 	| { valid: false; errors: string[] };
 
@@ -268,7 +268,7 @@ export const ElementValidationSchema = z
 export function validateElementData(
 	elementType: string,
 	data: Record<string, unknown>
-): ValidationResult {
+): ElementValidationResult {
 	// Ensure elementType is in the data for discriminated union
 	const dataWithType = { ...data, elementType };
 

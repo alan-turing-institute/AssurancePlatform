@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { LINK_COOKIE_NAME } from "@/lib/auth/config";
 import { validateSession } from "@/lib/auth/validate-session";
-import { LINK_COOKIE_NAME } from "@/lib/auth-options";
 
 const LINK_COOKIE_MAX_AGE = 60 * 5; // 5 minutes - enough time for OAuth flow
 

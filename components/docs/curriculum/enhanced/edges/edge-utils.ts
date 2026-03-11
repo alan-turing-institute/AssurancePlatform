@@ -116,7 +116,7 @@ export function createGradientStops(
 		positions ?? colors.map((_, i) => i / (colors.length - 1));
 
 	return colors.map((color, i) => ({
-		offset: `${finalPositions[i] * 100}%`,
+		offset: `${(finalPositions[i] ?? 0) * 100}%`,
 		stopColor: color,
 		stopOpacity: 1,
 	}));
@@ -344,9 +344,9 @@ export function hexToRgb(hex: string): RgbColor | null {
 	const result = HEX_COLOR_REGEX.exec(hex);
 	return result
 		? {
-				r: Number.parseInt(result[1], 16),
-				g: Number.parseInt(result[2], 16),
-				b: Number.parseInt(result[3], 16),
+				r: Number.parseInt(result[1] ?? "0", 16),
+				g: Number.parseInt(result[2] ?? "0", 16),
+				b: Number.parseInt(result[3] ?? "0", 16),
 			}
 		: null;
 }
@@ -406,7 +406,7 @@ export function getStateColor(state: EdgeState | string): string {
 		default: "#b1b1b7", // React Flow default grey
 	};
 
-	return stateColors[state] ?? stateColors.default;
+	return stateColors[state] ?? "#b1b1b7";
 }
 
 /**

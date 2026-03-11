@@ -1,0 +1,3 @@
+-- Prisma field renames only (colorProfile → colourProfile, deletedBy → deletedById)
+-- Database column names are unchanged (@map keeps existing column names)
+-- This is a no-op migration to keep the migration history in sync with the schema

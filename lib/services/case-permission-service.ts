@@ -1,8 +1,7 @@
-"use server";
-
-import { randomBytes } from "node:crypto";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { createCaseInvite } from "@/lib/services/case-invite-service";
 import type { PermissionLevel } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // INPUT INTERFACES
@@ -73,27 +72,6 @@ export type ShareByEmailResult = {
 	already_shared?: boolean;
 };
 
-export type SecurityContext = {
-	ipAddress: string | null;
-	userAgent: string | null;
-};
-
-export type AcceptInviteResult =
-	| { success: true; case_id: string }
-	| { success: false; error: string };
-
-type InviteTransactionError =
-	| { error: "invalid_token" }
-	| { error: "expired"; inviteId: string }
-	| { error: "already_used"; inviteId: string }
-	| { error: "email_mismatch"; inviteId: string; inviteEmail: string };
-
-type InviteTransactionSuccess = { success: true; caseId: string };
-
-type InviteTransactionResult =
-	| InviteTransactionError
-	| InviteTransactionSuccess;
-
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -114,35 +92,6 @@ async function validateCaseAdmin(
 }
 
 /**
- * Generates a secure invite token.
- */
-function generateInviteToken(): string {
-	return randomBytes(32).toString("hex");
-}
-
-/**
- * Logs a security event for invite acceptance audit purposes.
- */
-async function logInviteSecurityEvent(params: {
-	eventType: string;
-	userId: string | null;
-	ipAddress: string | null;
-	userAgent: string | null;
-	metadata?: Record<string, unknown>;
-}): Promise<void> {
-	await prismaNew.securityAuditLog.create({
-		data: {
-			userId: params.userId,
-			eventType: params.eventType,
-			ipAddress: params.ipAddress,
-			userAgent: params.userAgent,
-			// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-			metadata: (params.metadata ?? null) as any,
-		},
-	});
-}
-
-/**
  * Validates permission level input.
  */
 function isValidPermission(permission: string): permission is PermissionLevel {
@@ -159,7 +108,7 @@ function isValidPermission(permission: string): permission is PermissionLevel {
 export async function listCasePermissions(
 	userId: string,
 	caseId: string
-): Promise<{ data?: CasePermissionsListResponse; error?: string }> {
+): ServiceResult<CasePermissionsListResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -168,7 +117,7 @@ export async function listCasePermissions(
 
 	try {
 		// Get case with owner info
-		const assuranceCase = await prismaNew.assuranceCase.findUnique({
+		const assuranceCase = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
 			select: {
 				createdById: true,
@@ -187,7 +136,7 @@ export async function listCasePermissions(
 		}
 
 		// Get user permissions
-		const userPermissions = await prismaNew.casePermission.findMany({
+		const userPermissions = await prisma.casePermission.findMany({
 			where: { caseId },
 			include: {
 				user: {
@@ -209,7 +158,7 @@ export async function listCasePermissions(
 		});
 
 		// Get team permissions
-		const teamPermissions = await prismaNew.caseTeamPermission.findMany({
+		const teamPermissions = await prisma.caseTeamPermission.findMany({
 			where: { caseId },
 			include: {
 				team: {
@@ -274,7 +223,7 @@ export async function shareByEmail(
 	userId: string,
 	caseId: string,
 	input: ShareByEmailInput
-): Promise<{ data?: ShareByEmailResult; error?: string }> {
+): ServiceResult<ShareByEmailResult> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -295,14 +244,14 @@ export async function shareByEmail(
 
 	try {
 		// Find user by email
-		const targetUser = await prismaNew.user.findUnique({
+		const targetUser = await prisma.user.findUnique({
 			where: { email },
 			select: { id: true, username: true, avatarUrl: true },
 		});
 
 		if (targetUser) {
 			// Check if user is the case owner (can't add permission to owner)
-			const assuranceCase = await prismaNew.assuranceCase.findUnique({
+			const assuranceCase = await prisma.assuranceCase.findUnique({
 				where: { id: caseId },
 				select: { createdById: true },
 			});
@@ -312,7 +261,7 @@ export async function shareByEmail(
 			}
 
 			// Check if already has permission
-			const existingPermission = await prismaNew.casePermission.findUnique({
+			const existingPermission = await prisma.casePermission.findUnique({
 				where: {
 					caseId_userId: { caseId, userId: targetUser.id },
 				},
@@ -323,7 +272,7 @@ export async function shareByEmail(
 			}
 
 			// Grant permission
-			const permission = await prismaNew.casePermission.create({
+			const permission = await prisma.casePermission.create({
 				data: {
 					caseId,
 					userId: targetUser.id,
@@ -370,26 +319,22 @@ export async function shareByEmail(
 			};
 		}
 
-		// User not found - create invite
-		const token = generateInviteToken();
-		const expiresAt = new Date();
-		expiresAt.setDate(expiresAt.getDate() + 7); // 7 day expiry
-
-		await prismaNew.caseInvite.create({
-			data: {
-				caseId,
-				email,
-				permission: input.permission,
-				inviteToken: token,
-				inviteExpiresAt: expiresAt,
-				invitedById: userId,
-			},
+		// User not found — create invite via invite service
+		const inviteResult = await createCaseInvite({
+			caseId,
+			email,
+			permission: input.permission,
+			invitedById: userId,
 		});
+
+		if ("error" in inviteResult) {
+			return { error: inviteResult.error };
+		}
 
 		return {
 			data: {
 				invite_created: true,
-				invite_token: token,
+				invite_token: inviteResult.data.invite_token,
 			},
 		};
 	} catch (error) {
@@ -405,7 +350,7 @@ export async function shareWithTeam(
 	userId: string,
 	caseId: string,
 	input: ShareWithTeamInput
-): Promise<{ data?: TeamPermissionResponse; error?: string }> {
+): ServiceResult<TeamPermissionResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -427,7 +372,7 @@ export async function shareWithTeam(
 		}
 
 		// Check if already shared with team
-		const existingPermission = await prismaNew.caseTeamPermission.findUnique({
+		const existingPermission = await prisma.caseTeamPermission.findUnique({
 			where: {
 				caseId_teamId: { caseId, teamId: input.teamId },
 			},
@@ -438,7 +383,7 @@ export async function shareWithTeam(
 		}
 
 		// Grant permission
-		const permission = await prismaNew.caseTeamPermission.create({
+		const permission = await prisma.caseTeamPermission.create({
 			data: {
 				caseId,
 				teamId: input.teamId,
@@ -483,7 +428,7 @@ export async function updateUserPermission(
 	caseId: string,
 	permissionId: string,
 	input: UpdatePermissionInput
-): Promise<{ data?: UserPermissionResponse; error?: string }> {
+): ServiceResult<UserPermissionResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -497,7 +442,7 @@ export async function updateUserPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.casePermission.findUnique({
+		const existingPermission = await prisma.casePermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -506,7 +451,7 @@ export async function updateUserPermission(
 		}
 
 		// Update permission
-		const permission = await prismaNew.casePermission.update({
+		const permission = await prisma.casePermission.update({
 			where: { id: permissionId },
 			data: { permission: input.permission },
 			include: {
@@ -559,7 +504,7 @@ export async function updateTeamPermission(
 	caseId: string,
 	permissionId: string,
 	input: UpdatePermissionInput
-): Promise<{ data?: TeamPermissionResponse; error?: string }> {
+): ServiceResult<TeamPermissionResponse> {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -573,7 +518,7 @@ export async function updateTeamPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.caseTeamPermission.findUnique({
+		const existingPermission = await prisma.caseTeamPermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -582,7 +527,7 @@ export async function updateTeamPermission(
 		}
 
 		// Update permission
-		const permission = await prismaNew.caseTeamPermission.update({
+		const permission = await prisma.caseTeamPermission.update({
 			where: { id: permissionId },
 			data: { permission: input.permission },
 			include: {
@@ -622,7 +567,7 @@ export async function revokeUserPermission(
 	userId: string,
 	caseId: string,
 	permissionId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -631,7 +576,7 @@ export async function revokeUserPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.casePermission.findUnique({
+		const existingPermission = await prisma.casePermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -640,11 +585,11 @@ export async function revokeUserPermission(
 		}
 
 		// Delete permission
-		await prismaNew.casePermission.delete({
+		await prisma.casePermission.delete({
 			where: { id: permissionId },
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to revoke permission:", error);
 		return { error: "Failed to revoke permission" };
@@ -658,7 +603,7 @@ export async function revokeTeamPermission(
 	userId: string,
 	caseId: string,
 	permissionId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	// Validate admin access
 	const validation = await validateCaseAdmin(userId, caseId);
 	if (!validation.valid) {
@@ -667,7 +612,7 @@ export async function revokeTeamPermission(
 
 	try {
 		// Verify permission exists and belongs to this case
-		const existingPermission = await prismaNew.caseTeamPermission.findUnique({
+		const existingPermission = await prisma.caseTeamPermission.findUnique({
 			where: { id: permissionId },
 		});
 
@@ -676,165 +621,13 @@ export async function revokeTeamPermission(
 		}
 
 		// Delete permission
-		await prismaNew.caseTeamPermission.delete({
+		await prisma.caseTeamPermission.delete({
 			where: { id: permissionId },
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to revoke team permission:", error);
 		return { error: "Failed to revoke team permission" };
-	}
-}
-
-/**
- * Accepts a case invite using the token.
- */
-export async function acceptInvite(
-	userId: string,
-	inviteToken: string,
-	securityContext: SecurityContext = { ipAddress: null, userAgent: null }
-): Promise<AcceptInviteResult> {
-	const { ipAddress, userAgent } = securityContext;
-
-	try {
-		// Validate user exists first (explicit null check)
-		const user = await prismaNew.user.findUnique({
-			where: { id: userId },
-			select: { email: true },
-		});
-
-		if (user === null) {
-			await logInviteSecurityEvent({
-				eventType: "invite_acceptance_user_not_found",
-				userId,
-				ipAddress,
-				userAgent,
-				metadata: { inviteToken: `${inviteToken.substring(0, 8)}...` },
-			});
-			return { success: false, error: "User not found" };
-		}
-
-		// Atomic transaction for invite acceptance (prevents race conditions)
-		const result: InviteTransactionResult = await prismaNew.$transaction(
-			async (tx) => {
-				// Find invite with implicit row lock
-				const invite = await tx.caseInvite.findUnique({
-					where: { inviteToken },
-				});
-
-				if (!invite) {
-					return { error: "invalid_token" as const };
-				}
-
-				if (invite.inviteExpiresAt < new Date()) {
-					return { error: "expired" as const, inviteId: invite.id };
-				}
-
-				// Double-check not already accepted (race condition guard)
-				if (invite.acceptedAt !== null) {
-					return { error: "already_used" as const, inviteId: invite.id };
-				}
-
-				// Email verification
-				if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
-					return {
-						error: "email_mismatch" as const,
-						inviteId: invite.id,
-						inviteEmail: invite.email,
-					};
-				}
-
-				// Check existing permission
-				const existingPermission = await tx.casePermission.findUnique({
-					where: {
-						caseId_userId: { caseId: invite.caseId, userId },
-					},
-				});
-
-				// Grant permission if not exists
-				if (!existingPermission) {
-					await tx.casePermission.create({
-						data: {
-							caseId: invite.caseId,
-							userId,
-							permission: invite.permission,
-							grantedById: invite.invitedById,
-						},
-					});
-				}
-
-				// Mark invite as accepted (atomic with permission grant)
-				await tx.caseInvite.update({
-					where: { inviteToken },
-					data: {
-						acceptedAt: new Date(),
-						acceptedById: userId,
-					},
-				});
-
-				return { success: true as const, caseId: invite.caseId };
-			}
-		);
-
-		// Handle transaction results and log appropriately
-		if (!("success" in result)) {
-			const errorKey = result.error;
-
-			const errorMap = {
-				invalid_token: "Invalid invite",
-				expired: "Invite has expired",
-				already_used: "Invite has already been used",
-				email_mismatch: "Invite was sent to a different email address",
-			} as const;
-
-			const eventTypeMap = {
-				invalid_token: "invite_acceptance_invalid_token",
-				expired: "invite_acceptance_expired",
-				already_used: "invite_acceptance_already_used",
-				email_mismatch: "invite_acceptance_email_mismatch",
-			} as const;
-
-			await logInviteSecurityEvent({
-				eventType: eventTypeMap[errorKey],
-				userId,
-				ipAddress,
-				userAgent,
-				metadata: {
-					inviteToken: `${inviteToken.substring(0, 8)}...`,
-					...("inviteId" in result && { inviteId: result.inviteId }),
-					...("inviteEmail" in result && { inviteEmail: result.inviteEmail }),
-					userEmail: user.email,
-				},
-			});
-
-			return { success: false, error: errorMap[errorKey] };
-		}
-
-		// Log successful acceptance
-		await logInviteSecurityEvent({
-			eventType: "invite_acceptance_completed",
-			userId,
-			ipAddress,
-			userAgent,
-			metadata: { caseId: result.caseId },
-		});
-
-		return { success: true, case_id: result.caseId };
-	} catch (error) {
-		console.error("Failed to accept invite:", error);
-
-		await logInviteSecurityEvent({
-			eventType: "invite_acceptance_failed",
-			userId,
-			ipAddress,
-			userAgent,
-			metadata: {
-				error: error instanceof Error ? error.message : "Unknown error",
-				inviteToken: `${inviteToken.substring(0, 8)}...`,
-			},
-		});
-
-		return { success: false, error: "Failed to accept invite" };
 	}
 }

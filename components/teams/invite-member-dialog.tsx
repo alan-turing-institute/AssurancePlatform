@@ -5,7 +5,6 @@ import { Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -25,13 +24,10 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useInviteMemberModal } from "@/hooks/use-invite-member-modal";
-
-const formSchema = z.object({
-	email: z.string().email("Please enter a valid email address"),
-	role: z.enum(["MEMBER", "ADMIN"]),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import {
+	type AddTeamMemberSchemaInput,
+	addTeamMemberSchema,
+} from "@/lib/schemas/team";
 
 export function InviteMemberDialog() {
 	const inviteMemberModal = useInviteMemberModal();
@@ -40,15 +36,15 @@ export function InviteMemberDialog() {
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 
-	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<AddTeamMemberSchemaInput>({
+		resolver: zodResolver(addTeamMemberSchema),
 		defaultValues: {
 			email: "",
 			role: "MEMBER",
 		},
 	});
 
-	const onSubmit = async (values: FormValues) => {
+	const onSubmit = async (values: AddTeamMemberSchemaInput) => {
 		if (!inviteMemberModal.teamId) {
 			return;
 		}
@@ -117,7 +113,7 @@ export function InviteMemberDialog() {
 						</div>
 					)}
 					{success && (
-						<div className="rounded-md bg-amber-100 p-3 text-amber-800 text-sm dark:bg-amber-900/30 dark:text-amber-200">
+						<div className="rounded-md bg-warning/20 p-3 text-sm text-warning-foreground">
 							{success}
 						</div>
 					)}

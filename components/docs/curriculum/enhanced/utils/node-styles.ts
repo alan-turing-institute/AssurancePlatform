@@ -183,7 +183,7 @@ export const iconSizes: Record<string, string> = {
  * Get icon size classes
  */
 export const getIconSize = (size = "base"): string =>
-	iconSizes[size] || iconSizes.base;
+	iconSizes[size] ?? "w-5 h-5";
 
 // ========================================================================
 // Shadow and Border Utilities
@@ -207,7 +207,7 @@ export const shadowClasses: Record<string, string> = {
  * Get shadow class for elevation level
  */
 export const getShadowClass = (level: string | number = "base"): string =>
-	shadowClasses[level] || shadowClasses.base;
+	shadowClasses[level] ?? "shadow-glassmorphic";
 
 /**
  * Border radius utilities
@@ -228,7 +228,7 @@ export const borderRadiusClasses: Record<string, string> = {
  * Get border radius class
  */
 export const getBorderRadiusClass = (size = "xl"): string =>
-	borderRadiusClasses[size] || borderRadiusClasses.xl;
+	borderRadiusClasses[size] ?? "rounded-xl";
 
 // ========================================================================
 // Glassmorphism Combinations
@@ -240,13 +240,13 @@ export const getBorderRadiusClass = (size = "xl"): string =>
 export const applyGlassmorphism = (
 	level: "base" | "elevated" | "highest" = "base"
 ): string => {
-	const presets: Record<string, string> = {
+	const presets: Record<"base" | "elevated" | "highest", string> = {
 		base: glassmorphismPresets.node.base,
 		elevated: glassmorphismPresets.node.elevated,
 		highest: glassmorphismPresets.node.highest,
 	};
 
-	return presets[level] || presets.base;
+	return presets[level];
 };
 
 /**
@@ -265,7 +265,9 @@ export const buildCustomGlassmorphism = ({
 		highest: "bg-background-transparent-black-secondaryAlt",
 	};
 
-	const classes: string[] = [bgClasses[background] || bgClasses.base];
+	const classes: string[] = [
+		bgClasses[background] ?? "bg-background-transparent-black",
+	];
 
 	if (blur) {
 		classes.push("f-effect-backdrop-blur-lg");

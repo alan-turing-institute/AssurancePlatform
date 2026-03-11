@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
+import { AppError } from "@/lib/errors";
 import { purgeExpiredCases } from "@/lib/services/case-trash-service";
 
 /**
@@ -15,20 +16,26 @@ import { purgeExpiredCases } from "@/lib/services/case-trash-service";
  * @tag Cron
  */
 export async function POST(request: Request) {
-	const authHeader = request.headers.get("authorization");
-	const token = authHeader?.replace("Bearer ", "") ?? null;
+	try {
+		const authHeader = request.headers.get("authorization");
+		const token = authHeader?.replace("Bearer ", "") ?? null;
 
-	const result = await purgeExpiredCases(token);
+		const result = await purgeExpiredCases(token);
 
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: result.status ?? 500 }
-		);
+		if ("error" in result) {
+			return apiError(
+				new AppError({
+					code: result.error === "Unauthorised" ? "UNAUTHORISED" : "INTERNAL",
+					message: result.error,
+				})
+			);
+		}
+
+		return apiSuccess({
+			success: true,
+			...result.data,
+		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	return NextResponse.json({
-		success: true,
-		...result.data,
-	});
 }

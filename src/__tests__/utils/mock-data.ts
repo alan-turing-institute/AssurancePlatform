@@ -1,5 +1,9 @@
 // Mock data generators for tests
-import type { AssuranceCase, CaseStudy } from "@/types/domain";
+import type {
+	AssuranceCaseResponse,
+	CaseStudyResponse,
+} from "@/lib/services/case-response-types";
+import type { CommentResponse } from "@/lib/services/comment-service";
 
 export const mockUser = {
 	id: 1,
@@ -11,115 +15,102 @@ export const mockUser = {
 	auth_username: "testuser",
 };
 
-export const mockAssuranceCase = {
-	id: 1,
+export const mockAssuranceCase: AssuranceCaseResponse = {
+	id: "1",
 	type: "AssuranceCase",
 	name: "Test Assurance Case",
 	description: "A comprehensive test case for testing purposes",
-	created_date: "2024-01-01T00:00:00Z",
-	owner: mockUser.id,
-	view_groups: [],
-	edit_groups: [],
-	review_groups: [],
-	color_profile: "default",
+	createdDate: "2024-01-01T00:00:00Z",
+	owner: String(mockUser.id),
+	colourProfile: "default",
 	published: false,
-	published_date: null,
-	permissions: "manage" as const,
+	publishedAt: null,
+	permissions: "manage",
 	comments: [],
 	goals: [],
-	property_claims: [],
-	evidence: [],
-	contexts: [],
-	strategies: [],
-	images: [],
 	viewMembers: [],
 	editMembers: [],
 	reviewMembers: [],
+	images: [],
 };
 
 export const mockGoal = {
-	id: 1,
+	id: "1",
 	name: "Primary Safety Goal",
-	short_description: "Ensure system safety",
-	long_description:
+	shortDescription: "Ensure system safety",
+	longDescription:
 		"The system shall operate safely under all specified conditions",
 	keywords: "safety, reliability",
-	assurance_case: 1,
+	assuranceCaseId: "1",
 	assumption: null,
 };
 
 export const mockPropertyClaim = {
-	id: 1,
+	id: "1",
 	name: "Performance Claim",
-	short_description: "System meets performance requirements",
-	long_description: "The system shall respond within 100ms",
-	property_claim_type: "performance",
+	shortDescription: "System meets performance requirements",
+	longDescription: "The system shall respond within 100ms",
+	propertyClaimType: "performance",
 	level: 1,
-	claim_type: "claim",
-	goal: 1,
+	claimType: "claim",
+	goal: "1",
 	strategy: null,
-	assurance_case: 1,
+	assuranceCaseId: "1",
 };
 
 export const mockEvidence = {
-	id: 1,
+	id: "1",
 	name: "Test Results",
-	short_description: "Automated test suite results",
-	long_description: "Comprehensive test results showing 99.9% pass rate",
+	shortDescription: "Automated test suite results",
+	longDescription: "Comprehensive test results showing 99.9% pass rate",
 	URL: "https://example.com/test-results",
-	assurance_case: 1,
+	assuranceCaseId: "1",
 };
 
 export const mockContext = {
-	id: 1,
+	id: "1",
 	name: "Operating Environment",
-	short_description: "System operating context",
-	long_description: "The system operates in a controlled environment",
-	goal: 1,
-	assurance_case: 1,
+	shortDescription: "System operating context",
+	longDescription: "The system operates in a controlled environment",
+	goal: "1",
+	assuranceCaseId: "1",
 };
 
 export const mockStrategy = {
-	id: 1,
+	id: "1",
 	name: "Testing Strategy",
-	short_description: "Comprehensive testing approach",
-	long_description:
+	shortDescription: "Comprehensive testing approach",
+	longDescription:
 		"Multi-layered testing strategy including unit, integration, and E2E tests",
-	goal: 1,
-	assurance_case: 1,
+	goal: "1",
+	assuranceCaseId: "1",
 };
 
-export const mockComment = {
-	id: 1,
+export const mockComment: CommentResponse = {
+	id: "1",
 	content: "This looks good to me",
-	author: mockUser.id,
-	author_name: `${mockUser.first_name} ${mockUser.last_name}`,
-	created_date: "2024-01-01T10:00:00Z",
-	assurance_case: 1,
-	goal: null,
-	property_claim: null,
-	evidence: null,
-	context: null,
-	strategy: null,
+	author: `${mockUser.first_name} ${mockUser.last_name}`,
+	authorId: String(mockUser.id),
+	createdAt: "2024-01-01T10:00:00Z",
 };
 
-export const mockCaseStudy = {
+export const mockCaseStudy: CaseStudyResponse = {
 	id: 1,
 	title: "Sample Case Study",
 	description: "A comprehensive case study for learning",
-	content: "Detailed case study content...",
-	type: "learning",
-	owner: mockUser.id,
-	created_date: "2024-01-01T00:00:00Z",
-	image: null,
+	sector: "learning",
+	createdOn: "2024-01-01T00:00:00Z",
+	authors: "Test User",
+	published: false,
+	featuredImage: undefined,
 };
 
 export const mockPublishedCase = {
-	id: 1,
+	id: "1",
 	name: "Published Safety Case",
 	description: "A published assurance case for public viewing",
-	published_date: "2024-01-01T00:00:00Z",
-	case_study: mockCaseStudy.id,
+	publishedDate: "2024-01-01T00:00:00Z",
+	caseStudy: mockCaseStudy.id,
 };
 
 // Factory functions for creating multiple instances
@@ -129,12 +120,11 @@ export const createMockUser = (overrides: Partial<typeof mockUser> = {}) => ({
 });
 
 export const createMockAssuranceCase = (
-	overrides: Partial<AssuranceCase> = {}
-): AssuranceCase =>
-	({
-		...mockAssuranceCase,
-		...overrides,
-	}) as AssuranceCase;
+	overrides: Partial<AssuranceCaseResponse> = {}
+): AssuranceCaseResponse => ({
+	...mockAssuranceCase,
+	...overrides,
+});
 
 export const createMockGoal = (overrides: Partial<typeof mockGoal> = {}) => ({
 	...mockGoal,
@@ -170,19 +160,18 @@ export const createMockStrategy = (
 });
 
 export const createMockComment = (
-	overrides: Partial<typeof mockComment> = {}
-) => ({
+	overrides: Partial<CommentResponse> = {}
+): CommentResponse => ({
 	...mockComment,
 	...overrides,
 });
 
 export const createMockCaseStudy = (
-	overrides: Partial<CaseStudy> = {}
-): CaseStudy =>
-	({
-		...mockCaseStudy,
-		...overrides,
-	}) as CaseStudy;
+	overrides: Partial<CaseStudyResponse> = {}
+): CaseStudyResponse => ({
+	...mockCaseStudy,
+	...overrides,
+});
 
 // Mock team data
 export const mockTeam = {

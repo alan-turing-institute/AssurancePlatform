@@ -5,15 +5,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
-import useStore from "@/data/store";
 import { usePublishModal } from "@/hooks/use-publish-modal";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 
 /**
  * Shows a toast notification based on the unpublish result.
  */
 function showUnpublishToast(
-	toast: ReturnType<typeof useToast>["toast"],
 	response: Response,
 	result: { error?: string },
 	linkedCaseStudyCount: number
@@ -53,8 +52,6 @@ function showUnpublishToast(
 export const PublishModal = () => {
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const publishModal = usePublishModal();
-	const { toast } = useToast();
-
 	const [publishDescription, setPublishDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 
@@ -132,7 +129,6 @@ export const PublishModal = () => {
 			const result = await response.json();
 
 			const success = showUnpublishToast(
-				toast,
 				response,
 				result,
 				publishModal.linkedCaseStudyCount
@@ -171,13 +167,13 @@ export const PublishModal = () => {
 
 	const renderPublishContent = () => (
 		<div className="space-y-4">
-			<div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950">
-				<Globe className="mt-0.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
+			<div className="flex items-start gap-3 rounded-lg border border-info/20 bg-info/10 p-3">
+				<Globe className="mt-0.5 h-5 w-5 text-info" />
 				<div className="text-sm">
-					<p className="font-medium text-blue-800 dark:text-blue-200">
+					<p className="font-medium text-info-foreground">
 						Make this case publicly available
 					</p>
-					<p className="text-blue-600 dark:text-blue-400">
+					<p className="text-info">
 						A snapshot of your assurance case will be created and visible on the
 						Discover page.
 					</p>
@@ -223,13 +219,13 @@ export const PublishModal = () => {
 		return (
 			<div className="space-y-4">
 				{hasLinkedCaseStudies ? (
-					<div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-						<AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
+					<div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-3">
+						<AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
 						<div className="text-sm">
-							<p className="font-medium text-amber-800 dark:text-amber-200">
+							<p className="font-medium text-warning-foreground">
 								Warning: Linked to case studies
 							</p>
-							<p className="text-amber-600 dark:text-amber-400">
+							<p className="text-warning-foreground">
 								This case is linked to {publishModal.linkedCaseStudyCount} case{" "}
 								{publishModal.linkedCaseStudyCount === 1 ? "study" : "studies"}.
 								Unpublishing will break those links.
@@ -237,13 +233,13 @@ export const PublishModal = () => {
 						</div>
 					</div>
 				) : (
-					<div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
-						<GlobeLock className="mt-0.5 h-5 w-5 text-gray-600 dark:text-gray-400" />
+					<div className="flex items-start gap-3 rounded-lg border border-border bg-muted p-3">
+						<GlobeLock className="mt-0.5 h-5 w-5 text-muted-foreground" />
 						<div className="text-sm">
-							<p className="font-medium text-gray-800 dark:text-gray-200">
+							<p className="font-medium text-foreground">
 								Remove public access
 							</p>
-							<p className="text-gray-600 dark:text-gray-400">
+							<p className="text-muted-foreground">
 								Your assurance case will no longer be visible on the Discover
 								page.
 							</p>

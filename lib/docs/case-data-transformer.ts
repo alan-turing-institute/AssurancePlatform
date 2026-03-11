@@ -8,21 +8,12 @@
  */
 
 import { type Edge, MarkerType, type Node } from "reactflow";
+import { toReactFlowType } from "@/lib/element-types";
 import type {
 	CaseExportNested,
 	ReactFlowNodeData,
 	TreeNode,
 } from "@/types/curriculum";
-
-/**
- * Map ElementType (uppercase) to React Flow node type (lowercase)
- */
-const ELEMENT_TYPE_TO_NODE_TYPE: Record<string, string> = {
-	GOAL: "goal",
-	STRATEGY: "strategy",
-	PROPERTY_CLAIM: "propertyClaim",
-	EVIDENCE: "evidence",
-};
 
 /**
  * Type guard to check if data is CaseExportNested (v1.0) format
@@ -44,7 +35,7 @@ function buildNode(
 	node: TreeNode,
 	position: { x: number; y: number }
 ): Node<ReactFlowNodeData> {
-	const nodeType = ELEMENT_TYPE_TO_NODE_TYPE[node.type] || "goal";
+	const nodeType = toReactFlowType(node.type);
 
 	return {
 		id: node.id,

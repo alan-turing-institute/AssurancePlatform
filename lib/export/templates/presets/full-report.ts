@@ -13,7 +13,12 @@ import type {
 import type { BrandingConfig } from "../../schemas/branding-config";
 import { DEFAULT_SECTIONS_FULL } from "../../schemas/section-config";
 import type { TemplateConfig } from "../../schemas/template-config";
-import type { ContentBlock, DiagramImage, RenderedSection } from "../../types";
+import type {
+	ContentBlock,
+	DiagramImage,
+	LabelledDiagramImage,
+	RenderedSection,
+} from "../../types";
 import { ELEMENT_TYPE_LABELS } from "../../types";
 import { BaseTemplate } from "../base-template";
 import {
@@ -67,7 +72,8 @@ export class FullReportTemplate extends BaseTemplate {
 
 	protected renderSections(
 		caseData: CaseExportNested,
-		diagramImage?: DiagramImage
+		diagramImage?: DiagramImage,
+		branchDiagrams?: LabelledDiagramImage[]
 	): RenderedSection[] {
 		const sections: RenderedSection[] = [];
 		const tree = caseData.tree;
@@ -82,6 +88,13 @@ export class FullReportTemplate extends BaseTemplate {
 
 		if (this.isSectionEnabled("diagram") && diagramImage) {
 			sections.push(this.renderDiagram(caseData, diagramImage));
+
+			// Add per-branch diagram pages after the overview
+			if (branchDiagrams) {
+				for (const branch of branchDiagrams) {
+					sections.push(this.renderBranchDiagram(caseData, branch));
+				}
+			}
 		}
 
 		if (this.isSectionEnabled("executiveSummary")) {
@@ -201,6 +214,23 @@ export class FullReportTemplate extends BaseTemplate {
 					diagramImage.data,
 					`Diagram for ${caseData.case.name}`,
 					"Assurance Case Structure"
+				),
+			],
+		};
+	}
+
+	private renderBranchDiagram(
+		caseData: CaseExportNested,
+		branch: LabelledDiagramImage
+	): RenderedSection {
+		return {
+			type: "diagram",
+			title: branch.title,
+			blocks: [
+				this.image(
+					branch.data,
+					`Branch diagram: ${branch.title} — ${caseData.case.name}`,
+					branch.title
 				),
 			],
 		};

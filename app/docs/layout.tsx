@@ -44,7 +44,7 @@ const footer = (
 	<Footer>
 		<div className="flex w-full flex-col items-center sm:flex-row sm:justify-between">
 			<span>MIT {new Date().getFullYear()} © Alan Turing Institute</span>
-			<span className="text-gray-500 text-sm">
+			<span className="text-muted-foreground text-sm">
 				Trustworthy and Ethical Assurance Platform
 			</span>
 		</div>

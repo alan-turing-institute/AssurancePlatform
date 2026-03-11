@@ -15,8 +15,8 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
@@ -41,10 +41,8 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 	onClose,
 	setUnresolvedChanges,
 }) => {
-	const { assuranceCase, setAssuranceCase } = useStore();
+	const { assuranceCase } = useStore();
 	const [loading, setLoading] = useState(false);
-	const { toast } = useToast();
-
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: assuranceCase || {
@@ -83,11 +81,6 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 				return;
 			}
 
-			setAssuranceCase({
-				...assuranceCase,
-				name: values.name ?? assuranceCase.name,
-				description: values.description,
-			});
 			onClose();
 		} catch (_error) {
 			toast({
@@ -167,7 +160,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 				<div className="flex items-center justify-start gap-3">
 					{assuranceCase?.permissions === "manage" && (
 						<Button
-							className="bg-indigo-500 hover:bg-indigo-600 dark:text-white"
+							className="bg-primary text-primary-foreground hover:bg-primary/90"
 							disabled={loading}
 							type="submit"
 						>

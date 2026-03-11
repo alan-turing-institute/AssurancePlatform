@@ -1,5 +1,11 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiRateLimited,
+	apiSuccess,
+} from "@/lib/api-response";
+import { AppError, validationError } from "@/lib/errors";
 import { requestPasswordReset } from "@/lib/services/password-reset-service";
 
 type ForgotPasswordRequest = {
@@ -16,35 +22,35 @@ export async function POST(request: Request) {
 		const body = (await request.json()) as ForgotPasswordRequest;
 
 		if (!body.email) {
-			return NextResponse.json({ error: "Email is required" }, { status: 400 });
+			return apiError(validationError("Email is required"));
 		}
 
 		// Get client IP and user agent for rate limiting
 		const headersList = await headers();
 		const forwarded = headersList.get("x-forwarded-for");
 		const ipAddress = forwarded
-			? forwarded.split(",")[0].trim()
+			? (forwarded.split(",")[0]?.trim() ?? "unknown")
 			: (headersList.get("x-real-ip") ?? "unknown");
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		const result = await requestPasswordReset(body.email, ipAddress, userAgent);
 
-		if (!result.success) {
-			const status = result.rateLimited ? 429 : 400;
-			return NextResponse.json({ error: result.error }, { status });
+		if ("error" in result) {
+			if (result.rateLimited) {
+				return apiRateLimited(result.error, 60 * 1000);
+			}
+			return apiError(
+				new AppError({ code: "VALIDATION", message: result.error })
+			);
 		}
 
 		// Always return success to prevent user enumeration
-		return NextResponse.json({
+		return apiSuccess({
 			success: true,
 			message:
 				"If an account with that email exists, you will receive a password reset link shortly.",
 		});
 	} catch (error) {
-		console.error("Error requesting password reset:", error);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

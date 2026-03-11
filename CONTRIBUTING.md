@@ -41,24 +41,35 @@ that cover the same or similar points to avoid duplication.
 
 ### Contributing to our Code
 
-Please remember to enable `pre-commit` and run it before any push or PR.
+#### Branch Workflow
+
+We use a three-branch flow: feature branches → `staging` → `main`.
+
+1. Create a feature branch from `staging` (e.g., `feature/add-dark-mode` or `fix/broken-link`)
+2. Open a pull request to merge into `staging`
+3. After CI passes, `staging` is merged into `main` for production release
+
+#### Pre-commit Hooks
+
+Pre-commit hooks run automatically on `git commit` to catch issues early. Install them once:
 
 ```bash
 pre-commit install
-pre-commit run --all-files
 ```
+
+The hooks run [Ultracite](https://biomejs.dev) (Biome wrapper) for linting and formatting, the TypeScript compiler for type checking, and `detect-secrets` for secret detection.
+
+#### Issue Tracking
+
+We use [Beads](https://github.com/cosmicpudding/beads) for issue tracking. Run `bd ready` to find available work, or create a new issue with `bd create`. See [AGENTS.md](./AGENTS.md) for the full workflow.
 
 ### Contributing to the Documentation
 
-We use [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) to
-generate our documentation site. All documentation is written in markdown, and
-any contributions should be made following this format.
+We use [Nextra 4](https://nextra.site/) to generate our documentation site. All documentation is written in [MDX](https://mdxjs.com/) format (Markdown with JSX components) and lives in the `content/` directory.
 
 If you are new to Markdown, GitHub has a helpful page on
 [getting started with writing and formatting on GitHub](https://help.github.com/articles/getting-started-with-writing-and-formatting-on-github).
-And, the
-[documentation for Material for MkDocs](https://squidfunk.github.io/mkdocs-material/reference/)
-also has excellent support on additional syntax and styling.
+The [Nextra documentation](https://nextra.site/docs) covers additional MDX features and components.
 
 When writing in Markdown, please start each new sentence on a new line. Having
 each sentence on a new line will make no difference to how the text is

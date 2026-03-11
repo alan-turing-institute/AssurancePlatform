@@ -3,7 +3,12 @@
  * Handles hidden state management and tree navigation
  */
 
-import type { AssuranceCase, Goal, PropertyClaim, Strategy } from "@/types";
+import type {
+	AssuranceCaseResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";
 
 /**
@@ -13,19 +18,18 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 	if (caseNode.type === "AssuranceCase") {
 		return (caseNode.goals || []) as unknown as CaseNode[];
 	}
-	if (caseNode.type === "TopLevelNormativeGoal") {
+	if (caseNode.type === "goal") {
 		return ((caseNode.context || []) as unknown as CaseNode[]).concat(
-			(caseNode.property_claims || []) as unknown as CaseNode[],
+			(caseNode.propertyClaims || []) as unknown as CaseNode[],
 			(caseNode.strategies || []) as unknown as CaseNode[],
 			(caseNode.context || []) as unknown as CaseNode[]
 		);
 	}
-	if (caseNode.type === "Strategy") {
-		return (caseNode.property_claims || []) as unknown as CaseNode[];
+	if (caseNode.type === "strategy") {
+		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
 	}
-	// Handle both "PropertyClaim" (from Django API) and "property_claim" (legacy format)
-	if (caseNode.type === "PropertyClaim" || caseNode.type === "property_claim") {
-		return ((caseNode.property_claims || []) as unknown as CaseNode[]).concat(
+	if (caseNode.type === "property_claim") {
+		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
 			(caseNode.evidence || []) as unknown as CaseNode[]
 		);
 	}
@@ -39,9 +43,9 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 export function searchWithDeepFirst(
 	targetNode: CaseNode,
 	assuranceCase: CaseNode
-): [CaseNode | null, Record<number, CaseNode>] {
+): [CaseNode | null, Record<string, CaseNode>] {
 	const visitedNodes: CaseNode[] = [];
-	const parentMap: Record<number, CaseNode> = {};
+	const parentMap: Record<string, CaseNode> = {};
 	let nodesToProcess: CaseNode[] = [assuranceCase];
 	let nodeFound: CaseNode | null = null;
 
@@ -73,8 +77,8 @@ export function searchWithDeepFirst(
  * Recursively adds a `hidden` property to each node in an assurance case structure.
  */
 export const addHiddenProp = (
-	assuranceCase: AssuranceCase | NestedArrayItem | NestedArrayItem[]
-): AssuranceCase | NestedArrayItem | NestedArrayItem[] => {
+	assuranceCase: AssuranceCaseResponse | NestedArrayItem | NestedArrayItem[]
+): AssuranceCaseResponse | NestedArrayItem | NestedArrayItem[] => {
 	if (Array.isArray(assuranceCase)) {
 		for (const item of assuranceCase) {
 			addHiddenProp(item);
@@ -89,7 +93,7 @@ export const addHiddenProp = (
 				addHiddenProp(
 					value as unknown as
 						| NestedArrayItem
-						| AssuranceCase
+						| AssuranceCaseResponse
 						| NestedArrayItem[]
 				);
 			}
@@ -103,11 +107,11 @@ export const addHiddenProp = (
  */
 export function toggleHiddenForParent(
 	node: ReactFlowNode,
-	assuranceCase: AssuranceCase
-): AssuranceCase {
+	assuranceCase: AssuranceCaseResponse
+): AssuranceCaseResponse {
 	const newAssuranceCase = JSON.parse(
 		JSON.stringify(assuranceCase)
-	) as AssuranceCase;
+	) as AssuranceCaseResponse;
 	const [nodeFound, parentMap] = searchWithDeepFirst(
 		node.data as unknown as CaseNode,
 		newAssuranceCase as unknown as CaseNode
@@ -117,7 +121,7 @@ export function toggleHiddenForParent(
 	const nodesToShow: CaseNode[] = [];
 	while (currentNode != null) {
 		nodesToShow.push(currentNode);
-		currentNode = parentMap[currentNode.id];
+		currentNode = parentMap[currentNode.id] ?? null;
 	}
 
 	for (const nodeToShow of nodesToShow) {
@@ -129,12 +133,12 @@ export function toggleHiddenForParent(
 
 // Options for toggle children processing
 type ToggleChildrenOptions = {
-	targetParentId: number;
+	targetParentId: string;
 	parentFound: boolean;
 	hide: boolean;
 	toggleChildren: (
 		item: unknown,
-		targetId: number,
+		targetId: string,
 		isParentFound: boolean,
 		shouldHide: boolean
 	) => void;
@@ -151,7 +155,7 @@ const processArray = (arr: unknown[], options: ToggleChildrenOptions): void => {
 // Helper function to handle parent node
 const handleParentNode = (
 	node: CaseNode,
-	targetParentId: number
+	targetParentId: string
 ): { parentFound: boolean; hide: boolean } => {
 	if (node.id === targetParentId) {
 		const hide = !node.childrenHidden; // Toggle childrenHidden for the parent
@@ -199,12 +203,12 @@ const processObjectProperties = (
  * Toggles the visibility of all children nodes of a specified parent node in the assurance case.
  */
 export function toggleHiddenForChildren(
-	assuranceCase: AssuranceCase,
-	parentId: number
-): AssuranceCase {
+	assuranceCase: AssuranceCaseResponse,
+	parentId: string
+): AssuranceCaseResponse {
 	function toggleChildren(
 		obj: unknown,
-		targetParentId: number,
+		targetParentId: string,
 		parentFound: boolean,
 		hide: boolean
 	): void {
@@ -256,7 +260,7 @@ export function toggleHiddenForChildren(
 	// Create a deep copy of the assuranceCase to ensure immutability
 	const newAssuranceCase = JSON.parse(
 		JSON.stringify(assuranceCase)
-	) as AssuranceCase;
+	) as AssuranceCaseResponse;
 
 	// Toggle hidden property for the children
 	toggleChildren(newAssuranceCase, parentId, false, false);
@@ -266,29 +270,34 @@ export function toggleHiddenForChildren(
 
 // Helper to get children array by key from element
 const getChildrenByKey = (
-	element: NestedArrayItem | AssuranceCase,
+	element: NestedArrayItem | AssuranceCaseResponse,
 	key: string
 ): unknown[] | undefined => {
 	switch (key) {
 		case "goals":
-			return "goals" in element ? (element as AssuranceCase).goals : undefined;
+			return "goals" in element
+				? (element as AssuranceCaseResponse).goals
+				: undefined;
 		case "context":
-			return "context" in element ? (element as Goal).context : undefined;
-		case "property_claims":
-			return "property_claims" in element
-				? (element as Goal | PropertyClaim | Strategy).property_claims
+			return "context" in element
+				? (element as GoalResponse).context
+				: undefined;
+		case "propertyClaims":
+			return "propertyClaims" in element
+				? (element as GoalResponse | PropertyClaimResponse | StrategyResponse)
+						.propertyClaims
 				: undefined;
 		case "strategies":
 			return "strategies" in element
-				? (element as Goal | PropertyClaim).strategies
+				? (element as GoalResponse | PropertyClaimResponse).strategies
 				: undefined;
 		case "evidence":
 			return "evidence" in element
-				? (element as PropertyClaim).evidence
+				? (element as PropertyClaimResponse).evidence
 				: undefined;
 		case "comments":
 			return "comments" in element
-				? (element as AssuranceCase).comments
+				? (element as AssuranceCaseResponse).comments
 				: undefined;
 		default:
 			return;
@@ -297,20 +306,20 @@ const getChildrenByKey = (
 
 // Type for the search element function
 type SearchElementFunction = (
-	el: NestedArrayItem | AssuranceCase,
-	id: number
-) => NestedArrayItem | AssuranceCase | null;
+	el: NestedArrayItem | AssuranceCaseResponse,
+	id: string
+) => NestedArrayItem | AssuranceCaseResponse | null;
 
 // Helper function to search within children array
 const searchInChildrenArray = (
 	children: unknown[],
-	targetId: number,
+	targetId: string,
 	searchElement: SearchElementFunction
-): NestedArrayItem | AssuranceCase | null => {
+): NestedArrayItem | AssuranceCaseResponse | null => {
 	for (const child of children) {
 		if (child && typeof child === "object" && "id" in child) {
 			const result = searchElement(
-				child as NestedArrayItem | AssuranceCase,
+				child as NestedArrayItem | AssuranceCaseResponse,
 				targetId
 			);
 			if (result) {
@@ -323,11 +332,11 @@ const searchInChildrenArray = (
 
 // Helper function to search in child elements
 const searchInChildElements = (
-	element: NestedArrayItem | AssuranceCase,
-	targetId: number,
+	element: NestedArrayItem | AssuranceCaseResponse,
+	targetId: string,
 	childrenKeys: string[],
 	searchElement: SearchElementFunction
-): NestedArrayItem | AssuranceCase | null => {
+): NestedArrayItem | AssuranceCaseResponse | null => {
 	for (const key of childrenKeys) {
 		const children = getChildrenByKey(element, key);
 		if (children) {
@@ -344,14 +353,14 @@ const searchInChildElements = (
  * Finds an element within an assurance case by its unique ID.
  */
 export function findElementById(
-	assuranceCase: AssuranceCase,
-	id: number
-): NestedArrayItem | AssuranceCase | null {
+	assuranceCase: AssuranceCaseResponse,
+	id: string
+): NestedArrayItem | AssuranceCaseResponse | null {
 	// Recursive function to search for the element with the given ID
 	function searchElement(
-		element: NestedArrayItem | AssuranceCase,
-		targetId: number
-	): NestedArrayItem | AssuranceCase | null {
+		element: NestedArrayItem | AssuranceCaseResponse,
+		targetId: string
+	): NestedArrayItem | AssuranceCaseResponse | null {
 		if (element.id === targetId) {
 			return element;
 		}
@@ -359,7 +368,7 @@ export function findElementById(
 		const childrenKeys = [
 			"goals",
 			"context",
-			"property_claims",
+			"propertyClaims",
 			"strategies",
 			"evidence",
 			"comments",
@@ -389,9 +398,9 @@ const processChildrenForHiddenStatus = (
 			hiddenStatus.push((child as { hidden: boolean }).hidden);
 		}
 		// Recursively check nested property claims and strategies
-		if (key === "property_claims" || key === "strategies") {
+		if (key === "propertyClaims" || key === "strategies") {
 			const nestedStatus = getChildrenHiddenStatus(
-				child as NestedArrayItem | AssuranceCase
+				child as NestedArrayItem | AssuranceCaseResponse
 			);
 			hiddenStatus.push(...nestedStatus);
 		}
@@ -402,12 +411,12 @@ const processChildrenForHiddenStatus = (
  * Retrieves the hidden status of all child elements of a specified element.
  */
 export function getChildrenHiddenStatus(
-	element: NestedArrayItem | AssuranceCase
+	element: NestedArrayItem | AssuranceCaseResponse
 ): boolean[] {
 	const hiddenStatus: boolean[] = [];
 	const childrenKeys = [
 		"context",
-		"property_claims",
+		"propertyClaims",
 		"strategies",
 		"evidence",
 		"comments",
@@ -426,8 +435,8 @@ export function getChildrenHiddenStatus(
  * Finds the hidden state of a sibling element by checking the parent node's hidden status.
  */
 export const findSiblingHiddenState = (
-	assuranceCase: AssuranceCase,
-	parentId: number
+	assuranceCase: AssuranceCaseResponse,
+	parentId: string
 ): boolean | undefined => {
 	const element = findElementById(assuranceCase, parentId);
 	if (element) {
@@ -449,31 +458,31 @@ export const findParentNode = (
 	nodes: ReactFlowNode[],
 	node: ReactFlowNode
 ): ReactFlowNode | null => {
-	if (node.data.goal_id) {
+	if (node.data.goalId) {
 		// search for goal
 		const parent = nodes.find(
-			(n: ReactFlowNode) => n.data.id === node.data.goal_id
+			(n: ReactFlowNode) => n.data.id === node.data.goalId
 		);
 		return parent ?? null;
 	}
-	if (node.data.property_claim_id) {
+	if (node.data.propertyClaimId) {
 		if (node.type === "evidence") {
 			const parent = nodes.find(
 				(n: ReactFlowNode) =>
-					n.data.id === (node.data.property_claim_id as number[])[0]
+					n.data.id === (node.data.propertyClaimId as string[])[0]
 			);
 			return parent ?? null;
 		}
 		// search for property claim
 		const parent = nodes.find(
-			(n: ReactFlowNode) => n.data.id === node.data.property_claim_id
+			(n: ReactFlowNode) => n.data.id === node.data.propertyClaimId
 		);
 		return parent ?? null;
 	}
-	if (node.data.strategy_id) {
+	if (node.data.strategyId) {
 		// search for strategy
 		const parent = nodes.find(
-			(n: ReactFlowNode) => n.data.id === node.data.strategy_id
+			(n: ReactFlowNode) => n.data.id === node.data.strategyId
 		);
 		return parent ?? null;
 	}

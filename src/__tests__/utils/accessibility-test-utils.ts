@@ -30,7 +30,9 @@ async function loadAxe() {
 		try {
 			const axeModule = await import("vitest-axe");
 			axe = axeModule.axe;
-		} catch (_error) {}
+		} catch (_error) {
+			// axe unavailable in this environment — fall through without it
+		}
 	}
 	return axe;
 }
@@ -166,20 +168,19 @@ async function runAccessibilityTests(
 
 				// Process axe violations
 				if (axeResult.violations) {
-					axeResult.violations.forEach((violation: any) => {
+					for (const violation of axeResult.violations) {
 						const message = `${violation.id}: ${violation.description} (${violation.nodes.length} instances)`;
 						violations.push(message);
-					});
+					}
 				}
 
 				// Process axe incomplete checks as warnings
 				if (axeResult.incomplete) {
-					axeResult.incomplete.forEach((incomplete: any) => {
+					for (const incomplete of axeResult.incomplete) {
 						const message = `Incomplete check - ${incomplete.id}: ${incomplete.description}`;
 						warnings.push(message);
-					});
+					}
 				}
-			} else {
 			}
 		} catch (error) {
 			violations.push(
@@ -203,14 +204,13 @@ async function runAccessibilityTests(
 /**
  * Run custom accessibility checks beyond axe-core
  */
-async function runCustomAccessibilityChecks(
-	container: HTMLElement
-): Promise<string[]> {
+function runCustomAccessibilityChecks(container: HTMLElement): string[] {
 	const violations: string[] = [];
 
 	// Check for missing alt text on images
 	const images = container.querySelectorAll("img");
-	images.forEach((img, index) => {
+	let index = 0;
+	for (const img of images) {
 		if (
 			!(
 				img.alt ||
@@ -222,11 +222,13 @@ async function runCustomAccessibilityChecks(
 				`Image ${index + 1} missing alt text or accessible label`
 			);
 		}
-	});
+		index++;
+	}
 
 	// Check for empty links
 	const links = container.querySelectorAll("a");
-	links.forEach((link, index) => {
+	let linkIndex = 0;
+	for (const link of links) {
 		if (
 			!(
 				link.textContent?.trim() ||
@@ -234,13 +236,15 @@ async function runCustomAccessibilityChecks(
 				link.getAttribute("aria-labelledby")
 			)
 		) {
-			violations.push(`Link ${index + 1} has no accessible text content`);
+			violations.push(`Link ${linkIndex + 1} has no accessible text content`);
 		}
-	});
+		linkIndex++;
+	}
 
 	// Check for buttons with inadequate accessible names
 	const buttons = container.querySelectorAll("button");
-	buttons.forEach((button, index) => {
+	let buttonIndex = 0;
+	for (const button of buttons) {
 		const hasAccessibleName =
 			button.getAttribute("aria-label") ||
 			button.getAttribute("aria-labelledby") ||
@@ -248,14 +252,16 @@ async function runCustomAccessibilityChecks(
 
 		if (!hasAccessibleName) {
 			violations.push(
-				`Button ${index + 1} has inadequate accessible name or description`
+				`Button ${buttonIndex + 1} has inadequate accessible name or description`
 			);
 		}
-	});
+		buttonIndex++;
+	}
 
 	// Check for missing form labels
 	const inputs = container.querySelectorAll('input:not([type="hidden"])');
-	inputs.forEach((input, index) => {
+	let inputIndex = 0;
+	for (const input of inputs) {
 		const hasLabel =
 			input.getAttribute("aria-label") ||
 			input.getAttribute("aria-labelledby") ||
@@ -264,10 +270,11 @@ async function runCustomAccessibilityChecks(
 
 		if (!hasLabel) {
 			violations.push(
-				`Input ${index + 1} (type: ${input.getAttribute("type") || "text"}) missing label`
+				`Input ${inputIndex + 1} (type: ${input.getAttribute("type") || "text"}) missing label`
 			);
 		}
-	});
+		inputIndex++;
+	}
 
 	// Check for missing headings hierarchy
 	const headings = Array.from(
@@ -275,12 +282,12 @@ async function runCustomAccessibilityChecks(
 	);
 	if (headings.length > 1) {
 		for (let i = 1; i < headings.length; i++) {
-			const current = Number.parseInt(headings[i].tagName.charAt(1), 10);
-			const previous = Number.parseInt(headings[i - 1].tagName.charAt(1), 10);
+			const current = Number.parseInt(headings[i]!.tagName.charAt(1), 10);
+			const previous = Number.parseInt(headings[i - 1]!.tagName.charAt(1), 10);
 
 			if (current > previous + 1) {
 				violations.push(
-					`Heading hierarchy skip: ${headings[i - 1].tagName} followed by ${headings[i].tagName}`
+					`Heading hierarchy skip: ${headings[i - 1]!.tagName} followed by ${headings[i]!.tagName}`
 				);
 			}
 		}
@@ -473,21 +480,21 @@ function testScreenReaderCompatibility(
 		'button, a, input, select, textarea, [role="button"], [role="link"], [role="textbox"]'
 	);
 
-	interactiveElements.forEach((element) => {
+	for (const element of interactiveElements) {
 		const el = element as HTMLElement;
 		const accessibleName = getAccessibleName(el);
 
 		if (!accessibleName) {
 			missingAccessibleNames.push(el);
 		}
-	});
+	}
 
 	// Check for elements that should have descriptions
 	const elementsNeedingDescriptions = container.querySelectorAll(
 		'[aria-describedby], input[type="password"], input[required]'
 	);
 
-	elementsNeedingDescriptions.forEach((element) => {
+	for (const element of elementsNeedingDescriptions) {
 		const el = element as HTMLElement;
 		const describedBy = el.getAttribute("aria-describedby");
 
@@ -502,11 +509,11 @@ function testScreenReaderCompatibility(
 		) {
 			insufficientDescriptions.push(el);
 		}
-	});
+	}
 
 	// Check for incorrect roles
 	const elementsWithRoles = container.querySelectorAll("[role]");
-	elementsWithRoles.forEach((element) => {
+	for (const element of elementsWithRoles) {
 		const el = element as HTMLElement;
 		const role = el.getAttribute("role");
 		const tagName = el.tagName.toLowerCase();
@@ -516,7 +523,7 @@ function testScreenReaderCompatibility(
 			// Redundant role
 			incorrectRoles.push(el);
 		}
-	});
+	}
 
 	// Calculate accessibility score
 	const totalElements =
@@ -559,10 +566,10 @@ function testLandmarkNavigation(container: HTMLElement): {
 	];
 
 	const landmarks: HTMLElement[] = [];
-	landmarkSelectors.forEach((selector) => {
+	for (const selector of landmarkSelectors) {
 		const elements = container.querySelectorAll(selector);
 		landmarks.push(...(Array.from(elements) as HTMLElement[]));
-	});
+	}
 
 	const hasMainLandmark = landmarks.some(
 		(el) =>
@@ -713,7 +720,7 @@ async function testFocusTrap(
 	const lastElement = focusableElements.at(-1);
 
 	// Focus first element and shift+tab - should go to last element
-	firstElement.focus();
+	firstElement!.focus();
 	await user.tab({ shift: true });
 
 	if (document.activeElement !== lastElement) {
@@ -750,7 +757,7 @@ function testFormAccessibility(container: HTMLElement): {
 	const inputs = container.querySelectorAll(
 		'input:not([type="hidden"]), select, textarea'
 	);
-	inputs.forEach((input) => {
+	for (const input of inputs) {
 		const el = input as HTMLElement;
 		const hasLabel = getAccessibleName(el) !== "";
 
@@ -789,16 +796,16 @@ function testFormAccessibility(container: HTMLElement): {
 				missingErrorAssociation.push(el);
 			}
 		}
-	});
+	}
 
 	// Check fieldsets
 	const fieldsets = container.querySelectorAll("fieldset");
-	fieldsets.forEach((fieldset) => {
+	for (const fieldset of fieldsets) {
 		const legend = fieldset.querySelector("legend");
 		if (!legend) {
 			improperFieldsets.push(fieldset as HTMLElement);
 		}
-	});
+	}
 
 	// Calculate score
 	const totalChecks = inputs.length + fieldsets.length;
@@ -846,10 +853,19 @@ async function testWithAccessibilityPreferences<T>(
 			matches: matches[query],
 			media: query,
 			onchange: null,
-			addListener: () => {},
-			removeListener: () => {},
-			addEventListener: () => {},
-			removeEventListener: () => {},
+			// No-op event listener stubs required by the MediaQueryList interface
+			addListener: () => {
+				/* no-op stub */
+			},
+			removeListener: () => {
+				/* no-op stub */
+			},
+			addEventListener: () => {
+				/* no-op stub */
+			},
+			removeEventListener: () => {
+				/* no-op stub */
+			},
 			dispatchEvent: () => true,
 		};
 	};
@@ -983,8 +999,8 @@ function checkLogicalTabOrder(elements: HTMLElement[]): boolean {
 	}
 
 	for (let i = 1; i < elements.length; i++) {
-		const current = elements[i].getBoundingClientRect();
-		const previous = elements[i - 1].getBoundingClientRect();
+		const current = elements[i]!.getBoundingClientRect();
+		const previous = elements[i - 1]!.getBoundingClientRect();
 
 		// If current element is significantly higher than previous, order might be wrong
 		if (current.top < previous.top - 10) {
@@ -1119,14 +1135,14 @@ async function quickAccessibilityCheck(
 		if (axeInstance) {
 			const axeResult = await axeInstance(container);
 			if (axeResult.violations) {
-				axeResult.violations.forEach((violation: any) => {
+				for (const violation of axeResult.violations) {
 					issues.push(`${violation.id}: ${violation.description}`);
-				});
+				}
 			}
 		}
 
 		// Quick manual checks
-		const customViolations = await runCustomAccessibilityChecks(container);
+		const customViolations = runCustomAccessibilityChecks(container);
 		issues.push(...customViolations);
 	} catch (error) {
 		issues.push(

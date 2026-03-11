@@ -1,8 +1,7 @@
-"use server";
-
-import { timingSafeEqual } from "node:crypto";
+import { timingSafeCompare } from "@/lib/auth/timing-safe";
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // OUTPUT INTERFACES
@@ -37,10 +36,9 @@ async function validateCaseOwner(
 	userId: string,
 	caseId: string
 ): Promise<
-	| { valid: true; deletedAt: Date | null }
-	| { valid: false; error: string; status: number }
+	{ valid: true; deletedAt: Date | null } | { valid: false; error: string }
 > {
-	const existingCase = await prismaNew.assuranceCase.findUnique({
+	const existingCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
 			createdById: true,
@@ -49,31 +47,14 @@ async function validateCaseOwner(
 	});
 
 	if (!existingCase) {
-		return { valid: false, error: "Case not found", status: 404 };
+		return { valid: false, error: "Permission denied" };
 	}
 
 	if (existingCase.createdById !== userId) {
-		return { valid: false, error: "Permission denied", status: 403 };
+		return { valid: false, error: "Permission denied" };
 	}
 
 	return { valid: true, deletedAt: existingCase.deletedAt };
-}
-
-/**
- * Performs timing-safe comparison of two strings.
- * Prevents timing attacks on secret comparison.
- */
-function timingSafeCompare(a: string, b: string): boolean {
-	try {
-		const bufA = Buffer.from(a);
-		const bufB = Buffer.from(b);
-		if (bufA.length !== bufB.length) {
-			return false;
-		}
-		return timingSafeEqual(bufA, bufB);
-	} catch {
-		return false;
-	}
 }
 
 // ============================================
@@ -86,9 +67,9 @@ function timingSafeCompare(a: string, b: string): boolean {
  */
 export async function listTrashedCases(
 	userId: string
-): Promise<{ data?: TrashListResponse; error?: string }> {
+): ServiceResult<TrashListResponse> {
 	try {
-		const trashedCases = await prismaNew.assuranceCase.findMany({
+		const trashedCases = await prisma.assuranceCase.findMany({
 			where: {
 				createdById: userId,
 				deletedAt: { not: null },
@@ -131,55 +112,43 @@ export async function listTrashedCases(
 export async function softDeleteCase(
 	userId: string,
 	caseId: string
-): Promise<{ success?: boolean; error?: string; status?: number }> {
-	const { getCasePermission, hasPermissionLevel } = await import(
-		"@/lib/permissions"
-	);
+): ServiceResult {
+	const { canAccessCase } = await import("@/lib/permissions");
 
 	// Check permission - only ADMIN can delete
-	const permissionResult = await getCasePermission({
-		userId,
-		caseId,
-	});
-
-	if (
-		!(
-			permissionResult.hasAccess &&
-			permissionResult.permission &&
-			hasPermissionLevel(permissionResult.permission, "ADMIN")
-		)
-	) {
-		return { error: "Permission denied", status: 403 };
+	const hasAccess = await canAccessCase({ userId, caseId }, "ADMIN");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
 	}
 
 	try {
 		// Check if case exists and is not already deleted
-		const existingCase = await prismaNew.assuranceCase.findUnique({
+		const existingCase = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
 			select: { deletedAt: true },
 		});
 
 		if (!existingCase) {
-			return { error: "Case not found", status: 404 };
+			return { error: "Case not found" };
 		}
 
 		if (existingCase.deletedAt) {
-			return { error: "Case is already in trash", status: 400 };
+			return { error: "Case is already in trash" };
 		}
 
-		// Soft-delete: set deletedAt and deletedBy
-		await prismaNew.assuranceCase.update({
+		// Soft-delete: set deletedAt and deletedById
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				deletedAt: new Date(),
-				deletedBy: userId,
+				deletedById: userId,
 			},
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to soft-delete case:", error);
-		return { error: "Failed to delete case", status: 500 };
+		return { error: "Failed to delete case" };
 	}
 }
 
@@ -190,30 +159,30 @@ export async function softDeleteCase(
 export async function restoreCase(
 	userId: string,
 	caseId: string
-): Promise<{ success?: boolean; error?: string; status?: number }> {
+): ServiceResult {
 	const validation = await validateCaseOwner(userId, caseId);
 
 	if (!validation.valid) {
-		return { error: validation.error, status: validation.status };
+		return { error: validation.error };
 	}
 
 	if (!validation.deletedAt) {
-		return { error: "Case is not in trash", status: 400 };
+		return { error: "Case is not in trash" };
 	}
 
 	try {
-		await prismaNew.assuranceCase.update({
+		await prisma.assuranceCase.update({
 			where: { id: caseId },
 			data: {
 				deletedAt: null,
-				deletedBy: null,
+				deletedById: null,
 			},
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to restore case:", error);
-		return { error: "Failed to restore case", status: 500 };
+		return { error: "Failed to restore case" };
 	}
 }
 
@@ -221,32 +190,28 @@ export async function restoreCase(
  * Permanently deletes a case from trash.
  * Only the case owner can purge. Case must be in trash.
  */
-export async function purgeCase(
-	userId: string,
-	caseId: string
-): Promise<{ success?: boolean; error?: string; status?: number }> {
+export async function purgeCase(userId: string, caseId: string): ServiceResult {
 	const validation = await validateCaseOwner(userId, caseId);
 
 	if (!validation.valid) {
-		return { error: validation.error, status: validation.status };
+		return { error: validation.error };
 	}
 
 	if (!validation.deletedAt) {
 		return {
 			error: "Case must be in trash before it can be permanently deleted",
-			status: 400,
 		};
 	}
 
 	try {
-		await prismaNew.assuranceCase.delete({
+		await prisma.assuranceCase.delete({
 			where: { id: caseId },
 		});
 
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to purge case:", error);
-		return { error: "Failed to purge case", status: 500 };
+		return { error: "Failed to purge case" };
 	}
 }
 
@@ -256,23 +221,23 @@ export async function purgeCase(
  */
 export async function purgeExpiredCases(
 	authToken: string | null
-): Promise<{ data?: PurgeResult; error?: string; status?: number }> {
+): ServiceResult<PurgeResult> {
 	const cronSecret = process.env.CRON_SECRET;
 
 	if (!cronSecret) {
 		console.error("CRON_SECRET environment variable not set");
-		return { error: "Server configuration error", status: 500 };
+		return { error: "Server configuration error" };
 	}
 
 	if (!(authToken && timingSafeCompare(authToken, cronSecret))) {
-		return { error: "Unauthorised", status: 401 };
+		return { error: "Unauthorised" };
 	}
 
 	try {
 		const cutoffDate = new Date();
 		cutoffDate.setDate(cutoffDate.getDate() - TRASH_RETENTION_DAYS);
 
-		const result = await prismaNew.assuranceCase.deleteMany({
+		const result = await prisma.assuranceCase.deleteMany({
 			where: {
 				deletedAt: {
 					not: null,
@@ -291,6 +256,6 @@ export async function purgeExpiredCases(
 		};
 	} catch (error) {
 		console.error("Failed to purge expired cases:", error);
-		return { error: "Failed to purge trash", status: 500 };
+		return { error: "Failed to purge trash" };
 	}
 }

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PublishStatusType } from "@/components/publishing/status-badge";
+import type { PublishStatusType } from "@/lib/services/case-response-types";
 
 /**
  * Defines the shape of the state for the status modal store.

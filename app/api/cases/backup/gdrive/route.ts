@@ -1,33 +1,31 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import type { ErrorCode } from "@/lib/errors";
+import { AppError, forbidden, validationError } from "@/lib/errors";
+import { backupToDriveSchema } from "@/lib/schemas/google-drive";
 import { exportCase } from "@/lib/services/case-export-service";
 import {
-	type GoogleDriveError,
 	type GoogleDriveErrorCode,
 	hasGoogleToken,
 	uploadBackupToDrive,
 } from "@/lib/services/google-drive-service";
 
-const BackupSchema = z.object({
-	caseId: z.string().uuid("Invalid case ID"),
-	includeComments: z.boolean().optional().default(true),
-});
-
 /**
- * Maps Google Drive error codes to HTTP status codes.
+ * Maps Google Drive error codes to application error codes.
  */
-function getStatusForDriveError(code: GoogleDriveErrorCode): number {
-	const statusMap: Record<GoogleDriveErrorCode, number> = {
-		NO_TOKEN: 403,
-		TOKEN_EXPIRED: 401,
-		REFRESH_FAILED: 401,
-		NOT_FOUND: 404,
-		FORBIDDEN: 403,
-		API_ERROR: 500,
-	};
-	return statusMap[code] ?? 500;
-}
+const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
+	NO_TOKEN: "FORBIDDEN",
+	TOKEN_EXPIRED: "UNAUTHORISED",
+	REFRESH_FAILED: "UNAUTHORISED",
+	NOT_FOUND: "NOT_FOUND",
+	FORBIDDEN: "FORBIDDEN",
+	API_ERROR: "INTERNAL",
+};
 
 /**
  * POST /api/cases/backup/gdrive
@@ -40,64 +38,54 @@ function getStatusForDriveError(code: GoogleDriveErrorCode): number {
  * @tag Cases
  */
 export async function POST(request: Request) {
-	const validated = await validateSession();
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const hasToken = await hasGoogleToken(validated.userId);
-	if (!hasToken) {
-		return NextResponse.json(
-			{
-				error: "Google not connected",
-				code: "NO_TOKEN",
-				message: "Please sign in with Google to back up to Google Drive.",
-			},
-			{ status: 403 }
-		);
-	}
-
-	const parseResult = BackupSchema.safeParse(
-		await request.json().catch(() => null)
-	);
-	if (!parseResult.success) {
-		return NextResponse.json(
-			{ error: "Invalid request", validationErrors: parseResult.error.errors },
-			{ status: 400 }
-		);
-	}
-
-	const { caseId, includeComments } = parseResult.data;
-
-	const exportResult = await exportCase(validated.userId, caseId, {
-		includeComments,
-	});
-
-	if (!exportResult.success) {
-		const status = exportResult.error === "Permission denied" ? 403 : 500;
-		return NextResponse.json({ error: exportResult.error }, { status });
-	}
-
 	try {
+		const userId = await requireAuth();
+
+		const hasToken = await hasGoogleToken(userId);
+		if (!hasToken) {
+			return apiError(
+				forbidden(
+					"Google not connected. Please sign in with Google to back up to Google Drive."
+				)
+			);
+		}
+
+		const parseResult = backupToDriveSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parseResult.success) {
+			return apiError(validationError("Invalid request"));
+		}
+
+		const { caseId, includeComments } = parseResult.data;
+
+		const exportResult = await exportCase(userId, caseId, {
+			includeComments,
+		});
+
+		if ("error" in exportResult) {
+			return apiError(serviceErrorToAppError(exportResult.error));
+		}
+
 		const result = await uploadBackupToDrive(
-			validated.userId,
+			userId,
 			exportResult.data.case.name,
 			JSON.stringify(exportResult.data, null, 2)
 		);
 
-		return NextResponse.json({
+		if ("error" in result) {
+			const code = DRIVE_ERROR_MAP[result.driveError.code] ?? "INTERNAL";
+			return apiError(new AppError({ code, message: result.error }));
+		}
+
+		return apiSuccess({
 			success: true,
-			fileId: result.fileId,
-			fileName: result.fileName,
-			webViewLink: result.webViewLink,
+			fileId: result.data.fileId,
+			fileName: result.data.fileName,
+			webViewLink: result.data.webViewLink,
 		});
 	} catch (error) {
-		const driveError = error as GoogleDriveError;
-		const status = getStatusForDriveError(driveError.code);
-		return NextResponse.json(
-			{ error: driveError.message, code: driveError.code },
-			{ status }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }
 
@@ -111,11 +99,11 @@ export async function POST(request: Request) {
  * @tag Cases
  */
 export async function GET() {
-	const validated = await validateSession();
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+	try {
+		const userId = await requireAuth();
+		const connected = await hasGoogleToken(userId);
+		return apiSuccess({ connected });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const connected = await hasGoogleToken(validated.userId);
-	return NextResponse.json({ connected });
 }

@@ -3,32 +3,13 @@
  * Handles CRUD operations and element attachment/detachment
  */
 
-import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
-import type { ReactFlowNode } from "./types";
-
-// API Response types
-type ApiNodeResponse = {
-	id: number;
-	name: string;
-	short_description: string;
-	long_description: string;
-	type: string;
-	[key: string]: unknown;
-};
-
-// Comment type for API operations
-type CommentPayload = {
-	content: string;
-	[key: string]: unknown;
-};
-
-// Type for node creation payloads
-type CreateNodePayload =
-	| Partial<Goal>
-	| Partial<Context>
-	| Partial<Strategy>
-	| Partial<PropertyClaim>
-	| Partial<Evidence>;
+import { fromCollectionName } from "@/lib/element-types";
+import type {
+	ApiNodeResponse,
+	CommentPayload,
+	CreateNodePayload,
+	ReactFlowNode,
+} from "./types";
 
 /**
  * Creates a new assurance case node by sending a POST request to the specified API endpoint.
@@ -40,24 +21,16 @@ export const createAssuranceCaseNode = async (
 	_token: string | null
 ): Promise<{ data?: ApiNodeResponse; error?: string | unknown }> => {
 	// Get case ID from the payload
-	const caseId = (newItem as { assurance_case_id?: number | string })
-		.assurance_case_id;
+	const caseId = (newItem as { assuranceCaseId?: number | string })
+		.assuranceCaseId;
 	if (!caseId) {
 		return { error: "Case ID is required" };
 	}
 
-	// Map entity to element type for unified API
-	const elementTypeMap: Record<string, string> = {
-		goals: "goal",
-		contexts: "context",
-		strategies: "strategy",
-		propertyclaims: "property_claim",
-		evidence: "evidence",
-	};
-
 	try {
 		// Use internal API route which handles Django/Prisma switching
 		const url = `/api/cases/${caseId}/elements`;
+		const resolvedType = fromCollectionName(entity);
 
 		const requestOptions: RequestInit = {
 			method: "POST",
@@ -66,8 +39,8 @@ export const createAssuranceCaseNode = async (
 			},
 			body: JSON.stringify({
 				...newItem,
-				elementType: elementTypeMap[entity] || entity,
-				type: elementTypeMap[entity] || entity,
+				elementType: resolvedType,
+				type: resolvedType,
 			}),
 		};
 		const response = await fetch(url, requestOptions);
@@ -238,34 +211,34 @@ export const attachCaseElement = async (
 	// Build payload for attach operation
 	const payload: {
 		parentId?: string | number;
-		element_type?: string;
-		goal_id?: number | null;
-		strategy_id?: number | null;
-		property_claim_id?: number | null;
+		elementType?: string;
+		goalId?: string | null;
+		strategyId?: string | null;
+		propertyClaimId?: string | null;
 	} = {
 		parentId: parent.data.id,
-		element_type: orphan.type.toLowerCase(),
+		elementType: orphan.type.toLowerCase(),
 	};
 
-	// Also include Django-style parent references for fallback
+	// Include camelCase parent references
 	switch (orphan.type.toLowerCase()) {
 		case "context":
 		case "strategy":
-			payload.goal_id = parent.data.id;
+			payload.goalId = parent.data.id;
 			break;
 		case "propertyclaim":
 			if (parent.type === "property") {
-				payload.property_claim_id = parent.data.id;
+				payload.propertyClaimId = parent.data.id;
 			}
 			if (parent.type === "strategy") {
-				payload.strategy_id = parent.data.id;
+				payload.strategyId = parent.data.id;
 			}
 			if (parent.type === "goal") {
-				payload.goal_id = parent.data.id;
+				payload.goalId = parent.data.id;
 			}
 			break;
 		case "evidence":
-			payload.property_claim_id = parent.data.id;
+			payload.propertyClaimId = parent.data.id;
 			break;
 		default:
 			break;
@@ -369,6 +342,38 @@ export const updateElementComment = async (
 		const result = await response.json();
 
 		return result;
+	} catch (error) {
+		return { error };
+	}
+};
+
+/**
+ * Moves an element to a new parent in the assurance case.
+ */
+export const moveCaseElement = async (
+	elementId: number | string,
+	parentId: string
+): Promise<{ moved: boolean } | { error: string | unknown }> => {
+	try {
+		const url = `/api/elements/${elementId}/move`;
+
+		const requestOptions: RequestInit = {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ parentId }),
+		};
+		const response = await fetch(url, requestOptions);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			return {
+				error: errorData.error || `Something went wrong ${response.status}`,
+			};
+		}
+
+		return { moved: true };
 	} catch (error) {
 		return { error };
 	}

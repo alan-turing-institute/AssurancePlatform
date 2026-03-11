@@ -1,6 +1,4 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type {
 	CaseExportNested,
 	ElementRole,
@@ -17,9 +15,7 @@ export type ExportOptions = {
 	includeComments?: boolean;
 };
 
-export type ExportResult =
-	| { success: true; data: CaseExportNested }
-	| { success: false; error: string };
+export type ExportResult = { data: CaseExportNested } | { error: string };
 
 /**
  * Validates user has VIEW permission on the case.
@@ -45,7 +41,7 @@ async function fetchCommentsForElements(
 		return commentsMap;
 	}
 
-	const comments = await prismaNew.comment.findMany({
+	const comments = await prisma.comment.findMany({
 		where: {
 			elementId: { in: elementIds },
 		},
@@ -88,7 +84,7 @@ async function fetchCommentsForElements(
  * Fetches and exports a case in nested tree format.
  *
  * Export includes:
- * - Case metadata (name, description, colorProfile)
+ * - Case metadata (name, description, colourProfile)
  * - Nested tree structure with evidence inline under claims
  * - Comments (when includeComments option is true, default)
  *
@@ -108,15 +104,17 @@ export async function exportCase(
 	// Validate user has VIEW permission
 	const hasAccess = await validateViewAccess(userId, caseId);
 	if (!hasAccess) {
-		return { success: false, error: "Permission denied" };
+		return { error: "Permission denied" };
 	}
 
 	try {
 		// Fetch case with elements and their evidence links (for claims)
-		const caseData = await prismaNew.assuranceCase.findUnique({
+		// Exclude soft-deleted elements from export
+		const caseData = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
 			include: {
 				elements: {
+					where: { deletedAt: null },
 					select: {
 						id: true,
 						elementType: true,
@@ -143,6 +141,9 @@ export async function exportCase(
 						defeatsElementId: true,
 						// Include evidence linked TO this element (claims get their evidence)
 						evidenceLinksTo: {
+							where: {
+								evidence: { deletedAt: null },
+							},
 							select: {
 								evidence: {
 									select: {
@@ -179,11 +180,11 @@ export async function exportCase(
 		});
 
 		if (!caseData) {
-			return { success: false, error: "Case not found" };
+			return { error: "Case not found" };
 		}
 
 		if (caseData.elements.length === 0) {
-			return { success: false, error: "Case has no elements to export" };
+			return { error: "Case has no elements to export" };
 		}
 
 		// Fetch comments if requested
@@ -265,9 +266,10 @@ export async function exportCase(
 		const tree = buildTreeFromElements(elements);
 
 		// Build the nested export (uses "1.0" as first officially versioned format)
+		// exportedAt uses the case's updatedAt for conflict detection during batch updates
 		const exportData: CaseExportNested = {
 			version: "1.0",
-			exportedAt: new Date().toISOString(),
+			exportedAt: caseData.updatedAt.toISOString(),
 			case: {
 				name: caseData.name,
 				description: caseData.description,
@@ -275,9 +277,9 @@ export async function exportCase(
 			tree,
 		};
 
-		return { success: true, data: exportData };
+		return { data: exportData };
 	} catch (error) {
 		console.error("Failed to export case:", error);
-		return { success: false, error: "Failed to export case" };
+		return { error: "Failed to export case" };
 	}
 }

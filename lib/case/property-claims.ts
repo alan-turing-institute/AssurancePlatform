@@ -3,27 +3,30 @@
  * Handles adding, updating, moving, and listing property claims
  */
 
-import type { PropertyClaim, Strategy } from "@/types";
+import type {
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 
 // Regular expressions
 const NUMERIC_ID_PATTERN = /^\d+$/;
 
 // Helper function to add property claim to a specific claim
 const addPropertyClaimToSpecificClaim = (
-	propertyClaim: PropertyClaim,
-	newPropertyClaim: PropertyClaim
+	propertyClaim: PropertyClaimResponse,
+	newPropertyClaim: PropertyClaimResponse
 ): void => {
-	if (!propertyClaim.property_claims) {
-		propertyClaim.property_claims = [];
+	if (!propertyClaim.propertyClaims) {
+		propertyClaim.propertyClaims = [];
 	}
-	propertyClaim.property_claims.push(newPropertyClaim);
+	propertyClaim.propertyClaims.push(newPropertyClaim);
 };
 
 // Helper function to search in nested property claims
 const searchInNestedPropertyClaims = (
-	propertyClaims: PropertyClaim[],
-	parentId: number,
-	newPropertyClaim: PropertyClaim
+	propertyClaims: PropertyClaimResponse[],
+	parentId: string,
+	newPropertyClaim: PropertyClaimResponse
 ): boolean => {
 	const found = addPropertyClaimToNested(
 		propertyClaims,
@@ -35,24 +38,24 @@ const searchInNestedPropertyClaims = (
 
 // Helper function to search in strategies
 const searchInStrategies = (
-	strategies: Strategy[],
-	parentId: number,
-	newPropertyClaim: PropertyClaim
+	strategies: StrategyResponse[],
+	parentId: string,
+	newPropertyClaim: PropertyClaimResponse
 ): boolean => {
 	for (const strategy of strategies) {
 		// Check if this strategy matches the parent ID
 		if (strategy.id === parentId) {
-			// Initialize property_claims array if it doesn't exist
-			if (!strategy.property_claims) {
-				strategy.property_claims = [];
+			// Initialise propertyClaims array if it doesn't exist
+			if (!strategy.propertyClaims) {
+				strategy.propertyClaims = [];
 			}
-			strategy.property_claims.push(newPropertyClaim);
+			strategy.propertyClaims.push(newPropertyClaim);
 			return true;
 		}
 		// If the strategy has property claims, search within them
-		if (strategy.property_claims && strategy.property_claims.length > 0) {
+		if (strategy.propertyClaims && strategy.propertyClaims.length > 0) {
 			const found = addPropertyClaimToNested(
-				strategy.property_claims,
+				strategy.propertyClaims,
 				parentId,
 				newPropertyClaim
 			);
@@ -68,9 +71,9 @@ const searchInStrategies = (
  * Recursively adds a new property claim to a specified parent property claim by ID.
  */
 export const addPropertyClaimToNested = (
-	propertyClaims: PropertyClaim[],
-	parentId: number,
-	newPropertyClaim: PropertyClaim
+	propertyClaims: PropertyClaimResponse[],
+	parentId: string,
+	newPropertyClaim: PropertyClaimResponse
 ): boolean => {
 	// Iterate through the property claims array
 	for (const propertyClaim of propertyClaims) {
@@ -82,11 +85,11 @@ export const addPropertyClaimToNested = (
 
 		// If this property claim has nested property claims, recursively search within them
 		if (
-			propertyClaim.property_claims &&
-			propertyClaim.property_claims.length > 0
+			propertyClaim.propertyClaims &&
+			propertyClaim.propertyClaims.length > 0
 		) {
 			const found = searchInNestedPropertyClaims(
-				propertyClaim.property_claims,
+				propertyClaim.propertyClaims,
 				parentId,
 				newPropertyClaim
 			);
@@ -113,23 +116,23 @@ export const addPropertyClaimToNested = (
 
 // Helper to update strategies with nested property claims immutably
 const updateStrategiesWithClaim = (
-	strategies: Strategy[],
-	id: number,
-	newPropertyClaim: Partial<PropertyClaim>
-): { strategies: Strategy[]; found: boolean } => {
+	strategies: StrategyResponse[],
+	id: string,
+	newPropertyClaim: Partial<PropertyClaimResponse>
+): { strategies: StrategyResponse[]; found: boolean } => {
 	let found = false;
 	const result = strategies.map((strategy) => {
-		if (found || !strategy.property_claims?.length) {
+		if (found || !strategy.propertyClaims?.length) {
 			return strategy;
 		}
 		const updated = updatePropertyClaimNested(
-			strategy.property_claims,
+			strategy.propertyClaims,
 			id,
 			newPropertyClaim
 		);
-		if (updated !== strategy.property_claims) {
+		if (updated !== strategy.propertyClaims) {
 			found = true;
-			return { ...strategy, property_claims: updated };
+			return { ...strategy, propertyClaims: updated };
 		}
 		return strategy;
 	});
@@ -138,33 +141,26 @@ const updateStrategiesWithClaim = (
 
 // Helper to process a single property claim immutably
 const processClaimUpdate = (
-	claim: PropertyClaim,
-	id: number,
-	newData: Partial<PropertyClaim>,
+	claim: PropertyClaimResponse,
+	id: string,
+	newData: Partial<PropertyClaimResponse>,
 	alreadyFound: boolean
-): { claim: PropertyClaim; found: boolean } => {
+): { claim: PropertyClaimResponse; found: boolean } => {
 	if (alreadyFound) {
 		return { claim, found: false };
 	}
 
-	// Direct match - check for both API format ("property_claim") and legacy format ("PropertyClaim")
-	if (
-		claim.id === id &&
-		(claim.type === "property_claim" || claim.type === "PropertyClaim")
-	) {
+	// Direct match
+	if (claim.id === id && claim.type === "property_claim") {
 		return { claim: { ...claim, ...newData }, found: true };
 	}
 
 	// Check nested claims
-	if (claim.property_claims?.length) {
-		const nested = updatePropertyClaimNested(
-			claim.property_claims,
-			id,
-			newData
-		);
-		if (nested !== claim.property_claims) {
+	if (claim.propertyClaims?.length) {
+		const nested = updatePropertyClaimNested(claim.propertyClaims, id, newData);
+		if (nested !== claim.propertyClaims) {
 			return {
-				claim: { ...claim, property_claims: nested },
+				claim: { ...claim, propertyClaims: nested },
 				found: true,
 			};
 		}
@@ -190,10 +186,10 @@ const processClaimUpdate = (
  * Returns a NEW array reference when updates are made, ensuring React detects changes.
  */
 export const updatePropertyClaimNested = (
-	array: PropertyClaim[],
-	id: number,
-	newPropertyClaim: Partial<PropertyClaim>
-): PropertyClaim[] => {
+	array: PropertyClaimResponse[],
+	id: string,
+	newPropertyClaim: Partial<PropertyClaimResponse>
+): PropertyClaimResponse[] => {
 	if (!array || array.length === 0) {
 		return array;
 	}
@@ -220,21 +216,21 @@ export const updatePropertyClaimNested = (
  * Uses immutable patterns - returns NEW object references to ensure React detects changes.
  */
 const removePropertyClaimFromOldLocation = (
-	array: PropertyClaim[],
-	id: number
-): PropertyClaim[] => {
+	array: PropertyClaimResponse[],
+	id: string
+): PropertyClaimResponse[] => {
 	return array.map((item) => {
 		// Create a new item object to avoid mutating the original
-		const newItem: PropertyClaim = { ...item };
+		const newItem: PropertyClaimResponse = { ...item };
 
-		if (newItem.property_claims) {
+		if (newItem.propertyClaims) {
 			// Filter out the claim with the given id
-			newItem.property_claims = newItem.property_claims.filter(
+			newItem.propertyClaims = newItem.propertyClaims.filter(
 				(claim) => claim.id !== id
 			);
-			// Recursively remove the claim from nested property_claims
-			newItem.property_claims = removePropertyClaimFromOldLocation(
-				newItem.property_claims,
+			// Recursively remove the claim from nested propertyClaims
+			newItem.propertyClaims = removePropertyClaimFromOldLocation(
+				newItem.propertyClaims,
 				id
 			);
 		}
@@ -242,15 +238,15 @@ const removePropertyClaimFromOldLocation = (
 		if (newItem.strategies) {
 			// Recursively process each strategy with immutable updates
 			newItem.strategies = newItem.strategies.map((strategy) => {
-				if (strategy.property_claims) {
-					// Filter out the claim with the given id from the strategy's property_claims
-					const filteredClaims = strategy.property_claims.filter(
+				if (strategy.propertyClaims) {
+					// Filter out the claim with the given id from the strategy's propertyClaims
+					const filteredClaims = strategy.propertyClaims.filter(
 						(claim) => claim.id !== id
 					);
-					// Recursively remove the claim from the strategy's nested property_claims
+					// Recursively remove the claim from the strategy's nested propertyClaims
 					return {
 						...strategy,
-						property_claims: removePropertyClaimFromOldLocation(
+						propertyClaims: removePropertyClaimFromOldLocation(
 							filteredClaims,
 							id
 						),
@@ -269,24 +265,24 @@ const removePropertyClaimFromOldLocation = (
  * Uses immutable patterns - returns NEW object references to ensure React detects changes.
  */
 const addPropertyClaimToLocation = (
-	array: PropertyClaim[],
-	property_claim: PropertyClaim,
-	newParentId: number
-): PropertyClaim[] =>
+	array: PropertyClaimResponse[],
+	propertyClaim: PropertyClaimResponse,
+	newParentId: string
+): PropertyClaimResponse[] =>
 	array.map((item) => {
 		// Create a new item object to avoid mutating the original
-		const newItem: PropertyClaim = { ...item };
+		const newItem: PropertyClaimResponse = { ...item };
 
 		if (newItem.id === newParentId) {
 			// Create new array with the added property claim
-			newItem.property_claims = [
-				...(newItem.property_claims || []),
-				property_claim,
+			newItem.propertyClaims = [
+				...(newItem.propertyClaims || []),
+				propertyClaim,
 			];
-		} else if (newItem.property_claims) {
-			newItem.property_claims = addPropertyClaimToLocation(
-				newItem.property_claims,
-				property_claim,
+		} else if (newItem.propertyClaims) {
+			newItem.propertyClaims = addPropertyClaimToLocation(
+				newItem.propertyClaims,
+				propertyClaim,
 				newParentId
 			);
 		}
@@ -297,19 +293,16 @@ const addPropertyClaimToLocation = (
 					// Create new strategy with added property claim
 					return {
 						...strategy,
-						property_claims: [
-							...(strategy.property_claims || []),
-							property_claim,
-						],
+						propertyClaims: [...(strategy.propertyClaims || []), propertyClaim],
 					};
 				}
 
-				if (strategy.property_claims) {
+				if (strategy.propertyClaims) {
 					return {
 						...strategy,
-						property_claims: addPropertyClaimToLocation(
-							strategy.property_claims,
-							property_claim,
+						propertyClaims: addPropertyClaimToLocation(
+							strategy.propertyClaims,
+							propertyClaim,
 							newParentId
 						),
 					};
@@ -323,13 +316,10 @@ const addPropertyClaimToLocation = (
 
 // Helper function to search for property claim in item
 const searchPropertyClaimInItem = (
-	item: PropertyClaim,
-	id: number
-): PropertyClaim | null => {
-	if (
-		item.id === id &&
-		(item.type === "property_claim" || item.type === "PropertyClaim")
-	) {
+	item: PropertyClaimResponse,
+	id: string
+): PropertyClaimResponse | null => {
+	if (item.id === id && item.type === "property_claim") {
 		return item;
 	}
 	return null;
@@ -337,13 +327,13 @@ const searchPropertyClaimInItem = (
 
 // Helper function to search in property claims of strategies
 const searchInStrategyPropertyClaims = (
-	strategies: Strategy[],
-	id: number
-): PropertyClaim | null => {
+	strategies: StrategyResponse[],
+	id: string
+): PropertyClaimResponse | null => {
 	for (const strategy of strategies) {
-		if (strategy.property_claims) {
+		if (strategy.propertyClaims) {
 			const found = searchInNestedPropertyClaimsRecursive(
-				strategy.property_claims,
+				strategy.propertyClaims,
 				id
 			);
 			if (found) {
@@ -356,17 +346,17 @@ const searchInStrategyPropertyClaims = (
 
 // Helper function to search a single item and its nested structure
 const searchPropertyClaimItem = (
-	item: PropertyClaim,
-	id: number
-): PropertyClaim | null => {
+	item: PropertyClaimResponse,
+	id: string
+): PropertyClaimResponse | null => {
 	const found = searchPropertyClaimInItem(item, id);
 	if (found) {
 		return found;
 	}
 
-	if (item.property_claims) {
+	if (item.propertyClaims) {
 		const nestedFound = searchInNestedPropertyClaimsRecursive(
-			item.property_claims,
+			item.propertyClaims,
 			id
 		);
 		if (nestedFound) {
@@ -386,9 +376,9 @@ const searchPropertyClaimItem = (
 
 // Helper function to search in nested property claims recursively
 const searchInNestedPropertyClaimsRecursive = (
-	arr: PropertyClaim[],
-	id: number
-): PropertyClaim | null => {
+	arr: PropertyClaimResponse[],
+	id: string
+): PropertyClaimResponse | null => {
 	for (const item of arr) {
 		const found = searchPropertyClaimItem(item, id);
 		if (found) {
@@ -400,16 +390,16 @@ const searchInNestedPropertyClaimsRecursive = (
 
 // Helper function to determine new parent ID
 const determineNewParentId = (
-	updatedPropertyClaim: PropertyClaim
-): number | null => {
-	if (updatedPropertyClaim.goal_id !== null) {
-		return updatedPropertyClaim.goal_id;
+	updatedPropertyClaim: PropertyClaimResponse
+): string | null => {
+	if (updatedPropertyClaim.goalId !== null) {
+		return updatedPropertyClaim.goalId;
 	}
-	if (updatedPropertyClaim.strategy_id !== null) {
-		return updatedPropertyClaim.strategy_id;
+	if (updatedPropertyClaim.strategyId !== null) {
+		return updatedPropertyClaim.strategyId;
 	}
-	if (updatedPropertyClaim.property_claim_id !== null) {
-		return updatedPropertyClaim.property_claim_id;
+	if (updatedPropertyClaim.propertyClaimId !== null) {
+		return updatedPropertyClaim.propertyClaimId;
 	}
 	return null;
 };
@@ -418,10 +408,12 @@ const determineNewParentId = (
  * Updates a property claim's location and properties in a nested array structure.
  */
 export const updatePropertyClaimNestedMove = (
-	array: PropertyClaim[],
-	id: number,
-	newPropertyClaim: Partial<PropertyClaim> & { property_claim_id?: number }
-): PropertyClaim[] => {
+	array: PropertyClaimResponse[],
+	id: string,
+	newPropertyClaim: Partial<PropertyClaimResponse> & {
+		propertyClaimId?: string;
+	}
+): PropertyClaimResponse[] => {
 	// Find the existing property claim item
 	const existingPropertyClaim = searchInNestedPropertyClaimsRecursive(
 		array,
@@ -438,15 +430,19 @@ export const updatePropertyClaimNestedMove = (
 	const updatedPropertyClaim = {
 		...existingPropertyClaim,
 		...newPropertyClaim,
-	} as PropertyClaim;
+	} as PropertyClaimResponse;
 
 	// Determine the new parent ID
 	const newParentId = determineNewParentId(updatedPropertyClaim);
 
+	if (!newParentId) {
+		return arrayWithoutOldPropertyClaim;
+	}
+
 	const updatedArray = addPropertyClaimToLocation(
 		arrayWithoutOldPropertyClaim,
 		updatedPropertyClaim,
-		newParentId as number
+		newParentId
 	);
 
 	return updatedArray;
@@ -454,9 +450,9 @@ export const updatePropertyClaimNestedMove = (
 
 // Helper function to check and add property claim to list
 const addPropertyClaimToList = (
-	item: PropertyClaim,
+	item: PropertyClaimResponse,
 	currentClaimName: string,
-	claims: PropertyClaim[]
+	claims: PropertyClaimResponse[]
 ): void => {
 	// Skip null/undefined items
 	if (!item || typeof item !== "object") {
@@ -466,7 +462,7 @@ const addPropertyClaimToList = (
 	// Check if currentClaimName is actually an ID (numeric string)
 	const isIdComparison = NUMERIC_ID_PATTERN.test(currentClaimName);
 
-	if (item.type === "property_claim" || item.type === "PropertyClaim") {
+	if (item.type === "property_claim") {
 		if (isIdComparison) {
 			// Compare by ID if currentClaimName is a numeric string
 			if (item.id?.toString() !== currentClaimName) {
@@ -481,14 +477,14 @@ const addPropertyClaimToList = (
 
 // Helper function to process strategies with property claims
 const processStrategiesPropertyClaims = (
-	strategies: Strategy[],
+	strategies: StrategyResponse[],
 	currentClaimName: string,
-	claims: PropertyClaim[]
+	claims: PropertyClaimResponse[]
 ): void => {
 	for (const strategy of strategies) {
-		if (strategy.property_claims && strategy.property_claims.length > 0) {
+		if (strategy.propertyClaims && strategy.propertyClaims.length > 0) {
 			listPropertyClaims(
-				strategy.property_claims,
+				strategy.propertyClaims,
 				currentClaimName,
 				claims,
 				true
@@ -501,11 +497,11 @@ const processStrategiesPropertyClaims = (
  * Recursively lists all property claims except the specified current claim.
  */
 export const listPropertyClaims = (
-	array: PropertyClaim[],
+	array: PropertyClaimResponse[],
 	currentClaimName: string,
-	claims: PropertyClaim[] = [],
+	claims: PropertyClaimResponse[] = [],
 	isNested = false
-): PropertyClaim[] => {
+): PropertyClaimResponse[] => {
 	// Handle null/undefined array
 	if (!(array && Array.isArray(array))) {
 		return claims;
@@ -524,9 +520,9 @@ export const listPropertyClaims = (
 		}
 
 		// If this item has nested property claims, recursively search within them
-		if (item.property_claims && item.property_claims.length > 0) {
+		if (item.propertyClaims && item.propertyClaims.length > 0) {
 			listPropertyClaims(
-				item.property_claims,
+				item.propertyClaims,
 				currentClaimName,
 				claims,
 				true // Mark as nested

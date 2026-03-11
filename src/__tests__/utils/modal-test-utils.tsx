@@ -65,7 +65,7 @@ export const renderWithModal = (
 	_modalStore: ModalStore = mockModalStores.permissions
 ) => {
 	// Mock the specific modal hook
-	vi.mock("@/hooks/use-permissions-modal", () => ({
+	vi.mock("@/hooks/modal-hooks", () => ({
 		usePermissionsModal: () => mockModalStores.permissions,
 	}));
 

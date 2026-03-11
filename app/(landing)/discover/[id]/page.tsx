@@ -1,11 +1,23 @@
 import { MailIcon, MoveLeftIcon, Users2Icon } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchPublishedCaseStudyById } from "@/actions/case-studies";
+import { SanitisedHtml } from "@/components/cases/sanitised-html";
 import { formatShortDate } from "@/lib/date";
-import { extractTextFromHtml } from "@/lib/sanitize-html";
-import { normalizeImageUrl } from "@/lib/utils";
 import CaseStudyCases from "../../_components/case-study-cases";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+	const { id } = await params;
+	const caseStudy = await fetchPublishedCaseStudyById(Number.parseInt(id, 10));
+	return {
+		title: `${caseStudy.title} | TEA Platform`,
+	};
+}
 
 const DiscoverCaseStudyPage = async ({
 	params,
@@ -16,24 +28,24 @@ const DiscoverCaseStudyPage = async ({
 	const caseStudy = await fetchPublishedCaseStudyById(Number.parseInt(id, 10));
 
 	return (
-		<div className="overflow-hidden bg-white">
+		<div className="overflow-hidden bg-background">
 			<div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8">
-				<div className="absolute top-0 bottom-0 left-3/4 hidden w-screen bg-gray-50 lg:block" />
+				<div className="absolute top-0 bottom-0 left-3/4 hidden w-screen bg-muted lg:block" />
 				<div className="mx-auto text-base lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-8">
 					<div>
 						<Link
-							className="mb-12 inline-flex items-center justify-start gap-2 rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-500"
+							className="mb-12 inline-flex items-center justify-start gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90"
 							href={"/discover"}
 						>
 							<MoveLeftIcon className="size-3" />
 							Back
 						</Link>
 
-						<h3 className="mt-2 font-bold text-3xl/8 text-gray-900 tracking-tight sm:text-4xl">
+						<h3 className="mt-2 font-bold text-3xl/8 text-foreground tracking-tight sm:text-4xl">
 							{caseStudy.title}
 						</h3>
 						<div className="mt-3 flex items-center justify-start gap-3">
-							<span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-1 font-medium text-indigo-700 text-xs">
+							<span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 font-medium text-primary text-xs">
 								{caseStudy.sector}
 							</span>
 							<p className="text-muted-foreground text-sm">
@@ -62,7 +74,7 @@ const DiscoverCaseStudyPage = async ({
 									y={0}
 								>
 									<rect
-										className="text-gray-200"
+										className="text-muted"
 										fill="currentColor"
 										height={4}
 										width={4}
@@ -84,20 +96,20 @@ const DiscoverCaseStudyPage = async ({
 									className="aspect-12/7 w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
 									height={1376}
 									src={
-										normalizeImageUrl(caseStudy.feature_image_url) ??
+										caseStudy.featuredImage ??
 										"https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 									}
 									width={1184}
 								/>
-								<figcaption className="mt-3 flex text-gray-500 text-sm">
+								<figcaption className="mt-3 flex text-muted-foreground text-sm">
 									<span className="ml-2">{`${caseStudy.title} featured image`}</span>
 								</figcaption>
 							</figure>
 						</div>
 					</div>
 					<div className="mt-8 lg:mt-0">
-						<div className="mx-auto text-base/7 text-gray-500">
-							<div className="mb-10 flex items-center justify-start gap-2 text-black">
+						<div className="mx-auto text-base/7 text-muted-foreground">
+							<div className="mb-10 flex items-center justify-start gap-2 text-foreground">
 								<div className="mr-4 flex items-center justify-start gap-2 text-sm">
 									<MailIcon className="size-4" /> {caseStudy.contact}
 								</div>
@@ -106,13 +118,16 @@ const DiscoverCaseStudyPage = async ({
 									{caseStudy.authors}
 								</div>
 							</div>
-							<div className="prose">
-								<div>{extractTextFromHtml(caseStudy.description)}</div>
-							</div>
+							<SanitisedHtml
+								className="prose max-w-none prose-a:text-primary"
+								html={caseStudy.description}
+							/>
 
 							<div className="pt-6">
 								<CaseStudyCases
-									assuranceCaseIds={caseStudy.assurance_cases ?? []}
+									assuranceCaseIds={(caseStudy.assuranceCases ?? []).map((ac) =>
+										String(ac.id)
+									)}
 								/>
 							</div>
 						</div>

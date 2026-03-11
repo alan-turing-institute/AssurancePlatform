@@ -10,12 +10,17 @@
 
 /**
  * Node types for React Flow visualisation in curriculum components.
+ * Uses full element names (e.g. "propertyClaim") matching the export schema.
  *
  * Note on Context: The Prisma schema supports CONTEXT as an ElementType, but in
  * the current design context is stored as a string[] attribute on nodes
  * (see TreeNode.context), not as a separate node type.
  */
-export type NodeType = "goal" | "strategy" | "propertyClaim" | "evidence";
+export type CurriculumNodeType =
+	| "goal"
+	| "strategy"
+	| "propertyClaim"
+	| "evidence";
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 
@@ -23,107 +28,24 @@ export type ImportanceLevel = "critical" | "medium" | "low";
 
 export type QualityLevel = "high" | "medium" | "low";
 
-/**
- * Base element shared by all assurance case nodes.
- * Contains common properties for all element types.
- * @deprecated Use TreeNode from CaseExportNested format instead
- */
-export type BaseElement = {
-	name: string;
-	description: string;
-	short_description?: string;
-	long_description?: string;
-	priority?: string;
-	status?: string;
-	strength?: number;
-	confidence?: number;
-	assumptions?: string[];
-	justifications?: string[];
-};
-
-/**
- * @deprecated Context is now a string[] attribute on nodes, not a separate element.
- * See TreeNode.context for the current implementation.
- */
-export type Context = BaseElement;
-
-/**
- * @deprecated Use TreeNode from CaseExportNested format instead
- */
-export type Evidence = BaseElement & {
-	evidenceType?: string;
-	quality?: QualityLevel;
-	context?: Context[];
-};
-
-/**
- * @deprecated Use TreeNode from CaseExportNested format instead
- */
-export type PropertyClaim = BaseElement & {
-	evidence?: Evidence[];
-	context?: Context[];
-};
-
-/**
- * @deprecated Use TreeNode from CaseExportNested format instead
- */
-export type Strategy = BaseElement & {
-	strategyType?: "AND" | "OR";
-	approach?: "decomposition" | "alternative";
-	property_claims?: PropertyClaim[];
-	context?: Context[];
-};
-
-/**
- * @deprecated Use TreeNode from CaseExportNested format instead
- */
-export type Goal = BaseElement & {
-	id?: string;
-	importance?: ImportanceLevel;
-	progress?: number;
-	subGoalsCount?: number;
-	isRoot?: boolean;
-	context?: Context[];
-	strategies?: Strategy[];
-};
-
-/**
- * Top-level case data structure containing all goals.
- * @deprecated Use CaseExportNested for new implementations
- */
-export type CaseData = {
-	goals: Goal[];
-};
-
 // ============================================
 // New Export Schema Types (v1.0)
 // ============================================
 
 /**
- * Element types in the new export schema.
- * Uses uppercase to match Prisma enum.
+ * Element types, roles, and module embed types — re-exported from Prisma as single source of truth.
  */
-export type ElementType =
-	| "GOAL"
-	| "CONTEXT"
-	| "STRATEGY"
-	| "PROPERTY_CLAIM"
-	| "EVIDENCE"
-	| "JUSTIFICATION"
-	| "ASSUMPTION"
-	| "MODULE"
-	| "AWAY_GOAL"
-	| "CONTRACT";
+export type {
+	ElementRole,
+	ElementType,
+	ModuleEmbedType,
+} from "@/src/generated/prisma";
 
-/**
- * Role for goal elements.
- */
-export type ElementRole = "TOP_LEVEL" | "SUPPORTING";
-
-/**
- * Module embed type for module elements.
- */
-export type ModuleEmbedType = "COPY" | "REFERENCE";
+import type {
+	ElementRole,
+	ElementType,
+	ModuleEmbedType,
+} from "@/src/generated/prisma";
 
 /**
  * Comment attached to an element in the export.
@@ -506,7 +428,6 @@ export type ReactFlowNodeData = {
 	assumption?: string;
 	/** Single-string justification from TreeNode export */
 	justification?: string;
-	element?: BaseElement;
 	importance?: ImportanceLevel;
 	progress?: number;
 	strength?: string;

@@ -20,32 +20,44 @@ repos:
         args: ['--maxkb=2000', '--enforce-all']
         exclude: hero\.gif|codeveloping-an-assurance-case\.pdf|src/generated/prisma/
 
-  # - repo: https://github.com/Yelp/detect-secrets
-  #   rev: v1.4.0
-  #   hooks:
-  #     - id: detect-secrets
-  #       args: ['--baseline', '.secrets.baseline']
+  - repo: local
+    hooks:
+      - id: detect-secrets
+        name: detect-secrets
+        entry: bash -c 'uv tool run --from detect-secrets detect-secrets-hook --baseline .secrets.baseline "$@"' --
+        language: system
+        files: '.*'
+        exclude: '(\.secrets\.baseline|pnpm-lock\.yaml|\.beads/)$'
 
-  # Frontend formatting and linting with Biome/Ultracite (optional)
-  # - repo: local
-  #   hooks:
-  #     - id: ultracite-format
-  #       name: ultracite format (safe fixes only)
-  #       entry: bash -c 'npx ultracite format || true'
-  #       language: system
-  #       pass_filenames: false
-  #       files: '\.(jsx?|tsx?|json)$'
-  #       exclude: '(node_modules|\.next|public/documentation|logs)/'
+  # Frontend linting and formatting with Biome/Ultracite (staged files only)
+  - repo: local
+    hooks:
+      - id: ultracite-lint
+        name: ultracite lint (staged files)
+        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite lint'
+        language: system
+        pass_filenames: false
+        files: '\.(jsx?|tsx?|json)$'
+        exclude: '(node_modules|\.next|public/documentation|logs)/'
 
-  # TypeScript type checking (optional)
-  # - repo: local
-  #   hooks:
-  #     - id: tsc
-  #       name: TypeScript Compiler
-  #       entry: bash -c 'npx tsc --noEmit'
-  #       language: system
-  #       files: '\.(ts|tsx)$'
-  #       pass_filenames: false
+      - id: ultracite-format
+        name: ultracite format (staged files, safe fixes only)
+        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite format || true'
+        language: system
+        pass_filenames: false
+        files: '\.(jsx?|tsx?|json)$'
+        exclude: '(node_modules|\.next|public/documentation|logs)/'
+
+  # TypeScript type checking (skip if no TS files staged)
+  - repo: local
+    hooks:
+      - id: tsc
+        name: TypeScript Compiler
+        entry: bash -c 'git diff --cached --name-only | grep -qE "\.(ts|tsx)$" && npx tsc --noEmit --skipLibCheck || true'
+        language: system
+        files: '\.(ts|tsx)$'
+        exclude: '\.next/'
+        pass_filenames: false
 
   # File cleanup (last, so it doesn't interfere with other tools)
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -54,8 +66,8 @@ repos:
       - id: debug-statements
         files: \.(js|jsx|ts|tsx)$
       - id: end-of-file-fixer
-        exclude: \.(svg|png|jpg|jpeg|gif)$|tsconfig\.tsbuildinfo$
+        exclude: \.(svg|png|jpg|jpeg|gif)$|tsconfig\.tsbuildinfo$|^\.beads/
       - id: mixed-line-ending
-        exclude: \.(svg|png|jpg|jpeg|gif)$
+        exclude: \.(svg|png|jpg|jpeg|gif)$|^\.beads/
       - id: trailing-whitespace
-        exclude: \.(svg|png|jpg|jpeg|gif|md)$
+        exclude: \.(svg|png|jpg|jpeg|gif|md)$|^\.beads/

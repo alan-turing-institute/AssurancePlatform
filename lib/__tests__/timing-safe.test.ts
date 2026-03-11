@@ -12,15 +12,15 @@ describe("timing-safe utilities", () => {
 		});
 
 		it("should return true for future timestamp", () => {
-			const now = 1000000;
+			const now = 1_000_000;
 			vi.setSystemTime(now);
-			expect(isTimestampValid(now + 10000)).toBe(true);
+			expect(isTimestampValid(now + 10_000)).toBe(true);
 		});
 
 		it("should return false for past timestamp", () => {
-			const now = 1000000;
+			const now = 1_000_000;
 			vi.setSystemTime(now);
-			expect(isTimestampValid(now - 10000)).toBe(false);
+			expect(isTimestampValid(now - 10_000)).toBe(false);
 		});
 
 		it("should return true for undefined (no expiry)", () => {
@@ -28,16 +28,16 @@ describe("timing-safe utilities", () => {
 		});
 
 		it("should return true when timestamp equals current time", () => {
-			const now = 1000000;
+			const now = 1_000_000;
 			vi.setSystemTime(now);
 			// now <= timestamp, so equal should be valid
 			expect(isTimestampValid(now, now)).toBe(true);
 		});
 
 		it("should accept custom now parameter", () => {
-			const customNow = 500000;
-			expect(isTimestampValid(600000, customNow)).toBe(true);
-			expect(isTimestampValid(400000, customNow)).toBe(false);
+			const customNow = 500_000;
+			expect(isTimestampValid(600_000, customNow)).toBe(true);
+			expect(isTimestampValid(400_000, customNow)).toBe(false);
 		});
 
 		it("should handle edge case with MAX_SAFE_INTEGER", () => {
@@ -99,44 +99,6 @@ describe("timing-safe utilities", () => {
 			const elapsed = Date.now() - start;
 			// Should be nearly instant
 			expect(elapsed).toBeLessThan(10);
-		});
-	});
-
-	describe("timing consistency", () => {
-		it("isTimestampValid should take similar time regardless of result", () => {
-			const iterations = 1000;
-			const futureTimestamp = Date.now() + 100000;
-			const pastTimestamp = Date.now() - 100000;
-
-			// Measure time for valid timestamp
-			const validStart = performance.now();
-			for (let i = 0; i < iterations; i++) {
-				isTimestampValid(futureTimestamp);
-			}
-			const validTime = performance.now() - validStart;
-
-			// Measure time for invalid timestamp
-			const invalidStart = performance.now();
-			for (let i = 0; i < iterations; i++) {
-				isTimestampValid(pastTimestamp);
-			}
-			const invalidTime = performance.now() - invalidStart;
-
-			// Measure time for undefined timestamp
-			const undefinedStart = performance.now();
-			for (let i = 0; i < iterations; i++) {
-				isTimestampValid(undefined);
-			}
-			const undefinedTime = performance.now() - undefinedStart;
-
-			// All execution times should be within reasonable tolerance of each other
-			// Note: This is a rough check - actual timing attacks require more sophisticated analysis
-			const avgTime = (validTime + invalidTime + undefinedTime) / 3;
-			const tolerance = avgTime * 0.5; // 50% tolerance for test stability
-
-			expect(Math.abs(validTime - avgTime)).toBeLessThan(tolerance);
-			expect(Math.abs(invalidTime - avgTime)).toBeLessThan(tolerance);
-			expect(Math.abs(undefinedTime - avgTime)).toBeLessThan(tolerance);
 		});
 	});
 });

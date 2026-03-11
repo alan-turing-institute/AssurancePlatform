@@ -3,7 +3,7 @@
 import { MoveRightIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
-import { useEmailModal } from "@/hooks/use-email-modal";
+import { useEmailModal } from "@/hooks/modal-hooks";
 import { Button } from "../ui/button";
 
 export const EmailModal = () => {

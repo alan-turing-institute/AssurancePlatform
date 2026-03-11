@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
-import { isPublicRoute } from "./lib/routes";
+import { isAuthRoute, isPublicRoute } from "./lib/routes";
 
 export default withAuth(
 	function middleware(req) {
 		const pathname = req.nextUrl.pathname;
+		const token = req.nextauth.token;
+
+		// Redirect authenticated users away from auth pages (login/register)
+		if (token?.id != null && isAuthRoute(pathname)) {
+			const rawRedirect =
+				req.nextUrl.searchParams.get("redirect") || "/dashboard";
+			// Prevent open redirect: only allow relative paths that don't start with //
+			const redirectTo =
+				rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
+					? rawRedirect
+					: "/dashboard";
+			return NextResponse.redirect(new URL(redirectTo, req.url));
+		}
 
 		// Check redirect loop protection
 		const redirectCount = Number.parseInt(
@@ -45,6 +58,9 @@ export default withAuth(
 				// JWT auth: require valid token with user ID
 				return token?.id != null;
 			},
+		},
+		pages: {
+			signIn: "/login",
 		},
 	}
 );

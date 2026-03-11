@@ -69,7 +69,7 @@ const ReflectionPrompts = ({
 	// Load current response when prompt changes
 	useEffect(() => {
 		const promptId = prompts[currentPromptIndex]?.id;
-		setCurrentResponse(responses[promptId] || "");
+		setCurrentResponse((promptId ? responses[promptId] : undefined) ?? "");
 		setErrors({});
 	}, [currentPromptIndex, prompts, responses]);
 
@@ -167,7 +167,10 @@ const ReflectionPrompts = ({
 			// Check if all required prompts have responses
 			const missingRequired = prompts
 				.filter((p) => p.required)
-				.find((p) => !allResponses[p.id] || allResponses[p.id].length === 0);
+				.find((p) => {
+					const response = allResponses[p.id];
+					return !response || response.length === 0;
+				});
 
 			if (missingRequired && !allowSkip) {
 				setErrors({

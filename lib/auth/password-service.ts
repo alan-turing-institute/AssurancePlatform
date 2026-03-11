@@ -35,12 +35,18 @@ export async function verifyPassword(
 			return { valid: false, needsUpgrade: false };
 		}
 
-		const iterations = Number.parseInt(iterationsStr, 10);
+		const iterations = Number.parseInt(iterationsStr ?? "", 10);
 		if (Number.isNaN(iterations)) {
 			return { valid: false, needsUpgrade: false };
 		}
 
-		const derivedKey = pbkdf2Sync(password, salt, iterations, 32, "sha256");
+		const derivedKey = pbkdf2Sync(
+			password,
+			salt ?? "",
+			iterations,
+			32,
+			"sha256"
+		);
 
 		const valid = derivedKey.toString("base64") === storedHash;
 		return { valid, needsUpgrade: valid }; // Upgrade if valid

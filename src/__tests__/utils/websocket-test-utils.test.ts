@@ -199,7 +199,7 @@ describe("WebSocket Testing Utilities", () => {
 		});
 
 		it("should create assurance case update messages", () => {
-			const assuranceCase = { id: 1, name: "Test Case" };
+			const assuranceCase = { id: "1", name: "Test Case" };
 			const message = createAssuranceCaseUpdate(assuranceCase, "user1");
 
 			expect(message.type).toBe(MessageType.CASE_MESSAGE);
@@ -295,7 +295,7 @@ describe("WebSocket Testing Utilities", () => {
 			const messages = await simulator.simulateConcurrentEdits(5, 10);
 
 			expect(messages).toHaveLength(5);
-			expect(messages[0].type).toBe(MessageType.CASE_MESSAGE);
+			expect(messages[0]!.type).toBe(MessageType.CASE_MESSAGE);
 		});
 
 		it("should simulate cursor movements", () => {
@@ -353,7 +353,7 @@ describe("WebSocket Testing Utilities", () => {
 
 			const duplicates = tester.checkForDuplicates();
 			expect(duplicates).toHaveLength(1);
-			expect(duplicates[0].count).toBe(2);
+			expect(duplicates[0]!.count).toBe(2);
 		});
 
 		it("should verify message integrity", () => {
@@ -369,8 +369,8 @@ describe("WebSocket Testing Utilities", () => {
 
 			const errors = tester.verifyMessageIntegrity();
 			expect(errors).toHaveLength(1);
-			expect(errors[0].errors).toContain("Missing message type");
-			expect(errors[0].errors).toContain("Missing message content");
+			expect(errors[0]!.errors).toContain("Missing message type");
+			expect(errors[0]!.errors).toContain("Missing message content");
 		});
 
 		it("should generate message statistics", () => {
@@ -458,7 +458,7 @@ describe("WebSocket Testing Utilities", () => {
 
 			const events = tester.getEvents();
 			expect(events).toHaveLength(3);
-			expect(events[0].type).toBe("connect");
+			expect(events[0]!.type).toBe("connect");
 		});
 
 		it("should check event timing", async () => {

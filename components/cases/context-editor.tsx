@@ -44,7 +44,7 @@ const ContextEditor: React.FC<ContextEditorProps> = ({ form, readOnly }) => {
 			itemIds.push(`${componentId}-${idCounter + itemIds.length}`);
 		}
 		return contextValues.map((value, i) => ({
-			id: itemIds[i],
+			id: itemIds[i] ?? `${componentId}-fallback-${i}`,
 			value,
 		}));
 	}, [contextValues, itemIds, componentId, idCounter]);
@@ -82,7 +82,7 @@ const ContextEditor: React.FC<ContextEditorProps> = ({ form, readOnly }) => {
 							<span className="flex-1 text-sm">{item.value}</span>
 							{!readOnly && (
 								<button
-									className="rounded p-1 text-rose-500 hover:bg-rose-500/10"
+									className="rounded p-1 text-destructive hover:bg-destructive/10"
 									onClick={() => removeContext(idx)}
 									title="Remove context"
 									type="button"

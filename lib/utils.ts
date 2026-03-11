@@ -25,21 +25,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Normalizes image URLs.
- *
- * @deprecated Images are now served through Next.js internal routes.
- * This function is kept for backward compatibility but simply returns the URL unchanged.
- *
- * @param {string | null | undefined} url - The URL to normalize
- * @returns {string | null | undefined} The URL unchanged
- */
-export function normalizeImageUrl(
-	url: string | null | undefined
-): string | null | undefined {
-	return url;
-}
-
-/**
  * Serialises an object, converting BigInt values to strings.
  *
  * Prisma returns BigInt for certain database fields (e.g., auto-increment IDs).

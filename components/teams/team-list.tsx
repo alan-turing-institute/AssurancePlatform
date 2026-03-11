@@ -1,10 +1,10 @@
 "use client";
 
 import { PlusCircleIcon } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useCreateTeamModal } from "@/hooks/use-create-team-modal";
+import { useCreateTeamModal } from "@/hooks/modal-hooks";
 import { TeamCard } from "./team-card";
 
 type Team = {
@@ -25,18 +25,13 @@ type TeamListProps = {
 export function TeamList({ teams }: TeamListProps) {
 	const createTeamModal = useCreateTeamModal();
 	const [searchTerm, setSearchTerm] = useState("");
-	const [filteredTeams, setFilteredTeams] = useState(teams);
 
-	useEffect(() => {
-		const searchTermLowerCase = searchTerm.toLowerCase();
+	const filteredTeams = useMemo(() => {
 		if (searchTerm.trim() === "") {
-			setFilteredTeams(teams);
-		} else {
-			const filtered = teams.filter((team) =>
-				team.name.toLowerCase().includes(searchTermLowerCase)
-			);
-			setFilteredTeams(filtered);
+			return teams;
 		}
+		const lower = searchTerm.toLowerCase();
+		return teams.filter((team) => team.name.toLowerCase().includes(lower));
 	}, [searchTerm, teams]);
 
 	return (
@@ -53,7 +48,7 @@ export function TeamList({ teams }: TeamListProps) {
 				</div>
 				<div className="flex w-1/3 items-end justify-end">
 					<button
-						className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
+						className="inline-flex items-center rounded-md bg-primary px-3 py-2 font-semibold text-primary-foreground text-sm shadow-xs hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-solid focus-visible:outline-offset-2"
 						onClick={() => createTeamModal.onOpen()}
 						type="button"
 					>
@@ -68,7 +63,7 @@ export function TeamList({ teams }: TeamListProps) {
 					onClick={() => createTeamModal.onOpen()}
 					type="button"
 				>
-					<Card className="flex h-full items-center justify-center border-dashed transition-all group-hover:bg-indigo-500/10">
+					<Card className="flex h-full items-center justify-center border-dashed transition-all group-hover:bg-primary/10">
 						<CardContent className="flex flex-col items-center justify-center gap-2 py-10">
 							<PlusCircleIcon className="group-hover:-translate-y-1 h-10 w-10 transition-all" />
 							<div>

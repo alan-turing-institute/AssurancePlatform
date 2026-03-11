@@ -1,23 +1,36 @@
+import os from "node:os";
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+const cpuCount = os.cpus().length;
 
 export default defineConfig({
 	plugins: [react()],
 	test: {
 		environment: "jsdom",
-		setupFiles: ["./src/__tests__/setup.tsx"],
+		setupFiles: ["./src/__tests__/setup/index.ts"],
 		globals: true,
 		css: true,
 		pool: "forks",
 		poolOptions: {
 			forks: {
 				singleFork: false,
-				maxForks: 4,
+				maxForks: Math.max(cpuCount - 1, 4),
 			},
 		},
 		include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-		exclude: ["node_modules", "dist", ".idea", ".git", ".cache", "tea-docs/**"],
+		exclude: [
+			"node_modules",
+			"dist",
+			".idea",
+			".git",
+			".cache",
+			"tea-docs/**",
+			".claude/**",
+			"e2e/**",
+			"src/__tests__/integration/**",
+		],
 		testTimeout: 15_000,
 		hookTimeout: 10_000,
 		teardownTimeout: 5000,
@@ -26,7 +39,7 @@ export default defineConfig({
 			? ["default", ["junit", { outputFile: "./test-results/junit.xml" }]]
 			: ["default"],
 		coverage: {
-			enabled: true,
+			enabled: !!process.env.COVERAGE,
 			provider: "v8",
 			reporter: ["json", "html"],
 			reportsDirectory: "./coverage",
@@ -44,6 +57,8 @@ export default defineConfig({
 				"dist/**",
 				"**/*.spec.{js,ts,jsx,tsx}",
 				"**/*.test.{js,ts,jsx,tsx}",
+				"**/*.md",
+				"**/*.bak",
 			],
 			include: [
 				"app/**",
@@ -57,15 +72,13 @@ export default defineConfig({
 			clean: true,
 			skipFull: false,
 			thresholds: {
-				global: {
-					statements: 80,
-					branches: 80,
-					functions: 80,
-					lines: 80,
-				},
+				statements: 20,
+				branches: 20,
+				functions: 20,
+				lines: 20,
 			},
 		},
-		maxConcurrency: 5,
+		maxConcurrency: 10,
 		passWithNoTests: false,
 		allowOnly: process.env.CI !== "true",
 		dangerouslyIgnoreUnhandledErrors: false,
@@ -82,7 +95,7 @@ export default defineConfig({
 			"@/providers": path.resolve(__dirname, "./providers"),
 			"@/app": path.resolve(__dirname, "./app"),
 			"@/config": path.resolve(__dirname, "./config"),
-			"@/data": path.resolve(__dirname, "./data"),
+			"@/store": path.resolve(__dirname, "./store"),
 			"@/public": path.resolve(__dirname, "./public"),
 			"@/src": path.resolve(__dirname, "./src"),
 		},

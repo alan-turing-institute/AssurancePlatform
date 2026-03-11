@@ -8,35 +8,52 @@ import { Skeleton } from "../ui/skeleton";
 type UserData = {
 	username: string;
 	email: string;
+	firstName?: string;
+	lastName?: string;
+};
+
+type UserState = {
+	user: UserData | null;
+	loading: boolean;
 };
 
 const LoggedInUser = () => {
-	const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-	const [loading, setLoading] = useState<boolean>(true);
+	const [state, setState] = useState<UserState>({ user: null, loading: true });
 
 	useEffect(() => {
 		const loadUser = async () => {
 			try {
-				const result = await fetchCurrentUser("");
+				const result = await fetchCurrentUser();
 				if (result) {
-					setCurrentUser({ username: result.username, email: result.email });
+					setState({
+						user: {
+							username: result.username,
+							email: result.email,
+							firstName: result.firstName ?? undefined,
+							lastName: result.lastName ?? undefined,
+						},
+						loading: false,
+					});
 				} else {
-					setCurrentUser(null);
+					setState({ user: null, loading: false });
 				}
-				setLoading(false);
 			} catch {
 				// Handle error silently - user will see loading state
-				setCurrentUser(null);
-				setLoading(false);
+				setState({ user: null, loading: false });
 			}
 		};
 
 		loadUser();
 	}, []);
 
+	const displayName =
+		[state.user?.firstName, state.user?.lastName].filter(Boolean).join(" ") ||
+		state.user?.username ||
+		"";
+
 	return (
 		<>
-			{loading ? (
+			{state.loading ? (
 				<div className="p-4">
 					<div className="flex items-center gap-3">
 						<Skeleton className="aspect-square h-10 w-10 rounded-full" />
@@ -48,21 +65,21 @@ const LoggedInUser = () => {
 				</div>
 			) : (
 				<Link
-					className="group block shrink-0 rounded-md p-4 hover:bg-indigo-900/40 dark:hover:bg-indigo-600"
+					className="group block shrink-0 rounded-md p-4 hover:bg-sidebar-accent/40"
 					href="/dashboard/settings"
 				>
 					<div className="flex items-center gap-3">
-						<span className="inline-flex size-10 items-center justify-center rounded-full bg-indigo-900/40 dark:bg-indigo-500">
-							<span className="font-medium text-sm text-white capitalize">
-								{currentUser?.username.charAt(0)}
+						<span className="inline-flex size-10 items-center justify-center rounded-full bg-sidebar-accent/60">
+							<span className="font-medium text-sidebar-accent-foreground text-sm capitalize">
+								{displayName.charAt(0)}
 							</span>
 						</span>
 						<div>
-							<p className="font-medium text-sm text-white capitalize group-hover:text-white">
-								{currentUser?.username}
+							<p className="font-medium text-sidebar-foreground text-sm capitalize">
+								{displayName}
 							</p>
-							<p className="font-medium text-gray-300 text-xs group-hover:text-white">
-								{currentUser?.email}
+							<p className="font-medium text-sidebar-foreground/70 text-xs">
+								{state.user?.email}
 							</p>
 						</div>
 					</div>

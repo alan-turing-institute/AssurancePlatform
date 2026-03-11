@@ -1,5 +1,13 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiRateLimited,
+	apiSuccess,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { registerUserSchema } from "@/lib/schemas/user";
 import {
 	checkAndRecordRateLimit,
 	RATE_LIMIT_CONFIGS,
@@ -12,19 +20,24 @@ import { registerUser } from "@/lib/services/user-service";
  */
 export async function POST(request: Request) {
 	try {
-		const body = await request.json();
+		const parsed = registerUserSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
+		}
+
+		const { username, email, password } = parsed.data;
 
 		// Extract IP address and user agent for rate limiting
 		const headersList = await headers();
 		const forwarded = headersList.get("x-forwarded-for");
 		const ipAddress = forwarded
-			? forwarded.split(",")[0].trim()
+			? (forwarded.split(",")[0]?.trim() ?? "unknown")
 			: (headersList.get("x-real-ip") ?? "unknown");
 		const userAgent = headersList.get("user-agent") ?? undefined;
-
-		// Support both password formats (password1/password2 from form, or password directly)
-		const password = body.password || body.password1;
-		const email = body.email?.toLowerCase().trim();
 
 		// Check rate limit before processing
 		const rateLimitResult = await checkAndRecordRateLimit(
@@ -34,56 +47,24 @@ export async function POST(request: Request) {
 		);
 
 		if (!rateLimitResult.allowed) {
-			const response = NextResponse.json(
-				{ error: rateLimitResult.reason },
-				{ status: 429 }
-			);
-
-			// Add Retry-After header if available
-			if (rateLimitResult.retryAfterMs) {
-				response.headers.set(
-					"Retry-After",
-					String(Math.ceil(rateLimitResult.retryAfterMs / 1000))
-				);
-			}
-
-			return response;
-		}
-
-		// Validate passwords match if both provided
-		if (body.password1 && body.password2 && body.password1 !== body.password2) {
-			return NextResponse.json(
-				{ error: "Passwords do not match", field: "password2" },
-				{ status: 400 }
-			);
-		}
-
-		if (!(body.username && body.email && password)) {
-			return NextResponse.json(
-				{ error: "Username, email, and password are required" },
-				{ status: 400 }
+			return apiRateLimited(
+				rateLimitResult.reason ?? "Too many requests",
+				rateLimitResult.retryAfterMs
 			);
 		}
 
 		const result = await registerUser({
-			username: body.username,
-			email: body.email,
-			password,
+			username,
+			email,
+			password: password ?? "",
 		});
 
-		if (result.error) {
-			return NextResponse.json(
-				{ error: result.error, field: result.field },
-				{ status: 400 }
-			);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return NextResponse.json(result.data, { status: 201 });
+		return apiSuccess(result.data, 201);
 	} catch (error) {
-		console.error("Registration error:", error);
-		return NextResponse.json(
-			{ error: "Failed to process registration" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

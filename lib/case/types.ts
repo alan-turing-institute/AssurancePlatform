@@ -1,7 +1,12 @@
 /**
  * Shared types for case helper modules
  */
-import type { Context, Evidence, Goal, PropertyClaim, Strategy } from "@/types";
+import type {
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 
 // Regular expressions
 export const NUMERIC_ID_PATTERN = /^\d+$/;
@@ -11,96 +16,99 @@ export type Map = {
 };
 
 // Extended CaseNode interface with proper typing
+// Dynamic property bag: legacy case tree operations pass arbitrary fields through nodes
 export type CaseNode = {
 	hidden: boolean;
-	id: number;
+	id: string;
 	type: string;
 	name?: string;
-	goals?: Goal[];
-	context?: Context[];
-	property_claims?: PropertyClaim[];
-	strategies?: Strategy[];
-	evidence?: Evidence[];
+	goals?: GoalResponse[];
+	context?: string[];
+	propertyClaims?: PropertyClaimResponse[];
+	strategies?: StrategyResponse[];
+	evidence?: EvidenceResponse[];
 	childrenHidden?: boolean;
 	originalHidden?: boolean;
 	[key: string]: unknown;
 };
 
 // Node type for React Flow integration
+// Dynamic property bag on data: legacy case tree operations spread arbitrary fields into node data
 export type ReactFlowNode = {
 	id: string;
 	type: string;
 	data: {
-		id: number;
+		id: string;
 		name: string;
 		type: string;
-		goal_id?: number | null;
-		strategy_id?: number | null;
-		property_claim_id?: number | number[] | null;
-		context?: Context[];
-		property_claims?: PropertyClaim[];
-		strategies?: Strategy[];
-		evidence?: Evidence[];
+		goalId?: string | null;
+		strategyId?: string | null;
+		propertyClaimId?: string | string[] | null;
+		context?: string[];
+		propertyClaims?: PropertyClaimResponse[];
+		strategies?: StrategyResponse[];
+		evidence?: EvidenceResponse[];
 		[key: string]: unknown;
 	};
 	position: { x: number; y: number };
 };
 
 // API Response types
+// Dynamic property bag: API responses include varying fields per element type
 export type ApiNodeResponse = {
-	id: number;
+	id: string;
 	name: string;
-	short_description: string;
-	long_description: string;
+	description: string;
 	type: string;
 	[key: string]: unknown;
 };
 
 // Payload types for API requests
 export type DetachPayload = {
-	goal_id: number | null;
-	strategy_id: number | null;
-	property_claim_id: number | null;
+	goalId: string | null;
+	strategyId: string | null;
+	propertyClaimId: string | null;
 };
 
 // Comment type for API operations
 export type CommentPayload = {
 	content: string;
-	[key: string]: unknown;
 };
 
 // Type for node creation payloads
 export type CreateNodePayload =
-	| Partial<Goal>
-	| Partial<Context>
-	| Partial<Strategy>
-	| Partial<PropertyClaim>
-	| Partial<Evidence>;
+	| Partial<GoalResponse>
+	| Partial<StrategyResponse>
+	| Partial<PropertyClaimResponse>
+	| Partial<EvidenceResponse>;
 
 // Type for nested array items that can contain various node types
 export type NestedArrayItem =
-	| Goal
-	| PropertyClaim
-	| Strategy
-	| Context
-	| Evidence;
+	| GoalResponse
+	| PropertyClaimResponse
+	| StrategyResponse
+	| EvidenceResponse;
 
 // Type guards
 export function hasPropertyClaims(
 	obj: unknown
-): obj is { property_claims: PropertyClaim[] } {
-	return typeof obj === "object" && obj !== null && "property_claims" in obj;
+): obj is { propertyClaims: PropertyClaimResponse[] } {
+	return typeof obj === "object" && obj !== null && "propertyClaims" in obj;
 }
 
-export function hasStrategies(obj: unknown): obj is { strategies: Strategy[] } {
+export function hasStrategies(
+	obj: unknown
+): obj is { strategies: StrategyResponse[] } {
 	return typeof obj === "object" && obj !== null && "strategies" in obj;
 }
 
-export function hasEvidence(obj: unknown): obj is { evidence: Evidence[] } {
+export function hasEvidence(
+	obj: unknown
+): obj is { evidence: EvidenceResponse[] } {
 	return typeof obj === "object" && obj !== null && "evidence" in obj;
 }
 
-export function hasContext(obj: unknown): obj is { context: Context[] } {
+export function hasContext(obj: unknown): obj is { context: string[] } {
 	return typeof obj === "object" && obj !== null && "context" in obj;
 }
 

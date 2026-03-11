@@ -56,8 +56,6 @@ type NodeData = {
 	id?: string;
 	name?: string;
 	description?: string;
-	long_description?: string;
-	short_description?: string;
 	context?: string[];
 	assumption?: string;
 	justification?: string;
@@ -136,10 +134,7 @@ const useHoverState = () => {
 // ========================================================================
 
 const getNodeDescription = (data: NodeData): string =>
-	data.description ||
-	data.long_description ||
-	data.short_description ||
-	"No description available";
+	data.description || "No description available";
 
 const computeHasAttributes = (
 	attributes: ReturnType<typeof extractAttributes>

@@ -1,0 +1,54 @@
+diff --git a/dist/NextStepReact.js b/dist/NextStepReact.js
+index 218eecee38a3f3f8a682c37fa97ffa0520cf7d43..ce00fa7687ad11366ce64e8c861e3d250a4cbead 100644
+--- a/dist/NextStepReact.js
++++ b/dist/NextStepReact.js
+@@ -416,6 +416,24 @@ const NextStepReact = ({ children, steps, shadowRgb = '0, 0, 0', shadowOpacity =
+                     setCurrentStep(nextStepIndex);
+                     scrollToElement(nextStepIndex);
+                 }
++                // Fix: recalculate pointer position after React commits the new step
++                requestAnimationFrame(() => {
++                    const nextSelector = currentTourSteps[nextStepIndex]?.selector;
++                    if (nextSelector) {
++                        const el = document.querySelector(nextSelector);
++                        if (el) {
++                            const rect = el.getBoundingClientRect();
++                            const body = document.body;
++                            const bodyRect = body.getBoundingClientRect();
++                            setPointerPosition({
++                                x: rect.left - bodyRect.left + body.scrollLeft,
++                                y: rect.top - bodyRect.top + body.scrollTop,
++                                width: rect.width,
++                                height: rect.height,
++                            });
++                        }
++                    }
++                });
+             }
+             catch (error) {
+                 if (!disableConsoleLogs) {
+@@ -463,6 +481,24 @@ const NextStepReact = ({ children, steps, shadowRgb = '0, 0, 0', shadowOpacity =
+                     setCurrentStep(prevStepIndex);
+                     scrollToElement(prevStepIndex);
+                 }
++                // Fix: recalculate pointer position after React commits the new step
++                requestAnimationFrame(() => {
++                    const prevSelector = currentTourSteps[prevStepIndex]?.selector;
++                    if (prevSelector) {
++                        const el = document.querySelector(prevSelector);
++                        if (el) {
++                            const rect = el.getBoundingClientRect();
++                            const body = document.body;
++                            const bodyRect = body.getBoundingClientRect();
++                            setPointerPosition({
++                                x: rect.left - bodyRect.left + body.scrollLeft,
++                                y: rect.top - bodyRect.top + body.scrollTop,
++                                width: rect.width,
++                                height: rect.height,
++                            });
++                        }
++                    }
++                });
+             }
+             catch (error) {
+                 if (!disableConsoleLogs) {

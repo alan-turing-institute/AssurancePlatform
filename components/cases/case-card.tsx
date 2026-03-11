@@ -1,6 +1,12 @@
 "use client";
 
-import { Eye, MessageCircleMore, PencilRuler, Trash2 } from "lucide-react";
+import {
+	BookOpen,
+	Eye,
+	MessageCircleMore,
+	PencilRuler,
+	Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +20,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { formatShortDate } from "@/lib/date";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 
 // Flexible type for case data - compatible with both actions and domain types
@@ -21,16 +28,19 @@ export type CaseCardData = {
 	id: number | string;
 	name: string;
 	description?: string;
-	created_date?: string;
+	createdDate?: string;
+	updatedDate?: string;
 	permissions?: string | string[];
+	isDemo?: boolean;
 };
 
 type CaseCardProps = {
 	assuranceCase: CaseCardData;
+	className?: string;
 };
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
-	const { id, name, description, created_date } = assuranceCase;
+	const { id, name, description, createdDate, isDemo } = assuranceCase;
 	const router = useRouter();
 
 	const [open, setOpen] = useState(false);
@@ -102,7 +112,12 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	return (
 		<div className="group relative min-h-[420px]">
 			<Link href={`/case/${assuranceCase.id}`}>
-				<Card className="flex h-full flex-col items-start justify-start transition-all group-hover:bg-indigo-500/5">
+				<Card
+					className={cn(
+						"flex h-full flex-col items-start justify-start transition-all group-hover:bg-primary/5",
+						isDemo && "ring-2 ring-primary/20"
+					)}
+				>
 					<CardHeader className="w-full flex-1">
 						{imageLoading ? (
 							<Skeleton className="relative mb-4 flex aspect-video overflow-hidden rounded-md" />
@@ -112,19 +127,26 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 									<Image
 										alt={`Assurance Case ${assuranceCase.name} screenshot`}
 										fill
+										sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 										src={imgSrc}
 									/>
+								)}
+								{isDemo && (
+									<div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground text-xs">
+										<BookOpen aria-hidden="true" className="h-3 w-3" />
+										Tutorial
+									</div>
 								)}
 							</div>
 						)}
 						<CardTitle>{name}</CardTitle>
-						<CardDescription className="text-slate-900 dark:text-white">
+						<CardDescription className="text-foreground">
 							{description}
 						</CardDescription>
 					</CardHeader>
-					<CardFooter className="flex w-full items-center justify-between text-gray-500 text-xs dark:text-gray-300">
+					<CardFooter className="flex w-full items-center justify-between text-muted-foreground text-xs">
 						<p>
-							Created on: {created_date ? formatShortDate(created_date) : "N/A"}
+							Created on: {createdDate ? formatShortDate(createdDate) : "N/A"}
 						</p>
 						<div className="flex items-center justify-start gap-2">
 							{permissions.includes("view") && <Eye className="h-4 w-4" />}
@@ -140,7 +162,9 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 			</Link>
 			{(permissions.includes("manage") || permissions.includes("owner")) && (
 				<button
-					className="absolute top-4 right-4 z-50 hidden rounded-md bg-rose-500 p-2 text-white shadow-lg group-hover:block"
+					aria-label="Delete case"
+					className="absolute top-4 right-4 z-50 hidden rounded-md bg-destructive p-2 text-destructive-foreground shadow-lg group-hover:block"
+					data-testid="delete-case-button"
 					disabled={loading}
 					onClick={() => setOpen(true)}
 					type="button"

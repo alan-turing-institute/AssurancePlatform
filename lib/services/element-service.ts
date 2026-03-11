@@ -1,91 +1,47 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { toPrefix, toPrismaType } from "@/lib/element-types";
+import { prisma } from "@/lib/prisma";
+import type {
+	CreateElementSchemaOutput,
+	UpdateElementSchemaOutput,
+} from "@/lib/schemas/element";
+import { transformToResponse } from "@/lib/transforms/element-response";
+import {
+	getDeletedDescendantIds,
+	getDescendantIds,
+} from "@/lib/utils/tree-traversal";
 import type {
 	PermissionLevel,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
 
-// Element types mapping from frontend to Prisma enum
-const ELEMENT_TYPE_MAP: Record<string, string> = {
-	goal: "GOAL",
-	strategy: "STRATEGY",
-	property: "PROPERTY_CLAIM",
-	property_claim: "PROPERTY_CLAIM",
-	propertyclaim: "PROPERTY_CLAIM",
-	evidence: "EVIDENCE",
-} as const;
-
-// Reverse mapping for API responses
-const ELEMENT_TYPE_REVERSE_MAP: Record<string, string> = {
-	GOAL: "TopLevelNormativeGoal",
-	STRATEGY: "Strategy",
-	PROPERTY_CLAIM: "PropertyClaim",
-	EVIDENCE: "Evidence",
-} as const;
-
-// Element type prefixes for auto-generated names
-const TYPE_PREFIXES: Record<string, string> = {
-	GOAL: "G",
-	STRATEGY: "S",
-	PROPERTY_CLAIM: "P",
-	EVIDENCE: "E",
-};
-
-export type CreateElementInput = {
+/**
+ * Create element input — extends the Zod schema output with API-layer fields
+ * that are not part of the validation schema (caseId, elementType, description aliases).
+ */
+export type CreateElementInput = CreateElementSchemaOutput & {
 	caseId: string;
 	elementType: string;
-	name?: string;
-	description?: string;
 	shortDescription?: string;
 	longDescription?: string;
-	parentId?: string | null;
-	// For compatibility with Django format
-	goal_id?: string | number | null;
-	strategy_id?: string | number | null;
-	property_claim_id?: string | number | number[] | null;
-	assurance_case_id?: string | number;
-	// Evidence-specific
-	url?: string;
-	URL?: string;
-	urls?: string[];
-	// GSN-specific
-	assumption?: string;
-	justification?: string;
-	context?: string[];
 };
 
-export type UpdateElementInput = {
-	name?: string;
-	description?: string;
-	shortDescription?: string;
-	longDescription?: string;
-	parentId?: string | null;
-	url?: string;
-	URL?: string;
-	urls?: string[];
-	assumption?: string;
-	justification?: string;
-	context?: string[];
-	inSandbox?: boolean;
-	// For compatibility with Django format
-	goal_id?: string | number | null;
-	strategy_id?: string | number | null;
-	property_claim_id?: string | number | number[] | null;
-};
+/**
+ * Update element input — derived directly from the Zod schema output.
+ */
+export type UpdateElementInput = UpdateElementSchemaOutput;
 
 export type ElementResponse = {
 	id: string;
 	type: string;
 	name: string;
-	short_description: string;
-	long_description: string;
-	created_date: string;
-	in_sandbox: boolean;
-	assurance_case_id: string;
-	goal_id?: string | null;
-	strategy_id?: string | null;
-	property_claim_id?: string | string[] | null;
+	description: string;
+	createdDate: string;
+	inSandbox: boolean;
+	assuranceCaseId: string;
+	goalId?: string | null;
+	strategyId?: string | null;
+	propertyClaimId?: string | string[] | null;
 	URL?: string;
 	urls?: string[];
 	assumption?: string;
@@ -108,8 +64,8 @@ async function validateCaseAccess(
 }
 
 /**
- * Resolves parent ID from Django-style fields (goal_id, strategy_id, property_claim_id)
- * Returns undefined if no parent field is specified (to distinguish from explicitly setting null)
+ * Resolves parent ID from input.
+ * Returns undefined if no parent field is specified (to distinguish from explicitly setting null).
  */
 function resolveParentId(
 	input: CreateElementInput | UpdateElementInput
@@ -119,32 +75,9 @@ function resolveParentId(
 		return input.parentId;
 	}
 
-	// Check Django-style parent references
-	if (input.goal_id) {
-		return String(input.goal_id);
-	}
-	if (input.strategy_id) {
-		return String(input.strategy_id);
-	}
-	if (input.property_claim_id) {
-		// Handle array format from evidence
-		if (Array.isArray(input.property_claim_id)) {
-			return String(input.property_claim_id[0]);
-		}
-		return String(input.property_claim_id);
-	}
-
 	// Return undefined to indicate no parent field was specified
 	// (different from null which means explicitly clearing the parent)
 	return;
-}
-
-/**
- * Maps element type from frontend format to Prisma enum
- */
-function mapElementType(type: string): string {
-	const normalised = type.toLowerCase().replace(/\s+/g, "_");
-	return ELEMENT_TYPE_MAP[normalised] || type.toUpperCase();
 }
 
 /**
@@ -158,7 +91,7 @@ function resolveUrls(input: CreateElementInput | UpdateElementInput): {
 	const legacyUrl = input.url || input.URL;
 
 	if (input.urls && input.urls.length > 0) {
-		return { url: input.urls[0], urls: input.urls };
+		return { url: input.urls[0] ?? null, urls: input.urls };
 	}
 	if (legacyUrl) {
 		return { url: legacyUrl, urls: [legacyUrl] };
@@ -184,101 +117,6 @@ function applyUrlUpdates(
 }
 
 /**
- * Adds parent reference to response in Django format
- */
-function addParentReference(
-	response: ElementResponse,
-	parent: { id: string; elementType: string },
-	elementType: string
-): void {
-	switch (parent.elementType) {
-		case "GOAL":
-			response.goal_id = parent.id;
-			break;
-		case "STRATEGY":
-			response.strategy_id = parent.id;
-			break;
-		case "PROPERTY_CLAIM":
-			// Evidence expects property_claim_id as an array (Django format)
-			// Other elements get it as a string
-			if (elementType === "EVIDENCE") {
-				response.property_claim_id = [parent.id];
-			} else {
-				response.property_claim_id = parent.id;
-			}
-			break;
-		default:
-			// Unknown parent type - no reference added
-			break;
-	}
-}
-
-/**
- * Transforms Prisma element to Django-compatible response format
- */
-function transformToResponse(element: {
-	id: string;
-	elementType: string;
-	name: string | null;
-	description: string;
-	assumption: string | null;
-	justification: string | null;
-	context: string[];
-	url: string | null;
-	urls: string[];
-	inSandbox: boolean;
-	level: number | null;
-	caseId: string;
-	parentId: string | null;
-	createdAt: Date;
-	parent?: {
-		id: string;
-		elementType: string;
-	} | null;
-}): ElementResponse {
-	const response: ElementResponse = {
-		id: element.id,
-		type: ELEMENT_TYPE_REVERSE_MAP[element.elementType] || element.elementType,
-		name: element.name || "",
-		short_description: element.description || "",
-		long_description: element.description || "",
-		created_date: element.createdAt.toISOString(),
-		in_sandbox: element.inSandbox,
-		assurance_case_id: element.caseId,
-		comments: [],
-	};
-
-	// Add parent reference in Django format
-	if (element.parent) {
-		addParentReference(response, element.parent, element.elementType);
-	}
-
-	// Add type-specific fields
-	// Handle URLs: prefer urls array, fall back to legacy url field
-	if (element.urls && element.urls.length > 0) {
-		response.urls = element.urls;
-		response.URL = element.urls[0]; // Backward compatibility: first URL
-	} else if (element.url) {
-		response.URL = element.url;
-		response.urls = [element.url]; // Backward compatibility
-	}
-	if (element.assumption) {
-		response.assumption = element.assumption;
-	}
-	if (element.justification) {
-		response.justification = element.justification;
-	}
-	if (element.context && element.context.length > 0) {
-		response.context = element.context;
-	}
-	if (element.level !== null) {
-		response.level = element.level;
-	}
-
-	return response;
-}
-
-/**
  * Generates an element name based on type and hierarchy.
  *
  * Naming conventions:
@@ -295,7 +133,7 @@ async function generateElementName(
 	parentId: string | null,
 	parentInfo: { name: string | null; elementType: string } | null
 ): Promise<string> {
-	const prefix = TYPE_PREFIXES[elementType] || "X";
+	const prefix = toPrefix(elementType);
 
 	// Property claims with a property claim parent get hierarchical names (P1.1, P1.1.1)
 	if (
@@ -304,10 +142,11 @@ async function generateElementName(
 		parentInfo.name
 	) {
 		// Count existing siblings under the same parent (efficient indexed query)
-		const siblingCount = await prismaNew.assuranceElement.count({
+		const siblingCount = await prisma.assuranceElement.count({
 			where: {
 				parentId,
 				elementType: "PROPERTY_CLAIM",
+				deletedAt: null,
 			},
 		});
 		return `${parentInfo.name}.${siblingCount + 1}`;
@@ -320,11 +159,12 @@ async function generateElementName(
 		parentId &&
 		parentInfo?.elementType !== "PROPERTY_CLAIM"
 	) {
-		const caseWideCount = await prismaNew.assuranceElement.count({
+		const caseWideCount = await prisma.assuranceElement.count({
 			where: {
 				caseId,
 				elementType: "PROPERTY_CLAIM",
 				level: 1,
+				deletedAt: null,
 			},
 		});
 		return `${prefix}${caseWideCount + 1}`;
@@ -332,10 +172,11 @@ async function generateElementName(
 
 	// All other element types (Strategy, Evidence, Context) - count case-wide
 	// This ensures unique identifiers across the entire case (S1, S2, E1, E2, C1, C2...)
-	const caseWideCount = await prismaNew.assuranceElement.count({
+	const caseWideCount = await prisma.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: elementType as PrismaElementType,
+			deletedAt: null,
 		},
 	});
 	return `${prefix}${caseWideCount + 1}`;
@@ -348,8 +189,8 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	level: number;
 	parentInfo: { name: string | null; elementType: string };
 }> {
-	const parent = await prismaNew.assuranceElement.findUnique({
-		where: { id: parentId },
+	const parent = await prisma.assuranceElement.findFirst({
+		where: { id: parentId, deletedAt: null },
 		select: { level: true, elementType: true, name: true },
 	});
 
@@ -368,92 +209,151 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 }
 
 /**
+ * Checks if a case already has a goal element.
+ * Returns true if a goal exists, false otherwise.
+ */
+async function caseHasGoal(caseId: string): Promise<boolean> {
+	const existingGoal = await prisma.assuranceElement.findFirst({
+		where: {
+			caseId,
+			elementType: "GOAL",
+			deletedAt: null,
+		},
+		select: { id: true },
+	});
+	return !!existingGoal;
+}
+
+/**
+ * Creates an evidence link between an evidence element and a claim.
+ */
+async function createEvidenceLink(
+	evidenceId: string,
+	claimId: string
+): Promise<void> {
+	await prisma.evidenceLink.create({
+		data: {
+			evidenceId,
+			claimId,
+		},
+	});
+}
+
+/**
+ * Resolves description from input fields with priority order.
+ */
+function resolveDescription(input: CreateElementInput): string {
+	return (
+		input.description || input.shortDescription || input.longDescription || ""
+	);
+}
+
+/**
+ * Creates the element in the database and handles evidence linking.
+ */
+async function createElementInDatabase(
+	input: CreateElementInput,
+	caseId: string,
+	elementType: string,
+	elementName: string,
+	effectiveParentId: string | null | undefined,
+	level: number | undefined,
+	userId: string,
+	intendedParentId: string | null
+): Promise<{ data: ElementResponse } | { error: string }> {
+	const element = await prisma.assuranceElement.create({
+		data: {
+			caseId,
+			elementType: elementType as
+				| "GOAL"
+				| "STRATEGY"
+				| "PROPERTY_CLAIM"
+				| "EVIDENCE",
+			name: elementName,
+			description: resolveDescription(input),
+			parentId: effectiveParentId,
+			...resolveUrls(input),
+			assumption: input.assumption,
+			justification: input.justification,
+			context: input.context ?? [],
+			level,
+			createdById: userId,
+		},
+		include: {
+			parent: { select: { id: true, elementType: true } },
+		},
+	});
+
+	// Create EvidenceLink for evidence elements with an intended parent claim
+	if (intendedParentId) {
+		await createEvidenceLink(element.id, intendedParentId);
+	}
+
+	const response = transformToResponse(element);
+
+	// Evidence has no parentId, so transformToResponse won't set propertyClaimId.
+	// Add it from the evidence link we just created.
+	if (intendedParentId) {
+		response.propertyClaimId = [intendedParentId];
+	}
+
+	return { data: response };
+}
+
+/**
  * Creates a new element in a case
  */
 export async function createElement(
 	userId: string,
 	input: CreateElementInput
-): Promise<{ data?: ElementResponse; error?: string }> {
-	const caseId = input.caseId || String(input.assurance_case_id);
+): ServiceResult<ElementResponse> {
+	const caseId = input.caseId;
 	if (!caseId) {
 		return { error: "Case ID is required" };
 	}
 
-	// Validate user has EDIT permission
 	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
 	if (!hasAccess) {
 		return { error: "Permission denied" };
 	}
 
-	const elementType = mapElementType(input.elementType);
+	const elementType = toPrismaType(input.elementType);
 	const parentId = resolveParentId(input);
 
-	// Prevent duplicate goals - a case can only have one goal
-	if (elementType === "GOAL") {
-		const existingGoal = await prismaNew.assuranceElement.findFirst({
-			where: {
-				caseId,
-				elementType: "GOAL",
-			},
-			select: { id: true },
-		});
-		if (existingGoal) {
-			return { error: "A case can only have one goal claim" };
-		}
+	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
+		return { error: "A case can only have one goal claim" };
 	}
 
-	// Calculate level and get parent info for property claims
-	let level: number | undefined;
-	let parentInfo: { name: string | null; elementType: string } | null = null;
+	const { level, parentInfo } =
+		elementType === "PROPERTY_CLAIM" && parentId
+			? await calculatePropertyClaimLevel(parentId)
+			: { level: undefined, parentInfo: null };
 
-	if (elementType === "PROPERTY_CLAIM" && parentId) {
-		const result = await calculatePropertyClaimLevel(parentId);
-		level = result.level;
-		parentInfo = result.parentInfo;
-	}
-
-	// Auto-generate name if not provided
-	let elementName = input.name || "";
-	if (!elementName) {
-		elementName = await generateElementName(
+	const elementName =
+		input.name ||
+		(await generateElementName(
 			elementType,
 			caseId,
 			parentId ?? null,
 			parentInfo
-		);
-	}
+		));
+
+	// Evidence uses evidence_links instead of parentId
+	const isEvidence = elementType === "EVIDENCE";
+	const intendedParentId = isEvidence ? (parentId ?? null) : null;
+	const effectiveParentId = isEvidence ? null : parentId;
 
 	try {
-		const element = await prismaNew.assuranceElement.create({
-			data: {
-				caseId,
-				elementType: elementType as
-					| "GOAL"
-					| "STRATEGY"
-					| "PROPERTY_CLAIM"
-					| "EVIDENCE",
-				name: elementName,
-				description:
-					input.description ||
-					input.shortDescription ||
-					input.longDescription ||
-					"",
-				parentId,
-				...resolveUrls(input),
-				assumption: input.assumption,
-				justification: input.justification,
-				context: input.context ?? [],
-				level,
-				createdById: userId,
-			},
-			include: {
-				parent: {
-					select: { id: true, elementType: true },
-				},
-			},
-		});
-
-		return { data: transformToResponse(element) };
+		return await createElementInDatabase(
+			input,
+			caseId,
+			elementType,
+			elementName,
+			effectiveParentId,
+			level,
+			userId,
+			intendedParentId
+		);
 	} catch (error) {
 		console.error("Failed to create element:", error);
 		return { error: "Failed to create element" };
@@ -466,10 +366,10 @@ export async function createElement(
 export async function getElement(
 	userId: string,
 	elementId: string
-): Promise<{ data?: ElementResponse; error?: string }> {
+): ServiceResult<ElementResponse> {
 	try {
-		const element = await prismaNew.assuranceElement.findUnique({
-			where: { id: elementId },
+		const element = await prisma.assuranceElement.findFirst({
+			where: { id: elementId, deletedAt: null },
 			include: {
 				parent: {
 					select: { id: true, elementType: true },
@@ -484,7 +384,7 @@ export async function getElement(
 		// Validate user has VIEW permission on the case
 		const hasAccess = await validateCaseAccess(userId, element.caseId, "VIEW");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
 		}
 
 		return { data: transformToResponse(element) };
@@ -533,177 +433,14 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
  * Calculates the new level for a property claim based on its new parent
  */
 async function calculateNewLevel(newParentId: string): Promise<number> {
-	const newParent = await prismaNew.assuranceElement.findUnique({
-		where: { id: newParentId },
+	const newParent = await prisma.assuranceElement.findFirst({
+		where: { id: newParentId, deletedAt: null },
 		select: { level: true, elementType: true },
 	});
 	if (newParent?.elementType === "PROPERTY_CLAIM") {
 		return (newParent.level || 1) + 1;
 	}
 	return 1;
-}
-
-/**
- * Updates an existing element
- */
-export async function updateElement(
-	userId: string,
-	elementId: string,
-	input: UpdateElementInput
-): Promise<{ data?: ElementResponse; error?: string }> {
-	try {
-		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
-			where: { id: elementId },
-			select: { caseId: true, elementType: true, level: true },
-		});
-
-		if (!existing) {
-			return { error: "Element not found" };
-		}
-
-		// Validate user has EDIT permission
-		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
-		if (!hasAccess) {
-			return { error: "Permission denied" };
-		}
-
-		// Build update data from input fields
-		const updateData = buildUpdateData(input);
-
-		// Handle parent change (for move operations)
-		const newParentId = resolveParentId(input);
-		if (newParentId !== undefined && newParentId !== null) {
-			// Validate parent change doesn't create circular reference
-			const validationError = await validateParentChange(
-				elementId,
-				newParentId
-			);
-			if (validationError) {
-				return { error: validationError };
-			}
-
-			updateData.parentId = newParentId;
-
-			// Recalculate level if it's a property claim
-			if (existing.elementType === "PROPERTY_CLAIM" && newParentId) {
-				updateData.level = await calculateNewLevel(newParentId);
-			}
-		} else if (newParentId === null) {
-			// Allow setting parent to null (detaching)
-			updateData.parentId = null;
-		}
-
-		const element = await prismaNew.assuranceElement.update({
-			where: { id: elementId },
-			data: updateData,
-			include: {
-				parent: {
-					select: { id: true, elementType: true },
-				},
-			},
-		});
-
-		return { data: transformToResponse(element) };
-	} catch (error) {
-		console.error("Failed to update element:", error);
-		return { error: "Failed to update element" };
-	}
-}
-
-/**
- * Deletes an element
- */
-export async function deleteElement(
-	userId: string,
-	elementId: string
-): Promise<{ success?: boolean; error?: string }> {
-	try {
-		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
-			where: { id: elementId },
-			select: { caseId: true },
-		});
-
-		if (!existing) {
-			return { error: "Element not found" };
-		}
-
-		// Validate user has EDIT permission
-		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
-		if (!hasAccess) {
-			return { error: "Permission denied" };
-		}
-
-		// Delete element and all descendants (cascade delete configured in schema)
-		await prismaNew.assuranceElement.delete({
-			where: { id: elementId },
-		});
-
-		return { success: true };
-	} catch (error) {
-		console.error("Failed to delete element:", error);
-		return { error: "Failed to delete element" };
-	}
-}
-
-/**
- * Detaches an element (moves to sandbox)
- */
-export async function detachElement(
-	userId: string,
-	elementId: string
-): Promise<{ success?: boolean; error?: string }> {
-	try {
-		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
-			where: { id: elementId },
-			select: { caseId: true },
-		});
-
-		if (!existing) {
-			return { error: "Element not found" };
-		}
-
-		// Validate user has EDIT permission
-		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
-		if (!hasAccess) {
-			return { error: "Permission denied" };
-		}
-
-		// Move to sandbox by clearing parent and setting inSandbox
-		await prismaNew.assuranceElement.update({
-			where: { id: elementId },
-			data: {
-				parentId: null,
-				inSandbox: true,
-			},
-		});
-
-		return { success: true };
-	} catch (error) {
-		console.error("Failed to detach element:", error);
-		return { error: "Failed to detach element" };
-	}
-}
-
-/**
- * Recursively gets all descendant element IDs for a given parent
- */
-async function getDescendantIds(parentId: string): Promise<string[]> {
-	const children = await prismaNew.assuranceElement.findMany({
-		where: { parentId },
-		select: { id: true },
-	});
-
-	const descendantIds: string[] = [];
-	for (const child of children) {
-		descendantIds.push(child.id);
-		const grandchildren = await getDescendantIds(child.id);
-		descendantIds.push(...grandchildren);
-	}
-
-	return descendantIds;
 }
 
 /**
@@ -729,6 +466,181 @@ async function validateParentChange(
 }
 
 /**
+ * Updates an existing element
+ */
+export async function updateElement(
+	userId: string,
+	elementId: string,
+	input: UpdateElementInput
+): ServiceResult<ElementResponse> {
+	try {
+		// Get existing element to check permissions (include deleted to give proper error message)
+		const existing = await prisma.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { caseId: true, elementType: true, level: true, deletedAt: true },
+		});
+
+		if (!existing) {
+			return { error: "Element not found" };
+		}
+
+		if (existing.deletedAt) {
+			return { error: "Cannot update deleted element" };
+		}
+
+		// Validate user has EDIT permission
+		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
+		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Build update data from input fields
+		const updateData = buildUpdateData(input);
+
+		// Handle parent change (for move operations)
+		const newParentId = resolveParentId(input);
+		if (newParentId !== undefined && newParentId !== null) {
+			// Validate new parent exists, is not deleted, and belongs to the same case
+			const newParent = await prisma.assuranceElement.findUnique({
+				where: { id: newParentId },
+				select: { caseId: true, deletedAt: true },
+			});
+
+			if (
+				!newParent ||
+				newParent.deletedAt ||
+				newParent.caseId !== existing.caseId
+			) {
+				return { error: "Element not found" };
+			}
+
+			// Validate parent change doesn't create circular reference
+			const validationError = await validateParentChange(
+				elementId,
+				newParentId
+			);
+			if (validationError) {
+				return { error: validationError };
+			}
+
+			updateData.parentId = newParentId;
+
+			// Recalculate level if it's a property claim
+			if (existing.elementType === "PROPERTY_CLAIM" && newParentId) {
+				updateData.level = await calculateNewLevel(newParentId);
+			}
+		} else if (newParentId === null) {
+			// Allow setting parent to null (detaching)
+			updateData.parentId = null;
+		}
+
+		const element = await prisma.assuranceElement.update({
+			where: { id: elementId },
+			data: updateData,
+			include: {
+				parent: {
+					select: { id: true, elementType: true },
+				},
+			},
+		});
+
+		return { data: transformToResponse(element) };
+	} catch (error) {
+		console.error("Failed to update element:", error);
+		return { error: "Failed to update element" };
+	}
+}
+
+/**
+ * Soft-deletes an element and all its descendants
+ */
+export async function deleteElement(
+	userId: string,
+	elementId: string
+): ServiceResult {
+	try {
+		// Get existing element to check permissions
+		const existing = await prisma.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { caseId: true, deletedAt: true },
+		});
+
+		if (!existing) {
+			return { error: "Element not found" };
+		}
+
+		if (existing.deletedAt) {
+			return { error: "Element already deleted" };
+		}
+
+		// Validate user has EDIT permission
+		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
+		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Gather descendants and soft-delete atomically
+		await prisma.$transaction(async (tx) => {
+			const descendantIds = await getDescendantIds(elementId, tx);
+			const allIds = [elementId, ...descendantIds];
+			await tx.assuranceElement.updateMany({
+				where: { id: { in: allIds } },
+				data: { deletedAt: new Date(), deletedById: userId },
+			});
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to delete element:", error);
+		return { error: "Failed to delete element" };
+	}
+}
+
+/**
+ * Detaches an element (moves to sandbox)
+ */
+export async function detachElement(
+	userId: string,
+	elementId: string
+): ServiceResult {
+	try {
+		// Get existing element to check permissions
+		const existing = await prisma.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { caseId: true, deletedAt: true },
+		});
+
+		if (!existing) {
+			return { error: "Element not found" };
+		}
+
+		if (existing.deletedAt) {
+			return { error: "Cannot detach deleted element" };
+		}
+
+		// Validate user has EDIT permission
+		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
+		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Move to sandbox by clearing parent and setting inSandbox
+		await prisma.assuranceElement.update({
+			where: { id: elementId },
+			data: {
+				parentId: null,
+				inSandbox: true,
+			},
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to detach element:", error);
+		return { error: "Failed to detach element" };
+	}
+}
+
+/**
  * Attaches an element (moves from sandbox to parent)
  * Also cascades to all descendants, removing them from sandbox
  */
@@ -736,22 +648,40 @@ export async function attachElement(
 	userId: string,
 	elementId: string,
 	parentId: string
-): Promise<{ success?: boolean; error?: string }> {
+): ServiceResult {
 	try {
 		// Get existing element to check permissions
-		const existing = await prismaNew.assuranceElement.findUnique({
+		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, elementType: true },
+			select: { caseId: true, elementType: true, deletedAt: true },
 		});
 
 		if (!existing) {
 			return { error: "Element not found" };
 		}
 
+		if (existing.deletedAt) {
+			return { error: "Cannot attach deleted element" };
+		}
+
 		// Validate user has EDIT permission
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
-			return { error: "Permission denied" };
+			return { error: "Element not found" };
+		}
+
+		// Validate parent exists, is not deleted, and belongs to the same case
+		const parentElement = await prisma.assuranceElement.findUnique({
+			where: { id: parentId },
+			select: { caseId: true, deletedAt: true },
+		});
+
+		if (
+			!parentElement ||
+			parentElement.deletedAt ||
+			parentElement.caseId !== existing.caseId
+		) {
+			return { error: "Element not found" };
 		}
 
 		// Validate parent change doesn't create circular reference
@@ -760,47 +690,163 @@ export async function attachElement(
 			return { error: validationError };
 		}
 
-		// Calculate level if property claim
-		let level: number | undefined;
-		if (existing.elementType === "PROPERTY_CLAIM") {
-			const parent = await prismaNew.assuranceElement.findUnique({
-				where: { id: parentId },
-				select: { level: true, elementType: true },
-			});
-			if (parent?.elementType === "PROPERTY_CLAIM") {
-				level = (parent.level || 1) + 1;
-			} else {
-				level = 1;
+		// Calculate level, attach, and cascade sandbox removal atomically
+		await prisma.$transaction(async (tx) => {
+			let level: number | undefined;
+			if (existing.elementType === "PROPERTY_CLAIM") {
+				const parent = await tx.assuranceElement.findFirst({
+					where: { id: parentId, deletedAt: null },
+					select: { level: true, elementType: true },
+				});
+				if (parent?.elementType === "PROPERTY_CLAIM") {
+					level = (parent.level || 1) + 1;
+				} else {
+					level = 1;
+				}
 			}
-		}
 
-		// Attach to parent and remove from sandbox
-		await prismaNew.assuranceElement.update({
-			where: { id: elementId },
-			data: {
-				parentId,
-				inSandbox: false,
-				...(level !== undefined ? { level } : {}),
-			},
+			await tx.assuranceElement.update({
+				where: { id: elementId },
+				data: {
+					parentId,
+					inSandbox: false,
+					...(level !== undefined ? { level } : {}),
+				},
+			});
+
+			const descendantIds = await getDescendantIds(elementId, tx);
+			if (descendantIds.length > 0) {
+				await tx.assuranceElement.updateMany({
+					where: { id: { in: descendantIds } },
+					data: { inSandbox: false },
+				});
+			}
 		});
 
-		// Cascade: remove all descendants from sandbox as well
-		const descendantIds = await getDescendantIds(elementId);
-		if (descendantIds.length > 0) {
-			await prismaNew.assuranceElement.updateMany({
-				where: {
-					id: { in: descendantIds },
-				},
-				data: {
-					inSandbox: false,
-				},
-			});
-		}
-
-		return { success: true };
+		return { data: true };
 	} catch (error) {
 		console.error("Failed to attach element:", error);
 		return { error: "Failed to attach element" };
+	}
+}
+
+/**
+ * Moves an element to a new parent within the same case.
+ *
+ * Validates:
+ *  - Element exists and is not deleted
+ *  - User has EDIT permission on the case
+ *  - New parent exists, belongs to the same case, and is not deleted
+ *  - Child/parent types are compatible (see element-compatibility)
+ *  - The move does not create a circular reference
+ *
+ * Evidence elements use EvidenceLink rather than parentId.
+ */
+export async function moveElement(
+	userId: string,
+	elementId: string,
+	newParentId: string
+): ServiceResult {
+	try {
+		// Fetch element — validate exists and is not deleted
+		const element = await prisma.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { caseId: true, elementType: true, deletedAt: true },
+		});
+
+		if (!element) {
+			return { error: "Element not found" };
+		}
+
+		if (element.deletedAt) {
+			return { error: "Element not found" };
+		}
+
+		// Validate user has EDIT permission on the case (before any type-specific checks)
+		const hasAccess = await validateCaseAccess(userId, element.caseId, "EDIT");
+		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Goals cannot be moved — they are the root of the hierarchy
+		if (element.elementType === "GOAL") {
+			return { error: "Element not found" };
+		}
+
+		// Fetch new parent — validate exists, same case, not deleted
+		const newParent = await prisma.assuranceElement.findUnique({
+			where: { id: newParentId },
+			select: { caseId: true, elementType: true, deletedAt: true },
+		});
+
+		if (
+			!newParent ||
+			newParent.deletedAt ||
+			newParent.caseId !== element.caseId
+		) {
+			return { error: "Element not found" };
+		}
+
+		// Check type compatibility
+		const { canBeChildOf } = await import("@/lib/element-compatibility");
+		const elementTypeLower = element.elementType.toLowerCase();
+		const parentTypeLower = newParent.elementType.toLowerCase();
+
+		if (!canBeChildOf(elementTypeLower, parentTypeLower)) {
+			return {
+				error: `${element.elementType.toLowerCase()} cannot be a child of ${newParent.elementType.toLowerCase()}`,
+			};
+		}
+
+		// Validate the move does not create a circular reference
+		const circularError = await validateParentChange(elementId, newParentId);
+		if (circularError) {
+			return { error: circularError };
+		}
+
+		// Perform the move atomically
+		await prisma.$transaction(async (tx) => {
+			if (element.elementType === "EVIDENCE") {
+				// Evidence uses EvidenceLink rather than parentId
+				// Remove existing evidence link(s) for this evidence element
+				await tx.evidenceLink.deleteMany({
+					where: { evidenceId: elementId },
+				});
+
+				// Create new evidence link to the new parent claim
+				await tx.evidenceLink.create({
+					data: {
+						evidenceId: elementId,
+						claimId: newParentId,
+					},
+				});
+			} else {
+				// Non-evidence: update parentId directly
+				const updateData: Record<string, unknown> = { parentId: newParentId };
+
+				// Recalculate level for property claims
+				if (element.elementType === "PROPERTY_CLAIM") {
+					const parent = await tx.assuranceElement.findFirst({
+						where: { id: newParentId, deletedAt: null },
+						select: { level: true, elementType: true },
+					});
+					updateData.level =
+						parent?.elementType === "PROPERTY_CLAIM"
+							? (parent.level || 1) + 1
+							: 1;
+				}
+
+				await tx.assuranceElement.update({
+					where: { id: elementId },
+					data: updateData,
+				});
+			}
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("[moveElement]", { elementId, newParentId, userId, error });
+		return { error: "Failed to move element" };
 	}
 }
 
@@ -810,7 +856,7 @@ export async function attachElement(
 export async function getSandboxElements(
 	userId: string,
 	caseId: string
-): Promise<{ data?: ElementResponse[]; error?: string }> {
+): ServiceResult<ElementResponse[]> {
 	// Validate user has VIEW permission
 	const hasAccess = await validateCaseAccess(userId, caseId, "VIEW");
 	if (!hasAccess) {
@@ -818,10 +864,11 @@ export async function getSandboxElements(
 	}
 
 	try {
-		const elements = await prismaNew.assuranceElement.findMany({
+		const elements = await prisma.assuranceElement.findMany({
 			where: {
 				caseId,
 				inSandbox: true,
+				deletedAt: null,
 			},
 			include: {
 				parent: {
@@ -835,5 +882,61 @@ export async function getSandboxElements(
 	} catch (error) {
 		console.error("Failed to get sandbox elements:", error);
 		return { error: "Failed to get sandbox elements" };
+	}
+}
+
+/**
+ * Restores a soft-deleted element and all its descendants
+ */
+export async function restoreElement(
+	userId: string,
+	elementId: string
+): ServiceResult {
+	try {
+		// Get the element (including deleted ones)
+		const element = await prisma.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { parentId: true, caseId: true, deletedAt: true },
+		});
+
+		if (!element) {
+			return { error: "Element not found" };
+		}
+
+		if (!element.deletedAt) {
+			return { error: "Element is not deleted" };
+		}
+
+		// Validate user has EDIT permission
+		const hasAccess = await validateCaseAccess(userId, element.caseId, "EDIT");
+		if (!hasAccess) {
+			return { error: "Element not found" };
+		}
+
+		// Verify parent is not deleted (if exists)
+		if (element.parentId) {
+			const parent = await prisma.assuranceElement.findUnique({
+				where: { id: element.parentId },
+				select: { deletedAt: true },
+			});
+			if (parent?.deletedAt) {
+				return { error: "Cannot restore: parent element is deleted" };
+			}
+		}
+
+		// Gather deleted descendants and restore atomically
+		await prisma.$transaction(async (tx) => {
+			const descendantIds = await getDeletedDescendantIds(elementId, tx);
+			const allIds = [elementId, ...descendantIds];
+			await tx.assuranceElement.updateMany({
+				where: { id: { in: allIds } },
+				data: { deletedAt: null, deletedById: null },
+			});
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to restore element:", error);
+		return { error: "Failed to restore element" };
 	}
 }

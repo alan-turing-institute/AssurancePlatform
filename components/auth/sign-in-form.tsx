@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 // import { useLoginToken } from '.*/use-auth';
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -19,16 +20,8 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z.object({
-	identifier: z.string().min(2, "Please enter your email or username"),
-	password: z.string().min(8),
-});
-
 const SignInForm = () => {
-	const [_usernameError, _setUsernameError] = useState<string>("");
-	const [_passwordError, _setPasswordError] = useState<string>("");
 	const [errors, setErrors] = useState<string[]>([]);
-	const [_dirty, _setDirty] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [loadingProvider, setLoadingProvider] = useState(false);
 	const [successMessage, setSuccessMessage] = useState<string>("");
@@ -37,48 +30,15 @@ const SignInForm = () => {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
-	// const [token, setToken] = useLoginToken();
-	const { data: session } = useSession();
-
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<SignInFormInput>({
+		resolver: zodResolver(signInFormSchema),
 		defaultValues: {
 			identifier: "",
 			password: "",
 		},
 	});
 
-	// async function onSubmit(values: z.infer<typeof formSchema>) {
-	//   setLoading(true);
-
-	//   const user = {
-	//     username: values.username,
-	//     password: values.password,
-	//   };
-
-	//   const requestOptions: RequestInit = {
-	//     method: "POST",
-	//     headers: {
-	//       "Content-Type": "application/json",
-	//     },
-	//     body: JSON.stringify(user),
-	//   }
-
-	//   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL_STAGING}/api/auth/login/`, requestOptions)
-	//   const result = await response.json()
-
-	//   if (result.key) {
-	//     setToken(result.key);
-	//     router.push('/dashboard')
-	//     return
-	//   } else {
-	//     setLoading(false);
-	//     setToken(null);
-	//     setErrors(["Cannot log in with provided credentials"]);
-	//   }
-	// }
-
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: SignInFormInput) {
 		setLoading(true);
 		setErrors([]); // Clear any previous errors
 
@@ -136,14 +96,7 @@ const SignInForm = () => {
 				"Password reset successful! Please log in with your new password."
 			);
 		}
-
-		// Only redirect if we have a valid session
-		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
-		if (session?.user?.id) {
-			const redirectTo = searchParams.get("redirect") || "/dashboard";
-			router.push(redirectTo);
-		}
-	}, [session, router, searchParams]);
+	}, [searchParams]);
 
 	return (
 		<div className="mx-auto w-full max-w-sm lg:w-96">
@@ -153,24 +106,24 @@ const SignInForm = () => {
 				</h2>
 				<p className="mt-2 text-foreground text-sm leading-6">
 					Not a member?{" "}
-					<a
-						className="font-semibold text-indigo-600 hover:text-indigo-600/80"
+					<Link
+						className="font-semibold text-primary hover:text-primary/80"
 						href="/register"
 					>
 						Sign up today!
-					</a>
+					</Link>
 				</p>
 			</div>
 
 			{successMessage && (
-				<div className="mt-4 rounded-md border border-green-700 bg-green-500/20 px-4 py-2 text-green-700">
+				<div className="mt-4 rounded-md border border-success bg-success/20 px-4 py-2 text-success-foreground">
 					<p>{successMessage}</p>
 				</div>
 			)}
 
 			{errors?.map((error) => (
 				<div
-					className="-mb-4 mt-4 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
+					className="-mb-4 mt-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
 					key={crypto.randomUUID()}
 				>
 					<p>{error}</p>
@@ -213,20 +166,22 @@ const SignInForm = () => {
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword(!showPassword)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
@@ -234,18 +189,14 @@ const SignInForm = () => {
 							)}
 						/>
 						<div className="flex items-center justify-end">
-							<a
-								className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+							<Link
+								className="font-semibold text-primary text-sm hover:text-primary/80"
 								href="/forgot-password"
 							>
 								Forgot password?
-							</a>
+							</Link>
 						</div>
-						<Button
-							className="w-full bg-indigo-600 text-white hover:bg-indigo-500"
-							disabled={loading}
-							type="submit"
-						>
+						<Button className="w-full" disabled={loading} type="submit">
 							{loading ? "Logging in" : "Login"}
 						</Button>
 					</form>
@@ -257,7 +208,7 @@ const SignInForm = () => {
 							aria-hidden="true"
 							className="absolute inset-0 flex items-center"
 						>
-							<div className="w-full border-gray-200 border-t" />
+							<div className="w-full border-border border-t" />
 						</div>
 						<div className="relative flex justify-center font-medium text-sm leading-6">
 							<span className="bg-background px-6 text-foreground">
@@ -267,11 +218,12 @@ const SignInForm = () => {
 					</div>
 
 					<div className="mt-6 grid grid-cols-2 gap-4">
-						<button
-							className="flex w-full items-center justify-center gap-3 rounded-md bg-background px-3 py-2 font-semibold text-foreground text-sm shadow-xs ring-1 ring-gray-200 ring-inset hover:bg-foreground/10 focus-visible:ring-transparent dark:ring-slate-800"
+						<Button
+							className="flex w-full items-center justify-center gap-3"
 							disabled={loadingProvider}
 							onClick={() => handleProviderLogin("github")}
 							type="button"
+							variant="outline"
 						>
 							{loadingProvider ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -294,12 +246,13 @@ const SignInForm = () => {
 									</span>
 								</>
 							)}
-						</button>
-						<button
-							className="flex w-full items-center justify-center gap-3 rounded-md bg-background px-3 py-2 font-semibold text-foreground text-sm shadow-xs ring-1 ring-gray-200 ring-inset hover:bg-foreground/10 focus-visible:ring-transparent dark:ring-slate-800"
+						</Button>
+						<Button
+							className="flex w-full items-center justify-center gap-3"
 							disabled={loadingProvider}
 							onClick={() => handleProviderLogin("google")}
 							type="button"
+							variant="outline"
 						>
 							{loadingProvider ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -332,7 +285,7 @@ const SignInForm = () => {
 									</span>
 								</>
 							)}
-						</button>
+						</Button>
 					</div>
 				</div>
 			</div>

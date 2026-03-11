@@ -1,11 +1,16 @@
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/20/solid";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+	title: "Cookie Policy | TEA Platform",
+};
 
 const CookiePolicyPage = () => {
 	return (
-		<div className="bg-white px-6 py-32 lg:px-8">
-			<div className="mx-auto max-w-3xl text-base/7 text-gray-700">
+		<div className="bg-background px-6 py-32 lg:px-8">
+			<div className="mx-auto max-w-3xl text-base/7 text-muted-foreground">
 				{/* <p className="text-base/7 font-semibold text-indigo-600">Policy</p> */}
-				<h1 className="mt-2 text-pretty font-semibold text-4xl text-gray-900 tracking-tight sm:text-5xl">
+				<h1 className="mt-2 text-pretty font-semibold text-4xl text-foreground tracking-tight sm:text-5xl">
 					Cookie Notice for the Trustworthy and Ethical Assurance Platform
 				</h1>
 				<p className="mt-6 text-xl/8">
@@ -13,7 +18,7 @@ const CookiePolicyPage = () => {
 					(TEA) Platform (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;)
 					uses cookies on our website,{" "}
 					<a
-						className="text-indigo-600 underline"
+						className="text-primary underline"
 						href="https://assuranceplatform.azurewebsites.net/"
 					>
 						https://assuranceplatform.azurewebsites.net/
@@ -24,7 +29,7 @@ const CookiePolicyPage = () => {
 				</p>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						What are Cookies?
 					</h2>
 					<p className="mt-6">
@@ -36,7 +41,7 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						How We Use Cookies
 					</h2>
 					<p className="mt-6">
@@ -50,11 +55,11 @@ const CookiePolicyPage = () => {
 					<p className="mt-6">
 						We do <strong>not</strong> use cookies for:
 					</p>
-					<ul className="mt-8 max-w-xl space-y-4 text-gray-600">
+					<ul className="mt-8 max-w-xl space-y-4 text-muted-foreground">
 						<li className="flex gap-x-3">
 							<XCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-rose-600"
+								className="mt-1 size-5 flex-none text-destructive"
 							/>
 							<span>
 								Tracking your browsing activity across other websites.
@@ -63,14 +68,14 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<XCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-rose-600"
+								className="mt-1 size-5 flex-none text-destructive"
 							/>
 							<span>Marketing or advertising purposes.</span>
 						</li>
 						<li className="flex gap-x-3">
 							<XCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-rose-600"
+								className="mt-1 size-5 flex-none text-destructive"
 							/>
 							<span>Analytics on anonymous users before login.</span>
 						</li>
@@ -78,26 +83,26 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Types of Cookies We Use (Essential Cookies)
 					</h2>
 					<p className="mt-6">
 						The following are the essential cookies used by the TEA Platform.
 						These are set by NextAuth.js, the authentication library we use:
 					</p>
-					<ul className="mt-8 max-w-xl space-y-8 text-gray-600">
+					<ul className="mt-8 max-w-xl space-y-8 text-muted-foreground">
 						<li className="flex gap-x-3">
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-emerald-600"
+								className="mt-1 size-5 flex-none text-success"
 							/>
 							<div>
-								<strong className="font-semibold text-gray-900">
+								<strong className="font-semibold text-foreground">
 									next-auth.csrf-token
 								</strong>
 								<ul className="mt-2 space-y-2">
 									<li>
-										<strong className="font-semibold text-gray-900">
+										<strong className="font-semibold text-foreground">
 											Purpose:
 										</strong>{" "}
 										Helps protect against Cross-Site Request Forgery (CSRF)
@@ -105,7 +110,7 @@ const CookiePolicyPage = () => {
 										the Platform.
 									</li>
 									<li>
-										<strong className="font-semibold text-gray-900">
+										<strong className="font-semibold text-foreground">
 											Duration:
 										</strong>{" "}
 										Session cookie (expires when you close your browser) or for
@@ -117,15 +122,15 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-emerald-600"
+								className="mt-1 size-5 flex-none text-success"
 							/>
 							<div>
-								<strong className="font-semibold text-gray-900">
+								<strong className="font-semibold text-foreground">
 									next-auth.callback-url
 								</strong>
 								<ul className="mt-2 space-y-2">
 									<li>
-										<strong className="font-semibold text-gray-900">
+										<strong className="font-semibold text-foreground">
 											Purpose:
 										</strong>{" "}
 										Stores the URL the user was trying to access before being
@@ -134,7 +139,7 @@ const CookiePolicyPage = () => {
 										authentication.
 									</li>
 									<li>
-										<strong className="font-semibold text-gray-900">
+										<strong className="font-semibold text-foreground">
 											Duration:
 										</strong>{" "}
 										Session cookie (expires when you close your browser).
@@ -145,15 +150,15 @@ const CookiePolicyPage = () => {
 						<li className="flex gap-x-3">
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="mt-1 size-5 flex-none text-emerald-600"
+								className="mt-1 size-5 flex-none text-success"
 							/>
 							<div>
-								<strong className="font-semibold text-gray-900">
+								<strong className="font-semibold text-foreground">
 									next-auth.session-token
 								</strong>
 								<ul className="mt-2 space-y-2">
 									<li>
-										<strong className="font-semibold text-gray-900">
+										<strong className="font-semibold text-foreground">
 											Purpose:
 										</strong>{" "}
 										Stores your session information, allowing you to stay logged
@@ -162,7 +167,7 @@ const CookiePolicyPage = () => {
 										authenticated users.
 									</li>
 									<li>
-										<strong className="font-semibold text-gray-900">
+										<strong className="font-semibold text-foreground">
 											Duration:
 										</strong>{" "}
 										This is a session cookie that typically persists for the
@@ -181,14 +186,14 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Why These Cookies Are Essential
 					</h2>
 					<p className="mt-6">
 						These cookies are classified as &quot;strictly necessary&quot;
 						because:
 					</p>
-					<ul className="mt-6 ml-8 max-w-xl list-disc text-gray-600">
+					<ul className="mt-6 ml-8 max-w-xl list-disc text-muted-foreground">
 						<li>
 							They enable you to log in and access secure areas of the Platform.
 						</li>
@@ -203,7 +208,7 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Your Choices Regarding Cookies
 					</h2>
 					<p className="mt-6">
@@ -214,7 +219,7 @@ const CookiePolicyPage = () => {
 						Because the cookies we use are strictly necessary for registered
 						users to log in and use the Platform&apos;s features:
 					</p>
-					<ul className="mt-6 ml-8 max-w-xl list-disc text-gray-600">
+					<ul className="mt-6 ml-8 max-w-xl list-disc text-muted-foreground">
 						<li>
 							<strong>
 								You cannot opt-out of these essential cookies if you wish to log
@@ -237,7 +242,7 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Data Protection and GDPR Compliance
 					</h2>
 					<p className="mt-6">
@@ -256,7 +261,7 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Third-Party Cookies
 					</h2>
 					<p className="mt-6">
@@ -275,7 +280,7 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Changes to This Cookie Notice
 					</h2>
 					<p className="mt-6">
@@ -287,14 +292,14 @@ const CookiePolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<h2 className="text-pretty font-semibold text-3xl text-gray-900 tracking-tight">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
 						Contact Us
 					</h2>
 					<p className="mt-6">
 						If you have any questions about our use of cookies or this Cookie
 						Notice, please raise an issue via our GitHub repository:{" "}
 						<a
-							className="text-indigo-600 underline"
+							className="text-primary underline"
 							href=" https://github.com/alan-turing-institute/AssurancePlatform/issues"
 						>
 							https://github.com/alan-turing-institute/AssurancePlatform/issues

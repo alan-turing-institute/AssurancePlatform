@@ -135,9 +135,6 @@ function createPrismaClient() {
 
 export const prisma = globalForPrisma.prisma || createPrismaClient();
 
-// Legacy alias for backward compatibility during migration
-export const prismaNew = prisma;
-
 if (process.env.NODE_ENV !== "production") {
 	globalForPrisma.prisma = prisma;
 }

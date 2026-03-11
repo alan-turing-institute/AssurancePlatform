@@ -31,6 +31,7 @@ Table users {
   passwordResetExpires DateTime
   defaultCaseMode CaseMode [not null, default: 'STANDARD', note: 'Default view mode for new cases: STANDARD (simplified) or ADVANCED (full GSN notation)']
   hasSeenMigrationNotice Boolean [not null, default: false, note: 'Whether user has dismissed the Django-to-Next.js migration notice']
+  completedTours String[] [not null, note: 'IDs of onboarding tours the user has completed']
   isSystemUser Boolean [not null, default: false, note: 'True for system/bot accounts (e.g., automated imports)']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -41,6 +42,7 @@ Table users {
   casePermissions case_permissions [not null]
   grantedPermissions case_permissions [not null]
   createdElements assurance_elements [not null]
+  deletedElements assurance_elements [not null]
   authoredComments comments [not null]
   resolvedComments comments [not null]
   releaseComments release_comments [not null]
@@ -126,7 +128,9 @@ Table assurance_cases {
   description String [not null, note: 'Summary describing the case\'s purpose and scope']
   createdById String [not null, note: 'User who created the case (for audit trail)']
   mode CaseMode [not null, default: 'STANDARD', note: 'STANDARD (simplified UI) or ADVANCED (full GSN notation)']
-  colorProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
+  colourProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
+  isDemo Boolean [not null, default: false, note: 'True for auto-generated tutorial cases']
+  layoutDirection String [not null, default: 'TB', note: 'ELK layout direction: TB (top-bottom) or LR (left-right)']
   sourcePatternId String [note: 'If created from a pattern, the source pattern ID']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -136,7 +140,7 @@ Table assurance_cases {
   markedReadyAt DateTime [note: 'When owner marked case as ready to publish']
   markedReadyById String [note: 'Who marked the case as ready']
   deletedAt DateTime [note: 'When the case was moved to trash (null = not deleted)']
-  deletedBy String [note: 'User ID who deleted the case']
+  deletedById String [note: 'User ID who deleted the case']
   createdBy users [not null]
   markedReadyBy users
   deletedByUser users
@@ -232,7 +236,10 @@ Table assurance_elements {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   createdById String [not null]
+  deletedAt DateTime [note: 'When the element was deleted (null = active)']
+  deletedById String [note: 'User who deleted the element']
   case assurance_cases [not null]
+  deletedBy users
   createdBy users [not null]
   parent assurance_elements
   children assurance_elements [not null]
@@ -545,20 +552,6 @@ Table published_assurance_cases {
   Note: 'Snapshot of an assurance case for case study integration. Content stored as JSON.'
 }
 
-Table legacy_mappings {
-  id String [pk]
-  entityType String [not null, note: 'Entity type: \'user\', \'case\', \'element\', \'team\', etc.']
-  legacyId BigInt [not null, note: 'Old Django integer ID']
-  newId String [not null, note: 'New Prisma UUID']
-  createdAt DateTime [default: `now()`, not null]
-
-  indexes {
-    (entityType, legacyId) [unique]
-  }
-
-  Note: 'Django-to-Prisma ID mappings from Dec 2025 migration. See issue AssurancePlatform-ogq for cleanup.'
-}
-
 Enum AuthProvider {
   LOCAL
   GITHUB
@@ -647,7 +640,7 @@ Ref: assurance_cases.createdById > users.id
 
 Ref: assurance_cases.markedReadyById > users.id
 
-Ref: assurance_cases.deletedBy > users.id
+Ref: assurance_cases.deletedById > users.id
 
 Ref: assurance_cases.sourcePatternId > argument_patterns.id
 
@@ -664,6 +657,8 @@ Ref: case_team_permissions.teamId > teams.id [delete: Cascade]
 Ref: case_invites.caseId > assurance_cases.id [delete: Cascade]
 
 Ref: assurance_elements.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: assurance_elements.deletedById > users.id
 
 Ref: assurance_elements.createdById > users.id
 

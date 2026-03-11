@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import { restoreCase } from "@/lib/services/case-trash-service";
 
 /**
  * Restore a case from trash
  *
- * @description Restores a soft-deleted case, clearing deletedAt and deletedBy fields.
+ * @description Restores a soft-deleted case, clearing deletedAt and deletedById fields.
  * Only the case owner can restore their deleted cases.
  *
  * @pathParam id - Case ID (UUID)
@@ -21,22 +26,18 @@ export async function POST(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const validated = await validateSession();
+	try {
+		const userId = await requireAuth();
+		const { id } = await params;
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		const result = await restoreCase(userId, id);
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess({ success: true });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const { id } = await params;
-
-	const result = await restoreCase(validated.userId, id);
-
-	if (result.error) {
-		return NextResponse.json(
-			{ error: result.error },
-			{ status: result.status ?? 500 }
-		);
-	}
-
-	return NextResponse.json({ success: true });
 }

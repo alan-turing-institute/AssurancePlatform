@@ -676,8 +676,9 @@ const ExplorationChecklist = ({
 		index: number;
 	} | null => {
 		const currentIndex = items.findIndex((item) => !checkedItems.has(item.id));
-		return currentIndex >= 0
-			? { item: items[currentIndex], index: currentIndex }
+		const currentItem = items[currentIndex];
+		return currentIndex >= 0 && currentItem
+			? { item: currentItem, index: currentIndex }
 			: null;
 	};
 

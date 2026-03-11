@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { formatShortDate } from "@/lib/date";
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 export type TrashedCase = {
@@ -33,12 +33,12 @@ type TrashListProps = {
 
 function getDaysRemainingColour(days: number): string {
 	if (days > 7) {
-		return "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20";
+		return "bg-success/10 text-success ring-success/20";
 	}
 	if (days > 3) {
-		return "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20";
+		return "bg-warning/10 text-warning ring-warning/20";
 	}
-	return "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20";
+	return "bg-destructive/10 text-destructive ring-destructive/20";
 }
 
 function DaysRemainingBadge({ days }: { days: number }) {
@@ -56,7 +56,6 @@ function DaysRemainingBadge({ days }: { days: number }) {
 
 export function TrashList({ cases }: TrashListProps) {
 	const router = useRouter();
-	const { toast } = useToast();
 	const [isRestoring, setIsRestoring] = useState<string | null>(null);
 	const [isPurging, setIsPurging] = useState<string | null>(null);
 	const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);

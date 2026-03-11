@@ -49,14 +49,18 @@ vi.mock("@/components/ui/button", () => ({
 	),
 }));
 
-describe("DownloadCaseButton", () => {
-	// Mock DOM APIs
-	const mockCreateObjectURL = vi.fn();
-	const mockRevokeObjectURL = vi.fn();
+// Mock URL API at module level (same pattern as image-upload.test.tsx)
+const mockCreateObjectURL = vi.fn(() => "blob:mock-url");
+const mockRevokeObjectURL = vi.fn();
 
-	// Store original methods
-	let originalCreateObjectURL: typeof URL.createObjectURL;
-	let originalRevokeObjectURL: typeof URL.revokeObjectURL;
+global.URL.createObjectURL = mockCreateObjectURL;
+global.URL.revokeObjectURL = mockRevokeObjectURL;
+
+// Keep a reference to the real Blob constructor so we can create genuine Blob instances
+const RealBlob = global.Blob;
+
+describe("DownloadCaseButton", () => {
+	// Store original createElement for spy fallback
 	let originalCreateElement: typeof document.createElement;
 
 	// Mock anchor element for all tests
@@ -70,6 +74,9 @@ describe("DownloadCaseButton", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+
+		// Re-assert URL mock return value after clearAllMocks resets the mock state
+		mockCreateObjectURL.mockReturnValue("blob:mock-url");
 
 		// Mock getComputedStyle for accessibility tests
 		window.getComputedStyle = vi.fn().mockImplementation(() => ({
@@ -86,25 +93,18 @@ describe("DownloadCaseButton", () => {
 			}),
 		}));
 
-		// Store originals
-		originalCreateObjectURL = URL.createObjectURL;
-		originalRevokeObjectURL = URL.revokeObjectURL;
-		originalCreateElement = document.createElement;
+		// Store original createElement for use in spy implementations
+		originalCreateElement = document.createElement.bind(document);
 
-		// Mock URL methods
-		mockCreateObjectURL.mockReturnValue("blob:mock-url");
-		URL.createObjectURL = mockCreateObjectURL;
-		URL.revokeObjectURL = mockRevokeObjectURL;
-
-		// Mock Blob constructor
-		global.Blob = vi
-			.fn()
-			.mockImplementation((parts: BlobPart[], options: BlobPropertyBag) => ({
-				parts,
-				options,
-				size: JSON.stringify(parts[0]).length,
-				type: options.type,
-			}));
+		// Mock Blob constructor — use RealBlob so URL.createObjectURL receives a genuine Blob.
+		// Must use 'function' keyword (not arrow) for constructor mocks in Vitest.
+		// biome-ignore lint/complexity/useArrowFunction: constructor mock requires function keyword
+		global.Blob = vi.fn().mockImplementation(function (
+			parts: BlobPart[],
+			options: BlobPropertyBag
+		) {
+			return new RealBlob(parts, options);
+		});
 
 		// Reset mock anchor for each test
 		mockAnchor.href = "";
@@ -113,13 +113,7 @@ describe("DownloadCaseButton", () => {
 	});
 
 	afterEach(() => {
-		// Restore original methods
 		vi.restoreAllMocks();
-		URL.createObjectURL = originalCreateObjectURL;
-		URL.revokeObjectURL = originalRevokeObjectURL;
-		if (document.createElement !== originalCreateElement) {
-			document.createElement = originalCreateElement;
-		}
 	});
 
 	describe("Component Rendering", () => {
@@ -133,7 +127,7 @@ describe("DownloadCaseButton", () => {
 				name: DOWNLOAD_BUTTON_REGEX,
 			});
 			expect(button).toBeInTheDocument();
-			expect(button).toHaveAttribute("data-variant", "primary");
+			expect(button).toHaveAttribute("data-variant", "default");
 		});
 
 		it("should render download icon", () => {
@@ -254,14 +248,20 @@ describe("DownloadCaseButton", () => {
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
 			// Set up mocks before clicking
-			document.createElement = vi.fn().mockImplementation((tagName: string) => {
-				if (tagName === "a") {
-					return mockAnchor as unknown as HTMLElement;
-				}
-				return originalCreateElement.call(document, tagName);
-			});
-			document.body.appendChild = vi.fn();
-			document.body.removeChild = vi.fn();
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -272,8 +272,9 @@ describe("DownloadCaseButton", () => {
 			expect(mockAnchor.download).toBe("Test_Case_With_Spaces.json");
 			expect(mockAnchor.click).toHaveBeenCalled();
 
-			// Restore mocks
-			document.createElement = originalCreateElement;
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should set correct blob URL as href", async () => {
@@ -284,14 +285,20 @@ describe("DownloadCaseButton", () => {
 			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
 
 			// Set up mocks before clicking
-			document.createElement = vi.fn().mockImplementation((tagName: string) => {
-				if (tagName === "a") {
-					return mockAnchor as unknown as HTMLElement;
-				}
-				return originalCreateElement.call(document, tagName);
-			});
-			document.body.appendChild = vi.fn();
-			document.body.removeChild = vi.fn();
+			const createElementSpy = vi
+				.spyOn(document, "createElement")
+				.mockImplementation((tagName: string) => {
+					if (tagName === "a") {
+						return mockAnchor as unknown as HTMLElement;
+					}
+					return originalCreateElement.call(document, tagName);
+				});
+			const appendChildSpy = vi
+				.spyOn(document.body, "appendChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
+			const removeChildSpy = vi
+				.spyOn(document.body, "removeChild")
+				.mockImplementation(() => mockAnchor as unknown as Node);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -302,8 +309,9 @@ describe("DownloadCaseButton", () => {
 			expect(mockCreateObjectURL).toHaveBeenCalled();
 			expect(mockAnchor.href).toBe("blob:mock-url");
 
-			// Restore mocks
-			document.createElement = originalCreateElement;
+			createElementSpy.mockRestore();
+			appendChildSpy.mockRestore();
+			removeChildSpy.mockRestore();
 		});
 
 		it("should handle multiple spaces in title correctly", async () => {

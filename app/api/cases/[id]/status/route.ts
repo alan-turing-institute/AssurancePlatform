@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { updateCaseStatusSchema } from "@/lib/schemas/status";
 import {
 	getFullPublishStatus,
 	transitionStatus,
@@ -22,22 +29,20 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id } = await params;
+	try {
+		const userId = await requireAuth();
+		const { id } = await params;
 
-	const session = await getServerSession(authOptions);
+		const result = await getFullPublishStatus(userId, id);
 
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		if (result.error) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await getFullPublishStatus(session.user.id, id);
-
-	if (result.error) {
-		const status = result.error === "Permission denied" ? 403 : 400;
-		return NextResponse.json({ error: result.error }, { status });
-	}
-
-	return NextResponse.json(result.data);
 }
 
 /**
@@ -61,68 +66,56 @@ export async function PATCH(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id } = await params;
-
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	let body: { targetStatus?: string; description?: string };
 	try {
-		body = await request.json();
-	} catch {
-		return NextResponse.json(
-			{ error: "Invalid request body" },
-			{ status: 400 }
+		const userId = await requireAuth();
+		const { id } = await params;
+
+		const parsed = updateCaseStatusSchema.safeParse(
+			await request.json().catch(() => null)
 		);
-	}
-
-	const { targetStatus, description } = body;
-
-	// Validate targetStatus
-	const validStatuses = ["DRAFT", "READY_TO_PUBLISH", "PUBLISHED"];
-	if (!(targetStatus && validStatuses.includes(targetStatus))) {
-		return NextResponse.json(
-			{
-				error: `Invalid targetStatus. Must be one of: ${validStatuses.join(", ")}`,
-			},
-			{ status: 400 }
-		);
-	}
-
-	const result = await transitionStatus(
-		session.user.id,
-		id,
-		targetStatus as PrismaPublishStatus,
-		description
-	);
-
-	if (!result.success) {
-		// Check for specific error types
-		if (result.error === "Permission denied") {
-			return NextResponse.json({ error: result.error }, { status: 403 });
-		}
-
-		// Include linkedCaseStudies in response if present (for unpublish warning)
-		if (result.linkedCaseStudies) {
-			return NextResponse.json(
-				{
-					error: result.error,
-					linkedCaseStudies: result.linkedCaseStudies,
-				},
-				{ status: 409 }
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
 			);
 		}
 
-		return NextResponse.json({ error: result.error }, { status: 400 });
-	}
+		const { targetStatus, description } = parsed.data;
 
-	return NextResponse.json({
-		success: true,
-		newStatus: result.newStatus,
-		publishedId: result.publishedId,
-		publishedAt: result.publishedAt,
-	});
+		const result = await transitionStatus(
+			userId,
+			id,
+			targetStatus as PrismaPublishStatus,
+			description
+		);
+
+		if ("error" in result) {
+			// Check for specific error types
+			if (result.error === "Permission denied") {
+				return apiError(serviceErrorToAppError(result.error));
+			}
+
+			// Include linkedCaseStudies in response if present (for unpublish warning)
+			if (result.linkedCaseStudies) {
+				return NextResponse.json(
+					{
+						error: result.error,
+						code: "CONFLICT" as const,
+						linkedCaseStudies: result.linkedCaseStudies,
+					},
+					{ status: 409 }
+				);
+			}
+
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess({
+			success: true,
+			newStatus: result.data.newStatus,
+			publishedId: result.data.publishedId,
+			publishedAt: result.data.publishedAt,
+		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }

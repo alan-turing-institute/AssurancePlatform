@@ -30,11 +30,7 @@ const ALLOWED_MIME_TYPES = [
 	"image/webp",
 ];
 
-type SaveFileResult = {
-	success: boolean;
-	path?: string;
-	error?: string;
-};
+type SaveFileResult = { data: { path: string } } | { error: string };
 
 /**
  * Ensures the upload directory exists (for local storage)
@@ -90,19 +86,19 @@ async function saveFileLocally(
 		const relativePath = `/uploads/${subDirectory}/${uniqueFilename}`;
 		console.log(`[Dev] File saved locally: ${relativePath}`);
 
-		return { success: true, path: relativePath };
+		return { data: { path: relativePath } };
 	} catch (error) {
 		console.error("Error saving file locally:", error);
-		return { success: false, error: "Failed to save file" };
+		return { error: "Failed to save file" };
 	}
 }
 
 /**
- * Saves a file to storage (Azure Blob in production, local in development)
+ * Saves a file to storage (Azure Blob in production, local in development).
  *
  * @param file - The file to save
  * @param subDirectory - Subdirectory/prefix for the file (e.g., "case-studies/123")
- * @returns Result with the URL/path to the saved file
+ * @returns `{ data: { path } }` on success, `{ error }` on failure
  */
 export async function saveFile(
 	file: File,
@@ -110,7 +106,7 @@ export async function saveFile(
 ): Promise<SaveFileResult> {
 	const validation = validateFile(file);
 	if (validation.valid === false) {
-		return { success: false, error: validation.error };
+		return { error: validation.error };
 	}
 
 	const extension = getExtensionFromMimeType(file.type);
@@ -125,10 +121,10 @@ export async function saveFile(
 
 		const result = await uploadToBlob(buffer, blobPath, contentType);
 
-		if (result.success === false) {
-			return { success: false, error: result.error };
+		if ("error" in result) {
+			return result;
 		}
-		return { success: true, path: result.url };
+		return { data: { path: result.data.url } };
 	}
 
 	// Fall back to local storage in development or when explicitly enabled for self-hosting
@@ -143,7 +139,7 @@ export async function saveFile(
 	console.error(
 		"Storage not configured. Set USE_LOCAL_STORAGE=true for local filesystem storage, or configure Azure Blob Storage."
 	);
-	return { success: false, error: "Storage not configured" };
+	return { error: "Storage not configured" };
 }
 
 /**

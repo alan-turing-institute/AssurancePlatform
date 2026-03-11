@@ -24,7 +24,7 @@ AssurancePlatform/
 │   └── cases/            # Assurance case components
 ├── lib/                  # Utilities and core logic
 │   ├── auth/             # Authentication utilities
-│   └── db.ts             # Prisma client
+│   └── prisma.ts          # Prisma client
 ├── prisma/               # Database schema and migrations
 ├── public/               # Static assets
 ├── types/                # TypeScript type definitions
@@ -68,7 +68,7 @@ Session management uses JWT tokens with refresh token rotation for security. See
 The database layer uses Prisma ORM with PostgreSQL:
 - **Schema**: Defined in `prisma/schema.prisma`
 - **Migrations**: Managed with `prisma migrate`
-- **Client**: Generated and accessed via `lib/db.ts`
+- **Client**: Generated and accessed via `lib/prisma.ts`
 
 For details on the data model, see [Assurance Case Model](./assurance-case-model).
 
@@ -97,7 +97,7 @@ Assurance cases can be published to share with the community:
 ## API Layer
 
 The platform exposes a REST API for programmatic access:
-- **Base URL**: `/api/v1/`
+- **Base URL**: `/api/`
 - **Authentication**: Bearer token (from session)
 - **Resources**: Cases, Elements, Teams, Users, Comments
 

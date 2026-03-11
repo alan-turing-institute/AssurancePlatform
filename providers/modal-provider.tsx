@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 // Dynamic imports with ssr: false to reduce initial bundle size
 const CaseCreateModal = dynamic(
@@ -67,39 +68,39 @@ const InviteMemberDialog = dynamic(
 /**
  * ModalProvider component that renders several modals for different functionalities.
  *
- * This component manages the mounting state to prevent server-side rendering issues with modals in Next.js.
- * It uses a `useState` hook to track if the component is mounted and a `useEffect` hook to update this state after mounting.
- * The component returns `null` if it is not mounted yet to prevent any rendering issues.
+ * All child modals use `dynamic(..., { ssr: false })`, so no mounted gate is needed here.
  *
- * @returns {JSX.Element | null} The JSX for the modals when the component is mounted, or `null` if not mounted.
+ * @returns {JSX.Element} The JSX for the modals.
  */
-export const ModalProvider = (): JSX.Element | null => {
-	const [isMounted, setIsMounted] = useState(false);
-
-	useEffect(() => {
-		// Set mounted state to true after the component is mounted
-		setIsMounted(true);
-	}, []);
-
-	if (!isMounted) {
-		// Return null to prevent rendering modals during server-side rendering
-		return null;
-	}
-
-	return (
-		<>
-			<CaseCreateModal />
+export const ModalProvider = (): JSX.Element => (
+	<>
+		<CaseCreateModal />
+		<ErrorBoundary
+			fallback={
+				<p className="p-4 text-destructive text-sm">
+					Something went wrong. Please refresh.
+				</p>
+			}
+		>
 			<ImportModal />
-			<MigrationModal />
-			<ShareModal />
-			<PermissionsModal />
-			<PublishModal />
-			<StatusModalWrapper />
-			<EmailModal />
-			<ResourcesModal />
-			<CreateTeamDialog />
-			<InviteMemberDialog />
+		</ErrorBoundary>
+		<MigrationModal />
+		<ShareModal />
+		<PermissionsModal />
+		<PublishModal />
+		<StatusModalWrapper />
+		<EmailModal />
+		<ResourcesModal />
+		<CreateTeamDialog />
+		<InviteMemberDialog />
+		<ErrorBoundary
+			fallback={
+				<p className="p-4 text-destructive text-sm">
+					Something went wrong. Please refresh.
+				</p>
+			}
+		>
 			<CaseSharingDialog />
-		</>
-	);
-};
+		</ErrorBoundary>
+	</>
+);

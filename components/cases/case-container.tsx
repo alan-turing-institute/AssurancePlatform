@@ -1,20 +1,23 @@
 "use client";
 
-import { Loader2, MessagesSquare } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
-import { toast } from "sonner";
-import useStore from "@/data/store";
+import CheckTourClient from "@/components/tour/check-tour-client";
+import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
-import { addHiddenProp } from "@/lib/case";
-import type { AssuranceCase } from "@/types";
-import Header from "../header";
+import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
+import { toastError, toastInfo } from "@/lib/toast";
+import useHistoryStore from "@/store/history-store";
+import useStore from "@/store/store";
+import { ErrorBoundary } from "../ui/error-boundary";
 import CaseDetails from "./case-details";
 import Flow from "./flow";
+import Header from "./header";
 
 type CaseContainerProps = {
 	caseId?: string;
@@ -26,8 +29,14 @@ const REFETCH_EVENTS = [
 	"element:created",
 	"element:updated",
 	"element:deleted",
+	"element:restored",
 	"element:attached",
 	"element:detached",
+	"element:moved",
+	"comment:created",
+	"comment:updated",
+	"comment:deleted",
+	"permission:changed",
 ];
 
 /** Event types that also require orphan refetch */
@@ -39,8 +48,10 @@ const EVENT_MESSAGE_TEMPLATES: Record<string, [string, string]> = {
 	"element:created": ['added "{element}"', "added a new element"],
 	"element:updated": ['modified "{element}"', "modified an element"],
 	"element:deleted": ['removed "{element}"', "removed an element"],
+	"element:restored": ['restored "{element}"', "restored an element"],
 	"element:attached": ['attached "{element}"', "attached an element"],
 	"element:detached": ['detached "{element}"', "detached an element"],
+	"element:moved": ['moved "{element}"', "moved an element"],
 	"comment:created": ['added a comment to "{element}"', "added a comment"],
 	"comment:updated": ['updated a comment on "{element}"', "updated a comment"],
 	"comment:deleted": [
@@ -56,8 +67,7 @@ function getElementName(event: SSEEvent): string | undefined {
 	return (
 		(event.payload?.elementName as string) ||
 		(event.payload?.element as { name?: string })?.name ||
-		(event.payload?.element as { short_description?: string })
-			?.short_description
+		(event.payload?.element as { description?: string })?.description
 	);
 }
 
@@ -87,25 +97,36 @@ function buildToastMessage(event: SSEEvent): string | null {
 function showEventToast(event: SSEEvent): void {
 	const message = buildToastMessage(event);
 	if (message) {
-		toast.info(message, { duration: 4000 });
+		toastInfo(message, { duration: 4000 });
 	}
 }
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const [loading, setLoading] = useState(true);
 	const { assuranceCase, setAssuranceCase, setOrphanedElements } = useStore();
+	const { setCaseId: setHistoryCaseId } = useHistoryStore();
 	const [open, setOpen] = useState(false);
 
 	const params = useParams();
 	const router = useRouter();
 	const { caseId: paramsCaseId } = params;
 
-	// Session is used by NextAuth for authentication state
-	useSession();
+	const { data: session } = useSession();
+
+	// Debounce refs for SSE-triggered refetches
+	const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const orphanRefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	// Get the effective case ID
 	const effectiveCaseId =
 		caseId || (Array.isArray(paramsCaseId) ? paramsCaseId[0] : paramsCaseId);
+
+	// Update history store when case changes (clears history if different case)
+	useEffect(() => {
+		if (effectiveCaseId) {
+			setHistoryCaseId(effectiveCaseId);
+		}
+	}, [effectiveCaseId, setHistoryCaseId]);
 
 	// Fetch a single case by ID
 	const fetchSingleCase = useCallback(
@@ -113,19 +134,19 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			try {
 				const response = await fetch(`/api/cases/${id}`);
 
-				if (response.status === 404 || response.status === 403) {
-					return;
-				}
-
 				if (response.status === 401) {
 					router.replace("/login");
 					return null;
 				}
 
+				if (!response.ok) {
+					return null;
+				}
+
 				const result = await response.json();
-				const formattedAssuranceCase = await addHiddenProp(result);
-				return formattedAssuranceCase;
+				return addHiddenProp(result) as AssuranceCaseResponse;
 			} catch (_error) {
+				toastError("Failed to load case data");
 				return null;
 			}
 		},
@@ -150,6 +171,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				const result = await response.json();
 				return result;
 			} catch (_error) {
+				toastError("Failed to load sandbox elements");
 				return [];
 			}
 		},
@@ -163,7 +185,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			return;
 		}
 
-		const idValue = Array.isArray(id) ? id[0] : id;
+		const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 		try {
 			const result = await fetchOrphanedElements(idValue);
 			setOrphanedElements(result || []);
@@ -177,26 +199,60 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		if (!effectiveCaseId) {
 			return;
 		}
-		fetchSingleCase(effectiveCaseId).then((result) => {
+		fetchAndRefreshCase(effectiveCaseId).then((result) => {
 			if (result) {
-				setAssuranceCase(result as AssuranceCase);
+				setAssuranceCase(result);
 			}
 		});
-	}, [effectiveCaseId, fetchSingleCase, setAssuranceCase]);
+	}, [effectiveCaseId, setAssuranceCase]);
+
+	// Debounced versions to prevent rapid-fire API calls from multiple SSE events
+	const debouncedRefetchCase = useCallback(() => {
+		if (refetchTimeoutRef.current) {
+			clearTimeout(refetchTimeoutRef.current);
+		}
+		refetchTimeoutRef.current = setTimeout(() => refetchCase(), 300);
+	}, [refetchCase]);
+
+	const debouncedOrphanRefetch = useCallback(() => {
+		if (orphanRefetchTimeoutRef.current) {
+			clearTimeout(orphanRefetchTimeoutRef.current);
+		}
+		orphanRefetchTimeoutRef.current = setTimeout(
+			() => loadOrphanedElementsData(),
+			300
+		);
+	}, [loadOrphanedElementsData]);
+
+	// Clean up debounce timeouts on unmount
+	useEffect(
+		() => () => {
+			if (refetchTimeoutRef.current) {
+				clearTimeout(refetchTimeoutRef.current);
+			}
+			if (orphanRefetchTimeoutRef.current) {
+				clearTimeout(orphanRefetchTimeoutRef.current);
+			}
+		},
+		[]
+	);
 
 	// Subscribe to real-time case events via SSE
 	useCaseEvents({
 		caseId: effectiveCaseId || "",
 		enabled: Boolean(effectiveCaseId) && !loading,
 		onEvent: (event) => {
-			// Show toast for all supported events
-			showEventToast(event);
+			// Suppress toasts for self-events (acting user)
+			const isSelfEvent = event.userId && event.userId === session?.user?.id;
+			if (!isSelfEvent) {
+				showEventToast(event);
+			}
 
 			// Refetch case data for element/case events
 			if (REFETCH_EVENTS.includes(event.type)) {
-				refetchCase();
+				debouncedRefetchCase();
 				if (ORPHAN_REFETCH_EVENTS.includes(event.type)) {
-					loadOrphanedElementsData();
+					debouncedOrphanRefetch();
 				}
 			}
 		},
@@ -208,9 +264,9 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			const id = caseId || paramsCaseId;
 			if (id) {
 				try {
-					const idValue = Array.isArray(id) ? id[0] : id;
+					const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 					const result = await fetchSingleCase(idValue);
-					setAssuranceCase((result as AssuranceCase) || null);
+					setAssuranceCase((result as AssuranceCaseResponse) || null);
 					setLoading(false);
 				} catch {
 					setLoading(false);
@@ -226,42 +282,48 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		loadOrphanedElementsData();
 	}, [loadOrphanedElementsData]);
 
-	return (
-		<>
-			{(() => {
-				if (loading) {
-					return (
-						<div className="flex min-h-screen items-center justify-center">
-							<div className="flex flex-col items-center justify-center gap-2">
-								<Loader2 className="h-8 w-8 animate-spin" />
-								<p className="text-muted-foreground">Rendering your chart...</p>
-							</div>
+	if (loading) {
+		return (
+			<div className="flex min-h-screen items-center justify-center">
+				<div className="flex flex-col items-center justify-center gap-2">
+					<Loader2 className="h-8 w-8 animate-spin" />
+					<p className="text-muted-foreground">Rendering your chart...</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (assuranceCase) {
+		return (
+			<ReactFlowProvider>
+				<CheckTourClient
+					enabled={!loading}
+					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
+				/>
+				<Header setOpen={setOpen} />
+				<ErrorBoundary
+					fallback={
+						<div className="flex min-h-screen items-center justify-center text-muted-foreground">
+							<p>Diagram failed to render. Try refreshing.</p>
 						</div>
-					);
-				}
-				if (assuranceCase) {
-					return (
-						<ReactFlowProvider>
-							<Header setOpen={setOpen} />
-							<Flow />
-							<CaseDetails isOpen={open} setOpen={setOpen} />
-							<FeedbackButton />
-						</ReactFlowProvider>
-					);
-				}
-				return <p>No Case Found</p>;
-			})()}
-		</>
+					}
+				>
+					<Flow />
+				</ErrorBoundary>
+				<CaseDetails isOpen={open} setOpen={setOpen} />
+			</ReactFlowProvider>
+		);
+	}
+
+	return (
+		<div className="flex min-h-[60vh] items-center justify-center px-4">
+			<ErrorCard
+				message="We couldn't find this case. It may have been deleted or you may not have permission to view it."
+				showDashboardLink
+				title="Case not found"
+			/>
+		</div>
 	);
 };
-
-const FeedbackButton = () => (
-	<Link href="/docs/community/community-support" target="_blank">
-		<div className="absolute right-4 bottom-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-600 shadow-xl hover:cursor-pointer">
-			<MessagesSquare className="h-6 w-6 text-white" />
-			<div className="-z-10 absolute h-16 w-16 animate-pulse rounded-full bg-violet-500" />
-		</div>
-	</Link>
-);
 
 export default CaseContainer;

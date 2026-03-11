@@ -10,8 +10,8 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
-import useStore from "@/data/store";
-import { usePermissionsModal } from "@/hooks/use-permissions-modal";
+import { usePermissionsModal } from "@/hooks/modal-hooks";
+import useStore from "@/store/store";
 
 type Member = {
 	id: number | string;
@@ -20,7 +20,7 @@ type Member = {
 	permissionId?: string;
 };
 
-import { useToast } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 
@@ -42,8 +42,6 @@ export const PermissionsModal = () => {
 	const params = useParams();
 	const router = useRouter();
 	const { caseId } = params;
-
-	const { toast } = useToast();
 
 	const fetchCaseMembers = useCallback(async () => {
 		// Use Next.js API route which handles Prisma auth
@@ -170,7 +168,7 @@ export const PermissionsModal = () => {
 			onClose={permissionModal.onClose}
 			title="Permissions"
 		>
-			<p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+			<p className="mb-2 flex items-center justify-start gap-2 text-muted-foreground text-xs uppercase">
 				<PencilRuler className="h-4 w-4" />
 				Edit members
 			</p>
@@ -188,7 +186,7 @@ export const PermissionsModal = () => {
 								<p>{member.email}</p>
 							</div>
 							<Button
-								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
+								className="hover:bg-destructive hover:text-destructive-foreground"
 								onClick={() => handleRemovePermissions(member, "EDIT")}
 								size={"icon"}
 								title="Remove edit access"
@@ -203,7 +201,7 @@ export const PermissionsModal = () => {
 				)}
 			</div>
 
-			<p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+			<p className="mb-2 flex items-center justify-start gap-2 text-muted-foreground text-xs uppercase">
 				<MessageCircleMore className="h-4 w-4" />
 				Review members
 			</p>
@@ -221,7 +219,7 @@ export const PermissionsModal = () => {
 								<p>{member.email}</p>
 							</div>
 							<Button
-								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
+								className="hover:bg-destructive hover:text-destructive-foreground"
 								onClick={() => handleRemovePermissions(member, "COMMENT")}
 								size={"icon"}
 								title="Remove review access"
@@ -236,7 +234,7 @@ export const PermissionsModal = () => {
 				)}
 			</div>
 
-			<p className="mb-2 flex items-center justify-start gap-2 text-slate-300 text-xs uppercase">
+			<p className="mb-2 flex items-center justify-start gap-2 text-muted-foreground text-xs uppercase">
 				<Eye className="h-4 w-4" />
 				View members
 			</p>
@@ -254,7 +252,7 @@ export const PermissionsModal = () => {
 								<p>{member.email}</p>
 							</div>
 							<Button
-								className="hover:bg-rose-500 hover:text-white dark:hover:bg-rose-700/50"
+								className="hover:bg-destructive hover:text-destructive-foreground"
 								onClick={() => handleRemovePermissions(member, "VIEW")}
 								size={"icon"}
 								title="Remove view access"

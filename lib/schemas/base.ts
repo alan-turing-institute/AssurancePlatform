@@ -50,6 +50,30 @@ export const optionalString = (maxLength = 2000) =>
 		.transform((v) => (v?.trim() ? v.trim() : undefined))
 		.describe("Optional string field");
 
+/**
+ * Valid username — letters, numbers, underscores, and hyphens only.
+ */
+export const usernameSchema = z
+	.string()
+	.min(3, "Username must be at least 3 characters")
+	.max(50, "Username must be at most 50 characters")
+	.regex(
+		/^[a-zA-Z0-9_-]+$/,
+		"Username can only contain letters, numbers, underscores, and hyphens"
+	)
+	.transform((v) => v.trim())
+	.describe("Valid username");
+
+/**
+ * Non-empty string identifier (for non-UUID IDs like tour names)
+ */
+export const stringIdSchema = z
+	.string()
+	.min(1, "ID is required")
+	.max(100, "ID must be less than 100 characters")
+	.transform((v) => v.trim())
+	.describe("Non-empty string identifier");
+
 // ============================================
 // Number Primitives
 // ============================================

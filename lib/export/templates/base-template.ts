@@ -15,6 +15,7 @@ import type {
 	DiagramImage,
 	DocumentMetadata,
 	ExportFormat,
+	LabelledDiagramImage,
 	RenderedDocument,
 	RenderedSection,
 	ResolvedBranding,
@@ -79,14 +80,24 @@ export abstract class BaseTemplate {
 	 * resolves branding, and delegates section rendering to the subclass.
 	 */
 	async render(input: TemplateInput): Promise<RenderedDocument> {
-		const { caseData, diagramImage, exportedBy, sectionOverrides } = input;
+		const {
+			caseData,
+			diagramImage,
+			branchDiagrams,
+			exportedBy,
+			sectionOverrides,
+		} = input;
 
 		// Store section overrides for use in isSectionEnabled
 		this.sectionOverrides = sectionOverrides ?? {};
 
 		const metadata = this.buildMetadata(caseData, exportedBy);
 		const resolvedBranding = this.buildResolvedBranding();
-		const sections = await this.renderSections(caseData, diagramImage);
+		const sections = await this.renderSections(
+			caseData,
+			diagramImage,
+			branchDiagrams
+		);
 
 		return {
 			metadata,
@@ -134,12 +145,14 @@ export abstract class BaseTemplate {
 	 * Render all sections - subclasses must implement this
 	 *
 	 * @param caseData - The exported case data
-	 * @param diagramImage - Optional diagram image to embed
+	 * @param diagramImage - Optional overview diagram image to embed
+	 * @param branchDiagrams - Optional per-branch diagram images for multi-page exports
 	 * @returns Array of rendered sections (sync or async)
 	 */
 	protected abstract renderSections(
 		caseData: CaseExportNested,
-		diagramImage?: DiagramImage
+		diagramImage?: DiagramImage,
+		branchDiagrams?: LabelledDiagramImage[]
 	): RenderedSection[] | Promise<RenderedSection[]>;
 
 	// ============================================
@@ -170,7 +183,7 @@ export abstract class BaseTemplate {
 	protected isSectionEnabled(sectionKey: keyof SectionsConfig): boolean {
 		// Check section overrides first (explicit user preference)
 		if (sectionKey in this.sectionOverrides) {
-			return this.sectionOverrides[sectionKey];
+			return this.sectionOverrides[sectionKey] ?? true;
 		}
 
 		// Fall back to template configuration

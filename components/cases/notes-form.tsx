@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type React from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import {
 	Form,
 	FormControl,
@@ -10,29 +9,22 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import useStore from "@/data/store";
-import { useToast } from "@/lib/toast";
+import { type NoteFormInput, noteFormSchema } from "@/lib/schemas/comment";
+import { toast } from "@/lib/toast";
+import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
-const formSchema = z.object({
-	note: z.string().min(2, {
-		message: "Note must be at least 2 characters",
-	}),
-});
-
 const NotesForm: React.FC = () => {
 	const { assuranceCase, caseNotes, setCaseNotes } = useStore();
-	const { toast } = useToast();
-
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<NoteFormInput>({
+		resolver: zodResolver(noteFormSchema),
 		defaultValues: {
 			note: "",
 		},
 	});
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: NoteFormInput) {
 		if (!assuranceCase) {
 			toast({
 				variant: "destructive",
@@ -91,7 +83,7 @@ const NotesForm: React.FC = () => {
 				/>
 				<div className="flex items-center justify-start gap-3">
 					<Button
-						className="bg-indigo-500 text-white hover:bg-indigo-600"
+						className="bg-primary text-primary-foreground hover:bg-primary/90"
 						type="submit"
 					>
 						Add Note

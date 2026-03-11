@@ -6,7 +6,8 @@
  */
 
 import { Octokit } from "@octokit/rest";
-import { prismaNew } from "@/lib/prisma";
+import type { ErrorCode } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
 
 // Top-level regex patterns for URL parsing
 // Matches: raw.githubusercontent.com/owner/repo/branch/path (simple format)
@@ -43,7 +44,7 @@ export type GitHubServiceError = {
  * Returns null if the user doesn't have a GitHub token stored.
  */
 async function getUserGitHubToken(userId: string): Promise<string | null> {
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
 			githubAccessToken: true,
@@ -64,21 +65,38 @@ async function getUserGitHubToken(userId: string): Promise<string | null> {
 }
 
 /**
- * Creates an authenticated Octokit client for the specified user.
- * Throws if the user doesn't have a valid GitHub token.
+ * Maps GitHub service error codes to application error codes.
+ * Moved here from the route layer so callers can use it without coupling to the route.
  */
-async function createOctokitClient(userId: string): Promise<Octokit> {
+export const GITHUB_ERROR_MAP: Record<string, ErrorCode> = {
+	NO_TOKEN: "FORBIDDEN",
+	TOKEN_EXPIRED: "UNAUTHORISED",
+	NOT_FOUND: "NOT_FOUND",
+	FORBIDDEN: "FORBIDDEN",
+	RATE_LIMITED: "RATE_LIMITED",
+	API_ERROR: "INTERNAL",
+};
+
+/**
+ * Creates an authenticated Octokit client for the specified user.
+ * Returns null if the user doesn't have a valid GitHub token.
+ */
+async function createOctokitClient(
+	userId: string
+): Promise<{ client: Octokit } | { serviceError: GitHubServiceError }> {
 	const token = await getUserGitHubToken(userId);
 
 	if (!token) {
-		throw {
-			code: "NO_TOKEN",
-			message:
-				"No GitHub token found. Please sign in with GitHub to connect your account.",
-		} as GitHubServiceError;
+		return {
+			serviceError: {
+				code: "NO_TOKEN",
+				message:
+					"No GitHub token found. Please sign in with GitHub to connect your account.",
+			},
+		};
 	}
 
-	return new Octokit({ auth: token });
+	return { client: new Octokit({ auth: token }) };
 }
 
 /**
@@ -139,8 +157,7 @@ function handleOctokitError(
  * @param repo - Repository name
  * @param path - Path to the file within the repository
  * @param branch - Branch name (optional, defaults to repo's default branch)
- * @returns The file content and metadata
- * @throws GitHubServiceError if the request fails
+ * @returns `{ data: GitHubFileResult }` on success, `{ error: string, serviceError: GitHubServiceError }` on failure
  */
 export async function fetchFileFromGitHub(
 	userId: string,
@@ -148,8 +165,20 @@ export async function fetchFileFromGitHub(
 	repo: string,
 	path: string,
 	branch?: string
-): Promise<GitHubFileResult> {
-	const octokit = await createOctokitClient(userId);
+): Promise<
+	| { data: GitHubFileResult }
+	| { error: string; serviceError: GitHubServiceError }
+> {
+	const octokitResult = await createOctokitClient(userId);
+
+	if ("serviceError" in octokitResult) {
+		return {
+			error: octokitResult.serviceError.message,
+			serviceError: octokitResult.serviceError,
+		};
+	}
+
+	const octokit = octokitResult.client;
 
 	try {
 		const response = await octokit.repos.getContent({
@@ -163,48 +192,48 @@ export async function fetchFileFromGitHub(
 		const data = response.data;
 
 		if (Array.isArray(data)) {
-			throw {
+			const serviceError: GitHubServiceError = {
 				code: "API_ERROR",
 				message: `Path "${path}" is a directory, not a file.`,
-			} as GitHubServiceError;
+			};
+			return { error: serviceError.message, serviceError };
 		}
 
 		if (data.type !== "file") {
-			throw {
+			const serviceError: GitHubServiceError = {
 				code: "API_ERROR",
 				message: `Path "${path}" is not a regular file (type: ${data.type}).`,
-			} as GitHubServiceError;
+			};
+			return { error: serviceError.message, serviceError };
 		}
 
 		// File content is base64 encoded
 		if (!data.content) {
-			throw {
+			const serviceError: GitHubServiceError = {
 				code: "API_ERROR",
 				message: "File has no content.",
-			} as GitHubServiceError;
+			};
+			return { error: serviceError.message, serviceError };
 		}
 
 		const content = Buffer.from(data.content, "base64").toString("utf-8");
 
 		return {
-			content,
-			sha: data.sha,
-			path: data.path,
-			size: data.size,
+			data: {
+				content,
+				sha: data.sha,
+				path: data.path,
+				size: data.size,
+			},
 		};
 	} catch (error) {
-		// Re-throw our custom errors
-		if ((error as GitHubServiceError).code) {
-			throw error;
-		}
-
-		// Handle Octokit errors
-		throw handleOctokitError(
+		const serviceError = handleOctokitError(
 			error as { status?: number; message?: string },
 			path,
 			owner,
 			repo
 		);
+		return { error: serviceError.message, serviceError };
 	}
 }
 
@@ -229,53 +258,49 @@ export async function hasGitHubToken(userId: string): Promise<boolean> {
  * @param url - The GitHub URL or shorthand to parse
  * @returns Parsed components or null if the URL is invalid
  */
-export function parseGitHubUrl(url: string): {
+type ParsedGitHubUrl = {
 	owner: string;
 	repo: string;
 	path: string;
 	branch?: string;
-} | null {
+};
+
+/** Build a parsed result from a 4-group regex match (owner, repo, branch, path). */
+function buildParsedUrl(
+	match: RegExpMatchArray,
+	includeBranch: boolean
+): ParsedGitHubUrl {
+	return {
+		owner: match[1] ?? "",
+		repo: match[2] ?? "",
+		...(includeBranch ? { branch: match[3] } : {}),
+		path: decodeURIComponent(match[includeBranch ? 4 : 3] ?? ""),
+	};
+}
+
+export function parseGitHubUrl(url: string): ParsedGitHubUrl | null {
 	// Try raw.githubusercontent.com with refs/heads format first (more specific)
 	const rawRefsMatch = url.match(RAW_GITHUB_REFS_REGEX);
 	if (rawRefsMatch) {
-		return {
-			owner: rawRefsMatch[1],
-			repo: rawRefsMatch[2],
-			branch: rawRefsMatch[3],
-			path: decodeURIComponent(rawRefsMatch[4]),
-		};
+		return buildParsedUrl(rawRefsMatch, true);
 	}
 
 	// Try raw.githubusercontent.com simple format
 	const rawSimpleMatch = url.match(RAW_GITHUB_SIMPLE_REGEX);
 	if (rawSimpleMatch) {
-		return {
-			owner: rawSimpleMatch[1],
-			repo: rawSimpleMatch[2],
-			branch: rawSimpleMatch[3],
-			path: decodeURIComponent(rawSimpleMatch[4]),
-		};
+		return buildParsedUrl(rawSimpleMatch, true);
 	}
 
 	// Try github.com blob format
 	const blobMatch = url.match(BLOB_GITHUB_URL_REGEX);
 	if (blobMatch) {
-		return {
-			owner: blobMatch[1],
-			repo: blobMatch[2],
-			branch: blobMatch[3],
-			path: decodeURIComponent(blobMatch[4]),
-		};
+		return buildParsedUrl(blobMatch, true);
 	}
 
 	// Try shorthand format: owner/repo/path (assumes main branch)
 	const shorthandMatch = url.match(SHORTHAND_PATH_REGEX);
 	if (shorthandMatch && !url.includes("://")) {
-		return {
-			owner: shorthandMatch[1],
-			repo: shorthandMatch[2],
-			path: decodeURIComponent(shorthandMatch[3]),
-		};
+		return buildParsedUrl(shorthandMatch, false);
 	}
 
 	return null;

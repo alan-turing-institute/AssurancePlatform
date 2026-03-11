@@ -6,7 +6,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import {
+	type ResetPasswordFormInput,
+	resetPasswordFormSchema,
+} from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -19,25 +22,7 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z
-	.object({
-		password: z
-			.string()
-			.min(8, "Password must be at least 8 characters")
-			.regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-			.regex(/\d/, "Password must contain at least one number")
-			.regex(
-				/[!@#$%^&*()_,.?":{}|<>]/,
-				"Password must contain at least one special character"
-			),
-		confirmPassword: z.string(),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: "Passwords do not match",
-		path: ["confirmPassword"],
-	});
-
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = ResetPasswordFormInput;
 
 type TokenState = "loading" | "valid" | "invalid" | "expired";
 
@@ -55,7 +40,7 @@ const ResetPasswordForm = () => {
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+		resolver: zodResolver(resetPasswordFormSchema),
 		defaultValues: {
 			password: "",
 			confirmPassword: "",
@@ -71,15 +56,13 @@ const ResetPasswordForm = () => {
 			}
 
 			try {
-				const response = await fetch(
-					`/api/auth/reset-password?token=${encodeURIComponent(token)}`
-				);
-				const data = await response.json();
+				const { validatePasswordResetToken } = await import("@/actions/auth");
+				const result = await validatePasswordResetToken(token);
 
-				if (response.ok && data.valid) {
+				if (result.valid) {
 					setTokenState("valid");
-					setEmail(data.email);
-				} else if (data.error?.includes("expired")) {
+					setEmail(result.email ?? null);
+				} else if (result.error?.includes("expired")) {
 					setTokenState("expired");
 				} else {
 					setTokenState("invalid");
@@ -136,7 +119,7 @@ const ResetPasswordForm = () => {
 	if (tokenState === "loading") {
 		return (
 			<div className="mx-auto flex w-full max-w-sm flex-col items-center justify-center lg:w-96">
-				<Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
 				<p className="mt-4 text-foreground text-sm">Validating reset link...</p>
 			</div>
 		);
@@ -146,17 +129,17 @@ const ResetPasswordForm = () => {
 	if (tokenState === "invalid") {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-rose-700 bg-rose-500/20 px-4 py-6">
-					<h3 className="font-semibold text-rose-800 dark:text-rose-400">
+				<div className="rounded-md border border-destructive bg-destructive/20 px-4 py-6">
+					<h3 className="font-semibold text-destructive dark:text-destructive">
 						Invalid reset link
 					</h3>
-					<p className="mt-2 text-rose-700 text-sm dark:text-rose-300">
+					<p className="mt-2 text-destructive/80 text-sm">
 						This password reset link is invalid. Please request a new one.
 					</p>
 				</div>
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/forgot-password"
 					>
 						Request new reset link
@@ -170,17 +153,17 @@ const ResetPasswordForm = () => {
 	if (tokenState === "expired") {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-amber-700 bg-amber-500/20 px-4 py-6">
-					<h3 className="font-semibold text-amber-800 dark:text-amber-400">
+				<div className="rounded-md border border-warning bg-warning/20 px-4 py-6">
+					<h3 className="font-semibold text-warning dark:text-warning">
 						Link expired
 					</h3>
-					<p className="mt-2 text-amber-700 text-sm dark:text-amber-300">
+					<p className="mt-2 text-sm text-warning/80">
 						This password reset link has expired. Please request a new one.
 					</p>
 				</div>
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/forgot-password"
 					>
 						Request new reset link
@@ -194,11 +177,11 @@ const ResetPasswordForm = () => {
 	if (success) {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-green-700 bg-green-500/20 px-4 py-6">
-					<h3 className="font-semibold text-green-800 dark:text-green-400">
+				<div className="rounded-md border border-success bg-success/20 px-4 py-6">
+					<h3 className="font-semibold text-success dark:text-success">
 						Password reset successful
 					</h3>
-					<p className="mt-2 text-green-700 text-sm dark:text-green-300">
+					<p className="mt-2 text-sm text-success/80">
 						Your password has been reset. Redirecting you to login...
 					</p>
 				</div>
@@ -221,7 +204,7 @@ const ResetPasswordForm = () => {
 			</div>
 
 			{error && (
-				<div className="mt-4 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700">
+				<div className="mt-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive">
 					<p>{error}</p>
 				</div>
 			)}
@@ -242,20 +225,22 @@ const ResetPasswordForm = () => {
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword(!showPassword)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormDescription>
@@ -279,35 +264,33 @@ const ResetPasswordForm = () => {
 												type={showConfirmPassword ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showConfirmPassword
 														? "Hide password"
 														: "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() =>
 													setShowConfirmPassword(!showConfirmPassword)
 												}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showConfirmPassword ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
 							)}
 						/>
-						<Button
-							className="w-full bg-indigo-600 text-white hover:bg-indigo-500"
-							disabled={loading}
-							type="submit"
-						>
+						<Button className="w-full" disabled={loading} type="submit">
 							{loading ? "Resetting..." : "Reset password"}
 						</Button>
 					</form>
@@ -315,7 +298,7 @@ const ResetPasswordForm = () => {
 
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/login"
 					>
 						Back to login

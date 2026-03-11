@@ -66,7 +66,7 @@ export function ResourcesInfo() {
 		<NavigationMenu className="hidden sm:block">
 			<NavigationMenuList>
 				<NavigationMenuItem>
-					<NavigationMenuTrigger className="bg-indigo-600 hover:bg-indigo-700 hover:text-white dark:bg-slate-900 dark:hover:bg-slate-800">
+					<NavigationMenuTrigger className="bg-primary text-primary-foreground hover:bg-primary/90">
 						Resources
 					</NavigationMenuTrigger>
 					<NavigationMenuContent>
@@ -105,10 +105,14 @@ const ListItem = React.forwardRef<
 					className
 				)}
 				ref={ref}
+				rel="noopener noreferrer"
 				{...props}
 			>
 				<div className="font-medium text-sm leading-none">{title}</div>
 				<p className="text-muted-foreground text-sm leading-snug">{children}</p>
+				{props.target === "_blank" && (
+					<span className="sr-only">(opens in new tab)</span>
+				)}
 			</a>
 		</NavigationMenuLink>
 	</li>

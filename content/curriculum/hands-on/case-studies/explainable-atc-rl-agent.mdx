@@ -1,0 +1,207 @@
+---
+title: "Explainable Reinforcement Learning Agent for Air Traffic Control"
+description: "A case study exploring how to assure the explainability of a reinforcement learning agent undergoing a supervised operational trial as a decision-support tool for en route air traffic controllers"
+sidebar_label: "ATC RL Agent"
+sidebar_position: 7
+tags:
+  - case-studies
+  - aviation
+  - explainability
+  - AI
+  - reinforcement-learning
+---
+
+# Explainable Reinforcement Learning Agent for Air Traffic Control
+
+![ATC RL Agent Hero Image](/images/case-studies/explainable-atc-rl-agent.jpeg)
+
+| Field              | Details          |
+| ------------------ | ---------------- |
+| **Domain**         | Aviation         |
+| **Assurance Goal** | Explainability   |
+
+## Overview
+
+Project Bluebird is an EPSRC Prosperity Partnership between the Alan Turing Institute, NATS (the UK's en route air navigation service provider), and the University of Exeter. The programme has developed BluebirdDT, a probabilistic Digital Twin of the London Area Control Centre (LACC) that integrates over 20 million flights of NATS operational data.[^1] BluebirdDT has been used to train and evaluate AI agents for en route air traffic management—the high-altitude phase of flight between departure and arrival airports.
+
+[^1]: Pepper, N., Keane, A., Hodgkin, A., Gould, D., Henderson, E., Lauritsen, L., Vlahos, C., Ath, G. D., Everson, R., Cannon, R., Sierra-Castro, A., Korna, J., Carvell, B. J., & Thomas, M. (n.d.). A Probabilistic Digital Twin of UK en Route Airspace. In AIAA SCITECH 2026 Forum. American Institute of Aeronautics and Astronautics. https://doi.org/10.2514/6.2026-1794
+
+A reinforcement learning (RL) agent has been trained using Proximal Policy Optimisation (PPO) to manage aircraft within simulated en route sectors.[^2] The agent learns to recommend clearances (i.e. instructions to aircraft to turn or change altitude) in order to maintain safe separation between aircraft while keeping them close to their planned routes.
+
+[^2]: Carvell, B., Ath, G. D., Benjamin, E., & Everson, R. (2026, January 12). Online Action-Stacking Improves Reinforcement Learning Performance for Air Traffic Control. AIAA SCITECH 2026 Forum. https://doi.org/10.2514/6.2026-2746
+
+The agent has completed simulation-based qualification using the Machine Basic Training (MBT) framework — a human-in-the-loop assessment methodology that adapts NATS' regulator-certified training curriculum for evaluating AI agents, using certified ATCO assessors to grade agent performance against the same competency standards applied to human trainees.[^3] This case study considers a plausible near-future scenario in which, having passed MBT qualification, the agent enters a **supervised operational trial** in a designated en route sector within the LACC. During the trial, the agent operates as a **decision-support tool**: it monitors live traffic and recommends clearances to a supervising air traffic controller (ATCO), who retains full authority to accept, modify, or override any recommendation. The ATCO remains responsible for all clearances issued to pilots.
+
+[^3]: Carvell, B., Thomas, M., Pace, A., Dorney, C., De Ath, G., Everson, R., Pepper, N., Keane, A., Tomlinson, S., & Cannon, R. (2026). Human-in-the-Loop Testing of AI Agents for Air Traffic Control with a Regulated Assessment Framework. arXiv:2601.04288.
+
+Because RL agents learn policies through *trial-and-error interaction* within a simulated environment, rather than being explicitly programmed with rules, their decision-making can be inherently opaque. An ATCO supervising the agent during the trial would need to understand *why* it recommended a particular clearance to judge whether the recommendation was safe and appropriate. A developer investigating a failure or unexpected recommendation would need to understand the internal factors driving the decision. A regulator evaluating the trial would need evidence that the agent's behaviour is explainable in terms that map to established operational standards. This case study explores the challenge of assuring explainability across these different audiences and needs.
+
+## System Description
+
+### What the System Does
+
+The RL agent provides decision support to a supervising ATCO by:
+
+- continuously monitoring the positions, headings, altitudes, and flight plan routes of all aircraft in the designated trial sector;
+- identifying potential conflicts between aircraft and recommending clearances (heading changes, altitude changes) to maintain safe separation;
+- presenting recommended clearances to the supervising ATCO for review and approval;
+- updating its situational model based on the ATCO's decisions, whether the recommendation was accepted, modified, or overridden; and
+- recommending that aircraft be returned to their planned routes once a conflict has been resolved.
+
+The ATCO issues all clearances to pilots via the standard voice communication loop. The agent does not communicate directly with pilots.
+
+### How It Works
+
+The agent's operation spans two distinct phases. During **training** (in simulation), the agent learns a policy through repeated interaction with the BluebirdDT environment. During **inference** (at trial runtime), the trained policy is fixed and applied to live traffic data.
+
+**Training (simulation)**
+
+1. **State Observation**: At each time step, the agent receives a state vector containing information about aircraft in the sector (e.g. relative bearings, distances, vertical separations, time since last action, and each aircraft's deviation from its planned route).
+2. **Policy Evaluation**: A neural network (the "policy") maps the current state to a probability distribution over possible actions. The agent samples from this distribution to select an action.
+3. **Reward Feedback**: The agent receives reward signals reflecting multiple objectives — maintaining safe separation, minimising route deviation, and avoiding excessive or oscillatory commands. These signals shape the policy over many thousands of training episodes.
+
+**Inference (operational trial)**
+
+4. **State Observation**: The agent receives the same state vector as in training, but now derived from live surveillance data (radar, flight plan updates) rather than simulation. The quality and completeness of this data stream is a critical dependency (see [Deliberative Prompt 3](#deliberative-prompts)).
+5. **Policy Evaluation**: The trained policy maps the current state to a recommended clearance. The policy is frozen — it does not update during the trial.
+6. **Value Estimation**: A separate value function (the "critic" network) estimates how much future reward the agent expects from the current state. This provides a real-time confidence signal that can be surfaced to the supervising ATCO and trial monitoring systems.
+7. **Recommendation Presentation**: The recommended clearance is presented to the supervising ATCO, who decides whether to issue it to the pilot, modify it, or override it entirely.
+
+### Key Technical Details
+
+| Aspect                      | Details |
+| --------------------------- | ------- |
+| **Model Architecture**      | Fully-connected neural network with two hidden layers of 64 neurons each (approximately 8,320 parameters), using ReLU activation functions. Separate policy (actor) and value (critic) networks |
+| **Training Algorithm**      | Proximal Policy Optimisation (PPO) — a policy gradient method that updates the policy in small, stable steps to avoid catastrophic performance changes |
+| **Training Environment**    | BluebirdDT simulation environments modelling en route sectors within the LACC, using probabilistic trajectory prediction informed by over 20 million flights of NATS operational data |
+| **State Representation**    | Relative bearings, distances, vertical separations, time since last action, route deviation — a compact vector representation rather than raw radar imagery |
+| **Action Space**            | Heading changes (turn left/right) and altitude changes (climb/descend), composed into operationally natural compound clearances |
+| **Reward Function**         | Multi-objective: centreline tracking (route adherence), separation maintenance (safety), action damping (avoiding excessive or oscillatory commands) |
+| **Explainability Methods**  | Under investigation — this is a central challenge of the case study. Candidate approaches include reward-component attribution, value function analysis, policy entropy (a measure of how certain the agent is about what to do), and saliency methods |
+| **Pre-Trial Qualification** | Machine Basic Training (MBT) assessment: formative and summative exercises evaluated by certified ATCO assessors against competency standards for safety, controlling, planning, and coordination[^3] |
+
+### Deployment Context
+
+- **Scope**: Supervised operational trial in a designated en route sector within the London Area Control Centre (LACC)
+- **Role**: Decision support — the agent recommends clearances; the supervising ATCO retains full authority to accept, modify, or override any recommendation
+- **Environment**: Live operational airspace (single sector), with BluebirdDT used for pre-trial qualification and ongoing parallel validation
+- **Users**: Operational ATCOs, with trial oversight from NATS safety management and CAA observers
+- **Human Oversight**: The ATCO is always in command. Enhanced monitoring during the trial includes a dedicated safety officer and real-time recording of all agent recommendations and ATCO responses
+- **Validation Framework**: Pre-trial: MBT qualification (formative and summative assessment by certified ATCO assessors[^3]). During trial: continuous monitoring against safety, efficiency, and procedural metrics; periodic human-in-the-loop assessment reviews
+- **Trial Status**: This case study describes a plausible near-future scenario. The RL agent and the systems it depends on are currently in simulation-based research and evaluation
+
+## Stakeholders
+
+| Stakeholder                                         | Interest                                                                                       | Concern                                                                                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Air Traffic Controllers (ATCOs)**                  | Understanding agent recommendations well enough to make informed accept/override decisions      | Cannot calibrate trust if the agent's reasoning is opaque; risk of over-reliance on recommendations or of dismissing them without engagement |
+| **ATCO Examiners and Training Assessors**            | Assessing whether the agent meets the same competency standards applied to human trainees       | MBT provides a pre-trial qualification methodology[^3], but how should competency be monitored on an ongoing basis during the trial?   |
+| **Trial Engineering Team**                           | Debugging failures, understanding generalisation gaps, improving reward design                  | Policy networks are opaque; reward-driven behaviour may satisfy metrics without genuinely safe reasoning                               |
+| **NATS (Air Navigation Service Provider)**           | Safe, efficient, and operationally acceptable agent behaviour; trial evidence supporting the case for wider deployment | Reputational and safety risk if agents produce unexplainable recommendations that erode controller trust                               |
+| **Civil Aviation Authority (CAA)**                   | Evidence that the system meets safety and explainability requirements; trial data to inform a future regulatory framework | No established certification pathway for RL agents in safety-critical ATC roles; CAP2970 provides emerging but incomplete guidance[^4] |
+| **Trial Oversight Board**                            | Defining trial entry/exit criteria, monitoring safety thresholds, deciding whether to continue, modify, or halt the trial | No precedent exists for RL agent trials in live ATC; difficulty defining appropriate go/no-go criteria                                 |
+| **Airline Operators and Pilots**                     | Safe and predictable handling of their aircraft in controlled airspace                          | During the trial, pilots interact only with the human ATCO; pilots may be unaware of the agent's role, raising questions about transparency |
+| **Passengers and Public**                            | Confidence that AI involvement in ATC does not compromise safety                               | Difficulty understanding what role AI plays and what safeguards exist                                                                  |
+| **Academic Research Community**                      | Advancing understanding of explainable RL in safety-critical domains                           | Publication pressure may incentivise overstating agent capability relative to published evidence                                       |
+
+[^4]: https://www.caa.co.uk/data-and-publications/publications/documents/content/cap-493/
+
+## Regulatory Context
+
+No established regulatory pathway exists for deploying RL-based decision support in live UK airspace. The supervised operational trial described in this case study represents a plausible intermediate step between simulation-based research and any future certification. The trial itself is designed to generate the operational evidence — on safety, explainability, and human-machine interaction — that would be needed to inform a future regulatory framework. The following regulations and guidance documents are relevant to both the trial and any subsequent deployment.
+
+- **CAA CAP493 (Manual of Air Traffic Services)**: The primary operational standard for ATC in the UK. Defines controller responsibilities, separation standards, and the clearances that controllers may issue. During the trial, all clearances are issued by the human ATCO in accordance with CAP493; the agent's recommendations must be consistent with CAP493 procedures, and any explanation of those recommendations must be interpretable in CAP493 terms[^4]
+- **CAA CAP2970 (Artificial Intelligence in Aviation)**: The most directly relevant emerging framework for the trial. Addresses requirements for transparency, explainability, and human oversight of AI-based decision support in aviation[^5]
+- **EASA AI Concept Paper**: The European Union Aviation Safety Agency's framework for certifying AI in aviation. Distinguishes between Level 1 (human-assisted AI) and Level 2 (human-AI collaboration), with increasing explainability requirements at higher levels. The trial described in this case study sits at the boundary of these two levels. Relevant as a benchmark even outside EU jurisdiction[^6]
+- **EU AI Act**: Classifies AI systems by risk level. ATC applications are likely to be classified as high-risk, requiring conformity assessments, documentation of training data, and ongoing monitoring. Relevant for any future European deployment
+- **UK GDPR and Data Protection Act 2018**: Relevant to the extent that NATS operational data (including flight tracks and controller actions) is used for training, and that trial operations may involve processing of participant and operational data
+- **FAA Roadmap for Artificial Intelligence Safety Assurance**: The US Federal Aviation Administration's framework for AI assurance in aviation. While not directly applicable in the UK, it provides a comparative benchmark for international alignment[^7]
+- **NATS Internal Safety Management System**: NATS' own safety governance framework, which any operational trial would need to satisfy before reaching the regulator
+
+[^5]: https://www.caa.co.uk/data-and-publications/publications/documents/content/cap2970/
+
+[^6]: https://www.easa.europa.eu/en/document-library/general-publications/easa-artificial-intelligence-concept-paper-issue-2
+
+[^7]: https://www.faa.gov/media/82891
+
+## Explainability Considerations
+
+### Explanation for Whom? The Audience Problem
+
+A central challenge for explainability in this context is that different audiences need fundamentally different kinds of explanation. An ATCO supervising the agent during the trial needs rapid, operationally grounded justifications (e.g. why was this clearance recommended for this aircraft, why now, why this magnitude?). A developer investigating an unexpected recommendation needs access to internal model states, such as which reward components dominated, what the value function estimated, and where the policy was uncertain. A regulator evaluating the trial needs structured evidence linking the agent's behaviour to established competency standards. These are not variations of the same explanation; they may require entirely different methods and representations.
+
+A key question for the assurance case is whether a unified explanation framework can serve all audiences, or whether layered, audience-specific approaches are necessary.
+
+### Reward Function Transparency
+
+The agent's behaviour is shaped by a multi-objective reward function combining centreline tracking, separation maintenance, and action damping. Different weightings of these objectives produce qualitatively different agent behaviours. If the agent recommends what appears to be an unnecessarily aggressive turn, the explanation may lie not in the current state but in the reward function's relative weighting of route adherence versus safety margin. Understanding *why the agent learned to behave this way*, rather than just *what it recommended in this instance*, requires transparency about the reward function design. This is primarily a developer-facing concern, but it also has regulatory implications: can an authority be satisfied that the reward function encodes the right priorities? The operational trial provides a valuable opportunity to validate whether reward-driven behaviour aligns with the expectations of experienced ATCOs in live traffic conditions.
+
+### Value Function as Confidence Signal
+
+The value function (critic network) estimates the expected future reward from any given state. A sudden drop in the value estimate may signal that the agent perceives a deteriorating situation — effectively, a loss of confidence. This could be a useful real-time signal for the supervising ATCO and trial monitoring systems, but it requires careful interpretation. A low value estimate does not mean the agent will fail; it means the agent expects less reward. The relationship between value estimates and operationally meaningful concepts like "safety margin" or "sector complexity" is not straightforward and would need empirical validation before it could be relied upon for operational oversight. The trial provides an opportunity to calibrate this relationship against real operational outcomes.
+
+### Monitoring versus Controlling
+
+Although the trial is explicitly designed as decision-support — with the ATCO retaining full authority — there is a well-documented risk that effective automation shifts human operators from active controlling to passive monitoring over time, even in advisory systems. Decades of human factors research in aviation and other safety-critical domains shows that passive monitoring degrades situational awareness, creating a risk that controllers fail to maintain the mental model of traffic that would enable them to intervene quickly and correctly if the agent produces a poor recommendation. Explanations are sometimes proposed as a solution (e.g. the agent narrates its reasoning, keeping the controller engaged). But explanations themselves impose a cognitive load, and processing them competes with the monitoring task. There is a genuine tension between providing enough explanation to maintain situational awareness and providing so much that it becomes a distraction. This tension is particularly acute in ATC, where decision timescales are measured in seconds and the operational tempo is high.
+
+### Communicability and the Voice Loop
+
+ATC relies on voice communication between controllers and pilots. Every clearance is read back by the pilot and confirmed by the controller. This communication loop serves multiple functions:
+
+- it ensures the pilot has correctly understood the instruction;
+- it provides a record for other controllers monitoring the frequency; and
+- it supports the controller's own situational awareness.
+
+During the trial, the ATCO communicates with pilots in the normal way — the agent does not participate in the voice loop. However, the agent's recommendations must be presented to the ATCO in a form that can be seamlessly translated into standard voice clearances. If the agent's recommendations are expressed in terms that do not map naturally to CAP493 phraseology, or if the ATCO must mentally translate between the agent's representation and the language of the voice loop, this creates friction that may slow decision-making or introduce errors. The communicability of agent recommendations is not only a technical challenge but a human factors and procedural one.
+
+## Assurance Focus
+
+The assurance case should demonstrate that:
+
+> **The RL agent's behaviour during the supervised operational trial is explainable to the degree necessary for operational supervision by ATCOs, developmental oversight by the trial engineering team, and regulatory evaluation by aviation authorities.**
+
+### Deliberative Prompts
+
+1. An ATCO supervising a human trainee can ask "why did you do that?" and receive an answer in operational language. What would the equivalent interaction look like with an RL agent providing decision support, and is it achievable with current explainability methods?
+2. If the agent consistently performs well on safety and efficiency metrics but its developers cannot fully explain *why* it makes specific recommendations, should it be considered safe for operational use? How should the assurance case handle the gap between performance evidence and explanatory evidence?
+3. The agent was trained on clean, complete state vectors in simulation, but at trial runtime it depends on live surveillance data streams (radar feeds, flight plan updates) that may be incomplete, noisy, delayed, or temporarily unavailable. How should the assurance case address the quality and reliability of runtime data? If a data feed degrades mid-session — for example, a radar gap or a stale flight plan — the agent's recommendations may become unreliable without the agent or the ATCO having any obvious signal that this has occurred. What continuous validation and monitoring mechanisms are needed to detect data quality issues in real time, and how should the system behave when data integrity cannot be assured?
+4. The agent was qualified in simulation using the MBT framework. How should the assurance case address whether explainability methods validated in simulation remain reliable under live operational conditions, where traffic patterns, weather, and controller behaviour may differ from the training environment?
+5. If the agent's reward function encodes incorrect or incomplete priorities (e.g., underweighting a rare but critical safety scenario), the agent's behaviour will be consistently wrong in ways that are difficult to detect through explainability methods alone. How should the assurance case address the trustworthiness of the reward function itself?
+6. Human controllers undergo a structured competency assessment where they must demonstrate and explain their decision-making. The MBT framework has been used to assess rules-based and optimisation-based agents against the same competency standards.[^3] Should the RL agent be assessed against this same framework, and if so, what counts as an "explanation" from a non-human agent? Does the MBT framework need adaptation for RL-specific challenges such as policy opacity and reward-driven behaviour?
+
+## Suggested Strategies
+
+### S1. Argument Over Reward-Component Attribution
+
+**Decompose the agent's multi-objective reward into its constituent components (centreline tracking, separation maintenance, action damping) and attribute each recommendation to the relative contribution of each component.** This provides a *developer-facing explanation* of why the agent learned a particular behaviour and supports regulatory review of whether the reward function encodes appropriate priorities. It does not directly produce operationally meaningful explanations for controllers, but it provides the foundation upon which higher-level explanations can be built.
+
+### S2. Argument Over Operational Envelope Characterisation
+
+**Systematically map the state-space regions where the agent behaves competently and where it does not, using the MBT curriculum and structured probe scenarios to identify boundaries of reliable performance.** Rather than explaining individual decisions, this strategy characterises the agent's overall competency — where it can be trusted and where human intervention is most likely to be needed. This is the most technically tractable approach given current RL explainability methods and aligns with how human controller competency is assessed. One method for mapping the envelope is comparative baseline testing: evaluating the RL agent against a rules-based agent on the same MBT scenarios, using divergences in behaviour to identify edge cases or novel strategies. During the trial, operational data progressively extends the characterisation beyond what was achievable in simulation alone.
+
+### S3. Argument Over Layered Explanation Architecture
+
+**Design separate explanation interfaces for different audiences: a simplified operational layer for the supervising ATCO (concise summaries of what the agent is recommending and why), a technical layer for the trial engineering team (reward decomposition, policy entropy, saliency, and value-function monitoring as a real-time confidence signal), and a structured evidence layer for regulators (TEA-formatted claims, MBT assessment results, and behavioural testing outcomes).** This acknowledges that a single explanation cannot serve all audiences and builds the explanation system as a deliberate multi-layered architecture.
+
+### S4. Argument Over Reversion and Handover Protocol
+
+**Define clear protocols for when and how the agent's decision-support role should be suspended and full manual control restored, and ensure these protocols are themselves explainable.** In a supervised trial, the ability to revert cleanly to manual control is as important as the system's normal operation. The reversion protocol should include what information the agent provides to the controller during handover (traffic state, active recommendations, perceived conflicts), the conditions that trigger reversion (e.g. value-function confidence dropping below a threshold, out-of-distribution detection, or ATCO override rate exceeding a limit), and how quickly the transition must occur. The trial provides direct evidence of the protocol's effectiveness and identifies gaps that would need to be addressed before wider deployment.
+
+## Recommended Techniques for Evidence
+
+The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
+
+- [Integrated Gradients](https://alan-turing-institute.github.io/tea-techniques/techniques/integrated-gradients/) — Attribute the agent's output to specific input features (e.g., which aircraft's relative position most influenced a turn recommendation), supporting both developer debugging and regulatory evidence of feature relevance
+- [Contrastive Explanation Method](https://alan-turing-institute.github.io/tea-techniques/techniques/contrastive-explanation-method/) — Generate contrastive explanations of the form "the agent recommended turning aircraft A left because aircraft B was closing from the right; had aircraft B been 5 nautical miles further away, no turn would have been recommended". Aligns with how ATCOs reason about traffic conflicts
+- [Partial Dependence Plots](https://alan-turing-institute.github.io/tea-techniques/techniques/partial-dependence-plots/) — Visualise how the agent's policy responds to changes in individual input features (e.g., how turn probability varies with separation distance), supporting developer understanding of learned behaviours and identification of unexpected sensitivities
+- [Out-of-Distribution Detector for Neural Networks](https://alan-turing-institute.github.io/tea-techniques/techniques/out-of-distribution-detector-for-neural-networks/) — Detect traffic scenarios that fall outside the agent's training distribution, flagging situations where the agent's recommendations (and their explanations) should not be trusted and enhanced human oversight is required
+- [Permutation Importance](https://alan-turing-institute.github.io/tea-techniques/techniques/permutation-importance/) — Assess which input features the agent relies on most by measuring performance degradation when each feature is randomly shuffled. Validates that the agent uses operationally meaningful features (e.g., separation distance) rather than spurious correlations
+
+## Further Reading
+
+- [Keane et al. (2026) "A Framework for Assuring the Accuracy and Fidelity of an AI-Enabled Digital Twin of en Route UK Airspace"](https://arc.aiaa.org/doi/abs/10.2514/6.2026-1793) — A technical paper presenting an assurance case for the accuracy and fidelity of the Bluebird digital twin environment
+- [Carvell, B. et al. (2026) "Online Action-Stacking Improves RL Performance for ATC"](https://arxiv.org/html/2601.04287v1) — The technical paper describing the RL agent and online action-stacking mechanism
+- [Carvell, B. et al. (2026) "Human-in-the-Loop Testing of AI Agents for ATC with a Regulated Assessment Framework"](https://arxiv.org/abs/2601.04288) — The technical paper describing the Machine Basic Training (MBT) assessment framework and its application to candidate agents
+- [Pepper, N. et al. (2026) "A Probabilistic Digital Twin of UK En Route Airspace"](https://arxiv.org/abs/2601.03113) — The technical paper describing the BluebirdDT platform, including the MBT assessment curriculum and HITL framework
+- [CAA CAP2970 — Artificial Intelligence in Aviation](https://www.caa.co.uk/cap2970) — The UK Civil Aviation Authority's emerging guidance on AI in aviation
+- [EASA AI Concept Paper](https://www.easa.europa.eu/en/document-library/general-publications/easa-artificial-intelligence-concept-paper) — The European framework for certifying AI in aviation systems

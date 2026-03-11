@@ -1,143 +1,63 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import type { ActionResult } from "@/lib/errors";
 import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
-import { validateInput } from "@/lib/validation/server-action";
-import type { ActionResult } from "@/types";
+import { validateInput } from "@/lib/validation/input-validation";
 
 type AssuranceCase = {
 	id: number | string;
 	name: string;
 	description?: string;
-	created_date?: string;
+	createdDate?: string;
+	updatedDate?: string;
 	owner?: number | string;
+	isDemo?: boolean;
 };
 
-export const fetchAssuranceCases = async (
-	_token: string
-): Promise<AssuranceCase[] | null> => {
-	const { prismaNew } = await import("@/lib/prisma");
-
+export const fetchAssuranceCases = async (): Promise<
+	AssuranceCase[] | null
+> => {
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	// Get cases where user is creator OR has explicit permission (exclude soft-deleted)
-	const cases = await prismaNew.assuranceCase.findMany({
-		where: {
-			deletedAt: null,
-			OR: [
-				{ createdById: validated.userId },
-				{
-					userPermissions: {
-						some: {
-							userId: validated.userId,
-						},
-					},
-				},
-			],
-		},
-		select: {
-			id: true,
-			name: true,
-			description: true,
-			createdAt: true,
-			createdById: true,
-		},
-		orderBy: {
-			createdAt: "desc",
-		},
-	});
-
-	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description ?? undefined,
-		created_date: c.createdAt.toISOString(),
-		owner: c.createdById ?? undefined,
-	}));
+	const { listUserCases } = await import("@/lib/services/case-fetch-service");
+	const result = await listUserCases(validated.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return result.data;
 };
 
-export const fetchSharedAssuranceCases = async (
-	_token: string
-): Promise<AssuranceCase[] | null> => {
-	const { prismaNew } = await import("@/lib/prisma");
-
+export const fetchSharedAssuranceCases = async (): Promise<
+	AssuranceCase[] | null
+> => {
 	const validated = await validateSession();
 	if (!validated) {
 		return null;
 	}
 
-	// Get cases where user has permission (direct or via team) but is NOT the creator (exclude soft-deleted)
-	const cases = await prismaNew.assuranceCase.findMany({
-		where: {
-			deletedAt: null,
-			AND: [
-				// User has permission (either direct or via team membership)
-				{
-					OR: [
-						// Direct user permission
-						{
-							userPermissions: {
-								some: {
-									userId: validated.userId,
-								},
-							},
-						},
-						// Team-based permission (user is member of a team with access)
-						{
-							teamPermissions: {
-								some: {
-									team: {
-										members: {
-											some: {
-												userId: validated.userId,
-											},
-										},
-									},
-								},
-							},
-						},
-					],
-				},
-				// User is NOT the creator
-				{
-					NOT: {
-						createdById: validated.userId,
-					},
-				},
-			],
-		},
-		select: {
-			id: true,
-			name: true,
-			description: true,
-			createdAt: true,
-			createdById: true,
-		},
-		orderBy: {
-			createdAt: "desc",
-		},
-	});
-
-	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description ?? undefined,
-		created_date: c.createdAt.toISOString(),
-		owner: c.createdById ?? undefined,
-	}));
+	const { listSharedCases } = await import("@/lib/services/case-fetch-service");
+	const result = await listSharedCases(validated.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return result.data;
 };
 
 export const createAssuranceCase = async (
-	_token: string,
 	input: CreateAssuranceCaseInput
 ): Promise<ActionResult<{ id: string }>> => {
-	// 1. Validate input
+	const validated = await validateSession();
+	if (!validated) {
+		return { success: false, error: "Invalid session" };
+	}
+
 	const validation = validateInput(input, createAssuranceCaseSchema);
 	if (!validation.success) {
 		return {
@@ -147,36 +67,67 @@ export const createAssuranceCase = async (
 		};
 	}
 
-	// 2. Authenticate
-	const validated = await validateSession();
-	if (!validated) {
-		return { success: false, error: "Invalid session" };
+	const { createCase } = await import("@/lib/services/case-fetch-service");
+	const result = await createCase(validated.userId, {
+		name: validation.data.name,
+		description: validation.data.description,
+		colourProfile: validation.data.colourProfile,
+	});
+
+	if ("error" in result) {
+		return { success: false, error: result.error };
 	}
 
-	// 3. Business logic
-	const { prismaNew } = await import("@/lib/prisma");
-
-	try {
-		const newCase = await prismaNew.assuranceCase.create({
-			data: {
-				name: validation.data.name,
-				description: validation.data.description,
-				colorProfile: validation.data.colorProfile,
-				createdById: validated.userId,
-			},
-		});
-
-		return { success: true, data: { id: newCase.id } };
-	} catch (error) {
-		console.error("Failed to create case:", error);
-		return { success: false, error: "Failed to create case" };
-	}
+	return { success: true, data: result.data };
 };
 
-export const fetchPublishedAssuranceCases = async (
-	_token: string
-): Promise<AssuranceCase[]> => {
+export const fetchPublishedAssuranceCases = async (): Promise<
+	AssuranceCase[]
+> => {
 	// Note: Published cases feature not yet implemented in Prisma schema
 	// This function is retained for backwards compatibility but returns empty array
 	return await Promise.resolve([]);
 };
+
+type PublishedCaseForStudy = {
+	id: string;
+	name: string;
+	description: string;
+	publishStatus: string;
+	publishedAt: string | null;
+	markedReadyAt: string | null;
+	publishedVersionId: string | null;
+};
+
+/**
+ * Fetches the current user's cases that are available for linking to case studies
+ * (those with READY_TO_PUBLISH or PUBLISHED status).
+ */
+export async function fetchPublishedCasesForStudy(): Promise<
+	PublishedCaseForStudy[]
+> {
+	const validated = await validateSession();
+	if (!validated) {
+		return [];
+	}
+
+	const { getCasesAvailableForCaseStudy } = await import(
+		"@/lib/services/case-study-service"
+	);
+
+	const result = await getCasesAvailableForCaseStudy(validated.userId);
+
+	if ("error" in result) {
+		return [];
+	}
+
+	return result.data.map((c) => ({
+		id: c.id,
+		name: c.name,
+		description: c.description,
+		publishStatus: c.publishStatus,
+		publishedAt: c.publishedAt?.toISOString() ?? null,
+		markedReadyAt: c.markedReadyAt?.toISOString() ?? null,
+		publishedVersionId: c.publishedVersionId,
+	}));
+}

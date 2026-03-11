@@ -60,10 +60,10 @@ async function getCasePermissionFromPrisma(
 	userId: string,
 	caseId: string
 ): Promise<CasePermissionResult> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	// First, check if user is the case creator (implicit owner)
-	const assuranceCase = await prismaNew.assuranceCase.findUnique({
+	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: { createdById: true },
 	});
@@ -79,13 +79,13 @@ async function getCasePermissionFromPrisma(
 
 	// Get direct user permission and team-based permissions in parallel
 	const [userPermission, teamPermissions] = await Promise.all([
-		prismaNew.casePermission.findUnique({
+		prisma.casePermission.findUnique({
 			where: {
 				caseId_userId: { caseId, userId },
 			},
 			select: { permission: true },
 		}),
-		prismaNew.caseTeamPermission.findMany({
+		prisma.caseTeamPermission.findMany({
 			where: {
 				caseId,
 				team: {
@@ -173,9 +173,9 @@ export async function getTeamRole(
 	userId: string,
 	teamId: string
 ): Promise<TeamRole | null> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
-	const membership = await prismaNew.teamMember.findUnique({
+	const membership = await prisma.teamMember.findUnique({
 		where: {
 			teamId_userId: { teamId, userId },
 		},
@@ -237,6 +237,36 @@ export async function canManageTeam(
 }
 
 /**
+ * Validates that a user has admin access to a team.
+ * Returns a typed result for use in service-layer permission guards.
+ */
+export async function validateTeamAdmin(
+	userId: string,
+	teamId: string
+): Promise<{ valid: true } | { valid: false; error: string }> {
+	const isAdmin = await isTeamAdmin(userId, teamId);
+	if (!isAdmin) {
+		return { valid: false, error: "Permission denied" };
+	}
+	return { valid: true };
+}
+
+/**
+ * Validates that a user is a member of a team.
+ * Returns a typed result for use in service-layer permission guards.
+ */
+export async function validateTeamMember(
+	userId: string,
+	teamId: string
+): Promise<{ valid: true } | { valid: false; error: string }> {
+	const isMember = await isTeamMember(userId, teamId);
+	if (!isMember) {
+		return { valid: false, error: "Permission denied" };
+	}
+	return { valid: true };
+}
+
+/**
  * Checks if a user is the last admin of a team.
  * Used to prevent removing the last admin.
  */
@@ -244,7 +274,7 @@ export async function isLastTeamAdmin(
 	userId: string,
 	teamId: string
 ): Promise<boolean> {
-	const { prismaNew } = await import("@/lib/prisma");
+	const { prisma } = await import("@/lib/prisma");
 
 	// Check if user is an admin
 	const userRole = await getTeamRole(userId, teamId);
@@ -253,7 +283,7 @@ export async function isLastTeamAdmin(
 	}
 
 	// Count other admins
-	const adminCount = await prismaNew.teamMember.count({
+	const adminCount = await prisma.teamMember.count({
 		where: {
 			teamId,
 			role: { in: ["ADMIN", "OWNER"] },

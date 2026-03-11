@@ -151,7 +151,7 @@ const TemplatePreview = ({ template }: TemplatePreviewProps): ReactNode => {
 		const createdEdges = createdNodes.slice(0, -1).map((node, index) => ({
 			id: `edge-${index}`,
 			source: node.id,
-			target: createdNodes[index + 1].id,
+			target: createdNodes[index + 1]?.id ?? "",
 			type: "smoothstep",
 			animated: true,
 		}));

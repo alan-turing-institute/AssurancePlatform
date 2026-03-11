@@ -6,7 +6,8 @@
  */
 
 import { google } from "googleapis";
-import { prismaNew } from "@/lib/prisma";
+import type { ErrorCode } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
 
 const FOLDER_NAME = "TEA Platform Backups";
 const MIME_TYPE_JSON = "application/json";
@@ -47,6 +48,19 @@ export type DownloadResult = {
 };
 
 /**
+ * Maps Google Drive error codes to application error codes.
+ * Moved here from the route layer so callers can use it without coupling to the route.
+ */
+export const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
+	NO_TOKEN: "FORBIDDEN",
+	TOKEN_EXPIRED: "UNAUTHORISED",
+	REFRESH_FAILED: "UNAUTHORISED",
+	NOT_FOUND: "NOT_FOUND",
+	FORBIDDEN: "FORBIDDEN",
+	API_ERROR: "INTERNAL",
+};
+
+/**
  * Creates a GoogleDriveError with the specified code and message.
  */
 function createDriveError(
@@ -65,7 +79,7 @@ async function getUserGoogleTokens(userId: string): Promise<{
 	accessToken: string;
 	refreshToken: string | null;
 } | null> {
-	const user = await prismaNew.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
 			googleAccessToken: true,
@@ -105,7 +119,7 @@ async function getUserGoogleTokens(userId: string): Promise<{
 			}
 
 			// Update stored tokens
-			await prismaNew.user.update({
+			await prisma.user.update({
 				where: { id: userId },
 				data: {
 					googleAccessToken: credentials.access_token,
@@ -133,16 +147,22 @@ async function getUserGoogleTokens(userId: string): Promise<{
 
 /**
  * Creates an authenticated Google Drive client for the specified user.
- * Throws GoogleDriveError if no valid token is available.
+ * Returns a drive error result if no valid token is available.
  */
-async function createDriveClient(userId: string) {
+async function createDriveClient(
+	userId: string
+): Promise<
+	{ drive: ReturnType<typeof google.drive> } | { driveError: GoogleDriveError }
+> {
 	const tokens = await getUserGoogleTokens(userId);
 
 	if (!tokens) {
-		throw createDriveError(
-			"NO_TOKEN",
-			"No Google token found. Please sign in with Google to connect your account."
-		);
+		return {
+			driveError: createDriveError(
+				"NO_TOKEN",
+				"No Google token found. Please sign in with Google to connect your account."
+			),
+		};
 	}
 
 	const oauth2Client = new google.auth.OAuth2(
@@ -154,38 +174,50 @@ async function createDriveClient(userId: string) {
 		refresh_token: tokens.refreshToken,
 	});
 
-	return google.drive({ version: "v3", auth: oauth2Client });
+	return { drive: google.drive({ version: "v3", auth: oauth2Client }) };
 }
 
 /**
  * Finds or creates the TEA Platform backup folder in user's Drive.
+ * Returns the folder ID or a drive error.
  */
-async function getOrCreateBackupFolder(userId: string): Promise<string> {
-	const drive = await createDriveClient(userId);
+async function getOrCreateBackupFolder(
+	drive: ReturnType<typeof google.drive>
+): Promise<{ folderId: string } | { driveError: GoogleDriveError }> {
+	try {
+		// Search for existing folder
+		const response = await drive.files.list({
+			q: `name='${FOLDER_NAME}' and mimeType='${MIME_TYPE_FOLDER}' and trashed=false`,
+			fields: "files(id, name)",
+			spaces: "drive",
+		});
 
-	// Search for existing folder
-	const response = await drive.files.list({
-		q: `name='${FOLDER_NAME}' and mimeType='${MIME_TYPE_FOLDER}' and trashed=false`,
-		fields: "files(id, name)",
-		spaces: "drive",
-	});
+		if (response.data.files && response.data.files.length > 0) {
+			return { folderId: response.data.files[0]?.id as string };
+		}
 
-	if (response.data.files && response.data.files.length > 0) {
-		return response.data.files[0].id as string;
+		// Create new folder
+		const folderMetadata = {
+			name: FOLDER_NAME,
+			mimeType: MIME_TYPE_FOLDER,
+		};
+
+		const folder = await drive.files.create({
+			requestBody: folderMetadata,
+			fields: "id",
+		});
+
+		return { folderId: folder.data.id as string };
+	} catch (error) {
+		return {
+			driveError: createDriveError(
+				"API_ERROR",
+				error instanceof Error
+					? error.message
+					: "Failed to find or create backup folder"
+			),
+		};
 	}
-
-	// Create new folder
-	const folderMetadata = {
-		name: FOLDER_NAME,
-		mimeType: MIME_TYPE_FOLDER,
-	};
-
-	const folder = await drive.files.create({
-		requestBody: folderMetadata,
-		fields: "id",
-	});
-
-	return folder.data.id as string;
 }
 
 /**
@@ -194,44 +226,79 @@ async function getOrCreateBackupFolder(userId: string): Promise<string> {
  * @param userId - The user's ID
  * @param caseName - The name of the assurance case
  * @param jsonContent - The JSON content to upload
- * @returns Upload result with file ID and name
+ * @returns `{ data: UploadResult }` on success, `{ error: string, driveError: GoogleDriveError }` on failure
  */
 export async function uploadBackupToDrive(
 	userId: string,
 	caseName: string,
 	jsonContent: string
-): Promise<UploadResult> {
-	const drive = await createDriveClient(userId);
-	const folderId = await getOrCreateBackupFolder(userId);
+): Promise<
+	{ data: UploadResult } | { error: string; driveError: GoogleDriveError }
+> {
+	const driveResult = await createDriveClient(userId);
 
-	const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-");
-	const sanitisedName = caseName.replace(/[^a-zA-Z0-9-_]/g, "_");
-	const fileName = `${sanitisedName}-${timestamp}.json`;
+	if ("driveError" in driveResult) {
+		return {
+			error: driveResult.driveError.message,
+			driveError: driveResult.driveError,
+		};
+	}
 
-	const fileMetadata = {
-		name: fileName,
-		parents: [folderId],
-		mimeType: MIME_TYPE_JSON,
-	};
+	const drive = driveResult.drive;
+	const folderResult = await getOrCreateBackupFolder(drive);
 
-	// Use a readable stream for the media body
-	const { Readable } = require("node:stream");
-	const stream = Readable.from([jsonContent]);
+	if ("driveError" in folderResult) {
+		return {
+			error: folderResult.driveError.message,
+			driveError: folderResult.driveError,
+		};
+	}
 
-	const file = await drive.files.create({
-		requestBody: fileMetadata,
-		media: {
+	const folderId = folderResult.folderId;
+
+	try {
+		const timestamp = new Date()
+			.toISOString()
+			.slice(0, 19)
+			.replace(/[:.]/g, "-");
+		const sanitisedName = caseName.replace(/[^a-zA-Z0-9-_]/g, "_");
+		const fileName = `${sanitisedName}-${timestamp}.json`;
+
+		const fileMetadata = {
+			name: fileName,
+			parents: [folderId],
 			mimeType: MIME_TYPE_JSON,
-			body: stream,
-		},
-		fields: "id, webViewLink",
-	});
+		};
 
-	return {
-		fileId: file.data.id as string,
-		fileName,
-		webViewLink: file.data.webViewLink ?? undefined,
-	};
+		// Use a readable stream for the media body
+		const { Readable } = require("node:stream");
+		const stream = Readable.from([jsonContent]);
+
+		const file = await drive.files.create({
+			requestBody: fileMetadata,
+			media: {
+				mimeType: MIME_TYPE_JSON,
+				body: stream,
+			},
+			fields: "id, webViewLink",
+		});
+
+		return {
+			data: {
+				fileId: file.data.id as string,
+				fileName,
+				webViewLink: file.data.webViewLink ?? undefined,
+			},
+		};
+	} catch (error) {
+		const driveError = createDriveError(
+			"API_ERROR",
+			error instanceof Error
+				? error.message
+				: "Failed to upload to Google Drive"
+		);
+		return { error: driveError.message, driveError };
+	}
 }
 
 /**
@@ -239,49 +306,88 @@ export async function uploadBackupToDrive(
  *
  * @param userId - The user's ID
  * @param fileId - The Google Drive file ID
- * @returns The file content and name
+ * @returns `{ data: DownloadResult }` on success, `{ error: string, driveError: GoogleDriveError }` on failure
  */
 export async function downloadFileFromDrive(
 	userId: string,
 	fileId: string
-): Promise<DownloadResult> {
-	const drive = await createDriveClient(userId);
+): Promise<
+	{ data: DownloadResult } | { error: string; driveError: GoogleDriveError }
+> {
+	const driveResult = await createDriveClient(userId);
 
-	// Get file metadata
-	const metadata = await drive.files.get({
-		fileId,
-		fields: "name, mimeType",
-	});
-
-	if (metadata.data.mimeType !== MIME_TYPE_JSON) {
-		throw createDriveError("API_ERROR", "Selected file is not a JSON file");
+	if ("driveError" in driveResult) {
+		return {
+			error: driveResult.driveError.message,
+			driveError: driveResult.driveError,
+		};
 	}
 
-	// Download content
-	const response = await drive.files.get(
-		{ fileId, alt: "media" },
-		{ responseType: "text" }
-	);
+	const drive = driveResult.drive;
 
-	return {
-		content: response.data as string,
-		name: metadata.data.name as string,
-	};
+	try {
+		// Get file metadata
+		const metadata = await drive.files.get({
+			fileId,
+			fields: "name, mimeType",
+		});
+
+		if (metadata.data.mimeType !== MIME_TYPE_JSON) {
+			const driveError = createDriveError(
+				"API_ERROR",
+				"Selected file is not a JSON file"
+			);
+			return { error: driveError.message, driveError };
+		}
+
+		// Download content
+		const response = await drive.files.get(
+			{ fileId, alt: "media" },
+			{ responseType: "text" }
+		);
+
+		return {
+			data: {
+				content: response.data as string,
+				name: metadata.data.name as string,
+			},
+		};
+	} catch (error) {
+		const driveError = createDriveError(
+			"API_ERROR",
+			error instanceof Error
+				? error.message
+				: "Failed to download from Google Drive"
+		);
+		return { error: driveError.message, driveError };
+	}
 }
 
 /**
  * Lists backup files in the TEA Platform folder.
  *
  * @param userId - The user's ID
- * @returns Array of file metadata
+ * @returns Array of file metadata (empty if token unavailable or API error)
  */
 export async function listBackupFiles(
 	userId: string
 ): Promise<DriveFileMetadata[]> {
-	const drive = await createDriveClient(userId);
+	const driveResult = await createDriveClient(userId);
+
+	if ("driveError" in driveResult) {
+		return [];
+	}
+
+	const drive = driveResult.drive;
 
 	try {
-		const folderId = await getOrCreateBackupFolder(userId);
+		const folderResult = await getOrCreateBackupFolder(drive);
+
+		if ("driveError" in folderResult) {
+			return [];
+		}
+
+		const folderId = folderResult.folderId;
 
 		const response = await drive.files.list({
 			q: `'${folderId}' in parents and mimeType='${MIME_TYPE_JSON}' and trashed=false`,
@@ -307,7 +413,7 @@ export async function listBackupFiles(
  * Checks if a user has a valid Google token stored.
  *
  * @param userId - The user's ID
- * @returns true if the user has a valid token
+ * @returns true if the user has a valid (non-expired) token
  */
 export async function hasGoogleToken(userId: string): Promise<boolean> {
 	const tokens = await getUserGoogleTokens(userId);

@@ -1,25 +1,18 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { attachElementSchema } from "@/lib/schemas/element";
 import { attachElement } from "@/lib/services/element-service";
 
 /**
- * Maps error messages to HTTP status codes.
+ * Resolves parent ID from request body, handling legacy field names.
  */
-function getErrorStatus(error: string): number {
-	if (error === "Permission denied") {
-		return 403;
-	}
-	if (error === "Element not found") {
-		return 404;
-	}
-	return 400;
-}
-
-/**
- * Extracts parent ID from request body.
- */
-function extractParentId(body: Record<string, unknown>): string | undefined {
+function resolveParentId(body: Record<string, unknown>): string | undefined {
 	const parentId =
 		body.parentId ||
 		body.parent_id ||
@@ -37,36 +30,28 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: elementId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
-
 	try {
-		const body = await request.json();
-		const parentId = extractParentId(body);
+		const session = await requireAuthSession();
+		const { id: elementId } = await params;
 
-		if (!parentId) {
-			return NextResponse.json(
-				{ error: "Parent ID is required" },
-				{ status: 400 }
-			);
+		const body = await request.json();
+		const normalised = { parentId: resolveParentId(body) };
+		const parsed = attachElementSchema.safeParse(normalised);
+
+		if (!parsed.success) {
+			return apiError(validationError("Invalid parent ID format"));
 		}
 
-		const result = await attachElement(session.user.id, elementId, parentId);
+		const { parentId } = parsed.data;
+		const result = await attachElement(session.userId, elementId, parentId);
 
-		if (result.error) {
-			return NextResponse.json(
-				{ error: result.error },
-				{ status: getErrorStatus(result.error) }
-			);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
 
 		// Emit SSE event for real-time updates
-		const { prismaNew } = await import("@/lib/prisma");
-		const element = await prismaNew.assuranceElement.findUnique({
+		const { prisma } = await import("@/lib/prisma");
+		const element = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
 			select: { caseId: true },
 		});
@@ -75,20 +60,17 @@ export async function POST(
 			const { emitSSEEvent } = await import(
 				"@/lib/services/sse-connection-manager"
 			);
-			emitSSEEvent(
-				"element:attached",
-				element.caseId,
-				{ elementId, parentId },
-				session.user.id
-			);
+			const username = session.username ?? session.email ?? "Someone";
+			emitSSEEvent("element:attached", element.caseId, {
+				elementId,
+				parentId,
+				username,
+				userId: session.userId,
+			});
 		}
 
-		return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
 	} catch (error) {
-		console.error("Error attaching element:", error);
-		return NextResponse.json(
-			{ error: "Failed to attach element" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

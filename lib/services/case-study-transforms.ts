@@ -7,7 +7,7 @@
  */
 
 import type { PublishedAssuranceCase } from "@/src/generated/prisma";
-import type { CaseStudy as CaseStudyApiResponse } from "@/types/domain";
+import type { CaseStudyResponse } from "./case-response-types";
 import type { CaseStudyWithRelations } from "./case-study-service";
 
 export type PublishedAssuranceCaseResponse = {
@@ -15,8 +15,8 @@ export type PublishedAssuranceCaseResponse = {
 	title: string;
 	description: string | null;
 	content: string;
-	created_at: string;
-	assurance_case_id: number;
+	createdAt: string;
+	assuranceCaseId: number;
 };
 
 /**
@@ -24,7 +24,7 @@ export type PublishedAssuranceCaseResponse = {
  */
 function transformCaseStudyForResponse(
 	caseStudy: CaseStudyWithRelations
-): CaseStudyApiResponse {
+): CaseStudyResponse {
 	return {
 		id: caseStudy.id,
 		title: caseStudy.title,
@@ -38,13 +38,7 @@ function transformCaseStudyForResponse(
 		publishedDate: caseStudy.publishedDate?.toISOString(),
 		createdOn: caseStudy.createdOn.toISOString(),
 		lastModifiedOn: caseStudy.lastModifiedOn.toISOString(),
-		// Feature image URL for display
-		feature_image_url: caseStudy.featureImage?.image ?? undefined,
 		featuredImage: caseStudy.featureImage?.image ?? undefined,
-		// Include source assurance case IDs (UUIDs as strings)
-		assurance_cases: caseStudy.publishedCases.map(
-			(link) => link.publishedAssuranceCase.assuranceCaseId
-		),
 	};
 }
 
@@ -53,7 +47,7 @@ function transformCaseStudyForResponse(
  */
 export function transformCaseStudiesForApi(
 	caseStudies: CaseStudyWithRelations[]
-): CaseStudyApiResponse[] {
+): CaseStudyResponse[] {
 	return caseStudies.map(transformCaseStudyForResponse);
 }
 
@@ -62,7 +56,7 @@ export function transformCaseStudiesForApi(
  */
 export function transformCaseStudyForApi(
 	caseStudy: CaseStudyWithRelations
-): CaseStudyApiResponse {
+): CaseStudyResponse {
 	return transformCaseStudyForResponse(caseStudy);
 }
 
@@ -78,7 +72,7 @@ export function transformPublishedCaseForApi(
 		description: publishedCase.description,
 		// Stringify content for download (stored as JSON object in Prisma)
 		content: JSON.stringify(publishedCase.content),
-		created_at: publishedCase.createdAt.toISOString(),
-		assurance_case_id: Number(publishedCase.assuranceCaseId),
+		createdAt: publishedCase.createdAt.toISOString(),
+		assuranceCaseId: Number(publishedCase.assuranceCaseId),
 	};
 }

@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
-import useStore from "@/data/store";
 import { formatShortDate } from "@/lib/date";
-import { useToast } from "@/lib/toast";
-import type { Comment } from "@/types/domain";
+import type { CommentResponse } from "@/lib/services/comment-service";
+import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
+import useStore from "@/store/store";
 import { Button } from "../ui/button";
-import CommentsForm from "./comment-form";
 import CommentsEditForm from "./comments-edit-form";
+import CommentsForm from "./comments-form";
 
 type CommentsFeedProps = {
 	node: {
@@ -30,7 +31,7 @@ type CommentsFeedProps = {
 };
 
 type CommentItemProps = {
-	comment: Comment;
+	comment: CommentResponse;
 	node: CommentsFeedProps["node"];
 	currentUsername: string | null | undefined;
 	canEdit: boolean;
@@ -45,13 +46,13 @@ type CommentItemProps = {
 /**
  * Renders the resolved status banner for a comment.
  */
-function ResolvedBanner({ comment }: { comment: Comment }) {
+function ResolvedBanner({ comment }: { comment: CommentResponse }) {
 	if (!comment.resolved) {
 		return null;
 	}
 
 	return (
-		<div className="mb-2 flex items-center gap-1 text-green-600 text-xs dark:text-green-400">
+		<div className="mb-2 flex items-center gap-1 text-success text-xs">
 			<CheckCircle className="h-3 w-3" />
 			<span>
 				Resolved by {comment.resolvedBy}
@@ -72,7 +73,7 @@ function CommentMeta({
 	showReplies,
 	onToggleReplies,
 }: {
-	comment: Comment;
+	comment: CommentResponse;
 	isResolved: boolean;
 	hasReplies: boolean;
 	showReplies: boolean;
@@ -82,7 +83,10 @@ function CommentMeta({
 
 	return (
 		<div
-			className={`mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300 ${hoverClass}`}
+			className={cn(
+				"mt-3 flex items-center justify-start gap-2 text-muted-foreground text-xs transition-all duration-300",
+				hoverClass
+			)}
 		>
 			<User2Icon className="h-3 w-3" />
 			<div>
@@ -94,12 +98,12 @@ function CommentMeta({
 				>
 					<circle cx={1} cy={1} r={1} />
 				</svg>
-				{formatShortDate(new Date(comment.created_at))}
+				{formatShortDate(new Date(comment.createdAt))}
 			</div>
 
 			{hasReplies && (
 				<button
-					className="ml-2 flex items-center gap-1 hover:text-indigo-400"
+					className="ml-2 flex items-center gap-1 hover:text-primary"
 					onClick={onToggleReplies}
 					type="button"
 				>
@@ -141,7 +145,7 @@ function CommentActions({
 			<div className="flex items-center justify-start gap-1">
 				{isTopLevel && (
 					<Button
-						className="hover:bg-indigo-800/50"
+						className="hover:bg-primary/30"
 						onClick={onReply}
 						size="sm"
 						title="Reply"
@@ -153,7 +157,7 @@ function CommentActions({
 
 				{isTopLevel && (
 					<Button
-						className="hover:bg-indigo-800/50"
+						className="hover:bg-primary/30"
 						onClick={onResolve}
 						size="sm"
 						title={isResolved ? "Unresolve" : "Resolve"}
@@ -169,7 +173,7 @@ function CommentActions({
 
 				{isOwnComment && (
 					<Button
-						className="hover:bg-indigo-800/50"
+						className="hover:bg-primary/30"
 						onClick={onEdit}
 						size="sm"
 						title="Edit"
@@ -215,19 +219,19 @@ function CommentItem({
 	const isTopLevel = depth === 0;
 	const isOwnComment = currentUsername === comment.author;
 
-	const nestedClass =
-		depth > 0
-			? "ml-6 border-slate-200 border-l-2 pl-4 dark:border-slate-700"
-			: "";
+	const nestedClass = depth > 0 ? "ml-6 border-border border-l-2 pl-4" : "";
 
 	const cardClass = isResolved
-		? "bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30"
-		: "hover:bg-indigo-500 hover:pb-8 hover:text-white";
+		? "bg-success/10 hover:bg-success/15"
+		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (
-		<div className={`w-full ${nestedClass}`}>
+		<div className={cn("w-full", nestedClass)}>
 			<div
-				className={`group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer ${cardClass}`}
+				className={cn(
+					"group relative w-full rounded-md p-3 text-foreground transition-all duration-300 hover:cursor-pointer",
+					cardClass
+				)}
 			>
 				{edit ? (
 					<CommentsEditForm comment={comment} node={node} setEdit={setEdit} />
@@ -235,7 +239,10 @@ function CommentItem({
 					<>
 						<ResolvedBanner comment={comment} />
 						<p
-							className={`mb-1 whitespace-normal ${isResolved ? "text-foreground/70" : ""}`}
+							className={cn(
+								"mb-1 whitespace-normal",
+								isResolved && "text-foreground/70"
+							)}
 						>
 							{comment.content}
 						</p>
@@ -266,7 +273,7 @@ function CommentItem({
 			</div>
 
 			{isReplyingToThis && (
-				<div className="mt-2 ml-6 border-indigo-200 border-l-2 pl-4 dark:border-indigo-700">
+				<div className="mt-2 ml-6 border-primary/20 border-l-2 pl-4">
 					<CommentsForm
 						node={node}
 						onCancel={() => setReplyingTo(null)}
@@ -302,8 +309,6 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const { assuranceCase, nodeComments, setNodeComments } = useStore();
 	const { data: session } = useSession();
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
-	const { toast } = useToast();
-
 	const currentUsername = session?.user?.name || session?.user?.email;
 	const canEdit = assuranceCase?.permissions !== "view";
 
@@ -323,7 +328,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 				return;
 			}
 
-			const removeFromTree = (comments: Comment[]): Comment[] =>
+			const removeFromTree = (comments: CommentResponse[]): CommentResponse[] =>
 				comments
 					.filter((c) => String(c.id) !== String(id))
 					.map((c) => ({
@@ -360,7 +365,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 
 			const updated = await response.json();
 
-			const updateInTree = (comments: Comment[]): Comment[] =>
+			const updateInTree = (comments: CommentResponse[]): CommentResponse[] =>
 				comments.map((c) => {
 					if (String(c.id) === id) {
 						return {

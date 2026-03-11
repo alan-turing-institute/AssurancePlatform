@@ -2,57 +2,58 @@
 
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
+import type { ActionResult } from "@/lib/errors";
 import {
 	caseStudyIdSchema,
 	createCaseStudySchema,
 	updateCaseStudySchema,
 } from "@/lib/schemas/case-study";
 import {
-	createCaseStudyWithLinks,
-	deleteCaseStudy as deleteCaseStudyService,
-	getCaseStudiesByOwner,
-	getCaseStudyById,
-	getPublishedAssuranceCaseByCaseId,
-	getPublishedCaseStudies,
-	getPublishedCaseStudyById,
-	updateCaseStudyWithLinks,
-} from "@/lib/services/case-study-service";
-import {
-	transformCaseStudiesForApi,
-	transformCaseStudyForApi,
-	transformPublishedCaseForApi,
-} from "@/lib/services/case-study-transforms";
-import {
 	validateFormData,
 	validateInput,
-} from "@/lib/validation/server-action";
-import type { ActionResult } from "@/types";
-
-type CaseStudyResponse = ReturnType<typeof transformCaseStudyForApi>;
+} from "@/lib/validation/input-validation";
 
 /**
  * Fetch all case studies owned by the current user
- * @deprecated The token parameter is no longer used - session is used instead
  */
-export const fetchCaseStudies = async (_token?: string) => {
-	const session = await getServerSession(authOptions);
+export const fetchCaseStudies = async () => {
+	const session = await validateSession();
 
-	if (!session?.user?.id) {
-		throw new Error("Unauthorised");
+	if (!session) {
+		return null;
 	}
 
-	const caseStudies = await getCaseStudiesByOwner(session.user.id);
-	return transformCaseStudiesForApi(caseStudies);
+	const { getCaseStudiesByOwner } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudiesForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
+
+	const result = await getCaseStudiesByOwner(session.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return transformCaseStudiesForApi(result.data);
 };
 
 /**
  * Fetch all published case studies (public access)
  */
 export const fetchPublishedCaseStudies = async () => {
-	const caseStudies = await getPublishedCaseStudies();
-	return transformCaseStudiesForApi(caseStudies);
+	const { getPublishedCaseStudies } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudiesForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
+
+	const result = await getPublishedCaseStudies();
+	if ("error" in result) {
+		return null;
+	}
+	return transformCaseStudiesForApi(result.data);
 };
 
 /**
@@ -65,57 +66,69 @@ export const fetchPublishedCaseStudyById = async (id: number) => {
 		notFound();
 	}
 
-	const caseStudy = await getPublishedCaseStudyById(validation.data);
+	const { getPublishedCaseStudyById } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudyForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
 
-	if (!caseStudy) {
+	const result = await getPublishedCaseStudyById(validation.data);
+
+	if ("error" in result) {
 		notFound();
 	}
 
-	return transformCaseStudyForApi(caseStudy);
+	return transformCaseStudyForApi(result.data);
 };
 
 /**
  * Fetch a specific case study by ID (requires authentication)
- * @deprecated The token parameter is no longer used - session is used instead
  */
-export const fetchCaseStudyById = async (_token: string, id: number) => {
-	const session = await getServerSession(authOptions);
+export const fetchCaseStudyById = async (id: number) => {
+	const session = await validateSession();
 
-	if (!session?.user?.id) {
-		throw new Error("Unauthorised");
+	if (!session) {
+		return null;
 	}
 
 	// Validate ID
 	const validation = validateInput(id, caseStudyIdSchema);
 	if (!validation.success) {
-		throw new Error("Invalid case study ID");
+		return null;
 	}
 
-	const caseStudy = await getCaseStudyById(validation.data);
+	const { getCaseStudyById } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudyForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
 
-	if (!caseStudy) {
-		throw new Error("Case study not found");
+	const result = await getCaseStudyById(validation.data, session.userId);
+
+	if ("error" in result) {
+		return null;
 	}
 
-	// Verify ownership
-	if (caseStudy.ownerId !== session.user.id) {
-		throw new Error("Forbidden");
-	}
-
-	return transformCaseStudyForApi(caseStudy);
+	return transformCaseStudyForApi(result.data);
 };
 
 /**
  * Create a new case study
- * @deprecated The token parameter is no longer used - session is used instead
  */
 export const createCaseStudy = async (
-	_token: string,
 	formData: FormData
-): Promise<ActionResult<CaseStudyResponse>> => {
+): Promise<
+	ActionResult<
+		ReturnType<
+			typeof import("@/lib/services/case-study-transforms").transformCaseStudyForApi
+		>
+	>
+> => {
 	// 1. Authenticate
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
+	const session = await validateSession();
+	if (!session) {
 		return { success: false, error: "Unauthorised" };
 	}
 
@@ -129,10 +142,17 @@ export const createCaseStudy = async (
 		};
 	}
 
+	const { createCaseStudyWithLinks } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformCaseStudyForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
+
 	// 3. Business logic
 	try {
-		const caseStudy = await createCaseStudyWithLinks(
-			session.user.id,
+		const createResult = await createCaseStudyWithLinks(
+			session.userId,
 			{
 				title: validation.data.title,
 				description: validation.data.description,
@@ -146,8 +166,15 @@ export const createCaseStudy = async (
 			validation.data.assurance_cases
 		);
 
+		if ("error" in createResult) {
+			return { success: false, error: createResult.error };
+		}
+
 		revalidatePath("/dashboard/case-studies");
-		return { success: true, data: transformCaseStudyForApi(caseStudy) };
+		return {
+			success: true,
+			data: transformCaseStudyForApi(createResult.data),
+		};
 	} catch (error) {
 		console.error("Error creating case study:", error);
 		return { success: false, error: "Failed to create case study" };
@@ -156,15 +183,13 @@ export const createCaseStudy = async (
 
 /**
  * Update an existing case study
- * @deprecated The token parameter is no longer used - session is used instead
  */
 export const updateCaseStudy = async (
-	_token: string | undefined,
 	formData: FormData
 ): Promise<ActionResult<boolean>> => {
 	// 1. Authenticate
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
+	const session = await validateSession();
+	if (!session) {
 		return { success: false, error: "Unauthorised" };
 	}
 
@@ -178,13 +203,17 @@ export const updateCaseStudy = async (
 		};
 	}
 
+	const { updateCaseStudyWithLinks } = await import(
+		"@/lib/services/case-study-service"
+	);
+
 	// 3. Business logic
 	try {
 		const { id, assurance_cases, ...updateData } = validation.data;
 
 		const caseStudy = await updateCaseStudyWithLinks(
 			id,
-			session.user.id,
+			session.userId,
 			{
 				title: updateData.title,
 				description: updateData.description,
@@ -198,8 +227,8 @@ export const updateCaseStudy = async (
 			assurance_cases
 		);
 
-		if (!caseStudy) {
-			return { success: false, error: "Case study not found or access denied" };
+		if ("error" in caseStudy) {
+			return { success: false, error: caseStudy.error };
 		}
 
 		revalidatePath(`/dashboard/case-studies/${id}`);
@@ -214,15 +243,13 @@ export const updateCaseStudy = async (
 
 /**
  * Delete a case study
- * @deprecated The token parameter is no longer used - session is used instead
  */
 export const deleteCaseStudy = async (
-	_token: string,
 	caseStudyId: number
 ): Promise<ActionResult<boolean>> => {
 	// 1. Authenticate
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
+	const session = await validateSession();
+	if (!session) {
 		return { success: false, error: "Unauthorised" };
 	}
 
@@ -232,15 +259,19 @@ export const deleteCaseStudy = async (
 		return { success: false, error: validation.error };
 	}
 
+	const { deleteCaseStudy: deleteCaseStudyService } = await import(
+		"@/lib/services/case-study-service"
+	);
+
 	// 3. Business logic
 	try {
-		const deleted = await deleteCaseStudyService(
+		const result = await deleteCaseStudyService(
 			validation.data,
-			session.user.id
+			session.userId
 		);
 
-		if (!deleted) {
-			return { success: false, error: "Case study not found or access denied" };
+		if ("error" in result) {
+			return { success: false, error: result.error };
 		}
 
 		revalidatePath("/dashboard/case-studies");
@@ -257,12 +288,18 @@ export const deleteCaseStudy = async (
 export const fetchPublishedAssuranceCaseId = async (
 	assuranceCaseId: string
 ) => {
-	const publishedCase =
-		await getPublishedAssuranceCaseByCaseId(assuranceCaseId);
+	const { getPublishedAssuranceCaseByCaseId } = await import(
+		"@/lib/services/case-study-service"
+	);
+	const { transformPublishedCaseForApi } = await import(
+		"@/lib/services/case-study-transforms"
+	);
 
-	if (!publishedCase) {
-		throw new Error("Published assurance case not found");
+	const result = await getPublishedAssuranceCaseByCaseId(assuranceCaseId);
+
+	if ("error" in result) {
+		return null;
 	}
 
-	return transformPublishedCaseForApi(publishedCase);
+	return transformPublishedCaseForApi(result.data);
 };

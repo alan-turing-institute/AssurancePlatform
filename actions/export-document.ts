@@ -1,17 +1,14 @@
 "use server";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { validateSession } from "@/lib/auth/validate-session";
+import { uuidSchema } from "@/lib/schemas/base";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
-import { exportCase } from "@/lib/services/case-export-service";
 
-export type DocumentExportOptions = {
+type DocumentExportOptions = {
 	includeComments: boolean;
 };
 
-export type DocumentExportResult =
-	| { success: true; data: CaseExportNested }
-	| { success: false; error: string };
+type DocumentExportResult = { data: CaseExportNested } | { error: string };
 
 /**
  * Server action to get case data for document export.
@@ -21,15 +18,25 @@ export async function getDocumentExportData(
 	caseId: string,
 	options: DocumentExportOptions
 ): Promise<DocumentExportResult> {
-	const session = await getServerSession(authOptions);
+	const session = await validateSession();
 
-	if (!session?.user?.id) {
-		return { success: false, error: "Not authenticated" };
+	if (!session) {
+		return { error: "Not authenticated" };
 	}
 
-	const result = await exportCase(session.user.id, caseId, {
+	const idResult = uuidSchema.safeParse(caseId);
+	if (!idResult.success) {
+		return { error: "Invalid case ID" };
+	}
+
+	const { exportCase } = await import("@/lib/services/case-export-service");
+	const result = await exportCase(session.userId, idResult.data, {
 		includeComments: options.includeComments,
 	});
 
-	return result;
+	if ("error" in result) {
+		return { error: result.error };
+	}
+
+	return { data: result.data };
 }

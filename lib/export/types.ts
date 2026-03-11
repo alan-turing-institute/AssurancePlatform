@@ -166,6 +166,13 @@ export type DiagramImage = {
 };
 
 /**
+ * Diagram image with a label, used for per-branch multi-page exports
+ */
+export type LabelledDiagramImage = DiagramImage & {
+	title: string;
+};
+
+/**
  * Section overrides to enable/disable specific sections
  */
 export type SectionOverrides = Record<string, boolean>;
@@ -176,6 +183,7 @@ export type SectionOverrides = Record<string, boolean>;
 export type TemplateInput = {
 	caseData: import("@/lib/schemas/case-export").CaseExportNested;
 	diagramImage?: DiagramImage;
+	branchDiagrams?: LabelledDiagramImage[];
 	exportedBy?: string;
 	sectionOverrides?: SectionOverrides;
 };

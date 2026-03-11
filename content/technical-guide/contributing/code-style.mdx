@@ -65,7 +65,7 @@ Import types from `types/` or generate them from Prisma:
 import type { AssuranceCaseWithElements } from '@/types/cases'
 
 // Use Prisma generated types
-import type { AssuranceCase, AssuranceElement } from '@/src/generated/prisma'
+import type { AssuranceCase, AssuranceElement } from '@prisma/client'
 ```
 
 ### Prefer Type Inference
@@ -133,8 +133,10 @@ Default to Server Components. Use Client Components only when necessary:
 
 ```typescript
 // Server Component (default) - no directive needed
-async function CasePage({ params }) {
-  const data = await getCaseData(params.id)
+// Note: In Next.js 15, params is a Promise and must be awaited
+async function CasePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const data = await getCaseData(id)
   return <CaseView data={data} />
 }
 
@@ -213,33 +215,36 @@ Server Actions follow a consistent pattern:
 'use server'
 
 import { z } from 'zod'
-import { prisma } from '@/lib/db'
-import { requireAuth } from '@/lib/auth'
+import { validateSession } from '@/lib/auth'
 
 const createElementSchema = z.object({
   caseId: z.string().uuid(),
   elementType: z.nativeEnum(ElementType),
-  description: z.string().min(1),
+  description: z.string().min(1).trim(),
 })
 
 export async function createElement(
   input: z.infer<typeof createElementSchema>
 ) {
-  const user = await requireAuth()
+  const session = await validateSession()
+  if (!session) return { success: false, error: 'Unauthorised' }
 
-  const validated = createElementSchema.parse(input)
+  const result = createElementSchema.safeParse(input)
+  if (!result.success) return { success: false, error: 'Invalid input' }
 
-  // Check permissions
-  const hasAccess = await checkCaseAccess(validated.caseId, user.id, 'EDIT')
+  // Dynamic import for Prisma (keeps Server Action bundle small)
+  const { prisma } = await import('@/lib/prisma')
+
+  // Check permissions in service layer
+  const hasAccess = await checkCaseAccess(result.data.caseId, session.userId, 'EDIT')
   if (!hasAccess) {
-    throw new Error('Permission denied')
+    return { success: false, error: 'Permission denied' }
   }
 
-  // Perform action
   const element = await prisma.assuranceElement.create({
     data: {
-      ...validated,
-      createdById: user.id,
+      ...result.data,
+      createdById: session.userId,
     }
   })
 
@@ -249,7 +254,7 @@ export async function createElement(
 
 ### Return Types
 
-Actions should return consistent result objects:
+Actions should return consistent result objects (never throw for expected failures):
 
 ```typescript
 // Success
@@ -278,7 +283,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { prisma } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 
 import { LocalComponent } from './local-component'

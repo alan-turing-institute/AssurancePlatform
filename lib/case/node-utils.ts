@@ -4,12 +4,12 @@
  */
 
 import type {
-	AssuranceCase,
-	Evidence,
-	Goal,
-	PropertyClaim,
-	Strategy,
-} from "@/types";
+	AssuranceCaseResponse,
+	EvidenceResponse,
+	GoalResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
 import type { NestedArrayItem, ReactFlowNode } from "./types";
 
 type DescriptionMap = {
@@ -47,8 +47,8 @@ export const caseItemDescription = (
 
 // Helper function to search in property claims
 const searchInPropertyClaims = (
-	propertyClaims: PropertyClaim[],
-	id: number
+	propertyClaims: PropertyClaimResponse[],
+	id: string
 ): NestedArrayItem | null => {
 	for (const propertyClaim of propertyClaims) {
 		const found = findItemById(propertyClaim, id);
@@ -56,8 +56,8 @@ const searchInPropertyClaims = (
 			return found;
 		}
 
-		if (propertyClaim.property_claims) {
-			for (const childPropertyClaim of propertyClaim.property_claims) {
+		if (propertyClaim.propertyClaims) {
+			for (const childPropertyClaim of propertyClaim.propertyClaims) {
 				const childFound = findItemById(childPropertyClaim, id);
 				if (childFound) {
 					return childFound;
@@ -70,8 +70,8 @@ const searchInPropertyClaims = (
 
 // Helper function to search in evidence items
 const searchInEvidenceItems = (
-	evidence: Evidence[],
-	id: number
+	evidence: EvidenceResponse[],
+	id: string
 ): NestedArrayItem | null => {
 	for (const evidenceItem of evidence) {
 		const found = findItemById(evidenceItem, id);
@@ -84,8 +84,8 @@ const searchInEvidenceItems = (
 
 // Helper function to search in strategies
 const searchInStrategyItems = (
-	strategies: Strategy[],
-	id: number
+	strategies: StrategyResponse[],
+	id: string
 ): NestedArrayItem | null => {
 	for (const strategyItem of strategies) {
 		const found = findItemById(strategyItem, id);
@@ -93,8 +93,8 @@ const searchInStrategyItems = (
 			return found;
 		}
 
-		if (strategyItem.property_claims) {
-			for (const childPropertyClaim of strategyItem.property_claims) {
+		if (strategyItem.propertyClaims) {
+			for (const childPropertyClaim of strategyItem.propertyClaims) {
 				const childFound = findItemById(childPropertyClaim, id);
 				if (childFound) {
 					return childFound;
@@ -109,8 +109,8 @@ const searchInStrategyItems = (
 // Note: Context is now a string[] attribute, not an array of elements
 // This function always returns null but is kept for structural consistency
 const searchContextIfExists = (
-	_item: NestedArrayItem | AssuranceCase,
-	_id: number
+	_item: NestedArrayItem | AssuranceCaseResponse,
+	_id: string
 ): NestedArrayItem | null => {
 	// Context is now a string[] attribute, not searchable elements
 	return null;
@@ -118,15 +118,17 @@ const searchContextIfExists = (
 
 // Helper function to search property claims if exists
 const searchPropertyClaimsIfExists = (
-	item: NestedArrayItem | AssuranceCase,
-	id: number
+	item: NestedArrayItem | AssuranceCaseResponse,
+	id: string
 ): NestedArrayItem | null => {
 	if (
-		"property_claims" in item &&
-		(item as Goal | PropertyClaim | Strategy).property_claims
+		"propertyClaims" in item &&
+		(item as GoalResponse | PropertyClaimResponse | StrategyResponse)
+			.propertyClaims
 	) {
 		return searchInPropertyClaims(
-			(item as Goal | PropertyClaim | Strategy).property_claims,
+			(item as GoalResponse | PropertyClaimResponse | StrategyResponse)
+				.propertyClaims,
 			id
 		);
 	}
@@ -135,30 +137,30 @@ const searchPropertyClaimsIfExists = (
 
 // Helper function to search evidence if exists
 const searchEvidenceIfExists = (
-	item: NestedArrayItem | AssuranceCase,
-	id: number
+	item: NestedArrayItem | AssuranceCaseResponse,
+	id: string
 ): NestedArrayItem | null => {
-	if ("evidence" in item && (item as PropertyClaim).evidence) {
-		return searchInEvidenceItems((item as PropertyClaim).evidence, id);
+	if ("evidence" in item && (item as PropertyClaimResponse).evidence) {
+		return searchInEvidenceItems((item as PropertyClaimResponse).evidence, id);
 	}
 	return null;
 };
 
 // Helper function to search strategies if exists
 const searchStrategiesIfExists = (
-	item: NestedArrayItem | AssuranceCase,
-	id: number
+	item: NestedArrayItem | AssuranceCaseResponse,
+	id: string
 ): NestedArrayItem | null => {
-	if ("strategies" in item && (item as Goal).strategies) {
-		return searchInStrategyItems((item as Goal).strategies, id);
+	if ("strategies" in item && (item as GoalResponse).strategies) {
+		return searchInStrategyItems((item as GoalResponse).strategies, id);
 	}
 	return null;
 };
 
 // Helper function to search in all nested structures
 const searchInAllNestedStructures = (
-	item: NestedArrayItem | AssuranceCase,
-	id: number
+	item: NestedArrayItem | AssuranceCaseResponse,
+	id: string
 ): NestedArrayItem | null => {
 	const contextResult = searchContextIfExists(item, id);
 	if (contextResult) {
@@ -187,11 +189,11 @@ const searchInAllNestedStructures = (
  * Recursively searches for an item by its ID within a nested structure.
  */
 export const findItemById = (
-	item: NestedArrayItem | AssuranceCase,
-	id: number
+	item: NestedArrayItem | AssuranceCaseResponse,
+	id: string
 ): NestedArrayItem | null => {
-	// Check if it's an AssuranceCase (which doesn't match NestedArrayItem structure)
-	// AssuranceCase cannot be returned as NestedArrayItem, so skip to nested search
+	// Check if it's an AssuranceCaseResponse (which doesn't match NestedArrayItem structure)
+	// AssuranceCaseResponse cannot be returned as NestedArrayItem, so skip to nested search
 	if ("goals" in item) {
 		return searchInAllNestedStructures(item, id);
 	}
@@ -209,12 +211,12 @@ export const findItemById = (
 const getNodeArray = (
 	parentNode: ReactFlowNode,
 	nodeType: string
-): (Strategy | PropertyClaim | Evidence)[] => {
+): (StrategyResponse | PropertyClaimResponse | EvidenceResponse)[] => {
 	switch (nodeType.toLowerCase()) {
 		case "strategy":
 			return [...(parentNode.data.strategies || [])];
 		case "property":
-			return [...(parentNode.data.property_claims || [])];
+			return [...(parentNode.data.propertyClaims || [])];
 		case "evidence":
 			return [...(parentNode.data.evidence || [])];
 		default:
@@ -224,7 +226,11 @@ const getNodeArray = (
 
 // Helper function to calculate identifier from last item
 const calculateIdentifierFromLastItem = (
-	lastItem: Strategy | PropertyClaim | Evidence | undefined,
+	lastItem:
+		| StrategyResponse
+		| PropertyClaimResponse
+		| EvidenceResponse
+		| undefined,
 	newNodeType: string,
 	parentNode: ReactFlowNode,
 	arrayLength: number
@@ -238,7 +244,7 @@ const calculateIdentifierFromLastItem = (
 		const lastIdentifier = Number.parseFloat(
 			lastItem.name.substring(1)
 		).toString();
-		const subIdentifier = lastIdentifier.split(".")[1];
+		const subIdentifier = lastIdentifier.split(".")[1] ?? "0";
 		return Number.parseInt(subIdentifier, 10) + 1;
 	}
 
@@ -299,46 +305,50 @@ export const setNodeIdentifier = (
  */
 const removeItemFromNestedStructure = (
 	array: NestedArrayItem[],
-	id: number,
+	id: string,
 	type: string
 ): NestedArrayItem[] => {
 	return array
 		.map((item: NestedArrayItem) => {
-			// Remove from property_claims
-			if ("property_claims" in item && item.property_claims) {
-				(item as Goal | PropertyClaim | Strategy).property_claims = (
-					item as Goal | PropertyClaim | Strategy
-				).property_claims.filter(
-					(claim: PropertyClaim) => !(claim.id === id && claim.type === type)
+			// Remove from propertyClaims
+			if ("propertyClaims" in item && item.propertyClaims) {
+				(
+					item as GoalResponse | PropertyClaimResponse | StrategyResponse
+				).propertyClaims = (
+					item as GoalResponse | PropertyClaimResponse | StrategyResponse
+				).propertyClaims.filter(
+					(claim: PropertyClaimResponse) =>
+						!(claim.id === id && claim.type === type)
 				);
-				(item as Goal | PropertyClaim | Strategy).property_claims =
-					removeItemFromNestedStructure(
-						(item as Goal | PropertyClaim | Strategy)
-							.property_claims as unknown as NestedArrayItem[],
-						id,
-						type
-					) as unknown as PropertyClaim[];
+				(
+					item as GoalResponse | PropertyClaimResponse | StrategyResponse
+				).propertyClaims = removeItemFromNestedStructure(
+					(item as GoalResponse | PropertyClaimResponse | StrategyResponse)
+						.propertyClaims as unknown as NestedArrayItem[],
+					id,
+					type
+				) as unknown as PropertyClaimResponse[];
 			}
 
 			// Remove from strategies
 			if ("strategies" in item && item.strategies) {
-				(item as Goal).strategies = (item as Goal).strategies
-					.map((strategy: Strategy) => {
-						if (strategy.property_claims) {
-							strategy.property_claims = strategy.property_claims.filter(
-								(claim: PropertyClaim) =>
+				(item as GoalResponse).strategies = (item as GoalResponse).strategies
+					.map((strategy: StrategyResponse) => {
+						if (strategy.propertyClaims) {
+							strategy.propertyClaims = strategy.propertyClaims.filter(
+								(claim: PropertyClaimResponse) =>
 									!(claim.id === id && claim.type === type)
 							);
-							strategy.property_claims = removeItemFromNestedStructure(
-								strategy.property_claims as unknown as NestedArrayItem[],
+							strategy.propertyClaims = removeItemFromNestedStructure(
+								strategy.propertyClaims as unknown as NestedArrayItem[],
 								id,
 								type
-							) as unknown as PropertyClaim[];
+							) as unknown as PropertyClaimResponse[];
 						}
 						return strategy;
 					})
 					.filter(
-						(strategy: Strategy) =>
+						(strategy: StrategyResponse) =>
 							!(strategy.id === id && strategy.type === type)
 					);
 			}
@@ -347,17 +357,19 @@ const removeItemFromNestedStructure = (
 
 			// Remove from evidence
 			if ("evidence" in item && item.evidence) {
-				(item as PropertyClaim).evidence = (
-					item as PropertyClaim
+				(item as PropertyClaimResponse).evidence = (
+					item as PropertyClaimResponse
 				).evidence.filter(
-					(evidence: Evidence) =>
+					(evidence: EvidenceResponse) =>
 						!(evidence.id === id && evidence.type === type)
 				);
-				(item as PropertyClaim).evidence = removeItemFromNestedStructure(
-					(item as PropertyClaim).evidence as unknown as NestedArrayItem[],
-					id,
-					type
-				) as unknown as Evidence[];
+				(item as PropertyClaimResponse).evidence =
+					removeItemFromNestedStructure(
+						(item as PropertyClaimResponse)
+							.evidence as unknown as NestedArrayItem[],
+						id,
+						type
+					) as unknown as EvidenceResponse[];
 			}
 
 			return item;
@@ -369,15 +381,15 @@ const removeItemFromNestedStructure = (
  * Removes an assurance case node from the specified assurance case by its ID and type.
  */
 export const removeAssuranceCaseNode = (
-	assuranceCase: AssuranceCase,
-	id: number,
+	assuranceCase: AssuranceCaseResponse,
+	id: string,
 	type: string
-): AssuranceCase => {
+): AssuranceCaseResponse => {
 	const updatedGoals = removeItemFromNestedStructure(
-		assuranceCase.goals as unknown as NestedArrayItem[],
+		(assuranceCase.goals ?? []) as unknown as NestedArrayItem[],
 		id,
 		type
-	) as unknown as Goal[];
+	) as unknown as GoalResponse[];
 	return {
 		...assuranceCase,
 		goals: updatedGoals,
@@ -388,13 +400,13 @@ export const removeAssuranceCaseNode = (
 const collectGoal = (
 	item: NestedArrayItem,
 	result: {
-		goal: Goal | null;
-		claims: PropertyClaim[];
-		strategies: (Goal | PropertyClaim | Strategy)[];
+		goal: GoalResponse | null;
+		claims: PropertyClaimResponse[];
+		strategies: (GoalResponse | PropertyClaimResponse | StrategyResponse)[];
 	}
 ): void => {
-	if (item.type === "TopLevelNormativeGoal" || item.type === "Goal") {
-		result.goal = item as Goal;
+	if (item.type === "goal") {
+		result.goal = item as GoalResponse;
 	}
 };
 
@@ -402,14 +414,13 @@ const collectGoal = (
 const collectPropertyClaim = (
 	item: NestedArrayItem,
 	result: {
-		goal: Goal | null;
-		claims: PropertyClaim[];
-		strategies: (Goal | PropertyClaim | Strategy)[];
+		goal: GoalResponse | null;
+		claims: PropertyClaimResponse[];
+		strategies: (GoalResponse | PropertyClaimResponse | StrategyResponse)[];
 	}
 ): void => {
-	// Handle both "PropertyClaim" (from Django API) and "property_claim" (legacy format)
-	if (item.type === "PropertyClaim" || item.type === "property_claim") {
-		result.claims.push(item as PropertyClaim);
+	if (item.type === "property_claim") {
+		result.claims.push(item as PropertyClaimResponse);
 	}
 };
 
@@ -417,13 +428,13 @@ const collectPropertyClaim = (
 const collectStrategy = (
 	item: NestedArrayItem,
 	result: {
-		goal: Goal | null;
-		claims: PropertyClaim[];
-		strategies: (Goal | PropertyClaim | Strategy)[];
+		goal: GoalResponse | null;
+		claims: PropertyClaimResponse[];
+		strategies: (GoalResponse | PropertyClaimResponse | StrategyResponse)[];
 	}
 ): void => {
-	if (item.type === "Goal" || item.type === "Strategy") {
-		result.strategies.push(item as Goal | Strategy);
+	if (item.type === "goal" || item.type === "strategy") {
+		result.strategies.push(item as GoalResponse | StrategyResponse);
 	}
 };
 
@@ -432,8 +443,8 @@ const traverseNestedStructures = (
 	item: NestedArrayItem,
 	traverse: (items: NestedArrayItem[]) => void
 ): void => {
-	if ("property_claims" in item && item.property_claims) {
-		traverse(item.property_claims as NestedArrayItem[]);
+	if ("propertyClaims" in item && item.propertyClaims) {
+		traverse(item.propertyClaims as NestedArrayItem[]);
 	}
 	if ("strategies" in item && item.strategies) {
 		traverse(item.strategies as NestedArrayItem[]);
@@ -450,14 +461,18 @@ const traverseNestedStructures = (
 export const extractGoalsClaimsStrategies = (
 	array: NestedArrayItem[]
 ): {
-	goal: Goal | null;
-	claims: PropertyClaim[];
-	strategies: (Goal | PropertyClaim | Strategy)[];
+	goal: GoalResponse | null;
+	claims: PropertyClaimResponse[];
+	strategies: (GoalResponse | PropertyClaimResponse | StrategyResponse)[];
 } => {
 	const result = {
-		goal: null as Goal | null,
-		claims: [] as PropertyClaim[],
-		strategies: [] as (Goal | PropertyClaim | Strategy)[],
+		goal: null as GoalResponse | null,
+		claims: [] as PropertyClaimResponse[],
+		strategies: [] as (
+			| GoalResponse
+			| PropertyClaimResponse
+			| StrategyResponse
+		)[],
 	};
 
 	const traverse = (items: NestedArrayItem[]) => {

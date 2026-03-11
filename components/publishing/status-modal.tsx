@@ -14,7 +14,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import type { PublishStatusType } from "./status-badge";
+import type { PublishStatusType } from "@/lib/services/case-response-types";
 
 type StatusModalProps = {
 	open: boolean;
@@ -78,7 +78,7 @@ export function StatusModal({
 					<DialogTitle>
 						Case Status: {getStatusLabel(status)}
 						{hasChanges && status === "PUBLISHED" && (
-							<span className="ml-2 font-normal text-amber-500 text-sm">
+							<span className="ml-2 font-normal text-sm text-warning">
 								(Changes pending)
 							</span>
 						)}
@@ -174,7 +174,7 @@ function DraftContent({
 
 			{onMarkAsReady && (
 				<Button
-					className="w-full bg-amber-500 text-white hover:bg-amber-600"
+					className="w-full bg-warning text-warning-foreground hover:bg-warning/90"
 					disabled={loading}
 					onClick={() => handleAction(onMarkAsReady)}
 				>
@@ -248,7 +248,7 @@ function PublishedContent({
 
 			{hasChanges && onUpdatePublished && (
 				<Button
-					className="w-full bg-green-500 text-white hover:bg-green-600"
+					className="w-full bg-success text-success-foreground hover:bg-success/90"
 					disabled={loading}
 					onClick={() => handleAction(onUpdatePublished)}
 				>

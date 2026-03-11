@@ -3,13 +3,24 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import LogoutButton from "@/components/auth/logout-button";
-import FeedbackBanner from "@/components/feedback-banner";
+import FeedbackBanner from "@/components/navigation/feedback-banner";
 import { ModeToggle } from "@/components/ui/theme-toggle";
 import DesktopNav from "./desktop-nav";
 import MenuToggleButton from "./menu-toggle";
 import { MobileNav } from "./mobile-nav";
 
-export const Navbar = ({ children }: { children: React.ReactNode }) => {
+type Team = {
+	id: string;
+	name: string;
+	slug: string;
+};
+
+type NavbarProps = {
+	children: React.ReactNode;
+	teams: Team[];
+};
+
+export const Navbar = ({ children, teams }: NavbarProps) => {
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const pathname = usePathname();
 	const getPageName = (path: string): string => {
@@ -19,6 +30,9 @@ export const Navbar = ({ children }: { children: React.ReactNode }) => {
 		if (path.includes("/dashboard/case-studies")) {
 			return "Case Studies";
 		}
+		if (path.includes("/dashboard/teams/")) {
+			return "Teams";
+		}
 		return path.split("/").filter(Boolean).pop() || "";
 	};
 
@@ -26,13 +40,17 @@ export const Navbar = ({ children }: { children: React.ReactNode }) => {
 
 	return (
 		<div>
-			<MobileNav setSidebarOpen={setSidebarOpen} sidebarOpen={sidebarOpen} />
+			<MobileNav
+				setSidebarOpen={setSidebarOpen}
+				sidebarOpen={sidebarOpen}
+				teams={teams}
+			/>
 
 			{/* Static sidebar for desktop */}
-			<DesktopNav />
+			<DesktopNav teams={teams} />
 
 			<div className="lg:pl-72">
-				<div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-foreground/10 border-b bg-background px-4 shadow-xs sm:gap-x-6 sm:px-6 lg:px-8">
+				<div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-border border-b bg-background px-4 shadow-xs sm:gap-x-6 sm:px-6 lg:px-8">
 					<MenuToggleButton setSidebarOpen={setSidebarOpen} />
 
 					<div className="flex flex-1 items-center justify-start">
@@ -50,7 +68,7 @@ export const Navbar = ({ children }: { children: React.ReactNode }) => {
 
 							<div
 								aria-hidden="true"
-								className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10"
+								className="hidden lg:block lg:h-6 lg:w-px lg:bg-border"
 							/>
 							<LogoutButton />
 							<ModeToggle />

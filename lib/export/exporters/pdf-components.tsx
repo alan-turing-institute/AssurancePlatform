@@ -8,8 +8,6 @@
  * content is never reordered or mutated after render.
  */
 
-/* biome-ignore-all lint/suspicious/noArrayIndexKey: Static PDF content is never reordered */
-
 import {
 	Document,
 	Image,
@@ -19,6 +17,7 @@ import {
 	Text,
 	View,
 } from "@react-pdf/renderer";
+import type { ReactNode } from "react";
 import type { TreeNode } from "@/lib/schemas/case-export";
 import type {
 	ContentBlock,
@@ -27,6 +26,29 @@ import type {
 	ResolvedBranding,
 } from "../types";
 import { getElementTitle } from "../utils";
+
+/**
+ * Maximum content blocks per page to prevent react-pdf layout
+ * engine Y-position overflow on large documents.
+ */
+const MAX_BLOCKS_PER_PAGE = 30;
+
+/**
+ * Split a section's blocks into page-sized chunks.
+ */
+function splitSectionBlocks(
+	blocks: ContentBlock[],
+	max: number
+): ContentBlock[][] {
+	if (blocks.length <= max) {
+		return [blocks];
+	}
+	const chunks: ContentBlock[][] = [];
+	for (let i = 0; i < blocks.length; i += max) {
+		chunks.push(blocks.slice(i, i + max));
+	}
+	return chunks;
+}
 
 /**
  * Create styles based on branding configuration.
@@ -384,6 +406,7 @@ function PDFList({
 	return (
 		<View style={styles.list}>
 			{items.map((item, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[] items with possible duplicates
 				<View key={`list-item-${index}`} style={styles.listItem}>
 					<Text style={styles.listBullet}>
 						{ordered ? `${index + 1}.` : "\u2022"}
@@ -414,15 +437,18 @@ function PDFTable({
 		<View style={styles.table}>
 			<View style={styles.tableHeaderRow}>
 				{headers.map((header, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[] headers with possible duplicates
 					<Text key={`header-${index}`} style={styles.tableHeaderCell}>
 						{header}
 					</Text>
 				))}
 			</View>
 			{rows.map((row, rowIndex) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[][] rows with no unique identifiers
 				<View key={`row-${rowIndex}`} style={styles.tableRow}>
 					{headers.map((_, cellIndex) => (
 						<Text
+							// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[][] cells with no unique identifiers
 							key={`cell-${rowIndex}-${cellIndex}`}
 							style={styles.tableCell}
 						>
@@ -466,6 +492,24 @@ function formatImageSrc(src: string): string {
 
 	// Unknown format, return as-is
 	return src;
+}
+
+/**
+ * Get a stable key for a content block, using the best available identifier per type.
+ */
+function getBlockKey(block: ContentBlock, index: number): string {
+	switch (block.type) {
+		case "element":
+			return `element-${block.node.id}`;
+		case "heading":
+			return `heading-${block.level}-${index}`;
+		case "metadata":
+			return `metadata-${block.key}`;
+		case "image":
+			return `image-${block.alt}`;
+		default:
+			return `${block.type}-${index}`;
+	}
 }
 
 /**
@@ -537,6 +581,7 @@ function PDFContextList({
 		<View style={styles.elementField}>
 			<Text style={styles.elementFieldLabel}>Context:</Text>
 			{context.map((ctx, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: Plain string[] context items with possible duplicates
 				<Text key={`ctx-${index}`} style={styles.elementFieldValue}>
 					{"\u2022"} {ctx}
 				</Text>
@@ -558,8 +603,11 @@ function PDFCommentsList({
 	return (
 		<View style={styles.elementField}>
 			<Text style={styles.elementFieldLabel}>Comments:</Text>
-			{comments.map((comment, index) => (
-				<View key={`comment-${index}`} style={styles.comment}>
+			{comments.map((comment) => (
+				<View
+					key={`comment-${comment.author}-${comment.createdAt}`}
+					style={styles.comment}
+				>
 					<Text style={styles.commentAuthor}>
 						{comment.author}
 						{comment.createdAt &&
@@ -659,7 +707,13 @@ function PDFElement({
 /**
  * Render a content block to PDF components.
  */
-export function renderBlock(block: ContentBlock, styles: PDFStyles) {
+function PDFBlock({
+	block,
+	styles,
+}: {
+	block: ContentBlock;
+	styles: PDFStyles;
+}) {
 	switch (block.type) {
 		case "heading":
 			return (
@@ -714,34 +768,6 @@ function PDFFooterBranding({
 		return <Image src={branding.logoBase64} style={styles.footerLogo} />;
 	}
 	return <Text>{branding.footerText}</Text>;
-}
-
-/**
- * Render a section to PDF components.
- */
-function PDFSection({
-	section,
-	styles,
-}: {
-	section: RenderedSection;
-	styles: PDFStyles;
-}) {
-	if (section.blocks.length === 0) {
-		return null;
-	}
-
-	return (
-		<View>
-			{section.type !== "title-page" && section.title && (
-				<Text style={styles.h2}>{section.title}</Text>
-			)}
-			{section.blocks.map((block, index) => (
-				<View key={`block-${section.type}-${index}`}>
-					{renderBlock(block, styles)}
-				</View>
-			))}
-		</View>
-	);
 }
 
 /**
@@ -827,6 +853,35 @@ function PDFDiagramPage({
 }
 
 /**
+ * Portrait content page with standard footer.
+ * Wraps content in an A4 page with page numbers — mirrors the
+ * pattern used by PDFTitlePage and PDFDiagramPage.
+ */
+function PDFContentPage({
+	children,
+	branding,
+	styles,
+}: {
+	children: ReactNode;
+	branding: ResolvedBranding;
+	styles: PDFStyles;
+}) {
+	return (
+		<Page size="A4" style={styles.page}>
+			{children}
+			<View fixed style={styles.footer}>
+				<PDFFooterBranding branding={branding} styles={styles} />
+				<Text
+					render={({ pageNumber, totalPages }) =>
+						`Page ${pageNumber} of ${totalPages}`
+					}
+				/>
+			</View>
+		</Page>
+	);
+}
+
+/**
  * Main PDF document component.
  */
 export function PDFDocumentComponent({ document }: PDFDocumentProps) {
@@ -849,33 +904,46 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 			<PDFTitlePage document={document} styles={styles} />
 
 			{/* Diagram Pages (landscape, one per diagram) */}
-			{diagramSections.map((section, index) => (
+			{diagramSections.map((section) => (
 				<PDFDiagramPage
 					branding={document.branding}
-					key={`diagram-${index}`}
+					key={`diagram-${section.title}`}
 					section={section}
 					styles={styles}
 				/>
 			))}
 
-			{/* Content Pages (portrait) */}
-			<Page size="A4" style={styles.page}>
-				{contentSections.map((section, index) => (
-					<PDFSection
-						key={`section-${section.type}-${index}`}
-						section={section}
+			{/* Content Pages (portrait, one page per section, large sections split) */}
+			{contentSections.map((section) => {
+				if (section.blocks.length === 0) {
+					return null;
+				}
+
+				const chunks = splitSectionBlocks(section.blocks, MAX_BLOCKS_PER_PAGE);
+
+				return chunks.map((chunk, chunkIndex) => (
+					<PDFContentPage
+						branding={document.branding}
+						key={`section-${section.type}-${chunkIndex}`}
 						styles={styles}
-					/>
-				))}
-				<View fixed style={styles.footer}>
-					<PDFFooterBranding branding={document.branding} styles={styles} />
-					<Text
-						render={({ pageNumber, totalPages }) =>
-							`Page ${pageNumber} of ${totalPages}`
-						}
-					/>
-				</View>
-			</Page>
+					>
+						{section.title && (
+							<Text style={styles.h2}>
+								{chunkIndex === 0
+									? section.title
+									: `${section.title} (continued)`}
+							</Text>
+						)}
+						{chunk.map((block, blockIndex) => (
+							<PDFBlock
+								block={block}
+								key={getBlockKey(block, blockIndex)}
+								styles={styles}
+							/>
+						))}
+					</PDFContentPage>
+				));
+			})}
 		</Document>
 	);
 }

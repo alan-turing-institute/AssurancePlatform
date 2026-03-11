@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import type {
-	ShareByEmailInput,
-	ShareWithTeamInput,
-} from "@/lib/services/case-permission-service";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import {
+	shareByEmailSchema,
+	shareWithTeamSchema,
+} from "@/lib/schemas/permission";
 import {
 	listCasePermissions,
 	shareByEmail,
@@ -19,26 +25,19 @@ export async function GET(
 	_request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
+	try {
+		const userId = await requireAuth();
+		const { id: caseId } = await params;
+		const result = await listCasePermissions(userId, caseId);
 
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const result = await listCasePermissions(session.user.id, caseId);
-
-	if (result.error) {
-		let status = 400;
-		if (result.error === "Permission denied") {
-			status = 403;
-		} else if (result.error === "Case not found") {
-			status = 404;
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
 		}
-		return NextResponse.json({ error: result.error }, { status });
-	}
 
-	return NextResponse.json(result.data);
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }
 
 /**
@@ -53,83 +52,88 @@ export async function POST(
 	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
-	const { id: caseId } = await params;
-	const session = await getServerSession(authOptions);
-
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	try {
-		const body = await request.json();
+		const session = await requireAuthSession();
+		const { id: caseId } = await params;
+		const body = await request.json().catch(() => null);
 
-		if (body.type === "team") {
-			const input: ShareWithTeamInput = {
-				teamId: body.teamId,
-				permission: body.permission,
-			};
-
-			const result = await shareWithTeam(session.user.id, caseId, input);
-
-			if (result.error) {
-				const status =
-					result.error === "Permission denied"
-						? 403
-						: result.error === "Case not found" ||
-								result.error === "Team not found"
-							? 404
-							: 400;
-				return NextResponse.json({ error: result.error }, { status });
+		if (body?.type === "team") {
+			const parsed = shareWithTeamSchema.safeParse(body);
+			if (!parsed.success) {
+				return apiError(
+					validationError(
+						parsed.error.errors[0]?.message ?? "Invalid input"
+					)
+				);
 			}
 
-			return NextResponse.json(result.data, { status: 201 });
+			const result = await shareWithTeam(session.userId, caseId, {
+				teamId: parsed.data.teamId,
+				permission: parsed.data.permission,
+			});
+
+			if ("error" in result) {
+				return apiError(serviceErrorToAppError(result.error));
+			}
+
+			// Emit SSE event for real-time updates
+			const { emitSSEEvent } = await import(
+				"@/lib/services/sse-connection-manager"
+			);
+			const username = session.username ?? session.email ?? "Someone";
+			emitSSEEvent("permission:changed", caseId, {
+				username,
+				userId: session.userId,
+			});
+
+			return apiSuccess(result.data, 201);
 		}
 
 		// Default to user share (by email)
-		const input: ShareByEmailInput = {
-			email: body.email,
-			permission: body.permission,
-		};
-
-		const result = await shareByEmail(session.user.id, caseId, input);
-
-		if (result.error) {
-			const status =
-				result.error === "Permission denied"
-					? 403
-					: result.error === "Case not found"
-						? 404
-						: 400;
-			return NextResponse.json({ error: result.error }, { status });
+		const parsed = shareByEmailSchema.safeParse(body);
+		if (!parsed.success) {
+			return apiError(
+				validationError(
+					parsed.error.errors[0]?.message ?? "Invalid input"
+				)
+			);
 		}
+
+		const result = await shareByEmail(session.userId, caseId, {
+			email: parsed.data.email,
+			permission: parsed.data.permission,
+		});
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("permission:changed", caseId, {
+			username,
+			userId: session.userId,
+		});
 
 		// Return appropriate response based on result
 		if (result.data?.already_shared) {
-			return NextResponse.json(
+			return apiSuccess(
 				{ message: "User already has access to this case" },
-				{ status: 200 }
+				200
 			);
 		}
 
 		if (result.data?.invite_created) {
-			// Return invite link for the user to share
 			const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 			const inviteUrl = `${baseUrl}/invites/${result.data.invite_token}`;
-			return NextResponse.json(
-				{
-					message: "Invite created",
-					invite_url: inviteUrl,
-				},
-				{ status: 201 }
-			);
+			return apiSuccess({ message: "Invite created", invite_url: inviteUrl }, 201);
 		}
 
-		return NextResponse.json(result.data?.permission, { status: 201 });
+		return apiSuccess(result.data?.permission, 201);
 	} catch (error) {
-		console.error("Error sharing case:", error);
-		return NextResponse.json(
-			{ error: "Failed to share case" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

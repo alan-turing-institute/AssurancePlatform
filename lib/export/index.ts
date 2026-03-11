@@ -53,10 +53,7 @@ export {
 	ExporterRegistry,
 	exporterRegistry,
 	MarkdownExporter,
-	PDFDocumentComponent,
-	type PDFDocumentProps,
 	PDFExporter,
-	renderBlock,
 	WordExporter,
 } from "./exporters";
 
@@ -142,6 +139,7 @@ export {
 	type ExportResult,
 	type HeadingBlock,
 	type ImageBlock,
+	type LabelledDiagramImage,
 	type ListBlock,
 	type MetadataBlock,
 	type ParagraphBlock,

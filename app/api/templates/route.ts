@@ -1,14 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
-import { NextResponse } from "next/server";
+import {
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
 
 type Template = {
 	name: string;
 	[key: string]: unknown;
 };
 
-export function GET() {
+export async function GET() {
 	try {
+		await requireAuth();
 		// Read files from the file system using Node.js fs module
 		const templatesDir = path.resolve(process.cwd(), "caseTemplates");
 		let files: string[];
@@ -17,7 +22,7 @@ export function GET() {
 			files = fs.readdirSync(templatesDir);
 		} catch (_error) {
 			// Directory doesn't exist or no permissions
-			return NextResponse.json({ newTemplates: [], defaultCase: undefined });
+			return apiSuccess({ newTemplates: [], defaultCase: undefined });
 		}
 
 		// Filter JSON files
@@ -40,11 +45,8 @@ export function GET() {
 		const defaultCase =
 			newTemplates.find((c) => c.name === "empty") || newTemplates[0];
 
-		return NextResponse.json({ newTemplates, defaultCase });
-	} catch (_error) {
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{ status: 500 }
-		);
+		return apiSuccess({ newTemplates, defaultCase });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
 }

@@ -1,21 +1,92 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
-import { topologicalSort, transformV1ToV2 } from "@/lib/transforms/v1-to-v2";
 
 export type ImportResult =
 	| {
-			success: true;
-			caseId: string;
-			caseName: string;
-			elementCount: number;
-			evidenceLinkCount: number;
-			commentCount: number;
-			warnings: string[];
+			data: {
+				caseId: string;
+				caseName: string;
+				elementCount: number;
+				evidenceLinkCount: number;
+				commentCount: number;
+				warnings: string[];
+			};
 	  }
-	| { success: false; error: string; validationErrors?: string[] };
+	| { error: string; validationErrors?: string[] };
+
+// ---------------------------------------------------------------------------
+// Topological sort (Kahn's algorithm) — ensures parents are created before children
+// ---------------------------------------------------------------------------
+
+type SortContext = {
+	inDegree: Map<string, number>;
+	children: Map<string, ElementV2[]>;
+};
+
+function initSortGraph(elements: ElementV2[]): SortContext {
+	const inDegree = new Map<string, number>();
+	const children = new Map<string, ElementV2[]>();
+
+	for (const el of elements) {
+		inDegree.set(el.id, 0);
+		children.set(el.id, []);
+	}
+
+	for (const el of elements) {
+		if (el.parentId && inDegree.has(el.parentId)) {
+			inDegree.set(el.id, (inDegree.get(el.id) ?? 0) + 1);
+			children.get(el.parentId)?.push(el);
+		}
+	}
+
+	return { inDegree, children };
+}
+
+function processSortQueue(queue: ElementV2[], ctx: SortContext): ElementV2[] {
+	const result: ElementV2[] = [];
+
+	while (queue.length > 0) {
+		const current = queue.shift();
+		if (!current) {
+			break;
+		}
+
+		result.push(current);
+
+		for (const child of ctx.children.get(current.id) ?? []) {
+			const newDegree = (ctx.inDegree.get(child.id) ?? 1) - 1;
+			ctx.inDegree.set(child.id, newDegree);
+			if (newDegree === 0) {
+				queue.push(child);
+			}
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Topologically sorts elements so parents come before children.
+ * Uses Kahn's algorithm.
+ */
+function topologicalSort(elements: ElementV2[]): ElementV2[] {
+	const ctx = initSortGraph(elements);
+
+	// Queue elements with no dependencies (roots)
+	const queue = elements.filter((el) => ctx.inDegree.get(el.id) === 0);
+	const result = processSortQueue(queue, ctx);
+
+	// Handle orphaned elements (parent not in import)
+	const resultIds = new Set(result.map((el) => el.id));
+	const orphans = elements.filter((el) => !resultIds.has(el.id));
+
+	return [...result, ...orphans];
+}
+
+// ---------------------------------------------------------------------------
+// Import pipeline
+// ---------------------------------------------------------------------------
 
 /**
  * Validates and transforms imported JSON data.
@@ -34,16 +105,6 @@ async function processImportData(data: unknown): Promise<{
 			success: false,
 			warnings: [],
 			errors: result.errors.map((e) => `${e.path}: ${e.message}`),
-		};
-	}
-
-	// If legacy, transform to flat format
-	if (result.version === "legacy") {
-		const transformed = transformV1ToV2(result.data);
-		return {
-			success: true,
-			data: transformed.case,
-			warnings: transformed.warnings,
 		};
 	}
 
@@ -93,7 +154,7 @@ async function createCaseWithPermission(
 	caseData: CaseExportV2["case"],
 	userId: string
 ): Promise<string> {
-	const newCase = await prismaNew.assuranceCase.create({
+	const newCase = await prisma.assuranceCase.create({
 		data: {
 			name: caseData.name,
 			description: caseData.description,
@@ -116,28 +177,22 @@ async function createElements(
 	idMap: Map<string, string>,
 	userId: string
 ): Promise<number> {
-	// Sort elements topologically
+	// Sort elements topologically so parents are created before children
 	const sortedElements = topologicalSort(elements);
 
-	for (const el of sortedElements) {
-		const newId = idMap.get(el.id);
-		if (!newId) {
-			continue;
-		}
+	const data = sortedElements
+		.map((el) => {
+			const newId = idMap.get(el.id);
+			if (!newId) {
+				return null;
+			}
 
-		// Resolve parentId
-		let parentId: string | null = null;
-		if (el.parentId) {
-			parentId = idMap.get(el.parentId) ?? null;
-		}
-
-		await prismaNew.assuranceElement.create({
-			data: {
+			return {
 				id: newId,
 				caseId,
 				elementType: el.elementType,
 				role: el.role,
-				parentId,
+				parentId: el.parentId ? (idMap.get(el.parentId) ?? null) : null,
 				name: el.name,
 				description: el.description,
 				assumption: el.assumption,
@@ -149,11 +204,13 @@ async function createElements(
 				fromPattern: el.fromPattern ?? false,
 				modifiedFromPattern: el.modifiedFromPattern ?? false,
 				createdById: userId,
-			},
-		});
-	}
+			};
+		})
+		.filter((d) => d !== null);
 
-	return sortedElements.length;
+	await prisma.assuranceElement.createMany({ data });
+
+	return data.length;
 }
 
 /**
@@ -164,24 +221,20 @@ async function createEvidenceLinks(
 	links: CaseExportV2["evidenceLinks"],
 	idMap: Map<string, string>
 ): Promise<number> {
-	let created = 0;
+	const data = links
+		.map((link) => {
+			const evidenceId = idMap.get(link.evidenceId);
+			const claimId = idMap.get(link.claimId);
+			if (evidenceId && claimId) {
+				return { evidenceId, claimId };
+			}
+			return null;
+		})
+		.filter((d) => d !== null);
 
-	for (const link of links) {
-		const evidenceId = idMap.get(link.evidenceId);
-		const claimId = idMap.get(link.claimId);
+	await prisma.evidenceLink.createMany({ data });
 
-		if (evidenceId && claimId) {
-			await prismaNew.evidenceLink.create({
-				data: {
-					evidenceId,
-					claimId,
-				},
-			});
-			created += 1;
-		}
-	}
-
-	return created;
+	return data.length;
 }
 
 /**
@@ -192,7 +245,12 @@ async function createComments(
 	idMap: Map<string, string>,
 	userId: string
 ): Promise<number> {
-	let created = 0;
+	const data: {
+		elementId: string;
+		authorId: string;
+		content: string;
+		createdAt: Date;
+	}[] = [];
 
 	for (const el of elements) {
 		if (!el.comments || el.comments.length === 0) {
@@ -216,27 +274,26 @@ async function createComments(
 				createdAt = new Date();
 			}
 
-			await prismaNew.comment.create({
-				data: {
-					elementId,
-					authorId: userId, // Import user becomes comment author
-					content: comment.content,
-					createdAt,
-				},
+			data.push({
+				elementId,
+				authorId: userId,
+				content: comment.content,
+				createdAt,
 			});
-			created += 1;
 		}
 	}
 
-	return created;
+	if (data.length > 0) {
+		await prisma.comment.createMany({ data });
+	}
+
+	return data.length;
 }
 
 /**
  * Imports a case from JSON data.
  *
- * Accepts both v1 (legacy Django) and v2 (Prisma) formats.
- * V1 data is automatically transformed to v2 format.
- *
+ * Accepts nested (v1.0) and flat (v2.0) formats.
  * The importing user becomes the owner with ADMIN permission.
  */
 export async function importCase(
@@ -248,7 +305,6 @@ export async function importCase(
 
 	if (!(processed.success && processed.data)) {
 		return {
-			success: false,
 			error: "Invalid import data",
 			validationErrors: processed.errors,
 		};
@@ -261,7 +317,7 @@ export async function importCase(
 		const idMap = buildIdMap(v2Data.elements);
 
 		// Use a transaction to ensure atomicity
-		const result = await prismaNew.$transaction(async () => {
+		const result = await prisma.$transaction(async () => {
 			// Create case
 			const caseId = await createCaseWithPermission(v2Data.case, userId);
 
@@ -292,13 +348,14 @@ export async function importCase(
 		});
 
 		return {
-			success: true,
-			...result,
-			warnings: processed.warnings,
+			data: {
+				...result,
+				warnings: processed.warnings,
+			},
 		};
 	} catch (error) {
 		console.error("Failed to import case:", error);
-		return { success: false, error: "Failed to import case" };
+		return { error: "Failed to import case" };
 	}
 }
 
@@ -308,7 +365,7 @@ export async function importCase(
  */
 export async function validateImportData(jsonData: unknown): Promise<{
 	isValid: boolean;
-	version: "legacy" | "flat" | "nested" | null;
+	version: "flat" | "nested" | null;
 	caseName?: string;
 	elementCount?: number;
 	evidenceLinkCount?: number;

@@ -7,12 +7,12 @@ export default function Hero() {
 	const { data: session } = useSession();
 
 	return (
-		<div className="bg-white">
+		<div className="bg-background">
 			<main>
 				<div className="relative isolate">
 					<svg
 						aria-hidden="true"
-						className="-z-10 mask-[radial-gradient(32rem_32rem_at_center,white,transparent)] absolute inset-x-0 top-0 h-256 w-full stroke-gray-200"
+						className="-z-10 mask-[radial-gradient(32rem_32rem_at_center,white,transparent)] absolute inset-x-0 top-0 h-256 w-full stroke-border"
 					>
 						<defs>
 							<pattern
@@ -26,7 +26,7 @@ export default function Hero() {
 								<path d="M.5 200V.5H200" fill="none" />
 							</pattern>
 						</defs>
-						<svg className="overflow-visible fill-gray-50" x="50%" y={-1}>
+						<svg className="overflow-visible fill-muted" x="50%" y={-1}>
 							<title>Background decoration pattern</title>
 							<path
 								d="M-200 0h201v201h-201Z M600 0h201v201h-201Z M-400 600h201v201h-201Z M200 800h201v201h-201Z"
@@ -40,31 +40,19 @@ export default function Hero() {
 							width="100%"
 						/>
 					</svg>
-					<div
-						aria-hidden="true"
-						className="-z-10 -ml-24 absolute top-0 right-0 left-1/2 transform-gpu overflow-hidden blur-3xl lg:ml-24 xl:ml-48"
-					>
-						<div
-							className="aspect-801/1036 w-200.25 bg-linear-to-tr from-[#ff80b5] to-[#9089fc] opacity-30"
-							style={{
-								clipPath:
-									"polygon(63.1% 29.5%, 100% 17.1%, 76.6% 3%, 48.4% 0%, 44.6% 4.7%, 54.5% 25.3%, 59.8% 49%, 55.2% 57.8%, 44.4% 57.2%, 27.8% 47.9%, 35.1% 81.5%, 0% 97.7%, 39.2% 100%, 35.2% 81.4%, 97.2% 52.8%, 63.1% 29.5%)",
-							}}
-						/>
-					</div>
 					<div className="overflow-hidden">
 						<div className="mx-auto max-w-7xl px-6 pb-32 lg:px-8">
 							<div className="mx-auto w-full gap-8 lg:grid lg:grid-cols-2 lg:items-center">
 								{/* <div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center"> */}
 								<div className="relative w-full">
 									{/* max-w-xl lg:shrink-0 xl:max-w-2xl */}
-									<div className="mb-6 inline-flex rounded-md border border-indigo-300 bg-indigo-100 px-3 py-2 font-semibold text-indigo-500 text-xs">
+									<div className="mb-6 inline-flex rounded-md border border-primary/30 bg-primary/10 px-3 py-2 font-semibold text-primary text-xs">
 										Available as a Research Preview
 									</div>
-									<h1 className="font-bold text-4xl text-gray-900 tracking-tight sm:text-6xl">
+									<h1 className="font-bold text-4xl text-foreground tracking-tight sm:text-6xl">
 										Build trust, collaboratively.
 									</h1>
-									<p className="mt-6 text-gray-600 text-lg leading-8 sm:max-w-full lg:max-w-none">
+									<p className="mt-6 text-lg text-muted-foreground leading-8 sm:max-w-full lg:max-w-none">
 										The Trustworthy and Ethical Assurance (TEA) Platform is an
 										innovative, open-source tool designed to facilitate the
 										process of creating, managing and sharing assurance cases
@@ -72,7 +60,7 @@ export default function Hero() {
 									</p>
 									<div className="mt-10 flex items-center gap-x-6">
 										<Link
-											className="rounded-md bg-indigo-600 px-3.5 py-2.5 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
+											className="rounded-md bg-primary px-3.5 py-2.5 font-semibold text-primary-foreground text-sm shadow-xs hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-solid focus-visible:outline-offset-2"
 											href={
 												session?.user?.id
 													? "/dashboard"
@@ -81,12 +69,12 @@ export default function Hero() {
 										>
 											{session?.user?.id ? "Go to Dashboard" : "Get started"}
 										</Link>
-										<a
-											className="font-semibold text-gray-900 text-sm leading-6"
+										<Link
+											className="font-semibold text-foreground text-sm leading-6"
 											href="/docs/curriculum"
 										>
 											Learn more <span aria-hidden="true">→</span>
-										</a>
+										</Link>
 									</div>
 								</div>
 								{/* sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0 */}

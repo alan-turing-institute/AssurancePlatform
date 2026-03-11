@@ -33,32 +33,32 @@ const faqs = [
 
 export default function FAQ() {
 	return (
-		<div className="bg-white">
+		<div className="bg-background">
 			<div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8">
 				<div className="mx-auto max-w-2xl text-center">
-					<h2 className="font-bold text-2xl text-gray-900 leading-10 tracking-tight">
+					<h2 className="font-bold text-2xl text-foreground leading-10 tracking-tight">
 						Frequently asked questions
 					</h2>
-					<p className="mt-6 text-base text-gray-600 leading-7">
-						Have a different question and can’t find the answer you’re looking
+					<p className="mt-6 text-base text-muted-foreground leading-7">
+						Have a different question and can't find the answer you're looking
 						for? Reach out to our support team by{" "}
 						<a
-							className="font-semibold text-indigo-600 hover:text-indigo-500"
+							className="font-semibold text-primary hover:text-primary/80"
 							href="mailto:tea@turing.ac.uk"
 						>
 							sending us an email
 						</a>{" "}
-						and we’ll get back to you as soon as we can.
+						and we'll get back to you as soon as we can.
 					</p>
 				</div>
 				<div className="mt-20">
 					<dl className="space-y-16 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:gap-y-16 sm:space-y-0 lg:grid-cols-3 lg:gap-x-10">
 						{faqs.map((faq) => (
 							<div key={faq.id}>
-								<dt className="font-semibold text-base text-gray-900 leading-7">
+								<dt className="font-semibold text-base text-foreground leading-7">
 									{faq.question}
 								</dt>
-								<dd className="mt-2 text-base text-gray-600 leading-7">
+								<dd className="mt-2 text-base text-muted-foreground leading-7">
 									{faq.answer}
 								</dd>
 							</div>

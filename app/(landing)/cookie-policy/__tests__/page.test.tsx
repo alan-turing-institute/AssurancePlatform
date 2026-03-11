@@ -140,7 +140,7 @@ describe("CookiePolicyPage", () => {
 			const { container } = render(<CookiePolicyPage />);
 
 			// Look for CheckCircleIcons by their class and SVG element
-			const checkIcons = container.querySelectorAll("svg.text-emerald-600");
+			const checkIcons = container.querySelectorAll("svg.text-success");
 
 			// Should have 3 check icons for the 3 essential cookies
 			expect(checkIcons).toHaveLength(3);
@@ -150,7 +150,7 @@ describe("CookiePolicyPage", () => {
 			const { container } = render(<CookiePolicyPage />);
 
 			// Look for XCircleIcons by their class and SVG element
-			const xIcons = container.querySelectorAll("svg.text-rose-600");
+			const xIcons = container.querySelectorAll("svg.text-destructive");
 
 			// Should have 3 X icons for the 3 things cookies are NOT used for
 			expect(xIcons).toHaveLength(3);
@@ -204,7 +204,7 @@ describe("CookiePolicyPage", () => {
 			const { container } = render(<CookiePolicyPage />);
 
 			const mainDiv = container.firstChild;
-			expect(mainDiv).toHaveClass("bg-white", "px-6", "py-32", "lg:px-8");
+			expect(mainDiv).toHaveClass("bg-background", "px-6", "py-32", "lg:px-8");
 		});
 
 		it("should have correct content wrapper classes", () => {
@@ -217,7 +217,7 @@ describe("CookiePolicyPage", () => {
 				"mx-auto",
 				"max-w-3xl",
 				"text-base/7",
-				"text-gray-700"
+				"text-muted-foreground"
 			);
 		});
 
@@ -226,7 +226,7 @@ describe("CookiePolicyPage", () => {
 
 			const links = screen.getAllByRole("link");
 			for (const link of links) {
-				expect(link).toHaveClass("text-indigo-600", "underline");
+				expect(link).toHaveClass("text-primary", "underline");
 			}
 		});
 	});

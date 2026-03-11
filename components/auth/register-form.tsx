@@ -2,11 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { type RegisterFormInput, registerFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -18,40 +18,15 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z.object({
-	username: z
-		.string()
-		.min(2)
-		.max(250)
-		.regex(/^\S*$/, "Username cannot contain spaces"),
-	email: z.string().min(2).email(),
-	password1: z
-		.string()
-		.min(8)
-		.regex(
-			/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/,
-			"Password must contain at least one uppercase letter, one number, and one special character"
-		),
-	password2: z
-		.string()
-		.min(8)
-		.regex(
-			/(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/,
-			"Password must contain at least one uppercase letter, one number, and one special character"
-		),
-});
-
 const RegisterForm = () => {
 	const [loading, setLoading] = useState(false);
 	const [errors, setErrors] = useState<string[]>([]);
 	const [showPassword1, setShowPassword1] = useState(false);
 	const [showPassword2, setShowPassword2] = useState(false);
-	const { data: session } = useSession();
-
 	const router = useRouter();
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<RegisterFormInput>({
+		resolver: zodResolver(registerFormSchema),
 		defaultValues: {
 			username: "",
 			email: "",
@@ -60,7 +35,7 @@ const RegisterForm = () => {
 		},
 	});
 
-	function validatePasswords(values: z.infer<typeof formSchema>) {
+	function validatePasswords(values: RegisterFormInput) {
 		if (values.password1 !== values.password2) {
 			setErrors(["Your passwords must match, please try again."]);
 			return false;
@@ -113,14 +88,14 @@ const RegisterForm = () => {
 
 	function handleSuccessfulRegistration(
 		_response: Response,
-		_values: z.infer<typeof formSchema>
+		_values: RegisterFormInput
 	) {
 		// Registration successful - redirect to login
 		setLoading(false);
 		redirectToLoginWithSuccess();
 	}
 
-	function registerUser(values: z.infer<typeof formSchema>) {
+	function registerUser(values: RegisterFormInput) {
 		const user = {
 			username: values.username,
 			email: values.email,
@@ -142,7 +117,7 @@ const RegisterForm = () => {
 		return fetch(apiUrl, requestOptions);
 	}
 
-	async function onSubmit(values: z.infer<typeof formSchema>) {
+	async function onSubmit(values: RegisterFormInput) {
 		if (!validatePasswords(values)) {
 			return;
 		}
@@ -165,19 +140,12 @@ const RegisterForm = () => {
 		}
 	}
 
-	useEffect(() => {
-		// Redirect to dashboard if already logged in (check user.id for JWT-only mode compatibility)
-		if (session?.user?.id) {
-			router.push("/dashboard");
-		}
-	}, [session?.user?.id, router]);
-
 	return (
 		<div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-			<div className="bg-white px-6 py-12 shadow-sm sm:rounded-lg sm:px-12 dark:bg-slate-900">
+			<div className="bg-background px-6 py-12 shadow-sm sm:rounded-lg sm:px-12">
 				{errors?.map((error: string) => (
 					<div
-						className="mb-6 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700"
+						className="mb-6 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
 						key={crypto.randomUUID()}
 					>
 						<p>{error}</p>
@@ -232,20 +200,22 @@ const RegisterForm = () => {
 												type={showPassword1 ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword1 ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword1(!showPassword1)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword1 ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
@@ -264,31 +234,29 @@ const RegisterForm = () => {
 												type={showPassword2 ? "text" : "password"}
 												{...field}
 											/>
-											<button
+											<Button
 												aria-label={
 													showPassword2 ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 hover:text-gray-700"
+												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
 												onClick={() => setShowPassword2(!showPassword2)}
+												size="icon"
 												type="button"
+												variant="ghost"
 											>
 												{showPassword2 ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</button>
+											</Button>
 										</div>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
 							)}
 						/>
-						<Button
-							className="inline-flex w-full bg-indigo-600 text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-							disabled={loading}
-							type="submit"
-						>
+						<Button className="w-full" disabled={loading} type="submit">
 							{loading ? "Creating Account..." : "Submit"}
 						</Button>
 					</form>
@@ -297,12 +265,12 @@ const RegisterForm = () => {
 
 			<p className="mt-10 text-center text-foreground text-sm">
 				Already a member?{" "}
-				<a
-					className="font-semibold text-indigo-600 leading-6 hover:text-indigo-500"
-					href={"/login"}
+				<Link
+					className="font-semibold text-primary leading-6 hover:text-primary/80"
+					href="/login"
 				>
 					Login here
-				</a>
+				</Link>
 			</p>
 		</div>
 	);

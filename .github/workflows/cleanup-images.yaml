@@ -1,0 +1,25 @@
+name: Cleanup PR Docker Images
+
+on:
+  schedule:
+    - cron: "0 4 * * 0" # Weekly, Sundays at 4 AM UTC
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    name: Delete old PR images
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Delete PR images older than 14 days
+        uses: snok/container-retention-policy@v3
+        with:
+          account: alan-turing-institute
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image-names: "assuranceplatform/tea-app"
+          tag-selection: "both"
+          cut-off: "14 days ago UTC"
+          keep-n-most-recent: 3
+          filter-tags: "pr-*"

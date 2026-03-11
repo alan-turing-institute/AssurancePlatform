@@ -226,7 +226,9 @@ const priorityEmojis: Record<string, string> = {
 export const StrengthBadge = ({ strength, className }: StrengthBadgeProps) => {
 	const strengthStr = String(strength || "moderate");
 	const normalizedStrength = strengthStr.toLowerCase();
-	const color = strengthColors[normalizedStrength] ?? strengthColors.moderate;
+	const color =
+		strengthColors[normalizedStrength] ??
+		"bg-yellow-500/20 text-yellow-300 border border-yellow-400/30";
 
 	return (
 		<BaseBadge
@@ -244,7 +246,9 @@ export const StatusBadge = ({ status, className }: StatusBadgeProps) => {
 	const normalizedStatus = (status || "pending")
 		.toLowerCase()
 		.replace(STATUS_NORMALIZE_REGEX, "-");
-	const color = statusColors[normalizedStatus] ?? statusColors.pending;
+	const color =
+		statusColors[normalizedStatus] ??
+		"bg-orange-500/20 text-orange-300 border border-orange-400/30";
 
 	return <BaseBadge className={className} color={color} label={status} />;
 };

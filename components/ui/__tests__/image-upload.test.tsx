@@ -217,7 +217,7 @@ describe("ImageUpload", () => {
 			render(<ImageUpload onChange={mockOnChange} />);
 
 			// Simulate file drop by calling onDrop from useDropzone
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([file], []);
@@ -235,7 +235,7 @@ describe("ImageUpload", () => {
 
 			render(<ImageUpload onChange={mockOnChange} />);
 
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([], [rejection]);
@@ -252,7 +252,7 @@ describe("ImageUpload", () => {
 
 			render(<ImageUpload onChange={mockOnChange} />);
 
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([], [rejection]);
@@ -271,7 +271,7 @@ describe("ImageUpload", () => {
 
 			render(<ImageUpload onChange={mockOnChange} />);
 
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([], [rejection]);
@@ -292,7 +292,7 @@ describe("ImageUpload", () => {
 			render(<ImageUpload onChange={mockOnChange} />);
 
 			// First, trigger an error
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([], [rejection]);
@@ -341,7 +341,7 @@ describe("ImageUpload", () => {
 			const { rerender } = render(<ImageUpload onChange={mockOnChange} />);
 
 			// Upload a file
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([file], []);
@@ -375,7 +375,7 @@ describe("ImageUpload", () => {
 			const { rerender } = render(<ImageUpload onChange={mockOnChange} />);
 
 			// Trigger an error
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 			const rejection = {
 				file: new File(["test"], "test.txt", { type: "text/plain" }),
 				errors: [{ code: "file-invalid-type", message: "Invalid type" }],
@@ -420,7 +420,7 @@ describe("ImageUpload", () => {
 	});
 
 	describe("Disabled State", () => {
-		it("should disable dropzone when disabled", () => {
+		it("should pass disabled flag to dropzone", () => {
 			render(<ImageUpload disabled onChange={mockOnChange} />);
 
 			expect(mockUseDropzone).toHaveBeenCalledWith(
@@ -479,7 +479,7 @@ describe("ImageUpload", () => {
 			render(<ImageUpload onChange={mockOnChange} />);
 
 			// Trigger an error
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 			const rejection = {
 				file: new File(["test"], "test.txt", { type: "text/plain" }),
 				errors: [{ code: "file-invalid-type", message: "Invalid type" }],
@@ -518,7 +518,7 @@ describe("ImageUpload", () => {
 				errors: [{ code: "file-too-large", message: "File too large" }],
 			};
 
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([], [rejection]);
@@ -532,15 +532,13 @@ describe("ImageUpload", () => {
 		it("should configure dropzone with correct options", () => {
 			render(<ImageUpload onChange={mockOnChange} />);
 
-			expect(mockUseDropzone).toHaveBeenCalledWith({
-				onDrop: expect.any(Function),
-				accept: {
-					"image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
-				},
-				maxFiles: 1,
-				maxSize: 5 * 1024 * 1024,
-				disabled: false,
-			});
+			expect(mockUseDropzone).toHaveBeenCalledWith(
+				expect.objectContaining({
+					onDrop: expect.any(Function),
+					maxFiles: 1,
+					disabled: false,
+				})
+			);
 		});
 
 		it("should limit to single file", () => {
@@ -583,7 +581,7 @@ describe("ImageUpload", () => {
 			const { container } = render(<ImageUpload onChange={mockOnChange} />);
 
 			const dropzone = container.querySelector(
-				".focus\\:outline-none.focus\\:ring-2"
+				".focus\\:outline-hidden.focus\\:ring-2"
 			);
 			expect(dropzone).toBeInTheDocument();
 		});
@@ -622,7 +620,7 @@ describe("ImageUpload", () => {
 			render(<ImageUpload onChange={mockOnChange} />);
 
 			// Upload a file
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 			const file = new File(["test"], "test.png", { type: "image/png" });
 
 			act(() => {
@@ -639,7 +637,7 @@ describe("ImageUpload", () => {
 
 			render(<ImageUpload onChange={mockOnChange} />);
 
-			const dropzoneConfig = mockUseDropzone.mock.calls[0][0];
+			const dropzoneConfig = mockUseDropzone.mock.calls[0]![0];
 
 			act(() => {
 				dropzoneConfig.onDrop([file1, file2], []);

@@ -1,28 +1,27 @@
 ---
 sidebar_position: 2
 sidebar_label: 'Docker Production'
-draft: true
 ---
 
 import { Callout } from 'nextra/components'
 
 # Docker Production Deployment
 
-<Callout type="warning">
-**Coming Soon**
-
-Detailed production deployment documentation is in development. This page provides preliminary guidance.
-</Callout>
-
 ## Overview
 
-For production deployments, we recommend using Docker Compose with production-optimised settings. This differs from the development configuration in several ways:
+For self-hosted production deployments, the TEA Platform provides a production Docker Compose configuration (`docker-compose.yml`) that differs from the development setup in several ways:
 
-- Production-ready image builds
-- Proper secret management
-- Database persistence and backups
-- Reverse proxy configuration
-- Health checks and monitoring
+- Uses the pre-built image from GitHub Container Registry (ghcr.io) instead of building locally
+- Production-optimised Next.js build
+- Proper secret management via environment variables
+- Database persistence with named volumes
+- Health checks for both application and database
+
+<Callout type="info">
+**Azure Deployment**
+
+The official staging and production environments are hosted on Azure App Service and deployed automatically via GitHub Actions. This guide is for self-hosted deployments using Docker Compose.
+</Callout>
 
 ## Quick Start
 
@@ -36,10 +35,10 @@ cd AssurancePlatform
 ### 2. Create Production Environment File
 
 ```shell
-cp .env.example .env.production
+cp .env.example .env
 ```
 
-Edit `.env.production` with production values:
+Edit `.env` with production values:
 
 ```bash
 # Application
@@ -61,26 +60,23 @@ GITHUB_APP_CLIENT_SECRET=your-client-secret
 ### 3. Deploy
 
 ```shell
-docker-compose -f docker-compose.production.yml up -d
+docker-compose -f docker-compose.yml up -d
 ```
+
+This pulls the latest image from `ghcr.io/alan-turing-institute/assuranceplatform:latest` and starts the application with PostgreSQL.
 
 ## Production Configuration
 
+### Container Names
+
+| Container | Service | Port |
+|-----------|---------|------|
+| `tea_app` | Next.js application | 3000 |
+| `tea_postgres` | PostgreSQL database | 5432 |
+
 ### Reverse Proxy
 
-For production, place the application behind a reverse proxy:
-
-**Using Traefik:**
-```yaml
-# Add to docker-compose.production.yml
-services:
-  traefik:
-    image: traefik:v2.10
-    ports:
-      - "80:80"
-      - "443:443"
-    # ... configuration
-```
+For production, place the application behind a reverse proxy for SSL termination:
 
 **Using nginx:**
 ```nginx
@@ -101,7 +97,7 @@ server {
 
 ### Database Persistence
 
-Ensure database data is persisted on a reliable volume:
+Database data is persisted via a named Docker volume (`postgres_data`). To use a bind mount instead:
 
 ```yaml
 volumes:
@@ -115,21 +111,27 @@ volumes:
 
 ### Health Checks
 
-The application includes health check endpoints:
+The application includes a health check endpoint:
 
-- `/api/health` - Application health
-- Database connection is verified on startup
+- `/api/health` — Returns 200 when the application is ready
 
 ## Updating
 
 To update to a new version:
 
 ```shell
-# Pull latest changes
-git pull origin main
+# Pull latest image
+docker-compose -f docker-compose.yml pull
 
-# Rebuild and restart
-docker-compose -f docker-compose.production.yml up -d --build
+# Restart with new image
+docker-compose -f docker-compose.yml up -d
+```
+
+Or to build from source:
+
+```shell
+git pull origin main
+docker-compose -f docker-compose.yml up -d --build
 ```
 
 ## Troubleshooting
@@ -137,22 +139,22 @@ docker-compose -f docker-compose.production.yml up -d --build
 ### View Logs
 
 ```shell
-docker-compose -f docker-compose.production.yml logs -f
+docker-compose -f docker-compose.yml logs -f tea_app
 ```
 
 ### Database Connection Issues
 
-1. Verify `DATABASE_URL` is correct
-2. Check database container is running
+1. Verify `DATABASE_URL` is correct in your `.env` file
+2. Check database container is running: `docker ps | grep tea_postgres`
 3. Ensure network connectivity between containers
 
 ### Application Not Starting
 
 1. Check logs for error messages
-2. Verify all required environment variables are set
-3. Ensure database migrations have run
+2. Verify all required environment variables are set (`NEXTAUTH_SECRET`, `DATABASE_URL`)
+3. Ensure database migrations have run: `docker exec tea_app npx prisma migrate deploy`
 
 ## Further Reading
 
-- [Deployment Overview](./index) - General deployment guidance
-- [Database Management](./database-management) - Backup and restore procedures
+- [Deployment Overview](./index) — General deployment guidance
+- [Database Management](./database-management) — Backup and restore procedures

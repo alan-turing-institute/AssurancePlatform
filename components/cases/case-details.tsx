@@ -2,7 +2,8 @@
 
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
-import useStore from "@/data/store";
+import { Skeleton } from "@/components/ui/skeleton";
+import useStore from "@/store/store";
 import CaseSheet from "../ui/case-sheet";
 import CaseEditForm from "./case-edit-form";
 
@@ -24,7 +25,23 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 	}, []);
 
 	if (!isMounted) {
-		return null;
+		return (
+			<CaseSheet
+				description=""
+				isOpen={isOpen}
+				onChange={() => setOpen(false)}
+				onClose={() => setOpen(false)}
+				title="Assurance Case"
+			>
+				<div className="my-6 space-y-4">
+					<Skeleton className="h-4 w-32" />
+					<Skeleton className="h-24 w-full" />
+					<Skeleton className="h-4 w-32" />
+					<Skeleton className="h-24 w-full" />
+					<Skeleton className="h-10 w-24" />
+				</div>
+			</CaseSheet>
+		);
 	}
 
 	const handleClose = () => {

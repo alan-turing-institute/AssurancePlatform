@@ -13,8 +13,10 @@ export type SSEEventType =
 	| "element:created"
 	| "element:updated"
 	| "element:deleted"
+	| "element:restored"
 	| "element:attached"
 	| "element:detached"
+	| "element:moved"
 	| "permission:changed";
 
 export type SSEEvent = {
@@ -92,9 +94,8 @@ class SSEConnectionManager {
 
 	/**
 	 * Broadcasts an event to all connections for a case.
-	 * Optionally excludes the originating user.
 	 */
-	broadcast(event: SSEEvent, excludeUserId?: string): void {
+	broadcast(event: SSEEvent): void {
 		const caseConnections = this.connections.get(event.caseId);
 		if (!caseConnections || caseConnections.size === 0) {
 			return;
@@ -104,11 +105,6 @@ class SSEConnectionManager {
 		const deadConnections: string[] = [];
 
 		for (const [connectionId, connection] of caseConnections) {
-			// Skip the user who triggered the event
-			if (excludeUserId && connection.userId === excludeUserId) {
-				continue;
-			}
-
 			try {
 				connection.controller.enqueue(eventData);
 			} catch {
@@ -205,16 +201,15 @@ if (process.env.NODE_ENV !== "production") {
 export function emitSSEEvent(
 	type: SSEEventType,
 	caseId: string,
-	payload: Record<string, unknown>,
-	userId?: string
+	payload: Record<string, unknown>
 ): void {
 	const event: SSEEvent = {
 		type,
 		caseId,
 		payload,
 		timestamp: new Date().toISOString(),
-		userId,
+		userId: typeof payload.userId === "string" ? payload.userId : undefined,
 	};
 
-	sseConnectionManager.broadcast(event, userId);
+	sseConnectionManager.broadcast(event);
 }

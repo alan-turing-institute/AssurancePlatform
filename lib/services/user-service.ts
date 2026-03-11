@@ -1,16 +1,11 @@
-"use server";
-
-import { prismaNew } from "@/lib/prisma";
-
-// ============================================
-// VALIDATION REGEX PATTERNS (top-level for performance)
-// ============================================
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UPPERCASE_REGEX = /[A-Z]/;
-const DIGIT_REGEX = /\d/;
-const SPECIAL_CHAR_REGEX = /[\W_]/;
-const WHITESPACE_REGEX = /\s/;
+import { prisma } from "@/lib/prisma";
+import type { ConnectedAccountsData } from "@/lib/services/connected-accounts-service";
+import {
+	validateEmail,
+	validatePassword,
+	validateUsername,
+} from "@/lib/validation/validators";
+import type { ServiceResult } from "@/types/service";
 
 // ============================================
 // INPUT INTERFACES
@@ -26,68 +21,12 @@ export type RegisterUserInput = {
 // OUTPUT INTERFACES
 // ============================================
 
-export type UserResponse = {
+export type RegisteredUserResponse = {
 	id: string;
 	username: string;
 	email: string;
 	created_at: string;
 };
-
-// ============================================
-// VALIDATION HELPERS
-// ============================================
-
-/**
- * Validates email format.
- */
-function isValidEmail(email: string): boolean {
-	return EMAIL_REGEX.test(email);
-}
-
-/**
- * Validates password strength.
- * Requires: min 8 chars, 1 uppercase, 1 number, 1 special char.
- */
-function isValidPassword(password: string): { valid: boolean; error?: string } {
-	if (password.length < 8) {
-		return { valid: false, error: "Password must be at least 8 characters" };
-	}
-	if (!UPPERCASE_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one uppercase letter",
-		};
-	}
-	if (!DIGIT_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one number",
-		};
-	}
-	if (!SPECIAL_CHAR_REGEX.test(password)) {
-		return {
-			valid: false,
-			error: "Password must contain at least one special character",
-		};
-	}
-	return { valid: true };
-}
-
-/**
- * Validates username format.
- */
-function isValidUsername(username: string): { valid: boolean; error?: string } {
-	if (username.length < 2) {
-		return { valid: false, error: "Username must be at least 2 characters" };
-	}
-	if (username.length > 250) {
-		return { valid: false, error: "Username must be less than 250 characters" };
-	}
-	if (WHITESPACE_REGEX.test(username)) {
-		return { valid: false, error: "Username cannot contain spaces" };
-	}
-	return { valid: true };
-}
 
 // ============================================
 // SERVICE FUNCTIONS
@@ -98,30 +37,33 @@ function isValidUsername(username: string): { valid: boolean; error?: string } {
  */
 export async function registerUser(
 	input: RegisterUserInput
-): Promise<{ data?: UserResponse; error?: string; field?: string }> {
+): Promise<
+	{ data: RegisteredUserResponse } | { error: string; field?: string }
+> {
 	// Validate username
-	const usernameValidation = isValidUsername(input.username);
+	const usernameValidation = validateUsername(input.username);
 	if (!usernameValidation.valid) {
 		return { error: usernameValidation.error, field: "username" };
 	}
 
 	// Validate email
-	if (!isValidEmail(input.email)) {
-		return { error: "Please enter a valid email address", field: "email" };
+	const emailValidation = validateEmail(input.email);
+	if (!emailValidation.valid) {
+		return { error: emailValidation.error, field: "email" };
 	}
 
 	// Validate password
-	const passwordValidation = isValidPassword(input.password);
+	const passwordValidation = validatePassword(input.password);
 	if (!passwordValidation.valid) {
 		return { error: passwordValidation.error, field: "password" };
 	}
 
-	const email = input.email.toLowerCase().trim();
-	const username = input.username.trim();
+	const email = emailValidation.value;
+	const username = usernameValidation.value;
 
 	try {
 		// Check if email already exists
-		const existingEmail = await prismaNew.user.findUnique({
+		const existingEmail = await prisma.user.findUnique({
 			where: { email },
 			select: { id: true },
 		});
@@ -134,7 +76,7 @@ export async function registerUser(
 		}
 
 		// Check if username already exists
-		const existingUsername = await prismaNew.user.findUnique({
+		const existingUsername = await prisma.user.findUnique({
 			where: { username },
 			select: { id: true },
 		});
@@ -148,7 +90,7 @@ export async function registerUser(
 		const passwordHash = await hashPassword(input.password);
 
 		// Create user
-		const user = await prismaNew.user.create({
+		const user = await prisma.user.create({
 			data: {
 				username,
 				email,
@@ -178,13 +120,47 @@ export async function registerUser(
 }
 
 /**
+ * Dismisses the migration notice for the given user.
+ * Only succeeds if the user has a valid (non-placeholder) email address.
+ */
+export async function dismissMigrationNotice(
+	userId: string
+): ServiceResult<null> {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { email: true },
+		});
+
+		if (!user) {
+			return { error: "Permission denied" };
+		}
+
+		const hasValidEmail = user.email && !user.email.includes("@placeholder");
+		if (!hasValidEmail) {
+			return { error: "Valid email required to dismiss migration notice" };
+		}
+
+		await prisma.user.update({
+			where: { id: userId },
+			data: { hasSeenMigrationNotice: true },
+		});
+
+		return { data: null };
+	} catch (error) {
+		console.error("[dismissMigrationNotice]", { userId, error });
+		return { error: "Failed to dismiss migration notice" };
+	}
+}
+
+/**
  * Gets the current user by ID.
  */
 export async function getUserById(
 	userId: string
-): Promise<{ data?: UserResponse; error?: string }> {
+): ServiceResult<RegisteredUserResponse> {
 	try {
-		const user = await prismaNew.user.findUnique({
+		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: {
 				id: true,
@@ -209,5 +185,147 @@ export async function getUserById(
 	} catch (error) {
 		console.error("Failed to get user:", error);
 		return { error: "Failed to get user" };
+	}
+}
+
+// ============================================
+// User Profile (used by /api/users/me)
+// ============================================
+
+export type UserProfileData = {
+	id: string;
+	username: string;
+	email: string;
+	firstName: string | null;
+	lastName: string | null;
+	avatarUrl: string | null;
+	groups: Array<{ id: string; name: string }>;
+};
+
+/**
+ * Fetches the user's profile including team memberships.
+ * Used by the /api/users/me route.
+ */
+export async function getUserProfile(
+	userId: string
+): ServiceResult<UserProfileData> {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: {
+				id: true,
+				username: true,
+				email: true,
+				firstName: true,
+				lastName: true,
+				avatarUrl: true,
+				teamMemberships: {
+					select: {
+						team: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+			},
+		});
+
+		if (!user) {
+			return { error: "Permission denied" };
+		}
+
+		return {
+			data: {
+				id: user.id,
+				username: user.username,
+				email: user.email,
+				firstName: user.firstName,
+				lastName: user.lastName,
+				avatarUrl: user.avatarUrl,
+				groups: user.teamMemberships.map((m) => ({
+					id: m.team.id,
+					name: m.team.name,
+				})),
+			},
+		};
+	} catch (error) {
+		console.error("[getUserProfile]", { userId, error });
+		return { error: "Failed to fetch user profile" };
+	}
+}
+
+// ============================================
+// Current User
+// ============================================
+
+export type CurrentUserData = {
+	id: string;
+	username: string;
+	email: string;
+	firstName?: string;
+	lastName?: string;
+	avatar?: string | null;
+	groups: Array<{ id: string; name: string }>;
+	hasSeenMigrationNotice: boolean;
+	completedTours: string[];
+	connectedAccounts?: ConnectedAccountsData;
+};
+
+/**
+ * Fetches the current user's full profile including team memberships.
+ */
+export async function getCurrentUser(
+	userId: string
+): ServiceResult<CurrentUserData> {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: {
+				id: true,
+				username: true,
+				email: true,
+				firstName: true,
+				lastName: true,
+				avatarUrl: true,
+				hasSeenMigrationNotice: true,
+				completedTours: true,
+				teamMemberships: {
+					select: {
+						team: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+			},
+		});
+
+		if (!user) {
+			return { error: "Permission denied" };
+		}
+
+		return {
+			data: {
+				id: user.id,
+				username: user.username,
+				email: user.email,
+				firstName: user.firstName ?? undefined,
+				lastName: user.lastName ?? undefined,
+				avatar: user.avatarUrl,
+				groups: user.teamMemberships.map((m) => ({
+					id: m.team.id,
+					name: m.team.name,
+				})),
+				hasSeenMigrationNotice: user.hasSeenMigrationNotice,
+				completedTours: user.completedTours,
+			},
+		};
+	} catch (error) {
+		console.error("[getCurrentUser]", { userId, error });
+		return { error: "Failed to fetch user" };
 	}
 }

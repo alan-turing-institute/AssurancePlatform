@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	Form,
@@ -19,33 +18,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
+import { useCreateCaseModal } from "@/hooks/modal-hooks";
+import {
+	type CreateAssuranceCaseInput,
+	createAssuranceCaseSchema,
+} from "@/lib/schemas/assurance-case";
 import { Button } from "../ui/button";
-
-const formSchema = z.object({
-	name: z.string().min(1),
-	description: z.string().min(1),
-	// template: z.string().min(1)
-});
 
 export const CaseCreateModal = () => {
 	const createCaseModal = useCreateCaseModal();
 	const router = useRouter();
-	// const [token] = useLoginToken();
 	const { data: session } = useSession();
 
 	const [loading, setLoading] = useState(false);
 	const [_stage, _setStage] = useState(0);
-	// const [templates, setTemplates] = useState<any[]>([]);
-	// const [defaultValue, setDefaultValue] = useState(0);
-	const [_errors, setErrors] = useState<string[]>([]);
+	const [errors, setErrors] = useState<string[]>([]);
 
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<CreateAssuranceCaseInput>({
+		resolver: zodResolver(createAssuranceCaseSchema),
 		defaultValues: {
 			name: "",
 			description: "",
-			// template: ""
 		},
 	});
 
@@ -60,8 +53,7 @@ export const CaseCreateModal = () => {
 			setLoading(true);
 
 			try {
-				// Pass empty string - server action uses validateSession() internally
-				const result = await createAssuranceCase("", {
+				const result = await createAssuranceCase({
 					name,
 					description,
 				});
@@ -90,22 +82,9 @@ export const CaseCreateModal = () => {
 		createCaseModal.onClose();
 	};
 
-	const onSubmit = (values: z.infer<typeof formSchema>) => {
+	const onSubmit = (values: CreateAssuranceCaseInput) => {
 		CreateCase(values.name, values.description);
 	};
-
-	// const fetchTemplates = async () => {
-	//   const response = await fetch('/api/templates')
-	//   const result = await response.json()
-	//   return result
-	// }
-
-	// useEffect(() => {
-	//   fetchTemplates().then(result => {
-	//     setTemplates(result.newTemplates);
-	//     setDefaultValue(result.defaultCase);
-	//   })
-	// },[])
 
 	return (
 		<Modal
@@ -161,34 +140,13 @@ export const CaseCreateModal = () => {
 										</FormItem>
 									)}
 								/>
-								{/* <FormField
-                control={form.control}
-                name="template"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Select a template...</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        {templates.map((template, index) => (
-                          <FormItem key={crypto.randomUUID()} className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value={index.toString()} />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {template.name}
-                            </FormLabel>
-                          </FormItem>
-                        ))}
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              /> */}
+								{errors.length > 0 && (
+									<div className="text-destructive text-sm">
+										{errors.map((e) => (
+											<p key={e}>{e}</p>
+										))}
+									</div>
+								)}
 								<div className="flex w-full items-center justify-end space-x-2 pt-6">
 									<Button
 										disabled={loading}

@@ -73,7 +73,9 @@ const shuffleArray = <T,>(array: T[], shouldShuffle: boolean): T[] => {
 	const shuffled = [...array];
 	for (let i = shuffled.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1));
-		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		const temp = shuffled[i];
+		shuffled[i] = shuffled[j] as T;
+		shuffled[j] = temp as T;
 	}
 	return shuffled;
 };
@@ -454,6 +456,9 @@ const SequentialQuiz = ({
 	onPrevious,
 }: SequentialQuizProps): React.ReactNode => {
 	const currentQuestion = questions[currentIndex];
+	if (!currentQuestion) {
+		return null;
+	}
 	const hasAnswered = answers[currentQuestion.id] !== undefined;
 
 	return (

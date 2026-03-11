@@ -1,8 +1,13 @@
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import type { CreateTeamInput } from "@/lib/services/team-service";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { createTeamSchema } from "@/lib/schemas/team";
 import { createTeam, listUserTeams } from "@/lib/services/team-service";
 
 /**
@@ -10,18 +15,18 @@ import { createTeam, listUserTeams } from "@/lib/services/team-service";
  * Lists all teams the authenticated user is a member of.
  */
 export async function GET() {
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+	try {
+		const userId = await requireAuth();
+		const result = await listUserTeams(userId);
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess(result.data);
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await listUserTeams(session.user.id);
-
-	if (result.error) {
-		return NextResponse.json({ error: result.error }, { status: 400 });
-	}
-
-	return NextResponse.json(result.data);
 }
 
 /**
@@ -29,34 +34,27 @@ export async function GET() {
  * Creates a new team with the authenticated user as ADMIN.
  */
 export async function POST(request: Request) {
-	const session = await getServerSession(authOptions);
-	if (!session?.user?.id) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
 	try {
-		const body = await request.json();
+		const userId = await requireAuth();
 
-		const input: CreateTeamInput = {
-			name: body.name,
-			description: body.description,
-		};
-
-		const result = await createTeam(session.user.id, input);
-
-		if (result.error) {
-			return NextResponse.json({ error: result.error }, { status: 400 });
+		const parsed = createTeamSchema.safeParse(
+			await request.json().catch(() => null)
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+			);
 		}
 
-		// Revalidate the teams page cache so the new team appears when navigating back
-		revalidatePath("/dashboard/teams");
+		const result = await createTeam(userId, parsed.data);
 
-		return NextResponse.json(result.data, { status: 201 });
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		revalidatePath("/dashboard/teams");
+		return apiSuccess(result.data, 201);
 	} catch (error) {
-		console.error("Error creating team:", error);
-		return NextResponse.json(
-			{ error: "Failed to create team" },
-			{ status: 500 }
-		);
+		return apiErrorFromUnknown(error);
 	}
 }

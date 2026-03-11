@@ -4,16 +4,15 @@
  */
 
 import type {
-	AssuranceCase,
-	CaseStudy,
-	Comment,
-	Context,
-	Evidence,
-	Goal,
-	Member,
-	PropertyClaim,
-	Strategy,
-} from "@/types/domain";
+	AssuranceCaseResponse,
+	CaseStudyResponse,
+	EvidenceResponse,
+	GoalResponse,
+	MemberResponse,
+	PropertyClaimResponse,
+	StrategyResponse,
+} from "@/lib/services/case-response-types";
+import type { CommentResponse } from "@/lib/services/comment-service";
 
 // Counter for generating unique IDs
 let idCounter = 1;
@@ -66,11 +65,10 @@ export type CaseTemplate = {
 	name: string;
 	description: string;
 	structure: {
-		goals: Partial<Goal>[];
-		strategies: Partial<Strategy>[];
-		property_claims: Partial<PropertyClaim>[];
-		contexts: Partial<Context>[];
-		evidence: Partial<Evidence>[];
+		goals: Partial<GoalResponse>[];
+		strategies: Partial<StrategyResponse>[];
+		propertyClaims: Partial<PropertyClaimResponse>[];
+		evidence: Partial<EvidenceResponse>[];
 	};
 	category: string;
 	tags: string[];
@@ -166,29 +164,23 @@ export const TeamFactory = {
 
 // Advanced AssuranceCase Factory
 export const AssuranceCaseFactory = {
-	create(overrides: Partial<AssuranceCase> = {}): AssuranceCase {
-		const id = overrides.id ?? getNextId();
-		const owner = overrides.owner ?? UserFactory.create().id;
+	create(
+		overrides: Partial<AssuranceCaseResponse> = {}
+	): AssuranceCaseResponse {
+		const id = overrides.id ?? String(getNextId());
+		const owner = overrides.owner ?? String(UserFactory.create().id);
 		const currentDate = new Date().toISOString();
 
 		const defaults = {
 			type: "AssuranceCase" as const,
 			name: `Assurance Case ${id}`,
 			description: `Comprehensive assurance case ${id} for testing`,
-			created_date: currentDate,
-			view_groups: [],
-			edit_groups: [],
-			review_groups: [],
-			color_profile: "default",
+			createdDate: currentDate,
+			colourProfile: "default",
 			published: false,
-			published_date: null,
 			permissions: "manage" as const,
 			comments: [],
 			goals: [],
-			property_claims: [],
-			evidence: [],
-			contexts: [],
-			strategies: [],
 			images: [],
 			viewMembers: [],
 			editMembers: [],
@@ -204,60 +196,48 @@ export const AssuranceCaseFactory = {
 	},
 
 	createWithFullStructure(): {
-		assuranceCase: AssuranceCase;
-		goals: Goal[];
-		strategies: Strategy[];
-		propertyClaims: PropertyClaim[];
-		evidence: Evidence[];
-		contexts: Context[];
+		assuranceCase: AssuranceCaseResponse;
+		goals: GoalResponse[];
+		strategies: StrategyResponse[];
+		propertyClaims: PropertyClaimResponse[];
+		evidence: EvidenceResponse[];
 	} {
 		const assuranceCase = this.create();
 		const caseId = assuranceCase.id;
 
 		// Create hierarchical structure
 		const topGoal = GoalFactory.create({
-			assurance_case_id: caseId,
+			assuranceCaseId: caseId,
 			name: "Top-Level Safety Goal",
 		});
 
-		const contexts = [
-			ContextFactory.create({
-				goal_id: topGoal.id,
-				name: "Operating Environment",
-			}),
-			ContextFactory.create({
-				goal_id: topGoal.id,
-				name: "System Boundaries",
-			}),
-		];
-
 		const strategy = StrategyFactory.create({
-			goal_id: topGoal.id,
+			goalId: topGoal.id,
 			name: "Argument by Component Safety",
 		});
 
 		const subGoals = [
 			GoalFactory.create({
-				assurance_case_id: caseId,
+				assuranceCaseId: caseId,
 				name: "Component A Safety",
 			}),
 			GoalFactory.create({
-				assurance_case_id: caseId,
+				assuranceCaseId: caseId,
 				name: "Component B Safety",
 			}),
 		];
 
 		const propertyClaims = [
 			PropertyClaimFactory.create({
-				goal_id: subGoals[0].id,
+				goalId: subGoals[0]!.id,
 				name: "Component A Reliability",
-				claim_type: "claim",
+				claimType: "claim",
 				level: 1,
 			}),
 			PropertyClaimFactory.create({
-				goal_id: subGoals[1].id,
+				goalId: subGoals[1]!.id,
 				name: "Component B Performance",
-				claim_type: "claim",
+				claimType: "claim",
 				level: 1,
 			}),
 		];
@@ -274,15 +254,11 @@ export const AssuranceCaseFactory = {
 		];
 
 		// Link evidence to property claims
-		evidence[0].property_claim_id = [propertyClaims[0].id];
-		evidence[1].property_claim_id = [propertyClaims[1].id];
+		evidence[0]!.propertyClaimId = [propertyClaims[0]!.id];
+		evidence[1]!.propertyClaimId = [propertyClaims[1]!.id];
 
-		// Update assurance case with all elements
+		// Update assurance case with top-level goals
 		assuranceCase.goals = [topGoal, ...subGoals];
-		assuranceCase.strategies = [strategy];
-		assuranceCase.property_claims = propertyClaims;
-		assuranceCase.evidence = evidence;
-		assuranceCase.contexts = contexts;
 
 		return {
 			assuranceCase,
@@ -290,15 +266,16 @@ export const AssuranceCaseFactory = {
 			strategies: [strategy],
 			propertyClaims,
 			evidence,
-			contexts,
 		};
 	},
 
-	createPublished(overrides: Partial<AssuranceCase> = {}): AssuranceCase {
+	createPublished(
+		overrides: Partial<AssuranceCaseResponse> = {}
+	): AssuranceCaseResponse {
 		return this.create({
 			...overrides,
 			published: true,
-			published_date: new Date().toISOString(),
+			publishedAt: new Date().toISOString(),
 		});
 	},
 
@@ -309,7 +286,7 @@ export const AssuranceCaseFactory = {
 			type: CasePermission["permission_type"];
 		}>
 	): {
-		assuranceCase: AssuranceCase;
+		assuranceCase: AssuranceCaseResponse;
 		permissions: CasePermission[];
 		users: User[];
 		teams: Team[];
@@ -322,7 +299,7 @@ export const AssuranceCaseFactory = {
 		permissions.forEach((perm, _index) => {
 			const permission: CasePermission = {
 				id: getNextId(),
-				case: assuranceCase.id,
+				case: Number(assuranceCase.id),
 				permission_type: perm.type,
 				created_date: new Date().toISOString(),
 			};
@@ -342,8 +319,8 @@ export const AssuranceCaseFactory = {
 
 			// Update assurance case members lists
 			if (permission.user) {
-				const member: Member = {
-					id: permission.user,
+				const member: MemberResponse = {
+					id: String(permission.user),
 					username: `user${permission.user}`,
 					email: `user${permission.user}@example.com`,
 				};
@@ -379,29 +356,26 @@ export const AssuranceCaseFactory = {
 
 // Goal Factory
 export const GoalFactory = {
-	create(overrides: Partial<Goal> = {}): Goal {
-		const id = overrides.id ?? getNextId();
+	create(overrides: Partial<GoalResponse> = {}): GoalResponse {
+		const id = overrides.id ?? String(getNextId());
 
 		return {
 			id,
-			type: overrides.type ?? "Goal",
+			type: overrides.type ?? "goal",
 			name: overrides.name ?? `Goal ${id}`,
-			short_description:
-				overrides.short_description ?? `Short description for goal ${id}`,
-			long_description:
-				overrides.long_description ?? `Detailed description for goal ${id}`,
+			description: overrides.description ?? `Description for goal ${id}`,
 			keywords: overrides.keywords ?? "safety, reliability, testing",
-			assurance_case_id: overrides.assurance_case_id ?? 1,
+			assuranceCaseId: overrides.assuranceCaseId ?? "1",
 			context: overrides.context ?? [],
-			property_claims: overrides.property_claims ?? [],
+			propertyClaims: overrides.propertyClaims ?? [],
 			strategies: overrides.strategies ?? [],
 		};
 	},
 
-	createHierarchy(depth = 3, breadth = 2): Goal[] {
-		const goals: Goal[] = [];
+	createHierarchy(depth = 3, breadth = 2): GoalResponse[] {
+		const goals: GoalResponse[] = [];
 
-		const createLevel = (parentId: number | null, currentDepth: number) => {
+		const createLevel = (parentId: string | null, currentDepth: number) => {
 			if (currentDepth >= depth) {
 				return;
 			}
@@ -422,56 +396,51 @@ export const GoalFactory = {
 
 // Strategy Factory
 export const StrategyFactory = {
-	create(overrides: Partial<Strategy> = {}): Strategy {
-		const id = overrides.id ?? getNextId();
+	create(overrides: Partial<StrategyResponse> = {}): StrategyResponse {
+		const id = overrides.id ?? String(getNextId());
 
 		return {
 			id,
-			type: overrides.type ?? "Strategy",
+			type: overrides.type ?? "strategy",
 			name: overrides.name ?? `Strategy ${id}`,
-			short_description:
-				overrides.short_description ?? `Strategy ${id} short description`,
-			long_description:
-				overrides.long_description ??
-				`Comprehensive strategy ${id} for achieving goals`,
-			goal_id: overrides.goal_id ?? 1,
-			property_claims: overrides.property_claims ?? [],
+			description: overrides.description ?? `Description for strategy ${id}`,
+			goalId: overrides.goalId ?? "1",
+			propertyClaims: overrides.propertyClaims ?? [],
 		};
 	},
 };
 
 // PropertyClaim Factory
 export const PropertyClaimFactory = {
-	create(overrides: Partial<PropertyClaim> = {}): PropertyClaim {
-		const id = overrides.id ?? getNextId();
+	create(
+		overrides: Partial<PropertyClaimResponse> = {}
+	): PropertyClaimResponse {
+		const id = overrides.id ?? String(getNextId());
 
 		return {
 			id,
-			type: overrides.type ?? "PropertyClaim",
+			type: overrides.type ?? "property_claim",
 			name: overrides.name ?? `Property Claim ${id}`,
-			short_description:
-				overrides.short_description ?? `Claim ${id} short description`,
-			long_description:
-				overrides.long_description ?? `Detailed property claim ${id}`,
-			goal_id: overrides.goal_id ?? null,
-			property_claim_id: overrides.property_claim_id ?? null,
+			description: overrides.description ?? `Description for claim ${id}`,
+			goalId: overrides.goalId ?? null,
+			propertyClaimId: overrides.propertyClaimId ?? null,
 			level: overrides.level ?? 1,
-			claim_type: overrides.claim_type ?? "claim",
-			property_claims: overrides.property_claims ?? [],
+			claimType: overrides.claimType ?? "claim",
+			propertyClaims: overrides.propertyClaims ?? [],
 			evidence: overrides.evidence ?? [],
-			strategy_id: overrides.strategy_id ?? null,
+			strategyId: overrides.strategyId ?? null,
 		};
 	},
 
-	createNested(levels = 3): PropertyClaim[] {
-		const claims: PropertyClaim[] = [];
-		let parentId: number | null = null;
+	createNested(levels = 3): PropertyClaimResponse[] {
+		const claims: PropertyClaimResponse[] = [];
+		let parentId: string | null = null;
 
 		for (let level = 1; level <= levels; level++) {
 			const claim = this.create({
 				name: `Level ${level} Claim`,
 				level,
-				property_claim_id: parentId,
+				propertyClaimId: parentId,
 			});
 			claims.push(claim);
 			parentId = claim.id;
@@ -483,74 +452,52 @@ export const PropertyClaimFactory = {
 
 // Evidence Factory
 export const EvidenceFactory = {
-	create(overrides: Partial<Evidence> = {}): Evidence {
-		const id = overrides.id ?? getNextId();
+	create(overrides: Partial<EvidenceResponse> = {}): EvidenceResponse {
+		const id = overrides.id ?? String(getNextId());
 
 		return {
 			id,
-			type: overrides.type ?? "Evidence",
+			type: overrides.type ?? "evidence",
 			name: overrides.name ?? `Evidence ${id}`,
-			short_description:
-				overrides.short_description ?? `Evidence ${id} summary`,
-			long_description:
-				overrides.long_description ??
-				`Comprehensive evidence ${id} supporting claims`,
+			description: overrides.description ?? `Description for evidence ${id}`,
 			URL: overrides.URL ?? `https://example.com/evidence/${id}`,
-			property_claim_id: overrides.property_claim_id ?? [],
+			propertyClaimId: overrides.propertyClaimId ?? [],
 		};
 	},
 
-	createForClaim(claimId: number, count = 3): Evidence[] {
+	createForClaim(claimId: string, count = 3): EvidenceResponse[] {
 		return Array.from({ length: count }, (_, i) =>
 			this.create({
 				name: `Evidence ${i + 1} for Claim ${claimId}`,
-				property_claim_id: [claimId],
+				propertyClaimId: [claimId],
 			})
 		);
 	},
 };
 
-// Context Factory
-export const ContextFactory = {
-	create(overrides: Partial<Context> = {}): Context {
-		const id = overrides.id ?? getNextId();
-
-		return {
-			id,
-			type: overrides.type ?? "Context",
-			name: overrides.name ?? `Context ${id}`,
-			short_description: overrides.short_description ?? `Context ${id} summary`,
-			long_description:
-				overrides.long_description ?? `Detailed context ${id} information`,
-			created_date: overrides.created_date ?? new Date().toISOString(),
-			goal_id: overrides.goal_id ?? 1,
-		};
-	},
-};
-
 // Comment Factory
 export const CommentFactory = {
-	create(overrides: Partial<Comment> = {}): Comment {
-		const id = overrides.id ?? getNextId();
+	create(overrides: Partial<CommentResponse> = {}): CommentResponse {
+		const id = overrides.id ?? String(getNextId());
 		const author = overrides.author ?? `user${id}`;
 
 		return {
 			id,
 			author,
 			content: overrides.content ?? `This is comment ${id}`,
-			created_at: overrides.created_at ?? new Date().toISOString(),
+			createdAt: overrides.createdAt ?? new Date().toISOString(),
 		};
 	},
 
-	createThread(count = 5): Comment[] {
+	createThread(count = 5): CommentResponse[] {
 		const users = UserFactory.createBatch(3);
 
 		return Array.from({ length: count }, (_, i) => {
-			const user = users[i % users.length];
+			const user = users[i % users.length]!;
 			return this.create({
 				author: `${user.first_name} ${user.last_name}`,
 				content: `Thread comment ${i + 1} from ${user.username}`,
-				created_at: new Date(
+				createdAt: new Date(
 					Date.now() - (count - i) * 60 * 60 * 1000
 				).toISOString(),
 			});
@@ -560,7 +507,7 @@ export const CommentFactory = {
 
 // CaseStudy Factory
 export const CaseStudyFactory = {
-	create(overrides: Partial<CaseStudy> = {}): CaseStudy {
+	create(overrides: Partial<CaseStudyResponse> = {}): CaseStudyResponse {
 		const id = overrides.id ?? getNextId();
 
 		return {
@@ -573,14 +520,14 @@ export const CaseStudyFactory = {
 			publishedDate: overrides.publishedDate,
 			createdOn: overrides.createdOn ?? new Date().toISOString(),
 			authors: overrides.authors ?? "Research Team",
-			assurance_cases: overrides.assurance_cases ?? [],
+			assuranceCases: overrides.assuranceCases ?? [],
 			...overrides, // Include any other override properties
 		};
 	},
 
 	createPublishedWithCases(caseCount = 3): {
-		caseStudy: CaseStudy;
-		assuranceCases: AssuranceCase[];
+		caseStudy: CaseStudyResponse;
+		assuranceCases: AssuranceCaseResponse[];
 	} {
 		const assuranceCases = Array.from({ length: caseCount }, () =>
 			AssuranceCaseFactory.createPublished()
@@ -589,7 +536,6 @@ export const CaseStudyFactory = {
 		const caseStudy = this.create({
 			published: true,
 			publishedDate: new Date().toISOString(),
-			assurance_cases: assuranceCases.map((ac) => ac.id),
 			assuranceCases,
 		});
 
@@ -610,8 +556,7 @@ export const TemplateFactory = {
 			structure: overrides.structure ?? {
 				goals: [],
 				strategies: [],
-				property_claims: [],
-				contexts: [],
+				propertyClaims: [],
 				evidence: [],
 			},
 			category: overrides.category ?? "General",
@@ -629,36 +574,26 @@ export const TemplateFactory = {
 				goals: [
 					{
 						name: "System is acceptably safe",
-						short_description: "Top-level safety goal",
+						description: "Top-level safety goal",
 					},
 				],
 				strategies: [
 					{
 						name: "Argument over hazards",
-						short_description: "Address all identified hazards",
+						description: "Address all identified hazards",
 					},
 				],
-				contexts: [
-					{
-						name: "System Definition",
-						short_description: "Define system boundaries and interfaces",
-					},
-					{
-						name: "Operating Environment",
-						short_description: "Define operational context",
-					},
-				],
-				property_claims: [
+				propertyClaims: [
 					{
 						name: "Hazards identified",
-						short_description: "All hazards have been identified",
-						claim_type: "claim",
+						description: "All hazards have been identified",
+						claimType: "claim",
 					},
 				],
 				evidence: [
 					{
 						name: "Hazard Analysis Report",
-						short_description: "Comprehensive hazard analysis",
+						description: "Comprehensive hazard analysis",
 					},
 				],
 			},
@@ -671,8 +606,8 @@ export const BatchFactory = {
 	createCompleteScenario(): {
 		users: User[];
 		teams: Team[];
-		assuranceCases: AssuranceCase[];
-		caseStudies: CaseStudy[];
+		assuranceCases: AssuranceCaseResponse[];
+		caseStudies: CaseStudyResponse[];
 		permissions: CasePermission[];
 	} {
 		// Create users with different roles
@@ -693,8 +628,8 @@ export const BatchFactory = {
 		const case2 = AssuranceCaseFactory.createPublished();
 		const { assuranceCase: case3, permissions } =
 			AssuranceCaseFactory.createWithPermissions([
-				{ userId: users[1].id, type: "edit" },
-				{ teamId: teams[0].id, type: "view" },
+				{ userId: users[1]!.id, type: "edit" },
+				{ teamId: teams[0]!.id, type: "view" },
 			]);
 
 		const assuranceCases = [case1, case2, case3];
@@ -724,7 +659,7 @@ export const BatchFactory = {
 
 				assuranceCase.comments = comments;
 				assuranceCase.editMembers = users.slice(0, 3).map((u) => ({
-					id: u.id,
+					id: String(u.id),
 					username: u.username,
 					email: u.email,
 				}));
@@ -738,7 +673,6 @@ export const BatchFactory = {
 				const claims = PropertyClaimFactory.createNested(3);
 
 				assuranceCase.goals = goals;
-				assuranceCase.property_claims = claims;
 
 				return { assuranceCase, goals, claims };
 			}
@@ -752,11 +686,11 @@ export const BatchFactory = {
 
 				const { assuranceCase, permissions } =
 					AssuranceCaseFactory.createWithPermissions([
-						{ userId: users[0].id, type: "manage" },
-						{ userId: users[1].id, type: "edit" },
-						{ userId: users[2].id, type: "view" },
-						{ teamId: teams[0].id, type: "review" },
-						{ teamId: teams[1].id, type: "view" },
+						{ userId: users[0]!.id, type: "manage" },
+						{ userId: users[1]!.id, type: "edit" },
+						{ userId: users[2]!.id, type: "view" },
+						{ teamId: teams[0]!.id, type: "review" },
+						{ teamId: teams[1]!.id, type: "view" },
 					]);
 
 				return { users, teams, assuranceCase, permissions };
@@ -773,19 +707,19 @@ export const createUser = (overrides?: Partial<User>) =>
 	UserFactory.create(overrides);
 export const createTeam = (overrides?: Partial<Team>) =>
 	TeamFactory.create(overrides);
-export const createAssuranceCase = (overrides?: Partial<AssuranceCase>) =>
-	AssuranceCaseFactory.create(overrides);
-export const createGoal = (overrides?: Partial<Goal>) =>
+export const createAssuranceCase = (
+	overrides?: Partial<AssuranceCaseResponse>
+) => AssuranceCaseFactory.create(overrides);
+export const createGoal = (overrides?: Partial<GoalResponse>) =>
 	GoalFactory.create(overrides);
-export const createStrategy = (overrides?: Partial<Strategy>) =>
+export const createStrategy = (overrides?: Partial<StrategyResponse>) =>
 	StrategyFactory.create(overrides);
-export const createPropertyClaim = (overrides?: Partial<PropertyClaim>) =>
-	PropertyClaimFactory.create(overrides);
-export const createEvidence = (overrides?: Partial<Evidence>) =>
+export const createPropertyClaim = (
+	overrides?: Partial<PropertyClaimResponse>
+) => PropertyClaimFactory.create(overrides);
+export const createEvidence = (overrides?: Partial<EvidenceResponse>) =>
 	EvidenceFactory.create(overrides);
-export const createContext = (overrides?: Partial<Context>) =>
-	ContextFactory.create(overrides);
-export const createComment = (overrides?: Partial<Comment>) =>
+export const createComment = (overrides?: Partial<CommentResponse>) =>
 	CommentFactory.create(overrides);
-export const createCaseStudy = (overrides?: Partial<CaseStudy>) =>
+export const createCaseStudy = (overrides?: Partial<CaseStudyResponse>) =>
 	CaseStudyFactory.create(overrides);

@@ -4,8 +4,8 @@ import { PlusIcon } from "@heroicons/react/20/solid";
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
 import { Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCreateCaseModal } from "@/hooks/use-create-case-modal";
-import { useImportModal } from "@/hooks/use-import-modal";
+import { Button } from "@/components/ui/button";
+import { useCreateCaseModal, useImportModal } from "@/hooks/modal-hooks";
 
 type NoCasesFoundProps = {
 	message: string;
@@ -64,38 +64,38 @@ export default function NoCasesFound({
 				<p className="mt-1 text-foreground/80 text-sm">{message}</p>
 				<div className="mt-6 flex items-center justify-center gap-2">
 					{shared ? (
-						<button
-							className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
+						<Button
 							onClick={() => router.push("/dashboard")}
 							type="button"
+							variant="default"
 						>
 							<Undo2 aria-hidden="true" className="-ml-0.5 mr-1.5 h-5 w-5" />
 							Back to my cases
-						</button>
+						</Button>
 					) : (
 						<>
-							<button
-								className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 font-semibold text-sm text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2"
+							<Button
 								onClick={() => createCaseModal.onOpen()}
 								type="button"
+								variant="default"
 							>
 								<PlusIcon
 									aria-hidden="true"
 									className="-ml-0.5 mr-1.5 h-5 w-5"
 								/>
 								New Case
-							</button>
-							<button
-								className="rexr-slate-900 inline-flex items-center rounded-md bg-foreground/5 px-3 py-2 font-semibold text-sm shadow-xs hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-indigo-600 focus-visible:outline-solid focus-visible:outline-offset-2 dark:bg-foreground/10 dark:text-white dark:hover:bg-foreground/20"
+							</Button>
+							<Button
 								onClick={() => importModal.onOpen()}
 								type="button"
+								variant="outline"
 							>
 								<ArrowUpTrayIcon
 									aria-hidden="true"
 									className="-ml-0.5 mr-1.5 h-5 w-5"
 								/>
 								Import File
-							</button>
+							</Button>
 						</>
 					)}
 				</div>

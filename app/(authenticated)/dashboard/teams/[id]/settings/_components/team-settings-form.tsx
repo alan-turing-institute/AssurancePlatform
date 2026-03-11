@@ -1,0 +1,222 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Loader, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
+import { AlertModal } from "@/components/modals/alert-modal";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { createTeamSchema } from "@/lib/schemas/team";
+
+type FormValues = z.infer<typeof createTeamSchema>;
+
+type TeamSettingsFormProps = {
+	team: {
+		id: string;
+		name: string;
+		slug: string;
+		description: string | null;
+	};
+};
+
+export function TeamSettingsForm({ team }: TeamSettingsFormProps) {
+	const router = useRouter();
+
+	const [saving, setSaving] = useState(false);
+	const [deleting, setDeleting] = useState(false);
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [success, setSuccess] = useState<string | null>(null);
+
+	const form = useForm<FormValues>({
+		resolver: zodResolver(createTeamSchema),
+		defaultValues: {
+			name: team.name,
+			description: team.description || "",
+		},
+	});
+
+	const onSubmit = async (values: FormValues) => {
+		setSaving(true);
+		setError(null);
+		setSuccess(null);
+
+		try {
+			const response = await fetch(`/api/teams/${team.id}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(values),
+			});
+
+			if (!response.ok) {
+				const data = await response.json();
+				throw new Error(data.error || "Failed to update team");
+			}
+
+			setSuccess("Team updated successfully");
+			router.refresh();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "An error occurred");
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	const handleDelete = async () => {
+		setDeleting(true);
+
+		try {
+			const response = await fetch(`/api/teams/${team.id}`, {
+				method: "DELETE",
+			});
+
+			if (!response.ok) {
+				const data = await response.json();
+				throw new Error(data.error || "Failed to delete team");
+			}
+
+			router.push("/dashboard/teams");
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "An error occurred");
+			setDeleting(false);
+			setDeleteModalOpen(false);
+		}
+	};
+
+	return (
+		<>
+			<div className="flex w-full items-center gap-4 py-6">
+				<Link href={`/dashboard/teams/${team.id}`}>
+					<Button size="icon" title="Back to team" variant="ghost">
+						<ArrowLeft className="h-5 w-5" />
+					</Button>
+				</Link>
+				<div>
+					<h1 className="font-semibold text-2xl">Team Settings</h1>
+					<p className="text-muted-foreground">Manage your team settings</p>
+				</div>
+			</div>
+
+			<div className="w-full max-w-2xl space-y-6">
+				{error && (
+					<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
+						{error}
+					</div>
+				)}
+				{success && (
+					<div className="rounded-md bg-success/20 p-3 text-sm text-success-foreground">
+						{success}
+					</div>
+				)}
+
+				<Card>
+					<CardHeader>
+						<CardTitle>General</CardTitle>
+						<CardDescription>
+							Update your team&apos;s name and description
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Form {...form}>
+							<form
+								className="space-y-6"
+								onSubmit={form.handleSubmit(onSubmit)}
+							>
+								<FormField
+									control={form.control}
+									name="name"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Team Name</FormLabel>
+											<FormControl>
+												<Input disabled={saving} {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="description"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Description</FormLabel>
+											<FormControl>
+												<Textarea disabled={saving} rows={3} {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<div className="flex justify-end">
+									<Button disabled={saving} type="submit">
+										{saving ? (
+											<>
+												<Loader className="mr-2 h-4 w-4 animate-spin" />
+												Saving...
+											</>
+										) : (
+											"Save Changes"
+										)}
+									</Button>
+								</div>
+							</form>
+						</Form>
+					</CardContent>
+				</Card>
+
+				<Card className="border-destructive/50">
+					<CardHeader>
+						<CardTitle className="text-destructive">Danger Zone</CardTitle>
+						<CardDescription>
+							Permanently delete this team and all its data
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<p className="mb-4 text-muted-foreground text-sm">
+							Once you delete a team, there is no going back. This will remove
+							all team members and revoke all team-based case permissions.
+						</p>
+						<Button
+							onClick={() => setDeleteModalOpen(true)}
+							variant="destructive"
+						>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Delete Team
+						</Button>
+					</CardContent>
+				</Card>
+			</div>
+
+			<AlertModal
+				confirmButtonText="Delete Team"
+				isOpen={deleteModalOpen}
+				loading={deleting}
+				onClose={() => setDeleteModalOpen(false)}
+				onConfirm={handleDelete}
+			/>
+		</>
+	);
+}

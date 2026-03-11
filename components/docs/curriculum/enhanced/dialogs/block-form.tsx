@@ -671,7 +671,7 @@ const getDefaultFormData = (nodeType: string): FormData => {
 		},
 	};
 
-	return defaults[nodeType] || defaults.goal;
+	return defaults[nodeType] ?? { name: "", description: "" };
 };
 
 export default BlockForm;

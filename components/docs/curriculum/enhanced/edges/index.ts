@@ -17,8 +17,6 @@ export {
 	SlowAnimatedEdge,
 	ThicknessAnimatedEdge,
 } from "./animated-edge";
-// Edge Demo
-export { default as EdgeDemo, SimpleEdgeShowcase } from "./edge-demo";
 // Edge utilities (TypeScript)
 export * from "./edge-utils";
 // FlowingEdge and variants

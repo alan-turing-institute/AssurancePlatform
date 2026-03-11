@@ -1,5 +1,11 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { validateSession } from "@/lib/auth/validate-session";
+import type { NextRequest } from "next/server";
+import {
+	apiError,
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuthSession,
+	serviceErrorToAppError,
+} from "@/lib/api-response";
 import {
 	getPublishStatus,
 	publishAssuranceCase,
@@ -11,52 +17,32 @@ type RouteParams = {
 };
 
 /**
- * Maps error messages to HTTP status codes.
- */
-function getErrorStatus(error: string): number {
-	if (error === "Permission denied") {
-		return 403;
-	}
-	if (error === "Case not found") {
-		return 404;
-	}
-	if (error === "Cannot unpublish: linked to case studies") {
-		return 409;
-	}
-	return 400;
-}
-
-/**
  * GET /api/cases/[id]/publish
  * Returns the publish status of an assurance case.
  */
 export async function GET(
 	_request: NextRequest,
 	{ params }: RouteParams
-): Promise<NextResponse> {
-	const validated = await validateSession();
+): Promise<Response> {
+	try {
+		const session = await requireAuthSession();
+		const { id: caseId } = await params;
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+		const result = await getPublishStatus(session.userId, caseId);
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess({
+			is_published: result.data.isPublished,
+			published_id: result.data.publishedId,
+			published_at: result.data.publishedAt?.toISOString() ?? null,
+			linked_case_study_count: result.data.linkedCaseStudyCount,
+		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const { id: caseId } = await params;
-
-	const status = await getPublishStatus(validated.userId, caseId);
-
-	if (!status) {
-		return NextResponse.json(
-			{ error: "Case not found or access denied" },
-			{ status: 404 }
-		);
-	}
-
-	return NextResponse.json({
-		is_published: status.isPublished,
-		published_id: status.publishedId,
-		published_at: status.publishedAt?.toISOString() ?? null,
-		linked_case_study_count: status.linkedCaseStudyCount,
-	});
 }
 
 /**
@@ -67,39 +53,48 @@ export async function GET(
 export async function POST(
 	request: NextRequest,
 	{ params }: RouteParams
-): Promise<NextResponse> {
-	const validated = await validateSession();
-
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
-
-	const { id: caseId } = await params;
-
-	// Parse request body
-	let description: string | undefined;
+): Promise<Response> {
 	try {
-		const body = await request.json();
-		description = body.description;
-	} catch {
-		// Body is optional, ignore parse errors
+		const session = await requireAuthSession();
+		const { id: caseId } = await params;
+
+		// Parse request body
+		let description: string | undefined;
+		try {
+			const body = await request.json();
+			description = body.description;
+		} catch {
+			// Body is optional, ignore parse errors
+		}
+
+		const result = await publishAssuranceCase(
+			session.userId,
+			caseId,
+			description
+		);
+
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
+		);
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("case:updated", caseId, {
+			action: "published",
+			username,
+			userId: session.userId,
+		});
+
+		return apiSuccess({
+			published_id: result.data.publishedId,
+			published_at: result.data.publishedAt.toISOString(),
+		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
 	}
-
-	const result = await publishAssuranceCase(
-		validated.userId,
-		caseId,
-		description
-	);
-
-	if (!result.success) {
-		const status = getErrorStatus(result.error);
-		return NextResponse.json({ error: result.error }, { status });
-	}
-
-	return NextResponse.json({
-		published_id: result.publishedId,
-		published_at: result.publishedAt.toISOString(),
-	});
 }
 
 /**
@@ -110,28 +105,31 @@ export async function POST(
 export async function DELETE(
 	request: NextRequest,
 	{ params }: RouteParams
-): Promise<NextResponse> {
-	const validated = await validateSession();
+): Promise<Response> {
+	try {
+		const session = await requireAuthSession();
+		const { id: caseId } = await params;
+		const force = request.nextUrl.searchParams.get("force") === "true";
 
-	if (!validated) {
-		return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-	}
+		const result = await unpublishAssuranceCase(session.userId, caseId, force);
 
-	const { id: caseId } = await params;
-	const force = request.nextUrl.searchParams.get("force") === "true";
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
 
-	const result = await unpublishAssuranceCase(validated.userId, caseId, force);
-
-	if (!result.success) {
-		const status = getErrorStatus(result.error);
-		return NextResponse.json(
-			{
-				error: result.error,
-				linked_case_studies: result.linkedCaseStudies ?? undefined,
-			},
-			{ status }
+		// Emit SSE event for real-time updates
+		const { emitSSEEvent } = await import(
+			"@/lib/services/sse-connection-manager"
 		);
-	}
+		const username = session.username ?? session.email ?? "Someone";
+		emitSSEEvent("case:updated", caseId, {
+			action: "unpublished",
+			username,
+			userId: session.userId,
+		});
 
-	return NextResponse.json({ success: true });
+		return apiSuccess({ success: true });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
 }

@@ -7,7 +7,7 @@
 
 import type { Mock } from "vitest";
 import { vi } from "vitest";
-import type { AssuranceCase } from "@/types/domain";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
 /**
  * WebSocket ready states
@@ -325,7 +325,6 @@ export class MessageQueue<T = unknown> {
 				continue;
 			}
 			// Sequential processing is required for message ordering
-			// biome-ignore lint/nursery/noAwaitInLoop: sequential processing needed
 			await this.processor(message);
 		}
 
@@ -598,7 +597,6 @@ export async function waitForConnection(
 		if (Date.now() - startTime > timeout) {
 			throw new Error("WebSocket connection timeout");
 		}
-		// biome-ignore lint/nursery/noAwaitInLoop: polling for connection state
 		await new Promise((resolve) => setTimeout(resolve, 50));
 	}
 }
@@ -607,7 +605,7 @@ export async function waitForConnection(
  * Create a mock assurance case update message
  */
 export function createAssuranceCaseUpdate(
-	assuranceCase: Partial<AssuranceCase>,
+	assuranceCase: Partial<AssuranceCaseResponse>,
 	userId?: string
 ): WebSocketMessage {
 	return {
@@ -711,10 +709,10 @@ export class ConcurrentUserSimulator {
 		const users = Array.from(this.users.entries());
 
 		for (let i = 0; i < editCount; i++) {
-			const [userId, { ws }] = users[i % users.length];
+			const [userId, { ws }] = users[i % users.length]!;
 			const message = createAssuranceCaseUpdate(
 				{
-					id: 1,
+					id: "1",
 					name: `Updated by ${userId} - Edit ${i}`,
 					updatedOn: new Date().toISOString(),
 				},
@@ -728,7 +726,6 @@ export class ConcurrentUserSimulator {
 			this.server.broadcast(message, userId);
 
 			if (delay > 0) {
-				// biome-ignore lint/nursery/noAwaitInLoop: simulating delays between edits
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
@@ -1001,7 +998,6 @@ export class ReconnectionTester {
 		while (attempt < this.maxRetries) {
 			const delay = this.baseDelay * 2 ** attempt;
 			// Exponential backoff requires sequential delays
-			// biome-ignore lint/nursery/noAwaitInLoop: exponential backoff requires sequential timing
 			await new Promise((resolve) => setTimeout(resolve, delay));
 
 			try {
@@ -1056,7 +1052,7 @@ export class ReconnectionTester {
 		const delays = this.attempts
 			.slice(1)
 			.map(
-				(attempt, index) => attempt.timestamp - this.attempts[index].timestamp
+				(attempt, index) => attempt.timestamp - this.attempts[index]!.timestamp
 			);
 		const averageDelay =
 			delays.length > 0 ? delays.reduce((a, b) => a + b, 0) / delays.length : 0;
@@ -1123,7 +1119,7 @@ export function createEventSequenceTester() {
 			}
 
 			const delay =
-				events[event2Index].timestamp - events[event1Index].timestamp;
+				events[event2Index]!.timestamp - events[event1Index]!.timestamp;
 			return delay <= maxDelay;
 		},
 

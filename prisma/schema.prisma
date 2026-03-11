@@ -61,6 +61,9 @@ model User {
   // Migration notice tracking
   hasSeenMigrationNotice Boolean    @default(false) @map("has_seen_migration_notice") /// Whether user has dismissed the Django-to-Next.js migration notice
 
+  // Onboarding tour tracking
+  completedTours       String[]    @default([]) @map("completed_tours") /// IDs of onboarding tours the user has completed
+
   // System flag
   isSystemUser         Boolean      @default(false) @map("is_system_user") /// True for system/bot accounts (e.g., automated imports)
 
@@ -76,6 +79,7 @@ model User {
   casePermissions      CasePermission[]   @relation("PermissionHolder")
   grantedPermissions   CasePermission[]   @relation("PermissionGranter")
   createdElements      AssuranceElement[] @relation("ElementCreator")
+  deletedElements      AssuranceElement[] @relation("ElementDeleter")
   authoredComments     Comment[]          @relation("CommentAuthor")
   resolvedComments     Comment[]          @relation("CommentResolver")
   releaseComments      ReleaseComment[]
@@ -224,7 +228,13 @@ model AssuranceCase {
   mode            CaseMode              @default(STANDARD) /// STANDARD (simplified UI) or ADVANCED (full GSN notation)
 
   // Visual settings
-  colorProfile    String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
+  colourProfile   String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
+
+  // Demo/tutorial flag
+  isDemo          Boolean               @default(false) @map("is_demo") /// True for auto-generated tutorial cases
+
+  // Layout preference
+  layoutDirection String                @default("TB") @map("layout_direction") /// ELK layout direction: TB (top-bottom) or LR (left-right)
 
   // Pattern tracking
   sourcePatternId String?               @map("source_pattern_id") /// If created from a pattern, the source pattern ID
@@ -244,12 +254,12 @@ model AssuranceCase {
 
   // Soft delete (recycle bin)
   deletedAt         DateTime?             @map("deleted_at") /// When the case was moved to trash (null = not deleted)
-  deletedBy         String?               @map("deleted_by_id") /// User ID who deleted the case
+  deletedById       String?               @map("deleted_by_id") /// User ID who deleted the case
 
   // Relations
   createdBy       User                  @relation("CaseCreator", fields: [createdById], references: [id])
   markedReadyBy   User?                 @relation("CaseMarkedReady", fields: [markedReadyById], references: [id])
-  deletedByUser   User?                 @relation("CaseDeleter", fields: [deletedBy], references: [id])
+  deletedByUser   User?                 @relation("CaseDeleter", fields: [deletedById], references: [id])
   sourcePattern   ArgumentPattern?      @relation(fields: [sourcePatternId], references: [id])
   elements        AssuranceElement[]
   userPermissions CasePermission[]
@@ -396,8 +406,13 @@ model AssuranceElement {
   updatedAt           DateTime         @updatedAt @map("updated_at")
   createdById         String           @map("created_by_id")
 
+  // Soft delete
+  deletedAt           DateTime?        @map("deleted_at") /// When the element was deleted (null = active)
+  deletedById         String?          @map("deleted_by_id") /// User who deleted the element
+
   // Relations
   case                AssuranceCase    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  deletedBy           User?            @relation("ElementDeleter", fields: [deletedById], references: [id])
   createdBy           User             @relation("ElementCreator", fields: [createdById], references: [id])
   parent              AssuranceElement? @relation("ElementHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children            AssuranceElement[] @relation("ElementHierarchy")
@@ -414,6 +429,7 @@ model AssuranceElement {
 
   @@index([caseId])
   @@index([caseId, elementType])
+  @@index([caseId, deletedAt], map: "assurance_elements_case_deleted_idx")
   @@index([parentId])
   @@map("assurance_elements")
 }
@@ -894,21 +910,4 @@ model PublishedAssuranceCase {
 
   @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
   @@map("published_assurance_cases")
-}
-
-// ============================================
-// LEGACY MAPPING (for migration tracking)
-// ============================================
-
-/// Django-to-Prisma ID mappings from Dec 2025 migration. See issue AssurancePlatform-ogq for cleanup.
-model LegacyMapping {
-  id          String   @id @default(uuid())
-  entityType  String   @map("entity_type") /// Entity type: 'user', 'case', 'element', 'team', etc.
-  legacyId    BigInt   @map("legacy_id") /// Old Django integer ID
-  newId       String   @map("new_id") /// New Prisma UUID
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@unique([entityType, legacyId])
-  @@index([entityType, newId])
-  @@map("legacy_mappings")
 }

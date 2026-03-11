@@ -24,6 +24,7 @@ export const navigation = [
 		icon: FolderIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-my-cases",
 	},
 	{
 		name: "Shared With Me",
@@ -31,6 +32,7 @@ export const navigation = [
 		icon: UsersIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-shared",
 	},
 	{
 		name: "Case Studies",
@@ -38,6 +40,7 @@ export const navigation = [
 		icon: Blocks,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-case-studies",
 	},
 	{
 		name: "Teams",
@@ -45,6 +48,7 @@ export const navigation = [
 		icon: UserGroupIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-teams",
 	},
 	{
 		name: "Trash",
@@ -52,6 +56,7 @@ export const navigation = [
 		icon: TrashIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-trash",
 	},
 	{
 		name: "Discover Public Projects",
@@ -59,8 +64,8 @@ export const navigation = [
 		icon: GlobeAltIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-discover",
 	},
-	// { name: 'Users', href: '/users', icon: UserGroupIcon, current: false, externalLink: false },
 ];
 
 export const externalNavigation = [
@@ -70,6 +75,7 @@ export const externalNavigation = [
 		icon: GitHubLogoIcon,
 		current: false,
 		externalLink: true,
+		tourId: "sidebar-github",
 	},
 	{
 		name: "Documentation",
@@ -77,6 +83,7 @@ export const externalNavigation = [
 		icon: DocumentDuplicateIcon,
 		current: false,
 		externalLink: false,
+		tourId: "sidebar-docs",
 	},
 ];
 
@@ -86,11 +93,7 @@ export const teams: Array<{
 	href: string;
 	initial: string;
 	current: boolean;
-}> = [
-	// { id: 1, name: 'Technology', href: '#', initial: 'T', current: false },
-	// { id: 2, name: 'Automation', href: '#', initial: 'A', current: false },
-	// { id: 3, name: 'General', href: '#', initial: 'G', current: false },
-];
+}> = [];
 
 export const userNavigation = [
 	{ name: "Your profile", href: "#" },
@@ -135,7 +138,6 @@ export const caseStudies = [
 			{ id: crypto.randomUUID(), name: "Assurance Case Title Example" },
 		],
 		image: "",
-		// image: 'https://images.unsplash.com/photo-1682685797743-3a7b6b8d8149?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 		published: true,
 	},
 	{

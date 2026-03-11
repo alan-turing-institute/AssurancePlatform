@@ -30,9 +30,9 @@ export function TeamCard({ team }: TeamCardProps) {
 	return (
 		<div className="group relative">
 			<Link href={`/dashboard/teams/${team.id}`}>
-				<Card className="flex h-full min-h-[200px] flex-col items-start justify-between transition-all group-hover:bg-indigo-500/5">
+				<Card className="flex h-full min-h-[200px] flex-col items-start justify-between transition-all group-hover:bg-primary/5">
 					<CardHeader className="w-full">
-						<div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg border border-indigo-400 bg-indigo-500 font-medium text-lg text-white">
+						<div className="mb-2 flex h-12 w-12 items-center justify-center rounded-lg border border-primary/60 bg-primary font-medium text-lg text-primary-foreground">
 							{team.name.charAt(0).toUpperCase()}
 						</div>
 						<CardTitle className="text-lg">{team.name}</CardTitle>
@@ -42,7 +42,7 @@ export function TeamCard({ team }: TeamCardProps) {
 							</CardDescription>
 						)}
 					</CardHeader>
-					<CardFooter className="flex w-full items-center justify-between text-gray-500 text-sm dark:text-gray-300">
+					<CardFooter className="flex w-full items-center justify-between text-muted-foreground text-sm">
 						<div className="flex items-center gap-1">
 							<Users className="h-4 w-4" />
 							<span>
@@ -50,7 +50,7 @@ export function TeamCard({ team }: TeamCardProps) {
 							</span>
 						</div>
 						{isAdmin && (
-							<span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-700 text-xs dark:bg-indigo-900/30 dark:text-indigo-300">
+							<span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary text-xs">
 								Admin
 							</span>
 						)}
@@ -59,7 +59,7 @@ export function TeamCard({ team }: TeamCardProps) {
 			</Link>
 			{isAdmin && (
 				<Link
-					className="absolute top-4 right-4 z-50 hidden rounded-md bg-slate-200 p-2 shadow-lg group-hover:block dark:bg-slate-700"
+					className="absolute top-4 right-4 z-50 hidden rounded-md bg-muted p-2 shadow-lg group-hover:block"
 					href={`/dashboard/teams/${team.id}/settings`}
 				>
 					<Settings className="h-4 w-4" />

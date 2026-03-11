@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import {
+	type ForgotPasswordFormInput,
+	forgotPasswordFormSchema,
+} from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -16,28 +19,19 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 
-const formSchema = z.object({
-	email: z
-		.string()
-		.min(1, "Email is required")
-		.email("Please enter a valid email address"),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 const ForgotPasswordForm = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
 
-	const form = useForm<FormValues>({
-		resolver: zodResolver(formSchema),
+	const form = useForm<ForgotPasswordFormInput>({
+		resolver: zodResolver(forgotPasswordFormSchema),
 		defaultValues: {
 			email: "",
 		},
 	});
 
-	async function onSubmit(values: FormValues) {
+	async function onSubmit(values: ForgotPasswordFormInput) {
 		setLoading(true);
 		setError(null);
 
@@ -75,18 +69,18 @@ const ForgotPasswordForm = () => {
 	if (success) {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-green-700 bg-green-500/20 px-4 py-6">
-					<h3 className="font-semibold text-green-800 dark:text-green-400">
+				<div className="rounded-md border border-success bg-success/20 px-4 py-6">
+					<h3 className="font-semibold text-success dark:text-success">
 						Check your email
 					</h3>
-					<p className="mt-2 text-green-700 text-sm dark:text-green-300">
+					<p className="mt-2 text-sm text-success/80">
 						If an account with that email exists, you will receive a password
 						reset link shortly. Please check your inbox and spam folder.
 					</p>
 				</div>
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/login"
 					>
 						Back to login
@@ -109,7 +103,7 @@ const ForgotPasswordForm = () => {
 			</div>
 
 			{error && (
-				<div className="mt-4 rounded-md border border-rose-700 bg-rose-500/20 px-4 py-2 text-rose-700">
+				<div className="mt-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive">
 					<p>{error}</p>
 				</div>
 			)}
@@ -136,7 +130,7 @@ const ForgotPasswordForm = () => {
 							)}
 						/>
 						<Button
-							className="w-full bg-indigo-600 text-white hover:bg-indigo-500"
+							className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
 							disabled={loading}
 							type="submit"
 						>
@@ -147,7 +141,7 @@ const ForgotPasswordForm = () => {
 
 				<div className="mt-6 text-center">
 					<Link
-						className="font-semibold text-indigo-600 text-sm hover:text-indigo-500"
+						className="font-semibold text-primary text-sm hover:text-primary/80"
 						href="/login"
 					>
 						Back to login
