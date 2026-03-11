@@ -58,7 +58,7 @@
     "@react-pdf/renderer": "^4.3.2",
     "@scalar/api-reference-react": "^0.8.7",
     "@tailwindcss/line-clamp": "^0.4.4",
-    "@tailwindcss/typography": "^0.5.15",
+    "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-color": "^2.26.0",
     "@tiptap/extension-list-item": "^2.26.0",
     "@tiptap/extension-placeholder": "^2.26.0",
