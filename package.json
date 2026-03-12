@@ -1,6 +1,6 @@
 {
   "name": "tea-platform-frontend",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
