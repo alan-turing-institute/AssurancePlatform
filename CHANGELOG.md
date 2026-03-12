@@ -11,6 +11,17 @@ All notable changes to the TEA Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.4.0...v0.4.1) (2026-03-12)
+
+### 🐛 Bug Fixes
+
+* target dependabot PRs to staging instead of main ([2ac5460](https://github.com/alan-turing-institute/AssurancePlatform/commit/2ac5460642a8b5fb7723023f6a42c0e3eeb805dd))
+* target dependabot PRs to staging instead of main ([1d84ca0](https://github.com/alan-turing-institute/AssurancePlatform/commit/1d84ca0779356b8baf51eed560b067f5780dfbcd))
+
+### ⚡ Performance Improvements
+
+* run Docker build only after tests pass and only on push ([337c5fd](https://github.com/alan-turing-institute/AssurancePlatform/commit/337c5fd4e9aeb9b4604470169468122d3bfa5227))
+
 ## [0.4.0](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.3.2...v0.4.0) (2026-03-11)
 
 ### ✨ Features
