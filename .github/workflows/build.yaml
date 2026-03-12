@@ -242,6 +242,8 @@ jobs:
 
   docker-build:
     name: Build and Push Docker Image
+    needs: [validate, test]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -350,7 +352,7 @@ jobs:
   deploy:
     name: Deploy to Azure
     runs-on: ubuntu-latest
-    needs: [validate, test, docker-build]
+    needs: [docker-build]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
 
     steps:
