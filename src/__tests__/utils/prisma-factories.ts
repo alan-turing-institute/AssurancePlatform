@@ -321,7 +321,7 @@ export function createNestedCaseJSON(
 			description: "A case created for import testing",
 		},
 		tree: {
-			id: "00000000-0000-0000-0000-000000000001",
+			id: "00000000-0000-4000-8000-000000000001",
 			type: "GOAL",
 			name: "Top-level Goal",
 			description: "The root goal",
@@ -346,7 +346,7 @@ export function createNestedCaseWithChainJSON(): Record<string, unknown> {
 			description: "Case with strategy chain",
 		},
 		tree: {
-			id: "10000000-0000-0000-0000-000000000001",
+			id: "10000000-0000-4000-8000-000000000001",
 			type: "GOAL",
 			name: "Root Goal",
 			description: "Top-level goal",
@@ -354,21 +354,21 @@ export function createNestedCaseWithChainJSON(): Record<string, unknown> {
 			role: "TOP_LEVEL",
 			children: [
 				{
-					id: "10000000-0000-0000-0000-000000000002",
+					id: "10000000-0000-4000-8000-000000000002",
 					type: "STRATEGY",
 					name: "Strategy 1",
 					description: "A strategy",
 					inSandbox: false,
 					children: [
 						{
-							id: "10000000-0000-0000-0000-000000000003",
+							id: "10000000-0000-4000-8000-000000000003",
 							type: "PROPERTY_CLAIM",
 							name: "Claim 1",
 							description: "A property claim",
 							inSandbox: false,
 							children: [
 								{
-									id: "10000000-0000-0000-0000-000000000004",
+									id: "10000000-0000-4000-8000-000000000004",
 									type: "EVIDENCE",
 									name: "Evidence 1",
 									description: "Supporting evidence",
