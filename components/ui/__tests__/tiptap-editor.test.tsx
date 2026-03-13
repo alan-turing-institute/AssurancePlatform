@@ -116,7 +116,7 @@ describe("TiptapEditor", () => {
 		});
 
 		it("should return null if editor is not initialized", () => {
-			mockUseEditor.mockReturnValueOnce(null);
+			mockUseEditor.mockReturnValueOnce(null as never);
 
 			const { container } = render(<TiptapEditor />);
 
@@ -341,6 +341,7 @@ describe("TiptapEditor", () => {
 				transaction: {} as unknown as Parameters<
 					NonNullable<typeof editorConfig.onUpdate>
 				>[0]["transaction"],
+				appendedTransactions: [],
 			});
 
 			expect(onChange).toHaveBeenCalledWith("<p>Updated content</p>");
@@ -362,6 +363,7 @@ describe("TiptapEditor", () => {
 					transaction: {} as unknown as Parameters<
 						NonNullable<typeof editorConfig.onUpdate>
 					>[0]["transaction"],
+					appendedTransactions: [],
 				});
 			}).not.toThrow();
 		});
@@ -465,6 +467,7 @@ describe("TiptapEditor", () => {
 					transaction: {} as unknown as Parameters<
 						NonNullable<typeof editorConfig.onUpdate>
 					>[0]["transaction"],
+					appendedTransactions: [],
 				});
 			}).not.toThrow();
 		});
