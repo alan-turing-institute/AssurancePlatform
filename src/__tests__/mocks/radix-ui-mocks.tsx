@@ -144,7 +144,10 @@ export const MockTooltipTrigger = ({
 		if (asChild && React.isValidElement(children)) {
 			return (
 				<span {...wrapperProps}>
-					{cloneElement(children as ReactElement, { ...triggerProps, ref })}
+					{cloneElement(children as ReactElement<Record<string, unknown>>, {
+						...triggerProps,
+						ref,
+					})}
 				</span>
 			);
 		}
@@ -163,7 +166,10 @@ export const MockTooltipTrigger = ({
 	}
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, triggerProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			triggerProps
+		);
 	}
 
 	return (
@@ -264,7 +270,10 @@ export const MockDialogTrigger = ({
 	};
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, triggerProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			triggerProps
+		);
 	}
 
 	return (
@@ -377,7 +386,10 @@ export const MockDialogClose = ({
 			...(children.props as Record<string, unknown>),
 			onClick: handleClick,
 		};
-		return cloneElement(children as ReactElement, childProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			childProps
+		);
 	}
 
 	return <button {...closeProps}>{children}</button>;
@@ -595,7 +607,10 @@ export const MockDropdownMenuTrigger = ({
 	};
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, triggerProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			triggerProps
+		);
 	}
 
 	return (
@@ -760,7 +775,7 @@ export const MockDropdownMenuItem = ({
 	} = props;
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, {
+		return cloneElement(children as ReactElement<Record<string, unknown>>, {
 			role: "menuitem",
 			tabIndex: disabled ? -1 : 0,
 			"aria-disabled": disabled,

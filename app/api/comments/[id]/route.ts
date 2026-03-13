@@ -51,7 +51,7 @@ export async function PUT(
 		const body = await request.json();
 		const parsed = updateCommentSchema.safeParse(body);
 		if (!parsed.success) {
-			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
+			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
 		}
 
 		const result = await updateComment(commentId, parsed.data.content, session);
@@ -78,7 +78,7 @@ export async function PATCH(
 		const body = await request.json();
 		const parsed = resolveCommentSchema.safeParse(body);
 		if (!parsed.success) {
-			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
+			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
 		}
 
 		const result = await resolveComment(

@@ -55,7 +55,7 @@ async function parseRequestBody(request: Request): Promise<GitHubImportInput> {
 	const parsed = GitHubImportSchema.safeParse(json);
 	if (!parsed.success) {
 		throw validationError(
-			parsed.error.errors[0]?.message ?? "Invalid request body"
+			parsed.error.issues[0]?.message ?? "Invalid request body"
 		);
 	}
 	return parsed.data;

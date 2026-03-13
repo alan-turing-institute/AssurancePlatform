@@ -87,6 +87,7 @@ interface DocSections {
 	metadata: boolean;
 	tableOfContents: boolean;
 	titlePage: boolean;
+	[key: string]: boolean;
 }
 
 interface SectionCustomisationProps {

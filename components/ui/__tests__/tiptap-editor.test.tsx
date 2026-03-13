@@ -66,7 +66,7 @@ vi.mock("@tiptap/extension-text-align", () => ({
 }));
 
 vi.mock("@tiptap/extension-text-style", () => ({
-	default: {},
+	TextStyle: {},
 }));
 
 describe("TiptapEditor", () => {

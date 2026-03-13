@@ -62,7 +62,7 @@ export async function POST(
 			if (!parsed.success) {
 				return apiError(
 					validationError(
-						parsed.error.errors[0]?.message ?? "Invalid input"
+						parsed.error.issues[0]?.message ?? "Invalid input"
 					)
 				);
 			}
@@ -94,7 +94,7 @@ export async function POST(
 		if (!parsed.success) {
 			return apiError(
 				validationError(
-					parsed.error.errors[0]?.message ?? "Invalid input"
+					parsed.error.issues[0]?.message ?? "Invalid input"
 				)
 			);
 		}

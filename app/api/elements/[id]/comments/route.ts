@@ -48,7 +48,7 @@ export async function POST(
 		const body = await request.json();
 		const parsed = createElementCommentSchema.safeParse(body);
 		if (!parsed.success) {
-			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
+			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
 		}
 
 		const result = await createElementComment(

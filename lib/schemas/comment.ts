@@ -58,7 +58,7 @@ export type UpdateCommentOutput = z.output<typeof updateCommentSchema>;
 // ============================================
 
 export const resolveCommentSchema = z.object({
-	resolved: z.boolean({ required_error: "resolved must be a boolean" }),
+	resolved: z.boolean({ error: "resolved must be a boolean" }),
 });
 
 export type ResolveCommentInput = z.input<typeof resolveCommentSchema>;

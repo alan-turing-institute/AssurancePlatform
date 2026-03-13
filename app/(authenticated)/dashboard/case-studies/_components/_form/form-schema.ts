@@ -12,9 +12,9 @@ export const caseStudyFormSchema = z.object({
 	authors: z.string().optional(),
 	// category: z.string().optional(),
 	type: z.string().optional(),
-	publishedDate: z.coerce.date().optional(),
-	lastModifiedOn: z.coerce.date().optional(),
-	createdOn: z.coerce.date().optional(),
+	publishedDate: z.date().optional(),
+	lastModifiedOn: z.date().optional(),
+	createdOn: z.date().optional(),
 	sector: z.string().optional(),
 	contact: z
 		.string()

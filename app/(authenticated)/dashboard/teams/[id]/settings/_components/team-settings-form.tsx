@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import type { z } from "zod";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +25,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createTeamSchema } from "@/lib/schemas/team";
+import {
+	type CreateTeamSchemaInput,
+	createTeamSchema,
+} from "@/lib/schemas/team";
 
-type FormValues = z.infer<typeof createTeamSchema>;
+type FormValues = CreateTeamSchemaInput;
 
 interface TeamSettingsFormProps {
 	team: {
@@ -164,7 +166,12 @@ export function TeamSettingsForm({ team }: TeamSettingsFormProps) {
 										<FormItem>
 											<FormLabel>Description</FormLabel>
 											<FormControl>
-												<Textarea disabled={saving} rows={3} {...field} />
+												<Textarea
+													disabled={saving}
+													rows={3}
+													{...field}
+													value={field.value ?? ""}
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>

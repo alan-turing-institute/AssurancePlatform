@@ -1104,7 +1104,7 @@ export class WordExporter implements Exporter {
 
 			// Generate the document as a Buffer
 			const buffer = await Packer.toBuffer(doc);
-			const blob = new Blob([buffer], { type: this.mimeType });
+			const blob = new Blob([new Uint8Array(buffer)], { type: this.mimeType });
 
 			return {
 				success: true,

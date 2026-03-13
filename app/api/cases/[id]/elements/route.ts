@@ -46,6 +46,7 @@ function buildCreateInput(
 	body: Record<string, unknown>,
 	rawBody: Record<string, unknown>
 ): CreateElementInput {
+	const url = (body.url || body.URL) as string | undefined;
 	return {
 		caseId,
 		elementType: (body.type || body.elementType) as string,
@@ -54,7 +55,8 @@ function buildCreateInput(
 		shortDescription: body.shortDescription as string | undefined,
 		longDescription: body.longDescription as string | undefined,
 		parentId: resolveParentIdFromBody(rawBody),
-		url: (body.url || body.URL) as string | undefined,
+		url,
+		URL: url,
 		urls: body.urls as string[] | undefined,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
@@ -91,7 +93,7 @@ export async function POST(
 		const parsed = createElementSchema.safeParse(rawBody);
 		if (!parsed.success) {
 			return apiError(
-				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
 			);
 		}
 

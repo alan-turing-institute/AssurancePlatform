@@ -68,7 +68,7 @@ export async function PUT(
 		const raw = await request.json();
 		const parsed = updateAssuranceCaseSchema.safeParse(raw);
 		if (!parsed.success) {
-			throw validationError(parsed.error.errors[0]?.message ?? "Invalid input");
+			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
 		}
 		const result = await updateCaseWithPrisma(id, session.userId, parsed.data);
 		if ("error" in result) {
