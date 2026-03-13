@@ -4,22 +4,22 @@ import { FileIcon, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-type DriveFile = {
+interface DriveFile {
 	id: string;
-	name: string;
 	modifiedTime: string;
+	name: string;
 	size?: string;
-};
+}
 
-type DrivePickerProps = {
-	onFileSelect: (fileId: string, fileName: string) => void;
+interface DrivePickerProps {
 	disabled?: boolean;
-};
+	onFileSelect: (fileId: string, fileName: string) => void;
+}
 
-type DriveState = {
+interface DriveState {
 	files: DriveFile[];
 	loading: boolean;
-};
+}
 
 /**
  * Component to display and select files from Google Drive backup folder.

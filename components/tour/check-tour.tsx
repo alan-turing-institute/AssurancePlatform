@@ -3,10 +3,10 @@
 import { useNextStep } from "nextstepjs";
 import { useCallback, useEffect, useRef } from "react";
 
-type CheckTourProps = {
+interface CheckTourProps {
 	completedTours: string[];
 	tourId: string;
-};
+}
 
 /**
  * Checks whether a tour should be shown and starts it if needed.

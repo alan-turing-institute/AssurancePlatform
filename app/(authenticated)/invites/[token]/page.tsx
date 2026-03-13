@@ -14,9 +14,9 @@ export function generateMetadata(): Metadata {
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type AcceptInvitePageProps = {
+interface AcceptInvitePageProps {
 	params: Promise<{ token: string }>;
-};
+}
 
 export default async function AcceptInvitePage({
 	params,

@@ -13,23 +13,23 @@ import { cn } from "@/lib/utils";
 // Type Definitions
 // ========================================================================
 
-type BaseBadgeProps = {
+interface BaseBadgeProps {
+	className?: string;
+	color: string;
 	icon?: LucideIcon;
 	label: string;
-	color: string;
-	className?: string;
 	onClick?: () => void;
-};
+}
 
-type CountBadgeProps = {
+interface CountBadgeProps {
+	className?: string;
 	count: number;
 	onClick?: () => void;
-	className?: string;
-};
+}
 
-type ValueBadgeProps = {
+interface ValueBadgeProps {
 	className?: string;
-};
+}
 
 type StrengthBadgeProps = ValueBadgeProps & {
 	strength: string | number;
@@ -43,31 +43,31 @@ type PriorityBadgeProps = ValueBadgeProps & {
 	priority: string;
 };
 
-type AttributesData = {
-	context?: unknown[];
+interface AttributesData {
 	assumptions?: unknown[];
+	context?: unknown[];
 	justifications?: unknown[];
-};
+}
 
 type AttributeType = "context" | "assumptions" | "justifications";
 
-type AttributesSectionProps = {
+interface AttributesSectionProps {
 	attributes?: AttributesData;
+	className?: string;
 	onAttributeClick?: (type: AttributeType, items: unknown[]) => void;
-	className?: string;
-};
+}
 
-type MetadataData = {
-	strength?: string | number;
-	status?: string;
-	priority?: string;
+interface MetadataData {
 	confidence?: number;
-};
+	priority?: string;
+	status?: string;
+	strength?: string | number;
+}
 
-type MetadataSectionProps = {
-	metadata?: MetadataData;
+interface MetadataSectionProps {
 	className?: string;
-};
+	metadata?: MetadataData;
+}
 
 // ========================================================================
 // Regex Patterns (module top-level)
@@ -365,15 +365,15 @@ export const MetadataSection = ({
 
 type AttributeContentItem = { text?: string } | string;
 
-type AttributeContentSectionProps = {
+interface AttributeContentSectionProps {
 	attributes?: {
 		context?: AttributeContentItem[];
 		assumptions?: AttributeContentItem[];
 		justifications?: AttributeContentItem[];
 	};
-	isDarkMode?: boolean;
 	className?: string;
-};
+	isDarkMode?: boolean;
+}
 
 /**
  * Extracts text from an attribute item (handles both {text: string} and plain string)

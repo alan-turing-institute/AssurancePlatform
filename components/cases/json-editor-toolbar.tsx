@@ -20,32 +20,32 @@ import {
 } from "@/components/ui/tooltip";
 import type { TreeDiffResult } from "@/lib/case/tree-diff";
 
-type JsonEditorToolbarProps = {
-	/** Whether the editor has unsaved changes */
-	isDirty: boolean;
-	/** Whether the JSON is currently valid */
-	isValid: boolean;
-	/** Whether an apply operation is in progress */
-	isApplying: boolean;
-	/** Number of validation errors */
-	errorCount: number;
-	/** Diff result showing pending changes */
-	diffResult: TreeDiffResult | null;
-	/** Handler for applying changes */
-	onApply: () => void;
-	/** Handler for discarding changes */
-	onDiscard: () => void;
-	/** Whether there's a conflict with server state */
-	hasConflict: boolean;
-	/** Handler for refreshing from server */
-	onRefresh: () => void;
-	/** Handler for copying JSON */
-	onCopy: () => void;
+interface JsonEditorToolbarProps {
 	/** Whether content has been copied */
 	copied: boolean;
 	/** Whether copy is disabled (loading) */
 	copyDisabled: boolean;
-};
+	/** Diff result showing pending changes */
+	diffResult: TreeDiffResult | null;
+	/** Number of validation errors */
+	errorCount: number;
+	/** Whether there's a conflict with server state */
+	hasConflict: boolean;
+	/** Whether an apply operation is in progress */
+	isApplying: boolean;
+	/** Whether the editor has unsaved changes */
+	isDirty: boolean;
+	/** Whether the JSON is currently valid */
+	isValid: boolean;
+	/** Handler for applying changes */
+	onApply: () => void;
+	/** Handler for copying JSON */
+	onCopy: () => void;
+	/** Handler for discarding changes */
+	onDiscard: () => void;
+	/** Handler for refreshing from server */
+	onRefresh: () => void;
+}
 
 /**
  * Formats the change summary for display

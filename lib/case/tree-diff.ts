@@ -15,49 +15,49 @@ import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 /**
  * Element data for creating a new element
  */
-export type CreateElementData = {
-	id: string;
-	type: string;
-	name: string | null;
-	description: string;
-	inSandbox: boolean;
-	role?: string | null;
+export interface CreateElementData {
 	assumption?: string | null;
-	justification?: string | null;
 	context?: string[];
-	url?: string | null;
+	defeatsElementId?: string;
+	description: string;
+	fromPattern?: boolean;
+	id: string;
+	inSandbox: boolean;
+	isDefeater?: boolean;
+	justification?: string | null;
 	level?: number | null;
-	moduleReferenceId?: string;
+	modifiedFromPattern?: boolean;
 	moduleEmbedType?: string;
 	modulePublicSummary?: string | null;
-	fromPattern?: boolean;
-	modifiedFromPattern?: boolean;
-	isDefeater?: boolean;
-	defeatsElementId?: string;
-};
+	moduleReferenceId?: string;
+	name: string | null;
+	role?: string | null;
+	type: string;
+	url?: string | null;
+}
 
 /**
  * Element data for updating an existing element
  */
-export type UpdateElementData = {
-	name?: string | null;
-	description?: string;
-	inSandbox?: boolean;
-	parentId?: string | null;
-	role?: string | null;
+export interface UpdateElementData {
 	assumption?: string | null;
-	justification?: string | null;
 	context?: string[];
-	url?: string | null;
+	defeatsElementId?: string;
+	description?: string;
+	fromPattern?: boolean;
+	inSandbox?: boolean;
+	isDefeater?: boolean;
+	justification?: string | null;
 	level?: number | null;
-	moduleReferenceId?: string;
+	modifiedFromPattern?: boolean;
 	moduleEmbedType?: string;
 	modulePublicSummary?: string | null;
-	fromPattern?: boolean;
-	modifiedFromPattern?: boolean;
-	isDefeater?: boolean;
-	defeatsElementId?: string;
-};
+	moduleReferenceId?: string;
+	name?: string | null;
+	parentId?: string | null;
+	role?: string | null;
+	url?: string | null;
+}
 
 /**
  * A change operation to be applied to the database
@@ -77,49 +77,49 @@ export type ElementChange =
 /**
  * Flat representation of a tree node for comparison
  */
-type FlatElement = {
-	id: string;
-	type: string;
-	name: string | null;
-	description: string;
-	inSandbox: boolean;
-	parentId: string | null;
-	role?: string | null;
+interface FlatElement {
 	assumption?: string | null;
-	justification?: string | null;
 	context?: string[];
-	url?: string | null;
+	defeatsElementId?: string;
+	description: string;
+	fromPattern?: boolean;
+	id: string;
+	inSandbox: boolean;
+	isDefeater?: boolean;
+	justification?: string | null;
 	level?: number | null;
-	moduleReferenceId?: string;
+	modifiedFromPattern?: boolean;
 	moduleEmbedType?: string;
 	modulePublicSummary?: string | null;
-	fromPattern?: boolean;
-	modifiedFromPattern?: boolean;
-	isDefeater?: boolean;
-	defeatsElementId?: string;
-};
+	moduleReferenceId?: string;
+	name: string | null;
+	parentId: string | null;
+	role?: string | null;
+	type: string;
+	url?: string | null;
+}
 
 /**
  * Represents an evidence-to-claim link relationship.
  * Evidence uses EvidenceLink (many-to-many), not parentId.
  */
-type EvidenceLinkRecord = {
-	evidenceId: string;
+interface EvidenceLinkRecord {
 	claimId: string;
-};
+	evidenceId: string;
+}
 
 /**
  * Result of flattening a tree - includes both elements and evidence links
  */
-type FlattenResult = {
+interface FlattenResult {
 	elements: Map<string, FlatElement>;
 	evidenceLinks: EvidenceLinkRecord[];
-};
+}
 
 /**
  * Result of computing a tree diff
  */
-export type TreeDiffResult = {
+export interface TreeDiffResult {
 	changes: ElementChange[];
 	summary: {
 		created: number;
@@ -127,7 +127,7 @@ export type TreeDiffResult = {
 		deleted: number;
 		moved: number;
 	};
-};
+}
 
 /**
  * Element types that can have evidence linked to them

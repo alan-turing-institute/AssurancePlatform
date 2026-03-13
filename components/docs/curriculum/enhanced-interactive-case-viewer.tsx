@@ -87,42 +87,42 @@ const getDescendantIds = (nodeId: string, allEdges: Edge[]): string[] => {
 // Type Definitions
 // ========================================================================
 
-type NodeCreationData = {
-	nodeType: string;
-	name: string;
+interface NodeCreationData {
 	description: string;
-	position?: { x: number; y: number };
+	name: string;
+	nodeType: string;
 	parentNode: Node | null;
+	position?: { x: number; y: number };
 	/** Skip auto-layout after creation (used for drag-to-create where position is intentional) */
 	skipLayout?: boolean;
-};
+}
 
-type ControlButtonsProps = {
-	nodes: Node[];
+interface ControlButtonsProps {
 	edges: Edge[];
-	setNodes: (nodes: Node[]) => void;
-	setEdges: (edges: Edge[]) => void;
 	isFullscreen: boolean;
+	nodes: Node[];
 	onToggleFullscreen: () => void;
-	showLegend: boolean;
+	setEdges: (edges: Edge[]) => void;
+	setNodes: (nodes: Node[]) => void;
 	setShowLegend: (show: boolean) => void;
-};
+	showLegend: boolean;
+}
 
-type EnhancedInteractiveCaseViewerInnerProps = {
+interface EnhancedInteractiveCaseViewerInnerProps {
 	caseData: CaseExportNested;
-	onNodeClick?: (node: Node<ReactFlowNodeData>) => void;
-	guidedPath?: string[];
-	highlightedNodes?: string[];
-	enableCollapsible?: boolean;
-	enableNodeCreation?: boolean;
-	enableAnimations?: boolean;
-	enableEnhancedEdges?: boolean;
+	className?: string;
 	/** Enable editing mode (browser-only, no persistence) */
 	editable?: boolean;
-	className?: string;
+	enableAnimations?: boolean;
+	enableCollapsible?: boolean;
+	enableEnhancedEdges?: boolean;
+	enableNodeCreation?: boolean;
+	guidedPath?: string[];
 	height?: string;
+	highlightedNodes?: string[];
+	onNodeClick?: (node: Node<ReactFlowNodeData>) => void;
 	persistKey?: string;
-};
+}
 
 type EnhancedInteractiveCaseViewerProps =
 	EnhancedInteractiveCaseViewerInnerProps;

@@ -21,31 +21,31 @@ export type GoogleDriveErrorCode =
 	| "FORBIDDEN"
 	| "API_ERROR";
 
-export type GoogleDriveError = {
+export interface GoogleDriveError {
 	code: GoogleDriveErrorCode;
 	message: string;
 	status?: number;
-};
+}
 
-export type DriveFileMetadata = {
-	id: string;
-	name: string;
-	mimeType: string;
+export interface DriveFileMetadata {
 	createdTime: string;
+	id: string;
+	mimeType: string;
 	modifiedTime: string;
+	name: string;
 	size?: string;
-};
+}
 
-export type UploadResult = {
+export interface UploadResult {
 	fileId: string;
 	fileName: string;
 	webViewLink?: string;
-};
+}
 
-export type DownloadResult = {
+export interface DownloadResult {
 	content: string;
 	name: string;
-};
+}
 
 /**
  * Maps Google Drive error codes to application error codes.

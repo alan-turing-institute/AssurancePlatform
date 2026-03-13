@@ -3,29 +3,28 @@ import { create } from "zustand";
 /**
  * Defines the shape of the state for the Migration modal store.
  */
-type MigrationModalStore = {
+interface MigrationModalStore {
+	/**
+	 * Indicates whether the user is missing a valid email address.
+	 * Used to show conditional UI and prevent permanent dismissal.
+	 */
+	isMissingEmail: boolean;
 	/**
 	 * Indicates whether the modal is open or closed.
 	 */
 	isOpen: boolean;
 
 	/**
-	 * Indicates whether the user is missing a valid email address.
-	 * Used to show conditional UI and prevent permanent dismissal.
+	 * Function to close the modal.
 	 */
-	isMissingEmail: boolean;
+	onClose: () => void;
 
 	/**
 	 * Function to open the modal.
 	 * @param isMissingEmail - Whether the user is missing a valid email
 	 */
 	onOpen: (isMissingEmail: boolean) => void;
-
-	/**
-	 * Function to close the modal.
-	 */
-	onClose: () => void;
-};
+}
 
 /**
  * Creates a Zustand store for managing the state of the Migration modal.

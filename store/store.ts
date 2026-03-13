@@ -24,31 +24,51 @@ import { initEdges } from "./edges";
 import { initNodes } from "./nodes";
 
 // Define types for orphaned elements
-type OrphanedElement = {
+interface OrphanedElement {
 	id: string;
-	type: string;
 	name: string;
+	type: string;
 	[key: string]: unknown;
-};
+}
 
 // Define type for members (users with permissions)
-type Member = {
-	id: number | string;
+interface Member {
 	email: string;
-	username: string;
+	id: number | string;
 	permissionId?: string;
-};
+	username: string;
+}
 
-type Store = {
+interface Store {
+	activeUsers: UserResponse[];
 	assuranceCase: AssuranceCaseResponse | null;
-	orphanedElements: OrphanedElement[];
-	nodes: Node[];
+	caseNotes: CommentResponse[];
+	commentsSheetNode: Node | null;
+	// Comments sheet state
+	commentsSheetOpen: boolean;
 	edges: Edge[];
+	editMembers: Member[];
+	fitView: () => void;
+	layoutDirection: "TB" | "LR";
+	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
+	nodeComments: CommentResponse[];
+	nodes: Node[];
 	nodeTypes: NodeTypes;
-	onNodesChange: OnNodesChange;
-	onEdgesChange: OnEdgesChange;
 	onConnect: OnConnect;
+	onEdgesChange: OnEdgesChange;
+	onNodesChange: OnNodesChange;
+	orphanedElements: OrphanedElement[];
+	reviewMembers: Member[];
+	setActiveUsers: (users: UserResponse[]) => void;
 	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => void;
+	setCaseNotes: (comments: CommentResponse[]) => void;
+	setCommentsSheetNode: (node: Node | null) => void;
+	setCommentsSheetOpen: (open: boolean) => void;
+	setEdges: (edges: Edge[]) => void;
+	setEditMembers: (members: Member[]) => void;
+	setLayoutDirection: (dir: "TB" | "LR") => void;
+	setNodeComments: (comments: CommentResponse[]) => void;
+	setNodes: (nodes: Node[]) => void;
 	setOrphanedElements: (
 		orphanedElements:
 			| OrphanedElement[]
@@ -59,35 +79,15 @@ type Store = {
 					evidence?: OrphanedElement[];
 			  }
 	) => void;
-	setNodes: (nodes: Node[]) => void;
-	setEdges: (edges: Edge[]) => void;
-	layoutDirection: "TB" | "LR";
-	setLayoutDirection: (dir: "TB" | "LR") => void;
-	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
-	triggerLayout: () => Promise<void>;
-	fitView: () => void;
-	viewMembers: Member[];
-	editMembers: Member[];
-	reviewMembers: Member[];
-	setViewMembers: (members: Member[]) => void;
-	setEditMembers: (members: Member[]) => void;
 	setReviewMembers: (members: Member[]) => void;
-	activeUsers: UserResponse[];
-	setActiveUsers: (users: UserResponse[]) => void;
-	nodeComments: CommentResponse[];
-	setNodeComments: (comments: CommentResponse[]) => void;
-	caseNotes: CommentResponse[];
-	setCaseNotes: (comments: CommentResponse[]) => void;
-	// Comments sheet state
-	commentsSheetOpen: boolean;
-	commentsSheetNode: Node | null;
-	setCommentsSheetOpen: (open: boolean) => void;
-	setCommentsSheetNode: (node: Node | null) => void;
-};
+	setViewMembers: (members: Member[]) => void;
+	triggerLayout: () => Promise<void>;
+	viewMembers: Member[];
+}
 
-export type NodeData = {
+export interface NodeData {
 	color: string;
-};
+}
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useStore = create<Store>((set, get) => ({

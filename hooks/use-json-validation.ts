@@ -17,30 +17,30 @@ const POSITION_PATTERN = /position (\d+)/;
 /**
  * Validation error with position information
  */
-export type ValidationError = {
+export interface ValidationError {
+	column?: number;
+	line?: number;
 	message: string;
 	path: string;
-	line?: number;
-	column?: number;
-};
+}
 
 /**
  * Result of JSON validation
  */
-export type JsonValidationResult = {
-	isValid: boolean;
-	errors: ValidationError[];
+export interface JsonValidationResult {
 	diagnostics: Diagnostic[];
+	errors: ValidationError[];
+	isValid: boolean;
 	parsedData: CaseExportNested | null;
-};
+}
 
 /**
  * Options for the validation hook
  */
-type UseJsonValidationOptions = {
+interface UseJsonValidationOptions {
 	/** Debounce delay in milliseconds (default: 300) */
 	debounceMs?: number;
-};
+}
 
 /**
  * Finds the line and column for a JSON path in the source text.

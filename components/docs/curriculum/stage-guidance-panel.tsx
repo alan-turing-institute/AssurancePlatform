@@ -5,10 +5,10 @@ import { Info } from "lucide-react";
 import type React from "react";
 import type { StageDefinition } from "./stage-definitions";
 
-type StageGuidancePanelProps = {
+interface StageGuidancePanelProps {
 	/** Current stage definition */
 	stage: StageDefinition;
-};
+}
 
 /**
  * StageGuidancePanel - Displays contextual guidance for the current stage

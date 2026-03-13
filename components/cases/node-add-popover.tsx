@@ -12,24 +12,24 @@ import {
 } from "@/components/ui/popover";
 import NodeAddDialog from "./node-add-dialog";
 
-type NodeAddPopoverProps = {
+interface NodeAddPopoverProps {
+	/** The trigger element (children) */
+	children: React.ReactNode;
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node */
 	nodeType: DiagramNodeType;
-	/** Whether the popover is open */
-	open: boolean;
 	/** Callback when open state changes */
 	onOpenChange: (open: boolean) => void;
-	/** The trigger element (children) */
-	children: React.ReactNode;
-};
+	/** Whether the popover is open */
+	open: boolean;
+}
 
-type AddOption = {
-	type: string;
-	label: string;
+interface AddOption {
 	icon: React.ReactNode;
-};
+	label: string;
+	type: string;
+}
 
 /**
  * Get the available add options based on node type

@@ -80,54 +80,54 @@ const iconMap: Record<string, LucideIcon> = {
 /**
  * Position type
  */
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
 /**
  * Form data type
  */
-type FormData = {
-	name?: string;
+interface FormData {
 	description?: string;
+	name?: string;
 	[key: string]: unknown;
-};
+}
 
 /**
  * Node type metadata type
  */
-type NodeTypeMetadata = {
-	id: string;
-	name: string;
+interface NodeTypeMetadata {
+	category: string;
+	color: string;
 	description: string;
 	icon: string;
-	color: string;
-	category: string;
+	id: string;
+	name: string;
 	shortcut: string;
-};
+}
 
 /**
  * Node data type for adding
  */
-type AddNodeData = {
-	type: string;
-	template?: Template;
-	position?: Position | null;
-	id?: string;
+interface AddNodeData {
 	data?: Record<string, unknown>;
-};
+	id?: string;
+	position?: Position | null;
+	template?: Template;
+	type: string;
+}
 
 /**
  * Node Type Card Component Props
  */
-type NodeTypeCardProps = {
-	metadata: NodeTypeMetadata;
-	isSelected: boolean;
-	onClick: () => void;
-	isRecent: boolean;
+interface NodeTypeCardProps {
 	isFavorite: boolean;
-};
+	isRecent: boolean;
+	isSelected: boolean;
+	metadata: NodeTypeMetadata;
+	onClick: () => void;
+}
 
 /**
  * Node Type Card Component
@@ -217,21 +217,21 @@ const NodeTypeCard = ({
 /**
  * AddBlockDialog Component Props
  */
-type AddBlockDialogProps = {
-	open?: boolean;
-	onClose?: () => void;
+interface AddBlockDialogProps {
+	className?: string;
+	currentNodes?: Node[];
+	defaultNodeType?: string | null;
+	enableBulkMode?: boolean;
+	enableQuickMode?: boolean;
+	enableTemplates?: boolean;
 	onAdd?: (nodeData: AddNodeData) => void;
 	onBulkAdd?: (nodes: AddNodeData[]) => void;
+	onClose?: () => void;
+	open?: boolean;
 	position?: Position | null;
-	currentNodes?: Node[];
-	suggestedConnections?: unknown[];
-	defaultNodeType?: string | null;
-	enableTemplates?: boolean;
-	enableQuickMode?: boolean;
-	enableBulkMode?: boolean;
 	showConnectionHints?: boolean;
-	className?: string;
-};
+	suggestedConnections?: unknown[];
+}
 
 /**
  * Valid node type ids
@@ -249,13 +249,13 @@ const findNodeTypeByShortcut = (shortcut: string): string | undefined =>
 /**
  * Keyboard handler context type
  */
-type KeyboardHandlerContext = {
-	onClose: () => void;
+interface KeyboardHandlerContext {
+	enableTemplates: boolean;
 	onAdd: () => void;
+	onClose: () => void;
 	onSelectNodeType: (type: string) => void;
 	onSelectTemplatesTab: () => void;
-	enableTemplates: boolean;
-};
+}
 
 /**
  * Process keyboard event and return true if handled
@@ -725,7 +725,7 @@ const AddBlockDialog = ({
 							>
 								{/* Search */}
 								<div className="relative mb-4">
-									<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-text-light/50" />
+									<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-text-light/50" />
 									<input
 										className={cn(
 											"w-full py-2 pr-4 pl-10",
@@ -868,12 +868,12 @@ const AddBlockDialog = ({
 /**
  * Compact Add Block Dialog Props
  */
-type CompactAddBlockDialogProps = {
-	open: boolean;
-	onClose: () => void;
+interface CompactAddBlockDialogProps {
 	onAdd: (nodeData: AddNodeData) => void;
+	onClose: () => void;
+	open: boolean;
 	position?: Position | null;
-};
+}
 
 /**
  * Compact Add Block Dialog (minimal version)

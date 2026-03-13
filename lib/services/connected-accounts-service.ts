@@ -13,11 +13,10 @@ export type Provider = "github" | "google";
 /**
  * Data about a user's connected authentication providers.
  */
-export type ConnectedAccountsData = {
-	/** Primary authentication provider used for sign-in */
-	primaryAuthProvider: "LOCAL" | "GITHUB" | "GOOGLE" | "SYSTEM";
-	/** Whether the user has a password set (can use email/password login) */
-	hasPassword: boolean;
+export interface ConnectedAccountsData {
+	/** Safety flags — whether provider can be unlinked */
+	canUnlinkGitHub: boolean;
+	canUnlinkGoogle: boolean;
 
 	/** GitHub connection status */
 	github: {
@@ -34,11 +33,11 @@ export type ConnectedAccountsData = {
 		/** Whether user has granted Drive access (has refresh token) */
 		hasDriveAccess: boolean;
 	};
-
-	/** Safety flags — whether provider can be unlinked */
-	canUnlinkGitHub: boolean;
-	canUnlinkGoogle: boolean;
-};
+	/** Whether the user has a password set (can use email/password login) */
+	hasPassword: boolean;
+	/** Primary authentication provider used for sign-in */
+	primaryAuthProvider: "LOCAL" | "GITHUB" | "GOOGLE" | "SYSTEM";
+}
 
 // ============================================
 // Internal helpers

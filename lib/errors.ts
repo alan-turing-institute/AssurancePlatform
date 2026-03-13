@@ -28,12 +28,12 @@ const STATUS_MAP: Record<ErrorCode, number> = {
 	INTERNAL: 500,
 };
 
-type AppErrorOptions = {
-	code: ErrorCode;
-	message: string;
+interface AppErrorOptions {
 	cause?: unknown;
+	code: ErrorCode;
 	fieldErrors?: Record<string, string>;
-};
+	message: string;
+}
 
 /**
  * Structured application error with an error code and optional field-level errors.

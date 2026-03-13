@@ -74,7 +74,7 @@ export default function Features() {
 						width={2432}
 					/>
 					<div aria-hidden="true" className="relative">
-						<div className="-inset-x-20 absolute bottom-0 bg-linear-to-t from-background pt-[7%]" />
+						<div className="absolute -inset-x-20 bottom-0 bg-linear-to-t from-background pt-[7%]" />
 					</div>
 				</div>
 			</div>

@@ -10,46 +10,46 @@
 import type { Node, ReactFlowInstance } from "reactflow";
 import { createNodeData, nodeTypeMetadata } from "../nodes/node-types";
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
-type NodeSize = {
-	width: number;
+interface NodeSize {
 	height: number;
-};
+	width: number;
+}
 
-type ValidationResult = {
-	valid: boolean;
+interface ValidationResult {
 	error: string | null;
-};
+	valid: boolean;
+}
 
-type ConnectionHint = {
-	nodeId: string;
-	nodeName: string;
+interface ConnectionHint {
 	direction: string;
 	distance: number;
-};
+	nodeId: string;
+	nodeName: string;
+}
 
-type NodeTemplate = {
+interface NodeTemplate {
+	description: string;
 	id: string;
 	name: string;
-	description: string;
 	nodes: Array<{
 		type: string;
 		name: string;
 		offsetX?: number;
 		offsetY?: number;
 	}>;
-};
+}
 
-type CreationPreferences = {
-	gridSnap: boolean;
+interface CreationPreferences {
 	autoConnect: boolean;
-	quickCreateEnabled: boolean;
 	defaultNodeType: string;
-};
+	gridSnap: boolean;
+	quickCreateEnabled: boolean;
+}
 
 /**
  * Generate a unique node ID

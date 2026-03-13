@@ -57,12 +57,12 @@ type SmartHandleProps = HandleProps & {
 	className?: string;
 };
 
-type ColorConfig = {
+interface ColorConfig {
 	bg: string;
 	border: string;
-	icon: string;
 	glow: string;
-};
+	icon: string;
+}
 
 const connectionTypeIconMap: Record<ConnectionType, LucideIcon> = {
 	AND: GitMerge,
@@ -306,7 +306,7 @@ const SmartHandle = ({
 							<motion.div
 								animate={{ scale: 1 }}
 								className={cn(
-									"-top-1 -right-1 absolute",
+									"absolute -top-1 -right-1",
 									"px-1.5 py-0.5",
 									"rounded-full",
 									"bg-purple-500",
@@ -375,7 +375,7 @@ const SmartHandle = ({
 						{smartPositioning && (
 							<div
 								className={cn(
-									"-bottom-3 -translate-x-1/2 absolute left-1/2",
+									"absolute -bottom-3 left-1/2 -translate-x-1/2",
 									"h-1 w-1 rounded-full bg-blue-500"
 								)}
 							/>
@@ -403,7 +403,7 @@ const SmartHandle = ({
 							position === Position.Bottom && "bottom-full mb-2",
 							position === Position.Left && "left-full ml-2",
 							position === Position.Right && "right-full mr-2",
-							"-translate-x-1/2 left-1/2"
+							"left-1/2 -translate-x-1/2"
 						)}
 						exit={{ opacity: 0, y: -5 }}
 						initial={{ opacity: 0, y: -5 }}

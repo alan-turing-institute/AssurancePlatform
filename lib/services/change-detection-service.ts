@@ -7,18 +7,18 @@ import { exportCase } from "@/lib/services/case-export-service";
 // Types
 // ============================================
 
-export type ChangeSummary = {
+export interface ChangeSummary {
 	addedElements: number;
-	removedElements: number;
 	modifiedElements: number;
-};
+	removedElements: number;
+}
 
-export type ChangeStatus = {
+export interface ChangeStatus {
+	changeSummary?: ChangeSummary;
 	hasChanges: boolean;
 	publishedAt: Date | null;
 	publishedId: string | null;
-	changeSummary?: ChangeSummary;
-};
+}
 
 // ============================================
 // Service Functions
@@ -255,17 +255,17 @@ function flattenTree(nodes: TreeNode[]): Map<string, TreeNodeCompareData> {
 /**
  * Data structure for element comparison (excludes volatile fields).
  */
-type TreeNodeCompareData = {
-	id: string;
-	type: string;
-	name: string | null;
-	description: string;
-	role: string | null;
-	url: string | null;
-	level: number | null;
-	isDefeater: boolean | null;
+interface TreeNodeCompareData {
 	defeatsElementId: string | null;
-};
+	description: string;
+	id: string;
+	isDefeater: boolean | null;
+	level: number | null;
+	name: string | null;
+	role: string | null;
+	type: string;
+	url: string | null;
+}
 
 /**
  * Extracts comparison-relevant data from a tree node.

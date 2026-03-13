@@ -1,10 +1,10 @@
 import { create } from "zustand";
 
-type ModalStore = {
+interface ModalStore {
 	isOpen: boolean;
-	onOpen: () => void;
 	onClose: () => void;
-};
+	onOpen: () => void;
+}
 
 export function createModalStore() {
 	return create<ModalStore>((set) => ({

@@ -14,9 +14,9 @@ import {
 } from "@/lib/services/case-study-service";
 import { transformCaseStudyForApi } from "@/lib/services/case-study-transforms";
 
-type RouteParams = {
+interface RouteParams {
 	params: Promise<{ id: string }>;
-};
+}
 
 /**
  * GET /api/case-studies/[id]

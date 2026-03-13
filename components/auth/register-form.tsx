@@ -204,7 +204,7 @@ const RegisterForm = () => {
 												aria-label={
 													showPassword1 ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
+												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
 												onClick={() => setShowPassword1(!showPassword1)}
 												size="icon"
 												type="button"
@@ -238,7 +238,7 @@ const RegisterForm = () => {
 												aria-label={
 													showPassword2 ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
+												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
 												onClick={() => setShowPassword2(!showPassword2)}
 												size="icon"
 												type="button"

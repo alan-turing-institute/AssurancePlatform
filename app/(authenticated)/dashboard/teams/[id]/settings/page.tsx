@@ -5,9 +5,9 @@ import { isTeamAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { TeamSettingsForm } from "./_components/team-settings-form";
 
-type TeamSettingsPageProps = {
+interface TeamSettingsPageProps {
 	params: Promise<{ id: string }>;
-};
+}
 
 export default async function TeamSettingsPage({
 	params,

@@ -12,21 +12,21 @@ import { ELEMENT_TYPE_LABELS } from "../../types";
 /**
  * Options for rendering tree elements
  */
-export type TreeRenderOptions = {
-	includeSandbox?: boolean;
-	maxDepth?: number;
-	includeTypes?: ElementType[];
+export interface TreeRenderOptions {
 	excludeTypes?: ElementType[];
-};
+	includeSandbox?: boolean;
+	includeTypes?: ElementType[];
+	maxDepth?: number;
+}
 
 /**
  * Rendered element with metadata
  */
-export type RenderedElement = {
-	node: TreeNode;
-	depth: number;
+export interface RenderedElement {
 	blocks: ContentBlock[];
-};
+	depth: number;
+	node: TreeNode;
+}
 
 /**
  * Check if an element should be included based on options

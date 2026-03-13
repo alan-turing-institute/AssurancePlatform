@@ -21,12 +21,12 @@ import {
 /**
  * Parsed GitHub location
  */
-type GitHubLocation = {
-	owner: string;
-	repo: string;
-	path: string;
+interface GitHubLocation {
 	branch?: string;
-};
+	owner: string;
+	path: string;
+	repo: string;
+}
 
 /**
  * Maps GitHub service error codes to application error codes.

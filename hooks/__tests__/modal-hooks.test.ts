@@ -14,11 +14,11 @@ import {
 } from "@/hooks/modal-hooks";
 
 // Type for modal hook return value
-type ModalHookReturn = {
+interface ModalHookReturn {
 	isOpen: boolean;
-	onOpen: () => void;
 	onClose: () => void;
-};
+	onOpen: () => void;
+}
 
 // Helper function to test modal hook behavior
 const testModalHook = (hookName: string, useHook: () => ModalHookReturn) => {

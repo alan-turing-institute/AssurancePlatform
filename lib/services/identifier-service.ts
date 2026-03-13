@@ -14,22 +14,22 @@ const TYPE_PREFIXES: Record<string, string> = {
 	EVIDENCE: "E",
 };
 
-type ElementWithChildren = {
-	id: string;
-	elementType: string;
-	parentId: string | null;
-	createdAt: Date;
-	name: string | null;
+interface ElementWithChildren {
 	children: ElementWithChildren[];
-};
+	createdAt: Date;
+	elementType: string;
+	id: string;
+	name: string | null;
+	parentId: string | null;
+}
 
-type PropertyClaimNameOptions = {
+interface PropertyClaimNameOptions {
+	globalCounters: Record<string, number>;
 	node: ElementWithChildren;
 	parentName: string | null;
 	parentType: string | null;
 	roots: ElementWithChildren[];
-	globalCounters: Record<string, number>;
-};
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers

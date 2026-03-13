@@ -7,27 +7,27 @@ import { TaskStatus } from "./task-registry";
 
 type CheckpointVariant = "minimal" | "inline" | "border";
 
-type TaskCheckpointProps = {
-	id: string;
-	title?: string | null;
-	section?: string | null;
+interface TaskCheckpointProps {
 	children: React.ReactNode;
-	/** Style variant: "minimal" (default), "inline", or "border" */
-	variant?: CheckpointVariant;
-	/** Whether to show the completion toggle */
-	showToggle?: boolean;
+	id: string;
+	section?: string | null;
 	/** @deprecated Use variant instead */
 	showButton?: boolean;
 	/** @deprecated Use variant="border" instead */
 	showHeader?: boolean;
-};
+	/** Whether to show the completion toggle */
+	showToggle?: boolean;
+	title?: string | null;
+	/** Style variant: "minimal" (default), "inline", or "border" */
+	variant?: CheckpointVariant;
+}
 
-type ToggleButtonProps = {
+interface ToggleButtonProps {
 	isComplete: boolean;
 	onClick: () => void;
-	size?: "sm" | "md";
 	showLabel?: boolean;
-};
+	size?: "sm" | "md";
+}
 
 /**
  * Small toggle button with checkbox indicator

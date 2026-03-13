@@ -23,20 +23,13 @@ import type { EdgeProps } from "reactflow";
 import { EdgeLabelRenderer, getBezierPath } from "reactflow";
 import { getStateColor, getStrokeWidth } from "./edge-utils";
 
-type AnimatedEdgeData = {
-	state?: string;
-	color?: string;
-	strokeWidth?: number;
+interface AnimatedEdgeData {
 	animated?: boolean;
 	animationSpeed?: number;
-	label?: string;
-	showLabel?: boolean;
+	color?: string;
 	enterDuration?: number;
+	label?: string;
 	onClick?: (
-		event: React.MouseEvent,
-		info: { id: string; source: string; target: string }
-	) => void;
-	onDoubleClick?: (
 		event: React.MouseEvent,
 		info: { id: string; source: string; target: string }
 	) => void;
@@ -44,7 +37,14 @@ type AnimatedEdgeData = {
 		event: React.MouseEvent,
 		info: { id: string; source: string; target: string }
 	) => void;
-};
+	onDoubleClick?: (
+		event: React.MouseEvent,
+		info: { id: string; source: string; target: string }
+	) => void;
+	showLabel?: boolean;
+	state?: string;
+	strokeWidth?: number;
+}
 
 type AnimatedEdgeProps = EdgeProps<AnimatedEdgeData>;
 

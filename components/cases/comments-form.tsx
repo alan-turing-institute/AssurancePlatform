@@ -19,16 +19,16 @@ import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
-type CommentsFormProps = {
+interface CommentsFormProps {
 	node: {
 		type: string;
 		data: {
 			id: number;
 		};
 	};
-	parentId?: string | null;
 	onCancel?: () => void;
-};
+	parentId?: string | null;
+}
 
 const CommentsForm: React.FC<CommentsFormProps> = ({
 	node,

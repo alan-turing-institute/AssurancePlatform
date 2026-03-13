@@ -11,9 +11,9 @@ import {
 	type ElementWithLinks,
 } from "@/lib/transforms/build-tree";
 
-export type ExportOptions = {
+export interface ExportOptions {
 	includeComments?: boolean;
-};
+}
 
 export type ExportResult = { data: CaseExportNested } | { error: string };
 

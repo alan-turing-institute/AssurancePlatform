@@ -3,12 +3,12 @@
 import { useEffect } from "react";
 import { useMigrationModal } from "@/hooks/use-migration-modal";
 
-type CheckMigrationNoticeProps = {
+interface CheckMigrationNoticeProps {
 	user: {
 		email?: string | null;
 		hasSeenMigrationNotice?: boolean;
 	} | null;
-};
+}
 
 /**
  * Component that checks if the migration notice modal should be shown.

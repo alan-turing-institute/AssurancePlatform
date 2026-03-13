@@ -17,37 +17,37 @@ import { fieldAppliesTo } from "../schemas/element-validation";
 /**
  * Element with evidence links as returned from Prisma query.
  */
-export type ElementWithLinks = {
-	id: string;
-	elementType: ElementType;
-	parentId: string | null;
-	name: string | null;
-	description: string;
-	inSandbox: boolean;
-	// Type-specific fields
-	role: ElementRole | null;
+export interface ElementWithLinks {
 	assumption: string | null;
-	justification: string | null;
+	// Comments (optional - only included when export includes comments)
+	comments?: ExportComment[];
 	context: string[];
-	url: string | null;
-	level: number | null;
-	// Module fields
-	moduleReferenceId: string | null;
-	moduleEmbedType: ModuleEmbedType | null;
-	modulePublicSummary: string | null;
-	// Pattern metadata
-	fromPattern: boolean;
-	modifiedFromPattern: boolean;
-	// Dialogical reasoning
-	isDefeater: boolean;
 	defeatsElementId: string | null;
+	description: string;
+	elementType: ElementType;
 	// Evidence linked TO this element (this element is a claim)
 	evidenceLinksTo?: Array<{
 		evidence: ElementWithLinks;
 	}>;
-	// Comments (optional - only included when export includes comments)
-	comments?: ExportComment[];
-};
+	// Pattern metadata
+	fromPattern: boolean;
+	id: string;
+	inSandbox: boolean;
+	// Dialogical reasoning
+	isDefeater: boolean;
+	justification: string | null;
+	level: number | null;
+	modifiedFromPattern: boolean;
+	moduleEmbedType: ModuleEmbedType | null;
+	modulePublicSummary: string | null;
+	// Module fields
+	moduleReferenceId: string | null;
+	name: string | null;
+	parentId: string | null;
+	// Type-specific fields
+	role: ElementRole | null;
+	url: string | null;
+}
 
 /**
  * Type-specific fields that require applicability check.

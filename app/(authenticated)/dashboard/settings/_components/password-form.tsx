@@ -22,15 +22,15 @@ import {
 import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
-type UserData = {
+interface UserData {
 	id: number | string;
-};
+}
 
 const _ACCEPTED_FILE_TYPES = ["jpg"];
 
-type PasswordFormProps = {
+interface PasswordFormProps {
 	data: UserData | null | undefined;
-};
+}
 
 export function PasswordForm({ data }: PasswordFormProps) {
 	const [error, setError] = useState<string>("");

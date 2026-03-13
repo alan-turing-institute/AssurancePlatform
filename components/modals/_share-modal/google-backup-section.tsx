@@ -34,16 +34,16 @@ function GoogleIcon({ className }: { className?: string }) {
 	);
 }
 
-type ExportModal = {
+interface ExportModal {
 	isOpen: boolean;
-};
+}
 
-export type GoogleBackupSectionProps = {
+export interface GoogleBackupSectionProps {
 	assuranceCase: AssuranceCaseResponse | null;
+	className?: string;
 	exportModal: ExportModal;
 	toast: typeof ToastFn;
-	className?: string;
-};
+}
 
 export function GoogleBackupSection({
 	assuranceCase,

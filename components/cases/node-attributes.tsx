@@ -32,17 +32,17 @@ type NodeWithData = Node & {
 	};
 };
 
-type NodeActions = {
-	setSelectedLink: (value: boolean) => void;
+interface NodeActions {
 	setAction: (value: string) => void;
-};
+	setSelectedLink: (value: boolean) => void;
+}
 
-type NodeAttributesProps = {
-	node: NodeWithData;
+interface NodeAttributesProps {
 	actions: NodeActions;
+	node: NodeWithData;
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-};
+}
 
 // Helper to check if element type supports context
 const supportsContext = (type: string | undefined): boolean =>

@@ -5,26 +5,26 @@ import { prisma } from "@/lib/prisma";
 // TYPES
 // ============================================
 
-export type RateLimitConfig = {
+export interface RateLimitConfig {
 	readonly endpoint: string;
 	readonly limits: ReadonlyArray<{
 		readonly identifierType: "ip" | "email" | "user_id";
 		readonly maxAttempts: number;
 		readonly windowMs: number; // Time window in milliseconds
 	}>;
-};
+}
 
-export type RateLimitIdentifiers = {
-	ipAddress?: string;
+export interface RateLimitIdentifiers {
 	email?: string;
+	ipAddress?: string;
 	userId?: string;
-};
+}
 
-export type RateLimitCheckResult = {
+export interface RateLimitCheckResult {
 	allowed: boolean;
 	reason?: string;
 	retryAfterMs?: number;
-};
+}
 
 // ============================================
 // PREDEFINED CONFIGURATIONS

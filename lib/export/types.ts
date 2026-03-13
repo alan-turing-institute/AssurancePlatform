@@ -33,72 +33,72 @@ export type SectionType =
 /**
  * Heading content block
  */
-export type HeadingBlock = {
-	type: "heading";
+export interface HeadingBlock {
 	level: 1 | 2 | 3 | 4 | 5 | 6;
 	text: string;
-};
+	type: "heading";
+}
 
 /**
  * Paragraph content block
  */
-export type ParagraphBlock = {
-	type: "paragraph";
+export interface ParagraphBlock {
 	text: string;
-};
+	type: "paragraph";
+}
 
 /**
  * List content block (ordered or unordered)
  */
-export type ListBlock = {
-	type: "list";
-	ordered: boolean;
+export interface ListBlock {
 	items: string[];
-};
+	ordered: boolean;
+	type: "list";
+}
 
 /**
  * Table content block
  */
-export type TableBlock = {
-	type: "table";
+export interface TableBlock {
 	headers: string[];
 	rows: string[][];
-};
+	type: "table";
+}
 
 /**
  * Image content block
  */
-export type ImageBlock = {
-	type: "image";
-	src: string;
+export interface ImageBlock {
 	alt: string;
 	caption?: string;
-};
+	src: string;
+	type: "image";
+}
 
 /**
  * Divider/horizontal rule content block
  */
-export type DividerBlock = {
+export interface DividerBlock {
 	type: "divider";
-};
+}
 
 /**
  * Metadata key-value content block
  */
-export type MetadataBlock = {
-	type: "metadata";
+export interface MetadataBlock {
 	key: string;
+	type: "metadata";
 	value: string;
-};
+}
 
 /**
  * Element content block - renders a TreeNode element
  */
-export type ElementBlock = {
-	type: "element";
-	node: TreeNode;
+export interface ElementBlock {
 	depth: number;
-};
+	node: TreeNode;
+	type: "element";
+}
 
 /**
  * Union of all content block types
@@ -116,54 +116,54 @@ export type ContentBlock =
 /**
  * Rendered section - contains multiple content blocks
  */
-export type RenderedSection = {
-	type: SectionType;
-	title: string;
+export interface RenderedSection {
 	blocks: ContentBlock[];
-};
+	title: string;
+	type: SectionType;
+}
 
 /**
  * Document metadata included in exports
  */
-export type DocumentMetadata = {
-	caseName: string;
+export interface DocumentMetadata {
 	caseDescription: string;
+	caseName: string;
+	elementCount: number;
 	exportedAt: string;
 	exportedBy?: string;
-	version: string;
-	elementCount: number;
 	format: ExportFormat;
-};
+	version: string;
+}
 
 /**
  * Resolved branding with defaults applied
  */
-export type ResolvedBranding = {
+export interface ResolvedBranding {
+	fontFamily: string;
+	footerText: string;
+	logoBase64?: string;
+	logoUrl?: string;
+	organisationName?: string;
 	primaryColour: string;
 	secondaryColour: string;
-	logoUrl?: string;
-	logoBase64?: string;
-	organisationName?: string;
-	footerText: string;
-	fontFamily: string;
-};
+}
 
 /**
  * Complete rendered document ready for export
  */
-export type RenderedDocument = {
-	metadata: DocumentMetadata;
+export interface RenderedDocument {
 	branding: ResolvedBranding;
+	metadata: DocumentMetadata;
 	sections: RenderedSection[];
-};
+}
 
 /**
  * Diagram image data for embedding in exports
  */
-export type DiagramImage = {
+export interface DiagramImage {
 	data: string;
 	format: "png" | "svg";
-};
+}
 
 /**
  * Diagram image with a label, used for per-branch multi-page exports
@@ -180,13 +180,13 @@ export type SectionOverrides = Record<string, boolean>;
 /**
  * Input for template rendering
  */
-export type TemplateInput = {
+export interface TemplateInput {
+	branchDiagrams?: LabelledDiagramImage[];
 	caseData: import("@/lib/schemas/case-export").CaseExportNested;
 	diagramImage?: DiagramImage;
-	branchDiagrams?: LabelledDiagramImage[];
 	exportedBy?: string;
 	sectionOverrides?: SectionOverrides;
-};
+}
 
 /**
  * Export result - either success with blob/string or failure with error
@@ -199,10 +199,10 @@ export type ExportResult =
 /**
  * Export options passed to exporters
  */
-export type ExportOptions = {
+export interface ExportOptions {
 	caseName: string;
 	timestamp?: Date;
-};
+}
 
 /**
  * Element type labels for human-readable output

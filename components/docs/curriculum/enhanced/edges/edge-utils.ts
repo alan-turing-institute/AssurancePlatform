@@ -15,10 +15,10 @@ const HEX_COLOR_REGEX = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i;
  * Path Calculation Helpers
  */
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
 /**
  * Calculate bezier curve path for smooth connections
@@ -99,11 +99,11 @@ export function generateGradientId(edgeId: string): string {
 	return `edge-gradient-${edgeId}`;
 }
 
-type GradientStop = {
+interface GradientStop {
 	offset: string;
 	stopColor: string;
 	stopOpacity: number;
-};
+}
 
 /**
  * Create gradient stops from colours
@@ -122,11 +122,11 @@ export function createGradientStops(
 	}));
 }
 
-type RgbColor = {
-	r: number;
-	g: number;
+interface RgbColor {
 	b: number;
-};
+	g: number;
+	r: number;
+}
 
 /**
  * Generate gradient based on node colours
@@ -159,13 +159,13 @@ export function interpolateGradient(
  * Animation Timing Utilities
  */
 
-type AnimationPreset = {
+interface AnimationPreset {
+	damping?: number;
 	duration: number;
 	ease?: string | number[];
-	type?: string;
 	stiffness?: number;
-	damping?: number;
-};
+	type?: string;
+}
 
 /**
  * Animation presets for different edge behaviours
@@ -203,14 +203,14 @@ export function createDashArray(pathLength: number, dashCount = 10): string {
 	return `${dashLength} ${dashLength}`;
 }
 
-type FlowAnimation = {
+interface FlowAnimation {
 	strokeDashoffset: number[];
 	transition: {
 		duration: number;
 		repeat: number;
 		ease: string;
 	};
-};
+}
 
 /**
  * Get animation keyframes for flowing effect
@@ -230,11 +230,11 @@ export function getFlowAnimation(speed = 1): FlowAnimation {
  * Label Positioning Algorithms
  */
 
-type LabelPosition = {
+interface LabelPosition {
+	angle: number;
 	x: number;
 	y: number;
-	angle: number;
-};
+}
 
 /**
  * Calculate label position on edge
@@ -290,16 +290,16 @@ export function calculateBezierLabelPosition(
  * Edge Validation Functions
  */
 
-type Node = {
+interface Node {
 	id: string;
 	[key: string]: unknown;
-};
+}
 
-type Edge = {
+interface Edge {
 	source: string;
 	target: string;
 	[key: string]: unknown;
-};
+}
 
 /**
  * Check if edge connection is valid
@@ -315,10 +315,10 @@ export function validateEdge(edge: Edge, nodes: Node[]): boolean {
 	return !!(sourceNode && targetNode);
 }
 
-type ExcludeNodes = {
+interface ExcludeNodes {
 	source?: string;
 	target?: string;
-};
+}
 
 /**
  * Check for edge overlap with nodes
@@ -437,17 +437,17 @@ export function getMarkerEnd(markerId: string, _color: string): string {
 	return `url(#${markerId})`;
 }
 
-type MarkerConfig = {
+interface MarkerConfig {
+	fill: string;
 	id: string;
-	viewBox: string;
-	refX: number;
-	refY: number;
-	markerWidth: number;
 	markerHeight: number;
+	markerWidth: number;
 	orient: string;
 	path: string;
-	fill: string;
-};
+	refX: number;
+	refY: number;
+	viewBox: string;
+}
 
 /**
  * Create arrow marker element

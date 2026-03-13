@@ -29,25 +29,25 @@ import { recordCreate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 
-type UseNewLinkFormProps = {
-	node: Node;
-	linkType: string;
+interface UseNewLinkFormProps {
 	actions: {
 		setSelectedLink: (value: boolean) => void;
 		setLinkToCreate: (value: string) => void;
 		handleClose: () => void;
 	};
+	linkType: string;
+	node: Node;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-};
+}
 
-type UseNewLinkFormReturn = {
-	form: ReturnType<typeof useForm<NodeEditFormInput>>;
-	fields: ReturnType<typeof useFieldArray<NodeEditFormInput, "urls">>["fields"];
+interface UseNewLinkFormReturn {
 	append: ReturnType<typeof useFieldArray<NodeEditFormInput, "urls">>["append"];
-	remove: ReturnType<typeof useFieldArray<NodeEditFormInput, "urls">>["remove"];
+	fields: ReturnType<typeof useFieldArray<NodeEditFormInput, "urls">>["fields"];
+	form: ReturnType<typeof useForm<NodeEditFormInput>>;
 	loading: boolean;
 	onSubmit: (values: NodeEditFormInput) => void;
-};
+	remove: ReturnType<typeof useFieldArray<NodeEditFormInput, "urls">>["remove"];
+}
 
 export function useNewLinkForm({
 	node,

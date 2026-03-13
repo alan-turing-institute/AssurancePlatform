@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useEmailModal } from "@/hooks/modal-hooks";
 
-type CheckUserEmailProps = {
+interface CheckUserEmailProps {
 	user: { email?: string | null } | null | undefined;
-};
+}
 
 const CheckUserEmail = ({ user }: CheckUserEmailProps) => {
 	const emailModal = useEmailModal();

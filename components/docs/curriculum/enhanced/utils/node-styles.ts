@@ -18,42 +18,42 @@ import {
 // Type Definitions
 // ========================================================================
 
-type NodeContainerOptions = {
-	nodeType?: string;
-	isSelected?: boolean;
-	isHovered?: boolean;
+interface NodeContainerOptions {
+	className?: string;
 	isCollapsed?: boolean;
 	isDarkMode?: boolean;
-	className?: string;
-};
+	isHovered?: boolean;
+	isSelected?: boolean;
+	nodeType?: string;
+}
 
-type CustomGlassmorphismOptions = {
+interface CustomGlassmorphismOptions {
 	background?: "base" | "elevated" | "highest";
 	blur?: boolean;
 	border?: boolean;
 	borderRadius?: string;
 	shadow?: string;
-};
+}
 
-type InteractionOptions = {
-	nodeType?: string;
-	isSelected?: boolean;
-	isHovered?: boolean;
+interface InteractionOptions {
 	isFocused?: boolean;
-};
+	isHovered?: boolean;
+	isSelected?: boolean;
+	nodeType?: string;
+}
 
-type FlexOptions = {
-	direction?: "row" | "column" | "rowReverse" | "columnReverse";
+interface FlexOptions {
 	align?: "start" | "center" | "end" | "stretch" | "baseline";
-	justify?: "start" | "center" | "end" | "between" | "around" | "evenly";
+	direction?: "row" | "column" | "rowReverse" | "columnReverse";
 	gap?: string;
-};
+	justify?: "start" | "center" | "end" | "between" | "around" | "evenly";
+}
 
-type ResponsiveWidthOptions = {
-	min?: string;
-	max?: string;
+interface ResponsiveWidthOptions {
 	full?: boolean;
-};
+	max?: string;
+	min?: string;
+}
 
 // ========================================================================
 // Base Style Builders

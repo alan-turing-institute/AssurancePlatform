@@ -22,17 +22,17 @@ import {
 import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
-type UserData = {
-	id: number | string;
+interface UserData {
 	email?: string;
-	username?: string;
 	firstName?: string | null;
+	id: number | string;
 	lastName?: string | null;
-};
+	username?: string;
+}
 
-type PersonalInfoFormProps = {
+interface PersonalInfoFormProps {
 	data: UserData | null | undefined;
-};
+}
 
 export function PersonalInfoForm({ data }: PersonalInfoFormProps) {
 	const [loading, setLoading] = useState<boolean>(false);

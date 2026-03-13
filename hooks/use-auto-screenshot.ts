@@ -1,16 +1,16 @@
 import html2canvas from "html2canvas";
 import { useCallback, useEffect, useRef } from "react";
 
-type UseAutoScreenshotOptions = {
-	/** The case ID to save the screenshot for */
-	caseId: string | number;
+interface UseAutoScreenshotOptions {
 	/** Whether the user has edit permission */
 	canEdit: boolean;
-	/** Selector for the element to capture (default: #ReactFlow) */
-	selector?: string;
+	/** The case ID to save the screenshot for */
+	caseId: string | number;
 	/** Delay after last change before capturing (default: 5000ms) */
 	debounceMs?: number;
-};
+	/** Selector for the element to capture (default: #ReactFlow) */
+	selector?: string;
+}
 
 /**
  * Hook for automatically capturing screenshots of assurance cases.

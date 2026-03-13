@@ -19,20 +19,20 @@ export type SSEEventType =
 	| "element:moved"
 	| "permission:changed";
 
-export type SSEEvent = {
-	type: SSEEventType;
+export interface SSEEvent {
 	caseId: string;
 	payload: Record<string, unknown>;
 	timestamp: string;
+	type: SSEEventType;
 	userId?: string;
-};
+}
 
-type SSEConnection = {
-	id: string;
+interface SSEConnection {
 	controller: ReadableStreamDefaultController<Uint8Array>;
-	userId: string;
 	createdAt: Date;
-};
+	id: string;
+	userId: string;
+}
 
 type CaseConnections = Map<string, SSEConnection>;
 

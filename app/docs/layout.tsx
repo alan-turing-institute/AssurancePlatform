@@ -11,9 +11,9 @@ export const metadata = {
 	description: "Trustworthy and Ethical Assurance Platform Documentation",
 };
 
-type DocsLayoutPageProps = {
+interface DocsLayoutPageProps {
 	children: ReactNode;
-};
+}
 
 const navbar = (
 	<Navbar

@@ -31,32 +31,32 @@ import { getNodeTypeConfig } from "../utils/theme-config";
 // Types
 // ========================================================================
 
-type NodeData = {
-	id?: string;
-	name?: string;
-	description?: string;
-	context?: string[];
+interface NodeData {
 	assumption?: string;
+	context?: string[];
+	description?: string;
+	id?: string;
 	justification?: string;
+	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type FormData = {
-	name: string;
-	description: string;
-	context: string;
+interface FormData {
 	assumption: string;
+	context: string;
+	description: string;
 	justification: string;
-};
+	name: string;
+}
 
-type EditNodeModalProps = {
-	open: boolean;
-	nodeType: string;
-	nodeData: NodeData;
+interface EditNodeModalProps {
 	isDarkMode: boolean;
-	onSave: (data: NodeDataUpdate) => void;
+	nodeData: NodeData;
+	nodeType: string;
 	onClose: () => void;
-};
+	onSave: (data: NodeDataUpdate) => void;
+	open: boolean;
+}
 
 // ========================================================================
 // Helper Functions

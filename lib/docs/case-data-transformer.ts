@@ -81,21 +81,21 @@ function buildEdge(
 	};
 }
 
-type TransformOptions = {
-	/** IDs of nodes to animate edges to */
-	guidedPath?: string[];
+interface TransformOptions {
 	/** Edge type to use (default: "smart") */
 	edgeType?: string;
+	/** IDs of nodes to animate edges to */
+	guidedPath?: string[];
 	/** Horizontal spacing between sibling nodes */
 	xSpacing?: number;
 	/** Vertical spacing between parent and children */
 	ySpacing?: number;
-};
+}
 
-type TransformResult = {
-	nodes: Node<ReactFlowNodeData>[];
+interface TransformResult {
 	edges: Edge[];
-};
+	nodes: Node<ReactFlowNodeData>[];
+}
 
 /**
  * Transform CaseExportNested to React Flow nodes and edges.

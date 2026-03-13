@@ -79,20 +79,20 @@ const TEMPLATE_SECTION_DEFAULTS: Record<TemplatePreset, DocSections> = {
 	},
 };
 
-type DocSections = {
-	titlePage: boolean;
-	tableOfContents: boolean;
-	diagram: boolean;
-	executiveSummary: boolean;
+interface DocSections {
 	assuranceCaseStructure: boolean;
 	comments: boolean;
+	diagram: boolean;
+	executiveSummary: boolean;
 	metadata: boolean;
-};
+	tableOfContents: boolean;
+	titlePage: boolean;
+}
 
-type SectionCustomisationProps = {
-	sections: DocSections;
+interface SectionCustomisationProps {
 	onToggle: (key: keyof DocSections) => void;
-};
+	sections: DocSections;
+}
 
 /**
  * Collapsible section customisation component
@@ -135,9 +135,9 @@ function SectionCustomisation({
 	);
 }
 
-type TemplateDescriptionProps = {
+interface TemplateDescriptionProps {
 	template: TemplatePreset;
-};
+}
 
 /**
  * Template description component
@@ -156,17 +156,17 @@ function TemplateDescription({ template }: TemplateDescriptionProps) {
 	);
 }
 
-export type DocumentExportSectionProps = {
+export interface DocumentExportSectionProps {
 	assuranceCase: AssuranceCaseResponse | null;
-	nodes: Node[];
+	className?: string;
 	edges: Edge[];
 	layoutDirection: "TB" | "LR";
-	setNodes: (nodes: Node[]) => void;
+	nodes: Node[];
 	setEdges: (edges: Edge[]) => void;
 	setLayoutDirection: (dir: "TB" | "LR") => void;
+	setNodes: (nodes: Node[]) => void;
 	toast: typeof ToastFn;
-	className?: string;
-};
+}
 
 export function DocumentExportSection({
 	assuranceCase,

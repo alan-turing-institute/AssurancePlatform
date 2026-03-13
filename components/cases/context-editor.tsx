@@ -8,19 +8,19 @@ import { FormLabel } from "@/components/ui/form";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-type ContextEditorProps = {
+interface ContextEditorProps {
 	form: UseFormReturn<{
 		assumption?: string;
 		justification?: string;
 		context?: string[];
 	}>;
 	readOnly: boolean;
-};
+}
 
-type ContextItemWithId = {
+interface ContextItemWithId {
 	id: string;
 	value: string;
-};
+}
 
 /**
  * Editor component for managing context array on elements.

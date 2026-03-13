@@ -46,11 +46,11 @@ function maxPermission(
 	return aIndex >= bIndex ? a : b;
 }
 
-type CasePermissionResult = {
+interface CasePermissionResult {
 	hasAccess: boolean;
-	permission: PermissionLevel | null;
 	isOwner: boolean;
-};
+	permission: PermissionLevel | null;
+}
 
 /**
  * Gets a user's effective permission level on a case using Prisma.
@@ -160,10 +160,10 @@ export function hasTeamRole(
 	return userIndex >= requiredIndex;
 }
 
-type TeamMembershipResult = {
+interface TeamMembershipResult {
 	isMember: boolean;
 	role: TeamRole | null;
-};
+}
 
 /**
  * Gets a user's role in a team.

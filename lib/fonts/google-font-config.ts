@@ -2,14 +2,14 @@
 type FontWeight = 400 | 500 | 600 | 700;
 
 /** Configuration for a single Google Font family */
-export type GoogleFontConfig = {
+export interface GoogleFontConfig {
 	/** Font family name exactly as listed on Google Fonts */
 	family: string;
-	/** Weight values to load */
-	weights: readonly FontWeight[];
 	/** Whether to include italic variants */
 	italic?: boolean;
-};
+	/** Weight values to load */
+	weights: readonly FontWeight[];
+}
 
 /**
  * Registry of font families that need loading from Google Fonts.

@@ -8,33 +8,33 @@ import type {
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-type UseCaseEventsOptions = {
+interface UseCaseEventsOptions {
 	/** Case ID to subscribe to */
 	caseId: string;
 	/** Whether the hook is enabled */
 	enabled?: boolean;
+	/** Maximum number of reconnection attempts */
+	maxReconnectAttempts?: number;
 	/** Event handlers for specific event types */
 	onEvent?: (event: SSEEvent) => void;
 	/** Handler for connection status changes */
 	onStatusChange?: (status: ConnectionStatus) => void;
-	/** Maximum number of reconnection attempts */
-	maxReconnectAttempts?: number;
 	/** Base delay between reconnection attempts (ms) */
 	reconnectDelay?: number;
-};
+}
 
-type UseCaseEventsReturn = {
-	/** Current connection status */
-	status: ConnectionStatus;
+interface UseCaseEventsReturn {
+	/** Manually disconnect */
+	disconnect: () => void;
 	/** Whether currently connected */
 	isConnected: boolean;
 	/** Last received event */
 	lastEvent: SSEEvent | null;
 	/** Manually reconnect */
 	reconnect: () => void;
-	/** Manually disconnect */
-	disconnect: () => void;
-};
+	/** Current connection status */
+	status: ConnectionStatus;
+}
 
 const DEFAULT_MAX_RECONNECT_ATTEMPTS = 5;
 const DEFAULT_RECONNECT_DELAY = 1000;

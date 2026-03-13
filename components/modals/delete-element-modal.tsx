@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Modal } from "@/components/ui/modal";
 
-type DeleteElementModalProps = {
+interface DeleteElementModalProps {
+	childCount?: number;
+	hasChildren: boolean;
 	isOpen: boolean;
+	loading: boolean;
 	onClose: () => void;
 	onDelete: () => Promise<void>;
-	loading: boolean;
-	hasChildren: boolean;
-	childCount?: number;
 	onSkipPreferenceChange?: (skip: boolean) => void;
-};
+}
 
 export const DeleteElementModal: React.FC<DeleteElementModalProps> = ({
 	isOpen,

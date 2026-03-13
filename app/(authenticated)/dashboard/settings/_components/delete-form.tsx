@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/toast";
 
 // Minimal user data needed for this form
-type UserData = {
+interface UserData {
 	id: number | string;
-};
+}
 
-type DeleteFormProps = {
+interface DeleteFormProps {
 	user: UserData | null | undefined;
-};
+}
 
 export const DeleteForm = ({ user }: DeleteFormProps) => {
 	const [deleteOpen, setDeleteOpen] = useState(false);

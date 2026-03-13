@@ -27,16 +27,16 @@ type NodeWithData = Node & {
 	};
 };
 
-type NodeCommentProps = {
-	node: NodeWithData;
+interface NodeCommentProps {
 	handleClose: () => void;
 	loadingState: {
 		loading: boolean;
 		setLoading: Dispatch<SetStateAction<boolean>>;
 	};
-	setAction: Dispatch<SetStateAction<string | null>>;
+	node: NodeWithData;
 	readOnly: boolean;
-};
+	setAction: Dispatch<SetStateAction<string | null>>;
+}
 
 const NodeComment = ({
 	node,

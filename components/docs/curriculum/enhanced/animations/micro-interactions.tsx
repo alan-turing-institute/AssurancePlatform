@@ -49,20 +49,20 @@ type AnimatedFocusRingProps = {
 	className?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
 
-type FeedbackToastProps = {
-	type?: ToastType;
-	message?: string;
-	isVisible?: boolean;
-	onDismiss?: () => void;
-	duration?: number;
+interface FeedbackToastProps {
 	className?: string;
-};
+	duration?: number;
+	isVisible?: boolean;
+	message?: string;
+	onDismiss?: () => void;
+	type?: ToastType;
+}
 
-type SuccessCheckmarkProps = {
+interface SuccessCheckmarkProps {
+	className?: string;
 	isVisible?: boolean;
 	size?: number;
-	className?: string;
-};
+}
 
 type AnimatedCounterProps = {
 	value?: number;
@@ -93,12 +93,12 @@ type WiggleProps = {
 	className?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
 
-type AnimatedTooltipProps = {
+interface AnimatedTooltipProps {
 	children: React.ReactNode;
+	className?: string;
 	content: string;
 	position?: TooltipPosition;
-	className?: string;
-};
+}
 
 type BadgePulseProps = {
 	count: string | number;
@@ -106,17 +106,17 @@ type BadgePulseProps = {
 	className?: string;
 } & React.HTMLAttributes<HTMLSpanElement>;
 
-type Ripple = {
+interface Ripple {
+	id: number;
 	x: number;
 	y: number;
-	id: number;
-};
+}
 
-type ToastConfig = {
-	icon: LucideIcon;
+interface ToastConfig {
 	bgColor: string;
+	icon: LucideIcon;
 	iconColor: string;
-};
+}
 
 // ========================================================================
 // Interactive Button Component

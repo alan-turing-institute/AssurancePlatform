@@ -6,12 +6,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
-type LinkedCaseModalProps = {
+interface LinkedCaseModalProps {
 	isOpen: boolean;
-	onClose: () => void;
 	linkedCaseStudies: { id: number; title: string }[];
 	loading: boolean;
-};
+	onClose: () => void;
+}
 
 export const LinkedCaseModal: React.FC<LinkedCaseModalProps> = ({
 	isOpen,

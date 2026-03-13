@@ -18,41 +18,41 @@ export type UpdateTeamInput = UpdateTeamSchemaOutput;
 // OUTPUT INTERFACES
 // ============================================
 
-export type TeamMemberResponse = {
+export interface TeamMemberResponse {
 	id: string;
-	user_id: string;
-	role: TeamRole;
 	joined_at: string;
+	role: TeamRole;
 	user: {
 		id: string;
 		username: string;
 		email: string;
 		avatar_url: string | null;
 	};
-};
+	user_id: string;
+}
 
-export type TeamResponse = {
-	id: string;
-	name: string;
-	slug: string;
-	description: string | null;
+export interface TeamResponse {
 	created_at: string;
-	updated_at: string;
 	created_by_id: string;
-	member_count: number;
-	my_role: TeamRole | null;
-	members?: TeamMemberResponse[];
-};
-
-export type TeamListResponse = {
+	description: string | null;
 	id: string;
+	member_count: number;
+	members?: TeamMemberResponse[];
+	my_role: TeamRole | null;
 	name: string;
 	slug: string;
-	description: string | null;
+	updated_at: string;
+}
+
+export interface TeamListResponse {
 	created_at: string;
+	description: string | null;
+	id: string;
 	member_count: number;
 	my_role: TeamRole;
-};
+	name: string;
+	slug: string;
+}
 
 // ============================================
 // HELPER FUNCTIONS

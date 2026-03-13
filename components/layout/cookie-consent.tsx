@@ -6,11 +6,11 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type CookieConsentProps = {
+interface CookieConsentProps {
 	demo?: boolean;
 	onAcceptCallback?: () => void;
 	onDeclineCallback?: () => void;
-};
+}
 
 export default function CookieConsent({
 	demo = false,

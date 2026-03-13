@@ -7,70 +7,70 @@ import type { ServiceResult } from "@/types/service";
 // INPUT INTERFACES
 // ============================================
 
-export type ShareByEmailInput = {
+export interface ShareByEmailInput {
 	email: string;
 	permission: PermissionLevel;
-};
+}
 
-export type ShareWithTeamInput = {
+export interface ShareWithTeamInput {
+	permission: PermissionLevel;
 	teamId: string;
-	permission: PermissionLevel;
-};
+}
 
-export type UpdatePermissionInput = {
+export interface UpdatePermissionInput {
 	permission: PermissionLevel;
-};
+}
 
 // ============================================
 // OUTPUT INTERFACES
 // ============================================
 
-export type UserPermissionResponse = {
-	id: string;
+export interface UserPermissionResponse {
 	case_id: string;
-	permission: PermissionLevel;
 	granted_at: string;
+	granted_by: {
+		id: string;
+		username: string;
+	};
+	id: string;
+	permission: PermissionLevel;
 	user: {
 		id: string;
 		username: string;
 		email: string;
 		avatar_url: string | null;
 	};
-	granted_by: {
-		id: string;
-		username: string;
-	};
-};
+}
 
-export type TeamPermissionResponse = {
-	id: string;
+export interface TeamPermissionResponse {
 	case_id: string;
-	permission: PermissionLevel;
 	granted_at: string;
+	id: string;
+	permission: PermissionLevel;
 	team: {
 		id: string;
 		name: string;
 		slug: string;
 	};
-};
+}
 
-export type CasePermissionsListResponse = {
-	user_permissions: UserPermissionResponse[];
-	team_permissions: TeamPermissionResponse[];
+export interface CasePermissionsListResponse {
 	is_owner: boolean;
 	owner: {
 		id: string;
 		username: string;
 		email: string;
 	};
-};
+	team_permissions: TeamPermissionResponse[];
+	user_permissions: UserPermissionResponse[];
+}
 
-export type ShareByEmailResult = {
-	permission?: UserPermissionResponse;
+export interface ShareByEmailResult {
+	already_shared?: boolean;
 	invite_created?: boolean;
 	invite_token?: string;
-	already_shared?: boolean;
-};
+	permission?: UserPermissionResponse;
+}
 
 // ============================================
 // HELPER FUNCTIONS

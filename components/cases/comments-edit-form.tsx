@@ -27,16 +27,16 @@ import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Textarea } from "../ui/textarea";
 
-type CommentsEditFormProps = {
+interface CommentsEditFormProps {
+	comment: CommentResponse;
 	node: {
 		type: string;
 		data: {
 			id: number | string;
 		};
 	};
-	comment: CommentResponse;
 	setEdit: Dispatch<SetStateAction<boolean>>;
-};
+}
 
 const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 	const { nodeComments, setNodeComments } = useStore();

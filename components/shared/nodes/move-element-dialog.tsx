@@ -22,12 +22,12 @@ import { toastError, toastSuccess } from "@/lib/toast";
 import type { DiagramNodeType } from "./node-config";
 import { getNodeIcon } from "./node-config";
 
-export type MoveElementDialogProps = {
+export interface MoveElementDialogProps {
 	node: Node;
 	nodeType: DiagramNodeType;
-	open: boolean;
 	onOpenChange: (open: boolean) => void;
-};
+	open: boolean;
+}
 
 /** Map canonical parent types from the compatibility module to ReactFlow node types */
 const DISPLAY_TO_REACTFLOW: Record<string, string> = {

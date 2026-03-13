@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useCreateCaseModal, useImportModal } from "@/hooks/modal-hooks";
 
-type NoCasesFoundProps = {
+interface NoCasesFoundProps {
 	message: string;
 	shared?: boolean;
-};
+}
 
 export default function NoCasesFound({
 	message,
@@ -69,7 +69,7 @@ export default function NoCasesFound({
 							type="button"
 							variant="default"
 						>
-							<Undo2 aria-hidden="true" className="-ml-0.5 mr-1.5 h-5 w-5" />
+							<Undo2 aria-hidden="true" className="mr-1.5 -ml-0.5 h-5 w-5" />
 							Back to my cases
 						</Button>
 					) : (
@@ -81,7 +81,7 @@ export default function NoCasesFound({
 							>
 								<PlusIcon
 									aria-hidden="true"
-									className="-ml-0.5 mr-1.5 h-5 w-5"
+									className="mr-1.5 -ml-0.5 h-5 w-5"
 								/>
 								New Case
 							</Button>
@@ -92,7 +92,7 @@ export default function NoCasesFound({
 							>
 								<ArrowUpTrayIcon
 									aria-hidden="true"
-									className="-ml-0.5 mr-1.5 h-5 w-5"
+									className="mr-1.5 -ml-0.5 h-5 w-5"
 								/>
 								Import File
 							</Button>

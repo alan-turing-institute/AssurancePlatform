@@ -24,55 +24,55 @@ export const resetIdCounter = () => {
 };
 
 // Type definitions for our factory structures
-export type User = {
-	id: number;
-	username: string;
-	email: string;
-	first_name: string;
-	last_name: string;
+export interface User {
 	auth_provider: string;
 	auth_username: string;
-};
-
-export type Team = {
+	email: string;
+	first_name: string;
 	id: number;
-	name: string;
+	last_name: string;
+	username: string;
+}
+
+export interface Team {
+	created_date: string;
 	description: string;
-	owner: number;
+	id: number;
 	members: number[];
-	created_date: string;
-};
+	name: string;
+	owner: number;
+}
 
-export type TeamMember = {
+export interface TeamMember {
 	id: number;
-	user: number;
-	team: number;
-	role: "owner" | "admin" | "member";
 	joined_date: string;
-};
+	role: "owner" | "admin" | "member";
+	team: number;
+	user: number;
+}
 
-export type CasePermission = {
-	id: number;
+export interface CasePermission {
 	case: number;
-	user?: number;
-	team?: number;
-	permission_type: "view" | "edit" | "review" | "manage";
 	created_date: string;
-};
+	id: number;
+	permission_type: "view" | "edit" | "review" | "manage";
+	team?: number;
+	user?: number;
+}
 
-export type CaseTemplate = {
+export interface CaseTemplate {
+	category: string;
+	description: string;
 	id: number;
 	name: string;
-	description: string;
 	structure: {
 		goals: Partial<GoalResponse>[];
 		strategies: Partial<StrategyResponse>[];
 		propertyClaims: Partial<PropertyClaimResponse>[];
 		evidence: Partial<EvidenceResponse>[];
 	};
-	category: string;
 	tags: string[];
-};
+}
 
 // Advanced User Factory
 export const UserFactory = {

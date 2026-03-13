@@ -34,7 +34,7 @@ repos:
     hooks:
       - id: ultracite-lint
         name: ultracite lint (staged files)
-        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite lint'
+        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite check'
         language: system
         pass_filenames: false
         files: '\.(jsx?|tsx?|json)$'
@@ -42,7 +42,7 @@ repos:
 
       - id: ultracite-format
         name: ultracite format (staged files, safe fixes only)
-        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite format || true'
+        entry: bash -c 'FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E "\.(jsx?|tsx?|json)$" || true); [ -z "$FILES" ] && exit 0; echo "$FILES" | xargs npx ultracite fix || true'
         language: system
         pass_filenames: false
         files: '\.(jsx?|tsx?|json)$'

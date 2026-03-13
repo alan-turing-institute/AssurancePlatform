@@ -14,53 +14,53 @@ import { Position } from "reactflow";
 // Types
 // ========================================================================
 
-type NodeBounds = {
-	x: number;
-	y: number;
-	width: number;
+interface NodeBounds {
 	height: number;
-};
-
-type HandlePosition = {
+	width: number;
 	x: number;
 	y: number;
-};
+}
 
-type ValidationResult = {
-	valid: boolean;
+interface HandlePosition {
+	x: number;
+	y: number;
+}
+
+interface ValidationResult {
 	reason: string;
-};
+	valid: boolean;
+}
 
-type ValidationRules = {
+interface ValidationRules {
+	allowedConnections?: Record<string, string[]>;
 	checkDuplicates?: boolean;
 	maxConnections?: number;
-	allowedConnections?: Record<string, string[]>;
-};
+}
 
-type NodeWithEdges = {
-	id: string;
-	type?: string;
+interface NodeWithEdges {
+	connectionCount?: number;
 	data?: {
 		name?: string;
 		type?: string;
 	};
 	edges?: Edge[];
-	connectionCount?: number;
-};
+	id: string;
+	type?: string;
+}
 
-type HandleColors = {
+interface HandleColors {
 	bg: string;
 	border: string;
 	icon: string;
 	ring: string;
-};
+}
 
-type HandleSizeClasses = {
-	outer: string;
-	inner: string;
+interface HandleSizeClasses {
 	icon: string;
+	inner: string;
 	offset: string;
-};
+	outer: string;
+}
 
 type DebounceFunction = (...args: unknown[]) => void;
 

@@ -41,36 +41,36 @@ import {
 	buildSeparatorClasses,
 } from "./node-styles";
 
-export type BaseNodeProps = {
-	/** The type of node (goal, strategy, property, evidence) */
-	nodeType: DiagramNodeType;
-	/** The display name/ID of the node (e.g., "G1", "S1", "P1") */
-	name: string;
-	/** Short description of the node */
-	description?: string;
-	/** Whether the node is currently selected */
-	selected?: boolean;
-	/** Context strings array */
-	context?: string[];
+export interface BaseNodeProps {
 	/** Assumption text */
 	assumption?: string;
-	/** Justification text */
-	justification?: string;
-	/** Whether to start in expanded state */
-	initialExpanded?: boolean;
-	/** Actions to display in the top-right (e.g., comment indicators) */
-	topRightActions?: ReactNode;
 	/** Actions to display in the bottom-left (e.g., toggle children button) */
 	bottomLeftActions?: ReactNode;
 	/** Additional content to render in expanded state */
 	children?: ReactNode;
 	/** Additional class names */
 	className?: string;
+	/** Context strings array */
+	context?: string[];
 	/** Optional data-tour attribute for onboarding tours */
 	dataTour?: string;
+	/** Short description of the node */
+	description?: string;
 	/** Optional data-tour attribute for the expand/collapse chevron button */
 	expandTour?: string;
-};
+	/** Whether to start in expanded state */
+	initialExpanded?: boolean;
+	/** Justification text */
+	justification?: string;
+	/** The display name/ID of the node (e.g., "G1", "S1", "P1") */
+	name: string;
+	/** The type of node (goal, strategy, property, evidence) */
+	nodeType: DiagramNodeType;
+	/** Whether the node is currently selected */
+	selected?: boolean;
+	/** Actions to display in the top-right (e.g., comment indicators) */
+	topRightActions?: ReactNode;
+}
 
 /**
  * Truncate text to a maximum number of lines worth of characters

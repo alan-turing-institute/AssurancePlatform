@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
-type AlertModalProps = {
-	isOpen: boolean;
-	onClose: () => void;
-	onConfirm: () => void;
-	loading: boolean;
-	message?: string;
-	confirmButtonText: string;
+interface AlertModalProps {
 	cancelButtonText?: string | null;
 	children?: React.ReactNode;
-};
+	confirmButtonText: string;
+	isOpen: boolean;
+	loading: boolean;
+	message?: string;
+	onClose: () => void;
+	onConfirm: () => void;
+}
 
 export const AlertModal: React.FC<AlertModalProps> = ({
 	isOpen,

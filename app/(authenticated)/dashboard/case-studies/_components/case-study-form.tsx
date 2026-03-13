@@ -24,10 +24,10 @@ import { useAuthorManagement } from "./_form/use-author-management";
 import { useCaseStudyImage } from "./_form/use-case-study-image";
 import RelatedAssuranceCaseList from "./related-assurance-case-list";
 
-type CaseStudyFormProps = {
+interface CaseStudyFormProps {
 	caseStudy?: CaseStudyResponse;
 	className?: string;
-};
+}
 
 const CaseStudyForm = ({ caseStudy }: CaseStudyFormProps) => {
 	const router = useRouter();

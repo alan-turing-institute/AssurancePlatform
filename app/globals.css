@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @utility container {
-	margin-inline: auto;
 	padding-inline: 2rem;
+	margin-inline: auto;
 	@media (width >= --theme(--breakpoint-sm)) {
 		max-width: none;
 	}
@@ -316,17 +316,17 @@
    ======================================================================== */
 
 .ProseMirror {
-	outline: none;
 	color: var(--foreground);
+	outline: none;
 	background-color: var(--background);
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
-	color: var(--muted-foreground);
-	content: attr(data-placeholder);
 	float: left;
 	height: 0;
+	color: var(--muted-foreground);
 	pointer-events: none;
+	content: attr(data-placeholder);
 }
 
 .ProseMirror ul,
@@ -340,10 +340,10 @@
 .ProseMirror h4,
 .ProseMirror h5,
 .ProseMirror h6 {
-	line-height: 1.1;
 	margin-top: 2.5rem;
-	text-wrap: pretty;
+	line-height: 1.1;
 	color: var(--foreground);
+	text-wrap: pretty;
 }
 
 .ProseMirror h1,
@@ -368,16 +368,16 @@
 }
 
 .ProseMirror blockquote {
-	border-left: 3px solid var(--border);
-	margin: 1.5rem 0;
 	padding-left: 1rem;
-	color: var(--muted-foreground);
+	margin: 1.5rem 0;
 	font-style: italic;
+	color: var(--muted-foreground);
+	border-left: 3px solid var(--border);
 }
 
 .ProseMirror strong {
-	color: var(--foreground);
 	font-weight: 600;
+	color: var(--foreground);
 }
 
 .ProseMirror em {
@@ -385,37 +385,37 @@
 }
 
 .ProseMirror code {
-	background-color: var(--muted);
-	color: var(--foreground);
 	padding: 0.2rem 0.4rem;
-	border-radius: 0.25rem;
 	font-size: 0.875rem;
+	color: var(--foreground);
+	background-color: var(--muted);
+	border-radius: 0.25rem;
 }
 
 .ProseMirror pre {
-	background-color: var(--muted);
-	color: var(--foreground);
 	padding: 1rem;
-	border-radius: 0.5rem;
 	overflow-x: auto;
+	color: var(--foreground);
+	background-color: var(--muted);
+	border-radius: 0.5rem;
 }
 
 .ProseMirror pre code {
-	background: none;
 	padding: 0;
+	background: none;
 }
 
 /* Ensure lists have proper spacing and colors */
 .ProseMirror ul li,
 .ProseMirror ol li {
-	color: var(--foreground);
 	margin: 0.25rem 0;
+	color: var(--foreground);
 }
 
 /* Selection styles */
 .ProseMirror ::selection {
-	background-color: var(--accent);
 	color: var(--accent-foreground);
+	background-color: var(--accent);
 }
 
 /* ========================================================================
@@ -539,8 +539,8 @@
 }
 
 .react-flow__controls-button {
-	background: transparent;
 	color: var(--rf-controls-text);
+	background: transparent;
 	border: none;
 	border-bottom: 1px solid var(--rf-controls-border);
 	transition:
@@ -549,8 +549,8 @@
 }
 
 .react-flow__controls-button:hover {
-	background: var(--rf-controls-bg-hover);
 	color: var(--rf-controls-text-hover);
+	background: var(--rf-controls-bg-hover);
 }
 
 /* ========================================================================
@@ -577,8 +577,8 @@
 @media (prefers-reduced-motion: reduce) {
 	.spring-medium,
 	.react-flow__edge.animated .react-flow__edge-path {
-		animation: none;
 		transition: none;
+		animation: none;
 	}
 }
 

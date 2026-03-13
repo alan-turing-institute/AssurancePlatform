@@ -21,12 +21,12 @@ import { toastError, toastSuccess } from "@/lib/toast";
 import useStore from "@/store/store";
 import type { DiagramNodeType } from "./node-config";
 
-export type AttachElementDialogProps = {
+export interface AttachElementDialogProps {
 	node: Node;
 	nodeType: DiagramNodeType;
-	open: boolean;
 	onOpenChange: (open: boolean) => void;
-};
+	open: boolean;
+}
 
 /** Map display types to icons */
 const TYPE_ICONS: Record<string, typeof Database> = {

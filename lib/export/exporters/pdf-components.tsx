@@ -804,9 +804,9 @@ function PDFTitlePage({
 /**
  * Props for the PDF document component.
  */
-export type PDFDocumentProps = {
+export interface PDFDocumentProps {
 	document: RenderedDocument;
-};
+}
 
 /**
  * Render a diagram section on its own landscape page.
@@ -924,7 +924,7 @@ export function PDFDocumentComponent({ document }: PDFDocumentProps) {
 				return chunks.map((chunk, chunkIndex) => (
 					<PDFContentPage
 						branding={document.branding}
-						key={`section-${section.type}-${chunkIndex}`}
+						key={`section-${section.type}-chunk-${chunk[0] ? getBlockKey(chunk[0], 0) : chunkIndex}`}
 						styles={styles}
 					>
 						{section.title && (

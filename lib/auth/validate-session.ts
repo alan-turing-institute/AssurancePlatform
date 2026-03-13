@@ -4,11 +4,11 @@ import { authOptions } from "@/lib/auth/config";
 /**
  * Result of session validation.
  */
-export type ValidatedSession = {
+export interface ValidatedSession {
+	email: string | null;
 	userId: string;
 	username: string | null;
-	email: string | null;
-};
+}
 
 /**
  * Validates the current user session.

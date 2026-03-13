@@ -71,33 +71,33 @@ const iconMap: Record<string, IconType> = {
 	AlertCircle,
 };
 
-type NodeMetadata = {
-	id: string;
-	name: string;
+interface NodeMetadata {
+	color: string;
 	description: string;
 	icon: string;
-	color: string;
+	id: string;
+	name: string;
 	shortcut?: string;
-};
+}
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
-type ConfirmData = {
-	nodeType: string;
-	name: string;
+interface ConfirmData {
 	description: string;
-	position: Position | null;
+	name: string;
+	nodeType: string;
 	parentNode: Node | null;
-};
+	position: Position | null;
+}
 
-type NodeTypeCardProps = {
-	metadata: NodeMetadata;
+interface NodeTypeCardProps {
 	isSelected: boolean;
+	metadata: NodeMetadata;
 	onClick: () => void;
-};
+}
 
 /**
  * Node Type Card for quick selection
@@ -151,13 +151,13 @@ const NodeTypeCard = ({ metadata, isSelected, onClick }: NodeTypeCardProps) => {
 	);
 };
 
-type CreateNodeDialogProps = {
-	open?: boolean;
+interface CreateNodeDialogProps {
 	onClose: () => void;
 	onConfirm: (data: ConfirmData) => void;
+	open?: boolean;
 	parentNode?: Node | null;
 	position?: Position | null;
-};
+}
 
 /**
  * CreateNodeDialog Component

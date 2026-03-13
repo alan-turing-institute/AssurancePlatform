@@ -16,10 +16,10 @@ import { formatShortDate } from "@/lib/date";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 
-type CaseStudiesProps = {
+interface CaseStudiesProps {
 	caseStudies: CaseStudyResponse[];
 	className?: string;
-};
+}
 
 function CaseStudies({ caseStudies }: CaseStudiesProps) {
 	const [searchKeyword, setSearchKeyword] = useState("");

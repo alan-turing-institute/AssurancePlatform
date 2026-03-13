@@ -50,57 +50,57 @@ type ApproachType =
 	| "evidence"
 	| "assumption";
 
-type StrategyTypeConfig = {
-	label: string;
-	description: string;
+interface StrategyTypeConfig {
 	className: string;
-	icon: typeof Split | typeof Network;
-};
-
-type ApproachConfig = {
-	label: string;
-	icon: string;
 	description: string;
-};
+	icon: typeof Split | typeof Network;
+	label: string;
+}
 
-type EvidenceItem = {
+interface ApproachConfig {
+	description: string;
+	icon: string;
+	label: string;
+}
+
+interface EvidenceItem {
 	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type StrategyNodeData = {
-	id?: string;
-	name?: string;
+interface StrategyNodeData {
+	approach?: ApproachType;
 	description?: string;
-	strategyType?: StrategyType;
-	approach?: ApproachType;
-	pathCount?: number;
-	supportingEvidence?: (EvidenceItem | string)[];
-	rationale?: string;
-	metadata?: Record<string, unknown>;
-	[key: string]: unknown;
-};
-
-type StrategyTypeBadgeProps = {
-	strategyType?: StrategyType;
-};
-
-type ApproachIndicatorProps = {
-	approach?: ApproachType;
-};
-
-type ConnectionPathsProps = {
-	pathCount?: number;
-};
-
-type StrategyNodeProps = {
 	id?: string;
-	data?: StrategyNodeData;
-	selected?: boolean;
-	isConnectable?: boolean;
-	className?: string;
+	metadata?: Record<string, unknown>;
+	name?: string;
+	pathCount?: number;
+	rationale?: string;
+	strategyType?: StrategyType;
+	supportingEvidence?: (EvidenceItem | string)[];
 	[key: string]: unknown;
-};
+}
+
+interface StrategyTypeBadgeProps {
+	strategyType?: StrategyType;
+}
+
+interface ApproachIndicatorProps {
+	approach?: ApproachType;
+}
+
+interface ConnectionPathsProps {
+	pathCount?: number;
+}
+
+interface StrategyNodeProps {
+	className?: string;
+	data?: StrategyNodeData;
+	id?: string;
+	isConnectable?: boolean;
+	selected?: boolean;
+	[key: string]: unknown;
+}
 
 // ========================================================================
 // Sub-Components

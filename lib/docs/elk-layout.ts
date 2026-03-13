@@ -47,14 +47,14 @@ const DIRECTION_MAP: Record<LayoutDirection, ElkDirection> = {
 	BT: "UP",
 };
 
-type LayoutOptions = {
+interface LayoutOptions {
 	direction?: LayoutDirection;
-};
+}
 
-type LayoutedElements<N extends Node = Node, E extends Edge = Edge> = {
-	nodes: N[];
+interface LayoutedElements<N extends Node = Node, E extends Edge = Edge> {
 	edges: E[];
-};
+	nodes: N[];
+}
 
 /**
  * Generates a layout for the given nodes and edges using ELK's layered algorithm.

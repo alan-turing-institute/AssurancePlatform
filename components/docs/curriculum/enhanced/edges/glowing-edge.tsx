@@ -24,24 +24,23 @@ import type { EdgeProps } from "reactflow";
 import { EdgeLabelRenderer, getBezierPath } from "reactflow";
 import { getStateColor } from "./edge-utils";
 
-type GlowingEdgeData = {
-	state?: string;
+interface GlowingEdgeData {
 	color?: string;
-	strokeWidth?: number;
-	glowIntensity?: number;
-	pulse?: boolean;
-	neon?: boolean;
 	flowIntensity?: number;
+	glowIntensity?: number;
 	label?: string;
+	neon?: boolean;
+	pulse?: boolean;
 	showLabel?: boolean;
-};
+	state?: string;
+	strokeWidth?: number;
+}
 
 type GlowingEdgeProps = EdgeProps<GlowingEdgeData>;
 
 /**
  * GlowingEdge Component
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex edge rendering with multiple visual effects
 function GlowingEdge({
 	id,
 	sourceX,

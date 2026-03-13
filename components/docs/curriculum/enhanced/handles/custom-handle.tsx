@@ -28,15 +28,15 @@ import {
 // Types
 // ========================================================================
 
-type ValidationState = {
-	valid: boolean;
+interface ValidationState {
 	message?: string;
-};
+	valid: boolean;
+}
 
-type FlowPosition = {
+interface FlowPosition {
 	x: number;
 	y: number;
-};
+}
 
 type CustomHandleProps = Omit<HandleProps, "id"> & {
 	type: "source" | "target";
@@ -247,9 +247,9 @@ const handleDecoratorVariants = {
 // Sub-Components (extracted to reduce main component complexity)
 // ========================================================================
 
-type ConnectionBadgeProps = {
+interface ConnectionBadgeProps {
 	count: number;
-};
+}
 
 const ConnectionBadge = ({ count }: ConnectionBadgeProps) => (
 	<motion.div
@@ -272,14 +272,14 @@ const ConnectionBadge = ({ count }: ConnectionBadgeProps) => (
 	</motion.div>
 );
 
-type LimitIndicatorProps = {
+interface LimitIndicatorProps {
 	percentage: number;
-};
+}
 
 const LimitIndicator = ({ percentage }: LimitIndicatorProps) => (
 	<div
 		className={cn(
-			"-bottom-1 -translate-x-1/2 absolute left-1/2",
+			"absolute -bottom-1 left-1/2 -translate-x-1/2",
 			"h-1 w-full",
 			"overflow-hidden rounded-full bg-gray-200"
 		)}
@@ -293,9 +293,9 @@ const LimitIndicator = ({ percentage }: LimitIndicatorProps) => (
 	</div>
 );
 
-type PulseRingProps = {
+interface PulseRingProps {
 	isValid: boolean | undefined;
-};
+}
 
 const PulseRing = ({ isValid }: PulseRingProps) => (
 	<motion.div
@@ -350,10 +350,10 @@ const getDisabledClass = (
 	return "";
 };
 
-type HandleTooltipProps = {
+interface HandleTooltipProps {
 	position: Position;
 	text: string;
-};
+}
 
 const HandleTooltip = ({ position, text }: HandleTooltipProps) => (
 	<motion.div
@@ -372,7 +372,7 @@ const HandleTooltip = ({ position, text }: HandleTooltipProps) => (
 			position === Position.Bottom && "bottom-full mb-2",
 			position === Position.Left && "left-full ml-2",
 			position === Position.Right && "right-full mr-2",
-			"-translate-x-1/2 left-1/2"
+			"left-1/2 -translate-x-1/2"
 		)}
 		exit={{ opacity: 0, y: -5 }}
 		initial={{ opacity: 0, y: -5 }}
@@ -381,11 +381,11 @@ const HandleTooltip = ({ position, text }: HandleTooltipProps) => (
 		{text}
 		<div
 			className={cn(
-				"-translate-x-1/2 absolute left-1/2",
-				position === Position.Top && "-mt-1 top-0",
-				position === Position.Bottom && "-mb-1 bottom-0 rotate-180",
-				position === Position.Left && "-ml-1 -rotate-90 left-0",
-				position === Position.Right && "-mr-1 right-0 rotate-90"
+				"absolute left-1/2 -translate-x-1/2",
+				position === Position.Top && "top-0 -mt-1",
+				position === Position.Bottom && "bottom-0 -mb-1 rotate-180",
+				position === Position.Left && "left-0 -ml-1 -rotate-90",
+				position === Position.Right && "right-0 -mr-1 rotate-90"
 			)}
 		>
 			<div className="border-4 border-transparent border-t-gray-900" />

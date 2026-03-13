@@ -22,17 +22,17 @@ import {
 	SelectValue,
 } from "../../ui/select";
 
-export type ImageExportSectionProps = {
+export interface ImageExportSectionProps {
 	assuranceCase: AssuranceCaseResponse | null;
-	nodes: Node[];
+	className?: string;
 	edges: Edge[];
 	layoutDirection: "TB" | "LR";
-	setNodes: (nodes: Node[]) => void;
+	nodes: Node[];
 	setEdges: (edges: Edge[]) => void;
 	setLayoutDirection: (dir: "TB" | "LR") => void;
+	setNodes: (nodes: Node[]) => void;
 	toast: typeof ToastFn;
-	className?: string;
-};
+}
 
 export function ImageExportSection({
 	assuranceCase,

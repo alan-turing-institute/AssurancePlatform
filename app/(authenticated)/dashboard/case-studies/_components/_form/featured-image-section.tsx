@@ -5,16 +5,16 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
 import type { CaseStudyFormValues } from "./form-schema";
 
-export type FeaturedImageSectionProps = {
+export interface FeaturedImageSectionProps {
+	caseStudyId: number | undefined;
+	className?: string;
+	deleteCaseStudyFeatureImage: (caseStudyId: number) => Promise<void>;
+	featuredImage: string;
 	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
 	previewImage: string;
-	setPreviewImage: React.Dispatch<React.SetStateAction<string>>;
-	featuredImage: string;
 	setFeaturedImage: React.Dispatch<React.SetStateAction<string>>;
-	caseStudyId: number | undefined;
-	deleteCaseStudyFeatureImage: (caseStudyId: number) => Promise<void>;
-	className?: string;
-};
+	setPreviewImage: React.Dispatch<React.SetStateAction<string>>;
+}
 
 export function FeaturedImageSection({
 	form,

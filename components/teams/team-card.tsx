@@ -10,7 +10,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 
-type TeamCardProps = {
+interface TeamCardProps {
 	team: {
 		id: string;
 		name: string;
@@ -21,7 +21,7 @@ type TeamCardProps = {
 		};
 		role?: string;
 	};
-};
+}
 
 export function TeamCard({ team }: TeamCardProps) {
 	const memberCount = team._count?.members ?? 0;

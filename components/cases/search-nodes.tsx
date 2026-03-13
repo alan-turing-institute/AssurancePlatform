@@ -16,10 +16,10 @@ import { Separator } from "@/components/ui/separator";
 import ActionTooltip from "../ui/action-tooltip";
 import { Button } from "../ui/button";
 
-type SearchNodesProps = {
-	nodes: Node[];
+interface SearchNodesProps {
 	focusNode: (value: string) => void;
-};
+	nodes: Node[];
+}
 const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 	const [value, setValue] = useState("");
 	const [searchOpen, setSearchOpen] = useState(false);

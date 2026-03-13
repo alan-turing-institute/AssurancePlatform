@@ -66,11 +66,11 @@ const ALL_VARIABLES: ThemeVariable[] = [
 	"--spacing",
 ];
 
-type ThemePresetContextValue = {
+interface ThemePresetContextValue {
+	availablePresets: ThemePreset[];
 	preset: ThemePreset;
 	setPreset: (id: string) => void;
-	availablePresets: ThemePreset[];
-};
+}
 
 const ThemePresetContext = createContext<ThemePresetContextValue | null>(null);
 

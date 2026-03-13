@@ -45,29 +45,29 @@ import { QuickEditPopover } from "./quick-edit-popover";
 // Types
 // ========================================================================
 
-type NodeData = {
-	id?: string;
-	name?: string;
-	description?: string;
-	context?: string[];
+interface NodeData {
 	assumption?: string;
+	context?: string[];
+	description?: string;
+	id?: string;
 	justification?: string;
+	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type NodeActionToolbarProps = {
-	nodeType: string;
-	nodeData: NodeData;
-	visible: boolean;
-	isDarkMode: boolean;
-	isRootNode: boolean;
+interface NodeActionToolbarProps {
 	hasChildren: boolean;
 	hasHiddenChildren: boolean;
-	onDescriptionChange: (description: string) => void;
+	isDarkMode: boolean;
+	isRootNode: boolean;
+	nodeData: NodeData;
+	nodeType: string;
 	onDataChange: (data: NodeDataUpdate) => void;
 	onDelete: () => void;
+	onDescriptionChange: (description: string) => void;
 	onToggleChildren: () => void;
-};
+	visible: boolean;
+}
 
 // ========================================================================
 // Animation Variants
@@ -136,7 +136,7 @@ export const NodeActionToolbar = ({
 					<motion.div
 						animate="visible"
 						className={cn(
-							"-top-12 -translate-x-1/2 absolute left-1/2",
+							"absolute -top-12 left-1/2 -translate-x-1/2",
 							"flex items-center gap-1",
 							"rounded-lg border p-1",
 							"shadow-lg",

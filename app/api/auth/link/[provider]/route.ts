@@ -5,9 +5,9 @@ import { validateSession } from "@/lib/auth/validate-session";
 
 const LINK_COOKIE_MAX_AGE = 60 * 5; // 5 minutes - enough time for OAuth flow
 
-type RouteParams = {
+interface RouteParams {
 	params: Promise<{ provider: string }>;
-};
+}
 
 /**
  * GET /api/auth/link/[provider]

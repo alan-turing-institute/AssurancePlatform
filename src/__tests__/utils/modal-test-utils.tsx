@@ -3,11 +3,11 @@ import type { ReactElement } from "react";
 import { vi } from "vitest";
 import { renderWithAuth } from "./test-utils";
 
-type ModalStore = {
+interface ModalStore {
 	isOpen: boolean;
-	onOpen: () => void;
 	onClose: () => void;
-};
+	onOpen: () => void;
+}
 
 // Mock modal stores
 export const mockModalStores = {

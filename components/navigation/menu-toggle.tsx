@@ -4,9 +4,9 @@ import { Bars3Icon } from "@heroicons/react/24/outline";
 import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 
-type MenuToggleButtonProps = {
+interface MenuToggleButtonProps {
 	setSidebarOpen: Dispatch<SetStateAction<boolean>>;
-};
+}
 
 export const MenuToggleButton = ({ setSidebarOpen }: MenuToggleButtonProps) => (
 	<Button

@@ -52,31 +52,31 @@ import { AttributeContentSection, MetadataSection } from "./attribute-badges";
 // Type Definitions
 // ========================================================================
 
-type NodeData = {
-	id?: string;
-	name?: string;
-	description?: string;
-	context?: string[];
+interface NodeData {
 	assumption?: string;
+	context?: string[];
+	description?: string;
+	id?: string;
 	justification?: string;
+	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type BaseNodeProps = {
-	data?: NodeData;
-	selected?: boolean;
-	isConnectable?: boolean;
+interface BaseNodeProps {
 	children?: ReactNode;
-	nodeType?: string;
-	defaultExpanded?: boolean;
-	onExpandChange?: (expanded: boolean) => void;
 	className?: string;
-};
+	data?: NodeData;
+	defaultExpanded?: boolean;
+	isConnectable?: boolean;
+	nodeType?: string;
+	onExpandChange?: (expanded: boolean) => void;
+	selected?: boolean;
+}
 
-type ActionItem = {
+interface ActionItem {
 	label: string;
 	onClick: () => void;
-};
+}
 
 type BaseNodeWithActionsProps = BaseNodeProps & {
 	actions?: ActionItem[];
@@ -157,15 +157,15 @@ const computeHasMetadata = (
 // Sub-Components (extracted to reduce complexity)
 // ========================================================================
 
-type NodeHeaderProps = {
-	nodeType: string;
+interface NodeHeaderProps {
 	displayName: string;
+	Icon: LucideIcon | null;
+	isDarkMode: boolean;
 	isExpanded: boolean;
 	isHovered: boolean;
-	isDarkMode: boolean;
-	Icon: LucideIcon | null;
+	nodeType: string;
 	onToggle: (e: React.MouseEvent) => void;
-};
+}
 
 const NodeHeader = ({
 	nodeType,
@@ -210,11 +210,11 @@ const NodeHeader = ({
 	);
 };
 
-type NodeFooterProps = {
+interface NodeFooterProps {
 	configName: string;
 	identifier: string | null;
 	isDarkMode: boolean;
-};
+}
 
 const NodeFooter = ({
 	configName,
@@ -236,17 +236,17 @@ const NodeFooter = ({
 	);
 };
 
-type ExpandedContentProps = {
+interface ExpandedContentProps {
+	attributes: ReturnType<typeof extractAttributes>;
+	children?: ReactNode;
+	configName: string;
 	description: string;
-	isDarkMode: boolean;
 	hasAttributes: boolean;
 	hasMetadata: boolean;
-	attributes: ReturnType<typeof extractAttributes>;
-	metadata: ReturnType<typeof extractMetadata>;
-	configName: string;
 	identifier: string | null;
-	children?: ReactNode;
-};
+	isDarkMode: boolean;
+	metadata: ReturnType<typeof extractMetadata>;
+}
 
 const ExpandedContent = ({
 	description,
@@ -297,10 +297,10 @@ const ExpandedContent = ({
 	</div>
 );
 
-type CollapsedPreviewProps = {
+interface CollapsedPreviewProps {
 	description: string;
 	isDarkMode: boolean;
-};
+}
 
 const CollapsedPreview = ({
 	description,
@@ -319,23 +319,23 @@ const CollapsedPreview = ({
 	</motion.div>
 );
 
-type NodeCardContentProps = {
+interface NodeCardContentProps {
+	children?: ReactNode;
 	data: NodeData;
-	nodeType: string;
+	isDarkMode: boolean;
 	isExpanded: boolean;
 	isHovered: boolean;
-	isDarkMode: boolean;
-	toolbarVisible: boolean;
 	nodeHasChildren: boolean;
 	nodeHasHiddenChildren: boolean;
 	nodeIsRoot: boolean;
-	onToggle: (e: React.MouseEvent) => void;
-	onDescriptionChange: (description: string) => void;
+	nodeType: string;
 	onDataChange: (data: NodeDataUpdate) => void;
 	onDelete: () => void;
+	onDescriptionChange: (description: string) => void;
+	onToggle: (e: React.MouseEvent) => void;
 	onToggleChildren: () => void;
-	children?: ReactNode;
-};
+	toolbarVisible: boolean;
+}
 
 const NodeCardContent = ({
 	data,
@@ -588,7 +588,7 @@ export const BaseNodeWithActions = ({
 		{children}
 		{actions.length > 0 && (
 			<div className="mt-3 flex gap-2">
-				{actions.map((action, index) => (
+				{actions.map((action) => (
 					<button
 						className={cn(
 							"px-3 py-1.5",
@@ -602,7 +602,7 @@ export const BaseNodeWithActions = ({
 							"border",
 							"border-transparent"
 						)}
-						key={`action-${action.label}-${index}`}
+						key={`action-${action.label}`}
 						onClick={(e) => {
 							e.stopPropagation();
 							action.onClick();

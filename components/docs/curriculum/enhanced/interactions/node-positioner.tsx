@@ -31,21 +31,21 @@ import {
 	snapToGrid,
 } from "./creation-utils";
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
-type AlignmentGuides = {
+interface AlignmentGuides {
 	horizontal: number | null;
 	vertical: number | null;
-};
+}
 
-type AlignmentGuideProps = {
+interface AlignmentGuideProps {
+	isVisible: boolean;
 	position: Position;
 	type: "horizontal" | "vertical";
-	isVisible: boolean;
-};
+}
 
 /**
  * Alignment Guide Component
@@ -73,10 +73,10 @@ const AlignmentGuide = ({ position, type, isVisible }: AlignmentGuideProps) => {
 	);
 };
 
-type GridOverlayProps = {
-	visible: boolean;
+interface GridOverlayProps {
 	gridSize?: number;
-};
+	visible: boolean;
+}
 
 /**
  * Grid Overlay Component
@@ -103,11 +103,11 @@ const GridOverlay = ({ visible, gridSize = 20 }: GridOverlayProps) => {
 	);
 };
 
-type ConnectionPreviewProps = {
-	start: Position;
+interface ConnectionPreviewProps {
 	end: Position;
 	isVisible: boolean;
-};
+	start: Position;
+}
 
 /**
  * Connection Preview Component
@@ -144,11 +144,11 @@ const _ConnectionPreview = ({
 	);
 };
 
-type GhostNodePreviewProps = {
-	position: Position | null;
-	nodeType: string;
+interface GhostNodePreviewProps {
 	isVisible: boolean;
-};
+	nodeType: string;
+	position: Position | null;
+}
 
 /**
  * Ghost Node Preview Component
@@ -187,10 +187,10 @@ const GhostNodePreview = ({
 	);
 };
 
-type MagneticSnapIndicatorProps = {
-	position: Position | null;
+interface MagneticSnapIndicatorProps {
 	isSnapping: boolean;
-};
+	position: Position | null;
+}
 
 /**
  * Magnetic Snap Indicator
@@ -222,43 +222,43 @@ const MagneticSnapIndicator = ({
 	);
 };
 
-type UseNodePositionerOptions = {
+interface UseNodePositionerOptions {
 	gridSize?: number;
-	snapThreshold?: number;
 	magneticThreshold?: number;
-	showGuides?: boolean;
 	showGrid?: boolean;
+	showGuides?: boolean;
 	showPreview?: boolean;
-};
+	snapThreshold?: number;
+}
 
-type CalculateOptimalPositionOptions = {
+interface CalculateOptimalPositionOptions {
 	enableGridSnap?: boolean;
 	enableMagneticSnap?: boolean;
 	enableOverlapAvoidance?: boolean;
 	sourceNode?: Node | null;
-};
+}
 
-type UseNodePositionerReturn = {
+interface UseNodePositionerReturn {
+	alignmentGuides: AlignmentGuides;
+	autoArrange: (algorithm?: "hierarchical") => void;
 	calculateOptimalPosition: (
 		basePosition: Position,
 		options?: CalculateOptimalPositionOptions
 	) => Position;
+	currentPosition: Position | null;
 	getConnectionHints: (position: Position) => Array<{
 		nodeId: string;
 		nodeName: string;
 		direction: string;
 		distance: number;
 	}>;
-	autoArrange: (algorithm?: "hierarchical") => void;
 	isDragging: boolean;
-	setIsDragging: (value: boolean) => void;
-	currentPosition: Position | null;
-	setCurrentPosition: (value: Position | null) => void;
-	snappedPosition: Position | null;
-	setSnappedPosition: (value: Position | null) => void;
-	alignmentGuides: AlignmentGuides;
 	isSnapping: boolean;
-};
+	setCurrentPosition: (value: Position | null) => void;
+	setIsDragging: (value: boolean) => void;
+	setSnappedPosition: (value: Position | null) => void;
+	snappedPosition: Position | null;
+}
 
 /**
  * Node Positioner Hook
@@ -430,14 +430,14 @@ export const useNodePositioner = ({
 	};
 };
 
-type NodePositionerProps = {
-	nodeType: string;
+interface NodePositionerProps {
 	basePosition: Position | null;
-	onPositionChange?: (position: Position) => void;
-	showControls?: boolean;
 	children?: ReactNode;
 	className?: string;
-};
+	nodeType: string;
+	onPositionChange?: (position: Position) => void;
+	showControls?: boolean;
+}
 
 /**
  * Node Positioner Component

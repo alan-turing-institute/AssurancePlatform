@@ -3,10 +3,10 @@
 import { useNextStep } from "nextstepjs";
 import { useCallback, useEffect, useRef } from "react";
 
-type CheckTourClientProps = {
-	tourId: string;
+interface CheckTourClientProps {
 	enabled: boolean;
-};
+	tourId: string;
+}
 
 /**
  * Client-side tour checker that fetches the user's completed tours

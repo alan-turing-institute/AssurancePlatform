@@ -1,0 +1,71 @@
+# Organisations Using TEA Platform
+
+## Universities & Research Institutions
+
+- University College London (ucl.ac.uk)
+- Alan Turing Institute (turing.ac.uk)
+- University of York (york.ac.uk)
+- University of Nottingham (nottingham.ac.uk)
+- University of Edinburgh (ed.ac.uk)
+- University of Cambridge (cam.ac.uk)
+- University of Bristol (bristol.ac.uk)
+- University of Sheffield (sheffield.ac.uk)
+- King's College London (kcl.ac.uk)
+- Heriot-Watt University (hw.ac.uk)
+- Newcastle University (newcastle.ac.uk)
+- Loughborough University (lboro.ac.uk)
+- Glasgow Caledonian University (gcu.ac.uk)
+- Manchester Metropolitan University (mmu.ac.uk)
+- University of Portsmouth (port.ac.uk)
+- Ulster University (ulster.ac.uk)
+- Liverpool John Moores University (ljmu.ac.uk)
+- City, University of London (city.ac.uk)
+- McMaster University, Canada (mcmaster.ca)
+- UC Davis, USA (ucdavis.edu)
+- Telkom University, Indonesia (student.telkomuniversity.ac.id)
+- University of Glasgow (student.gla.ac.uk)
+- Mid Kent College (midkent.ac.uk)
+- Kangan Institute, Australia (kangan.edu.au)
+- Vita-Salute San Raffaele University, Italy (unisr.it)
+- Leiden University Medical Centre, Netherlands (lumc.nl)
+
+## Government & Public Sector
+
+- DSIT (dsit.gov.uk)
+- Met Office (metoffice.gov.uk)
+- DSTL — Defence Science & Technology Laboratory (dstl.gov.uk)
+- Ministry of Justice (justice.gov.uk)
+- Department for Business and Trade (businessandtrade.gov.uk)
+- Westminster City Council (westminster.gov.uk)
+- Civil Service Fast Stream (faststream.civilservice.gov.uk)
+- NHS (nhs.net)
+- Great Ormond Street Hospital (gosh.nhs.uk)
+
+## UKRI & Research Councils
+
+- STFC (stfc.ac.uk)
+- NERC (nerc.ukri.org)
+- British Geological Survey (bgs.ac.uk)
+- National Centre for Atmospheric Science (ncas.ac.uk)
+- Plymouth Marine Laboratory (pml.ac.uk)
+- National Oceanography Centre (noc.ac.uk)
+- Cefas (cefas.co.uk)
+
+## Industry & Non-Profit
+
+- DNV (dnv.com)
+- MITRE (mitre.org)
+- Red Hat (redhat.com)
+- Digital Catapult (digicatapult.org.uk)
+- IEEE (ieee.org)
+- CERTI Foundation, Brazil (certi.org.br)
+- Common Crawl (commoncrawl.org)
+- Advai (advai.com)
+- Amdaris (amdaris.com)
+- Methods Consulting (methods.co.uk)
+- Careful AI (carefulai.com)
+- Serox AI (serox.ai)
+- Willing Consulting (willingconsulting.com)
+- Co-Opts (co-opts.com)
+- Colt Technology Services (colt.net)
+- Quantum Village (quantumvillage.org)

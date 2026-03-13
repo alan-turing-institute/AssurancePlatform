@@ -19,11 +19,11 @@ import type {
  * Context object for flattening operations.
  * Groups accumulators to reduce function parameter count.
  */
-type FlattenContext = {
+interface FlattenContext {
 	elements: ElementV2[];
 	evidenceLinks: EvidenceLinkV2[];
 	evidenceMap: Map<string, string>;
-};
+}
 
 /**
  * Flattens a nested tree export to flat format.

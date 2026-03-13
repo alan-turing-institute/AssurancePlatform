@@ -8,12 +8,14 @@ import type { ServiceResult } from "@/types/service";
 // Types
 // ============================================
 
-export type SecurityContext = {
+export interface SecurityContext {
 	ipAddress: string | null;
 	userAgent: string | null;
-};
+}
 
-export type AcceptInviteResult = { caseId: string };
+export interface AcceptInviteResult {
+	caseId: string;
+}
 
 type InviteTransactionError =
 	| { error: "invalid_token" }
@@ -21,7 +23,10 @@ type InviteTransactionError =
 	| { error: "already_used"; inviteId: string }
 	| { error: "email_mismatch"; inviteId: string; inviteEmail: string };
 
-type InviteTransactionSuccess = { success: true; caseId: string };
+interface InviteTransactionSuccess {
+	caseId: string;
+	success: true;
+}
 
 type InviteTransactionResult =
 	| InviteTransactionError

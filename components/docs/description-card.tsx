@@ -4,12 +4,12 @@ import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type DescriptionCardProps = {
-	icon?: ReactNode;
-	title: string;
+interface DescriptionCardProps {
 	description: string;
 	href: string;
-};
+	icon?: ReactNode;
+	title: string;
+}
 
 export function DescriptionCard({
 	icon,
@@ -57,9 +57,9 @@ export function DescriptionCard({
 	return <Link href={href}>{content}</Link>;
 }
 
-type DescriptionCardsProps = {
+interface DescriptionCardsProps {
 	children: ReactNode;
-};
+}
 
 export function DescriptionCards({ children }: DescriptionCardsProps) {
 	return (

@@ -20,21 +20,21 @@ export type OperationType =
  * Contains all the fields needed to restore the element.
  */
 // Captures arbitrary element fields for history snapshots (undo/redo)
-export type ElementSnapshot = {
-	id: string;
-	elementType: string;
-	name: string;
+export interface ElementSnapshot {
+	assumption?: string | null;
+	context?: string[];
 	description: string;
+	elementType: string;
+	id: string;
+	inSandbox?: boolean;
+	justification?: string | null;
+	level?: number | null;
+	name: string;
 	parentId?: string | null;
 	url?: string | null;
 	urls?: string[];
-	assumption?: string | null;
-	justification?: string | null;
-	context?: string[];
-	inSandbox?: boolean;
-	level?: number | null;
 	[key: string]: unknown;
-};
+}
 
 /**
  * A single command in the history representing one atomic operation.
@@ -46,61 +46,61 @@ export type ElementSnapshot = {
  * - For detaches: before contains parentId, after is null
  * - For attaches: before is null, after contains parentId
  */
-export type HistoryCommand = {
-	type: OperationType;
+export interface HistoryCommand {
+	after: ElementSnapshot | null;
+	before: ElementSnapshot | null;
 	elementId: string;
 	elementType: string;
-	before: ElementSnapshot | null;
-	after: ElementSnapshot | null;
-};
+	type: OperationType;
+}
 
 /**
  * A history entry representing a user action.
  * May contain multiple commands for operations that affect multiple elements
  * (e.g., deleting an element with children).
  */
-export type HistoryEntry = {
+export interface HistoryEntry {
+	commands: HistoryCommand[];
+	description: string;
 	id: string;
 	timestamp: number;
-	description: string;
-	commands: HistoryCommand[];
-};
+}
 
 /**
  * State of the history store.
  */
-export type HistoryState = {
+export interface HistoryState {
 	/** Current case ID - history is cleared when this changes */
 	caseId: string | null;
-	/** Stack of entries that can be undone */
-	undoStack: HistoryEntry[];
-	/** Stack of entries that can be redone */
-	redoStack: HistoryEntry[];
 	/** Whether an undo/redo operation is currently in progress */
 	isApplying: boolean;
-};
+	/** Stack of entries that can be redone */
+	redoStack: HistoryEntry[];
+	/** Stack of entries that can be undone */
+	undoStack: HistoryEntry[];
+}
 
 /**
  * Actions available on the history store.
  */
-export type HistoryActions = {
-	/** Set the current case ID, clearing history if it changes */
-	setCaseId: (caseId: string | null) => void;
-	/** Record a new operation to the history */
-	recordOperation: (entry: HistoryEntry) => void;
-	/** Pop the last entry from the undo stack */
-	popUndo: () => HistoryEntry | undefined;
+export interface HistoryActions {
+	/** Clear all history */
+	clearHistory: () => void;
 	/** Pop the last entry from the redo stack */
 	popRedo: () => HistoryEntry | undefined;
+	/** Pop the last entry from the undo stack */
+	popUndo: () => HistoryEntry | undefined;
 	/** Push an entry to the redo stack */
 	pushRedo: (entry: HistoryEntry) => void;
 	/** Push an entry to the undo stack */
 	pushUndo: (entry: HistoryEntry) => void;
+	/** Record a new operation to the history */
+	recordOperation: (entry: HistoryEntry) => void;
+	/** Set the current case ID, clearing history if it changes */
+	setCaseId: (caseId: string | null) => void;
 	/** Set the isApplying flag */
 	setIsApplying: (value: boolean) => void;
-	/** Clear all history */
-	clearHistory: () => void;
-};
+}
 
 /**
  * Combined history store type.

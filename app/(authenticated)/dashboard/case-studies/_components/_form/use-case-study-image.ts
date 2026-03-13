@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import type { toast as toastFn } from "@/lib/toast";
 
-type UseCaseStudyImageParams = {
+interface UseCaseStudyImageParams {
 	caseStudyId: number | undefined;
 	toast: typeof toastFn;
-};
+}
 
-type UseCaseStudyImageReturn = {
-	previewImage: string;
-	setPreviewImage: React.Dispatch<React.SetStateAction<string>>;
+interface UseCaseStudyImageReturn {
+	deleteCaseStudyFeatureImage: (caseStudyId: number) => Promise<void>;
 	featuredImage: string;
+	previewImage: string;
 	setFeaturedImage: React.Dispatch<React.SetStateAction<string>>;
+	setPreviewImage: React.Dispatch<React.SetStateAction<string>>;
 	uploadCaseStudyFeatureImage: (
 		caseStudyId: number,
 		imageFile: File
 	) => Promise<void>;
-	deleteCaseStudyFeatureImage: (caseStudyId: number) => Promise<void>;
-};
+}
 
 export function useCaseStudyImage({
 	caseStudyId,

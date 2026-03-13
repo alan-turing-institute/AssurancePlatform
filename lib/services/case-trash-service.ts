@@ -7,23 +7,23 @@ import type { ServiceResult } from "@/types/service";
 // OUTPUT INTERFACES
 // ============================================
 
-export type TrashedCaseResponse = {
+export interface TrashedCaseResponse {
+	createdAt: string;
+	daysRemaining: number;
+	deletedAt: string;
+	description: string | null;
 	id: string;
 	name: string;
-	description: string | null;
-	createdAt: string;
-	deletedAt: string;
-	daysRemaining: number;
-};
+}
 
-export type TrashListResponse = {
+export interface TrashListResponse {
 	cases: TrashedCaseResponse[];
-};
+}
 
-export type PurgeResult = {
-	purgedCount: number;
+export interface PurgeResult {
 	cutoffDate: string;
-};
+	purgedCount: number;
+}
 
 // ============================================
 // HELPER FUNCTIONS

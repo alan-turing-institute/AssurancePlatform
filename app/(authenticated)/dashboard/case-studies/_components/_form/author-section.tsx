@@ -15,16 +15,16 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { CaseStudyFormValues } from "./form-schema";
 
-export type AuthorSectionProps = {
-	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
-	authors: string[];
-	inputValue: string;
-	setInputValue: React.Dispatch<React.SetStateAction<string>>;
+export interface AuthorSectionProps {
 	addAuthor: () => void;
-	removeAuthor: (authorToRemove: string) => void;
-	isPublished: boolean;
+	authors: string[];
 	className?: string;
-};
+	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
+	inputValue: string;
+	isPublished: boolean;
+	removeAuthor: (authorToRemove: string) => void;
+	setInputValue: React.Dispatch<React.SetStateAction<string>>;
+}
 
 export function AuthorSection({
 	form,

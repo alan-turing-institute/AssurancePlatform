@@ -34,79 +34,79 @@ import { useAnimation } from "./animation-provider";
 type AnimationType = "fade" | "slideUp" | "slideDown" | "scale" | "slideScale";
 type DrawerSide = "left" | "right" | "top" | "bottom";
 
-type Tab = {
+interface Tab {
+	content: React.ReactNode;
 	id: string;
 	label: string;
-	content: React.ReactNode;
-};
+}
 
-type PageTransitionProps = {
-	children: React.ReactNode;
+interface PageTransitionProps {
 	animationType?: AnimationType;
+	children: React.ReactNode;
 	className?: string;
-};
+}
 
-type ModalTransitionProps = {
+interface ModalTransitionProps {
+	children: React.ReactNode;
+	className?: string;
 	isOpen?: boolean;
 	onClose?: () => void;
-	children: React.ReactNode;
-	className?: string;
-};
+}
 
-type TabTransitionProps = {
-	tabs?: Tab[];
+interface TabTransitionProps {
 	activeTab: string;
+	className?: string;
 	onTabChange: (tabId: string) => void;
-	className?: string;
-};
+	tabs?: Tab[];
+}
 
-type AccordionTransitionProps = {
-	title: string;
+interface AccordionTransitionProps {
 	children: React.ReactNode;
+	className?: string;
 	defaultOpen?: boolean;
-	className?: string;
-};
+	title: string;
+}
 
-type CrossfadeTransitionProps = {
+interface CrossfadeTransitionProps {
 	children: React.ReactNode;
-	transitionKey: string | number;
 	className?: string;
-};
+	transitionKey: string | number;
+}
 
 type SlideDirection = "left" | "right" | "up" | "down";
 
-type SlideTransitionProps = {
+interface SlideTransitionProps {
 	children: React.ReactNode;
+	className?: string;
 	direction?: SlideDirection;
 	transitionKey: string | number;
-	className?: string;
-};
+}
 
-type MorphTransitionProps = {
+interface MorphTransitionProps {
 	children: React.ReactNode;
+	className?: string;
 	layoutId: string;
-	className?: string;
-};
+}
 
-type CollapseTransitionProps = {
-	isOpen?: boolean;
+interface CollapseTransitionProps {
 	children: React.ReactNode;
 	className?: string;
-};
+	isOpen?: boolean;
+}
 
-type DrawerTransitionProps = {
+interface DrawerTransitionProps {
+	children: React.ReactNode;
+	className?: string;
 	isOpen?: boolean;
 	onClose?: () => void;
 	side?: DrawerSide;
-	children: React.ReactNode;
-	className?: string;
-};
+}
 
-type FadeThroughTransitionProps = {
+interface FadeThroughTransitionProps {
 	children: React.ReactNode;
-	transitionKey: string | number;
 	className?: string;
-};
+	transitionKey: string | number;
+}
 
 // ========================================================================
 // Page Transition Component

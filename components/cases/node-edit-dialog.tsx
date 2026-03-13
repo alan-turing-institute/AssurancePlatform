@@ -83,13 +83,13 @@ function buildUpdatePayload(
 
 // --- Sub-components to reduce complexity ---
 
-type TextFieldProps = {
+interface TextFieldProps {
 	form: UseFormReturn<FormValues>;
-	name: "description" | "assumption" | "justification";
 	label: string;
+	name: "description" | "assumption" | "justification";
 	placeholder: string;
 	readOnly: boolean;
-};
+}
 
 function TextFieldSection({
 	form,
@@ -126,14 +126,14 @@ function TextFieldSection({
 	);
 }
 
-type ContextSectionProps = {
+interface ContextSectionProps {
 	contextItems: Array<{ id: string; value: string }>;
-	readOnly: boolean;
 	newContextValue: string;
-	onNewContextChange: (value: string) => void;
 	onAddContext: () => void;
+	onNewContextChange: (value: string) => void;
 	onRemoveContext: (idx: number) => void;
-};
+	readOnly: boolean;
+}
 
 function ContextSection({
 	contextItems,
@@ -204,13 +204,13 @@ function ContextSection({
 	);
 }
 
-type UrlsSectionProps = {
-	form: UseFormReturn<FormValues>;
+interface UrlsSectionProps {
 	fields: Array<{ id: string; value: string }>;
-	readOnly: boolean;
+	form: UseFormReturn<FormValues>;
 	onAppend: () => void;
 	onRemove: (idx: number) => void;
-};
+	readOnly: boolean;
+}
 
 function UrlsSection({
 	form,
@@ -277,13 +277,13 @@ function UrlsSection({
 
 // --- Main component ---
 
-type NodeEditDialogProps = {
+interface NodeEditDialogProps {
 	node: Node;
 	nodeType: DiagramNodeType;
-	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	open: boolean;
 	readOnly?: boolean;
-};
+}
 
 export default function NodeEditDialog({
 	node,

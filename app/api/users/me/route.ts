@@ -8,9 +8,9 @@ import {
 import { validationError } from "@/lib/errors";
 import { updateUserProfileSchema } from "@/lib/schemas/user";
 
-type DeleteAccountRequest = {
+interface DeleteAccountRequest {
 	password?: string;
-};
+}
 
 /**
  * GET /api/users/me

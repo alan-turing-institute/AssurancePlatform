@@ -33,101 +33,101 @@ import { useAnimation } from "./animation-provider";
 
 type StaggerType = "fast" | "normal" | "slow";
 
-type SpringStaggerContainerProps = {
+interface SpringStaggerContainerProps {
 	children: React.ReactNode;
+	className?: string;
 	stagger?: Record<string, unknown>;
 	staggerType?: StaggerType;
-	className?: string;
-};
+}
 
-type SpringStaggerItemProps = {
+interface SpringStaggerItemProps {
 	children: React.ReactNode;
 	className?: string;
-};
+}
 
-type SpringScaleProps = {
+interface SpringScaleProps {
 	children: React.ReactNode;
+	className?: string;
 	scale?: number;
 	spring?: Record<string, unknown>;
-	className?: string;
-};
+}
 
-type SpringRotateProps = {
+interface SpringRotateProps {
 	children: React.ReactNode;
+	className?: string;
 	rotation?: number;
 	spring?: Record<string, unknown>;
-	className?: string;
-};
+}
 
-type DragConstraints = {
+interface DragConstraints {
+	bottom?: number;
 	left?: number;
 	right?: number;
 	top?: number;
-	bottom?: number;
-};
+}
 
-type SpringDraggableProps = {
+interface SpringDraggableProps {
 	children: React.ReactNode;
+	className?: string;
 	constraints?: DragConstraints;
-	onDragEnd?: () => void;
 	elastic?: number;
-	className?: string;
-};
+	onDragEnd?: () => void;
+}
 
-type SpringScrollTriggerProps = {
+interface SpringScrollTriggerProps {
 	children: React.ReactNode;
+	className?: string;
 	offset?: number;
-	className?: string;
-};
+}
 
-type SpringParallaxProps = {
+interface SpringParallaxProps {
 	children: React.ReactNode;
+	className?: string;
 	speed?: number;
-	className?: string;
-};
+}
 
-type SpringVelocityProps = {
+interface SpringVelocityProps {
 	children: React.ReactNode;
+	className?: string;
 	transformVelocity?: (v: number) => number;
-	className?: string;
-};
+}
 
-type SpringChainProps = {
+interface SpringChainProps {
 	children: React.ReactNode;
+	className?: string;
 	sequence?: Record<string, string | number | number[]>[];
-	className?: string;
-};
+}
 
-type SpringGestureProps = {
+interface SpringGestureProps {
 	children: React.ReactNode;
+	className?: string;
+	enableDrag?: boolean;
 	enableHover?: boolean;
 	enableTap?: boolean;
-	enableDrag?: boolean;
 	hoverScale?: number;
 	tapScale?: number;
-	className?: string;
-};
+}
 
-type SpringMagneticProps = {
+interface SpringMagneticProps {
 	children: React.ReactNode;
+	className?: string;
 	strength?: number;
-	className?: string;
-};
+}
 
-type SpringInertiaProps = {
+interface SpringInertiaProps {
 	children: React.ReactNode;
+	className?: string;
 	power?: number;
-	className?: string;
-};
+}
 
-type SpringKeyframesProps = {
+interface SpringKeyframesProps {
 	children: React.ReactNode;
+	className?: string;
+	duration?: number;
 	keyframes?: number[];
 	property?: string;
-	duration?: number;
 	repeat?: number;
-	className?: string;
-};
+}
 
 // ========================================================================
 // Spring Container Component

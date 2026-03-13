@@ -32,16 +32,16 @@ export function isValidGitHubUrl(url: string): boolean {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ImportResponse = {
-	id?: string | number;
-	name?: string;
-	elementCount?: number;
-	warnings?: string[];
-	error?: string;
-	validationErrors?: Array<{ path: string; message: string } | string>;
+export interface ImportResponse {
 	code?: string;
+	elementCount?: number;
+	error?: string;
+	id?: string | number;
 	message?: string;
-};
+	name?: string;
+	validationErrors?: Array<{ path: string; message: string } | string>;
+	warnings?: string[];
+}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -95,29 +95,29 @@ export function extractErrorMessage(data: ImportResponse): string {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-type DriveFile = {
+interface DriveFile {
 	id: string;
 	name: string;
-};
+}
 
-type UseCaseImportParams = {
+interface UseCaseImportParams {
 	isOpen: boolean;
 	onClose: () => void;
-};
+}
 
-export type UseCaseImportReturn = {
-	loading: boolean;
+export interface UseCaseImportReturn {
 	error: string;
-	warnings: string[];
-	setError: (error: string) => void;
 	githubConnected: boolean | null;
 	googleConnected: boolean | null;
-	selectedDriveFile: DriveFile | null;
-	setSelectedDriveFile: (file: DriveFile | null) => void;
 	importCase: (json: unknown) => Promise<void>;
 	importFromGitHub: (url: string) => Promise<void>;
 	importFromGoogleDrive: (fileId: string) => Promise<void>;
-};
+	loading: boolean;
+	selectedDriveFile: DriveFile | null;
+	setError: (error: string) => void;
+	setSelectedDriveFile: (file: DriveFile | null) => void;
+	warnings: string[];
+}
 
 /**
  * Centralises all import logic for the ImportModal.

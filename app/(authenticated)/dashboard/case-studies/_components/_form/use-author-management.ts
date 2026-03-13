@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import type { useForm } from "react-hook-form";
 import type { CaseStudyFormValues } from "./form-schema";
 
-type UseAuthorManagementReturn = {
+interface UseAuthorManagementReturn {
+	addAuthor: () => void;
 	authors: string[];
 	inputValue: string;
-	setInputValue: React.Dispatch<React.SetStateAction<string>>;
-	addAuthor: () => void;
 	removeAuthor: (authorToRemove: string) => void;
-};
+	setInputValue: React.Dispatch<React.SetStateAction<string>>;
+}
 
 export function useAuthorManagement(
 	form: ReturnType<typeof useForm<CaseStudyFormValues>>

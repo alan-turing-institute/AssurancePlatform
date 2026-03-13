@@ -123,7 +123,7 @@ const SignInForm = () => {
 
 			{errors?.map((error) => (
 				<div
-					className="-mb-4 mt-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
+					className="mt-4 -mb-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
 					key={crypto.randomUUID()}
 				>
 					<p>{error}</p>
@@ -170,7 +170,7 @@ const SignInForm = () => {
 												aria-label={
 													showPassword ? "Hide password" : "Show password"
 												}
-												className="-translate-y-1/2 absolute top-1/2 right-2 h-8 w-8"
+												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
 												onClick={() => setShowPassword(!showPassword)}
 												size="icon"
 												type="button"

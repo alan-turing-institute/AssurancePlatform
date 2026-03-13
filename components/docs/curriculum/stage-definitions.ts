@@ -5,20 +5,20 @@
  * the concepts progressively.
  */
 
-export type StageDefinition = {
-	/** Stage number (1-indexed) */
-	id: number;
-	/** Full title for the stage */
-	title: string;
-	/** Short title for stepper UI */
-	shortTitle: string;
-	/** Guidance text explaining what to observe and do */
-	guidance: string;
+export interface StageDefinition {
 	/** Path to the JSON file for this stage (relative to /data/) */
 	caseFile: string;
+	/** Guidance text explaining what to observe and do */
+	guidance: string;
+	/** Stage number (1-indexed) */
+	id: number;
+	/** Short title for stepper UI */
+	shortTitle: string;
 	/** Task ID that corresponds to completing this stage */
 	taskId: string;
-};
+	/** Full title for the stage */
+	title: string;
+}
 
 /**
  * Get a stage by its ID

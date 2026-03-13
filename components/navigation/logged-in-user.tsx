@@ -5,17 +5,17 @@ import { useEffect, useState } from "react";
 import { fetchCurrentUser } from "@/actions/users";
 import { Skeleton } from "../ui/skeleton";
 
-type UserData = {
-	username: string;
+interface UserData {
 	email: string;
 	firstName?: string;
 	lastName?: string;
-};
+	username: string;
+}
 
-type UserState = {
-	user: UserData | null;
+interface UserState {
 	loading: boolean;
-};
+	user: UserData | null;
+}
 
 const LoggedInUser = () => {
 	const [state, setState] = useState<UserState>({ user: null, loading: true });

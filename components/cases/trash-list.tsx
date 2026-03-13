@@ -18,18 +18,18 @@ import { formatShortDate } from "@/lib/date";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-export type TrashedCase = {
+export interface TrashedCase {
+	createdAt: string;
+	daysRemaining: number;
+	deletedAt: string;
+	description: string | null;
 	id: string;
 	name: string;
-	description: string | null;
-	createdAt: string;
-	deletedAt: string;
-	daysRemaining: number;
-};
+}
 
-type TrashListProps = {
+interface TrashListProps {
 	cases: TrashedCase[];
-};
+}
 
 function getDaysRemainingColour(days: number): string {
 	if (days > 7) {

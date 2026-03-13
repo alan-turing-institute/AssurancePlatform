@@ -33,73 +33,73 @@ import { PERFORMANCE } from "./animation-presets";
 type AnimationSpeed = "slow" | "normal" | "fast";
 type PerformanceScore = "excellent" | "good" | "fair" | "poor";
 
-type AnimationSpeeds = {
-	slow: number;
-	normal: number;
+interface AnimationSpeeds {
 	fast: number;
-};
+	normal: number;
+	slow: number;
+}
 
-type FpsThresholds = {
+interface FpsThresholds {
 	excellent: number;
-	good: number;
 	fair: number;
+	good: number;
 	poor: number;
-};
+}
 
-type LocalStorageKeys = {
-	animationsEnabled: string;
+interface LocalStorageKeys {
 	animationSpeed: string;
+	animationsEnabled: string;
 	reducedMotion: string;
-};
+}
 
-type SpringConfig = {
-	type?: "spring" | "tween" | "keyframes" | "inertia";
-	duration?: number;
+interface SpringConfig {
 	damping?: number;
+	duration?: number;
 	mass?: number;
 	stiffness?: number;
-};
+	type?: "spring" | "tween" | "keyframes" | "inertia";
+}
 
 // biome-ignore lint/suspicious/noExplicitAny: Animation variants used with framer-motion
 type AnimationVariants = Record<string, any>;
 
-type PerformanceChangeData = {
+interface PerformanceChangeData {
+	drops: number;
 	fps: number;
 	score: PerformanceScore;
-	drops: number;
 	targetFps: number;
-};
+}
 
-type AnimationProviderProps = {
+interface AnimationProviderProps {
 	children: React.ReactNode;
 	enablePerformanceMonitoring?: boolean;
 	fpsTarget?: number;
 	onPerformanceChange?: (data: PerformanceChangeData) => void;
-};
+}
 
-type AnimationContextValue = {
-	animationsEnabled: boolean;
+interface AnimationContextValue {
 	animationSpeed: AnimationSpeed;
-	reducedMotion: boolean;
-	systemReducedMotion: boolean;
-	reducedMotionOverride: boolean | null;
-	speedMultiplier: number;
-	shouldAnimate: boolean;
+	animationsEnabled: boolean;
+	canAnimate: () => boolean;
 	fps: number;
-	performanceScore: PerformanceScore;
-	frameDrops: number;
 	fpsTarget: number;
+	frameDrops: number;
 	getDuration: (duration: number) => number;
+	getGpuAcceleration: () => Record<string, string>;
 	getSpring: (spring: SpringConfig) => SpringConfig;
 	getVariants: (variants: AnimationVariants) => AnimationVariants;
-	canAnimate: () => boolean;
-	getGpuAcceleration: () => Record<string, string>;
-	toggleAnimations: () => void;
-	setSpeed: (speed: AnimationSpeed) => void;
-	setReducedMotion: (value: boolean | null) => void;
+	performanceScore: PerformanceScore;
+	reducedMotion: boolean;
+	reducedMotionOverride: boolean | null;
 	resetPreferences: () => void;
 	setAnimationsEnabled: (enabled: boolean) => void;
-};
+	setReducedMotion: (value: boolean | null) => void;
+	setSpeed: (speed: AnimationSpeed) => void;
+	shouldAnimate: boolean;
+	speedMultiplier: number;
+	systemReducedMotion: boolean;
+	toggleAnimations: () => void;
+}
 
 // ========================================================================
 // Context Creation

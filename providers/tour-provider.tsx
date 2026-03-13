@@ -9,9 +9,9 @@ import { demoCaseTour } from "@/lib/tours/demo-case-tour";
 
 const allTours = [dashboardTour, caseCanvasTour, demoCaseTour];
 
-type TourProviderProps = {
+interface TourProviderProps {
 	children: ReactNode;
-};
+}
 
 /**
  * Workaround for a NextStepjs bug where the Framer Motion pointer

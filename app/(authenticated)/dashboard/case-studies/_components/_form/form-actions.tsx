@@ -6,12 +6,12 @@ import type { CaseStudyResponse } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
 import DeleteCaseButton from "../delete-button";
 
-export type FormActionsProps = {
+export interface FormActionsProps {
 	caseStudy: CaseStudyResponse | undefined;
-	loading: boolean;
-	handlePublish: () => Promise<void>;
 	className?: string;
-};
+	handlePublish: () => Promise<void>;
+	loading: boolean;
+}
 
 export function FormActions({
 	caseStudy,

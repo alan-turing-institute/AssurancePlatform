@@ -10,14 +10,14 @@ import type { PublishedAssuranceCase } from "@/src/generated/prisma";
 import type { CaseStudyResponse } from "./case-response-types";
 import type { CaseStudyWithRelations } from "./case-study-service";
 
-export type PublishedAssuranceCaseResponse = {
-	id: string;
-	title: string;
-	description: string | null;
+export interface PublishedAssuranceCaseResponse {
+	assuranceCaseId: number;
 	content: string;
 	createdAt: string;
-	assuranceCaseId: number;
-};
+	description: string | null;
+	id: string;
+	title: string;
+}
 
 /**
  * Transform a Prisma CaseStudy to the frontend API response format

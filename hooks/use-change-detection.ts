@@ -2,55 +2,55 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type ChangeSummary = {
+interface ChangeSummary {
 	addedElements: number;
-	removedElements: number;
 	modifiedElements: number;
-};
+	removedElements: number;
+}
 
-type ChangeDetectionResult = {
+interface ChangeDetectionResult {
+	changeSummary?: ChangeSummary;
 	hasChanges: boolean;
 	publishedAt: string | null;
 	publishedId: string | null;
-	changeSummary?: ChangeSummary;
-};
+}
 
-type UseChangeDetectionOptions = {
+interface UseChangeDetectionOptions {
 	/** Case ID to check for changes */
 	caseId: string | null;
-	/** Whether to include detailed change summary */
-	includeDetails?: boolean;
 	/** Whether the hook is enabled */
 	enabled?: boolean;
+	/** Whether to include detailed change summary */
+	includeDetails?: boolean;
 	/** Poll interval in milliseconds (0 to disable polling) */
 	pollInterval?: number;
-};
+}
 
-type UseChangeDetectionReturn = {
+interface UseChangeDetectionReturn {
+	/** Detailed change summary (if includeDetails is true) */
+	changeSummary: ChangeSummary | null;
+	/** Error message if fetch failed */
+	error: string | null;
 	/** Whether changes were detected */
 	hasChanges: boolean;
+	/** Whether the hook is loading */
+	isLoading: boolean;
 	/** When the case was last published */
 	publishedAt: string | null;
 	/** ID of the published version */
 	publishedId: string | null;
-	/** Detailed change summary (if includeDetails is true) */
-	changeSummary: ChangeSummary | null;
-	/** Whether the hook is loading */
-	isLoading: boolean;
-	/** Error message if fetch failed */
-	error: string | null;
 	/** Manually refresh the change detection */
 	refresh: () => Promise<void>;
-};
+}
 
-type ChangeDetectionState = {
+interface ChangeDetectionState {
+	changeSummary: ChangeSummary | null;
+	error: string | null;
 	hasChanges: boolean;
+	isLoading: boolean;
 	publishedAt: string | null;
 	publishedId: string | null;
-	changeSummary: ChangeSummary | null;
-	isLoading: boolean;
-	error: string | null;
-};
+}
 
 const initialState: ChangeDetectionState = {
 	hasChanges: false,

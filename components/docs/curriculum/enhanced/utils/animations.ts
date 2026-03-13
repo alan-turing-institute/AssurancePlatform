@@ -14,60 +14,60 @@ import { collapseAnimationVariants } from "./theme-config";
 // Type Definitions
 // ========================================================================
 
-type AnimationTransition = {
-	duration?: number;
-	type?: string;
-	stiffness?: number;
+interface AnimationTransition {
 	damping?: number;
-	mass?: number;
-	ease?: string | number[];
 	delay?: number;
+	delayChildren?: number;
+	duration?: number;
+	ease?: string | number[];
+	mass?: number;
 	repeat?: number;
 	staggerChildren?: number;
-	delayChildren?: number;
 	staggerDirection?: number;
-};
+	stiffness?: number;
+	type?: string;
+}
 
-type AnimationState = {
-	scale?: number | number[];
-	opacity?: number | number[];
-	y?: number;
-	x?: number;
-	rotate?: number;
-	height?: number | string;
-	marginTop?: string;
-	marginBottom?: string;
+interface AnimationState {
 	borderColor?: string;
 	boxShadow?: string | string[];
+	height?: number | string;
+	marginBottom?: string;
+	marginTop?: string;
+	opacity?: number | number[];
+	rotate?: number;
+	scale?: number | number[];
 	transition?: AnimationTransition | Record<string, AnimationTransition>;
-};
+	x?: number;
+	y?: number;
+}
 
 type AnimationVariants = Record<string, AnimationState>;
 
-type SpringOptions = {
-	stiffness?: number;
+interface SpringOptions {
 	damping?: number;
 	mass?: number;
-};
+	stiffness?: number;
+}
 
-type EaseOptions = {
+interface EaseOptions {
+	delay?: number;
 	duration?: number;
 	ease?: string | number[];
-	delay?: number;
-};
+}
 
-type StaggerOptions = {
-	staggerChildren?: number;
+interface StaggerOptions {
 	delayChildren?: number;
-};
+	staggerChildren?: number;
+}
 
 type RevealDirection = "up" | "down" | "left" | "right";
 
-type RevealOptions = {
+interface RevealOptions {
 	direction?: RevealDirection;
 	distance?: number;
 	duration?: number;
-};
+}
 
 type PresetName =
 	| "entrance"
@@ -556,12 +556,12 @@ export const modalContentVariants: AnimationVariants = {
 // Utility Functions
 // ========================================================================
 
-type SpringTransition = {
-	type: "spring";
-	stiffness: number;
+interface SpringTransition {
 	damping: number;
 	mass: number;
-};
+	stiffness: number;
+	type: "spring";
+}
 
 /**
  * Create custom spring transition
@@ -577,11 +577,11 @@ export const createSpringTransition = ({
 	mass,
 });
 
-type EaseTransition = {
+interface EaseTransition {
+	delay: number;
 	duration: number;
 	ease: string | number[];
-	delay: number;
-};
+}
 
 /**
  * Create custom ease transition
@@ -596,10 +596,10 @@ export const createEaseTransition = ({
 	delay,
 });
 
-type StaggerTransition = {
-	staggerChildren: number;
+interface StaggerTransition {
 	delayChildren: number;
-};
+	staggerChildren: number;
+}
 
 /**
  * Create stagger transition for container
@@ -628,7 +628,10 @@ export const combineVariants = (
 		return acc;
 	}, {} as AnimationVariants);
 
-type DirectionOffset = { x?: number; y?: number };
+interface DirectionOffset {
+	x?: number;
+	y?: number;
+}
 
 /**
  * Create reveal animation with custom direction

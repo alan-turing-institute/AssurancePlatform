@@ -25,12 +25,12 @@ import { CaseSettingsPopover } from "./case-settings-popover";
 import { HistoryControls } from "./history-controls";
 import JsonViewPanel from "./json-view-panel";
 
-type ActionButtonProps = {
+interface ActionButtonProps {
 	actions: {
 		onLayout: (direction: "LR" | "TB" | "RL" | "BT") => Promise<void>;
 	};
 	notifyError: (message: string) => void;
-};
+}
 
 const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const [alertOpen, setAlertOpen] = useState(false);
@@ -100,7 +100,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	};
 
 	return (
-		<div className="-translate-x-1/2 fixed bottom-4 left-1/2 z-40 flex transform items-center justify-center">
+		<div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 transform items-center justify-center">
 			<div
 				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg"
 				data-testid="action-buttons"

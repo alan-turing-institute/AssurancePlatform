@@ -6,11 +6,11 @@
  * Provides Framer Motion animation configurations for node animations.
  */
 
-type PropertyTransition = {
+interface PropertyTransition {
+	delay?: number;
 	duration?: number;
 	ease?: string | number[];
-	delay?: number;
-};
+}
 
 type AnimationTransition = PropertyTransition & {
 	type?: string;
@@ -20,13 +20,13 @@ type AnimationTransition = PropertyTransition & {
 	opacity?: PropertyTransition;
 };
 
-type AnimationState = {
-	scale?: number;
-	opacity?: number;
-	y?: number;
+interface AnimationState {
 	height?: number | string;
+	opacity?: number;
+	scale?: number;
 	transition?: AnimationTransition;
-};
+	y?: number;
+}
 
 type AnimationVariants = Record<string, AnimationState>;
 

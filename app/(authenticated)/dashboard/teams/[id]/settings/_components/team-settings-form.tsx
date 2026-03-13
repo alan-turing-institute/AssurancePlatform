@@ -30,14 +30,14 @@ import { createTeamSchema } from "@/lib/schemas/team";
 
 type FormValues = z.infer<typeof createTeamSchema>;
 
-type TeamSettingsFormProps = {
+interface TeamSettingsFormProps {
 	team: {
 		id: string;
 		name: string;
 		slug: string;
 		description: string | null;
 	};
-};
+}
 
 export function TeamSettingsForm({ team }: TeamSettingsFormProps) {
 	const router = useRouter();

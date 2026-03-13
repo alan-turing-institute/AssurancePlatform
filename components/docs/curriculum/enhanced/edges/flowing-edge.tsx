@@ -23,20 +23,20 @@ import type { EdgeProps } from "reactflow";
 import { EdgeLabelRenderer, getBezierPath } from "reactflow";
 import { getStateColor, getStrokeWidth } from "./edge-utils";
 
-type FlowingEdgeData = {
-	state?: string;
+interface FlowingEdgeData {
+	bidirectional?: boolean;
 	color?: string;
-	strokeWidth?: number;
+	flowSpeed?: number;
+	indicatorCount?: number;
+	label?: string;
 	particleCount?: number;
 	particleSize?: number;
-	flowSpeed?: number;
-	bidirectional?: boolean;
 	showDirectionIndicators?: boolean;
-	indicatorCount?: number;
-	trafficIntensity?: number;
-	label?: string;
 	showLabel?: boolean;
-};
+	state?: string;
+	strokeWidth?: number;
+	trafficIntensity?: number;
+}
 
 type FlowingEdgeProps = EdgeProps<FlowingEdgeData>;
 

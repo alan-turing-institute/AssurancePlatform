@@ -44,11 +44,11 @@ type MultiHandleProps = HandleProps & {
 	className?: string;
 };
 
-type StackPosition = {
+interface StackPosition {
 	x: number;
 	y: number;
 	z: number;
-};
+}
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex handle component with multiple visual states and interactions
 function MultiHandle({
@@ -94,7 +94,6 @@ function MultiHandle({
 	const sizeClasses = getHandleSizeClasses("medium");
 
 	// Calculate stack positions
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Stack position calculation with multiple layout directions
 	function getStackPositions(): StackPosition[] {
 		if (!showConnectionStack || connectionCount === 0) {
 			return [];
@@ -293,7 +292,7 @@ function MultiHandle({
 					<motion.div
 						animate={{ scale: 1 }}
 						className={cn(
-							"-top-1 -right-1 absolute z-20",
+							"absolute -top-1 -right-1 z-20",
 							"h-5 min-w-5 px-1",
 							"rounded-full",
 							"bg-blue-500",
@@ -311,7 +310,7 @@ function MultiHandle({
 				{/* Connection limit indicator bar */}
 				<div
 					className={cn(
-						"-bottom-2 -translate-x-1/2 absolute left-1/2",
+						"absolute -bottom-2 left-1/2 -translate-x-1/2",
 						"h-1.5 w-full",
 						"overflow-hidden rounded-full bg-gray-200"
 					)}
@@ -329,7 +328,7 @@ function MultiHandle({
 					<motion.div
 						animate={{ scale: 1 }}
 						className={cn(
-							"-bottom-1 -left-1 absolute z-20",
+							"absolute -bottom-1 -left-1 z-20",
 							"h-4 w-4",
 							"rounded-full",
 							"bg-red-500",
@@ -457,7 +456,7 @@ function MultiHandle({
 							position === Position.Bottom && "bottom-full mb-2",
 							position === Position.Left && "left-full ml-2",
 							position === Position.Right && "right-full mr-2",
-							"-translate-x-1/2 left-1/2"
+							"left-1/2 -translate-x-1/2"
 						)}
 						exit={{ opacity: 0, y: -5 }}
 						initial={{ opacity: 0, y: -5 }}

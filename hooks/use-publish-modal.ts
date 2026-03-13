@@ -3,16 +3,15 @@ import { create } from "zustand";
 /**
  * Defines the shape of the state for the publish modal store.
  */
-type PublishModalStore = {
-	/**
-	 * Indicates whether the modal is open or closed.
-	 */
-	isOpen: boolean;
-
+interface PublishModalStore {
 	/**
 	 * The case ID being published/unpublished.
 	 */
 	caseId: string | null;
+	/**
+	 * Indicates whether the modal is open or closed.
+	 */
+	isOpen: boolean;
 
 	/**
 	 * Whether the case is currently published.
@@ -25,6 +24,11 @@ type PublishModalStore = {
 	linkedCaseStudyCount: number;
 
 	/**
+	 * Function to close the modal.
+	 */
+	onClose: () => void;
+
+	/**
 	 * Function to open the modal with initial state.
 	 */
 	onOpen: (
@@ -32,12 +36,7 @@ type PublishModalStore = {
 		isPublished: boolean,
 		linkedCaseStudyCount: number
 	) => void;
-
-	/**
-	 * Function to close the modal.
-	 */
-	onClose: () => void;
-};
+}
 
 /**
  * Creates a Zustand store for managing the state of the publish modal.

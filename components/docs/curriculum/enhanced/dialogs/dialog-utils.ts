@@ -24,54 +24,54 @@ const STORAGE_KEYS = {
 // Type Definitions
 // ========================================================================
 
-type DraftData = {
-	nodeType: string;
+interface DraftData {
 	formData: Record<string, unknown>;
+	nodeType: string;
 	savedAt?: string;
-};
+}
 
 type ValidationErrors = Record<string, string>;
 
-type ValidationResult = {
-	isValid: boolean;
+interface ValidationResult {
 	errors: ValidationErrors;
-};
+	isValid: boolean;
+}
 
-type DialogPreferences = {
-	showConnectionHints: boolean;
+interface DialogPreferences {
 	autoSaveDrafts: boolean;
 	defaultQuickMode: boolean;
-	rememberLastNodeType: boolean;
-	showTemplatePreview: boolean;
 	enableKeyboardShortcuts: boolean;
-};
+	rememberLastNodeType: boolean;
+	showConnectionHints: boolean;
+	showTemplatePreview: boolean;
+}
 
-type CharacterCountInfo = {
+interface CharacterCountInfo {
 	current: number;
-	max: number;
-	percentage: number;
 	isNearLimit: boolean;
 	isOverLimit: boolean;
-};
+	max: number;
+	percentage: number;
+}
 
-type DialogPosition = {
+interface DialogPosition {
 	centered: boolean;
 	offset: {
 		x: number;
 		y: number;
 	};
-};
+}
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
-type DialogEvent = {
-	event: string;
+interface DialogEvent {
 	data: Record<string, unknown>;
+	event: string;
 	timestamp: string;
-};
+}
 
 // ========================================================================
 // Draft Management

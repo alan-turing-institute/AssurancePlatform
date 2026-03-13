@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
-type CaseEditorMockProps = {
+interface CaseEditorMockProps {
 	caseData: AssuranceCaseResponse;
-};
+}
 
 export const CaseEditorMock = ({ caseData }: CaseEditorMockProps) => {
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);

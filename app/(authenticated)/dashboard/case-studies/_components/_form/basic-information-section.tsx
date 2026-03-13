@@ -20,10 +20,10 @@ import { sectors } from "@/config/index";
 import { cn } from "@/lib/utils";
 import type { CaseStudyFormValues } from "./form-schema";
 
-export type BasicInformationSectionProps = {
-	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
+export interface BasicInformationSectionProps {
 	className?: string;
-};
+	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
+}
 
 export function BasicInformationSection({
 	form,

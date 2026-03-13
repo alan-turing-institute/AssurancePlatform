@@ -14,9 +14,9 @@ import ActionTooltip from "@/components/ui/action-tooltip";
 import { toggleHiddenForChildren } from "@/lib/case";
 import useStore from "@/store/store";
 
-type ToggleButtonProps = {
+interface ToggleButtonProps {
 	node: Node;
-};
+}
 
 const ToggleButton = ({ node }: ToggleButtonProps) => {
 	const [hidden, setHidden] = useState<boolean>(false);

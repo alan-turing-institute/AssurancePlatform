@@ -35,23 +35,23 @@ function parseCaseData(data: unknown): CaseExportNested {
 	);
 }
 
-type ViewerState = {
+interface ViewerState {
 	data: CaseExportNested | null;
 	error: string | null;
 	loading: boolean;
-};
+}
 
 const EMPTY_GUIDED_PATH: string[] = [];
 const EMPTY_HIGHLIGHTED_NODES: string[] = [];
 
-type CaseViewerWrapperProps = {
+interface CaseViewerWrapperProps {
 	caseFile?: string;
-	onNodeClick?: ((node: Node<ReactFlowNodeData>) => void) | null;
-	guidedPath?: string[];
-	highlightedNodes?: string[];
 	/** Enable editing mode (browser-only, no persistence) */
 	editable?: boolean;
-};
+	guidedPath?: string[];
+	highlightedNodes?: string[];
+	onNodeClick?: ((node: Node<ReactFlowNodeData>) => void) | null;
+}
 
 /**
  * Wrapper component that loads case data from static folder and renders the case viewer.

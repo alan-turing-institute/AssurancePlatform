@@ -17,7 +17,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-export type UserPermission = {
+export interface UserPermission {
 	id: string;
 	permission: string;
 	user: {
@@ -25,9 +25,9 @@ export type UserPermission = {
 		username: string;
 		email: string;
 	};
-};
+}
 
-export type TeamPermission = {
+export interface TeamPermission {
 	id: string;
 	permission: string;
 	team: {
@@ -35,19 +35,19 @@ export type TeamPermission = {
 		name: string;
 		slug: string;
 	};
-};
+}
 
-export type Team = {
+export interface Team {
 	id: string;
 	name: string;
 	slug: string;
-};
+}
 
-type PermissionSelectProps = {
-	value: string;
-	onValueChange: (value: string) => void;
+interface PermissionSelectProps {
 	className?: string;
-};
+	onValueChange: (value: string) => void;
+	value: string;
+}
 
 export function PermissionSelect({
 	value,
@@ -69,13 +69,13 @@ export function PermissionSelect({
 	);
 }
 
-type UserPermissionRowProps = {
-	permission: UserPermission;
-	onUpdate: (permissionId: string, newPermission: string) => void;
-	onRevoke: (permissionId: string) => void;
-	getInitials: (name: string) => string;
+interface UserPermissionRowProps {
 	className?: string;
-};
+	getInitials: (name: string) => string;
+	onRevoke: (permissionId: string) => void;
+	onUpdate: (permissionId: string, newPermission: string) => void;
+	permission: UserPermission;
+}
 
 export function UserPermissionRow({
 	permission,
@@ -133,12 +133,12 @@ export function UserPermissionRow({
 	);
 }
 
-type TeamPermissionRowProps = {
-	permission: TeamPermission;
-	onUpdate: (permissionId: string, newPermission: string) => void;
-	onRevoke: (permissionId: string) => void;
+interface TeamPermissionRowProps {
 	className?: string;
-};
+	onRevoke: (permissionId: string) => void;
+	onUpdate: (permissionId: string, newPermission: string) => void;
+	permission: TeamPermission;
+}
 
 export function TeamPermissionRow({
 	permission,
@@ -187,12 +187,12 @@ export function TeamPermissionRow({
 	);
 }
 
-type AvailableTeamsListProps = {
+interface AvailableTeamsListProps {
+	className?: string;
+	onShareWithTeam: (teamId: string, permission: string) => void;
 	teams: Team[];
 	userTeamsCount: number;
-	onShareWithTeam: (teamId: string, permission: string) => void;
-	className?: string;
-};
+}
 
 export function AvailableTeamsList({
 	teams,

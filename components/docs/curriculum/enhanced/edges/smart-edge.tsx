@@ -33,14 +33,14 @@ import { getStateColor, getStrokeWidth } from "./edge-utils";
 
 type EdgeState = "error" | "success" | "active" | "default";
 
-type PositionParams = {
+interface PositionParams {
+	sourcePosition: Position;
 	sourceX: number;
 	sourceY: number;
+	targetPosition: Position;
 	targetX: number;
 	targetY: number;
-	sourcePosition: Position;
-	targetPosition: Position;
-};
+}
 
 /**
  * Get icon based on edge state
@@ -60,20 +60,12 @@ function getStateIcon(edgeState: EdgeState | string): LucideIcon {
 
 type PathType = "auto" | "straight" | "smoothstep" | "bezier";
 
-type SmartEdgeData = {
-	state?: EdgeState | string;
+interface SmartEdgeData {
 	color?: string;
-	strength?: number;
-	strokeWidth?: number;
-	pathType?: PathType;
-	curvature?: number;
 	cornerRadius?: number;
+	curvature?: number;
 	label?: string;
-	showLabel?: boolean;
 	labelIcon?: LucideIcon;
-	showStrengthIndicator?: boolean;
-	showTypeIndicator?: boolean;
-	type?: string;
 	metadata?: string;
 	onClick?: (
 		event: React.MouseEvent,
@@ -83,7 +75,15 @@ type SmartEdgeData = {
 		event: React.MouseEvent,
 		info: { id: string; source: string; target: string; data: SmartEdgeData }
 	) => void;
-};
+	pathType?: PathType;
+	showLabel?: boolean;
+	showStrengthIndicator?: boolean;
+	showTypeIndicator?: boolean;
+	state?: EdgeState | string;
+	strength?: number;
+	strokeWidth?: number;
+	type?: string;
+}
 
 type SmartEdgeProps = EdgeProps<SmartEdgeData>;
 
@@ -183,22 +183,20 @@ function calculateEdgeStyle(
 /**
  * SmartEdge Component
  */
-const SmartEdge = (
-	{
-		id,
-		source: _source,
-		target: _target,
-		sourceX,
-		sourceY,
-		targetX,
-		targetY,
-		sourcePosition,
-		targetPosition,
-		data = {},
-		selected: _selected = false,
-		style = {},
-	}: SmartEdgeProps // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Component handles multiple interaction states and path calculations
-) => {
+const SmartEdge = ({
+	id,
+	source: _source,
+	target: _target,
+	sourceX,
+	sourceY,
+	targetX,
+	targetY,
+	sourcePosition,
+	targetPosition,
+	data = {},
+	selected: _selected = false,
+	style = {},
+}: SmartEdgeProps) => {
 	// Hover and selection states disabled - no edge editing functionality currently
 	const isHovered = false;
 	const isSelected = false;
@@ -439,7 +437,7 @@ const SmartEdge = (
 						{isHovered && data.metadata && (
 							<motion.div
 								animate={{ opacity: 1, y: -10 }}
-								className="-translate-x-1/2 absolute top-full left-1/2 mt-2 transform whitespace-nowrap rounded px-2 py-1 text-[10px]"
+								className="absolute top-full left-1/2 mt-2 -translate-x-1/2 transform whitespace-nowrap rounded px-2 py-1 text-[10px]"
 								exit={{ opacity: 0 }}
 								initial={{ opacity: 0, y: -5 }}
 								style={{

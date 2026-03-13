@@ -85,21 +85,21 @@ export type LayoutApplyFn = (
 	direction?: LayoutDirection
 ) => void;
 
-export type DocumentExportOptions = {
+export interface DocumentExportOptions {
+	applyLayout: LayoutApplyFn;
 	caseData: CaseExportNested;
 	caseName: string;
-	format: ExportFormat;
-	template: TemplatePreset;
-	includeDiagram: boolean;
-	nodes: Node[];
+	diagramMode?: DiagramMode;
 	edges: Edge[];
+	format: ExportFormat;
+	includeDiagram: boolean;
 	layoutDirection: LayoutDirection;
-	applyLayout: LayoutApplyFn;
+	maxDiagramDepth?: number | null;
+	nodes: Node[];
 	restoreLayout: () => void;
 	sectionOverrides?: Record<string, boolean>;
-	maxDiagramDepth?: number | null;
-	diagramMode?: DiagramMode;
-};
+	template: TemplatePreset;
+}
 
 /**
  * Filter function for diagram capture - exclude UI controls.

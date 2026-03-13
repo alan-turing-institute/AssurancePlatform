@@ -1,9 +1,9 @@
 import { sanitizeDescription } from "@/lib/sanitize-html";
 
-type SanitisedHtmlProps = {
-	html: string;
+interface SanitisedHtmlProps {
 	className?: string;
-};
+	html: string;
+}
 
 export const SanitisedHtml = ({ html, className }: SanitisedHtmlProps) => (
 	<div

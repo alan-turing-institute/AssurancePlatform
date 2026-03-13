@@ -1,9 +1,9 @@
 import { fetchPublishedAssuranceCaseId } from "@/actions/case-studies";
 import DownloadCaseButton from "./download-case-button";
 
-type CaseStudyCaseItemProps = {
+interface CaseStudyCaseItemProps {
 	assuranceCaseId: string;
-};
+}
 
 const CaseStudyCaseItem = async ({
 	assuranceCaseId,

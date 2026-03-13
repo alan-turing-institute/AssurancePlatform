@@ -14,9 +14,9 @@ import {
 import type { ConnectedAccountsData } from "@/lib/services/connected-accounts-service";
 import { toast } from "@/lib/toast";
 
-type ConnectedAccountsFormProps = {
+interface ConnectedAccountsFormProps {
 	data: ConnectedAccountsData | null;
-};
+}
 
 /**
  * Google icon component

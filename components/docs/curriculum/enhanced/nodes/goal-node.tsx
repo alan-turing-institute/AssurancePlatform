@@ -47,47 +47,47 @@ import CollapsibleNode from "./collapsible-node";
 
 type ImportanceLevel = "critical" | "high" | "medium" | "low";
 
-type ImportanceConfig = {
-	label: string;
+interface ImportanceConfig {
 	className: string;
 	icon: string;
-};
+	label: string;
+}
 
-type ContextItem = {
+interface ContextItem {
 	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type GoalNodeData = {
-	id?: string;
-	name?: string;
+interface GoalNodeData {
+	context?: (ContextItem | string)[];
 	description?: string;
+	id?: string;
 	importance?: ImportanceLevel;
+	isRoot?: boolean;
+	metadata?: Record<string, unknown>;
+	name?: string;
 	progress?: number;
 	subGoalsCount?: number;
-	isRoot?: boolean;
-	context?: (ContextItem | string)[];
-	metadata?: Record<string, unknown>;
 	[key: string]: unknown;
-};
+}
 
-type ProgressIndicatorProps = {
+interface ProgressIndicatorProps {
 	progress?: number;
 	showLabel?: boolean;
-};
+}
 
-type ImportanceBadgeProps = {
+interface ImportanceBadgeProps {
 	importance?: ImportanceLevel;
-};
+}
 
-type GoalNodeProps = {
-	id?: string;
-	data?: GoalNodeData;
-	selected?: boolean;
-	isConnectable?: boolean;
+interface GoalNodeProps {
 	className?: string;
+	data?: GoalNodeData;
+	id?: string;
+	isConnectable?: boolean;
+	selected?: boolean;
 	[key: string]: unknown;
-};
+}
 
 // ========================================================================
 // Sub-Components
@@ -111,7 +111,7 @@ const ProgressIndicator = ({
 				{/* Background circle */}
 				<svg
 					aria-label={`Progress indicator showing ${Math.round(percentage)}% completion`}
-					className="-rotate-90 h-full w-full transform"
+					className="h-full w-full -rotate-90 transform"
 					role="img"
 					viewBox="0 0 40 40"
 				>

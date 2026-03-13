@@ -199,15 +199,15 @@ const getUserAnswerText = (
 // Quiz Results Component
 // ============================================
 
-type QuizResultsProps = {
-	score: number;
-	total: number;
-	questions: Question[];
-	answers: Record<string, string | boolean>;
-	showFeedback: boolean;
+interface QuizResultsProps {
 	allowRetry: boolean;
+	answers: Record<string, string | boolean>;
 	onRetry: () => void;
-};
+	questions: Question[];
+	score: number;
+	showFeedback: boolean;
+	total: number;
+}
 
 const QuizResults = ({
 	score,
@@ -258,10 +258,10 @@ const QuizResults = ({
 // Quiz Feedback List Component
 // ============================================
 
-type QuizFeedbackListProps = {
-	questions: Question[];
+interface QuizFeedbackListProps {
 	answers: Record<string, string | boolean>;
-};
+	questions: Question[];
+}
 
 const QuizFeedbackList = ({
 	questions,
@@ -309,14 +309,14 @@ const QuizFeedbackList = ({
 // Multiple Choice Question Renderer
 // ============================================
 
-type MultipleChoiceRendererProps = {
+interface MultipleChoiceRendererProps {
+	disabled: boolean;
+	onAnswer: (optionId: string) => void;
 	question: MultipleChoiceQuestion;
 	selectedAnswer: string | undefined;
-	onAnswer: (optionId: string) => void;
-	disabled: boolean;
-	shuffleOptions: boolean;
 	shuffleKey: number;
-};
+	shuffleOptions: boolean;
+}
 
 const MultipleChoiceRenderer = ({
 	question,
@@ -380,12 +380,12 @@ const MultipleChoiceRenderer = ({
 // True/False Question Renderer
 // ============================================
 
-type TrueFalseRendererProps = {
+interface TrueFalseRendererProps {
+	disabled: boolean;
+	onAnswer: (value: boolean) => void;
 	question: TrueFalseQuestion;
 	selectedAnswer: boolean | undefined;
-	onAnswer: (value: boolean) => void;
-	disabled: boolean;
-};
+}
 
 const TrueFalseRenderer = ({
 	question,
@@ -432,17 +432,17 @@ const TrueFalseRenderer = ({
 // Sequential Quiz Mode Component
 // ============================================
 
-type SequentialQuizProps = {
-	questions: Question[];
-	title?: string;
+interface SequentialQuizProps {
 	answers: Record<string, string | boolean>;
 	currentIndex: number;
-	shuffleKey: number;
-	shuffleOptions: boolean;
 	onAnswer: (questionId: string, answer: string | boolean) => void;
 	onNext: () => void;
 	onPrevious: () => void;
-};
+	questions: Question[];
+	shuffleKey: number;
+	shuffleOptions: boolean;
+	title?: string;
+}
 
 const SequentialQuiz = ({
 	questions,
@@ -548,15 +548,15 @@ const SequentialQuiz = ({
 // All-at-Once Quiz Mode Component
 // ============================================
 
-type AllAtOnceQuizProps = {
-	questions: Question[];
-	title?: string;
+interface AllAtOnceQuizProps {
 	answers: Record<string, string | boolean>;
-	shuffleKey: number;
-	shuffleOptions: boolean;
 	onAnswer: (questionId: string, answer: string | boolean) => void;
 	onComplete: () => void;
-};
+	questions: Question[];
+	shuffleKey: number;
+	shuffleOptions: boolean;
+	title?: string;
+}
 
 const AllAtOnceQuiz = ({
 	questions,
@@ -761,11 +761,11 @@ export const Quiz = ({
 // Confidence Rating Component
 // ============================================
 
-type ConfidenceLevel = {
-	value: number;
-	label: string;
+interface ConfidenceLevel {
 	Icon: React.ComponentType<{ className?: string }>;
-};
+	label: string;
+	value: number;
+}
 
 const confidenceLevels: ConfidenceLevel[] = [
 	{ value: 1, label: "Not confident", Icon: XCircle },

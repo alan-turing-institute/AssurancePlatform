@@ -36,9 +36,9 @@ async function hashPassword(password: string): Promise<string> {
 	return hash;
 }
 
-type Credentials = {
+interface Credentials {
 	[username: string]: string;
-};
+}
 
 function loadCredentials(): Credentials {
 	const credentialsPath = join(__dirname, ".credentials");

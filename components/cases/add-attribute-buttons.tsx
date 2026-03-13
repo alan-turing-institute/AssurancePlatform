@@ -4,15 +4,15 @@ import { MinusIcon, PlusIcon } from "lucide-react";
 import type React from "react";
 import { Button } from "../ui/button";
 
-type AddAttributeButtonsProps = {
+interface AddAttributeButtonsProps {
 	hasAssumption: boolean;
 	hasJustification: boolean;
 	newAssumption: boolean;
 	newJustification: boolean;
-	supportsJustification: boolean;
 	onToggleAssumption: () => void;
 	onToggleJustification: () => void;
-};
+	supportsJustification: boolean;
+}
 
 /**
  * Buttons for adding new assumption and justification attributes.

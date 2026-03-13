@@ -40,12 +40,12 @@ type AnimatedHandleProps = HandleProps & {
 	className?: string;
 };
 
-type ColorConfig = {
+interface ColorConfig {
 	base: string;
-	glow: string;
 	border: string;
+	glow: string;
 	ring: string;
-};
+}
 
 const AnimatedHandle = ({
 	type,
@@ -348,7 +348,7 @@ const AnimatedHandle = ({
 								y: 0,
 								opacity: 1,
 							}}
-							key={`particle-${i}-${nodeId}`}
+							key={`particle-${Math.cos((i * Math.PI * 2) / 6).toFixed(4)}-${nodeId}`}
 							transition={{
 								duration: 1,
 								repeat: Number.POSITIVE_INFINITY,
@@ -408,7 +408,7 @@ const AnimatedHandle = ({
 				>
 					<Zap
 						className={cn(
-							"-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2",
+							"absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
 							"h-6 w-6 text-yellow-300"
 						)}
 					/>

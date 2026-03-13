@@ -17,19 +17,19 @@ import { useNewLinkForm } from "@/hooks/use-new-link-form";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
-type NodeActions = {
-	setSelectedLink: (value: boolean) => void;
-	setLinkToCreate: (value: string) => void;
+interface NodeActions {
 	handleClose: () => void;
-};
+	setLinkToCreate: (value: string) => void;
+	setSelectedLink: (value: boolean) => void;
+}
 
-type NewLinkFormProps = {
-	node: Node;
-	linkType: string;
+interface NewLinkFormProps {
 	actions: NodeActions;
-	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
 	className?: string;
-};
+	linkType: string;
+	node: Node;
+	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
+}
 
 const NewLinkForm: React.FC<NewLinkFormProps> = ({
 	node,

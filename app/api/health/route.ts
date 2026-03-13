@@ -3,19 +3,19 @@ import { prisma } from "@/lib/prisma";
 
 type HealthStatus = "healthy" | "unhealthy" | "degraded";
 
-type DatabaseCheck = {
-	status: HealthStatus;
-	latencyMs?: number;
+interface DatabaseCheck {
 	error?: string;
-};
-
-type HealthCheckResponse = {
+	latencyMs?: number;
 	status: HealthStatus;
-	timestamp: string;
+}
+
+interface HealthCheckResponse {
 	checks: {
 		database: DatabaseCheck;
 	};
-};
+	status: HealthStatus;
+	timestamp: string;
+}
 
 /**
  * GET /api/health

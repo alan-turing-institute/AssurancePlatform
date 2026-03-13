@@ -18,12 +18,12 @@ import type { LayoutDirection } from "@/lib/case/layout-helper";
 export type ImageFormat = "svg" | "png";
 export type ImageScale = 1 | 2 | 3;
 
-export type ImageExportOptions = {
-	format: ImageFormat;
-	scale?: ImageScale;
+export interface ImageExportOptions {
 	caseName: string;
+	format: ImageFormat;
 	nodes: Node[];
-};
+	scale?: ImageScale;
+}
 
 export type FilteredImageExportOptions = ImageExportOptions & {
 	edges: Edge[];

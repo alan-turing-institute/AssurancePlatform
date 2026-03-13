@@ -58,7 +58,7 @@ const DiscoverCaseStudyPage = async ({
 					<div className="relative lg:col-start-2 lg:row-start-1">
 						<svg
 							aria-hidden="true"
-							className="-mr-20 -mt-20 absolute top-0 right-0 hidden lg:block"
+							className="absolute top-0 right-0 -mt-20 -mr-20 hidden lg:block"
 							fill="none"
 							height={384}
 							viewBox="0 0 404 384"

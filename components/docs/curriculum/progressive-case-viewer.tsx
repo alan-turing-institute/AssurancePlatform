@@ -12,14 +12,14 @@ import {
 import StageGuidancePanel from "./stage-guidance-panel";
 import StageSelector from "./stage-selector";
 
-type ProgressiveCaseViewerProps = {
-	/** Stage definitions for this case */
-	stages: StageDefinition[];
-	/** Initial stage to display (1-indexed, defaults to 1) */
-	initialStage?: number;
+interface ProgressiveCaseViewerProps {
 	/** Whether keyboard navigation is enabled */
 	enableKeyboard?: boolean;
-};
+	/** Initial stage to display (1-indexed, defaults to 1) */
+	initialStage?: number;
+	/** Stage definitions for this case */
+	stages: StageDefinition[];
+}
 
 /**
  * ProgressiveCaseViewer - Orchestrates progressive disclosure of an assurance case

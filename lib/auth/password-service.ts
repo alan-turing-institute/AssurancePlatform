@@ -2,10 +2,10 @@ import { pbkdf2Sync } from "node:crypto";
 
 export type PasswordAlgorithm = "django_pbkdf2" | "argon2id";
 
-type VerifyResult = {
-	valid: boolean;
+interface VerifyResult {
 	needsUpgrade: boolean;
-};
+	valid: boolean;
+}
 
 /**
  * Verifies a password against a stored hash.

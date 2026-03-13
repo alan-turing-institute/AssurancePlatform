@@ -29,59 +29,59 @@ import "reactflow/dist/style.css";
 /**
  * Connection hint type
  */
-type ConnectionHint = {
-	nodeName: string;
-	distance: number;
+interface ConnectionHint {
 	direction: string;
-};
+	distance: number;
+	nodeName: string;
+}
 
 /**
  * Template node configuration type
  */
-type TemplateNodeConfig = {
-	type: string;
-	name: string;
+interface TemplateNodeConfig {
 	description?: string;
+	name: string;
 	offsetX?: number;
 	offsetY?: number;
-};
+	type: string;
+}
 
 /**
  * Template type
  */
-type Template = {
+interface Template {
 	id: string;
 	name: string;
 	nodes?: TemplateNodeConfig[];
-};
+}
 
 /**
  * Form data type
  */
-type FormData = {
-	name?: string;
+interface FormData {
 	description?: string;
+	name?: string;
 	[key: string]: unknown;
-};
+}
 
 /**
  * Edge type for React Flow
  */
-type Edge = {
+interface Edge {
+	animated: boolean;
 	id: string;
 	source: string;
 	target: string;
 	type: string;
-	animated: boolean;
-};
+}
 
 /**
  * Connection Hint Component Props
  */
-type ConnectionHintProps = {
+interface ConnectionHintProps {
 	hint: ConnectionHint;
 	index: number;
-};
+}
 
 /**
  * Connection Hint Component
@@ -113,9 +113,9 @@ const ConnectionHint = ({ hint, index }: ConnectionHintProps): ReactNode => (
 /**
  * Template Preview Component Props
  */
-type TemplatePreviewProps = {
+interface TemplatePreviewProps {
 	template: Template;
-};
+}
 
 /**
  * Template Preview Component
@@ -209,15 +209,15 @@ const TemplatePreview = ({ template }: TemplatePreviewProps): ReactNode => {
 /**
  * BlockPreview Component Props
  */
-type BlockPreviewProps = {
-	nodeType?: string;
-	formData?: FormData;
-	template?: Template | null;
+interface BlockPreviewProps {
+	className?: string;
 	connectionHints?: ConnectionHint[];
+	formData?: FormData;
+	nodeType?: string;
 	showConnectionHints?: boolean;
 	showZoomControls?: boolean;
-	className?: string;
-};
+	template?: Template | null;
+}
 
 /**
  * BlockPreview Component
@@ -538,10 +538,10 @@ const BlockPreview = ({
 /**
  * Compact Block Preview Props
  */
-type CompactBlockPreviewProps = {
-	nodeType?: string;
+interface CompactBlockPreviewProps {
 	formData?: FormData;
-};
+	nodeType?: string;
+}
 
 /**
  * Compact Block Preview (smaller version)

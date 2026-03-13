@@ -4,23 +4,23 @@ import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prism
 export type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma";
 
 // Legacy type kept for backward compatibility
-export type PublishStatus = {
+export interface PublishStatus {
 	isPublished: boolean;
-	publishedId: string | null;
-	publishedAt: Date | null;
 	linkedCaseStudyCount: number;
-};
+	publishedAt: Date | null;
+	publishedId: string | null;
+}
 
 // Full status including 3-state workflow
-export type FullPublishStatus = {
-	publishStatus: PrismaPublishStatus;
-	isPublished: boolean;
-	publishedId: string | null;
-	publishedAt: Date | null;
-	markedReadyAt: Date | null;
-	linkedCaseStudyCount: number;
+export interface FullPublishStatus {
 	hasChanges: boolean;
-};
+	isPublished: boolean;
+	linkedCaseStudyCount: number;
+	markedReadyAt: Date | null;
+	publishedAt: Date | null;
+	publishedId: string | null;
+	publishStatus: PrismaPublishStatus;
+}
 
 export type PublishResult =
 	| { data: { publishedId: string; publishedAt: Date } }
