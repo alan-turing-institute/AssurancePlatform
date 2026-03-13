@@ -88,8 +88,8 @@ jobs:
         uses: actions/cache@v5
         id: prisma-cache-validate
         with:
-          path: node_modules/.prisma/client
-          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma') }}
+          path: src/generated/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma', 'pnpm-lock.yaml') }}
 
       - name: Generate Prisma client
         if: steps.prisma-cache-validate.outputs.cache-hit != 'true'
@@ -158,8 +158,8 @@ jobs:
         uses: actions/cache@v5
         id: prisma-cache-test
         with:
-          path: node_modules/.prisma/client
-          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma') }}
+          path: src/generated/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma', 'pnpm-lock.yaml') }}
 
       - name: Generate Prisma client
         if: steps.prisma-cache-test.outputs.cache-hit != 'true'
