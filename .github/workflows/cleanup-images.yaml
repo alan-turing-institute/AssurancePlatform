@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Delete PR images older than 14 days
-        uses: snok/container-retention-policy@v3
+        uses: snok/container-retention-policy@v3.0.1
         with:
           account: alan-turing-institute
           token: ${{ secrets.GITHUB_TOKEN }}
