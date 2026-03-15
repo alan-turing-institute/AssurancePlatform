@@ -71,10 +71,19 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Delete Me Case").hover();
 		await dashboard.deleteCaseButton("Delete Me Case").click();
 
-		// Confirm deletion in alert modal
-		await page.getByRole("button", { name: "Delete" }).click();
+		// Confirm deletion in alert modal and wait for the API response
+		await Promise.all([
+			page.waitForResponse(
+				(resp) =>
+					resp.url().includes("/api/cases/") &&
+					resp.request().method() === "DELETE"
+			),
+			page.getByRole("button", { name: "Delete" }).click(),
+		]);
 
-		// Case should disappear
-		await expect(page.getByText("Delete Me Case")).not.toBeVisible();
+		// Case should disappear after the dashboard refreshes
+		await expect(page.getByText("Delete Me Case")).not.toBeVisible({
+			timeout: 10_000,
+		});
 	});
 });
