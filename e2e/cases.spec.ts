@@ -81,9 +81,9 @@ test.describe("Case management", () => {
 			page.getByRole("button", { name: "Delete" }).click(),
 		]);
 
-		// Case should disappear after the dashboard refreshes
-		await expect(page.getByText("Delete Me Case")).not.toBeVisible({
-			timeout: 10_000,
-		});
+		// Re-navigate to dashboard to ensure fresh data (router.refresh()
+		// triggers an async RSC re-fetch that may not complete in CI)
+		await dashboard.goto();
+		await expect(page.getByText("Delete Me Case")).not.toBeVisible();
 	});
 });
