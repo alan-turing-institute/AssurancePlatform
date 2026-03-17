@@ -55,73 +55,73 @@ import CollapsibleNode from "./collapsible-node";
 type VerificationStatus = "verified" | "in-review" | "pending" | "challenged";
 type ClaimStrength = "strong" | "moderate" | "weak";
 
-type StatusConfig = {
-	label: string;
+interface StatusConfig {
 	className: string;
 	icon: React.ComponentType<{ className?: string }>;
-};
-
-type StrengthConfig = {
 	label: string;
+}
+
+interface StrengthConfig {
 	bars: number;
 	color: string;
-};
+	label: string;
+}
 
-type MetadataItem = {
+interface MetadataItem {
 	icon: React.ComponentType<{ className?: string }>;
 	label: string;
 	value: string;
-};
+}
 
-type ClaimItem = {
+interface ClaimItem {
 	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type PropertyClaimNodeData = {
-	id?: string;
-	name?: string;
+interface PropertyClaimNodeData {
+	assumptions?: (ClaimItem | string)[];
+	author?: string;
+	date?: string;
 	description?: string;
+	id?: string;
+	lastUpdated?: string;
+	linkedEvidenceCount?: number;
+	metadata?: Record<string, unknown>;
+	name?: string;
+	relatedClaims?: (ClaimItem | string)[];
+	reviewer?: string;
 	strength?: ClaimStrength;
 	verificationStatus?: VerificationStatus;
-	linkedEvidenceCount?: number;
-	author?: string;
-	date?: string;
-	reviewer?: string;
-	lastUpdated?: string;
-	assumptions?: (ClaimItem | string)[];
-	relatedClaims?: (ClaimItem | string)[];
-	metadata?: Record<string, unknown>;
 	[key: string]: unknown;
-};
+}
 
-type VerificationStatusBadgeProps = {
+interface VerificationStatusBadgeProps {
 	status?: VerificationStatus;
-};
+}
 
-type ClaimStrengthIndicatorProps = {
+interface ClaimStrengthIndicatorProps {
 	strength?: ClaimStrength;
-};
+}
 
-type LinkedEvidenceCounterProps = {
+interface LinkedEvidenceCounterProps {
 	count?: number;
-};
+}
 
-type MetadataDisplayProps = {
+interface MetadataDisplayProps {
 	author?: string;
 	date?: string;
-	reviewer?: string;
 	lastUpdated?: string;
-};
+	reviewer?: string;
+}
 
-type PropertyClaimNodeProps = {
-	id?: string;
-	data?: PropertyClaimNodeData;
-	selected?: boolean;
-	isConnectable?: boolean;
+interface PropertyClaimNodeProps {
 	className?: string;
+	data?: PropertyClaimNodeData;
+	id?: string;
+	isConnectable?: boolean;
+	selected?: boolean;
 	[key: string]: unknown;
-};
+}
 
 // ========================================================================
 // Sub-Components
@@ -208,17 +208,19 @@ const ClaimStrengthIndicator = ({
 				<span className="font-medium text-text-light/70">{config.label}</span>
 			</div>
 			<div className="flex gap-1">
-				{[...new Array(5)].map((_, i) => (
-					<div
-						className={cn(
-							"h-1.5 w-4 rounded-full transition-all duration-300",
-							i < config.bars
-								? config.color
-								: "bg-background-transparent-white-hover"
-						)}
-						key={`bar-${i + 1}`}
-					/>
-				))}
+				{(["bar-1", "bar-2", "bar-3", "bar-4", "bar-5"] as const).map(
+					(barId, i) => (
+						<div
+							className={cn(
+								"h-1.5 w-4 rounded-full transition-all duration-300",
+								i < config.bars
+									? config.color
+									: "bg-background-transparent-white-hover"
+							)}
+							key={barId}
+						/>
+					)
+				)}
 			</div>
 		</div>
 	);

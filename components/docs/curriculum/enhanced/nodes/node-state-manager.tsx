@@ -36,31 +36,31 @@ import useNodeState from "./use-node-state";
 // Type Definitions
 // ========================================================================
 
-type NodeStateStats = {
-	total: number;
-	expanded: number;
+interface NodeStateStats {
 	collapsed: number;
-};
+	expanded: number;
+	total: number;
+}
 
 type NodeStatesMap = Record<string, boolean>;
 
-type UseNodeStateReturn = {
-	nodeStates: NodeStatesMap;
-	isNodeExpanded: (nodeId: string) => boolean;
-	toggleNode: (nodeId: string) => void;
-	expandNode: (nodeId: string) => void;
+interface UseNodeStateReturn {
+	collapseAll: (allNodeIds: string[]) => void;
 	collapseNode: (nodeId: string) => void;
-	setNodeState: (nodeId: string, expanded: boolean) => void;
-	expandNodes: (nodeIds: string[]) => void;
 	collapseNodes: (nodeIds: string[]) => void;
 	expandAll: (allNodeIds: string[]) => void;
-	collapseAll: (allNodeIds: string[]) => void;
-	focusMode: (focusNodeIds: string[], allNodeIds: string[]) => void;
-	expandPathToNode: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
+	expandNode: (nodeId: string) => void;
+	expandNodes: (nodeIds: string[]) => void;
 	expandNodeTree: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
-	resetAll: () => void;
+	expandPathToNode: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
+	focusMode: (focusNodeIds: string[], allNodeIds: string[]) => void;
 	getStats: () => NodeStateStats;
-};
+	isNodeExpanded: (nodeId: string) => boolean;
+	nodeStates: NodeStatesMap;
+	resetAll: () => void;
+	setNodeState: (nodeId: string, expanded: boolean) => void;
+	toggleNode: (nodeId: string) => void;
+}
 
 type NodeStateContextValue = Omit<
 	UseNodeStateReturn,
@@ -82,27 +82,27 @@ type NodeStateContextValue = Omit<
 	edges: Edge[];
 };
 
-type StateChangeEvent = {
-	operation: string;
+interface StateChangeEvent {
 	args: unknown[];
-	stats: NodeStateStats;
 	nodeStates: NodeStatesMap;
-};
+	operation: string;
+	stats: NodeStateStats;
+}
 
-type NodeStateManagerProps = {
-	children: ReactNode;
-	persistKey?: string | null;
-	defaultExpanded?: boolean;
+interface NodeStateManagerProps {
 	autoExpandOnSelect?: boolean;
+	children: ReactNode;
+	className?: string;
 	debounceMs?: number;
+	defaultExpanded?: boolean;
 	onStateChange?: (event: StateChangeEvent) => void;
+	persistKey?: string | null;
 	showControls?: boolean;
-	className?: string;
-};
+}
 
-type NodeStateControlsProps = {
+interface NodeStateControlsProps {
 	className?: string;
-};
+}
 
 // ========================================================================
 // Context
@@ -378,9 +378,9 @@ export const useNodeStateWithFlow = () => {
 /**
  * Higher-Order Component to inject node state props
  */
-type WithNodeStateProps = {
+interface WithNodeStateProps {
 	nodeState: NodeStateContextValue;
-};
+}
 
 export function withNodeState<P extends WithNodeStateProps>(
 	Component: ComponentType<P>

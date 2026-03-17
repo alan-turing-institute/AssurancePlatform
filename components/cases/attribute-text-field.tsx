@@ -12,20 +12,20 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "../ui/textarea";
 
-type FormValues = {
+interface FormValues {
 	assumption?: string;
-	justification?: string;
 	context?: string[];
-};
+	justification?: string;
+}
 
-type AttributeTextFieldProps = {
+interface AttributeTextFieldProps {
 	form: UseFormReturn<FormValues>;
-	name: "assumption" | "justification";
 	label: string;
+	name: "assumption" | "justification";
+	onClear: () => void;
 	placeholder: string;
 	readOnly: boolean;
-	onClear: () => void;
-};
+}
 
 /**
  * Reusable text field for assumption and justification attributes.

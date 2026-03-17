@@ -13,15 +13,15 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 
-type InviteResult = {
-	success: boolean;
-	error?: string;
+interface InviteResult {
 	caseId?: string;
-};
+	error?: string;
+	success: boolean;
+}
 
-type InviteAcceptCardProps = {
+interface InviteAcceptCardProps {
 	token: string;
-};
+}
 
 function SuccessContent({ caseId }: { caseId?: string }) {
 	return (

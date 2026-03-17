@@ -118,7 +118,9 @@ function createExtendedPrismaClient() {
 	}
 
 	// Create Prisma adapter
-	const adapter = new PrismaPg(pool);
+	// Cast needed: @types/pg version in @prisma/adapter-pg (8.11) differs from project (8.18)
+	// biome-ignore lint/suspicious/noExplicitAny: type version mismatch between @types/pg versions
+	const adapter = new PrismaPg(pool as any);
 
 	// Create base client and extend with validation
 	const client = new PrismaClient({ adapter }).$extends(

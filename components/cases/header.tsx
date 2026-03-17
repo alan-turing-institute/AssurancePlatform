@@ -15,9 +15,9 @@ import { StatusButton } from "../publishing/status-button";
 import { Button } from "../ui/button";
 import ActiveUsersList from "./active-users-list";
 
-type HeaderProps = {
+interface HeaderProps {
 	setOpen: Dispatch<SetStateAction<boolean>>;
-};
+}
 
 const Header = ({ setOpen }: HeaderProps) => {
 	const { nodes, assuranceCase, setAssuranceCase } = useStore();

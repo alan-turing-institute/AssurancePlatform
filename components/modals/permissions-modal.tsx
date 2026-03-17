@@ -13,12 +13,12 @@ import { Modal } from "@/components/ui/modal";
 import { usePermissionsModal } from "@/hooks/modal-hooks";
 import useStore from "@/store/store";
 
-type Member = {
-	id: number | string;
+interface Member {
 	email: string;
-	username: string;
+	id: number | string;
 	permissionId?: string;
-};
+	username: string;
+}
 
 import { toast } from "@/lib/toast";
 import { Button } from "../ui/button";

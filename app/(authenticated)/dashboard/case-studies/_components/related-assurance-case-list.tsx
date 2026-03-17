@@ -10,11 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
-type RelatedAssuranceCaseListProps = {
+interface RelatedAssuranceCaseListProps {
+	className?: string;
 	selectedAssuranceCases: string[];
 	setSelectedAssuranceCases: Dispatch<SetStateAction<string[]>>;
-	className?: string;
-};
+}
 
 const RelatedAssuranceCaseList = ({
 	selectedAssuranceCases,

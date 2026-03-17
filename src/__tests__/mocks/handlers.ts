@@ -9,97 +9,97 @@ import {
 import { mockTeamMembers } from "../utils/team-mock-data";
 
 // Type interfaces for request bodies
-type CreateCaseRequest = {
-	name: string;
+interface CreateCaseRequest {
 	description: string;
-};
+	name: string;
+}
 
-type UpdateCaseRequest = {
-	name?: string;
+interface UpdateCaseRequest {
 	description?: string;
-	view_groups?: number[];
 	edit_groups?: number[];
+	name?: string;
 	review_groups?: number[];
-};
+	view_groups?: number[];
+}
 
-type GoalRequest = {
-	name: string;
-	short_description?: string;
-	long_description?: string;
-	keywords?: string;
-	assurance_case: number;
+interface GoalRequest {
 	assumption?: boolean;
-};
-
-type StrategyRequest = {
+	assurance_case: number;
+	keywords?: string;
+	long_description?: string;
 	name: string;
 	short_description?: string;
-	long_description?: string;
-	keywords?: string;
+}
+
+interface StrategyRequest {
+	assurance_case: number;
 	goal: number;
-	assurance_case: number;
-};
-
-type EvidenceRequest = {
+	keywords?: string;
+	long_description?: string;
 	name: string;
 	short_description?: string;
-	long_description?: string;
-	keywords?: string;
-	URL?: string;
-	assurance_case: number;
-};
+}
 
-type PermissionRequest = {
+interface EvidenceRequest {
+	assurance_case: number;
+	keywords?: string;
+	long_description?: string;
+	name: string;
+	short_description?: string;
+	URL?: string;
+}
+
+interface PermissionRequest {
+	permission_type: string;
 	user_id: number;
 	user_name: string;
-	permission_type: string;
-};
+}
 
-type InviteRequest = {
+interface InviteRequest {
 	email: string;
-};
+}
 
-type PropertyClaimRequest = {
-	name: string;
-	short_description?: string;
-	long_description?: string;
-	keywords?: string;
-	property_claim_type?: string;
-	level?: number;
+interface PropertyClaimRequest {
+	assurance_case: number;
 	claim_type?: string;
 	goal?: number;
+	keywords?: string;
+	level?: number;
+	long_description?: string;
+	name: string;
+	property_claim_type?: string;
+	short_description?: string;
 	strategy?: number;
-	assurance_case: number;
-};
+}
 
-type ContextRequest = {
+interface ContextRequest {
+	assurance_case: number;
+	goal: number;
+	keywords?: string;
+	long_description?: string;
 	name: string;
 	short_description?: string;
-	long_description?: string;
-	keywords?: string;
-	goal: number;
-	assurance_case: number;
-};
+}
 
-type TeamRequest = {
-	name: string;
+interface TeamRequest {
 	description?: string;
-};
-
-type TeamMemberUpdateRequest = {
 	name: string;
-	title: string;
+}
+
+interface TeamMemberUpdateRequest {
 	department: string;
 	isAdmin?: boolean;
-};
-
-type TeamMemberCreateRequest = {
 	name: string;
 	title: string;
+}
+
+interface TeamMemberCreateRequest {
 	department: string;
 	email: string;
 	isAdmin?: boolean;
-};
+	name: string;
+	title: string;
+}
 
 // Mock API base URL (should match your backend)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";

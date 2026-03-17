@@ -11,32 +11,30 @@ import type {
 // Regular expressions
 export const NUMERIC_ID_PATTERN = /^\d+$/;
 
-export type Map = {
+export interface Map {
 	[key: string]: string | undefined;
-};
+}
 
 // Extended CaseNode interface with proper typing
 // Dynamic property bag: legacy case tree operations pass arbitrary fields through nodes
-export type CaseNode = {
+export interface CaseNode {
+	childrenHidden?: boolean;
+	context?: string[];
+	evidence?: EvidenceResponse[];
+	goals?: GoalResponse[];
 	hidden: boolean;
 	id: string;
-	type: string;
 	name?: string;
-	goals?: GoalResponse[];
-	context?: string[];
+	originalHidden?: boolean;
 	propertyClaims?: PropertyClaimResponse[];
 	strategies?: StrategyResponse[];
-	evidence?: EvidenceResponse[];
-	childrenHidden?: boolean;
-	originalHidden?: boolean;
+	type: string;
 	[key: string]: unknown;
-};
+}
 
 // Node type for React Flow integration
 // Dynamic property bag on data: legacy case tree operations spread arbitrary fields into node data
-export type ReactFlowNode = {
-	id: string;
-	type: string;
+export interface ReactFlowNode {
 	data: {
 		id: string;
 		name: string;
@@ -50,30 +48,32 @@ export type ReactFlowNode = {
 		evidence?: EvidenceResponse[];
 		[key: string]: unknown;
 	};
+	id: string;
 	position: { x: number; y: number };
-};
+	type: string;
+}
 
 // API Response types
 // Dynamic property bag: API responses include varying fields per element type
-export type ApiNodeResponse = {
+export interface ApiNodeResponse {
+	description: string;
 	id: string;
 	name: string;
-	description: string;
 	type: string;
 	[key: string]: unknown;
-};
+}
 
 // Payload types for API requests
-export type DetachPayload = {
+export interface DetachPayload {
 	goalId: string | null;
-	strategyId: string | null;
 	propertyClaimId: string | null;
-};
+	strategyId: string | null;
+}
 
 // Comment type for API operations
-export type CommentPayload = {
+export interface CommentPayload {
 	content: string;
-};
+}
 
 // Type for node creation payloads
 export type CreateNodePayload =

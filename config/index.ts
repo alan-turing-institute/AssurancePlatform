@@ -9,13 +9,13 @@ import {
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { Blocks } from "lucide-react";
 
-type Sector = {
-	ID: number;
-	Name: string;
+interface Sector {
 	Description: string;
+	ID: number;
 	ISICcode: string;
 	NACEcode: string;
-};
+	Name: string;
+}
 
 export const navigation = [
 	{

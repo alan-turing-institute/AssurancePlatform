@@ -25,26 +25,26 @@ export type OrphanElement =
 	| PropertyClaimResponse
 	| StrategyResponse;
 
-type UseOrphanActionsParams = {
-	node: Node;
+interface UseOrphanActionsParams {
 	handleClose: () => void;
 	loadingState: {
 		loading: boolean;
 		setLoading: Dispatch<SetStateAction<boolean>>;
 	};
+	node: Node;
 	setAction: Dispatch<SetStateAction<string | null>>;
-};
+}
 
-type UseOrphanActionsResult = {
-	filteredOrphanElements: OrphanElement[];
-	loading: boolean;
+interface UseOrphanActionsResult {
 	deleteOpen: boolean;
-	setDeleteOpen: Dispatch<SetStateAction<boolean>>;
-	setAction: Dispatch<SetStateAction<string | null>>;
-	handleOrphanSelection: (orphan: OrphanElement) => Promise<void>;
+	filteredOrphanElements: OrphanElement[];
 	handleDelete: () => Promise<void>;
 	handleDeleteSingle: (orphan: OrphanElement) => Promise<void>;
-};
+	handleOrphanSelection: (orphan: OrphanElement) => Promise<void>;
+	loading: boolean;
+	setAction: Dispatch<SetStateAction<string | null>>;
+	setDeleteOpen: Dispatch<SetStateAction<boolean>>;
+}
 
 export function useOrphanActions({
 	node,

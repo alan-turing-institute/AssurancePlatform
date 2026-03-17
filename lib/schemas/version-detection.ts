@@ -8,6 +8,7 @@
  * Also provides validation against the appropriate schema.
  */
 
+import type { ZodError } from "zod";
 import {
 	type CaseExportNested,
 	CaseExportNestedSchema,
@@ -81,10 +82,8 @@ export function detectVersion(data: unknown): CaseFormatVersion | null {
 /**
  * Formats Zod errors into ValidationError array.
  */
-function formatZodErrors(error: {
-	errors: Array<{ path: (string | number)[]; message: string; code: string }>;
-}): ValidationError[] {
-	return error.errors.map((err) => ({
+function formatZodErrors(error: ZodError): ValidationError[] {
+	return error.issues.map((err) => ({
 		path: err.path.length > 0 ? err.path.join(".") : "root",
 		message: err.message,
 		code: err.code,

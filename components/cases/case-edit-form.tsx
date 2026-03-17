@@ -32,10 +32,10 @@ const formSchema = z.object({
 	}),
 });
 
-type CaseEditFormProps = {
+interface CaseEditFormProps {
 	onClose: () => void;
 	setUnresolvedChanges: Dispatch<SetStateAction<boolean>>;
-};
+}
 
 const CaseEditForm: React.FC<CaseEditFormProps> = ({
 	onClose,

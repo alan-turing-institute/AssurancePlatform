@@ -1,8 +1,8 @@
 import CaseStudyCaseItem from "./case-study-case-item";
 
-type CaseStudyCasesProps = {
+interface CaseStudyCasesProps {
 	assuranceCaseIds: string[];
-};
+}
 
 const CaseStudyCases = ({ assuranceCaseIds }: CaseStudyCasesProps) => {
 	if (assuranceCaseIds.length > 0) {

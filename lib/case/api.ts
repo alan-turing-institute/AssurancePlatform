@@ -305,13 +305,13 @@ export const addElementComment = async (
 	}
 };
 
-type UpdateCommentOptions = {
+interface UpdateCommentOptions {
 	entity: string;
 	id: number;
 	newComment: CommentPayload;
 	newCommentId: number | string;
 	token: string | null;
-};
+}
 
 /**
  * Updates a comment on an element.

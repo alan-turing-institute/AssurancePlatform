@@ -12,9 +12,9 @@ import {
 	unpublishAssuranceCase,
 } from "@/lib/services/publish-service";
 
-type RouteParams = {
+interface RouteParams {
 	params: Promise<{ id: string }>;
-};
+}
 
 /**
  * GET /api/cases/[id]/publish

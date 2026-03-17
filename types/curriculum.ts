@@ -50,11 +50,11 @@ import type {
 /**
  * Comment attached to an element in the export.
  */
-export type ExportComment = {
+export interface ExportComment {
 	author: string;
 	content: string;
 	createdAt: string;
-};
+}
 
 /**
  * Recursive tree node structure for the nested export format.
@@ -63,54 +63,54 @@ export type ExportComment = {
  * The `name` field contains the identifier (G1, P1.1, etc.) stored in DB.
  * The optional `title` field can contain a human-readable display name.
  */
-export type TreeNode = {
-	id: string;
-	type: ElementType;
-	name: string | null;
-	description: string;
-	inSandbox: boolean;
-	children: TreeNode[];
-	// Optional display title (for future use)
-	title?: string | null;
-	// Type-specific fields (only present when applicable)
-	role?: ElementRole | null;
+export interface TreeNode {
 	assumption?: string | null;
-	justification?: string | null;
-	context?: string[];
-	url?: string | null;
-	level?: number | null;
-	// Module fields
-	moduleReferenceId?: string;
-	moduleEmbedType?: ModuleEmbedType;
-	modulePublicSummary?: string | null;
-	// Pattern metadata
-	fromPattern?: boolean;
-	modifiedFromPattern?: boolean;
-	// Dialogical reasoning
-	isDefeater?: boolean;
-	defeatsElementId?: string;
+	children: TreeNode[];
 	// Comments (optional)
 	comments?: ExportComment[];
-};
+	context?: string[];
+	defeatsElementId?: string;
+	description: string;
+	// Pattern metadata
+	fromPattern?: boolean;
+	id: string;
+	inSandbox: boolean;
+	// Dialogical reasoning
+	isDefeater?: boolean;
+	justification?: string | null;
+	level?: number | null;
+	modifiedFromPattern?: boolean;
+	moduleEmbedType?: ModuleEmbedType;
+	modulePublicSummary?: string | null;
+	// Module fields
+	moduleReferenceId?: string;
+	name: string | null;
+	// Type-specific fields (only present when applicable)
+	role?: ElementRole | null;
+	// Optional display title (for future use)
+	title?: string | null;
+	type: ElementType;
+	url?: string | null;
+}
 
 /**
  * Case metadata in the nested export format.
  */
-export type CaseMetadata = {
-	name: string;
+export interface CaseMetadata {
 	description: string;
-};
+	name: string;
+}
 
 /**
  * New nested export format (v1.0).
  * This is the primary format exported by the TEA Platform.
  */
-export type CaseExportNested = {
-	version: "1.0";
-	exportedAt: string;
+export interface CaseExportNested {
 	case: CaseMetadata;
+	exportedAt: string;
 	tree: TreeNode;
-};
+	version: "1.0";
+}
 
 // ============================================
 // Progress Tracking Types
@@ -119,57 +119,57 @@ export type CaseExportNested = {
 /**
  * Represents a single task in the progress tracking system.
  */
-export type Task = {
-	id: string;
-	page?: string;
-	status: TaskStatus;
+export interface Task {
 	completed?: boolean;
 	completedAt?: string | null;
+	id: string;
+	page?: string;
 	required?: boolean;
-};
+	status: TaskStatus;
+}
 
 /**
  * Complete progress data for a module, including tasks and computed progress.
  */
-export type ProgressData = {
-	tasks: Task[];
+export interface ProgressData {
+	courseId?: string;
+	currentPage?: string;
+	lastUpdated?: string;
+	moduleId?: string;
 	progress: {
 		completed: number;
 		total: number;
 		percentage: number;
 	};
-	currentPage?: string;
-	courseId?: string;
-	moduleId?: string;
-	lastUpdated?: string;
-};
+	tasks: Task[];
+}
 
 /**
  * Context value provided by ModuleProgressContext.
  */
-export type ModuleProgressContextValue = {
-	tasks: Task[];
-	progress: ProgressData["progress"];
-	isLoaded: boolean;
+export interface ModuleProgressContextValue {
 	completeTask: (taskId: string) => void;
-	startTask: (taskId: string) => void;
+	getCurrentPageTasks: () => Task[];
+	getTask: (taskId: string) => Task | undefined;
+	isLoaded: boolean;
+	progress: ProgressData["progress"];
+	resetProgress: () => void;
 	resetTask: (taskId: string) => void;
 	skipTask: (taskId: string) => void;
-	resetProgress: () => void;
-	getTask: (taskId: string) => Task | undefined;
-	getCurrentPageTasks: () => Task[];
-};
+	startTask: (taskId: string) => void;
+	tasks: Task[];
+}
 
 /**
  * Props for ModuleProgressProvider component.
  */
-export type ModuleProgressProviderProps = {
+export interface ModuleProgressProviderProps {
+	children: React.ReactNode;
 	courseId: string;
+	currentPage?: string | null;
 	moduleId: string;
 	tasks: Task[];
-	currentPage?: string | null;
-	children: React.ReactNode;
-};
+}
 
 // ============================================
 // Quiz Types
@@ -178,21 +178,21 @@ export type ModuleProgressProviderProps = {
 /**
  * Single option in a multiple choice quiz.
  */
-export type QuizOption = {
+export interface QuizOption {
 	id: string;
 	text: string;
-};
+}
 
 /**
  * Result of completing a quiz.
  */
-export type QuizResult = {
-	score: number;
-	total: number;
-	percentage: number;
+export interface QuizResult {
 	attempts?: number;
 	passed: boolean;
-};
+	percentage: number;
+	score: number;
+	total: number;
+}
 
 // ============================================
 // Unified Quiz Types
@@ -206,10 +206,10 @@ export type QuestionType = "multiple-choice" | "true-false";
 /**
  * Base question properties shared by all question types.
  */
-type BaseQuestion = {
-	id: string;
+interface BaseQuestion {
 	explanation?: string;
-};
+	id: string;
+}
 
 /**
  * Multiple choice question with options.
@@ -238,22 +238,22 @@ export type Question = MultipleChoiceQuestion | TrueFalseQuestion;
 /**
  * Quiz configuration object for loading from questions.ts files.
  */
-export type QuizConfig = {
-	/** Unique identifier for the quiz (used for task tracking) */
-	id: string;
-	/** Display title for the quiz */
-	title?: string;
-	/** Questions in the quiz */
-	questions: Question[];
-	/** Percentage required to pass (0-100) */
-	passThreshold?: number;
-	/** Whether to show feedback after completion */
-	showFeedback?: boolean;
+export interface QuizConfig {
 	/** Whether to allow retries */
 	allowRetry?: boolean;
+	/** Unique identifier for the quiz (used for task tracking) */
+	id: string;
+	/** Percentage required to pass (0-100) */
+	passThreshold?: number;
+	/** Questions in the quiz */
+	questions: Question[];
+	/** Whether to show feedback after completion */
+	showFeedback?: boolean;
 	/** Whether to shuffle options (multiple choice only) */
 	shuffleOptions?: boolean;
-};
+	/** Display title for the quiz */
+	title?: string;
+}
 
 /**
  * UI mode for the Quiz component.
@@ -263,37 +263,37 @@ export type QuizMode = "sequential" | "all-at-once" | "auto";
 /**
  * Props for the unified Quiz component.
  */
-export type QuizProps = {
+export interface QuizProps {
+	/** Allow retry override */
+	allowRetry?: boolean;
 	/** Quiz configuration or array of questions */
 	config: QuizConfig | Question[];
+	/** UI mode for the quiz */
+	mode?: QuizMode;
 	/** Callback when quiz is completed */
 	onComplete?: (result: QuizResult) => void;
-	/** Task ID for progress tracking (overrides config.id) */
-	taskId?: string;
-	/** Whether to integrate with ModuleProgressContext */
-	useGlobalProgress?: boolean;
 	/** Pass threshold override (0-100) */
 	passThreshold?: number;
 	/** Show feedback override */
 	showFeedback?: boolean;
-	/** Allow retry override */
-	allowRetry?: boolean;
 	/** Shuffle options override */
 	shuffleOptions?: boolean;
-	/** UI mode for the quiz */
-	mode?: QuizMode;
-};
+	/** Task ID for progress tracking (overrides config.id) */
+	taskId?: string;
+	/** Whether to integrate with ModuleProgressContext */
+	useGlobalProgress?: boolean;
+}
 
 /**
  * Props for ConfidenceRating component.
  */
-export type ConfidenceRatingProps = {
-	topic: string;
+export interface ConfidenceRatingProps {
 	onSubmit?: (rating: number) => void;
 	showFeedback?: boolean;
 	taskId?: string;
+	topic: string;
 	useGlobalProgress?: boolean;
-};
+}
 
 // ============================================
 // Concept Types
@@ -309,39 +309,39 @@ export type ConceptType =
 /**
  * A learning concept for display in carousel or reveal components.
  */
-export type Concept = {
-	id: string;
-	type: ConceptType;
-	name: string;
+export interface Concept {
 	brief?: string;
 	definition?: string;
 	details?: string[];
 	example?: string;
+	id: string;
+	name: string;
 	relationships?: string[];
-};
+	type: ConceptType;
+}
 
 /**
  * Props for ConceptCarousel component.
  */
-export type ConceptCarouselProps = {
+export interface ConceptCarouselProps {
 	concepts: Concept[];
 	mode?: "guided" | "free";
 	onComplete?: () => void;
 	onConceptView?: (id: string, index: number) => void;
 	/** Task ID to mark complete when all concepts have been viewed */
 	taskId?: string;
-};
+}
 
 /**
  * Props for ConceptReveal component.
  */
-export type ConceptRevealProps = {
+export interface ConceptRevealProps {
+	animationSpeed?: AnimationSpeed;
 	concepts: Concept[];
 	mode?: "progressive" | "all" | "interactive";
 	onConceptReveal?: (id: string) => void;
 	showDefinitions?: boolean;
-	animationSpeed?: AnimationSpeed;
-};
+}
 
 // ============================================
 // Learning Objectives Types
@@ -350,14 +350,14 @@ export type ConceptRevealProps = {
 /**
  * A single learning objective.
  */
-export type LearningObjective = {
-	id: string;
-	text: string;
+export interface LearningObjective {
+	badge?: boolean;
 	description?: string;
 	icon?: React.ComponentType<{ className?: string }>;
+	id: string;
 	relatedTask?: string;
-	badge?: boolean;
-};
+	text: string;
+}
 
 /**
  * Display variant for learning objectives.
@@ -367,12 +367,12 @@ export type LearningObjectivesVariant = "card" | "list" | "compact";
 /**
  * Props for LearningObjectives component.
  */
-export type LearningObjectivesProps = {
+export interface LearningObjectivesProps {
+	collapsible?: boolean;
 	objectives: LearningObjective[];
 	title?: string;
 	variant?: LearningObjectivesVariant;
-	collapsible?: boolean;
-};
+}
 
 // ============================================
 // Reflection Prompts Types
@@ -381,31 +381,31 @@ export type LearningObjectivesProps = {
 /**
  * A reflection prompt for learners.
  */
-export type ReflectionPrompt = {
-	id: string;
+export interface ReflectionPrompt {
 	category?: string;
-	title: string;
-	question: string;
 	example?: string;
+	id: string;
+	question: string;
 	required?: boolean;
+	title: string;
 	validation?: (response: string) => true | string;
-};
+}
 
 /**
  * Props for ReflectionPrompts component.
  */
-export type ReflectionPromptsProps = {
-	prompts: ReflectionPrompt[];
-	onSubmit?: (responses: Record<string, string>) => void;
-	onSave?: (promptId: string, response: string) => void;
+export interface ReflectionPromptsProps {
 	allowSkip?: boolean;
 	autoSave?: boolean;
-	showProgress?: boolean;
 	minResponseLength?: number;
-	useGlobalProgress?: boolean;
+	onSave?: (promptId: string, response: string) => void;
+	onSubmit?: (responses: Record<string, string>) => void;
+	prompts: ReflectionPrompt[];
+	showProgress?: boolean;
 	/** Task ID to mark complete when all required prompts are submitted */
 	taskId?: string;
-};
+	useGlobalProgress?: boolean;
+}
 
 // ============================================
 // React Flow Node/Edge Types
@@ -414,83 +414,83 @@ export type ReflectionPromptsProps = {
 /**
  * Data attached to React Flow nodes in the case viewer.
  */
-export type ReactFlowNodeData = {
-	id?: string;
-	name: string;
+export interface ReactFlowNodeData {
+	/** Single-string assumption from TreeNode export */
+	assumption?: string;
+	childCount?: number;
+	confidence?: number;
+	/** Context strings from TreeNode export */
+	context?: string[];
+	contextType?: string;
 	description: string;
+	hasChildren?: boolean;
+	id?: string;
+	importance?: ImportanceLevel;
+	/** Single-string justification from TreeNode export */
+	justification?: string;
+	name: string;
+	progress?: number;
+	strength?: string;
 	/** Optional display title separate from identifier */
 	title?: string;
 	/** URL for evidence nodes */
 	url?: string;
-	/** Context strings from TreeNode export */
-	context?: string[];
-	/** Single-string assumption from TreeNode export */
-	assumption?: string;
-	/** Single-string justification from TreeNode export */
-	justification?: string;
-	importance?: ImportanceLevel;
-	progress?: number;
-	strength?: string;
 	verificationStatus?: string;
-	confidence?: number;
-	contextType?: string;
-	hasChildren?: boolean;
-	childCount?: number;
-};
+}
 
 /**
  * Data attached to React Flow edges.
  */
-export type ReactFlowEdgeData = {
-	showLabel?: boolean;
-	strength?: number;
-	state?: "active" | "error" | "success" | "warning" | "inactive";
+export interface ReactFlowEdgeData {
+	animateGradient?: boolean;
 	flowSpeed?: number;
 	glowIntensity?: number;
-	particleCount?: number;
 	gradientStops?: number;
-	animateGradient?: boolean;
-};
+	particleCount?: number;
+	showLabel?: boolean;
+	state?: "active" | "error" | "success" | "warning" | "inactive";
+	strength?: number;
+}
 
 /**
  * Props for custom node components in React Flow.
  */
-export type CustomNodeProps<T = ReactFlowNodeData> = {
+export interface CustomNodeProps<T = ReactFlowNodeData> {
 	data: T;
 	isSelected?: boolean;
 	selected?: boolean;
-};
+}
 
 /**
  * Props for EnhancedInteractiveCaseViewer component.
  * Uses CaseExportNested (v1.0) format only.
  */
-export type EnhancedInteractiveCaseViewerProps = {
+export interface EnhancedInteractiveCaseViewerProps {
 	/** Case data in CaseExportNested (v1.0) format */
 	caseData: CaseExportNested;
-	/** Callback when a node is clicked */
-	onNodeClick?: (nodeId: string, nodeData: ReactFlowNodeData) => void;
-	/** Array of node IDs defining a guided exploration path */
-	guidedPath?: string[];
-	/** Array of node IDs to highlight */
-	highlightedNodes?: string[];
-	/** Container height */
-	height?: string;
 	/** Additional CSS classes */
 	className?: string;
+	/** Enable entrance/hover animations */
+	enableAnimations?: boolean;
 	/** Enable collapsible node sections */
 	enableCollapsible?: boolean;
 	/** Enable right-click context menus */
 	enableContextMenus?: boolean;
-	/** Enable double-click to create new nodes */
-	enableNodeCreation?: boolean;
-	/** Enable entrance/hover animations */
-	enableAnimations?: boolean;
 	/** Enable animated edge styling */
 	enableEnhancedEdges?: boolean;
+	/** Enable double-click to create new nodes */
+	enableNodeCreation?: boolean;
+	/** Array of node IDs defining a guided exploration path */
+	guidedPath?: string[];
+	/** Container height */
+	height?: string;
+	/** Array of node IDs to highlight */
+	highlightedNodes?: string[];
+	/** Callback when a node is clicked */
+	onNodeClick?: (nodeId: string, nodeData: ReactFlowNodeData) => void;
 	/** localStorage key for persisting edits */
 	persistKey?: string;
-};
+}
 
 // ============================================
 // Animation Types
@@ -498,29 +498,29 @@ export type EnhancedInteractiveCaseViewerProps = {
 
 export type AnimationSpeed = "slow" | "normal" | "fast";
 
-export type AnimationPreset = {
+export interface AnimationPreset {
+	delay?: number;
 	duration: number;
 	ease: string | number[];
-	delay?: number;
 	repeat?: number;
-};
+}
 
-export type SpringConfig = {
-	type: "spring";
-	stiffness: number;
+export interface SpringConfig {
 	damping: number;
 	mass?: number;
 	restDelta?: number;
-};
+	stiffness: number;
+	type: "spring";
+}
 
 /**
  * Animation timing presets used across components.
  */
-export type AnimationTiming = {
+export interface AnimationTiming {
 	fast: number;
 	normal: number;
 	slow: number;
-};
+}
 
 // ============================================
 // Layout Types
@@ -528,55 +528,55 @@ export type AnimationTiming = {
 
 export type LayoutDirection = "LR" | "TB" | "RL" | "BT";
 
-export type LayoutOptions = {
+export interface LayoutOptions {
 	direction?: LayoutDirection;
-	nodeWidth?: number;
 	nodeHeight?: number;
-	rankSep?: number;
 	nodeSep?: number;
-};
+	nodeWidth?: number;
+	rankSep?: number;
+}
 
 // ============================================
 // Feature Config Types
 // ============================================
 
-export type FeatureFlags = {
+export interface FeatureFlags {
 	enableAnimations?: boolean;
 	enableCollapsible?: boolean;
 	enableContextMenus?: boolean;
-	enableNodeCreation?: boolean;
 	enableEnhancedEdges?: boolean;
+	enableNodeCreation?: boolean;
 	enableProgressTracking?: boolean;
-};
+}
 
 // ============================================
 // Two Column Layout Types
 // ============================================
 
-export type TwoColumnLayoutProps = {
-	leftContent: React.ReactNode;
-	rightContent: React.ReactNode;
-	leftWidth?: string;
-	rightWidth?: string;
-	gap?: string;
+export interface TwoColumnLayoutProps {
 	className?: string;
-};
+	gap?: string;
+	leftContent: React.ReactNode;
+	leftWidth?: string;
+	rightContent: React.ReactNode;
+	rightWidth?: string;
+}
 
 // ============================================
 // Checklist Types
 // ============================================
 
-export type ChecklistItem = {
-	id: string;
-	text: string;
+export interface ChecklistItem {
 	completed?: boolean;
 	hint?: string;
-};
+	id: string;
+	text: string;
+}
 
-export type ExplorationChecklistProps = {
+export interface ExplorationChecklistProps {
 	items: ChecklistItem[];
-	title?: string;
 	onItemComplete?: (itemId: string) => void;
 	taskId?: string;
+	title?: string;
 	useGlobalProgress?: boolean;
-};
+}

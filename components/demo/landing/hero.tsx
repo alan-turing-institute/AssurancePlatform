@@ -12,7 +12,7 @@ export default function Hero() {
 				<div className="relative isolate">
 					<svg
 						aria-hidden="true"
-						className="-z-10 mask-[radial-gradient(32rem_32rem_at_center,white,transparent)] absolute inset-x-0 top-0 h-256 w-full stroke-border"
+						className="mask-[radial-gradient(32rem_32rem_at_center,white,transparent)] absolute inset-x-0 top-0 -z-10 h-256 w-full stroke-border"
 					>
 						<defs>
 							<pattern

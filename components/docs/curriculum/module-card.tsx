@@ -13,20 +13,20 @@ import { cn } from "@/lib/utils";
 
 export type ModuleStatus = "available" | "coming-soon" | "locked";
 
-export type ModuleCardProps = {
-	/** Module number (e.g., 1, 2, 3) */
-	moduleNumber: number;
-	/** Module title */
-	title: string;
+export interface ModuleCardProps {
 	/** Short description of the module */
 	description: string;
 	/** Estimated duration (e.g., "20-30 minutes") */
 	duration?: string;
 	/** URL to navigate to when clicked */
 	href?: string;
+	/** Module number (e.g., 1, 2, 3) */
+	moduleNumber: number;
 	/** Module availability status */
 	status?: ModuleStatus;
-};
+	/** Module title */
+	title: string;
+}
 
 /**
  * ModuleCard - Display a curriculum module as an interactive card
@@ -107,10 +107,10 @@ export const ModuleCard = ({
 	return cardContent;
 };
 
-export type ModuleGridProps = {
+export interface ModuleGridProps {
 	children: React.ReactNode;
 	className?: string;
-};
+}
 
 /**
  * ModuleGrid - A responsive grid layout for module cards

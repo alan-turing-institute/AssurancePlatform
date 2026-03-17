@@ -19,10 +19,10 @@ export type ImportResult =
 // Topological sort (Kahn's algorithm) — ensures parents are created before children
 // ---------------------------------------------------------------------------
 
-type SortContext = {
-	inDegree: Map<string, number>;
+interface SortContext {
 	children: Map<string, ElementV2[]>;
-};
+	inDegree: Map<string, number>;
+}
 
 function initSortGraph(elements: ElementV2[]): SortContext {
 	const inDegree = new Map<string, number>();

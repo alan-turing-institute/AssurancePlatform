@@ -62,19 +62,19 @@ const iconMap: Record<string, IconType> = {
 	AlertCircle,
 };
 
-type NodeMetadata = {
-	id: string;
-	name: string;
+interface NodeMetadata {
+	color: string;
 	description: string;
 	icon: string;
-	color: string;
+	id: string;
+	name: string;
 	shortcut?: string;
-};
+}
 
-type NodeTypeButtonProps = {
+interface NodeTypeButtonProps {
 	metadata: NodeMetadata;
 	onClick: () => void;
-};
+}
 
 /**
  * Node Type Button for selection
@@ -121,25 +121,25 @@ const NodeTypeButton = ({ metadata, onClick }: NodeTypeButtonProps) => {
 	);
 };
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
-type SelectionData = {
-	nodeType: string;
-	name: string;
+interface SelectionData {
 	description: string;
+	name: string;
+	nodeType: string;
 	parentNode: Node | null;
-};
+}
 
-type CreateNodePopoverProps = {
-	open?: boolean;
+interface CreateNodePopoverProps {
 	onOpenChange: (open: boolean) => void;
 	onSelect: (data: SelectionData) => void;
+	open?: boolean;
 	parentNode?: Node | null;
 	position?: Position | null;
-};
+}
 
 /**
  * CreateNodePopover Component

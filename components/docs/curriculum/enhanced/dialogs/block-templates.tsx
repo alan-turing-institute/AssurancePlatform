@@ -45,26 +45,26 @@ type TemplateCategory =
 /**
  * Template node configuration type
  */
-type TemplateNodeConfig = {
-	type: string;
-	name: string;
+interface TemplateNodeConfig {
 	description?: string;
+	name: string;
 	offsetX?: number;
 	offsetY?: number;
-};
+	type: string;
+}
 
 /**
  * Template type
  */
-export type Template = {
+export interface Template {
+	category: TemplateCategory;
+	description: string;
+	icon: LucideIcon;
 	id: string;
 	name: string;
-	description: string;
-	category: TemplateCategory;
 	nodes: TemplateNodeConfig[];
 	usageCount?: number;
-	icon: LucideIcon;
-};
+}
 
 /**
  * Extended template library with more patterns
@@ -144,13 +144,13 @@ const extendedTemplates: Template[] = [
 /**
  * Template Card Component Props
  */
-type TemplateCardProps = {
-	template: Template;
-	isSelected: boolean;
+interface TemplateCardProps {
 	isFavorite: boolean;
+	isSelected: boolean;
 	onSelect: () => void;
 	onToggleFavorite: () => void;
-};
+	template: Template;
+}
 
 /**
  * Template Card Component
@@ -267,11 +267,11 @@ const TemplateCard = ({
 /**
  * BlockTemplates Component Props
  */
-type BlockTemplatesProps = {
-	selectedTemplate?: Template | null;
-	onSelectTemplate: (template: Template) => void;
+interface BlockTemplatesProps {
 	enableImportExport?: boolean;
-};
+	onSelectTemplate: (template: Template) => void;
+	selectedTemplate?: Template | null;
+}
 
 /**
  * BlockTemplates Component
@@ -504,9 +504,9 @@ const BlockTemplates = ({
 /**
  * Template Stats Component Props
  */
-type TemplateStatsProps = {
+interface TemplateStatsProps {
 	templates?: Template[];
-};
+}
 
 /**
  * Template Stats Component

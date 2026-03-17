@@ -6,9 +6,9 @@ import { updateCaseStudy } from "@/actions/case-studies";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { toast } from "@/lib/toast";
 
-type UnpublishCaseButtonProps = {
+interface UnpublishCaseButtonProps {
 	caseStudyId: number;
-};
+}
 
 const UnpublishCaseButton = ({ caseStudyId }: UnpublishCaseButtonProps) => {
 	const [alertOpen, setAlertOpen] = useState(false);

@@ -45,9 +45,9 @@ export const optionalString = (maxLength = 2000) =>
 	z
 		.string()
 		.max(maxLength, `Must be less than ${maxLength} characters`)
-		.optional()
 		.nullable()
 		.transform((v) => (v?.trim() ? v.trim() : undefined))
+		.optional()
 		.describe("Optional string field");
 
 /**
@@ -119,7 +119,7 @@ export const coerceBoolean = z
  */
 export const permissionLevelSchema = z
 	.enum(["VIEW", "COMMENT", "EDIT", "ADMIN"], {
-		errorMap: () => ({ message: "Invalid permission level" }),
+		message: "Invalid permission level",
 	})
 	.describe("Permission level for case access");
 
@@ -128,6 +128,6 @@ export const permissionLevelSchema = z
  */
 export const teamRoleSchema = z
 	.enum(["ADMIN", "MEMBER"], {
-		errorMap: () => ({ message: "Invalid team role" }),
+		message: "Invalid team role",
 	})
 	.describe("Role within a team");

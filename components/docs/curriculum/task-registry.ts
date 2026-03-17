@@ -37,38 +37,38 @@ export type TaskStatusValue = (typeof TaskStatus)[keyof typeof TaskStatus];
 /**
  * Task definition created by createTask
  */
-export type TaskDefinition = {
-	id: string;
-	title: string;
-	description: string;
-	type: TaskTypeValue;
-	page: string | null;
-	section: string | null;
+export interface TaskDefinition {
 	autoTrack: boolean;
-	required: boolean;
-	learningObjective: string | null;
-	order: number;
-	status: TaskStatusType;
 	completed: boolean;
 	completedAt: string | null;
+	description: string;
 	hint?: string;
-};
+	id: string;
+	learningObjective: string | null;
+	order: number;
+	page: string | null;
+	required: boolean;
+	section: string | null;
+	status: TaskStatusType;
+	title: string;
+	type: TaskTypeValue;
+}
 
 /**
  * Configuration for creating a task
  */
-type CreateTaskConfig = {
-	id: string;
-	title: string;
-	description?: string;
-	type?: TaskTypeValue;
-	page?: string | null;
-	section?: string | null;
+interface CreateTaskConfig {
 	autoTrack?: boolean;
-	required?: boolean;
+	description?: string;
+	id: string;
 	learningObjective?: string | null;
 	order?: number;
-};
+	page?: string | null;
+	required?: boolean;
+	section?: string | null;
+	title: string;
+	type?: TaskTypeValue;
+}
 
 /**
  * Create a task definition

@@ -59,9 +59,9 @@ export type ThemeVariable =
 export type ThemeVariableSet = Partial<Record<ThemeVariable, string>>;
 
 /** A complete colour preset with light and dark variable sets */
-export type ThemePreset = {
-	id: string;
-	name: string;
-	light: ThemeVariableSet;
+export interface ThemePreset {
 	dark: ThemeVariableSet;
-};
+	id: string;
+	light: ThemeVariableSet;
+	name: string;
+}

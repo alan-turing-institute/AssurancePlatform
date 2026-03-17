@@ -4,9 +4,9 @@ import { notFound } from "@/lib/errors";
 import { getPublishedAssuranceCaseById } from "@/lib/services/case-study-service";
 import { transformPublishedCaseForApi } from "@/lib/services/case-study-transforms";
 
-type RouteParams = {
+interface RouteParams {
 	params: Promise<{ id: string }>;
-};
+}
 
 /**
  * GET /api/public/assurance-case/[id]

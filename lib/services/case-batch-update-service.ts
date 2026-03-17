@@ -39,10 +39,10 @@ export type BatchUpdateResult =
 /**
  * Options for batch update
  */
-export type BatchUpdateOptions = {
+export interface BatchUpdateOptions {
 	/** Expected version (updatedAt timestamp) for conflict detection */
 	expectedVersion?: string;
-};
+}
 
 type CreateChange = ElementChange & { type: "create" };
 type UpdateChange = ElementChange & { type: "update" };

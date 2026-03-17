@@ -2,9 +2,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 
-type PublicCaseViewMockProps = {
+interface PublicCaseViewMockProps {
 	caseId: number;
-};
+}
 
 export const PublicCaseViewMock = ({ caseId }: PublicCaseViewMockProps) => {
 	const router = useRouter();

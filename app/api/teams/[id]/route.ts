@@ -50,7 +50,7 @@ export async function PATCH(
 		);
 		if (!parsed.success) {
 			return apiError(
-				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
 			);
 		}
 

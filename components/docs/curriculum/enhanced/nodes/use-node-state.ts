@@ -33,12 +33,12 @@ import type { Edge, Node } from "reactflow";
 /**
  * Configuration options for the node state hook
  */
-type NodeStateConfig = {
-	persistKey?: string | null; // localStorage key (null = no persistence)
-	defaultExpanded?: boolean; // Default state for new nodes
+interface NodeStateConfig {
 	autoExpandOnSelect?: boolean; // Auto-expand when node is selected
 	debounceMs?: number; // Debounce delay for rapid actions
-};
+	defaultExpanded?: boolean; // Default state for new nodes
+	persistKey?: string | null; // localStorage key (null = no persistence)
+}
 
 /**
  * Node state map type
@@ -48,45 +48,45 @@ type NodeStatesMap = Record<string, boolean>;
 /**
  * Statistics about node states
  */
-type NodeStateStats = {
-	total: number;
-	expanded: number;
+interface NodeStateStats {
 	collapsed: number;
+	expanded: number;
 	percentExpanded: number;
-};
+	total: number;
+}
 
 /**
  * Return type for the useNodeState hook
  */
-type UseNodeStateReturn = {
+interface UseNodeStateReturn {
+	collapseAll: (allNodeIds?: string[]) => void;
+	collapseNode: (nodeId: string) => void;
+	collapseNodes: (nodeIds: string[]) => void;
+	debouncedCollapseAll: (...args: unknown[]) => void;
+
+	// Debounced operations (for rapid actions)
+	debouncedExpandAll: (...args: unknown[]) => void;
+	debouncedFocusMode: (...args: unknown[]) => void;
+	expandAll: (allNodeIds?: string[]) => void;
+	expandNode: (nodeId: string) => void;
+
+	// Bulk operations
+	expandNodes: (nodeIds: string[]) => void;
+	expandNodeTree: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
+	expandPathToNode: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
+
+	// Advanced operations
+	focusMode: (focusNodeIds: string[], allNodeIds: string[]) => void;
+	getStats: () => NodeStateStats;
 	// State queries
 	isNodeExpanded: (nodeId: string) => boolean;
 	nodeStates: NodeStatesMap;
-	getStats: () => NodeStateStats;
+	resetAll: () => void;
 
 	// Individual node operations
 	setNodeState: (nodeId: string, isExpanded: boolean) => void;
 	toggleNode: (nodeId: string) => void;
-	expandNode: (nodeId: string) => void;
-	collapseNode: (nodeId: string) => void;
-
-	// Bulk operations
-	expandNodes: (nodeIds: string[]) => void;
-	collapseNodes: (nodeIds: string[]) => void;
-	expandAll: (allNodeIds?: string[]) => void;
-	collapseAll: (allNodeIds?: string[]) => void;
-
-	// Advanced operations
-	focusMode: (focusNodeIds: string[], allNodeIds: string[]) => void;
-	expandPathToNode: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
-	expandNodeTree: (nodeId: string, nodes: Node[], edges: Edge[]) => void;
-	resetAll: () => void;
-
-	// Debounced operations (for rapid actions)
-	debouncedExpandAll: (...args: unknown[]) => void;
-	debouncedCollapseAll: (...args: unknown[]) => void;
-	debouncedFocusMode: (...args: unknown[]) => void;
-};
+}
 
 /**
  * Default configuration for node state

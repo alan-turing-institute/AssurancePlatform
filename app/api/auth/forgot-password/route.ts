@@ -8,9 +8,9 @@ import {
 import { AppError, validationError } from "@/lib/errors";
 import { requestPasswordReset } from "@/lib/services/password-reset-service";
 
-type ForgotPasswordRequest = {
+interface ForgotPasswordRequest {
 	email: string;
-};
+}
 
 /**
  * POST /api/auth/forgot-password

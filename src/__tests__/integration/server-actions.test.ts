@@ -123,13 +123,23 @@ describe("loadStaticCaseData", () => {
 		);
 	});
 
-	it("rejects a filename containing a forward slash", async () => {
+	it("rejects an absolute path starting with /", async () => {
 		const { loadStaticCaseData } = await import("@/actions/case-data");
 
 		expectError(
-			await loadStaticCaseData("subdir/file.json"),
+			await loadStaticCaseData("/etc/passwd"),
 			"Invalid case file name"
 		);
+	});
+
+	it("allows subdirectory paths with forward slashes", async () => {
+		const { loadStaticCaseData } = await import("@/actions/case-data");
+
+		// Subdirectory paths are valid — curriculum stages use them
+		const result = await loadStaticCaseData(
+			"curriculum/first-sip/stage-1-goal.json"
+		);
+		expectSuccess(result);
 	});
 
 	it("returns an error for a file that does not exist", async () => {

@@ -78,7 +78,7 @@ export default function NotesFeed() {
 							{index !== sortedNotes.length - 1 ? (
 								<span
 									aria-hidden="true"
-									className="-ml-px absolute top-5 left-9 h-full w-0.5 bg-border"
+									className="absolute top-5 left-9 -ml-px h-full w-0.5 bg-border"
 								/>
 							) : null}
 							<div className="relative flex items-start justify-start space-x-3 rounded-md p-4 group-hover:bg-accent">

@@ -21,12 +21,12 @@ import {
 /**
  * Parsed GitHub location
  */
-type GitHubLocation = {
-	owner: string;
-	repo: string;
-	path: string;
+interface GitHubLocation {
 	branch?: string;
-};
+	owner: string;
+	path: string;
+	repo: string;
+}
 
 /**
  * Maps GitHub service error codes to application error codes.
@@ -55,7 +55,7 @@ async function parseRequestBody(request: Request): Promise<GitHubImportInput> {
 	const parsed = GitHubImportSchema.safeParse(json);
 	if (!parsed.success) {
 		throw validationError(
-			parsed.error.errors[0]?.message ?? "Invalid request body"
+			parsed.error.issues[0]?.message ?? "Invalid request body"
 		);
 	}
 	return parsed.data;

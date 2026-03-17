@@ -9,7 +9,8 @@ if (!databaseUrl) {
 }
 
 const pool = new Pool({ connectionString: databaseUrl });
-const adapter = new PrismaPg(pool);
+// biome-ignore lint/suspicious/noExplicitAny: @types/pg version mismatch with @prisma/adapter-pg
+const adapter = new PrismaPg(pool as any);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

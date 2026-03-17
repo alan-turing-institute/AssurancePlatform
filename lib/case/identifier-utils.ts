@@ -7,10 +7,10 @@
  * @module identifier-utils
  */
 
-type ParsedIdentifier = {
-	prefix: string;
+interface ParsedIdentifier {
 	parts: number[];
-};
+	prefix: string;
+}
 
 /**
  * Regex pattern for parsing identifiers like "S2", "P1.3", "G1"

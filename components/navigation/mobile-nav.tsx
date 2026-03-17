@@ -13,17 +13,17 @@ import { useSidebarLogo } from "@/hooks/use-sidebar-logo";
 import { Separator } from "../ui/separator";
 import LoggedInUser from "./logged-in-user";
 
-type Team = {
+interface Team {
 	id: string;
 	name: string;
 	slug: string;
-};
+}
 
-type MobileNavProps = {
-	sidebarOpen: boolean;
+interface MobileNavProps {
 	setSidebarOpen: Dispatch<SetStateAction<boolean>>;
+	sidebarOpen: boolean;
 	teams: Team[];
-};
+}
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
 	return classes.filter(Boolean).join(" ");

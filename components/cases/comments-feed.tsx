@@ -21,27 +21,27 @@ import { Button } from "../ui/button";
 import CommentsEditForm from "./comments-edit-form";
 import CommentsForm from "./comments-form";
 
-type CommentsFeedProps = {
+interface CommentsFeedProps {
 	node: {
 		type: string;
 		data: {
 			id: number;
 		};
 	};
-};
+}
 
-type CommentItemProps = {
-	comment: CommentResponse;
-	node: CommentsFeedProps["node"];
-	currentUsername: string | null | undefined;
+interface CommentItemProps {
 	canEdit: boolean;
+	comment: CommentResponse;
+	currentUsername: string | null | undefined;
 	depth?: number;
+	node: CommentsFeedProps["node"];
 	onDelete: (id: number | string) => Promise<void>;
-	onResolve: (id: string, resolved: boolean) => Promise<void>;
 	onReply: (parentId: string) => void;
+	onResolve: (id: string, resolved: boolean) => Promise<void>;
 	replyingTo: string | null;
 	setReplyingTo: (id: string | null) => void;
-};
+}
 
 /**
  * Renders the resolved status banner for a comment.

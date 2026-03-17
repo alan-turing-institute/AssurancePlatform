@@ -71,10 +71,19 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Delete Me Case").hover();
 		await dashboard.deleteCaseButton("Delete Me Case").click();
 
-		// Confirm deletion in alert modal
-		await page.getByRole("button", { name: "Delete" }).click();
+		// Confirm deletion in alert modal and wait for the API response
+		await Promise.all([
+			page.waitForResponse(
+				(resp) =>
+					resp.url().includes("/api/cases/") &&
+					resp.request().method() === "DELETE"
+			),
+			page.getByRole("button", { name: "Delete" }).click(),
+		]);
 
-		// Case should disappear
+		// Re-navigate to dashboard to ensure fresh data (router.refresh()
+		// triggers an async RSC re-fetch that may not complete in CI)
+		await dashboard.goto();
 		await expect(page.getByText("Delete Me Case")).not.toBeVisible();
 	});
 });

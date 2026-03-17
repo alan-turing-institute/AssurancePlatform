@@ -11,15 +11,15 @@ import {
 import type { PublishStatusType } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
 
-type StatusButtonProps = {
-	status: PublishStatusType;
+interface StatusButtonProps {
+	className?: string;
+	disabled?: boolean;
 	hasChanges?: boolean;
 	loading?: boolean;
-	disabled?: boolean;
-	publishedAt?: Date | string | null;
 	onClick?: () => void;
-	className?: string;
-};
+	publishedAt?: Date | string | null;
+	status: PublishStatusType;
+}
 
 const statusConfig: Record<
 	PublishStatusType,
@@ -99,7 +99,7 @@ export function StatusButton({
 						{hasChanges && status === "PUBLISHED" && (
 							<span
 								aria-hidden="true"
-								className="-right-1 -top-1 absolute h-2.5 w-2.5 rounded-full bg-warning"
+								className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-warning"
 								title="Changes pending"
 							/>
 						)}

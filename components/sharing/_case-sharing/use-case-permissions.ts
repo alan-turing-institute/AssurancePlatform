@@ -14,33 +14,35 @@ export type ShareFormValues = ShareByEmailSchemaInput;
 
 export const PERMISSION_LEVELS = ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const;
 
-export type PermissionsData = {
-	userPermissions: UserPermission[];
-	teamPermissions: TeamPermission[];
+export interface PermissionsData {
 	owner: {
 		id: string;
 		username: string;
 		email: string;
 	};
-};
+	teamPermissions: TeamPermission[];
+	userPermissions: UserPermission[];
+}
 
-type UseCasePermissionsParams = {
+interface UseCasePermissionsParams {
 	caseId: string | null;
-	isOpen: boolean;
 	form: UseFormReturn<ShareFormValues>;
-};
+	isOpen: boolean;
+}
 
-type UseCasePermissionsResult = {
-	loading: boolean;
-	permissions: PermissionsData | null;
-	userTeams: Team[];
+interface UseCasePermissionsResult {
 	availableTeams: Team[];
-	inviteUrl: string | null;
+	clearInviteUrl: () => void;
 	copied: boolean;
+	copyInviteUrl: () => void;
 	error: string | null;
 	getInitials: (name: string) => string;
-	copyInviteUrl: () => void;
-	clearInviteUrl: () => void;
+	inviteUrl: string | null;
+	loading: boolean;
+	onRevokePermission: (
+		permissionId: string,
+		type: "user" | "team"
+	) => Promise<void>;
 	onShareByEmail: (values: ShareFormValues) => Promise<void>;
 	onShareWithTeam: (teamId: string, permission: string) => Promise<void>;
 	onUpdatePermission: (
@@ -48,11 +50,9 @@ type UseCasePermissionsResult = {
 		newPermission: string,
 		type: "user" | "team"
 	) => Promise<void>;
-	onRevokePermission: (
-		permissionId: string,
-		type: "user" | "team"
-	) => Promise<void>;
-};
+	permissions: PermissionsData | null;
+	userTeams: Team[];
+}
 
 export function useCasePermissions({
 	caseId,

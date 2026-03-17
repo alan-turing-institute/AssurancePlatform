@@ -21,10 +21,10 @@ const mockSession = {
 } as Session & { key: string };
 
 // Provider wrapper for tests
-type ProvidersProps = {
+interface ProvidersProps {
 	children: React.ReactNode;
 	session?: Session | null;
-};
+}
 
 const Providers = ({ children, session = null }: ProvidersProps) => (
 	<SessionProvider session={session}>

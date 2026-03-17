@@ -7,44 +7,44 @@ import type { ReactElement, ReactNode } from "react";
 import React, { cloneElement, useEffect, useRef, useState } from "react";
 
 // Common mock prop types
-type MockComponentProps = {
+interface MockComponentProps {
 	children?: ReactNode;
 	[key: string]: unknown;
-};
+}
 
-type MockTriggerProps = {
-	children?: ReactNode;
+interface MockTriggerProps {
 	asChild?: boolean;
+	children?: ReactNode;
 	[key: string]: unknown;
-};
+}
 
-type MockRootProps = {
+interface MockRootProps {
 	children?: ReactNode;
 	defaultOpen?: boolean;
-	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
-};
+	open?: boolean;
+}
 
-type MockValueRootProps = {
+interface MockValueRootProps {
 	children?: ReactNode;
 	defaultValue?: string;
-	value?: string;
 	onValueChange?: (value: string) => void;
+	value?: string;
 	[key: string]: unknown;
-};
+}
 
-type MockSelectItemProps = {
+interface MockSelectItemProps {
 	children?: ReactNode;
-	value: string;
 	disabled?: boolean;
+	value: string;
 	[key: string]: unknown;
-};
+}
 
 // Tooltip Mock with state management
-type TooltipContextValue = {
+interface TooltipContextValue {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-};
+}
 
 const TooltipContext = React.createContext<TooltipContextValue | null>(null);
 
@@ -52,12 +52,12 @@ export const MockTooltipProvider = ({ children }: { children: ReactNode }) => (
 	<>{children}</>
 );
 
-type TooltipRootProps = {
+interface TooltipRootProps {
 	children?: ReactNode;
 	defaultOpen?: boolean;
-	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
-};
+	open?: boolean;
+}
 
 export const MockTooltipRoot = ({
 	children,
@@ -87,12 +87,12 @@ export const MockTooltipRoot = ({
 	);
 };
 
-type TooltipTriggerProps = {
-	children?: ReactNode;
+interface TooltipTriggerProps {
 	asChild?: boolean;
+	children?: ReactNode;
 	disabled?: boolean;
 	[key: string]: unknown;
-};
+}
 
 export const MockTooltipTrigger = ({
 	children,
@@ -144,7 +144,10 @@ export const MockTooltipTrigger = ({
 		if (asChild && React.isValidElement(children)) {
 			return (
 				<span {...wrapperProps}>
-					{cloneElement(children as ReactElement, { ...triggerProps, ref })}
+					{cloneElement(children as ReactElement<Record<string, unknown>>, {
+						...triggerProps,
+						ref,
+					})}
 				</span>
 			);
 		}
@@ -163,7 +166,10 @@ export const MockTooltipTrigger = ({
 	}
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, triggerProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			triggerProps
+		);
 	}
 
 	return (
@@ -173,13 +179,13 @@ export const MockTooltipTrigger = ({
 	);
 };
 
-type TooltipContentProps = {
-	children?: ReactNode;
-	sideOffset?: number;
-	side?: string;
+interface TooltipContentProps {
 	align?: string;
+	children?: ReactNode;
+	side?: string;
+	sideOffset?: number;
 	[key: string]: unknown;
-};
+}
 
 export const MockTooltipContent = ({
 	children,
@@ -210,10 +216,10 @@ export const MockTooltipContent = ({
 export const MockTooltipArrow = () => <div data-testid="tooltip-arrow" />;
 
 // Dialog Mock with state management
-type DialogContextValue = {
+interface DialogContextValue {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-};
+}
 
 const DialogContext = React.createContext<DialogContextValue | null>(null);
 
@@ -264,7 +270,10 @@ export const MockDialogTrigger = ({
 	};
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, triggerProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			triggerProps
+		);
 	}
 
 	return (
@@ -339,12 +348,12 @@ export const MockDialogContent = ({
 	);
 };
 
-type DialogCloseProps = {
-	children?: ReactNode;
-	asChild?: boolean;
+interface DialogCloseProps {
 	"aria-label"?: string;
+	asChild?: boolean;
+	children?: ReactNode;
 	[key: string]: unknown;
-};
+}
 
 export const MockDialogClose = ({
 	children,
@@ -377,7 +386,10 @@ export const MockDialogClose = ({
 			...(children.props as Record<string, unknown>),
 			onClick: handleClick,
 		};
-		return cloneElement(children as ReactElement, childProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			childProps
+		);
 	}
 
 	return <button {...closeProps}>{children}</button>;
@@ -425,10 +437,10 @@ export const MockPopoverAnchor = ({ children }: { children: ReactNode }) => (
 );
 
 // RadioGroup Mock with state management
-type RadioGroupContextValue = {
-	value: string;
+interface RadioGroupContextValue {
 	setValue: (value: string) => void;
-};
+	value: string;
+}
 
 const RadioGroupContext = React.createContext<RadioGroupContextValue | null>(
 	null
@@ -470,12 +482,12 @@ export const MockRadioGroupRoot = ({
 	);
 };
 
-type RadioGroupItemProps = {
+interface RadioGroupItemProps {
 	children?: ReactNode;
-	value: string;
 	disabled?: boolean;
+	value: string;
 	[key: string]: unknown;
-};
+}
 
 export const MockRadioGroupItem = ({
 	children,
@@ -527,10 +539,10 @@ export const MockRadioGroupIndicator = ({
 }) => <>{children}</>;
 
 // DropdownMenu Mock with state management
-type DropdownMenuContextValue = {
+interface DropdownMenuContextValue {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-};
+}
 
 const DropdownMenuContext =
 	React.createContext<DropdownMenuContextValue | null>(null);
@@ -595,7 +607,10 @@ export const MockDropdownMenuTrigger = ({
 	};
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, triggerProps);
+		return cloneElement(
+			children as ReactElement<Record<string, unknown>>,
+			triggerProps
+		);
 	}
 
 	return (
@@ -710,14 +725,14 @@ export const MockDropdownMenuContent = ({
 	);
 };
 
-type DropdownMenuItemProps = {
-	children?: ReactNode;
-	onSelect?: (event: React.MouseEvent | React.KeyboardEvent) => void;
-	disabled?: boolean;
+interface DropdownMenuItemProps {
 	asChild?: boolean;
+	children?: ReactNode;
+	disabled?: boolean;
+	onSelect?: (event: React.MouseEvent | React.KeyboardEvent) => void;
 	textValue?: string;
 	[key: string]: unknown;
-};
+}
 
 export const MockDropdownMenuItem = ({
 	children,
@@ -760,7 +775,7 @@ export const MockDropdownMenuItem = ({
 	} = props;
 
 	if (asChild && React.isValidElement(children)) {
-		return cloneElement(children as ReactElement, {
+		return cloneElement(children as ReactElement<Record<string, unknown>>, {
 			role: "menuitem",
 			tabIndex: disabled ? -1 : 0,
 			"aria-disabled": disabled,
@@ -832,14 +847,14 @@ export const MockDropdownMenuRadioGroup = ({
 	...props
 }: MockComponentProps) => <fieldset {...props}>{children}</fieldset>;
 
-type DropdownMenuRadioItemProps = {
-	children?: ReactNode;
-	value: string;
+interface DropdownMenuRadioItemProps {
 	checked?: boolean;
-	onSelect?: (value: string) => void;
+	children?: ReactNode;
 	disabled?: boolean;
+	onSelect?: (value: string) => void;
+	value: string;
 	[key: string]: unknown;
-};
+}
 
 export const MockDropdownMenuRadioItem = ({
 	children,
@@ -879,13 +894,13 @@ export const MockDropdownMenuRadioItem = ({
 	);
 };
 
-type DropdownMenuCheckboxItemProps = {
-	children?: ReactNode;
+interface DropdownMenuCheckboxItemProps {
 	checked?: boolean;
-	onCheckedChange?: (checked: boolean) => void;
+	children?: ReactNode;
 	disabled?: boolean;
+	onCheckedChange?: (checked: boolean) => void;
 	[key: string]: unknown;
-};
+}
 
 export const MockDropdownMenuCheckboxItem = ({
 	children,
@@ -931,21 +946,21 @@ export const MockDropdownMenuItemIndicator = ({
 }) => <>{children}</>;
 
 // Select Mock with state management
-type SelectContextValue = {
-	value: string;
-	setValue: (value: string) => void;
+interface SelectContextValue {
 	open: boolean;
 	setOpen: (open: boolean) => void;
-};
+	setValue: (value: string) => void;
+	value: string;
+}
 
 const SelectContext = React.createContext<SelectContextValue | null>(null);
 
-type SelectRootProps = {
+interface SelectRootProps {
 	children?: ReactNode;
 	defaultValue?: string;
-	value?: string;
 	onValueChange?: (value: string) => void;
-};
+	value?: string;
+}
 
 export const MockSelectRoot = ({
 	children,
@@ -1012,10 +1027,10 @@ export const MockSelectValue = ({ placeholder }: { placeholder?: string }) => {
 	return <span>{context?.value || placeholder}</span>;
 };
 
-type SelectIconProps = {
-	children?: ReactNode;
+interface SelectIconProps {
 	asChild?: boolean;
-};
+	children?: ReactNode;
+}
 
 export const MockSelectIcon = ({ children, asChild }: SelectIconProps) => {
 	if (asChild && React.isValidElement(children)) {

@@ -12,20 +12,20 @@ const SCREENSHOT_THROTTLE_MS = 30 * 60 * 1000;
 // Types
 // ============================================
 
-export type CaseImageData = {
+export interface CaseImageData {
 	image: string;
 	uploadedAt: string;
-};
+}
 
-export type ThrottledResult = {
-	throttled: true;
+export interface ThrottledResult {
 	nextAllowedAt: string;
-};
+	throttled: true;
+}
 
-export type UploadCaseImageData = {
+export interface UploadCaseImageData {
 	image: string;
 	uploadedAt: string;
-};
+}
 
 // ============================================
 // Service functions

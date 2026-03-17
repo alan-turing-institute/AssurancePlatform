@@ -44,13 +44,13 @@ import { cn } from "@/lib/utils";
 
 type ValidationErrors = Record<string, string>;
 
-type FormFieldProps = {
-	label: string;
-	error?: string;
-	required?: boolean;
+interface FormFieldProps {
 	children: React.ReactNode;
+	error?: string;
 	helperText?: string;
-};
+	label: string;
+	required?: boolean;
+}
 
 /**
  * Form Field Wrapper
@@ -84,11 +84,11 @@ const FormField = ({
 	</div>
 );
 
-type CharacterCounterProps = {
+interface CharacterCounterProps {
+	className?: string;
 	current: number;
 	max: number;
-	className?: string;
-};
+}
 
 /**
  * Character Counter Component
@@ -122,12 +122,12 @@ const CharacterCounter = ({
 	);
 };
 
-type TagInputProps = {
-	value?: string[];
+interface TagInputProps {
+	maxTags?: number;
 	onChange: (tags: string[]) => void;
 	placeholder?: string;
-	maxTags?: number;
-};
+	value?: string[];
+}
 
 /**
  * Tag Input Component
@@ -198,18 +198,18 @@ const TagInput = ({
 
 type FormData = Record<string, unknown>;
 
-type BlockFormProps = {
-	nodeType: string;
+interface BlockFormProps {
 	formData?: FormData;
+	nodeType: string;
 	onChange: (data: FormData) => void;
 	quickMode?: boolean;
 	validationErrors?: ValidationErrors;
-};
+}
 
-type BlockFormHandle = {
-	validate: () => ValidationErrors;
+interface BlockFormHandle {
 	getData: () => FormData;
-};
+	validate: () => ValidationErrors;
+}
 
 /**
  * BlockForm Component
@@ -348,7 +348,7 @@ const BlockForm = forwardRef<BlockFormHandle, BlockFormProps>(
 							label="Target Date"
 						>
 							<div className="relative">
-								<Calendar className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-text-light/50" />
+								<Calendar className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-text-light/50" />
 								<Input
 									className={cn(
 										"pl-10",

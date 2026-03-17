@@ -42,13 +42,15 @@ export async function GET(
  * Builds update input from validated body.
  */
 function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
+	const url = (body.url || body.URL) as string | undefined;
 	return {
 		name: body.name as string | undefined,
 		description: body.description as string | undefined,
 		shortDescription: body.shortDescription as string | undefined,
 		longDescription: body.longDescription as string | undefined,
 		parentId: body.parentId as string | undefined,
-		url: (body.url || body.URL) as string | undefined,
+		url,
+		URL: url,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
 		context: body.context as string[] | undefined,
@@ -73,7 +75,7 @@ export async function PUT(
 		);
 		if (!parsed.success) {
 			return apiError(
-				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
 			);
 		}
 

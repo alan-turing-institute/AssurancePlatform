@@ -1,10 +1,10 @@
 import type { Edge, Node } from "reactflow";
 
-export type Branch = {
-	rootNodeId: string;
+export interface Branch {
 	label: string;
 	nodeIds: Set<string>;
-};
+	rootNodeId: string;
+}
 
 /**
  * Find the root node of a graph (no incoming edges, or first goal-type node).

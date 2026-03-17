@@ -31,25 +31,25 @@ export type CreateElementInput = CreateElementSchemaOutput & {
  */
 export type UpdateElementInput = UpdateElementSchemaOutput;
 
-export type ElementResponse = {
-	id: string;
-	type: string;
-	name: string;
-	description: string;
-	createdDate: string;
-	inSandbox: boolean;
+export interface ElementResponse {
+	assumption?: string;
 	assuranceCaseId: string;
+	comments?: unknown[];
+	context?: string[];
+	createdDate: string;
+	description: string;
 	goalId?: string | null;
-	strategyId?: string | null;
+	id: string;
+	inSandbox: boolean;
+	justification?: string;
+	level?: number;
+	name: string;
 	propertyClaimId?: string | string[] | null;
+	strategyId?: string | null;
+	type: string;
 	URL?: string;
 	urls?: string[];
-	assumption?: string;
-	justification?: string;
-	context?: string[];
-	level?: number;
-	comments?: unknown[];
-};
+}
 
 /**
  * Validates user has permission to access/modify a case

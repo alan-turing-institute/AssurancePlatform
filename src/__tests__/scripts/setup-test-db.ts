@@ -5,7 +5,7 @@ import path from "node:path";
 import { Pool } from "pg";
 
 // Resolve project root from this file's location (src/__tests__/scripts/)
-const PROJECT_ROOT = path.resolve(__dirname, "../../..");
+const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
 
 export async function setup() {
 	// Connect to tea_dev (guaranteed to exist) to create tea_test

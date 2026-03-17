@@ -4,26 +4,26 @@ import styles from "./TwoColumnLayout.module.css";
 type StickyOption = "left" | "right" | "none";
 type MobileOrder = "left-first" | "right-first";
 
-type TwoColumnLayoutProps = {
-	left: React.ReactNode;
-	right: React.ReactNode;
-	leftRatio?: string;
-	rightRatio?: string;
-	sticky?: StickyOption;
-	gap?: string;
-	stackBreakpoint?: number;
-	mobileOrder?: MobileOrder;
+interface TwoColumnLayoutProps {
 	className?: string;
+	gap?: string;
+	left: React.ReactNode;
 	leftLabel?: string;
+	leftRatio?: string;
+	mobileOrder?: MobileOrder;
+	right: React.ReactNode;
 	rightLabel?: string;
-};
+	rightRatio?: string;
+	stackBreakpoint?: number;
+	sticky?: StickyOption;
+}
 
-type LayoutStyle = {
+interface LayoutStyle {
+	"--column-gap": string;
 	"--left-width": string;
 	"--right-width": string;
-	"--column-gap": string;
 	"--stack-breakpoint": string;
-};
+}
 
 /**
  * TwoColumnLayout - A flexible, responsive two-column layout component

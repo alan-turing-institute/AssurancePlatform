@@ -23,11 +23,11 @@ import "reactflow/dist/style.css";
 
 import { CollapsibleNode, NodeStateControls, NodeStateManager } from "../nodes";
 
-type CaseElement = {
-	name: string;
+interface CaseElement {
 	description?: string;
 	evidence?: CaseElement[];
-};
+	name: string;
+}
 
 type PropertyClaim = CaseElement & {
 	evidence?: CaseElement[];
@@ -42,15 +42,15 @@ type Goal = CaseElement & {
 	context?: CaseElement[];
 };
 
-type CaseData = {
+interface CaseData {
 	goals?: Goal[];
-};
+}
 
-type NodeDataType = {
+interface NodeDataType {
+	description: string;
 	id: string;
 	name: string;
-	description: string;
-};
+}
 
 /**
  * Convert existing node data to collapsible node format
@@ -185,12 +185,12 @@ const convertToCollapsibleNodes = (caseData: CaseData) => {
 	return { nodes, edges };
 };
 
-type EnhancedInteractiveCaseViewerProps = {
+interface EnhancedInteractiveCaseViewerProps {
 	caseData: CaseData;
 	onNodeClick?: (node: Node) => void;
 	persistKey?: string;
 	showControls?: boolean;
-};
+}
 
 /**
  * Enhanced Interactive Case Viewer with Collapsible Nodes

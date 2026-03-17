@@ -17,12 +17,12 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { type GitHubFormInput, githubFormSchema } from "./use-case-import";
 
-export type GitHubImportTabProps = {
+export interface GitHubImportTabProps {
+	className?: string;
+	githubConnected: boolean | null;
 	importFromGitHub: (url: string) => Promise<void>;
 	loading: boolean;
-	githubConnected: boolean | null;
-	className?: string;
-};
+}
 
 /**
  * Renders the loading state while checking a provider's connection.

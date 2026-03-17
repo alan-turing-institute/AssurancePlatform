@@ -52,12 +52,12 @@ const updateStrategy = (
 };
 
 // Options type for updatePropertyClaim helper
-type UpdatePropertyClaimOptions = {
+interface UpdatePropertyClaimOptions {
 	assuranceCase: AssuranceCaseResponse;
 	id: string;
-	updatedItem: Partial<PropertyClaimResponse>;
 	move: boolean;
-};
+	updatedItem: Partial<PropertyClaimResponse>;
+}
 
 // Helper function to update property claim
 const updatePropertyClaim = (
@@ -133,12 +133,12 @@ const updatePropertyClaim = (
 };
 
 // Options type for updateEvidence helper
-type UpdateEvidenceOptions = {
+interface UpdateEvidenceOptions {
 	assuranceCase: AssuranceCaseResponse;
 	id: string;
-	updatedItem: Partial<EvidenceResponse>;
 	move: boolean;
-};
+	updatedItem: Partial<EvidenceResponse>;
+}
 
 // Helper function to update evidence
 const updateEvidence = (

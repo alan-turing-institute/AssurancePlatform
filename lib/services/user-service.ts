@@ -11,22 +11,22 @@ import type { ServiceResult } from "@/types/service";
 // INPUT INTERFACES
 // ============================================
 
-export type RegisterUserInput = {
-	username: string;
+export interface RegisterUserInput {
 	email: string;
 	password: string;
-};
+	username: string;
+}
 
 // ============================================
 // OUTPUT INTERFACES
 // ============================================
 
-export type RegisteredUserResponse = {
+export interface RegisteredUserResponse {
+	created_at: string;
+	email: string;
 	id: string;
 	username: string;
-	email: string;
-	created_at: string;
-};
+}
 
 // ============================================
 // SERVICE FUNCTIONS
@@ -192,15 +192,15 @@ export async function getUserById(
 // User Profile (used by /api/users/me)
 // ============================================
 
-export type UserProfileData = {
-	id: string;
-	username: string;
+export interface UserProfileData {
+	avatarUrl: string | null;
 	email: string;
 	firstName: string | null;
-	lastName: string | null;
-	avatarUrl: string | null;
 	groups: Array<{ id: string; name: string }>;
-};
+	id: string;
+	lastName: string | null;
+	username: string;
+}
 
 /**
  * Fetches the user's profile including team memberships.
@@ -260,18 +260,18 @@ export async function getUserProfile(
 // Current User
 // ============================================
 
-export type CurrentUserData = {
-	id: string;
-	username: string;
-	email: string;
-	firstName?: string;
-	lastName?: string;
+export interface CurrentUserData {
 	avatar?: string | null;
-	groups: Array<{ id: string; name: string }>;
-	hasSeenMigrationNotice: boolean;
 	completedTours: string[];
 	connectedAccounts?: ConnectedAccountsData;
-};
+	email: string;
+	firstName?: string;
+	groups: Array<{ id: string; name: string }>;
+	hasSeenMigrationNotice: boolean;
+	id: string;
+	lastName?: string;
+	username: string;
+}
 
 /**
  * Fetches the current user's full profile including team memberships.

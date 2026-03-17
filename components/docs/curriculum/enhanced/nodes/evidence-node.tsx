@@ -58,64 +58,64 @@ import CollapsibleNode from "./collapsible-node";
 type EvidenceType = "document" | "test" | "review" | "inspection" | "analysis";
 type QualityLevel = "high" | "good" | "medium" | "low";
 
-type EvidenceTypeConfig = {
-	label: string;
-	icon: React.ComponentType<{ className?: string }>;
+interface EvidenceTypeConfig {
 	className: string;
 	description: string;
-};
+	icon: React.ComponentType<{ className?: string }>;
+	label: string;
+}
 
-type QualityConfig = {
-	stars: number;
+interface QualityConfig {
 	color: string;
-};
+	stars: number;
+}
 
-type EvidenceNodeData = {
-	id?: string;
-	name?: string;
+interface EvidenceNodeData {
+	author?: string;
+	confidence?: number;
 	description?: string;
 	evidenceType?: EvidenceType;
-	confidence?: number;
-	sourceLink?: string;
-	sourceName?: string;
-	lastUpdated?: string;
-	quality?: QualityLevel;
-	author?: string;
-	verifiedBy?: string;
-	tags?: string[];
-	metadata?: Record<string, unknown>;
-	[key: string]: unknown;
-};
-
-type EvidenceTypeBadgeProps = {
-	evidenceType?: EvidenceType;
-};
-
-type ConfidenceLevelIndicatorProps = {
-	confidence?: number;
-};
-
-type QualityRatingProps = {
-	quality?: QualityLevel;
-};
-
-type SourceLinkProps = {
-	sourceLink?: string;
-	sourceName?: string;
-};
-
-type LastUpdatedDisplayProps = {
-	lastUpdated?: string;
-};
-
-type EvidenceNodeProps = {
 	id?: string;
-	data?: EvidenceNodeData;
-	selected?: boolean;
-	isConnectable?: boolean;
-	className?: string;
+	lastUpdated?: string;
+	metadata?: Record<string, unknown>;
+	name?: string;
+	quality?: QualityLevel;
+	sourceLink?: string;
+	sourceName?: string;
+	tags?: string[];
+	verifiedBy?: string;
 	[key: string]: unknown;
-};
+}
+
+interface EvidenceTypeBadgeProps {
+	evidenceType?: EvidenceType;
+}
+
+interface ConfidenceLevelIndicatorProps {
+	confidence?: number;
+}
+
+interface QualityRatingProps {
+	quality?: QualityLevel;
+}
+
+interface SourceLinkProps {
+	sourceLink?: string;
+	sourceName?: string;
+}
+
+interface LastUpdatedDisplayProps {
+	lastUpdated?: string;
+}
+
+interface EvidenceNodeProps {
+	className?: string;
+	data?: EvidenceNodeData;
+	id?: string;
+	isConnectable?: boolean;
+	selected?: boolean;
+	[key: string]: unknown;
+}
 
 // ========================================================================
 // Configuration
@@ -251,16 +251,18 @@ const QualityRating = ({
 		<div className="flex items-center gap-2">
 			<span className="text-text-light/50 text-xs">Quality:</span>
 			<div className="flex gap-0.5">
-				{[...new Array(5)].map((_, i) => (
-					<Star
-						className={cn(
-							"h-3 w-3",
-							i < config.stars ? config.color : "text-gray-600",
-							i < config.stars && "fill-current"
-						)}
-						key={`star-${i + 1}`}
-					/>
-				))}
+				{(["star-1", "star-2", "star-3", "star-4", "star-5"] as const).map(
+					(starId, i) => (
+						<Star
+							className={cn(
+								"h-3 w-3",
+								i < config.stars ? config.color : "text-gray-600",
+								i < config.stars && "fill-current"
+							)}
+							key={starId}
+						/>
+					)
+				)}
 			</div>
 		</div>
 	);

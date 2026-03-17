@@ -6,19 +6,19 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ConnectionLoadingState } from "./github-import-tab";
 
-type DriveFile = {
+interface DriveFile {
 	id: string;
 	name: string;
-};
+}
 
-export type GoogleDriveImportTabProps = {
+export interface GoogleDriveImportTabProps {
+	className?: string;
+	googleConnected: boolean | null;
 	importFromGoogleDrive: (fileId: string) => Promise<void>;
 	loading: boolean;
-	googleConnected: boolean | null;
 	selectedDriveFile: DriveFile | null;
 	setSelectedDriveFile: (file: DriveFile | null) => void;
-	className?: string;
-};
+}
 
 /**
  * Google icon SVG component.

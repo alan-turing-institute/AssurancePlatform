@@ -11,37 +11,37 @@ import type { ServiceResult } from "@/types/service";
 // INPUT INTERFACES
 // ============================================
 
-export type AddTeamMemberInput = {
+export interface AddTeamMemberInput {
 	email: string;
 	role?: "ADMIN" | "MEMBER";
-};
+}
 
-export type UpdateMemberRoleInput = {
+export interface UpdateMemberRoleInput {
 	role: "ADMIN" | "MEMBER";
-};
+}
 
 // ============================================
 // OUTPUT INTERFACES
 // ============================================
 
-export type TeamMemberResponse = {
+export interface TeamMemberResponse {
 	id: string;
-	user_id: string;
-	role: TeamRole;
 	joined_at: string;
+	role: TeamRole;
 	user: {
 		id: string;
 		username: string;
 		email: string;
 		avatar_url: string | null;
 	};
-};
+	user_id: string;
+}
 
-export type AddMemberResult = {
-	member?: TeamMemberResponse;
+export interface AddMemberResult {
 	already_member?: boolean;
+	member?: TeamMemberResponse;
 	user_not_found?: boolean;
-};
+}
 
 // ============================================
 // HELPER FUNCTIONS

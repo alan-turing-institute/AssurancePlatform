@@ -1,15 +1,15 @@
 // Mock data for team management tests
 
-export type TeamMember = {
-	id: number;
-	name: string;
-	title: string;
+export interface TeamMember {
 	department: string;
 	email: string;
-	role: string;
-	isAdmin: boolean;
+	id: number;
 	image: string;
-};
+	isAdmin: boolean;
+	name: string;
+	role: string;
+	title: string;
+}
 
 export const mockTeamMember: TeamMember = {
 	id: 1,

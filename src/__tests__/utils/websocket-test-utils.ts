@@ -38,38 +38,38 @@ export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 /**
  * Mock WebSocket server configuration options
  */
-export type MockWebSocketServerOptions = {
-	url?: string;
+export interface MockWebSocketServerOptions {
 	autoConnect?: boolean;
 	connectionDelay?: number;
 	reconnectAttempts?: number;
 	reconnectDelay?: number;
-};
+	url?: string;
+}
 
 /**
  * User presence information for collaboration features
  */
-export type UserPresence = {
-	id: string;
-	username: string;
+export interface UserPresence {
 	cursor?: {
 		x: number;
 		y: number;
 		elementId?: string;
 	};
+	id: string;
 	lastActivity: Date;
 	status: "active" | "idle" | "away";
-};
+	username: string;
+}
 
 /**
  * WebSocket message structure
  */
-export type WebSocketMessage<T = unknown> = {
-	type: string;
+export interface WebSocketMessage<T = unknown> {
 	content: T;
 	timestamp?: number;
+	type: string;
 	userId?: string;
-};
+}
 
 /**
  * Mock WebSocket instance with enhanced testing capabilities

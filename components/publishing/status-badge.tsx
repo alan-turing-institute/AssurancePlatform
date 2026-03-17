@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import type { PublishStatusType } from "@/lib/services/case-response-types";
 import { cn } from "@/lib/utils";
 
-type StatusBadgeProps = {
-	status: PublishStatusType;
-	hasChanges?: boolean;
+interface StatusBadgeProps {
 	className?: string;
-};
+	hasChanges?: boolean;
+	status: PublishStatusType;
+}
 
 const statusConfig: Record<
 	PublishStatusType,
@@ -56,7 +56,7 @@ export function StatusBadge({
 			{hasChanges && status === "PUBLISHED" && (
 				<span
 					aria-hidden="true"
-					className="-right-1 -top-1 absolute h-2.5 w-2.5 rounded-full bg-warning"
+					className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-warning"
 					title="Changes pending"
 				/>
 			)}

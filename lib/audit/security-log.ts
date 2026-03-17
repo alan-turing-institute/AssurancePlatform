@@ -1,8 +1,8 @@
-type SecurityEventParams = {
+interface SecurityEventParams {
 	event: string;
-	severity: "low" | "medium" | "high" | "critical";
 	metadata?: Record<string, unknown>;
-};
+	severity: "low" | "medium" | "high" | "critical";
+}
 
 export function logSecurityEvent({
 	event,

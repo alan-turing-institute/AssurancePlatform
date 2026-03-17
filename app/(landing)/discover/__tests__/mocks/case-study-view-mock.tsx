@@ -5,9 +5,9 @@ import type {
 	CaseStudyResponse,
 } from "@/lib/services/case-response-types";
 
-type CaseStudyViewMockProps = {
+interface CaseStudyViewMockProps {
 	caseStudyId: number;
-};
+}
 
 export const CaseStudyViewMock = ({ caseStudyId }: CaseStudyViewMockProps) => {
 	const router = useRouter();

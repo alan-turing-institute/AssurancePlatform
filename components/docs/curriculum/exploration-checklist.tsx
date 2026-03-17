@@ -20,29 +20,29 @@ import { useModuleProgress } from "./module-progress-context";
 
 type DisplayMode = "default" | "floating";
 
-type SubItem = {
+interface SubItem {
 	id: string;
 	title: string;
-};
+}
 
-type ChecklistItemData = {
-	id: string;
-	title: string;
+interface ChecklistItemData {
 	description?: string;
 	hint?: string;
+	id: string;
 	subItems?: SubItem[];
-};
+	title: string;
+}
 
-type ExplorationChecklistProps = {
+interface ExplorationChecklistProps {
+	allowHints?: boolean;
+	autoSave?: boolean;
+	displayMode?: DisplayMode;
 	items?: ChecklistItemData[];
 	onComplete?: () => void;
 	onItemCheck?: (itemId: string, isChecked: boolean) => void;
 	showProgress?: boolean;
-	allowHints?: boolean;
-	autoSave?: boolean;
-	displayMode?: DisplayMode;
 	useGlobalProgress?: boolean;
-};
+}
 
 /**
  * Get task card class based on checked state
@@ -76,10 +76,10 @@ const useSafeProgress = (
 // Sub-components to reduce cognitive complexity
 // ============================================
 
-type CongratsModalProps = {
-	showCongrats: boolean;
+interface CongratsModalProps {
 	onClose: () => void;
-};
+	showCongrats: boolean;
+}
 
 const CongratsModal = ({
 	showCongrats,
@@ -120,13 +120,13 @@ const CongratsModal = ({
 	</AnimatePresence>
 );
 
-type HintSectionProps = {
-	hint: string;
-	itemId: string;
-	isExpanded: boolean;
-	onToggle: (id: string) => void;
+interface HintSectionProps {
 	allowHints: boolean;
-};
+	hint: string;
+	isExpanded: boolean;
+	itemId: string;
+	onToggle: (id: string) => void;
+}
 
 const HintSection = ({
 	hint,
@@ -167,15 +167,15 @@ const HintSection = ({
 	);
 };
 
-type ChecklistItemRowProps = {
-	item: ChecklistItemData;
+interface ChecklistItemRowProps {
+	allowHints: boolean;
+	checkedItems: Set<string>;
 	isChecked: boolean;
 	isHintExpanded: boolean;
-	allowHints: boolean;
-	onToggleItem: (id: string) => void;
+	item: ChecklistItemData;
 	onToggleHint: (id: string) => void;
-	checkedItems: Set<string>;
-};
+	onToggleItem: (id: string) => void;
+}
 
 const ChecklistItemRow = ({
 	item,
@@ -269,11 +269,11 @@ const ChecklistItemRow = ({
 	</div>
 );
 
-type FloatingMinimizedProps = {
+interface FloatingMinimizedProps {
 	checkedCount: number;
-	totalCount: number;
 	onExpand: () => void;
-};
+	totalCount: number;
+}
 
 const FloatingMinimized = ({
 	checkedCount,
@@ -298,19 +298,19 @@ const FloatingMinimized = ({
 	</motion.div>
 );
 
-type FloatingCompactProps = {
-	currentTask: { item: ChecklistItemData; index: number } | null;
-	checkedCount: number;
-	totalCount: number;
-	progressPercentage: number;
+interface FloatingCompactProps {
 	allowHints: boolean;
+	checkedCount: number;
+	currentTask: { item: ChecklistItemData; index: number } | null;
 	expandedHints: Set<string>;
-	onToggleHint: (id: string) => void;
-	onToggleItem: (id: string) => void;
+	onDismiss: () => void;
 	onExpand: () => void;
 	onMinimize: () => void;
-	onDismiss: () => void;
-};
+	onToggleHint: (id: string) => void;
+	onToggleItem: (id: string) => void;
+	progressPercentage: number;
+	totalCount: number;
+}
 
 const FloatingCompact = ({
 	currentTask,
@@ -455,18 +455,18 @@ const FloatingCompact = ({
 	</motion.div>
 );
 
-type FloatingExpandedProps = {
-	items: ChecklistItemData[];
+interface FloatingExpandedProps {
+	allowHints: boolean;
+	checkedCount: number;
 	checkedItems: Set<string>;
 	expandedHints: Set<string>;
-	checkedCount: number;
-	progressPercentage: number;
-	allowHints: boolean;
-	onToggleItem: (id: string) => void;
-	onToggleHint: (id: string) => void;
+	items: ChecklistItemData[];
 	onCollapse: () => void;
 	onReset: () => void;
-};
+	onToggleHint: (id: string) => void;
+	onToggleItem: (id: string) => void;
+	progressPercentage: number;
+}
 
 const FloatingExpanded = ({
 	items,

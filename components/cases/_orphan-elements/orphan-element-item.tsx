@@ -10,13 +10,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { OrphanElement } from "./use-orphan-actions";
 
-export type OrphanElementItemProps = {
-	orphan: OrphanElement;
-	onSelect: (orphan: OrphanElement) => void;
-	onDelete: (orphan: OrphanElement) => void;
-	loading: boolean;
+export interface OrphanElementItemProps {
 	className?: string;
-};
+	loading: boolean;
+	onDelete: (orphan: OrphanElement) => void;
+	onSelect: (orphan: OrphanElement) => void;
+	orphan: OrphanElement;
+}
 
 export function OrphanElementItem({
 	orphan,

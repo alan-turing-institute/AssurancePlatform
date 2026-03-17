@@ -103,18 +103,18 @@ const DIRECTION_MAP: Record<LayoutDirection, ElkDirection> = {
 	BT: "UP",
 };
 
-export type LayoutOptions = {
+export interface LayoutOptions {
 	direction: LayoutDirection;
-	/** Spacing between nodes in the same layer (default: 40) */
-	nodeSpacing?: number;
 	/** Spacing between layers (default: 60) */
 	layerSpacing?: number;
-};
+	/** Spacing between nodes in the same layer (default: 40) */
+	nodeSpacing?: number;
+}
 
-type LayoutedElements = {
-	nodes: Node[];
+interface LayoutedElements {
 	edges: Edge[];
-};
+	nodes: Node[];
+}
 
 /**
  * Generates a layout for the given nodes and edges using ELK's layered algorithm.

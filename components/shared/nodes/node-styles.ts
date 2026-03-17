@@ -8,11 +8,11 @@
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
 
-type NodeContainerOptions = {
-	nodeType: DiagramNodeType;
-	isSelected?: boolean;
+interface NodeContainerOptions {
 	className?: string;
-};
+	isSelected?: boolean;
+	nodeType: DiagramNodeType;
+}
 
 /**
  * Build complete node container classes

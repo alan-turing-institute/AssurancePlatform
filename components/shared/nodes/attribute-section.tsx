@@ -12,11 +12,11 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
 
-type AttributeItemProps = {
+interface AttributeItemProps {
 	icon: ReactNode;
 	label: string;
 	value: string | string[];
-};
+}
 
 function AttributeItem({ icon, label, value }: AttributeItemProps) {
 	const displayValue = Array.isArray(value) ? value.join(", ") : value;
@@ -55,13 +55,13 @@ function AttributeItem({ icon, label, value }: AttributeItemProps) {
 	);
 }
 
-type AttributeSectionProps = {
-	nodeType: DiagramNodeType;
-	context?: string[];
+interface AttributeSectionProps {
 	assumption?: string;
-	justification?: string;
 	className?: string;
-};
+	context?: string[];
+	justification?: string;
+	nodeType: DiagramNodeType;
+}
 
 export default function AttributeSection({
 	nodeType,

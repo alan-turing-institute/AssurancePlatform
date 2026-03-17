@@ -30,11 +30,11 @@ import { cn } from "@/lib/utils";
 // Types
 // ========================================================================
 
-type QuickEditPopoverProps = {
+interface QuickEditPopoverProps {
 	description: string;
 	isDarkMode: boolean;
 	onSave: (description: string) => void;
-};
+}
 
 // ========================================================================
 // Component

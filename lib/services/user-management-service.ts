@@ -15,23 +15,25 @@ import type { ServiceResult } from "@/types/service";
 // Types
 // ============================================
 
-export type UpdateProfileInput = {
-	username?: string;
+export interface UpdateProfileInput {
+	email?: string;
 	firstName?: string;
 	lastName?: string;
-	email?: string;
-};
+	username?: string;
+}
 
-export type ChangePasswordInput = {
+export interface ChangePasswordInput {
 	currentPassword: string;
 	newPassword: string;
-};
+}
 
 // ============================================
 // Profile Update
 // ============================================
 
-type ValidationError = { error: string };
+interface ValidationError {
+	error: string;
+}
 
 /**
  * Validates and checks uniqueness of a username.
@@ -87,7 +89,11 @@ async function validateAndCheckEmail(
 	return null;
 }
 
-type ProfileData = { username: string; firstName?: string; lastName?: string };
+interface ProfileData {
+	firstName?: string;
+	lastName?: string;
+	username: string;
+}
 
 function toProfileData(user: {
 	username: string;

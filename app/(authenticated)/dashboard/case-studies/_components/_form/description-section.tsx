@@ -20,12 +20,12 @@ import {
 import { cn } from "@/lib/utils";
 import type { CaseStudyFormValues } from "./form-schema";
 
-export type DescriptionSectionProps = {
-	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
-	value: string;
-	setValue: React.Dispatch<React.SetStateAction<string>>;
+export interface DescriptionSectionProps {
 	className?: string;
-};
+	form: ReturnType<typeof useForm<CaseStudyFormValues>>;
+	setValue: React.Dispatch<React.SetStateAction<string>>;
+	value: string;
+}
 
 export function DescriptionSection({
 	form,

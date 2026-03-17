@@ -12,11 +12,11 @@ import { CheckCircle, FileText, GitBranch, Target } from "lucide-react";
 
 export type DiagramNodeType = "goal" | "strategy" | "property" | "evidence";
 
-export type NodeColourScheme = {
-	/** Light mode background (e.g., bg-green-50) */
-	bgLight: string;
+export interface NodeColourScheme {
 	/** Dark mode background (e.g., bg-green-950) */
 	bgDark: string;
+	/** Light mode background (e.g., bg-green-50) */
+	bgLight: string;
 	/** Border colour */
 	border: string;
 	/** Border colour on hover */
@@ -27,23 +27,23 @@ export type NodeColourScheme = {
 	iconHover: string;
 	/** Ring colour for selected state */
 	ring: string;
-	/** Text colour for light mode */
-	textLight: string;
 	/** Text colour for dark mode */
 	textDark: string;
-};
+	/** Text colour for light mode */
+	textLight: string;
+}
 
-export type DiagramNodeTypeConfig = {
-	id: DiagramNodeType;
-	label: string;
+export interface DiagramNodeTypeConfig {
+	colours: NodeColourScheme;
 	description: string;
 	icon: LucideIcon;
-	colours: NodeColourScheme;
-	/** Whether to show target handle (top) */
-	showTargetHandle: boolean;
+	id: DiagramNodeType;
+	label: string;
 	/** Whether to show source handle (bottom) */
 	showSourceHandle: boolean;
-};
+	/** Whether to show target handle (top) */
+	showTargetHandle: boolean;
+}
 
 /**
  * Node type configurations using the curriculum colour scheme:

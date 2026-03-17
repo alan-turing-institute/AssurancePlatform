@@ -4,36 +4,30 @@ import type { PublishStatusType } from "@/lib/services/case-response-types";
 /**
  * Defines the shape of the state for the status modal store.
  */
-type StatusModalStore = {
-	/**
-	 * Indicates whether the modal is open or closed.
-	 */
-	isOpen: boolean;
-
+interface StatusModalStore {
 	/**
 	 * The case ID being managed.
 	 */
 	caseId: string | null;
 
 	/**
-	 * Current publish status of the case.
-	 */
-	status: PublishStatusType;
-
-	/**
 	 * Whether the case has changes since last publish.
 	 */
 	hasChanges: boolean;
-
 	/**
-	 * When the case was last published.
+	 * Indicates whether the modal is open or closed.
 	 */
-	publishedAt: Date | string | null;
+	isOpen: boolean;
 
 	/**
 	 * Number of case studies linked to this published case.
 	 */
 	linkedCaseStudyCount: number;
+
+	/**
+	 * Function to close the modal.
+	 */
+	onClose: () => void;
 
 	/**
 	 * Function to open the modal with initial state.
@@ -47,6 +41,16 @@ type StatusModalStore = {
 	}) => void;
 
 	/**
+	 * When the case was last published.
+	 */
+	publishedAt: Date | string | null;
+
+	/**
+	 * Current publish status of the case.
+	 */
+	status: PublishStatusType;
+
+	/**
 	 * Function to update the current state without closing.
 	 */
 	updateState: (
@@ -54,12 +58,7 @@ type StatusModalStore = {
 			Omit<StatusModalStore, "isOpen" | "onOpen" | "onClose" | "updateState">
 		>
 	) => void;
-
-	/**
-	 * Function to close the modal.
-	 */
-	onClose: () => void;
-};
+}
 
 /**
  * Creates a Zustand store for managing the state of the status modal.

@@ -34,29 +34,29 @@ import { NodeStateContext } from "./node-state-manager";
 // Type Definitions
 // ========================================================================
 
-type NodeData = {
+interface NodeData {
+	description?: string;
 	id?: string;
 	name?: string;
-	description?: string;
 	[key: string]: unknown;
-};
+}
 
-type CollapsibleNodeProps = {
-	id?: string;
-	data?: NodeData;
-	selected?: boolean;
-	isConnectable?: boolean;
+interface CollapsibleNodeProps {
+	autoExpandOnSelect?: boolean;
 	children?: ReactNode;
-	nodeType?: string;
+	className?: string;
+	data?: NodeData;
 	defaultExpanded?: boolean;
-	onExpandChange?: (expanded: boolean) => void;
+	enableDoubleClickExpand?: boolean;
+	id?: string;
+	isConnectable?: boolean;
+	nodeType?: string;
 	onClick?: (event: MouseEvent) => void;
 	onDoubleClick?: (event: MouseEvent) => void;
-	enableDoubleClickExpand?: boolean;
-	autoExpandOnSelect?: boolean;
-	className?: string;
+	onExpandChange?: (expanded: boolean) => void;
+	selected?: boolean;
 	[key: string]: unknown;
-};
+}
 
 type FocusCollapsibleNodeProps = {
 	id?: string;
@@ -78,16 +78,16 @@ type ControlledCollapsibleNodeProps = {
 	showControls?: boolean;
 } & Omit<CollapsibleNodeProps, "id" | "data" | "children">;
 
-type NodeStateContextType = {
-	isNodeExpanded: (nodeId: string) => boolean;
-	expandNode: (nodeId: string) => void;
-	setNodeState: (nodeId: string, expanded: boolean) => void;
-	expandNodeTree: (nodeId: string) => void;
+interface NodeStateContextType {
 	collapseNodes: (nodeIds: string[]) => void;
-	expandNodes: (nodeIds: string[]) => void;
-	nodes: Array<{ id: string }>;
 	edges: Array<{ source: string; target: string }>;
-};
+	expandNode: (nodeId: string) => void;
+	expandNodes: (nodeIds: string[]) => void;
+	expandNodeTree: (nodeId: string) => void;
+	isNodeExpanded: (nodeId: string) => boolean;
+	nodes: Array<{ id: string }>;
+	setNodeState: (nodeId: string, expanded: boolean) => void;
+}
 
 // ========================================================================
 // Main Component

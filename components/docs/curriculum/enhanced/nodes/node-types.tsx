@@ -18,29 +18,29 @@ export type NodeTypeId = "goal" | "strategy" | "propertyClaim" | "evidence";
 
 type NodeCategory = "Primary" | "Supporting";
 
-type NodeTypeMetadataItem = {
-	id: NodeTypeId;
-	name: string;
-	description: string;
+interface NodeTypeMetadataItem {
 	category: NodeCategory;
 	color: string;
+	description: string;
 	icon: string;
+	id: NodeTypeId;
+	name: string;
 	shortcut: string;
 	validChildren: NodeTypeId[];
-};
+}
 
-type NodeDefaults = {
-	name: string;
+interface NodeDefaults {
 	description: string;
+	name: string;
 	[key: string]: unknown;
-};
+}
 
-type ReactFlowNode = {
-	id: string;
-	type: string;
-	position: { x: number; y: number };
+interface ReactFlowNode {
 	data: Record<string, unknown>;
-};
+	id: string;
+	position: { x: number; y: number };
+	type: string;
+}
 
 // ========================================================================
 // Regex Patterns (module top-level)

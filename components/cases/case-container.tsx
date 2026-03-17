@@ -19,9 +19,9 @@ import CaseDetails from "./case-details";
 import Flow from "./flow";
 import Header from "./header";
 
-type CaseContainerProps = {
+interface CaseContainerProps {
 	caseId?: string;
-};
+}
 
 /** Event types that trigger a case refetch */
 const REFETCH_EVENTS = [

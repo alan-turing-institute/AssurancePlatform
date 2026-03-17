@@ -9,11 +9,11 @@ import type { toast as ToastFn } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Button } from "../../ui/button";
 
-export type JsonExportSectionProps = {
+export interface JsonExportSectionProps {
 	assuranceCase: AssuranceCaseResponse | null;
-	toast: typeof ToastFn;
 	className?: string;
-};
+	toast: typeof ToastFn;
+}
 
 export function JsonExportSection({
 	assuranceCase,

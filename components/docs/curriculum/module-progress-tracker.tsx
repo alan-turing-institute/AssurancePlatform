@@ -17,16 +17,16 @@ import { useState } from "react";
 import { useModuleProgress } from "./module-progress-context";
 import { type TaskDefinition, TaskStatus } from "./task-registry";
 
-type ModuleProgressTrackerProps = {
-	show?: boolean;
-	showHints?: boolean;
-	/** Custom navigation handler. If not provided, uses built-in scroll navigation */
-	onNavigate?: ((page: string, section?: string | null) => void) | null;
+interface ModuleProgressTrackerProps {
 	/** Base path for curriculum module (used for cross-page navigation) */
 	basePath?: string;
 	/** Current page identifier (used to determine if task is on current page) */
 	currentPage?: string | null;
-};
+	/** Custom navigation handler. If not provided, uses built-in scroll navigation */
+	onNavigate?: ((page: string, section?: string | null) => void) | null;
+	show?: boolean;
+	showHints?: boolean;
+}
 
 /**
  * Get task card border/background class based on completion state

@@ -17,7 +17,7 @@ import {
 import { useInviteMemberModal } from "@/hooks/use-invite-member-modal";
 import { cn } from "@/lib/utils";
 
-type TeamMember = {
+interface TeamMember {
 	id: string;
 	role: string;
 	user: {
@@ -25,14 +25,14 @@ type TeamMember = {
 		username: string;
 		email: string;
 	};
-};
+}
 
-type TeamMemberListProps = {
-	teamId: string;
-	members: TeamMember[];
-	currentUserRole: string;
+interface TeamMemberListProps {
 	currentUserId: string;
-};
+	currentUserRole: string;
+	members: TeamMember[];
+	teamId: string;
+}
 
 export function TeamMemberList({
 	teamId,

@@ -41,20 +41,20 @@ type SkeletonProps = {
 
 type NodeType = "goal" | "strategy" | "evidence";
 
-type NodeSkeletonProps = {
-	nodeType?: NodeType;
-	expanded?: boolean;
+interface NodeSkeletonProps {
 	className?: string;
-};
+	expanded?: boolean;
+	nodeType?: NodeType;
+}
 
 type SpinnerProps = {
 	size?: number;
 	className?: string;
 } & React.SVGProps<SVGSVGElement>;
 
-type DotsLoaderProps = {
+interface DotsLoaderProps {
 	className?: string;
-};
+}
 
 type ProgressBarProps = {
 	progress?: number;
@@ -62,17 +62,17 @@ type ProgressBarProps = {
 	showLabel?: boolean;
 } & React.HTMLAttributes<HTMLDivElement>;
 
-type CircularProgressProps = {
+interface CircularProgressProps {
+	className?: string;
 	progress?: number;
+	showLabel?: boolean;
 	size?: number;
 	strokeWidth?: number;
-	className?: string;
-	showLabel?: boolean;
-};
+}
 
-type PulseLoaderProps = {
+interface PulseLoaderProps {
 	className?: string;
-};
+}
 
 type ShimmerContainerProps = {
 	children: React.ReactNode;
@@ -87,21 +87,21 @@ type ContentRevealProps = {
 	className?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
 
-type PlaceholderProps = {
-	text?: string;
+interface PlaceholderProps {
+	className?: string;
 	icon?: LucideIcon;
-	className?: string;
-};
+	text?: string;
+}
 
-type CardSkeletonProps = {
+interface CardSkeletonProps {
 	className?: string;
-};
+}
 
-type LoadingOverlayProps = {
+interface LoadingOverlayProps {
+	className?: string;
 	isLoading?: boolean;
 	message?: string;
-	className?: string;
-};
+}
 
 // ========================================================================
 // Skeleton Loader Component

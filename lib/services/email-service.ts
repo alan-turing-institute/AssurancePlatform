@@ -16,22 +16,22 @@ const TEA_LOGO_BASE64 =
 // Types
 type EmailResult = { data: { messageId: string } } | { error: string };
 
-type PasswordResetEmailParams = {
-	to: string;
-	username: string;
-	resetToken: string;
+interface PasswordResetEmailParams {
 	expiresInMinutes?: number;
-};
-
-type WelcomeEmailParams = {
+	resetToken: string;
 	to: string;
 	username: string;
-};
+}
 
-type AccountDeletedEmailParams = {
+interface WelcomeEmailParams {
 	to: string;
 	username: string;
-};
+}
+
+interface AccountDeletedEmailParams {
+	to: string;
+	username: string;
+}
 
 /**
  * Get the Azure Communication Services email client.

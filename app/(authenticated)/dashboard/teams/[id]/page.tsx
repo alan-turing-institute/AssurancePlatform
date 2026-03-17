@@ -8,9 +8,9 @@ import { authOptions } from "@/lib/auth/config";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/src/generated/prisma";
 
-type TeamDetailPageProps = {
+interface TeamDetailPageProps {
 	params: Promise<{ id: string }>;
-};
+}
 
 type TeamWithMembers = Prisma.TeamGetPayload<{
 	include: {

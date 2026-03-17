@@ -108,7 +108,7 @@ describe("importCase", () => {
 				description: "Missing name",
 			},
 			tree: {
-				id: "20000000-0000-0000-0000-000000000001",
+				id: "20000000-0000-4000-8000-000000000001",
 				type: "GOAL",
 				name: "Root Goal",
 				description: "Description",

@@ -294,16 +294,16 @@ export async function fetchCaseFromPrisma(
 // Case list types
 // ---------------------------------------------------------------------------
 
-export type AssuranceCaseSummary = {
-	id: string;
-	name: string;
-	description?: string;
+export interface AssuranceCaseSummary {
 	createdDate: string;
-	updatedDate: string;
-	owner?: string;
+	description?: string;
+	id: string;
 	isDemo?: boolean;
+	name: string;
+	owner?: string;
 	permissions?: string;
-};
+	updatedDate: string;
+}
 
 // ---------------------------------------------------------------------------
 // Case list and create service functions

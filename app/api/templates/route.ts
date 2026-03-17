@@ -6,10 +6,10 @@ import {
 	requireAuth,
 } from "@/lib/api-response";
 
-type Template = {
+interface Template {
 	name: string;
 	[key: string]: unknown;
-};
+}
 
 export async function GET() {
 	try {

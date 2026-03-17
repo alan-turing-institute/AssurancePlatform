@@ -369,27 +369,27 @@ export class UserJourney {
 }
 
 // Mutable subset of WebSocket used by the test helper
-type MockWebSocket = {
-	send: ReturnType<typeof vi.fn>;
-	close: ReturnType<typeof vi.fn>;
+interface MockWebSocket {
 	addEventListener: ReturnType<typeof vi.fn>;
-	removeEventListener: ReturnType<typeof vi.fn>;
-	dispatchEvent: ReturnType<typeof vi.fn>;
-	readyState: number;
-	url: string;
-	CONNECTING: number;
-	OPEN: number;
-	CLOSING: number;
+	binaryType: BinaryType;
+	bufferedAmount: number;
 	CLOSED: number;
-	onopen: null;
+	CLOSING: number;
+	CONNECTING: number;
+	close: ReturnType<typeof vi.fn>;
+	dispatchEvent: ReturnType<typeof vi.fn>;
+	extensions: string;
+	OPEN: number;
 	onclose: null;
 	onerror: null;
 	onmessage: null;
+	onopen: null;
 	protocol: string;
-	extensions: string;
-	bufferedAmount: number;
-	binaryType: BinaryType;
-};
+	readyState: number;
+	removeEventListener: ReturnType<typeof vi.fn>;
+	send: ReturnType<typeof vi.fn>;
+	url: string;
+}
 
 // Helper for testing WebSocket connections
 export class WebSocketTestHelper {

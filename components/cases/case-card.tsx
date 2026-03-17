@@ -24,20 +24,20 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 
 // Flexible type for case data - compatible with both actions and domain types
-export type CaseCardData = {
-	id: number | string;
-	name: string;
-	description?: string;
+export interface CaseCardData {
 	createdDate?: string;
-	updatedDate?: string;
-	permissions?: string | string[];
+	description?: string;
+	id: number | string;
 	isDemo?: boolean;
-};
+	name: string;
+	permissions?: string | string[];
+	updatedDate?: string;
+}
 
-type CaseCardProps = {
+interface CaseCardProps {
 	assuranceCase: CaseCardData;
 	className?: string;
-};
+}
 
 const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	const { id, name, description, createdDate, isDemo } = assuranceCase;

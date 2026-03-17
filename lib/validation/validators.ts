@@ -10,7 +10,7 @@ export function validateUsername(username: string): ValidationResult {
 	if (!result.success) {
 		return {
 			valid: false,
-			error: result.error.errors[0]?.message ?? "Invalid input",
+			error: result.error.issues[0]?.message ?? "Invalid input",
 		};
 	}
 	return { valid: true, value: result.data };
@@ -21,7 +21,7 @@ export function validatePassword(password: string): ValidationResult {
 	if (!result.success) {
 		return {
 			valid: false,
-			error: result.error.errors[0]?.message ?? "Invalid input",
+			error: result.error.issues[0]?.message ?? "Invalid input",
 		};
 	}
 	return { valid: true, value: result.data };
@@ -32,7 +32,7 @@ export function validateEmail(email: string): ValidationResult {
 	if (!result.success) {
 		return {
 			valid: false,
-			error: result.error.errors[0]?.message ?? "Invalid input",
+			error: result.error.issues[0]?.message ?? "Invalid input",
 		};
 	}
 	return { valid: true, value: result.data };

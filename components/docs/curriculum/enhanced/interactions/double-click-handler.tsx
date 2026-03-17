@@ -22,15 +22,15 @@ import React, { type ReactNode, useCallback, useRef, useState } from "react";
 import { useReactFlow } from "reactflow";
 import { screenToFlowPosition } from "./creation-utils";
 
-type Position = {
+interface Position {
 	x: number;
 	y: number;
-};
+}
 
-type CreationIndicatorProps = {
-	position: Position;
+interface CreationIndicatorProps {
 	onComplete: () => void;
-};
+	position: Position;
+}
 
 /**
  * Creation indicator component (ripple effect)
@@ -59,14 +59,14 @@ const CreationIndicator = ({
 	</motion.div>
 );
 
-type DoubleClickHandlerProps = {
+interface DoubleClickHandlerProps {
+	children: ReactNode;
+	debounceMs?: number;
+	enabled?: boolean;
 	onDoubleClick?: (position: Position, event: React.MouseEvent) => void;
 	onQuickCreate?: (position: Position, event: React.MouseEvent) => void;
-	enabled?: boolean;
-	debounceMs?: number;
 	showVisualFeedback?: boolean;
-	children: ReactNode;
-};
+}
 
 /**
  * DoubleClickHandler Component
@@ -192,18 +192,18 @@ const DoubleClickHandler = ({
 	);
 };
 
-type UseDoubleClickHandlerOptions = {
+interface UseDoubleClickHandlerOptions {
+	debounceMs?: number;
+	enabled?: boolean;
 	onDoubleClick?: (position: Position, event: React.MouseEvent) => void;
 	onQuickCreate?: (position: Position, event: React.MouseEvent) => void;
-	enabled?: boolean;
-	debounceMs?: number;
-};
+}
 
-type UseDoubleClickHandlerReturn = {
+interface UseDoubleClickHandlerReturn {
 	handleDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
 	handleQuickCreate: (event: React.MouseEvent<HTMLDivElement>) => void;
 	isProcessing: boolean;
-};
+}
 
 /**
  * Hook for using double-click handler
@@ -279,10 +279,10 @@ export const useDoubleClickHandler = ({
 	};
 };
 
-type WithDoubleClickHandlerProps = {
+interface WithDoubleClickHandlerProps {
 	onDoubleClick?: (position: Position, event: React.MouseEvent) => void;
 	onQuickCreate?: (position: Position, event: React.MouseEvent) => void;
-};
+}
 
 /**
  * Higher-order component to add double-click handling

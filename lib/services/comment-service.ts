@@ -8,57 +8,57 @@ import type { ServiceResult } from "@/types/service";
 // Public types
 // ---------------------------------------------------------------------------
 
-export type CommentResponse = {
-	id: string;
-	content: string;
+export interface CommentResponse {
 	author: string;
 	authorId?: string;
+	content: string;
 	createdAt: string;
-	updatedAt?: string;
+	id: string;
 	parentId?: string | null;
 	replies?: CommentResponse[];
 	resolved?: boolean;
-	resolvedBy?: string | null;
 	resolvedAt?: string | null;
-};
+	resolvedBy?: string | null;
+	updatedAt?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
 
-type PrismaComment = {
-	id: string;
-	content: string;
+interface PrismaComment {
+	author: { username: string };
 	authorId: string;
+	content: string;
 	createdAt: Date;
-	updatedAt: Date;
+	id: string;
 	parentCommentId: string | null;
 	resolved: boolean;
 	resolvedAt: Date | null;
-	author: { username: string };
 	resolvedBy: { username: string } | null;
-};
+	updatedAt: Date;
+}
 
-type CommentWithElement = {
-	id: string;
+interface CommentWithElement {
+	author: { username: string };
 	authorId: string;
+	caseId: string | null;
 	content: string;
 	createdAt: Date;
-	caseId: string | null;
-	elementId: string | null;
 	element: {
 		caseId: string;
 		name: string | null;
 		description: string | null;
 	} | null;
-	author: { username: string };
-};
+	elementId: string | null;
+	id: string;
+}
 
-type CommentPermissionResult = {
-	comment: CommentWithElement;
+interface CommentPermissionResult {
 	caseId: string;
+	comment: CommentWithElement;
 	elementName: string | null;
-};
+}
 
 // ---------------------------------------------------------------------------
 // Pure functions
@@ -379,12 +379,12 @@ export async function deleteComment(
 	return { data: null };
 }
 
-type UpdatedCommentData = {
-	id: string;
-	content: string;
+interface UpdatedCommentData {
 	author: string;
+	content: string;
 	createdAt: string;
-};
+	id: string;
+}
 
 /**
  * Updates the content of a comment by ID.

@@ -21,17 +21,17 @@ export type CaseStudyWithRelations = PrismaCaseStudy & {
 	featureImage: { image: string; uploadedAt: Date } | null;
 };
 
-export type CaseStudyCreateInput = {
-	title: string;
-	description?: string;
+export interface CaseStudyCreateInput {
 	authors?: string;
 	category?: string;
-	sector?: string;
 	contact?: string;
-	type?: string;
-	published?: boolean;
+	description?: string;
 	image?: string;
-};
+	published?: boolean;
+	sector?: string;
+	title: string;
+	type?: string;
+}
 
 export type CaseStudyUpdateInput = Partial<CaseStudyCreateInput> & {
 	id: number;
@@ -778,15 +778,15 @@ export async function updateCaseStudyWithLinks(
 // Publishing Workflow Helpers
 // ============================================
 
-export type CaseAvailableForStudy = {
-	id: string;
-	name: string;
+export interface CaseAvailableForStudy {
 	description: string;
-	publishStatus: PrismaPublishStatus;
-	publishedAt: Date | null;
+	id: string;
 	markedReadyAt: Date | null;
+	name: string;
+	publishedAt: Date | null;
 	publishedVersionId: string | null;
-};
+	publishStatus: PrismaPublishStatus;
+}
 
 /**
  * Gets cases that are ready to publish OR published for a specific user.

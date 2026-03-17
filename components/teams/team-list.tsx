@@ -7,20 +7,20 @@ import { Input } from "@/components/ui/input";
 import { useCreateTeamModal } from "@/hooks/modal-hooks";
 import { TeamCard } from "./team-card";
 
-type Team = {
-	id: string;
-	name: string;
-	slug: string;
-	description: string | null;
+interface Team {
 	_count?: {
 		members: number;
 	};
+	description: string | null;
+	id: string;
+	name: string;
 	role?: string;
-};
+	slug: string;
+}
 
-type TeamListProps = {
+interface TeamListProps {
 	teams: Team[];
-};
+}
 
 export function TeamList({ teams }: TeamListProps) {
 	const createTeamModal = useCreateTeamModal();
@@ -52,7 +52,7 @@ export function TeamList({ teams }: TeamListProps) {
 						onClick={() => createTeamModal.onOpen()}
 						type="button"
 					>
-						<PlusCircleIcon className="-ml-0.5 mr-1.5 h-5 w-5" />
+						<PlusCircleIcon className="mr-1.5 -ml-0.5 h-5 w-5" />
 						<span className="hidden md:block">New Team</span>
 					</button>
 				</div>
@@ -65,7 +65,7 @@ export function TeamList({ teams }: TeamListProps) {
 				>
 					<Card className="flex h-full items-center justify-center border-dashed transition-all group-hover:bg-primary/10">
 						<CardContent className="flex flex-col items-center justify-center gap-2 py-10">
-							<PlusCircleIcon className="group-hover:-translate-y-1 h-10 w-10 transition-all" />
+							<PlusCircleIcon className="h-10 w-10 transition-all group-hover:-translate-y-1" />
 							<div>
 								<h4 className="mb-1 text-center text-xl">Create new team</h4>
 								<p className="text-center text-foreground/70 text-sm">

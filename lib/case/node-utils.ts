@@ -12,9 +12,9 @@ import type {
 } from "@/lib/services/case-response-types";
 import type { NestedArrayItem, ReactFlowNode } from "./types";
 
-type DescriptionMap = {
+interface DescriptionMap {
 	[key: string]: string | undefined;
-};
+}
 
 const DESCRIPTION_FROM_TYPE: DescriptionMap = {
 	goal: "Goals are the overarching objectives of the assurance case. They represent what needs to be achieved or demonstrated.",

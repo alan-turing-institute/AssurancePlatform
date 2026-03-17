@@ -16,11 +16,11 @@ import {
 // Response helpers
 // ---------------------------------------------------------------------------
 
-type ApiErrorBody = {
-	error: string;
+interface ApiErrorBody {
 	code: ErrorCode;
+	error: string;
 	fieldErrors?: Record<string, string>;
-};
+}
 
 /** Create a JSON error response from an `AppError`. */
 export function apiError(error: AppError): NextResponse<ApiErrorBody> {

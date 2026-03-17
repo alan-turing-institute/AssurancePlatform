@@ -2,12 +2,12 @@
 
 import { validateSession } from "@/lib/auth/validate-session";
 
-type DriveFile = {
+interface DriveFile {
 	id: string;
-	name: string;
 	modifiedTime: string;
+	name: string;
 	size?: string;
-};
+}
 
 /**
  * Checks whether the current user has connected their Google Drive account.

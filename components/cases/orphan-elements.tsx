@@ -10,16 +10,16 @@ import { ScrollArea } from "../ui/scroll-area";
 import { OrphanElementItem } from "./_orphan-elements/orphan-element-item";
 import { useOrphanActions } from "./_orphan-elements/use-orphan-actions";
 
-export type OrphanElementsProps = {
-	node: Node;
+export interface OrphanElementsProps {
+	className?: string;
 	handleClose: () => void;
 	loadingState: {
 		loading: boolean;
 		setLoading: Dispatch<SetStateAction<boolean>>;
 	};
+	node: Node;
 	setAction: Dispatch<SetStateAction<string | null>>;
-	className?: string;
-};
+}
 
 export function OrphanElements({
 	node,

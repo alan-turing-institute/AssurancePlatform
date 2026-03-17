@@ -28,17 +28,17 @@ import {
 	interpolateGradient,
 } from "./edge-utils";
 
-type GradientEdgeData = {
-	sourceColor?: string;
-	targetColor?: string;
+interface GradientEdgeData {
+	animateGradient?: boolean;
 	gradientStops?: number;
-	strokeWidth?: number;
+	label?: string;
 	opacity?: number;
 	opacityVariation?: number;
-	animateGradient?: boolean;
-	label?: string;
 	showLabel?: boolean;
-};
+	sourceColor?: string;
+	strokeWidth?: number;
+	targetColor?: string;
+}
 
 type GradientEdgeProps = EdgeProps<GradientEdgeData>;
 

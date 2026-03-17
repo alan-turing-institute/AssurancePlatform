@@ -6,20 +6,20 @@ import type React from "react";
 import { useCallback, useEffect } from "react";
 import type { StageDefinition } from "./stage-definitions";
 
-type StageSelectorProps = {
-	/** All stage definitions */
-	stages: StageDefinition[];
-	/** Current active stage (1-indexed) */
-	currentStage: number;
+interface StageSelectorProps {
 	/** Set of completed stage IDs */
 	completedStages: Set<number>;
-	/** Callback when stage is selected */
-	onStageSelect: (stageId: number) => void;
-	/** Callback to advance to next stage (marks current complete) */
-	onAdvance: () => void;
+	/** Current active stage (1-indexed) */
+	currentStage: number;
 	/** Whether keyboard navigation is enabled */
 	enableKeyboard?: boolean;
-};
+	/** Callback to advance to next stage (marks current complete) */
+	onAdvance: () => void;
+	/** Callback when stage is selected */
+	onStageSelect: (stageId: number) => void;
+	/** All stage definitions */
+	stages: StageDefinition[];
+}
 
 /**
  * Get progress dot styling based on state

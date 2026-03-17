@@ -8,9 +8,9 @@ import {
 import { validationError } from "@/lib/errors";
 import { updateUserProfileSchema } from "@/lib/schemas/user";
 
-type DeleteAccountRequest = {
+interface DeleteAccountRequest {
 	password?: string;
-};
+}
 
 /**
  * GET /api/users/me
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
 		);
 		if (!parsed.success) {
 			return apiError(
-				validationError(parsed.error.errors[0]?.message ?? "Invalid input")
+				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
 			);
 		}
 

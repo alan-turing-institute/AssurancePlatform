@@ -7,24 +7,24 @@ import useStore from "@/store/store";
 import type { DiagramNodeType } from "./node-config";
 import NodeOptionsMenu from "./node-options-menu";
 
-type NodeActionGroupProps = {
+interface NodeActionGroupProps {
+	/** The Add popover component to wrap around the Add button */
+	addPopover?: React.ReactNode;
+	/** Number of comments on this node */
+	commentCount?: number;
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node (goal, strategy, property, evidence) */
 	nodeType: DiagramNodeType;
+	/** Callback when edit is clicked */
+	onEditClick: () => void;
 	/** Whether to show the Add button (false for evidence nodes) */
 	showAdd?: boolean;
 	/** Whether to show the Toggle button */
 	showToggle?: boolean;
 	/** The Toggle button component to render */
 	toggleButton?: React.ReactNode;
-	/** Callback when edit is clicked */
-	onEditClick: () => void;
-	/** The Add popover component to wrap around the Add button */
-	addPopover?: React.ReactNode;
-	/** Number of comments on this node */
-	commentCount?: number;
-};
+}
 
 /**
  * NodeActionGroup - Horizontal icon group for node actions
@@ -99,7 +99,7 @@ export default function NodeActionGroup({
 					<div className="relative inline-flex rounded-full p-1 hover:bg-foreground/10">
 						<MessageCircle aria-hidden="true" size={16} />
 						{commentCount > 0 && (
-							<span className="-top-1 -right-1 absolute flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-[9px] text-info-foreground">
+							<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-[9px] text-info-foreground">
 								{commentCount}
 							</span>
 						)}

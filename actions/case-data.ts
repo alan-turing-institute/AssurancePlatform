@@ -11,7 +11,7 @@ export async function loadStaticCaseData(
 	caseFile: string
 ): Promise<{ data: unknown } | { error: string }> {
 	// Validate filename to prevent path traversal
-	if (caseFile.includes("..") || caseFile.includes("/")) {
+	if (caseFile.includes("..") || caseFile.startsWith("/")) {
 		return { error: "Invalid case file name" };
 	}
 

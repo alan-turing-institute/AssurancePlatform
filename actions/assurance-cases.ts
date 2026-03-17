@@ -8,15 +8,15 @@ import {
 } from "@/lib/schemas/assurance-case";
 import { validateInput } from "@/lib/validation/input-validation";
 
-type AssuranceCase = {
-	id: number | string;
-	name: string;
-	description?: string;
+interface AssuranceCase {
 	createdDate?: string;
-	updatedDate?: string;
-	owner?: number | string;
+	description?: string;
+	id: number | string;
 	isDemo?: boolean;
-};
+	name: string;
+	owner?: number | string;
+	updatedDate?: string;
+}
 
 export const fetchAssuranceCases = async (): Promise<
 	AssuranceCase[] | null
@@ -89,15 +89,15 @@ export const fetchPublishedAssuranceCases = async (): Promise<
 	return await Promise.resolve([]);
 };
 
-type PublishedCaseForStudy = {
-	id: string;
-	name: string;
+interface PublishedCaseForStudy {
 	description: string;
-	publishStatus: string;
-	publishedAt: string | null;
+	id: string;
 	markedReadyAt: string | null;
+	name: string;
+	publishedAt: string | null;
 	publishedVersionId: string | null;
-};
+	publishStatus: string;
+}
 
 /**
  * Fetches the current user's cases that are available for linking to case studies

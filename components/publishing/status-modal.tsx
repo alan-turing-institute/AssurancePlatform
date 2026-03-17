@@ -16,16 +16,16 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { PublishStatusType } from "@/lib/services/case-response-types";
 
-type StatusModalProps = {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	status: PublishStatusType;
+interface StatusModalProps {
 	hasChanges?: boolean;
-	publishedAt?: Date | string | null;
 	linkedCaseStudyCount?: number;
 	onMarkAsReady?: () => Promise<void>;
+	onOpenChange: (open: boolean) => void;
 	onUpdatePublished?: () => Promise<void>;
-};
+	open: boolean;
+	publishedAt?: Date | string | null;
+	status: PublishStatusType;
+}
 
 /**
  * Modal for managing publish status transitions.
@@ -151,11 +151,11 @@ function getStatusDescription(status: PublishStatusType): string {
 	}
 }
 
-type DraftContentProps = {
+interface DraftContentProps {
+	handleAction: (action: (() => Promise<void>) | undefined) => void;
 	loading: boolean;
 	onMarkAsReady?: () => Promise<void>;
-	handleAction: (action: (() => Promise<void>) | undefined) => void;
-};
+}
 
 function DraftContent({
 	loading,
@@ -186,9 +186,9 @@ function DraftContent({
 	);
 }
 
-type ReadyContentProps = {
+interface ReadyContentProps {
 	onOpenChange: (open: boolean) => void;
-};
+}
 
 function ReadyContent({ onOpenChange }: ReadyContentProps) {
 	return (
@@ -201,14 +201,14 @@ function ReadyContent({ onOpenChange }: ReadyContentProps) {
 	);
 }
 
-type PublishedContentProps = {
-	hasChanges: boolean;
+interface PublishedContentProps {
 	formattedDate: string | null;
+	handleAction: (action: (() => Promise<void>) | undefined) => void;
+	hasChanges: boolean;
 	linkedCaseStudyCount: number;
 	loading: boolean;
 	onUpdatePublished?: () => Promise<void>;
-	handleAction: (action: (() => Promise<void>) | undefined) => void;
-};
+}
 
 function PublishedContent({
 	hasChanges,

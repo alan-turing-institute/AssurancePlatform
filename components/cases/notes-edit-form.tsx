@@ -20,10 +20,10 @@ import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Textarea } from "../ui/textarea";
 
-type NotesEditFormProps = {
+interface NotesEditFormProps {
 	note: CommentResponse;
 	setEdit: Dispatch<SetStateAction<boolean | undefined>>;
-};
+}
 
 const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
 	const { caseNotes, setCaseNotes } = useStore();

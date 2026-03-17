@@ -13,35 +13,35 @@ import { recordDelete } from "@/lib/services/history-service";
 /**
  * Type for orphan element data
  */
-export type OrphanElementData = {
-	id: string;
-	type: string;
-	name: string;
+export interface OrphanElementData {
 	description: string;
+	id: string;
+	name: string;
 	propertyClaimId?: string | null;
-};
+	type: string;
+}
 
-type DeleteNodeOptions = {
-	node: ReactFlowNode;
+interface DeleteNodeOptions {
 	assuranceCase: AssuranceCaseResponse;
-	setAssuranceCase: (ac: AssuranceCaseResponse) => void;
-	setLoading: (loading: boolean) => void;
-	setDeleteOpen: (open: boolean) => void;
 	handleClose: () => void;
+	node: ReactFlowNode;
 	sessionKey: string;
-};
-
-type DetachNodeOptions = {
-	node: ReactFlowNode;
-	assuranceCase: AssuranceCaseResponse;
 	setAssuranceCase: (ac: AssuranceCaseResponse) => void;
-	setLoading: (loading: boolean) => void;
 	setDeleteOpen: (open: boolean) => void;
+	setLoading: (loading: boolean) => void;
+}
+
+interface DetachNodeOptions {
+	assuranceCase: AssuranceCaseResponse;
 	handleClose: () => void;
+	node: ReactFlowNode;
 	orphanedElements: OrphanElementData[];
-	setOrphanedElements: (elements: OrphanElementData[]) => void;
 	sessionKey: string;
-};
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void;
+	setDeleteOpen: (open: boolean) => void;
+	setLoading: (loading: boolean) => void;
+	setOrphanedElements: (elements: OrphanElementData[]) => void;
+}
 
 /**
  * Map of React Flow node types to canonical element types

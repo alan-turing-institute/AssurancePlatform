@@ -20,14 +20,14 @@ const BLOB_GITHUB_URL_REGEX =
 	/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+?)(?:\?.*)?$/;
 const SHORTHAND_PATH_REGEX = /^([^/]+)\/([^/]+)\/(.+)$/;
 
-export type GitHubFileResult = {
+export interface GitHubFileResult {
 	content: string;
-	sha: string;
 	path: string;
+	sha: string;
 	size: number;
-};
+}
 
-export type GitHubServiceError = {
+export interface GitHubServiceError {
 	code:
 		| "NO_TOKEN"
 		| "TOKEN_EXPIRED"
@@ -37,7 +37,7 @@ export type GitHubServiceError = {
 		| "API_ERROR";
 	message: string;
 	status?: number;
-};
+}
 
 /**
  * Retrieves the user's GitHub access token from the database.
@@ -258,12 +258,12 @@ export async function hasGitHubToken(userId: string): Promise<boolean> {
  * @param url - The GitHub URL or shorthand to parse
  * @returns Parsed components or null if the URL is invalid
  */
-type ParsedGitHubUrl = {
-	owner: string;
-	repo: string;
-	path: string;
+interface ParsedGitHubUrl {
 	branch?: string;
-};
+	owner: string;
+	path: string;
+	repo: string;
+}
 
 /** Build a parsed result from a 4-group regex match (owner, repo, branch, path). */
 function buildParsedUrl(

@@ -3,16 +3,16 @@ import { create } from "zustand";
 /**
  * Defines the shape of the state for the invite member modal store.
  */
-type InviteMemberModalStore = {
+interface InviteMemberModalStore {
 	/**
 	 * Indicates whether the modal is open or closed.
 	 */
 	isOpen: boolean;
 
 	/**
-	 * The team ID to invite a member to.
+	 * Function to close the modal.
 	 */
-	teamId: string | null;
+	onClose: () => void;
 
 	/**
 	 * Function to open the modal with a team ID.
@@ -20,10 +20,10 @@ type InviteMemberModalStore = {
 	onOpen: (teamId: string) => void;
 
 	/**
-	 * Function to close the modal.
+	 * The team ID to invite a member to.
 	 */
-	onClose: () => void;
-};
+	teamId: string | null;
+}
 
 /**
  * Creates a Zustand store for managing the state of the invite member modal.

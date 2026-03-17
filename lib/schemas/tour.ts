@@ -17,9 +17,7 @@ export type TourId = (typeof KNOWN_TOUR_IDS)[number];
  */
 export const tourCompletionSchema = z.object({
 	tourId: z.enum(KNOWN_TOUR_IDS, {
-		errorMap: () => ({
-			message: `Invalid tour ID. Expected one of: ${KNOWN_TOUR_IDS.join(", ")}`,
-		}),
+		message: `Invalid tour ID. Expected one of: ${KNOWN_TOUR_IDS.join(", ")}`,
 	}),
 });
 

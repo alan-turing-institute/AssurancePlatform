@@ -132,17 +132,17 @@ export function toggleHiddenForParent(
 }
 
 // Options for toggle children processing
-type ToggleChildrenOptions = {
-	targetParentId: string;
-	parentFound: boolean;
+interface ToggleChildrenOptions {
 	hide: boolean;
+	parentFound: boolean;
+	targetParentId: string;
 	toggleChildren: (
 		item: unknown,
 		targetId: string,
 		isParentFound: boolean,
 		shouldHide: boolean
 	) => void;
-};
+}
 
 // Helper function to handle array processing
 const processArray = (arr: unknown[], options: ToggleChildrenOptions): void => {

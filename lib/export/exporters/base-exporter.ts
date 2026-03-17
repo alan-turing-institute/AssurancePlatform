@@ -17,22 +17,7 @@ import type {
 /**
  * Base exporter type - all format exporters must implement this
  */
-export type Exporter = {
-	/**
-	 * The format this exporter handles
-	 */
-	readonly format: ExportFormat;
-
-	/**
-	 * MIME type for the output
-	 */
-	readonly mimeType: string;
-
-	/**
-	 * File extension for the output (without dot)
-	 */
-	readonly fileExtension: string;
-
+export interface Exporter {
 	/**
 	 * Export a rendered document to the target format
 	 *
@@ -44,7 +29,21 @@ export type Exporter = {
 		document: RenderedDocument,
 		options: ExportOptions
 	): Promise<ExportResult>;
-};
+
+	/**
+	 * File extension for the output (without dot)
+	 */
+	readonly fileExtension: string;
+	/**
+	 * The format this exporter handles
+	 */
+	readonly format: ExportFormat;
+
+	/**
+	 * MIME type for the output
+	 */
+	readonly mimeType: string;
+}
 
 /**
  * Abstract base class providing common exporter functionality

@@ -9,16 +9,16 @@ import DesktopNav from "./desktop-nav";
 import MenuToggleButton from "./menu-toggle";
 import { MobileNav } from "./mobile-nav";
 
-type Team = {
+interface Team {
 	id: string;
 	name: string;
 	slug: string;
-};
+}
 
-type NavbarProps = {
+interface NavbarProps {
 	children: React.ReactNode;
 	teams: Team[];
-};
+}
 
 export const Navbar = ({ children, teams }: NavbarProps) => {
 	const [sidebarOpen, setSidebarOpen] = useState(false);

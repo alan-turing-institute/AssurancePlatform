@@ -13,18 +13,18 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 
-type NodeAddDialogProps = {
+interface NodeAddDialogProps {
+	/** The type of element to create (strategy, claim, evidence) */
+	elementType: string | null;
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node */
 	nodeType: DiagramNodeType;
-	/** The type of element to create (strategy, claim, evidence) */
-	elementType: string | null;
-	/** Whether the dialog is open */
-	open: boolean;
 	/** Callback when open state changes */
 	onOpenChange: (open: boolean) => void;
-};
+	/** Whether the dialog is open */
+	open: boolean;
+}
 
 /** Get display label for element type */
 function getElementLabel(elementType: string): string {

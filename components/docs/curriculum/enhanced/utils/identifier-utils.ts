@@ -30,45 +30,45 @@ type NodeType =
 	| "context"
 	| string;
 
-type ContextItem = {
+interface ContextItem {
+	isAssumption?: boolean;
 	text?: string;
 	type?: string;
-	isAssumption?: boolean;
 	[key: string]: unknown;
-};
+}
 
-type NodeData = {
-	id?: string;
-	name?: string;
-	/** Optional display title separate from identifier */
-	title?: string;
-	description?: string;
-	context?: ContextItem[] | string[];
-	assumptions?: unknown[];
-	justifications?: unknown[];
+interface NodeData {
 	/** Single-string assumption from TreeNode export format */
 	assumption?: string;
+	assumptions?: unknown[];
+	confidence?: number;
+	context?: ContextItem[] | string[];
+	description?: string;
+	id?: string;
 	/** Single-string justification from TreeNode export format */
 	justification?: string;
-	strength?: number | string;
-	status?: string;
+	justifications?: unknown[];
+	name?: string;
 	priority?: string;
-	confidence?: number;
+	status?: string;
+	strength?: number | string;
+	/** Optional display title separate from identifier */
+	title?: string;
 	[key: string]: unknown;
-};
+}
 
-type ExtractedAttributes = {
-	context: ContextItem[];
+interface ExtractedAttributes {
 	assumptions: ContextItem[];
+	context: ContextItem[];
 	justifications: ContextItem[];
-};
+}
 
-type ExtractedMetadata = {
-	strength?: number | string;
-	status?: string;
-	priority?: string;
+interface ExtractedMetadata {
 	confidence?: number;
-};
+	priority?: string;
+	status?: string;
+	strength?: number | string;
+}
 
 /**
  * Format node identifier to display format

@@ -185,11 +185,11 @@ export const defaultEdgeOptions = {
 	},
 };
 
-type EdgeStylePreset = {
-	type: string;
+interface EdgeStylePreset {
 	animated?: boolean;
 	data: Record<string, unknown>;
-};
+	type: string;
+}
 
 /**
  * Edge style presets
@@ -334,12 +334,12 @@ export function createEdge(
 	};
 }
 
-type EdgeConnection = {
+interface EdgeConnection {
+	data?: Record<string, unknown>;
 	source: string;
 	target: string;
 	type?: string;
-	data?: Record<string, unknown>;
-};
+}
 
 /**
  * Helper function to create edges from node connections

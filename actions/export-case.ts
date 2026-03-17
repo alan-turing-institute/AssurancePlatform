@@ -4,9 +4,9 @@ import { validateSession } from "@/lib/auth/validate-session";
 import { uuidSchema } from "@/lib/schemas/base";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 
-type ExportOptions = {
+interface ExportOptions {
 	includeComments: boolean;
-};
+}
 
 type ExportResult = { data: CaseExportNested } | { error: string };
 

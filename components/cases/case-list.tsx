@@ -69,11 +69,11 @@ function compareCases(
 	}
 }
 
-type CaseListProps = {
+interface CaseListProps {
 	assuranceCases: CaseCardData[];
-	showCreate?: boolean;
 	className?: string;
-};
+	showCreate?: boolean;
+}
 
 const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 	const createCaseModal = useCreateCaseModal();
@@ -169,7 +169,7 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 					>
 						<Card className="flex h-full w-full items-center justify-center border-dashed transition-all group-hover:bg-primary/10">
 							<CardContent className="flex flex-col items-center justify-center gap-2 py-20">
-								<PlusCircleIcon className="group-hover:-translate-y-1 h-10 w-10 transition-all" />
+								<PlusCircleIcon className="h-10 w-10 transition-all group-hover:-translate-y-1" />
 								<div>
 									<h4 className="mb-1 text-center text-xl">Create new case</h4>
 									<p className="text-center text-foreground/70 text-sm">

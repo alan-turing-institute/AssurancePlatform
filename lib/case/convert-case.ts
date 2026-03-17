@@ -8,25 +8,25 @@ import type {
 
 // Define the structure of items that can be converted to nodes
 // Dynamic property bag: generic tree conversion spreads all fields into React Flow node data
-export type ConvertibleItem = {
+export interface ConvertibleItem {
+	context?: ConvertibleItem[];
+	description?: string;
+	evidence?: EvidenceResponse[];
+	hidden?: boolean;
 	id: string;
 	name: string;
-	type: string;
-	description?: string;
-	hidden?: boolean;
-	context?: ConvertibleItem[];
-	strategies?: StrategyResponse[];
 	propertyClaims?: PropertyClaimResponse[];
-	evidence?: EvidenceResponse[];
+	strategies?: StrategyResponse[];
+	type: string;
 	[key: string]: unknown;
-};
+}
 
 // Define the structure of the assurance case
 // Dynamic property bag: case objects include varying metadata fields (isDemo, permissions, etc.)
-export type AssuranceCaseWithGoals = {
+export interface AssuranceCaseWithGoals {
 	goals: GoalResponse[];
 	[key: string]: unknown;
-};
+}
 
 /**
  * Convert Assurance Case

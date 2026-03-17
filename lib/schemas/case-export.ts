@@ -166,11 +166,11 @@ export type CaseExportV2 = z.infer<typeof CaseExportV2Schema>;
 /**
  * Comment type for export/import
  */
-export type ExportComment = {
+export interface ExportComment {
 	author: string;
 	content: string;
 	createdAt: string;
-};
+}
 
 /**
  * Tree Node - recursive structure with unified children array.
@@ -189,33 +189,33 @@ export type ExportComment = {
  * - isDefeater, defeatsElementId: any type (dialogical reasoning)
  * - comments: optional, included when includeComments export option is true
  */
-export type TreeNode = {
-	id: string;
-	type: ElementType;
-	name: string | null;
-	description: string;
-	inSandbox: boolean;
-	children: TreeNode[];
-	// Type-specific fields (only included when applicable)
-	role?: ElementRole | null;
+export interface TreeNode {
 	assumption?: string | null;
-	justification?: string | null;
-	context?: string[];
-	url?: string | null;
-	level?: number | null;
-	// Module fields
-	moduleReferenceId?: string;
-	moduleEmbedType?: ModuleEmbedType;
-	modulePublicSummary?: string | null;
-	// Pattern metadata (only included when true)
-	fromPattern?: boolean;
-	modifiedFromPattern?: boolean;
-	// Dialogical reasoning
-	isDefeater?: boolean;
-	defeatsElementId?: string;
+	children: TreeNode[];
 	// Comments (optional - included when export option enabled)
 	comments?: ExportComment[];
-};
+	context?: string[];
+	defeatsElementId?: string;
+	description: string;
+	// Pattern metadata (only included when true)
+	fromPattern?: boolean;
+	id: string;
+	inSandbox: boolean;
+	// Dialogical reasoning
+	isDefeater?: boolean;
+	justification?: string | null;
+	level?: number | null;
+	modifiedFromPattern?: boolean;
+	moduleEmbedType?: ModuleEmbedType;
+	modulePublicSummary?: string | null;
+	// Module fields
+	moduleReferenceId?: string;
+	name: string | null;
+	// Type-specific fields (only included when applicable)
+	role?: ElementRole | null;
+	type: ElementType;
+	url?: string | null;
+}
 
 // Comment schema for export/import
 export const ExportCommentSchema = z
@@ -286,15 +286,15 @@ export type CaseExportNested = z.infer<typeof CaseExportNestedSchema>;
 // VALIDATION RESULT TYPES
 // ============================================
 
-export type ValidationError = {
-	path: string;
-	message: string;
+export interface ValidationError {
 	code: string;
-};
+	message: string;
+	path: string;
+}
 
-export type ImportValidationResult = {
+export interface ImportValidationResult {
+	errors: ValidationError[];
 	isValid: boolean;
 	version: "flat" | "nested" | null;
-	errors: ValidationError[];
 	warnings: string[];
-};
+}

@@ -44,13 +44,9 @@ async function loadAxe() {
 /**
  * Configuration for accessibility testing
  */
-export type AccessibilityTestConfig = {
-	/** Skip axe-core accessibility checks */
-	skipAxe?: boolean;
+export interface AccessibilityTestConfig {
 	/** Custom axe-core rules configuration */
 	axeOptions?: AxeRunOptions;
-	/** Expected WCAG conformance level */
-	wcagLevel?: "A" | "AA" | "AAA";
 	/** Focus management expectations */
 	focusManagement?: {
 		/** Should focus be trapped within the component */
@@ -60,12 +56,16 @@ export type AccessibilityTestConfig = {
 		/** Element that should receive focus when component unmounts */
 		restoreFocus?: boolean;
 	};
-};
+	/** Skip axe-core accessibility checks */
+	skipAxe?: boolean;
+	/** Expected WCAG conformance level */
+	wcagLevel?: "A" | "AA" | "AAA";
+}
 
 /**
  * Result of keyboard navigation test
  */
-export type KeyboardNavigationResult = {
+export interface KeyboardNavigationResult {
 	/** Elements that received focus in order */
 	focusedElements: HTMLElement[];
 	/** Whether tab order is logical */
@@ -74,67 +74,67 @@ export type KeyboardNavigationResult = {
 	missingFocusableElements: HTMLElement[];
 	/** Elements that are focusable but shouldn't be */
 	unexpectedFocusableElements: HTMLElement[];
-};
+}
 
 /**
  * Screen reader testing result
  */
-export type ScreenReaderResult = {
-	/** Elements missing accessible names */
-	missingAccessibleNames: HTMLElement[];
-	/** Elements with insufficient descriptions */
-	insufficientDescriptions: HTMLElement[];
-	/** Elements with incorrect roles */
-	incorrectRoles: HTMLElement[];
+export interface ScreenReaderResult {
 	/** Overall accessibility score (0-100) */
 	accessibilityScore: number;
-};
+	/** Elements with incorrect roles */
+	incorrectRoles: HTMLElement[];
+	/** Elements with insufficient descriptions */
+	insufficientDescriptions: HTMLElement[];
+	/** Elements missing accessible names */
+	missingAccessibleNames: HTMLElement[];
+}
 
 /**
  * Focus management test result
  */
-export type FocusManagementResult = {
-	/** Whether focus is properly trapped */
-	isFocusTrapped: boolean;
-	/** Whether focus is restored correctly */
-	isFocusRestored: boolean;
+export interface FocusManagementResult {
 	/** Initial focus element */
 	initialFocusElement: HTMLElement | null;
+	/** Whether focus is restored correctly */
+	isFocusRestored: boolean;
+	/** Whether focus is properly trapped */
+	isFocusTrapped: boolean;
 	/** Focus restoration element */
 	restorationElement: HTMLElement | null;
-};
+}
 
 /**
  * Color contrast test result
  */
-export type ColorContrastResult = {
+export interface ColorContrastResult {
+	/** Overall contrast compliance */
+	isCompliant: boolean;
 	/** Elements with insufficient contrast */
 	lowContrastElements: Array<{
 		element: HTMLElement;
 		contrastRatio: number;
 		required: number;
 	}>;
-	/** Overall contrast compliance */
-	isCompliant: boolean;
 	/** Minimum contrast ratio found */
 	minimumContrast: number;
-};
+}
 
 /**
  * Accessibility preferences for testing
  */
-export type AccessibilityPreferences = {
-	/** Reduced motion preference */
-	prefersReducedMotion?: boolean;
-	/** High contrast preference */
-	prefersHighContrast?: boolean;
+export interface AccessibilityPreferences {
 	/** Color scheme preference */
 	colorScheme?: "light" | "dark";
 	/** Font size multiplier */
 	fontSizeMultiplier?: number;
+	/** High contrast preference */
+	prefersHighContrast?: boolean;
+	/** Reduced motion preference */
+	prefersReducedMotion?: boolean;
 	/** Screen reader simulation */
 	simulateScreenReader?: boolean;
-};
+}
 
 // =============================================================================
 // Core Accessibility Testing

@@ -16,12 +16,12 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { type FileFormInput, fileFormSchema } from "./use-case-import";
 
-export type FileImportTabProps = {
+export interface FileImportTabProps {
+	className?: string;
 	importCase: (json: unknown) => Promise<void>;
 	loading: boolean;
 	setError: (error: string) => void;
-	className?: string;
-};
+}
 
 /**
  * File upload tab content for the import modal.

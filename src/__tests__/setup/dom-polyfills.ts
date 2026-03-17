@@ -95,15 +95,15 @@ if (
 // DragEvent polyfill
 if (typeof global.DragEvent === "undefined") {
 	interface MockDragEventInit extends EventInit {
-		dataTransfer?: DataTransfer | null;
+		altKey?: boolean;
 		clientX?: number;
 		clientY?: number;
+		ctrlKey?: boolean;
+		dataTransfer?: DataTransfer | null;
+		metaKey?: boolean;
 		screenX?: number;
 		screenY?: number;
-		ctrlKey?: boolean;
 		shiftKey?: boolean;
-		altKey?: boolean;
-		metaKey?: boolean;
 	}
 
 	global.DragEvent = class MockDragEvent extends Event {

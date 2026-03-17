@@ -7,11 +7,11 @@ import { toast as sonnerToast } from "sonner";
 
 type ToastVariant = "default" | "destructive" | "success";
 
-type ToastOptions = {
-	variant?: ToastVariant;
-	title?: string;
+interface ToastOptions {
 	description?: string;
-};
+	title?: string;
+	variant?: ToastVariant;
+}
 
 /**
  * Display a toast notification.

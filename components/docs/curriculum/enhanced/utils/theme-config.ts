@@ -24,97 +24,94 @@ import { createContext, useContext } from "react";
 // Type Definitions
 // ========================================================================
 
-type BackgroundColorsDark = {
+interface BackgroundColorsDark {
+	disabledLight: string;
+	opaqueWhite: string;
 	transparentBlack: string;
 	transparentBlackSecondary: string;
 	transparentBlackSecondaryAlt: string;
 	transparentWhiteHover: string;
 	transparentWhiteSecondaryHover: string;
-	opaqueWhite: string;
-	disabledLight: string;
-};
+}
 
-type BackgroundColorsLight = {
+interface BackgroundColorsLight {
+	disabledLight: string;
+	opaqueWhite: string;
+	transparentBlackHover: string;
+	transparentBlackSecondaryHover: string;
 	transparentWhite: string;
 	transparentWhiteSecondary: string;
 	transparentWhiteSecondaryAlt: string;
-	transparentBlackHover: string;
-	transparentBlackSecondaryHover: string;
-	opaqueWhite: string;
-	disabledLight: string;
-};
+}
 
-type TextColorsDark = {
+interface TextColorsDark {
+	dark: string;
 	light: string;
+	lightQuaternary: string;
 	lightSecondary: string;
 	lightTertiary: string;
-	lightQuaternary: string;
-	dark: string;
-};
+}
 
-type TextColorsLight = {
+interface TextColorsLight {
 	dark: string;
+	darkQuaternary: string;
 	darkSecondary: string;
 	darkTertiary: string;
-	darkQuaternary: string;
 	light: string;
-};
+}
 
-type IconColors = {
-	lightSecondary?: string;
+interface IconColors {
 	darkSecondary?: string;
-};
+	lightSecondary?: string;
+}
 
-type BorderColors = {
+interface BorderColors {
 	transparent: string;
 	transparentSecondary: string;
-};
+}
 
-type ColorScheme = {
-	primary: string;
-	light: string;
-	dark: string;
+interface ColorScheme {
 	bg: string;
+	bgDark: string; // Dark mode background (e.g., green-950)
 	bgHover: string;
 	bgLight: string; // Light mode background (e.g., green-50)
-	bgDark: string; // Dark mode background (e.g., green-950)
 	border: string;
 	borderHover: string;
+	dark: string;
 	icon: string;
 	iconHover: string;
+	light: string;
+	primary: string;
 	ring: string;
-};
+}
 
-type NodeTypeConfigItem = {
-	id: string;
-	name: string;
+interface NodeTypeConfigItem {
+	colorScheme: ColorScheme;
 	description: string;
 	icon: LucideIcon;
-	colorScheme: ColorScheme;
+	id: string;
+	name: string;
 	shortcut: string;
-	showTargetHandle: boolean;
 	showSourceHandle: boolean;
-};
+	showTargetHandle: boolean;
+}
 
-type NodeTypeConfigMap = {
-	goal: NodeTypeConfigItem;
-	strategy: NodeTypeConfigItem;
-	propertyClaim: NodeTypeConfigItem;
-	evidence: NodeTypeConfigItem;
+interface NodeTypeConfigMap {
 	context: NodeTypeConfigItem;
+	evidence: NodeTypeConfigItem;
+	goal: NodeTypeConfigItem;
+	propertyClaim: NodeTypeConfigItem;
+	strategy: NodeTypeConfigItem;
 	[key: string]: NodeTypeConfigItem;
-};
+}
 
-type SpringConfig = {
-	type: "spring";
-	stiffness: number;
+interface SpringConfig {
 	damping: number;
-};
+	stiffness: number;
+	type: "spring";
+}
 
-type AnimationTimingsConfig = {
-	fast: number;
-	normal: number;
-	slow: number;
+interface AnimationTimingsConfig {
 	easing: {
 		default: string;
 		spring: string;
@@ -122,6 +119,9 @@ type AnimationTimingsConfig = {
 		easeIn: string;
 		easeInOut: string;
 	};
+	fast: number;
+	normal: number;
+	slow: number;
 	spring: {
 		default: SpringConfig;
 		gentle: SpringConfig;
@@ -133,31 +133,26 @@ type AnimationTimingsConfig = {
 		normal: number;
 		slow: number;
 	};
-};
+}
 
-type AnimationTransition = {
-	duration?: number;
-	type?: string;
-	stiffness?: number;
+interface AnimationTransition {
 	damping?: number;
+	duration?: number;
 	ease?: string;
 	repeat?: number;
-};
+	stiffness?: number;
+	type?: string;
+}
 
-type AnimationVariant = {
-	scale?: number | number[];
-	opacity?: number | number[];
+interface AnimationVariant {
 	height?: number | string;
+	opacity?: number | number[];
 	rotate?: number;
+	scale?: number | number[];
 	transition?: AnimationTransition;
-};
+}
 
-type HandleStyleConfig = {
-	size: {
-		outer: string;
-		inner: string;
-		icon: string;
-	};
+interface HandleStyleConfig {
 	background: {
 		default: string;
 		hover: string;
@@ -167,22 +162,27 @@ type HandleStyleConfig = {
 		color: string;
 		colorHover: string;
 	};
-	shadow: {
-		default: string;
-		hover: string;
-	};
 	iconColor: string;
-	transition: {
-		duration: number;
-		easing: string;
-	};
 	offset: {
 		top: string;
 		bottom: string;
 		left: string;
 		right: string;
 	};
-};
+	shadow: {
+		default: string;
+		hover: string;
+	};
+	size: {
+		outer: string;
+		inner: string;
+		icon: string;
+	};
+	transition: {
+		duration: number;
+		easing: string;
+	};
+}
 
 type HandleClickCallback = (
 	nodeId: string,
@@ -191,37 +191,37 @@ type HandleClickCallback = (
 	nodeData?: Record<string, unknown>
 ) => void;
 
-type NodeDataUpdate = {
-	name?: string;
-	description?: string;
-	context?: string[];
+interface NodeDataUpdate {
 	assumption?: string;
+	context?: string[];
+	description?: string;
 	justification?: string;
+	name?: string;
 	[key: string]: unknown;
-};
+}
 
-type ThemeContextValue = {
-	isDarkMode: boolean;
+interface ThemeContextValue {
 	colorMode: "dark" | "light";
 	editable: boolean;
+	hasChildren?: (nodeId: string) => boolean;
+	hasHiddenChildren?: (nodeId: string) => boolean;
+	hiddenNodeIds?: Set<string>;
+	isDarkMode: boolean;
+	isRootNode?: (nodeId: string) => boolean;
 	onHandleClick?: HandleClickCallback;
+	onNodeDataChange?: (nodeId: string, data: NodeDataUpdate) => void;
 	// New callbacks for node actions
 	onNodeDelete?: (nodeId: string) => void;
 	onNodeDescriptionChange?: (nodeId: string, description: string) => void;
-	onNodeDataChange?: (nodeId: string, data: NodeDataUpdate) => void;
 	onToggleChildrenVisibility?: (nodeId: string) => void;
-	hiddenNodeIds?: Set<string>;
-	hasChildren?: (nodeId: string) => boolean;
-	hasHiddenChildren?: (nodeId: string) => boolean;
-	isRootNode?: (nodeId: string) => boolean;
-};
+}
 
-type ThemeColors = {
+interface ThemeColors {
 	background: BackgroundColorsDark | BackgroundColorsLight;
-	text: TextColorsDark | TextColorsLight;
-	icon: IconColors;
 	border: BorderColors;
-};
+	icon: IconColors;
+	text: TextColorsDark | TextColorsLight;
+}
 
 // ========================================================================
 // Color Tokens

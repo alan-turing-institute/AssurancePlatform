@@ -29,10 +29,10 @@ import useStore from "@/store/store";
 import type { HistoryCommand, HistoryEntry } from "@/types/history";
 import { JsonEditorToolbar } from "./json-editor-toolbar";
 
-type JsonViewPanelProps = {
+interface JsonViewPanelProps {
 	isOpen: boolean;
 	onClose: () => void;
-};
+}
 
 type BatchUpdateResult =
 	| {

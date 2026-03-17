@@ -10,19 +10,19 @@ import { useSidebarLogo } from "@/hooks/use-sidebar-logo";
 import { Separator } from "../ui/separator";
 import LoggedInUser from "./logged-in-user";
 
-type Team = {
+interface Team {
 	id: string;
 	name: string;
 	slug: string;
-};
+}
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
-type DesktopNavProps = {
+interface DesktopNavProps {
 	teams: Team[];
-};
+}
 
 const DesktopNav = ({ teams }: DesktopNavProps) => {
 	const pathname = usePathname();

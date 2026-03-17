@@ -19,16 +19,16 @@
 	position: sticky;
 	top: calc(var(--ifm-navbar-height, 60px) + 1rem);
 	max-height: calc(100vh - var(--ifm-navbar-height, 60px) - 2rem);
-	overflow-y: auto;
 	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 .stickyRight .rightColumn {
 	position: sticky;
 	top: calc(var(--ifm-navbar-height, 60px) + 1rem);
 	max-height: calc(100vh - var(--ifm-navbar-height, 60px) - 2rem);
-	overflow-y: auto;
 	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 /* Scrollbar styling for sticky columns */
@@ -97,8 +97,8 @@
 
 	.leftColumn,
 	.rightColumn {
-		break-inside: avoid;
 		margin-bottom: 1rem;
+		break-inside: avoid;
 	}
 
 	.stickyLeft .leftColumn,

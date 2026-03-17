@@ -5,9 +5,7 @@ import { Badge } from "@/components/ui/badge";
 /**
  * Module metadata for displaying header badges
  */
-export type ModuleMetadata = {
-	/** Module title (typically from frontmatter) */
-	title: string;
+export interface ModuleMetadata {
 	/** Estimated time to complete the module (e.g., "20-30 minutes") */
 	duration: string;
 	/** List of prerequisite module paths and their display names */
@@ -17,12 +15,14 @@ export type ModuleMetadata = {
 		/** Display name for the prerequisite */
 		name: string;
 	}>;
-};
+	/** Module title (typically from frontmatter) */
+	title: string;
+}
 
-type ModuleHeaderProps = {
+interface ModuleHeaderProps {
 	/** Module metadata containing title, duration and prerequisites */
 	metadata: ModuleMetadata;
-};
+}
 
 /**
  * ModuleHeader - Display module title and metadata badges

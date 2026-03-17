@@ -46,12 +46,12 @@ import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
 
-type NodeOptionsMenuProps = {
+interface NodeOptionsMenuProps {
 	/** The ReactFlow node object */
 	node: Node;
 	/** The type of node */
 	nodeType: DiagramNodeType;
-};
+}
 
 /** Create orphan element from node data */
 function createOrphanElement(node: Node) {
@@ -120,14 +120,14 @@ function processDeleteResult(
 	}
 }
 
-type DestructiveActionsProps = {
+interface DestructiveActionsProps {
+	loading: boolean;
 	node: Node;
 	nodeType: DiagramNodeType;
-	loading: boolean;
-	setLoading: (v: boolean) => void;
-	onRequestDetach: () => void;
 	onRequestDelete: () => void;
-};
+	onRequestDetach: () => void;
+	setLoading: (v: boolean) => void;
+}
 
 /**
  * Menu items and confirmation dialogs for move, detach, and delete —
@@ -170,19 +170,19 @@ function DestructiveMenuItems({
 	);
 }
 
-type ConfirmationDialogsProps = {
+interface ConfirmationDialogsProps {
+	deleteOpen: boolean;
+	detachOpen: boolean;
+	loading: boolean;
+	moveOpen: boolean;
 	node: Node;
 	nodeType: DiagramNodeType;
-	loading: boolean;
-	detachOpen: boolean;
-	deleteOpen: boolean;
-	moveOpen: boolean;
-	onDetachOpenChange: (v: boolean) => void;
-	onDeleteOpenChange: (v: boolean) => void;
-	onMoveOpenChange: (v: boolean) => void;
-	onConfirmDetach: () => void;
 	onConfirmDelete: () => void;
-};
+	onConfirmDetach: () => void;
+	onDeleteOpenChange: (v: boolean) => void;
+	onDetachOpenChange: (v: boolean) => void;
+	onMoveOpenChange: (v: boolean) => void;
+}
 
 function ConfirmationDialogs({
 	node,

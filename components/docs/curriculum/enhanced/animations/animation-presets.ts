@@ -14,32 +14,32 @@
 
 type EasingValue = string | number[];
 
-type SpringConfig = {
-	type: "spring";
-	stiffness: number;
+interface SpringConfig {
 	damping: number;
 	mass: number;
-};
+	stiffness: number;
+	type: "spring";
+}
 
-type TransitionConfig = {
+interface TransitionConfig {
+	damping?: number;
+	delay?: number;
 	duration?: number;
 	ease?: EasingValue;
-	type?: string;
-	stiffness?: number;
-	damping?: number;
-	mass?: number;
-	repeat?: number;
-	delay?: number;
 	height?: { duration: number; ease: EasingValue };
+	mass?: number;
 	opacity?: { duration: number; ease: EasingValue; delay?: number };
-};
+	repeat?: number;
+	stiffness?: number;
+	type?: string;
+}
 
-type AnimationPreset = {
-	initial?: Record<string, unknown>;
+interface AnimationPreset {
 	animate?: Record<string, unknown>;
 	exit?: Record<string, unknown>;
+	initial?: Record<string, unknown>;
 	transition?: TransitionConfig | SpringConfig;
-};
+}
 
 // biome-ignore lint/suspicious/noExplicitAny: Animation presets used with framer-motion
 type InteractionPreset = Record<string, any>;
@@ -48,16 +48,16 @@ type InteractionPreset = Record<string, any>;
 // biome-ignore lint/suspicious/noExplicitAny: Animation presets are used with framer-motion's animate prop
 type LoadingPreset = Record<string, any>;
 
-type CollapseVariants = {
+interface CollapseVariants {
 	collapsed: Record<string, unknown>;
 	expanded: Record<string, unknown>;
-};
+}
 
-type StaggerConfig = {
-	staggerChildren: number;
+interface StaggerConfig {
 	delayChildren?: number;
+	staggerChildren: number;
 	staggerDirection?: number;
-};
+}
 
 // ========================================================================
 // Timing & Easing Constants
@@ -793,12 +793,12 @@ export const getPreset = (
 	);
 };
 
-type CustomPresetOptions = {
-	initial?: Record<string, unknown>;
+interface CustomPresetOptions {
 	animate?: Record<string, unknown>;
 	exit?: Record<string, unknown>;
+	initial?: Record<string, unknown>;
 	transition?: TransitionConfig | SpringConfig;
-};
+}
 
 /**
  * Create custom animation preset
