@@ -29,7 +29,8 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
 	}
 	if (caseNode.type === "property_claim") {
-		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
+		return ((caseNode.strategies || []) as unknown as CaseNode[]).concat(
+			(caseNode.propertyClaims || []) as unknown as CaseNode[],
 			(caseNode.evidence || []) as unknown as CaseNode[]
 		);
 	}

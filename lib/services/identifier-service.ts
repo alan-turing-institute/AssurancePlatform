@@ -12,6 +12,7 @@ const TYPE_PREFIXES: Record<string, string> = {
 	STRATEGY: "S",
 	PROPERTY_CLAIM: "P",
 	EVIDENCE: "E",
+	CONTEXT: "C",
 };
 
 interface ElementWithChildren {
@@ -130,6 +131,32 @@ function getSiblingIndex(
 }
 
 /**
+ * Collect all effective property claim children of an ancestor claim,
+ * including direct children and children of strategies under the ancestor.
+ * Used for transparent strategy numbering during reset.
+ */
+function collectEffectivePropertyClaimChildren(
+	ancestor: ElementWithChildren
+): ElementWithChildren[] {
+	const effective: ElementWithChildren[] = [];
+
+	for (const child of ancestor.children) {
+		if (child.elementType === "PROPERTY_CLAIM") {
+			effective.push(child);
+		} else if (child.elementType === "STRATEGY") {
+			// Transparent: collect property claims under this strategy as effective children
+			for (const grandchild of child.children) {
+				if (grandchild.elementType === "PROPERTY_CLAIM") {
+					effective.push(grandchild);
+				}
+			}
+		}
+	}
+
+	return effective;
+}
+
+/**
  * Generate name for a property claim element.
  */
 function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
@@ -138,9 +165,23 @@ function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
 
 	if (parentType === "PROPERTY_CLAIM" && parentName) {
 		// Sub-property claim: use parent's name as base
-		const parent = findParentNode(roots, node.parentId);
-		const siblingIndex = parent
-			? getSiblingIndex(parent, node.id, "PROPERTY_CLAIM")
+		const directParent = findParentNode(roots, node.parentId);
+
+		// If the direct parent is a strategy (transparent numbering),
+		// find the ancestor property claim and count among its effective children
+		if (directParent?.elementType === "STRATEGY") {
+			const ancestorClaim = findParentNode(roots, directParent.parentId);
+			if (ancestorClaim) {
+				const effectiveChildren =
+					collectEffectivePropertyClaimChildren(ancestorClaim);
+				const index = effectiveChildren.findIndex((c) => c.id === node.id);
+				return `${parentName}.${index + 1}`;
+			}
+		}
+
+		// Direct property claim parent — use standard sibling index
+		const siblingIndex = directParent
+			? getSiblingIndex(directParent, node.id, "PROPERTY_CLAIM")
 			: 1;
 		return `${parentName}.${siblingIndex}`;
 	}
@@ -191,7 +232,13 @@ function generateHierarchicalNames(
 		nameMap.set(node.id, newName);
 
 		for (const child of node.children) {
-			processNode(child, newName, node.elementType);
+			if (node.elementType === "STRATEGY" && parentType === "PROPERTY_CLAIM") {
+				// Transparent strategy: property claims under this strategy inherit
+				// the ancestor claim's name/type for hierarchical numbering
+				processNode(child, parentName, parentType);
+			} else {
+				processNode(child, newName, node.elementType);
+			}
 		}
 	}
 

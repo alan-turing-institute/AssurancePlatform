@@ -7,8 +7,9 @@ RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and patches (pnpm needs patches during install)
 COPY package.json pnpm-lock.yaml ./
+COPY patches/ ./patches/
 
 # Install dependencies with pnpm store cache for faster rebuilds
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \

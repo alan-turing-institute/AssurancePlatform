@@ -212,4 +212,61 @@ describe("case-fetch-service", () => {
 			expect(data.layoutDirection).toBe("LR");
 		});
 	});
+
+	describe("fetchCaseFromPrisma with strategies under property claims", () => {
+		it("includes strategies nested under property claims in the response", async () => {
+			const { createElement } = await import("@/lib/services/element-service");
+
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			// Build: G1 → S1 → P1 → S2 (strategy under property claim)
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const s1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: p1.id,
+				})
+			);
+
+			// Fetch the case and verify the nested strategy appears
+			const result = await fetchCaseFromPrisma(testCase.id, user.id);
+			const caseData = expectSuccess(result);
+
+			// Navigate the response tree: goals[0].strategies[0].propertyClaims[0].strategies
+			const fetchedGoal = caseData.goals?.[0];
+			expect(fetchedGoal).toBeDefined();
+
+			const fetchedS1 = fetchedGoal?.strategies?.[0];
+			expect(fetchedS1).toBeDefined();
+
+			const fetchedP1 = fetchedS1?.propertyClaims?.[0];
+			expect(fetchedP1).toBeDefined();
+
+			// The strategy under P1 should be in the strategies array
+			expect(fetchedP1?.strategies).toBeDefined();
+			expect(fetchedP1?.strategies?.length).toBe(1);
+			expect(fetchedP1?.strategies?.[0]?.type).toBe("strategy");
+		});
+	});
 });

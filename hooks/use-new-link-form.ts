@@ -125,27 +125,61 @@ export function useNewLinkForm({
 		setLoading(false);
 	};
 
-	/** Handles creation of a strategy node linked to a goal */
-	const handleStrategyAdd = async (description: string) => {
-		if (!assuranceCase?.goals?.[0]?.id) {
-			setLoading(false);
-			return;
+	/** Builds the strategy creation payload based on the parent node type */
+	const createStrategyPayload = (description: string) => {
+		if (node.type === "property") {
+			return {
+				description,
+				propertyClaimId: node.data.id as string,
+				assuranceCaseId: assuranceCase?.id,
+			};
 		}
-
-		if (!session?.user?.id) {
-			setLoading(false);
-			return;
-		}
-
-		const newStrategyItem = {
+		return {
 			description,
-			goalId: assuranceCase.goals[0].id,
-			assuranceCaseId: assuranceCase.id,
+			goalId: assuranceCase?.goals?.[0]?.id,
+			assuranceCaseId: assuranceCase?.id,
 		};
+	};
+
+	/** Optimistically adds a new strategy to the goal's strategies in state */
+	const updateGoalWithStrategy = (strategyData: unknown) => {
+		const newStrategy = [
+			...(assuranceCase?.goals?.[0]?.strategies || []),
+			strategyData,
+		].filter(Boolean);
+
+		const updatedAssuranceCase = assuranceCase
+			? {
+					...assuranceCase,
+					goals: [
+						{
+							...(assuranceCase.goals?.[0] || {}),
+							strategies: newStrategy,
+						} as GoalResponse,
+					],
+				}
+			: null;
+
+		if (updatedAssuranceCase) {
+			setAssuranceCase(updatedAssuranceCase as AssuranceCaseResponse);
+		}
+	};
+
+	/** Handles creation of a strategy node linked to a goal or property claim */
+	const handleStrategyAdd = async (description: string) => {
+		const parentId =
+			node.type === "property"
+				? (node.data.id as string)
+				: assuranceCase?.goals?.[0]?.id;
+
+		if (!(parentId && session?.user?.id)) {
+			setLoading(false);
+			return;
+		}
 
 		const result = await createAssuranceCaseNode(
 			"strategies",
-			newStrategyItem,
+			createStrategyPayload(description),
 			""
 		);
 
@@ -164,26 +198,13 @@ export function useNewLinkForm({
 			recordCreate(result.data.id, "strategy", result.data);
 		}
 
-		const newStrategy = [
-			...(assuranceCase?.goals?.[0]?.strategies || []),
-			result.data,
-		].filter(Boolean);
-
-		const updatedAssuranceCase = assuranceCase
-			? {
-					...assuranceCase,
-					goals: [
-						{
-							...(assuranceCase.goals?.[0] || {}),
-							strategies: newStrategy,
-						} as GoalResponse,
-					],
-				}
-			: null;
-
-		if (updatedAssuranceCase) {
-			setAssuranceCase(updatedAssuranceCase as AssuranceCaseResponse);
+		// Optimistic update: for goal-level strategies, update state directly.
+		// For strategies under property claims, the SSE event triggers a full
+		// case refetch that places the strategy correctly in the nested tree.
+		if (node.type !== "property") {
+			updateGoalWithStrategy(result.data);
 		}
+
 		reset();
 		setLoading(false);
 	};

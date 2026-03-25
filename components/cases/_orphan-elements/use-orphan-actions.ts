@@ -119,7 +119,8 @@ export function useOrphanActions({
 					return convertedElements.filter(
 						(item) =>
 							item.type?.toLowerCase() === "evidence" ||
-							item.type?.toLowerCase() === "propertyclaim"
+							item.type?.toLowerCase() === "propertyclaim" ||
+							item.type?.toLowerCase() === "strategy"
 					);
 				default:
 					return convertedElements;

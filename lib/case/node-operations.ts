@@ -73,6 +73,36 @@ const createEvidenceOrphan = (
 });
 
 /**
+ * Helper to collect orphan elements from strategies nested under a property claim.
+ */
+const collectStrategyOrphans = (
+	claim: PropertyClaimResponse
+): OrphanElementData[] => {
+	const elements: OrphanElementData[] = [];
+	const nestedStrategies = claim.strategies;
+	if (!(nestedStrategies && Array.isArray(nestedStrategies))) {
+		return elements;
+	}
+
+	for (const strategy of nestedStrategies) {
+		elements.push({
+			id: strategy.id,
+			type: TYPE_MAP.strategy ?? "strategy",
+			name: strategy.name,
+			description: strategy.description ?? "",
+		});
+		// Also collect property claims under the strategy
+		if (strategy.propertyClaims && Array.isArray(strategy.propertyClaims)) {
+			for (const nested of strategy.propertyClaims) {
+				elements.push(...collectOrphanElements(nested));
+			}
+		}
+	}
+
+	return elements;
+};
+
+/**
  * Helper to collect all orphan elements from a property claim (including children)
  */
 const collectOrphanElements = (
@@ -104,6 +134,9 @@ const collectOrphanElements = (
 			elements.push(...collectOrphanElements(nested));
 		}
 	}
+
+	// Collect nested strategies and their children
+	elements.push(...collectStrategyOrphans(claim));
 
 	return elements;
 };

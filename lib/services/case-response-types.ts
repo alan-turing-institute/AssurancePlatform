@@ -37,7 +37,7 @@ export interface StrategyResponse {
 	context?: string[];
 	createdDate?: string;
 	description: string;
-	goalId: string;
+	goalId: string | null;
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
