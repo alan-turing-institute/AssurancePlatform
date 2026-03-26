@@ -93,7 +93,7 @@ describe("identifier-service", () => {
 
 			// Create a context element bypassing element validation middleware
 			await prisma.$executeRaw`
-				INSERT INTO assurance_elements (id, "caseId", "elementType", "parentId", name, description, "createdById", "createdAt", "updatedAt")
+				INSERT INTO assurance_elements (id, case_id, element_type, parent_id, name, description, created_by_id, created_at, updated_at)
 				VALUES (gen_random_uuid(), ${testCase.id}, 'CONTEXT', ${goal.id}, 'X1', 'Test context', ${user.id}, NOW(), NOW())
 			`;
 
