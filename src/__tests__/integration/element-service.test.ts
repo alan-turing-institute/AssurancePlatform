@@ -775,7 +775,7 @@ describe("element-service", () => {
 			// Moving a strategy under evidence should fail
 			expectError(
 				await moveElement(user.id, strategy.id, evidence.id),
-				"cannot be a child of"
+				"strategy cannot be a child of evidence"
 			);
 		});
 	});

@@ -91,17 +91,11 @@ describe("identifier-service", () => {
 				})
 			);
 
-			// Manually create a context element
-			await prisma.assuranceElement.create({
-				data: {
-					caseId: testCase.id,
-					elementType: "CONTEXT",
-					parentId: goal.id,
-					name: "X1",
-					description: "Test context",
-					createdById: user.id,
-				},
-			});
+			// Create a context element bypassing element validation middleware
+			await prisma.$executeRaw`
+				INSERT INTO "AssuranceElement" (id, "caseId", "elementType", "parentId", name, description, "createdById", "createdAt", "updatedAt")
+				VALUES (gen_random_uuid(), ${testCase.id}, 'CONTEXT', ${goal.id}, 'X1', 'Test context', ${user.id}, NOW(), NOW())
+			`;
 
 			await resetIdentifiers(testCase.id, user.id);
 
