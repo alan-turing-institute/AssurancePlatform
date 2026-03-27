@@ -1,7 +1,7 @@
 /**
  * Element parent-child compatibility rules.
  *
- * Pure function module — no Prisma, importable by both client and server.
+ * Pure function module — no Prisma dependency, importable by both client and server.
  *
  * Hierarchy:
  *   goal          → strategy, property_claim
