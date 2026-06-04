@@ -47,6 +47,23 @@ beads.left.meta.json
 beads.right.jsonl
 beads.right.meta.json
 
+# Embedded Dolt store (this clone runs bd in embedded mode; managed by Dolt, not git)
+embeddeddolt/
+
+# Dolt sql-server runtime files (per-machine, not shared)
+dolt-server.pid
+dolt-server.port
+dolt-server.lock
+dolt-server.log
+dolt-server.activity
+
+# bd backup dir + export-state file (local)
+backup/
+export-state.json
+
+# Credential key (never commit)
+.beads-credential-key
+
 # NOTE: Do NOT add negation patterns (e.g., !issues.jsonl) here.
 # They would override fork protection in .git/info/exclude, allowing
 # contributors to accidentally commit upstream issue databases.
