@@ -144,23 +144,20 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
 Code listed here is scheduled for removal or repair. Do not copy its patterns,
 and do not "fix" it incidentally — it is tracked work.
 
-- `src/generated/prisma/` — generated Prisma client output. Never edit or
-  import-from-it outside `lib/prisma.ts` and services. Regenerate with
-  `prisma generate` (CI does this on every build); the tracked copy in git is
-  stale and slated for untracking.
+- `src/generated/prisma/` — generated Prisma client output (untracked from
+  git; regenerate with `prisma generate`). Never edit it or import from it
+  outside `lib/prisma.ts` and services.
 - Circular imports between `store/` and node components — being inverted; do
   not add new imports from `store/` to component modules.
 - Large duplicated blocks in `components/docs/curriculum/` and the share-modal
   export sections — live code, pending consolidation (not deletion).
-- `components/docs/curriculum/enhanced/{dialogs,handles,interactions,demos}/` —
-  unreachable subtrees of an unshipped curriculum editor; pending product
-  ruling before deletion. Note: curriculum components are imported from MDX in
-  `content/` — static analysers miss this; check MDX before declaring them dead.
+- Curriculum components are imported from MDX in `content/` (and the case
+  viewer is lazy-loaded via dynamic `import()`) — static analysers miss both;
+  check MDX and dynamic imports before declaring anything in
+  `components/docs/curriculum/` dead.
 - Scattered `console.*` calls — being replaced by the structured logger.
 
 ## Open decisions
 
-- Fate of the unshipped curriculum editor subtrees under
-  `components/docs/curriculum/enhanced/` (see above).
 - Plugin system is design-only (`content/technical-guide/architecture/plugin-ecosystem.mdx`);
   no plugin code exists yet.
