@@ -251,3 +251,6 @@ docker-compose.prod-test.yml
 # Database backups
 backups/
 .patches/
+
+# Local-only archive of pre-atelier Claude config (contains a seed credential)
+claude-dir.zip
