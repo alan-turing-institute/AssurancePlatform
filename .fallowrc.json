@@ -39,6 +39,10 @@
     "@tailwindcss/typography",
     "tailwindcss-animate",
     "@tailwindcss/postcss",
-    "postcss"
-  ]
+    "postcss",
+    "@prisma/client-runtime-utils",
+    "axe-core",
+    "conventional-changelog-conventionalcommits"
+  ],
+  "ignoreDependencyOverrides": ["@isaacs/brace-expansion"]
 }
