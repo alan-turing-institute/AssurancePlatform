@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Pre-push gate: lint + typecheck must pass before pushing to staging or main.
+# Activated by `pnpm install` (prepare script sets core.hooksPath). CI remains
+# the authoritative gate; this is the fast local fail.
+set -u
+
+protected=false
+zero=0000000000000000000000000000000000000000
+
+# git feeds us: <local_ref> <local_sha> <remote_ref> <remote_sha> per line
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  [[ "$local_sha" == "$zero" ]] && continue  # branch deletion — let it through
+  case "$remote_ref" in
+    refs/heads/staging|refs/heads/main) protected=true ;;
+  esac
+done
+
+[[ "$protected" == "true" ]] || exit 0
+
+echo "[pre-push] Push to staging/main — running lint + typecheck..."
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+fail=0
+if ! pnpm lint; then
+  echo "[pre-push] ✗ lint failed" >&2
+  fail=1
+fi
+if ! pnpm typecheck; then
+  echo "[pre-push] ✗ typecheck failed" >&2
+  fail=1
+fi
+
+if [[ $fail -ne 0 ]]; then
+  echo "[pre-push] Blocked: fix the errors above before pushing to staging/main." >&2
+  echo "[pre-push] (Emergency bypass: git push --no-verify — CI will still gate.)" >&2
+  exit 1
+fi
+echo "[pre-push] ✓ all checks passed"
+exit 0
