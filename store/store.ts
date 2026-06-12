@@ -7,7 +7,6 @@ import {
 	type EdgeChange,
 	type Node,
 	type NodeChange,
-	type NodeTypes,
 	type OnConnect,
 	type OnEdgesChange,
 	type OnNodesChange,
@@ -19,7 +18,6 @@ import type {
 	UserResponse,
 } from "@/lib/services/case-response-types";
 import type { CommentResponse } from "@/lib/services/comment-service";
-import { nodeTypes } from "@/store/node-types";
 import { initEdges } from "./edges";
 import { initNodes } from "./nodes";
 
@@ -53,7 +51,6 @@ interface Store {
 	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
 	nodeComments: CommentResponse[];
 	nodes: Node[];
-	nodeTypes: NodeTypes;
 	onConnect: OnConnect;
 	onEdgesChange: OnEdgesChange;
 	onNodesChange: OnNodesChange;
@@ -95,7 +92,6 @@ const useStore = create<Store>((set, get) => ({
 	orphanedElements: [],
 	nodes: initNodes,
 	edges: initEdges,
-	nodeTypes,
 	onNodesChange: (changes: NodeChange[]) => {
 		set({
 			nodes: applyNodeChanges(changes, get().nodes),

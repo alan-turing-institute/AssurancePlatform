@@ -1,9 +1,6 @@
-import {
-	deleteAssuranceCaseNode,
-	detachCaseElement,
-	type ReactFlowNode,
-	removeAssuranceCaseNode,
-} from "@/lib/case";
+import { deleteAssuranceCaseNode, detachCaseElement } from "@/lib/case/api";
+import { removeAssuranceCaseNode } from "@/lib/case/node-utils";
+import type { ReactFlowNode } from "@/lib/case/types";
 import type {
 	AssuranceCaseResponse,
 	PropertyClaimResponse,
