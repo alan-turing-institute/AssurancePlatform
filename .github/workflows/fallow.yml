@@ -1,0 +1,64 @@
+name: Fallow Report
+
+# Structural-quality report (dead code, duplication, cycles, complexity) on
+# changed files. Report-only: posts a PR comment, never fails the build.
+# Config: .fallowrc.json. Flip to blocking once tuned (tracked in the vault).
+
+on:
+  pull_request:
+    paths:
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "package.json"
+      - ".fallowrc.json"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  fallow:
+    name: Structural Quality (report-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run fallow on changed files
+        run: |
+          npx -y fallow \
+            --changed-since "origin/${{ github.base_ref }}" \
+            --format pr-comment-github \
+            --output-file fallow-comment.md \
+            --quiet || true
+          if [ ! -s fallow-comment.md ]; then
+            echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
+          fi
+
+      - name: Post or update PR comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MARKER="<!-- fallow-id: fallow-results -->"
+          if grep -q "$MARKER" fallow-comment.md; then
+            cp fallow-comment.md comment.md
+          else
+            printf '%s\n\n' "$MARKER" | cat - fallow-comment.md > comment.md
+          fi
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" -F body=@comment.md > /dev/null
+          else
+            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
+          fi
