@@ -1,0 +1,44 @@
+{
+  "ignorePatterns": [
+    "src/generated/**",
+    "content/**",
+    "docs/**",
+    "public/**",
+    ".next/**",
+    "coverage/**"
+  ],
+  "entry": [
+    "components/docs/curriculum/index.ts",
+    "components/docs/curriculum/concept-carousel.tsx",
+    "components/docs/curriculum/learning-objectives.tsx",
+    "components/docs/curriculum/module-card.tsx",
+    "components/docs/curriculum/module-header.tsx",
+    "components/docs/curriculum/module-progress-context.tsx",
+    "components/docs/curriculum/module-progress-tracker.tsx",
+    "components/docs/curriculum/progressive-case-viewer.tsx",
+    "components/docs/curriculum/quiz-components.tsx",
+    "components/docs/curriculum/reflection-prompts.tsx",
+    "app/**/page.tsx",
+    "app/**/layout.tsx",
+    "app/**/route.ts",
+    "app/**/loading.tsx",
+    "app/**/error.tsx",
+    "app/**/not-found.tsx",
+    "middleware.ts",
+    "mdx-components.tsx",
+    "next.config.mjs",
+    "playwright.config.ts",
+    "vitest.config.ts",
+    "vitest.workspace.ts",
+    "prisma/seed/**",
+    "scripts/**",
+    "e2e/**"
+  ],
+  "ignoreDependencies": [
+    "sharp",
+    "@tailwindcss/typography",
+    "tailwindcss-animate",
+    "@tailwindcss/postcss",
+    "postcss"
+  ]
+}
