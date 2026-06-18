@@ -26,23 +26,27 @@ import { Callout } from 'nextra/components'
 
 ## Overview
 
-A response-adaptive trial is often considered a more ethical design for clinical trials. As evidence accumulates, the trial steers patients away from the treatments that are losing and toward those that are winning. But this mechanism can also lead to problems if there is a run of unlucky early outcomes that herd participants toward an arm that is no better, or worse, than the control before the data are able to correct it. This case study puts that mechanism itself on the assurance stand.
+A response-adaptive trial is often considered a more ethical design for clinical trials. As evidence accumulates, the trial steers patients away from the treatments that are "losing" and toward those that are "winning". But this mechanism can also lead to problems if there is a run of unlucky early outcomes that herd participants toward an arm that is no better, or worse, than the control before the data are able to correct it. This case study puts that mechanism itself on the assurance stand.
 
-A publicly funded academic clinical trials unit, hosted by an NHS teaching hospital, runs **REVIVE-ICU**, a **platform trial** evaluating several candidate treatments for adults admitted to intensive care with sepsis (a life-threatening reaction to infection). A platform trial evaluates several interventions against a single shared control group under one overarching protocol, adding or dropping treatment arms as the evidence accumulates. The design is used in real critical-care trials such as REMAP-CAP and RECOVERY.[^1]
+A publicly funded academic clinical trials unit, hosted by an NHS teaching hospital, runs REVIVE-ICU, a platform trial evaluating several candidate treatments for adults admitted to intensive care with sepsis — a life-threatening reaction to infection. A platform trial evaluates several interventions against a single shared control group under one overarching protocol, adding or dropping treatment arms as the evidence accumulates. The design is used in real platform trials such as REMAP-CAP and RECOVERY.[^1]
 
 <Callout type="info">
 **A note on vocabulary.** An *arm* is one of the treatments being tested (the *control* arm is the existing standard of care), and *allocation* is the probability that the next enrolled patient is assigned to each arm.
 </Callout>
 
-At the heart of REVIVE-ICU is a **Bayesian response-adaptive randomisation (RAR) engine** — referred to throughout as "the allocation engine". Rather than randomising each patient to all arms with equal probability for the whole trial, the engine periodically updates the randomisation probabilities using the outcomes observed so far, so that patients are more likely to be allocated to arms that currently appear to be performing better. The intention is to expose fewer participants to inferior treatments while still gathering enough evidence to reach a reliable conclusion.
+At the heart of REVIVE-ICU is a *Bayesian response-adaptive randomisation (RAR) engine*, which is referred to throughout as the 'allocation engine'. Rather than randomising each patient to all arms with equal probability for the whole trial, the engine periodically updates the randomisation probabilities using the outcomes observed so far, so that patients are more likely to be allocated to arms that currently appear to be performing better. The intention is to expose fewer participants to inferior treatments while still gathering enough evidence to reach a reliable conclusion.
 
-This adaptivity is precisely what makes assurance difficult. The allocation engine is a learning system whose behaviour changes during the trial in response to early, noisy, and incomplete data. Statisticians have warned that response-adaptive randomisation can, under realistic conditions, increase the number of patients allocated to inferior treatments and introduce bias when patient characteristics or standards of care drift over time.[^2] Following questions raised by the trial's research ethics committee and its independent **Data Monitoring Committee** (the DMC — the body empowered to review the accumulating, still-confidential interim data and to halt or modify the trial on safety grounds), the trials unit has commissioned an assurance case to demonstrate that the allocation engine is safe to operate, with allocation decisions that can be explained to the participants, clinicians, and regulators who must trust them.
+This adaptivity is precisely what makes assurance difficult. The allocation engine is a learning system whose behaviour changes during the trial in response to early, noisy, and incomplete data. Statisticians have warned that response-adaptive randomisation can, under realistic conditions, increase the number of patients allocated to inferior treatments and introduce bias when patient characteristics or standards of care drift over time.[^2] Following questions raised by the trial's research ethics committee and its independent Data Monitoring Committee (DMC) — the body empowered to review the accumulating, still-confidential interim data and to halt or modify the trial on safety grounds — the trials unit has commissioned an assurance case to demonstrate that the allocation engine is safe to operate, with allocation decisions that can be explained to the participants, clinicians, and regulators who must trust them.
 
-[^1]: Angus, D. C., Berry, S., Lewis, R. J., et al. (2020). The REMAP-CAP (Randomized Embedded Multifactorial Adaptive Platform for Community-acquired Pneumonia) Study: Rationale and Design. *Annals of the American Thoracic Society*, 17(7), 879–891.
+[^1]: Angus, D. C., Berry, S., Lewis, R. J., et al. (2020). The REMAP-CAP (Randomized Embedded Multifactorial Adaptive Platform for Community-acquired Pneumonia) Study: Rationale and Design. *Annals of the American Thoracic Society*, 17(7), 879–891. https://doi.org/10.1513/AnnalsATS.202003-192SD
 
-[^2]: Proschan, M., & Evans, S. (2020). Resist the Temptation of Response-Adaptive Randomization. *Clinical Infectious Diseases*, 71(11), 3002–3004.
+[^2]: Proschan, M., & Evans, S. (2020). Resist the Temptation of Response-Adaptive Randomization. *Clinical Infectious Diseases*, 71(11), 3002–3004. https://doi.org/10.1093/cid/ciaa334
 
 ## System Description
+
+<Callout type="info" emoji="💡">
+**Reading this section.** This is the system you're building a case about. Aim for a working picture of what it does and where it could go wrong — you don't need to master every technical detail.
+</Callout>
 
 ### What the System Does
 
@@ -51,32 +55,32 @@ The allocation engine supports the conduct of the trial by:
 - maintaining an up-to-date statistical model of how each arm is performing on the primary outcome, expressed as a posterior probability distribution over treatment effects;
 - recomputing the randomisation probabilities at scheduled adaptation points so that new participants are more likely to be allocated to better-performing arms;
 - applying pre-specified decision rules to *graduate* an arm (declare it effective), *drop* an arm for futility, or trigger a *safety hold* if harm is suspected;
-- enforcing constraints that protect the integrity of the trial, such as a minimum allocation to the control arm and a fixed equal-allocation "burn-in" period before adaptation begins; and
+- enforcing constraints that protect the integrity of the trial, such as a minimum allocation to the control arm and a fixed equal-allocation "lead-in" period before adaptation begins; and
 - producing an auditable record of every adaptation: the data available, the model output, the resulting allocation ratios, and the decision rules applied.
 
 The engine does not enrol or treat patients directly. It produces the randomisation probabilities used by the trial's electronic randomisation system; clinicians deliver care, and the DMC retains authority over safety decisions.
 
 ### How It Works
 
-The engine operates in repeated cycles tied to *adaptation points* — pre-specified moments (for example, after every 150 participants reach their primary outcome) at which the allocation is allowed to change. Between adaptation points the allocation ratios are fixed.
+The engine operates in repeated cycles tied to *adaptation points*. These are pre-specified moments (e.g. after every 150 participants reach their primary outcome) at which the allocation is allowed to change. Between adaptation points the allocation ratios are fixed.
 
-1. **Outcome Accrual**: As participants reach the trial's primary outcome, their results are added to the trial database. The outcome is a composite measure that rewards both survival and a faster recovery (here, the number of days a patient is alive and free of organ support, such as a ventilator, in the first three weeks, combined with survival at 90 days). This outcome takes weeks to observe, so at any adaptation point some already-enrolled participants still have incomplete follow-up. As we discuss below, that incompleteness matters for safety.
+1. **Outcome Accrual**: As participants reach the trial's primary outcome, their results are added to the trial database. The outcome is a composite measure that rewards both survival and a faster recovery (e.g. the number of days a patient is alive and free of organ support, such as a ventilator, in the first three weeks, combined with survival at 90 days). This outcome takes weeks to observe, so at any adaptation point some already-enrolled participants still have incomplete follow-up. As we discuss below, that incompleteness matters for safety.
 2. **Posterior Update**: A Bayesian model updates the posterior distribution of each arm's treatment effect relative to control, given the outcomes observed so far and the pre-specified priors. The model can include covariate adjustment (e.g. for illness severity) and may borrow information across related arms.
-3. **Decision Rules**: The updated posterior is evaluated against pre-registered thresholds — for example, "graduate an arm if the posterior probability of superiority exceeds 0.99", "drop for futility if the probability of a clinically meaningful benefit falls below 0.01", and "trigger a safety hold if the posterior probability of excess mortality exceeds a defined threshold".
-4. **Allocation Update**: For arms that remain, the randomisation probabilities are recomputed as a function of the posterior — for instance, proportional to each arm's posterior probability of being best (Thompson sampling, also called probability matching; it is one rule among several, such as optimal or Neyman allocation) — then clipped to keep allocation probabilities within safe bounds and to preserve a minimum allocation to control.
-5. **Constraint Enforcement**: Fixed safeguards are applied — the burn-in period, minimum control allocation, and caps on how fast allocation may shift between adaptation points — to limit the influence of early, unstable estimates.
-6. **DMC Review and Release**: The proposed adaptation, together with its supporting evidence, is reviewed by the independent DMC before the new allocation ratios are released to the randomisation system.
+3. **Decision Rules**: The updated posterior is evaluated against pre-registered thresholds (e.g. "graduate an arm if the posterior probability of superiority exceeds 0.99", "drop for futility if the probability of a clinically meaningful benefit falls below 0.01", and "trigger a safety hold if the posterior probability of excess mortality exceeds a defined threshold").
+4. **Allocation Update**: For arms that remain, the randomisation probabilities are recomputed as a function of the posterior (e.g. proportional to each arm's posterior probability of being best), and then clipped to keep allocation probabilities within safe bounds and to preserve a minimum allocation to control.
+5. **Constraint Enforcement**: Fixed safeguards are applied, such as the lead-in period, minimum control allocation, and caps on how fast allocation may shift between adaptation points, to limit the influence of early, unstable estimates.
+6. **DMC Oversight**: New allocation ratios are computed from the pre-specified algorithm and released to the randomisation system. At each adaptation point, the independent DMC reviews the accumulating safety and interim data and retains the authority to pause, modify, or halt the trial.
 
 ### Key Technical Details
 
 | Aspect                       | Details |
 | ---------------------------- | ------- |
 | **Statistical Model**        | Bayesian hierarchical outcome model producing a posterior distribution over each arm's treatment effect relative to a shared control; supports covariate adjustment and optional information borrowing across arms |
-| **Allocation Rule**          | Response-adaptive randomisation: allocation probabilities are a function of the posterior probability that each arm is best, with clipping to bounded ranges and a protected minimum control allocation |
+| **Allocation Rule**          | Response-adaptive randomisation. Allocation probabilities are a function of the posterior probability that each arm is best, with clipping to bounded ranges and a protected minimum control allocation |
 | **Priors**                   | Pre-specified, weakly informative priors agreed at protocol stage; prior choice is part of the design rationale and is itself an object of assurance |
-| **Adaptation Schedule**      | Allocation fixed between pre-specified adaptation points (e.g. by information fraction or participant count); a fixed equal-allocation burn-in precedes the first adaptation |
+| **Adaptation Schedule**      | Allocation fixed between pre-specified adaptation points (e.g. by information fraction or participant count); a fixed equal-allocation lead-in precedes the first adaptation |
 | **Decision Thresholds**      | Pre-registered posterior-probability thresholds for graduation (superiority), futility, and safety holds |
-| **Operating Characteristics**| Type I error, power, expected sample size, and the probability of over-allocating to an inferior arm are estimated by large-scale **trial simulation** across plausible and adversarial scenarios before the trial opens |
+| **Operating Characteristics**| Type I error, power, expected sample size, and the probability of over-allocating to an inferior arm are estimated by large-scale trial simulation across plausible and adversarial scenarios before the trial opens |
 | **Safety Monitoring**        | Continuous monitoring of mortality and pre-defined adverse events by the independent DMC; safety holds can override the adaptation logic |
 | **Validation**               | Pre-trial simulation study (operating characteristics); independent statistical review; ongoing reconciliation of model predictions against observed outcomes |
 
@@ -86,10 +90,14 @@ The engine operates in repeated cycles tied to *adaptation points* — pre-speci
 - **Role**: The engine sets randomisation probabilities; it does not make treatment decisions or override clinicians
 - **Scale**: Several thousand participants enrolled over the trial lifetime; typically three to five active arms plus a shared control at any time
 - **Users**: Trial statisticians, the trial management group, site investigators (indirectly, via the randomisation system), and the independent DMC
-- **Human Oversight**: The independent DMC reviews each proposed adaptation and holds authority over safety; a separate Trial Steering Committee provides governance oversight
+- **Human Oversight**: The independent DMC oversees the adaptive process — reviewing the accumulating safety and interim data at each adaptation point — and holds authority over safety; a separate Trial Steering Committee provides governance oversight
 - **Status**: This case study describes a plausible, realistic trial scenario; it does not report a specific live trial
 
 ## Stakeholders
+
+<Callout type="info" emoji="💡">
+**Reading this section.** Use this to work out whose concerns your case must answer. Different stakeholders want different things, and a strong case addresses the tensions between them.
+</Callout>
 
 | Stakeholder                                  | Interest                                                                                          | Concern                                                                                                                                       |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -104,100 +112,107 @@ The engine operates in repeated cycles tied to *adaptation points* — pre-speci
 
 ## Regulatory Context
 
+<Callout type="info" emoji="💡">
+**Reading this section.** Background on the rules the system operates under. Focus on the *shape* of the constraints, not the regulatory detail — you're not being asked to argue full compliance here.
+</Callout>
+
 Clinical trials are among the most heavily regulated activities in research, and a reader new to the field does not need the full apparatus to follow this case. What matters is the *shape* of the constraints that regulation places on an adaptive, data-driven design. Three demands in particular:
 
-- **Pre-specification.** Decision rules cannot be chosen after seeing the data. The design, the priors, the adaptation rule, the graduation/futility/safety thresholds, and the analysis plan must all be fixed and justified *before* the trial opens, and registered publicly so the logic can be scrutinised independently. Regulators expect error rates to be controlled and the design's behaviour to be established by simulation in advance. The FDA's guidance on adaptive designs is the most influential reference standard here.[^3]
+- **Pre-specification.** Decision rules cannot be chosen after seeing the data. The design, the priors, the adaptation rule, the graduation/futility/safety thresholds, and the analysis plan must all be fixed and justified *before* the trial opens, and registered publicly so the logic can be scrutinised independently. Regulators expect error rates to be controlled and the design's behaviour to be established by simulation in advance. Internationally, the FDA's 2019 guidance on adaptive designs is the most detailed single treatment and is widely referenced.[^3] In the UK, the operative expectations reach trialists through the MHRA via the ICH framework — notably ICH E9, the statistical-principles guideline[^4] — which establishes the same underlying expectations of pre-specification and error control.
 - **Participant protection.** Long-standing research-ethics principles — informed consent, and the duty to minimise harm — are legally binding, and are directly engaged by a design that changes a patient's odds of allocation in response to *other* patients' outcomes. A favourable ethics opinion and regulatory authorisation are preconditions for running the trial at all.
 - **Independent oversight.** Authority over safety does not rest with the trial team. The independent DMC reviews the confidential interim data and can halt or modify the trial, and a separate governance committee oversees its overall conduct.
 
 Behind these demands sit detailed instruments: UK clinical-trials regulations, Good Clinical Practice, and statistical-principles guidance such as the ICH E9(R1) "estimands" framework (which makes precise *what* a trial is estimating when events such as death interrupt the measured outcome). These matter to the trial team, but are background for this case study.
 
-[^3]: U.S. Food and Drug Administration. (2019). *Adaptive Designs for Clinical Trials of Drugs and Biologics: Guidance for Industry*. *(URL and citation details to be verified before publication.)*
+[^3]: U.S. Food and Drug Administration (CDER & CBER). (2019). *Adaptive Designs for Clinical Trials of Drugs and Biologics: Guidance for Industry*. https://www.fda.gov/media/78495/download
+
+[^4]: International Council for Harmonisation. (1998). *ICH E9: Statistical Principles for Clinical Trials*. https://www.ema.europa.eu/en/ich-e9-statistical-principles-clinical-trials-scientific-guideline
 
 ## Safety Considerations
 
+<Callout type="info" emoji="💡">
+**Reading this section.** These are the specific risks the design raises — a strong starting point for the claims your case will need to make and defend.
+</Callout>
+
 Several aspects of the allocation engine require careful attention to safety. Each concern below is specific to an adaptive, data-driven allocation mechanism.
 
-### Premature Convergence on Early, Noisy Data
+### 1. Reacting to Early, Incomplete, and Noisy Data
 
-The defining risk of response-adaptive randomisation is that the engine shifts allocation toward an arm on the basis of early outcomes that later prove misleading. Because critical-care outcomes are variable and follow-up is delayed, the first adaptation points operate on small, uncertain samples. If the engine reacts too strongly or too soon, it can allocate a substantial number of participants to an arm that is no better (or worse) than control before the accumulating data corrects the estimate. The burn-in period, allocation clipping, and caps on the rate of change are intended to mitigate this, but their adequacy must be demonstrated, not assumed.
+The defining risk of response-adaptive randomisation is that the engine shifts allocation toward an arm on the basis of early outcomes that later prove misleading. Because critical-care outcomes are variable and slow to observe, the first adaptation points operate on small, uncertain samples — and at each point some enrolled participants have not yet reached their primary endpoint at all. If the engine reacts too strongly or too soon, it can allocate a substantial number of participants to an arm that is no better (or worse) than control before the accumulating data corrects the estimate. How the model treats those not-yet-observed outcomes compounds the problem: naive handling (for example, conditioning only on completed outcomes) can yield posteriors that are too narrow — understating uncertainty by ignoring the enrolled-but-not-yet-observed — or biased toward early responders, causing allocation to swing between adaptation points in ways that reflect an artefact of follow-up timing rather than a genuine treatment effect. The lead-in period, allocation clipping, and caps on the rate of change are intended to mitigate this, but their adequacy must be demonstrated, not assumed.
 
-### Temporal Drift and Confounding
+### 2. Temporal Drift and Confounding
 
 Response-adaptive randomisation is vulnerable to **time trends**. Because the allocation ratio changes over calendar time, any temporal trend in outcomes (an improving standard of supportive care, a change in the mix of patients enrolling, seasonal variation) becomes correlated with treatment assignment and is therefore confounded with it.[^2] Patients allocated early, when allocation is near-equal, differ in calendar time from those allocated late, after the ratio has shifted toward a favoured arm; an arm can thus appear better or worse partly because of *when* its patients were enrolled rather than because of the treatment itself. The assurance case must address whether and how the design controls for temporal drift (for example, through time-block adjustment in the model).
 
-### Adequacy of Safety Holds and Stopping Rules
-
-The engine's safety holds and futility rules are the primary mechanism preventing continued allocation to a harmful arm. Their safety depends on the thresholds being sensitive enough to detect harm promptly, yet robust enough not to halt arms spuriously on noise. The relationship between a posterior-probability threshold and the real, clinically meaningful harm it is meant to catch is not self-evident and must be characterised — including how quickly a genuinely harmful arm would be detected and held given the delay in outcome accrual.
-
-### Sensitivity to Priors and Design Choices
+### 3. Sensitivity to Priors and Design Choices
 
 The engine's behaviour depends on choices made before any data arrive: the priors, the form of the allocation rule, the decision thresholds, and the adaptation schedule. Reasonable-seeming alternatives can produce materially different allocation behaviour and different probabilities of harm. Safety therefore depends not only on the data but on whether these design choices have been justified and stress-tested. A design that is safe under the anticipated scenario may not be safe under plausible departures from it.
 
-### Incomplete and Delayed Outcomes
+### 4. Safety Holds, Stopping Rules, and Operational Integrity
 
-At each adaptation point, some enrolled participants have not yet reached their primary endpoint. How the model treats these incomplete observations affects both the stability and the honesty of the allocation. Naive handling (for example, conditioning only on completed outcomes) can yield posteriors that are too narrow (understating uncertainty by ignoring the enrolled-but-not-yet-observed) or biased toward early responders, and can cause allocation to swing between adaptation points, exposing participants to an allocation that reflects an artefact of follow-up timing rather than a genuine treatment effect.
-
-### Operational and Data-Integrity Failures
-
-The engine depends on timely, correct outcome data flowing from many sites into the trial database. A data error, a site reporting lag, or a software fault in the adaptation pipeline could cause the engine to compute and release an unsafe allocation. Safety is therefore partly an operational property: it requires checks that the inputs to each adaptation are complete and correct, and a defined safe behaviour when they are not.
+The engine's safety holds and futility rules are the primary mechanism preventing continued allocation to a harmful arm. Their safety depends on the thresholds being sensitive enough to detect harm promptly, yet robust enough not to halt arms spuriously on noise; the relationship between a posterior-probability threshold and the real, clinically meaningful harm it is meant to catch is not self-evident and must be characterised, including how quickly a genuinely harmful arm would be detected and held given the delay in outcome accrual. These safeguards are only as reliable as the data and pipeline behind them: the engine depends on timely, correct outcome data flowing from many sites into the trial database, so a data error, a site reporting lag, or a software fault in the adaptation pipeline could itself cause an unsafe allocation. Safety is therefore partly an operational property — it requires checks that the inputs to each adaptation are complete and correct, and a defined safe behaviour when they are not.
 
 ## Assurance Focus
 
-The assurance case should demonstrate that:
+<Callout type="info" emoji="💡">
+**Reading this section.** This frames the core question your case must answer. Use the Deliberative Prompts to interrogate the system and find where the argument is hardest.
+</Callout>
 
-> **The Bayesian response-adaptive allocation engine protects participant safety throughout the trial (limiting allocation to inferior or harmful arms, detecting harm promptly, and behaving robustly under realistic departures from its design assumptions), with the basis for each allocation decision explainable to the participants, clinicians, and regulators who must scrutinise that safety argument.**
+The assurance case is built around a single top-level goal:
 
-Safety is the primary goal; explainability appears here in a supporting role — the decisions must be intelligible enough that the people responsible for safety can interrogate, rather than merely ratify, what the engine recommends.
+> **The REVIVE-ICU allocation engine is acceptably safe to operate throughout the trial.**
+
+Stated this concisely, the goal exposes its own central question — the word *acceptably*. Safety here is not the absence of *all risk*, which is an unobtainable goal, but a judgement about how much risk is tolerable, and whether it has been reduced as far as is reasonably practicable. In a complete case that judgement would be pinned down by a *justification* node that specifies an explicit criterion for what constitutes *safe enough*, as well as an argument that residual risk has been driven As Low As Reasonably Practicable (ALARP). Articulating that criterion is part of the work this case asks of you.
+
+Safety is the primary goal, and explainability is a supporting claim rather than part of it. The allocation decisions must be intelligible enough that those responsible for safety can interrogate what the engine recommends.
 
 ### Deliberative Prompts
 
-1. Response-adaptive randomisation is often justified on the ethical grounds that it allocates fewer participants to inferior treatments. Yet under realistic conditions it can do the opposite. How should the assurance case weigh the *intended* ethical benefit of adaptivity against the *demonstrated* safety behaviour under simulation? When, if ever, would fixed equal randomisation be the safer and more defensible choice?
-2. The engine's safety rests heavily on a simulation study of its operating characteristics conducted before any patient is enrolled. What does it take for that simulation evidence to be trustworthy, and how should the assurance case handle the gap between the scenarios that were simulated and the conditions actually encountered during the trial?
-3. The priors, thresholds, and allocation rule are chosen by the trial design team. To what extent is the safety of the trial a property of the *data* versus a property of these human design choices? How should the assurance case make those choices visible and contestable?
-4. A participant asks their clinician, "Why was I more likely to be put in this group than that one?" What is an honest, comprehensible answer, and is it achievable without misrepresenting a stochastic, posterior-driven decision? Does the consent process adequately convey that allocation probabilities change over time?
-5. The independent DMC must decide, at each adaptation point, whether an emerging difference between arms is a genuine signal or noise. What evidence and explanation does the DMC need to make that judgement, and how should the engine present its reasoning so that the DMC can scrutinise rather than simply ratify it?
-6. If outcomes drift over the course of the trial for reasons unrelated to treatment (changing case-mix, improving standard of care), the adaptive comparison can be biased. How should the assurance case demonstrate that any conclusion the trial reaches is not an artefact of allocation changing in step with time?
+1. What work is the word *acceptably* doing in the goal? Safety is rarely absolute, so who is entitled to decide how much risk is tolerable, and against what criterion?
+2. Response-adaptive randomisation is often justified on the ethical grounds that it allocates fewer participants to inferior treatments. Yet under realistic conditions it can do the opposite. How should the assurance case weigh the *intended* ethical benefit of adaptivity against the *demonstrated* safety behaviour under simulation? When, if ever, would fixed equal randomisation be the safer and more defensible choice?
+3. The engine's safety rests heavily on a simulation study of its operating characteristics conducted before any patient is enrolled. What does it take for that simulation evidence to be trustworthy, and how should the assurance case handle the gap between the scenarios that were simulated and the conditions actually encountered during the trial?
+4. The priors, thresholds, and allocation rule are chosen by the trial design team. To what extent is the safety of the trial a property of the *data* versus a property of these human design choices?
+5. A participant asks their clinician, "Why was I more likely to be put in this group than that one?" What is an honest, comprehensible answer, and is it achievable without misrepresenting a stochastic, posterior-driven decision?
+6. The independent DMC must decide, at each adaptation point, whether an emerging difference between arms is a genuine signal or noise. What evidence and explanation does the DMC need to make that judgement, and how should the engine present its reasoning so that the DMC can scrutinise rather than simply ratify it?
+7. If outcomes drift over the course of the trial for reasons unrelated to treatment (e.g. changing case-mix, improving standard of care), the adaptive comparison can be biased. How should the assurance case demonstrate that any conclusion the trial reaches is not an artefact of allocation changing in step with time?
 
 ## Suggested Strategies
 
-### S1. Argument Over Operating Characteristics
+<Callout type="info" emoji="💡">
+**Reading this section.** Candidate ways to structure your argument. You don't have to use them, but they're a useful scaffold — pick one (or combine a few) and develop it.
+</Callout>
 
-Demonstrate, through a pre-specified large-scale simulation study, that the design has acceptable operating characteristics — controlled error rates, adequate power, and, critically, a bounded probability of over-allocating participants to an inferior or harmful arm. The argument should cover not only the anticipated scenario but adversarial and edge-case scenarios (early misleading runs, null effects, harmful arms, temporal trends), establishing the conditions under which the design is and is not safe.
+### S1. Argument Over Operating Characteristics and Robustness
 
-### S2. Argument Over Robustness to Design Assumptions
+Demonstrate, through a pre-specified large-scale simulation study, that the design has acceptable operating characteristics, such as controlled error rates, adequate power, and, critically, a bounded probability of over-allocating participants to an inferior or harmful arm. The argument should cover not only the anticipated scenario but adversarial and edge-case scenarios (early misleading runs, null effects, harmful arms, temporal trends), and should show that this safety does not depend on a single fortunate choice of prior, threshold, or allocation rule — through systematic sensitivity analysis across plausible alternative specifications, documenting the conditions under which the design is, and is not, safe.
 
-Establish that the engine's safety does not depend on a single fortunate choice of prior, threshold, or allocation rule. This involves systematic sensitivity analysis across plausible alternative specifications, showing that safety-relevant behaviour (allocation to inferior arms, speed of harm detection) remains acceptable across the range, and documenting any specifications under which it does not.
-
-### S3. Argument Over Real-Time Safety Monitoring and Circuit Breakers
+### S2. Argument Over Real-Time Safety Monitoring and Circuit Breakers
 
 Show that the trial can detect and respond to harm during conduct, not only in retrospect. This includes the DMC's monitoring of mortality and adverse events, pre-specified safety holds that override the adaptation logic, and operational checks that each adaptation is computed from complete, correct data — with a defined safe fallback (e.g. revert to fixed allocation or pause) when data integrity cannot be assured.
 
-### S4. Argument Over Explainable and Auditable Adaptations
+### S3. Argument Over Explainable and Auditable Adaptations
 
 Establish that every adaptation can be reconstructed and explained after the fact, and presented intelligibly to its audiences. This includes an immutable audit trail of the data, model output, and decision rule applied at each adaptation point; contrastive explanations of why allocation shifted; and audience-appropriate accounts for the DMC, for clinicians and participants, and for the regulator, each faithful to the underlying probabilistic reasoning.
 
-### S5. Argument Over Inferential Validity Under Adaptation
+### S4. Argument Over Inferential Validity Under Adaptation
 
 Demonstrate that the conclusions drawn from the trial remain valid given the adaptive allocation — that a treatment is not declared effective (or ineffective) as an artefact of how allocation evolved over time. The argument must establish that the final analysis accounts for both the adaptive sampling and any temporal trend: pre-specified estimators that adjust for time (e.g. time-block or covariate adjustment), pre-registered sensitivity analyses comparing adjusted and unadjusted estimates, and bias/coverage results from the same simulation study used in S1 (showing the estimator recovers the true effect under the adaptation scheme). The argument fails if a plausible temporal trend can reproduce the trial's headline result in the absence of any true treatment effect.
 
 ## Recommended Techniques for Evidence
+
+<Callout type="info" emoji="💡">
+**Reading this section.** Methods that could supply the evidence your claims need. Match techniques to the claims you're making, rather than gathering evidence for its own sake.
+</Callout>
 
 The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
 
 - [Safety Envelope Testing](https://alan-turing-institute.github.io/tea-techniques/techniques/safety-envelope-testing/) — Systematically evaluate the allocation engine's behaviour at the boundaries of its design assumptions (early misleading data, null effects, harmful arms, strong temporal trends) to characterise where it remains safe and where it does not — the simulation study of operating characteristics is the central piece of safety evidence
 - [Red Teaming](https://alan-turing-institute.github.io/tea-techniques/techniques/red-teaming/) — Adversarially construct outcome sequences and scenarios designed to make the engine misbehave (e.g. over-allocate to an inferior arm, or fail to trigger a safety hold), probing failure modes that benign simulation may miss
 - [Empirical Calibration](https://alan-turing-institute.github.io/tea-techniques/techniques/empirical-calibration/) — Check that the model's posterior probabilities are well calibrated against observed outcomes, so that a stated "0.99 probability of superiority" means what it claims when allocation and stopping decisions depend on it
-- [Conformal Prediction](https://alan-turing-institute.github.io/tea-techniques/techniques/conformal-prediction/) — Provide distribution-free uncertainty bounds on outcome predictions, complementing the Bayesian posterior with a guarantee that does not rely solely on the model being correctly specified. Important caveat for this audience: standard conformal prediction assumes exchangeability, which response-adaptive sampling violates — *weighted* or *online* conformal methods are needed to retain validity under the shifting allocation
 - [Runtime Monitoring and Circuit Breakers](https://alan-turing-institute.github.io/tea-techniques/techniques/runtime-monitoring-and-circuit-breakers/) — Continuously monitor safety-critical signals (mortality, adverse events, allocation drift, data-feed completeness) with pre-defined thresholds that trigger a safety hold or revert to fixed allocation
-- [Human-in-the-Loop Safeguards](https://alan-turing-institute.github.io/tea-techniques/techniques/human-in-the-loop-safeguards/) — Structure the independent DMC's review of each proposed adaptation, with defined criteria for approving, modifying, or halting, so that no allocation change is released without informed human oversight
 - [Contrastive Explanation Method](https://alan-turing-institute.github.io/tea-techniques/techniques/contrastive-explanation-method/) — Generate contrastive accounts of adaptation decisions ("allocation to arm B increased because its posterior probability of being best rose to X; had the observed organ-support–free days been lower, allocation would have been unchanged"), supporting the explainability strand for the DMC and clinicians
-- [Model Development Audit Trails](https://alan-turing-institute.github.io/tea-techniques/techniques/model-development-audit-trails/) — Maintain immutable records of priors, thresholds, code versions, and every adaptation decision, providing the traceability the DMC, ethics committee, and regulator need for independent scrutiny
-- [Model Cards](https://alan-turing-institute.github.io/tea-techniques/techniques/model-cards/) — Document the allocation engine's design, assumptions, intended operating conditions, and known limitations in a standardised form for oversight bodies
 
 ## Further Reading
 
-- [Understanding the Assurance Ecosystem](../../standalone/assurance-ecosystem)
-- [Explainable RL Agent for Air Traffic Control](./explainable-atc-rl-agent) — A companion case study on assuring a learning system whose behaviour must be explained to operational, developmental, and regulatory audiences
 - [MHRA: Good Clinical Practice (GCP)](https://www.gov.uk/guidance/good-clinical-practice-for-clinical-trials) — UK guidance on the conduct of clinical trials
-- [FDA: Adaptive Designs for Clinical Trials of Drugs and Biologics](https://www.fda.gov/regulatory-information/search-fda-guidance-documents/adaptive-designs-clinical-trials-drugs-and-biologics-guidance-industry) — Influential guidance on the design and justification of adaptive trials
+- [FDA: Adaptive Designs for Clinical Trials of Drugs and Biologics](https://www.fda.gov/media/78495/download) — Influential guidance on the design and justification of adaptive trials

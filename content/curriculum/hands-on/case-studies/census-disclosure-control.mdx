@@ -12,6 +12,8 @@ tags:
   - official-statistics
 ---
 
+import { Callout } from 'nextra/components'
+
 # Balancing Privacy and Utility in Census Disclosure Control
 
 ![Census Disclosure Control Hero Image](/images/case-studies/census-disclosure-control.png)
@@ -23,17 +25,21 @@ tags:
 
 ## Overview
 
-Publishing detailed statistics about a population can quietly expose the individuals within it. When many tables are released about the same small area, an attacker can combine them to reconstruct (and then re-identify) the records of individual people. This is not hypothetical: researchers at the United States Census Bureau showed that the published tables from a previous census could be used to reconstruct a substantial share of individual records, and to confirm the identities of a meaningful fraction of the population, prompting national statistics offices to overhaul how they protect confidentiality.[^1] The object of assurance in this case study is therefore not a model bolted onto a process, but a statistical mechanism itself.
+Publishing detailed statistics about a population can quietly expose the individuals within it. When many tables are released about the same small area, an attacker can combine them to reconstruct (and then re-identify) the records of individual people. This is not a hypothetical concern. Researchers at the United States Census Bureau showed that the published tables from a previous census could be used to reconstruct a substantial share of individual records, and to re-identify some of those individuals by linking to external data, prompting national statistics offices to overhaul how they protect confidentiality.[^1] The object of assurance in this case study is therefore not a model bolted onto a process, but a statistical mechanism itself.
 
-The National Population Statistics Agency (NPSA), a fictional national statistics office, conducts the decennial census and publishes the detailed population tables on which much of public life depends: central government allocates funding to local areas, local authorities plan schools and social care, electoral boundaries are drawn, and researchers study the population — all from tables broken down by geography and characteristics such as age, ethnicity, and household composition.
+The National Population Statistics Agency (NPSA), a fictional national statistics office, conducts the decennial census and publishes the detailed population tables on which much of public life depends: central government allocates funding to local areas, local authorities plan schools and social care, electoral boundaries are drawn, and researchers study the population. All information is drawn from tables broken down by geography and characteristics such as age, ethnicity, and household composition.
 
-To protect respondents while still publishing this detail, the NPSA has adopted a **differentially private disclosure-control system** — referred to throughout as "the disclosure engine". The engine injects carefully calibrated random noise into the published statistics, providing a mathematically defined privacy guarantee governed by a **privacy-loss budget**, conventionally denoted **ε (epsilon)** (smaller ε → more noise and a stronger guarantee; larger ε → less noise and more accurate statistics).
+To protect respondents while still publishing this detail, the NPSA has adopted a *differentially private disclosure-control system*, which will be referred to throughout as "the disclosure engine". The disclosure engine injects carefully calibrated random noise into the published statistics, providing a mathematically defined privacy guarantee governed by a *privacy-loss budget*, which we will denote **ε** (epsilon) — smaller ε → more noise and a stronger guarantee; larger ε → less noise and more accurate statistics.
 
-The difficulty is that ε is more than a technical setting: it governs a direct trade-off with real-world consequences. Too small, and the noise distorts the small-area counts that determine funding and service planning, harming the very communities the statistics are meant to serve; too large, and the confidentiality guarantee weakens to the point where reconstruction becomes feasible. The choice of ε, and how the finite budget is shared across geographies and tables, is therefore a **policy decision wearing the clothing of a hyperparameter**. Following scrutiny from local authorities concerned about distorted small-area figures, and from a privacy regulator concerned about disclosure risk, the NPSA has commissioned an assurance case to demonstrate that its chosen privacy–utility trade-off is justified, transparent, and contestable.
+The difficulty is that ε is more than a technical setting. It also governs a direct trade-off with real-world consequences. If ε is too small, the noise distorts the small-area counts that determine funding and service planning, harming the very communities the statistics are meant to serve. If it is too large, the confidentiality guarantee weakens to the point where reconstruction becomes feasible. The choice of ε, and how the finite budget is shared across geographies and tables, is therefore a policy decision wearing the clothing of a hyperparameter. Following scrutiny from local authorities concerned about distorted small-area figures, and from a privacy regulator concerned about disclosure risk, the NPSA has commissioned an assurance case to demonstrate that its chosen privacy–utility trade-off is justified, transparent, and contestable.
 
-[^1]: This refers to the database-reconstruction and re-identification work associated with the United States Census Bureau's adoption of differential privacy for the 2020 Census (the "TopDown Algorithm"); see in particular the work of Abowd and colleagues. The specific reconstruction and re-identification figures, and full citations, should be confirmed before publication. *(References to be verified.)*
+[^1]: The motivating example is the United States Census Bureau's finding that published 2010 Census tabulations could be used to reconstruct individual-level records (a *database-reconstruction attack*) and, by linking those records to external data, to re-identify some respondents — a demonstration that contributed to the Bureau's decision to adopt differential privacy (the "TopDown Algorithm") for the 2020 Census. The underlying reconstruction vulnerability is not seriously disputed, though the scale of re-identification it enables has been contested in the disclosure-control literature. See Garfinkel, S., Abowd, J. M., & Martindale, C. (2019). Understanding Database Reconstruction Attacks on Public Data. *Communications of the ACM*, 62(3), 46–53. https://doi.org/10.1145/3287287; and Abowd, J. M., & Hawes, M. B. (2023). Confidentiality Protection in the 2020 US Census of Population and Housing. *Annual Review of Statistics and Its Application*, 10, 119–144. https://doi.org/10.1146/annurev-statistics-010422-034226
 
 ## System Description
+
+<Callout type="info" emoji="💡">
+**Reading this section.** This is the system you're building a case about. Aim for a working picture of what it does and where it could go wrong — you don't need to master every technical detail.
+</Callout>
 
 ### What the System Does
 
@@ -42,25 +48,25 @@ The disclosure engine sits between the confidential census database and the publ
 - takes the confidential, record-level census data as input and produces the set of tables released to the public and to government users;
 - allocates a finite privacy-loss budget (ε) across the many tables and geographic levels that must be published;
 - adds calibrated random noise to counts so that the published statistics satisfy a formal differential-privacy guarantee;
-- post-processes the noisy output to restore usability — ensuring counts are non-negative, whole numbers, and internally consistent across nested geographies (the parts sum to the whole from small area up to nation); and
+- post-processes the noisy output to restore usability, ensuring counts are non-negative, whole numbers, and internally consistent across nested geographies (the parts sum to the whole from small area up to nation); and
 - produces documentation of the noise properties so that downstream users can interpret the published figures appropriately.
 
-The engine does not decide policy or allocate funding. It produces the statistics that others rely upon — which is precisely why its accuracy and confidentiality both matter.
+The engine does not decide policy or allocate funding. It produces the statistics that others rely upon, which is precisely why its accuracy and confidentiality both matter.
 
 ### How It Works
 
-1. **Budget Setting**: A total privacy-loss budget (ε) is set as a governance decision. This is the single most consequential parameter: it fixes the overall strength of the privacy guarantee and, inversely, the overall accuracy of the outputs.
+1. **Budget Setting**: A total privacy-loss budget (ε) is set as a governance decision. This is the single most consequential parameter because it fixes the overall strength of the privacy guarantee and, inversely, the overall accuracy of the outputs.
 2. **Budget Allocation**: The total budget is divided across the publication — across geographic levels (nation, region, local authority, small area) and across the different tables and characteristics. Allocating more budget to one output means more accuracy there and less elsewhere.
-3. **Noise Injection**: Calibrated random noise (drawn from a distribution whose scale is determined by the allocated budget and the sensitivity of each query) is added to the true counts, producing noisy measurements that satisfy the differential-privacy guarantee.
-4. **Post-Processing**: The noisy measurements are reconciled into a coherent set of published tables, enforcing non-negativity, integer counts, and consistency across the geographic hierarchy. Post-processing improves usability but interacts with accuracy in ways that are uneven across the table (small counts are typically affected most).
-5. **Utility Assessment**: The published tables are evaluated against utility targets that reflect how the statistics are actually used (for example, the accuracy of small-area population counts that drive funding formulae).
+3. **Noise Injection**: Calibrated random noise is added to the true counts, producing noisy measurements that satisfy the differential-privacy guarantee.
+4. **Post-Processing**: The noisy measurements are reconciled into a coherent set of published tables, enforcing non-negativity, integer counts, and consistency across the geographic hierarchy. Post-processing improves usability but interacts with accuracy in ways that are uneven across the table. For instance, small counts are typically affected most.
+5. **Utility Assessment**: The published tables are evaluated against utility targets that reflect how the statistics are actually used. For example, the accuracy of small-area population counts that drive funding formulae.
 6. **Release and Documentation**: The tables are published as authoritative statistics, accompanied by guidance on the noise properties and known limitations.
 
 ### Key Technical Details
 
 | Aspect                     | Details |
 | -------------------------- | ------- |
-| **Privacy Model**          | Differential privacy — a formal, mathematically provable definition of privacy that bounds how much any single individual's data can affect the published output |
+| **Privacy Model**          | Differential privacy (i.e. a formal, mathematically provable definition of privacy that bounds how much any single individual's data can affect the probability of any published output) |
 | **Privacy Parameter**      | A global privacy-loss budget ε, allocated across geographies and tables; smaller ε gives stronger privacy and less accuracy |
 | **Noise Mechanism**        | Calibrated random noise added to counts, with scale determined by the allocated budget and the sensitivity of each query |
 | **Composition**            | The total privacy loss accumulates ("composes") across all published statistics, which is why the budget must be shared rather than spent freely per table |
@@ -80,11 +86,15 @@ The engine does not decide policy or allocate funding. It produces the statistic
 
 ## Stakeholders
 
+<Callout type="info" emoji="💡">
+**Reading this section.** Use this to work out whose concerns your case must answer. Different stakeholders want different things, and a strong case addresses the tensions between them.
+</Callout>
+
 | Stakeholder                                   | Interest                                                                                        | Concern                                                                                                                                |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Census Respondents / the Public**           | Confidence that the information they are legally required to provide stays confidential          | Re-identification from published tables; loss of trust could reduce response rates in future censuses                                  |
 | **Local Authorities**                         | Accurate small-area counts for funding bids, service planning, and statutory duties              | Noise distorts small populations most; under- or over-counts translate directly into mis-allocated funding for their residents          |
-| **Central Government (Funding Bodies)**       | Statistics fit to drive national funding formulae fairly across areas                            | A trade-off set centrally redistributes accuracy — and therefore money — between areas, often invisibly                                |
+| **Central Government (Funding Bodies)**       | Statistics fit to drive national funding formulae fairly across areas                            | A trade-off set centrally redistributes accuracy, and therefore money, between areas, often invisibly                                |
 | **Researchers and Analysts**                  | Detailed, accurate, usable microdata and tables                                                  | Noise and suppression can render small subgroups unusable; injected error may be mistaken for real signal                              |
 | **Electoral / Boundary Bodies**               | Accurate population figures for drawing fair constituencies                                      | Boundary decisions rest on counts that now contain deliberate noise                                                                    |
 | **Privacy Regulator**                         | Demonstrable protection of personal data in published statistics                                 | Whether the chosen ε actually provides meaningful protection against realistic reconstruction attacks                                  |
@@ -93,99 +103,105 @@ The engine does not decide policy or allocate funding. It produces the statistic
 
 ## Regulatory Context
 
-A web of law and professional standards applies to any official-statistics system, and a reader does not need all of it to follow this case. What matters is the *shape* of the obligations it places on the disclosure engine. Three in particular:
+<Callout type="info" emoji="💡">
+**Reading this section.** Background on the rules the system operates under. Focus on the *shape* of the constraints, not the regulatory detail — you're not being asked to argue full compliance here.
+</Callout>
 
-- **A legal duty of confidentiality.** Census responses are typically collected under a statutory confidentiality pledge, and data-protection law (the UK GDPR and Data Protection Act 2018) requires the agency to demonstrate that published outputs genuinely protect personal data. The disclosure engine is the mechanism through which that legal promise is kept. It must therefore be shown to *reduce re-identification risk*, not merely to apply a recognised method.
-- **A duty to stay fit for public use, and fair.** Official statistics are held to a professional standard of trustworthiness, quality, and value (in the UK, the Code of Practice for Statistics). Because the figures drive funding and planning, degrading them has real consequences. Where that degradation falls unevenly, systematically distorting the statistics of particular groups, equality obligations are engaged.
-- **Transparency and contestability.** Methods that shape public resource allocation are expected to be open to scrutiny, potentially including the value of ε and how the budget was divided. (The EU AI Act, though not directly applicable in the UK, is a useful reference standard: public-sector statistical systems informing resource allocation may fall within its high-risk, transparency-oriented provisions.)
+A web of law and professional standards applies to any official-statistics system, and a reader does not need all of it to follow this case. What matters is the *shape* of the obligations it places on the disclosure engine. Three in particular are worth mentioning:
+
+- **A legal duty of confidentiality.** Census responses are typically collected under a statutory confidentiality pledge, and data-protection law (e.g. UK GDPR and Data Protection Act 2018) requires the agency to demonstrate that published outputs genuinely protect personal data. The disclosure engine is the mechanism through which that legal promise is kept. It must therefore be shown to *reduce re-identification risk*, not merely to apply a recognised method.
+- **A duty to stay fit for public use, and fair.** Official statistics are held to a professional standard of trustworthiness, quality, and value (e.g. in the UK, the [Code of Practice for Statistics](https://code.statisticsauthority.gov.uk/)). Because the figures drive funding and planning, degrading them has real consequences. Where that degradation falls unevenly, systematically distorting the statistics of particular groups, equality obligations are engaged.
+- **Transparency and contestability.** Methods that shape public resource allocation are expected to be open to scrutiny, potentially including the value of ε and how the budget was divided.[^2]
+
+[^2]: The EU AI Act does not apply in the UK, but it is a useful comparator for the transparency expectations placed on public-sector systems that inform resource allocation. Its high-risk, transparency-oriented provisions are aimed primarily at systems that make or support decisions about individuals; whether a statistical disclosure-control mechanism falls within its scope is debatable, so it serves here as a reference standard rather than a binding requirement.
 
 ## Privacy–Utility Considerations
 
+<Callout type="info" emoji="💡">
+**Reading this section.** These are the specific risks the design raises — a strong starting point for the claims your case will need to make and defend.
+</Callout>
+
 The central assurance challenge in this case is not privacy alone or utility alone, but the trade-off between them and the legitimacy of how it is struck. The considerations below are specific to a differentially private disclosure system.
 
-### ε as a Contestable Policy Choice
+### 1. ε and the Privacy Budget as a Contestable Policy Choice
 
-The privacy-loss budget ε determines, in a single number, how much accuracy is sacrificed for how much privacy across the entire census. There is no value of ε that is "correct" on technical grounds alone — the right balance depends on contested judgements about the relative importance of confidentiality and accuracy, and about who bears the costs of each. Treating ε as an internal technical setting hides a decision that is properly a matter of public, accountable judgement.
+The privacy-loss budget ε determines, in a single number, how much accuracy is sacrificed for how much privacy across the entire census — and there is no value that is "correct" on technical grounds alone. The right balance depends on contested judgements about the relative importance of confidentiality and accuracy, and about who bears the costs of each, so treating ε as an internal technical setting hides a decision that is properly a matter of public, accountable judgement. The budget is also finite and *composes*: every released statistic spends some of it, so allocation decisions made for the initial release constrain what can later be published — a table requested after the fact either spends additional budget (weakening the guarantee) or is carved out of what was already allocated (degrading existing outputs). The assurance case must therefore treat the choice and allocation of ε not as a one-off calculation but as an ongoing governance question.
 
-### Budget Composition and Future Publications
-
-Because privacy loss composes across every released statistic, the budget is a finite resource spent over the whole publication, and over time. Allocation decisions made for the initial release constrain what can later be published: a new table requested after the fact either spends additional budget (weakening the overall guarantee) or must be carved out of what was already allocated (degrading existing outputs). The assurance case must therefore treat budget allocation not as a one-off calculation but as an ongoing governance question: how the budget is apportioned, recorded, and revised as demands for new statistics arise.
-
-### Uneven Distribution of Error
+### 2. Uneven Distribution of Error
 
 Fixed-scale noise does not fall evenly. For a small count, a given absolute perturbation is a large *relative* error, so small areas and small subgroups (often minority or marginalised communities) absorb disproportionate distortion, precisely because they are the most disclosure-sensitive. This is a *between-group* disparity in error, not merely a higher average: the privacy mechanism can impose its heaviest accuracy costs on the populations least able to absorb them. The assurance case must confront how the trade-off *distributes* harm across groups, not only its aggregate effect.
 
-### The Limits and Meaning of the Formal Guarantee
-
-Differential privacy provides a provable mathematical guarantee, but the guarantee is about a bound on privacy *loss*, not an intuitive promise that "no one can be identified". Communicating what ε actually guarantees (and what it does not) to local authorities, regulators, and the public is itself a substantial challenge. There is a risk that a precise mathematical statement is mistaken for a stronger or different assurance than it provides.
-
-### Post-Processing and Hidden Distortion
+### 3. Post-Processing and Hidden Distortion
 
 The reconciliation that makes outputs usable (non-negativity, integer counts, hierarchical consistency) preserves the privacy guarantee but redistributes error in ways that are hard to see. For example, forcing small counts to be non-negative can systematically bias them upward. Users who treat the published figures as exact may draw unsound conclusions without any visible signal that the figures contain (and have redistributed) deliberate error.
 
-### Empirical Risk versus Formal Risk
+### 4. Formal Guarantee versus Empirical Risk
 
 A formal differential-privacy guarantee bounds worst-case privacy loss under stated assumptions. Whether *realistic* reconstruction or re-identification attacks succeed against the published outputs is an empirical question that depends on the chosen ε, the auxiliary data an attacker might hold, and the structure of the released tables. Assurance requires both the formal guarantee and empirical evidence about residual risk under plausible attack.
 
-### Transparency of the Mechanism Itself
+### 5. Transparency and the Meaning of the Guarantee
 
-A tension runs through disclosure control: the methodology should be open to scrutiny, yet users may lose confidence if they do not understand why published figures no longer match exactly or no longer reproduce known totals. Deciding how much of the mechanism (including ε and the budget allocation) to publish, and how to explain it, is part of the assurance problem, not separate from it.
+Differential privacy provides a provable mathematical guarantee, but it bounds privacy *loss* — it is not an intuitive promise that "no one can be identified". Communicating what ε does and does not guarantee, to local authorities, regulators, and the public, is itself a substantial challenge: a precise mathematical statement is easily mistaken for a stronger or different assurance than it provides. A related tension runs through the mechanism as a whole — it should be open to scrutiny, yet users may lose confidence when they cannot see why published figures no longer match exactly or reproduce known totals. Deciding how much of the method (including ε and the budget allocation) to publish, and how to explain it, is part of the assurance problem, not separate from it.
 
 ## Assurance Focus
 
+<Callout type="info" emoji="💡">
+**Reading this section.** This frames the core question your case must answer. Use the Deliberative Prompts to interrogate the system and find where the argument is hardest.
+</Callout>
+
 The assurance case should demonstrate that:
 
-> **The disclosure engine strikes a privacy–utility trade-off that provides a demonstrably meaningful confidentiality guarantee while preserving the fitness-for-purpose of the statistics on which public decisions depend — a trade-off whose parameters (the choice of ε and the budget allocation) are documented, justified against real uses, and subject to accountable governance.**
+> **The disclosure engine strikes an acceptable privacy–utility trade-off in publishing the census statistics.**
 
-The privacy–utility trade-off is the single object of the case; transparency and contestability of how it was struck are supporting arguments (developed in S5), not separate goals.
+Stated this concisely, the goal exposes the word doing the work: *acceptable*. No privacy–utility trade-off is "correct" on technical grounds alone, so what counts as acceptable is a judgement — and, in this case, a contested one. The claim deliberately leaves that judgement open: it is the argument's job to operationalise it — to establish what makes the confidentiality guarantee meaningful, the utility fit for its real uses, and the choice of ε and its allocation justified and accountably governed. In a complete case, an explicit *justification* node would state the criterion for what makes the trade-off acceptable, and on whose authority.
+
+The privacy–utility trade-off is the single object of the case; transparency and contestability of how it was struck are supporting arguments (developed in S4), not separate goals.
 
 ### Deliberative Prompts
 
-1. The value of ε determines how accuracy and privacy are traded off for an entire nation's statistics. Who should decide it (statisticians, ministers, Parliament, the public), and through what process? Should ε be published, and what follows if it is?
+1. The value of ε determines how accuracy and privacy are traded off for an entire nation's statistics. Who should decide it (e.g. statisticians, ministers, Parliament, the public), and through what process? Should ε be published, and how should the agency account for the statistics it withholds or degrades to stay within the budget?
 2. The privacy mechanism distorts the smallest populations most. Is it acceptable for a confidentiality safeguard to impose its largest accuracy costs on minority and small communities, and how should the assurance case weigh privacy protection against the right of small groups to be counted accurately?
 3. A formal differential-privacy guarantee and an intuitive promise that "your data is safe" are not the same thing. What can the agency honestly tell respondents and the public about what the guarantee does and does not provide?
 4. Local authorities make funding bids on figures that now contain deliberate noise. What do they need to know about that noise to use the figures responsibly, and where does the responsibility lie when a noisy figure leads to a mis-allocation of resources?
 5. The formal guarantee and empirical reconstruction testing can give different verdicts — the guarantee bounds worst-case privacy loss under stated assumptions, while a realistic attack might partially succeed even when the guarantee is satisfied (or fail even when it is weak). If they disagree, which should govern the decision to publish, who has the authority to make that call, and what recourse do those affected have?
-6. Every additional published table spends more of the privacy budget. How should the agency decide what *not* to publish, and how should it be accountable for statistics that are withheld or degraded in the name of confidentiality?
 
 ## Suggested Strategies
+
+<Callout type="info" emoji="💡">
+**Reading this section.** Candidate ways to structure your argument. You don't have to use them, but they're a useful scaffold — pick one (or combine a few) and develop it.
+</Callout>
 
 ### S1. Argument Over Justified Budget Selection
 
 Claim: the chosen ε and its allocation across geographies and tables are the defensible outcome of a systematic comparison (not a default or a matter of convenience), such that the trade-off can be independently replicated and challenged. The argument must show (i) which candidate budgets were evaluated, (ii) how each was scored against both utility and disclosure-risk criteria, and (iii) that an accountable governance body made the final choice on the record. Evidence: a candidate-budget utility-and-risk study, a sensitivity analysis of how utility and residual risk vary across the candidate range, the stakeholder consultation considered, and a governance decision log. The argument fails if a reasonable alternative budget would have scored as well under the same criteria with no recorded reason for rejecting it.
 
-### S2. Argument Over Utility Fitness-for-Purpose
+### S2. Argument Over Utility: Fitness-for-Purpose and Fair Distribution
 
-Demonstrate that the published statistics remain fit for their actual uses (funding allocation, service planning, boundary setting, research) under the chosen budget. This involves utility metrics tied to those uses, with explicit attention to where utility is weakest (small areas and small subgroups) and an account of whether that weakness is tolerable.
+Demonstrate that the published statistics remain fit for their actual uses (funding allocation, service planning, boundary setting, research) under the chosen budget — and that the accuracy costs are acceptably *distributed* across populations, not merely acceptable on average. This involves utility metrics tied to those uses, with explicit attention to where utility is weakest (small areas and small subgroups), an account of where the burden falls hardest, and either mitigation of that disparity (e.g. through budget-allocation choices) or an open justification of it. The uneven impact is treated as a first-class concern, not a footnote.
 
-### S3. Argument Over Equitable Distribution of Error
-
-Show that the assurance case has examined how the privacy mechanism distributes accuracy costs across populations, identified where the burden falls hardest, and either mitigated the disparity (e.g. through budget allocation choices) or justified it openly. This treats the uneven impact as a first-class concern rather than a footnote.
-
-### S4. Argument Over Disclosure-Risk Evidence
+### S3. Argument Over Disclosure-Risk Evidence
 
 Combine the formal guarantee with empirical evidence. Establish the mathematical privacy guarantee provided by the chosen parameters, and corroborate it with reconstruction and re-identification testing against the published outputs under realistic attacker assumptions, to show that residual risk is acceptable.
 
-### S5. Argument Over Transparency and Contestability
+### S4. Argument Over Transparency and Contestability
 
 Establish that the mechanism, its parameters, and their consequences are communicated honestly to respondents, data users, and the public (including what the guarantee means, how noise affects the figures, and how the trade-off was decided), and that there are routes through which affected parties can question and seek revision of those choices.
 
 ## Recommended Techniques for Evidence
 
+<Callout type="info" emoji="💡">
+**Reading this section.** Methods that could supply the evidence your claims need. Match techniques to the claims you're making, rather than gathering evidence for its own sake.
+</Callout>
+
 The following techniques from the [TEA Techniques library](https://alan-turing-institute.github.io/tea-techniques/techniques/) may be useful when gathering evidence for this assurance case:
 
 - [Differential Privacy](https://alan-turing-institute.github.io/tea-techniques/techniques/differential-privacy/) — The core mechanism; document the privacy model, the chosen budget, how it composes across outputs, and the formal guarantee it provides, as the foundation of the privacy argument
-- [Membership Inference Attack Testing](https://alan-turing-institute.github.io/tea-techniques/techniques/membership-inference-attack-testing/) — A *supplementary* empirical disclosure-risk check: probe whether an individual's presence in the data can be inferred from the published outputs. Note that the *primary* empirical threat for aggregate tabular releases is **database reconstruction** — rebuilding the underlying microdata from the released marginals, addressed under Red Teaming below — which membership inference complements but does not replace
-- [Sobol Indices](https://alan-turing-institute.github.io/tea-techniques/techniques/sobol-indices/) — Use variance-based global sensitivity analysis to quantify how downstream utility (e.g. error in funding-relevant small-area counts) responds to ε and to budget-allocation choices. Caveat for this audience: ε is a *policy parameter*, not a random variable, so treat the analysis as a Monte Carlo sweep over a chosen range (the mechanism's own noise requires repeated runs per setting); a direct utility-versus-ε curve or a Pareto-frontier analysis is often the clearer companion
-- [GAN-Based Tabular Synthetic Data](https://alan-turing-institute.github.io/tea-techniques/techniques/gan-based-tabular-synthetic-data/) — Directly relevant to the researchers and analysts who need usable record-level data: synthetic microdata is a candidate way to meet that need, but it carries its own privacy–utility profile that must be evaluated against the differentially private tabular approach rather than assumed safe
-- [Datasheets for Datasets](https://alan-turing-institute.github.io/tea-techniques/techniques/datasheets-for-datasets/) — Document the provenance, noise properties, and intended-use limitations of the released tables so that downstream users can interpret the deliberately perturbed figures responsibly
-- [Model Development Audit Trails](https://alan-turing-institute.github.io/tea-techniques/techniques/model-development-audit-trails/) — Maintain a traceable record of budget-setting and allocation decisions, candidate-budget evaluations, and the rationale for the final choice, supporting independent scrutiny
-- [Internal Review Boards](https://alan-turing-institute.github.io/tea-techniques/techniques/internal-review-boards/) — Establish governance over the privacy–utility decision, ensuring the choice of ε and budget allocation is reviewed by an accountable body rather than made implicitly within the engineering pipeline
 - [Red Teaming](https://alan-turing-institute.github.io/tea-techniques/techniques/red-teaming/) — The primary empirical test of the confidentiality claim: commission adversarial **database-reconstruction and re-identification** attempts against the published outputs, using plausible auxiliary data, mirroring the attack that motivated this case study
+- [Internal Review Boards](https://alan-turing-institute.github.io/tea-techniques/techniques/internal-review-boards/) — Establish governance over the privacy–utility decision, ensuring the choice of ε and budget allocation is reviewed by an accountable body rather than made implicitly within the engineering pipeline
+- [Model Development Audit Trails](https://alan-turing-institute.github.io/tea-techniques/techniques/model-development-audit-trails/) — Maintain a traceable record of budget-setting and allocation decisions, candidate-budget evaluations, and the rationale for the final choice, supporting independent scrutiny
+- [Datasheets for Datasets](https://alan-turing-institute.github.io/tea-techniques/techniques/datasheets-for-datasets/) — Document the provenance, noise properties, and intended-use limitations of the released tables so that downstream users can interpret the deliberately perturbed figures responsibly
 
 ## Further Reading
 
-- [Understanding the Assurance Ecosystem](../../standalone/assurance-ecosystem)
-- [Transparent Clinical GenAI System with Legacy Data](./clinical-genai-data-governance) — A companion case study on data governance, transparency, and the limits of consent and erasure
 - [UK Statistics Authority: Code of Practice for Statistics](https://code.statisticsauthority.gov.uk/) — The professional framework of trustworthiness, quality, and value for official statistics
 - [Office for National Statistics: Statistical disclosure control](https://www.ons.gov.uk/methodology/methodologytopicsandstatisticalconcepts/disclosurecontrol) — Real-world guidance on protecting confidentiality in published statistics
