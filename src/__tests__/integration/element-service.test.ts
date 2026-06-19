@@ -7,6 +7,7 @@ import {
 	detachElement,
 	getElement,
 	getSandboxElements,
+	moveElement,
 	restoreElement,
 	updateElement,
 } from "@/lib/services/element-service";
@@ -543,6 +544,238 @@ describe("element-service", () => {
 			expectError(
 				await getSandboxElements(outsider.id, testCase.id),
 				"Permission denied"
+			);
+		});
+	});
+
+	describe("strategy under property claim (transparent numbering)", () => {
+		it("creates a STRATEGY under a PROPERTY_CLAIM", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: strategy.id,
+				})
+			);
+
+			// Create a strategy under the property claim
+			const nestedStrategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: claim.id,
+				})
+			);
+
+			expect(nestedStrategy.type).toBe("strategy");
+			expect(nestedStrategy.name).toMatch(STRATEGY_NAME_PATTERN);
+
+			// Verify parentId in database
+			const inDb = await prisma.assuranceElement.findUnique({
+				where: { id: nestedStrategy.id },
+			});
+			expect(inDb?.parentId).toBe(claim.id);
+		});
+
+		it("numbers property claims under a strategy-under-property-claim as children of the ancestor claim", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const s1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+
+			// Create direct sub-claim P1.1
+			const p1_1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: p1.id,
+				})
+			);
+			expect(p1_1.name).toBe("P1.1");
+
+			// Create strategy S2 under P1
+			const s2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: p1.id,
+				})
+			);
+			expect(s2.name).toMatch(STRATEGY_NAME_PATTERN);
+
+			// Create property claim under S2 — should be numbered as P1.2 (transparent)
+			const p1_2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s2.id,
+				})
+			);
+			expect(p1_2.name).toBe("P1.2");
+
+			// Verify level is correct (same as direct sub-claims of P1)
+			const inDb = await prisma.assuranceElement.findUnique({
+				where: { id: p1_2.id },
+			});
+			expect(inDb?.level).toBe(2);
+		});
+
+		it("allows moving a strategy to a property claim parent", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			// Create strategy under goal
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: strategy.id,
+				})
+			);
+
+			// Create a second strategy under goal
+			const s2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+
+			// Move s2 to be under claim — should succeed
+			const result = await moveElement(user.id, s2.id, claim.id);
+			expect("data" in result).toBe(true);
+
+			// Verify the parentId was updated
+			const inDb = await prisma.assuranceElement.findUnique({
+				where: { id: s2.id },
+			});
+			expect(inDb?.parentId).toBe(claim.id);
+		});
+
+		it("numbers claims under strategy-under-goal as top-level (no transparency)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+
+			// Property claims under strategy-under-goal should be top-level (P1, P2)
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: strategy.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+
+			const p2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: strategy.id,
+				})
+			);
+			expect(p2.name).toBe("P2");
+		});
+
+		it("rejects moving a strategy under an evidence element", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: strategy.id,
+				})
+			);
+			const evidence = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "evidence",
+					parentId: claim.id,
+				})
+			);
+
+			// Moving a strategy under evidence should fail
+			expectError(
+				await moveElement(user.id, strategy.id, evidence.id),
+				"strategy cannot be a child of evidence"
 			);
 		});
 	});

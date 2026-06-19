@@ -100,7 +100,7 @@ function buildGoalStructure(
 function buildStrategyStructure(
 	strategy: CaseElement,
 	allElements: CaseElement[],
-	goalId: string
+	goalId: string | null
 ): StrategyResponse {
 	const children = allElements.filter((el) => el.parentId === strategy.id);
 
@@ -161,6 +161,11 @@ function buildPropertyClaimStructure(
 			buildPropertyClaimStructure(nested, allElements, null, null)
 		);
 
+	const nestedStrategies = children
+		.filter((el) => el.elementType === "STRATEGY")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((strategy) => buildStrategyStructure(strategy, allElements, null));
+
 	return {
 		id: claim.id,
 		type: "property_claim",
@@ -173,6 +178,7 @@ function buildPropertyClaimStructure(
 		level: claim.level ?? 1,
 		claimType: "Project claim",
 		propertyClaims: nestedClaims,
+		strategies: nestedStrategies,
 		evidence,
 		comments: [],
 		assumption: claim.assumption ?? "",

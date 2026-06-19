@@ -60,6 +60,11 @@ function getAddOptions(nodeType: DiagramNodeType): AddOption[] {
 		case "property":
 			return [
 				{
+					type: "strategy",
+					label: "Add Strategy",
+					icon: <GitBranch className="h-4 w-4" />,
+				},
+				{
 					type: "claim",
 					label: "Add Property Claim",
 					icon: <Scale className="h-4 w-4" />,
@@ -81,7 +86,7 @@ function getAddOptions(nodeType: DiagramNodeType): AddOption[] {
  * Shows different options based on node type:
  * - Goal: Add Strategy, Add Property Claim
  * - Strategy: Add Property Claim
- * - Property: Add Property Claim, Add Evidence
+ * - Property: Add Strategy, Add Property Claim, Add Evidence
  * - Evidence: (no add options)
  *
  * When an option is selected, the popover closes and a dialog opens

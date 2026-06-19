@@ -1,12 +1,12 @@
 /**
  * Element parent-child compatibility rules.
  *
- * Pure function module — no Prisma, importable by both client and server.
+ * Pure function module — no Prisma dependency, importable by both client and server.
  *
  * Hierarchy:
  *   goal          → strategy, property_claim
  *   strategy      → property_claim
- *   property_claim → property_claim, evidence
+ *   property_claim → property_claim, evidence, strategy
  *   evidence      → (terminal — no valid children)
  */
 
@@ -47,7 +47,7 @@ function normalise(type: string): string {
 const VALID_CHILDREN: Record<CanonicalType, CanonicalType[]> = {
 	goal: ["strategy", "property_claim"],
 	strategy: ["property_claim"],
-	property_claim: ["property_claim", "evidence"],
+	property_claim: ["property_claim", "evidence", "strategy"],
 	evidence: [],
 };
 

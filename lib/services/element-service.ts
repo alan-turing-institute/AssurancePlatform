@@ -152,6 +152,54 @@ async function generateElementName(
 		return `${parentInfo.name}.${siblingCount + 1}`;
 	}
 
+	// Property claims under a strategy: transparent numbering
+	// If the strategy's parent is a property claim, number as a child of that ancestor claim.
+	// If the strategy's parent is a goal, fall through to top-level numbering below.
+	if (
+		elementType === "PROPERTY_CLAIM" &&
+		parentId &&
+		parentInfo?.elementType === "STRATEGY"
+	) {
+		// Look up the strategy's parent (one hop — strategies can't be under other strategies)
+		const grandparent = await prisma.assuranceElement.findFirst({
+			where: { id: parentId, deletedAt: null },
+			select: { parentId: true },
+		});
+
+		if (grandparent?.parentId) {
+			const ancestor = await prisma.assuranceElement.findFirst({
+				where: { id: grandparent.parentId, deletedAt: null },
+				select: { elementType: true, name: true, level: true },
+			});
+
+			if (ancestor?.elementType === "PROPERTY_CLAIM" && ancestor.name) {
+				// Count effective siblings: direct PC children of ancestor + PC children of strategies under ancestor
+				const strategyChildren = await prisma.assuranceElement.findMany({
+					where: {
+						parentId: grandparent.parentId,
+						elementType: "STRATEGY",
+						deletedAt: null,
+					},
+					select: { id: true },
+				});
+				const effectiveParentIds = [
+					grandparent.parentId,
+					...strategyChildren.map((s) => s.id),
+				];
+
+				const siblingCount = await prisma.assuranceElement.count({
+					where: {
+						parentId: { in: effectiveParentIds },
+						elementType: "PROPERTY_CLAIM",
+						deletedAt: null,
+					},
+				});
+				return `${ancestor.name}.${siblingCount + 1}`;
+			}
+		}
+		// Strategy is under a goal — fall through to top-level numbering
+	}
+
 	// Top-level property claims (under strategy/goal, not under another property claim)
 	// Count ALL level-1 property claims in the case for case-wide sequential numbering (P1, P2, P3...)
 	if (
@@ -184,6 +232,9 @@ async function generateElementName(
 
 /**
  * Calculates level for property claims and retrieves parent info.
+ *
+ * Strategies are transparent: if the parent is a strategy whose parent is a
+ * property claim, the level is derived from that ancestor claim (one hop up).
  */
 async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	level: number;
@@ -191,21 +242,33 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 }> {
 	const parent = await prisma.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null },
-		select: { level: true, elementType: true, name: true },
+		select: { level: true, elementType: true, name: true, parentId: true },
 	});
 
 	const parentInfo = parent as {
 		name: string | null;
 		elementType: string;
 		level?: number | null;
+		parentId?: string | null;
 	};
 
-	const level =
-		parentInfo?.elementType === "PROPERTY_CLAIM"
-			? (parentInfo.level || 1) + 1
-			: 1;
+	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
+		return { level: (parentInfo.level || 1) + 1, parentInfo };
+	}
 
-	return { level, parentInfo };
+	// Transparent strategy: look one hop further to find ancestor property claim
+	if (parentInfo?.elementType === "STRATEGY" && parentInfo.parentId) {
+		const grandparent = await prisma.assuranceElement.findFirst({
+			where: { id: parentInfo.parentId, deletedAt: null },
+			select: { level: true, elementType: true, name: true },
+		});
+
+		if (grandparent?.elementType === "PROPERTY_CLAIM") {
+			return { level: (grandparent.level || 1) + 1, parentInfo };
+		}
+	}
+
+	return { level: 1, parentInfo };
 }
 
 /**

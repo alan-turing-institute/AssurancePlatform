@@ -59,6 +59,17 @@ repos:
         exclude: '\.next/'
         pass_filenames: false
 
+  # Integration tests (requires Docker PostgreSQL on port 5432)
+  - repo: local
+    hooks:
+      - id: integration-tests
+        name: integration tests (requires Docker PostgreSQL)
+        entry: ./scripts/run-integration-tests.sh
+        language: script
+        files: '\.(ts|tsx)$'
+        exclude: '(node_modules|\.next|e2e)/'
+        pass_filenames: false
+
   # File cleanup (last, so it doesn't interfere with other tools)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 'v5.0.0'
