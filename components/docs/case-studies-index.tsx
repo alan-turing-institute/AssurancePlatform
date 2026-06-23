@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { MdxFile, PageMapItem } from "nextra";
 import { getPageMap } from "nextra/page-map";
 
@@ -99,9 +98,30 @@ export async function getCaseStudyEntries(): Promise<CaseStudyEntry[]> {
  *
  * Adding a new case-study `.mdx` file with `domain` and `assurance_goal`
  * frontmatter makes it appear here automatically — no manual edit required.
+ *
+ * getMDXComponents is dynamically imported so that the module boundary for
+ * getCaseStudyEntries (used in unit tests) does not pull in the Nextra theme
+ * bundle, which executes IntersectionObserver at module load time and is
+ * unavailable in the Node test environment.
  */
 export async function CaseStudiesIndex() {
 	const entries = await getCaseStudyEntries();
+
+	// Dynamic import keeps the Nextra theme bundle out of the getCaseStudyEntries
+	// module graph, so unit tests can import that function without a browser env.
+	// getMDXComponents is a plain function (not a hook) — safe to call in an RSC.
+	const { getMDXComponents } = await import("@/mdx-components");
+	const {
+		a: A,
+		h2: H2,
+		h3: H3,
+		table: Table,
+		tr: Tr,
+		th: Th,
+		td: Td,
+		ul: Ul,
+		li: Li,
+	} = getMDXComponents();
 
 	// Build domain groups (preserving insertion order = sidebar_position order)
 	const domainMap = new Map<string, CaseStudyEntry[]>();
@@ -116,42 +136,42 @@ export async function CaseStudiesIndex() {
 
 	return (
 		<>
-			<h2>Available Case Studies</h2>
+			<H2>Available Case Studies</H2>
 
-			<table>
+			<Table>
 				<thead>
-					<tr>
-						<th>Case Study</th>
-						<th>Domain</th>
-						<th>Assurance Goal</th>
-					</tr>
+					<Tr>
+						<Th>Case Study</Th>
+						<Th>Domain</Th>
+						<Th>Assurance Goal</Th>
+					</Tr>
 				</thead>
 				<tbody>
 					{entries.map((entry) => (
-						<tr key={entry.slug}>
-							<td>
-								<Link href={entry.href}>{entry.title}</Link>
-							</td>
-							<td>{entry.domain}</td>
-							<td>{entry.assurance_goal}</td>
-						</tr>
+						<Tr key={entry.slug}>
+							<Td>
+								<A href={entry.href}>{entry.title}</A>
+							</Td>
+							<Td>{entry.domain}</Td>
+							<Td>{entry.assurance_goal}</Td>
+						</Tr>
 					))}
 				</tbody>
-			</table>
+			</Table>
 
 			{Array.from(domainMap.entries()).map(([domain, domainEntries]) => (
 				<section key={domain}>
-					<h3>{domain}</h3>
-					<ul>
+					<H3>{domain}</H3>
+					<Ul>
 						{domainEntries.map((entry) => (
-							<li key={entry.slug}>
+							<Li key={entry.slug}>
 								<strong>
-									<Link href={entry.href}>{entry.title}</Link>
+									<A href={entry.href}>{entry.title}</A>
 								</strong>{" "}
 								- {entry.description}
-							</li>
+							</Li>
 						))}
-					</ul>
+					</Ul>
 				</section>
 			))}
 		</>
