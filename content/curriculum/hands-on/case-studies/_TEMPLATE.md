@@ -4,8 +4,9 @@
 > extension and underscore prefix so that Nextra does not include it in the
 > documentation build. When creating a new case study, copy this file, rename it
 > to `your-case-study-name.mdx`, and fill in each section following the guidance
-> below. Remember to also add the new case study to the `_meta.ts` file and the
-> `index.mdx` listing.
+> below. Remember to also add the new case study to the `_meta.ts` file.
+> The `index.mdx` listing is auto-generated from frontmatter — no manual edit
+> required provided `domain` and `assurance_goal` are set.
 
 ---
 
@@ -31,6 +32,17 @@ sidebar_label: "Short Label"
 sidebar_position: N
 # ^ Numeric position in the sidebar. Check existing case studies for the
 #   next available number.
+
+domain: "Domain Name"
+# ^ The primary domain of the case study.
+#   e.g. "Healthcare", "Agriculture", "Education", "Environmental",
+#        "Pharmaceutical", "Aviation", "Public Sector"
+
+assurance_goal: "Goal"
+# ^ The primary assurance goal of the case study.
+#   e.g. "Explainability", "Fairness", "Transparency", "Safety", "Privacy"
+# ^ Both domain and assurance_goal are required for the case studies index
+#   to list this case study automatically.
 
 tags:
   - case-studies
