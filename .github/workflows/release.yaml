@@ -36,6 +36,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Prisma Client
+        uses: actions/cache@v5
+        id: prisma-cache-release
+        with:
+          path: src/generated/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma', 'pnpm-lock.yaml') }}
+
+      - name: Generate Prisma client
+        if: steps.prisma-cache-release.outputs.cache-hit != 'true'
+        run: npx prisma generate --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+      - name: Disarm local pre-push hook for CI
+        # `pnpm install` arms core.hooksPath=.githooks (see the `prepare` script),
+        # which re-runs lint+typecheck on `@semantic-release/git`'s push to main.
+        # That hook is a developer fast-fail; CI is authoritative for the
+        # automated release path, so point hooksPath away from it here.
+        run: git config core.hooksPath /dev/null
+
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
