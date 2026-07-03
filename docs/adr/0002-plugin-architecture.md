@@ -106,7 +106,7 @@ The plugin-facing surface is the **existing documented API** (the OpenAPI spec, 
 
 ### Sequencing (aligned to the approved 1.0 plan)
 
-- **Phase A (now → ~24 Jul, with the evidence increment):** the full schema above lands in one migration alongside ADR 0001's models — schema is cheap, churn is not. `requireApiToken(scope)` + registry service. The DARTER registration and its first token are created by a **seed/ops script** — no UI yet. This is everything the keystone demo needs.
+- **Phase A:** the plugin identity schema above (registry + tokens) lands in its own migration, followed by `requireApiToken(scope)` + the registry service. The DARTER registration and its first token are created by a **seed/ops script** — no UI yet. *(Amended 2026-07-03: the original plan landed ADR 0001's evidence/claim-state models in the same migration; that half is now gated behind a claim-state representation review — the ADR 0001 model was judged at risk of overfitting to its first consumer and goes through its own design session before any schema lands. The plugin tables here are vocabulary-neutral and proceed independently.)*
 - **Phase B (24 Jul → 14 Aug):** management API routes + minimal settings UI (register plugin, issue/rotate/revoke tokens, see scopes and last-used), the rewritten plugin guide, format-registry seam.
 
 ## Consequences
@@ -140,7 +140,7 @@ The plugin-facing surface is the **existing documented API** (the OpenAPI spec, 
 
 Sequenced; items 1–3 are Phase A (shared foundation with ADR 0001 — its item 3 *is* item 2 here), 4–6 are Phase B:
 
-1. Schema: `PluginRegistration` + `ApiToken` + `PluginStatus` enum (incl. `User` back-relations; `formatVersion` column on `RuntimeEvidence` so stored records carry the spec version they were captured under), one migration with ADR 0001's models — *foundational*
+1. Schema: `PluginRegistration` + `ApiToken` + `PluginStatus` enum (incl. `User` back-relations), one migration — *foundational; the evidence-side schema (ADR 0001's models + a `formatVersion` column on `RuntimeEvidence`) follows separately once the claim-state representation review concludes*
 2. Machine auth: `requireApiToken(scope)` + hashing/timing-safe/throttle/audit wiring + **`middleware.ts` matcher exemption for machine endpoints** + registry service (`ServiceResult`, service-layer-only Prisma) — *foundational, security; = ADR 0001 item 3*
 3. Seed/ops script: register the DARTER plugin, grant its system user case permissions, issue its token — **plus the `getOrCreateSystemUser` singleton fix (§3), which must land before any plugin system user exists** — *unblocks the keystone demo*
 4. Management API routes + minimal settings UI (register / tokens / revoke / last-used) — *Phase B*
