@@ -50,6 +50,8 @@ Table users {
   caseStudies case_studies [not null]
   markedReadyCases assurance_cases [not null]
   deletedCases assurance_cases [not null]
+  ownedIntegrations integrations [not null]
+  integrationPrincipal integrations
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -152,6 +154,7 @@ Table assurance_cases {
   comments comments [not null]
   caseImage case_images
   caseTypes case_type_assignments [not null]
+  pluginData plugin_data [not null]
   sourceReleases releases [not null]
   publishedReleases releases [not null]
   publishedVersions published_assurance_cases [not null]
@@ -250,6 +253,7 @@ Table assurance_elements {
   evidenceLinksTo evidence_links [not null]
   comments comments [not null]
   releaseComments release_comments [not null]
+  pluginData plugin_data [not null]
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
@@ -552,6 +556,86 @@ Table published_assurance_cases {
   Note: 'Snapshot of an assurance case for case study integration. Content stored as JSON.'
 }
 
+Table plugin_data {
+  id String [pk]
+  pluginId String [not null, note: 'Namespace, e.g. "tea.health"']
+  caseId String [not null, note: 'Permission anchor — access rides on canAccessCase']
+  elementId String [note: 'Null = case-level data']
+  data Json [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  case assurance_cases [not null]
+  element assurance_elements
+
+  indexes {
+    (pluginId, caseId, elementId) [unique]
+  }
+
+  Note: 'Tier-1 namespaced plugin storage, scoped to a case or element. Access
+rides on the case\'s existing canAccessCase permission machinery — no
+parallel ACL. A disabled or uninstalled plugin leaves its rows inert:
+never rendered, never deleted without an explicit user action.'
+}
+
+Table plugin_state {
+  id String [pk]
+  pluginId String [not null]
+  scopeType PluginScopeType [not null]
+  scopeId String [not null]
+  enabled Boolean [not null]
+  settings Json
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+
+  indexes {
+    (pluginId, scopeType, scopeId) [unique]
+  }
+
+  Note: 'Hierarchical plugin enablement (organisation → team → user; off wins
+downward). 1.0 activates only the USER tier; the schema carries all three
+from day one so organisation/team activate later with no migration. No FK
+on scopeId — scope is polymorphic across account tiers, and the
+ORGANISATION tier\'s referent does not exist yet (deliberate).'
+}
+
+Table integrations {
+  id String [pk]
+  name String [unique, not null, note: 'e.g. "darter-evidence-pipeline"']
+  description String
+  ownerId String [not null, note: 'The human accountable for this integration']
+  systemUserId String [unique, not null, note: 'The machine principal (User with isSystemUser)']
+  scopes String[] [not null]
+  status IntegrationStatus [not null, default: 'ACTIVE']
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  lastSeenAt DateTime [note: 'Updated on authenticated use']
+  owner users [not null]
+  systemUser users [not null]
+  tokens api_tokens [not null]
+
+  Note: 'External machine client holding scoped API tokens (renamed from
+PluginRegistration in ADR 0002 v1 — these are integrations, not in-app
+plugins). Owned by a human (accountability) and acts through a dedicated
+system User (principal). No cascade on either User relation: owner
+deletion is blocked while ACTIVE integrations exist, enforced at the
+service layer when the registry service lands.'
+}
+
+Table api_tokens {
+  id String [pk]
+  integrationId String [not null]
+  tokenHash String [unique, not null, note: 'SHA-256 of the secret']
+  tokenPrefix String [not null, note: 'Leading chars of the secret, for identification in UI/logs']
+  expiresAt DateTime
+  lastUsedAt DateTime
+  revokedAt DateTime
+  createdAt DateTime [default: `now()`, not null]
+  integration integrations [not null]
+
+  Note: 'Bearer tokens issued to an integration, never free-floating. Hashed at
+rest; plaintext shown once at issuance.'
+}
+
 Enum AuthProvider {
   LOCAL
   GITHUB
@@ -628,6 +712,18 @@ Enum CaseTypeCategory {
   DOMAIN
   TECHNIQUE
   STANDARD
+}
+
+Enum PluginScopeType {
+  ORGANISATION
+  TEAM
+  USER
+}
+
+Enum IntegrationStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
 }
 
 Ref: teams.createdById > users.id
@@ -725,3 +821,13 @@ Ref: case_study_published_cases.publishedAssuranceCaseId > published_assurance_c
 Ref: case_study_images.caseStudyId - case_studies.id [delete: No Action]
 
 Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id
+
+Ref: plugin_data.caseId > assurance_cases.id [delete: Cascade]
+
+Ref: plugin_data.elementId > assurance_elements.id [delete: Cascade]
+
+Ref: integrations.ownerId > users.id
+
+Ref: integrations.systemUserId > users.id
+
+Ref: api_tokens.integrationId > integrations.id [delete: Cascade]

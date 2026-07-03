@@ -30,6 +30,7 @@ afterEach(async () => {
         case_invites,
         case_team_permissions,
         case_permissions,
+        plugin_data,
         assurance_elements,
         assurance_cases,
         pattern_permissions,
@@ -42,6 +43,9 @@ afterEach(async () => {
         rate_limit_attempts,
         security_audit_logs,
         password_reset_attempts,
+        api_tokens,
+        integrations,
+        plugin_state,
         users
       CASCADE
     `);
