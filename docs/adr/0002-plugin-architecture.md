@@ -1,6 +1,6 @@
 # ADR 0002 — Plugin architecture: extensible core, official plugins first
 
-- **Status:** Proposed (v2 — rewritten 2026-07-03 after the design session with Chris; v1's external-API-only framing is superseded and preserved in this branch's history)
+- **Status:** **Accepted** (Chris Burr, 2026-07-03 — approved in the design session and follow-up rulings: extensible-core model adopted, hierarchical enablement settled, 4 Sep target noted. v2 rewritten same day after the session; v1's external-API-only framing is superseded and preserved in this branch's history)
 - **Date:** 2026-07-03
 - **Author:** cid (agent-atelier technical lead), for the TEA v1.0 release
 - **Deciders:** Chris Burr (PI), TEA maintainers
