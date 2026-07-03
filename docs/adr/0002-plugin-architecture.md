@@ -1,148 +1,159 @@
-# ADR 0002 — Plugin architecture v1: external plugins over a token-authenticated API
+# ADR 0002 — Plugin architecture: extensible core, official plugins first
 
-- **Status:** Proposed
+- **Status:** Proposed (v2 — rewritten 2026-07-03 after the design session with Chris; v1's external-API-only framing is superseded and preserved in this branch's history)
 - **Date:** 2026-07-03
 - **Author:** cid (agent-atelier technical lead), for the TEA v1.0 release
 - **Deciders:** Chris Burr (PI), TEA maintainers
-- **Related:** ADR 0001 (runtime evidence & claim-state), the plugin-ecosystem vision page (`content/technical-guide/architecture/plugin-ecosystem.mdx`), DARTER technical development plan (Interfaces B & C, milestone M1 — contracts frozen July 2026), TEA 1.0 decision package (vault, 2026-07-02)
-- **Supersedes:** the "post-v1.0" timeline stated on the vision page — plugin architecture v1 is **in** 1.0 scope by decision of 2026-07-02
+- **Related:** ADR 0001 (runtime evidence & claim-state — see "Relationship to ADR 0001" below), evidence format v0.1 (`docs/specs/evidence-format-v0.1.md`), the plugin-ecosystem vision page, DARTER technical development plan (Interfaces B & C, milestone M1 — *design* frozen July 2026)
 
 ---
 
 ## Context
 
-The vision page names four plugin types — element-type, format, analysis, and integration plugins — and defers all of them past 1.0. Two things changed:
+The design session of 2026-07-03 settled the question v1 of this ADR answered too narrowly. The target model for TEA's extensibility is **Obsidian's**: a lean core that is fully usable on its own, a set of **official plugins** that ship with the platform and can be toggled on and off, and — as a later destination — a **community marketplace** where third parties submit plugins for review.
 
-1. **DARTER needs a machine-writable path into assurance cases now** (its M1 milestone, July 2026, requires the interface contracts frozen). ADR 0001 designed that path: scoped machine tokens, an append-only evidence endpoint, claim-state.
-2. **The 1.0 review (2026-07-02) found that the evidence path and a plugin system are one build, not two.** What a plugin fundamentally needs — an identity, scoped permissions, and a stable documented API to read and write through — is exactly what ADR 0001's machine auth already specifies. The plugin system's 1.0 core *is* that auth plus a registry and a published contract.
+Three consequences drove the rewrite:
 
-**The question this ADR answers first: what is a plugin, physically, in this codebase?** The platform is a single Next.js application with a database schema fixed at build time. Loading third-party code *into* that process at runtime is neither safe (arbitrary code in the trusted process, no isolation story) nor practical for 1.0 (no stable in-process extension API exists, and designing one speculatively would displace the evidence work DARTER is waiting on).
+1. **Claim/evidence health is a plugin, not core.** v1 of this ADR (and ADR 0001 before it) put claim-state fields on the core `AssuranceElement` schema. Under the adopted model, a user who installs nothing gets the base case builder and stores **no** health data at all. Platform-wide schema changes to serve one extension were exactly the overfit Chris flagged.
+2. **The plugin system must serve more than one shape of plugin.** Three official plugins are already named: **claim/evidence health** (1.0), **TEA techniques integration** and **GSN-style UI** (1.1). A surface designed against three known consumers is generic by construction.
+3. **Release staging is decided:** **1.0** = plugin system + health plugin · **1.1** = techniques + GSN-UI plugins · **later** = the community ecosystem (review pipeline, sandboxing, API stability guarantees). 1.0 ships official plugins only — first-party code, so no sandboxing problem — under the discipline that official plugins use *only* the public extension surfaces. We prove the surfaces on ourselves before opening the door.
+
+**What "plugin" means, physically, in 1.0:** an official plugin is a first-party module compiled into the platform, registered in a static manifest, and switchable per assurance case. It is *not* runtime-loaded third-party code (that is the community tier, later) and it is *not* an external process. External processes — like the DARTER pipeline — are **integrations**: machine clients holding scoped API tokens. v1 of this ADR conflated the two; this version separates them. A plugin may *expose* machine endpoints that integrations call — the health plugin does exactly this.
 
 ## Decision
 
-**A plugin is an external process holding a scoped API token.** It reads case structure through the existing documented API and writes through purpose-built endpoints — first among them the evidence endpoint of ADR 0001. The platform does not load, host, or execute plugin code in 1.0.
+### 1. The layer model
 
-Five parts:
+| Layer | Contains | Commitment |
+|---|---|---|
+| **Core** | Case builder, element graph, permissions, auth, snapshots, SSE — plus the four extension surfaces below | Semantically neutral: core knows *that* plugins exist, never *what they mean* |
+| **Official plugins** (1.0: health; 1.1: techniques, GSN-UI) | First-party modules on the public surfaces; toggleable per case | May be disabled without loss: their data sits inert, never stripped |
+| **Integrations** | External machine clients (DARTER pipeline first) with scoped tokens | Talk to core and plugin machine endpoints; never inside the process |
+| **Community plugins** (later) | Third-party code, reviewed, sandboxed | Out of scope for 1.0/1.1 — named, not designed here |
 
-### 1. Plugin registry — `PluginRegistration`
+**One-way dependency rule (load-bearing):** plugins depend on core; core never depends on any plugin. No core table references a plugin table; no core module imports from a plugin module. This rule is what keeps the base platform genuinely plugin-free.
 
-A first-class record of what is connected, by whom, with which permissions:
+### 2. The four extension surfaces
 
-```
-model PluginRegistration {
-  id            String        @id @default(uuid())
-  name          String        @unique                    // e.g. "darter-evidence-pipeline"
-  description   String?
-  ownerId       String        @map("owner_id")           // the human accountable for this plugin
-  systemUserId  String        @unique @map("system_user_id") // the machine principal (User with isSystemUser)
-  scopes        String[]      @default([]) @map("scopes")    // verb grants, see §3
-  status        PluginStatus  @default(ACTIVE)
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  lastSeenAt    DateTime?     @map("last_seen_at")       // updated on authenticated use
-  owner         User          @relation("PluginOwner", fields: [ownerId], references: [id])
-  systemUser    User          @relation("PluginPrincipal", fields: [systemUserId], references: [id])
-  tokens        ApiToken[]
-  @@map("plugin_registrations")
-}
-enum PluginStatus { ACTIVE  SUSPENDED  REVOKED }
-```
+#### 2.1 Extension data — two tiers
 
-Every plugin is **owned by a human** (accountability) and **acts as a dedicated system `User`** (the schema's existing `isSystemUser` flag, built for exactly this). Suspending or revoking the registration cuts off every token it holds.
-
-Schema notes for the implementer: both named relations need their **back-relation fields declared on `User`** (Prisma requires both ends — same for ADR 0001's `RuntimeEvidence.claim` ↔ `AssuranceElement`); and the `User` relations deliberately carry **no cascade** — deleting a human owner is **blocked while they own `ACTIVE` registrations** (reassign first), enforced in the account-deletion service path.
-
-### 2. Tokens — `ApiToken` (ADR 0001 §3, now owned by the registry)
-
-Tokens are issued *to a registration*, never free-floating:
+**Tier 1 — namespaced generic data.** One core table holds structured JSON per plugin, per case or element:
 
 ```
-model ApiToken {
-  id             String     @id @default(uuid())
-  registrationId String     @map("registration_id")
-  tokenHash      String     @unique @map("token_hash")  // SHA-256 of the secret; plaintext shown once
-  tokenPrefix    String     @map("token_prefix")        // first 8 chars, for identification in UI/logs
-  expiresAt      DateTime?  @map("expires_at")
-  lastUsedAt     DateTime?  @map("last_used_at")
-  revokedAt      DateTime?  @map("revoked_at")
-  createdAt      DateTime   @default(now()) @map("created_at")
-  registration   PluginRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  @@map("api_tokens")
+model PluginData {
+  id         String   @id @default(uuid())
+  pluginId   String   @map("plugin_id")     // the namespace, e.g. "tea.health"
+  caseId     String   @map("case_id")       // permission anchor — access rides on canAccessCase
+  elementId  String?  @map("element_id")    // null = case-level data
+  data       Json
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  @@unique([pluginId, caseId, elementId])
+  @@index([caseId, pluginId])
+  @@map("plugin_data")
 }
 ```
 
-Rules: hashed at rest; compared timing-safely (`lib/auth/timing-safe.ts` already exists); plaintext displayed exactly once at issuance; rotation = issue new + revoke old (both live during the overlap); a `teap_` prefix on the secret so leaked tokens are grep-able by secret scanners.
+Namespacing is enforced, not hoped for: a plugin's service can only read/write rows under its own `pluginId`. Permissions anchor on the **case** via the existing `canAccessCase` machinery — no parallel ACL. Disabled or uninstalled plugin → rows sit inert (never rendered, never deleted without an explicit user action).
 
-`requireApiToken(scope)` — the machine mirror of `requireAuth()` — resolves the bearer token to its registration, checks status + expiry + scope, stamps `lastUsedAt`/`lastSeenAt`, and returns the machine principal context (`systemUserId`, `registrationId`). Failures are throttled via the existing `RateLimitAttempt` pattern (keyed on `ip` for failed attempts — a garbage token resolves to no user, and the current `identifierType` union has no token variant) and logged to `SecurityAuditLog`.
+**Tier 2 — plugin-owned tables**, for official server-side plugins with integrity requirements that JSON cannot honestly carry. Decided in-session to fix one instance now, against technical debt: **the evidence log is a real table from day one** (`plugin_health_evidence` — the append-only, hash-chained design from ADR 0001 §2, unchanged in substance). Rules for all tier-2 tables: name prefixed `plugin_<pluginId>_`, migrations through the normal reviewed pipeline (first-party code needs no new machinery), foreign keys may point **at** core, never the reverse.
 
-**Middleware exemption (load-bearing, easy to miss):** `middleware.ts` routes everything outside a fixed allowlist through NextAuth's `withAuth` — a bearer-token-only client hitting a machine endpoint today gets a 307 redirect to the login page, never the route handler. The machine-endpoint path prefixes MUST be added to the matcher's negative lookahead (exact precedent: the existing `api/cron` entry). Auth for these routes is then enforced solely by `requireApiToken` at the route layer. Without this, nothing in this ADR is reachable.
+Community plugins (later) get tier 1 only; tier 2 is an official-plugin privilege because it rides the reviewed-migration pipeline.
 
-### 3. Authorisation: scopes gate verbs; **case access reuses the existing permission model**
+#### 2.2 Plugin lifecycle
 
-The deliberate non-decision that keeps this small: **we do not build a parallel ACL system for machines.**
+- A static **manifest** of official plugins in code: id (`tea.health`), name, version, which surfaces it uses.
+- **Availability** is a deployment concern (config/env: which official plugins this instance offers).
+- **Enablement is per case** (recommended in-session; confirm at reconvene): a `PluginState` row (caseId, pluginId, enabled, settings JSON). Obsidian toggles per vault; the case is TEA's vault-analogue — different teams' cases legitimately want different plugin sets, and per-case enablement is what makes "no health data unless this case opted in" true at the natural grain.
+- A **settings section** (core UI) lists available plugins per case with toggle + per-plugin settings — the analogue of Obsidian's community-plugins pane, official-only for now.
 
-- **Scopes** are a small fixed vocabulary of verb grants held on the registration: `case:read`, `evidence:read`, `evidence:write` (v1 complete list; extended only by ADR).
-- **Which cases** a plugin may touch is decided by the existing per-case permission machinery: the plugin's system `User` is granted case permissions (VIEW / EDIT) exactly like a human collaborator, and the service layer's existing `canAccessCase` checks apply unchanged.
+#### 2.3 UI extension points
 
-So a token proves *who is calling* (authentication), scopes bound *what kinds of action* it may attempt, and per-case permissions decide *which cases* — least privilege by construction, and the case-authorisation path itself is untouched (verified: `canAccessCase` and its call sites key on a bare `userId` with zero session coupling). Not-found and no-permission return the same error, as everywhere else.
+Build-time slots, registered by official plugins through one registry module (the pattern `lib/export/exporters/` already proves). Sized against the three known plugins:
 
-**One required accompanying fix — the `isSystemUser` singleton assumption.** `getOrCreateSystemUser` (`lib/services/user-management-service.ts`) does an unqualified `findFirst({ where: { isSystemUser: true } })` and reassigns deleted users' case ownership to whatever it finds. Once plugins each have a system user, that lookup becomes nondeterministic — and because `createdById === userId` grants implicit ADMIN, a plugin principal could silently inherit ownership (and admin rights) over cases it was never granted. The helper MUST be changed to select the generic fallback account by its stable identifier (e.g. email), not the bare flag, in the same change that introduces plugin system users. This is the one place the "reuse, don't rebuild" claim needed a code change, found in feasibility review (2026-07-03).
-
-### 4. The published contract
-
-The plugin-facing surface is the **existing documented API** (the OpenAPI spec, `pnpm docs:generate`) plus the purpose-built machine endpoints from ADR 0001. Two artefacts make it a *contract*:
-
-- **Evidence format v0.1** (`docs/specs/evidence-format-v0.1.md`) — the versioned JSON schema of one evidence item (DARTER's Interface B). The `POST /api/elements/[id]/evidence` body *is* this format. Frozen as v0.1 for DARTER S0; changes bump the version.
-- **The plugin guide** — the vision page (`plugin-ecosystem.mdx`) is rewritten from "coming soon" to the real how-to: register, obtain a token, scopes, the endpoints, rate limits, the evidence format. Routes in the published spec are semi-contractual per the repo's existing rule.
-
-### 5. How the four visioned plugin types map
-
-| Vision type | 1.0 answer |
+| Slot | First consumer |
 |---|---|
-| **Integration** (external systems) | **Native fit** — this model, no adaptation needed. First instance: the DARTER evidence pipeline. |
-| **Analysis** (checkers, validators) | **Native fit** — read via `case:read`, write findings as evidence via `evidence:write`. |
-| **Format** (import/export) | **Two different things, answered separately (corrected in feasibility review 2026-07-03).** *Document export* (PDF/DOCX/Markdown reports) already has a working `ExporterRegistry` in `lib/export/` — 1.0 keeps it as the explicit contribution seam; third-party formats arrive as reviewed code contributions. *Case-data interchange* (GSN Community Standard XML, SACM, SCSC — what the vision page actually means) has **no seam at all**: `case-import-service` only auto-detects TEA's two internal JSON shapes, and there is no import counterpart to generalise. Interchange formats are **deferred beyond 1.0 as their own design cycle** — saying otherwise would misprice the work. |
-| **Element-type** (custom node types) | **Deferred beyond 1.0, explicitly.** The element-type list is baked into the database enum and the canvas components. Genuinely hard; not 1.0 material; revisit with real demand. |
+| `element-badge` — small status affordance on a canvas node | Health: the state dot |
+| `element-panel` — a tab in the element detail view | Health: the evidence log / trace view |
+| `case-panel` — a sidebar section at case level | Techniques (1.1): suggested evidence-generating techniques |
+| `canvas-decorator` — notation/re-skin layer over the graph | GSN-UI (1.1) |
+| `settings-section` — per-plugin settings within the plugin pane | All |
 
-### Sequencing (aligned to the approved 1.0 plan)
+Slots render nothing when no enabled plugin registers into them; core screens must be complete without any slot filled.
 
-- **Phase A:** the plugin identity schema above (registry + tokens) lands in its own migration, followed by `requireApiToken(scope)` + the registry service. The DARTER registration and its first token are created by a **seed/ops script** — no UI yet. *(Amended 2026-07-03: the original plan landed ADR 0001's evidence/claim-state models in the same migration; that half is now gated behind a claim-state representation review — the ADR 0001 model was judged at risk of overfitting to its first consumer and goes through its own design session before any schema lands. The plugin tables here are vocabulary-neutral and proceed independently.)*
-- **Phase B (24 Jul → 14 Aug):** management API routes + minimal settings UI (register plugin, issue/rotate/revoke tokens, see scopes and last-used), the rewritten plugin guide, format-registry seam.
+#### 2.4 Machine access (the surviving pillar of v1)
+
+Carried over from v1 with one rename and all feasibility-review findings intact:
+
+- **`Integration`** (was `PluginRegistration` — renamed because these are external machine clients, not in-app plugins) + **`ApiToken`**: human-owned registrations of external systems, hashed tokens (`teap_` prefix, shown once, timing-safe compare), scoped, suspendable; acting through a dedicated system `User`.
+- **Scopes** gate verbs; **which cases** an integration touches rides on the existing per-case permission model via its system user (verified against code in the 2026-07-03 feasibility review: `canAccessCase` keys on a bare `userId`, zero session coupling). Scope strings are plugin-namespaced where they gate plugin endpoints (`health:evidence:write`); core scopes stay unprefixed (`case:read`).
+- **All machine endpoints live under one path prefix: `/api/machine/…`** — a single `middleware.ts` matcher exemption (the review's R1 blocker: today every unlisted route 307-redirects bearer-token clients to the login page). `requireApiToken(scope)` is enforced in every handler under the prefix; failed attempts throttle by `ip` (the existing `identifierType` union has no token variant) and audit to `SecurityAuditLog`.
+- **Required accompanying fix (review R2, privilege escalation):** `getOrCreateSystemUser` selects by bare `isSystemUser: true` and reassigns deleted users' case ownership to whatever it finds; it must select the generic fallback account by stable identifier before any integration system user exists.
+- Prisma back-relations declared on both ends; no cascade from `Integration` to `User` — owner deletion is blocked while active integrations exist.
+
+#### 2.5 Events
+
+SSE event types become namespaced when plugin-emitted (`tea.health/state-changed`). The connection manager's closed `SSEEventType` union gains a plugin-event variant; plugins emit only after their write transaction commits.
+
+### 3. The first official plugin: claim/evidence health (1.0)
+
+The health plugin is the proof of every surface, and DARTER's dependency. Its internals adopt ADR 0001's designs, relocated:
+
+- **Storage:** `plugin_health_evidence` (tier 2 — ADR 0001 §2's append-only, provenance-stamped, hash-chained log, plus a `format_version` column) and per-claim state in tier-1 `PluginData` under `tea.health`: `{ score, lastEvaluatedAt, validityWindowSeconds }`.
+- **Representation (the question that started all this):** a **continuous score 0.0–1.0** with every vocabulary (traffic lights, binary) as a derived, configurable view — now a *plugin-internal* choice, revisable without touching anyone's core schema. Health ⊥ freshness (green-but-stale) is preserved: staleness derives from `lastEvaluatedAt` + `validityWindowSeconds`.
+- **Ingestion:** `POST /api/machine/health/elements/[id]/evidence`, token scope `health:evidence:write`, body = **evidence format v0.1 unchanged** (`docs/specs/evidence-format-v0.1.md` survives verbatim as the plugin's ingestion contract; body `claimId` must equal the path id, 400 on mismatch). Append (hash chain, concurrency-guarded row lock) → score recompute (worst-verdict-in-window v1 rule, thresholds in plugin settings) → `PluginData` update → SSE after commit. `GET` returns the log.
+- **UI:** state dot via `element-badge`; evidence log via `element-panel`. Both dark when the plugin is off.
+- **Staleness sweeper:** the existing cron-route pattern, marking stale claims and emitting SSE.
+- **Snapshots:** `ReleaseSnapshot` content gains a `pluginData` section capturing each *enabled* plugin's namespace verbatim — a snapshot remains a citable point-in-time record, plugins included, without core understanding any of it.
+- **DARTER end-to-end:** pipeline (integration, token) → machine endpoint → health plugin → score + SSE → badge flips live. The keystone demo survives intact, one architectural floor lower.
+
+### 4. Explicitly not in 1.0 (named, not silently dropped)
+
+Community runtime (sandboxing, review pipeline, marketplace, API stability guarantees) · third-party UI code · tier-1 public write API hardening (quotas, per-plugin schema registry — needed only when non-first-party code writes) · element-type plugins (schema-baked; unchanged from v1's deferral) · case-interchange format plugins (GSN XML, SACM, SCSC — no existing seam; own design cycle) · webhooks/event push to integrations.
+
+## Relationship to ADR 0001
+
+ADR 0001 (merged, status Proposed) is **partially superseded**: its §1 claim-state fields on core `AssuranceElement` and its §4 placement of endpoints in the core API do not proceed. Its §2 evidence-log design, §3 machine-auth concept, and §5 evidence format survive intact inside the health plugin and the integration pillar. A supersession banner goes on ADR 0001 in this same PR; it stays in the record as the design the health plugin implements.
 
 ## Consequences
 
 **Positive**
-- One build, two payoffs: the machine-auth + registry + contract *is* the plugin system's core, and the DARTER evidence pipeline is its first working plugin — no speculative plugin-loader built on guesses about future needs.
-- Authorisation reuses the battle-tested per-case permission model; the new security surface is authentication only (hashing, timing-safe compare, throttling — all with existing in-repo precedents).
-- The platform's open-source story gets a real extension answer at 1.0 without runtime code-loading risk.
+- The core stays semantically neutral — the platform-wide-commitment problem that triggered the 2026-07-03 review structurally cannot recur; plugin design mistakes are now local and revisable.
+- Three release trains (1.0 / 1.1 / community) each land on surfaces already proven by the previous one; DARTER M1 (July, *design* frozen) is satisfied by this document rather than by rushed code.
+- "No plugins = base builder, nothing stored" is a checkable property, per case.
 
 **Negative / costs**
-- External-only plugins mean no UI extensions and no custom element types in 1.0 — the two most-requested "plugin" imaginings on the vision page. The vision page rewrite must say so plainly.
-- Every plugin needs its own hosting; the barrier to entry is "run a service", not "drop in a file". Acceptable for 1.0's actual consumers (pipelines, checkers), revisit if demand says otherwise.
-- Token lifecycle (rotation, expiry hygiene) is operational burden on plugin owners; mitigated by `lastUsedAt` visibility and revocation-by-registration.
+- More design lands before the first line of implementation; the coded keystone demo moves (~2 weeks — see timeline).
+- Two storage tiers to explain and police (mitigated: tier 2 is a *rule*, not machinery).
+- Core UI must be complete with every slot empty — a real design constraint on 1.0 screens.
+- Cases shared to a deployment without a given plugin show inert data affordances (a "plugin data present but plugin unavailable" state needs one honest UI treatment).
 
-**Deferred (named, not silently dropped)**
-- Element-type plugins (schema + canvas baked; needs its own design cycle).
-- Case-data interchange formats (GSN XML, SACM, SCSC) — no existing seam; a fresh design cycle post-1.0 (see §5 format row).
-- In-process or sandboxed (WASM/worker) plugin execution.
-- Webhooks / event subscriptions pushed *to* plugins (1.0 plugins poll or act on their own schedule; the SSE stream exists for browsers but is not part of the machine contract yet).
-- A plugin marketplace/directory; multi-tenant token quotas.
+**Deferred (named)** — everything in §4, plus: per-element enablement granularity (case-level assumed sufficient), plugin data export/purge tooling (until a real deletion request), defeat-cascade through the claim DAG (unchanged from ADR 0001 — Steffen/DTNet+, Nov 2026).
 
 ## Alternatives considered
 
-- **In-process plugin loader (npm packages, dynamic import).** Rejected for 1.0: arbitrary third-party code inside the trusted process, no isolation, and a speculative extension API designed before any real consumer exists — except one, DARTER, which is external by nature.
-- **Sandboxed execution (WASM / worker threads).** The credible long-term in-process answer, but a research-grade effort; nothing in 1.0 scope needs it.
-- **Webhook-only integration (platform pushes, plugins receive).** Inverts the wrong way for the first consumer: DARTER *produces* evidence on its own cadence and must write in; it does not wait to be called.
-- **A separate machine ACL table (per-token case lists).** Rejected: duplicates the existing permission model, guaranteeing drift between human and machine authorisation. Granting the system user case permissions keeps one model.
-- **Ship the evidence endpoint with ad-hoc auth, design plugins later.** Rejected: the marginal cost of the registry over a bare token table is one model + one service, and skipping it now means re-cutting the auth surface within weeks.
+- **v1 of this ADR (external-API-only "plugins").** Superseded: it answered the integration question and called it the plugin system; it could never yield toggleable in-app capabilities like GSN-UI, and it forced claim health into core schema.
+- **Claim-state in core with a migration to plugins post-1.0** (the "hybrid" option at the direction call). Rejected: a data migration against live user cases to fix a known-wrong placement, twice the design work in exchange for ~2 weeks of schedule.
+- **Community runtime in 1.0.** Rejected: sandboxing + review + API guarantees is an ecosystem investment; shipping official plugins on public surfaces gets the architecture validated without it.
+- **Tier-1-only storage (evidence log in JSON).** Rejected in-session: migrating an append-only, hash-chained, regulator-facing log out of JSONB later is the single worst migration on offer.
 
-## Work breakdown
+## Work breakdown (1.0)
 
-Sequenced; items 1–3 are Phase A (shared foundation with ADR 0001 — its item 3 *is* item 2 here), 4–6 are Phase B:
+Sequenced; issue mapping in brackets (vault, epic [[TEA 1.0 Release]]):
 
-1. Schema: `PluginRegistration` + `ApiToken` + `PluginStatus` enum (incl. `User` back-relations), one migration — *foundational; the evidence-side schema (ADR 0001's models + a `formatVersion` column on `RuntimeEvidence`) follows separately once the claim-state representation review concludes*
-2. Machine auth: `requireApiToken(scope)` + hashing/timing-safe/throttle/audit wiring + **`middleware.ts` matcher exemption for machine endpoints** + registry service (`ServiceResult`, service-layer-only Prisma) — *foundational, security; = ADR 0001 item 3*
-3. Seed/ops script: register the DARTER plugin, grant its system user case permissions, issue its token — **plus the `getOrCreateSystemUser` singleton fix (§3), which must land before any plugin system user exists** — *unblocks the keystone demo*
-4. Management API routes + minimal settings UI (register / tokens / revoke / last-used) — *Phase B*
-5. Plugin guide: rewrite `plugin-ecosystem.mdx` from vision to contract; OpenAPI annotations on machine endpoints — *Phase B*
-6. Document-export contribution seam: keep `ExporterRegistry` as the single registration point; derive `ExportFormat` from it (one source of truth); document it as the format-contribution path — *Phase B, small; case-interchange formats deferred per §5*
+1. **Extension foundations schema** — `PluginData` + `PluginState` + `Integration` + `ApiToken`, one migration [re-cuts *Plugin auth schema foundation*]
+2. **Machine auth + integration registry service** — `requireApiToken`, `/api/machine` middleware exemption, `getOrCreateSystemUser` fix, seed script for the DARTER integration [survives as *Machine auth & plugin registry service*, renamed objects]
+3. **Plugin lifecycle core** — manifest, per-case enablement service, settings pane with toggles [new issue]
+4. **UI extension slots** — registry + `element-badge` + `element-panel` minimal [new issue, aerith]
+5. **Health plugin, server core** — `plugin_health_evidence` + scoring + machine endpoints + SSE [re-cuts *Evidence endpoints & confidence scoring (keystone)*]
+6. **Health plugin, hardening** — staleness sweeper + snapshot `pluginData` capture [re-cuts *Staleness sweeper & snapshot integration*]
+7. **Integration management API + settings UI** [survives as *Plugin management API & settings UI*]
+8. **Plugin guide + contract docs** — the vision page rewritten against THIS model [survives as *Plugin guide & contract docs*]
+9. *(flex)* Document-export registry seam [unchanged]
+
+## Timeline proposal (for the reconvene)
+
+- **Now (July):** this ADR approved → DARTER M1's "TEA extension design" frozen — the milestone the July date actually names.
+- **w/c 7 Jul → early Aug:** items 1–4 (barret + aerith), cid reviewing around BAE commitments (partial until 23 Jul).
+- **Keystone demo w/c 11 Aug** (was ~24 Jul): one evidence POST from a token-authenticated integration flips a claim badge on staging — now demonstrating the *whole architecture*, not a special-cased path.
+- **v1.0 tag Thursday 4 September** (was 21 Aug — the decision package's named conservative date, now the honest one). 1.1 (techniques + GSN-UI) is scoped after 1.0 ships.

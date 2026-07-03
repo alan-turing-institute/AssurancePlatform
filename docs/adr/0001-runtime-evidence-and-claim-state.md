@@ -1,5 +1,7 @@
 # ADR 0001 — Runtime evidence ingestion and claim-state
 
+> **⚠ Partially superseded by ADR 0002 (2026-07-03).** The 2026-07-03 design session adopted an extensible-core / official-plugins architecture: claim/evidence health is a **plugin**, not core. Consequently §1's claim-state fields on core `AssuranceElement` and §4's placement of the endpoints in the core API **do not proceed as written** — the health plugin carries them (per-claim state in namespaced plugin data; endpoints under `/api/machine/health/…`). §2 (the append-only evidence log — now `plugin_health_evidence`), §3 (machine auth), and §5 (evidence format v0.1) survive in substance as the health plugin's internals and the integration pillar. See ADR 0002 for the architecture; this document remains the record of the evidence/claim-state design the plugin implements.
+
 - **Status:** Proposed
 - **Date:** 2026-06-03
 - **Author:** cid (agent-atelier technical lead), for the DARTER / TEA v1.0 work
