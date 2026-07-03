@@ -273,13 +273,24 @@ const SYSTEM_USER_EMAIL = "system@tea-platform.internal";
 const SYSTEM_USER_USERNAME = "system";
 
 /**
- * Gets or creates the system user for ownership transfer.
+ * Gets or creates the generic fallback system user for ownership transfer
+ * (used when a human account is deleted).
+ *
+ * Selects by the stable `SYSTEM_USER_EMAIL` identifier, NOT bare
+ * `isSystemUser: true` — a bare-flag lookup is a privilege-escalation
+ * hazard once integration system users exist (ADR 0002 v2 §2.4, feasibility
+ * review R2): `findFirst({ isSystemUser: true })` returns whichever system
+ * user Postgres happens to return first, which could just as easily be an
+ * integration's machine principal as this fallback account. Deleted users'
+ * case ownership — createdById, i.e. implicit ADMIN — would then be
+ * reassigned to an integration's principal instead of the intended generic
+ * account, handing that integration elevated access it never had.
  */
 async function getOrCreateSystemUser(
 	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 ): Promise<string> {
 	let systemUser = await tx.user.findFirst({
-		where: { isSystemUser: true },
+		where: { email: SYSTEM_USER_EMAIL, isSystemUser: true },
 		select: { id: true },
 	});
 
