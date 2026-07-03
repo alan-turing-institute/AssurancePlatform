@@ -21,11 +21,23 @@ export const INTEGRATION_TEST_ADMIN_DATABASE_URL =
 export const INTEGRATION_TEST_TEMPLATE_DATABASE = "tea_test_template";
 
 /** Prefix for per-worker throwaway databases: `tea_test_w1`, `tea_test_w2`, … */
-export const INTEGRATION_TEST_WORKER_DATABASE_PREFIX = "tea_test_w";
+const INTEGRATION_TEST_WORKER_DATABASE_PREFIX = "tea_test_w";
 
 /** Matches exactly the worker databases this scheme owns — used for force-drop and assertions. */
 export const INTEGRATION_TEST_WORKER_DATABASE_PATTERN = /^tea_test_w[0-9]+$/;
 
+/**
+ * Validates and formats a vitest worker/pool id into its worker database
+ * name. Rejects anything outside `1..INTEGRATION_TEST_WORKER_COUNT` so a bad
+ * or unset `VITEST_POOL_ID` fails loudly here, naming the bad value, instead
+ * of surfacing later as an opaque "database does not exist" from pg.
+ */
 export function workerDatabaseName(poolId: string | number): string {
-	return `${INTEGRATION_TEST_WORKER_DATABASE_PREFIX}${poolId}`;
+	const id = typeof poolId === "number" ? poolId : Number.parseInt(poolId, 10);
+	if (!Number.isInteger(id) || id < 1 || id > INTEGRATION_TEST_WORKER_COUNT) {
+		throw new Error(
+			`Invalid vitest worker id ${JSON.stringify(poolId)}: expected an integer between 1 and ${INTEGRATION_TEST_WORKER_COUNT} (INTEGRATION_TEST_WORKER_COUNT), got ${id}`
+		);
+	}
+	return `${INTEGRATION_TEST_WORKER_DATABASE_PREFIX}${id}`;
 }

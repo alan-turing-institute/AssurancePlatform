@@ -71,7 +71,8 @@ async function dropAllWorkerDatabases(
 	logPrefix: string
 ): Promise<void> {
 	const result = await adminPool.query<{ datname: string }>(
-		"SELECT datname FROM pg_database WHERE datname ~ '^tea_test_w[0-9]+$'"
+		"SELECT datname FROM pg_database WHERE datname ~ $1",
+		[INTEGRATION_TEST_WORKER_DATABASE_PATTERN.source]
 	);
 	for (const row of result.rows) {
 		if (!INTEGRATION_TEST_WORKER_DATABASE_PATTERN.test(row.datname)) {
