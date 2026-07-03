@@ -27,7 +27,7 @@ Three consequences drove the rewrite:
 | Layer | Contains | Commitment |
 |---|---|---|
 | **Core** | Case builder, element graph, permissions, auth, snapshots, SSE — plus the four extension surfaces below | Semantically neutral: core knows *that* plugins exist, never *what they mean* |
-| **Official plugins** (1.0: health; 1.1: techniques, GSN-UI) | First-party modules on the public surfaces; toggleable per case | May be disabled without loss: their data sits inert, never stripped |
+| **Official plugins** (1.0: health; 1.1: techniques, GSN-UI) | First-party modules on the public surfaces; hierarchically toggleable (organisation → team → user, off wins downward) | May be disabled without loss: their data sits inert, never stripped |
 | **Integrations** | External machine clients (DARTER pipeline first) with scoped tokens | Talk to core and plugin machine endpoints; never inside the process |
 | **Community plugins** (later) | Third-party code, reviewed, sandboxed | Out of scope for 1.0/1.1 — named, not designed here |
 
@@ -64,8 +64,10 @@ Community plugins (later) get tier 1 only; tier 2 is an official-plugin privileg
 
 - A static **manifest** of official plugins in code: id (`tea.health`), name, version, which surfaces it uses.
 - **Availability** is a deployment concern (config/env: which official plugins this instance offers).
-- **Enablement is per case** (recommended in-session; confirm at reconvene): a `PluginState` row (caseId, pluginId, enabled, settings JSON). Obsidian toggles per vault; the case is TEA's vault-analogue — different teams' cases legitimately want different plugin sets, and per-case enablement is what makes "no health data unless this case opted in" true at the natural grain.
-- A **settings section** (core UI) lists available plugins per case with toggle + per-plugin settings — the analogue of Obsidian's community-plugins pane, official-only for now.
+- **Enablement is hierarchically scoped, off wins downward** (settled with Chris, 2026-07-03 — per-case toggles were considered and rejected as too fine-grained, the Obsidian per-note trap). The scope chain rides the platform's account model: **organisation → team → user**. A plugin is usable in a context only if *no level above it* has switched it off: organisation off means no team, user, or case beneath can use it; a user may switch a plugin off for themselves even where the organisation/team has it on — never the reverse.
+- **1.0 implements** deployment availability + the **user-level** toggle. The schema carries the scope dimension from day one — `PluginState` (pluginId, `scopeType` ORGANISATION | TEAM | USER, scopeId, enabled, settings JSON, unique per plugin+scope) — so the organisation and team tiers activate when the organisation model (not yet built) lands, with no migration.
+- **The storage guarantee moves up the hierarchy:** a user-level "off" hides the plugin's UI and API surface *for that user*; data written by other enabled collaborators on a shared case still exists and sits inert for them (Obsidian's exact semantics — plugin off ≠ others' data purged). The strong "nothing stored at all" property attaches to the topmost OFF: deployment or organisation.
+- A **settings section** (core UI) lists available plugins with toggle + per-plugin settings, showing the *effective* state and which level pinned it — the analogue of Obsidian's community-plugins pane, official-only for now.
 
 #### 2.3 UI extension points
 
@@ -104,7 +106,7 @@ The health plugin is the proof of every surface, and DARTER's dependency. Its in
 - **Ingestion:** `POST /api/machine/health/elements/[id]/evidence`, token scope `health:evidence:write`, body = **evidence format v0.1 unchanged** (`docs/specs/evidence-format-v0.1.md` survives verbatim as the plugin's ingestion contract; body `claimId` must equal the path id, 400 on mismatch). Append (hash chain, concurrency-guarded row lock) → score recompute (worst-verdict-in-window v1 rule, thresholds in plugin settings) → `PluginData` update → SSE after commit. `GET` returns the log.
 - **UI:** state dot via `element-badge`; evidence log via `element-panel`. Both dark when the plugin is off.
 - **Staleness sweeper:** the existing cron-route pattern, marking stale claims and emitting SSE.
-- **Snapshots:** `ReleaseSnapshot` content gains a `pluginData` section capturing each *enabled* plugin's namespace verbatim — a snapshot remains a citable point-in-time record, plugins included, without core understanding any of it.
+- **Snapshots:** `ReleaseSnapshot` content gains a `pluginData` section capturing every plugin namespace **holding data on the case** (capture follows data present, not any viewer's toggle) — a snapshot remains a citable point-in-time record, plugins included, without core understanding any of it.
 - **DARTER end-to-end:** pipeline (integration, token) → machine endpoint → health plugin → score + SSE → badge flips live. The keystone demo survives intact, one architectural floor lower.
 
 ### 4. Explicitly not in 1.0 (named, not silently dropped)
@@ -128,7 +130,7 @@ ADR 0001 (merged, status Proposed) is **partially superseded**: its §1 claim-st
 - Core UI must be complete with every slot empty — a real design constraint on 1.0 screens.
 - Cases shared to a deployment without a given plugin show inert data affordances (a "plugin data present but plugin unavailable" state needs one honest UI treatment).
 
-**Deferred (named)** — everything in §4, plus: per-element enablement granularity (case-level assumed sufficient), plugin data export/purge tooling (until a real deletion request), defeat-cascade through the claim DAG (unchanged from ADR 0001 — Steffen/DTNet+, Nov 2026).
+**Deferred (named)** — everything in §4, plus: activating the ORGANISATION/TEAM tiers of the scoped-enablement schema (waits on the organisation model; schema is ready), plugin data export/purge tooling (until a real deletion request), defeat-cascade through the claim DAG (unchanged from ADR 0001 — Steffen/DTNet+, Nov 2026).
 
 ## Alternatives considered
 
