@@ -1,6 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { INTEGRATION_TEST_WORKER_COUNT } from "./src/__tests__/scripts/test-db-config";
 
 /**
  * Vitest workspace configuration with two projects:
@@ -55,8 +56,13 @@ export default defineConfig({
 					testTimeout: 30_000,
 					hookTimeout: 15_000,
 					pool: "forks",
-					fileParallelism: false,
+					// vitest 4 replaced poolOptions.forks.maxForks with a single
+					// maxWorkers option shared across pool types.
+					maxWorkers: INTEGRATION_TEST_WORKER_COUNT,
 					env: {
+						// Fallback/admin connection only — each worker's setup file
+						// (setup.integration.tsx) overrides DATABASE_URL to point at its
+						// own throwaway `tea_test_w*` database before any test runs.
 						DATABASE_URL:
 							"postgresql://tea_user:tea_password@localhost:5432/tea_test",
 						SKIP_ELEMENT_VALIDATION: "false",
