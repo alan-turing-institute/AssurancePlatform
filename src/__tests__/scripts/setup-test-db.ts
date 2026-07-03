@@ -60,8 +60,16 @@ async function forceDropDatabase(
 	);
 }
 
-/** Drops every database matching the worker-database naming scheme, whatever N was last run with. */
-async function dropAllWorkerDatabases(adminPool: Pool): Promise<void> {
+/**
+ * Drops every database matching the worker-database naming scheme, whatever N
+ * was last run with. `logPrefix` only distinguishes the two call sites in the
+ * console (the startup sweep clears crash strays; the teardown sweep is
+ * routine end-of-run cleanup) — same statement either way.
+ */
+async function dropAllWorkerDatabases(
+	adminPool: Pool,
+	logPrefix: string
+): Promise<void> {
 	const result = await adminPool.query<{ datname: string }>(
 		"SELECT datname FROM pg_database WHERE datname ~ '^tea_test_w[0-9]+$'"
 	);
@@ -70,7 +78,7 @@ async function dropAllWorkerDatabases(adminPool: Pool): Promise<void> {
 			// Defence in depth: the SQL regex above should already guarantee this.
 			continue;
 		}
-		console.log(`Force-dropping stray database ${row.datname}`);
+		console.log(`${logPrefix} ${row.datname}`);
 		await forceDropDatabase(adminPool, row.datname);
 	}
 }
@@ -121,7 +129,7 @@ export async function setup() {
 	});
 
 	try {
-		await dropAllWorkerDatabases(adminPool);
+		await dropAllWorkerDatabases(adminPool, "Force-dropping stray database");
 		await ensureTemplateDatabase(adminPool);
 		await createWorkerDatabases(adminPool);
 	} catch (error) {
@@ -131,7 +139,7 @@ export async function setup() {
 
 	return async function teardown() {
 		try {
-			await dropAllWorkerDatabases(adminPool);
+			await dropAllWorkerDatabases(adminPool, "Dropping worker database");
 		} finally {
 			await adminPool.end();
 		}
