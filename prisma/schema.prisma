@@ -87,6 +87,8 @@ model User {
   caseStudies          CaseStudy[]
   markedReadyCases     AssuranceCase[]    @relation("CaseMarkedReady")
   deletedCases         AssuranceCase[]    @relation("CaseDeleter")
+  ownedIntegrations    Integration[]      @relation("IntegrationOwner")
+  integrationPrincipal Integration?       @relation("IntegrationPrincipal")
 
   @@map("users")
 }
@@ -268,6 +270,7 @@ model AssuranceCase {
   comments        Comment[]
   caseImage       CaseImage?
   caseTypes       CaseTypeAssignment[]
+  pluginData      PluginData[]
 
   // Release relations
   sourceReleases    Release[] @relation("SourceCase")
@@ -426,6 +429,7 @@ model AssuranceElement {
 
   comments            Comment[]
   releaseComments     ReleaseComment[]
+  pluginData          PluginData[]
 
   @@index([caseId])
   @@index([caseId, elementType])
@@ -910,4 +914,117 @@ model PublishedAssuranceCase {
 
   @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
   @@map("published_assurance_cases")
+}
+
+// ============================================
+// EXTENSION FOUNDATIONS (plugins & integrations)
+// ============================================
+// ADR 0002 v2 §2.1, §2.2, §2.4. One-way dependency rule: nothing below may
+// reference a plugin-owned (tier-2) table — plugin tables belong to plugin
+// work items, foundations stay plugin-free.
+
+/// Tier-1 namespaced plugin storage, scoped to a case or element. Access
+/// rides on the case's existing canAccessCase permission machinery — no
+/// parallel ACL. A disabled or uninstalled plugin leaves its rows inert:
+/// never rendered, never deleted without an explicit user action.
+model PluginData {
+  id        String  @id @default(uuid())
+  pluginId  String  @map("plugin_id") /// Namespace, e.g. "tea.health"
+  caseId    String  @map("case_id") /// Permission anchor — access rides on canAccessCase
+  elementId String? @map("element_id") /// Null = case-level data
+  data      Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  case    AssuranceCase     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  element AssuranceElement? @relation(fields: [elementId], references: [id], onDelete: Cascade)
+
+  // @@unique below covers element-level rows, but Postgres treats NULL <>
+  // NULL, so it does NOT constrain case-level rows (elementId IS NULL) to one
+  // per (pluginId, caseId) — two such rows are both accepted. That gap is
+  // closed by a partial unique index (pluginId, caseId) WHERE elementId IS
+  // NULL, hand-written in this migration's SQL because Prisma's schema DSL
+  // cannot express partial indexes. Keep both in sync if this model changes.
+  @@unique([pluginId, caseId, elementId])
+  @@index([caseId, pluginId])
+  @@map("plugin_data")
+}
+
+/// Hierarchical plugin enablement (organisation → team → user; off wins
+/// downward). 1.0 activates only the USER tier; the schema carries all three
+/// from day one so organisation/team activate later with no migration. No FK
+/// on scopeId — scope is polymorphic across account tiers, and the
+/// ORGANISATION tier's referent does not exist yet (deliberate).
+model PluginState {
+  id        String          @id @default(uuid())
+  pluginId  String          @map("plugin_id")
+  scopeType PluginScopeType @map("scope_type")
+  scopeId   String          @map("scope_id")
+  enabled   Boolean
+  settings  Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([pluginId, scopeType, scopeId])
+  @@map("plugin_state")
+}
+
+enum PluginScopeType {
+  ORGANISATION
+  TEAM
+  USER
+}
+
+/// External machine client holding scoped API tokens (renamed from
+/// PluginRegistration in ADR 0002 v1 — these are integrations, not in-app
+/// plugins). Owned by a human (accountability) and acts through a dedicated
+/// system User (principal). No cascade on either User relation: owner
+/// deletion is blocked while ACTIVE integrations exist, enforced at the
+/// service layer when the registry service lands.
+model Integration {
+  id           String            @id @default(uuid())
+  name         String            @unique /// e.g. "darter-evidence-pipeline"
+  description  String?
+  ownerId      String            @map("owner_id") /// The human accountable for this integration
+  systemUserId String            @unique @map("system_user_id") /// The machine principal (User with isSystemUser)
+  scopes       String[]          @default([])
+  status       IntegrationStatus @default(ACTIVE)
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  lastSeenAt DateTime? @map("last_seen_at") /// Updated on authenticated use
+
+  // Relations
+  owner      User       @relation("IntegrationOwner", fields: [ownerId], references: [id])
+  systemUser User       @relation("IntegrationPrincipal", fields: [systemUserId], references: [id])
+  tokens     ApiToken[]
+
+  @@map("integrations")
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+/// Bearer tokens issued to an integration, never free-floating. Hashed at
+/// rest; plaintext shown once at issuance.
+model ApiToken {
+  id            String    @id @default(uuid())
+  integrationId String    @map("integration_id")
+  tokenHash     String    @unique @map("token_hash") /// SHA-256 of the secret
+  tokenPrefix   String    @map("token_prefix") /// Leading chars of the secret, for identification in UI/logs
+  expiresAt     DateTime? @map("expires_at")
+  lastUsedAt    DateTime? @map("last_used_at")
+  revokedAt     DateTime? @map("revoked_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("api_tokens")
 }
