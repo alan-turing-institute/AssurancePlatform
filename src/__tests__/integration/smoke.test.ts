@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { INTEGRATION_TEST_WORKER_DATABASE_PATTERN } from "../scripts/test-db-config";
 import { createTestUser } from "../utils/prisma-factories";
 
 describe("Integration test infrastructure", () => {
-	it("connects to tea_test database", async () => {
+	it("connects to its own worker-scoped test database", async () => {
 		const result = await prisma.$queryRaw<
 			Array<{ current_database: string }>
 		>`SELECT current_database()`;
-		expect(result).toEqual([{ current_database: "tea_test" }]);
+		expect(result).toHaveLength(1);
+		expect(result[0]?.current_database).toMatch(
+			INTEGRATION_TEST_WORKER_DATABASE_PATTERN
+		);
 	});
 
 	it("creates and retrieves a user via factory", async () => {
