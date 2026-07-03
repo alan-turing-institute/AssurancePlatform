@@ -36,7 +36,12 @@ import type { ServiceResult } from "@/types/service";
 
 export interface PluginDataLocation {
 	caseId: string;
-	/** Omit or `null` for case-level data. */
+	/**
+	 * Omit or `null` for case-level data. `""` is rejected outright by
+	 * `resolveDataAccess` rather than silently treated as "omitted" — an
+	 * empty string is never a valid id, and falling through to case-level
+	 * semantics would hide a caller bug.
+	 */
 	elementId?: string | null;
 }
 
@@ -76,10 +81,15 @@ async function guardPluginAccess(
 
 /**
  * Verifies `elementId` belongs to `caseId` and is not soft-deleted
- * (nanaki QA finding 4, 2026-07-03). Returns `null` on success, or a clear
- * rejection message otherwise — distinct messages for "doesn't exist" vs.
- * "exists but wrong case" so a caller can tell a typo'd id from a genuine
- * cross-case mismatch.
+ * (nanaki QA finding 4, 2026-07-03). Returns `null` on success, or the
+ * single generic "Element not found" message otherwise — non-existent,
+ * soft-deleted, and belongs-to-a-different-case all collapse to the SAME
+ * message (repo convention: same error for not-found and no-permission,
+ * `element-service.ts`'s `updateElement` precedent). Distinguishing them
+ * would let any caller with access to ANY case probe arbitrary elementIds
+ * against their own caseId and learn, from the message difference, whether
+ * that element exists anywhere on the platform (vincent review, BLOCKER,
+ * 2026-07-03).
  */
 async function validateElementBelongsToCase(
 	elementId: string,
@@ -90,12 +100,50 @@ async function validateElementBelongsToCase(
 		select: { caseId: true, deletedAt: true },
 	});
 
-	if (!element || element.deletedAt) {
+	if (!element || element.deletedAt || element.caseId !== caseId) {
 		return "Element not found";
 	}
-	if (element.caseId !== caseId) {
-		return "Element does not belong to the specified case";
+	return null;
+}
+
+/**
+ * Combined guard for every location-scoped operation below (read/write/
+ * delete): enablement + case-permission (`guardPluginAccess`), then — if
+ * `location.elementId` is present — element validation. Extracted to remove
+ * the guard+element-validation preamble previously duplicated across
+ * read/write (25 lines) and write/delete (31 lines) — same fallow-clone fix
+ * pattern as `integration-registry-service.ts`'s `getIntegrationOrError`.
+ * Returns `null` on success, or the error message to surface otherwise.
+ */
+async function resolveDataAccess(
+	pluginId: string,
+	userId: string,
+	location: PluginDataLocation,
+	requiredLevel: PermissionLevel
+): Promise<string | null> {
+	const guardError = await guardPluginAccess(
+		pluginId,
+		userId,
+		location.caseId,
+		requiredLevel
+	);
+	if (guardError) {
+		return guardError;
 	}
+
+	if (location.elementId != null) {
+		if (location.elementId === "") {
+			return "elementId must not be empty";
+		}
+		const elementError = await validateElementBelongsToCase(
+			location.elementId,
+			location.caseId
+		);
+		if (elementError) {
+			return elementError;
+		}
+	}
+
 	return null;
 }
 
@@ -164,24 +212,14 @@ export async function readPluginData(
 	userId: string,
 	location: PluginDataLocation
 ): ServiceResult<PluginData | null> {
-	const guardError = await guardPluginAccess(
+	const accessError = await resolveDataAccess(
 		pluginId,
 		userId,
-		location.caseId,
+		location,
 		"VIEW"
 	);
-	if (guardError) {
-		return { error: guardError };
-	}
-
-	if (location.elementId) {
-		const elementError = await validateElementBelongsToCase(
-			location.elementId,
-			location.caseId
-		);
-		if (elementError) {
-			return { error: elementError };
-		}
+	if (accessError) {
+		return { error: accessError };
 	}
 
 	try {
@@ -229,24 +267,14 @@ export async function writePluginData(
 	location: PluginDataLocation,
 	data: Prisma.InputJsonValue
 ): ServiceResult<PluginData> {
-	const guardError = await guardPluginAccess(
+	const accessError = await resolveDataAccess(
 		pluginId,
 		userId,
-		location.caseId,
+		location,
 		"EDIT"
 	);
-	if (guardError) {
-		return { error: guardError };
-	}
-
-	if (location.elementId) {
-		const elementError = await validateElementBelongsToCase(
-			location.elementId,
-			location.caseId
-		);
-		if (elementError) {
-			return { error: elementError };
-		}
+	if (accessError) {
+		return { error: accessError };
 	}
 
 	try {
@@ -276,24 +304,14 @@ export async function deletePluginData(
 	userId: string,
 	location: PluginDataLocation
 ): ServiceResult<true> {
-	const guardError = await guardPluginAccess(
+	const accessError = await resolveDataAccess(
 		pluginId,
 		userId,
-		location.caseId,
+		location,
 		"EDIT"
 	);
-	if (guardError) {
-		return { error: guardError };
-	}
-
-	if (location.elementId) {
-		const elementError = await validateElementBelongsToCase(
-			location.elementId,
-			location.caseId
-		);
-		if (elementError) {
-			return { error: elementError };
-		}
+	if (accessError) {
+		return { error: accessError };
 	}
 
 	try {

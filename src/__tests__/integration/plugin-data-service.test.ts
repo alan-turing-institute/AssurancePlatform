@@ -25,8 +25,10 @@ const KNOWN_PLUGIN_ID = "tea.health";
 const OTHER_NAMESPACE = "tea.other-namespace"; // deliberately not manifest-registered — seeded directly, never through the service
 const UNKNOWN_PLUGIN_ID = "tea.does-not-exist";
 const NOT_ENABLED_PATTERN = /is not enabled/;
-const NOT_FOUND_PATTERN = /not found/i;
-const MISMATCH_PATTERN = /does not belong to the specified case/;
+// Single generic message for non-existent, soft-deleted, and cross-case
+// mismatch alike (no enumeration oracle — see plugin-data-service.ts's
+// validateElementBelongsToCase).
+const ELEMENT_NOT_FOUND = "Element not found";
 
 async function setup() {
 	const owner = await createTestUser();
@@ -190,7 +192,7 @@ describe("plugin-data-service — element-level data", () => {
 // ============================================
 
 describe("plugin-data-service — elementId/caseId mismatch", () => {
-	it("rejects a write whose elementId belongs to a different case", async () => {
+	it("rejects a write whose elementId belongs to a different case with the generic not-found message (no enumeration oracle)", async () => {
 		const { owner, testCase } = await setup();
 		const otherCase = await createTestCase(owner.id);
 		const elementInOtherCase = await createTestElement(otherCase.id, owner.id);
@@ -201,7 +203,7 @@ describe("plugin-data-service — elementId/caseId mismatch", () => {
 			{ caseId: testCase.id, elementId: elementInOtherCase.id },
 			{ score: 0.1 }
 		);
-		expectError(result, MISMATCH_PATTERN);
+		expectError(result, ELEMENT_NOT_FOUND);
 
 		// Nothing was written under either case for this element.
 		const rows = await prisma.pluginData.findMany({
@@ -210,7 +212,7 @@ describe("plugin-data-service — elementId/caseId mismatch", () => {
 		expect(rows).toHaveLength(0);
 	});
 
-	it("rejects a read whose elementId belongs to a different case", async () => {
+	it("rejects a read whose elementId belongs to a different case with the generic not-found message (no enumeration oracle)", async () => {
 		const { owner, testCase } = await setup();
 		const otherCase = await createTestCase(owner.id);
 		const elementInOtherCase = await createTestElement(otherCase.id, owner.id);
@@ -219,10 +221,10 @@ describe("plugin-data-service — elementId/caseId mismatch", () => {
 			caseId: testCase.id,
 			elementId: elementInOtherCase.id,
 		});
-		expectError(result, MISMATCH_PATTERN);
+		expectError(result, ELEMENT_NOT_FOUND);
 	});
 
-	it("rejects an elementId that does not exist at all", async () => {
+	it("rejects an elementId that does not exist at all with the same generic message", async () => {
 		const { owner, testCase } = await setup();
 		const result = await writePluginData(
 			KNOWN_PLUGIN_ID,
@@ -233,10 +235,19 @@ describe("plugin-data-service — elementId/caseId mismatch", () => {
 			},
 			{ score: 0.1 }
 		);
-		expectError(result, NOT_FOUND_PATTERN);
+		expectError(result, ELEMENT_NOT_FOUND);
+
+		// Nothing was written for the non-existent element.
+		const rows = await prisma.pluginData.findMany({
+			where: {
+				pluginId: KNOWN_PLUGIN_ID,
+				elementId: "00000000-0000-0000-0000-000000000000",
+			},
+		});
+		expect(rows).toHaveLength(0);
 	});
 
-	it("rejects an elementId belonging to a soft-deleted element", async () => {
+	it("rejects an elementId belonging to a soft-deleted element with the same generic message", async () => {
 		const { owner, testCase, element } = await setup();
 		await prisma.assuranceElement.update({
 			where: { id: element.id },
@@ -249,7 +260,92 @@ describe("plugin-data-service — elementId/caseId mismatch", () => {
 			{ caseId: testCase.id, elementId: element.id },
 			{ score: 0.1 }
 		);
-		expectError(result, NOT_FOUND_PATTERN);
+		expectError(result, ELEMENT_NOT_FOUND);
+
+		// Nothing was written for the soft-deleted element.
+		const rows = await prisma.pluginData.findMany({
+			where: { pluginId: KNOWN_PLUGIN_ID, elementId: element.id },
+		});
+		expect(rows).toHaveLength(0);
+	});
+});
+
+// ============================================
+// Empty-string elementId (item 3 — must not silently fall through to
+// case-level semantics)
+// ============================================
+
+describe("plugin-data-service — empty-string elementId", () => {
+	it("rejects an empty-string elementId on write rather than silently treating it as case-level", async () => {
+		const { owner, testCase } = await setup();
+		const result = await writePluginData(
+			KNOWN_PLUGIN_ID,
+			owner.id,
+			{ caseId: testCase.id, elementId: "" },
+			{ score: 0.1 }
+		);
+		expectError(result, "elementId must not be empty");
+
+		const rows = await prisma.pluginData.findMany({
+			where: { pluginId: KNOWN_PLUGIN_ID, caseId: testCase.id },
+		});
+		expect(rows).toHaveLength(0);
+	});
+
+	it("rejects an empty-string elementId on read rather than silently treating it as case-level", async () => {
+		const { owner, testCase } = await setup();
+		// A real case-level row exists — if "" fell through to case-level
+		// semantics, this read would wrongly return it.
+		await writePluginData(
+			KNOWN_PLUGIN_ID,
+			owner.id,
+			{ caseId: testCase.id },
+			{ score: 0.9 }
+		);
+
+		const result = await readPluginData(KNOWN_PLUGIN_ID, owner.id, {
+			caseId: testCase.id,
+			elementId: "",
+		});
+		expectError(result, "elementId must not be empty");
+	});
+});
+
+// ============================================
+// Concurrent case-level upsert race (item 5 — the P2002 catch->fallback
+// path in upsertCaseLevelPluginData is otherwise never exercised)
+// ============================================
+
+describe("plugin-data-service — concurrent case-level upsert", () => {
+	it("survives two concurrent case-level writes with exactly one row surviving, holding one of the two payloads", async () => {
+		const { owner, testCase } = await setup();
+
+		const [resultA, resultB] = await Promise.all([
+			writePluginData(
+				KNOWN_PLUGIN_ID,
+				owner.id,
+				{ caseId: testCase.id },
+				{ writer: "a" }
+			),
+			writePluginData(
+				KNOWN_PLUGIN_ID,
+				owner.id,
+				{ caseId: testCase.id },
+				{ writer: "b" }
+			),
+		]);
+		expectSuccess(resultA);
+		expectSuccess(resultB);
+
+		const rows = await prisma.pluginData.findMany({
+			where: {
+				pluginId: KNOWN_PLUGIN_ID,
+				caseId: testCase.id,
+				elementId: null,
+			},
+		});
+		expect(rows).toHaveLength(1);
+		expect([{ writer: "a" }, { writer: "b" }]).toContainEqual(rows[0]!.data);
 	});
 });
 

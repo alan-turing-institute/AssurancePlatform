@@ -35,6 +35,9 @@ export interface PluginManifestEntry {
  * Its implementation (storage, scoring, machine endpoints) is a later issue —
  * this entry is metadata only, enough for the lifecycle/enablement/PluginData
  * plumbing to have a real namespace to prove itself against.
+ *
+ * No external callers yet (fallow dead-export finding) — staged for the
+ * settings pane, a later work item. Not dead code; do not remove.
  */
 export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 	{
@@ -64,7 +67,12 @@ export function getManifestEntry(
 	return MANIFEST_BY_ID.get(pluginId);
 }
 
-/** All plugin ids known to this build, in manifest order. */
+/**
+ * All plugin ids known to this build, in manifest order.
+ *
+ * No external callers yet (fallow dead-export finding) — staged for the
+ * settings pane, a later work item. Not dead code; do not remove.
+ */
 export function listManifestPluginIds(): string[] {
 	return PLUGIN_MANIFEST.map((entry) => entry.id);
 }

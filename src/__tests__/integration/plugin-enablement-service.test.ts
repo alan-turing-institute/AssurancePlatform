@@ -262,6 +262,30 @@ describe("resolveEffectivePluginState — full ORGANISATION -> TEAM -> USER chai
 		expect(state.enabled).toBe(true);
 		expect(state.disabledAt).toBeNull();
 	});
+
+	it("a disabling TEAM row for a team outside the caller's teamIds sits present-but-inactive (ORGANISATION twin above)", async () => {
+		const user = await createTestUser();
+		// The caller belongs to `memberTeamId` only — `otherTeamId`'s
+		// disabling row is for a team this caller isn't in, so it must have
+		// no effect on the resolved state (mirrors the ORGANISATION
+		// present-but-inactive test above at the TEAM tier).
+		const memberTeamId = "00000000-0000-4000-8000-0000000000f7";
+		const otherTeamId = "00000000-0000-4000-8000-0000000000f8";
+		await createTestPluginState(otherTeamId, {
+			pluginId: KNOWN_PLUGIN_ID,
+			scopeType: "TEAM",
+			enabled: false,
+		});
+
+		const state = expectSuccess(
+			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, {
+				teamIds: [memberTeamId],
+				userId: user.id,
+			})
+		);
+		expect(state.enabled).toBe(true);
+		expect(state.disabledAt).toBeNull();
+	});
 });
 
 // ============================================
@@ -356,6 +380,22 @@ describe("setPluginEnabledForUser", () => {
 				settings: { threshold: 0.8 },
 			})
 		);
+		expect(state.settings).toEqual({ threshold: 0.8 });
+	});
+
+	it("does not wipe settings when a later call only toggles enabled (guards against a future `?? null` regression)", async () => {
+		const user = await createTestUser();
+		await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
+			enabled: true,
+			settings: { threshold: 0.8 },
+		});
+
+		const state = expectSuccess(
+			await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
+				enabled: false,
+			})
+		);
+		expect(state.enabled).toBe(false);
 		expect(state.settings).toEqual({ threshold: 0.8 });
 	});
 
