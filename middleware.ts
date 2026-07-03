@@ -71,11 +71,25 @@ export const config = {
 		/*
 		 * Match all request paths except for the ones starting with:
 		 * - api/auth (auth endpoints)
+		 * - api/cron (cron endpoints, own CRON_SECRET bearer auth)
+		 * - api/machine (machine/integration endpoints, own requireApiToken
+		 *   bearer auth — ADR 0002 v2 §2.4. Without this exemption every
+		 *   bearer-token request here 307-redirects to /login instead of
+		 *   reaching the route handler.)
+		 * - api/health (health checks)
 		 * - _next/static (static files)
 		 * - _next/image (image optimization files)
 		 * - favicon.ico (favicon file)
 		 * - public folder
+		 *
+		 * Each of the four `api/*` prefixes above is boundary-anchored
+		 * (`(?:/|$)`) rather than a bare string prefix — otherwise a
+		 * hypothetical future route like `/api/machinery` or
+		 * `/api/healthcheck` would be silently exempted from session auth
+		 * too. Verified against the full route inventory (fix round,
+		 * 2026-07-03): no existing route under any of the four prefixes
+		 * relies on the looser match, so all four were anchored together.
 		 */
-		"/((?!api/auth|api/cron|api/health|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
+		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
 	],
 };

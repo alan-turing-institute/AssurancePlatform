@@ -63,6 +63,23 @@ export const RATE_LIMIT_CONFIGS = {
 			},
 		],
 	},
+	/**
+	 * Failed `/api/machine/*` bearer-token auth attempts (ADR 0002 v2 §2.4).
+	 * `identifierType: "ip"` only — the identifier union has no token variant,
+	 * and a garbage/unknown token resolves to no user to key on. Only failed
+	 * attempts consume this budget (see integration-registry-service.ts); a
+	 * validly authenticated integration polling frequently never touches it.
+	 */
+	machineAuth: {
+		endpoint: "machine_auth",
+		limits: [
+			{
+				identifierType: "ip" as const,
+				maxAttempts: 20,
+				windowMs: 15 * 60 * 1000,
+			},
+		],
+	},
 } as const;
 
 // ============================================
