@@ -1,11 +1,15 @@
 import prisma from "@/lib/prisma";
 import type {
+	ApiToken,
 	AssuranceCase,
 	AssuranceElement,
 	CasePermission,
 	CaseStudy,
 	CaseTeamPermission,
 	Comment,
+	Integration,
+	PluginData,
+	PluginState,
 	Team,
 	TeamMember,
 	User,
@@ -247,6 +251,119 @@ export function createTestComment(
 }
 
 // ============================================
+// PLUGIN DATA (tier-1 namespaced plugin storage)
+// ============================================
+
+type PluginDataOverrides = Partial<{
+	pluginId: string;
+	elementId: string;
+	data: Record<string, unknown>;
+}>;
+
+export function createTestPluginData(
+	caseId: string,
+	overrides: PluginDataOverrides = {}
+): Promise<PluginData> {
+	const n = nextId();
+	return prisma.pluginData.create({
+		data: {
+			pluginId: overrides.pluginId ?? `test.plugin-${n}`,
+			caseId,
+			elementId: overrides.elementId,
+			data: overrides.data ?? { test: true },
+		},
+	});
+}
+
+// ============================================
+// PLUGIN STATE (hierarchical enablement)
+// ============================================
+
+type PluginStateOverrides = Partial<{
+	pluginId: string;
+	scopeType: "ORGANISATION" | "TEAM" | "USER";
+	enabled: boolean;
+	settings: Record<string, unknown>;
+}>;
+
+/** scopeId is polymorphic (no FK) — pass whichever tier's ID matches scopeType. */
+export function createTestPluginState(
+	scopeId: string,
+	overrides: PluginStateOverrides = {}
+): Promise<PluginState> {
+	const n = nextId();
+	return prisma.pluginState.create({
+		data: {
+			pluginId: overrides.pluginId ?? `test.plugin-${n}`,
+			scopeType: overrides.scopeType ?? "USER",
+			scopeId,
+			enabled: overrides.enabled ?? true,
+			settings: overrides.settings,
+		},
+	});
+}
+
+// ============================================
+// INTEGRATION (external machine clients)
+// ============================================
+
+type IntegrationOverrides = Partial<{
+	name: string;
+	description: string;
+	scopes: string[];
+	status: "ACTIVE" | "SUSPENDED" | "REVOKED";
+	lastSeenAt: Date;
+}>;
+
+export function createTestIntegration(
+	ownerId: string,
+	systemUserId: string,
+	overrides: IntegrationOverrides = {}
+): Promise<Integration> {
+	const n = nextId();
+	return prisma.integration.create({
+		data: {
+			name: overrides.name ?? `test-integration-${n}`,
+			description: overrides.description,
+			ownerId,
+			systemUserId,
+			scopes: overrides.scopes ?? ["case:read"],
+			status: overrides.status ?? "ACTIVE",
+			lastSeenAt: overrides.lastSeenAt,
+		},
+	});
+}
+
+// ============================================
+// API TOKEN
+// ============================================
+
+type ApiTokenOverrides = Partial<{
+	tokenHash: string;
+	tokenPrefix: string;
+	expiresAt: Date;
+	lastUsedAt: Date;
+	revokedAt: Date;
+}>;
+
+export function createTestApiToken(
+	integrationId: string,
+	overrides: ApiTokenOverrides = {}
+): Promise<ApiToken> {
+	const n = nextId();
+	return prisma.apiToken.create({
+		data: {
+			integrationId,
+			tokenHash: overrides.tokenHash ?? `test-token-hash-${n}`,
+			tokenPrefix: overrides.tokenPrefix ?? `teap_test${n}`,
+			expiresAt: overrides.expiresAt,
+			lastUsedAt: overrides.lastUsedAt,
+			revokedAt: overrides.revokedAt,
+		},
+	});
+}
+
+// ============================================
 // COMPOSITE FACTORIES
 // ============================================
 
@@ -286,6 +403,31 @@ export async function createTestTeamWithAdmin(
 		},
 	});
 	return team.id;
+}
+
+/**
+ * Creates a system user (isSystemUser: true) and an Integration owned by
+ * the given user acting through it. Returns both records.
+ */
+export async function createTestIntegrationWithSystemUser(
+	ownerId: string,
+	overrides: IntegrationOverrides = {}
+): Promise<{ integration: Integration; systemUser: User }> {
+	const n = nextId();
+	const createdUser = await createTestUser({
+		email: `system-user-${n}@example.com`,
+		username: `system-user-${n}`,
+	});
+	const systemUser = await prisma.user.update({
+		where: { id: createdUser.id },
+		data: { isSystemUser: true },
+	});
+	const integration = await createTestIntegration(
+		ownerId,
+		systemUser.id,
+		overrides
+	);
+	return { integration, systemUser };
 }
 
 /**
