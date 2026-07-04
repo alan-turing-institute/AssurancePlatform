@@ -207,6 +207,23 @@ const healthStateSchema = z.object({
 });
 
 /**
+ * A single generic message for every reason this read can fail to resolve a
+ * claim — doesn't exist, is soft-deleted, or the caller lacks case access —
+ * mirroring `health-evidence-service.ts`'s `CLAIM_NOT_FOUND` precedent.
+ * Distinguishing "doesn't exist" from "no permission" would let any caller
+ * with access to ANY case probe arbitrary ids and learn, from which message
+ * came back, whether a claim exists elsewhere on the platform — the same
+ * enumeration oracle that precedent (and `plugin-data-service.ts`'s own
+ * "same error for not-found and no-permission" convention) exists to close.
+ * `readPluginData`'s OWN generic message for a permission failure is
+ * `"Case not found"` (a different string, since it's shared by non-claim
+ * callers too) — remapped to this one below so both failure modes are
+ * byte-identical from this function's callers' point of view.
+ */
+const CLAIM_NOT_FOUND = "Claim not found";
+const PLUGIN_DATA_CASE_NOT_FOUND = "Case not found";
+
+/**
  * Reads the current `{ score, lastEvaluatedAt, validityWindowSeconds }` for
  * one claim — the human-facing read path the `element-badge`/`element-panel`
  * UI slots use (ADR 0002 v2 §3: "state dot via element-badge"). Delegates to
@@ -239,7 +256,7 @@ export async function readHealthState(
 		return { error: "Failed to read health state" };
 	}
 	if (!element || element.deletedAt) {
-		return { error: "Claim not found" };
+		return { error: CLAIM_NOT_FOUND };
 	}
 
 	const result = await readPluginData(PLUGIN_ID, actingUserId, {
@@ -247,7 +264,11 @@ export async function readHealthState(
 		elementId: claimId,
 	});
 	if ("error" in result) {
-		return { error: result.error };
+		const error =
+			result.error === PLUGIN_DATA_CASE_NOT_FOUND
+				? CLAIM_NOT_FOUND
+				: result.error;
+		return { error };
 	}
 	if (!result.data) {
 		return { data: null };

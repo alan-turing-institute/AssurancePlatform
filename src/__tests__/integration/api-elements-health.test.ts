@@ -156,7 +156,7 @@ describe("GET /api/elements/[id]/health — permission matrix", () => {
 		expect(body.error).toBe("Claim not found");
 	});
 
-	it("returns 404 (generic, not an enumeration oracle) for a session with no case access", async () => {
+	it("returns 404 'Claim not found' for a session with no case access", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
 		await mockAuth(outsider.id, outsider.username, outsider.email);
@@ -167,6 +167,27 @@ describe("GET /api/elements/[id]/health — permission matrix", () => {
 		});
 
 		expect(response.status).toBe(404);
+		const body = await response.json();
+		expect(body.error).toBe("Claim not found");
+	});
+
+	it("returns byte-identical 404s for a non-existent claim vs. one an outsider can't access (no enumeration oracle)", async () => {
+		const { claim } = await setup();
+		const outsider = await createTestUser();
+		await mockAuth(outsider.id, outsider.username, outsider.email);
+		const { GET } = await importRoute();
+
+		const noAccessResponse = await GET(getRequest(claim.id), {
+			params: Promise.resolve({ id: claim.id }),
+		});
+		const nonexistentResponse = await GET(getRequest(NONEXISTENT_ID), {
+			params: Promise.resolve({ id: NONEXISTENT_ID }),
+		});
+
+		expect(noAccessResponse.status).toBe(nonexistentResponse.status);
+		const noAccessBody = await noAccessResponse.json();
+		const nonexistentBody = await nonexistentResponse.json();
+		expect(noAccessBody).toEqual(nonexistentBody);
 	});
 });
 
