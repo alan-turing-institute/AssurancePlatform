@@ -146,7 +146,7 @@
       "vite": ">=7.0.8",
       "hono": ">=4.11.10",
       "valibot": ">=1.2.0",
-      "@babel/runtime": ">=7.26.10",
+      "@babel/runtime": ">=7.26.10 <8",
       "js-yaml": ">=4.1.1",
       "cross-spawn": ">=7.0.5",
       "minimatch": ">=10.2.3",

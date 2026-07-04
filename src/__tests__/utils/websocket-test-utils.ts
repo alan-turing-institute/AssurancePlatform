@@ -76,7 +76,7 @@ export interface WebSocketMessage<T = unknown> {
  */
 export class MockWebSocket implements Partial<WebSocket> {
 	url: string;
-	readyState: number = WS_READY_STATE.CONNECTING;
+	readyState: WS_READY_STATE = WS_READY_STATE.CONNECTING;
 
 	private readonly eventListeners: Map<string, Set<EventListener>> = new Map();
 	private sentMessages: WebSocketMessage[] = [];
