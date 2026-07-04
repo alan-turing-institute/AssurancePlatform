@@ -1,11 +1,16 @@
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginSettingsListItem } from "@/hooks/use-plugin-settings";
+import { settingsSectionSlot } from "@/lib/plugins/slots";
 import {
 	renderWithoutProviders,
 	screen,
 } from "@/src/__tests__/utils/test-utils";
 import { PluginToggleRow } from "../plugin-toggle-row";
+
+function FakeSettings({ pluginId }: { pluginId: string }) {
+	return <div data-testid="fake-settings">{`settings for ${pluginId}`}</div>;
+}
 
 const UNAVAILABLE_REGEX = /unavailable on this deployment/i;
 const ORGANISATION_REGEX = /turned off by your organisation/i;
@@ -179,6 +184,41 @@ describe("PluginToggleRow", () => {
 			expect(
 				screen.queryByTestId("plugin-settings-slot")
 			).not.toBeInTheDocument();
+		});
+
+		describe("gated on the row's effective checked state", () => {
+			afterEach(() => {
+				settingsSectionSlot.resetForTests();
+			});
+
+			it("does not render a registered settings component when the plugin is not effectively enabled", () => {
+				settingsSectionSlot.register({
+					pluginId: "tea.health",
+					Component: FakeSettings,
+				});
+
+				renderWithoutProviders(
+					<PluginToggleRow
+						onToggle={vi.fn()}
+						plugin={makePlugin({ enabled: false, pinnedAt: "USER" })}
+					/>
+				);
+
+				expect(screen.queryByTestId("fake-settings")).not.toBeInTheDocument();
+			});
+
+			it("renders a registered settings component when the plugin is effectively enabled", () => {
+				settingsSectionSlot.register({
+					pluginId: "tea.health",
+					Component: FakeSettings,
+				});
+
+				renderWithoutProviders(
+					<PluginToggleRow onToggle={vi.fn()} plugin={makePlugin()} />
+				);
+
+				expect(screen.getByTestId("fake-settings")).toBeInTheDocument();
+			});
 		});
 	});
 });

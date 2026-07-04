@@ -89,7 +89,7 @@ export function PluginToggleRow({
 				</div>
 			</div>
 
-			<PluginSettingsSlot pluginId={plugin.pluginId} />
+			{checked && <PluginSettingsSlot pluginId={plugin.pluginId} />}
 		</div>
 	);
 }
