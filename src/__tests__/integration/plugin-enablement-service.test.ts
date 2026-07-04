@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
 	assertPluginEnabledForUser,
+	getUserPluginSettings,
 	isPluginEnabledForUser,
 	resolveEffectivePluginState,
 	setPluginEnabledForUser,
@@ -426,5 +427,52 @@ describe("setPluginEnabledForUser", () => {
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
 		expect(state.enabled).toBe(false);
+	});
+});
+
+// ============================================
+// getUserPluginSettings — the settings pane's per-user read
+// ============================================
+
+describe("getUserPluginSettings", () => {
+	it("returns null when the user has no USER-scope row yet", async () => {
+		const user = await createTestUser();
+
+		// `expectSuccess` treats `data === null` as a void-result success and
+		// returns `undefined` — asserted directly here rather than through the
+		// helper (nanaki 5) so a future regression that silently drops the
+		// settings payload can't hide behind that shortcut.
+		const result = await getUserPluginSettings(KNOWN_PLUGIN_ID, user.id);
+		expect(result).toEqual({ data: null });
+	});
+
+	it("rejects an unknown plugin id", async () => {
+		const user = await createTestUser();
+		expectError(
+			await getUserPluginSettings(UNKNOWN_PLUGIN_ID, user.id),
+			UNKNOWN_PLUGIN_PATTERN
+		);
+	});
+
+	it("does not let one user's settings affect another user", async () => {
+		const owner = await createTestUser();
+		const otherUser = await createTestUser();
+		await createTestPluginState(owner.id, {
+			pluginId: KNOWN_PLUGIN_ID,
+			scopeType: "USER",
+			enabled: true,
+			settings: { threshold: 0.8 },
+		});
+
+		const ownerSettings = expectSuccess(
+			await getUserPluginSettings(KNOWN_PLUGIN_ID, owner.id)
+		);
+		expect(ownerSettings).toEqual({ threshold: 0.8 });
+
+		const otherUserResult = await getUserPluginSettings(
+			KNOWN_PLUGIN_ID,
+			otherUser.id
+		);
+		expect(otherUserResult).toEqual({ data: null });
 	});
 });
