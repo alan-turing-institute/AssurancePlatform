@@ -154,6 +154,42 @@ export async function isPluginEnabledForUser(
 	return "data" in result;
 }
 
+/**
+ * Reads the current USER-scope `settings` JSON for `pluginId`, or `null` if
+ * no USER-scope row exists yet (a user who has never touched this plugin's
+ * toggle has no row at all). Separate from `resolveEffectivePluginState`
+ * deliberately: that resolver answers "is this plugin ON", walking the full
+ * scope chain, and never needed to surface a settings payload; this answers
+ * "what did the USER save", a single-scope lookup with no chain-walking.
+ * Added for the settings pane (`GET /api/user/plugins`) to round-trip a
+ * user's saved settings without duplicating enablement logic in the route.
+ */
+export async function getUserPluginSettings(
+	pluginId: string,
+	userId: string
+): ServiceResult<Prisma.JsonValue | null> {
+	if (!getManifestEntry(pluginId)) {
+		return { error: `Unknown plugin '${pluginId}'` };
+	}
+
+	try {
+		const row = await prisma.pluginState.findUnique({
+			where: {
+				pluginId_scopeType_scopeId: {
+					pluginId,
+					scopeType: "USER",
+					scopeId: userId,
+				},
+			},
+			select: { settings: true },
+		});
+		return { data: row?.settings ?? null };
+	} catch (error) {
+		console.error("Failed to read plugin settings:", error);
+		return { error: "Failed to read plugin settings" };
+	}
+}
+
 export interface SetUserPluginEnabledInput {
 	enabled: boolean;
 	settings?: Prisma.InputJsonValue;
