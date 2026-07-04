@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fetchPlugins } from "@/hooks/use-plugin-enablement";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { toast } from "@/lib/toast";
 
@@ -9,15 +10,14 @@ import { toast } from "@/lib/toast";
 // the single definition (was hand-duplicated with `UserPluginListItem` in
 // `app/api/user/plugins/route.ts`; consolidated 2026-07-04). A second,
 // separate `export ... from` (not re-exporting the local import above) so
-// biome's `noExportedImports` doesn't fire.
+// biome's `noExportedImports` doesn't fire. The fetch itself is delegated to
+// `use-plugin-enablement.ts` — the shared fetch mechanism both this pane and
+// the build-time UI slots read through (`[[TEA — UI extension slots]]`); this
+// hook keeps its own public API unchanged.
 export type {
 	PluginPinnedAt,
 	PluginSettingsListItem,
 } from "@/lib/schemas/plugin";
-
-interface PluginsResponseBody {
-	plugins: PluginSettingsListItem[];
-}
 
 interface ApiErrorBody {
 	error?: string;
@@ -26,15 +26,6 @@ interface ApiErrorBody {
 async function parseErrorMessage(response: Response): Promise<string> {
 	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
 	return body?.error ?? "Something went wrong";
-}
-
-async function fetchPlugins(): Promise<PluginSettingsListItem[]> {
-	const response = await fetch("/api/user/plugins");
-	if (!response.ok) {
-		throw new Error(await parseErrorMessage(response));
-	}
-	const body = (await response.json()) as PluginsResponseBody;
-	return body.plugins;
 }
 
 async function requestPluginToggle(

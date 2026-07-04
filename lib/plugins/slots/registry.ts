@@ -1,0 +1,83 @@
+/**
+ * The UI extension slot registry (ADR 0002 v2 §2.3) — the pattern
+ * `lib/export/exporters/base-exporter.ts` already proves, applied to
+ * build-time-registered plugin UI instead of export formats.
+ *
+ * A `SlotRegistry` holds every plugin's registration for one slot id, in
+ * registration order. Registration is validated against the manifest
+ * (`lib/plugins/manifest.ts`) — a plugin can only register into a slot its
+ * own manifest entry admits to using — but says nothing about whether that
+ * registration is currently *enabled* for any given user; that's a runtime
+ * question the render-time consumers (`hooks/use-element-badge-slot.tsx`,
+ * `hooks/use-element-panel-slot.ts`) answer by filtering `.list()` against
+ * effective enablement.
+ */
+
+import { getManifestEntry } from "@/lib/plugins/manifest";
+import type {
+	ElementBadgeRegistration,
+	ElementPanelRegistration,
+	SettingsSectionRegistration,
+	SlotId,
+} from "./types";
+
+export class SlotRegistry<TRegistration extends { pluginId: string }> {
+	private readonly registrations: TRegistration[] = [];
+	private readonly slotId: SlotId;
+
+	constructor(slotId: SlotId) {
+		this.slotId = slotId;
+	}
+
+	/**
+	 * Registers a plugin's contribution to this slot. Call once per plugin
+	 * module, at import time — never per-request. Throws rather than
+	 * returning a `ServiceResult`: an invalid registration is a programming
+	 * error in a first-party plugin module, not user input to report
+	 * gracefully.
+	 *
+	 * Two checks, both load-bearing for the one-way dependency rule (ADR
+	 * §1): the pluginId must be a real manifest entry, and that entry must
+	 * declare this slot's id among its `surfaces` — a plugin cannot show up
+	 * somewhere its own manifest doesn't admit to reaching.
+	 */
+	register(registration: TRegistration): void {
+		const entry = getManifestEntry(registration.pluginId);
+		if (!entry) {
+			throw new Error(
+				`Cannot register '${registration.pluginId}' into slot '${this.slotId}': unknown plugin (not in PLUGIN_MANIFEST)`
+			);
+		}
+		if (!entry.surfaces.includes(this.slotId)) {
+			throw new Error(
+				`Cannot register '${registration.pluginId}' into slot '${this.slotId}': its manifest entry does not declare this surface`
+			);
+		}
+		this.registrations.push(registration);
+	}
+
+	/** Every registration for this slot, in registration order. Callers filter by effective enablement before rendering. */
+	list(): readonly TRegistration[] {
+		return this.registrations;
+	}
+
+	/**
+	 * Test-only. Clears every registration so each test file starts from a
+	 * clean slate — production code must never call this; registrations are
+	 * meant to live for the process lifetime (build-time registration, not
+	 * request-scoped state).
+	 */
+	resetForTests(): void {
+		this.registrations.length = 0;
+	}
+}
+
+/** 1.0 slot registries — one instance per slot id, shared process-wide. */
+export const elementBadgeSlot = new SlotRegistry<ElementBadgeRegistration>(
+	"element-badge"
+);
+export const elementPanelSlot = new SlotRegistry<ElementPanelRegistration>(
+	"element-panel"
+);
+export const settingsSectionSlot =
+	new SlotRegistry<SettingsSectionRegistration>("settings-section");

@@ -5,6 +5,8 @@ import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
 import ActionTooltip from "@/components/ui/action-tooltip";
+import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
+import useStore from "@/store/store";
 import NodeAddPopover from "./node-add-popover";
 import NodeEditDialog from "./node-edit-dialog";
 import ToggleButton from "./toggle-button";
@@ -12,8 +14,15 @@ import ToggleButton from "./toggle-button";
 function StrategyNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+	const { assuranceCase } = useStore();
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
+
+	const badgeSlot = useElementBadgeSlot({
+		caseId: assuranceCase?.id?.toString() ?? "",
+		elementId: String(data.id),
+		elementType: "strategy",
+	});
 
 	const addPopover = (
 		<NodeAddPopover
@@ -65,6 +74,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="strategy"
 				selected={props.selected}
+				topRightActions={badgeSlot}
 			/>
 
 			{/* Edit Dialog */}

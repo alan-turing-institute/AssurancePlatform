@@ -24,13 +24,16 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useElementPanelSlot } from "@/hooks/use-element-panel-slot";
 import { updateAssuranceCaseNode } from "@/lib/case";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
+import useStore from "@/store/store";
 
 type FormValues = NodeEditFormInput;
 
@@ -296,6 +299,8 @@ export default function NodeEditDialog({
 	const [newContextValue, setNewContextValue] = useState("");
 	const componentId = useId();
 	const [idCounter, setIdCounter] = useState(0);
+	const { assuranceCase } = useStore();
+	const panelSlot = useElementPanelSlot();
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
@@ -414,6 +419,90 @@ export default function NodeEditDialog({
 	const nodeName = (node.data?.name as string) || "Element";
 	const nodeTypeLabel = nodeType.charAt(0).toUpperCase() + nodeType.slice(1);
 
+	// The `element-panel` slot (ADR 0002 v2 §2.3): when no enabled plugin has
+	// registered a panel, `detailsForm` renders directly with no `Tabs`
+	// wrapper at all — the DOM stays identical to the pre-slot dialog (no
+	// ghost tab, no extra strip). Only once a registration exists does the
+	// dialog grow a "Details" tab alongside the plugin's own.
+	const detailsForm = (
+		<Form {...form}>
+			<form className="space-y-4" onSubmit={form.handleSubmit(handleSubmit)}>
+				<TextFieldSection
+					form={form}
+					label="Description"
+					name="description"
+					placeholder="Type your description here."
+					readOnly={readOnly}
+				/>
+
+				{supportsAttributes(nodeType) && (
+					<>
+						<TextFieldSection
+							form={form}
+							label="Assumption"
+							name="assumption"
+							placeholder="Type your assumption here (optional)."
+							readOnly={readOnly}
+						/>
+						<TextFieldSection
+							form={form}
+							label="Justification"
+							name="justification"
+							placeholder="Type your justification here (optional)."
+							readOnly={readOnly}
+						/>
+						<ContextSection
+							contextItems={contextItems}
+							newContextValue={newContextValue}
+							onAddContext={addContext}
+							onNewContextChange={setNewContextValue}
+							onRemoveContext={removeContext}
+							readOnly={readOnly}
+						/>
+					</>
+				)}
+
+				{nodeType === "evidence" && (
+					<UrlsSection
+						fields={fields}
+						form={form}
+						onAppend={() => append({ value: "" })}
+						onRemove={remove}
+						readOnly={readOnly}
+					/>
+				)}
+
+				<DialogFooter className="pt-4">
+					<Button onClick={handleClose} type="button" variant="outline">
+						{readOnly ? "Close" : "Cancel"}
+					</Button>
+					{!readOnly && (
+						<Button
+							className="bg-primary text-primary-foreground hover:bg-primary/90"
+							disabled={loading}
+							type="submit"
+						>
+							{loading ? (
+								<span className="flex items-center gap-2">
+									<Loader2 className="h-4 w-4 animate-spin" />
+									Updating...
+								</span>
+							) : (
+								<span>Update {nodeTypeLabel}</span>
+							)}
+						</Button>
+					)}
+				</DialogFooter>
+			</form>
+		</Form>
+	);
+
+	const panelContext = {
+		caseId: assuranceCase?.id?.toString() ?? "",
+		elementId: String(node.data?.id ?? ""),
+		elementType: nodeType,
+	};
+
 	return (
 		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -428,79 +517,29 @@ export default function NodeEditDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				<Form {...form}>
-					<form
-						className="space-y-4"
-						onSubmit={form.handleSubmit(handleSubmit)}
-					>
-						<TextFieldSection
-							form={form}
-							label="Description"
-							name="description"
-							placeholder="Type your description here."
-							readOnly={readOnly}
-						/>
-
-						{supportsAttributes(nodeType) && (
-							<>
-								<TextFieldSection
-									form={form}
-									label="Assumption"
-									name="assumption"
-									placeholder="Type your assumption here (optional)."
-									readOnly={readOnly}
-								/>
-								<TextFieldSection
-									form={form}
-									label="Justification"
-									name="justification"
-									placeholder="Type your justification here (optional)."
-									readOnly={readOnly}
-								/>
-								<ContextSection
-									contextItems={contextItems}
-									newContextValue={newContextValue}
-									onAddContext={addContext}
-									onNewContextChange={setNewContextValue}
-									onRemoveContext={removeContext}
-									readOnly={readOnly}
-								/>
-							</>
-						)}
-
-						{nodeType === "evidence" && (
-							<UrlsSection
-								fields={fields}
-								form={form}
-								onAppend={() => append({ value: "" })}
-								onRemove={remove}
-								readOnly={readOnly}
-							/>
-						)}
-
-						<DialogFooter className="pt-4">
-							<Button onClick={handleClose} type="button" variant="outline">
-								{readOnly ? "Close" : "Cancel"}
-							</Button>
-							{!readOnly && (
-								<Button
-									className="bg-primary text-primary-foreground hover:bg-primary/90"
-									disabled={loading}
-									type="submit"
-								>
-									{loading ? (
-										<span className="flex items-center gap-2">
-											<Loader2 className="h-4 w-4 animate-spin" />
-											Updating...
-										</span>
-									) : (
-										<span>Update {nodeTypeLabel}</span>
-									)}
-								</Button>
+				{panelSlot.registrations.length === 0 ? (
+					detailsForm
+				) : (
+					<Tabs defaultValue="details">
+						<TabsList>
+							<TabsTrigger value="details">Details</TabsTrigger>
+							{panelSlot.registrations.map(
+								({ pluginId, tabId, label, icon: Icon }) => (
+									<TabsTrigger key={pluginId} value={tabId}>
+										{Icon && <Icon className="mr-1.5 h-3.5 w-3.5" />}
+										{label}
+									</TabsTrigger>
+								)
 							)}
-						</DialogFooter>
-					</form>
-				</Form>
+						</TabsList>
+						<TabsContent value="details">{detailsForm}</TabsContent>
+						{panelSlot.registrations.map(({ pluginId, tabId, Component }) => (
+							<TabsContent key={pluginId} value={tabId}>
+								<Component {...panelContext} />
+							</TabsContent>
+						))}
+					</Tabs>
+				)}
 			</DialogContent>
 		</Dialog>
 	);

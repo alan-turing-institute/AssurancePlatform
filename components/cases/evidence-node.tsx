@@ -4,15 +4,24 @@ import { ExternalLink } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
+import useStore from "@/store/store";
 import NodeEditDialog from "./node-edit-dialog";
 
 function EvidenceNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const { assuranceCase } = useStore();
 
 	const url = data.URL || data.url;
 	const fallback = url ? [url] : [];
 	const urls: string[] = data.urls?.length ? data.urls : fallback;
 	const node = { data, position: { x: 0, y: 0 }, ...props };
+
+	const badgeSlot = useElementBadgeSlot({
+		caseId: assuranceCase?.id?.toString() ?? "",
+		elementId: String(data.id),
+		elementType: "evidence",
+	});
 
 	const dataTour =
 		data.isDemo && data.name === "E1" ? "demo-evidence-1" : undefined;
@@ -37,6 +46,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="evidence"
 				selected={props.selected}
+				topRightActions={badgeSlot}
 			>
 				{urls.length > 0 && (
 					<div className="space-y-1">
