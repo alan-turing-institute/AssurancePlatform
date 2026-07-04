@@ -254,6 +254,7 @@ Table assurance_elements {
   comments comments [not null]
   releaseComments release_comments [not null]
   pluginData plugin_data [not null]
+  pluginHealthEvidence plugin_health_evidence [not null]
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
@@ -636,6 +637,33 @@ Table api_tokens {
 rest; plaintext shown once at issuance.'
 }
 
+Table plugin_health_evidence {
+  id String [pk]
+  claimId String [not null, note: 'The PROPERTY_CLAIM AssuranceElement this evidence bears on']
+  metricName String [not null]
+  value Float
+  threshold Float
+  verdict PluginHealthEvidenceVerdict [not null]
+  oddDimensions String[] [not null]
+  sourceSystem String [not null]
+  provenance Json [not null]
+  evaluatedAt DateTime [not null, note: 'When the check ran (client-supplied) — NOT when we stored it']
+  formatVersion String [not null, note: 'Which evidence-format-v0.1(.x) version governed this item\'s capture.']
+  recordHash String [not null]
+  previousRecordHash String
+  chainSequence Int [increment, unique, not null, note: 'Server-assigned, globally monotonic ordering anchor for the hash chain.
+Deliberately NOT `createdAt`: two records for the same claim could in
+principle share a millisecond-resolution timestamp, which would make
+"walk the chain in order" ambiguous. An autoincrementing column has no
+such ambiguity. Internal only — never part of the evidence-format-v0.1
+wire contract in either direction.']
+  createdById String [not null, note: 'The machine principal (an Integration\'s system User) that appended this record']
+  createdAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+
+  Note: 'One item of runtime evidence bearing on a PROPERTY_CLAIM (evidence-format-v0.1).'
+}
+
 Enum AuthProvider {
   LOCAL
   GITHUB
@@ -724,6 +752,12 @@ Enum IntegrationStatus {
   ACTIVE
   SUSPENDED
   REVOKED
+}
+
+Enum PluginHealthEvidenceVerdict {
+  PASS
+  FAIL
+  DEGRADED
 }
 
 Ref: teams.createdById > users.id
@@ -831,3 +865,5 @@ Ref: integrations.ownerId > users.id
 Ref: integrations.systemUserId > users.id
 
 Ref: api_tokens.integrationId > integrations.id [delete: Cascade]
+
+Ref: plugin_health_evidence.claimId > assurance_elements.id [delete: Cascade]

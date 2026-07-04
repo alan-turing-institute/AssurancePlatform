@@ -22,6 +22,12 @@
         "in": "cookie",
         "name": "next-auth.session-token",
         "description": "NextAuth.js session cookie"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API token",
+        "description": "Machine API token (`Authorization: Bearer <token>`), issued via the integration registry"
       }
     }
   },

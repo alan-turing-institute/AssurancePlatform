@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { listManifestPluginIds } from "@/lib/plugins/manifest";
+import {
+	BOUNDED_JSON_MAX_DEPTH,
+	BOUNDED_JSON_MAX_KEYS,
+	boundedJsonValueSchema,
+	serializedByteLength,
+} from "@/lib/schemas/bounded-json";
 
 /**
  * Zod schemas for the plugin lifecycle core's user-facing surface (ADR 0002
@@ -17,60 +23,21 @@ import { listManifestPluginIds } from "@/lib/plugins/manifest";
  * trusts schema-validated input and imposes no bound of its own on
  * `settings` (vincent finding 7, 2026-07-03 backend review: "the zod schema
  * on any route wiring to `setPluginEnabledForUser` MUST cap `settings`
- * size/shape"). These constants are that cap — generous enough for a
- * plugin's user-facing preferences, small enough that no caller can smuggle
- * an unbounded JSON blob into a tier-1 row through this route.
+ * size/shape"). The recursive shape and its depth/key/array/string caps are
+ * shared with `lib/schemas/health-evidence.ts`'s `provenance` via
+ * `lib/schemas/bounded-json.ts`; only the final byte cap is specific to
+ * settings — generous enough for a plugin's user-facing preferences, small
+ * enough that no caller can smuggle an unbounded JSON blob into a tier-1 row
+ * through this route.
  */
-const PLUGIN_SETTINGS_MAX_DEPTH = 4;
-const PLUGIN_SETTINGS_MAX_KEYS = 20;
-const PLUGIN_SETTINGS_MAX_ARRAY_ITEMS = 20;
-const PLUGIN_SETTINGS_MAX_STRING_LENGTH = 500;
 /** Final belt-and-braces bound on the whole payload, serialized as UTF-8 bytes. */
 const PLUGIN_SETTINGS_MAX_BYTES = 4096;
-
-const jsonPrimitiveSchema = z.union([
-	z.string().max(PLUGIN_SETTINGS_MAX_STRING_LENGTH),
-	z.number(),
-	z.boolean(),
-	z.null(),
-]);
-
-/**
- * A bounded JSON value, at most `depth` further levels of array/object
- * nesting below this call — `depth <= 0` collapses to primitives only, so
- * the recursion structurally terminates rather than relying on a runtime
- * counter. Each level down is a fresh schema (cheap: `PLUGIN_SETTINGS_MAX_DEPTH`
- * is small and fixed), not unbounded recursion.
- */
-// biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing (same pattern as lib/schemas/case-export.ts's TreeNodeSchema)
-function boundedJsonValueSchema(depth: number): z.ZodType<any> {
-	if (depth <= 0) {
-		return jsonPrimitiveSchema;
-	}
-	return z.lazy(() =>
-		z.union([
-			jsonPrimitiveSchema,
-			z
-				.array(boundedJsonValueSchema(depth - 1))
-				.max(PLUGIN_SETTINGS_MAX_ARRAY_ITEMS),
-			z
-				.record(z.string(), boundedJsonValueSchema(depth - 1))
-				.refine((obj) => Object.keys(obj).length <= PLUGIN_SETTINGS_MAX_KEYS, {
-					message: `Must have at most ${PLUGIN_SETTINGS_MAX_KEYS} keys`,
-				}),
-		])
-	);
-}
-
-function serializedByteLength(value: unknown): number {
-	return new TextEncoder().encode(JSON.stringify(value)).length;
-}
 
 /**
  * A plugin's `settings` JSON (ADR §2.2: "`PluginState` ... settings JSON,
  * unique per plugin+scope"). The top level must be a plain object — a
  * settings blob is a bag of named preferences, never a bare array or
- * scalar — nested up to `PLUGIN_SETTINGS_MAX_DEPTH` levels, with per-object
+ * scalar — nested up to `BOUNDED_JSON_MAX_DEPTH` levels, with per-object
  * key counts, per-array lengths, and per-string lengths all capped, and the
  * whole payload capped at `PLUGIN_SETTINGS_MAX_BYTES` serialized bytes as a
  * final structural-bypass-proof bound (a payload could satisfy every
@@ -78,9 +45,9 @@ function serializedByteLength(value: unknown): number {
  * closes that gap).
  */
 const pluginSettingsSchema = z
-	.record(z.string(), boundedJsonValueSchema(PLUGIN_SETTINGS_MAX_DEPTH - 1))
-	.refine((obj) => Object.keys(obj).length <= PLUGIN_SETTINGS_MAX_KEYS, {
-		message: `settings must have at most ${PLUGIN_SETTINGS_MAX_KEYS} top-level keys`,
+	.record(z.string(), boundedJsonValueSchema(BOUNDED_JSON_MAX_DEPTH - 1))
+	.refine((obj) => Object.keys(obj).length <= BOUNDED_JSON_MAX_KEYS, {
+		message: `settings must have at most ${BOUNDED_JSON_MAX_KEYS} top-level keys`,
 	})
 	.refine((obj) => serializedByteLength(obj) <= PLUGIN_SETTINGS_MAX_BYTES, {
 		message: `settings must serialize to at most ${PLUGIN_SETTINGS_MAX_BYTES} bytes`,

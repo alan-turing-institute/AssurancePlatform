@@ -1,0 +1,128 @@
+import { z } from "zod";
+import { uuidSchema } from "@/lib/schemas/base";
+import {
+	BOUNDED_JSON_MAX_DEPTH,
+	BOUNDED_JSON_MAX_KEYS,
+	BOUNDED_JSON_MAX_STRING_LENGTH,
+	boundedJsonValueSchema,
+	serializedByteLength,
+} from "@/lib/schemas/bounded-json";
+
+/**
+ * Zod schema for `docs/specs/evidence-format-v0.1.md` — the FROZEN
+ * ingestion contract for `POST /api/machine/health/elements/[id]/evidence`.
+ * Implemented exactly: unknown top-level fields are rejected (`.strict()`),
+ * unknown `provenance` keys are preserved verbatim (`.catchall()`, not
+ * `.strip()`). Any deviation from the spec is a question back to cid, not a
+ * unilateral change — see the health-plugin delegation brief.
+ *
+ * Fields the spec says a producer does NOT send (`recordHash`,
+ * `previousRecordHash`, `createdAt`, `createdById`) are simply absent from
+ * this schema — they are set server-side by `health-evidence-service.ts`
+ * and would be rejected anyway by `.strict()` if a caller tried to smuggle
+ * them in.
+ */
+
+export const EVIDENCE_FORMAT_VERSION = "0.1";
+
+const METRIC_NAME_MAX_LENGTH = 200;
+const SOURCE_SYSTEM_MAX_LENGTH = 100;
+const ODD_DIMENSION_MAX_ITEMS = 50;
+const ODD_DIMENSION_MAX_LENGTH = 200;
+
+/**
+ * Bounded-JSON cap for `provenance` (vincent's settings-cap review finding):
+ * `provenance` is regulator-grade and stored verbatim, but "verbatim" must
+ * not mean "unbounded" on a machine-write endpoint. `check` and `runId` are
+ * required (evidence-format-v0.1); every other key is free-form but capped
+ * in depth/count/length exactly like the plugin-settings JSON — the
+ * recursive shape and those caps are shared with `lib/schemas/plugin.ts` via
+ * `lib/schemas/bounded-json.ts`. Only the final serialized-byte cap is
+ * specific to `provenance` (regulator-grade payloads get a larger budget
+ * than a settings blob).
+ */
+/** Final belt-and-braces bound on the whole object, serialized as UTF-8 bytes. */
+const PROVENANCE_MAX_BYTES = 8192;
+
+/**
+ * `provenance` — evidence-format-v0.1 requires at least `check` and `runId`
+ * (strings); further keys are "recommended and preserved verbatim". Zod's
+ * `.catchall()` gives exactly that shape: named required keys, plus any
+ * additional key validated (and KEPT, never stripped) against the bounded
+ * JSON schema shared with `lib/schemas/plugin.ts`.
+ */
+const provenanceSchema = z
+	.object({
+		check: z
+			.string()
+			.min(1, "provenance.check is required")
+			.max(BOUNDED_JSON_MAX_STRING_LENGTH),
+		runId: z
+			.string()
+			.min(1, "provenance.runId is required")
+			.max(BOUNDED_JSON_MAX_STRING_LENGTH),
+	})
+	.catchall(boundedJsonValueSchema(BOUNDED_JSON_MAX_DEPTH - 1))
+	.refine((obj) => Object.keys(obj).length <= BOUNDED_JSON_MAX_KEYS, {
+		message: `provenance must have at most ${BOUNDED_JSON_MAX_KEYS} keys`,
+	})
+	.refine((obj) => serializedByteLength(obj) <= PROVENANCE_MAX_BYTES, {
+		message: `provenance must serialize to at most ${PROVENANCE_MAX_BYTES} bytes`,
+	});
+
+/**
+ * One evidence-format-v0.1 item, exactly as documented. `claimId` is
+ * required here (a producer supplies it), but its equality with the path
+ * `[id]` is enforced at the ROUTE layer (`app/api/machine/health/elements/
+ * [id]/evidence/route.ts`) — the spec is explicit that this is not
+ * expressible in the body schema alone, since path and body are parsed
+ * separately.
+ */
+export const healthEvidenceItemSchema = z
+	.object({
+		formatVersion: z.literal(EVIDENCE_FORMAT_VERSION, {
+			message: `formatVersion must be "${EVIDENCE_FORMAT_VERSION}"`,
+		}),
+		claimId: uuidSchema,
+		metricName: z
+			.string()
+			.min(1, "metricName is required")
+			.max(
+				METRIC_NAME_MAX_LENGTH,
+				`metricName must be at most ${METRIC_NAME_MAX_LENGTH} characters`
+			),
+		value: z.number().finite().optional(),
+		threshold: z.number().finite().optional(),
+		verdict: z.enum(["PASS", "FAIL", "DEGRADED"], {
+			message: "verdict must be PASS, FAIL, or DEGRADED",
+		}),
+		oddDimensions: z
+			.array(
+				z
+					.string()
+					.min(1)
+					.max(
+						ODD_DIMENSION_MAX_LENGTH,
+						`Each oddDimensions entry must be at most ${ODD_DIMENSION_MAX_LENGTH} characters`
+					)
+			)
+			.max(
+				ODD_DIMENSION_MAX_ITEMS,
+				`oddDimensions must have at most ${ODD_DIMENSION_MAX_ITEMS} entries`
+			)
+			.default([]),
+		sourceSystem: z
+			.string()
+			.min(1, "sourceSystem is required")
+			.max(
+				SOURCE_SYSTEM_MAX_LENGTH,
+				`sourceSystem must be at most ${SOURCE_SYSTEM_MAX_LENGTH} characters`
+			),
+		provenance: provenanceSchema,
+		// "ISO 8601 UTC" (spec) — no offset variants accepted, matching the
+		// spec's own example ("...T09:41:07Z").
+		evaluatedAt: z
+			.string()
+			.datetime({ message: "evaluatedAt must be an ISO 8601 UTC timestamp" }),
+	})
+	.strict();
