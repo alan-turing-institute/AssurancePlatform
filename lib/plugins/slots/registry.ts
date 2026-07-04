@@ -50,6 +50,18 @@ export class SlotRegistry<TRegistration extends { pluginId: string }> {
 	 * §1): the pluginId must be a real manifest entry, and that entry must
 	 * declare this slot's id among its `surfaces` — a plugin cannot show up
 	 * somewhere its own manifest doesn't admit to reaching.
+	 *
+	 * Idempotent by pluginId (bootstrap safety, `lib/plugins/bootstrap.ts`):
+	 * a plugin's register module runs its top-level `register()` calls as an
+	 * import side effect, and nothing here guarantees that module's import
+	 * graph is only ever entered once in a given process — a test file that
+	 * imports the bootstrap alongside the real providers path importing it
+	 * too, for instance. A second call for a pluginId already present in
+	 * this slot is a silent no-op rather than a second entry: without this,
+	 * `.list()` would return the same registration twice, and every render-
+	 * time consumer that maps over it keyed by `pluginId`
+	 * (`useElementBadgeSlot`, `useElementPanelSlot`) would render the
+	 * plugin's UI twice under a duplicate React key.
 	 */
 	register(registration: TRegistration): void {
 		const entry = getManifestEntry(registration.pluginId);
@@ -62,6 +74,12 @@ export class SlotRegistry<TRegistration extends { pluginId: string }> {
 			throw new Error(
 				`Cannot register '${registration.pluginId}' into slot '${this.slotId}': its manifest entry does not declare this surface`
 			);
+		}
+		const alreadyRegistered = this.registrations.some(
+			(existing) => existing.pluginId === registration.pluginId
+		);
+		if (alreadyRegistered) {
+			return;
 		}
 		this.registrations.push(registration);
 	}

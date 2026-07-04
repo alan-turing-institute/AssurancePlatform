@@ -1,9 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { JSX } from "react";
+import type { ReactNode } from "react";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+// Registers every official plugin's UI modules for the running app (ADR 0002
+// v2 §2.3 implementation decision, cid 2026-07-04) — a bare side-effect
+// import, so it runs once as this always-mounted, root-level client
+// component loads (`app/layout.tsx` renders `<ModalProvider />` for every
+// route), before any canvas node or the node-edit dialog can render a slot.
+import "@/lib/plugins/bootstrap";
 
 // Dynamic imports with ssr: false to reduce initial bundle size
 const CaseCreateModal = dynamic(
@@ -71,9 +77,9 @@ const InviteMemberDialog = dynamic(
  *
  * All child modals use `dynamic(..., { ssr: false })`, so no mounted gate is needed here.
  *
- * @returns {JSX.Element} The JSX for the modals.
+ * @returns {ReactNode} The JSX for the modals.
  */
-export const ModalProvider = (): JSX.Element => (
+export const ModalProvider = (): ReactNode => (
 	<>
 		<CaseCreateModal />
 		<ErrorBoundary

@@ -79,6 +79,27 @@ describe("SlotRegistry", () => {
 		]);
 	});
 
+	it("ignores a second registration for a pluginId already registered in this slot", () => {
+		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
+		const registry = new SlotRegistry<{
+			Component: () => null;
+			pluginId: string;
+		}>("element-badge");
+		const firstComponent = () => null;
+		const secondComponent = () => null;
+
+		registry.register({ pluginId: "tea.fake", Component: firstComponent });
+		registry.register({ pluginId: "tea.fake", Component: secondComponent });
+
+		// The first registration wins; the second is a silent no-op rather
+		// than a duplicate entry — a plugin's bootstrap module re-running its
+		// import-time `register()` call (e.g. imported by both a test and the
+		// real providers path in one process) must not double the badge.
+		expect(registry.list()).toEqual([
+			{ pluginId: "tea.fake", Component: firstComponent },
+		]);
+	});
+
 	it("resetForTests clears every registration", () => {
 		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
 		const registry = new SlotRegistry<{ pluginId: string }>("element-badge");
