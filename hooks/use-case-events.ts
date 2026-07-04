@@ -8,7 +8,7 @@ import type {
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-interface UseCaseEventsOptions {
+export interface UseCaseEventsOptions {
 	/** Case ID to subscribe to */
 	caseId: string;
 	/** Whether the hook is enabled */
@@ -38,6 +38,36 @@ interface UseCaseEventsReturn {
 
 const DEFAULT_MAX_RECONNECT_ATTEMPTS = 5;
 const DEFAULT_RECONNECT_DELAY = 1000;
+
+/**
+ * Every event type this hook registers an `EventSource.addEventListener` for
+ * — exported (rather than kept function-local) so a test can assert
+ * registration coverage against the SAME list the hook actually uses,
+ * instead of a hand-copied second list that could silently drift.
+ * Plugin-emitted events are namespaced (ADR 0002 v2 §2.5) but still flow
+ * through this generic case-event stream — `EventSource` only fires for
+ * event names it has a registered listener for, so a namespaced type omitted
+ * here is silently dropped even though the connection manager broadcasts it.
+ * This hook stays plugin-neutral (it doesn't know what
+ * "tea.health/state-changed" MEANS, only that the closed `SSEEventType`
+ * union names it) — see the health plugin's UI module (`lib/plugins/
+ * health/`) for the consumer.
+ */
+export const CASE_EVENT_TYPES: SSEEventType[] = [
+	"case:updated",
+	"comment:created",
+	"comment:updated",
+	"comment:deleted",
+	"element:created",
+	"element:updated",
+	"element:deleted",
+	"element:restored",
+	"element:attached",
+	"element:detached",
+	"element:moved",
+	"permission:changed",
+	"tea.health/state-changed",
+];
 
 /**
  * React hook for subscribing to real-time case events via SSE.
@@ -147,23 +177,8 @@ export function useCaseEvents({
 			}
 		});
 
-		// Set up event type handlers
-		const eventTypes: SSEEventType[] = [
-			"case:updated",
-			"comment:created",
-			"comment:updated",
-			"comment:deleted",
-			"element:created",
-			"element:updated",
-			"element:deleted",
-			"element:restored",
-			"element:attached",
-			"element:detached",
-			"element:moved",
-			"permission:changed",
-		];
-
-		for (const eventType of eventTypes) {
+		// Set up event type handlers — see `CASE_EVENT_TYPES`'s doc comment.
+		for (const eventType of CASE_EVENT_TYPES) {
 			eventSource.addEventListener(eventType, (e) => {
 				try {
 					const event = JSON.parse(e.data) as SSEEvent;

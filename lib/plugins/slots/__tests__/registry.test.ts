@@ -3,6 +3,7 @@ import type { PluginManifestEntry } from "@/lib/plugins/manifest";
 
 const UNKNOWN_PLUGIN_MESSAGE = /unknown plugin/i;
 const UNDECLARED_SURFACE_MESSAGE = /does not declare this surface/i;
+const CONFLICTING_REGISTRATION_MESSAGE = /conflicting registration/i;
 
 const mockGetManifestEntry =
 	vi.fn<(pluginId: string) => PluginManifestEntry | undefined>();
@@ -79,6 +80,53 @@ describe("SlotRegistry", () => {
 		]);
 	});
 
+	it("silently no-ops a second registration for a pluginId already registered, when it is IDENTICAL to the first", () => {
+		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
+		const registry = new SlotRegistry<{
+			Component: () => null;
+			pluginId: string;
+		}>("element-badge");
+		const component = () => null;
+
+		registry.register({ pluginId: "tea.fake", Component: component });
+		// Same pluginId, same Component reference — e.g. a plugin's bootstrap
+		// module re-running its import-time `register()` call (imported by
+		// both a test and the real providers path in one process) — must not
+		// double the badge, and must not throw.
+		expect(() =>
+			registry.register({ pluginId: "tea.fake", Component: component })
+		).not.toThrow();
+
+		expect(registry.list()).toEqual([
+			{ pluginId: "tea.fake", Component: component },
+		]);
+	});
+
+	it("throws on a second registration for a pluginId already registered, when it CONFLICTS with the first", () => {
+		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
+		const registry = new SlotRegistry<{
+			Component: () => null;
+			pluginId: string;
+		}>("element-badge");
+		const firstComponent = () => null;
+		const secondComponent = () => null;
+
+		registry.register({ pluginId: "tea.fake", Component: firstComponent });
+
+		// A DIFFERENT Component for the same pluginId in the same slot is not
+		// a re-run bootstrap — it's a first-party programming error (two
+		// distinct registrations claiming the same pluginId) and must throw,
+		// exactly like the unknown-plugin and undeclared-surface checks.
+		expect(() =>
+			registry.register({ pluginId: "tea.fake", Component: secondComponent })
+		).toThrow(CONFLICTING_REGISTRATION_MESSAGE);
+
+		// The first (conflicting-free) registration is left untouched.
+		expect(registry.list()).toEqual([
+			{ pluginId: "tea.fake", Component: firstComponent },
+		]);
+	});
+
 	it("resetForTests clears every registration", () => {
 		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
 		const registry = new SlotRegistry<{ pluginId: string }>("element-badge");
@@ -107,5 +155,27 @@ describe("SlotRegistry", () => {
 		expect(elementPanelSlot.list()).toHaveLength(0);
 
 		elementBadgeSlot.resetForTests();
+	});
+
+	it("lets the same pluginId register independently into two different slot instances", () => {
+		mockGetManifestEntry.mockReturnValue({
+			...FAKE_PLUGIN,
+			surfaces: ["element-badge", "element-panel"],
+		});
+		const badgeRegistry = new SlotRegistry<{ pluginId: string }>(
+			"element-badge"
+		);
+		const panelRegistry = new SlotRegistry<{ pluginId: string }>(
+			"element-panel"
+		);
+
+		badgeRegistry.register({ pluginId: "tea.fake" });
+		panelRegistry.register({ pluginId: "tea.fake" });
+
+		// Two independent `SlotRegistry` instances — the SAME pluginId in each
+		// is not a conflict, since `register()` only ever compares against
+		// registrations already held in ITS OWN slot.
+		expect(badgeRegistry.list()).toEqual([{ pluginId: "tea.fake" }]);
+		expect(panelRegistry.list()).toEqual([{ pluginId: "tea.fake" }]);
 	});
 });
