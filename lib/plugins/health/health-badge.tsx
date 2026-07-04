@@ -11,6 +11,7 @@ import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
 import type { HealthBand } from "./health-bands";
 import { deriveHealthBand, isHealthStale } from "./health-bands";
+import { useHealthBandScores } from "./use-health-band-scores";
 import { useHealthState } from "./use-health-state";
 
 const BAND_DOT_CLASSES: Record<HealthBand, string> = {
@@ -47,13 +48,14 @@ export function HealthBadge({
 	elementType,
 }: ElementSlotContext) {
 	const { health, status } = useHealthState({ caseId, elementId, elementType });
+	const bandScores = useHealthBandScores();
 
 	if (status !== "ready" || !health) {
 		return null;
 	}
 
 	const stale = isHealthStale(health);
-	const band = deriveHealthBand(health.score);
+	const band = deriveHealthBand(health.score, bandScores);
 	const dotClassName = stale ? STALE_DOT_CLASS : BAND_DOT_CLASSES[band];
 	const label = stale
 		? `Health: stale (last evaluated ${formatRelativeToNow(health.lastEvaluatedAt)})`

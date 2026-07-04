@@ -176,18 +176,19 @@ describe("HealthPanel — renders the log", () => {
 
 		const entries = screen.getAllByTestId("health-evidence-entry");
 		expect(entries).toHaveLength(2);
+		const [newest, oldest] = entries as [HTMLElement, HTMLElement];
 		// Newest first: chainSequence 2 (FAIL/ood-divergence) before 1 (PASS).
-		expect(within(entries[0]).getByText("Fail")).toBeInTheDocument();
-		expect(within(entries[0]).getByText("ood-divergence")).toBeInTheDocument();
+		expect(within(newest).getByText("Fail")).toBeInTheDocument();
+		expect(within(newest).getByText("ood-divergence")).toBeInTheDocument();
 		expect(
-			within(entries[0]).getByText("Value: 0.2 — Threshold: 0.1")
+			within(newest).getByText("Value: 0.2 — Threshold: 0.1")
 		).toBeInTheDocument();
 		expect(
-			within(entries[0]).getByText("Source: darter-monitor")
+			within(newest).getByText("Source: darter-monitor")
 		).toBeInTheDocument();
-		expect(within(entries[1]).getByText("Pass")).toBeInTheDocument();
+		expect(within(oldest).getByText("Pass")).toBeInTheDocument();
 		expect(
-			within(entries[1]).getByText("in-distribution-rate")
+			within(oldest).getByText("in-distribution-rate")
 		).toBeInTheDocument();
 	});
 
