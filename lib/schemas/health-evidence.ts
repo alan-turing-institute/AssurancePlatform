@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { uuidSchema } from "@/lib/schemas/base";
+import {
+	BOUNDED_JSON_MAX_DEPTH,
+	BOUNDED_JSON_MAX_KEYS,
+	BOUNDED_JSON_MAX_STRING_LENGTH,
+	boundedJsonValueSchema,
+	serializedByteLength,
+} from "@/lib/schemas/bounded-json";
 
 /**
  * Zod schema for `docs/specs/evidence-format-v0.1.md` — the FROZEN
@@ -24,80 +31,40 @@ const ODD_DIMENSION_MAX_ITEMS = 50;
 const ODD_DIMENSION_MAX_LENGTH = 200;
 
 /**
- * Bounded-JSON caps for `provenance` (vincent's settings-cap review finding,
- * same pattern as `lib/schemas/plugin.ts`'s `boundedJsonValueSchema`):
+ * Bounded-JSON cap for `provenance` (vincent's settings-cap review finding):
  * `provenance` is regulator-grade and stored verbatim, but "verbatim" must
  * not mean "unbounded" on a machine-write endpoint. `check` and `runId` are
  * required (evidence-format-v0.1); every other key is free-form but capped
- * in depth/count/length/bytes exactly like the plugin-settings JSON.
+ * in depth/count/length exactly like the plugin-settings JSON — the
+ * recursive shape and those caps are shared with `lib/schemas/plugin.ts` via
+ * `lib/schemas/bounded-json.ts`. Only the final serialized-byte cap is
+ * specific to `provenance` (regulator-grade payloads get a larger budget
+ * than a settings blob).
  */
-const PROVENANCE_MAX_DEPTH = 4;
-const PROVENANCE_MAX_KEYS = 20;
-const PROVENANCE_MAX_ARRAY_ITEMS = 20;
-const PROVENANCE_MAX_STRING_LENGTH = 500;
 /** Final belt-and-braces bound on the whole object, serialized as UTF-8 bytes. */
 const PROVENANCE_MAX_BYTES = 8192;
-
-const jsonPrimitiveSchema = z.union([
-	z.string().max(PROVENANCE_MAX_STRING_LENGTH),
-	z.number(),
-	z.boolean(),
-	z.null(),
-]);
-
-/**
- * A bounded JSON value, at most `depth` further levels of array/object
- * nesting below this call — `depth <= 0` collapses to primitives only, so
- * the recursion structurally terminates. Mirrors `lib/schemas/plugin.ts`'s
- * `boundedJsonValueSchema` (kept as a separate, smaller copy here rather
- * than a shared import: this schema's caps and required-key shape are
- * specific to `provenance`, not the generic plugin-settings blob).
- */
-// biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing (same pattern as lib/schemas/plugin.ts)
-function boundedJsonValueSchema(depth: number): z.ZodType<any> {
-	if (depth <= 0) {
-		return jsonPrimitiveSchema;
-	}
-	return z.lazy(() =>
-		z.union([
-			jsonPrimitiveSchema,
-			z
-				.array(boundedJsonValueSchema(depth - 1))
-				.max(PROVENANCE_MAX_ARRAY_ITEMS),
-			z
-				.record(z.string(), boundedJsonValueSchema(depth - 1))
-				.refine((obj) => Object.keys(obj).length <= PROVENANCE_MAX_KEYS, {
-					message: `Must have at most ${PROVENANCE_MAX_KEYS} keys`,
-				}),
-		])
-	);
-}
-
-function serializedByteLength(value: unknown): number {
-	return new TextEncoder().encode(JSON.stringify(value)).length;
-}
 
 /**
  * `provenance` — evidence-format-v0.1 requires at least `check` and `runId`
  * (strings); further keys are "recommended and preserved verbatim". Zod's
  * `.catchall()` gives exactly that shape: named required keys, plus any
  * additional key validated (and KEPT, never stripped) against the bounded
- * JSON schema above.
+ * JSON schema shared with `lib/schemas/plugin.ts`.
  */
 const provenanceSchema = z
 	.object({
 		check: z
 			.string()
 			.min(1, "provenance.check is required")
-			.max(PROVENANCE_MAX_STRING_LENGTH),
+			.max(BOUNDED_JSON_MAX_STRING_LENGTH),
 		runId: z
 			.string()
 			.min(1, "provenance.runId is required")
-			.max(PROVENANCE_MAX_STRING_LENGTH),
+			.max(BOUNDED_JSON_MAX_STRING_LENGTH),
 	})
-	.catchall(boundedJsonValueSchema(PROVENANCE_MAX_DEPTH - 1))
-	.refine((obj) => Object.keys(obj).length <= PROVENANCE_MAX_KEYS, {
-		message: `provenance must have at most ${PROVENANCE_MAX_KEYS} keys`,
+	.catchall(boundedJsonValueSchema(BOUNDED_JSON_MAX_DEPTH - 1))
+	.refine((obj) => Object.keys(obj).length <= BOUNDED_JSON_MAX_KEYS, {
+		message: `provenance must have at most ${BOUNDED_JSON_MAX_KEYS} keys`,
 	})
 	.refine((obj) => serializedByteLength(obj) <= PROVENANCE_MAX_BYTES, {
 		message: `provenance must serialize to at most ${PROVENANCE_MAX_BYTES} bytes`,
@@ -159,5 +126,3 @@ export const healthEvidenceItemSchema = z
 			.datetime({ message: "evaluatedAt must be an ISO 8601 UTC timestamp" }),
 	})
 	.strict();
-
-export type HealthEvidenceItemInput = z.infer<typeof healthEvidenceItemSchema>;

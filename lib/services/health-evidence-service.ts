@@ -10,11 +10,14 @@ import type { ServiceResult } from "@/types/service";
  * The health plugin's append-only evidence log (ADR 0001 §2, relocated by
  * ADR 0002 v2 §3 — `plugin_health_evidence`). This module is the ONLY code
  * path allowed to write to that table, and it exposes exactly two
- * operations: `appendHealthEvidence` and `listHealthEvidence`. There is no
- * update or delete function anywhere in this file — append-only is a
- * structural property of the service surface, not a convention a caller
- * could violate, and `src/__tests__/integration/health-evidence-service.test.ts`
- * asserts the module's exports directly to prove it.
+ * operations that touch the table: `appendHealthEvidence` and
+ * `listHealthEvidence` (plus the pure, side-effect-free hash helpers
+ * `canonicalJSON`/`computeRecordHash`, exported for hash-chain
+ * verification). There is no update or delete function anywhere in this
+ * file — append-only is a structural property of the service surface, not a
+ * convention a caller could violate, and
+ * `src/__tests__/integration/health-evidence-service.test.ts` asserts the
+ * module's exports directly to prove it.
  *
  * Concurrency: two writers racing to append evidence for the SAME claim
  * could both read the same "current tip" and both compute a
@@ -121,8 +124,14 @@ async function guardClaimAccess(
  * key reordering. Sorting keys at every level makes the serialization
  * depend only on content, never on any particular storage/transport's
  * ordering behaviour.
+ *
+ * Exported (alongside `computeRecordHash` below) for two callers outside
+ * this file: the future hardening sweeper that periodically re-verifies the
+ * whole chain, and this module's own integration tests, which recompute a
+ * record's hash from the columns Prisma hands back and assert it against
+ * the stored `recordHash` — the only way to actually prove a round trip.
  */
-function canonicalJSON(value: unknown): string {
+export function canonicalJSON(value: unknown): string {
 	if (value === null || typeof value !== "object") {
 		return JSON.stringify(value);
 	}
@@ -158,9 +167,14 @@ interface EvidenceHashContent {
  * separator sits between the previous hash and the canonical content string
  * so that no ambiguous concatenation (e.g. previousHash `"ab"` + content
  * `"c"` vs. previousHash `"a"` + content `"bc"`) can ever produce the same
- * bytes fed to the digest.
+ * bytes fed to the digest. That guarantee depends on this being the ONLY NUL
+ * byte in the assembled payload — `canonicalJSON` always serializes string
+ * values through `JSON.stringify`, which escapes an embedded NUL character
+ * as a six-character JSON escape sequence, never as a raw byte, so a
+ * producer cannot smuggle in a second raw separator byte via, say, a
+ * `provenance` string.
  */
-function computeRecordHash(
+export function computeRecordHash(
 	content: EvidenceHashContent,
 	previousRecordHash: string | null
 ): string {
@@ -194,6 +208,18 @@ export async function appendHealthEvidence(
 
 	try {
 		const createdAt = new Date();
+		// Parsed ONCE and reused for both the hash preimage and storage — the
+		// same fix as `createdAt` above. `evaluatedAt` is client-supplied and
+		// round-trips through Postgres's `TIMESTAMP(3)` column as a `Date`, not
+		// as the producer's original wire string; if the hash were computed
+		// from `input.evaluatedAt` directly but the column stored
+		// `new Date(input.evaluatedAt)`, a record's hash could never be
+		// recomputed from its own returned data (e.g. a wire value with no
+		// fractional seconds hashes as `"...07Z"` but re-serializes from the
+		// stored `Date` as `"...07.000Z"` — a spurious tamper signal on an
+		// untouched record). Hashing and storing the SAME `Date` instance
+		// makes the round trip exact.
+		const evaluatedAtDate = new Date(input.evaluatedAt);
 		const record = await prisma.$transaction(async (tx) => {
 			// Locks the claim's own row for the duration of this transaction.
 			// It is guaranteed to exist (guardClaimAccess just resolved it), so
@@ -218,7 +244,7 @@ export async function appendHealthEvidence(
 				oddDimensions: input.oddDimensions,
 				sourceSystem: input.sourceSystem,
 				provenance: input.provenance,
-				evaluatedAt: input.evaluatedAt,
+				evaluatedAt: evaluatedAtDate.toISOString(),
 				formatVersion: EVIDENCE_FORMAT_VERSION,
 				createdById: actingUserId,
 				createdAt: createdAt.toISOString(),
@@ -235,7 +261,7 @@ export async function appendHealthEvidence(
 					oddDimensions: input.oddDimensions,
 					sourceSystem: input.sourceSystem,
 					provenance: input.provenance,
-					evaluatedAt: new Date(input.evaluatedAt),
+					evaluatedAt: evaluatedAtDate,
 					formatVersion: EVIDENCE_FORMAT_VERSION,
 					recordHash,
 					previousRecordHash,

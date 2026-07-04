@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
 	appendHealthEvidence,
+	canonicalJSON,
+	computeRecordHash,
 	type HealthEvidenceInput,
 	listHealthEvidence,
 } from "@/lib/services/health-evidence-service";
@@ -17,8 +19,14 @@ import {
 const PLUGIN_ID = "tea.health";
 const NOT_FOUND_PATTERN = /Claim not found/;
 const NOT_ENABLED_PATTERN = /is not enabled/;
-const MUTATION_NAME_PATTERN = /update|delete|edit|remove|patch/i;
 const HEX_SHA256_PATTERN = /^[0-9a-f]{64}$/;
+/** The module's full runtime export surface — see the "module surface" describe block below. */
+const EXPECTED_EXPORTS = [
+	"appendHealthEvidence",
+	"canonicalJSON",
+	"computeRecordHash",
+	"listHealthEvidence",
+].sort();
 
 afterEach(() => {
 	vi.unstubAllEnvs();
@@ -53,16 +61,107 @@ function evidenceInput(
 }
 
 describe("health-evidence-service — module surface (append-only, structurally)", () => {
-	it("exposes no update/delete/edit/remove path for evidence records", async () => {
+	it("exposes EXACTLY appendHealthEvidence, listHealthEvidence, and the two hash helpers — no update/delete/edit/remove path", async () => {
 		const module = await import("@/lib/services/health-evidence-service");
-		const exportedNames = Object.keys(module);
+		const exportedNames = Object.keys(module).sort();
 
-		expect(exportedNames).toEqual(
-			expect.arrayContaining(["appendHealthEvidence", "listHealthEvidence"])
+		expect(exportedNames).toEqual(EXPECTED_EXPORTS);
+	});
+});
+
+describe("appendHealthEvidence — hash-chain tamper-evidence (recomputed from STORED columns)", () => {
+	it("recomputes to the SAME recordHash from the row fetched back via prisma — non-alphabetical provenance keys, no evaluatedAt milliseconds", async () => {
+		const { owner, claim } = await setup();
+
+		// Two deliberate stress cases in one append:
+		// - provenance keys are supplied out of alphabetical order, so this
+		//   only passes if canonicalJSON's key-sorting is actually applied on
+		//   both the write path and this test's independent recompute.
+		// - evaluatedAt has NO fractional seconds ("...07Z"). `Date.prototype
+		//   .toISOString()` always emits exactly 3 fractional digits
+		//   ("...07.000Z"), so hashing the producer's raw wire string but
+		//   storing `new Date(wireString)` makes the hash unrecoverable from
+		//   the record's own stored `evaluatedAt` column — this is the exact
+		//   drift this test pins shut (health-evidence-service.ts's
+		//   `evaluatedAtDate` handling).
+		const appended = expectSuccess(
+			await appendHealthEvidence(
+				owner.id,
+				evidenceInput(claim.id, {
+					evaluatedAt: "2026-07-04T09:41:07Z",
+					provenance: {
+						runId: "run-9",
+						zebra: "last-alphabetically",
+						check: "ood-monitor/kl-divergence",
+						alpha: "first-alphabetically",
+					},
+				})
+			)
 		);
-		expect(exportedNames.some((name) => MUTATION_NAME_PATTERN.test(name))).toBe(
-			false
+
+		const stored = await prisma.pluginHealthEvidence.findUniqueOrThrow({
+			where: { id: appended.evidence.id },
+		});
+
+		const recomputed = computeRecordHash(
+			{
+				claimId: stored.claimId,
+				metricName: stored.metricName,
+				value: stored.value,
+				threshold: stored.threshold,
+				verdict: stored.verdict,
+				oddDimensions: stored.oddDimensions,
+				// `stored.provenance` is Prisma's broader `JsonValue` type; the
+				// service's own write path also treats provenance as a plain
+				// object when it builds this same content shape (see
+				// `HealthEvidenceInput.provenance`) — this mirrors that.
+				provenance: stored.provenance as Record<string, unknown>,
+				sourceSystem: stored.sourceSystem,
+				evaluatedAt: stored.evaluatedAt.toISOString(),
+				formatVersion: stored.formatVersion,
+				createdById: stored.createdById,
+				createdAt: stored.createdAt.toISOString(),
+			},
+			stored.previousRecordHash
 		);
+
+		expect(recomputed).toBe(stored.recordHash);
+	});
+});
+
+describe("computeRecordHash — NUL-separator invariant", () => {
+	it("assembles exactly one raw NUL byte in the hash payload, even when a provenance string contains an embedded NUL character", () => {
+		// Mirrors computeRecordHash's own payload assembly
+		// (`${previousRecordHash ?? ""}\u0000${canonicalJSON(content)}`) so
+		// this test fails if that separator convention ever changes without a
+		// matching change here.
+		const previousRecordHash = "deadbeef";
+		const content = {
+			claimId: "00000000-0000-0000-0000-000000000000",
+			metricName: "in-distribution-rate",
+			value: 0.98,
+			threshold: 0.95,
+			verdict: "PASS",
+			oddDimensions: ["traffic-density"],
+			sourceSystem: "darter-pipeline",
+			// A literal NUL character embedded in a provenance string — if
+			// canonicalJSON ever stopped routing string serialization through
+			// JSON.stringify's escaping, this would inject a SECOND raw NUL
+			// byte into the payload, breaking the "no ambiguous
+			// concatenation" guarantee the separator exists for.
+			provenance: { check: "ood-monitor\u0000injected", runId: "run-1" },
+			evaluatedAt: "2026-07-04T09:41:07.000Z",
+			formatVersion: "0.1",
+			createdById: "00000000-0000-0000-0000-000000000001",
+			createdAt: "2026-07-04T09:41:08.000Z",
+		};
+
+		const payload = `${previousRecordHash}\u0000${canonicalJSON(content)}`;
+		const rawNulBytes = Buffer.from(payload, "utf8").filter(
+			(byte) => byte === 0
+		);
+
+		expect(rawNulBytes.length).toBe(1);
 	});
 });
 

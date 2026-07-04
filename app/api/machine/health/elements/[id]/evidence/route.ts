@@ -59,7 +59,7 @@ async function resolveReadPrincipalUserId(
  * @response 401 - Unauthorised (no valid token or session)
  * @response 404 - Claim not found (covers non-existent, wrong element type, and no-access — same message, no enumeration oracle)
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/principal
- * @auth bearer session
+ * @auth bearer,SessionAuth
  * @tag Machine
  */
 export async function GET(

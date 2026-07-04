@@ -31,6 +31,20 @@ vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
 	};
 });
 
+// Wrapped (not stubbed): defaults to the REAL implementation for every test
+// except the one that deliberately overrides it with `mockResolvedValueOnce`
+// (see "POST — evidence persists even when scoring fails" below).
+vi.mock("@/lib/services/health-scoring-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import("@/lib/services/health-scoring-service")
+		>();
+	return {
+		...actual,
+		recomputeHealthScore: vi.fn(actual.recomputeHealthScore),
+	};
+});
+
 const EVIDENCE_PATH = (claimId: string) =>
 	`http://localhost:3000/api/machine/health/elements/${claimId}/evidence`;
 const AUTH_FAILURE_MESSAGE = "Invalid or expired token";
@@ -204,6 +218,77 @@ describe("POST /api/machine/health/elements/[id]/evidence — happy path", () =>
 		);
 		expect(secondBody.health.score).toBe(0);
 	});
+
+	it("uses default scoring settings when no PluginState row exists for the integration's system user", async () => {
+		const { DEFAULT_VALIDITY_WINDOW_SECONDS } = await import(
+			"@/lib/services/health-scoring-service"
+		);
+		const { owner, testCase, claim } = await setup();
+		const { secret, systemUserId } = await setupIntegration(
+			owner.id,
+			testCase.id,
+			["health:evidence:write"]
+		);
+
+		const settingsRow = await prisma.pluginState.findUnique({
+			where: {
+				pluginId_scopeType_scopeId: {
+					pluginId: "tea.health",
+					scopeType: "USER",
+					scopeId: systemUserId,
+				},
+			},
+		});
+		expect(settingsRow).toBeNull();
+
+		const { POST } = await importRoute();
+		const response = await POST(
+			postRequest(claim.id, evidenceBody(claim.id), secret),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+
+		expect(response.status).toBe(201);
+		const body = await response.json();
+		expect(body.health.validityWindowSeconds).toBe(
+			DEFAULT_VALIDITY_WINDOW_SECONDS
+		);
+		expect(body.health.score).toBe(1);
+	});
+});
+
+describe("POST — evidence persists even when scoring fails", () => {
+	it("keeps the appended evidence, does not emit SSE, and surfaces the scoring error", async () => {
+		const { recomputeHealthScore } = await import(
+			"@/lib/services/health-scoring-service"
+		);
+		const { owner, testCase, claim } = await setup();
+		const { secret } = await setupIntegration(owner.id, testCase.id, [
+			"health:evidence:write",
+		]);
+		vi.mocked(recomputeHealthScore).mockResolvedValueOnce({
+			error: "Failed to compute health score",
+		});
+		const { POST } = await importRoute();
+
+		const response = await POST(
+			postRequest(claim.id, evidenceBody(claim.id), secret),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+
+		expect(response.status).toBe(500);
+		const body = await response.json();
+		expect(body.error).toBe("Failed to compute health score");
+
+		// The evidence write already committed inside appendHealthEvidence,
+		// BEFORE recomputeHealthScore was ever called — append-only durability
+		// does not depend on the scoring step succeeding.
+		const persisted = await prisma.pluginHealthEvidence.findMany({
+			where: { claimId: claim.id },
+		});
+		expect(persisted).toHaveLength(1);
+
+		expect(emitSSEEvent).not.toHaveBeenCalled();
+	});
 });
 
 describe("POST — evidence-format-v0.1 body validation", () => {
@@ -363,6 +448,29 @@ describe("POST — permission matrix (machine token paths)", () => {
 		expect(response.status).toBe(401);
 	});
 
+	it("rejects a token belonging to a SUSPENDED integration", async () => {
+		const { suspendIntegration } = await import(
+			"@/lib/services/integration-registry-service"
+		);
+		const { owner, testCase, claim } = await setup();
+		const { secret, integration } = await setupIntegration(
+			owner.id,
+			testCase.id,
+			["health:evidence:write"]
+		);
+		expectSuccess(await suspendIntegration(integration.id, owner.id));
+		const { POST } = await importRoute();
+
+		const response = await POST(
+			postRequest(claim.id, evidenceBody(claim.id), secret),
+			{
+				params: Promise.resolve({ id: claim.id }),
+			}
+		);
+
+		expect(response.status).toBe(401);
+	});
+
 	it("rejects a missing token entirely", async () => {
 		const { claim } = await setup();
 		const { POST } = await importRoute();
@@ -395,6 +503,32 @@ describe("POST — permission matrix (machine token paths)", () => {
 		const body = await response.json();
 		expect(body.error).toMatch(NOT_FOUND_PATTERN);
 		expect(emitSSEEvent).not.toHaveBeenCalled();
+	});
+
+	it("returns byte-identical 404 responses for a no-access token, whether the claim exists or not (no enumeration oracle)", async () => {
+		const { owner, testCase, claim } = await setup();
+		const { secret } = await setupIntegration(
+			owner.id,
+			testCase.id,
+			["health:evidence:write"],
+			null // no permission grant
+		);
+		const { POST } = await importRoute();
+		const nonexistentId = "00000000-0000-0000-0000-000000000000";
+
+		const existingResponse = await POST(
+			postRequest(claim.id, evidenceBody(claim.id), secret),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+		const nonexistentResponse = await POST(
+			postRequest(nonexistentId, evidenceBody(nonexistentId), secret),
+			{ params: Promise.resolve({ id: nonexistentId }) }
+		);
+
+		expect(existingResponse.status).toBe(nonexistentResponse.status);
+		const existingBody = await existingResponse.json();
+		const nonexistentBody = await nonexistentResponse.json();
+		expect(existingBody).toEqual(nonexistentBody);
 	});
 
 	it("refuses when the system user has only VIEW access (write needs EDIT)", async () => {
@@ -504,6 +638,25 @@ describe("GET /api/machine/health/elements/[id]/evidence — dual auth", () => {
 		expect(response.status).toBe(401);
 	});
 
+	it("refuses (generic not-found, not a 500) when the read token's system user has no case access", async () => {
+		const { owner, testCase, claim } = await setup();
+		const { secret } = await setupIntegration(
+			owner.id,
+			testCase.id,
+			["health:evidence:read"],
+			null // no permission grant
+		);
+		const { GET } = await importRoute();
+
+		const response = await GET(getRequest(claim.id, secret), {
+			params: Promise.resolve({ id: claim.id }),
+		});
+
+		expect(response.status).toBe(404);
+		const body = await response.json();
+		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+	});
+
 	it("reads the log via a human session with case VIEW access", async () => {
 		const { owner, testCase, claim } = await setup();
 		const viewer = await createTestUser();
@@ -518,7 +671,7 @@ describe("GET /api/machine/health/elements/[id]/evidence — dual auth", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("returns 401 (not a redirect) for a human session with no case access and no token", async () => {
+	it("returns 404 (not a redirect) for a human session with no case access and no token", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
 		await mockAuth(outsider.id, outsider.username, outsider.email);

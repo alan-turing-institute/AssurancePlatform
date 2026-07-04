@@ -93,7 +93,20 @@ export async function requireAuthSession(): Promise<ValidatedSession> {
 // Service error mapping
 // ---------------------------------------------------------------------------
 
-const ERROR_MAPPINGS: Array<{ pattern: string; factory: () => AppError }> = [
+/** A pattern is either a case-insensitive substring, or a `RegExp` for shapes a bare substring would over-match. */
+type ErrorPattern = string | RegExp;
+
+function matchesPattern(error: string, pattern: ErrorPattern): boolean {
+	if (typeof pattern === "string") {
+		return error.toLowerCase().includes(pattern.toLowerCase());
+	}
+	return pattern.test(error);
+}
+
+const ERROR_MAPPINGS: Array<{
+	pattern: ErrorPattern;
+	factory: () => AppError;
+}> = [
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
@@ -101,22 +114,25 @@ const ERROR_MAPPINGS: Array<{ pattern: string; factory: () => AppError }> = [
 		pattern: "already",
 		factory: () => new AppError({ code: "CONFLICT", message: "" }),
 	},
-	// `assertPluginEnabledForUser` ("Plugin '...' is not enabled") — a plugin
-	// switched off (deployment, or user-level) is a clean, expected refusal
-	// for any plugin's machine/human routes, not a 500. Matched here rather
-	// than in each plugin route so every current and future plugin gets it
-	// for free.
-	{ pattern: "not enabled", factory: () => forbidden() },
+	// `assertPluginEnabledForUser` ("Plugin '<id>' is not enabled",
+	// `plugin-enablement-service.ts`'s `assertPluginEnabledForUser`) — a
+	// plugin switched off (deployment, or user-level) is a clean, expected
+	// refusal for any plugin's machine/human routes, not a 500. Matched here
+	// rather than in each plugin route so every current and future plugin
+	// gets it for free. Anchored to the producing service's exact message
+	// shape (not a bare "not enabled" substring) so an unrelated service
+	// error that happens to contain that phrase for a different reason isn't
+	// misclassified as a plugin-disabled 403.
+	{ pattern: /^Plugin '.+' is not enabled$/, factory: () => forbidden() },
 ];
 
 /**
  * Converts a service-layer error string into an `AppError`.
- * Matches known patterns (case-insensitive) and falls back to INTERNAL.
+ * Matches known patterns (case-insensitive for strings) and falls back to INTERNAL.
  */
 export function serviceErrorToAppError(error: string): AppError {
-	const lower = error.toLowerCase();
 	for (const { pattern, factory } of ERROR_MAPPINGS) {
-		if (lower.includes(pattern.toLowerCase())) {
+		if (matchesPattern(error, pattern)) {
 			// Preserve the original message from the service
 			const appError = factory();
 			return new AppError({

@@ -113,6 +113,40 @@ describe("recomputeHealthScore — v1 worst-verdict-in-window rule", () => {
 		expect(result.score).toBe(0);
 	});
 
+	it("scores using FAIL when PASS, DEGRADED, and FAIL are all in-window (kills a DEGRADED/FAIL severity swap)", async () => {
+		const { owner, testCase, claim } = await setup();
+		expectSuccess(
+			await appendHealthEvidence(
+				owner.id,
+				evidenceInput(claim.id, { verdict: "PASS", metricName: "check-pass" })
+			)
+		);
+		expectSuccess(
+			await appendHealthEvidence(
+				owner.id,
+				evidenceInput(claim.id, {
+					verdict: "DEGRADED",
+					metricName: "check-degraded",
+				})
+			)
+		);
+		expectSuccess(
+			await appendHealthEvidence(
+				owner.id,
+				evidenceInput(claim.id, { verdict: "FAIL", metricName: "check-fail" })
+			)
+		);
+
+		const result = expectSuccess(
+			await recomputeHealthScore(owner.id, claim.id, testCase.id)
+		);
+		// A severity-order swap between DEGRADED and FAIL would pick DEGRADED's
+		// score (0.5) here instead of FAIL's (0) — this is the only case among
+		// the tests in this file where all three verdicts are simultaneously
+		// in-window, so it's the only one that can catch that specific mutant.
+		expect(result.score).toBe(0);
+	});
+
 	it("scores 0.0 when there is no evidence in the window at all (conservative default)", async () => {
 		const { owner, testCase, claim } = await setup();
 
