@@ -1,11 +1,13 @@
+import { waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { Node } from "reactflow";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { elementPanelSlot } from "@/lib/plugins/slots";
+import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { server } from "@/src/__tests__/mocks/server";
-import { render, screen, waitFor } from "@/src/__tests__/utils/test-utils";
+import { render, screen } from "@/src/__tests__/utils/test-utils";
 import NodeEditDialog from "../node-edit-dialog";
 
 const NODE: Node = {
@@ -37,7 +39,7 @@ function mockPluginsResponse(enabled: boolean) {
 						pinnedAt: enabled ? null : "USER",
 						settings: null,
 					},
-				],
+				] satisfies PluginSettingsListItem[],
 			})
 		)
 	);

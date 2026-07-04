@@ -17,7 +17,10 @@ import { settingsSectionSlot } from "@/lib/plugins/slots";
  * already has the plugin's effective `enabled` state in scope from
  * `usePluginSettings`, so re-fetching it here would just be a second
  * request answering a question the pane already has the answer to. Gating
- * this slot's visibility on `enabled` is left to that call site.
+ * this slot's visibility on `enabled` is the call site's job —
+ * `PluginToggleRow` renders this component only when its own `checked`
+ * (`plugin.available && plugin.enabled`) is true, so an unavailable or
+ * user-disabled plugin never mounts its settings UI at all.
  */
 export function PluginSettingsSlot({ pluginId }: { pluginId: string }) {
 	const registrations = settingsSectionSlot

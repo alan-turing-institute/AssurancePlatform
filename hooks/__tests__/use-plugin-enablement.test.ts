@@ -1,10 +1,15 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { server } from "@/src/__tests__/mocks/server";
-import { useEnabledPluginIds } from "../use-plugin-enablement";
+import {
+	resetPluginFetchDedupeForTests,
+	useEnabledPluginIds,
+} from "../use-plugin-enablement";
 
 afterEach(() => {
+	resetPluginFetchDedupeForTests();
 	vi.restoreAllMocks();
 });
 
@@ -14,9 +19,25 @@ describe("useEnabledPluginIds", () => {
 			http.get("/api/user/plugins", () =>
 				HttpResponse.json({
 					plugins: [
-						{ pluginId: "tea.health", enabled: true },
-						{ pluginId: "tea.off", enabled: false },
-					],
+						{
+							pluginId: "tea.health",
+							name: "Claim/Evidence Health",
+							version: "0.1.0",
+							available: true,
+							enabled: true,
+							pinnedAt: null,
+							settings: null,
+						},
+						{
+							pluginId: "tea.off",
+							name: "Off Plugin",
+							version: "0.1.0",
+							available: true,
+							enabled: false,
+							pinnedAt: "USER",
+							settings: null,
+						},
+					] satisfies PluginSettingsListItem[],
 				})
 			)
 		);
@@ -43,5 +64,49 @@ describe("useEnabledPluginIds", () => {
 		await waitFor(() => expect(result.current.loading).toBe(false));
 
 		expect(result.current.enabledPluginIds.size).toBe(0);
+	});
+
+	it("de-dupes concurrent mounts onto a single in-flight network request", async () => {
+		let hitCount = 0;
+		server.use(
+			http.get("/api/user/plugins", () => {
+				hitCount += 1;
+				return HttpResponse.json({
+					plugins: [
+						{
+							pluginId: "tea.health",
+							name: "Claim/Evidence Health",
+							version: "0.1.0",
+							available: true,
+							enabled: true,
+							pinnedAt: null,
+							settings: null,
+						},
+					] satisfies PluginSettingsListItem[],
+				});
+			})
+		);
+
+		// Mount N hook instances back-to-back with no `await` between them —
+		// this is the canvas's shape (N node components, each pulling
+		// enablement through this hook) rather than a single caller. Every
+		// instance's mount-time effect fires in this same synchronous stretch,
+		// before the mocked fetch above has had a chance to settle, so they
+		// must all observe (and share) the same in-flight promise if the
+		// dedupe is doing its job.
+		const instances = Array.from({ length: 5 }, () =>
+			renderHook(() => useEnabledPluginIds())
+		);
+
+		await waitFor(() => {
+			for (const { result } of instances) {
+				expect(result.current.loading).toBe(false);
+			}
+		});
+
+		for (const { result } of instances) {
+			expect(result.current.enabledPluginIds.has("tea.health")).toBe(true);
+		}
+		expect(hitCount).toBe(1);
 	});
 });

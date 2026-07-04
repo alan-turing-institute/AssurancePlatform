@@ -1,24 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-
-/** The scope currently pinning a plugin's state, or `null` if nothing is. */
-export type PluginPinnedAt =
-	| "DEPLOYMENT"
-	| "ORGANISATION"
-	| "TEAM"
-	| "USER"
-	| null;
-
-export interface PluginSettingsListItem {
-	available: boolean;
-	enabled: boolean;
-	name: string;
-	pinnedAt: PluginPinnedAt;
-	pluginId: string;
-	settings: unknown;
-	version: string;
-}
+import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 
 interface PluginsResponseBody {
 	plugins: PluginSettingsListItem[];
@@ -33,6 +16,31 @@ async function parseErrorMessage(response: Response): Promise<string> {
 	return body?.error ?? "Something went wrong";
 }
 
+async function requestPlugins(): Promise<PluginSettingsListItem[]> {
+	const response = await fetch("/api/user/plugins");
+	if (!response.ok) {
+		throw new Error(await parseErrorMessage(response));
+	}
+	const body = (await response.json()) as PluginsResponseBody;
+	return body.plugins;
+}
+
+/**
+ * De-dupes concurrent callers onto one in-flight request. A canvas full of N
+ * nodes mounts N `useElementBadgeSlot`/`useElementPanelSlot` instances
+ * together (plus, potentially, the settings pane) — without this, each one's
+ * effect fires its own `GET /api/user/plugins` in the same tick, an N+1 fan-
+ * out for data that's identical across every caller (vincent finding,
+ * 2026-07-04 UI-slots review).
+ *
+ * Deliberately NOT a response cache: the slot holds the promise only while
+ * a request is outstanding and clears it (success or failure) as soon as
+ * that request settles, so a later, non-concurrent call — e.g. the refetch
+ * `usePluginSettings.togglePlugin` issues after a PATCH — always goes to the
+ * network rather than replaying stale state.
+ */
+let inFlightFetch: Promise<PluginSettingsListItem[]> | null = null;
+
 /**
  * The one fetch mechanism for effective plugin state (ADR 0002 v2 §2.2/§2.3):
  * both the settings pane (`usePluginSettings`, the full list plus toggling)
@@ -40,13 +48,24 @@ async function parseErrorMessage(response: Response): Promise<string> {
  * through this single call to `/api/user/plugins` — one endpoint, one
  * response shape, no parallel mechanism invented for slots.
  */
-export async function fetchPlugins(): Promise<PluginSettingsListItem[]> {
-	const response = await fetch("/api/user/plugins");
-	if (!response.ok) {
-		throw new Error(await parseErrorMessage(response));
+export function fetchPlugins(): Promise<PluginSettingsListItem[]> {
+	if (inFlightFetch) {
+		return inFlightFetch;
 	}
-	const body = (await response.json()) as PluginsResponseBody;
-	return body.plugins;
+	const promise = requestPlugins().finally(() => {
+		inFlightFetch = null;
+	});
+	inFlightFetch = promise;
+	return promise;
+}
+
+/**
+ * Test-only. Clears any in-flight fetch this module is tracking, so each
+ * test file starts without carrying a pending (or already-settled, awaiting
+ * microtask cleanup) promise over from a previous case.
+ */
+export function resetPluginFetchDedupeForTests(): void {
+	inFlightFetch = null;
 }
 
 export interface UseEnabledPluginIdsResult {

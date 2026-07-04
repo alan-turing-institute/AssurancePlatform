@@ -59,13 +59,24 @@ describe("SlotRegistry", () => {
 	});
 
 	it("keeps registrations in registration order", () => {
-		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
+		const OTHER_PLUGIN: PluginManifestEntry = {
+			id: "tea.other",
+			name: "Other Plugin",
+			version: "0.0.1",
+			surfaces: ["element-badge"],
+		};
+		mockGetManifestEntry.mockImplementation((pluginId) =>
+			pluginId === "tea.fake" ? FAKE_PLUGIN : OTHER_PLUGIN
+		);
 		const registry = new SlotRegistry<{ pluginId: string }>("element-badge");
 
-		registry.register({ pluginId: "tea.fake" });
+		registry.register({ pluginId: "tea.other" });
 		registry.register({ pluginId: "tea.fake" });
 
-		expect(registry.list()).toHaveLength(2);
+		expect(registry.list()).toEqual([
+			{ pluginId: "tea.other" },
+			{ pluginId: "tea.fake" },
+		]);
 	});
 
 	it("resetForTests clears every registration", () => {

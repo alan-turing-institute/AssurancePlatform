@@ -11,6 +11,16 @@
  * question the render-time consumers (`hooks/use-element-badge-slot.tsx`,
  * `hooks/use-element-panel-slot.ts`) answer by filtering `.list()` against
  * effective enablement.
+ *
+ * Client-side by intent, despite living under `lib/`: the exported instances
+ * below (`elementBadgeSlot` et al.) are one module-level singleton per slot,
+ * populated by official plugin modules calling `.register()` at import time
+ * in the client bundle. Importing this module from server code (a route, a
+ * server action) would spin up a second, unsynchronised registry in the
+ * server runtime — registrations made in one would simply be invisible to
+ * the other, with no error to flag the split. Nothing server-side needs to
+ * import from here yet; enforcing that structurally (an eslint/biome
+ * boundary rule) is a 1.1 concern, not a 1.0 blocker.
  */
 
 import { getManifestEntry } from "@/lib/plugins/manifest";

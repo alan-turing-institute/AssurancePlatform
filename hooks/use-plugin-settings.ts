@@ -5,15 +5,20 @@ import { fetchPlugins } from "@/hooks/use-plugin-enablement";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { toast } from "@/lib/toast";
 
-// Re-exported so existing consumers (e.g. `PluginToggleRow`) keep importing
-// the settings pane's item shape from this hook — `lib/schemas/plugin.ts` is
-// the single definition (was hand-duplicated with `UserPluginListItem` in
-// `app/api/user/plugins/route.ts`; consolidated 2026-07-04). A second,
-// separate `export ... from` (not re-exporting the local import above) so
-// biome's `noExportedImports` doesn't fire. The fetch itself is delegated to
-// `use-plugin-enablement.ts` — the shared fetch mechanism both this pane and
-// the build-time UI slots read through (`[[TEA — UI extension slots]]`); this
-// hook keeps its own public API unchanged.
+// `PluginSettingsListItem` is re-exported so existing consumers (e.g.
+// `PluginToggleRow`) keep importing the settings pane's item shape from this
+// hook — `lib/schemas/plugin.ts` is the single definition (was hand-
+// duplicated with `UserPluginListItem` in `app/api/user/plugins/route.ts`;
+// consolidated 2026-07-04). `PluginPinnedAt` has no consumer of its own
+// through this module today — it's re-exported alongside purely as an
+// API-compat shim, so this hook's public surface doesn't silently shrink
+// for whatever eventually needs the pinning-scope type without going
+// straight to `lib/schemas/plugin.ts`. A second, separate `export ... from`
+// (not re-exporting the local import above) so biome's `noExportedImports`
+// doesn't fire. The fetch itself is delegated to `use-plugin-enablement.ts`
+// — the shared fetch mechanism both this pane and the build-time UI slots
+// read through (`[[TEA — UI extension slots]]`); this hook keeps its own
+// public API unchanged.
 export type {
 	PluginPinnedAt,
 	PluginSettingsListItem,

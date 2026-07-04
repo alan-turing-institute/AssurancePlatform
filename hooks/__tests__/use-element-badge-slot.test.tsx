@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { elementBadgeSlot } from "@/lib/plugins/slots";
+import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { server } from "@/src/__tests__/mocks/server";
 import { render, screen } from "@/src/__tests__/utils/test-utils";
 import { useElementBadgeSlot } from "../use-element-badge-slot";
@@ -36,7 +37,7 @@ function mockPluginsResponse(enabled: boolean) {
 						pinnedAt: enabled ? null : "USER",
 						settings: null,
 					},
-				],
+				] satisfies PluginSettingsListItem[],
 			})
 		)
 	);
