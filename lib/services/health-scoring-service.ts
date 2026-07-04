@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
 	type PluginDataLocation,
+	readPluginData,
 	writePluginData,
 } from "@/lib/services/plugin-data-service";
 import { getUserPluginSettings } from "@/lib/services/plugin-enablement-service";
@@ -196,4 +197,62 @@ export async function recomputeHealthScore(
 	}
 
 	return { data: healthState };
+}
+
+/** Validates a `PluginData.data` blob shapes up as a `HealthState` before handing it to a UI caller — defensive against a future settings/shape change leaving old rows on disk. */
+const healthStateSchema = z.object({
+	lastEvaluatedAt: z.string().nullable(),
+	score: z.number(),
+	validityWindowSeconds: z.number(),
+});
+
+/**
+ * Reads the current `{ score, lastEvaluatedAt, validityWindowSeconds }` for
+ * one claim — the human-facing read path the `element-badge`/`element-panel`
+ * UI slots use (ADR 0002 v2 §3: "state dot via element-badge"). Delegates to
+ * `readPluginData` (`plugin-data-service.ts`) for the actual row access,
+ * which is what enforces plugin enablement + case permission + namespace
+ * isolation; this function's only job is resolving `claimId` to the
+ * `caseId` that `PluginData`'s location key needs — the route layer
+ * (`app/api/elements/[id]/health/route.ts`) only has the element id,
+ * mirroring every other route in the `app/api/elements/[id]/*` family.
+ *
+ * Returns `{ data: null }` (NOT an error) when no `tea.health` row exists yet
+ * for this claim — "never evaluated" is a valid, expected state a claim with
+ * no evidence is in, not a failure — or when a row exists but its `data`
+ * doesn't parse as a `HealthState` (defensive: a future change to what this
+ * plugin stores should degrade old rows to "nothing to show" on this read
+ * path, never a 500).
+ */
+export async function readHealthState(
+	actingUserId: string,
+	claimId: string
+): ServiceResult<HealthState | null> {
+	let element: { caseId: string; deletedAt: Date | null } | null;
+	try {
+		element = await prisma.assuranceElement.findUnique({
+			where: { id: claimId },
+			select: { caseId: true, deletedAt: true },
+		});
+	} catch (error) {
+		console.error("Failed to resolve claim for health state read:", error);
+		return { error: "Failed to read health state" };
+	}
+	if (!element || element.deletedAt) {
+		return { error: "Claim not found" };
+	}
+
+	const result = await readPluginData(PLUGIN_ID, actingUserId, {
+		caseId: element.caseId,
+		elementId: claimId,
+	});
+	if ("error" in result) {
+		return { error: result.error };
+	}
+	if (!result.data) {
+		return { data: null };
+	}
+
+	const parsed = healthStateSchema.safeParse(result.data.data);
+	return { data: parsed.success ? parsed.data : null };
 }

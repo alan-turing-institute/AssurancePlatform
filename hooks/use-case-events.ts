@@ -8,7 +8,7 @@ import type {
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
-interface UseCaseEventsOptions {
+export interface UseCaseEventsOptions {
 	/** Case ID to subscribe to */
 	caseId: string;
 	/** Whether the hook is enabled */
@@ -161,6 +161,15 @@ export function useCaseEvents({
 			"element:detached",
 			"element:moved",
 			"permission:changed",
+			// Plugin-emitted events are namespaced (ADR 0002 v2 §2.5) but still
+			// flow through this generic case-event stream — `browser EventSource`
+			// only fires for event names it has a registered listener for, so a
+			// namespaced type omitted here is silently dropped even though the
+			// connection manager broadcasts it. This hook stays plugin-neutral
+			// (it doesn't know what "tea.health/state-changed" MEANS, only that
+			// the closed `SSEEventType` union names it) — see the health plugin's
+			// UI module (`lib/plugins/health/`) for the consumer.
+			"tea.health/state-changed",
 		];
 
 		for (const eventType of eventTypes) {

@@ -3,7 +3,7 @@
  * Uses date-fns for consistent, locale-aware date formatting.
  */
 
-import { format, parseISO } from "date-fns";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
 
 /**
  * Formats a date in DD/MM/YYYY format (British date format).
@@ -48,4 +48,26 @@ export function formatFullDate(
 	}
 	const dateObj = typeof date === "string" ? parseISO(date) : new Date(date);
 	return format(dateObj, "EEEE, d MMMM yyyy 'at' h:mm a");
+}
+
+/**
+ * Formats a date relative to now (e.g., "3 days ago").
+ *
+ * @param date - Date object, ISO string, timestamp, or undefined/null
+ * @param fallback - Optional fallback string if date is undefined/null (defaults to "N/A")
+ * @returns Relative date string (e.g., "3 days ago") or fallback
+ *
+ * @example
+ * formatRelativeToNow("2024-12-15T10:30:00Z") // "3 days ago"
+ * formatRelativeToNow(undefined) // "N/A"
+ */
+export function formatRelativeToNow(
+	date: Date | string | number | undefined | null,
+	fallback = "N/A"
+): string {
+	if (date === undefined || date === null) {
+		return fallback;
+	}
+	const dateObj = typeof date === "string" ? parseISO(date) : new Date(date);
+	return formatDistanceToNow(dateObj, { addSuffix: true });
 }
