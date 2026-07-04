@@ -101,6 +101,12 @@ const ERROR_MAPPINGS: Array<{ pattern: string; factory: () => AppError }> = [
 		pattern: "already",
 		factory: () => new AppError({ code: "CONFLICT", message: "" }),
 	},
+	// `assertPluginEnabledForUser` ("Plugin '...' is not enabled") — a plugin
+	// switched off (deployment, or user-level) is a clean, expected refusal
+	// for any plugin's machine/human routes, not a 500. Matched here rather
+	// than in each plugin route so every current and future plugin gets it
+	// for free.
+	{ pattern: "not enabled", factory: () => forbidden() },
 ];
 
 /**
