@@ -244,4 +244,29 @@ describe("HealthPanel — live update over SSE", () => {
 			expect(screen.getAllByTestId("health-evidence-entry")).toHaveLength(2)
 		);
 	});
+
+	it("ignores an event of a DIFFERENT type even when the claimId matches (proves the type half of the guard, n-F2)", async () => {
+		mockEvidenceResponse(CLAIM_CONTEXT.elementId, [evidenceItem()]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		await waitFor(() =>
+			expect(screen.getAllByTestId("health-evidence-entry")).toHaveLength(1)
+		);
+
+		mockEvidenceResponse(CLAIM_CONTEXT.elementId, [
+			evidenceItem({ id: "evidence-1", chainSequence: 1 }),
+			evidenceItem({ id: "evidence-2", chainSequence: 2 }),
+		]);
+		capturedOptions?.onEvent?.({
+			type: "element:moved",
+			caseId: CLAIM_CONTEXT.caseId,
+			timestamp: new Date().toISOString(),
+			payload: { claimId: CLAIM_CONTEXT.elementId },
+		});
+
+		// Give any (unwanted) refetch a chance to resolve, then assert the log
+		// did NOT pick up the second entry.
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(screen.getAllByTestId("health-evidence-entry")).toHaveLength(1);
+	});
 });

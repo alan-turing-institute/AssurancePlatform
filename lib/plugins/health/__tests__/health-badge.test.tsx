@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UseCaseEventsOptions } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
+import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { server } from "@/src/__tests__/mocks/server";
 import { render, screen } from "@/src/__tests__/utils/test-utils";
 import { HealthBadge } from "../health-badge";
@@ -71,7 +72,7 @@ function mockPluginSettings(settings: unknown) {
 						enabled: true,
 						pinnedAt: null,
 						settings,
-					},
+					} satisfies PluginSettingsListItem,
 				],
 			})
 		)
@@ -203,6 +204,31 @@ describe("HealthBadge — score→band via plugin settings", () => {
 			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
 				"bg-destructive"
 			)
+		);
+	});
+
+	it("falls back to the defaults when the settings response is schema-invalid (200, but verdictScores.PASS is not a number)", async () => {
+		// A 200 response, unlike the fetch-failure case above — the settings
+		// endpoint is up, but `tea.health`'s saved settings blob doesn't parse
+		// as `bandScoresSettingsSchema`. Score 1 is the discriminator: under a
+		// correctly-applied DEFAULT_BAND_SCORES fallback it's an exact match
+		// for "pass" (bg-success); a bug that used the malformed PASS value
+		// literally would make every distance to "pass" resolve to NaN,
+		// leaving the loop stuck on "degraded" (bg-warning) instead.
+		mockPluginSettings({ verdictScores: { PASS: "not-a-number" } });
+		mockHealthResponse(CLAIM_CONTEXT.elementId, {
+			score: 1,
+			lastEvaluatedAt: hoursAgo(0),
+			validityWindowSeconds: DAY_SECONDS,
+		});
+		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		await waitFor(() =>
+			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-success")
+		);
+		expect(screen.getByTestId("health-badge-dot")).toHaveAttribute(
+			"aria-label",
+			"Health: passing"
 		);
 	});
 });
@@ -354,6 +380,40 @@ describe("HealthBadge — live update over SSE", () => {
 			caseId: CLAIM_CONTEXT.caseId,
 			timestamp: hoursAgo(0),
 			payload: { claimId: "some-other-claim" },
+		});
+
+		// Give any (unwanted) refetch a chance to resolve, then assert the
+		// badge did NOT move off the original band.
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		expect(screen.getByTestId("health-badge-dot")).toHaveClass(
+			"bg-destructive"
+		);
+	});
+
+	it("ignores an event of a DIFFERENT type even when the claimId matches (proves the type half of the guard, n-F2)", async () => {
+		mockHealthResponse(CLAIM_CONTEXT.elementId, {
+			score: 0,
+			lastEvaluatedAt: hoursAgo(0),
+			validityWindowSeconds: DAY_SECONDS,
+		});
+		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		await waitFor(() =>
+			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
+				"bg-destructive"
+			)
+		);
+
+		mockHealthResponse(CLAIM_CONTEXT.elementId, {
+			score: 1,
+			lastEvaluatedAt: hoursAgo(0),
+			validityWindowSeconds: DAY_SECONDS,
+		});
+		capturedOptions?.onEvent?.({
+			type: "element:moved",
+			caseId: CLAIM_CONTEXT.caseId,
+			timestamp: hoursAgo(0),
+			payload: { claimId: CLAIM_CONTEXT.elementId },
 		});
 
 		// Give any (unwanted) refetch a chance to resolve, then assert the

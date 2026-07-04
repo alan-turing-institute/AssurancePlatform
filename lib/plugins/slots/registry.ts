@@ -31,6 +31,28 @@ import type {
 	SlotId,
 } from "./types";
 
+/**
+ * Own-enumerable-key shallow compare (`Object.is` per value, so a `Component`
+ * field only counts as equal when it's the SAME function reference — two
+ * components that merely render the same output are still a conflict).
+ * Deliberately generic rather than hand-listing `Component`/`tabId`/`label`:
+ * `SlotRegistry` is shared across three differently-shaped registration
+ * types (`ElementBadgeRegistration`, `ElementPanelRegistration`,
+ * `SettingsSectionRegistration`), and this way a future field added to any
+ * of them is compared for free, with no change here.
+ */
+function isShallowEqualRegistration<T extends { pluginId: string }>(
+	a: T,
+	b: T
+): boolean {
+	const aKeys = Object.keys(a) as (keyof T)[];
+	const bKeys = Object.keys(b) as (keyof T)[];
+	if (aKeys.length !== bKeys.length) {
+		return false;
+	}
+	return aKeys.every((key) => Object.is(a[key], b[key]));
+}
+
 export class SlotRegistry<TRegistration extends { pluginId: string }> {
 	private readonly registrations: TRegistration[] = [];
 	private readonly slotId: SlotId;
@@ -57,11 +79,25 @@ export class SlotRegistry<TRegistration extends { pluginId: string }> {
 	 * graph is only ever entered once in a given process — a test file that
 	 * imports the bootstrap alongside the real providers path importing it
 	 * too, for instance. A second call for a pluginId already present in
-	 * this slot is a silent no-op rather than a second entry: without this,
+	 * this slot is a silent no-op ONLY when it is the identical registration
+	 * (every field shallow-equal to the one already held) — without this,
 	 * `.list()` would return the same registration twice, and every render-
 	 * time consumer that maps over it keyed by `pluginId`
 	 * (`useElementBadgeSlot`, `useElementPanelSlot`) would render the
 	 * plugin's UI twice under a duplicate React key.
+	 *
+	 * A second call that differs from the first (a different `Component`,
+	 * `tabId`, or `label` for the SAME pluginId) is not a re-run bootstrap —
+	 * it is a first-party programming error (two plugin modules, or two
+	 * versions of one, both claiming the same pluginId in this slot with
+	 * different contents) and throws, exactly like the unknown-plugin and
+	 * undeclared-surface checks above it (vincent review, 2026-07-04). One
+	 * accepted source of a legitimate-looking "conflict": dev-mode HMR
+	 * reloading a plugin's register module gives its `Component` a fresh
+	 * function identity on every reload, so a second registration after a
+	 * hot reload IS a shallow-compare mismatch and WILL throw here — caught
+	 * and logged by `register.ts`'s try/catch (degrades to "unregistered"
+	 * for that reload), not a bug in this method.
 	 */
 	register(registration: TRegistration): void {
 		const entry = getManifestEntry(registration.pluginId);
@@ -75,11 +111,16 @@ export class SlotRegistry<TRegistration extends { pluginId: string }> {
 				`Cannot register '${registration.pluginId}' into slot '${this.slotId}': its manifest entry does not declare this surface`
 			);
 		}
-		const alreadyRegistered = this.registrations.some(
-			(existing) => existing.pluginId === registration.pluginId
+		const existing = this.registrations.find(
+			(candidate) => candidate.pluginId === registration.pluginId
 		);
-		if (alreadyRegistered) {
-			return;
+		if (existing) {
+			if (isShallowEqualRegistration(existing, registration)) {
+				return;
+			}
+			throw new Error(
+				`Cannot register '${registration.pluginId}' into slot '${this.slotId}': a conflicting registration already exists for this plugin (different Component/tabId/label)`
+			);
 		}
 		this.registrations.push(registration);
 	}

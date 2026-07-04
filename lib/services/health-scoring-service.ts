@@ -5,8 +5,12 @@ import {
 	readPluginData,
 	writePluginData,
 } from "@/lib/services/plugin-data-service";
-import { getUserPluginSettings } from "@/lib/services/plugin-enablement-service";
+import {
+	assertPluginEnabledForUser,
+	getUserPluginSettings,
+} from "@/lib/services/plugin-enablement-service";
 import type {
+	ElementType,
 	PluginHealthEvidenceVerdict,
 	Prisma,
 } from "@/src/generated/prisma";
@@ -208,13 +212,13 @@ const healthStateSchema = z.object({
 
 /**
  * A single generic message for every reason this read can fail to resolve a
- * claim — doesn't exist, is soft-deleted, or the caller lacks case access —
- * mirroring `health-evidence-service.ts`'s `CLAIM_NOT_FOUND` precedent.
- * Distinguishing "doesn't exist" from "no permission" would let any caller
- * with access to ANY case probe arbitrary ids and learn, from which message
- * came back, whether a claim exists elsewhere on the platform — the same
- * enumeration oracle that precedent (and `plugin-data-service.ts`'s own
- * "same error for not-found and no-permission" convention) exists to close.
+ * claim — doesn't exist, is soft-deleted, isn't a `PROPERTY_CLAIM`, or the
+ * caller lacks case access — mirroring `health-evidence-service.ts`'s
+ * `CLAIM_NOT_FOUND` precedent. Distinguishing any of these would let a
+ * caller learn, from which message came back, something about an element it
+ * has no business knowing about — the same enumeration oracle that
+ * precedent (and `plugin-data-service.ts`'s own "same error for not-found
+ * and no-permission" convention) exists to close.
  * `readPluginData`'s OWN generic message for a permission failure is
  * `"Case not found"` (a different string, since it's shared by non-claim
  * callers too) — remapped to this one below so both failure modes are
@@ -228,11 +232,32 @@ const PLUGIN_DATA_CASE_NOT_FOUND = "Case not found";
  * one claim — the human-facing read path the `element-badge`/`element-panel`
  * UI slots use (ADR 0002 v2 §3: "state dot via element-badge"). Delegates to
  * `readPluginData` (`plugin-data-service.ts`) for the actual row access,
- * which is what enforces plugin enablement + case permission + namespace
- * isolation; this function's only job is resolving `claimId` to the
- * `caseId` that `PluginData`'s location key needs — the route layer
+ * which is what enforces case permission + namespace isolation; this
+ * function's only job is resolving `claimId` to the `caseId` that
+ * `PluginData`'s location key needs — the route layer
  * (`app/api/elements/[id]/health/route.ts`) only has the element id,
  * mirroring every other route in the `app/api/elements/[id]/*` family.
+ *
+ * Enablement is checked FIRST, before the element lookup even runs (vincent
+ * review, BLOCKER, 2026-07-04): the element lookup below queries
+ * `assuranceElement` directly, with no case-permission check of its own, so
+ * running it before enablement made this function a platform-wide
+ * element-existence oracle for any user who had self-disabled `tea.health` —
+ * every REAL element id (any case, no access required) resolved past this
+ * lookup into `readPluginData`'s enablement check and came back
+ * `"Plugin 'tea.health' is not enabled"` (403), while a nonexistent id never
+ * got that far and came back `CLAIM_NOT_FOUND` (404). Checking enablement
+ * first closes that: a disabled plugin now refuses every id — real,
+ * soft-deleted, wrong-typed, or fabricated — with the exact same error
+ * before a single row is even queried.
+ *
+ * The element lookup also selects `elementType` and refuses anything that
+ * isn't a `PROPERTY_CLAIM` with the SAME `CLAIM_NOT_FOUND` message (not a
+ * distinct one) — evidence-format-v0.1 only ever bears on claims, so a
+ * goal/strategy/evidence id has no health state to read, but saying so in a
+ * different message would itself be a (smaller) oracle: "exists but wrong
+ * type" vs "doesn't exist" leaks whether an id resolves to *something* on
+ * the platform. Mirrors `health-evidence-service.ts`'s `resolveClaim`.
  *
  * Returns `{ data: null }` (NOT an error) when no `tea.health` row exists yet
  * for this claim — "never evaluated" is a valid, expected state a claim with
@@ -245,17 +270,30 @@ export async function readHealthState(
 	actingUserId: string,
 	claimId: string
 ): ServiceResult<HealthState | null> {
-	let element: { caseId: string; deletedAt: Date | null } | null;
+	const enablement = await assertPluginEnabledForUser(PLUGIN_ID, actingUserId);
+	if ("error" in enablement) {
+		return { error: enablement.error };
+	}
+
+	let element: {
+		caseId: string;
+		deletedAt: Date | null;
+		elementType: ElementType;
+	} | null;
 	try {
 		element = await prisma.assuranceElement.findUnique({
 			where: { id: claimId },
-			select: { caseId: true, deletedAt: true },
+			select: { caseId: true, deletedAt: true, elementType: true },
 		});
 	} catch (error) {
 		console.error("Failed to resolve claim for health state read:", error);
 		return { error: "Failed to read health state" };
 	}
-	if (!element || element.deletedAt) {
+	if (
+		!element ||
+		element.deletedAt ||
+		element.elementType !== "PROPERTY_CLAIM"
+	) {
 		return { error: CLAIM_NOT_FOUND };
 	}
 

@@ -1,10 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useCaseEvents } from "@/hooks/use-case-events";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
-
-const HEALTH_STATE_EVENT_TYPE = "tea.health/state-changed";
+import { useClaimScopedFetch } from "./use-claim-scoped-fetch";
 
 export type HealthEvidenceVerdict = "DEGRADED" | "FAIL" | "PASS";
 
@@ -64,7 +61,9 @@ export interface UseHealthEvidenceResult {
  * `GET /api/machine/health/elements/[id]/evidence` alongside a scoped bearer
  * token (verified in the server-core review). No new route: the
  * `element-panel` slot is simply the second, already-anticipated consumer of
- * an endpoint built for DARTER.
+ * an endpoint built for DARTER. Fetch-once-on-mount + SSE refetch wiring is
+ * shared with `useHealthState` via `useClaimScopedFetch`
+ * (`use-claim-scoped-fetch.ts`).
  *
  * Only meaningful for `PROPERTY_CLAIM` elements — see `useHealthState`'s
  * doc. Non-claim callers get `status: "ready"`, `evidence: []` without a
@@ -76,44 +75,14 @@ export function useHealthEvidence({
 	elementId,
 	elementType,
 }: ElementSlotContext): UseHealthEvidenceResult {
-	const isClaim = elementType === "property";
-	const [evidence, setEvidence] = useState<HealthEvidenceLogItem[] | null>(
-		isClaim ? null : []
-	);
-	const [status, setStatus] = useState<HealthEvidenceStatus>(
-		isClaim ? "loading" : "ready"
-	);
-
-	const refetch = useCallback(async () => {
-		if (!isClaim) {
-			return;
-		}
-		try {
-			const log = await fetchEvidenceLog(elementId);
-			setEvidence(log);
-			setStatus("ready");
-		} catch {
-			setEvidence(null);
-			setStatus("error");
-		}
-	}, [elementId, isClaim]);
-
-	useEffect(() => {
-		refetch();
-	}, [refetch]);
-
-	useCaseEvents({
+	const { data, status } = useClaimScopedFetch<HealthEvidenceLogItem[] | null>({
 		caseId,
-		enabled: isClaim && Boolean(caseId),
-		onEvent: (event) => {
-			if (
-				event.type === HEALTH_STATE_EVENT_TYPE &&
-				event.payload?.claimId === elementId
-			) {
-				refetch();
-			}
-		},
+		elementId,
+		elementType,
+		fetchFn: fetchEvidenceLog,
+		errorValue: null,
+		notApplicableValue: [],
 	});
 
-	return { evidence, status };
+	return { evidence: data, status };
 }
