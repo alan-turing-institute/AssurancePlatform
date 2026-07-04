@@ -256,6 +256,76 @@ describe("PATCH /api/user/plugins — validation", () => {
 
 		expect(response.status).toBe(400);
 	});
+
+	it("rejects settings nested 5 levels deep, beyond the depth cap", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/user/plugins/route");
+		const response = await PATCH(
+			patchRequest({
+				pluginId: KNOWN_PLUGIN_ID,
+				enabled: true,
+				settings: { a: { a: { a: { a: { a: 1 } } } } },
+			})
+		);
+
+		expect(response.status).toBe(400);
+	});
+
+	it("accepts settings nested exactly 4 levels deep, at the depth cap", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/user/plugins/route");
+		const response = await PATCH(
+			patchRequest({
+				pluginId: KNOWN_PLUGIN_ID,
+				enabled: true,
+				settings: { a: { a: { a: { a: 1 } } } },
+			})
+		);
+
+		expect(response.status).toBe(200);
+	});
+
+	it("rejects a settings array exceeding the per-array item cap", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const tooManyItems = Array.from({ length: 21 }, (_, i) => i);
+
+		const { PATCH } = await import("@/app/api/user/plugins/route");
+		const response = await PATCH(
+			patchRequest({
+				pluginId: KNOWN_PLUGIN_ID,
+				enabled: true,
+				settings: { items: tooManyItems },
+			})
+		);
+
+		expect(response.status).toBe(400);
+	});
+
+	it("rejects a nested object exceeding the per-object key cap (enforced below the top level)", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const tooManyNestedKeys = Object.fromEntries(
+			Array.from({ length: 21 }, (_, i) => [`key${i}`, i])
+		);
+
+		const { PATCH } = await import("@/app/api/user/plugins/route");
+		const response = await PATCH(
+			patchRequest({
+				pluginId: KNOWN_PLUGIN_ID,
+				enabled: true,
+				settings: { nested: tooManyNestedKeys },
+			})
+		);
+
+		expect(response.status).toBe(400);
+	});
 });
 
 // ============================================

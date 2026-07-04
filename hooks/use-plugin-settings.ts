@@ -1,25 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { toast } from "@/lib/toast";
 
-/** The scope currently pinning a plugin's state, or `null` if nothing is. */
-export type PluginPinnedAt =
-	| "DEPLOYMENT"
-	| "ORGANISATION"
-	| "TEAM"
-	| "USER"
-	| null;
-
-export interface PluginSettingsListItem {
-	available: boolean;
-	enabled: boolean;
-	name: string;
-	pinnedAt: PluginPinnedAt;
-	pluginId: string;
-	settings: unknown;
-	version: string;
-}
+// Re-exported so existing consumers (e.g. `PluginToggleRow`) keep importing
+// the settings pane's item shape from this hook — `lib/schemas/plugin.ts` is
+// the single definition (was hand-duplicated with `UserPluginListItem` in
+// `app/api/user/plugins/route.ts`; consolidated 2026-07-04). A second,
+// separate `export ... from` (not re-exporting the local import above) so
+// biome's `noExportedImports` doesn't fire.
+export type {
+	PluginPinnedAt,
+	PluginSettingsListItem,
+} from "@/lib/schemas/plugin";
 
 interface PluginsResponseBody {
 	plugins: PluginSettingsListItem[];

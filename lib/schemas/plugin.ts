@@ -26,7 +26,7 @@ const PLUGIN_SETTINGS_MAX_KEYS = 20;
 const PLUGIN_SETTINGS_MAX_ARRAY_ITEMS = 20;
 const PLUGIN_SETTINGS_MAX_STRING_LENGTH = 500;
 /** Final belt-and-braces bound on the whole payload, serialized as UTF-8 bytes. */
-export const PLUGIN_SETTINGS_MAX_BYTES = 4096;
+const PLUGIN_SETTINGS_MAX_BYTES = 4096;
 
 const jsonPrimitiveSchema = z.union([
 	z.string().max(PLUGIN_SETTINGS_MAX_STRING_LENGTH),
@@ -77,7 +77,7 @@ function serializedByteLength(value: unknown): number {
  * per-node cap and still be enormous via many small keys — this refine
  * closes that gap).
  */
-export const pluginSettingsSchema = z
+const pluginSettingsSchema = z
 	.record(z.string(), boundedJsonValueSchema(PLUGIN_SETTINGS_MAX_DEPTH - 1))
 	.refine((obj) => Object.keys(obj).length <= PLUGIN_SETTINGS_MAX_KEYS, {
 		message: `settings must have at most ${PLUGIN_SETTINGS_MAX_KEYS} top-level keys`,
@@ -116,5 +116,49 @@ export const pluginToggleSchema = z.object({
 	settings: pluginSettingsSchema.optional(),
 });
 
-export type PluginToggleInput = z.input<typeof pluginToggleSchema>;
-export type PluginToggleOutput = z.output<typeof pluginToggleSchema>;
+// ============================================
+// GET /api/user/plugins — response item
+// ============================================
+
+/**
+ * The scope currently pinning a plugin's state, or `null` if nothing is —
+ * mirrors `EffectivePluginState["disabledAt"]`
+ * (`lib/services/plugin-enablement-service.ts`) as a plain string union
+ * rather than importing `PluginScopeType` from the generated Prisma client,
+ * so client components (`hooks/use-plugin-settings.ts`) can use this type
+ * without depending on Prisma.
+ */
+export type PluginPinnedAt =
+	| "DEPLOYMENT"
+	| "ORGANISATION"
+	| "TEAM"
+	| "USER"
+	| null;
+
+/**
+ * A single plugin's effective state as returned by `GET /api/user/plugins`
+ * — the settings pane's only data source. Shared by the route (which builds
+ * it, `app/api/user/plugins/route.ts`) and `usePluginSettings` (which
+ * consumes it, `hooks/use-plugin-settings.ts`) so the shape has exactly one
+ * definition.
+ */
+export interface PluginSettingsListItem {
+	/** Deployment concern (ADR §2.2) — withheld entirely means `false`. */
+	available: boolean;
+	/** Effective state for the session user across the full scope chain. */
+	enabled: boolean;
+	name: string;
+	/**
+	 * The scope that is currently pinning this plugin OFF — see
+	 * `PluginPinnedAt`. A pane renders the toggle as user-editable only when
+	 * this is `null` or `"USER"`; `"DEPLOYMENT"`/`"ORGANISATION"`/`"TEAM"`
+	 * mean a level above the user has switched it off (off wins downward —
+	 * the user cannot override it from here).
+	 */
+	pinnedAt: PluginPinnedAt;
+	/** The `PluginState`/`PluginData` namespace, e.g. `"tea.health"`. */
+	pluginId: string;
+	/** The user's own saved settings for this plugin, or `null` if never set. */
+	settings: unknown;
+	version: string;
+}

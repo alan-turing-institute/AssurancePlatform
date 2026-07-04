@@ -10,35 +10,15 @@ import {
 	getManifestEntry,
 	listManifestPluginIds,
 } from "@/lib/plugins/manifest";
-import { pluginToggleSchema } from "@/lib/schemas/plugin";
+import {
+	type PluginSettingsListItem,
+	pluginToggleSchema,
+} from "@/lib/schemas/plugin";
 import {
 	getUserPluginSettings,
 	resolveEffectivePluginState,
 	setPluginEnabledForUser,
 } from "@/lib/services/plugin-enablement-service";
-import type { PluginScopeType, Prisma } from "@/src/generated/prisma";
-
-export interface UserPluginListItem {
-	/** Deployment concern (ADR §2.2) — withheld entirely means `false`. */
-	available: boolean;
-	/** Effective state for the session user across the full scope chain. */
-	enabled: boolean;
-	name: string;
-	/**
-	 * The scope that is currently pinning this plugin OFF — `"DEPLOYMENT"`,
-	 * the topmost `PluginScopeType` whose row disabled it, or `null` if the
-	 * plugin is ON. A pane renders the toggle as user-editable only when
-	 * this is `null` or `"USER"`; `"DEPLOYMENT"`/`"ORGANISATION"`/`"TEAM"`
-	 * mean a level above the user has switched it off (off wins downward —
-	 * the user cannot override it from here).
-	 */
-	pinnedAt: "DEPLOYMENT" | PluginScopeType | null;
-	/** The `PluginState`/`PluginData` namespace, e.g. `"tea.health"`. */
-	pluginId: string;
-	/** The user's own saved settings for this plugin, or `null` if never set. */
-	settings: Prisma.JsonValue | null;
-	version: string;
-}
 
 /**
  * GET /api/user/plugins
@@ -54,7 +34,7 @@ export async function GET() {
 
 		const plugins = await Promise.all(
 			listManifestPluginIds().map(
-				async (pluginId): Promise<UserPluginListItem> => {
+				async (pluginId): Promise<PluginSettingsListItem> => {
 					const entry = getManifestEntry(pluginId);
 					if (!entry) {
 						// Cannot happen — pluginId is sourced from the manifest itself.
@@ -67,10 +47,10 @@ export async function GET() {
 					]);
 
 					if ("error" in stateResult) {
-						throw new Error(stateResult.error);
+						throw serviceErrorToAppError(stateResult.error);
 					}
 					if ("error" in settingsResult) {
-						throw new Error(settingsResult.error);
+						throw serviceErrorToAppError(settingsResult.error);
 					}
 
 					return {
