@@ -22,9 +22,9 @@ import {
  */
 const SYSTEM_USER_EMAIL = "system@tea-platform.internal";
 const SINGLE_INTEGRATION_BLOCK_PATTERN =
-	/reassign or remove your 1 integration/i;
+	/Remove your 1 integration before deleting your account/;
 const MULTIPLE_INTEGRATIONS_BLOCK_PATTERN =
-	/reassign or remove your 2 integrations/i;
+	/Remove your 2 integrations before deleting your account/;
 
 describe("getOrCreateSystemUser (via deleteAccount) — R2 regression", () => {
 	it("reassigns a deleted user's case to the generic fallback account, not an unrelated system user created first", async () => {
@@ -89,7 +89,7 @@ describe("getOrCreateSystemUser (via deleteAccount) — R2 regression", () => {
  * `ON DELETE RESTRICT` on `Integration.ownerId` (ADR 0002 v2 §2.4) whenever
  * the deleting user owned any integration — that error was caught by the
  * function's catch-all and flattened into an unhelpful "Failed to delete
- * account". `deleteAccount` now checks `getIntegrationsOwnedBy` FIRST and
+ * account". `deleteAccount` now checks `countIntegrationsOwnedBy` FIRST and
  * returns a clean, typed, actionable error instead of ever reaching the
  * transaction.
  */

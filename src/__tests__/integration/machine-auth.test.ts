@@ -464,6 +464,27 @@ describe("integration-registry-service — registration & lifecycle", () => {
 		expect(token.revokedAt).not.toBeNull();
 	});
 
+	/**
+	 * `revokeIntegration` has no guard against being called twice — unlike
+	 * `suspendIntegration`/`reactivateIntegration`, which both explicitly
+	 * reject a REVOKED-state transition, re-revoking an already-REVOKED
+	 * integration is a harmless no-op success today. Pinning this is
+	 * deliberate, not an oversight rediscovery (nanaki info finding, work
+	 * item 12): a caller retrying a revoke after a dropped response
+	 * (network blip, client retry) gets a clean success, not a spurious
+	 * error. If this idempotence is ever tightened into a conflict, this
+	 * test should be updated alongside that decision, not silently broken.
+	 */
+	it("is idempotent: revoking an already-REVOKED integration succeeds harmlessly (deliberate)", async () => {
+		const { integration, owner } = await registerTestIntegration();
+
+		expectSuccess(await revokeIntegration(integration.id, owner.id));
+		const secondCall = expectSuccess(
+			await revokeIntegration(integration.id, owner.id)
+		);
+		expect(secondCall.status).toBe("REVOKED");
+	});
+
 	it("writes an audit log entry for registration, suspension, and revocation", async () => {
 		const { integration, owner } = await registerTestIntegration();
 		await suspendIntegration(integration.id, owner.id);

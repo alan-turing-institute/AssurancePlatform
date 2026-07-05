@@ -88,6 +88,37 @@ describe("GET /api/integrations", () => {
 		expect(token).not.toHaveProperty("secret");
 		expect(JSON.stringify(body)).not.toContain(apiToken.tokenHash);
 	});
+
+	/**
+	 * Pins that `revokedAt`/`expiresAt` survive `listIntegrationsForOwner`'s
+	 * `select` for BOTH lifecycle states, not just the "everything null"
+	 * happy path the previous test exercised (nanaki info, work item 10).
+	 */
+	it("surfaces revokedAt for a REVOKED token and expiresAt for an EXPIRED token", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const revokedToken = await createTestApiToken(integration.id, {
+			revokedAt: new Date(),
+		});
+		const expiredToken = await createTestApiToken(integration.id, {
+			expiresAt: new Date(Date.now() - 60_000),
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/integrations/route");
+		const response = await GET();
+		const body = await response.json();
+
+		const tokens = body.integrations[0].tokens as Array<{
+			expiresAt: string | null;
+			id: string;
+			revokedAt: string | null;
+		}>;
+		const revoked = tokens.find((token) => token.id === revokedToken.id);
+		const expired = tokens.find((token) => token.id === expiredToken.id);
+		expect(revoked?.revokedAt).not.toBeNull();
+		expect(expired?.expiresAt).not.toBeNull();
+	});
 });
 
 describe("POST /api/integrations", () => {
@@ -360,42 +391,81 @@ describe("PATCH /api/integrations/[id] — permission matrix", () => {
 // Lifecycle: suspend / reactivate / revoke
 // ============================================
 
-describe("POST /api/integrations/[id]/suspend|reactivate|revoke — permission matrix", () => {
+type MutationRouteHandler = (
+	req: Request,
+	ctx: { params: Promise<{ id: string }> }
+) => Promise<Response>;
+
+/** Looks up the named HTTP-verb export on an imported route module, failing loudly (not `undefined`) if the route doesn't actually export it. */
+function requireHandler(
+	mod: Record<string, MutationRouteHandler>,
+	method: "DELETE" | "POST"
+): MutationRouteHandler {
+	const handler = mod[method];
+	if (!handler) {
+		throw new Error(`Route module has no ${method} export`);
+	}
+	return handler;
+}
+
+/**
+ * One loop generates the 401 + byte-identical-404 tests for every
+ * single-`[id]`-keyed mutation route "for free" — `reactivate` (nanaki
+ * MAJOR, work item 3) and `DELETE /api/integrations/[id]` (cid decision,
+ * work item 6) are both added here rather than as one-off describe blocks,
+ * so any FUTURE route of this same shape gets the same coverage by adding
+ * one array entry. `path: ""` + `method: "DELETE"` models the base route
+ * (no action suffix, different verb) alongside the POST action routes.
+ */
+describe("Integration mutation routes — permission matrix (suspend/reactivate/revoke/delete)", () => {
 	const cases: Array<{
-		importRoute: () => Promise<{
-			POST: (
-				req: Request,
-				ctx: { params: Promise<{ id: string }> }
-			) => Promise<Response>;
-		}>;
+		importRoute: () => Promise<Record<string, MutationRouteHandler>>;
+		method: "DELETE" | "POST";
 		path: string;
 	}> = [
 		{
+			method: "POST",
 			path: "suspend",
 			importRoute: () => import("@/app/api/integrations/[id]/suspend/route"),
 		},
 		{
+			method: "POST",
+			path: "reactivate",
+			importRoute: () => import("@/app/api/integrations/[id]/reactivate/route"),
+		},
+		{
+			method: "POST",
 			path: "revoke",
 			importRoute: () => import("@/app/api/integrations/[id]/revoke/route"),
 		},
+		{
+			method: "DELETE",
+			path: "",
+			importRoute: () => import("@/app/api/integrations/[id]/route"),
+		},
 	];
 
-	for (const { path, importRoute } of cases) {
-		it(`${path}: returns 401 when unauthenticated`, async () => {
+	for (const { method, path, importRoute } of cases) {
+		const label = path || "delete";
+		const url = (id: string) =>
+			path ? `/api/integrations/${id}/${path}` : `/api/integrations/${id}`;
+
+		it(`${label}: returns 401 when unauthenticated`, async () => {
 			const owner = await createTestUser();
 			const { integration } = await createTestIntegrationWithSystemUser(
 				owner.id
 			);
-			const { POST } = await importRoute();
+			const mod = await importRoute();
+			const handler = requireHandler(mod, method);
 
-			const response = await POST(
-				jsonRequest(`/api/integrations/${integration.id}/${path}`, "POST"),
+			const response = await handler(
+				jsonRequest(url(integration.id), method),
 				idParams(integration.id)
 			);
 			expect(response.status).toBe(401);
 		});
 
-		it(`${path}: returns BYTE-IDENTICAL 404s for a non-owner vs a nonexistent id`, async () => {
+		it(`${label}: returns BYTE-IDENTICAL 404s for a non-owner vs a nonexistent id`, async () => {
 			const owner = await createTestUser();
 			const outsider = await createTestUser();
 			const { integration } = await createTestIntegrationWithSystemUser(
@@ -403,13 +473,14 @@ describe("POST /api/integrations/[id]/suspend|reactivate|revoke — permission m
 			);
 			await mockAuth(outsider.id, outsider.username, outsider.email);
 
-			const { POST } = await importRoute();
-			const nonOwnerResponse = await POST(
-				jsonRequest(`/api/integrations/${integration.id}/${path}`, "POST"),
+			const mod = await importRoute();
+			const handler = requireHandler(mod, method);
+			const nonOwnerResponse = await handler(
+				jsonRequest(url(integration.id), method),
 				idParams(integration.id)
 			);
-			const nonexistentResponse = await POST(
-				jsonRequest(`/api/integrations/${NOT_FOUND_ID}/${path}`, "POST"),
+			const nonexistentResponse = await handler(
+				jsonRequest(url(NOT_FOUND_ID), method),
 				idParams(NOT_FOUND_ID)
 			);
 
@@ -421,6 +492,127 @@ describe("POST /api/integrations/[id]/suspend|reactivate|revoke — permission m
 			expect(nonOwnerBody.error).toBe(INTEGRATION_NOT_FOUND);
 		});
 	}
+});
+
+// ============================================
+// DELETE /api/integrations/[id] — happy path (permission matrix above)
+// ============================================
+
+describe("DELETE /api/integrations/[id]", () => {
+	it("deletes the integration — it no longer appears in GET /api/integrations", async () => {
+		const owner = await createTestUser();
+		const { integration: toDelete } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ name: "delete-me" }
+		);
+		const { integration: toKeep } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ name: "keep-me" }
+		);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { DELETE } = await import("@/app/api/integrations/[id]/route");
+		const response = await DELETE(
+			jsonRequest(`/api/integrations/${toDelete.id}`, "DELETE"),
+			idParams(toDelete.id)
+		);
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.success).toBe(true);
+
+		const { GET } = await import("@/app/api/integrations/route");
+		const listResponse = await GET();
+		const listBody = await listResponse.json();
+		const ids = listBody.integrations.map(
+			(integration: { id: string }) => integration.id
+		);
+		expect(ids).not.toContain(toDelete.id);
+		expect(ids).toContain(toKeep.id);
+	});
+});
+
+// ============================================
+// Lifecycle conflict responses (409) — route level
+// (nanaki minor, work item 8 — service-level coverage already exists in
+// machine-auth.test.ts; these pin the SAME conflicts reach HTTP as 409,
+// analogous to the existing route-level 409 tests below/above at the
+// reactivate-after-revoke and issue-token-on-suspended cases.)
+// ============================================
+
+describe("Lifecycle conflict responses (409) — route level", () => {
+	it("suspend: 409 when the integration is already REVOKED", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ status: "REVOKED" }
+		);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import("@/app/api/integrations/[id]/suspend/route");
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/suspend`, "POST"),
+			idParams(integration.id)
+		);
+		expect(response.status).toBe(409);
+	});
+
+	it("reactivate: 409 when the integration is already ACTIVE", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/reactivate/route"
+		);
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/reactivate`, "POST"),
+			idParams(integration.id)
+		);
+		expect(response.status).toBe(409);
+	});
+
+	it("rotate: 409 when the token's integration is SUSPENDED", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ status: "SUSPENDED" }
+		);
+		const apiToken = await createTestApiToken(integration.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/rotate/route"
+		);
+		const response = await POST(
+			jsonRequest(
+				`/api/integrations/${integration.id}/tokens/${apiToken.id}/rotate`,
+				"POST"
+			),
+			tokenParams(integration.id, apiToken.id)
+		);
+		expect(response.status).toBe(409);
+	});
+
+	it("rotate: 409 when the token is already revoked", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const apiToken = await createTestApiToken(integration.id, {
+			revokedAt: new Date(),
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/rotate/route"
+		);
+		const response = await POST(
+			jsonRequest(
+				`/api/integrations/${integration.id}/tokens/${apiToken.id}/rotate`,
+				"POST"
+			),
+			tokenParams(integration.id, apiToken.id)
+		);
+		expect(response.status).toBe(409);
+	});
 });
 
 describe("Lifecycle round-trip via the routes", () => {
@@ -708,6 +900,78 @@ describe("POST /api/integrations/[id]/tokens/[tokenId]/rotate", () => {
 		expect(nonOwnerBody).toEqual(nonexistentBody);
 		expect(nonOwnerBody.error).toBe(TOKEN_NOT_FOUND);
 	});
+
+	/**
+	 * Deviation-5 fix (cid SHOULD-FIX, work item 2): a tokenId that exists
+	 * and IS owned by the caller, but belongs to a DIFFERENT integration the
+	 * SAME owner also owns, must be rejected identically to a nonexistent
+	 * tokenId — not silently rotated via the "wrong" path `[id]`. Regression
+	 * pair per nanaki's prescription: two integrations under the same
+	 * owner, token issued under B, rotate attempted via A's path.
+	 */
+	it("rejects a tokenId that belongs to a DIFFERENT integration under the SAME owner, identically to a nonexistent tokenId", async () => {
+		const owner = await createTestUser();
+		const { integration: integrationA } =
+			await createTestIntegrationWithSystemUser(owner.id, { name: "int-a" });
+		const { integration: integrationB } =
+			await createTestIntegrationWithSystemUser(owner.id, { name: "int-b" });
+		const tokenB = await createTestApiToken(integrationB.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/rotate/route"
+		);
+		const crossPathResponse = await POST(
+			jsonRequest(
+				`/api/integrations/${integrationA.id}/tokens/${tokenB.id}/rotate`,
+				"POST"
+			),
+			tokenParams(integrationA.id, tokenB.id)
+		);
+		const nonexistentResponse = await POST(
+			jsonRequest(
+				`/api/integrations/${integrationA.id}/tokens/${NOT_FOUND_ID}/rotate`,
+				"POST"
+			),
+			tokenParams(integrationA.id, NOT_FOUND_ID)
+		);
+
+		expect(crossPathResponse.status).toBe(404);
+		expect(crossPathResponse.status).toBe(nonexistentResponse.status);
+		const crossPathBody = await crossPathResponse.json();
+		const nonexistentBody = await nonexistentResponse.json();
+		expect(crossPathBody).toEqual(nonexistentBody);
+		expect(crossPathBody.error).toBe(TOKEN_NOT_FOUND);
+
+		// Must NOT have been rotated — still exactly one token on integration B.
+		const tokens = await prisma.apiToken.findMany({
+			where: { integrationId: integrationB.id },
+		});
+		expect(tokens).toHaveLength(1);
+	});
+
+	it("writes a SecurityAuditLog row for token rotation", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const apiToken = await createTestApiToken(integration.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/rotate/route"
+		);
+		await POST(
+			jsonRequest(
+				`/api/integrations/${integration.id}/tokens/${apiToken.id}/rotate`,
+				"POST"
+			),
+			tokenParams(integration.id, apiToken.id)
+		);
+
+		const event = await prisma.securityAuditLog.findFirst({
+			where: { userId: owner.id, eventType: "token_rotated" },
+		});
+		expect(event).not.toBeNull();
+	});
 });
 
 // ============================================
@@ -788,6 +1052,51 @@ describe("DELETE /api/integrations/[id]/tokens/[tokenId]", () => {
 		const nonexistentBody = await nonexistentResponse.json();
 		expect(nonOwnerBody).toEqual(nonexistentBody);
 		expect(nonOwnerBody.error).toBe(TOKEN_NOT_FOUND);
+	});
+
+	/**
+	 * Deviation-5 fix, DELETE-revoke equivalent of the rotate-route
+	 * regression pair above (work item 2, nanaki's prescription).
+	 */
+	it("rejects a tokenId that belongs to a DIFFERENT integration under the SAME owner, identically to a nonexistent tokenId", async () => {
+		const owner = await createTestUser();
+		const { integration: integrationA } =
+			await createTestIntegrationWithSystemUser(owner.id, { name: "int-a" });
+		const { integration: integrationB } =
+			await createTestIntegrationWithSystemUser(owner.id, { name: "int-b" });
+		const tokenB = await createTestApiToken(integrationB.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { DELETE } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/route"
+		);
+		const crossPathResponse = await DELETE(
+			jsonRequest(
+				`/api/integrations/${integrationA.id}/tokens/${tokenB.id}`,
+				"DELETE"
+			),
+			tokenParams(integrationA.id, tokenB.id)
+		);
+		const nonexistentResponse = await DELETE(
+			jsonRequest(
+				`/api/integrations/${integrationA.id}/tokens/${NOT_FOUND_ID}`,
+				"DELETE"
+			),
+			tokenParams(integrationA.id, NOT_FOUND_ID)
+		);
+
+		expect(crossPathResponse.status).toBe(404);
+		expect(crossPathResponse.status).toBe(nonexistentResponse.status);
+		const crossPathBody = await crossPathResponse.json();
+		const nonexistentBody = await nonexistentResponse.json();
+		expect(crossPathBody).toEqual(nonexistentBody);
+		expect(crossPathBody.error).toBe(TOKEN_NOT_FOUND);
+
+		// Must NOT have been revoked by the cross-path call.
+		const stillActive = await prisma.apiToken.findUniqueOrThrow({
+			where: { id: tokenB.id },
+		});
+		expect(stillActive.revokedAt).toBeNull();
 	});
 
 	it("writes a SecurityAuditLog row for token revocation", async () => {

@@ -8,7 +8,10 @@ import {
 import { validationError } from "@/lib/errors";
 import { uuidSchema } from "@/lib/schemas/base";
 import { updateIntegrationSchema } from "@/lib/schemas/integration";
-import { updateIntegration } from "@/lib/services/integration-registry-service";
+import {
+	deleteIntegrationRegistration,
+	updateIntegration,
+} from "@/lib/services/integration-registry-service";
 
 /**
  * PATCH /api/integrations/[id]
@@ -61,6 +64,50 @@ export async function PATCH(
 		}
 
 		return apiSuccess({ integration: result.data });
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
+}
+
+/**
+ * DELETE /api/integrations/[id]
+ *
+ * Deletes an integration's registration outright — its dedicated system
+ * user artefacts and every one of its tokens go with it (cascade), per
+ * `deleteIntegrationRegistration`'s existing semantics, unchanged here.
+ * Owner-only — a non-owner gets the exact same 404 as a nonexistent id (no
+ * enumeration oracle; `getOwnedIntegrationOrError` in the service layer).
+ *
+ * @description Prefer `POST .../revoke` when the integration's own
+ * accountability trail matters (it keeps the row, terminally revoked);
+ * use this when a human owner needs the row itself gone, with no new
+ * owner to reassign to (`deleteIntegrationRegistration`'s doc comment).
+ * @pathParam id - Integration ID (UUID)
+ * @response 200 - `{ success: true }`
+ * @response 401 - Unauthorised
+ * @response 404 - Integration not found (covers non-existent and not-owned — same message)
+ * @auth SessionAuth
+ * @tag Integrations
+ */
+export async function DELETE(
+	_request: Request,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		const userId = await requireAuth();
+		const { id } = await params;
+
+		const parsedId = uuidSchema.safeParse(id);
+		if (!parsedId.success) {
+			return apiError(validationError("Invalid integration id"));
+		}
+
+		const result = await deleteIntegrationRegistration(parsedId.data, userId);
+		if ("error" in result) {
+			return apiError(serviceErrorToAppError(result.error));
+		}
+
+		return apiSuccess({ success: true });
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

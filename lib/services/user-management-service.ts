@@ -4,7 +4,7 @@ import {
 	verifyPassword,
 } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
-import { getIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
+import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
 import {
 	validateEmail,
 	validatePassword,
@@ -322,10 +322,14 @@ async function getOrCreateSystemUser(
  * never silently vanish). Without the pre-check below, `tx.user.delete`
  * would throw a raw Postgres P2003 that the catch-all below flattens into
  * an unhelpful "Failed to delete account". Checking
- * `getIntegrationsOwnedBy` first turns that into a clean, typed, actionable
- * error instead — "reassign or remove your integrations first" — using the
- * same owner-deletion primitives the registry service already exposes
- * (`reassignIntegrationOwner` / `deleteIntegrationRegistration`).
+ * `countIntegrationsOwnedBy` first turns that into a clean, typed,
+ * actionable error instead — "Remove your N integration(s) before deleting
+ * your account". Reassignment has no path in 1.0 (vincent minor, review
+ * round 2 — this used to promise "reassign or remove"; only removal is
+ * actually offered), so the message promises only that. `countIntegrationsOwnedBy`
+ * is a `COUNT(*)`, not the full `getIntegrationsOwnedBy` row fetch this
+ * pre-check used to do (vincent minor, work item 7) — `getIntegrationsOwnedBy`
+ * itself is unchanged and still used elsewhere.
  */
 export async function deleteAccount(
 	userId: string,
@@ -347,14 +351,14 @@ export async function deleteAccount(
 			return { error: "User not found" };
 		}
 
-		const ownedIntegrations = await getIntegrationsOwnedBy(userId);
-		if ("error" in ownedIntegrations) {
-			return ownedIntegrations;
+		const ownedIntegrationCount = await countIntegrationsOwnedBy(userId);
+		if ("error" in ownedIntegrationCount) {
+			return ownedIntegrationCount;
 		}
-		if (ownedIntegrations.data.length > 0) {
-			const count = ownedIntegrations.data.length;
+		if (ownedIntegrationCount.data > 0) {
+			const count = ownedIntegrationCount.data;
 			return {
-				error: `Reassign or remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
+				error: `Remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
 			};
 		}
 

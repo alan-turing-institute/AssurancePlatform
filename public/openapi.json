@@ -2051,6 +2051,37 @@
             "$ref": "#/components/responses/500"
           }
         }
+      },
+      "delete": {
+        "operationId": "delete-integrations-{id}",
+        "summary": "DELETE /api/integrations/[id]",
+        "description": "Prefer `POST .../revoke` when the integration's own",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
       }
     },
     "/integrations/{id}/reactivate": {

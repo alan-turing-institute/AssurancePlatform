@@ -142,8 +142,15 @@ const ERROR_MAPPINGS: Array<{
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations
-	// (ON DELETE RESTRICT) block account deletion until reassigned/removed.
-	{ pattern: /reassign or remove your \d+ integrations?/i, factory: conflict },
+	// (ON DELETE RESTRICT) block account deletion until removed (no
+	// reassignment path in 1.0). Anchored `^...$` like its two siblings
+	// above, not a bare substring (vincent minor, review round 2 — this
+	// used to be unanchored, the odd one out of the three lifecycle
+	// patterns in this array).
+	{
+		pattern: /^Remove your \d+ integrations? before deleting your account$/,
+		factory: conflict,
+	},
 ];
 
 /**

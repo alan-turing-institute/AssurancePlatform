@@ -30,23 +30,36 @@ import type { ServiceResult } from "@/types/service";
  * Authorisation (management API precondition — vincent security review
  * 2026-07-03, finding 3): OWNER-ONLY in 1.0, no admin override — no
  * platform-admin concept exists anywhere in this codebase, and none is
- * invented here. `suspendIntegration`, `reactivateIntegration`,
- * `revokeIntegration`, `issueToken`, `rotateToken`, `revokeToken`,
- * `updateIntegration`/`updateIntegrationScopes`, `reassignIntegrationOwner`,
- * and `deleteIntegrationRegistration` all verify, at THIS service boundary
- * (not just in a calling route), that `actorUserId` owns the integration
- * before acting — `getOwnedIntegrationOrError` is the single choke point
- * for that check. `registerIntegration` binds the new integration's
- * `ownerId` to `actorUserId` directly (any authenticated user may
- * register; the registrant becomes owner — policy settled by cid,
- * 2026-07-05) — there is no `ownerId` input a caller could use to name a
- * different owner. A non-owner acting on someone else's integration
- * (or token) gets the EXACT SAME error as acting on a nonexistent id —
- * the repo's enumeration-prevention convention
- * (`element-service.ts`'s `getElement` precedent) — never a distinct
- * "Permission denied". `validateApiToken` is the one exception: it has no
- * human actor at all (it authenticates a bearer token), and its semantics
- * are unchanged.
+ * invented here. Every mutating operation below verifies, at THIS service
+ * boundary (not just in a calling route), that `actorUserId` owns the
+ * integration before acting — through exactly ONE of two choke points,
+ * chosen by which id the operation is keyed on (vincent MAJOR, review
+ * round 2: the single-choke-point claim used to be false — `rotateToken`/
+ * `revokeToken` had their own duplicated inline checks — this is now
+ * literally true for both families):
+ *   - INTEGRATION-keyed ops — `suspendIntegration`, `reactivateIntegration`,
+ *     `revokeIntegration`, `issueToken`, `updateIntegration`/
+ *     `updateIntegrationScopes`, `reassignIntegrationOwner`,
+ *     `deleteIntegrationRegistration` — go through
+ *     `getOwnedIntegrationOrError`.
+ *   - TOKEN-keyed ops — `rotateToken`, `revokeToken` — go through
+ *     `getOwnedApiTokenOrError`, its symmetrical twin. Ownership rides the
+ *     token's OWN integration, not a path-supplied integration id; a caller
+ *     may additionally pass `options.integrationId` to also require the
+ *     token belong to THAT specific integration (a tokenId that exists,
+ *     is owned by the actor, but hangs off a DIFFERENT integration the
+ *     actor also owns is rejected identically to a nonexistent tokenId —
+ *     deviation-5 fix, work item 2).
+ * `registerIntegration` binds the new integration's `ownerId` to
+ * `actorUserId` directly (any authenticated user may register; the
+ * registrant becomes owner — policy settled by cid, 2026-07-05) — there is
+ * no `ownerId` input a caller could use to name a different owner. A
+ * non-owner acting on someone else's integration (or token) gets the EXACT
+ * SAME error as acting on a nonexistent id — the repo's
+ * enumeration-prevention convention (`element-service.ts`'s `getElement`
+ * precedent) — never a distinct "Permission denied". `validateApiToken` is
+ * the one exception: it has no human actor at all (it authenticates a
+ * bearer token), and its semantics are unchanged.
  */
 
 // ============================================
@@ -195,6 +208,48 @@ async function getOwnedIntegrationOrError<S extends Prisma.IntegrationSelect>(
 	// distinct instantiations of the same generated type. Runtime shape is
 	// identical; this cast just reconciles the two static instantiations.
 	return { data: integration as Prisma.IntegrationGetPayload<{ select: S }> };
+}
+
+/**
+ * Loads an `ApiToken` by id with the given `select`, verifying it both
+ * EXISTS and its OWNING INTEGRATION is owned by `actorUserId` — the
+ * token-keyed twin of `getOwnedIntegrationOrError` above (vincent MAJOR,
+ * review round 2: `rotateToken`/`revokeToken` used to each run their own
+ * duplicated inline version of this check; this is now the single choke
+ * point for both, matching the module doc comment). A token has no
+ * `ownerId` of its own — ownership rides its `integration.ownerId` — so
+ * this is a distinct helper, not a generic rename of the integration one.
+ *
+ * Returns the SAME "Token not found" error whether the id doesn't exist at
+ * all or exists but its integration belongs to someone else — a caller
+ * cannot distinguish "no such token" from "not yours".
+ */
+async function getOwnedApiTokenOrError<S extends Prisma.ApiTokenSelect>(
+	tokenId: string,
+	actorUserId: string,
+	select: S
+): ServiceResult<Prisma.ApiTokenGetPayload<{ select: S }>> {
+	// Same two-query shape as `getOwnedIntegrationOrError`, for the same
+	// reason (see its comment): a generic `S` can't be safely merged with
+	// the nested `integration.ownerId` select at the type level.
+	const ownerRow = await prisma.apiToken.findUnique({
+		where: { id: tokenId },
+		select: { integration: { select: { ownerId: true } } },
+	});
+	if (!ownerRow || ownerRow.integration.ownerId !== actorUserId) {
+		return { error: "Token not found" };
+	}
+
+	const apiToken = await prisma.apiToken.findUnique({
+		where: { id: tokenId },
+		select,
+	});
+	if (!apiToken) {
+		return { error: "Token not found" };
+	}
+	// Same `$extends()` static/runtime reconciliation cast as
+	// `getOwnedIntegrationOrError` — see its comment for why this is safe.
+	return { data: apiToken as Prisma.ApiTokenGetPayload<{ select: S }> };
 }
 
 function issueTokenRecord(integrationId: string, expiresAt?: Date) {
@@ -514,6 +569,27 @@ export async function getIntegrationsOwnedBy(
 	}
 }
 
+/**
+ * Counts integrations owned by a user — the cheap existence-and-magnitude
+ * check `deleteAccount`'s pre-flight actually needs (vincent minor, work
+ * item 7). `deleteAccount` used to call `getIntegrationsOwnedBy` and
+ * discard every row but the length, forcing a full `Integration[]` fetch
+ * (columns, ORDER BY) to answer a question `COUNT(*)` answers directly.
+ * `getIntegrationsOwnedBy` itself is UNCHANGED and kept — other flows still
+ * need the actual rows. Same trust contract: `ownerId` must be the
+ * caller's own id.
+ */
+export async function countIntegrationsOwnedBy(
+	ownerId: string
+): ServiceResult<number> {
+	try {
+		const count = await prisma.integration.count({ where: { ownerId } });
+		return { data: count };
+	} catch {
+		return { error: "Failed to count owned integrations" };
+	}
+}
+
 export interface IntegrationTokenSummary {
 	createdAt: Date;
 	expiresAt: Date | null;
@@ -706,6 +782,21 @@ export async function issueToken(
 	}
 }
 
+export interface TokenScopedOptions {
+	/**
+	 * The PATH's integration id (e.g. `[id]` in
+	 * `/api/integrations/[id]/tokens/[tokenId]/rotate`). When present, the
+	 * token must belong to THIS integration or the call fails with the same
+	 * generic "Token not found" as a nonexistent tokenId — a caller who owns
+	 * BOTH Integration A and Integration B cannot rotate/revoke a token that
+	 * actually belongs to B by naming A in the URL (deviation-5 fix, work
+	 * item 2). Optional — and left unchecked when omitted — so existing
+	 * direct service callers (tests, scripts) that have no "path" concept at
+	 * all are unaffected.
+	 */
+	integrationId?: string;
+}
+
 /**
  * Issues a replacement token and brings the old token's expiry forward to
  * `now + TOKEN_ROTATION_OVERLAP_MS` (unless it already expires sooner) —
@@ -716,18 +807,28 @@ export async function issueToken(
  */
 export async function rotateToken(
 	tokenId: string,
-	actorUserId: string
+	actorUserId: string,
+	options: TokenScopedOptions = {}
 ): ServiceResult<RotatedToken> {
 	try {
-		const oldToken = await prisma.apiToken.findUnique({
-			where: { id: tokenId },
-			include: {
-				integration: { select: { id: true, status: true, ownerId: true } },
-			},
+		const owned = await getOwnedApiTokenOrError(tokenId, actorUserId, {
+			id: true,
+			integrationId: true,
+			expiresAt: true,
+			revokedAt: true,
+			integration: { select: { status: true } },
 		});
-		if (!oldToken || oldToken.integration.ownerId !== actorUserId) {
+		if ("error" in owned) {
+			return owned;
+		}
+		if (
+			options.integrationId &&
+			owned.data.integrationId !== options.integrationId
+		) {
 			return { error: "Token not found" };
 		}
+		const oldToken = owned.data;
+
 		if (oldToken.revokedAt) {
 			return { error: "Cannot rotate a revoked token" };
 		}
@@ -776,22 +877,25 @@ export async function rotateToken(
 
 export async function revokeToken(
 	tokenId: string,
-	actorUserId: string
+	actorUserId: string,
+	options: TokenScopedOptions = {}
 ): ServiceResult<ApiToken> {
 	try {
-		const existing = await prisma.apiToken.findUnique({
-			where: { id: tokenId },
-			select: {
-				id: true,
-				revokedAt: true,
-				integrationId: true,
-				integration: { select: { ownerId: true } },
-			},
+		const owned = await getOwnedApiTokenOrError(tokenId, actorUserId, {
+			id: true,
+			integrationId: true,
+			revokedAt: true,
 		});
-		if (!existing || existing.integration.ownerId !== actorUserId) {
+		if ("error" in owned) {
+			return owned;
+		}
+		if (
+			options.integrationId &&
+			owned.data.integrationId !== options.integrationId
+		) {
 			return { error: "Token not found" };
 		}
-		if (existing.revokedAt) {
+		if (owned.data.revokedAt) {
 			return { error: "Token already revoked" };
 		}
 
@@ -803,7 +907,7 @@ export async function revokeToken(
 		await writeAuditLog({
 			userId: actorUserId,
 			eventType: "token_revoked",
-			metadata: { integrationId: existing.integrationId, tokenId },
+			metadata: { integrationId: owned.data.integrationId, tokenId },
 		});
 
 		return { data: apiToken };
