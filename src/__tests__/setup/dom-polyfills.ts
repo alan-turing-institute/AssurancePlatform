@@ -1,11 +1,25 @@
 import { vi } from "vitest";
 
 // ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-	observe: vi.fn(),
-	unobserve: vi.fn(),
-	disconnect: vi.fn(),
-}));
+//
+// The mock implementation MUST be a `function`/`class`, never an arrow
+// function: some components (e.g. Radix `Checkbox`'s hidden bubble input,
+// via `@radix-ui/react-use-size`) call `new ResizeObserver(...)` directly,
+// and vitest's spy implementation calls `Reflect.construct` on whatever's
+// configured here — which throws "is not a constructor" for an arrow
+// function (arrow functions have no `[[Construct]]`). Every prior consumer
+// of this mock only ever called `.observe`/`.disconnect` on an
+// already-constructed instance, so this never surfaced until a real
+// `new ResizeObserver()` call exercised it.
+global.ResizeObserver = vi
+	.fn()
+	.mockImplementation(function ResizeObserverMock() {
+		return {
+			observe: vi.fn(),
+			unobserve: vi.fn(),
+			disconnect: vi.fn(),
+		};
+	});
 
 // window.matchMedia
 Object.defineProperty(window, "matchMedia", {
