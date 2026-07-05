@@ -10,6 +10,7 @@ import {
 	handleError,
 	notFound,
 	unauthorised,
+	validationError,
 } from "./errors";
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,9 @@ function matchesPattern(error: string, pattern: ErrorPattern): boolean {
 	return pattern.test(error);
 }
 
+/** Shared factory for every "the resource exists but is in the wrong state for this action" error below. */
+const conflict = () => new AppError({ code: "CONFLICT", message: "" });
+
 const ERROR_MAPPINGS: Array<{
 	pattern: ErrorPattern;
 	factory: () => AppError;
@@ -110,10 +114,7 @@ const ERROR_MAPPINGS: Array<{
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
-	{
-		pattern: "already",
-		factory: () => new AppError({ code: "CONFLICT", message: "" }),
-	},
+	{ pattern: "already", factory: conflict },
 	// `assertPluginEnabledForUser` ("Plugin '<id>' is not enabled",
 	// `plugin-enablement-service.ts`'s `assertPluginEnabledForUser`) — a
 	// plugin switched off (deployment, or user-level) is a clean, expected
@@ -124,6 +125,25 @@ const ERROR_MAPPINGS: Array<{
 	// error that happens to contain that phrase for a different reason isn't
 	// misclassified as a plugin-disabled 403.
 	{ pattern: /^Plugin '.+' is not enabled$/, factory: () => forbidden() },
+	// `integration-registry-service.ts` / `lib/schemas/integration.ts`
+	// (integration management API, work item 7): an unknown scope is a
+	// validation failure (400), not an unmapped 500.
+	{ pattern: /^Unknown scope/, factory: () => validationError("") },
+	// Lifecycle/state-guard errors from the integration registry service —
+	// the integration or token exists and is owned by the caller, but its
+	// current status makes the requested action a no-op or a terminal-state
+	// violation (e.g. reactivating a REVOKED integration, or issuing/
+	// rotating a token against one that isn't ACTIVE). None of these contain
+	// "already" or "not found", so without this entry they'd fall through to
+	// INTERNAL (500) the first time an HTTP route ever surfaced them.
+	{
+		pattern:
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot rotate a revoked token$/,
+		factory: conflict,
+	},
+	// `user-management-service.ts`'s `deleteAccount` — owned integrations
+	// (ON DELETE RESTRICT) block account deletion until reassigned/removed.
+	{ pattern: /reassign or remove your \d+ integrations?/i, factory: conflict },
 ];
 
 /**

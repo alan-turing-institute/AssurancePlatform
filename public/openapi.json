@@ -1820,6 +1820,46 @@
         }
       }
     },
+    "/elements/{id}/health": {
+      "get": {
+        "operationId": "get-elements-{id}-health",
+        "summary": "GET /api/elements/[id]/health",
+        "description": "Refuses with a clean error (never a 500) when `tea.health`",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ health: { score, lastEvaluatedAt, validityWindowSeconds } | null }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/elements/{id}/move": {
       "post": {
         "operationId": "post-elements-{id}-move",
@@ -1880,6 +1920,357 @@
         ],
         "parameters": [],
         "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations": {
+      "get": {
+        "operationId": "get-integrations",
+        "summary": "GET /api/integrations",
+        "description": "Owner-only listing — the caller's own integrations only.",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ integrations: IntegrationListItem[] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-integrations",
+        "summary": "POST /api/integrations",
+        "description": "Any authenticated user may register an integration; the",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - The created integration (no token)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}": {
+      "patch": {
+        "operationId": "patch-integrations-{id}",
+        "summary": "PATCH /api/integrations/[id]",
+        "description": "At least one of `description`/`scopes` must be present.",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The updated integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/reactivate": {
+      "post": {
+        "operationId": "post-integrations-{id}-reactivate",
+        "summary": "POST /api/integrations/[id]/reactivate",
+        "description": "REVOKED stays terminal — reactivating a revoked integration",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The reactivated integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/revoke": {
+      "post": {
+        "operationId": "post-integrations-{id}-revoke",
+        "summary": "POST /api/integrations/[id]/revoke",
+        "description": "",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The revoked integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/suspend": {
+      "post": {
+        "operationId": "post-integrations-{id}-suspend",
+        "summary": "POST /api/integrations/[id]/suspend",
+        "description": "A REVOKED integration cannot be suspended (REVOKED is",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The suspended integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/tokens": {
+      "post": {
+        "operationId": "post-integrations-{id}-tokens",
+        "summary": "POST /api/integrations/[id]/tokens",
+        "description": "`expiresAt` is optional — omitted means the token never",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - `{ secret: string, token: { id, tokenPrefix, createdAt, expiresAt } }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/tokens/{tokenId}": {
+      "delete": {
+        "operationId": "delete-integrations-{id}-tokens-{tokenId}",
+        "summary": "DELETE /api/integrations/[id]/tokens/[tokenId]",
+        "description": "",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/tokens/{tokenId}/rotate": {
+      "post": {
+        "operationId": "post-integrations-{id}-tokens-{tokenId}-rotate",
+        "summary": "POST /api/integrations/[id]/tokens/[tokenId]/rotate",
+        "description": "Refuses a token that is already revoked, or whose",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ secret, token: { id, tokenPrefix, createdAt, expiresAt }, oldTokenId, overlapUntil }`"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },

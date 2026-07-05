@@ -129,7 +129,6 @@ async function main() {
 				name: INTEGRATION_NAME,
 				description:
 					"DARTER evidence pipeline — machine client for the health plugin",
-				ownerId: owner.id,
 				scopes: [...EXPECTED_SCOPES],
 			},
 			owner.id

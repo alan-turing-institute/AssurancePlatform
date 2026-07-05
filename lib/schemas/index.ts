@@ -8,6 +8,7 @@ export * from "./case-study";
 export * from "./comment";
 export * from "./element";
 export * from "./google-drive";
+export * from "./integration";
 export * from "./permission";
 export * from "./plugin";
 export * from "./status";

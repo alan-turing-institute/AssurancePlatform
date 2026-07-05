@@ -4,6 +4,7 @@ import {
 	verifyPassword,
 } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
+import { getIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
 import {
 	validateEmail,
 	validatePassword,
@@ -314,6 +315,17 @@ async function getOrCreateSystemUser(
  * Deletes a user account.
  * Transfers owned cases and anonymises comments before deletion.
  * Requires password confirmation for local auth users.
+ *
+ * Integrations are NOT silently cascade-deleted: `Integration.ownerId` is an
+ * unconditional `ON DELETE RESTRICT` (ADR 0002 v2 §2.4 — a revoked
+ * integration keeps its accountability trail, so its owner reference must
+ * never silently vanish). Without the pre-check below, `tx.user.delete`
+ * would throw a raw Postgres P2003 that the catch-all below flattens into
+ * an unhelpful "Failed to delete account". Checking
+ * `getIntegrationsOwnedBy` first turns that into a clean, typed, actionable
+ * error instead — "reassign or remove your integrations first" — using the
+ * same owner-deletion primitives the registry service already exposes
+ * (`reassignIntegrationOwner` / `deleteIntegrationRegistration`).
  */
 export async function deleteAccount(
 	userId: string,
@@ -333,6 +345,17 @@ export async function deleteAccount(
 
 		if (!user) {
 			return { error: "User not found" };
+		}
+
+		const ownedIntegrations = await getIntegrationsOwnedBy(userId);
+		if ("error" in ownedIntegrations) {
+			return ownedIntegrations;
+		}
+		if (ownedIntegrations.data.length > 0) {
+			const count = ownedIntegrations.data.length;
+			return {
+				error: `Reassign or remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
+			};
 		}
 
 		// Verify password for local auth users
