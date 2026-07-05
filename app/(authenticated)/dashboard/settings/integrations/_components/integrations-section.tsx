@@ -36,6 +36,11 @@ export function IntegrationsSection() {
 	} = useIntegrations();
 
 	const [registerOpen, setRegisterOpen] = useState(false);
+	// Bumped on every "open" click and used as the dialog's `key` — remounting
+	// it is how it gets a fresh `useForm` state each time it opens (React's
+	// own recommended fix for "resetting state when a prop changes", rather
+	// than a `useEffect` watching `open` to imperatively call `form.reset()`).
+	const [registerDialogInstance, setRegisterDialogInstance] = useState(0);
 
 	return (
 		<div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -53,7 +58,13 @@ export function IntegrationsSection() {
 
 			<div className="space-y-4 md:col-span-2">
 				<div className="flex justify-end">
-					<Button onClick={() => setRegisterOpen(true)} type="button">
+					<Button
+						onClick={() => {
+							setRegisterDialogInstance((instance) => instance + 1);
+							setRegisterOpen(true);
+						}}
+						type="button"
+					>
 						<Plus aria-hidden="true" className="h-4 w-4" />
 						Register integration
 					</Button>
@@ -99,6 +110,7 @@ export function IntegrationsSection() {
 			</div>
 
 			<IntegrationRegisterDialog
+				key={registerDialogInstance}
 				onOpenChange={setRegisterOpen}
 				onSubmit={registerIntegration}
 				open={registerOpen}

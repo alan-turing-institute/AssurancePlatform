@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -62,6 +61,13 @@ const DEFAULT_VALUES: RegisterIntegrationFormInput = {
  * `.transform()` folds `null`/empty into `undefined` — using the output type
  * for both, as a same-shaped schema elsewhere in the app might get away
  * with, fails `zodResolver`'s own typing here.
+ *
+ * Fresh fields on every open ride the parent's `key={registerDialogInstance}`
+ * (`IntegrationsSection`), which remounts this whole component on each
+ * "open" click — React's own recommended fix for "resetting state when a
+ * prop changes" — rather than a `useEffect` watching `open` to imperatively
+ * call `form.reset()` (flagged by react-doctor as event logic misplaced in
+ * an effect, plus a stale-closure risk on `form.reset` as a missing dep).
  */
 export function IntegrationRegisterDialog({
 	onOpenChange,
@@ -77,13 +83,6 @@ export function IntegrationRegisterDialog({
 		resolver: zodResolver(registerIntegrationSchema),
 		defaultValues: DEFAULT_VALUES,
 	});
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: form is a stable react-hook-form handle; including it would re-run on every keystroke
-	useEffect(() => {
-		if (open) {
-			form.reset(DEFAULT_VALUES);
-		}
-	}, [open]);
 
 	async function handleSubmit(values: RegisterIntegrationBody) {
 		const success = await onSubmit(values);
