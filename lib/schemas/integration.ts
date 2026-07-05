@@ -77,6 +77,9 @@ export type RegisterIntegrationFormInput = z.input<
  * Both fields optional, but at least one must be present — an empty PATCH
  * is a caller bug, not a no-op success.
  */
+// No `z.infer` alias here — nothing currently consumes an updateIntegrationSchema
+// type outside the route's own `.safeParse` call. Add one back when an edit UI
+// lands and a caller needs the parsed shape by name.
 export const updateIntegrationSchema = z
 	.object({
 		description: optionalString(1000),
@@ -86,8 +89,6 @@ export const updateIntegrationSchema = z
 		(data) => data.description !== undefined || data.scopes !== undefined,
 		{ message: "At least one field to update must be provided" }
 	);
-
-export type UpdateIntegrationBody = z.infer<typeof updateIntegrationSchema>;
 
 // ============================================
 // POST /api/integrations/[id]/tokens
@@ -102,6 +103,9 @@ export type UpdateIntegrationBody = z.infer<typeof updateIntegrationSchema>;
  * asking for an already-dead token is always a mistake worth rejecting at
  * the boundary rather than silently honouring.
  */
+// No `z.infer` alias here — nothing currently consumes an issueTokenSchema
+// type outside the route's own `.safeParse` call. Add one back when an
+// expiry-picker UI lands and a caller needs the parsed shape by name.
 export const issueTokenSchema = z.object({
 	expiresAt: z.coerce
 		.date()
@@ -110,8 +114,6 @@ export const issueTokenSchema = z.object({
 		})
 		.optional(),
 });
-
-export type IssueTokenBody = z.infer<typeof issueTokenSchema>;
 
 // ============================================
 // Response wire shapes — settings UI

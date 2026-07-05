@@ -9,17 +9,6 @@ import type {
 } from "@/lib/schemas/integration";
 import { toast } from "@/lib/toast";
 
-// Re-exported so consumers (`IntegrationsSection`, its tests, etc.) import
-// the settings pane's item shape from this hook, same convention as
-// `use-plugin-settings.ts` re-exporting `PluginSettingsListItem` — one
-// definition, in `lib/schemas/integration.ts`.
-export type {
-	IntegrationListItem,
-	IntegrationTokenSummary,
-	IssuedTokenResult,
-	RotatedTokenResult,
-} from "@/lib/schemas/integration";
-
 interface ApiErrorBody {
 	error?: string;
 }

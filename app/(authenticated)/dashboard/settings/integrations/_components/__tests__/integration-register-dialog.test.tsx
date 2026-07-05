@@ -13,6 +13,10 @@ const SUBMIT_BUTTON_REGEX = /register integration/i;
 const CANCEL_BUTTON_REGEX = /cancel/i;
 const NAME_REQUIRED_REGEX = /name is required/i;
 const SCOPE_REQUIRED_REGEX = /at least one scope is required/i;
+const NAME_TOO_LONG_REGEX = /name must be less than 100 characters/i;
+const DESCRIPTION_TOO_LONG_REGEX = /must be less than 1000 characters/i;
+const NAME_OVER_CAP = "n".repeat(101);
+const DESCRIPTION_OVER_CAP = "d".repeat(1001);
 
 describe("IntegrationRegisterDialog", () => {
 	it("renders nothing when closed", () => {
@@ -63,6 +67,34 @@ describe("IntegrationRegisterDialog", () => {
 
 		expect(await screen.findByText(NAME_REQUIRED_REGEX)).toBeInTheDocument();
 		expect(screen.getByText(SCOPE_REQUIRED_REGEX)).toBeInTheDocument();
+		expect(onSubmit).not.toHaveBeenCalled();
+	});
+
+	it("blocks submission and shows inline errors when name or description exceed the schema's caps (mirrors registerIntegrationSchema's 100/1000 limits)", async () => {
+		const onSubmit = vi.fn();
+		const user = userEvent.setup();
+
+		renderWithoutProviders(
+			<IntegrationRegisterDialog
+				onOpenChange={vi.fn()}
+				onSubmit={onSubmit}
+				open
+				submitting={false}
+			/>
+		);
+
+		await user.click(screen.getByLabelText(NAME_LABEL_REGEX));
+		await user.paste(NAME_OVER_CAP);
+		await user.click(screen.getByLabelText(DESCRIPTION_LABEL_REGEX));
+		await user.paste(DESCRIPTION_OVER_CAP);
+		await user.click(
+			screen.getByRole("checkbox", { name: READ_CASES_CHECKBOX_REGEX })
+		);
+
+		await user.click(screen.getByRole("button", { name: SUBMIT_BUTTON_REGEX }));
+
+		expect(await screen.findByText(NAME_TOO_LONG_REGEX)).toBeInTheDocument();
+		expect(screen.getByText(DESCRIPTION_TOO_LONG_REGEX)).toBeInTheDocument();
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
 

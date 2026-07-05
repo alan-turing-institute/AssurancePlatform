@@ -217,6 +217,12 @@ describe("useIntegrations", () => {
 			expect(JSON.stringify(Object.keys(result.current))).not.toMatch(
 				SECRET_KEY_REGEX
 			);
+			// The key-name checks above would miss a regression that stashed the
+			// secret under an innocuously-named field (e.g. `lastIssuedToken:
+			// { secret }`), since they only ever inspect top-level key names.
+			// Serialising the whole hook result and searching for the literal
+			// secret value catches that shape of leak too, nested or not.
+			expect(JSON.stringify(result.current)).not.toContain(issued?.secret);
 		});
 
 		it("rotateToken resolves the new secret plus the old token's overlap window", async () => {
@@ -265,6 +271,8 @@ describe("useIntegrations", () => {
 			expect(rotated?.oldTokenId).toBe("token-1");
 			expect(rotated?.overlapUntil).toBe("2026-07-05T01:00:00.000Z");
 			expect(rotated?.secret).toBe("tea_live_newsecret");
+			// Same non-persistence invariant as issueToken, for the rotate path.
+			expect(JSON.stringify(result.current)).not.toContain(rotated?.secret);
 		});
 
 		it("revokeToken issues the DELETE and refetches", async () => {

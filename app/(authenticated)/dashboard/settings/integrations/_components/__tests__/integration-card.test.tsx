@@ -19,6 +19,8 @@ const DELETE_CONFIRM_REGEX = /delete integration/i;
 const ISSUE_TOKEN_BUTTON_REGEX = /issue new token/i;
 const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
+const DONE_BUTTON_REGEX = /done.*stored it/i;
+const TOKEN_ROW_TEST_ID_REGEX = /^token-row-/;
 
 function makeIntegration(
 	overrides: Partial<IntegrationListItem> = {}
@@ -219,6 +221,29 @@ describe("IntegrationCard", () => {
 
 			expect(onRevokeToken).toHaveBeenCalledWith("integration-1", "token-1");
 		});
+
+		it("does not call onRevokeToken when the token revoke confirm dialog is cancelled", async () => {
+			const onRevokeToken = vi.fn();
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onRevokeToken={onRevokeToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: REVOKE_TOKEN_TRIGGER_REGEX })
+			);
+			await screen.findByRole("dialog");
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onRevokeToken).not.toHaveBeenCalled();
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
 	});
 
 	describe("tokens", () => {
@@ -261,6 +286,59 @@ describe("IntegrationCard", () => {
 			expect(await screen.findByTestId("token-secret-value")).toHaveTextContent(
 				"tea_live_freshsecret"
 			);
+		});
+
+		it("clears the revealed secret from the DOM once Done is clicked — IntegrationCard's own onClose wiring, not just the modal's isolated behaviour", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue({
+				secret: "tea_live_freshsecret",
+				token: {
+					id: "token-2",
+					tokenPrefix: "tea_live_cd34",
+					createdAt: "2026-07-05T00:00:00.000Z",
+					expiresAt: null,
+				},
+			});
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			expect(await screen.findByTestId("token-secret-value")).toHaveTextContent(
+				"tea_live_freshsecret"
+			);
+
+			await user.click(screen.getByRole("button", { name: DONE_BUTTON_REGEX }));
+
+			// A regression to `onClose={() => {}}` (a no-op) would leave this
+			// element in the DOM — `IntegrationTokenSecretModal`'s own isolated
+			// test cannot catch that, since it only ever rerenders with a
+			// directly-supplied `reveal` prop rather than exercising
+			// `IntegrationCard`'s `setTokenReveal(null)` handler.
+			expect(
+				screen.queryByTestId("token-secret-value")
+			).not.toBeInTheDocument();
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+
+		it("shows an empty-tokens message and no token rows when the integration has none issued", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ tokens: [] })}
+				/>
+			);
+
+			expect(screen.getByText("No tokens issued yet.")).toBeInTheDocument();
+			expect(
+				screen.queryByTestId(TOKEN_ROW_TEST_ID_REGEX)
+			).not.toBeInTheDocument();
 		});
 	});
 });
