@@ -13,8 +13,14 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
+      # This workflow exists solely to reseed the STAGING database (its
+      # DATABASE_URL is the staging secret). An unpinned checkout runs the
+      # default branch's migrations+seed against staging's DB, which both
+      # strips staging-only schema and seeds the wrong content — found 2026-07-05.
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          ref: staging
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
