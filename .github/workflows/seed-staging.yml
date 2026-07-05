@@ -13,8 +13,16 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
+      # This workflow exists solely to reseed the STAGING database (its
+      # DATABASE_URL is the staging secret). An unpinned checkout runs the
+      # default branch's migrations+seed against staging's DB, which both
+      # strips staging-only schema and seeds the wrong content — found 2026-07-05.
+      # After this pin, the manual dispatch's branch selector is cosmetic —
+      # every run seeds from staging's tree by design.
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          ref: staging
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -53,4 +61,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
           SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
-        run: npx tsx prisma/seed/dev-seed.ts
+        run: npx tsx prisma/seed/dev-seed.ts | tee seed.log
+
+      - name: Verify expected seed content ran
+        run: grep -q "claim C1 id=" seed.log || { echo "::error::seed log missing the demo-case line — wrong seed script/tree ran"; exit 1; }
