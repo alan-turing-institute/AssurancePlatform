@@ -630,6 +630,7 @@ async function main() {
 					createdById: chris.id,
 					mode: "ADVANCED",
 					publishStatus: "DRAFT",
+					// isDemo must stay false (the schema default) — the onboarding-tour feature keys on `isDemo && name` matches (G1/S1/E1…) unrelated to this case, so `true` here would misfire tour highlights on this case AND suppress the real tutorial case.
 				},
 			});
 
@@ -882,11 +883,16 @@ main()
 		// inside `lib/prisma.ts`). `PrismaPg`'s `disposeExternalPool` option
 		// defaults to `false`, so neither client's `$disconnect()` closes its
 		// underlying pool — only `pool.end()` does that, and this script has
-		// no handle on the second, internal one. `process.exit(0)` below
-		// guarantees the process still terminates promptly either way,
-		// rather than hanging on that dangling pool's open sockets.
-		await appPrisma.$disconnect();
-		await prisma.$disconnect();
-		await pool.end();
-		process.exit(0);
+		// no handle on the second, internal one. The `try`/`finally` below
+		// guarantees `process.exit(0)` runs — and the process still
+		// terminates promptly — either way: whether or not those
+		// disconnects fully close every socket, AND even if one of them
+		// throws.
+		try {
+			await appPrisma.$disconnect();
+			await prisma.$disconnect();
+			await pool.end();
+		} finally {
+			process.exit(0);
+		}
 	});
