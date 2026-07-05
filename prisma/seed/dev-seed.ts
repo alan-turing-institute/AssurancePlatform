@@ -624,9 +624,9 @@ async function main() {
 			// PluginData for it; that would pre-empt the live demo.
 			const demoCase = await tx.assuranceCase.create({
 				data: {
-					name: "DARTER Demo — Ship Detection Assurance",
+					name: "DARTER Demo — Automated Inspection Assurance",
 					description:
-						"Assurance case for the DARTER ship-detection pipeline, demonstrating runtime evidence flowing from the health plugin into a claim's assurance score.",
+						"Assurance case for an automated visual-inspection pipeline, demonstrating runtime evidence flowing from the health plugin into a claim's assurance score.",
 					createdById: chris.id,
 					mode: "ADVANCED",
 					publishStatus: "DRAFT",
@@ -641,9 +641,9 @@ async function main() {
 					role: "TOP_LEVEL",
 					name: "G1",
 					description:
-						"The ship-detection system performs reliably enough for operational deployment",
+						"The automated inspection system performs reliably enough for operational deployment",
 					context: [
-						"DARTER ship-detection pipeline",
+						"automated visual-inspection pipeline",
 						"Runtime health-plugin monitoring",
 					],
 					createdById: chris.id,
@@ -689,7 +689,7 @@ async function main() {
 					parentId: demoStrategy1.id,
 					name: "C1",
 					description:
-						"Ship detection recall remains above the operational threshold in production monitoring",
+						"Defect detection recall remains above the operational threshold in production monitoring",
 					createdById: chris.id,
 				},
 			});
@@ -776,7 +776,7 @@ async function main() {
 			});
 
 			console.log(
-				"Created: DARTER Demo — Ship Detection Assurance (Draft, chris, C1 reserved for live health-plugin evidence)"
+				"Created: DARTER Demo — Automated Inspection Assurance (Draft, chris, C1 reserved for live health-plugin evidence)"
 			);
 
 			// ============================================
@@ -860,7 +860,7 @@ async function main() {
 	console.log("    - Alice's Case (alice, Draft, team shared)");
 	console.log("    - Bob's Case (bob, Draft, shared with charlie)");
 	console.log(
-		`    - DARTER Demo — Ship Detection Assurance (chris, Draft, id=${demoCaseId}, claim C1 id=${demoClaim1Id} is the live evidence target)`
+		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim C1 id=${demoClaim1Id} is the live evidence target)`
 	);
 	console.log("  - 2 comments on Medium Case");
 	console.log(
