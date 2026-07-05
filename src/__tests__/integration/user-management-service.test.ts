@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
 import { deleteAccount } from "@/lib/services/user-management-service";
-import { expectSuccess } from "../utils/assertion-helpers";
-import { createTestCase, createTestUser } from "../utils/prisma-factories";
+import { expectError, expectSuccess } from "../utils/assertion-helpers";
+import {
+	createTestCase,
+	createTestIntegrationWithSystemUser,
+	createTestUser,
+} from "../utils/prisma-factories";
 
 /**
  * Regression test for feasibility review R2 (ADR 0002 v2 §2.4):
@@ -16,6 +21,10 @@ import { createTestCase, createTestUser } from "../utils/prisma-factories";
  * `system@tea-platform.internal` email identifier instead.
  */
 const SYSTEM_USER_EMAIL = "system@tea-platform.internal";
+const SINGLE_INTEGRATION_BLOCK_PATTERN =
+	/Remove your 1 integration before deleting your account/;
+const MULTIPLE_INTEGRATIONS_BLOCK_PATTERN =
+	/Remove your 2 integrations before deleting your account/;
 
 describe("getOrCreateSystemUser (via deleteAccount) — R2 regression", () => {
 	it("reassigns a deleted user's case to the generic fallback account, not an unrelated system user created first", async () => {
@@ -72,5 +81,75 @@ describe("getOrCreateSystemUser (via deleteAccount) — R2 regression", () => {
 		]);
 		expect(updatedCaseA.createdById).toBe(fallbackUsers[0]?.id);
 		expect(updatedCaseB.createdById).toBe(fallbackUsers[0]?.id);
+	});
+});
+
+/**
+ * `deleteAccount` used to hit a raw P2003 from the DB's unconditional
+ * `ON DELETE RESTRICT` on `Integration.ownerId` (ADR 0002 v2 §2.4) whenever
+ * the deleting user owned any integration — that error was caught by the
+ * function's catch-all and flattened into an unhelpful "Failed to delete
+ * account". `deleteAccount` now checks `countIntegrationsOwnedBy` FIRST and
+ * returns a clean, typed, actionable error instead of ever reaching the
+ * transaction.
+ */
+describe("deleteAccount — owned-integrations block (ADR 0002 v2 §2.4)", () => {
+	it("refuses with a clean typed error (not a raw P2003) when the user owns an integration", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		await createTestIntegrationWithSystemUser(owner.id);
+
+		const result = await deleteAccount(owner.id);
+
+		expectError(result, SINGLE_INTEGRATION_BLOCK_PATTERN);
+
+		// The user must still exist — the transaction was never attempted.
+		const stillThere = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(stillThere).not.toBeNull();
+	});
+
+	it("pluralises the count for more than one owned integration", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		await createTestIntegrationWithSystemUser(owner.id);
+		await createTestIntegrationWithSystemUser(owner.id);
+
+		const result = await deleteAccount(owner.id);
+
+		expectError(result, MULTIPLE_INTEGRATIONS_BLOCK_PATTERN);
+	});
+
+	it("succeeds once the owned integration is reassigned away", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const newOwner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+
+		expectSuccess(
+			await reassignIntegrationOwner(integration.id, newOwner.id, owner.id)
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
+	});
+
+	it("succeeds once the owned integration is deleted outright", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+
+		await prisma.integration.delete({ where: { id: integration.id } });
+
+		expectSuccess(await deleteAccount(owner.id));
+	});
+
+	it("is unaffected by an integration owned by a DIFFERENT user", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherOwner = await createTestUser();
+		await createTestIntegrationWithSystemUser(otherOwner.id);
+
+		expectSuccess(await deleteAccount(owner.id));
 	});
 });

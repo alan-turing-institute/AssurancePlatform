@@ -12,6 +12,7 @@ import {
 	deleteIntegrationRegistration,
 	getIntegrationsOwnedBy,
 	issueToken,
+	reactivateIntegration,
 	reassignIntegrationOwner,
 	registerIntegration,
 	revokeIntegration,
@@ -19,11 +20,16 @@ import {
 	rotateToken,
 	suspendIntegration,
 	TOKEN_ROTATION_OVERLAP_MS,
+	updateIntegration,
 	updateIntegrationScopes,
 	validateApiToken,
 } from "@/lib/services/integration-registry-service";
 import { RATE_LIMIT_CONFIGS } from "@/lib/services/rate-limit-service";
-import { expectError, expectSuccess } from "../utils/assertion-helpers";
+import {
+	expectError,
+	expectSameError,
+	expectSuccess,
+} from "../utils/assertion-helpers";
 import { createTestUser } from "../utils/prisma-factories";
 
 const AUTH_FAILURE_MESSAGE = "Invalid or expired token";
@@ -33,6 +39,310 @@ const NON_ACTIVE_PATTERN = /non-active/;
 const ALREADY_REVOKED_PATTERN = /revoked/;
 const NOT_FOUND_PATTERN = /not found/i;
 const NOT_FOUND_ID = "00000000-0000-0000-0000-000000000000";
+const INTEGRATION_NOT_FOUND = "Integration not found";
+const TOKEN_NOT_FOUND = "Token not found";
+const CANNOT_REVOKED_PATTERN = /revoked/i;
+const ALREADY_ACTIVE_PATTERN = /already active/i;
+
+/**
+ * Ownership enforcement (vincent security review 2026-07-03, finding 3 —
+ * the management API hard precondition): every mutating function below
+ * verifies the ACTOR owns the integration (or the integration behind a
+ * token) before acting. A non-owner gets the EXACT SAME "Integration not
+ * found" / "Token not found" error as acting on a nonexistent id — never a
+ * distinct "Permission denied" — so a caller can't use the response to
+ * learn whether an id exists at all. `expectSameError` asserts the two
+ * failure modes are byte-identical, not just "both errors".
+ */
+describe("service-boundary authorisation — non-owner gets the SAME error as nonexistent (no oracle)", () => {
+	it("updateIntegrationScopes: non-owner vs nonexistent id", async () => {
+		const { integration } = await registerTestIntegration();
+		const outsider = await createTestUser();
+
+		const nonOwner = await updateIntegrationScopes(
+			integration.id,
+			["case:read"],
+			outsider.id
+		);
+		const nonexistent = await updateIntegrationScopes(
+			NOT_FOUND_ID,
+			["case:read"],
+			outsider.id
+		);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+	});
+
+	it("suspendIntegration: non-owner vs nonexistent id", async () => {
+		const { integration } = await registerTestIntegration();
+		const outsider = await createTestUser();
+
+		const nonOwner = await suspendIntegration(integration.id, outsider.id);
+		const nonexistent = await suspendIntegration(NOT_FOUND_ID, outsider.id);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+	});
+
+	it("reactivateIntegration: non-owner vs nonexistent id", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		await suspendIntegration(integration.id, owner.id);
+		const outsider = await createTestUser();
+
+		const nonOwner = await reactivateIntegration(integration.id, outsider.id);
+		const nonexistent = await reactivateIntegration(NOT_FOUND_ID, outsider.id);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+	});
+
+	it("revokeIntegration: non-owner vs nonexistent id", async () => {
+		const { integration } = await registerTestIntegration();
+		const outsider = await createTestUser();
+
+		const nonOwner = await revokeIntegration(integration.id, outsider.id);
+		const nonexistent = await revokeIntegration(NOT_FOUND_ID, outsider.id);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+	});
+
+	it("reassignIntegrationOwner: non-owner vs nonexistent id", async () => {
+		const { integration } = await registerTestIntegration();
+		const outsider = await createTestUser();
+		const newOwner = await createTestUser();
+
+		const nonOwner = await reassignIntegrationOwner(
+			integration.id,
+			newOwner.id,
+			outsider.id
+		);
+		const nonexistent = await reassignIntegrationOwner(
+			NOT_FOUND_ID,
+			newOwner.id,
+			outsider.id
+		);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+	});
+
+	it("deleteIntegrationRegistration: non-owner vs nonexistent id", async () => {
+		const { integration } = await registerTestIntegration();
+		const outsider = await createTestUser();
+
+		const nonOwner = await deleteIntegrationRegistration(
+			integration.id,
+			outsider.id
+		);
+		const nonexistent = await deleteIntegrationRegistration(
+			NOT_FOUND_ID,
+			outsider.id
+		);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+
+		// Must NOT have been deleted — the outsider's call had no effect.
+		const stillThere = await prisma.integration.findUnique({
+			where: { id: integration.id },
+		});
+		expect(stillThere).not.toBeNull();
+	});
+
+	it("issueToken: non-owner vs nonexistent integration id", async () => {
+		const { integration } = await registerTestIntegration();
+		const outsider = await createTestUser();
+
+		const nonOwner = await issueToken(integration.id, outsider.id);
+		const nonexistent = await issueToken(NOT_FOUND_ID, outsider.id);
+
+		expectError(nonOwner, INTEGRATION_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+
+		// No token was actually issued for the non-owned integration.
+		const tokens = await prisma.apiToken.findMany({
+			where: { integrationId: integration.id },
+		});
+		expect(tokens).toHaveLength(0);
+	});
+
+	it("rotateToken: non-owner vs nonexistent token id", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		const { apiToken } = expectSuccess(
+			await issueToken(integration.id, owner.id)
+		);
+		const outsider = await createTestUser();
+
+		const nonOwner = await rotateToken(apiToken.id, outsider.id);
+		const nonexistent = await rotateToken(NOT_FOUND_ID, outsider.id);
+
+		expectError(nonOwner, TOKEN_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+
+		// The token was not rotated — still exactly one token on the integration.
+		const tokens = await prisma.apiToken.findMany({
+			where: { integrationId: integration.id },
+		});
+		expect(tokens).toHaveLength(1);
+	});
+
+	it("revokeToken: non-owner vs nonexistent token id", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		const { apiToken } = expectSuccess(
+			await issueToken(integration.id, owner.id)
+		);
+		const outsider = await createTestUser();
+
+		const nonOwner = await revokeToken(apiToken.id, outsider.id);
+		const nonexistent = await revokeToken(NOT_FOUND_ID, outsider.id);
+
+		expectError(nonOwner, TOKEN_NOT_FOUND);
+		expectSameError(nonOwner, nonexistent);
+
+		// The token was not revoked by the outsider's call.
+		const stillActive = await prisma.apiToken.findUniqueOrThrow({
+			where: { id: apiToken.id },
+		});
+		expect(stillActive.revokedAt).toBeNull();
+	});
+
+	it("registerIntegration binds ownership to the session actor regardless of body content — there is no ownerId field to spoof", async () => {
+		const actor = await createTestUser();
+		const result = expectSuccess(
+			await registerIntegration(
+				{ name: `no-spoof-${actor.id}`, scopes: ["case:read"] },
+				actor.id
+			)
+		);
+		expect(result.integration.ownerId).toBe(actor.id);
+	});
+});
+
+describe("reactivateIntegration — lifecycle (barret deviation 6, 2026-07-03: suspend was a one-way door)", () => {
+	it("reactivates a SUSPENDED integration back to ACTIVE", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		expectSuccess(await suspendIntegration(integration.id, owner.id));
+
+		const reactivated = expectSuccess(
+			await reactivateIntegration(integration.id, owner.id)
+		);
+		expect(reactivated.status).toBe("ACTIVE");
+	});
+
+	it("suspend → reactivate → suspend cycles cleanly", async () => {
+		const { integration, owner } = await registerTestIntegration();
+
+		expectSuccess(await suspendIntegration(integration.id, owner.id));
+		expectSuccess(await reactivateIntegration(integration.id, owner.id));
+		const suspendedAgain = expectSuccess(
+			await suspendIntegration(integration.id, owner.id)
+		);
+
+		expect(suspendedAgain.status).toBe("SUSPENDED");
+	});
+
+	it("refuses to reactivate a REVOKED integration — terminal, not a resurrection", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		expectSuccess(await revokeIntegration(integration.id, owner.id));
+
+		const result = await reactivateIntegration(integration.id, owner.id);
+		expectError(result, CANNOT_REVOKED_PATTERN);
+
+		const unchanged = await prisma.integration.findUniqueOrThrow({
+			where: { id: integration.id },
+		});
+		expect(unchanged.status).toBe("REVOKED");
+	});
+
+	it("refuses to reactivate an already-ACTIVE integration", async () => {
+		const { integration, owner } = await registerTestIntegration();
+
+		const result = await reactivateIntegration(integration.id, owner.id);
+		expectError(result, ALREADY_ACTIVE_PATTERN);
+	});
+
+	it("refuses to SUSPEND a REVOKED integration — suspend must not un-revoke it", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		expectSuccess(await revokeIntegration(integration.id, owner.id));
+
+		const result = await suspendIntegration(integration.id, owner.id);
+		expectError(result, CANNOT_REVOKED_PATTERN);
+
+		const unchanged = await prisma.integration.findUniqueOrThrow({
+			where: { id: integration.id },
+		});
+		expect(unchanged.status).toBe("REVOKED");
+	});
+
+	it("writes a SecurityAuditLog row for reactivation", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		await suspendIntegration(integration.id, owner.id);
+		await reactivateIntegration(integration.id, owner.id);
+
+		const event = await prisma.securityAuditLog.findFirst({
+			where: { userId: owner.id, eventType: "integration_reactivated" },
+		});
+		expect(event).not.toBeNull();
+	});
+});
+
+describe("updateIntegration — description and scopes, partial updates", () => {
+	it("updates description only, leaving scopes untouched", async () => {
+		const { integration, owner } = await registerTestIntegration(["case:read"]);
+
+		const result = expectSuccess(
+			await updateIntegration(
+				integration.id,
+				{ description: "a new description" },
+				owner.id
+			)
+		);
+
+		expect(result.description).toBe("a new description");
+		expect(result.scopes).toEqual(["case:read"]);
+	});
+
+	it("updates scopes only, leaving description untouched", async () => {
+		const { integration, owner } = await registerTestIntegration(["case:read"]);
+
+		const result = expectSuccess(
+			await updateIntegration(
+				integration.id,
+				{ scopes: ["case:read", "health:evidence:read"] },
+				owner.id
+			)
+		);
+
+		expect(result.scopes).toEqual(["case:read", "health:evidence:read"]);
+	});
+
+	it("rejects an unknown scope without persisting anything", async () => {
+		const { integration, owner } = await registerTestIntegration();
+
+		const result = await updateIntegration(
+			integration.id,
+			{ scopes: ["case:read", "not-a-real-scope"] },
+			owner.id
+		);
+		expectError(result, UNKNOWN_SCOPE_PATTERN);
+	});
+
+	it("writes a SecurityAuditLog row for an update", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		await updateIntegration(
+			integration.id,
+			{ description: "updated" },
+			owner.id
+		);
+
+		const event = await prisma.securityAuditLog.findFirst({
+			where: { userId: owner.id, eventType: "integration_updated" },
+		});
+		expect(event).not.toBeNull();
+	});
+});
 
 /** Creates a raw ApiToken row with a known plaintext secret (for edge cases the service's own issueToken doesn't cover, e.g. a past expiresAt). */
 async function createRawToken(
@@ -57,7 +367,7 @@ async function registerTestIntegration(
 	const owner = await createTestUser();
 	const result = expectSuccess(
 		await registerIntegration(
-			{ name: `test-integration-${owner.id}`, ownerId: owner.id, scopes },
+			{ name: `test-integration-${owner.id}`, scopes },
 			owner.id
 		)
 	);
@@ -87,7 +397,6 @@ describe("integration-registry-service — registration & lifecycle", () => {
 		const result = await registerIntegration(
 			{
 				name: "bad-scope-integration",
-				ownerId: owner.id,
 				scopes: ["case:read", "not-a-real-scope"],
 			},
 			owner.id
@@ -119,12 +428,12 @@ describe("integration-registry-service — registration & lifecycle", () => {
 		const owner = await createTestUser();
 		expectSuccess(
 			await registerIntegration(
-				{ name: "dup-name", ownerId: owner.id, scopes: ["case:read"] },
+				{ name: "dup-name", scopes: ["case:read"] },
 				owner.id
 			)
 		);
 		const second = await registerIntegration(
-			{ name: "dup-name", ownerId: owner.id, scopes: ["case:read"] },
+			{ name: "dup-name", scopes: ["case:read"] },
 			owner.id
 		);
 		expectError(second, ALREADY_EXISTS_PATTERN);
@@ -153,6 +462,27 @@ describe("integration-registry-service — registration & lifecycle", () => {
 			where: { id: apiToken.id },
 		});
 		expect(token.revokedAt).not.toBeNull();
+	});
+
+	/**
+	 * `revokeIntegration` has no guard against being called twice — unlike
+	 * `suspendIntegration`/`reactivateIntegration`, which both explicitly
+	 * reject a REVOKED-state transition, re-revoking an already-REVOKED
+	 * integration is a harmless no-op success today. Pinning this is
+	 * deliberate, not an oversight rediscovery (nanaki info finding, work
+	 * item 12): a caller retrying a revoke after a dropped response
+	 * (network blip, client retry) gets a clean success, not a spurious
+	 * error. If this idempotence is ever tightened into a conflict, this
+	 * test should be updated alongside that decision, not silently broken.
+	 */
+	it("is idempotent: revoking an already-REVOKED integration succeeds harmlessly (deliberate)", async () => {
+		const { integration, owner } = await registerTestIntegration();
+
+		expectSuccess(await revokeIntegration(integration.id, owner.id));
+		const secondCall = expectSuccess(
+			await revokeIntegration(integration.id, owner.id)
+		);
+		expect(secondCall.status).toBe("REVOKED");
 	});
 
 	it("writes an audit log entry for registration, suspension, and revocation", async () => {

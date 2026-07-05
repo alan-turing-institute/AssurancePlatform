@@ -4,6 +4,7 @@ import {
 	verifyPassword,
 } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
+import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
 import {
 	validateEmail,
 	validatePassword,
@@ -314,6 +315,21 @@ async function getOrCreateSystemUser(
  * Deletes a user account.
  * Transfers owned cases and anonymises comments before deletion.
  * Requires password confirmation for local auth users.
+ *
+ * Integrations are NOT silently cascade-deleted: `Integration.ownerId` is an
+ * unconditional `ON DELETE RESTRICT` (ADR 0002 v2 §2.4 — a revoked
+ * integration keeps its accountability trail, so its owner reference must
+ * never silently vanish). Without the pre-check below, `tx.user.delete`
+ * would throw a raw Postgres P2003 that the catch-all below flattens into
+ * an unhelpful "Failed to delete account". Checking
+ * `countIntegrationsOwnedBy` first turns that into a clean, typed,
+ * actionable error instead — "Remove your N integration(s) before deleting
+ * your account". Reassignment has no path in 1.0 (vincent minor, review
+ * round 2 — this used to promise "reassign or remove"; only removal is
+ * actually offered), so the message promises only that. `countIntegrationsOwnedBy`
+ * is a `COUNT(*)`, not the full `getIntegrationsOwnedBy` row fetch this
+ * pre-check used to do (vincent minor, work item 7) — `getIntegrationsOwnedBy`
+ * itself is unchanged and still used elsewhere.
  */
 export async function deleteAccount(
 	userId: string,
@@ -333,6 +349,17 @@ export async function deleteAccount(
 
 		if (!user) {
 			return { error: "User not found" };
+		}
+
+		const ownedIntegrationCount = await countIntegrationsOwnedBy(userId);
+		if ("error" in ownedIntegrationCount) {
+			return ownedIntegrationCount;
+		}
+		if (ownedIntegrationCount.data > 0) {
+			const count = ownedIntegrationCount.data;
+			return {
+				error: `Remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
+			};
 		}
 
 		// Verify password for local auth users

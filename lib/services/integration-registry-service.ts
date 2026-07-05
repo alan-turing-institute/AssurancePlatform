@@ -27,10 +27,39 @@ import type { ServiceResult } from "@/types/service";
  * (ADR 0002 v2 §2.4). All Prisma access for this domain lives here — routes
  * and `lib/auth/require-api-token.ts` never import Prisma directly.
  *
- * Authorisation note: this service does not itself enforce WHO may call
- * register/suspend/revoke/issue/rotate — that authority model belongs to
- * the management API + settings UI (issue 7, not yet built). `actorUserId`
- * parameters here are for audit attribution only.
+ * Authorisation (management API precondition — vincent security review
+ * 2026-07-03, finding 3): OWNER-ONLY in 1.0, no admin override — no
+ * platform-admin concept exists anywhere in this codebase, and none is
+ * invented here. Every mutating operation below verifies, at THIS service
+ * boundary (not just in a calling route), that `actorUserId` owns the
+ * integration before acting — through exactly ONE of two choke points,
+ * chosen by which id the operation is keyed on (vincent MAJOR, review
+ * round 2: the single-choke-point claim used to be false — `rotateToken`/
+ * `revokeToken` had their own duplicated inline checks — this is now
+ * literally true for both families):
+ *   - INTEGRATION-keyed ops — `suspendIntegration`, `reactivateIntegration`,
+ *     `revokeIntegration`, `issueToken`, `updateIntegration`/
+ *     `updateIntegrationScopes`, `reassignIntegrationOwner`,
+ *     `deleteIntegrationRegistration` — go through
+ *     `getOwnedIntegrationOrError`.
+ *   - TOKEN-keyed ops — `rotateToken`, `revokeToken` — go through
+ *     `getOwnedApiTokenOrError`, its symmetrical twin. Ownership rides the
+ *     token's OWN integration, not a path-supplied integration id; a caller
+ *     may additionally pass `options.integrationId` to also require the
+ *     token belong to THAT specific integration (a tokenId that exists,
+ *     is owned by the actor, but hangs off a DIFFERENT integration the
+ *     actor also owns is rejected identically to a nonexistent tokenId —
+ *     deviation-5 fix, work item 2).
+ * `registerIntegration` binds the new integration's `ownerId` to
+ * `actorUserId` directly (any authenticated user may register; the
+ * registrant becomes owner — policy settled by cid, 2026-07-05) — there is
+ * no `ownerId` input a caller could use to name a different owner. A
+ * non-owner acting on someone else's integration (or token) gets the EXACT
+ * SAME error as acting on a nonexistent id — the repo's
+ * enumeration-prevention convention (`element-service.ts`'s `getElement`
+ * precedent) — never a distinct "Permission denied". `validateApiToken` is
+ * the one exception: it has no human actor at all (it authenticates a
+ * bearer token), and its semantics are unchanged.
  */
 
 // ============================================
@@ -40,7 +69,6 @@ import type { ServiceResult } from "@/types/service";
 export interface RegisterIntegrationInput {
 	description?: string;
 	name: string;
-	ownerId: string;
 	scopes: string[];
 }
 
@@ -129,15 +157,43 @@ async function writeAuditLog(input: AuditLogInput): Promise<void> {
 }
 
 /**
- * Loads an `Integration` by id with the given `select`, or the shared
- * not-found error. Dedupes the "load integration, fail if absent"
- * boilerplate repeated across the register/suspend/revoke/reassign/
- * delete/issue call sites below (fallow clone finding, fix round).
+ * Loads an `Integration` by id with the given `select`, verifying it both
+ * EXISTS and is owned by `actorUserId` — the service-boundary authorisation
+ * check every mutating operation below relies on (module doc comment
+ * above; vincent security review 2026-07-03, finding 3). Dedupes the "load
+ * integration, fail if absent-or-not-mine" boilerplate repeated across the
+ * update/suspend/reactivate/revoke/reassign/delete/issue call sites below
+ * (fallow clone finding, fix round) — and, just as importantly, makes it
+ * structurally impossible for a call site to check existence and ownership
+ * as two separate steps with two different error messages, which is
+ * exactly how an enumeration oracle gets reintroduced by accident.
+ *
+ * Returns the SAME "Integration not found" error whether the id doesn't
+ * exist at all or exists but belongs to someone else — a caller cannot
+ * distinguish "no such integration" from "not yours".
  */
-async function getIntegrationOrError<S extends Prisma.IntegrationSelect>(
+async function getOwnedIntegrationOrError<S extends Prisma.IntegrationSelect>(
 	integrationId: string,
+	actorUserId: string,
 	select: S
 ): ServiceResult<Prisma.IntegrationGetPayload<{ select: S }>> {
+	// Two queries rather than merging `ownerId: true` into the generic `S` at
+	// the type level: spreading a generic `Prisma.IntegrationSelect` produces
+	// a mapped type Prisma's own conditional types can't statically resolve
+	// (tried, `tsc` rejected both the property access and the payload cast
+	// below it as "insufficient overlap"). A cheap extra `findUnique` on the
+	// non-hot-path owner-only management routes is a better trade than
+	// fighting the generated client's types. The two reads are int-generated
+	// UUID lookups milliseconds apart, not a meaningful race window, and a
+	// row deleted in between resolves to the same generic not-found error.
+	const ownerRow = await prisma.integration.findUnique({
+		where: { id: integrationId },
+		select: { ownerId: true },
+	});
+	if (!ownerRow || ownerRow.ownerId !== actorUserId) {
+		return { error: "Integration not found" };
+	}
+
 	const integration = await prisma.integration.findUnique({
 		where: { id: integrationId },
 		select,
@@ -152,6 +208,48 @@ async function getIntegrationOrError<S extends Prisma.IntegrationSelect>(
 	// distinct instantiations of the same generated type. Runtime shape is
 	// identical; this cast just reconciles the two static instantiations.
 	return { data: integration as Prisma.IntegrationGetPayload<{ select: S }> };
+}
+
+/**
+ * Loads an `ApiToken` by id with the given `select`, verifying it both
+ * EXISTS and its OWNING INTEGRATION is owned by `actorUserId` — the
+ * token-keyed twin of `getOwnedIntegrationOrError` above (vincent MAJOR,
+ * review round 2: `rotateToken`/`revokeToken` used to each run their own
+ * duplicated inline version of this check; this is now the single choke
+ * point for both, matching the module doc comment). A token has no
+ * `ownerId` of its own — ownership rides its `integration.ownerId` — so
+ * this is a distinct helper, not a generic rename of the integration one.
+ *
+ * Returns the SAME "Token not found" error whether the id doesn't exist at
+ * all or exists but its integration belongs to someone else — a caller
+ * cannot distinguish "no such token" from "not yours".
+ */
+async function getOwnedApiTokenOrError<S extends Prisma.ApiTokenSelect>(
+	tokenId: string,
+	actorUserId: string,
+	select: S
+): ServiceResult<Prisma.ApiTokenGetPayload<{ select: S }>> {
+	// Same two-query shape as `getOwnedIntegrationOrError`, for the same
+	// reason (see its comment): a generic `S` can't be safely merged with
+	// the nested `integration.ownerId` select at the type level.
+	const ownerRow = await prisma.apiToken.findUnique({
+		where: { id: tokenId },
+		select: { integration: { select: { ownerId: true } } },
+	});
+	if (!ownerRow || ownerRow.integration.ownerId !== actorUserId) {
+		return { error: "Token not found" };
+	}
+
+	const apiToken = await prisma.apiToken.findUnique({
+		where: { id: tokenId },
+		select,
+	});
+	if (!apiToken) {
+		return { error: "Token not found" };
+	}
+	// Same `$extends()` static/runtime reconciliation cast as
+	// `getOwnedIntegrationOrError` — see its comment for why this is safe.
+	return { data: apiToken as Prisma.ApiTokenGetPayload<{ select: S }> };
 }
 
 function issueTokenRecord(integrationId: string, expiresAt?: Date) {
@@ -176,6 +274,11 @@ function issueTokenRecord(integrationId: string, expiresAt?: Date) {
  * (`isSystemUser: true`) and the `Integration` row transactionally.
  * Rejects any scope not in the current registry (`lib/auth/scopes.ts`) —
  * loud failure, never a silent partial save.
+ *
+ * `ownerId` is NOT part of `input` — it is `actorUserId`, always. Any
+ * authenticated user may register an integration; the registrant becomes
+ * its owner, with no way to name a different one (policy settled by cid,
+ * 2026-07-05, recorded on the issue). Management is owner-only in 1.0.
  */
 export async function registerIntegration(
 	input: RegisterIntegrationInput,
@@ -188,7 +291,7 @@ export async function registerIntegration(
 		}
 
 		const owner = await prisma.user.findUnique({
-			where: { id: input.ownerId },
+			where: { id: actorUserId },
 			select: { id: true },
 		});
 		if (!owner) {
@@ -212,7 +315,7 @@ export async function registerIntegration(
 				data: {
 					name: input.name,
 					description: input.description,
-					ownerId: input.ownerId,
+					ownerId: actorUserId,
 					systemUserId: systemUser.id,
 					scopes: input.scopes,
 				},
@@ -240,38 +343,80 @@ export async function registerIntegration(
 	}
 }
 
-/** Validates and replaces an integration's scope set. Same registry check as registration. */
-export async function updateIntegrationScopes(
+export interface UpdateIntegrationInput {
+	description?: string;
+	scopes?: string[];
+}
+
+/**
+ * Partial update of an integration's description and/or scopes — the
+ * general-purpose updater behind `PATCH /api/integrations/[id]`. Same
+ * unknown-scope check as registration when `updates.scopes` is provided.
+ * Owner-only (`getOwnedIntegrationOrError`).
+ */
+export async function updateIntegration(
 	integrationId: string,
-	scopes: string[],
+	updates: UpdateIntegrationInput,
 	actorUserId: string
 ): ServiceResult<Integration> {
 	try {
-		const unknownScopes = findUnknownScopes(scopes);
-		if (unknownScopes.length > 0) {
-			return { error: `Unknown scope(s): ${unknownScopes.join(", ")}` };
+		if (updates.scopes) {
+			const unknownScopes = findUnknownScopes(updates.scopes);
+			if (unknownScopes.length > 0) {
+				return { error: `Unknown scope(s): ${unknownScopes.join(", ")}` };
+			}
 		}
 
-		const existing = await getIntegrationOrError(integrationId, { id: true });
+		const existing = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ id: true }
+		);
 		if ("error" in existing) {
 			return existing;
 		}
 
 		const integration = await prisma.integration.update({
 			where: { id: integrationId },
-			data: { scopes },
+			data: {
+				...(updates.description !== undefined && {
+					description: updates.description,
+				}),
+				...(updates.scopes !== undefined && { scopes: updates.scopes }),
+			},
 		});
+
+		// `Object.keys(updates)` would report a field as "updated" merely
+		// because the route passed the key through with an `undefined` value —
+		// filter to fields actually present so the audit trail reflects what
+		// changed, not what the caller's object literal happened to mention.
+		const updatedFields = (
+			Object.keys(updates) as (keyof UpdateIntegrationInput)[]
+		).filter((field) => updates[field] !== undefined);
 
 		await writeAuditLog({
 			userId: actorUserId,
-			eventType: "integration_scopes_updated",
-			metadata: { integrationId, scopes },
+			eventType: "integration_updated",
+			metadata: { integrationId, updatedFields },
 		});
 
 		return { data: integration };
 	} catch {
-		return { error: "Failed to update integration scopes" };
+		return { error: "Failed to update integration" };
 	}
+}
+
+/**
+ * Scopes-only convenience wrapper over `updateIntegration` — kept as its
+ * own export because `scripts/seed-darter-integration.ts` reconciles ONLY
+ * scopes on every re-run.
+ */
+export function updateIntegrationScopes(
+	integrationId: string,
+	scopes: string[],
+	actorUserId: string
+): ServiceResult<Integration> {
+	return updateIntegration(integrationId, { scopes }, actorUserId);
 }
 
 export async function suspendIntegration(
@@ -279,9 +424,20 @@ export async function suspendIntegration(
 	actorUserId: string
 ): ServiceResult<Integration> {
 	try {
-		const existing = await getIntegrationOrError(integrationId, { id: true });
+		const existing = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ id: true, status: true }
+		);
 		if ("error" in existing) {
 			return existing;
+		}
+		// REVOKED is terminal (ADR 0002 v2 §2.4) — without this guard,
+		// suspending a revoked integration would silently flip its status back
+		// to SUSPENDED, i.e. un-revoke it. `reactivateIntegration` enforces the
+		// same rule for the same reason.
+		if (existing.data.status === "REVOKED") {
+			return { error: "Cannot suspend a revoked integration" };
 		}
 
 		const integration = await prisma.integration.update({
@@ -302,6 +458,49 @@ export async function suspendIntegration(
 }
 
 /**
+ * Reverses `suspendIntegration` — SUSPENDED → ACTIVE (barret deviation 6,
+ * 2026-07-03: suspend was a one-way door until this method existed).
+ * REVOKED stays terminal: reactivating a revoked integration is an error,
+ * never a resurrection. Owner-only, audited.
+ */
+export async function reactivateIntegration(
+	integrationId: string,
+	actorUserId: string
+): ServiceResult<Integration> {
+	try {
+		const existing = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ id: true, status: true }
+		);
+		if ("error" in existing) {
+			return existing;
+		}
+		if (existing.data.status === "REVOKED") {
+			return { error: "Cannot reactivate a revoked integration" };
+		}
+		if (existing.data.status === "ACTIVE") {
+			return { error: "Integration is already active" };
+		}
+
+		const integration = await prisma.integration.update({
+			where: { id: integrationId },
+			data: { status: "ACTIVE" },
+		});
+
+		await writeAuditLog({
+			userId: actorUserId,
+			eventType: "integration_reactivated",
+			metadata: { integrationId },
+		});
+
+		return { data: integration };
+	} catch {
+		return { error: "Failed to reactivate integration" };
+	}
+}
+
+/**
  * Revokes an integration permanently and, in the same transaction, revokes
  * every one of its currently-unrevoked tokens — a revoked integration
  * should not keep authenticating on a token issued before the revocation.
@@ -311,7 +510,11 @@ export async function revokeIntegration(
 	actorUserId: string
 ): ServiceResult<Integration> {
 	try {
-		const existing = await getIntegrationOrError(integrationId, { id: true });
+		const existing = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ id: true }
+		);
 		if ("error" in existing) {
 			return existing;
 		}
@@ -345,7 +548,13 @@ export async function revokeIntegration(
 // this is the humane path layered on top)
 // ============================================
 
-/** Lists integrations owned by a user — the set that would block their account deletion. */
+/**
+ * Lists integrations owned by a user — the set that would block their
+ * account deletion (`user-management-service.ts`'s `deleteAccount`). NOT
+ * itself an authorisation boundary: `ownerId` is trusted as-is, so every
+ * caller MUST pass the acting user's own id (never a client-supplied one) —
+ * the same discipline `requireAuth()` already enforces at the route layer.
+ */
 export async function getIntegrationsOwnedBy(
 	ownerId: string
 ): ServiceResult<Integration[]> {
@@ -360,6 +569,92 @@ export async function getIntegrationsOwnedBy(
 	}
 }
 
+/**
+ * Counts integrations owned by a user — the cheap existence-and-magnitude
+ * check `deleteAccount`'s pre-flight actually needs (vincent minor, work
+ * item 7). `deleteAccount` used to call `getIntegrationsOwnedBy` and
+ * discard every row but the length, forcing a full `Integration[]` fetch
+ * (columns, ORDER BY) to answer a question `COUNT(*)` answers directly.
+ * `getIntegrationsOwnedBy` itself is UNCHANGED and kept — other flows still
+ * need the actual rows. Same trust contract: `ownerId` must be the
+ * caller's own id.
+ */
+export async function countIntegrationsOwnedBy(
+	ownerId: string
+): ServiceResult<number> {
+	try {
+		const count = await prisma.integration.count({ where: { ownerId } });
+		return { data: count };
+	} catch {
+		return { error: "Failed to count owned integrations" };
+	}
+}
+
+export interface IntegrationTokenSummary {
+	createdAt: Date;
+	expiresAt: Date | null;
+	id: string;
+	lastUsedAt: Date | null;
+	revokedAt: Date | null;
+	tokenPrefix: string;
+}
+
+export interface IntegrationListItem {
+	createdAt: Date;
+	description: string | null;
+	id: string;
+	lastSeenAt: Date | null;
+	name: string;
+	scopes: string[];
+	status: Integration["status"];
+	tokens: IntegrationTokenSummary[];
+	updatedAt: Date;
+}
+
+/**
+ * The `GET /api/integrations` data source: every integration `ownerId`
+ * owns, each with a token SUMMARY per issued token — prefix, timestamps,
+ * expiry/revocation state — never `tokenHash` or a plaintext secret. This
+ * is a `select`, not a post-hoc field strip, so leaking a hash here isn't a
+ * "remember to redact" discipline problem, it's structurally impossible:
+ * the query never reads the column. Same trust contract as
+ * `getIntegrationsOwnedBy` — `ownerId` must be the caller's own id.
+ */
+export async function listIntegrationsForOwner(
+	ownerId: string
+): ServiceResult<IntegrationListItem[]> {
+	try {
+		const integrations = await prisma.integration.findMany({
+			where: { ownerId },
+			orderBy: { createdAt: "asc" },
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				scopes: true,
+				status: true,
+				createdAt: true,
+				updatedAt: true,
+				lastSeenAt: true,
+				tokens: {
+					orderBy: { createdAt: "asc" },
+					select: {
+						id: true,
+						tokenPrefix: true,
+						createdAt: true,
+						lastUsedAt: true,
+						expiresAt: true,
+						revokedAt: true,
+					},
+				},
+			},
+		});
+		return { data: integrations };
+	} catch {
+		return { error: "Failed to list integrations" };
+	}
+}
+
 export async function reassignIntegrationOwner(
 	integrationId: string,
 	newOwnerId: string,
@@ -367,7 +662,7 @@ export async function reassignIntegrationOwner(
 ): ServiceResult<Integration> {
 	try {
 		const [existing, newOwner] = await Promise.all([
-			getIntegrationOrError(integrationId, { id: true }),
+			getOwnedIntegrationOrError(integrationId, actorUserId, { id: true }),
 			prisma.user.findUnique({
 				where: { id: newOwnerId },
 				select: { id: true },
@@ -406,10 +701,11 @@ export async function deleteIntegrationRegistration(
 	actorUserId: string
 ): ServiceResult<true> {
 	try {
-		const existing = await getIntegrationOrError(integrationId, {
-			id: true,
-			name: true,
-		});
+		const existing = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ id: true, name: true }
+		);
 		if ("error" in existing) {
 			return existing;
 		}
@@ -455,10 +751,11 @@ export async function issueToken(
 	options: { expiresAt?: Date } = {}
 ): ServiceResult<IssuedToken> {
 	try {
-		const integration = await getIntegrationOrError(integrationId, {
-			id: true,
-			status: true,
-		});
+		const integration = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ id: true, status: true }
+		);
 		if ("error" in integration) {
 			return integration;
 		}
@@ -485,6 +782,21 @@ export async function issueToken(
 	}
 }
 
+export interface TokenScopedOptions {
+	/**
+	 * The PATH's integration id (e.g. `[id]` in
+	 * `/api/integrations/[id]/tokens/[tokenId]/rotate`). When present, the
+	 * token must belong to THIS integration or the call fails with the same
+	 * generic "Token not found" as a nonexistent tokenId — a caller who owns
+	 * BOTH Integration A and Integration B cannot rotate/revoke a token that
+	 * actually belongs to B by naming A in the URL (deviation-5 fix, work
+	 * item 2). Optional — and left unchecked when omitted — so existing
+	 * direct service callers (tests, scripts) that have no "path" concept at
+	 * all are unaffected.
+	 */
+	integrationId?: string;
+}
+
 /**
  * Issues a replacement token and brings the old token's expiry forward to
  * `now + TOKEN_ROTATION_OVERLAP_MS` (unless it already expires sooner) —
@@ -495,16 +807,28 @@ export async function issueToken(
  */
 export async function rotateToken(
 	tokenId: string,
-	actorUserId: string
+	actorUserId: string,
+	options: TokenScopedOptions = {}
 ): ServiceResult<RotatedToken> {
 	try {
-		const oldToken = await prisma.apiToken.findUnique({
-			where: { id: tokenId },
-			include: { integration: { select: { id: true, status: true } } },
+		const owned = await getOwnedApiTokenOrError(tokenId, actorUserId, {
+			id: true,
+			integrationId: true,
+			expiresAt: true,
+			revokedAt: true,
+			integration: { select: { status: true } },
 		});
-		if (!oldToken) {
+		if ("error" in owned) {
+			return owned;
+		}
+		if (
+			options.integrationId &&
+			owned.data.integrationId !== options.integrationId
+		) {
 			return { error: "Token not found" };
 		}
+		const oldToken = owned.data;
+
 		if (oldToken.revokedAt) {
 			return { error: "Cannot rotate a revoked token" };
 		}
@@ -553,17 +877,25 @@ export async function rotateToken(
 
 export async function revokeToken(
 	tokenId: string,
-	actorUserId: string
+	actorUserId: string,
+	options: TokenScopedOptions = {}
 ): ServiceResult<ApiToken> {
 	try {
-		const existing = await prisma.apiToken.findUnique({
-			where: { id: tokenId },
-			select: { id: true, revokedAt: true, integrationId: true },
+		const owned = await getOwnedApiTokenOrError(tokenId, actorUserId, {
+			id: true,
+			integrationId: true,
+			revokedAt: true,
 		});
-		if (!existing) {
+		if ("error" in owned) {
+			return owned;
+		}
+		if (
+			options.integrationId &&
+			owned.data.integrationId !== options.integrationId
+		) {
 			return { error: "Token not found" };
 		}
-		if (existing.revokedAt) {
+		if (owned.data.revokedAt) {
 			return { error: "Token already revoked" };
 		}
 
@@ -575,7 +907,7 @@ export async function revokeToken(
 		await writeAuditLog({
 			userId: actorUserId,
 			eventType: "token_revoked",
-			metadata: { integrationId: existing.integrationId, tokenId },
+			metadata: { integrationId: owned.data.integrationId, tokenId },
 		});
 
 		return { data: apiToken };

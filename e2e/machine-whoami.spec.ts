@@ -53,7 +53,7 @@ test.describe("/api/machine/whoami — e2e smoke (R1)", () => {
 		ownerId = owner.id;
 
 		const registered = await registerIntegration(
-			{ name: unique, ownerId: owner.id, scopes: ["case:read"] },
+			{ name: unique, scopes: ["case:read"] },
 			owner.id
 		);
 		if ("error" in registered) {

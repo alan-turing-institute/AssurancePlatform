@@ -80,7 +80,6 @@ async function setupIntegration(
 		await registerIntegration(
 			{
 				name: `test-health-integration-${ownerId}-${Date.now()}`,
-				ownerId,
 				scopes,
 			},
 			ownerId
