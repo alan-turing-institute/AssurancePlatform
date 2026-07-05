@@ -130,7 +130,9 @@ describe("IntegrationsSection", () => {
 		await waitFor(() =>
 			expect(screen.getByText("new-pipeline")).toBeInTheDocument()
 		);
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+		);
 	});
 
 	it("does not leak stale form field values into a freshly reopened register dialog (pins the react-doctor remount fix, f324045e)", async () => {
