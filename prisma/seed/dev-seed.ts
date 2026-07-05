@@ -13,6 +13,12 @@ import { fileURLToPath } from "node:url";
 import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 import { Pool } from "pg";
+import { prisma as appPrisma } from "../../lib/prisma";
+import {
+	DARTER_INTEGRATION_NAME,
+	ensureDarterCaseGrant,
+	ensureDarterIntegration,
+} from "../../lib/services/darter-integration-service";
 import { PrismaClient } from "../../src/generated/prisma";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -112,7 +118,7 @@ async function main() {
 		hashPassword(charliePw),
 	]);
 
-	await prisma.$transaction(
+	const seeded = await prisma.$transaction(
 		async (tx) => {
 			// ============================================
 			// 1. CREATE USERS
@@ -607,6 +613,172 @@ async function main() {
 
 			console.log(`Created: Bob's Case (Draft, bob, shared with charlie)`);
 
+			// 3e. DARTER Demo Case (chris) - Draft, keystone demo target.
+			// Deterministic name/description so the demo documentation and the
+			// DARTER integration registration (below, after this transaction
+			// commits) can point at this case and its C1 claim by name. C1 is
+			// deliberately left WITHOUT a static EvidenceLink — it's the
+			// keystone claim whose badge flips live when the DARTER pipeline
+			// posts its first evidence-format-v0.1 item through the health
+			// plugin's machine endpoint. Do not seed PluginHealthEvidence or
+			// PluginData for it; that would pre-empt the live demo.
+			const demoCase = await tx.assuranceCase.create({
+				data: {
+					name: "DARTER Demo — Automated Inspection Assurance",
+					description:
+						"Assurance case for an automated visual-inspection pipeline, demonstrating runtime evidence flowing from the health plugin into a claim's assurance score.",
+					createdById: chris.id,
+					mode: "ADVANCED",
+					publishStatus: "DRAFT",
+					// isDemo must stay false (the schema default) — the onboarding-tour feature keys on `isDemo && name` matches (G1/S1/E1…) unrelated to this case, so `true` here would misfire tour highlights on this case AND suppress the real tutorial case.
+				},
+			});
+
+			const demoGoal = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "GOAL",
+					role: "TOP_LEVEL",
+					name: "G1",
+					description:
+						"The automated inspection system performs reliably enough for operational deployment",
+					context: [
+						"automated visual-inspection pipeline",
+						"Runtime health-plugin monitoring",
+					],
+					createdById: chris.id,
+				},
+			});
+
+			const demoStrategy1 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "STRATEGY",
+					role: "SUPPORTING",
+					parentId: demoGoal.id,
+					name: "S1",
+					description: "Argue over runtime detection-performance monitoring",
+					justification:
+						"Continuous runtime health evidence is the primary signal for detection reliability once deployed",
+					createdById: chris.id,
+				},
+			});
+
+			const demoStrategy2 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "STRATEGY",
+					role: "SUPPORTING",
+					parentId: demoGoal.id,
+					name: "S2",
+					description:
+						"Argue over human oversight and escalation for automated detections",
+					justification:
+						"Human oversight bounds the risk of undetected model drift between health-evidence checks",
+					createdById: chris.id,
+				},
+			});
+
+			// C1 is the keystone evidence target for the DARTER integration —
+			// intentionally created with NO EvidenceLink below.
+			const demoClaim1 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "PROPERTY_CLAIM",
+					role: "SUPPORTING",
+					parentId: demoStrategy1.id,
+					name: "C1",
+					description:
+						"Defect detection recall remains above the operational threshold in production monitoring",
+					createdById: chris.id,
+				},
+			});
+
+			const demoClaim2 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "PROPERTY_CLAIM",
+					role: "SUPPORTING",
+					parentId: demoStrategy1.id,
+					name: "C2",
+					description: "False-positive rate remains within acceptable bounds",
+					createdById: chris.id,
+				},
+			});
+
+			const demoClaim3 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "PROPERTY_CLAIM",
+					role: "SUPPORTING",
+					parentId: demoStrategy2.id,
+					name: "C3",
+					description:
+						"Low-confidence detections are escalated to human review",
+					createdById: chris.id,
+				},
+			});
+
+			const demoClaim4 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "PROPERTY_CLAIM",
+					role: "SUPPORTING",
+					parentId: demoStrategy2.id,
+					name: "C4",
+					description: "Operators can override automated detections",
+					createdById: chris.id,
+				},
+			});
+
+			const demoEvidence1 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "EVIDENCE",
+					role: "SUPPORTING",
+					name: "E1",
+					description: "False-positive rate analysis report",
+					url: "https://example.com/reports/darter-false-positive-rate.pdf",
+					createdById: chris.id,
+				},
+			});
+
+			const demoEvidence2 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "EVIDENCE",
+					role: "SUPPORTING",
+					name: "E2",
+					description: "Escalation workflow test report",
+					url: "https://example.com/reports/darter-escalation-workflow.pdf",
+					createdById: chris.id,
+				},
+			});
+
+			const demoEvidence3 = await tx.assuranceElement.create({
+				data: {
+					caseId: demoCase.id,
+					elementType: "EVIDENCE",
+					role: "SUPPORTING",
+					name: "E3",
+					description: "Operator override audit log",
+					url: "https://example.com/reports/darter-operator-override.pdf",
+					createdById: chris.id,
+				},
+			});
+
+			await tx.evidenceLink.createMany({
+				data: [
+					{ evidenceId: demoEvidence1.id, claimId: demoClaim2.id },
+					{ evidenceId: demoEvidence2.id, claimId: demoClaim3.id },
+					{ evidenceId: demoEvidence3.id, claimId: demoClaim4.id },
+				],
+			});
+
+			console.log(
+				"Created: DARTER Demo — Automated Inspection Assurance (Draft, chris, C1 reserved for live health-plugin evidence)"
+			);
+
 			// ============================================
 			// 4. CREATE COMMENTS (for collaboration testing)
 			// ============================================
@@ -632,9 +804,46 @@ async function main() {
 			});
 
 			console.log("Created: 2 comments on Medium Case from alice");
+
+			return {
+				chrisId: chris.id,
+				demoCaseId: demoCase.id,
+				demoClaim1Id: demoClaim1.id,
+			};
 		},
 		{ timeout: 30_000 }
 	); // end $transaction
+
+	const { chrisId, demoCaseId, demoClaim1Id } = seeded;
+
+	// ============================================
+	// 5. REGISTER THE DARTER INTEGRATION (keystone demo)
+	// ============================================
+	// Runs OUTSIDE the transaction above and through the app's own `prisma`
+	// client (`@/lib/prisma`, a separate connection/pool from this script's
+	// adapter-bound client) because `registerIntegration` and
+	// `ensureDarterCaseGrant` live in `lib/services/` and import that client
+	// directly — they need the demo case + chris user already committed and
+	// visible, which they are by this point. Reuses the exact registration
+	// logic `scripts/seed-darter-integration.ts` uses (shared via
+	// `lib/services/darter-integration-service.ts`), actor = the chris seed
+	// user, scopes = case:read + health:evidence:write. Deliberately issues
+	// NO token — shown-once semantics mean the token is issued through the
+	// management UI (PR #849) at demo time, never baked into the seed.
+	console.log("\nRegistering DARTER integration...");
+	const darter = await ensureDarterIntegration(chrisId);
+	if ("error" in darter) {
+		throw new Error(`Failed to register DARTER integration: ${darter.error}`);
+	}
+	await ensureDarterCaseGrant(
+		demoCaseId,
+		darter.data.systemUserId,
+		"EDIT",
+		chrisId
+	);
+	console.log(
+		`Registered "${DARTER_INTEGRATION_NAME}" integration (${darter.data.status}) and granted EDIT on the DARTER demo case to its system user. No token issued — issue one via the management UI at demo time.`
+	);
 
 	// ============================================
 	// SUMMARY
@@ -645,12 +854,18 @@ async function main() {
 	console.log("\nCreated:");
 	console.log("  - 4 users: chris, alice, bob, charlie");
 	console.log("  - 1 team: Test Team (alice=ADMIN, bob=MEMBER)");
-	console.log("  - 4 assurance cases:");
+	console.log("  - 5 assurance cases:");
 	console.log("    - Simple Case (chris, Draft)");
 	console.log("    - Medium Case (chris, Published, shared with alice)");
 	console.log("    - Alice's Case (alice, Draft, team shared)");
 	console.log("    - Bob's Case (bob, Draft, shared with charlie)");
+	console.log(
+		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim C1 id=${demoClaim1Id} is the live evidence target)`
+	);
 	console.log("  - 2 comments on Medium Case");
+	console.log(
+		`  - 1 machine integration: ${DARTER_INTEGRATION_NAME} (case:read + health:evidence:write, EDIT on the demo case, no token issued)`
+	);
 	console.log("\nLogin with any test user using the SEED_USER_PASSWORD");
 }
 
@@ -660,6 +875,24 @@ main()
 		process.exit(1);
 	})
 	.finally(async () => {
-		await prisma.$disconnect();
-		await pool.end();
+		// Two Prisma clients are live in this process: this script's own
+		// (`prisma`, backed by its own `pg.Pool`, ended explicitly below) and
+		// the app's shared singleton (`appPrisma`, imported transitively via
+		// `lib/services/darter-integration-service.ts` for the DARTER
+		// registration step, backed by ITS OWN separate `pg.Pool` created
+		// inside `lib/prisma.ts`). `PrismaPg`'s `disposeExternalPool` option
+		// defaults to `false`, so neither client's `$disconnect()` closes its
+		// underlying pool — only `pool.end()` does that, and this script has
+		// no handle on the second, internal one. The `try`/`finally` below
+		// guarantees `process.exit(0)` runs — and the process still
+		// terminates promptly — either way: whether or not those
+		// disconnects fully close every socket, AND even if one of them
+		// throws.
+		try {
+			await appPrisma.$disconnect();
+			await prisma.$disconnect();
+			await pool.end();
+		} finally {
+			process.exit(0);
+		}
 	});

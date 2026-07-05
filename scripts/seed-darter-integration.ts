@@ -17,17 +17,16 @@
  * accountable owner, so this script never invents one.
  */
 
-import { sameScopes } from "../lib/auth/scopes";
 import { prisma } from "../lib/prisma";
 import {
-	issueToken,
-	registerIntegration,
-	updateIntegrationScopes,
-} from "../lib/services/integration-registry-service";
+	DARTER_EXPECTED_SCOPES,
+	DARTER_INTEGRATION_NAME,
+	ensureDarterCaseGrant,
+	ensureDarterIntegration,
+} from "../lib/services/darter-integration-service";
+import { issueToken } from "../lib/services/integration-registry-service";
 import type { PermissionLevel } from "../src/generated/prisma";
 
-const INTEGRATION_NAME = "darter-pipeline";
-const EXPECTED_SCOPES = ["case:read", "health:evidence:write"] as const;
 const VALID_PERMISSIONS: PermissionLevel[] = [
 	"VIEW",
 	"COMMENT",
@@ -97,59 +96,30 @@ async function main() {
 		return;
 	}
 
-	let integrationId: string;
-	let systemUserId: string;
+	const ensured = await ensureDarterIntegration(owner.id);
+	if ("error" in ensured) {
+		console.error(`Failed to register/reconcile integration: ${ensured.error}`);
+		process.exit(1);
+		return;
+	}
+	const { integrationId, systemUserId, status } = ensured.data;
 
-	const existing = await prisma.integration.findUnique({
-		where: { name: INTEGRATION_NAME },
-	});
-
-	if (existing) {
-		integrationId = existing.id;
-		systemUserId = existing.systemUserId;
+	if (status === "existing") {
 		console.log(
-			`Integration "${INTEGRATION_NAME}" already registered (${existing.id}).`
+			`Integration "${DARTER_INTEGRATION_NAME}" already registered (${integrationId}).`
 		);
-
-		if (!sameScopes(existing.scopes, EXPECTED_SCOPES)) {
-			const result = await updateIntegrationScopes(
-				existing.id,
-				[...EXPECTED_SCOPES],
-				owner.id
-			);
-			if ("error" in result) {
-				console.error(`Failed to reconcile scopes: ${result.error}`);
-				process.exit(1);
-			}
-			console.log(`Reconciled scopes to: ${EXPECTED_SCOPES.join(", ")}`);
-		}
+	} else if (status === "reconciled") {
+		console.log(
+			`Integration "${DARTER_INTEGRATION_NAME}" already registered (${integrationId}).`
+		);
+		console.log(`Reconciled scopes to: ${DARTER_EXPECTED_SCOPES.join(", ")}`);
 	} else {
-		const result = await registerIntegration(
-			{
-				name: INTEGRATION_NAME,
-				description:
-					"DARTER evidence pipeline — machine client for the health plugin",
-				scopes: [...EXPECTED_SCOPES],
-			},
-			owner.id
-		);
-		if ("error" in result) {
-			console.error(`Failed to register integration: ${result.error}`);
-			process.exit(1);
-			return;
-		}
-		integrationId = result.data.integration.id;
-		systemUserId = result.data.systemUserId;
 		console.log(
-			`Registered integration "${INTEGRATION_NAME}" (${integrationId}).`
+			`Registered integration "${DARTER_INTEGRATION_NAME}" (${integrationId}).`
 		);
 	}
 
-	await prisma.casePermission.upsert({
-		where: { caseId_userId: { caseId, userId: systemUserId } },
-		create: { caseId, userId: systemUserId, permission, grantedById: owner.id },
-		update: { permission, grantedById: owner.id },
-	});
+	await ensureDarterCaseGrant(caseId, systemUserId, permission, owner.id);
 	console.log(
 		`Granted ${permission} on case "${targetCase.name}" (${caseId}) to the DARTER system user.`
 	);
