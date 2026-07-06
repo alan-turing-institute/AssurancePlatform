@@ -10,4 +10,5 @@ export default {
 	"explainable-atc-rl-agent": "ATC RL Agent",
 	"adaptive-clinical-trial-allocation": "Adaptive Clinical Trial",
 	"census-disclosure-control": "Census Disclosure Control",
+	"aerial-facial-recognition": "Aerial Facial Recognition",
 };
