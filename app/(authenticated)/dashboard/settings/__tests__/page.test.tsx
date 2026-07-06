@@ -42,20 +42,24 @@ vi.mock("../_components/delete-form", () => ({
 
 import SettingsPage from "../page";
 
+const INTEGRATIONS_LINK_NAME_REGEX = /integrations/i;
+
 describe("SettingsPage", () => {
 	it("renders a link to the Integrations settings page (regression: page existed but was unreachable)", async () => {
 		render(await SettingsPage());
 
-		const link = screen.getByRole("link", { name: /integrations/i });
+		const link = screen.getByRole("link", {
+			name: INTEGRATIONS_LINK_NAME_REGEX,
+		});
 		expect(link).toHaveAttribute("href", "/dashboard/settings/integrations");
 	});
 
 	it("places the Integrations link section after Plugins and before the password form", async () => {
 		const { container } = render(await SettingsPage());
 
-		const testIds = Array.from(
-			container.querySelectorAll("[data-testid]")
-		).map((el) => el.getAttribute("data-testid"));
+		const testIds = Array.from(container.querySelectorAll("[data-testid]")).map(
+			(el) => el.getAttribute("data-testid")
+		);
 
 		const pluginsIndex = testIds.indexOf("plugins-section");
 		const integrationsIndex = testIds.indexOf("integrations-link-section");

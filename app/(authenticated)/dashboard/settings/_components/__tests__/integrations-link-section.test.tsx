@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { renderWithoutProviders, screen } from "@/src/__tests__/utils/test-utils";
+import {
+	renderWithoutProviders,
+	screen,
+} from "@/src/__tests__/utils/test-utils";
 import { IntegrationsLinkSection } from "../integrations-link-section";
 
 describe("IntegrationsLinkSection", () => {
