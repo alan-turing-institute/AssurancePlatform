@@ -154,7 +154,7 @@ test.describe("Case Studies index page", () => {
 		const table = page.locator("table").first();
 		const links = table.locator("tbody tr td:first-child a");
 		const count = await links.count();
-		expect(count).toBe(9);
+		expect(count).toBe(10);
 
 		for (let i = 0; i < count; i++) {
 			const href = await links.nth(i).getAttribute("href");
@@ -338,10 +338,10 @@ This is a temporary file created by the Nanaki QA agent to verify the dynamic li
 			expect(href).toBe(
 				`/docs/curriculum/hands-on/case-studies/${FIXTURE_SLUG}`
 			);
-			// Row count grows to 10 automatically
+			// Row count grows to 11 automatically
 			const table = page.locator("table").first();
 			const rows = table.locator("tbody tr");
-			await expect(rows).toHaveCount(10);
+			await expect(rows).toHaveCount(11);
 		} else {
 			// Document caching behaviour — expected given content/ watch exclusion.
 			// The dynamic mechanism is structurally sound (getCaseStudyEntries reads
