@@ -20,7 +20,7 @@ jobs:
       # After this pin, the manual dispatch's branch selector is cosmetic —
       # every run seeds from staging's tree by design.
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: staging
 
@@ -30,7 +30,7 @@ jobs:
           node-version: "20"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

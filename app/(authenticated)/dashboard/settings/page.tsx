@@ -5,8 +5,10 @@ import { validateSession } from "@/lib/auth/validate-session";
 import { AppearanceForm } from "./_components/appearance-form";
 import { ConnectedAccountsForm } from "./_components/connected-accounts-form";
 import { DeleteForm } from "./_components/delete-form";
+import { IntegrationsLinkSection } from "./_components/integrations-link-section";
 import { PasswordForm } from "./_components/password-form";
 import { PersonalInfoForm } from "./_components/personal-info-form";
+import { PluginsSection } from "./_components/plugins-section";
 
 const SettingsPage = async () => {
 	const session = await validateSession();
@@ -26,6 +28,8 @@ const SettingsPage = async () => {
 				<AppearanceForm />
 				<PersonalInfoForm data={currentUser} />
 				<ConnectedAccountsForm data={connectedAccounts} />
+				<PluginsSection />
+				<IntegrationsLinkSection />
 				<PasswordForm data={currentUser} />
 				<DeleteForm user={currentUser} />
 			</div>

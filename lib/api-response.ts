@@ -10,6 +10,7 @@ import {
 	handleError,
 	notFound,
 	unauthorised,
+	validationError,
 } from "./errors";
 
 // ---------------------------------------------------------------------------
@@ -93,24 +94,72 @@ export async function requireAuthSession(): Promise<ValidatedSession> {
 // Service error mapping
 // ---------------------------------------------------------------------------
 
-const ERROR_MAPPINGS: Array<{ pattern: string; factory: () => AppError }> = [
+/** A pattern is either a case-insensitive substring, or a `RegExp` for shapes a bare substring would over-match. */
+type ErrorPattern = string | RegExp;
+
+function matchesPattern(error: string, pattern: ErrorPattern): boolean {
+	if (typeof pattern === "string") {
+		return error.toLowerCase().includes(pattern.toLowerCase());
+	}
+	return pattern.test(error);
+}
+
+/** Shared factory for every "the resource exists but is in the wrong state for this action" error below. */
+const conflict = () => new AppError({ code: "CONFLICT", message: "" });
+
+const ERROR_MAPPINGS: Array<{
+	pattern: ErrorPattern;
+	factory: () => AppError;
+}> = [
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
+	{ pattern: "already", factory: conflict },
+	// `assertPluginEnabledForUser` ("Plugin '<id>' is not enabled",
+	// `plugin-enablement-service.ts`'s `assertPluginEnabledForUser`) — a
+	// plugin switched off (deployment, or user-level) is a clean, expected
+	// refusal for any plugin's machine/human routes, not a 500. Matched here
+	// rather than in each plugin route so every current and future plugin
+	// gets it for free. Anchored to the producing service's exact message
+	// shape (not a bare "not enabled" substring) so an unrelated service
+	// error that happens to contain that phrase for a different reason isn't
+	// misclassified as a plugin-disabled 403.
+	{ pattern: /^Plugin '.+' is not enabled$/, factory: () => forbidden() },
+	// `integration-registry-service.ts` / `lib/schemas/integration.ts`
+	// (integration management API, work item 7): an unknown scope is a
+	// validation failure (400), not an unmapped 500.
+	{ pattern: /^Unknown scope/, factory: () => validationError("") },
+	// Lifecycle/state-guard errors from the integration registry service —
+	// the integration or token exists and is owned by the caller, but its
+	// current status makes the requested action a no-op or a terminal-state
+	// violation (e.g. reactivating a REVOKED integration, or issuing/
+	// rotating a token against one that isn't ACTIVE). None of these contain
+	// "already" or "not found", so without this entry they'd fall through to
+	// INTERNAL (500) the first time an HTTP route ever surfaced them.
 	{
-		pattern: "already",
-		factory: () => new AppError({ code: "CONFLICT", message: "" }),
+		pattern:
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot rotate a revoked token$/,
+		factory: conflict,
+	},
+	// `user-management-service.ts`'s `deleteAccount` — owned integrations
+	// (ON DELETE RESTRICT) block account deletion until removed (no
+	// reassignment path in 1.0). Anchored `^...$` like its two siblings
+	// above, not a bare substring (vincent minor, review round 2 — this
+	// used to be unanchored, the odd one out of the three lifecycle
+	// patterns in this array).
+	{
+		pattern: /^Remove your \d+ integrations? before deleting your account$/,
+		factory: conflict,
 	},
 ];
 
 /**
  * Converts a service-layer error string into an `AppError`.
- * Matches known patterns (case-insensitive) and falls back to INTERNAL.
+ * Matches known patterns (case-insensitive for strings) and falls back to INTERNAL.
  */
 export function serviceErrorToAppError(error: string): AppError {
-	const lower = error.toLowerCase();
 	for (const { pattern, factory } of ERROR_MAPPINGS) {
-		if (lower.includes(pattern.toLowerCase())) {
+		if (matchesPattern(error, pattern)) {
 			// Preserve the original message from the service
 			const appError = factory();
 			return new AppError({

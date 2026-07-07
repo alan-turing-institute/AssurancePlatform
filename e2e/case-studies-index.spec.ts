@@ -2,7 +2,7 @@
  * E2E tests for the dynamic Case Studies index page.
  *
  * These tests verify:
- *  - All 9 case studies appear in the summary table and per-domain grouped lists
+ *  - All 10 case studies appear in the summary table and per-domain grouped lists
  *  - Every case-study link is absolute and resolves (no 404s)
  *  - Domain/Assurance-Goal columns match the authored frontmatter
  *  - Excluded entries (index, _meta, underscore-prefixed) do NOT appear
@@ -95,6 +95,12 @@ const EXPECTED_CASE_STUDIES: Array<{
 		domain: "Public Sector",
 		assurance_goal: "Privacy",
 	},
+	{
+		slug: "aerial-facial-recognition",
+		title: "Equitable Identification in Aerial Facial Recognition",
+		domain: "Security and Defence",
+		assurance_goal: "Fairness",
+	},
 ];
 
 test.describe("Case Studies index page", () => {
@@ -121,11 +127,11 @@ test.describe("Case Studies index page", () => {
 		).toBeVisible();
 	});
 
-	test("all 9 case studies appear in the summary table", async ({ page }) => {
+	test("all 10 case studies appear in the summary table", async ({ page }) => {
 		await page.goto(INDEX_URL);
 		const table = page.locator("table").first();
 		const rows = table.locator("tbody tr");
-		await expect(rows).toHaveCount(9);
+		await expect(rows).toHaveCount(10);
 	});
 
 	test("summary table entries match authoritative domain/assurance_goal values", async ({
@@ -148,7 +154,7 @@ test.describe("Case Studies index page", () => {
 		const table = page.locator("table").first();
 		const links = table.locator("tbody tr td:first-child a");
 		const count = await links.count();
-		expect(count).toBe(9);
+		expect(count).toBe(10);
 
 		for (let i = 0; i < count; i++) {
 			const href = await links.nth(i).getAttribute("href");
@@ -226,14 +232,14 @@ test.describe("Case Studies index page", () => {
 		).toBeVisible();
 	});
 
-	test("per-domain grouped lists contain all 9 case studies", async ({
+	test("per-domain grouped lists contain all 10 case studies", async ({
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
 		// Each grouped section is a <section> with a <h3> domain heading
 		// and <li> items linking to case studies
 		const groupedLinks = page.locator("section li a");
-		await expect(groupedLinks).toHaveCount(9);
+		await expect(groupedLinks).toHaveCount(10);
 	});
 
 	test("per-domain grouped list links are also absolute paths", async ({
@@ -332,10 +338,10 @@ This is a temporary file created by the Nanaki QA agent to verify the dynamic li
 			expect(href).toBe(
 				`/docs/curriculum/hands-on/case-studies/${FIXTURE_SLUG}`
 			);
-			// Row count grows to 10 automatically
+			// Row count grows to 11 automatically
 			const table = page.locator("table").first();
 			const rows = table.locator("tbody tr");
-			await expect(rows).toHaveCount(10);
+			await expect(rows).toHaveCount(11);
 		} else {
 			// Document caching behaviour — expected given content/ watch exclusion.
 			// The dynamic mechanism is structurally sound (getCaseStudyEntries reads

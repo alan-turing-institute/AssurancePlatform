@@ -17,7 +17,11 @@ export type SSEEventType =
 	| "element:attached"
 	| "element:detached"
 	| "element:moved"
-	| "permission:changed";
+	| "permission:changed"
+	// Plugin-emitted events are namespaced (ADR 0002 v2 §2.5). The health
+	// plugin emits this AFTER its evidence-append write transaction commits,
+	// never from inside it, and never on a failed write.
+	| "tea.health/state-changed";
 
 export interface SSEEvent {
 	caseId: string;

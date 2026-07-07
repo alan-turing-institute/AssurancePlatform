@@ -430,6 +430,7 @@ model AssuranceElement {
   comments            Comment[]
   releaseComments     ReleaseComment[]
   pluginData          PluginData[]
+  pluginHealthEvidence PluginHealthEvidence[]
 
   @@index([caseId])
   @@index([caseId, elementType])
@@ -1027,4 +1028,70 @@ model ApiToken {
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
   @@map("api_tokens")
+}
+
+// ============================================
+// HEALTH PLUGIN — tier-2 plugin-owned table (ADR 0002 v2 §2.1/§3)
+// ============================================
+// plugin_health_evidence: the append-only, provenance-stamped, hash-chained
+// runtime evidence log (ADR 0001 §2, relocated under the health plugin per
+// ADR 0002 v2 §3). Prefixed `plugin_health_` per the tier-2 naming rule. The
+// only relation is a one-way FK to the CORE `AssuranceElement` table — this
+// table is never referenced BY a core table, and no other plugin's table may
+// ever reference this one either.
+//
+// Append-only is enforced at the service layer (`lib/services/
+// health-evidence-service.ts`): no update/delete path is ever written
+// against this model. `recordHash`/`previousRecordHash` reinforce that with
+// a tamper-evident hash chain per claim.
+
+/// One item of runtime evidence bearing on a PROPERTY_CLAIM (evidence-format-v0.1).
+model PluginHealthEvidence {
+  id        String @id @default(uuid())
+  claimId   String @map("claim_id") /// The PROPERTY_CLAIM AssuranceElement this evidence bears on
+
+  // What the check found (evidence-format-v0.1)
+  metricName    String                      @map("metric_name")
+  value         Float?
+  threshold     Float?
+  verdict       PluginHealthEvidenceVerdict
+  oddDimensions String[]                    @default([]) @map("odd_dimensions")
+
+  // Provenance (regulator-grade, first-class — stored verbatim, never lossy)
+  sourceSystem String   @map("source_system")
+  provenance   Json
+  evaluatedAt  DateTime @map("evaluated_at") /// When the check ran (client-supplied) — NOT when we stored it
+
+  /// Which evidence-format-v0.1(.x) version governed this item's capture.
+  formatVersion String @map("format_version")
+
+  // Tamper-evidence: append-only hash chain, per claim.
+  // recordHash = hash(content + previousRecordHash); server-computed, never
+  // accepted from the wire.
+  recordHash         String  @map("record_hash")
+  previousRecordHash String? @map("previous_record_hash")
+
+  /// Server-assigned, globally monotonic ordering anchor for the hash chain.
+  /// Deliberately NOT `createdAt`: two records for the same claim could in
+  /// principle share a millisecond-resolution timestamp, which would make
+  /// "walk the chain in order" ambiguous. An autoincrementing column has no
+  /// such ambiguity. Internal only — never part of the evidence-format-v0.1
+  /// wire contract in either direction.
+  chainSequence Int @unique @default(autoincrement()) @map("chain_sequence")
+
+  // Audit
+  createdById String   @map("created_by_id") /// The machine principal (an Integration's system User) that appended this record
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations — one-way: points at core only.
+  claim AssuranceElement @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([claimId, chainSequence])
+  @@map("plugin_health_evidence")
+}
+
+enum PluginHealthEvidenceVerdict {
+  PASS
+  FAIL
+  DEGRADED
 }

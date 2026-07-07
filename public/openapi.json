@@ -22,9 +22,47 @@
         "in": "cookie",
         "name": "next-auth.session-token",
         "description": "NextAuth.js session cookie"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API token",
+        "description": "Machine API token (`Authorization: Bearer <token>`), issued via the integration registry"
       }
     },
-    "schemas": {},
+    "schemas": {
+      "ImportResult": {},
+      "GitHubImportSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "GitHub URL or shorthand path to the JSON file"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (overrides URL parsing)"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name (overrides URL parsing)"
+          },
+          "path": {
+            "type": "string",
+            "description": "File path (overrides URL parsing)"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name (optional, uses default branch if not specified)"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "description": "GitHub import request parameters"
+      }
+    },
     "responses": {
       "400": {
         "description": "Bad Request",
@@ -182,6 +220,31 @@
         }
       }
     },
+    "/auth/link/{provider}": {
+      "get": {
+        "operationId": "get-auth-link-{provider}",
+        "summary": "GET /api/auth/link/[provider]",
+        "description": "",
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/case-studies": {
       "get": {
         "operationId": "get-case-studies",
@@ -286,6 +349,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -357,6 +423,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -375,13 +444,28 @@
     "/cases/{id}": {
       "get": {
         "operationId": "get-cases-{id}",
-        "summary": "",
-        "description": "",
+        "summary": "Get an assurance case by ID",
+        "description": "Retrieves the full case structure including goals, strategies,",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Full case data with nested elements"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -398,13 +482,28 @@
       },
       "put": {
         "operationId": "put-cases-{id}",
-        "summary": "PUT /api/cases/[id]",
-        "description": "",
+        "summary": "Update case metadata",
+        "description": "Updates the name, description, or colour profile of a case.",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Updated case data"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -421,13 +520,21 @@
       },
       "delete": {
         "operationId": "delete-cases-{id}",
-        "summary": "DELETE /api/cases/[id]",
-        "description": "",
+        "summary": "Delete an assurance case (soft-delete)",
+        "description": "Moves a case to trash (soft-delete). Cases remain in trash for 30 days",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -446,13 +553,28 @@
     "/cases/export": {
       "get": {
         "operationId": "get-cases-export",
-        "summary": "GET /api/cases/export?id=xxx&includeComments=true",
-        "description": "",
+        "summary": "Export an assurance case as JSON",
+        "description": "Exports the specified case in nested JSON format (v1.0).",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - CaseExportNested schema with Content-Disposition header"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -471,13 +593,37 @@
     "/cases/import": {
       "post": {
         "operationId": "post-cases-import",
-        "summary": "POST /api/cases/import",
-        "description": "",
+        "summary": "Import an assurance case from JSON",
+        "description": "Imports a case from JSON data. Accepts v1 (legacy Django),",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JSON case data in any supported format"
+              }
+            }
+          }
+        },
         "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { id, name, elementCount, evidenceLinkCount, warnings }"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -494,13 +640,77 @@
       },
       "put": {
         "operationId": "put-cases-import",
-        "summary": "GET /api/cases/import/validate",
-        "description": "",
+        "summary": "Validate import data without creating",
+        "description": "Validates JSON import data and returns preview information",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JSON case data to validate"
+              }
+            }
+          }
+        },
         "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { isValid, version, caseName, elementCount, evidenceLinkCount, warnings }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/trash": {
+      "get": {
+        "operationId": "get-cases-trash",
+        "summary": "List cases in the user's trash",
+        "description": "Returns all soft-deleted cases owned by the current user.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Array of trashed cases with deletion info"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -589,31 +799,6 @@
         }
       }
     },
-    "/cases/{id}/elements": {
-      "post": {
-        "operationId": "post-cases-{id}-elements",
-        "summary": "POST /api/cases/[id]/elements",
-        "description": "",
-        "tags": [
-          "Cases"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
-    },
     "/cases/{id}/events": {
       "get": {
         "operationId": "get-cases-{id}-events",
@@ -666,77 +851,6 @@
       "post": {
         "operationId": "post-cases-{id}-image",
         "summary": "POST /api/cases/[id]/image",
-        "description": "",
-        "tags": [
-          "Cases"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
-    },
-    "/cases/{id}/lock": {
-      "get": {
-        "operationId": "get-cases-{id}-lock",
-        "summary": "GET /api/cases/[id]/lock",
-        "description": "",
-        "tags": [
-          "Cases"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      },
-      "post": {
-        "operationId": "post-cases-{id}-lock",
-        "summary": "POST /api/cases/[id]/lock",
-        "description": "",
-        "tags": [
-          "Cases"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "delete-cases-{id}-lock",
-        "summary": "DELETE /api/cases/[id]/lock",
         "description": "",
         "tags": [
           "Cases"
@@ -862,6 +976,82 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/purge": {
+      "delete": {
+        "operationId": "delete-cases-{id}-purge",
+        "summary": "Permanently delete a case from trash",
+        "description": "Permanently deletes a soft-deleted case. This action cannot be undone.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/restore": {
+      "post": {
+        "operationId": "post-cases-{id}-restore",
+        "summary": "Restore a case from trash",
+        "description": "Restores a soft-deleted case, clearing deletedAt and deletedById fields.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true }"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -975,6 +1165,249 @@
         }
       }
     },
+    "/cases/backup/gdrive": {
+      "post": {
+        "operationId": "post-cases-backup-gdrive",
+        "summary": "POST /api/cases/backup/gdrive",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/{ success: boolean, fileId: string, fileName: string, webViewLink?: string }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "get": {
+        "operationId": "get-cases-backup-gdrive",
+        "summary": "GET /api/cases/backup/gdrive",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/{ connected: boolean }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/import/gdrive": {
+      "post": {
+        "operationId": "post-cases-import-gdrive",
+        "summary": "POST /api/cases/import/gdrive",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "get": {
+        "operationId": "get-cases-import-gdrive",
+        "summary": "GET /api/cases/import/gdrive",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/{ connected: boolean, files: DriveFileMetadata[] }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/import/github": {
+      "post": {
+        "operationId": "post-cases-import-github",
+        "summary": "POST /api/cases/import/github",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GitHubImportSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "get": {
+        "operationId": "get-cases-import-github",
+        "summary": "GET /api/cases/import/github/status",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/{ connected: boolean }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/permissions/{permissionId}": {
       "patch": {
         "operationId": "patch-cases-{id}-permissions-{permissionId}",
@@ -1008,6 +1441,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1033,6 +1469,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1079,6 +1518,41 @@
         ],
         "parameters": [],
         "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cron/purge-trash": {
+      "post": {
+        "operationId": "post-cron-purge-trash",
+        "summary": "Purge expired trash items (cron job)",
+        "description": "Permanently deletes cases that have been in trash longer than",
+        "tags": [
+          "Cron"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true, purgedCount: number, cutoffDate: string }"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1150,6 +1624,89 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/batch": {
+      "post": {
+        "operationId": "post-cases-{id}-batch",
+        "summary": "Apply batch updates to case elements",
+        "description": "Applies multiple element changes (create, update, delete) atomically.",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Success with summary of changes"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/elements": {
+      "post": {
+        "operationId": "post-cases-{id}-elements",
+        "summary": "Create a new element in a case",
+        "description": "Creates a goal, strategy, property claim, evidence, or other",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - Created element data"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1263,6 +1820,503 @@
         }
       }
     },
+    "/elements/{id}/health": {
+      "get": {
+        "operationId": "get-elements-{id}-health",
+        "summary": "GET /api/elements/[id]/health",
+        "description": "Refuses with a clean error (never a 500) when `tea.health`",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ health: { score, lastEvaluatedAt, validityWindowSeconds } | null }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/move": {
+      "post": {
+        "operationId": "post-elements-{id}-move",
+        "summary": "POST /api/elements/[id]/move",
+        "description": "",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/restore": {
+      "post": {
+        "operationId": "post-elements-{id}-restore",
+        "summary": "POST /api/elements/[id]/restore",
+        "description": "",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "get-health",
+        "summary": "GET /api/health",
+        "description": "",
+        "tags": [
+          "Health"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations": {
+      "get": {
+        "operationId": "get-integrations",
+        "summary": "GET /api/integrations",
+        "description": "Owner-only listing — the caller's own integrations only.",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ integrations: IntegrationListItem[] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-integrations",
+        "summary": "POST /api/integrations",
+        "description": "Any authenticated user may register an integration; the",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - The created integration (no token)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}": {
+      "patch": {
+        "operationId": "patch-integrations-{id}",
+        "summary": "PATCH /api/integrations/[id]",
+        "description": "At least one of `description`/`scopes` must be present.",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The updated integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-integrations-{id}",
+        "summary": "DELETE /api/integrations/[id]",
+        "description": "Prefer `POST .../revoke` when the integration's own",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/reactivate": {
+      "post": {
+        "operationId": "post-integrations-{id}-reactivate",
+        "summary": "POST /api/integrations/[id]/reactivate",
+        "description": "REVOKED stays terminal — reactivating a revoked integration",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The reactivated integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/revoke": {
+      "post": {
+        "operationId": "post-integrations-{id}-revoke",
+        "summary": "POST /api/integrations/[id]/revoke",
+        "description": "",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The revoked integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/suspend": {
+      "post": {
+        "operationId": "post-integrations-{id}-suspend",
+        "summary": "POST /api/integrations/[id]/suspend",
+        "description": "A REVOKED integration cannot be suspended (REVOKED is",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The suspended integration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/tokens": {
+      "post": {
+        "operationId": "post-integrations-{id}-tokens",
+        "summary": "POST /api/integrations/[id]/tokens",
+        "description": "`expiresAt` is optional — omitted means the token never",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - `{ secret: string, token: { id, tokenPrefix, createdAt, expiresAt } }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/tokens/{tokenId}": {
+      "delete": {
+        "operationId": "delete-integrations-{id}-tokens-{tokenId}",
+        "summary": "DELETE /api/integrations/[id]/tokens/[tokenId]",
+        "description": "",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/integrations/{id}/tokens/{tokenId}/rotate": {
+      "post": {
+        "operationId": "post-integrations-{id}-tokens-{tokenId}-rotate",
+        "summary": "POST /api/integrations/[id]/tokens/[tokenId]/rotate",
+        "description": "Refuses a token that is already revoked, or whose",
+        "tags": [
+          "Integrations"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ secret, token: { id, tokenPrefix, createdAt, expiresAt }, oldTokenId, overlapUntil }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/invites/{token}/accept": {
       "post": {
         "operationId": "post-invites-{token}-accept",
@@ -1273,6 +2327,127 @@
         ],
         "parameters": [],
         "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/whoami": {
+      "get": {
+        "operationId": "get-machine-whoami",
+        "summary": "Diagnostic identity check for a machine integration.",
+        "description": "Returns the identity of the integration whose bearer token",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { name, scopes, tokenPrefix }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/elements/{id}/evidence": {
+      "get": {
+        "operationId": "get-machine-health-elements-{id}-evidence",
+        "summary": "GET /api/machine/health/elements/[id]/evidence",
+        "description": "Auth is EITHER a bearer token scoped `health:evidence:read`",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ evidence: PluginHealthEvidence[] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-machine-health-elements-{id}-evidence",
+        "summary": "POST /api/machine/health/elements/[id]/evidence",
+        "description": "Machine-only (`requireApiToken(\"health:evidence:write\")`).",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - `{ evidence: PluginHealthEvidence, health: { score, lastEvaluatedAt, validityWindowSeconds } }`"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1492,6 +2667,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1613,6 +2791,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -1635,6 +2816,102 @@
         "description": "",
         "tags": [
           "Templates"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/plugins": {
+      "get": {
+        "operationId": "get-user-plugins",
+        "summary": "GET /api/user/plugins",
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch-user-plugins",
+        "summary": "PATCH /api/user/plugins",
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/tours": {
+      "get": {
+        "operationId": "get-user-tours",
+        "summary": "GET /api/user/tours",
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch-user-tours",
+        "summary": "PATCH /api/user/tours",
+        "description": "",
+        "tags": [
+          "User"
         ],
         "parameters": [],
         "responses": {
@@ -1709,6 +2986,9 @@
         ],
         "parameters": [],
         "responses": {
+          "204": {
+            "description": "No Content"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },

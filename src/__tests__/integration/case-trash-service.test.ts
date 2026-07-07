@@ -243,6 +243,42 @@ describe("case-trash-service", () => {
 			});
 			expect(commentInDb).toBeNull();
 		});
+
+		it("cascades deletion to health evidence records — ACCEPTED 1.0 behaviour, not a bug: the append-only log has no independent retention yet (tracked separately in the hardening issue)", async () => {
+			const { appendHealthEvidence } = await import(
+				"@/lib/services/health-evidence-service"
+			);
+
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id, {
+				name: "Cascade Purge — Health Evidence",
+			});
+			const claim = await createTestElement(testCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+
+			const appended = expectSuccess(
+				await appendHealthEvidence(owner.id, {
+					claimId: claim.id,
+					metricName: "in-distribution-rate",
+					value: 0.98,
+					threshold: 0.95,
+					verdict: "PASS",
+					oddDimensions: [],
+					sourceSystem: "darter-pipeline",
+					provenance: { check: "ood-monitor/kl-divergence", runId: "run-1" },
+					evaluatedAt: new Date().toISOString(),
+				})
+			);
+
+			await softDeleteCase(owner.id, testCase.id);
+			expectSuccess(await purgeCase(owner.id, testCase.id));
+
+			const evidenceInDb = await prisma.pluginHealthEvidence.findUnique({
+				where: { id: appended.evidence.id },
+			});
+			expect(evidenceInDb).toBeNull();
+		});
 	});
 
 	describe("anti-enumeration: consistent error responses", () => {
