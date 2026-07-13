@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { canAccessCase } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
+import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -115,6 +116,104 @@ describe("GET /api/integrations/[id]/case-grants", () => {
 		const nonexistentBody = await nonexistentResponse.json();
 		expect(nonOwnerBody).toEqual(nonexistentBody);
 		expect(nonOwnerBody.error).toBe(INTEGRATION_NOT_FOUND);
+	});
+
+	/**
+	 * V1: a reassigned owner must not learn the id/name of a case they
+	 * cannot themselves access, purely by having been handed the
+	 * integration — even though the `CasePermission` row for the
+	 * integration's system user still exists and is untouched.
+	 */
+	it("filters out grants for cases the new owner cannot access after reassignment", async () => {
+		const caseCreator = await createTestUser();
+		const originalOwner = await createTestUser();
+		const newOwner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(originalOwner.id);
+		const testCase = await createTestCase(caseCreator.id, {
+			name: "Not the new owner's case",
+		});
+		await createTestPermission(
+			testCase.id,
+			originalOwner.id,
+			caseCreator.id,
+			"ADMIN"
+		);
+		await createTestPermission(
+			testCase.id,
+			systemUser.id,
+			originalOwner.id,
+			"VIEW"
+		);
+
+		const reassignResult = await reassignIntegrationOwner(
+			integration.id,
+			newOwner.id,
+			originalOwner.id
+		);
+		expect("data" in reassignResult).toBe(true);
+
+		await mockAuth(newOwner.id, newOwner.username, newOwner.email);
+		const { GET } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await GET(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "GET"),
+			idParams(integration.id)
+		);
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.grants).toHaveLength(0);
+
+		// The underlying grant is untouched by the filter — only the LIST
+		// response is narrowed for this caller.
+		const permission = await prisma.casePermission.findUnique({
+			where: { caseId_userId: { caseId: testCase.id, userId: systemUser.id } },
+		});
+		expect(permission).not.toBeNull();
+
+		// Once the new owner is ALSO given their own access to the case, the
+		// same grant becomes visible to them.
+		await createTestPermission(
+			testCase.id,
+			newOwner.id,
+			caseCreator.id,
+			"VIEW"
+		);
+		const secondResponse = await GET(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "GET"),
+			idParams(integration.id)
+		);
+		const secondBody = await secondResponse.json();
+		expect(secondBody.grants).toHaveLength(1);
+		expect(secondBody.grants[0].caseId).toBe(testCase.id);
+	});
+
+	/**
+	 * N1: list is deliberately ungated on integration status — a REVOKED
+	 * integration's existing grants must still be readable (the operator's
+	 * cleanup path), unlike granting new access, which N1 blocks.
+	 */
+	it("still lists grants when the integration is REVOKED", async () => {
+		const owner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id, {
+				status: "REVOKED",
+			});
+		const testCase = await createTestCase(owner.id, { name: "Revoked target" });
+		await createTestPermission(testCase.id, systemUser.id, owner.id, "VIEW");
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await GET(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "GET"),
+			idParams(integration.id)
+		);
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.grants).toHaveLength(1);
 	});
 });
 
@@ -268,7 +367,7 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		const response = await POST(
 			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
 				caseId: testCase.id,
-				permission: "ADMIN",
+				permission: "EDIT",
 			}),
 			idParams(integration.id)
 		);
@@ -279,7 +378,7 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		const permission = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: systemUser.id } },
 		});
-		expect(permission?.permission).toBe("ADMIN");
+		expect(permission?.permission).toBe("EDIT");
 
 		// Still exactly one row — upsert on the (caseId, userId) unique
 		// constraint, never a second row for the same grant.
@@ -287,6 +386,39 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 			where: { caseId: testCase.id },
 		});
 		expect(permissions).toHaveLength(1);
+	});
+
+	/**
+	 * V2: ADMIN is excluded from the grantable set — a machine principal has
+	 * no use for case-ADMIN today, so requesting it is a 400 validation
+	 * error, never a silent downgrade to a lower level (see
+	 * `grantCaseAccessSchema`'s doc comment, `lib/schemas/integration.ts`).
+	 * This is the inversion of the old "upsert to ADMIN" proof above — that
+	 * proof now uses EDIT instead, since ADMIN is no longer a legal request.
+	 */
+	it("rejects granting permission: ADMIN with 400 — never a silent downgrade", async () => {
+		const owner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id);
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "ADMIN",
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(400);
+		const permission = await prisma.casePermission.findUnique({
+			where: { caseId_userId: { caseId: testCase.id, userId: systemUser.id } },
+		});
+		expect(permission).toBeNull();
 	});
 
 	it("returns BYTE-IDENTICAL 404s for a non-owner vs a nonexistent integration id", async () => {
@@ -454,7 +586,12 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		expect(grantedForSystemUser).not.toBeNull();
 	});
 
-	it("writes a SecurityAuditLog row for a grant", async () => {
+	/**
+	 * N3: assert the audit row's METADATA, not just its presence — the
+	 * prior version of this test only checked a matching row existed, which
+	 * would pass even if the metadata were empty or wrong.
+	 */
+	it("writes a SecurityAuditLog row for a grant, with integrationId/caseId/permission in its metadata", async () => {
 		const owner = await createTestUser();
 		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
 		const testCase = await createTestCase(owner.id);
@@ -466,7 +603,7 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		await POST(
 			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
 				caseId: testCase.id,
-				permission: "VIEW",
+				permission: "EDIT",
 			}),
 			idParams(integration.id)
 		);
@@ -475,6 +612,114 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 			where: { userId: owner.id, eventType: "integration_case_access_granted" },
 		});
 		expect(event).not.toBeNull();
+		expect(event?.metadata).toMatchObject({
+			integrationId: integration.id,
+			caseId: testCase.id,
+			permission: "EDIT",
+		});
+	});
+
+	/**
+	 * N1: granting is gated on the integration being ACTIVE — mirrors
+	 * `issueToken`'s own guard. GET/DELETE deliberately do NOT carry this
+	 * gate (see the "still lists"/"still revokes" tests in their own
+	 * describe blocks).
+	 */
+	it("rejects granting case access via a SUSPENDED integration with 409", async () => {
+		const owner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id, {
+				status: "SUSPENDED",
+			});
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "VIEW",
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(409);
+		const permission = await prisma.casePermission.findUnique({
+			where: { caseId_userId: { caseId: testCase.id, userId: systemUser.id } },
+		});
+		expect(permission).toBeNull();
+	});
+
+	it("rejects granting case access via a REVOKED integration with 409", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{
+				status: "REVOKED",
+			}
+		);
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "VIEW",
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(409);
+	});
+
+	/**
+	 * N2: a soft-deleted (trashed) case is rejected identically to a
+	 * nonexistent one — `canAccessCase` itself doesn't know about
+	 * `deletedAt` (a separate, platform-wide gap — see
+	 * `grantIntegrationCaseAccess`'s doc comment), but the owner here IS the
+	 * case's creator, so `canAccessCase` still reports ADMIN regardless of
+	 * trashing; the LOCAL `deletedAt` check in the grant path is what must
+	 * catch this.
+	 */
+	it("rejects granting access into a soft-deleted case, BYTE-IDENTICAL 404 to nonexistent", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const testCase = await createTestCase(owner.id);
+		await prisma.assuranceCase.update({
+			where: { id: testCase.id },
+			data: { deletedAt: new Date() },
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const trashedResponse = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "VIEW",
+			}),
+			idParams(integration.id)
+		);
+		const nonexistentResponse = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: NOT_FOUND_ID,
+				permission: "VIEW",
+			}),
+			idParams(integration.id)
+		);
+
+		expect(trashedResponse.status).toBe(404);
+		expect(trashedResponse.status).toBe(nonexistentResponse.status);
+		const trashedBody = await trashedResponse.json();
+		const nonexistentBody = await nonexistentResponse.json();
+		expect(trashedBody).toEqual(nonexistentBody);
+		expect(trashedBody.error).toBe(CASE_NOT_FOUND);
 	});
 });
 
@@ -557,6 +802,48 @@ describe("DELETE /api/integrations/[id]/case-grants/[caseId]", () => {
 			caseGrantParams(integration.id, testCase.id)
 		);
 		expect(response.status).toBe(200);
+
+		// V5: a no-op revoke (nothing to delete) writes NO audit row — the
+		// gate is on `deleteMany`'s count, not on the call having been made.
+		const event = await prisma.securityAuditLog.findFirst({
+			where: { userId: owner.id, eventType: "integration_case_access_revoked" },
+		});
+		expect(event).toBeNull();
+	});
+
+	/**
+	 * N1: list/revoke are deliberately NOT gated on integration status —
+	 * revoking a REVOKED integration's case access must still work, since
+	 * it is the operator's cleanup path (contrast with granting, which N1
+	 * blocks for a non-ACTIVE integration).
+	 */
+	it("still revokes access when the integration is REVOKED", async () => {
+		const owner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id, {
+				status: "REVOKED",
+			});
+		const testCase = await createTestCase(owner.id);
+		await createTestPermission(testCase.id, systemUser.id, owner.id, "VIEW");
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { DELETE } = await import(
+			"@/app/api/integrations/[id]/case-grants/[caseId]/route"
+		);
+		const response = await DELETE(
+			jsonRequest(
+				`/api/integrations/${integration.id}/case-grants/${testCase.id}`,
+				"DELETE"
+			),
+			caseGrantParams(integration.id, testCase.id)
+		);
+		expect(response.status).toBe(200);
+		const permission = await prisma.casePermission.findUnique({
+			where: {
+				caseId_userId: { caseId: testCase.id, userId: systemUser.id },
+			},
+		});
+		expect(permission).toBeNull();
 	});
 
 	it("returns BYTE-IDENTICAL 404s for a non-owner vs a nonexistent integration id", async () => {
@@ -642,7 +929,11 @@ describe("DELETE /api/integrations/[id]/case-grants/[caseId]", () => {
 		expect(response.status).toBe(400);
 	});
 
-	it("writes a SecurityAuditLog row for a revoke", async () => {
+	/**
+	 * N3: assert the audit row's METADATA, not just its presence (same
+	 * upgrade as the grant-side audit test above).
+	 */
+	it("writes a SecurityAuditLog row for a revoke, with integrationId/caseId in its metadata", async () => {
 		const owner = await createTestUser();
 		const { integration, systemUser } =
 			await createTestIntegrationWithSystemUser(owner.id);
@@ -668,5 +959,9 @@ describe("DELETE /api/integrations/[id]/case-grants/[caseId]", () => {
 			},
 		});
 		expect(event).not.toBeNull();
+		expect(event?.metadata).toMatchObject({
+			integrationId: integration.id,
+			caseId: testCase.id,
+		});
 	});
 });

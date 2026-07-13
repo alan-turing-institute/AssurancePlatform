@@ -133,12 +133,13 @@ const ERROR_MAPPINGS: Array<{
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state
 	// violation (e.g. reactivating a REVOKED integration, or issuing/
-	// rotating a token against one that isn't ACTIVE). None of these contain
-	// "already" or "not found", so without this entry they'd fall through to
-	// INTERNAL (500) the first time an HTTP route ever surfaced them.
+	// rotating a token against one that isn't ACTIVE, or granting case access
+	// through one that isn't ACTIVE). None of these contain "already" or
+	// "not found", so without this entry they'd fall through to INTERNAL
+	// (500) the first time an HTTP route ever surfaced them.
 	{
 		pattern:
-			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot rotate a revoked token$/,
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a non-active integration$|^Cannot rotate a revoked token$/,
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations

@@ -17,7 +17,12 @@ import {
  * GET /api/integrations/[id]/case-grants
  *
  * Lists the cases the integration's system user currently has access to.
- * Owner-only.
+ * Owner-only at the integration level, and additionally filtered per-row to
+ * cases the CALLER themselves can currently view — a reassigned integration
+ * owner does not learn the id/name of a case they cannot access just by
+ * having been handed the integration (see `listIntegrationCaseGrants`'s doc
+ * comment). Not gated on integration status — listing a suspended or
+ * revoked integration's grants still works (operator cleanup path).
  *
  * @pathParam id - Integration ID (UUID)
  * @response 200 - `{ grants: Array<{ caseId, caseName, permission, grantedAt }> }`
@@ -57,7 +62,18 @@ export async function GET(
  * Grants the integration's system user access to a case. The target user
  * is ALWAYS the integration's own system user — the request body has no
  * `userId` field, so a caller can never name a different user to grant.
- * Requires the caller both own the integration and hold ADMIN on the case.
+ * Requires the caller both own the integration and hold ADMIN on the case,
+ * AND requires the integration be ACTIVE (mirrors `POST .../tokens`'s own
+ * ACTIVE gate) — granting MORE case access through an integration that
+ * can't currently authenticate (SUSPENDED) or never will again (REVOKED)
+ * makes no sense. `GET`/`DELETE` on this same resource are deliberately NOT
+ * gated on integration status — see `grantIntegrationCaseAccess`'s doc
+ * comment in `integration-registry-service.ts`.
+ *
+ * `permission` accepts VIEW/COMMENT/EDIT only, never ADMIN — a machine
+ * principal has no use for case-ADMIN today, and requesting it is a 400,
+ * not a silent downgrade (see `grantCaseAccessSchema`'s doc comment in
+ * `lib/schemas/integration.ts`).
  *
  * @description Never errors on a repeat call for a case the system user
  * already has SOME access to (upsert, not create) — see
@@ -66,12 +82,13 @@ export async function GET(
  * fresh grant, OR a repeat call that changes the permission level, is a
  * real write and returns 201 with `alreadyGranted: false`.
  * @pathParam id - Integration ID (UUID)
- * @body { caseId: string, permission: "VIEW" | "COMMENT" | "EDIT" | "ADMIN" }
+ * @body { caseId: string, permission: "VIEW" | "COMMENT" | "EDIT" }
  * @response 201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` — new grant, or an existing grant's permission level changed
  * @response 200 - `{ grant: { ..., alreadyGranted: true } }` — already had EXACTLY this permission level
- * @response 400 - Validation error
+ * @response 400 - Validation error (including `permission: "ADMIN"`, which this endpoint never accepts)
  * @response 401 - Unauthorised
- * @response 404 - Integration not found, OR case not found, OR caller lacks case ADMIN (identical message/status for all three — no enumeration oracle)
+ * @response 404 - Integration not found, OR case not found (incl. soft-deleted/trashed), OR caller lacks case ADMIN (identical message/status for all — no enumeration oracle)
+ * @response 409 - The integration is not ACTIVE
  * @auth SessionAuth
  * @tag Integrations
  */

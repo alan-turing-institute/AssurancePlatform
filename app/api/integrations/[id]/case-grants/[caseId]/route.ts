@@ -15,7 +15,11 @@ import { revokeIntegrationCaseAccess } from "@/lib/services/integration-registry
  * Revokes the integration's system user's access to a case, if any is
  * currently granted. Idempotent — revoking a case that was never granted
  * (or already revoked) is a 200 success, not an error. Requires the caller
- * both own the integration and hold ADMIN on the case.
+ * both own the integration and hold ADMIN on the case. Deliberately NOT
+ * gated on integration status — revoking a suspended or revoked
+ * integration's case access must keep working, since it is the operator's
+ * cleanup path (see `revokeIntegrationCaseAccess`'s doc comment in
+ * `integration-registry-service.ts`).
  *
  * @pathParam id - Integration ID (UUID)
  * @pathParam caseId - Case ID (UUID)
