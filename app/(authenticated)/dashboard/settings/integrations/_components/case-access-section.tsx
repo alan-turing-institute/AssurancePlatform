@@ -1,0 +1,119 @@
+"use client";
+
+import { AlertCircle, Plus } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import type {
+	CaseGrantPermission,
+	IntegrationCaseGrant,
+} from "@/lib/schemas/integration";
+import { CaseAccessRow } from "./case-access-row";
+import { GrantCaseAccessForm } from "./grant-case-access-form";
+
+export interface CaseAccessSectionProps {
+	/** The faithfully-mapped message from the most recent failed grant attempt, or `null`. */
+	grantError: string | null;
+	/** True while a grant request is in flight (disables the form's submit/cancel). */
+	granting: boolean;
+	grants: IntegrationCaseGrant[];
+	loadError: string | null;
+	/** True while the initial list fetch is in flight. */
+	loading: boolean;
+	onGrant: (
+		caseId: string,
+		permission: CaseGrantPermission
+	) => Promise<boolean>;
+	onRemove: (caseId: string) => void;
+	/** The caseId currently mid-removal, or `null`. */
+	removingCaseId: string | null;
+}
+
+/**
+ * The "Case access" section of an integration's card — which cases the
+ * integration's machine user can currently touch, with grant/remove actions
+ * (ADR 0002 v2 §2.4, work item 7's settings-page half). Presentational, like
+ * its `Tokens` sibling section in `IntegrationCard`: every mutation is a
+ * callback prop, and this component (and its tests) never call
+ * `useIntegrationCaseGrants` directly — `IntegrationCard` owns that hook and
+ * threads its state down here.
+ */
+export function CaseAccessSection({
+	granting,
+	grantError,
+	grants,
+	loading,
+	loadError,
+	onGrant,
+	onRemove,
+	removingCaseId,
+}: CaseAccessSectionProps) {
+	const [addOpen, setAddOpen] = useState(false);
+
+	async function handleGrant(caseId: string, permission: CaseGrantPermission) {
+		const granted = await onGrant(caseId, permission);
+		if (granted) {
+			setAddOpen(false);
+		}
+		return granted;
+	}
+
+	return (
+		<div className="space-y-2 border-border border-t pt-3">
+			<h4 className="font-medium text-foreground text-xs uppercase tracking-wide">
+				Case access
+			</h4>
+
+			{loading && (
+				<p className="text-muted-foreground text-xs">Loading case access…</p>
+			)}
+
+			{!loading && loadError && (
+				<div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-xs">
+					<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+					<span>{loadError}</span>
+				</div>
+			)}
+
+			{!(loading || loadError) && grants.length === 0 && (
+				<p className="text-muted-foreground text-xs">
+					Which cases this integration&apos;s machine user can touch — none
+					granted yet.
+				</p>
+			)}
+
+			{!(loading || loadError) && grants.length > 0 && (
+				<div className="space-y-2">
+					{grants.map((grant) => (
+						<CaseAccessRow
+							grant={grant}
+							key={grant.caseId}
+							onRemove={onRemove}
+							removing={removingCaseId === grant.caseId}
+						/>
+					))}
+				</div>
+			)}
+
+			{!(loading || loadError) &&
+				(addOpen ? (
+					<GrantCaseAccessForm
+						existingCaseIds={grants.map((grant) => grant.caseId)}
+						grantError={grantError}
+						granting={granting}
+						onCancel={() => setAddOpen(false)}
+						onGrant={handleGrant}
+					/>
+				) : (
+					<Button
+						onClick={() => setAddOpen(true)}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						<Plus aria-hidden="true" className="h-3.5 w-3.5" />
+						Grant access to a case…
+					</Button>
+				))}
+		</div>
+	);
+}

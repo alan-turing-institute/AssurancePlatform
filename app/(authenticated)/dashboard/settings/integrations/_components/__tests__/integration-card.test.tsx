@@ -1,6 +1,8 @@
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IntegrationListItem } from "@/lib/schemas/integration";
+import { server } from "@/src/__tests__/mocks/server";
 import {
 	renderWithoutProviders,
 	screen,
@@ -60,6 +62,20 @@ const baseProps = {
 	pending: false,
 	pendingTokenKey: null,
 };
+
+// Every render of `IntegrationCard` now fires its own
+// `GET .../case-grants` (see `useIntegrationCaseGrants`, called directly
+// from `IntegrationCard` — one hook per card instance, not per list). None
+// of the pre-existing tests below care about case access, so this default
+// keeps them exercising exactly what they did before that section existed;
+// the dedicated case-access describe block overrides it per scenario.
+beforeEach(() => {
+	server.use(
+		http.get("/api/integrations/:id/case-grants", () =>
+			HttpResponse.json({ grants: [] })
+		)
+	);
+});
 
 describe("IntegrationCard", () => {
 	describe("status-gated lifecycle actions", () => {

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useIntegrationCaseGrants } from "@/hooks/use-integration-case-grants";
 import {
 	formatFullDate,
 	formatRelativeToNow,
@@ -15,6 +16,7 @@ import type {
 	IssuedTokenResult,
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
+import { CaseAccessSection } from "./case-access-section";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
 import { IntegrationTokenRow } from "./integration-token-row";
@@ -45,9 +47,17 @@ export interface IntegrationCardProps {
 
 /**
  * One integration's management card: identity + status + scopes (functional
- * scope item 1), lifecycle actions (item 3), and its tokens with issue/
- * rotate/revoke (item 4). Presentational — every mutation is a callback prop
- * so this component (and its tests) never touch `useIntegrations` directly.
+ * scope item 1), lifecycle actions (item 3), its tokens with issue/rotate/
+ * revoke (item 4), and its case-access grants (the settings-page half of
+ * "TEA — Integration case-access grants need a product surface"). Mostly
+ * presentational — every LIST-level mutation (suspend/revoke/delete/tokens)
+ * is still a callback prop from `IntegrationsSection`/`useIntegrations`, so
+ * this component's own tests never touch that hook directly. The one
+ * exception is case-access grants: unlike tokens, they are NOT embedded in
+ * `IntegrationListItem` (a deliberate separate-resource choice on the API
+ * side), so this component calls `useIntegrationCaseGrants(integration.id)`
+ * itself — one hook call per card instance, not a hook-in-a-loop — and
+ * threads its state down into the presentational `CaseAccessSection`.
  */
 export function IntegrationCard({
 	deleting,
@@ -68,6 +78,17 @@ export function IntegrationCard({
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
 		string | null
 	>(null);
+
+	const {
+		grants: caseGrants,
+		loading: caseGrantsLoading,
+		loadError: caseGrantsLoadError,
+		granting: grantingCaseAccess,
+		grantError,
+		grantAccess,
+		removingCaseId,
+		removeAccess,
+	} = useIntegrationCaseGrants(integration.id);
 
 	const isIssuing = pendingTokenKey === integration.id;
 	const integrationActive = integration.status === "ACTIVE";
@@ -223,6 +244,17 @@ export function IntegrationCard({
 					</div>
 				)}
 			</div>
+
+			<CaseAccessSection
+				grantError={grantError}
+				granting={grantingCaseAccess}
+				grants={caseGrants}
+				loadError={caseGrantsLoadError}
+				loading={caseGrantsLoading}
+				onGrant={grantAccess}
+				onRemove={removeAccess}
+				removingCaseId={removingCaseId}
+			/>
 
 			<IntegrationTokenSecretModal
 				onClose={() => setTokenReveal(null)}

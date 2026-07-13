@@ -228,3 +228,29 @@ export interface RotatedTokenResult {
 	secret: string;
 	token: IssuedTokenSummary;
 }
+
+/**
+ * Case-grant permission levels a machine principal may hold — mirrors
+ * `grantableCasePermissionSchema` above (VIEW/COMMENT/EDIT only, never
+ * ADMIN). Kept as its own wire-shape type rather than reusing a
+ * `z.infer<typeof grantableCasePermissionSchema>` alias, for the same reason
+ * `IntegrationStatus` above doesn't import the Prisma enum: this crosses the
+ * wire as a JSON string, and components/hooks must never import from
+ * `lib/services/` or reach for a Prisma-derived type.
+ */
+export type CaseGrantPermission = "COMMENT" | "EDIT" | "VIEW";
+
+/**
+ * One case an integration's system user currently has access to, as
+ * returned by `GET /api/integrations/[id]/case-grants` and (on success) by
+ * `POST .../case-grants`'s `grant` field — mirrors
+ * `IntegrationCaseGrant`/`IntegrationCaseGrantResult` in
+ * `lib/services/integration-registry-service.ts`, JSON-shaped (`grantedAt`
+ * a string, never a `Date`).
+ */
+export interface IntegrationCaseGrant {
+	caseId: string;
+	caseName: string;
+	grantedAt: string;
+	permission: CaseGrantPermission;
+}

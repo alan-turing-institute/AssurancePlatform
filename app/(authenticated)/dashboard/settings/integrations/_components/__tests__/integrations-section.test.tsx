@@ -1,7 +1,7 @@
 import { waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
 import {
 	renderWithoutProviders,
@@ -28,6 +28,18 @@ const INTEGRATION = {
 
 afterEach(() => {
 	vi.restoreAllMocks();
+});
+
+// Every rendered `IntegrationCard` fires its own `GET .../case-grants` (see
+// `useIntegrationCaseGrants`) — none of the tests below exercise case
+// access, so this default keeps them green without each one needing its
+// own handler for a resource they don't care about.
+beforeEach(() => {
+	server.use(
+		http.get("/api/integrations/:id/case-grants", () =>
+			HttpResponse.json({ grants: [] })
+		)
+	);
 });
 
 describe("IntegrationsSection", () => {
