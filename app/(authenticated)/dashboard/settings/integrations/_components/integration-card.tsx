@@ -17,6 +17,7 @@ import type {
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
 import { CaseAccessSection } from "./case-access-section";
+import { IntegrationDeleteDialog } from "./integration-delete-dialog";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
 import { IntegrationTokenRow } from "./integration-token-row";
@@ -93,6 +94,7 @@ export function IntegrationCard({
 
 	const isIssuing = pendingTokenKey === integration.id;
 	const integrationActive = integration.status === "ACTIVE";
+	const integrationRevoked = integration.status === "REVOKED";
 
 	async function handleIssueToken() {
 		const result = await onIssueToken(integration.id);
@@ -194,9 +196,14 @@ export function IntegrationCard({
 						</Button>
 					)}
 					<Button
-						disabled={deleting}
+						disabled={deleting || !integrationRevoked}
 						onClick={() => setConfirmDeleteOpen(true)}
 						size="sm"
+						title={
+							integrationRevoked
+								? undefined
+								: "Revoke first — delete is permanent"
+						}
 						type="button"
 						variant="destructive"
 					>
@@ -277,17 +284,15 @@ export function IntegrationCard({
 				}}
 			/>
 
-			<AlertModal
-				cancelButtonText="Cancel"
-				confirmButtonText="Delete integration"
-				isOpen={confirmDeleteOpen}
-				loading={deleting}
-				message={`Deleting "${integration.name}" permanently removes its registration and every one of its tokens. This cannot be undone.`}
-				onClose={() => setConfirmDeleteOpen(false)}
+			<IntegrationDeleteDialog
+				deleting={deleting}
+				integrationName={integration.name}
 				onConfirm={() => {
 					setConfirmDeleteOpen(false);
 					onDelete(integration.id);
 				}}
+				onOpenChange={setConfirmDeleteOpen}
+				open={confirmDeleteOpen}
 			/>
 
 			<AlertModal

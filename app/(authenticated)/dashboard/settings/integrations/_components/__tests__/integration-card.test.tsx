@@ -19,6 +19,8 @@ const REVOKE_TOKEN_CONFIRM_REGEX = /revoke token/i;
 const CANCEL_BUTTON_REGEX = /cancel/i;
 const DELETE_TRIGGER_REGEX = /^delete$/i;
 const DELETE_CONFIRM_REGEX = /delete integration/i;
+const DELETE_TOOLTIP_TEXT = "Revoke first — delete is permanent";
+const TYPE_NAME_LABEL_REGEX = /type.*to confirm/i;
 const ISSUE_TOKEN_BUTTON_REGEX = /issue new token/i;
 const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
@@ -151,6 +153,111 @@ describe("IntegrationCard", () => {
 		});
 	});
 
+	describe("delete needs a guard — revoke first", () => {
+		it("disables Delete with an explanatory tooltip for an ACTIVE integration", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_TRIGGER_REGEX,
+			});
+			expect(deleteButton).toBeDisabled();
+			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+		});
+
+		it("disables Delete with an explanatory tooltip for a SUSPENDED integration", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "SUSPENDED" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_TRIGGER_REGEX,
+			});
+			expect(deleteButton).toBeDisabled();
+			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+		});
+
+		it("enables Delete with no tooltip for a REVOKED integration", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "REVOKED" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_TRIGGER_REGEX,
+			});
+			expect(deleteButton).toBeEnabled();
+			expect(deleteButton).not.toHaveAttribute("title");
+		});
+
+		it("keeps the destructive confirm button disabled when the typed text doesn't exactly match the integration's name", async () => {
+			const onDelete = vi.fn();
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					onDelete={onDelete}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				`${integration.name}-typo`
+			);
+			expect(confirmButton).toBeDisabled();
+
+			await user.click(confirmButton);
+			expect(onDelete).not.toHaveBeenCalled();
+		});
+
+		it("calls onDelete neither on cancel, nor before the dialog is confirmed, and closes the dialog", async () => {
+			const onDelete = vi.fn();
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					onDelete={onDelete}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onDelete).not.toHaveBeenCalled();
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+		});
+	});
+
 	describe("confirm dialogs gate destructive actions", () => {
 		it("does not call onRevoke until the confirm dialog is accepted", async () => {
 			const onRevoke = vi.fn();
@@ -200,13 +307,14 @@ describe("IntegrationCard", () => {
 			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 		});
 
-		it("does not call onDelete until the delete confirm dialog is accepted", async () => {
+		it("does not call onDelete until the delete confirm dialog is accepted with the exact name typed", async () => {
 			const onDelete = vi.fn();
 			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
 			renderWithoutProviders(
 				<IntegrationCard
 					{...baseProps}
-					integration={makeIntegration()}
+					integration={integration}
 					onDelete={onDelete}
 				/>
 			);
@@ -216,12 +324,22 @@ describe("IntegrationCard", () => {
 			);
 			expect(onDelete).not.toHaveBeenCalled();
 
-			const dialog = await screen.findByRole("dialog");
+			const dialog = await screen.findByRole("alertdialog");
 			expect(dialog).toHaveTextContent(CANNOT_BE_UNDONE_TEXT_REGEX);
 
-			await user.click(
-				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+			expect(confirmButton).toBeDisabled();
+
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name
 			);
+			expect(confirmButton).toBeEnabled();
+
+			await user.click(confirmButton);
+			expect(onDelete).toHaveBeenCalledTimes(1);
 			expect(onDelete).toHaveBeenCalledWith("integration-1");
 		});
 
