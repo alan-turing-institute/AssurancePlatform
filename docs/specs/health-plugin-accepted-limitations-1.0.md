@@ -56,6 +56,12 @@ not just with the number of people viewing it.
 becomes a real resource concern, or findings from planned verification work
 on this behaviour.
 
+**Update, 2026-07-13:** HTTP/2 has been verified enabled on both staging and
+production, so these per-claim connections multiplex over a single
+underlying connection rather than each opening its own. This softens the
+concern considerably — the trigger above still applies for very large
+canvases, but it is no longer a near-term one.
+
 ## 4. No settings-management path for automated integrations
 
 The scoring thresholds and validity window used to compute a claim's health

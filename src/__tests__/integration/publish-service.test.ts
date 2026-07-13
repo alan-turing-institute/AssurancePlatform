@@ -570,7 +570,7 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		const content = published?.content as {
 			pluginData?: Record<string, unknown>;
 		};
-		expect(content.pluginData).toMatchObject({
+		expect(content.pluginData).toStrictEqual({
 			"tea.health": [
 				{
 					elementId: claim.id,
@@ -626,8 +626,17 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		const content = published?.content as {
 			pluginData?: Record<string, unknown>;
 		};
-		expect(content.pluginData).toMatchObject({
-			"tea.health": [{ elementId: claim.id }],
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [
+				{
+					elementId: claim.id,
+					data: {
+						score: 0.5,
+						lastEvaluatedAt: null,
+						validityWindowSeconds: 60,
+					},
+				},
+			],
 		});
 	});
 
@@ -649,7 +658,7 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		const content = published?.content as {
 			pluginData?: Record<string, unknown>;
 		};
-		expect(content.pluginData).toMatchObject({
+		expect(content.pluginData).toStrictEqual({
 			"tea.some-other-plugin": [
 				{ elementId: null, data: { anything: "goes" } },
 			],
@@ -681,7 +690,7 @@ describe("updatePublishedCase — snapshot pluginData capture", () => {
 		const content = published?.content as {
 			pluginData?: Record<string, unknown>;
 		};
-		expect(content.pluginData).toMatchObject({
+		expect(content.pluginData).toStrictEqual({
 			"tea.health": [{ elementId: claim.id, data: dataRow.data }],
 		});
 	});

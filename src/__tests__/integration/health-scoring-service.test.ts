@@ -408,6 +408,12 @@ describe("isHealthStateStale — health ⊥ freshness (ADR 0002 v2 §3)", () => 
 		expect(isHealthStateStale(stateAt(null, 0), now)).toBe(false);
 	});
 
+	it("a future lastEvaluatedAt (clock skew, negative age) is not stale", () => {
+		const now = new Date("2026-07-13T12:00:00.000Z");
+		const evaluatedAt = new Date(now.getTime() + 5000).toISOString(); // 5s in the future
+		expect(isHealthStateStale(stateAt(evaluatedAt, 60), now)).toBe(false);
+	});
+
 	it("never demotes the score — staleness is orthogonal, callers must combine it themselves", () => {
 		const now = new Date("2026-07-13T12:00:00.000Z");
 		const staleButHighScoring: HealthState = {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { sweepHealthStaleness } from "@/lib/services/health-staleness-sweep-service";
+import { upsertCaseLevelPluginData } from "@/lib/services/plugin-data-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
@@ -21,8 +22,22 @@ vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
 	};
 });
 
+// Wrapped (not stubbed): defaults to the REAL implementation for every case
+// except the one test below that overrides it per-caseId to simulate a
+// marker-persist failure for a single case.
+vi.mock("@/lib/services/plugin-data-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/services/plugin-data-service")>();
+	return {
+		...actual,
+		upsertCaseLevelPluginData: vi.fn(actual.upsertCaseLevelPluginData),
+	};
+});
+
 const PLUGIN_ID = "tea.health";
 const CRON_SECRET = "test-cron-secret";
+const ONE_OF_TWO_CASES_FAILED_PATTERN =
+	/Failed to sweep staleness for 1 of 2 case/;
 
 beforeEach(() => {
 	vi.mocked(emitSSEEvent).mockClear();
@@ -140,6 +155,44 @@ describe("sweepHealthStaleness — detecting newly-stale claims", () => {
 	});
 });
 
+describe("sweepHealthStaleness — malformed rows (safeParse-skip contract)", () => {
+	it("skips a row missing validityWindowSeconds without crashing, notifying nothing", async () => {
+		const { testCase, claim } = await setup();
+		await createTestPluginData(testCase.id, {
+			pluginId: PLUGIN_ID,
+			elementId: claim.id,
+			data: {
+				score: 1,
+				lastEvaluatedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
+				// validityWindowSeconds deliberately omitted — fails healthStateSchema.
+			},
+		});
+
+		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(result.staleClaimsNotified).toBe(0);
+		expect(result.casesNotified).toBe(0);
+		expect(emitSSEEvent).not.toHaveBeenCalled();
+	});
+
+	it("skips a row with a non-numeric score without crashing, notifying nothing", async () => {
+		const { testCase, claim } = await setup();
+		await createTestPluginData(testCase.id, {
+			pluginId: PLUGIN_ID,
+			elementId: claim.id,
+			data: {
+				score: "not-a-number",
+				lastEvaluatedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
+				validityWindowSeconds: 60,
+			},
+		});
+
+		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(result.staleClaimsNotified).toBe(0);
+		expect(result.casesNotified).toBe(0);
+		expect(emitSSEEvent).not.toHaveBeenCalled();
+	});
+});
+
 describe("sweepHealthStaleness — idempotency", () => {
 	it("a second immediate run notifies nothing new for an already-notified claim", async () => {
 		const { testCase, claim } = await setup();
@@ -214,5 +267,66 @@ describe("sweepHealthStaleness — idempotency", () => {
 		const third = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
 		expect(third.staleClaimsNotified).toBe(1);
 		expect(emitSSEEvent).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("sweepHealthStaleness — per-case error isolation", () => {
+	it("isolates one case's marker-persist failure so the other case is still processed and notified", async () => {
+		const { testCase: caseA, claim: claimA } = await setup();
+		const { testCase: caseB, claim: claimB } = await setup();
+		await createTestPluginData(caseA.id, {
+			pluginId: PLUGIN_ID,
+			elementId: claimA.id,
+			data: staleHealthData(60),
+		});
+		await createTestPluginData(caseB.id, {
+			pluginId: PLUGIN_ID,
+			elementId: claimB.id,
+			data: staleHealthData(60),
+		});
+
+		const { upsertCaseLevelPluginData: actualUpsert } = await vi.importActual<
+			typeof import("@/lib/services/plugin-data-service")
+		>("@/lib/services/plugin-data-service");
+
+		vi.mocked(upsertCaseLevelPluginData).mockImplementation(
+			(pluginId, caseId, data) => {
+				if (caseId === caseA.id) {
+					return Promise.reject(new Error("simulated marker-persist failure"));
+				}
+				return actualUpsert(pluginId, caseId, data);
+			}
+		);
+
+		try {
+			const result = await sweepHealthStaleness(CRON_SECRET);
+			expectError(result, ONE_OF_TWO_CASES_FAILED_PATTERN);
+
+			// Case B was still processed and notified, despite case A's failure —
+			// the loop does not abort partway through.
+			expect(emitSSEEvent).toHaveBeenCalledWith(
+				"tea.health/state-changed",
+				caseB.id,
+				expect.objectContaining({ claimId: claimB.id, stale: true })
+			);
+
+			const markerB = await prisma.pluginData.findFirst({
+				where: { pluginId: PLUGIN_ID, caseId: caseB.id, elementId: null },
+			});
+			expect(markerB?.data).toMatchObject({
+				notifiedStaleClaimIds: { [claimB.id]: expect.any(String) },
+			});
+
+			// Case A's marker never persisted (the mocked write rejected), so a
+			// future scheduled run naturally retries it — a failed case is
+			// never silently dropped.
+			const markerA = await prisma.pluginData.findFirst({
+				where: { pluginId: PLUGIN_ID, caseId: caseA.id, elementId: null },
+			});
+			expect(markerA).toBeNull();
+		} finally {
+			// Restore the mock to the real implementation for every other test.
+			vi.mocked(upsertCaseLevelPluginData).mockImplementation(actualUpsert);
+		}
 	});
 });

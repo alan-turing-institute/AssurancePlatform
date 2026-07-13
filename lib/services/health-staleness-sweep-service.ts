@@ -169,6 +169,16 @@ async function sweepCaseClaims(
  *  2. records the claimId in that case's sweep marker, so re-running the
  *     sweep is a no-op for claims already flagged (idempotent — a second
  *     immediate run notifies zero claims).
+ *
+ * Per-case error isolation: each case is swept inside its own try/catch, so
+ * one case's failure (e.g. its marker-persist write rejecting) does not
+ * abort the run for every case still queued — the sweep always processes
+ * every case it found before returning. If any case failed, the overall
+ * result is still an error (surfaced to the cron caller for alerting/retry),
+ * but only after every other case has already had its shot; a failed case's
+ * marker is simply not updated, so the next scheduled run naturally retries
+ * it (re-notify-on-failure, never silent loss — mirrors the module's
+ * existing re-arm behaviour for fresh-then-stale transitions).
  */
 export async function sweepHealthStaleness(
 	authToken: string | null
@@ -194,13 +204,28 @@ export async function sweepHealthStaleness(
 		const now = new Date();
 		let casesNotified = 0;
 		let staleClaimsNotified = 0;
+		let failedCaseCount = 0;
 
 		for (const [caseId, claims] of byCase) {
-			const outcome = await sweepCaseClaims(caseId, claims, now);
-			if (outcome.hadNewStale) {
-				casesNotified++;
+			try {
+				const outcome = await sweepCaseClaims(caseId, claims, now);
+				if (outcome.hadNewStale) {
+					casesNotified++;
+				}
+				staleClaimsNotified += outcome.staleNotified;
+			} catch (error) {
+				// Isolated per case: one case's marker-persist (or other) failure
+				// must not abort the sweep for every other case still queued —
+				// each case gets its own shot, in whatever order the Map iterates.
+				failedCaseCount++;
+				console.error(`Failed to sweep case ${caseId} staleness:`, error);
 			}
-			staleClaimsNotified += outcome.staleNotified;
+		}
+
+		if (failedCaseCount > 0) {
+			return {
+				error: `Failed to sweep staleness for ${failedCaseCount} of ${byCase.size} case(s)`,
+			};
 		}
 
 		return { data: { casesNotified, staleClaimsNotified } };
