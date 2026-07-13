@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { SCOPES } from "@/lib/auth/scopes";
-import { optionalString, requiredString } from "@/lib/schemas/base";
+import {
+	optionalString,
+	permissionLevelSchema,
+	requiredString,
+	uuidSchema,
+} from "@/lib/schemas/base";
 
 /**
  * Zod schemas for the integration management API (ADR 0002 v2 §2.4, work
@@ -114,6 +119,25 @@ export const issueTokenSchema = z.object({
 		})
 		.optional(),
 });
+
+// ============================================
+// POST /api/integrations/[id]/case-grants
+// ============================================
+
+/**
+ * Body schema for granting an integration's system user access to a case.
+ * `permission` is restricted to the closed `PermissionLevel` enum
+ * (`permissionLevelSchema` — VIEW/COMMENT/EDIT/ADMIN); there is no `userId`
+ * field — the grant always targets the integration's OWN system user,
+ * derived server-side in `grantIntegrationCaseAccess`, never a
+ * caller-supplied one.
+ */
+export const grantCaseAccessSchema = z.object({
+	caseId: uuidSchema,
+	permission: permissionLevelSchema,
+});
+
+export type GrantCaseAccessBody = z.infer<typeof grantCaseAccessSchema>;
 
 // ============================================
 // Response wire shapes — settings UI
