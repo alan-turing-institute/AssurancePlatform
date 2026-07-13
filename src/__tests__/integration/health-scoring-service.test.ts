@@ -6,6 +6,8 @@ import {
 } from "@/lib/services/health-evidence-service";
 import {
 	DEFAULT_VALIDITY_WINDOW_SECONDS,
+	type HealthState,
+	isHealthStateStale,
 	recomputeHealthScore,
 } from "@/lib/services/health-scoring-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
@@ -371,5 +373,51 @@ describe("recomputeHealthScore — respects plugin enablement via writePluginDat
 			await recomputeHealthScore(owner.id, claim.id, testCase.id),
 			NOT_ENABLED_PATTERN
 		);
+	});
+});
+
+describe("isHealthStateStale — health ⊥ freshness (ADR 0002 v2 §3)", () => {
+	function stateAt(
+		lastEvaluatedAt: string | null,
+		validityWindowSeconds = 60
+	): HealthState {
+		return { score: 1, lastEvaluatedAt, validityWindowSeconds };
+	}
+
+	it("is NOT stale exactly at the validity window boundary (strict greater-than)", () => {
+		const now = new Date("2026-07-13T12:00:00.000Z");
+		const evaluatedAt = new Date(now.getTime() - 60 * 1000).toISOString(); // exactly 60s old
+		expect(isHealthStateStale(stateAt(evaluatedAt, 60), now)).toBe(false);
+	});
+
+	it("IS stale one millisecond past the validity window boundary", () => {
+		const now = new Date("2026-07-13T12:00:00.000Z");
+		const evaluatedAt = new Date(now.getTime() - 60 * 1000 - 1).toISOString(); // 60.001s old
+		expect(isHealthStateStale(stateAt(evaluatedAt, 60), now)).toBe(true);
+	});
+
+	it("is NOT stale well inside the window", () => {
+		const now = new Date("2026-07-13T12:00:00.000Z");
+		const evaluatedAt = new Date(now.getTime() - 30 * 1000).toISOString();
+		expect(isHealthStateStale(stateAt(evaluatedAt, 60), now)).toBe(false);
+	});
+
+	it("a null lastEvaluatedAt (never evaluated) is never stale, regardless of window", () => {
+		const now = new Date("2026-07-13T12:00:00.000Z");
+		expect(isHealthStateStale(stateAt(null, 60), now)).toBe(false);
+		expect(isHealthStateStale(stateAt(null, 0), now)).toBe(false);
+	});
+
+	it("never demotes the score — staleness is orthogonal, callers must combine it themselves", () => {
+		const now = new Date("2026-07-13T12:00:00.000Z");
+		const staleButHighScoring: HealthState = {
+			score: 1,
+			lastEvaluatedAt: new Date(now.getTime() - 3600 * 1000).toISOString(),
+			validityWindowSeconds: 60,
+		};
+		expect(isHealthStateStale(staleButHighScoring, now)).toBe(true);
+		// The function's return type is a bare boolean — there is no code path
+		// by which calling it could mutate or reinterpret `score`.
+		expect(staleButHighScoring.score).toBe(1);
 	});
 });

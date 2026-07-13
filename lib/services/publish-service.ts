@@ -2,6 +2,7 @@ import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
+import { capturePluginDataForSnapshot } from "@/lib/services/plugin-data-service";
 import type {
 	FullPublishStatus,
 	MarkReadyResult,
@@ -119,6 +120,15 @@ export async function publishAssuranceCase(
 		return { error: exportResult.error };
 	}
 
+	// Every plugin namespace holding data on this case, captured verbatim
+	// (ADR 0002 v2 §3) — follows data present, not this (or any) viewer's
+	// plugin toggles. `undefined` when the case holds no plugin data at all,
+	// so the snapshot gains no `pluginData` key rather than an empty one.
+	const pluginData = await capturePluginDataForSnapshot(caseId);
+	const content = pluginData
+		? { ...exportResult.data, pluginData }
+		: exportResult.data;
+
 	const now = new Date();
 
 	try {
@@ -127,7 +137,7 @@ export async function publishAssuranceCase(
 			prisma.publishedAssuranceCase.create({
 				data: {
 					title: assuranceCase.name,
-					content: exportResult.data,
+					content,
 					description: description ?? null,
 					assuranceCaseId: caseId,
 					createdAt: now,
@@ -603,6 +613,12 @@ export async function updatePublishedCase(
 		return { error: exportResult.error };
 	}
 
+	// See `publishAssuranceCase` above for the same capture + merge.
+	const pluginData = await capturePluginDataForSnapshot(caseId);
+	const content = pluginData
+		? { ...exportResult.data, pluginData }
+		: exportResult.data;
+
 	const now = new Date();
 
 	try {
@@ -612,7 +628,7 @@ export async function updatePublishedCase(
 			const published = await tx.publishedAssuranceCase.create({
 				data: {
 					title: assuranceCase.name,
-					content: exportResult.data,
+					content,
 					description: description ?? null,
 					assuranceCaseId: caseId,
 					createdAt: now,
