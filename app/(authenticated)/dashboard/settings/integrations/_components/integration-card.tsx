@@ -28,28 +28,39 @@ import {
 	type TokenReveal,
 } from "./integration-token-secret-modal";
 
-/** Active tokens sort newest-issued-first — the auto-tuck UX (issue TEA —
- * Token list UX): a revoked token never needs a manual archive step because
- * revoking already removes it from this list. */
-function sortTokensByCreatedDesc(
-	tokens: IntegrationTokenSummary[]
-): IntegrationTokenSummary[] {
-	return [...tokens].sort(
-		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-	);
-}
-
-/** Revoked tokens (within the collapsed section) sort most-recently-revoked
- * first — every entry here has a non-null `revokedAt` by construction
- * (filtered below), so the fallback to 0 never fires in practice. */
-function sortTokensByRevokedDesc(
-	tokens: IntegrationTokenSummary[]
+/** Shared newest-first sort for both token lists — active tokens sort by
+ * `createdAt` (the auto-tuck UX, issue TEA — Token list UX: a revoked token
+ * never needs a manual archive step because revoking already removes it from
+ * the active list); revoked tokens (within the collapsed section) sort by
+ * `revokedAt`, most-recently-revoked first. The null fallback only matters
+ * for `revokedAt` in principle — every entry passed for that field has a
+ * non-null value by construction (partitioned below), so it never fires in
+ * practice. */
+function sortTokensByDateDesc(
+	tokens: IntegrationTokenSummary[],
+	field: "createdAt" | "revokedAt"
 ): IntegrationTokenSummary[] {
 	return [...tokens].sort((a, b) => {
-		const aTime = a.revokedAt ? new Date(a.revokedAt).getTime() : 0;
-		const bTime = b.revokedAt ? new Date(b.revokedAt).getTime() : 0;
+		const aValue = a[field];
+		const bValue = b[field];
+		const aTime = aValue ? new Date(aValue).getTime() : 0;
+		const bTime = bValue ? new Date(bValue).getTime() : 0;
 		return bTime - aTime;
 	});
+}
+
+/** Splits an integration's tokens into active/revoked in one pass rather than
+ * filtering the array twice. */
+function partitionTokensByRevoked(tokens: IntegrationTokenSummary[]): {
+	active: IntegrationTokenSummary[];
+	revoked: IntegrationTokenSummary[];
+} {
+	const active: IntegrationTokenSummary[] = [];
+	const revoked: IntegrationTokenSummary[] = [];
+	for (const token of tokens) {
+		(token.revokedAt ? revoked : active).push(token);
+	}
+	return { active, revoked };
 }
 
 export interface IntegrationCardProps {
@@ -127,12 +138,10 @@ export function IntegrationCard({
 	const integrationActive = integration.status === "ACTIVE";
 	const integrationRevoked = integration.status === "REVOKED";
 
-	const activeTokens = sortTokensByCreatedDesc(
-		integration.tokens.filter((token) => !token.revokedAt)
-	);
-	const revokedTokens = sortTokensByRevokedDesc(
-		integration.tokens.filter((token) => Boolean(token.revokedAt))
-	);
+	const { active: activeTokensRaw, revoked: revokedTokensRaw } =
+		partitionTokensByRevoked(integration.tokens);
+	const activeTokens = sortTokensByDateDesc(activeTokensRaw, "createdAt");
+	const revokedTokens = sortTokensByDateDesc(revokedTokensRaw, "revokedAt");
 
 	async function handleIssueToken() {
 		const result = await onIssueToken(integration.id);

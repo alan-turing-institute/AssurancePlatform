@@ -995,12 +995,12 @@ describe("IntegrationCard", () => {
 			);
 
 			// Only the active token renders as a visible row; the revoked one is
-			// tucked behind the still-collapsed disclosure, even though it's
-			// chronologically irrelevant to prove the point either way.
-			expect(screen.getByTestId("token-row-active")).toBeInTheDocument();
-			expect(
-				screen.queryByTestId("token-row-old-revoked")
-			).not.toBeInTheDocument();
+			// mounted (the disclosure panel stays in the DOM so `aria-controls`
+			// always resolves) but hidden behind the still-collapsed disclosure,
+			// even though it's chronologically irrelevant to prove the point
+			// either way.
+			expect(screen.getByTestId("token-row-active")).toBeVisible();
+			expect(screen.getByTestId("token-row-old-revoked")).not.toBeVisible();
 		});
 
 		it("collapses the revoked section by default, with an accurate count", () => {
@@ -1035,7 +1035,7 @@ describe("IntegrationCard", () => {
 			});
 			expect(toggle).toHaveTextContent("Revoked (3)");
 			expect(toggle).toHaveAttribute("aria-expanded", "false");
-			expect(screen.queryByTestId("token-row-r1")).not.toBeInTheDocument();
+			expect(screen.getByTestId("token-row-r1")).not.toBeVisible();
 		});
 
 		it("expands the revoked section on click, and collapses again on a second click", async () => {
@@ -1061,11 +1061,11 @@ describe("IntegrationCard", () => {
 			});
 
 			await user.click(toggle);
-			expect(screen.getByTestId("token-row-r1")).toBeInTheDocument();
+			expect(screen.getByTestId("token-row-r1")).toBeVisible();
 			expect(toggle).toHaveAttribute("aria-expanded", "true");
 
 			await user.click(toggle);
-			expect(screen.queryByTestId("token-row-r1")).not.toBeInTheDocument();
+			expect(screen.getByTestId("token-row-r1")).not.toBeVisible();
 			expect(toggle).toHaveAttribute("aria-expanded", "false");
 		});
 
@@ -1134,6 +1134,139 @@ describe("IntegrationCard", () => {
 			expect(
 				screen.queryByText("No tokens issued yet.")
 			).not.toBeInTheDocument();
+		});
+
+		it("keeps input order among active tokens that share the same createdAt (stable sort)", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken("x", "2026-06-01T00:00:00.000Z"),
+							makeToken("y", "2026-06-01T00:00:00.000Z"),
+							makeToken("z", "2026-06-01T00:00:00.000Z"),
+						],
+					})}
+				/>
+			);
+
+			const rows = screen
+				.getAllByTestId(TOKEN_ROW_TEST_ID_REGEX)
+				.map((row) => row.getAttribute("data-testid"));
+			expect(rows).toEqual(["token-row-x", "token-row-y", "token-row-z"]);
+		});
+
+		it("keeps the disclosure expanded across a parent re-render that adds a newly-revoked token", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({
+				tokens: [
+					makeToken("active", "2026-06-01T00:00:00.000Z"),
+					makeToken(
+						"r1",
+						"2026-05-01T00:00:00.000Z",
+						"2026-05-10T00:00:00.000Z"
+					),
+				],
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			const toggle = screen.getByRole("button", {
+				name: REVOKED_SECTION_BUTTON_REGEX,
+			});
+			await user.click(toggle);
+			expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+			rerender(
+				<IntegrationCard
+					{...baseProps}
+					integration={{
+						...integration,
+						tokens: [
+							...integration.tokens,
+							makeToken(
+								"r2",
+								"2026-05-02T00:00:00.000Z",
+								"2026-05-11T00:00:00.000Z"
+							),
+						],
+					}}
+				/>
+			);
+
+			const toggleAfterRerender = screen.getByRole("button", {
+				name: REVOKED_SECTION_BUTTON_REGEX,
+			});
+			expect(toggleAfterRerender).toHaveTextContent("Revoked (2)");
+			expect(toggleAfterRerender).toHaveAttribute("aria-expanded", "true");
+			expect(screen.getByTestId("token-row-r1")).toBeVisible();
+			expect(screen.getByTestId("token-row-r2")).toBeVisible();
+		});
+
+		it("wires aria-controls to the id of the real, always-mounted disclosure region", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken(
+								"r1",
+								"2026-05-01T00:00:00.000Z",
+								"2026-05-10T00:00:00.000Z"
+							),
+						],
+					})}
+				/>
+			);
+
+			const toggle = screen.getByRole("button", {
+				name: REVOKED_SECTION_BUTTON_REGEX,
+			});
+			const controlsId = toggle.getAttribute("aria-controls");
+			expect(controlsId).toBeTruthy();
+			if (!controlsId) {
+				throw new Error("expected aria-controls to be set");
+			}
+
+			const region = document.getElementById(controlsId);
+			expect(region).not.toBeNull();
+			if (!region) {
+				throw new Error("expected the disclosure region to be mounted");
+			}
+			expect(within(region).getByTestId("token-row-r1")).toBeInTheDocument();
+		});
+
+		it("toggles via keyboard — Enter opens, Space closes", async () => {
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken(
+								"r1",
+								"2026-05-01T00:00:00.000Z",
+								"2026-05-10T00:00:00.000Z"
+							),
+						],
+					})}
+				/>
+			);
+
+			const toggle = screen.getByRole("button", {
+				name: REVOKED_SECTION_BUTTON_REGEX,
+			});
+			toggle.focus();
+			expect(toggle).toHaveFocus();
+
+			await user.keyboard("{Enter}");
+			expect(toggle).toHaveAttribute("aria-expanded", "true");
+			expect(screen.getByTestId("token-row-r1")).toBeVisible();
+
+			await user.keyboard(" ");
+			expect(toggle).toHaveAttribute("aria-expanded", "false");
+			expect(screen.getByTestId("token-row-r1")).not.toBeVisible();
 		});
 	});
 });

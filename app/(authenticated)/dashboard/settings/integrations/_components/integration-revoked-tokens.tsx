@@ -46,27 +46,30 @@ export function IntegrationRevokedTokens({
 				{`Revoked (${tokens.length})`}
 			</button>
 
-			{open && (
-				<div className="space-y-2" id={listId}>
-					{tokens.map((token) => (
-						<IntegrationTokenRow
-							canRotate={false}
-							key={token.id}
-							onRevoke={() => {
-								// Revoked rows never render an action to trigger this —
-								// `IntegrationTokenRow` only wires rotate/revoke for a
-								// live token. Kept as a no-op rather than threading a
-								// real handler through for a callback that can't fire.
-							}}
-							onRotate={() => {
-								// See onRevoke above — unreachable for a revoked row.
-							}}
-							pending={false}
-							token={token}
-						/>
-					))}
-				</div>
-			)}
+			{/* Always mounted, visibility toggled via `hidden` (not conditional
+			 * rendering) — so `aria-controls` above always resolves to a real
+			 * element, collapsed or not. A conditionally-rendered panel points
+			 * `aria-controls` at an id that doesn't exist in the DOM while
+			 * closed, which assistive tech reports as broken. */}
+			<div className="space-y-2" hidden={!open} id={listId}>
+				{tokens.map((token) => (
+					<IntegrationTokenRow
+						canRotate={false}
+						key={token.id}
+						onRevoke={() => {
+							// Revoked rows never render an action to trigger this —
+							// `IntegrationTokenRow` only wires rotate/revoke for a
+							// live token. Kept as a no-op rather than threading a
+							// real handler through for a callback that can't fire.
+						}}
+						onRotate={() => {
+							// See onRevoke above — unreachable for a revoked row.
+						}}
+						pending={false}
+						token={token}
+					/>
+				))}
+			</div>
 		</div>
 	);
 }
