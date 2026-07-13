@@ -13,11 +13,13 @@ import {
 } from "@/lib/date";
 import type {
 	IntegrationListItem,
+	IntegrationTokenSummary,
 	IssuedTokenResult,
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
 import { CaseAccessSection } from "./case-access-section";
 import { IntegrationDeleteDialog } from "./integration-delete-dialog";
+import { IntegrationRevokedTokens } from "./integration-revoked-tokens";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
 import { IntegrationTokenRow } from "./integration-token-row";
@@ -25,6 +27,30 @@ import {
 	IntegrationTokenSecretModal,
 	type TokenReveal,
 } from "./integration-token-secret-modal";
+
+/** Active tokens sort newest-issued-first — the auto-tuck UX (issue TEA —
+ * Token list UX): a revoked token never needs a manual archive step because
+ * revoking already removes it from this list. */
+function sortTokensByCreatedDesc(
+	tokens: IntegrationTokenSummary[]
+): IntegrationTokenSummary[] {
+	return [...tokens].sort(
+		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+	);
+}
+
+/** Revoked tokens (within the collapsed section) sort most-recently-revoked
+ * first — every entry here has a non-null `revokedAt` by construction
+ * (filtered below), so the fallback to 0 never fires in practice. */
+function sortTokensByRevokedDesc(
+	tokens: IntegrationTokenSummary[]
+): IntegrationTokenSummary[] {
+	return [...tokens].sort((a, b) => {
+		const aTime = a.revokedAt ? new Date(a.revokedAt).getTime() : 0;
+		const bTime = b.revokedAt ? new Date(b.revokedAt).getTime() : 0;
+		return bTime - aTime;
+	});
+}
 
 export interface IntegrationCardProps {
 	/** True while THIS integration's registration delete request is in flight. */
@@ -100,6 +126,13 @@ export function IntegrationCard({
 	const isIssuing = pendingTokenKey === integration.id;
 	const integrationActive = integration.status === "ACTIVE";
 	const integrationRevoked = integration.status === "REVOKED";
+
+	const activeTokens = sortTokensByCreatedDesc(
+		integration.tokens.filter((token) => !token.revokedAt)
+	);
+	const revokedTokens = sortTokensByRevokedDesc(
+		integration.tokens.filter((token) => Boolean(token.revokedAt))
+	);
 
 	async function handleIssueToken() {
 		const result = await onIssueToken(integration.id);
@@ -240,11 +273,15 @@ export function IntegrationCard({
 					</Button>
 				</div>
 
-				{integration.tokens.length === 0 ? (
-					<p className="text-muted-foreground text-xs">No tokens issued yet.</p>
+				{activeTokens.length === 0 ? (
+					<p className="text-muted-foreground text-xs">
+						{revokedTokens.length > 0
+							? "No active tokens."
+							: "No tokens issued yet."}
+					</p>
 				) : (
 					<div className="space-y-2">
-						{integration.tokens.map((token) => (
+						{activeTokens.map((token) => (
 							<IntegrationTokenRow
 								canRotate={integrationActive}
 								key={token.id}
@@ -256,6 +293,8 @@ export function IntegrationCard({
 						))}
 					</div>
 				)}
+
+				<IntegrationRevokedTokens tokens={revokedTokens} />
 			</div>
 
 			<CaseAccessSection

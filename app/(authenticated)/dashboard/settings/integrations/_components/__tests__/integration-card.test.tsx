@@ -7,6 +7,7 @@ import { server } from "@/src/__tests__/mocks/server";
 import {
 	renderWithoutProviders,
 	screen,
+	within,
 } from "@/src/__tests__/utils/test-utils";
 import { IntegrationCard } from "../integration-card";
 
@@ -32,6 +33,9 @@ const CASE_COMBOBOX_REGEX = /^case$/i;
 const PERMISSION_COMBOBOX_REGEX = /permission level/i;
 const DELETING_LABEL_REGEX = /deleting…/i;
 const REACTIVATE_IT_TEXT_REGEX = /reactivate it/i;
+const REVOKED_SECTION_BUTTON_REGEX = /^revoked/i;
+const ROTATE_BUTTON_REGEX = /^rotate$/i;
+const REVOKE_TOKEN_BUTTON_REGEX = /revoke this token/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
 	fetchAssuranceCases: vi
@@ -934,6 +938,202 @@ describe("IntegrationCard", () => {
 				).toBeInTheDocument()
 			);
 			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		});
+	});
+
+	describe("token list auto-tuck (revoked tokens collapse out of the active list)", () => {
+		function makeToken(
+			id: string,
+			createdAt: string,
+			revokedAt: string | null = null
+		) {
+			return {
+				id,
+				tokenPrefix: `tea_live_${id}`,
+				createdAt,
+				lastUsedAt: null,
+				expiresAt: null,
+				revokedAt,
+			};
+		}
+
+		it("sorts active tokens newest-issued-first, regardless of API order", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken("a", "2026-06-01T00:00:00.000Z"),
+							makeToken("b", "2026-07-01T00:00:00.000Z"),
+							makeToken("c", "2026-06-15T00:00:00.000Z"),
+						],
+					})}
+				/>
+			);
+
+			const rows = screen
+				.getAllByTestId(TOKEN_ROW_TEST_ID_REGEX)
+				.map((row) => row.getAttribute("data-testid"));
+			expect(rows).toEqual(["token-row-b", "token-row-c", "token-row-a"]);
+		});
+
+		it("never shows a revoked token above an active token — revoked stays collapsed under the disclosure", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken(
+								"old-revoked",
+								"2026-01-01T00:00:00.000Z",
+								"2026-02-01T00:00:00.000Z"
+							),
+							makeToken("active", "2026-01-15T00:00:00.000Z"),
+						],
+					})}
+				/>
+			);
+
+			// Only the active token renders as a visible row; the revoked one is
+			// tucked behind the still-collapsed disclosure, even though it's
+			// chronologically irrelevant to prove the point either way.
+			expect(screen.getByTestId("token-row-active")).toBeInTheDocument();
+			expect(
+				screen.queryByTestId("token-row-old-revoked")
+			).not.toBeInTheDocument();
+		});
+
+		it("collapses the revoked section by default, with an accurate count", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken("active", "2026-06-01T00:00:00.000Z"),
+							makeToken(
+								"r1",
+								"2026-05-01T00:00:00.000Z",
+								"2026-05-10T00:00:00.000Z"
+							),
+							makeToken(
+								"r2",
+								"2026-04-01T00:00:00.000Z",
+								"2026-04-10T00:00:00.000Z"
+							),
+							makeToken(
+								"r3",
+								"2026-03-01T00:00:00.000Z",
+								"2026-03-10T00:00:00.000Z"
+							),
+						],
+					})}
+				/>
+			);
+
+			const toggle = screen.getByRole("button", {
+				name: REVOKED_SECTION_BUTTON_REGEX,
+			});
+			expect(toggle).toHaveTextContent("Revoked (3)");
+			expect(toggle).toHaveAttribute("aria-expanded", "false");
+			expect(screen.queryByTestId("token-row-r1")).not.toBeInTheDocument();
+		});
+
+		it("expands the revoked section on click, and collapses again on a second click", async () => {
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken("active", "2026-06-01T00:00:00.000Z"),
+							makeToken(
+								"r1",
+								"2026-05-01T00:00:00.000Z",
+								"2026-05-10T00:00:00.000Z"
+							),
+						],
+					})}
+				/>
+			);
+
+			const toggle = screen.getByRole("button", {
+				name: REVOKED_SECTION_BUTTON_REGEX,
+			});
+
+			await user.click(toggle);
+			expect(screen.getByTestId("token-row-r1")).toBeInTheDocument();
+			expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+			await user.click(toggle);
+			expect(screen.queryByTestId("token-row-r1")).not.toBeInTheDocument();
+			expect(toggle).toHaveAttribute("aria-expanded", "false");
+		});
+
+		it("renders no rotate/revoke actions on an expanded revoked row", async () => {
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken(
+								"r1",
+								"2026-05-01T00:00:00.000Z",
+								"2026-05-10T00:00:00.000Z"
+							),
+						],
+					})}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: REVOKED_SECTION_BUTTON_REGEX })
+			);
+
+			const row = screen.getByTestId("token-row-r1");
+			expect(
+				within(row).queryByRole("button", { name: ROTATE_BUTTON_REGEX })
+			).not.toBeInTheDocument();
+			expect(
+				within(row).queryByRole("button", { name: REVOKE_TOKEN_BUTTON_REGEX })
+			).not.toBeInTheDocument();
+		});
+
+		it("shows no revoked section at all when there are zero revoked tokens", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [makeToken("active", "2026-06-01T00:00:00.000Z")],
+					})}
+				/>
+			);
+
+			expect(
+				screen.queryByRole("button", { name: REVOKED_SECTION_BUTTON_REGEX })
+			).not.toBeInTheDocument();
+		});
+
+		it("shows a 'No active tokens.' message (not 'No tokens issued yet.') when every token has been revoked", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							makeToken(
+								"r1",
+								"2026-05-01T00:00:00.000Z",
+								"2026-05-10T00:00:00.000Z"
+							),
+						],
+					})}
+				/>
+			);
+
+			expect(screen.getByText("No active tokens.")).toBeInTheDocument();
+			expect(
+				screen.queryByText("No tokens issued yet.")
+			).not.toBeInTheDocument();
 		});
 	});
 });
