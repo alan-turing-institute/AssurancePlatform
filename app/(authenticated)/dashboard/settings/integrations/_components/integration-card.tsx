@@ -88,6 +88,7 @@ export function IntegrationCard({
 		grantAccess,
 		removingCaseId,
 		removeAccess,
+		refetch: refetchCaseGrants,
 	} = useIntegrationCaseGrants(integration.id);
 
 	const isIssuing = pendingTokenKey === integration.id;
@@ -249,10 +250,12 @@ export function IntegrationCard({
 				grantError={grantError}
 				granting={grantingCaseAccess}
 				grants={caseGrants}
+				integrationActive={integrationActive}
 				loadError={caseGrantsLoadError}
 				loading={caseGrantsLoading}
 				onGrant={grantAccess}
 				onRemove={removeAccess}
+				onRetry={refetchCaseGrants}
 				removingCaseId={removingCaseId}
 			/>
 

@@ -20,6 +20,9 @@ const CANCEL_BUTTON_REGEX = /^cancel$/i;
 const EMPTY_STATE_TEXT_REGEX =
 	/which cases this integration's machine user can touch/i;
 const INTEGRATION_MUST_BE_ACTIVE_REGEX = /integration must be active/i;
+const TRY_AGAIN_BUTTON_REGEX = /^try again$/i;
+const ADMIN_OPTION_REGEX = /admin/i;
+const GRANTING_BUTTON_REGEX = /^granting…$/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
 	fetchAssuranceCases: vi.fn().mockResolvedValue([
@@ -43,10 +46,12 @@ function makeGrant(
 const baseProps = {
 	granting: false,
 	grantError: null,
+	integrationActive: true,
 	loadError: null,
 	loading: false,
 	onGrant: vi.fn().mockResolvedValue(true),
 	onRemove: vi.fn(),
+	onRetry: vi.fn(),
 	removingCaseId: null,
 };
 
@@ -89,6 +94,63 @@ describe("CaseAccessSection", () => {
 			expect(
 				screen.queryByTestId(CASE_ROW_TEST_ID_REGEX)
 			).not.toBeInTheDocument();
+		});
+	});
+
+	describe("activation gating", () => {
+		it("disables the grant trigger with a tooltip when the integration isn't ACTIVE", () => {
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[]}
+					integrationActive={false}
+				/>
+			);
+
+			const trigger = screen.getByRole("button", { name: GRANT_TRIGGER_REGEX });
+			expect(trigger).toBeDisabled();
+			expect(trigger).toHaveAttribute(
+				"title",
+				"Only an ACTIVE integration can be granted access to a case"
+			);
+		});
+
+		it("leaves existing grants' remove action enabled when the integration isn't ACTIVE — only the grant trigger is gated (N1: GET/DELETE deliberately ungated)", () => {
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[makeGrant({ caseId: "case-1", caseName: "Alpha" })]}
+					integrationActive={false}
+				/>
+			);
+
+			expect(
+				screen.getByRole("button", { name: REMOVE_ALPHA_TRIGGER_REGEX })
+			).not.toBeDisabled();
+		});
+	});
+
+	describe("load error", () => {
+		it("shows a Try again button wired to onRetry alongside the error message", async () => {
+			const onRetry = vi.fn();
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[]}
+					loadError="Failed to list case grants"
+					onRetry={onRetry}
+				/>
+			);
+
+			expect(
+				screen.getByText("Failed to list case grants")
+			).toBeInTheDocument();
+
+			await user.click(
+				screen.getByRole("button", { name: TRY_AGAIN_BUTTON_REGEX })
+			);
+			expect(onRetry).toHaveBeenCalledTimes(1);
 		});
 	});
 
@@ -190,6 +252,78 @@ describe("CaseAccessSection", () => {
 				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
 			).toBeInTheDocument();
 		});
+
+		it("never offers ADMIN as a permission option — only VIEW/COMMENT/EDIT (a machine principal can never hold case-ADMIN)", async () => {
+			const user = userEvent.setup();
+			renderWithoutProviders(<CaseAccessSection {...baseProps} grants={[]} />);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("combobox", { name: PERMISSION_COMBOBOX_REGEX })
+			);
+
+			const options = screen.getAllByRole("option");
+			expect(options.map((option) => option.textContent)).toEqual([
+				"Can view",
+				"Can comment",
+				"Can edit",
+			]);
+			expect(
+				screen.queryByRole("option", { name: ADMIN_OPTION_REGEX })
+			).not.toBeInTheDocument();
+		});
+
+		it("disables the submit button while a grant is in flight, so a further click fires nothing", async () => {
+			const onGrant = vi.fn().mockResolvedValue(true);
+			const user = userEvent.setup();
+			const { rerender } = renderWithoutProviders(
+				<CaseAccessSection {...baseProps} grants={[]} onGrant={onGrant} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Assurance" }));
+
+			// Mirrors the real sequence: the instant `onGrant` (backed by the
+			// real hook's `grantAccess`) goes in flight, `IntegrationCard` passes
+			// down `granting: true` from `useIntegrationCaseGrants` a render
+			// later — this rerender is that update, same convention as the 409
+			// test above.
+			rerender(
+				<CaseAccessSection
+					{...baseProps}
+					granting={true}
+					grants={[]}
+					onGrant={onGrant}
+				/>
+			);
+
+			// Its label switches to "Granting…" the instant `granting` flips —
+			// same busy-label convention as the Issue-Token button.
+			const submitButton = screen.getByRole("button", {
+				name: GRANTING_BUTTON_REGEX,
+			});
+			expect(submitButton).toBeDisabled();
+
+			await user.click(submitButton);
+			expect(onGrant).not.toHaveBeenCalled();
+		});
 	});
 
 	describe("remove flow", () => {
@@ -238,6 +372,49 @@ describe("CaseAccessSection", () => {
 			expect(
 				screen.queryByText(REMOVE_CONFIRM_TEXT_REGEX)
 			).not.toBeInTheDocument();
+		});
+
+		it("moves focus to the Confirm button the moment the inline confirm appears", async () => {
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[makeGrant({ caseId: "case-1", caseName: "Alpha" })]}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: REMOVE_ALPHA_TRIGGER_REGEX })
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: CONFIRM_BUTTON_REGEX })
+				).toHaveFocus()
+			);
+		});
+
+		it("returns focus to the Remove trigger when the inline confirm is cancelled", async () => {
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[makeGrant({ caseId: "case-1", caseName: "Alpha" })]}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: REMOVE_ALPHA_TRIGGER_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: REMOVE_ALPHA_TRIGGER_REGEX })
+				).toHaveFocus()
+			);
 		});
 	});
 });

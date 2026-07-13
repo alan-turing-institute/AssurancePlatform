@@ -216,5 +216,37 @@ describe("useIntegrationCaseGrants", () => {
 			expect(result.current.grants).toHaveLength(0);
 			expect(result.current.removingCaseId).toBeNull();
 		});
+
+		it("leaves the grant in place when the DELETE fails — the row persists through a failed removal cycle (nanaki G3 probe)", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () =>
+					HttpResponse.json({ grants: [makeGrant()] })
+				),
+				http.delete(`${CASE_GRANTS_PATH}/case-1`, () =>
+					HttpResponse.json(
+						{ error: "Failed to remove case access" },
+						{ status: 500 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID)
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+			expect(result.current.grants).toHaveLength(1);
+
+			await act(async () => {
+				await result.current.removeAccess("case-1");
+			});
+
+			// No refetch was ever triggered by the failed DELETE (`load()` only
+			// runs in the `try` block, on success), so the grant that was never
+			// actually removed server-side stays visible rather than vanishing
+			// from a state the client never confirmed.
+			expect(result.current.grants).toHaveLength(1);
+			expect(result.current.grants[0]?.caseId).toBe("case-1");
+			expect(result.current.removingCaseId).toBeNull();
+		});
 	});
 });

@@ -1,3 +1,4 @@
+import { waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +24,16 @@ const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
 const DONE_BUTTON_REGEX = /done.*stored it/i;
 const TOKEN_ROW_TEST_ID_REGEX = /^token-row-/;
+const GRANT_TRIGGER_REGEX = /grant access to a case/i;
+const GRANT_SUBMIT_REGEX = /^grant access$/i;
+const CASE_COMBOBOX_REGEX = /^case$/i;
+const PERMISSION_COMBOBOX_REGEX = /permission level/i;
+
+vi.mock("@/actions/assurance-cases", () => ({
+	fetchAssuranceCases: vi
+		.fn()
+		.mockResolvedValue([{ id: "case-9", name: "Assurance" }]),
+}));
 
 function makeIntegration(
 	overrides: Partial<IntegrationListItem> = {}
@@ -354,6 +365,88 @@ describe("IntegrationCard", () => {
 			expect(screen.getByText("No tokens issued yet.")).toBeInTheDocument();
 			expect(
 				screen.queryByTestId(TOKEN_ROW_TEST_ID_REGEX)
+			).not.toBeInTheDocument();
+		});
+	});
+
+	describe("case access (wired to the real hook)", () => {
+		it("full grant round trip through the actual UI: card, real useIntegrationCaseGrants, and MSW — the row appears and the form closes (card↔hook wiring seam, nanaki G3 probe)", async () => {
+			let grants: Array<{
+				caseId: string;
+				caseName: string;
+				permission: string;
+				grantedAt: string;
+			}> = [];
+			server.use(
+				http.get("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json({ grants })
+				),
+				http.post("/api/integrations/:id/case-grants", async ({ request }) => {
+					const body = (await request.json()) as {
+						caseId: string;
+						permission: string;
+					};
+					const grant = {
+						caseId: body.caseId,
+						caseName: "Assurance",
+						permission: body.permission,
+						grantedAt: "2026-07-13T00:00:00.000Z",
+					};
+					grants = [...grants, grant];
+					return HttpResponse.json({ grant }, { status: 201 });
+				})
+			);
+
+			const user = userEvent.setup();
+			// No `onGrant`/`grants` props here — this test does NOT stub
+			// `useIntegrationCaseGrants` or pass case-access state down by
+			// hand. `IntegrationCard` calls the real hook itself, exactly as
+			// it does in production; a swapped/miswired prop between the card
+			// and the hook would pass every OTHER test in this file (they
+			// never touch case access) but fail here.
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Assurance" }));
+			await user.click(
+				screen.getByRole("combobox", { name: PERMISSION_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Can edit" }));
+			await user.click(
+				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
+			);
+
+			expect(
+				await screen.findByTestId("case-access-row-case-9")
+			).toBeInTheDocument();
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+			expect(
+				screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
 			).not.toBeInTheDocument();
 		});
 	});

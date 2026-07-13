@@ -16,6 +16,8 @@ export interface CaseAccessSectionProps {
 	/** True while a grant request is in flight (disables the form's submit/cancel). */
 	granting: boolean;
 	grants: IntegrationCaseGrant[];
+	/** True when the integration is ACTIVE — gates opening the grant form (existing grants stay listable/removable regardless, per N1: GET/DELETE deliberately ungated). */
+	integrationActive: boolean;
 	loadError: string | null;
 	/** True while the initial list fetch is in flight. */
 	loading: boolean;
@@ -24,6 +26,8 @@ export interface CaseAccessSectionProps {
 		permission: CaseGrantPermission
 	) => Promise<boolean>;
 	onRemove: (caseId: string) => void;
+	/** Retries the initial list fetch — wired to the hook's own `refetch`. Only rendered alongside `loadError`. */
+	onRetry: () => void;
 	/** The caseId currently mid-removal, or `null`. */
 	removingCaseId: string | null;
 }
@@ -41,10 +45,12 @@ export function CaseAccessSection({
 	granting,
 	grantError,
 	grants,
+	integrationActive,
 	loading,
 	loadError,
 	onGrant,
 	onRemove,
+	onRetry,
 	removingCaseId,
 }: CaseAccessSectionProps) {
 	const [addOpen, setAddOpen] = useState(false);
@@ -70,7 +76,10 @@ export function CaseAccessSection({
 			{!loading && loadError && (
 				<div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive text-xs">
 					<AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-					<span>{loadError}</span>
+					<span className="flex-1">{loadError}</span>
+					<Button onClick={onRetry} size="sm" type="button" variant="outline">
+						Try again
+					</Button>
 				</div>
 			)}
 
@@ -105,8 +114,14 @@ export function CaseAccessSection({
 					/>
 				) : (
 					<Button
+						disabled={!integrationActive}
 						onClick={() => setAddOpen(true)}
 						size="sm"
+						title={
+							integrationActive
+								? undefined
+								: "Only an ACTIVE integration can be granted access to a case"
+						}
 						type="button"
 						variant="outline"
 					>

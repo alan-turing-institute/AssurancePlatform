@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatShortDate } from "@/lib/date";
@@ -34,6 +34,33 @@ export function CaseAccessRow({
 	removing,
 }: CaseAccessRowProps) {
 	const [confirming, setConfirming] = useState(false);
+	const confirmButtonRef = useRef<HTMLButtonElement>(null);
+	const removeTriggerRef = useRef<HTMLButtonElement>(null);
+	// Set only by `handleCancel`, never by the initial mount or the
+	// entry-into-confirm transition — this is what stops the effect below
+	// from stealing focus onto the Remove trigger the first time the row
+	// ever renders (when `confirming` is already `false` and nothing has
+	// been focused yet).
+	const returnFocusOnCancel = useRef(false);
+
+	// Moves focus to the Confirm button the moment the inline confirm
+	// appears (so a keyboard user lands straight on it rather than the DOM
+	// default of nowhere-in-particular), and back to the Remove trigger
+	// when a cancel collapses it — never on removal success/failure, which
+	// leaves the row's confirm state exactly where the click left it.
+	useEffect(() => {
+		if (confirming) {
+			confirmButtonRef.current?.focus();
+		} else if (returnFocusOnCancel.current) {
+			removeTriggerRef.current?.focus();
+			returnFocusOnCancel.current = false;
+		}
+	}, [confirming]);
+
+	function handleCancel() {
+		returnFocusOnCancel.current = true;
+		setConfirming(false);
+	}
 
 	return (
 		<div
@@ -57,7 +84,7 @@ export function CaseAccessRow({
 						</span>
 						<Button
 							disabled={removing}
-							onClick={() => setConfirming(false)}
+							onClick={handleCancel}
 							size="sm"
 							type="button"
 							variant="outline"
@@ -67,6 +94,7 @@ export function CaseAccessRow({
 						<Button
 							disabled={removing}
 							onClick={() => onRemove(grant.caseId)}
+							ref={confirmButtonRef}
 							size="sm"
 							type="button"
 							variant="destructive"
@@ -79,6 +107,7 @@ export function CaseAccessRow({
 						aria-label={`Remove access to ${grant.caseName}`}
 						className="text-destructive hover:text-destructive"
 						onClick={() => setConfirming(true)}
+						ref={removeTriggerRef}
 						size="sm"
 						type="button"
 						variant="ghost"

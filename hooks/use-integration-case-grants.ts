@@ -1,51 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { RequestJsonError, requestJson } from "@/lib/request-json";
 import type {
 	CaseGrantPermission,
 	IntegrationCaseGrant,
 } from "@/lib/schemas/integration";
 import { toast } from "@/lib/toast";
-
-interface ApiErrorBody {
-	error?: string;
-}
-
-/**
- * A failed `fetch` against the case-grants routes, carrying the HTTP status
- * alongside the envelope's `error` message — `useIntegrations`' own
- * `requestJson` discards the status code, which is fine for its callers
- * (every failure there gets the same generic toast treatment) but not for
- * this hook: the grant flow needs to tell a 409 (integration not ACTIVE)
- * from a 404 (case not found / not admin) apart, faithfully, per the
- * settings-page dispatch brief.
- */
-class CaseGrantRequestError extends Error {
-	readonly status: number;
-
-	constructor(message: string, status: number) {
-		super(message);
-		this.name = "CaseGrantRequestError";
-		this.status = status;
-	}
-}
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(url, {
-		...init,
-		headers: { "Content-Type": "application/json", ...init?.headers },
-	});
-	if (!response.ok) {
-		const body = (await response
-			.json()
-			.catch(() => null)) as ApiErrorBody | null;
-		throw new CaseGrantRequestError(
-			body?.error ?? "Something went wrong",
-			response.status
-		);
-	}
-	return (await response.json()) as T;
-}
 
 function errorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : "Something went wrong";
@@ -61,7 +22,7 @@ function errorMessage(err: unknown): string {
  * try to tell those apart either, on purpose.
  */
 function grantErrorMessage(err: unknown): string {
-	if (err instanceof CaseGrantRequestError) {
+	if (err instanceof RequestJsonError) {
 		if (err.status === 409) {
 			return "This integration must be ACTIVE before it can be granted access to a case. Reactivate it, then try again.";
 		}
@@ -114,6 +75,19 @@ export function useIntegrationCaseGrants(
 	const [grantError, setGrantError] = useState<string | null>(null);
 	const [removingCaseId, setRemovingCaseId] = useState<string | null>(null);
 
+	// No `cancelled`/AbortController guard here, unlike `GrantCaseAccessForm`'s
+	// mount effect — deliberate, not an oversight (fix-batch item 6, G3
+	// review 2026-07-13). That form's fetch is called from exactly one
+	// effect, so a single `cancelled` flag cleanly scopes to "this mount is
+	// gone." `load` here is shared across three call sites (the mount
+	// effect AND both `grantAccess`/`removeAccess`), where a flag flipped by
+	// the mount effect's cleanup would wrongly suppress a mutation's own
+	// post-request refetch if the component happened to unmount in between.
+	// A correct version needs a second, call-site-scoped guard, not a
+	// straight port of the form's pattern — real added complexity for a
+	// race that's a non-issue under React 19 (setState after unmount is a
+	// silent no-op, confirmed by nanaki's unmount-during-flight probe,
+	// G3 review UI test half).
 	const load = useCallback(async () => {
 		try {
 			const body = await requestJson<{ grants: IntegrationCaseGrant[] }>(
