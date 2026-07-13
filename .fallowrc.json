@@ -44,5 +44,10 @@
     "axe-core",
     "conventional-changelog-conventionalcommits"
   ],
-  "ignoreDependencyOverrides": [{ "package": "@isaacs/brace-expansion" }]
+  "ignoreDependencyOverrides": [{ "package": "@isaacs/brace-expansion" }],
+  "audit": {
+    "deadCodeBaseline": ".fallow-baseline.dead-code.json",
+    "healthBaseline": ".fallow-baseline.health.json",
+    "dupesBaseline": ".fallow-baseline.dupes.json"
+  }
 }
