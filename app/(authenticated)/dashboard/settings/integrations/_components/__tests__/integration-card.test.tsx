@@ -30,6 +30,7 @@ const GRANT_TRIGGER_REGEX = /grant access to a case/i;
 const GRANT_SUBMIT_REGEX = /^grant access$/i;
 const CASE_COMBOBOX_REGEX = /^case$/i;
 const PERMISSION_COMBOBOX_REGEX = /permission level/i;
+const DELETING_LABEL_REGEX = /deleting…/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
 	fetchAssuranceCases: vi
@@ -255,6 +256,196 @@ describe("IntegrationCard", () => {
 
 			expect(onDelete).not.toHaveBeenCalled();
 			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+		});
+	});
+
+	describe("delete dialog — QA probe regressions", () => {
+		it("disables both Cancel and the destructive confirm, and relabels the confirm button, while a delete is in flight", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					deleting={false}
+					integration={integration}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			const cancelButton = screen.getByRole("button", {
+				name: CANCEL_BUTTON_REGEX,
+			});
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+
+			rerender(
+				<IntegrationCard
+					{...baseProps}
+					deleting={true}
+					integration={integration}
+				/>
+			);
+
+			expect(cancelButton).toBeDisabled();
+			expect(confirmButton).toBeDisabled();
+			expect(confirmButton).toHaveTextContent(DELETING_LABEL_REGEX);
+		});
+
+		it("resets the typed name when the dialog is cancelled and reopened — a remembered name must never pre-enable delete", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name
+			);
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeEnabled();
+
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			expect(screen.getByLabelText(TYPE_NAME_LABEL_REGEX)).toHaveValue("");
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("keeps the confirm button disabled when the typed name has trailing whitespace the real name doesn't have", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				`${integration.name}  `
+			);
+
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("keeps the confirm button disabled when the typed name differs only in case", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name.toUpperCase()
+			);
+
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("keeps the confirm button disabled when the typed text is a proper prefix of the name", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name.slice(0, -1)
+			);
+
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("matches an integration name containing regex metacharacters only by exact literal equality", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({
+				status: "REVOKED",
+				name: "pipe.line(v2)+",
+			});
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+			const input = screen.getByLabelText(TYPE_NAME_LABEL_REGEX);
+
+			// If the comparison were ever refactored into a regex test instead of
+			// `===`, the "." here would match any character and this string
+			// would wrongly enable the button.
+			await user.type(input, "pipeXline(v2)+");
+			expect(confirmButton).toBeDisabled();
+
+			await user.clear(input);
+			await user.type(input, integration.name);
+			expect(confirmButton).toBeEnabled();
+		});
+
+		it("closes the dialog on Escape without calling onDelete", async () => {
+			const onDelete = vi.fn();
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					onDelete={onDelete}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			await user.keyboard("{Escape}");
+
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+			expect(onDelete).not.toHaveBeenCalled();
 		});
 	});
 
