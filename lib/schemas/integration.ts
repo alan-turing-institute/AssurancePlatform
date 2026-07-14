@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SCOPES } from "@/lib/auth/scopes";
-import { optionalString, requiredString } from "@/lib/schemas/base";
+import { optionalString, requiredString, uuidSchema } from "@/lib/schemas/base";
 
 /**
  * Zod schemas for the integration management API (ADR 0002 v2 §2.4, work
@@ -113,6 +113,45 @@ export const issueTokenSchema = z.object({
 			message: "expiresAt must be in the future",
 		})
 		.optional(),
+});
+
+// ============================================
+// POST /api/integrations/[id]/case-grants
+// ============================================
+
+/**
+ * Permission levels grantable to an integration's system user —
+ * VIEW/COMMENT/EDIT only, deliberately narrower than the full
+ * `permissionLevelSchema` (which also allows ADMIN for human case-sharing).
+ * Least privilege: no machine-facing surface in this codebase does anything
+ * with case-ADMIN today (team/collaborator management, deletion) that a
+ * machine principal has any business doing unattended, so there is nothing
+ * for machine-ADMIN to be USED for right now — granting it would be inert
+ * capability sitting on a system user, which is a standing risk with no
+ * offsetting benefit. A request naming ADMIN is rejected here with a 400
+ * validation error, never silently downgraded to EDIT — if machine-ADMIN is
+ * ever wanted, that should arrive as its own deliberate, reviewed change,
+ * not as a value this schema quietly lets through.
+ */
+const grantableCasePermissionSchema = z.enum(["VIEW", "COMMENT", "EDIT"], {
+	message: "Invalid permission level",
+});
+
+/**
+ * Body schema for granting an integration's system user access to a case.
+ * `permission` is restricted to `grantableCasePermissionSchema`
+ * (VIEW/COMMENT/EDIT — see its doc comment for why ADMIN is excluded); there
+ * is no `userId` field — the grant always targets the integration's OWN
+ * system user, derived server-side in `grantIntegrationCaseAccess`, never a
+ * caller-supplied one.
+ */
+// No `z.infer` alias here — nothing currently consumes a GrantCaseAccessBody
+// type outside the route's own `.safeParse` call (file convention — see
+// `updateIntegrationSchema`/`issueTokenSchema` above). Add one back when a
+// caller needs the parsed shape by name.
+export const grantCaseAccessSchema = z.object({
+	caseId: uuidSchema,
+	permission: grantableCasePermissionSchema,
 });
 
 // ============================================

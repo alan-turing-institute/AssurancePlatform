@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/api-token-service";
 import { findUnknownScopes, type Scope } from "@/lib/auth/scopes";
 import { addTimingNoise, isTimestampValid } from "@/lib/auth/timing-safe";
+import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
 	checkRateLimit,
@@ -16,6 +17,7 @@ import {
 import {
 	type ApiToken,
 	type Integration,
+	type PermissionLevel,
 	Prisma,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -40,8 +42,9 @@ import type { ServiceResult } from "@/types/service";
  *   - INTEGRATION-keyed ops — `suspendIntegration`, `reactivateIntegration`,
  *     `revokeIntegration`, `issueToken`, `updateIntegration`/
  *     `updateIntegrationScopes`, `reassignIntegrationOwner`,
- *     `deleteIntegrationRegistration` — go through
- *     `getOwnedIntegrationOrError`.
+ *     `deleteIntegrationRegistration`, `listIntegrationCaseGrants`,
+ *     `grantIntegrationCaseAccess`, `revokeIntegrationCaseAccess` — go
+ *     through `getOwnedIntegrationOrError`.
  *   - TOKEN-keyed ops — `rotateToken`, `revokeToken` — go through
  *     `getOwnedApiTokenOrError`, its symmetrical twin. Ownership rides the
  *     token's OWN integration, not a path-supplied integration id; a caller
@@ -1055,4 +1058,352 @@ export async function validateApiToken(
 			tokenPrefix: record.tokenPrefix,
 		},
 	};
+}
+
+// ============================================
+// Case-access grants (ADR 0002 v2 — machine-access pillar; TEA — Integration
+// case-access grants need a product surface)
+// ============================================
+//
+// A registered integration authenticates fine on its own, but its system
+// user starts with ZERO case permissions — nothing granted here means an
+// integration that can present a valid bearer token yet touch no case at
+// all, with no in-product way to fix that (the gap this section closes).
+//
+// `grantIntegrationCaseAccess` / `revokeIntegrationCaseAccess` sit on a
+// SECOND authorisation axis on top of every other function in this file:
+// `getOwnedIntegrationOrError` still gates who may act on the INTEGRATION
+// (unchanged), but granting/revoking access to a CASE additionally requires
+// the actor hold ADMIN on THAT case. That check reuses `canAccessCase` from
+// `lib/permissions.ts` directly rather than `case-permission-service.ts`'s
+// own `validateCaseAdmin` — that helper isn't exported, and, more
+// importantly, its "Permission denied" error maps to a 403
+// (`lib/api-response.ts`'s `ERROR_MAPPINGS`), which here would itself BE an
+// enumeration oracle: a caller could distinguish "case doesn't exist" (404)
+// from "case exists but you're not its admin" (403). `canAccessCase` already
+// collapses both into a single `false` — `getCasePermission` returns
+// `hasAccess: false` for a nonexistent case exactly like it does for
+// "exists but no permission" (`lib/permissions.ts`) — so every failure here
+// is reported as "Case not found", the same substring-matched 404
+// `serviceErrorToAppError` already gives "Integration not found". A caller
+// therefore cannot tell wrong integration owner, no case-admin, or a
+// nonexistent case apart from one another. `requireIntegrationOwnerAndCaseAdmin`
+// below is the single choke point both ops go through for this check.
+//
+// `listIntegrationCaseGrants` is deliberately NOT gated on case-admin the
+// same way — it is owner-only, but per-row FILTERS its results to cases the
+// ACTOR (not the integration's system user) can currently VIEW, rather than
+// requiring admin on every row before returning any of them. An earlier
+// version of this comment justified skipping any case-level check at all on
+// the theory that a listed grant was "already made through this same
+// authorised path" — that reasoning does not survive
+// `reassignIntegrationOwner`: ownership can move to a user who was never the
+// one who granted any of these permissions and may hold no access at all to
+// some of the cases involved, so trusting integration-ownership alone would
+// let a newly-assigned owner enumerate case ids/names they cannot otherwise
+// see. Filtering by VIEW (not ADMIN) matches what listing actually discloses
+// (id + name), not the higher bar granting/revoking requires.
+//
+// Grant additionally requires the integration be ACTIVE
+// (`grantIntegrationCaseAccess`'s own doc comment) — list and revoke do not
+// carry that gate; see their doc comments for why leaving them ungated is
+// deliberate, not an oversight.
+
+export interface IntegrationCaseGrant {
+	caseId: string;
+	caseName: string;
+	grantedAt: Date;
+	permission: PermissionLevel;
+}
+
+/**
+ * Lists the integration's system user's current case permissions — the
+ * `GET /api/integrations/[id]/case-grants` data source. Owner-only at the
+ * INTEGRATION level (`getOwnedIntegrationOrError`), but each row is then
+ * filtered to cases the ACTOR (the calling human, not the integration's
+ * system user) can currently VIEW (`canAccessCase`, per-row) — deliberately
+ * NOT a blanket "owner may see every grant" read. Integration ownership can
+ * move (`reassignIntegrationOwner`) to a user who never made any of these
+ * grants and has no access themselves to some of the cases involved; without
+ * this filter, a newly-reassigned owner could learn case ids/names purely by
+ * having been handed the integration, which is exactly the kind of
+ * enumeration this module otherwise guards against (see the section doc
+ * comment above). Not gated on integration status — see
+ * `grantIntegrationCaseAccess`'s doc comment for why list/revoke stay
+ * ungated while grant does not.
+ */
+export async function listIntegrationCaseGrants(
+	integrationId: string,
+	actorUserId: string
+): ServiceResult<IntegrationCaseGrant[]> {
+	try {
+		const integration = await getOwnedIntegrationOrError(
+			integrationId,
+			actorUserId,
+			{ systemUserId: true }
+		);
+		if ("error" in integration) {
+			return integration;
+		}
+
+		const grants = await prisma.casePermission.findMany({
+			where: { userId: integration.data.systemUserId },
+			orderBy: { grantedAt: "desc" },
+			include: { case: { select: { id: true, name: true } } },
+		});
+
+		const visibility = await Promise.all(
+			grants.map((grant) =>
+				canAccessCase({ userId: actorUserId, caseId: grant.case.id }, "VIEW")
+			)
+		);
+
+		return {
+			data: grants
+				.filter((_grant, index) => visibility[index])
+				.map((grant) => ({
+					caseId: grant.case.id,
+					caseName: grant.case.name,
+					permission: grant.permission,
+					grantedAt: grant.grantedAt,
+				})),
+		};
+	} catch {
+		return { error: "Failed to list case grants" };
+	}
+}
+
+export interface IntegrationCaseGrantResult {
+	alreadyGranted: boolean;
+	caseId: string;
+	caseName: string;
+	grantedAt: Date;
+	permission: PermissionLevel;
+}
+
+/**
+ * Shared preamble for the case-grant family (`grantIntegrationCaseAccess`,
+ * `revokeIntegrationCaseAccess`): verifies the actor owns `integrationId`
+ * (`getOwnedIntegrationOrError`) AND holds ADMIN on `caseId`
+ * (`canAccessCase`) — the second authorisation axis the section doc comment
+ * above describes. Both checks collapse to the exact same "Integration not
+ * found" / "Case not found" 404 shape their own call sites already produce
+ * (never a 403 — see the section comment for why). Returns the
+ * integration's `systemUserId` and `status` on success — `status` is
+ * fetched here (not by a second `getOwnedIntegrationOrError` call) purely so
+ * `grantIntegrationCaseAccess`'s own ACTIVE gate doesn't need a THIRD
+ * ownership query; `revokeIntegrationCaseAccess` just ignores it.
+ *
+ * Deduped from what used to be two independently-maintained copies of this
+ * exact block (fallow clone finding) — collapsing them here makes it
+ * structurally impossible for grant and revoke to drift onto two different
+ * error messages for the same failure, the same reasoning
+ * `getOwnedIntegrationOrError`'s own doc comment gives for existing.
+ */
+async function requireIntegrationOwnerAndCaseAdmin(
+	integrationId: string,
+	caseId: string,
+	actorUserId: string
+): ServiceResult<{ status: Integration["status"]; systemUserId: string }> {
+	const integration = await getOwnedIntegrationOrError(
+		integrationId,
+		actorUserId,
+		{ systemUserId: true, status: true }
+	);
+	if ("error" in integration) {
+		return integration;
+	}
+
+	const hasCaseAdmin = await canAccessCase(
+		{ userId: actorUserId, caseId },
+		"ADMIN"
+	);
+	if (!hasCaseAdmin) {
+		return { error: "Case not found" };
+	}
+
+	return { data: integration.data };
+}
+
+/**
+ * Upserts a `CasePermission` for the integration's system user — the target
+ * userId is NEVER caller-supplied, it is derived server-side from the
+ * integration (`integration.data.systemUserId`), so nothing in the request
+ * body can ever grant access to an arbitrary user. Requires the actor OWN
+ * the integration AND hold ADMIN on `caseId`
+ * (`requireIntegrationOwnerAndCaseAdmin`; see the section doc comment above
+ * for why both collapse to the same "Case not found" / "Integration not
+ * found" 404 shape rather than a 403).
+ *
+ * Additionally requires the integration be ACTIVE — mirrors `issueToken`'s
+ * own guard and error shape ("Cannot grant case access for a non-active
+ * integration", mapped to 409 by `lib/api-response.ts`'s `ERROR_MAPPINGS`):
+ * handing a suspended or revoked integration's system user MORE case access
+ * makes no sense while it can't authenticate (SUSPENDED) or never will again
+ * (REVOKED). This check runs after `requireIntegrationOwnerAndCaseAdmin`
+ * rather than before — the two conditions are independent, so the ordering
+ * doesn't change what any caller can learn: failing case-admin always
+ * reports "Case not found" regardless of integration status, and an
+ * inactive integration always reports this conflict regardless of case
+ * access. `listIntegrationCaseGrants` and `revokeIntegrationCaseAccess`
+ * deliberately do NOT carry this gate — listing or revoking a suspended or
+ * revoked integration's access is exactly the cleanup path an operator
+ * needs after suspending/revoking it, and blocking that would make the
+ * suspend/revoke path harder to recover from, not safer.
+ *
+ * Rejects a soft-deleted (trashed) case identically to a nonexistent one —
+ * `deletedAt` is checked locally, in the query below, rather than inside
+ * `canAccessCase`/`lib/permissions.ts`: that helper ignoring soft-deletion
+ * is a pre-existing, platform-wide gap (tracked separately —
+ * "TEA — canAccessCase ignores soft-deleted cases (platform-wide)") that
+ * affects every caller of `canAccessCase`, not just this one; fixing it here
+ * only would paper over the general problem while leaving every other call
+ * site exposed, so this closes just the local hole (granting NEW machine
+ * access into trash) and leaves the platform-wide fix to that issue.
+ *
+ * Granting to a case the system user's integration already has access to
+ * never throws a unique-constraint error — it always goes through
+ * `upsert`, mirroring `shareByEmail`'s already-shared path. Re-granting the
+ * EXACT SAME permission level is idempotent success (`alreadyGranted:
+ * true`); re-granting a DIFFERENT level is a real write (the permission is
+ * updated) and reports `alreadyGranted: false` — either way it is a normal
+ * successful result, never an error. Granting when the system user is somehow already
+ * the case's owner (never expected in practice — integrations don't create
+ * cases — but checked defensively, same as `shareByEmail`'s owner check) is
+ * also idempotent success: the owner already has implicit ADMIN, and
+ * writing a `CasePermission` row for them would be a redundant, confusing
+ * state.
+ *
+ * The `assuranceCase` lookup below is a second query even though
+ * `canAccessCase` (inside `requireIntegrationOwnerAndCaseAdmin`) already
+ * reads the same row internally — folding the two was considered (V6) and
+ * NOT done: `canAccessCase` returns only a boolean, never the row, and
+ * extending its return shape (or `lib/permissions.ts` generally) is exactly
+ * the kind of platform-wide change the soft-delete issue above is already
+ * scoped to weigh, not a trivial fold to make incidentally here.
+ */
+export async function grantIntegrationCaseAccess(
+	integrationId: string,
+	caseId: string,
+	permission: PermissionLevel,
+	actorUserId: string
+): ServiceResult<IntegrationCaseGrantResult> {
+	try {
+		const authorised = await requireIntegrationOwnerAndCaseAdmin(
+			integrationId,
+			caseId,
+			actorUserId
+		);
+		if ("error" in authorised) {
+			return authorised;
+		}
+		if (authorised.data.status !== "ACTIVE") {
+			return { error: "Cannot grant case access for a non-active integration" };
+		}
+
+		const assuranceCase = await prisma.assuranceCase.findUnique({
+			where: { id: caseId },
+			select: { id: true, name: true, createdById: true, deletedAt: true },
+		});
+		if (!assuranceCase || assuranceCase.deletedAt) {
+			return { error: "Case not found" };
+		}
+
+		const { systemUserId } = authorised.data;
+
+		if (assuranceCase.createdById === systemUserId) {
+			return {
+				data: {
+					alreadyGranted: true,
+					caseId,
+					caseName: assuranceCase.name,
+					permission,
+					grantedAt: new Date(),
+				},
+			};
+		}
+
+		const existing = await prisma.casePermission.findUnique({
+			where: { caseId_userId: { caseId, userId: systemUserId } },
+		});
+
+		const grant = await prisma.casePermission.upsert({
+			where: { caseId_userId: { caseId, userId: systemUserId } },
+			create: {
+				caseId,
+				userId: systemUserId,
+				permission,
+				grantedById: actorUserId,
+			},
+			update: { permission, grantedById: actorUserId },
+		});
+
+		await writeAuditLog({
+			userId: actorUserId,
+			eventType: "integration_case_access_granted",
+			metadata: { integrationId, caseId, permission },
+		});
+
+		return {
+			data: {
+				alreadyGranted: Boolean(existing && existing.permission === permission),
+				caseId,
+				caseName: assuranceCase.name,
+				permission: grant.permission,
+				grantedAt: grant.grantedAt,
+			},
+		};
+	} catch {
+		return { error: "Failed to grant case access" };
+	}
+}
+
+/**
+ * Removes the integration's system user's `CasePermission` on `caseId`, if
+ * any. Same dual authorisation as `grantIntegrationCaseAccess`
+ * (`requireIntegrationOwnerAndCaseAdmin`), but deliberately NOT gated on the
+ * integration's status — see `grantIntegrationCaseAccess`'s doc comment for
+ * why revoking (and listing) a suspended or revoked integration's case
+ * access must keep working: it is the operator's cleanup path, not a
+ * privilege grant. Uses `deleteMany` rather than `delete` so revoking an
+ * already-absent grant is a no-op success rather than a Prisma "record not
+ * found" throw — revoke is idempotent by design here (unlike `revokeToken`,
+ * which treats a double-revoke as a 409 conflict: a case grant has no
+ * "already revoked" state worth surfacing, it either exists or it doesn't).
+ * The audit log write is skipped when nothing was actually removed
+ * (`deleteMany`'s count is 0) — a revoke call against a grant that was never
+ * there is a real no-op, not an event worth recording in the security audit
+ * trail.
+ */
+export async function revokeIntegrationCaseAccess(
+	integrationId: string,
+	caseId: string,
+	actorUserId: string
+): ServiceResult<true> {
+	try {
+		const authorised = await requireIntegrationOwnerAndCaseAdmin(
+			integrationId,
+			caseId,
+			actorUserId
+		);
+		if ("error" in authorised) {
+			return authorised;
+		}
+
+		const { count } = await prisma.casePermission.deleteMany({
+			where: { caseId, userId: authorised.data.systemUserId },
+		});
+
+		if (count > 0) {
+			await writeAuditLog({
+				userId: actorUserId,
+				eventType: "integration_case_access_revoked",
+				metadata: { integrationId, caseId },
+			});
+		}
+
+		return { data: true };
+	} catch {
+		return { error: "Failed to revoke case access" };
+	}
 }
