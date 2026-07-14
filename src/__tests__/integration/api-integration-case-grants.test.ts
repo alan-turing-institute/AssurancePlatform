@@ -624,8 +624,14 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 	 * `issueToken`'s own guard. GET/DELETE deliberately do NOT carry this
 	 * gate (see the "still lists"/"still revokes" tests in their own
 	 * describe blocks).
+	 *
+	 * V2 (QA, 2026-07-14): the 409 body must carry the integration's ACTUAL
+	 * status, not a uniform "non-active" message — a client keying its own
+	 * copy off a held prop can go stale cross-tab, and only the real status
+	 * lets it recover. Pinned as two distinct, status-specific strings
+	 * rather than one shared message.
 	 */
-	it("rejects granting case access via a SUSPENDED integration with 409", async () => {
+	it("rejects granting case access via a SUSPENDED integration with 409 and the SUSPENDED-specific message", async () => {
 		const owner = await createTestUser();
 		const { integration, systemUser } =
 			await createTestIntegrationWithSystemUser(owner.id, {
@@ -646,13 +652,17 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		);
 
 		expect(response.status).toBe(409);
+		const body = await response.json();
+		expect(body.error).toBe(
+			"Cannot grant case access for a suspended integration"
+		);
 		const permission = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: systemUser.id } },
 		});
 		expect(permission).toBeNull();
 	});
 
-	it("rejects granting case access via a REVOKED integration with 409", async () => {
+	it("rejects granting case access via a REVOKED integration with 409 and the REVOKED-specific message", async () => {
 		const owner = await createTestUser();
 		const { integration } = await createTestIntegrationWithSystemUser(
 			owner.id,
@@ -675,6 +685,10 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		);
 
 		expect(response.status).toBe(409);
+		const body = await response.json();
+		expect(body.error).toBe(
+			"Cannot grant case access for a revoked integration"
+		);
 	});
 
 	/**

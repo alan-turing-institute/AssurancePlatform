@@ -722,6 +722,19 @@ export async function reassignIntegrationOwner(
  * masked from `listIntegrationCaseGrants` by "the integration no longer
  * exists" but never actually gone. Both are fixed by deleting the system
  * user in the same transaction (found + fixed 2026-07-14, staging repro).
+ *
+ * One trail this does NOT preserve: `PluginHealthEvidence.createdById`
+ * (`prisma/schema.prisma`) records the machine principal that appended each
+ * evidence row, but that column carries no FK — it is a bare string, not a
+ * `@relation` onto `User` (deliberately: tier-2 plugin tables are one-way,
+ * core never references a plugin table back — see the model's own doc
+ * comment). Deleting this integration's system user here does not cascade
+ * or restrict against those rows; they simply survive with a `createdById`
+ * that no longer resolves to any user, an unattributable actor in an
+ * otherwise tamper-evident, hash-chained evidence log. `revokeIntegration`
+ * — not this function — is the trail-preserving path when that
+ * attribution matters: it never deletes the system user, so its evidence
+ * rows stay resolvable.
  */
 export async function deleteIntegrationRegistration(
 	integrationId: string,
@@ -1263,16 +1276,24 @@ async function requireIntegrationOwnerAndCaseAdmin(
  * found" 404 shape rather than a 403).
  *
  * Additionally requires the integration be ACTIVE — mirrors `issueToken`'s
- * own guard and error shape ("Cannot grant case access for a non-active
- * integration", mapped to 409 by `lib/api-response.ts`'s `ERROR_MAPPINGS`):
- * handing a suspended or revoked integration's system user MORE case access
- * makes no sense while it can't authenticate (SUSPENDED) or never will again
- * (REVOKED). This check runs after `requireIntegrationOwnerAndCaseAdmin`
- * rather than before — the two conditions are independent, so the ordering
- * doesn't change what any caller can learn: failing case-admin always
- * reports "Case not found" regardless of integration status, and an
- * inactive integration always reports this conflict regardless of case
- * access. `listIntegrationCaseGrants` and `revokeIntegrationCaseAccess`
+ * own guard, but reports the integration's ACTUAL status rather than a
+ * uniform "non-active" (QA, 2026-07-14: a client that keys its own copy off
+ * a prop it already held could go stale cross-tab — "non-active" told it
+ * nothing about which of the two terminal states it was looking at). Two
+ * distinct, `^...$`-anchored messages — "Cannot grant case access for a
+ * suspended integration" / "...for a revoked integration" — both map to 409
+ * via `lib/api-response.ts`'s `ERROR_MAPPINGS`. Revealing which status it is
+ * leaks nothing: this check runs strictly AFTER
+ * `requireIntegrationOwnerAndCaseAdmin`, so it only fires once the caller
+ * has already proven they own the integration and hold case-ADMIN — status
+ * is not something to hide from someone who could just call `GET
+ * /api/integrations/[id]` and read it directly. This check runs after
+ * `requireIntegrationOwnerAndCaseAdmin` rather than before — the two
+ * conditions are independent, so the ordering doesn't change what any
+ * caller can learn: failing case-admin always reports "Case not found"
+ * regardless of integration status, and an inactive integration always
+ * reports one of these two conflicts regardless of case access.
+ * `listIntegrationCaseGrants` and `revokeIntegrationCaseAccess`
  * deliberately do NOT carry this gate — listing or revoking a suspended or
  * revoked integration's access is exactly the cleanup path an operator
  * needs after suspending/revoking it, and blocking that would make the
@@ -1324,8 +1345,11 @@ export async function grantIntegrationCaseAccess(
 		if ("error" in authorised) {
 			return authorised;
 		}
-		if (authorised.data.status !== "ACTIVE") {
-			return { error: "Cannot grant case access for a non-active integration" };
+		if (authorised.data.status === "SUSPENDED") {
+			return { error: "Cannot grant case access for a suspended integration" };
+		}
+		if (authorised.data.status === "REVOKED") {
+			return { error: "Cannot grant case access for a revoked integration" };
 		}
 
 		const assuranceCase = await prisma.assuranceCase.findUnique({

@@ -137,9 +137,16 @@ const ERROR_MAPPINGS: Array<{
 	// through one that isn't ACTIVE). None of these contain "already" or
 	// "not found", so without this entry they'd fall through to INTERNAL
 	// (500) the first time an HTTP route ever surfaced them.
+	//
+	// `grantIntegrationCaseAccess` reports its non-ACTIVE guard as two
+	// DISTINCT status-specific messages ("...for a suspended integration" /
+	// "...for a revoked integration"), not one uniform "non-active" string
+	// (QA, 2026-07-14 — a client that keys its own copy off a held prop can
+	// go stale cross-tab; the uniform message gave it nothing to recover
+	// with). Both still collapse to the same 409 CONFLICT here.
 	{
 		pattern:
-			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a non-active integration$|^Cannot rotate a revoked token$/,
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked) integration$|^Cannot rotate a revoked token$/,
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations
