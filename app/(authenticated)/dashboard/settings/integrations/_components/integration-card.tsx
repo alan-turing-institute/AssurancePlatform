@@ -90,6 +90,7 @@ export function IntegrationCard({
 		loadError: caseGrantsLoadError,
 		granting: grantingCaseAccess,
 		grantError,
+		clearGrantError,
 		grantAccess,
 		removingCaseId,
 		removeAccess,
@@ -272,6 +273,7 @@ export function IntegrationCard({
 				key={integrationActive ? "active" : "inactive"}
 				loadError={caseGrantsLoadError}
 				loading={caseGrantsLoading}
+				onClearGrantError={clearGrantError}
 				onGrant={grantAccess}
 				onRemove={removeAccess}
 				onRetry={refetchCaseGrants}

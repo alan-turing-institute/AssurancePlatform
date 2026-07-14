@@ -49,6 +49,7 @@ const baseProps = {
 	integrationActive: true,
 	loadError: null,
 	loading: false,
+	onClearGrantError: vi.fn(),
 	onGrant: vi.fn().mockResolvedValue(true),
 	onRemove: vi.fn(),
 	onRetry: vi.fn(),
@@ -381,6 +382,58 @@ describe("CaseAccessSection", () => {
 
 			await user.click(submitButton);
 			expect(onGrant).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("stale grant-error banner (N2)", () => {
+		it("calls onClearGrantError when the grant form is opened", async () => {
+			const onClearGrantError = vi.fn();
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[]}
+					onClearGrantError={onClearGrantError}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+
+			expect(onClearGrantError).toHaveBeenCalledTimes(1);
+		});
+
+		it("calls onClearGrantError when the grant form is cancelled, so a past attempt's banner doesn't resurface on the next open", async () => {
+			const onClearGrantError = vi.fn();
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grantError="Revoked integrations cannot be restored — register a new integration and grant it access instead."
+					grants={[]}
+					onClearGrantError={onClearGrantError}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			onClearGrantError.mockClear();
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onClearGrantError).toHaveBeenCalledTimes(1);
+			expect(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			).toBeInTheDocument();
 		});
 	});
 
