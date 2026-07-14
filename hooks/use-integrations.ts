@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { requestJson } from "@/lib/request-json";
 import type {
 	IntegrationListItem,
 	IssuedTokenResult,
@@ -8,26 +9,6 @@ import type {
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
 import { toast } from "@/lib/toast";
-
-interface ApiErrorBody {
-	error?: string;
-}
-
-async function parseErrorMessage(response: Response): Promise<string> {
-	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
-	return body?.error ?? "Something went wrong";
-}
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(url, {
-		...init,
-		headers: { "Content-Type": "application/json", ...init?.headers },
-	});
-	if (!response.ok) {
-		throw new Error(await parseErrorMessage(response));
-	}
-	return (await response.json()) as T;
-}
 
 async function requestIntegrations(): Promise<IntegrationListItem[]> {
 	const body = await requestJson<{ integrations: IntegrationListItem[] }>(

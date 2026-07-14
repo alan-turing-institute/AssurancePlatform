@@ -1,6 +1,9 @@
+import { waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IntegrationListItem } from "@/lib/schemas/integration";
+import { server } from "@/src/__tests__/mocks/server";
 import {
 	renderWithoutProviders,
 	screen,
@@ -16,11 +19,24 @@ const REVOKE_TOKEN_CONFIRM_REGEX = /revoke token/i;
 const CANCEL_BUTTON_REGEX = /cancel/i;
 const DELETE_TRIGGER_REGEX = /^delete$/i;
 const DELETE_CONFIRM_REGEX = /delete integration/i;
+const DELETE_TOOLTIP_TEXT = "Revoke first — delete is permanent";
+const TYPE_NAME_LABEL_REGEX = /type.*to confirm/i;
 const ISSUE_TOKEN_BUTTON_REGEX = /issue new token/i;
 const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
 const DONE_BUTTON_REGEX = /done.*stored it/i;
 const TOKEN_ROW_TEST_ID_REGEX = /^token-row-/;
+const GRANT_TRIGGER_REGEX = /grant access to a case/i;
+const GRANT_SUBMIT_REGEX = /^grant access$/i;
+const CASE_COMBOBOX_REGEX = /^case$/i;
+const PERMISSION_COMBOBOX_REGEX = /permission level/i;
+const DELETING_LABEL_REGEX = /deleting…/i;
+
+vi.mock("@/actions/assurance-cases", () => ({
+	fetchAssuranceCases: vi
+		.fn()
+		.mockResolvedValue([{ id: "case-9", name: "Assurance" }]),
+}));
 
 function makeIntegration(
 	overrides: Partial<IntegrationListItem> = {}
@@ -60,6 +76,20 @@ const baseProps = {
 	pending: false,
 	pendingTokenKey: null,
 };
+
+// Every render of `IntegrationCard` now fires its own
+// `GET .../case-grants` (see `useIntegrationCaseGrants`, called directly
+// from `IntegrationCard` — one hook per card instance, not per list). None
+// of the pre-existing tests below care about case access, so this default
+// keeps them exercising exactly what they did before that section existed;
+// the dedicated case-access describe block overrides it per scenario.
+beforeEach(() => {
+	server.use(
+		http.get("/api/integrations/:id/case-grants", () =>
+			HttpResponse.json({ grants: [] })
+		)
+	);
+});
 
 describe("IntegrationCard", () => {
 	describe("status-gated lifecycle actions", () => {
@@ -124,6 +154,301 @@ describe("IntegrationCard", () => {
 		});
 	});
 
+	describe("delete needs a guard — revoke first", () => {
+		it("disables Delete with an explanatory tooltip for an ACTIVE integration", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_TRIGGER_REGEX,
+			});
+			expect(deleteButton).toBeDisabled();
+			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+		});
+
+		it("disables Delete with an explanatory tooltip for a SUSPENDED integration", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "SUSPENDED" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_TRIGGER_REGEX,
+			});
+			expect(deleteButton).toBeDisabled();
+			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+		});
+
+		it("enables Delete with no tooltip for a REVOKED integration", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "REVOKED" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETE_TRIGGER_REGEX,
+			});
+			expect(deleteButton).toBeEnabled();
+			expect(deleteButton).not.toHaveAttribute("title");
+		});
+
+		it("keeps the destructive confirm button disabled when the typed text doesn't exactly match the integration's name", async () => {
+			const onDelete = vi.fn();
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					onDelete={onDelete}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				`${integration.name}-typo`
+			);
+			expect(confirmButton).toBeDisabled();
+
+			await user.click(confirmButton);
+			expect(onDelete).not.toHaveBeenCalled();
+		});
+
+		it("calls onDelete neither on cancel, nor before the dialog is confirmed, and closes the dialog", async () => {
+			const onDelete = vi.fn();
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					onDelete={onDelete}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onDelete).not.toHaveBeenCalled();
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+		});
+	});
+
+	describe("delete dialog — QA probe regressions", () => {
+		it("disables both Cancel and the destructive confirm, and relabels the confirm button, while a delete is in flight", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					deleting={false}
+					integration={integration}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			const cancelButton = screen.getByRole("button", {
+				name: CANCEL_BUTTON_REGEX,
+			});
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+
+			rerender(
+				<IntegrationCard
+					{...baseProps}
+					deleting={true}
+					integration={integration}
+				/>
+			);
+
+			expect(cancelButton).toBeDisabled();
+			expect(confirmButton).toBeDisabled();
+			expect(confirmButton).toHaveTextContent(DELETING_LABEL_REGEX);
+		});
+
+		it("resets the typed name when the dialog is cancelled and reopened — a remembered name must never pre-enable delete", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name
+			);
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeEnabled();
+
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			expect(screen.getByLabelText(TYPE_NAME_LABEL_REGEX)).toHaveValue("");
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("keeps the confirm button disabled when the typed name has trailing whitespace the real name doesn't have", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				`${integration.name}  `
+			);
+
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("keeps the confirm button disabled when the typed name differs only in case", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name.toUpperCase()
+			);
+
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("keeps the confirm button disabled when the typed text is a proper prefix of the name", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name.slice(0, -1)
+			);
+
+			expect(
+				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			).toBeDisabled();
+		});
+
+		it("matches an integration name containing regex metacharacters only by exact literal equality", async () => {
+			const user = userEvent.setup();
+			const integration = makeIntegration({
+				status: "REVOKED",
+				name: "pipe.line(v2)+",
+			});
+			renderWithoutProviders(
+				<IntegrationCard {...baseProps} integration={integration} />
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+			const input = screen.getByLabelText(TYPE_NAME_LABEL_REGEX);
+
+			// If the comparison were ever refactored into a regex test instead of
+			// `===`, the "." here would match any character and this string
+			// would wrongly enable the button.
+			await user.type(input, "pipeXline(v2)+");
+			expect(confirmButton).toBeDisabled();
+
+			await user.clear(input);
+			await user.type(input, integration.name);
+			expect(confirmButton).toBeEnabled();
+		});
+
+		it("closes the dialog on Escape without calling onDelete", async () => {
+			const onDelete = vi.fn();
+			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					onDelete={onDelete}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: DELETE_TRIGGER_REGEX })
+			);
+			await screen.findByRole("alertdialog");
+
+			await user.keyboard("{Escape}");
+
+			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+			expect(onDelete).not.toHaveBeenCalled();
+		});
+	});
+
 	describe("confirm dialogs gate destructive actions", () => {
 		it("does not call onRevoke until the confirm dialog is accepted", async () => {
 			const onRevoke = vi.fn();
@@ -173,13 +498,14 @@ describe("IntegrationCard", () => {
 			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 		});
 
-		it("does not call onDelete until the delete confirm dialog is accepted", async () => {
+		it("does not call onDelete until the delete confirm dialog is accepted with the exact name typed", async () => {
 			const onDelete = vi.fn();
 			const user = userEvent.setup();
+			const integration = makeIntegration({ status: "REVOKED" });
 			renderWithoutProviders(
 				<IntegrationCard
 					{...baseProps}
-					integration={makeIntegration()}
+					integration={integration}
 					onDelete={onDelete}
 				/>
 			);
@@ -189,12 +515,22 @@ describe("IntegrationCard", () => {
 			);
 			expect(onDelete).not.toHaveBeenCalled();
 
-			const dialog = await screen.findByRole("dialog");
+			const dialog = await screen.findByRole("alertdialog");
 			expect(dialog).toHaveTextContent(CANNOT_BE_UNDONE_TEXT_REGEX);
 
-			await user.click(
-				screen.getByRole("button", { name: DELETE_CONFIRM_REGEX })
+			const confirmButton = screen.getByRole("button", {
+				name: DELETE_CONFIRM_REGEX,
+			});
+			expect(confirmButton).toBeDisabled();
+
+			await user.type(
+				screen.getByLabelText(TYPE_NAME_LABEL_REGEX),
+				integration.name
 			);
+			expect(confirmButton).toBeEnabled();
+
+			await user.click(confirmButton);
+			expect(onDelete).toHaveBeenCalledTimes(1);
 			expect(onDelete).toHaveBeenCalledWith("integration-1");
 		});
 
@@ -338,6 +674,88 @@ describe("IntegrationCard", () => {
 			expect(screen.getByText("No tokens issued yet.")).toBeInTheDocument();
 			expect(
 				screen.queryByTestId(TOKEN_ROW_TEST_ID_REGEX)
+			).not.toBeInTheDocument();
+		});
+	});
+
+	describe("case access (wired to the real hook)", () => {
+		it("full grant round trip through the actual UI: card, real useIntegrationCaseGrants, and MSW — the row appears and the form closes (card↔hook wiring seam, nanaki G3 probe)", async () => {
+			let grants: Array<{
+				caseId: string;
+				caseName: string;
+				permission: string;
+				grantedAt: string;
+			}> = [];
+			server.use(
+				http.get("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json({ grants })
+				),
+				http.post("/api/integrations/:id/case-grants", async ({ request }) => {
+					const body = (await request.json()) as {
+						caseId: string;
+						permission: string;
+					};
+					const grant = {
+						caseId: body.caseId,
+						caseName: "Assurance",
+						permission: body.permission,
+						grantedAt: "2026-07-13T00:00:00.000Z",
+					};
+					grants = [...grants, grant];
+					return HttpResponse.json({ grant }, { status: 201 });
+				})
+			);
+
+			const user = userEvent.setup();
+			// No `onGrant`/`grants` props here — this test does NOT stub
+			// `useIntegrationCaseGrants` or pass case-access state down by
+			// hand. `IntegrationCard` calls the real hook itself, exactly as
+			// it does in production; a swapped/miswired prop between the card
+			// and the hook would pass every OTHER test in this file (they
+			// never touch case access) but fail here.
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Assurance" }));
+			await user.click(
+				screen.getByRole("combobox", { name: PERMISSION_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Can edit" }));
+			await user.click(
+				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
+			);
+
+			expect(
+				await screen.findByTestId("case-access-row-case-9")
+			).toBeInTheDocument();
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+			expect(
+				screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
 			).not.toBeInTheDocument();
 		});
 	});

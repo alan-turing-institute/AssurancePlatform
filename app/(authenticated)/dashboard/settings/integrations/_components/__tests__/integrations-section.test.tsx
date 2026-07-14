@@ -1,7 +1,7 @@
 import { waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
 import {
 	renderWithoutProviders,
@@ -13,6 +13,7 @@ const REGISTER_BUTTON_REGEX = /register integration/i;
 const NAME_LABEL_REGEX = /^name$/i;
 const READ_CASES_CHECKBOX_REGEX = /read cases/i;
 const CANCEL_BUTTON_REGEX = /cancel/i;
+const FAILED_CASE_GRANTS_TEXT_REGEX = /failed to list case grants/i;
 
 const INTEGRATION = {
 	id: "integration-1",
@@ -28,6 +29,18 @@ const INTEGRATION = {
 
 afterEach(() => {
 	vi.restoreAllMocks();
+});
+
+// Every rendered `IntegrationCard` fires its own `GET .../case-grants` (see
+// `useIntegrationCaseGrants`) — none of the tests below exercise case
+// access, so this default keeps them green without each one needing its
+// own handler for a resource they don't care about.
+beforeEach(() => {
+	server.use(
+		http.get("/api/integrations/:id/case-grants", () =>
+			HttpResponse.json({ grants: [] })
+		)
+	);
 });
 
 describe("IntegrationsSection", () => {
@@ -184,5 +197,79 @@ describe("IntegrationsSection", () => {
 		expect(
 			within(dialog).getByRole("checkbox", { name: READ_CASES_CHECKBOX_REGEX })
 		).not.toBeChecked();
+	});
+
+	it("isolates a case-access load failure to the one card whose GET 500s — the sibling card renders fine, with exactly one case-grants GET per card (nanaki G3 fault-isolation probe)", async () => {
+		const failingIntegration = {
+			...INTEGRATION,
+			id: "integration-fails",
+			name: "flaky-pipeline",
+		};
+		const healthyIntegration = {
+			...INTEGRATION,
+			id: "integration-ok",
+			name: "steady-pipeline",
+		};
+		const callsById: Record<string, number> = {};
+
+		server.use(
+			http.get("/api/integrations", () =>
+				HttpResponse.json({
+					integrations: [failingIntegration, healthyIntegration],
+				})
+			),
+			http.get("/api/integrations/:id/case-grants", ({ params }) => {
+				const id = params.id as string;
+				callsById[id] = (callsById[id] ?? 0) + 1;
+				if (id === failingIntegration.id) {
+					return HttpResponse.json(
+						{ error: "Failed to list case grants" },
+						{ status: 500 }
+					);
+				}
+				return HttpResponse.json({
+					grants: [
+						{
+							caseId: "case-1",
+							caseName: "Assurance",
+							permission: "EDIT",
+							grantedAt: "2026-07-10T00:00:00.000Z",
+						},
+					],
+				});
+			})
+		);
+
+		renderWithoutProviders(<IntegrationsSection />);
+
+		await waitFor(() =>
+			expect(screen.getByText("flaky-pipeline")).toBeInTheDocument()
+		);
+		expect(screen.getByText("steady-pipeline")).toBeInTheDocument();
+
+		const failingCard = screen.getByTestId(
+			`integration-card-${failingIntegration.id}`
+		);
+		const healthyCard = screen.getByTestId(
+			`integration-card-${healthyIntegration.id}`
+		);
+
+		await waitFor(() =>
+			expect(
+				within(failingCard).getByText("Failed to list case grants")
+			).toBeInTheDocument()
+		);
+		// The sibling card's own GET succeeded independently — one card's
+		// 500 never poisons the other's case-access state.
+		expect(
+			within(healthyCard).getByTestId("case-access-row-case-1")
+		).toBeInTheDocument();
+		expect(
+			within(healthyCard).queryByText(FAILED_CASE_GRANTS_TEXT_REGEX)
+		).not.toBeInTheDocument();
+
+		await waitFor(() => expect(callsById[failingIntegration.id]).toBe(1));
+		expect(callsById[healthyIntegration.id]).toBe(1);
+		expect(Object.keys(callsById)).toHaveLength(2);
 	});
 });
