@@ -693,11 +693,35 @@ export async function reassignIntegrationOwner(
 }
 
 /**
- * Hard-deletes an integration's registration (cascades its tokens). Use
- * when reassignment isn't wanted — deleting the row, not just revoking,
- * gives up the integration's own accountability trail, so prefer
- * `revokeIntegration` when that trail matters and this only when a human
- * owner needs the RESTRICT cleared without a new owner to hand off to.
+ * Hard-deletes an integration's registration AND its dedicated system user
+ * (cascades the integration's tokens via `ApiToken`'s `onDelete: Cascade`,
+ * and the system user's `CasePermission` grants via that relation's own
+ * `onDelete: Cascade` — see `prisma/schema.prisma`). Use when reassignment
+ * isn't wanted — deleting the row, not just revoking, gives up the
+ * integration's own accountability trail, so prefer `revokeIntegration`
+ * when that trail matters and this only when a human owner needs the
+ * RESTRICT cleared without a new owner to hand off to.
+ *
+ * Deletion order inside the transaction is load-bearing, not incidental:
+ * `Integration.systemUserId`/`ownerId` are BOTH `onDelete: Restrict` FKs
+ * onto `User` (migration `20260703000000_extension_foundations`), so the
+ * `Integration` row must be gone before its system user can be deleted —
+ * deleting the user first would hit the RESTRICT constraint and roll back.
+ * `$transaction([...])` (array form) runs its statements sequentially in
+ * the order given, so `integration.delete` always precedes `user.delete`.
+ *
+ * Previously this deleted only the `Integration` row, orphaning the system
+ * user: its unique `username`/`email` stuck around forever, permanently
+ * blocking same-name re-registration (a fresh `registerIntegration` call
+ * collides with the orphan's constraints, and the generic unique-violation
+ * catch there misreports it as "An integration with this name already
+ * exists"), and its `CasePermission` grants never cascaded away (the
+ * cascade is keyed on the USER's delete, which never fired) — the delete
+ * dialog's "removes ... its case-access grants" promise wasn't kept for a
+ * grant list that referenced no case; the row itself just sat there,
+ * masked from `listIntegrationCaseGrants` by "the integration no longer
+ * exists" but never actually gone. Both are fixed by deleting the system
+ * user in the same transaction (found + fixed 2026-07-14, staging repro).
  */
 export async function deleteIntegrationRegistration(
 	integrationId: string,
@@ -707,13 +731,16 @@ export async function deleteIntegrationRegistration(
 		const existing = await getOwnedIntegrationOrError(
 			integrationId,
 			actorUserId,
-			{ id: true, name: true }
+			{ id: true, name: true, systemUserId: true }
 		);
 		if ("error" in existing) {
 			return existing;
 		}
 
-		await prisma.integration.delete({ where: { id: integrationId } });
+		await prisma.$transaction([
+			prisma.integration.delete({ where: { id: integrationId } }),
+			prisma.user.delete({ where: { id: existing.data.systemUserId } }),
+		]);
 
 		await writeAuditLog({
 			userId: actorUserId,

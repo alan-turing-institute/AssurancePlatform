@@ -4,7 +4,9 @@ import prisma from "@/lib/prisma";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestApiToken,
+	createTestCase,
 	createTestIntegrationWithSystemUser,
+	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -528,6 +530,256 @@ describe("DELETE /api/integrations/[id]", () => {
 		);
 		expect(ids).not.toContain(toDelete.id);
 		expect(ids).toContain(toKeep.id);
+	});
+});
+
+// ============================================
+// DELETE /api/integrations/[id] — system user orphan cleanup
+// (TEA — Integration delete leaves the machine user behind, blocks
+// same-name re-registration; found + fixed 2026-07-14, staging repro)
+// ============================================
+
+describe("DELETE /api/integrations/[id] — system user orphan cleanup", () => {
+	it("full journey: register, grant case access, revoke it, delete, then re-register the same name succeeds — the system user and its CasePermission grants are actually gone, not just unreachable through the deleted integration", async () => {
+		const owner = await createTestUser();
+		await mockAuth(owner.id, owner.username, owner.email);
+		const testCase = await createTestCase(owner.id, {
+			name: "orphan-journey-case",
+		});
+
+		const name = `orphan-journey-${owner.id}`;
+		const { POST: registerPost } = await import("@/app/api/integrations/route");
+		const registerResponse = await registerPost(
+			jsonRequest("/api/integrations", "POST", {
+				name,
+				scopes: ["case:read"],
+			})
+		);
+		expect(registerResponse.status).toBe(201);
+		const { integration } = await registerResponse.json();
+		const integrationId: string = integration.id;
+		const systemUserId: string = integration.systemUserId;
+		expect(systemUserId).toEqual(expect.any(String));
+
+		// The system user exists and carries the exact username/email the
+		// unique-constraint collision used to be keyed on.
+		const systemUserBeforeDelete = await prisma.user.findUnique({
+			where: { id: systemUserId },
+		});
+		expect(systemUserBeforeDelete).toMatchObject({
+			email: `integration+${name}@tea-platform.internal`,
+			isSystemUser: true,
+			username: `integration-${name}`,
+		});
+
+		// Grant the system user access to a case.
+		const { POST: grantPost } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const grantResponse = await grantPost(
+			jsonRequest(`/api/integrations/${integrationId}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "EDIT",
+			}),
+			idParams(integrationId)
+		);
+		expect(grantResponse.status).toBe(201);
+		expect(
+			await prisma.casePermission.findUnique({
+				where: {
+					caseId_userId: { caseId: testCase.id, userId: systemUserId },
+				},
+			})
+		).not.toBeNull();
+
+		// Revoke that grant explicitly, then grant it again — proving the
+		// orphan assertions below exercise the DELETE-time cascade, not just
+		// the outcome of this explicit revoke.
+		const { DELETE: revokeCaseAccessDelete } = await import(
+			"@/app/api/integrations/[id]/case-grants/[caseId]/route"
+		);
+		const revokeResponse = await revokeCaseAccessDelete(
+			jsonRequest(
+				`/api/integrations/${integrationId}/case-grants/${testCase.id}`,
+				"DELETE"
+			),
+			{ params: Promise.resolve({ id: integrationId, caseId: testCase.id }) }
+		);
+		expect(revokeResponse.status).toBe(200);
+		expect(
+			await prisma.casePermission.findUnique({
+				where: {
+					caseId_userId: { caseId: testCase.id, userId: systemUserId },
+				},
+			})
+		).toBeNull();
+
+		const regrantResponse = await grantPost(
+			jsonRequest(`/api/integrations/${integrationId}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "VIEW",
+			}),
+			idParams(integrationId)
+		);
+		expect(regrantResponse.status).toBe(201);
+		expect(
+			await prisma.casePermission.findUnique({
+				where: {
+					caseId_userId: { caseId: testCase.id, userId: systemUserId },
+				},
+			})
+		).not.toBeNull();
+
+		// Delete the integration's registration.
+		const { DELETE: deleteIntegrationDelete } = await import(
+			"@/app/api/integrations/[id]/route"
+		);
+		const deleteResponse = await deleteIntegrationDelete(
+			jsonRequest(`/api/integrations/${integrationId}`, "DELETE"),
+			idParams(integrationId)
+		);
+		expect(deleteResponse.status).toBe(200);
+
+		// Orphan assertions: the system user itself is gone...
+		const orphanUser = await prisma.user.findUnique({
+			where: { id: systemUserId },
+		});
+		expect(orphanUser).toBeNull();
+
+		// ...its CasePermission grant cascaded away with it (not merely
+		// unreachable via the now-deleted integration)...
+		const orphanGrant = await prisma.casePermission.findUnique({
+			where: {
+				caseId_userId: { caseId: testCase.id, userId: systemUserId },
+			},
+		});
+		expect(orphanGrant).toBeNull();
+
+		// ...and neither the username nor the email that used to collide on
+		// re-registration exist anywhere any more — the leftover-collision
+		// path `registerIntegration`'s catch-all unique-constraint handler
+		// used to hit is now unreachable, not merely worked around.
+		expect(
+			await prisma.user.findUnique({
+				where: { username: `integration-${name}` },
+			})
+		).toBeNull();
+		expect(
+			await prisma.user.findUnique({
+				where: { email: `integration+${name}@tea-platform.internal` },
+			})
+		).toBeNull();
+
+		// Re-registering the exact same name now succeeds instead of
+		// misreporting the orphan's leftover unique-constraint collision as
+		// "An integration with this name already exists".
+		const reregisterResponse = await registerPost(
+			jsonRequest("/api/integrations", "POST", {
+				name,
+				scopes: ["case:read"],
+			})
+		);
+		expect(reregisterResponse.status).toBe(201);
+		const reregisterBody = await reregisterResponse.json();
+		expect(reregisterBody.integration.name).toBe(name);
+		expect(reregisterBody.integration.id).not.toBe(integrationId);
+		expect(reregisterBody.integration.systemUserId).not.toBe(systemUserId);
+	});
+
+	it("does not touch a DIFFERENT integration's system user or its case-access grants", async () => {
+		const owner = await createTestUser();
+		const { integration: toDelete, systemUser: systemUserToDelete } =
+			await createTestIntegrationWithSystemUser(owner.id, {
+				name: "isolation-delete-me",
+			});
+		const { integration: toKeep, systemUser: systemUserToKeep } =
+			await createTestIntegrationWithSystemUser(owner.id, {
+				name: "isolation-keep-me",
+			});
+		const testCase = await createTestCase(owner.id, {
+			name: "isolation-case",
+		});
+		await createTestPermission(
+			testCase.id,
+			systemUserToDelete.id,
+			owner.id,
+			"VIEW"
+		);
+		await createTestPermission(
+			testCase.id,
+			systemUserToKeep.id,
+			owner.id,
+			"VIEW"
+		);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { DELETE } = await import("@/app/api/integrations/[id]/route");
+		const response = await DELETE(
+			jsonRequest(`/api/integrations/${toDelete.id}`, "DELETE"),
+			idParams(toDelete.id)
+		);
+		expect(response.status).toBe(200);
+
+		expect(
+			await prisma.user.findUnique({ where: { id: systemUserToDelete.id } })
+		).toBeNull();
+		expect(
+			await prisma.user.findUnique({ where: { id: systemUserToKeep.id } })
+		).not.toBeNull();
+		expect(
+			await prisma.integration.findUnique({ where: { id: toKeep.id } })
+		).not.toBeNull();
+		expect(
+			await prisma.casePermission.findUnique({
+				where: {
+					caseId_userId: { caseId: testCase.id, userId: systemUserToKeep.id },
+				},
+			})
+		).not.toBeNull();
+	});
+
+	it("still rejects a genuine live name collision with 'already exists' — distinct from the leftover-orphan collision this fix makes unreachable", async () => {
+		// `Integration.name` is its own `@unique` column (independent of the
+		// system user's username/email uniqueness this fix addresses), so a
+		// second registration under the same name MUST keep failing for as
+		// long as the first integration is alive and un-deleted. This is the
+		// genuine-collision path — it must remain reachable and correctly
+		// reported after this fix, never silently swallowed alongside the
+		// leftover-orphan path the journey test above proves is now closed.
+		const owner = await createTestUser();
+		await mockAuth(owner.id, owner.username, owner.email);
+		const name = `live-collision-${owner.id}`;
+
+		const { POST } = await import("@/app/api/integrations/route");
+		const firstResponse = await POST(
+			jsonRequest("/api/integrations", "POST", {
+				name,
+				scopes: ["case:read"],
+			})
+		);
+		expect(firstResponse.status).toBe(201);
+		const { integration: first } = await firstResponse.json();
+
+		const secondResponse = await POST(
+			jsonRequest("/api/integrations", "POST", {
+				name,
+				scopes: ["case:read"],
+			})
+		);
+		expect(secondResponse.status).toBe(409);
+		const secondBody = await secondResponse.json();
+		expect(secondBody.error).toBe(
+			"An integration with this name already exists"
+		);
+
+		// The first integration and its system user are untouched — this
+		// path never deletes anything, it just refuses the duplicate.
+		expect(
+			await prisma.integration.findUnique({ where: { id: first.id } })
+		).not.toBeNull();
+		expect(
+			await prisma.user.findUnique({ where: { id: first.systemUserId } })
+		).not.toBeNull();
 	});
 });
 
