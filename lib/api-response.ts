@@ -143,10 +143,15 @@ const ERROR_MAPPINGS: Array<{
 	// "...for a revoked integration"), not one uniform "non-active" string
 	// (QA, 2026-07-14 — a client that keys its own copy off a held prop can
 	// go stale cross-tab; the uniform message gave it nothing to recover
-	// with). Both still collapse to the same 409 CONFLICT here.
+	// with). The service's own gate still fails closed on `!== "ACTIVE"`
+	// rather than allowlisting just these two statuses, so the original
+	// uniform "...for a non-active integration" string remains a live
+	// (if unreachable while `IntegrationStatus` stays a 3-value enum)
+	// fallback — kept here too, or that fallback would 500 as INTERNAL
+	// instead of 409. All three collapse to the same 409 CONFLICT here.
 	{
 		pattern:
-			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked) integration$|^Cannot rotate a revoked token$/,
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked|non-active) integration$|^Cannot rotate a revoked token$/,
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations

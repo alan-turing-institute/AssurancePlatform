@@ -1282,8 +1282,15 @@ async function requireIntegrationOwnerAndCaseAdmin(
  * nothing about which of the two terminal states it was looking at). Two
  * distinct, `^...$`-anchored messages — "Cannot grant case access for a
  * suspended integration" / "...for a revoked integration" — both map to 409
- * via `lib/api-response.ts`'s `ERROR_MAPPINGS`. Revealing which status it is
- * leaks nothing: this check runs strictly AFTER
+ * via `lib/api-response.ts`'s `ERROR_MAPPINGS`. The gate itself stays a
+ * single `!== "ACTIVE"` check (fail-closed) rather than an allowlist of
+ * `SUSPENDED`/`REVOKED` — `IntegrationStatus` is a closed 3-value enum
+ * today, so the two are behaviourally identical, but `!== "ACTIVE"` also
+ * rejects any status this enum might grow in future, where an allowlist
+ * would silently fall through and grant. The unreachable-today fallback
+ * message ("...for a non-active integration") is also still matched by
+ * `ERROR_MAPPINGS`, so that future status would 409 rather than 500.
+ * Revealing which status it is leaks nothing: this check runs strictly AFTER
  * `requireIntegrationOwnerAndCaseAdmin`, so it only fires once the caller
  * has already proven they own the integration and hold case-ADMIN — status
  * is not something to hide from someone who could just call `GET
@@ -1345,11 +1352,17 @@ export async function grantIntegrationCaseAccess(
 		if ("error" in authorised) {
 			return authorised;
 		}
-		if (authorised.data.status === "SUSPENDED") {
-			return { error: "Cannot grant case access for a suspended integration" };
-		}
-		if (authorised.data.status === "REVOKED") {
-			return { error: "Cannot grant case access for a revoked integration" };
+		// Fail closed: gate on `!== "ACTIVE"`, not an allowlist of the two
+		// known-bad statuses — a future IntegrationStatus variant is rejected
+		// by default instead of silently falling through to a grant.
+		if (authorised.data.status !== "ACTIVE") {
+			let message = "Cannot grant case access for a non-active integration";
+			if (authorised.data.status === "SUSPENDED") {
+				message = "Cannot grant case access for a suspended integration";
+			} else if (authorised.data.status === "REVOKED") {
+				message = "Cannot grant case access for a revoked integration";
+			}
+			return { error: message };
 		}
 
 		const assuranceCase = await prisma.assuranceCase.findUnique({
