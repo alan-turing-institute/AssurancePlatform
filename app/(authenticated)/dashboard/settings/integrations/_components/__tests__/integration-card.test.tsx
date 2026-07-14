@@ -758,5 +758,63 @@ describe("IntegrationCard", () => {
 				screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
 			).not.toBeInTheDocument();
 		});
+
+		it("closes the open grant form and never POSTs when the same card's integration is revoked out from under it (stale-form path, real hook)", async () => {
+			let postCalls = 0;
+			server.use(
+				http.get("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json({ grants: [] })
+				),
+				http.post("/api/integrations/:id/case-grants", () => {
+					postCalls += 1;
+					return HttpResponse.json(
+						{ error: "Cannot grant case access for a non-active integration" },
+						{ status: 409 }
+					);
+				})
+			);
+
+			const user = userEvent.setup();
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+
+			// Revoked from the same card: `IntegrationCard` re-renders with the
+			// integration's new status, exactly as it would after
+			// `useIntegrations`'s `revokeIntegration` resolves and refetches.
+			rerender(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "REVOKED" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).not.toBeInTheDocument()
+			);
+			expect(
+				screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
+			).not.toBeInTheDocument();
+			expect(postCalls).toBe(0);
+		});
 	});
 });

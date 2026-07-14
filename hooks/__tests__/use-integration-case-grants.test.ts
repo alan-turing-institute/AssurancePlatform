@@ -33,7 +33,7 @@ describe("useIntegrationCaseGrants", () => {
 		);
 
 		const { result } = renderHook(() =>
-			useIntegrationCaseGrants(INTEGRATION_ID)
+			useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 		);
 
 		expect(result.current.loading).toBe(true);
@@ -58,7 +58,7 @@ describe("useIntegrationCaseGrants", () => {
 		);
 
 		const { result } = renderHook(() =>
-			useIntegrationCaseGrants(INTEGRATION_ID)
+			useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 		);
 
 		await waitFor(() => expect(result.current.loading).toBe(false));
@@ -89,7 +89,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(result.current.grants).toHaveLength(0);
@@ -104,7 +104,7 @@ describe("useIntegrationCaseGrants", () => {
 			expect(result.current.grantError).toBeNull();
 		});
 
-		it("maps a 409 to a fixed, faithful 'integration must be ACTIVE' message", async () => {
+		it("maps a 409 on a SUSPENDED integration to the 'Reactivate it' message", async () => {
 			server.use(
 				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
 				http.post(CASE_GRANTS_PATH, () =>
@@ -116,7 +116,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "SUSPENDED")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -132,6 +132,34 @@ describe("useIntegrationCaseGrants", () => {
 			expect(result.current.grants).toHaveLength(0);
 		});
 
+		it("maps a 409 on a REVOKED integration to the 'cannot be restored' message, not the impossible 'Reactivate it' advice", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
+				http.post(CASE_GRANTS_PATH, () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a non-active integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID, "REVOKED")
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			let success: boolean | undefined;
+			await act(async () => {
+				success = await result.current.grantAccess("case-1", "EDIT");
+			});
+
+			expect(success).toBe(false);
+			expect(result.current.grantError).toBe(
+				"Revoked integrations cannot be restored — register a new integration and grant it access instead."
+			);
+			expect(result.current.grants).toHaveLength(0);
+		});
+
 		it("maps a 404 to a generic 'case not found' message, whatever the server's own wording", async () => {
 			server.use(
 				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
@@ -141,7 +169,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -176,7 +204,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -204,7 +232,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(result.current.grants).toHaveLength(1);
@@ -231,7 +259,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(result.current.grants).toHaveLength(1);

@@ -5,6 +5,7 @@ import { RequestJsonError, requestJson } from "@/lib/request-json";
 import type {
 	CaseGrantPermission,
 	IntegrationCaseGrant,
+	IntegrationStatus,
 } from "@/lib/schemas/integration";
 import { toast } from "@/lib/toast";
 
@@ -14,17 +15,26 @@ function errorMessage(err: unknown): string {
 
 /**
  * Maps a failed grant attempt to the fixed, faithful message the settings
- * UI should show — 409 always means "the integration isn't ACTIVE" (the
+ * UI should show. A 409 always means "the integration isn't ACTIVE" (the
  * only conflict `POST .../case-grants` ever returns, per its own doc
- * comment), and 404 is deliberately generic: it covers a nonexistent case,
- * a soft-deleted one, AND the caller lacking case-ADMIN, all with the exact
- * same message server-side (no enumeration oracle) — this hook does not
- * try to tell those apart either, on purpose.
+ * comment) — but the two non-ACTIVE statuses need different advice, because
+ * only one of them is reversible: SUSPENDED can be reactivated, so "reactivate
+ * it" is genuinely actionable there; REVOKED is permanent by design (the
+ * revoke confirmation dialog itself says so), so telling a REVOKED integration
+ * to "reactivate" is impossible advice. 404 is deliberately generic: it
+ * covers a nonexistent case, a soft-deleted one, AND the caller lacking
+ * case-ADMIN, all with the exact same message server-side (no enumeration
+ * oracle) — this hook does not try to tell those apart either, on purpose.
  */
-function grantErrorMessage(err: unknown): string {
+function grantErrorMessage(
+	err: unknown,
+	integrationStatus: IntegrationStatus
+): string {
 	if (err instanceof RequestJsonError) {
 		if (err.status === 409) {
-			return "This integration must be ACTIVE before it can be granted access to a case. Reactivate it, then try again.";
+			return integrationStatus === "REVOKED"
+				? "Revoked integrations cannot be restored — register a new integration and grant it access instead."
+				: "This integration must be ACTIVE before it can be granted access to a case. Reactivate it, then try again.";
 		}
 		if (err.status === 404) {
 			return "Case not found. Check that the case still exists and that you hold admin access to it.";
@@ -64,9 +74,15 @@ export interface UseIntegrationCaseGrantsResult {
  * Every mutation re-fetches the full list on success, same rationale as
  * `useIntegrations`: cheaper to re-resolve through the same GET the section
  * renders from than to hand-reconcile a nested array locally.
+ *
+ * `integrationStatus` is threaded in (rather than read once at mount) so a
+ * 409 raised after the card's own status has just changed — e.g. the user
+ * revokes the integration while this card's grant form is still open — maps
+ * to the status-appropriate copy, not a stale one from first render.
  */
 export function useIntegrationCaseGrants(
-	integrationId: string
+	integrationId: string,
+	integrationStatus: IntegrationStatus
 ): UseIntegrationCaseGrantsResult {
 	const [grants, setGrants] = useState<IntegrationCaseGrant[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -117,13 +133,13 @@ export function useIntegrationCaseGrants(
 				await load();
 				return true;
 			} catch (err) {
-				setGrantError(grantErrorMessage(err));
+				setGrantError(grantErrorMessage(err, integrationStatus));
 				return false;
 			} finally {
 				setGranting(false);
 			}
 		},
-		[integrationId, load]
+		[integrationId, integrationStatus, load]
 	);
 
 	const removeAccess = useCallback(

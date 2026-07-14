@@ -40,6 +40,17 @@ export interface CaseAccessSectionProps {
  * callback prop, and this component (and its tests) never call
  * `useIntegrationCaseGrants` directly — `IntegrationCard` owns that hook and
  * threads its state down here.
+ *
+ * This component's own `addOpen` state (whether the grant form is showing)
+ * deliberately has no logic to force it closed when `integrationActive`
+ * turns false — that reset lives one level up, in `IntegrationCard`, via a
+ * `key` on this component keyed to activity. Remounting on that transition
+ * discards `addOpen` (and every other bit of local state) for free, with no
+ * Effect and no stale-then-corrected render — the two ways of clearing state
+ * "by hand" that both caused a react-doctor regression (a one-frame stale
+ * flash from a `useEffect`, then an "impure state updater" flag from doing
+ * the reset synchronously in the render body) before this file settled on
+ * leaving the reset out of this component entirely.
  */
 export function CaseAccessSection({
 	granting,
