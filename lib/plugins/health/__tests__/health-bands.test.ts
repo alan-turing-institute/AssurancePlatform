@@ -105,13 +105,21 @@ describe("isHealthStale", () => {
 		).toBe(false);
 	});
 
-	it("treats null lastEvaluatedAt as stale (defensive — currently unreachable in practice)", () => {
+	it("treats null lastEvaluatedAt as NEVER stale (mirrors health-scoring-service.ts's isHealthStateStale; currently unreachable in practice)", () => {
 		expect(
 			isHealthStale({
 				score: 1,
 				lastEvaluatedAt: null,
 				validityWindowSeconds: 24 * 60 * 60,
 			})
-		).toBe(true);
+		).toBe(false);
+		// Holds regardless of window width, including a zero window.
+		expect(
+			isHealthStale({
+				score: 1,
+				lastEvaluatedAt: null,
+				validityWindowSeconds: 0,
+			})
+		).toBe(false);
 	});
 });

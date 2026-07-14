@@ -112,6 +112,40 @@ export interface HealthState {
 }
 
 /**
+ * Staleness derivation (ADR 0002 v2 §3: health ⊥ freshness — "green-but-stale
+ * is preserved"). Computed on demand from `lastEvaluatedAt` +
+ * `validityWindowSeconds` every time this is called — there is no stored
+ * "stale" column anywhere; any bookkeeping that LOOKS like a cached stale
+ * flag (e.g. the sweeper's own already-notified marker,
+ * `health-staleness-sweep-service.ts`) is exactly that, a cache of THIS
+ * computation re-derived on the next read, never a second source of truth.
+ *
+ * `lastEvaluatedAt: null` (never evaluated — no evidence has ever been
+ * scored for this claim) is NEVER stale: "never evaluated" and "evaluated,
+ * now expired" are distinct states (mirrors `readHealthState`'s own doc:
+ * "never evaluated is a valid, expected state, not a failure"). A claim's
+ * SCORE is never touched by this function or derived from its result — this
+ * answers a question wholly orthogonal to `deriveHealthBand`
+ * (`lib/plugins/health/health-bands.ts`), and no caller may fold the two
+ * into one combined verdict.
+ *
+ * `now` is an optional injection point (defaults to the real clock) purely
+ * so boundary tests (exactly-at-window vs. just-past) don't need to race a
+ * real timer.
+ */
+export function isHealthStateStale(
+	health: Pick<HealthState, "lastEvaluatedAt" | "validityWindowSeconds">,
+	now: Date = new Date()
+): boolean {
+	if (health.lastEvaluatedAt === null) {
+		return false;
+	}
+	const evaluatedAtMs = new Date(health.lastEvaluatedAt).getTime();
+	const ageMs = now.getTime() - evaluatedAtMs;
+	return ageMs > health.validityWindowSeconds * 1000;
+}
+
+/**
  * Recomputes `claimId`'s health score from its full evidence log and writes
  * `{ score, lastEvaluatedAt, validityWindowSeconds }` into element-scoped
  * `PluginData` under `tea.health`, via `writePluginData` (inherits its

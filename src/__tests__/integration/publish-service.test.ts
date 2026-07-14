@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
 	getFullPublishStatus,
 	getPublishStatus,
@@ -19,7 +20,9 @@ import {
 	createTestCase,
 	createTestCaseStudy,
 	createTestCaseWithGoal,
+	createTestElement,
 	createTestPermission,
+	createTestPluginData,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -537,5 +540,158 @@ describe("transitionStatus", () => {
 		expectError(
 			await transitionStatus(stranger.id, testCase.id, "READY_TO_PUBLISH")
 		);
+	});
+});
+
+// ============================================
+// Snapshot pluginData capture (ADR 0002 v2 §3)
+// ============================================
+
+describe("publishAssuranceCase — snapshot pluginData capture", () => {
+	it("embeds captured plugin data in the snapshot content when present", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await createTestPluginData(testCase.id, {
+			pluginId: "tea.health",
+			elementId: claim.id,
+			data: { score: 1, lastEvaluatedAt: null, validityWindowSeconds: 86_400 },
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [
+				{
+					elementId: claim.id,
+					data: {
+						score: 1,
+						lastEvaluatedAt: null,
+						validityWindowSeconds: 86_400,
+					},
+				},
+			],
+		});
+	});
+
+	it("omits the pluginData section entirely when the case holds no plugin data", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toBeUndefined();
+	});
+
+	it("captures plugin data even when the plugin is disabled for the publishing user (capture follows data present, not viewer toggles)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await createTestPluginData(testCase.id, {
+			pluginId: "tea.health",
+			elementId: claim.id,
+			data: { score: 0.5, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+		});
+		expectSuccess(
+			await setPluginEnabledForUser("tea.health", owner.id, { enabled: false })
+		);
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [
+				{
+					elementId: claim.id,
+					data: {
+						score: 0.5,
+						lastEvaluatedAt: null,
+						validityWindowSeconds: 60,
+					},
+				},
+			],
+		});
+	});
+
+	it("captures every plugin namespace present, not just tea.health — core stays plugin-agnostic", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		await createTestPluginData(testCase.id, {
+			pluginId: "tea.some-other-plugin",
+			data: { anything: "goes" },
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.some-other-plugin": [
+				{ elementId: null, data: { anything: "goes" } },
+			],
+		});
+	});
+});
+
+describe("updatePublishedCase — snapshot pluginData capture", () => {
+	it("re-captures current plugin data on each new published version", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await publishAssuranceCase(owner.id, testCase.id);
+
+		const dataRow = await createTestPluginData(testCase.id, {
+			pluginId: "tea.health",
+			elementId: claim.id,
+			data: { score: 0, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+		});
+
+		const updated = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: updated.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [{ elementId: claim.id, data: dataRow.data }],
+		});
 	});
 });

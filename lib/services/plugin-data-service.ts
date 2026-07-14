@@ -172,8 +172,17 @@ function upsertElementLevelPluginData(
  * (`pluginId, caseId WHERE elementId IS NULL`, see `prisma/schema.prisma`)
  * backstops the small race window: if a concurrent writer wins, the create
  * throws P2002 and this falls back to updating the row that now exists.
+ *
+ * Exported (unlike its element-level sibling) for exactly one privileged
+ * caller outside this file: `health-staleness-sweep-service.ts`'s own
+ * case-level sweep-marker bookkeeping. That caller is a CRON job with no
+ * acting user — it deliberately bypasses `writePluginData`'s
+ * enablement/case-permission guard the same way `capturePluginDataForSnapshot`
+ * below does, and for the same reason (a system-level maintenance
+ * operation, not a per-user write) — reusing this race-safe upsert instead
+ * of re-deriving the partial-unique-index dance a second time.
  */
-async function upsertCaseLevelPluginData(
+export async function upsertCaseLevelPluginData(
 	pluginId: string,
 	caseId: string,
 	data: Prisma.InputJsonValue
@@ -327,4 +336,57 @@ export async function deletePluginData(
 		console.error("Failed to delete plugin data:", error);
 		return { error: "Failed to delete plugin data" };
 	}
+}
+
+/** One captured row, verbatim: which element it was scoped to (`null` = case-level) and its raw `data` blob. */
+export interface CapturedPluginDataEntry {
+	data: Prisma.JsonValue;
+	elementId: string | null;
+}
+
+/**
+ * Reads every `PluginData` row `caseId` holds, across EVERY plugin namespace
+ * present, and groups it by `pluginId` — the raw material for a publish
+ * snapshot's `pluginData` section (ADR 0002 v2 §3: "capture follows data
+ * present, not any viewer's toggle", and "core never interprets the data —
+ * this is core's one plugin-data obligation").
+ *
+ * Deliberately bypasses `guardPluginAccess`/`assertPluginEnabledForUser`:
+ * this is the ONE place in core that reads plugin data without checking
+ * whether the CALLER's principal has that plugin enabled, because a
+ * snapshot is a point-in-time record of what the case holds, not of what
+ * any one viewer can currently see — a plugin disabled for the publishing
+ * user (or every user) still has its data captured if it's present on the
+ * case. The caller (`publish-service.ts`) has already verified case-level
+ * EDIT access via `canAccessCase` before calling this; there is no
+ * additional permission check to perform here, and no plugin-specific
+ * branching — grouping by `pluginId` is the one thing every row
+ * structurally carries, so this stays exactly as semantically neutral as
+ * every other core module.
+ *
+ * Returns `undefined` (never `{}`) when the case holds no plugin data at
+ * all, so a snapshot never gains an empty `pluginData: {}` section —
+ * "nothing captured" and "some plugin captured an empty object" stay
+ * distinguishable on disk.
+ */
+export async function capturePluginDataForSnapshot(
+	caseId: string
+): Promise<Record<string, CapturedPluginDataEntry[]> | undefined> {
+	const rows = await prisma.pluginData.findMany({
+		where: { caseId },
+		select: { pluginId: true, elementId: true, data: true },
+		orderBy: { createdAt: "asc" },
+	});
+
+	if (rows.length === 0) {
+		return;
+	}
+
+	const byPlugin: Record<string, CapturedPluginDataEntry[]> = {};
+	for (const row of rows) {
+		const entries = byPlugin[row.pluginId] ?? [];
+		entries.push({ elementId: row.elementId, data: row.data });
+		byPlugin[row.pluginId] = entries;
+	}
+	return byPlugin;
 }
