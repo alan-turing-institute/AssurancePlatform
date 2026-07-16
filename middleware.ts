@@ -77,19 +77,29 @@ export const config = {
 		 *   bearer-token request here 307-redirects to /login instead of
 		 *   reaching the route handler.)
 		 * - api/health (health checks)
+		 * - api/public (published-content read endpoints — no auth by
+		 *   design, e.g. GET /api/public/assurance-case/[id] and
+		 *   /api/public/case-studies. Every route under this prefix is
+		 *   audited to serve only already-published content via read-only
+		 *   GET handlers with no session-derived data — see the route
+		 *   audit in the fix-public-api-auth issue. Without this exemption
+		 *   anonymous requests 307-redirect to /login instead of reaching
+		 *   the route handler, contradicting the routes' own "no auth
+		 *   required" doc comments.)
 		 * - _next/static (static files)
 		 * - _next/image (image optimization files)
 		 * - favicon.ico (favicon file)
 		 * - public folder
 		 *
-		 * Each of the four `api/*` prefixes above is boundary-anchored
+		 * Each of the five `api/*` prefixes above is boundary-anchored
 		 * (`(?:/|$)`) rather than a bare string prefix — otherwise a
 		 * hypothetical future route like `/api/machinery` or
-		 * `/api/healthcheck` would be silently exempted from session auth
-		 * too. Verified against the full route inventory (fix round,
-		 * 2026-07-03): no existing route under any of the four prefixes
-		 * relies on the looser match, so all four were anchored together.
+		 * `/api/healthcheck` (or `/api/publicfoo`) would be silently
+		 * exempted from session auth too. Verified against the full route
+		 * inventory (fix round, 2026-07-03; extended 2026-07-14): no
+		 * existing route under any of the five prefixes relies on the
+		 * looser match, so all five are anchored the same way.
 		 */
-		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
+		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
 	],
 };
