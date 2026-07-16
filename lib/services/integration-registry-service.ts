@@ -693,11 +693,48 @@ export async function reassignIntegrationOwner(
 }
 
 /**
- * Hard-deletes an integration's registration (cascades its tokens). Use
- * when reassignment isn't wanted — deleting the row, not just revoking,
- * gives up the integration's own accountability trail, so prefer
- * `revokeIntegration` when that trail matters and this only when a human
- * owner needs the RESTRICT cleared without a new owner to hand off to.
+ * Hard-deletes an integration's registration AND its dedicated system user
+ * (cascades the integration's tokens via `ApiToken`'s `onDelete: Cascade`,
+ * and the system user's `CasePermission` grants via that relation's own
+ * `onDelete: Cascade` — see `prisma/schema.prisma`). Use when reassignment
+ * isn't wanted — deleting the row, not just revoking, gives up the
+ * integration's own accountability trail, so prefer `revokeIntegration`
+ * when that trail matters and this only when a human owner needs the
+ * RESTRICT cleared without a new owner to hand off to.
+ *
+ * Deletion order inside the transaction is load-bearing, not incidental:
+ * `Integration.systemUserId`/`ownerId` are BOTH `onDelete: Restrict` FKs
+ * onto `User` (migration `20260703000000_extension_foundations`), so the
+ * `Integration` row must be gone before its system user can be deleted —
+ * deleting the user first would hit the RESTRICT constraint and roll back.
+ * `$transaction([...])` (array form) runs its statements sequentially in
+ * the order given, so `integration.delete` always precedes `user.delete`.
+ *
+ * Previously this deleted only the `Integration` row, orphaning the system
+ * user: its unique `username`/`email` stuck around forever, permanently
+ * blocking same-name re-registration (a fresh `registerIntegration` call
+ * collides with the orphan's constraints, and the generic unique-violation
+ * catch there misreports it as "An integration with this name already
+ * exists"), and its `CasePermission` grants never cascaded away (the
+ * cascade is keyed on the USER's delete, which never fired) — the delete
+ * dialog's "removes ... its case-access grants" promise wasn't kept for a
+ * grant list that referenced no case; the row itself just sat there,
+ * masked from `listIntegrationCaseGrants` by "the integration no longer
+ * exists" but never actually gone. Both are fixed by deleting the system
+ * user in the same transaction (found + fixed 2026-07-14, staging repro).
+ *
+ * One trail this does NOT preserve: `PluginHealthEvidence.createdById`
+ * (`prisma/schema.prisma`) records the machine principal that appended each
+ * evidence row, but that column carries no FK — it is a bare string, not a
+ * `@relation` onto `User` (deliberately: tier-2 plugin tables are one-way,
+ * core never references a plugin table back — see the model's own doc
+ * comment). Deleting this integration's system user here does not cascade
+ * or restrict against those rows; they simply survive with a `createdById`
+ * that no longer resolves to any user, an unattributable actor in an
+ * otherwise tamper-evident, hash-chained evidence log. `revokeIntegration`
+ * — not this function — is the trail-preserving path when that
+ * attribution matters: it never deletes the system user, so its evidence
+ * rows stay resolvable.
  */
 export async function deleteIntegrationRegistration(
 	integrationId: string,
@@ -707,13 +744,16 @@ export async function deleteIntegrationRegistration(
 		const existing = await getOwnedIntegrationOrError(
 			integrationId,
 			actorUserId,
-			{ id: true, name: true }
+			{ id: true, name: true, systemUserId: true }
 		);
 		if ("error" in existing) {
 			return existing;
 		}
 
-		await prisma.integration.delete({ where: { id: integrationId } });
+		await prisma.$transaction([
+			prisma.integration.delete({ where: { id: integrationId } }),
+			prisma.user.delete({ where: { id: existing.data.systemUserId } }),
+		]);
 
 		await writeAuditLog({
 			userId: actorUserId,
@@ -1236,16 +1276,31 @@ async function requireIntegrationOwnerAndCaseAdmin(
  * found" 404 shape rather than a 403).
  *
  * Additionally requires the integration be ACTIVE — mirrors `issueToken`'s
- * own guard and error shape ("Cannot grant case access for a non-active
- * integration", mapped to 409 by `lib/api-response.ts`'s `ERROR_MAPPINGS`):
- * handing a suspended or revoked integration's system user MORE case access
- * makes no sense while it can't authenticate (SUSPENDED) or never will again
- * (REVOKED). This check runs after `requireIntegrationOwnerAndCaseAdmin`
- * rather than before — the two conditions are independent, so the ordering
- * doesn't change what any caller can learn: failing case-admin always
- * reports "Case not found" regardless of integration status, and an
- * inactive integration always reports this conflict regardless of case
- * access. `listIntegrationCaseGrants` and `revokeIntegrationCaseAccess`
+ * own guard, but reports the integration's ACTUAL status rather than a
+ * uniform "non-active" (QA, 2026-07-14: a client that keys its own copy off
+ * a prop it already held could go stale cross-tab — "non-active" told it
+ * nothing about which of the two terminal states it was looking at). Two
+ * distinct, `^...$`-anchored messages — "Cannot grant case access for a
+ * suspended integration" / "...for a revoked integration" — both map to 409
+ * via `lib/api-response.ts`'s `ERROR_MAPPINGS`. The gate itself stays a
+ * single `!== "ACTIVE"` check (fail-closed) rather than an allowlist of
+ * `SUSPENDED`/`REVOKED` — `IntegrationStatus` is a closed 3-value enum
+ * today, so the two are behaviourally identical, but `!== "ACTIVE"` also
+ * rejects any status this enum might grow in future, where an allowlist
+ * would silently fall through and grant. The unreachable-today fallback
+ * message ("...for a non-active integration") is also still matched by
+ * `ERROR_MAPPINGS`, so that future status would 409 rather than 500.
+ * Revealing which status it is leaks nothing: this check runs strictly AFTER
+ * `requireIntegrationOwnerAndCaseAdmin`, so it only fires once the caller
+ * has already proven they own the integration and hold case-ADMIN — status
+ * is not something to hide from someone who could just call `GET
+ * /api/integrations/[id]` and read it directly. This check runs after
+ * `requireIntegrationOwnerAndCaseAdmin` rather than before — the two
+ * conditions are independent, so the ordering doesn't change what any
+ * caller can learn: failing case-admin always reports "Case not found"
+ * regardless of integration status, and an inactive integration always
+ * reports one of these two conflicts regardless of case access.
+ * `listIntegrationCaseGrants` and `revokeIntegrationCaseAccess`
  * deliberately do NOT carry this gate — listing or revoking a suspended or
  * revoked integration's access is exactly the cleanup path an operator
  * needs after suspending/revoking it, and blocking that would make the
@@ -1297,8 +1352,17 @@ export async function grantIntegrationCaseAccess(
 		if ("error" in authorised) {
 			return authorised;
 		}
+		// Fail closed: gate on `!== "ACTIVE"`, not an allowlist of the two
+		// known-bad statuses — a future IntegrationStatus variant is rejected
+		// by default instead of silently falling through to a grant.
 		if (authorised.data.status !== "ACTIVE") {
-			return { error: "Cannot grant case access for a non-active integration" };
+			let message = "Cannot grant case access for a non-active integration";
+			if (authorised.data.status === "SUSPENDED") {
+				message = "Cannot grant case access for a suspended integration";
+			} else if (authorised.data.status === "REVOKED") {
+				message = "Cannot grant case access for a revoked integration";
+			}
+			return { error: message };
 		}
 
 		const assuranceCase = await prisma.assuranceCase.findUnique({
