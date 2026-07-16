@@ -495,43 +495,16 @@ async function getLatestPublishedVersionId(
 }
 
 /**
- * Attempts to publish a case and returns the published ID if successful.
- * Handles legacy table issues gracefully by catching errors.
- */
-async function tryPublishCase(
-	ownerId: string,
-	caseId: string
-): Promise<string | null> {
-	const { publishAssuranceCase } = await import(
-		"@/lib/services/publish-service"
-	);
-
-	try {
-		const result = await publishAssuranceCase(ownerId, caseId);
-		return "error" in result ? null : result.data.publishedId;
-	} catch (error) {
-		console.warn(
-			`Failed to publish case ${caseId} (legacy table issue):`,
-			error
-		);
-		return null;
-	}
-}
-
-/**
  * Resolves source AssuranceCase IDs to their latest PublishedAssuranceCase IDs.
- * For cases that are READY_TO_PUBLISH but not yet published, this will publish them first.
  *
  * Note: The legacy PublishedAssuranceCase table has type mismatches with the new schema.
  * We query publishedVersions separately with error handling to avoid crashes.
  *
  * @param sourceCaseIds - Array of source AssuranceCase IDs
- * @param ownerId - The user ID performing the operation (for publishing)
  * @returns Array of PublishedAssuranceCase IDs
  */
 export async function resolvePublishedCaseIds(
-	sourceCaseIds: string[],
-	ownerId?: string
+	sourceCaseIds: string[]
 ): Promise<string[]> {
 	if (sourceCaseIds.length === 0) {
 		return [];
@@ -546,7 +519,7 @@ export async function resolvePublishedCaseIds(
 	const publishedCaseIds: string[] = [];
 
 	for (const sourceCase of sourceCases) {
-		const publishedId = await resolvePublishedIdForCase(sourceCase, ownerId);
+		const publishedId = await resolvePublishedIdForCase(sourceCase);
 		if (publishedId) {
 			publishedCaseIds.push(publishedId);
 		}
@@ -557,29 +530,25 @@ export async function resolvePublishedCaseIds(
 
 /**
  * Resolves a single case to its published version ID.
+ *
+ * There used to be a second path here: a case in the retired READY_TO_PUBLISH
+ * status (ADR 0003 §2) could be auto-published on first link. That status no
+ * longer exists — every case reaching this function is either PUBLISHED
+ * (has a published version) or DRAFT (does not, and is not auto-published) —
+ * so this is now a direct lookup.
  */
-async function resolvePublishedIdForCase(
-	sourceCase: { id: string; publishStatus: string; createdById: string },
-	ownerId?: string
-): Promise<string | null> {
+async function resolvePublishedIdForCase(sourceCase: {
+	id: string;
+	publishStatus: string;
+	createdById: string;
+}): Promise<string | null> {
 	const latestPublishedId = await getLatestPublishedVersionId(sourceCase.id);
 
 	if (latestPublishedId) {
 		await syncPublishStatusIfNeeded(sourceCase);
-		return latestPublishedId;
 	}
 
-	// If READY_TO_PUBLISH, owner provided, and owner is the case creator, publish it now
-	const canPublish =
-		sourceCase.publishStatus === "READY_TO_PUBLISH" &&
-		ownerId &&
-		sourceCase.createdById === ownerId;
-
-	if (canPublish) {
-		return tryPublishCase(ownerId, sourceCase.id);
-	}
-
-	return null;
+	return latestPublishedId;
 }
 
 /**
@@ -613,11 +582,8 @@ export async function createCaseStudyWithLinks(
 	try {
 		const now = new Date();
 
-		// Resolve source case IDs to published case IDs (publishes READY_TO_PUBLISH cases)
-		const publishedCaseIds = await resolvePublishedCaseIds(
-			sourceCaseIds,
-			ownerId
-		);
+		// Resolve source case IDs to their published case IDs
+		const publishedCaseIds = await resolvePublishedCaseIds(sourceCaseIds);
 
 		// Create case study and links in a transaction
 		const caseStudy = await prisma.$transaction(async (tx) => {
@@ -704,10 +670,10 @@ export async function updateCaseStudyWithLinks(
 		const wasPublished = existing.published;
 		const isNowPublished = data.published ?? existing.published;
 
-		// Resolve source case IDs to published case IDs if provided (publishes READY_TO_PUBLISH cases)
+		// Resolve source case IDs to their published case IDs, if provided
 		const publishedCaseIds =
 			sourceCaseIds !== undefined
-				? await resolvePublishedCaseIds(sourceCaseIds, ownerId)
+				? await resolvePublishedCaseIds(sourceCaseIds)
 				: undefined;
 
 		// Update case study and links in a transaction
@@ -789,8 +755,10 @@ export interface CaseAvailableForStudy {
 }
 
 /**
- * Gets cases that are ready to publish OR published for a specific user.
- * Used for case study linking - shows cases available for selection.
+ * Gets published cases for a specific user. Used for case study linking -
+ * shows cases available for selection. (Previously also included cases in
+ * the now-retired READY_TO_PUBLISH status — ADR 0003 §2 removed that
+ * intermediate step, so PUBLISHED is the only qualifying status left.)
  *
  * Note: The publishedVersions relation uses a legacy Django table that may have
  * type mismatches with UUID-based case IDs. We query it separately to handle errors.
@@ -803,9 +771,7 @@ export async function getCasesAvailableForCaseStudy(
 		const cases = await prisma.assuranceCase.findMany({
 			where: {
 				createdById: userId,
-				publishStatus: {
-					in: ["READY_TO_PUBLISH", "PUBLISHED"],
-				},
+				publishStatus: "PUBLISHED",
 			},
 			select: {
 				id: true,

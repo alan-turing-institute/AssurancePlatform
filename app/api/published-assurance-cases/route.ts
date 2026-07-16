@@ -11,8 +11,7 @@ import { getCasesAvailableForCaseStudy } from "@/lib/services/case-study-service
  * GET /api/published-assurance-cases
  *
  * Returns assurance cases that can be linked to case studies.
- * Returns cases owned by the current user with
- * publishStatus in (READY_TO_PUBLISH, PUBLISHED).
+ * Returns cases owned by the current user with publishStatus PUBLISHED.
  */
 export async function GET() {
 	try {

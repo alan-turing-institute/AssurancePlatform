@@ -274,12 +274,10 @@ export async function fetchCaseFromPrisma(
 			permissions,
 			type: "assurance_case",
 			comments: [],
-			// Publish status fields
+			// Publish status fields (DRAFT / PUBLISHED — the "Ready to Publish"
+			// intermediate step was retired, ADR 0003 §2)
 			published: caseData.publishStatus === "PUBLISHED",
-			publishStatus: caseData.publishStatus as
-				| "DRAFT"
-				| "READY_TO_PUBLISH"
-				| "PUBLISHED",
+			publishStatus: caseData.publishStatus as "DRAFT" | "PUBLISHED",
 			publishedAt: caseData.publishedAt?.toISOString() ?? null,
 			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
 			// Case study integration

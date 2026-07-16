@@ -5,9 +5,8 @@ import { optionalString } from "./base";
  * Update case publish status input
  */
 export const updateCaseStatusSchema = z.object({
-	targetStatus: z.enum(["DRAFT", "READY_TO_PUBLISH", "PUBLISHED"], {
-		message:
-			"Invalid targetStatus. Must be one of: DRAFT, READY_TO_PUBLISH, PUBLISHED",
+	targetStatus: z.enum(["DRAFT", "PUBLISHED"], {
+		message: "Invalid targetStatus. Must be one of: DRAFT, PUBLISHED",
 	}),
 	description: optionalString(5000),
 });

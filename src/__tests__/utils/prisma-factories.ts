@@ -3,6 +3,7 @@ import type {
 	ApiToken,
 	AssuranceCase,
 	AssuranceElement,
+	CaseInformation,
 	CasePermission,
 	CaseStudy,
 	CaseTeamPermission,
@@ -113,7 +114,7 @@ type CaseOverrides = Partial<{
 	name: string;
 	description: string;
 	mode: "STANDARD" | "ADVANCED";
-	publishStatus: "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED";
+	publishStatus: "DRAFT" | "PUBLISHED";
 	published: boolean;
 	isDemo: boolean;
 }>;
@@ -559,6 +560,34 @@ export function createTestCaseStudy(
 			ownerId,
 			createdOn: now,
 			lastModifiedOn: now,
+		},
+	});
+}
+
+// ============================================
+// CASE INFORMATION (ADR 0003 §1)
+// ============================================
+
+type CaseInformationOverrides = Partial<{
+	description: string;
+	authors: string;
+	sector: string;
+	featureImageUrl: string;
+}>;
+
+export function createTestCaseInformation(
+	caseId: string,
+	overrides: CaseInformationOverrides = {}
+): Promise<CaseInformation> {
+	const n = nextId();
+	return prisma.caseInformation.create({
+		data: {
+			caseId,
+			description: overrides.description ?? `Test case information ${n}`,
+			authors: overrides.authors ?? "Ada Lovelace",
+			sector: overrides.sector ?? "Healthcare",
+			featureImageUrl:
+				overrides.featureImageUrl ?? `https://example.com/image-${n}.png`,
 		},
 	});
 }

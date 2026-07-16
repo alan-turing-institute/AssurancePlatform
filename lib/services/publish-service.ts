@@ -1,18 +1,121 @@
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
+import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
 import { capturePluginDataForSnapshot } from "@/lib/services/plugin-data-service";
 import type {
 	FullPublishStatus,
-	MarkReadyResult,
 	PrismaPublishStatus,
 	PublishResult,
 	PublishStatus,
 	StatusTransitionResult,
-	UnmarkReadyResult,
 	UnpublishResult,
 } from "@/lib/services/publish-service.types";
+import { generateUniqueSlug } from "@/lib/services/slug-service";
+import type { Prisma } from "@/src/generated/prisma";
+
+// Derived from `prisma.$transaction`'s own callback parameter — same pattern
+// as `slug-service.ts` (kept local rather than imported: `Prisma.
+// TransactionClient` does not structurally match this project's
+// `.$extends()`-wrapped client from `lib/prisma.ts`).
+type TransactionCallback = Parameters<typeof prisma.$transaction>[0];
+type TransactionClient = TransactionCallback extends (
+	tx: infer T
+) => Promise<unknown>
+	? T
+	: never;
+
+// ============================================
+// Shared helpers — publish / republish
+// ============================================
+
+/**
+ * Composes the JSON snapshot content shared by every publish flow: the
+ * exported case tree plus captured plugin data (ADR 0002 v2 §3) and case
+ * information (ADR 0003 §3), each included only when present — `undefined`,
+ * not an empty object, when there is none — so a snapshot never gains a key
+ * for data the case doesn't hold.
+ *
+ * Shared verbatim between `publishAssuranceCase` (first publish) and
+ * `updatePublishedCase` (republish) — both must freeze identical content
+ * shapes, so this is the single place that composition happens.
+ */
+async function composeSnapshotContent(
+	userId: string,
+	caseId: string
+): Promise<{ data: Record<string, unknown> } | { error: string }> {
+	const exportResult = await exportCase(userId, caseId, {
+		includeComments: true,
+	});
+	if ("error" in exportResult) {
+		return { error: exportResult.error };
+	}
+
+	// Every plugin namespace holding data on this case, captured verbatim
+	// (ADR 0002 v2 §3) — follows data present, not this (or any) viewer's
+	// plugin toggles. `undefined` when the case holds no plugin data at all,
+	// so the snapshot gains no `pluginData` key rather than an empty one.
+	const pluginData = await capturePluginDataForSnapshot(caseId);
+	// Case information (ADR 0003 §3 — "the snapshot freezes metadata as well
+	// as content"), composed the same way: `undefined`, not an empty object,
+	// when the case has no case information at all.
+	const caseInformation = await captureCaseInformationForSnapshot(caseId);
+
+	return {
+		data: {
+			...exportResult.data,
+			...(pluginData && { pluginData }),
+			...(caseInformation && { caseInformation }),
+		},
+	};
+}
+
+/**
+ * Retires whichever row is currently `isCurrent: true` for `caseId` and
+ * inserts its replacement, inside the caller's transaction. Retirement must
+ * run BEFORE the insert — the partial unique index on (slug) WHERE
+ * is_current would otherwise reject the new row for reusing the same slug
+ * while the old row is still marked current.
+ *
+ * `updateMany` (not `update` on one known id) so this is correct whether
+ * zero or one row is currently marked: first-publish has none (this call is
+ * then a defensive no-op guarding the "at most one current row per case"
+ * invariant against being called twice on an already-published case — e.g.
+ * directly via `POST /api/cases/[id]/publish`, outside `transitionStatus`'s
+ * DRAFT-only gate); republish has exactly one.
+ *
+ * Shared verbatim between `publishAssuranceCase` and `updatePublishedCase`;
+ * each layers its own extra side effects (case status flip vs case-study
+ * link migration) around this call.
+ */
+async function swapCurrentPublishedVersion(
+	tx: TransactionClient,
+	input: {
+		caseId: string;
+		title: string;
+		slug: string;
+		content: Prisma.InputJsonValue;
+		description: string | null;
+		createdAt: Date;
+	}
+) {
+	await tx.publishedAssuranceCase.updateMany({
+		where: { assuranceCaseId: input.caseId, isCurrent: true },
+		data: { isCurrent: false },
+	});
+
+	return tx.publishedAssuranceCase.create({
+		data: {
+			title: input.title,
+			slug: input.slug,
+			content: input.content,
+			description: input.description,
+			assuranceCaseId: input.caseId,
+			createdAt: input.createdAt,
+		},
+	});
+}
 
 // ============================================
 // Service Functions
@@ -111,47 +214,51 @@ export async function publishAssuranceCase(
 		return { error: "Case not found" };
 	}
 
-	// Export case content as JSON
-	const exportResult = await exportCase(userId, caseId, {
-		includeComments: true,
-	});
-
-	if ("error" in exportResult) {
-		return { error: exportResult.error };
+	// Compose the JSON snapshot content (export + plugin data + case
+	// information) — shared with `updatePublishedCase`, see
+	// `composeSnapshotContent` above.
+	const contentResult = await composeSnapshotContent(userId, caseId);
+	if ("error" in contentResult) {
+		return { error: contentResult.error };
 	}
-
-	// Every plugin namespace holding data on this case, captured verbatim
-	// (ADR 0002 v2 §3) — follows data present, not this (or any) viewer's
-	// plugin toggles. `undefined` when the case holds no plugin data at all,
-	// so the snapshot gains no `pluginData` key rather than an empty one.
-	const pluginData = await capturePluginDataForSnapshot(caseId);
-	const content = pluginData
-		? { ...exportResult.data, pluginData }
-		: exportResult.data;
+	// The composed snapshot is plain JSON but, as a plain object built from
+	// named interfaces (`CaseInformationSnapshot` etc.) with no index
+	// signature of their own, doesn't structurally satisfy `InputJsonObject`
+	// even though every value it can hold is a valid `InputJsonValue`.
+	// Routing through `unknown` is TS's own prescribed escape hatch for
+	// exactly this "no sufficient overlap" case (same pattern as
+	// `health-scoring-service.ts`) — not a blind `any`.
+	const content = contentResult.data as unknown as Prisma.InputJsonValue;
 
 	const now = new Date();
 
 	try {
-		// Create the published version and update the case in a transaction
-		const [publishedCase] = await prisma.$transaction([
-			prisma.publishedAssuranceCase.create({
-				data: {
-					title: assuranceCase.name,
-					content,
-					description: description ?? null,
-					assuranceCaseId: caseId,
-					createdAt: now,
-				},
-			}),
-			prisma.assuranceCase.update({
+		// Generating the slug and creating the row must share one transaction
+		// — otherwise a concurrent first-publish of a same-named case could
+		// observe the same "no collision yet" result and both try to claim
+		// the identical slug (the table's unique index would then reject the
+		// second, surfacing as an opaque 500 rather than the numeric-suffix
+		// behaviour ADR 0003 §6 promises).
+		const publishedCase = await prisma.$transaction(async (tx) => {
+			const slug = await generateUniqueSlug(assuranceCase.name, tx);
+			const created = await swapCurrentPublishedVersion(tx, {
+				caseId,
+				title: assuranceCase.name,
+				slug,
+				content,
+				description: description ?? null,
+				createdAt: now,
+			});
+			await tx.assuranceCase.update({
 				where: { id: caseId },
 				data: {
 					published: true,
 					publishedAt: now,
 					publishStatus: "PUBLISHED",
 				},
-			}),
-		]);
+			});
+			return created;
+		});
 
 		return {
 			data: { publishedId: publishedCase.id, publishedAt: now },
@@ -307,12 +414,12 @@ export async function getPublishedCasesByUser(
 }
 
 // ============================================
-// 3-State Publishing Workflow Functions
+// Publishing Workflow Functions
 // ============================================
 
 /**
- * Gets the full publish status including 3-state workflow information.
- * Returns publish status, ready status, and change detection.
+ * Gets the full publish status (DRAFT / PUBLISHED — the "Ready to Publish"
+ * intermediate step was retired, ADR 0003 §2) plus change detection.
  *
  * Note: The publishedVersions relation uses a legacy Django table that may have
  * type mismatches with UUID-based case IDs. We handle this gracefully by
@@ -411,145 +518,6 @@ export async function getFullPublishStatus(
 }
 
 /**
- * Marks an assurance case as ready to publish.
- * Transitions from DRAFT to READY_TO_PUBLISH status.
- *
- * Requires EDIT permission or higher.
- */
-export async function markCaseAsReady(
-	userId: string,
-	caseId: string
-): Promise<MarkReadyResult> {
-	// Check user has EDIT permission
-	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
-	if (!hasAccess) {
-		return { error: "Permission denied" };
-	}
-
-	// Get the case to check its current status
-	const assuranceCase = await prisma.assuranceCase.findUnique({
-		where: { id: caseId },
-		select: {
-			id: true,
-			publishStatus: true,
-		},
-	});
-
-	if (!assuranceCase) {
-		return { error: "Case not found" };
-	}
-
-	// Only allow transition from DRAFT
-	if (assuranceCase.publishStatus !== "DRAFT") {
-		return {
-			error: `Cannot mark as ready: case is currently ${assuranceCase.publishStatus}`,
-		};
-	}
-
-	const now = new Date();
-
-	try {
-		await prisma.assuranceCase.update({
-			where: { id: caseId },
-			data: {
-				publishStatus: "READY_TO_PUBLISH",
-				markedReadyAt: now,
-				markedReadyById: userId,
-			},
-		});
-
-		return { data: { markedReadyAt: now } };
-	} catch (error) {
-		console.error("Failed to mark case as ready:", error);
-		return { error: "Failed to mark case as ready" };
-	}
-}
-
-/**
- * Unmarks an assurance case as ready to publish.
- * Transitions from READY_TO_PUBLISH back to DRAFT status.
- *
- * Requires EDIT permission or higher.
- */
-export async function unmarkCaseAsReady(
-	userId: string,
-	caseId: string
-): Promise<UnmarkReadyResult> {
-	// Check user has EDIT permission
-	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
-	if (!hasAccess) {
-		return { error: "Permission denied" };
-	}
-
-	// Get the case to check its current status
-	const assuranceCase = await prisma.assuranceCase.findUnique({
-		where: { id: caseId },
-		select: {
-			id: true,
-			publishStatus: true,
-		},
-	});
-
-	if (!assuranceCase) {
-		return { error: "Case not found" };
-	}
-
-	// Only allow transition from READY_TO_PUBLISH
-	if (assuranceCase.publishStatus !== "READY_TO_PUBLISH") {
-		return {
-			error: `Cannot unmark: case is currently ${assuranceCase.publishStatus}`,
-		};
-	}
-
-	try {
-		await prisma.assuranceCase.update({
-			where: { id: caseId },
-			data: {
-				publishStatus: "DRAFT",
-				markedReadyAt: null,
-				markedReadyById: null,
-			},
-		});
-
-		return { data: { success: true as const } };
-	} catch (error) {
-		console.error("Failed to unmark case as ready:", error);
-		return { error: "Failed to unmark case as ready" };
-	}
-}
-
-/**
- * Gets cases that are ready to publish for a specific user.
- * Returns cases owned by the user with READY_TO_PUBLISH status.
- */
-export async function getReadyToPublishCases(userId: string): Promise<
-	{
-		id: string;
-		name: string;
-		description: string;
-		markedReadyAt: Date | null;
-	}[]
-> {
-	const cases = await prisma.assuranceCase.findMany({
-		where: {
-			createdById: userId,
-			publishStatus: "READY_TO_PUBLISH",
-		},
-		select: {
-			id: true,
-			name: true,
-			description: true,
-			markedReadyAt: true,
-		},
-		orderBy: {
-			markedReadyAt: "desc",
-		},
-	});
-
-	return cases;
-}
-
-/**
  * Updates an existing published assurance case with current content.
  * Creates a new PublishedAssuranceCase record and migrates case study links.
  *
@@ -575,8 +543,10 @@ export async function updatePublishedCase(
 			published: true,
 			publishStatus: true,
 			publishedVersions: {
+				where: { isCurrent: true },
 				select: {
 					id: true,
+					slug: true,
 					caseStudyLinks: {
 						select: {
 							caseStudyId: true,
@@ -604,35 +574,30 @@ export async function updatePublishedCase(
 		return { error: "No published version found" };
 	}
 
-	// Export current case content
-	const exportResult = await exportCase(userId, caseId, {
-		includeComments: true,
-	});
-
-	if ("error" in exportResult) {
-		return { error: exportResult.error };
+	// Compose the JSON snapshot content — shared with `publishAssuranceCase`,
+	// see `composeSnapshotContent` above.
+	const contentResult = await composeSnapshotContent(userId, caseId);
+	if ("error" in contentResult) {
+		return { error: contentResult.error };
 	}
-
-	// See `publishAssuranceCase` above for the same capture + merge.
-	const pluginData = await capturePluginDataForSnapshot(caseId);
-	const content = pluginData
-		? { ...exportResult.data, pluginData }
-		: exportResult.data;
+	// See `publishAssuranceCase` above for why this cast is needed.
+	const content = contentResult.data as unknown as Prisma.InputJsonValue;
 
 	const now = new Date();
 
 	try {
 		// Create new version and migrate links in a transaction
 		const newPublished = await prisma.$transaction(async (tx) => {
-			// Create new published version
-			const published = await tx.publishedAssuranceCase.create({
-				data: {
-					title: assuranceCase.name,
-					content,
-					description: description ?? null,
-					assuranceCaseId: caseId,
-					createdAt: now,
-				},
+			// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
+			// across renames) — never regenerated here, even if
+			// `assuranceCase.name` has changed since first publish.
+			const published = await swapCurrentPublishedVersion(tx, {
+				caseId,
+				title: assuranceCase.name,
+				slug: currentPublished.slug,
+				content,
+				description: description ?? null,
+				createdAt: now,
 			});
 
 			// Get case study IDs linked to old version
@@ -710,13 +675,7 @@ function executeStatusTransition(
 	description?: string
 ): Promise<StatusTransitionResult> {
 	switch (transitionKey) {
-		case "DRAFT->READY_TO_PUBLISH":
-			return handleMarkAsReady(userId, caseId);
-
-		case "READY_TO_PUBLISH->DRAFT":
-			return handleUnmarkAsReady(userId, caseId);
-
-		case "READY_TO_PUBLISH->PUBLISHED":
+		case "DRAFT->PUBLISHED":
 			return handlePublish(userId, caseId, description);
 
 		case "PUBLISHED->DRAFT":
@@ -731,28 +690,6 @@ function executeStatusTransition(
 				error: `Invalid status transition: ${transitionKey.replace("->", " to ")}`,
 			});
 	}
-}
-
-async function handleMarkAsReady(
-	userId: string,
-	caseId: string
-): Promise<StatusTransitionResult> {
-	const result = await markCaseAsReady(userId, caseId);
-	if ("error" in result) {
-		return { error: result.error };
-	}
-	return { data: { newStatus: "READY_TO_PUBLISH" } };
-}
-
-async function handleUnmarkAsReady(
-	userId: string,
-	caseId: string
-): Promise<StatusTransitionResult> {
-	const result = await unmarkCaseAsReady(userId, caseId);
-	if ("error" in result) {
-		return { error: result.error };
-	}
-	return { data: { newStatus: "DRAFT" } };
 }
 
 async function handlePublish(
