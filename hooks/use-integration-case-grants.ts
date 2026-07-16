@@ -5,6 +5,7 @@ import { RequestJsonError, requestJson } from "@/lib/request-json";
 import type {
 	CaseGrantPermission,
 	IntegrationCaseGrant,
+	IntegrationStatus,
 } from "@/lib/schemas/integration";
 import { toast } from "@/lib/toast";
 
@@ -12,19 +13,56 @@ function errorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : "Something went wrong";
 }
 
+// The two distinct, server-disclosed 409 bodies `POST .../case-grants` now
+// returns (fix/integration-delete-orphan @ 8a413d5b, landing alongside this
+// branch) — verbatim, so a change to either wording is a loud test failure
+// here rather than a silently-wrong fallback match.
+const SUSPENDED_409_MESSAGE =
+	"Cannot grant case access for a suspended integration";
+const REVOKED_409_MESSAGE =
+	"Cannot grant case access for a revoked integration";
+
+const REACTIVATE_COPY =
+	"This integration must be ACTIVE before it can be granted access to a case. Reactivate it, then try again.";
+const REVOKED_COPY =
+	"Revoked integrations cannot be restored — register a new integration and grant it access instead.";
+
 /**
  * Maps a failed grant attempt to the fixed, faithful message the settings
- * UI should show — 409 always means "the integration isn't ACTIVE" (the
- * only conflict `POST .../case-grants` ever returns, per its own doc
- * comment), and 404 is deliberately generic: it covers a nonexistent case,
- * a soft-deleted one, AND the caller lacking case-ADMIN, all with the exact
- * same message server-side (no enumeration oracle) — this hook does not
- * try to tell those apart either, on purpose.
+ * UI should show. The two non-ACTIVE statuses need different advice, because
+ * only one of them is reversible: SUSPENDED can be reactivated, so "reactivate
+ * it" is genuinely actionable there; REVOKED is permanent by design (the
+ * revoke confirmation dialog itself says so), so telling a REVOKED integration
+ * to "reactivate" is impossible advice. 404 is deliberately generic: it
+ * covers a nonexistent case, a soft-deleted one, AND the caller lacking
+ * case-ADMIN, all with the exact same message server-side (no enumeration
+ * oracle) — this hook does not try to tell those apart either, on purpose.
+ *
+ * Server truth wins over the client-held `integrationStatus` prop: the 409
+ * body's own `error` string is matched first against the two verbatim
+ * messages above, because the prop can be stale (another tab, or another
+ * admin, revokes/suspends the integration while this card's grant form is
+ * still open and still believes the old status — a real probe caught the
+ * prop-keyed version giving the impossible "Reactivate it" advice for an
+ * integration the server had already told it was revoked). The prop is only
+ * a fallback, for the old uniform 409 message ("...for a non-active
+ * integration") that production keeps serving until both branches land
+ * together — once the server discloses which status it actually is, that
+ * disclosure is authoritative.
  */
-function grantErrorMessage(err: unknown): string {
+function grantErrorMessage(
+	err: unknown,
+	integrationStatus: IntegrationStatus
+): string {
 	if (err instanceof RequestJsonError) {
 		if (err.status === 409) {
-			return "This integration must be ACTIVE before it can be granted access to a case. Reactivate it, then try again.";
+			if (err.message === REVOKED_409_MESSAGE) {
+				return REVOKED_COPY;
+			}
+			if (err.message === SUSPENDED_409_MESSAGE) {
+				return REACTIVATE_COPY;
+			}
+			return integrationStatus === "REVOKED" ? REVOKED_COPY : REACTIVATE_COPY;
 		}
 		if (err.status === 404) {
 			return "Case not found. Check that the case still exists and that you hold admin access to it.";
@@ -34,6 +72,8 @@ function grantErrorMessage(err: unknown): string {
 }
 
 export interface UseIntegrationCaseGrantsResult {
+	/** Clears a mapped grant error without a new attempt — called when the grant form closes or reopens, so a past failure's copy (e.g. a stale "Reactivate it") never resurfaces on an unrelated later open. */
+	clearGrantError: () => void;
 	grantAccess: (
 		caseId: string,
 		permission: CaseGrantPermission
@@ -64,9 +104,15 @@ export interface UseIntegrationCaseGrantsResult {
  * Every mutation re-fetches the full list on success, same rationale as
  * `useIntegrations`: cheaper to re-resolve through the same GET the section
  * renders from than to hand-reconcile a nested array locally.
+ *
+ * `integrationStatus` is threaded in (rather than read once at mount) so a
+ * 409 raised after the card's own status has just changed — e.g. the user
+ * revokes the integration while this card's grant form is still open — maps
+ * to the status-appropriate copy, not a stale one from first render.
  */
 export function useIntegrationCaseGrants(
-	integrationId: string
+	integrationId: string,
+	integrationStatus: IntegrationStatus
 ): UseIntegrationCaseGrantsResult {
 	const [grants, setGrants] = useState<IntegrationCaseGrant[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -117,13 +163,13 @@ export function useIntegrationCaseGrants(
 				await load();
 				return true;
 			} catch (err) {
-				setGrantError(grantErrorMessage(err));
+				setGrantError(grantErrorMessage(err, integrationStatus));
 				return false;
 			} finally {
 				setGranting(false);
 			}
 		},
-		[integrationId, load]
+		[integrationId, integrationStatus, load]
 	);
 
 	const removeAccess = useCallback(
@@ -148,6 +194,14 @@ export function useIntegrationCaseGrants(
 		[integrationId, load]
 	);
 
+	// Deliberately not folded into `grantAccess`'s own `setGrantError(null)`
+	// at the start of an attempt: this clears the banner on the form
+	// closing/reopening, i.e. specifically WITHOUT a new attempt — the two
+	// call sites are the section's open-trigger click and its Cancel, not
+	// this hook's own request lifecycle (`grantAccess` already owns clearing
+	// for the "new attempt" case).
+	const clearGrantError = useCallback(() => setGrantError(null), []);
+
 	return {
 		grants,
 		loading,
@@ -155,6 +209,7 @@ export function useIntegrationCaseGrants(
 		refetch: load,
 		granting,
 		grantError,
+		clearGrantError,
 		grantAccess,
 		removingCaseId,
 		removeAccess,

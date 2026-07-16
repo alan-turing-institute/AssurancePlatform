@@ -33,7 +33,7 @@ describe("useIntegrationCaseGrants", () => {
 		);
 
 		const { result } = renderHook(() =>
-			useIntegrationCaseGrants(INTEGRATION_ID)
+			useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 		);
 
 		expect(result.current.loading).toBe(true);
@@ -58,7 +58,7 @@ describe("useIntegrationCaseGrants", () => {
 		);
 
 		const { result } = renderHook(() =>
-			useIntegrationCaseGrants(INTEGRATION_ID)
+			useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 		);
 
 		await waitFor(() => expect(result.current.loading).toBe(false));
@@ -89,7 +89,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(result.current.grants).toHaveLength(0);
@@ -104,7 +104,7 @@ describe("useIntegrationCaseGrants", () => {
 			expect(result.current.grantError).toBeNull();
 		});
 
-		it("maps a 409 to a fixed, faithful 'integration must be ACTIVE' message", async () => {
+		it("falls back to the prop-keyed 'Reactivate it' message when the server still serves the old uniform 409 (pre-cutover: production before both branches land) for a SUSPENDED integration", async () => {
 			server.use(
 				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
 				http.post(CASE_GRANTS_PATH, () =>
@@ -116,7 +116,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "SUSPENDED")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -132,6 +132,123 @@ describe("useIntegrationCaseGrants", () => {
 			expect(result.current.grants).toHaveLength(0);
 		});
 
+		it("falls back to the prop-keyed 'cannot be restored' message when the server still serves the old uniform 409 for a REVOKED integration", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
+				http.post(CASE_GRANTS_PATH, () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a non-active integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID, "REVOKED")
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			let success: boolean | undefined;
+			await act(async () => {
+				success = await result.current.grantAccess("case-1", "EDIT");
+			});
+
+			expect(success).toBe(false);
+			expect(result.current.grantError).toBe(
+				"Revoked integrations cannot be restored — register a new integration and grant it access instead."
+			);
+			expect(result.current.grants).toHaveLength(0);
+		});
+
+		it("maps the server's verbatim 'suspended integration' 409 message to the 'Reactivate it' copy", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
+				http.post(CASE_GRANTS_PATH, () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a suspended integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID, "SUSPENDED")
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			let success: boolean | undefined;
+			await act(async () => {
+				success = await result.current.grantAccess("case-1", "EDIT");
+			});
+
+			expect(success).toBe(false);
+			expect(result.current.grantError).toBe(
+				"This integration must be ACTIVE before it can be granted access to a case. Reactivate it, then try again."
+			);
+			expect(result.current.grants).toHaveLength(0);
+		});
+
+		it("maps the server's verbatim 'revoked integration' 409 message to the 'cannot be restored' copy, not the impossible 'Reactivate it' advice", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
+				http.post(CASE_GRANTS_PATH, () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a revoked integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID, "REVOKED")
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			let success: boolean | undefined;
+			await act(async () => {
+				success = await result.current.grantAccess("case-1", "EDIT");
+			});
+
+			expect(success).toBe(false);
+			expect(result.current.grantError).toBe(
+				"Revoked integrations cannot be restored — register a new integration and grant it access instead."
+			);
+			expect(result.current.grants).toHaveLength(0);
+		});
+
+		it("keys the 409 copy off the server's revoked message over a stale ACTIVE status prop (cross-tab revoke)", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
+				http.post(CASE_GRANTS_PATH, () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a revoked integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			// This card still believes the integration is ACTIVE — another tab
+			// (or another admin) revoked it after this card last rendered, and
+			// the prop hasn't caught up yet. The server's own 409 body is the
+			// only up-to-date signal at grant time, so it — not the stale
+			// prop — must decide the copy.
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			let success: boolean | undefined;
+			await act(async () => {
+				success = await result.current.grantAccess("case-1", "EDIT");
+			});
+
+			expect(success).toBe(false);
+			expect(result.current.grantError).toBe(
+				"Revoked integrations cannot be restored — register a new integration and grant it access instead."
+			);
+			expect(result.current.grants).toHaveLength(0);
+		});
+
 		it("maps a 404 to a generic 'case not found' message, whatever the server's own wording", async () => {
 			server.use(
 				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
@@ -141,7 +258,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -176,7 +293,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -192,6 +309,37 @@ describe("useIntegrationCaseGrants", () => {
 		});
 	});
 
+	describe("clearGrantError", () => {
+		it("clears a set grantError without making a new attempt — the form close/reopen path, not a retry", async () => {
+			server.use(
+				http.get(CASE_GRANTS_PATH, () => HttpResponse.json({ grants: [] })),
+				http.post(CASE_GRANTS_PATH, () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a revoked integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() =>
+				useIntegrationCaseGrants(INTEGRATION_ID, "REVOKED")
+			);
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			await act(async () => {
+				await result.current.grantAccess("case-1", "EDIT");
+			});
+			expect(result.current.grantError).not.toBeNull();
+
+			act(() => {
+				result.current.clearGrantError();
+			});
+
+			expect(result.current.grantError).toBeNull();
+			expect(result.current.grants).toHaveLength(0);
+		});
+	});
+
 	describe("removeAccess", () => {
 		it("issues the DELETE and refetches", async () => {
 			let grants = [makeGrant()];
@@ -204,7 +352,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(result.current.grants).toHaveLength(1);
@@ -231,7 +379,7 @@ describe("useIntegrationCaseGrants", () => {
 			);
 
 			const { result } = renderHook(() =>
-				useIntegrationCaseGrants(INTEGRATION_ID)
+				useIntegrationCaseGrants(INTEGRATION_ID, "ACTIVE")
 			);
 			await waitFor(() => expect(result.current.loading).toBe(false));
 			expect(result.current.grants).toHaveLength(1);

@@ -21,6 +21,8 @@ export interface CaseAccessSectionProps {
 	loadError: string | null;
 	/** True while the initial list fetch is in flight. */
 	loading: boolean;
+	/** Clears the hook-held `grantError` — called on both the grant form opening and closing, so a past attempt's copy never resurfaces on an unrelated later open (QA: stale "Reactivate it" banner on reopen with no new attempt). */
+	onClearGrantError: () => void;
 	onGrant: (
 		caseId: string,
 		permission: CaseGrantPermission
@@ -40,6 +42,17 @@ export interface CaseAccessSectionProps {
  * callback prop, and this component (and its tests) never call
  * `useIntegrationCaseGrants` directly — `IntegrationCard` owns that hook and
  * threads its state down here.
+ *
+ * This component's own `addOpen` state (whether the grant form is showing)
+ * deliberately has no logic to force it closed when `integrationActive`
+ * turns false — that reset lives one level up, in `IntegrationCard`, via a
+ * `key` on this component keyed to activity. Remounting on that transition
+ * discards `addOpen` (and every other bit of local state) for free, with no
+ * Effect and no stale-then-corrected render — the two ways of clearing state
+ * "by hand" that both caused a react-doctor regression (a one-frame stale
+ * flash from a `useEffect`, then an "impure state updater" flag from doing
+ * the reset synchronously in the render body) before this file settled on
+ * leaving the reset out of this component entirely.
  */
 export function CaseAccessSection({
 	granting,
@@ -48,6 +61,7 @@ export function CaseAccessSection({
 	integrationActive,
 	loading,
 	loadError,
+	onClearGrantError,
 	onGrant,
 	onRemove,
 	onRetry,
@@ -55,10 +69,26 @@ export function CaseAccessSection({
 }: CaseAccessSectionProps) {
 	const [addOpen, setAddOpen] = useState(false);
 
+	// Both the open-trigger and Cancel route through these, not just Cancel:
+	// clearing only on close would still leave a window (open → immediately
+	// re-triggered `onClearGrantError` a caller forgot to wire, or a future
+	// close path added here) where a stale banner could resurface on open.
+	// Clearing at both transitions costs nothing (the hook's clear is an
+	// idempotent `setGrantError(null)`) and needs no Effect.
+	function openForm() {
+		onClearGrantError();
+		setAddOpen(true);
+	}
+
+	function closeForm() {
+		onClearGrantError();
+		setAddOpen(false);
+	}
+
 	async function handleGrant(caseId: string, permission: CaseGrantPermission) {
 		const granted = await onGrant(caseId, permission);
 		if (granted) {
-			setAddOpen(false);
+			closeForm();
 		}
 		return granted;
 	}
@@ -109,13 +139,13 @@ export function CaseAccessSection({
 						existingCaseIds={grants.map((grant) => grant.caseId)}
 						grantError={grantError}
 						granting={granting}
-						onCancel={() => setAddOpen(false)}
+						onCancel={closeForm}
 						onGrant={handleGrant}
 					/>
 				) : (
 					<Button
 						disabled={!integrationActive}
-						onClick={() => setAddOpen(true)}
+						onClick={openForm}
 						size="sm"
 						title={
 							integrationActive

@@ -31,6 +31,7 @@ const GRANT_SUBMIT_REGEX = /^grant access$/i;
 const CASE_COMBOBOX_REGEX = /^case$/i;
 const PERMISSION_COMBOBOX_REGEX = /permission level/i;
 const DELETING_LABEL_REGEX = /deleting…/i;
+const REACTIVATE_IT_TEXT_REGEX = /reactivate it/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
 	fetchAssuranceCases: vi
@@ -757,6 +758,182 @@ describe("IntegrationCard", () => {
 			expect(
 				screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
 			).not.toBeInTheDocument();
+		});
+
+		it("closes the open grant form and never POSTs when the same card's integration is revoked out from under it (stale-form path, real hook)", async () => {
+			let postCalls = 0;
+			server.use(
+				http.get("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json({ grants: [] })
+				),
+				http.post("/api/integrations/:id/case-grants", () => {
+					postCalls += 1;
+					return HttpResponse.json(
+						{ error: "Cannot grant case access for a non-active integration" },
+						{ status: 409 }
+					);
+				})
+			);
+
+			const user = userEvent.setup();
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+
+			// Revoked from the same card: `IntegrationCard` re-renders with the
+			// integration's new status, exactly as it would after
+			// `useIntegrations`'s `revokeIntegration` resolves and refetches.
+			rerender(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "REVOKED" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).not.toBeInTheDocument()
+			);
+			expect(
+				screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
+			).not.toBeInTheDocument();
+			expect(postCalls).toBe(0);
+		});
+
+		it("surfaces the server's revoked-integration copy even though this card's own status prop still says ACTIVE (cross-tab revoke, real hook probe)", async () => {
+			server.use(
+				http.get("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json({ grants: [] })
+				),
+				http.post("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a revoked integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			// The card itself still renders `status: "ACTIVE"` — another tab (or
+			// another admin) revoked the integration server-side after this
+			// card's last render, so the prop is stale. The grant form is
+			// reachable (the button isn't disabled) precisely because this card
+			// doesn't know yet.
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Assurance" }));
+			await user.click(
+				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
+			);
+
+			expect(await screen.findByRole("alert")).toHaveTextContent(
+				"Revoked integrations cannot be restored"
+			);
+			expect(screen.queryByRole("alert")).not.toHaveTextContent(
+				REACTIVATE_IT_TEXT_REGEX
+			);
+		});
+
+		it("clears the stale error banner on close and doesn't show it again on reopen without a new attempt (real hook probe)", async () => {
+			server.use(
+				http.get("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json({ grants: [] })
+				),
+				http.post("/api/integrations/:id/case-grants", () =>
+					HttpResponse.json(
+						{ error: "Cannot grant case access for a revoked integration" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({ status: "ACTIVE" })}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			);
+			await user.click(screen.getByRole("option", { name: "Assurance" }));
+			await user.click(
+				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
+			);
+			expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+				).toBeInTheDocument()
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+				).toBeInTheDocument()
+			);
+			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 		});
 	});
 });

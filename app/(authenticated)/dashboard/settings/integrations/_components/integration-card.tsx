@@ -56,9 +56,13 @@ export interface IntegrationCardProps {
  * this component's own tests never touch that hook directly. The one
  * exception is case-access grants: unlike tokens, they are NOT embedded in
  * `IntegrationListItem` (a deliberate separate-resource choice on the API
- * side), so this component calls `useIntegrationCaseGrants(integration.id)`
- * itself — one hook call per card instance, not a hook-in-a-loop — and
- * threads its state down into the presentational `CaseAccessSection`.
+ * side), so this component calls
+ * `useIntegrationCaseGrants(integration.id, integration.status)` itself —
+ * one hook call per card instance, not a hook-in-a-loop — and
+ * threads its state down into the presentational `CaseAccessSection`. The
+ * integration's own `status` is passed alongside its id so the hook's 409
+ * copy stays correct even if the card revokes/suspends the integration
+ * while this card's grant form is open.
  */
 export function IntegrationCard({
 	deleting,
@@ -86,11 +90,12 @@ export function IntegrationCard({
 		loadError: caseGrantsLoadError,
 		granting: grantingCaseAccess,
 		grantError,
+		clearGrantError,
 		grantAccess,
 		removingCaseId,
 		removeAccess,
 		refetch: refetchCaseGrants,
-	} = useIntegrationCaseGrants(integration.id);
+	} = useIntegrationCaseGrants(integration.id, integration.status);
 
 	const isIssuing = pendingTokenKey === integration.id;
 	const integrationActive = integration.status === "ACTIVE";
@@ -258,8 +263,17 @@ export function IntegrationCard({
 				granting={grantingCaseAccess}
 				grants={caseGrants}
 				integrationActive={integrationActive}
+				// Keyed to activity, not `integration.id`: crossing the
+				// ACTIVE/non-ACTIVE boundary (revoke or suspend from this same
+				// card) remounts the section, which discards its own `addOpen`
+				// state — the stale-form path this closes off — for free, with
+				// no effect and no manual reset. Re-activating (SUSPENDED →
+				// ACTIVE via Reactivate) remounts the same way, which is fine:
+				// the form was never open across a state it can't act in anyway.
+				key={integrationActive ? "active" : "inactive"}
 				loadError={caseGrantsLoadError}
 				loading={caseGrantsLoading}
+				onClearGrantError={clearGrantError}
 				onGrant={grantAccess}
 				onRemove={removeAccess}
 				onRetry={refetchCaseGrants}

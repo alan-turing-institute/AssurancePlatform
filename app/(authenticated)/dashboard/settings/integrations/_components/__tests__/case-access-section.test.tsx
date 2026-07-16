@@ -49,6 +49,7 @@ const baseProps = {
 	integrationActive: true,
 	loadError: null,
 	loading: false,
+	onClearGrantError: vi.fn(),
 	onGrant: vi.fn().mockResolvedValue(true),
 	onRemove: vi.fn(),
 	onRetry: vi.fn(),
@@ -127,6 +128,64 @@ describe("CaseAccessSection", () => {
 			expect(
 				screen.getByRole("button", { name: REMOVE_ALPHA_TRIGGER_REGEX })
 			).not.toBeDisabled();
+		});
+	});
+
+	describe("stale-form path (revoke/suspend while the grant form is open)", () => {
+		// `CaseAccessSection` itself carries no logic to force its own `addOpen`
+		// state closed when `integrationActive` flips — that reset is owned by
+		// `IntegrationCard`, which keys this component to activity so a
+		// revoke/suspend remounts it (see `integration-card.tsx` and its own
+		// "closes the open grant form..." test). This test exercises that exact
+		// contract — a real key change across rerenders, matching how
+		// `IntegrationCard` renders this component in production — rather than
+		// a plain prop rerender, which would (correctly) leave `addOpen` alone
+		// since React never remounts on a bare prop change.
+		it("discards the open grant form when remounted via a key change on integrationActive, without ever calling onGrant", async () => {
+			const onGrant = vi.fn().mockResolvedValue(true);
+			const user = userEvent.setup();
+			const { rerender } = renderWithoutProviders(
+				<CaseAccessSection
+					key="active"
+					{...baseProps}
+					grants={[]}
+					integrationActive={true}
+					onGrant={onGrant}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
+				).toBeInTheDocument()
+			);
+
+			// Same card, same session: the integration is revoked/suspended out
+			// from under the still-open form — `IntegrationCard` re-renders this
+			// section with a new `key` once its status flips non-ACTIVE, forcing
+			// exactly the remount this test performs directly.
+			rerender(
+				<CaseAccessSection
+					key="inactive"
+					{...baseProps}
+					grants={[]}
+					integrationActive={false}
+					onGrant={onGrant}
+				/>
+			);
+
+			await waitFor(() =>
+				expect(
+					screen.queryByRole("button", { name: GRANT_SUBMIT_REGEX })
+				).not.toBeInTheDocument()
+			);
+			expect(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			).toBeDisabled();
+			expect(onGrant).not.toHaveBeenCalled();
 		});
 	});
 
@@ -323,6 +382,58 @@ describe("CaseAccessSection", () => {
 
 			await user.click(submitButton);
 			expect(onGrant).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("stale grant-error banner (N2)", () => {
+		it("calls onClearGrantError when the grant form is opened", async () => {
+			const onClearGrantError = vi.fn();
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[]}
+					onClearGrantError={onClearGrantError}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+
+			expect(onClearGrantError).toHaveBeenCalledTimes(1);
+		});
+
+		it("calls onClearGrantError when the grant form is cancelled, so a past attempt's banner doesn't resurface on the next open", async () => {
+			const onClearGrantError = vi.fn();
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grantError="Revoked integrations cannot be restored — register a new integration and grant it access instead."
+					grants={[]}
+					onClearGrantError={onClearGrantError}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			onClearGrantError.mockClear();
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+				).toBeInTheDocument()
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onClearGrantError).toHaveBeenCalledTimes(1);
+			expect(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			).toBeInTheDocument();
 		});
 	});
 
