@@ -254,3 +254,7 @@ backups/
 
 # Local-only archive of pre-atelier Claude config (contains a seed credential)
 claude-dir.zip
+
+# Design records are maintained internally, not in-repo
+docs/adr/
+docs/specs/
