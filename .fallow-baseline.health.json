@@ -1,0 +1,1183 @@
+{
+  "finding_counts": {
+    "app/(authenticated)/dashboard/case-studies/_components/_form/form-actions.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/case-studies/_components/_form/form-schema.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/case-studies/_components/case-study-form.tsx": {
+      "crap_high": {
+        "count": 3
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/case-studies/_components/related-assurance-case-list.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/settings/_components/connected-accounts-form.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/settings/integrations/_components/integration-card.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/teams/[id]/page.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/(authenticated)/dashboard/teams/[id]/settings/_components/team-settings-form.tsx": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "app/(authenticated)/dashboard/teams/[id]/settings/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(landing)/_components/case-studies.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(landing)/discover/__tests__/mocks/case-editor-mock.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(landing)/discover/__tests__/mocks/case-study-view-mock.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(landing)/discover/__tests__/mocks/discover-page-mock.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/(landing)/discover/__tests__/mocks/public-case-view-mock.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/auth/forgot-password/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/auth/reset-password/route.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/api/case-studies/[id]/image/route.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/case-studies/[id]/route.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/api/case-studies/route.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/batch/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/comments/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/elements/route.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/image/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/permissions/[permissionId]/route.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/permissions/route.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/cases/[id]/status/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/cases/backup/gdrive/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/cases/import/gdrive/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/cases/import/github/route.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "app/api/cases/import/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/comments/[id]/route.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "app/api/cron/purge-trash/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/elements/[id]/attach/route.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/elements/[id]/comments/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/elements/[id]/detach/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/elements/[id]/move/route.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/api/elements/[id]/restore/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/elements/[id]/route.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/health/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/invites/[token]/accept/route.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/api/teams/[id]/members/[userId]/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/templates/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/users/register/route.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/auth/forgot-password-form.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/auth/register-form.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/auth/reset-password-form.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/auth/sign-in-form.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/action-buttons.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/cases/add-attribute-buttons.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/case-card.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/case-container.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 4
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/cases/case-edit-form.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/case-list.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/case-notes.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/case-settings-popover.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/comments-feed.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/cases/comments-form.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/cases/comments-sheet.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/evidence-node.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/flow.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/goal-node.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/header.tsx": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/cases/json-editor-toolbar.tsx": {
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/cases/json-view-panel.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "components/cases/node-attributes.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      }
+    },
+    "components/cases/node-comment.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/cases/node-edit-dialog.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/notes-feed.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/property-node.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/strategy-node.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/toggle-button.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/cases/trash-list.tsx": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/demo/landing/hero.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/case-studies-index.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/case-viewer-wrapper.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/docs/curriculum/concept-carousel.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced-interactive-case-viewer.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/docs/curriculum/enhanced/animations/animation-provider.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/animations/micro-interactions.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/docs/curriculum/enhanced/animations/spring-animations.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/animations/transition-effects.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/dialogs/create-node-popover.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/dialogs/edit-node-modal.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/dialogs/node-action-toolbar.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/dialogs/quick-edit-popover.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/edges/animated-edge.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/edges/edge-utils.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/edges/flowing-edge.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/edges/glowing-edge.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/edges/gradient-edge.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/edges/smart-edge.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/handles/custom-handle.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "components/docs/curriculum/enhanced/handles/handle-utils.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 6
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/attribute-badges.tsx": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/base-node.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/collapsible-node.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 6
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/evidence-node.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/goal-node.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/property-claim-node.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/strategy-node.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/nodes/use-node-state.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/utils/animations.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/utils/identifier-utils.ts": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/enhanced/utils/theme-config.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/learning-objectives.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/module-card.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/module-progress-tracker.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/docs/curriculum/progress-storage.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/docs/curriculum/quiz-components.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "components/docs/curriculum/reflection-prompts.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 3
+      }
+    },
+    "components/docs/curriculum/stage-selector.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/docs/description-card.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/layout/check-migration-notice.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/delete-element-modal.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/navigation/desktop-nav.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/navigation/logged-in-user.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/navigation/mobile-nav.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/navigation/navbar.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/publishing/status-button.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/animations.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/attach-element-dialog.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/shared/nodes/attribute-section.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/base-node.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/move-element-dialog.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/shared/nodes/node-action-group.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/node-options-menu.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/tour/tour-card.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/ui/image-upload.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "components/ui/page-heading.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/ui/publish-button.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-history.ts": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "hooks/use-integrations.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-json-validation.ts": {
+      "crap_high": {
+        "count": 4
+      }
+    },
+    "hooks/use-keyboard-shortcuts.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "hooks/use-new-link-form.ts": {
+      "crap_critical": {
+        "count": 4
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "hooks/use-sidebar-logo.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts": {
+      "crap_high": {
+        "count": 2
+      }
+    },
+    "lib/case/api.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/case-updates.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/case/convert-case.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-operations.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/case/tree-utils.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/docs/case-data-transformer.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/docs/elk-layout.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/markdown-exporter.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/export/exporters/pdf-components.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/presets/summary.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/renderers/tree-renderer.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/case-image-service.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/case-study-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/change-detection-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/comment-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/element-service.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/health-scoring-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "middleware.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "prisma/seed/dev-seed.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "providers/tour-provider.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "scripts/seed-darter-integration.ts": {
+      "crap_high": {
+        "count": 2
+      }
+    },
+    "src/__tests__/mocks/radix-ui-mocks.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "src/__tests__/setup/dom-polyfills.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/__tests__/utils/accessibility-test-utils.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "complexity_high": {
+        "count": 1
+      },
+      "complexity_moderate": {
+        "count": 3
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/__tests__/utils/env-test-utils.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/__tests__/utils/test-factories.ts": {
+      "crap_moderate": {
+        "count": 3
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "lib/case/types.ts:dead code",
+    "lib/case/node-utils.ts:dead code",
+    "components/docs/curriculum/enhanced/nodes/collapsible-node.tsx:dead code",
+    "components/docs/curriculum/enhanced/edges/index.ts:dead code",
+    "components/docs/curriculum/enhanced/nodes/goal-node.tsx:dead code",
+    "src/__tests__/utils/react-18-test-utils.ts:dead code",
+    "components/docs/curriculum/enhanced/nodes/strategy-node.tsx:dead code",
+    "lib/export/schemas/template-config.ts:dead code",
+    "src/__tests__/utils/modal-test-utils.tsx:dead code",
+    "lib/export/utils/content-helpers.ts:dead code",
+    "components/ui/navigation-menu.tsx:dead code",
+    "components/docs/curriculum/enhanced/nodes/base-node.tsx:dead code",
+    "components/ui/dropdown-menu.tsx:dead code",
+    "src/__tests__/utils/mock-data.ts:dead code",
+    "components/docs/curriculum/task-registry.ts:dead code",
+    "src/__tests__/utils/test-utils.tsx:dead code",
+    "components/docs/curriculum/enhanced/nodes/node-types.tsx:dead code",
+    "lib/schemas/element-validation.ts:dead code",
+    "components/docs/curriculum/stage-definitions.ts:dead code",
+    "components/docs/curriculum/enhanced/utils/node-styles.ts:dead code",
+    "src/__tests__/utils/team-mock-data.ts:dead code",
+    "lib/schemas/version-detection.ts:dead code",
+    "components/modals/_import-modal/use-case-import.ts:dead code",
+    "components/docs/curriculum/enhanced/nodes/node-state-manager.tsx:dead code",
+    "components/docs/curriculum/enhanced/edges/edge-utils.ts:dead code",
+    "lib/schemas/case-export.ts:dead code",
+    "src/__tests__/utils/integration-test-utils.tsx:dead code",
+    "components/docs/curriculum/enhanced/nodes/property-claim-node.tsx:dead code",
+    "components/docs/curriculum/enhanced/nodes/evidence-node.tsx:dead code",
+    "lib/services/email-service.ts:dead code",
+    "components/docs/curriculum/enhanced/animations/micro-interactions.tsx:dead code",
+    "components/docs/curriculum/enhanced/animations/transition-effects.tsx:dead code",
+    "components/docs/curriculum/enhanced/nodes/attribute-badges.tsx:dead code",
+    "components/docs/curriculum/enhanced/animations/loading-states.tsx:dead code",
+    "components/docs/curriculum/enhanced/animations/spring-animations.tsx:dead code",
+    "components/docs/curriculum/enhanced/handles/custom-handle.tsx:dead code",
+    "lib/routes.ts:dead code",
+    "components/docs/curriculum/enhanced/utils/theme-config.ts:dead code",
+    "components/shared/nodes/animations.ts:dead code",
+    "components/docs/curriculum/enhanced/handles/handle-utils.ts:dead code",
+    "components/docs/curriculum/enhanced/utils/animations.ts:dead code",
+    "src/__tests__/utils/file-test-utils.ts:dead code",
+    "src/__tests__/utils/accessibility-test-utils.ts:dead code",
+    "components/docs/curriculum/enhanced-interactive-case-viewer.tsx:complexity",
+    "components/docs/curriculum/reflection-prompts.tsx:complexity"
+  ]
+}
