@@ -601,7 +601,7 @@ ORGANISATION tier\'s referent does not exist yet (deliberate).'
 
 Table integrations {
   id String [pk]
-  name String [unique, not null, note: 'e.g. "darter-evidence-pipeline"']
+  name String [unique, not null, note: 'e.g. "evidence-pipeline"']
   description String
   ownerId String [not null, note: 'The human accountable for this integration']
   systemUserId String [unique, not null, note: 'The machine principal (User with isSystemUser)']
