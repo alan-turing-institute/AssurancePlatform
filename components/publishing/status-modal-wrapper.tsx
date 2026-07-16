@@ -25,7 +25,7 @@ export function StatusModalWrapper() {
 	});
 
 	const handleStatusTransition = async (
-		targetStatus: "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED",
+		targetStatus: "DRAFT" | "PUBLISHED",
 		description?: string
 	) => {
 		if (!statusModal.caseId) {
@@ -75,10 +75,6 @@ export function StatusModalWrapper() {
 					title: "Returned to draft",
 					description: "Your case is now a private draft",
 				},
-				READY_TO_PUBLISH: {
-					title: "Marked as ready",
-					description: "Your case can now be linked to case studies",
-				},
 				PUBLISHED: {
 					title: "Case published",
 					description: "Your case is now publicly available",
@@ -105,10 +101,6 @@ export function StatusModalWrapper() {
 		}
 	};
 
-	const handleMarkAsReady = async () => {
-		await handleStatusTransition("READY_TO_PUBLISH");
-	};
-
 	const handleUpdatePublished = async () => {
 		await handleStatusTransition("PUBLISHED");
 	};
@@ -117,7 +109,6 @@ export function StatusModalWrapper() {
 		<StatusModal
 			hasChanges={hasChanges || statusModal.hasChanges}
 			linkedCaseStudyCount={statusModal.linkedCaseStudyCount}
-			onMarkAsReady={loading ? undefined : handleMarkAsReady}
 			onOpenChange={(open) => {
 				if (!open) {
 					statusModal.onClose();

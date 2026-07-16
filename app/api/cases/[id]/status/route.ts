@@ -18,7 +18,7 @@ import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prism
  * GET /api/cases/[id]/status
  *
  * Returns the full publish status of an assurance case including:
- * - publishStatus (DRAFT, READY_TO_PUBLISH, PUBLISHED)
+ * - publishStatus (DRAFT, PUBLISHED)
  * - isPublished
  * - publishedAt
  * - markedReadyAt
@@ -52,15 +52,14 @@ export async function GET(
  *
  * Request body:
  * {
- *   targetStatus: "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED"
+ *   targetStatus: "DRAFT" | "PUBLISHED"
  *   description?: string  // Optional description for publish
  * }
  *
  * Valid transitions:
- * - DRAFT -> READY_TO_PUBLISH (mark as ready)
- * - READY_TO_PUBLISH -> DRAFT (unmark)
- * - READY_TO_PUBLISH -> PUBLISHED (publish)
+ * - DRAFT -> PUBLISHED (publish)
  * - PUBLISHED -> DRAFT (unpublish)
+ * - PUBLISHED -> PUBLISHED (republish: fresh snapshot, same slug)
  */
 export async function PATCH(
 	request: Request,

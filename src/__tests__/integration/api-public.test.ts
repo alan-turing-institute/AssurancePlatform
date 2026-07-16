@@ -37,6 +37,7 @@ describe("GET /api/public/assurance-case/[id]", () => {
 		const published = await prisma.publishedAssuranceCase.create({
 			data: {
 				title: "Published Title",
+				slug: `published-title-${testCase.id.slice(0, 8)}`,
 				description: "Published description",
 				content: { nodes: [] },
 				assuranceCaseId: testCase.id,

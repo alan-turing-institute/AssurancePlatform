@@ -8,7 +8,9 @@
 
 import type { CommentResponse } from "./comment-service";
 
-export type PublishStatusType = "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED";
+// The "Ready to Publish" intermediate step was retired (ADR 0003 §2) — DRAFT
+// and PUBLISHED are the only two states now.
+export type PublishStatusType = "DRAFT" | "PUBLISHED";
 
 export interface GoalResponse {
 	assumption?: string;

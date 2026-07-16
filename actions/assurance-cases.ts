@@ -100,8 +100,8 @@ interface PublishedCaseForStudy {
 }
 
 /**
- * Fetches the current user's cases that are available for linking to case studies
- * (those with READY_TO_PUBLISH or PUBLISHED status).
+ * Fetches the current user's cases that are available for linking to case
+ * studies (those with PUBLISHED status).
  */
 export async function fetchPublishedCasesForStudy(): Promise<
 	PublishedCaseForStudy[]

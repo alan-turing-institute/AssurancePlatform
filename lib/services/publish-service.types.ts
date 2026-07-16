@@ -11,7 +11,8 @@ export interface PublishStatus {
 	publishedId: string | null;
 }
 
-// Full status including 3-state workflow
+// Full status (DRAFT / PUBLISHED — the "Ready to Publish" intermediate step
+// was retired, ADR 0003 §2)
 export interface FullPublishStatus {
 	hasChanges: boolean;
 	isPublished: boolean;
@@ -30,11 +31,9 @@ export type UnpublishResult =
 	| { data: { success: true } }
 	| { error: string; linkedCaseStudies?: { id: number; title: string }[] };
 
-export type MarkReadyResult =
-	| { data: { markedReadyAt: Date } }
-	| { error: string };
-
-export type UnmarkReadyResult = { data: { success: true } } | { error: string };
+// MarkReadyResult / UnmarkReadyResult retired alongside READY_TO_PUBLISH
+// (ADR 0003 §2/§4) — the "Ready to Publish" intermediate step no longer
+// exists, so there is nothing left to mark or unmark.
 
 export type StatusTransitionResult =
 	| {
