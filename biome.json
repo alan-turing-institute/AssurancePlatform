@@ -41,7 +41,8 @@
       "!.patches",
       "!tea-docs",
       "!*.openapi.json",
-      "!public/openapi.json"
+      "!public/openapi.json",
+      "!.fallow-baseline.*.json"
     ]
   },
   "formatter": {
