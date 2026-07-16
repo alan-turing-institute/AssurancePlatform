@@ -987,7 +987,7 @@ enum PluginScopeType {
 /// service layer when the registry service lands.
 model Integration {
   id           String            @id @default(uuid())
-  name         String            @unique /// e.g. "darter-evidence-pipeline"
+  name         String            @unique /// e.g. "example-integration"
   description  String?
   ownerId      String            @map("owner_id") /// The human accountable for this integration
   systemUserId String            @unique @map("system_user_id") /// The machine principal (User with isSystemUser)
