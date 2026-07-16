@@ -13,11 +13,13 @@ import {
 } from "@/lib/date";
 import type {
 	IntegrationListItem,
+	IntegrationTokenSummary,
 	IssuedTokenResult,
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
 import { CaseAccessSection } from "./case-access-section";
 import { IntegrationDeleteDialog } from "./integration-delete-dialog";
+import { IntegrationRevokedTokens } from "./integration-revoked-tokens";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
 import { IntegrationTokenRow } from "./integration-token-row";
@@ -25,6 +27,41 @@ import {
 	IntegrationTokenSecretModal,
 	type TokenReveal,
 } from "./integration-token-secret-modal";
+
+/** Shared newest-first sort for both token lists — active tokens sort by
+ * `createdAt` (the auto-tuck UX, issue TEA — Token list UX: a revoked token
+ * never needs a manual archive step because revoking already removes it from
+ * the active list); revoked tokens (within the collapsed section) sort by
+ * `revokedAt`, most-recently-revoked first. The null fallback only matters
+ * for `revokedAt` in principle — every entry passed for that field has a
+ * non-null value by construction (partitioned below), so it never fires in
+ * practice. */
+function sortTokensByDateDesc(
+	tokens: IntegrationTokenSummary[],
+	field: "createdAt" | "revokedAt"
+): IntegrationTokenSummary[] {
+	return [...tokens].sort((a, b) => {
+		const aValue = a[field];
+		const bValue = b[field];
+		const aTime = aValue ? new Date(aValue).getTime() : 0;
+		const bTime = bValue ? new Date(bValue).getTime() : 0;
+		return bTime - aTime;
+	});
+}
+
+/** Splits an integration's tokens into active/revoked in one pass rather than
+ * filtering the array twice. */
+function partitionTokensByRevoked(tokens: IntegrationTokenSummary[]): {
+	active: IntegrationTokenSummary[];
+	revoked: IntegrationTokenSummary[];
+} {
+	const active: IntegrationTokenSummary[] = [];
+	const revoked: IntegrationTokenSummary[] = [];
+	for (const token of tokens) {
+		(token.revokedAt ? revoked : active).push(token);
+	}
+	return { active, revoked };
+}
 
 export interface IntegrationCardProps {
 	/** True while THIS integration's registration delete request is in flight. */
@@ -100,6 +137,11 @@ export function IntegrationCard({
 	const isIssuing = pendingTokenKey === integration.id;
 	const integrationActive = integration.status === "ACTIVE";
 	const integrationRevoked = integration.status === "REVOKED";
+
+	const { active: activeTokensRaw, revoked: revokedTokensRaw } =
+		partitionTokensByRevoked(integration.tokens);
+	const activeTokens = sortTokensByDateDesc(activeTokensRaw, "createdAt");
+	const revokedTokens = sortTokensByDateDesc(revokedTokensRaw, "revokedAt");
 
 	async function handleIssueToken() {
 		const result = await onIssueToken(integration.id);
@@ -240,11 +282,15 @@ export function IntegrationCard({
 					</Button>
 				</div>
 
-				{integration.tokens.length === 0 ? (
-					<p className="text-muted-foreground text-xs">No tokens issued yet.</p>
+				{activeTokens.length === 0 ? (
+					<p className="text-muted-foreground text-xs">
+						{revokedTokens.length > 0
+							? "No active tokens."
+							: "No tokens issued yet."}
+					</p>
 				) : (
 					<div className="space-y-2">
-						{integration.tokens.map((token) => (
+						{activeTokens.map((token) => (
 							<IntegrationTokenRow
 								canRotate={integrationActive}
 								key={token.id}
@@ -256,6 +302,8 @@ export function IntegrationCard({
 						))}
 					</div>
 				)}
+
+				<IntegrationRevokedTokens tokens={revokedTokens} />
 			</div>
 
 			<CaseAccessSection
