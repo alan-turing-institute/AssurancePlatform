@@ -9,6 +9,7 @@ import {
 	unpublishAssuranceCase,
 	updatePublishedCase,
 } from "@/lib/services/publish-service";
+import { Prisma } from "@/src/generated/prisma";
 import {
 	expectError,
 	expectSameError,
@@ -234,6 +235,15 @@ describe("updatePublishedCase", () => {
 		});
 		expect(newVersion).not.toBeNull();
 		expect(newVersion?.description).toBe("Updated description");
+
+		// The superseded row is retired and the replacement takes over as the
+		// sole current row — the exact two-row invariant the partial unique
+		// index on (slug) WHERE is_current exists to protect (ADR 0003 §6).
+		const oldVersion = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: publishData.publishedId },
+		});
+		expect(oldVersion?.isCurrent).toBe(false);
+		expect(newVersion?.isCurrent).toBe(true);
 	});
 
 	it("returns error when case is not published", async () => {
@@ -607,6 +617,43 @@ describe("publishAssuranceCase — slug generation", () => {
 		expect(secondPublished?.slug).toBe("duplicate-name-2");
 	});
 
+	it("reuses a freed slug after the case holding it is unpublished, rather than continuing the suffix sequence", async () => {
+		const owner = await createTestUser();
+		const caseA = await createTestCaseWithGoal(owner.id, "Foo");
+		const caseB = await createTestCaseWithGoal(owner.id, "Foo");
+		const caseC = await createTestCaseWithGoal(owner.id, "Foo");
+
+		// A claims "foo", B collides onto "foo-2"
+		const publishedA = expectSuccess(
+			await publishAssuranceCase(owner.id, caseA.id)
+		);
+		const publishedB = expectSuccess(
+			await publishAssuranceCase(owner.id, caseB.id)
+		);
+		const [versionA, versionB] = await Promise.all([
+			prisma.publishedAssuranceCase.findUnique({
+				where: { id: publishedA.publishedId },
+			}),
+			prisma.publishedAssuranceCase.findUnique({
+				where: { id: publishedB.publishedId },
+			}),
+		]);
+		expect(versionA?.slug).toBe("foo");
+		expect(versionB?.slug).toBe("foo-2");
+
+		// Unpublishing A frees "foo" — its row (and the slug it held) is gone
+		expectSuccess(await unpublishAssuranceCase(owner.id, caseA.id));
+
+		// C should reclaim the freed "foo", not continue on to "foo-3"
+		const publishedC = expectSuccess(
+			await publishAssuranceCase(owner.id, caseC.id)
+		);
+		const versionC = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: publishedC.publishedId },
+		});
+		expect(versionC?.slug).toBe("foo");
+	});
+
 	it("stays stable across a rename and republish (never regenerated)", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id, "Original Name");
@@ -632,6 +679,45 @@ describe("publishAssuranceCase — slug generation", () => {
 		});
 		expect(secondVersion?.title).toBe("Renamed Case");
 		expect(secondVersion?.slug).toBe("original-name");
+	});
+});
+
+// ============================================
+// Database constraint hardening (ADR 0003 §6)
+// ============================================
+
+describe("published_assurance_cases_slug_is_current_key — partial unique index", () => {
+	it("rejects a raw insert of a second CURRENT row reusing another case's current slug", async () => {
+		const owner = await createTestUser();
+		const caseA = await createTestCaseWithGoal(owner.id, "Solo Slug");
+		const caseB = await createTestCase(owner.id);
+
+		await publishAssuranceCase(owner.id, caseA.id);
+
+		// Bypass the service entirely — the service's own transaction
+		// discipline (retire the old current row before inserting the new one,
+		// see `swapCurrentPublishedVersion` in publish-service.ts) never
+		// produces two CURRENT rows sharing a slug. This proves the partial
+		// unique index on (slug) WHERE is_current is itself the backstop, not
+		// merely a property of well-behaved callers.
+		let caught: unknown;
+		try {
+			await prisma.publishedAssuranceCase.create({
+				data: {
+					title: "Colliding Case",
+					slug: "solo-slug",
+					isCurrent: true,
+					content: {},
+					assuranceCaseId: caseB.id,
+					createdAt: new Date(),
+				},
+			});
+		} catch (error) {
+			caught = error;
+		}
+
+		expect(caught).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
+		expect((caught as Prisma.PrismaClientKnownRequestError).code).toBe("P2002");
 	});
 });
 

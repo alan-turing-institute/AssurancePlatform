@@ -354,6 +354,38 @@ describe("deleteCaseInformation", () => {
 		expectSuccess(await deleteCaseInformation(owner.id, testCase.id));
 	});
 
+	it("direct EDIT share can delete", async () => {
+		const owner = await createTestUser();
+		const editor = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
+		await createTestCaseInformation(testCase.id);
+
+		expectSuccess(await deleteCaseInformation(editor.id, testCase.id));
+
+		const stored = await prisma.caseInformation.findUnique({
+			where: { caseId: testCase.id },
+		});
+		expect(stored).toBeNull();
+	});
+
+	it("EDIT via team can delete", async () => {
+		const owner = await createTestUser();
+		const teamMember = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, teamMember.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "EDIT");
+		await createTestCaseInformation(testCase.id);
+
+		expectSuccess(await deleteCaseInformation(teamMember.id, testCase.id));
+
+		const stored = await prisma.caseInformation.findUnique({
+			where: { caseId: testCase.id },
+		});
+		expect(stored).toBeNull();
+	});
+
 	it("returns error for a user with only VIEW permission", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
@@ -367,6 +399,49 @@ describe("deleteCaseInformation", () => {
 		);
 	});
 
+	it("returns error for direct COMMENT share (read-only)", async () => {
+		const owner = await createTestUser();
+		const commenter = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestPermission(testCase.id, commenter.id, owner.id, "COMMENT");
+		await createTestCaseInformation(testCase.id);
+
+		expectError(
+			await deleteCaseInformation(commenter.id, testCase.id),
+			"Permission denied"
+		);
+	});
+
+	it("returns error for VIEW via team (read-only)", async () => {
+		const owner = await createTestUser();
+		const teamMember = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, teamMember.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
+		await createTestCaseInformation(testCase.id);
+
+		expectError(
+			await deleteCaseInformation(teamMember.id, testCase.id),
+			"Permission denied"
+		);
+	});
+
+	it("returns error for COMMENT via team (read-only)", async () => {
+		const owner = await createTestUser();
+		const teamMember = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, teamMember.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "COMMENT");
+		await createTestCaseInformation(testCase.id);
+
+		expectError(
+			await deleteCaseInformation(teamMember.id, testCase.id),
+			"Permission denied"
+		);
+	});
+
 	it("returns error for a user with no permission", async () => {
 		const owner = await createTestUser();
 		const stranger = await createTestUser();
@@ -376,6 +451,23 @@ describe("deleteCaseInformation", () => {
 			await deleteCaseInformation(stranger.id, testCase.id),
 			"Permission denied"
 		);
+	});
+
+	it("returns the same error for a non-existent case as for an inaccessible one", async () => {
+		const owner = await createTestUser();
+		const stranger = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+
+		const noAccessResult = await deleteCaseInformation(
+			stranger.id,
+			testCase.id
+		);
+		const notFoundResult = await deleteCaseInformation(
+			stranger.id,
+			NON_EXISTENT_CASE_ID
+		);
+
+		expectSameError(noAccessResult, notFoundResult);
 	});
 });
 

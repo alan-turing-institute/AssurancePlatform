@@ -13,6 +13,109 @@ import type {
 	UnpublishResult,
 } from "@/lib/services/publish-service.types";
 import { generateUniqueSlug } from "@/lib/services/slug-service";
+import type { Prisma } from "@/src/generated/prisma";
+
+// Derived from `prisma.$transaction`'s own callback parameter — same pattern
+// as `slug-service.ts` (kept local rather than imported: `Prisma.
+// TransactionClient` does not structurally match this project's
+// `.$extends()`-wrapped client from `lib/prisma.ts`).
+type TransactionCallback = Parameters<typeof prisma.$transaction>[0];
+type TransactionClient = TransactionCallback extends (
+	tx: infer T
+) => Promise<unknown>
+	? T
+	: never;
+
+// ============================================
+// Shared helpers — publish / republish
+// ============================================
+
+/**
+ * Composes the JSON snapshot content shared by every publish flow: the
+ * exported case tree plus captured plugin data (ADR 0002 v2 §3) and case
+ * information (ADR 0003 §3), each included only when present — `undefined`,
+ * not an empty object, when there is none — so a snapshot never gains a key
+ * for data the case doesn't hold.
+ *
+ * Shared verbatim between `publishAssuranceCase` (first publish) and
+ * `updatePublishedCase` (republish) — both must freeze identical content
+ * shapes, so this is the single place that composition happens.
+ */
+async function composeSnapshotContent(
+	userId: string,
+	caseId: string
+): Promise<{ data: Record<string, unknown> } | { error: string }> {
+	const exportResult = await exportCase(userId, caseId, {
+		includeComments: true,
+	});
+	if ("error" in exportResult) {
+		return { error: exportResult.error };
+	}
+
+	// Every plugin namespace holding data on this case, captured verbatim
+	// (ADR 0002 v2 §3) — follows data present, not this (or any) viewer's
+	// plugin toggles. `undefined` when the case holds no plugin data at all,
+	// so the snapshot gains no `pluginData` key rather than an empty one.
+	const pluginData = await capturePluginDataForSnapshot(caseId);
+	// Case information (ADR 0003 §3 — "the snapshot freezes metadata as well
+	// as content"), composed the same way: `undefined`, not an empty object,
+	// when the case has no case information at all.
+	const caseInformation = await captureCaseInformationForSnapshot(caseId);
+
+	return {
+		data: {
+			...exportResult.data,
+			...(pluginData && { pluginData }),
+			...(caseInformation && { caseInformation }),
+		},
+	};
+}
+
+/**
+ * Retires whichever row is currently `isCurrent: true` for `caseId` and
+ * inserts its replacement, inside the caller's transaction. Retirement must
+ * run BEFORE the insert — the partial unique index on (slug) WHERE
+ * is_current would otherwise reject the new row for reusing the same slug
+ * while the old row is still marked current.
+ *
+ * `updateMany` (not `update` on one known id) so this is correct whether
+ * zero or one row is currently marked: first-publish has none (this call is
+ * then a defensive no-op guarding the "at most one current row per case"
+ * invariant against being called twice on an already-published case — e.g.
+ * directly via `POST /api/cases/[id]/publish`, outside `transitionStatus`'s
+ * DRAFT-only gate); republish has exactly one.
+ *
+ * Shared verbatim between `publishAssuranceCase` and `updatePublishedCase`;
+ * each layers its own extra side effects (case status flip vs case-study
+ * link migration) around this call.
+ */
+async function swapCurrentPublishedVersion(
+	tx: TransactionClient,
+	input: {
+		caseId: string;
+		title: string;
+		slug: string;
+		content: Prisma.InputJsonValue;
+		description: string | null;
+		createdAt: Date;
+	}
+) {
+	await tx.publishedAssuranceCase.updateMany({
+		where: { assuranceCaseId: input.caseId, isCurrent: true },
+		data: { isCurrent: false },
+	});
+
+	return tx.publishedAssuranceCase.create({
+		data: {
+			title: input.title,
+			slug: input.slug,
+			content: input.content,
+			description: input.description,
+			assuranceCaseId: input.caseId,
+			createdAt: input.createdAt,
+		},
+	});
+}
 
 // ============================================
 // Service Functions
@@ -111,29 +214,21 @@ export async function publishAssuranceCase(
 		return { error: "Case not found" };
 	}
 
-	// Export case content as JSON
-	const exportResult = await exportCase(userId, caseId, {
-		includeComments: true,
-	});
-
-	if ("error" in exportResult) {
-		return { error: exportResult.error };
+	// Compose the JSON snapshot content (export + plugin data + case
+	// information) — shared with `updatePublishedCase`, see
+	// `composeSnapshotContent` above.
+	const contentResult = await composeSnapshotContent(userId, caseId);
+	if ("error" in contentResult) {
+		return { error: contentResult.error };
 	}
-
-	// Every plugin namespace holding data on this case, captured verbatim
-	// (ADR 0002 v2 §3) — follows data present, not this (or any) viewer's
-	// plugin toggles. `undefined` when the case holds no plugin data at all,
-	// so the snapshot gains no `pluginData` key rather than an empty one.
-	const pluginData = await capturePluginDataForSnapshot(caseId);
-	// Case information (ADR 0003 §3 — "the snapshot freezes metadata as well
-	// as content"), composed the same way: `undefined`, not an empty object,
-	// when the case has no case information at all.
-	const caseInformation = await captureCaseInformationForSnapshot(caseId);
-	const content = {
-		...exportResult.data,
-		...(pluginData && { pluginData }),
-		...(caseInformation && { caseInformation }),
-	};
+	// The composed snapshot is plain JSON but, as a plain object built from
+	// named interfaces (`CaseInformationSnapshot` etc.) with no index
+	// signature of their own, doesn't structurally satisfy `InputJsonObject`
+	// even though every value it can hold is a valid `InputJsonValue`.
+	// Routing through `unknown` is TS's own prescribed escape hatch for
+	// exactly this "no sufficient overlap" case (same pattern as
+	// `health-scoring-service.ts`) — not a blind `any`.
+	const content = contentResult.data as unknown as Prisma.InputJsonValue;
 
 	const now = new Date();
 
@@ -146,26 +241,13 @@ export async function publishAssuranceCase(
 		// behaviour ADR 0003 §6 promises).
 		const publishedCase = await prisma.$transaction(async (tx) => {
 			const slug = await generateUniqueSlug(assuranceCase.name, tx);
-			// Defensive, not load-bearing for the normal DRAFT->PUBLISHED path
-			// (a case only reaches DRAFT via `unpublishAssuranceCase`, which
-			// deletes every prior published row): guards this function's OWN
-			// invariant — "at most one current row per case" — against being
-			// called again on an already-published case (e.g. directly via
-			// `POST /api/cases/[id]/publish`, outside `transitionStatus`'s
-			// DRAFT-only gate).
-			await tx.publishedAssuranceCase.updateMany({
-				where: { assuranceCaseId: caseId, isCurrent: true },
-				data: { isCurrent: false },
-			});
-			const created = await tx.publishedAssuranceCase.create({
-				data: {
-					title: assuranceCase.name,
-					slug,
-					content,
-					description: description ?? null,
-					assuranceCaseId: caseId,
-					createdAt: now,
-				},
+			const created = await swapCurrentPublishedVersion(tx, {
+				caseId,
+				title: assuranceCase.name,
+				slug,
+				content,
+				description: description ?? null,
+				createdAt: now,
 			});
 			await tx.assuranceCase.update({
 				where: { id: caseId },
@@ -492,50 +574,30 @@ export async function updatePublishedCase(
 		return { error: "No published version found" };
 	}
 
-	// Export current case content
-	const exportResult = await exportCase(userId, caseId, {
-		includeComments: true,
-	});
-
-	if ("error" in exportResult) {
-		return { error: exportResult.error };
+	// Compose the JSON snapshot content — shared with `publishAssuranceCase`,
+	// see `composeSnapshotContent` above.
+	const contentResult = await composeSnapshotContent(userId, caseId);
+	if ("error" in contentResult) {
+		return { error: contentResult.error };
 	}
-
-	// See `publishAssuranceCase` above for the same capture + merge.
-	const pluginData = await capturePluginDataForSnapshot(caseId);
-	const caseInformation = await captureCaseInformationForSnapshot(caseId);
-	const content = {
-		...exportResult.data,
-		...(pluginData && { pluginData }),
-		...(caseInformation && { caseInformation }),
-	};
+	// See `publishAssuranceCase` above for why this cast is needed.
+	const content = contentResult.data as unknown as Prisma.InputJsonValue;
 
 	const now = new Date();
 
 	try {
 		// Create new version and migrate links in a transaction
 		const newPublished = await prisma.$transaction(async (tx) => {
-			// Retire the version being superseded BEFORE inserting its
-			// replacement — the partial unique index on (slug) WHERE
-			// is_current would otherwise reject the new row for reusing the
-			// same slug while the old row is still marked current.
-			await tx.publishedAssuranceCase.update({
-				where: { id: currentPublished.id },
-				data: { isCurrent: false },
-			});
-
-			// Create new published version — carrying the EXISTING slug forward
-			// verbatim (ADR 0003 §6: stable across renames). Never regenerated
-			// here, even if `assuranceCase.name` has changed since first publish.
-			const published = await tx.publishedAssuranceCase.create({
-				data: {
-					title: assuranceCase.name,
-					slug: currentPublished.slug,
-					content,
-					description: description ?? null,
-					assuranceCaseId: caseId,
-					createdAt: now,
-				},
+			// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
+			// across renames) — never regenerated here, even if
+			// `assuranceCase.name` has changed since first publish.
+			const published = await swapCurrentPublishedVersion(tx, {
+				caseId,
+				title: assuranceCase.name,
+				slug: currentPublished.slug,
+				content,
+				description: description ?? null,
+				createdAt: now,
 			});
 
 			// Get case study IDs linked to old version
