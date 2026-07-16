@@ -153,6 +153,7 @@ Table assurance_cases {
   invites case_invites [not null]
   comments comments [not null]
   caseImage case_images
+  caseInformation case_information
   caseTypes case_type_assignments [not null]
   pluginData plugin_data [not null]
   sourceReleases releases [not null]
@@ -455,6 +456,31 @@ Table case_images {
   Note: 'Cover/thumbnail image for an assurance case. One image per case.'
 }
 
+Table case_information {
+  id String [pk]
+  caseId String [unique, not null]
+  description String
+  authors String
+  sector String
+  featureImageUrl String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  case assurance_cases [not null]
+
+  Note: 'The canonical case-information record (ADR 0003 §1): description,
+authors, sector, and a feature image, editable at any time under the
+case\'s normal edit permissions. Deliberately broader than "publication
+metadata" — other services and plugins may read it; publishing (see
+`PublishedAssuranceCase`) is its first consumer, not its only one.
+One-to-one and optional: a case with no curated information yet has no
+row here, not a row of nulls.
+
+`description` is distinct from `AssuranceCase.description`: the case\'s
+own field describes the argument\'s purpose and scope for people working
+on it; this one is the public-facing narrative shown on Discover once
+published, mirroring what the retired case-study form collected.'
+}
+
 Table case_types {
   id String [pk]
   name String [unique, not null, note: 'Display name of the type']
@@ -546,6 +572,9 @@ Table case_study_images {
 
 Table published_assurance_cases {
   id String [pk]
+  type PublishableItemType [not null, default: 'ASSURANCE_CASE', note: 'Discriminator (ADR 0003 §5) — only ASSURANCE_CASE is implemented; ready for a future pattern type with no rework.']
+  slug String [not null, note: 'Stable, name-derived, deployment-unique public address (ADR 0003 §6). Generated once at first publish (see `slug-service.ts`) and carried forward verbatim — UNCHANGED — onto every later republish row of the same source case, never regenerated on rename. Collisions append a numeric suffix. NOT `@unique` here: every historical version of the same case shares one slug by design (that is what "stable" means), so true uniqueness is scoped to the CURRENT version only — see `isCurrent` and the hand-written partial index below (same DSL limitation as `PluginData`\'s case-level partial index; Prisma cannot express a partial unique constraint).']
+  isCurrent Boolean [not null, default: true, note: 'True for exactly one row per `assuranceCaseId` at a time — the version Discover and the public API serve. Republishing flips the previous current row to `false` in the same transaction that inserts the new current row (`updatePublishedCase`). That "exactly one" invariant is enforced at the service layer, not the DB — the partial unique index below only stops two DIFFERENT cases\' current rows from colliding on the same slug.']
   title String [not null, note: 'Title at time of publishing']
   content Json [not null, note: 'Full case content as JSON snapshot']
   createdAt DateTime [default: `now()`, not null]
@@ -554,7 +583,20 @@ Table published_assurance_cases {
   assuranceCase assurance_cases [not null]
   caseStudyLinks case_study_published_cases [not null]
 
-  Note: 'Snapshot of an assurance case for case study integration. Content stored as JSON.'
+  Note: 'Frozen, point-in-time snapshot of an assurance case (ADR 0003 §3): the
+public/Discover-facing published record. Content stored as JSON;
+multiple versions per case (history) via repeated publish/republish —
+republishing INSERTS a new row rather than updating the old one, so a
+case\'s full publish history stays queryable. Distinct from the `Release`
+model (community releases, a separate, currently-unused mechanism).
+
+`description` here is the free-text note optionally supplied by the
+caller at publish time (e.g. "Initial release") — NOT the case\'s curated
+`CaseInformation.description`. The latter, along with `authors`, `sector`,
+and `featureImageUrl`, is frozen verbatim into `content.caseInformation`
+at publish time (see `publish-service.ts`), composed the same way as
+`content.pluginData` (ADR 0002 v2 §3) — undefined, not an empty object,
+when the case holds no case information at all.'
 }
 
 Table plugin_data {
@@ -678,7 +720,6 @@ Enum CaseMode {
 
 Enum PublishStatus {
   DRAFT
-  READY_TO_PUBLISH
   PUBLISHED
 }
 
@@ -740,6 +781,11 @@ Enum CaseTypeCategory {
   DOMAIN
   TECHNIQUE
   STANDARD
+}
+
+Enum PublishableItemType {
+  ASSURANCE_CASE
+  ARGUMENT_PATTERN
 }
 
 Enum PluginScopeType {
@@ -839,6 +885,8 @@ Ref: comments.resolvedById > users.id
 Ref: comments.parentCommentId - comments.id
 
 Ref: case_images.caseId - assurance_cases.id [delete: Cascade]
+
+Ref: case_information.caseId - assurance_cases.id [delete: Cascade]
 
 Ref: case_type_assignments.caseId > assurance_cases.id [delete: Cascade]
 
