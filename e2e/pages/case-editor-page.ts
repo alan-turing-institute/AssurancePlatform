@@ -1,13 +1,15 @@
 import type { Locator, Page } from "@playwright/test";
 
-const STATUS_PATTERN = /Draft|Ready to Publish|Published/;
+// The "Ready to Publish" intermediate state was retired (ADR 0003 §2) — a
+// case is either DRAFT or PUBLISHED now, so the status button only ever
+// shows one of those two labels.
+const STATUS_PATTERN = /Draft|Published/;
 const CASE_STATUS_PATTERN = /Case Status:/;
 
 export class CaseEditorPage {
 	readonly statusButton: Locator;
 	readonly shareButton: Locator;
 	readonly statusModalTitle: Locator;
-	readonly markReadyButton: Locator;
 	readonly focusButton: Locator;
 	readonly exportButton: Locator;
 	readonly jsonViewButton: Locator;
@@ -22,9 +24,6 @@ export class CaseEditorPage {
 		});
 		this.shareButton = page.getByTestId("toolbar-share");
 		this.statusModalTitle = page.getByText(CASE_STATUS_PATTERN);
-		this.markReadyButton = page.getByRole("button", {
-			name: "Mark as Ready to Publish",
-		});
 		this.focusButton = page.getByTestId("toolbar-focus");
 		this.exportButton = page.getByTestId("toolbar-export");
 		this.jsonViewButton = page.getByTestId("toolbar-json");

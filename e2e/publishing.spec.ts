@@ -2,6 +2,15 @@ import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, LOGIN_PATTERN } from "./helpers/constants";
 import { CaseEditorPage } from "./pages/case-editor-page";
 
+// ADR 0003 §2 retired the READY_TO_PUBLISH intermediate state — a case is
+// now either DRAFT or PUBLISHED, with no "mark as ready" step in between.
+// These specs pin the current interim behaviour: a draft case shows an
+// informational status modal with no publish control, and a published case
+// shows the green "Published" badge. The guided single-action Publish flow
+// that replaces the old "mark as ready" journey is not built yet — its e2e
+// coverage lands with [[TEA — Retire case studies and land the publish
+// journey e2e (ADR 0003)]], the next issue in the chain.
+
 test.describe("Publishing", () => {
 	test("discover page loads with community heading", async ({ page }) => {
 		// Public route — uses chris's saved auth state but that's fine
@@ -19,7 +28,9 @@ test.describe("Publishing", () => {
 		await expect(editor.statusButton).toHaveText("Draft");
 	});
 
-	test("status modal opens with Draft content", async ({ page }) => {
+	test("status modal opens with Draft content and no publish control", async ({
+		page,
+	}) => {
 		await page.goto("/dashboard");
 		await page.getByText("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
@@ -29,25 +40,45 @@ test.describe("Publishing", () => {
 
 		await expect(editor.statusModalTitle).toBeVisible();
 		await expect(page.getByText("Case Status: Draft")).toBeVisible();
-		await expect(editor.markReadyButton).toBeVisible();
+		await expect(
+			page.getByText(
+				"Draft cases are only visible to you and collaborators with edit permissions."
+			)
+		).toBeVisible();
+		// The retired "mark as ready" control must not be present.
+		await expect(
+			page.getByRole("button", { name: "Mark as Ready to Publish" })
+		).toHaveCount(0);
 	});
 
-	test("mark case as ready to publish", async ({ page }) => {
-		// Create a fresh case to avoid mutating seeded data
+	test("status button shows Published for a published case", async ({
+		page,
+	}) => {
+		// "Medium Case" is seeded as PUBLISHED (prisma/seed/dev-seed.ts).
 		await page.goto("/dashboard");
-		await page.getByRole("button", { name: "Create new case" }).click();
-		await page.getByLabel("Name").waitFor({ state: "visible" });
-		await page.getByLabel("Name").fill("Publish Test Case");
-		await page.getByLabel("Description").fill("Case for testing publish flow");
-		await page.getByRole("button", { name: "Submit" }).click();
+		await page.getByText("Medium Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editor = new CaseEditorPage(page);
+		await expect(editor.statusButton).toBeVisible();
+		await expect(editor.statusButton).toHaveText("Published");
+	});
+
+	test("status modal opens with Published content for a published case", async ({
+		page,
+	}) => {
+		await page.goto("/dashboard");
+		await page.getByText("Medium Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);
 		await editor.statusButton.click();
-		await editor.markReadyButton.click();
 
-		// Status should now show "Ready to Publish"
-		await expect(editor.statusButton).toHaveText("Ready to Publish");
+		await expect(editor.statusModalTitle).toBeVisible();
+		await expect(page.getByText("Case Status: Published")).toBeVisible();
+		await expect(
+			page.getByText("This case is published and visible in case studies.")
+		).toBeVisible();
 	});
 
 	test("case studies page is accessible", async ({ page }) => {
@@ -55,27 +86,5 @@ test.describe("Publishing", () => {
 
 		// Should not redirect to login (authenticated via saved state)
 		await expect(page).not.toHaveURL(LOGIN_PATTERN);
-	});
-
-	test("complete publishing journey: draft → ready → published", async ({
-		page,
-	}) => {
-		// Create fresh case
-		await page.goto("/dashboard");
-		await page.getByRole("button", { name: "Create new case" }).click();
-		await page.getByLabel("Name").waitFor({ state: "visible" });
-		await page.getByLabel("Name").fill("Full Publish Test");
-		await page.getByLabel("Description").fill("Testing full publish flow");
-		await page.getByRole("button", { name: "Submit" }).click();
-		await page.waitForURL(CASE_URL_PATTERN);
-
-		// Goal is auto-created with the case — wait for it to appear
-		const editor = new CaseEditorPage(page);
-		await expect(page.getByText("G1")).toBeVisible();
-
-		// Mark as ready
-		await editor.statusButton.click();
-		await editor.markReadyButton.click();
-		await expect(editor.statusButton).toHaveText("Ready to Publish");
 	});
 });
