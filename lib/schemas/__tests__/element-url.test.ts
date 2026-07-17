@@ -58,6 +58,52 @@ describe("lenientUrlSchema", () => {
 	it("rejects an empty string", () => {
 		expect(lenientUrlSchema.safeParse("").success).toBe(false);
 	});
+
+	it("rejects a mailto: address rather than mangling it", () => {
+		const result = lenientUrlSchema.safeParse("mailto:x@y.z");
+		expect(result.success).toBe(false);
+		expect(result.success || result.error.issues[0]?.message).toBe(
+			SCHEME_MESSAGE
+		);
+	});
+
+	it("rejects a javascript: address (colon, no slashes)", () => {
+		const result = lenientUrlSchema.safeParse("javascript:alert(1)");
+		expect(result.success).toBe(false);
+		expect(result.success || result.error.issues[0]?.message).toBe(
+			SCHEME_MESSAGE
+		);
+	});
+
+	it("rejects a data: address (colon, no slashes)", () => {
+		const result = lenientUrlSchema.safeParse(
+			"data:text/plain;base64,SGVsbG8="
+		);
+		expect(result.success).toBe(false);
+		expect(result.success || result.error.issues[0]?.message).toBe(
+			SCHEME_MESSAGE
+		);
+	});
+
+	it("rejects a javascript:// address (scheme with slashes, not http/https)", () => {
+		const result = lenientUrlSchema.safeParse("javascript://alert(1)");
+		expect(result.success).toBe(false);
+		expect(result.success || result.error.issues[0]?.message).toBe(
+			SCHEME_MESSAGE
+		);
+	});
+
+	it("accepts a protocol-relative address and stores it as https://", () => {
+		const result = lenientUrlSchema.safeParse("//example.com");
+		expect(result.success).toBe(true);
+		expect(result.success && result.data).toBe("https://example.com");
+	});
+
+	it("passes an uppercase HTTPS:// value through byte-unchanged", () => {
+		const result = lenientUrlSchema.safeParse("HTTPS://example.com");
+		expect(result.success).toBe(true);
+		expect(result.success && result.data).toBe("HTTPS://example.com");
+	});
 });
 
 describe("optionalUrlSchema", () => {
