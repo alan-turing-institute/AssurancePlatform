@@ -19,6 +19,7 @@ import {
 	ensureDarterCaseGrant,
 	ensureDarterIntegration,
 } from "../../lib/services/darter-integration-service";
+import { publishAssuranceCase } from "../../lib/services/publish-service";
 import { PrismaClient } from "../../src/generated/prisma";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -312,16 +313,14 @@ async function main() {
 
 			console.log("Created: Simple Case (Draft, chris)");
 
-			// 3b. Medium Case (chris) - Published, shared with alice
+			// 3b. Medium Case (chris) - published after the transaction commits
+			// (see step 5 below) via the real publish service, shared with alice
 			const mediumCase = await tx.assuranceCase.create({
 				data: {
 					name: "Medium Case",
 					description: "A more complex assurance case with strategies",
 					createdById: chris.id,
 					mode: "ADVANCED",
-					publishStatus: "PUBLISHED",
-					published: true,
-					publishedAt: new Date(),
 				},
 			});
 
@@ -809,15 +808,40 @@ async function main() {
 				chrisId: chris.id,
 				demoCaseId: demoCase.id,
 				demoClaim1Id: demoClaim1.id,
+				mediumCaseId: mediumCase.id,
 			};
 		},
 		{ timeout: 30_000 }
 	); // end $transaction
 
-	const { chrisId, demoCaseId, demoClaim1Id } = seeded;
+	const { chrisId, demoCaseId, demoClaim1Id, mediumCaseId } = seeded;
 
 	// ============================================
-	// 5. REGISTER THE DARTER INTEGRATION (keystone demo)
+	// 5. PUBLISH MEDIUM CASE (via the real publish service)
+	// ============================================
+	// Runs OUTSIDE the transaction above, through the app's own `prisma`
+	// client, for the same reason as the DARTER registration below: publishing
+	// needs to read back Medium Case's elements, which only exist once this
+	// script's own transaction has committed and is visible to that separate
+	// connection. Calling `publishAssuranceCase` — not hand-setting the
+	// `published`/`publishStatus`/`publishedAt` columns — is deliberate: ADR
+	// 0003 defines "published" as the flag AND a `PublishedAssuranceCase`
+	// snapshot row (slug + isCurrent) created together, and this is the one
+	// path the real app uses to produce that pair. Hand-setting only the flag
+	// (the pre-#870 shape of this seed) leaves a case flagged PUBLISHED with
+	// no snapshot row — a state the current schema's own publish flow can
+	// never produce.
+	console.log("\nPublishing Medium Case...");
+	const publishResult = await publishAssuranceCase(chrisId, mediumCaseId);
+	if ("error" in publishResult) {
+		throw new Error(`Failed to publish Medium Case: ${publishResult.error}`);
+	}
+	console.log(
+		`Published Medium Case (slug id ${publishResult.data.publishedId}).`
+	);
+
+	// ============================================
+	// 6. REGISTER THE DARTER INTEGRATION (keystone demo)
 	// ============================================
 	// Runs OUTSIDE the transaction above and through the app's own `prisma`
 	// client (`@/lib/prisma`, a separate connection/pool from this script's
