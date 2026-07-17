@@ -103,9 +103,14 @@ function showEventToast(event: SSEEvent): void {
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const [loading, setLoading] = useState(true);
-	const { assuranceCase, setAssuranceCase, setOrphanedElements } = useStore();
+	const {
+		assuranceCase,
+		setAssuranceCase,
+		setOrphanedElements,
+		caseDetailsOpen,
+		setCaseDetailsOpen,
+	} = useStore();
 	const { setCaseId: setHistoryCaseId } = useHistoryStore();
-	const [open, setOpen] = useState(false);
 
 	const params = useParams();
 	const router = useRouter();
@@ -300,7 +305,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					enabled={!loading}
 					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
 				/>
-				<Header setOpen={setOpen} />
+				<Header setOpen={setCaseDetailsOpen} />
 				<ErrorBoundary
 					fallback={
 						<div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -310,7 +315,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				>
 					<Flow />
 				</ErrorBoundary>
-				<CaseDetails isOpen={open} setOpen={setOpen} />
+				<CaseDetails isOpen={caseDetailsOpen} setOpen={setCaseDetailsOpen} />
 			</ReactFlowProvider>
 		);
 	}

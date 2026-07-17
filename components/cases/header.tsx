@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { type Dispatch, type SetStateAction, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import SearchNodes from "@/components/cases/search-nodes";
 import { useChangeDetection } from "@/hooks/use-change-detection";
@@ -16,7 +16,7 @@ import { Button } from "../ui/button";
 import ActiveUsersList from "./active-users-list";
 
 interface HeaderProps {
-	setOpen: Dispatch<SetStateAction<boolean>>;
+	setOpen: (open: boolean) => void;
 }
 
 const Header = ({ setOpen }: HeaderProps) => {
@@ -189,6 +189,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 					</Button>
 					<button
 						className="border-none bg-transparent p-0 font-semibold text-sidebar-foreground hover:cursor-pointer"
+						data-testid="case-title-button"
 						data-tour="case-header"
 						onClick={() => setOpen(true)}
 						type="button"

@@ -40,6 +40,11 @@ interface Member {
 interface Store {
 	activeUsers: UserResponse[];
 	assuranceCase: AssuranceCaseResponse | null;
+	// Case information sheet state (ADR 0003 §1/§2 — the title-click sheet and
+	// the toolbar's "Case Information" button are two entry points onto the
+	// same component; both flip this one flag so the sheet lives in a single
+	// place in the tree, same pattern as `commentsSheetOpen` below).
+	caseDetailsOpen: boolean;
 	caseNotes: CommentResponse[];
 	commentsSheetNode: Node | null;
 	// Comments sheet state
@@ -58,6 +63,7 @@ interface Store {
 	reviewMembers: Member[];
 	setActiveUsers: (users: UserResponse[]) => void;
 	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => void;
+	setCaseDetailsOpen: (open: boolean) => void;
 	setCaseNotes: (comments: CommentResponse[]) => void;
 	setCommentsSheetNode: (node: Node | null) => void;
 	setCommentsSheetOpen: (open: boolean) => void;
@@ -231,6 +237,11 @@ const useStore = create<Store>((set, get) => ({
 	},
 	setCommentsSheetNode: (node: Node | null) => {
 		set({ commentsSheetNode: node });
+	},
+	// Case information sheet state
+	caseDetailsOpen: false,
+	setCaseDetailsOpen: (open: boolean) => {
+		set({ caseDetailsOpen: open });
 	},
 }));
 

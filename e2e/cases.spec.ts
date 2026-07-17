@@ -86,4 +86,20 @@ test.describe("Case management", () => {
 		await dashboard.goto();
 		await expect(page.getByText("Delete Me Case")).not.toBeVisible();
 	});
+
+	test("clicking the case title opens the case information sheet", async ({
+		page,
+	}) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		await page.getByTestId("case-title-button").click();
+
+		await expect(
+			page.getByRole("heading", { name: "Case Information" })
+		).toBeVisible();
+	});
 });

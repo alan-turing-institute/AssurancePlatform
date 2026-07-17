@@ -43,9 +43,8 @@ const PublishModal = dynamic(
 	() => import("@/components/modals/publish-modal").then((m) => m.PublishModal),
 	{ ssr: false }
 );
-const ResourcesModal = dynamic(
-	() =>
-		import("@/components/modals/resources-modal").then((m) => m.ResourcesModal),
+const HelpModal = dynamic(
+	() => import("@/components/modals/help-modal").then((m) => m.HelpModal),
 	{ ssr: false }
 );
 const ShareModal = dynamic(
@@ -97,7 +96,7 @@ export const ModalProvider = (): ReactNode => (
 		<PublishModal />
 		<StatusModalWrapper />
 		<EmailModal />
-		<ResourcesModal />
+		<HelpModal />
 		<CreateTeamDialog />
 		<InviteMemberDialog />
 		<ErrorBoundary
