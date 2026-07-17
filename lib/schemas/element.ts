@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { optionalString } from "./base";
+import { lenientUrlSchema, optionalString, optionalUrlSchema } from "./base";
 
 /**
  * Element type enum — accepts various frontend formats
@@ -25,9 +25,9 @@ export const createElementSchema = z.object({
 	parentId: z.string().nullable().optional(),
 
 	// Evidence-specific
-	url: optionalString(2000),
-	URL: optionalString(2000),
-	urls: z.array(z.string().url()).optional(),
+	url: optionalUrlSchema,
+	URL: optionalUrlSchema,
+	urls: z.array(lenientUrlSchema).optional(),
 
 	// GSN-specific
 	assumption: optionalString(5000),
@@ -52,9 +52,9 @@ export const updateElementSchema = z.object({
 	parentId: z.string().nullable().optional(),
 
 	// Evidence-specific
-	url: optionalString(2000),
-	URL: optionalString(2000),
-	urls: z.array(z.string().url()).optional(),
+	url: optionalUrlSchema,
+	URL: optionalUrlSchema,
+	urls: z.array(lenientUrlSchema).optional(),
 
 	// GSN-specific
 	assumption: optionalString(5000),

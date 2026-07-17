@@ -74,6 +74,90 @@ export const stringIdSchema = z
 	.transform((v) => v.trim())
 	.describe("Non-empty string identifier");
 
+/**
+ * Matches a URI scheme immediately followed by "//" (e.g. "https://",
+ * "ftp://") — used to detect whether a user-supplied address already
+ * carries a scheme before we consider prepending one.
+ */
+const URL_SCHEME_PREFIX = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//;
+
+/**
+ * Matches any URI scheme prefix, with or without the following "//" (e.g.
+ * "mailto:", "javascript:", "https://"). Used together with
+ * URL_SCHEME_PREFIX to detect a scheme that is NOT followed by "//" — those
+ * are non-web addresses (mailto:, javascript:, data:, …) and must never be
+ * silently rewritten into "https://mailto:..." nonsense.
+ */
+const URL_SCHEME_ONLY = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
+
+/**
+ * Protocol allowlist applied to the final, normalised value. Only http(s)
+ * addresses are ever stored — closes the javascript:// stored-XSS surface,
+ * since zod's url() check accepts any WHATWG-parseable URL (including
+ * javascript: and other non-web schemes) and evidence hrefs are rendered
+ * raw.
+ */
+const URL_ALLOWED_PROTOCOL = /^https?:\/\//i;
+
+const URL_ERROR_MESSAGE = "Enter a web address, such as example.com/report.pdf";
+
+/**
+ * Web address, lenient about the scheme — most people type "example.com",
+ * not "https://example.com". Trims, prepends "https://" when no scheme is
+ * present (or just "https:" for a protocol-relative "//example.com"), then
+ * validates as a URL and checks the result against the http(s) allowlist.
+ * The normalised value (always carrying a scheme) is what gets stored, so
+ * there is no silent divergence between what a user typed and what is
+ * saved. A scheme that isn't followed by "//" (mailto:, javascript:,
+ * data:, …) is rejected outright rather than mangled.
+ */
+export const lenientUrlSchema = z
+	.string()
+	.trim()
+	.refine(
+		(v) => !(URL_SCHEME_ONLY.test(v) && !URL_SCHEME_PREFIX.test(v)),
+		URL_ERROR_MESSAGE
+	)
+	.transform((v) => {
+		if (v.startsWith("//")) {
+			return `https:${v}`;
+		}
+		return URL_SCHEME_PREFIX.test(v) ? v : `https://${v}`;
+	})
+	.pipe(
+		z
+			.string()
+			.url(URL_ERROR_MESSAGE)
+			.refine((v) => URL_ALLOWED_PROTOCOL.test(v), URL_ERROR_MESSAGE)
+	)
+	.describe("Web address, normalised to always include a scheme");
+
+/**
+ * Optional web address field (empty string, null, or undefined all become
+ * undefined). Non-empty values are validated and normalised via
+ * lenientUrlSchema.
+ */
+export const optionalUrlSchema = z
+	.string()
+	.nullable()
+	.optional()
+	.transform((v) => (v?.trim() ? v.trim() : undefined))
+	.pipe(z.union([z.undefined(), lenientUrlSchema]))
+	// NOTE (V3, reverted): dropping this trailing .optional() was flagged by
+	// review as "redundant" because the piped union already accepts
+	// undefined at RUNTIME. It is not redundant for TYPE INFERENCE: zod only
+	// treats a z.object() field as an optional key (`url?:`) when the field
+	// schema is itself ZodOptional at the top level. Without this wrapper,
+	// `url`/`URL` on CreateElementInput/UpdateElementInput flip from an
+	// optional key to a required-but-possibly-undefined key, which broke
+	// tsc across 70 call sites in three integration test files outside this
+	// batch's scope (case-crud.test.ts, element-service.test.ts,
+	// identifier-service.test.ts) that construct input objects without
+	// url/URL. Kept in place; reported to cid rather than touching those
+	// files.
+	.optional()
+	.describe("Optional web address field");
+
 // ============================================
 // Number Primitives
 // ============================================
