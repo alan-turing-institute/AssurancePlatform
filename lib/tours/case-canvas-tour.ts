@@ -42,7 +42,7 @@ export const caseCanvasTour: Tour = {
 			icon: "🛠️",
 			title: "The Toolbar",
 			content:
-				"All your editing tools are here — Undo/Redo, Auto-Layout, Resources, Share, Export, JSON View, Notes, and Settings. Hover over each icon to see what it does.",
+				"All your editing tools are here — Undo/Redo, Auto-Layout, Case Information, Help, Share, Export, JSON View, Notes, and Settings. Hover over each icon to see what it does.",
 			selector: "[data-tour='toolbar']",
 			side: "top",
 			showControls: true,

@@ -16,7 +16,8 @@ export class CaseEditorPage {
 	readonly notesButton: Locator;
 	readonly settingsButton: Locator;
 	readonly deleteButton: Locator;
-	readonly resourcesButton: Locator;
+	readonly caseInformationButton: Locator;
+	readonly helpButton: Locator;
 
 	constructor(page: Page) {
 		this.statusButton = page.getByRole("button", {
@@ -30,6 +31,10 @@ export class CaseEditorPage {
 		this.notesButton = page.getByTestId("toolbar-notes");
 		this.settingsButton = page.getByTestId("toolbar-settings");
 		this.deleteButton = page.getByTestId("toolbar-delete");
-		this.resourcesButton = page.getByTestId("toolbar-resources");
+		// ADR 0003 implementation shape §2: the toolbar's ⓘ button was
+		// repurposed as "Case Information"; its former "Resources" content
+		// moved verbatim to a new "?" Help button.
+		this.caseInformationButton = page.getByTestId("toolbar-case-information");
+		this.helpButton = page.getByTestId("toolbar-help");
 	}
 }

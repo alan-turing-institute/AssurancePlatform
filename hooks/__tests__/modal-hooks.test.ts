@@ -8,9 +8,9 @@ import {
 	useCreateCaseModal,
 	useEmailModal,
 	useExportModal,
+	useHelpModal,
 	useImportModal,
 	usePermissionsModal,
-	useResourcesModal,
 } from "@/hooks/modal-hooks";
 
 // Type for modal hook return value
@@ -178,7 +178,7 @@ describe("Modal Hooks", () => {
 			usePermissionsModal,
 			useImportModal,
 			useEmailModal,
-			useResourcesModal,
+			useHelpModal,
 		];
 
 		// Reset each store to its initial state
@@ -193,7 +193,7 @@ describe("Modal Hooks", () => {
 	testModalHook("usePermissionsModal", usePermissionsModal);
 	testModalHook("useImportModal", useImportModal);
 	testModalHook("useEmailModal", useEmailModal);
-	testModalHook("useResourcesModal", useResourcesModal);
+	testModalHook("useHelpModal", useHelpModal);
 
 	describe("Cross-modal interactions", () => {
 		it("should allow multiple modals to be open simultaneously", () => {
@@ -350,7 +350,7 @@ describe("Modal Hooks", () => {
 				usePermissionsModal,
 				useImportModal,
 				useEmailModal,
-				useResourcesModal,
+				useHelpModal,
 			];
 
 			const results = hooks.map((hook) => renderHook(hook));

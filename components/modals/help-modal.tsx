@@ -9,11 +9,18 @@ import {
 } from "lucide-react";
 import React from "react";
 import { Modal } from "@/components/ui/modal";
-import { useResourcesModal } from "@/hooks/modal-hooks";
+import { useHelpModal } from "@/hooks/modal-hooks";
 import { cn } from "@/lib/utils";
 
-export const ResourcesModal = () => {
-	const resourcesModal = useResourcesModal();
+/**
+ * Help modal — the element-legend content formerly shown by the toolbar's
+ * "Resources" button. Mechanically relocated behind a new "?" Help button
+ * when the ⓘ button was repurposed as "Case Information" (ADR 0003
+ * implementation shape §2); content is unchanged. A genuine redesign of
+ * this modal is tracked separately (not this issue's scope).
+ */
+export const HelpModal = () => {
+	const helpModal = useHelpModal();
 
 	const components: {
 		title: string;
@@ -62,8 +69,8 @@ export const ResourcesModal = () => {
 		<Modal
 			classNames="min-w-[800px]"
 			description="Here is some useful information about each element, select each to find out more."
-			isOpen={resourcesModal.isOpen}
-			onClose={resourcesModal.onClose}
+			isOpen={helpModal.isOpen}
+			onClose={helpModal.onClose}
 			title="Element Legend"
 		>
 			<ul className="grid gap-3 py-2 md:grid-cols-2">
