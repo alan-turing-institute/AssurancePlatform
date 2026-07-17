@@ -74,6 +74,43 @@ export const stringIdSchema = z
 	.transform((v) => v.trim())
 	.describe("Non-empty string identifier");
 
+/**
+ * Matches a URI scheme immediately followed by "//" (e.g. "https://",
+ * "ftp://") — used to detect whether a user-supplied address already
+ * carries a scheme before we consider prepending one.
+ */
+const URL_SCHEME_PREFIX = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//;
+
+const URL_ERROR_MESSAGE = "Enter a web address, such as example.com/report.pdf";
+
+/**
+ * Web address, lenient about the scheme — most people type "example.com",
+ * not "https://example.com". Trims, prepends "https://" when no scheme is
+ * present, then validates as a URL. The normalised value (always carrying a
+ * scheme) is what gets stored, so there is no silent divergence between what
+ * a user typed and what is saved.
+ */
+export const lenientUrlSchema = z
+	.string()
+	.trim()
+	.transform((v) => (URL_SCHEME_PREFIX.test(v) ? v : `https://${v}`))
+	.pipe(z.string().url(URL_ERROR_MESSAGE))
+	.describe("Web address, normalised to always include a scheme");
+
+/**
+ * Optional web address field (empty string, null, or undefined all become
+ * undefined). Non-empty values are validated and normalised via
+ * lenientUrlSchema.
+ */
+export const optionalUrlSchema = z
+	.string()
+	.nullable()
+	.optional()
+	.transform((v) => (v?.trim() ? v.trim() : undefined))
+	.pipe(z.union([z.undefined(), lenientUrlSchema]))
+	.optional()
+	.describe("Optional web address field");
+
 // ============================================
 // Number Primitives
 // ============================================
