@@ -152,6 +152,17 @@ describe("POST /api/cases/[id]/information/image", () => {
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 
+		// The route saves the file to disk before the EDIT-permission check
+		// rejects the persist step, then cleans up via deleteFile(). Spy on
+		// deleteFile (default vi.spyOn behaviour still calls through to the
+		// real implementation) to capture the path it was given, so we can
+		// independently verify the file is actually gone from disk rather
+		// than just trusting that deleteFile() was invoked.
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
 		const { POST } = await import(
 			"@/app/api/cases/[id]/information/image/route"
 		);
@@ -164,6 +175,18 @@ describe("POST /api/cases/[id]/information/image", () => {
 		});
 
 		expect(response.status).toBe(403);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(1);
+		const deleteFileCall = deleteFileSpy.mock.calls[0];
+		if (!deleteFileCall) {
+			throw new Error("deleteFile was not called");
+		}
+		const [savedPath] = deleteFileCall;
+		expect(savedPath).toMatch(UPLOADED_PATH_PATTERN);
+
+		const { fileExists } = fileStorageService;
+		expect(await fileExists(savedPath)).toBe(false);
+
+		deleteFileSpy.mockRestore();
 	});
 });
 
@@ -202,7 +225,7 @@ describe("DELETE /api/cases/[id]/information/image", () => {
 			"@/lib/services/case-information-service"
 		);
 		const result = await getCaseInformation(owner.id, testCase.id);
-		expect("data" in result && result.data?.featureImageUrl).toBe("");
+		expect("data" in result && result.data?.featureImageUrl).toBe(null);
 	});
 
 	it("is a no-op when there is no feature image", async () => {

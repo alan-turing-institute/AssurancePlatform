@@ -189,6 +189,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 					</Button>
 					<button
 						className="border-none bg-transparent p-0 font-semibold text-sidebar-foreground hover:cursor-pointer"
+						data-testid="case-title-button"
 						data-tour="case-header"
 						onClick={() => setOpen(true)}
 						type="button"

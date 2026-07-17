@@ -7,6 +7,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
 import {
 	getCaseInformation,
 	upsertCaseInformation,
@@ -15,6 +16,29 @@ import { deleteFile, saveFile } from "@/lib/services/file-storage-service";
 
 interface RouteParams {
 	params: Promise<{ id: string }>;
+}
+
+/**
+ * Resolves the authenticated user and the case-information record's current
+ * state, shared by POST and DELETE below — both need the same VIEW-gated
+ * existence/access check before touching storage (the EDIT check that
+ * actually authorises the change happens in `upsertCaseInformation`).
+ * Returns a discriminated union rather than throwing so callers can return
+ * the prepared error response directly.
+ */
+async function requireExistingCaseInformation(params: RouteParams["params"]) {
+	const userId = await requireAuth();
+	const { id: caseId } = await params;
+
+	const existing = await getCaseInformation(userId, caseId);
+	if ("error" in existing) {
+		return {
+			ok: false as const,
+			response: apiError(serviceErrorToAppError(existing.error)),
+		};
+	}
+
+	return { ok: true as const, userId, caseId, existing: existing.data };
 }
 
 /**
@@ -40,16 +64,11 @@ interface RouteParams {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
 	try {
-		const userId = await requireAuth();
-		const { id: caseId } = await params;
-
-		// VIEW-gated existence/access check, so an unauthenticated stranger
-		// never reaches the storage write below (the EDIT check that
-		// actually authorises the change happens in `upsertCaseInformation`).
-		const existing = await getCaseInformation(userId, caseId);
-		if ("error" in existing) {
-			return apiError(serviceErrorToAppError(existing.error));
+		const guard = await requireExistingCaseInformation(params);
+		if (!guard.ok) {
+			return guard.response;
 		}
+		const { userId, caseId, existing } = guard;
 
 		const formData = await request.formData();
 		const imageFile = formData.get("image") as File | null;
@@ -77,7 +96,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		}
 
 		// Best-effort cleanup of the previous image, if any and different.
-		const previousUrl = existing.data?.featureImageUrl;
+		const previousUrl = existing?.featureImageUrl;
 		if (previousUrl && previousUrl !== saveResult.data.path) {
 			await deleteFile(previousUrl);
 		}
@@ -93,10 +112,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  *
  * @description Removes the feature image from a case's case-information
  * record. Deletes the stored file (best-effort) and clears
- * `featureImageUrl` on the record. Calls `upsertCaseInformation` directly
- * with an empty string rather than through the zod schema — the schema's
- * `optionalString` transform treats an empty string as "field omitted",
- * which would leave the existing image untouched instead of clearing it.
+ * `featureImageUrl` on the record. Goes through `upsertCaseInformationSchema`
+ * like every other write, passing `featureImageUrl: null` — the schema
+ * treats `null` as an explicit clear, distinct from `undefined` ("leave
+ * untouched"), so there is no need to bypass it as a plain string write.
  * Requires EDIT permission.
  *
  * @pathParam id - Case ID (UUID)
@@ -108,19 +127,28 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  */
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 	try {
-		const userId = await requireAuth();
-		const { id: caseId } = await params;
+		const guard = await requireExistingCaseInformation(params);
+		if (!guard.ok) {
+			return guard.response;
+		}
+		const { userId, caseId, existing } = guard;
 
-		const existing = await getCaseInformation(userId, caseId);
-		if ("error" in existing) {
-			return apiError(serviceErrorToAppError(existing.error));
+		const currentUrl = existing?.featureImageUrl;
+
+		const parsed = upsertCaseInformationSchema.safeParse({
+			featureImageUrl: null,
+		});
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
+			);
 		}
 
-		const currentUrl = existing.data?.featureImageUrl;
-
-		const updateResult = await upsertCaseInformation(userId, caseId, {
-			featureImageUrl: "",
-		});
+		const updateResult = await upsertCaseInformation(
+			userId,
+			caseId,
+			parsed.data
+		);
 		if ("error" in updateResult) {
 			return apiError(serviceErrorToAppError(updateResult.error));
 		}

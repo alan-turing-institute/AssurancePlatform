@@ -15,7 +15,9 @@ import type { ServiceResult } from "@/types/service";
 export interface CaseInformationInput {
 	authors?: string;
 	description?: string;
-	featureImageUrl?: string;
+	// `null` explicitly clears the stored value; `undefined` (the key
+	// omitted) leaves it untouched — see `lib/schemas/case-information.ts`.
+	featureImageUrl?: string | null;
 	sector?: string;
 }
 

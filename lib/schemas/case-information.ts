@@ -13,7 +13,21 @@ export const caseInformationSchema = z.object({
 	description: optionalString(5000),
 	authors: optionalString(255),
 	sector: optionalString(100),
-	featureImageUrl: optionalString(2000),
+	// Distinct from `optionalString`: the image field needs a genuine
+	// null-vs-undefined distinction so a caller can explicitly *clear* the
+	// image (`null`) without that being indistinguishable from "leave the
+	// existing image untouched" (`undefined` — the key omitted).
+	// `optionalString` collapses both `null` and `""` to `undefined`, which
+	// is exactly the ambiguity that used to force the image DELETE handler
+	// to bypass this schema and write an empty string directly.
+	featureImageUrl: z
+		.string()
+		.max(2000, "Must be less than 2000 characters")
+		.nullable()
+		.optional()
+		.describe(
+			"Feature image URL — null clears it, omitted leaves it untouched"
+		),
 });
 
 /**
