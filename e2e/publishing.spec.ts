@@ -2,6 +2,10 @@ import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, LOGIN_PATTERN } from "./helpers/constants";
 import { CaseEditorPage } from "./pages/case-editor-page";
 
+// Matches the case-status endpoint's path so the waitForResponse predicate in
+// the published-modal spec below can identify it regardless of query string.
+const STATUS_ENDPOINT_PATTERN = /\/api\/cases\/[^/]+\/status$/;
+
 // ADR 0003 §2 retired the READY_TO_PUBLISH intermediate state — a case is
 // now either DRAFT or PUBLISHED, with no "mark as ready" step in between.
 // These specs pin the current interim behaviour: a draft case shows an
@@ -72,9 +76,28 @@ test.describe("Publishing", () => {
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);
-		await editor.statusButton.click();
 
-		await expect(editor.statusModalTitle).toBeVisible();
+		// For a case with a current published snapshot, GET /api/cases/[id]/status
+		// synchronously runs full export + change-detection (getFullPublishStatus's
+		// expensive path) before the modal is allowed to open — see
+		// handleStatusButtonClick in components/cases/header.tsx. That can be slow
+		// on CI runners; arming this wait BEFORE the click means a slow/hung fetch
+		// fails here, naming the endpoint, instead of surfacing 5s later as a mute
+		// "element not found" on the modal assertions below. Making the open itself
+		// fast is tracked separately: [[TEA — Publish flow — validate, publish,
+		// republish, unpublish (ADR 0003)]].
+		const statusResponse = page.waitForResponse(
+			(response) =>
+				STATUS_ENDPOINT_PATTERN.test(new URL(response.url()).pathname) &&
+				response.status() === 200,
+			{ timeout: 20_000 }
+		);
+		await editor.statusButton.click();
+		await statusResponse;
+
+		// Extra headroom on the first assertion for render-after-response on slow
+		// runners; the response above already absorbed the expensive-path wait.
+		await expect(editor.statusModalTitle).toBeVisible({ timeout: 10_000 });
 		await expect(page.getByText("Case Status: Published")).toBeVisible();
 		await expect(
 			page.getByText("This case is published and visible in case studies.")
