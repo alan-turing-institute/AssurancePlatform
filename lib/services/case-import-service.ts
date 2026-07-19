@@ -169,6 +169,43 @@ async function createCaseWithPermission(
 }
 
 /**
+ * Batch-resolves citedElementId values (ADR 0004 D5, review fix item 1 —
+ * P2003 trace) that are NOT already covered by this import's idMap. An id
+ * present in idMap is import-internal and always resolves (see
+ * resolveImportedCitedElementId below); everything else names an element in
+ * a DIFFERENT case (the one referenced by moduleReferenceId), so it has to
+ * be checked against the target DB before the insert — the createMany FK
+ * (assurance_elements_cited_element_id_fkey) rejects unresolvable rows and
+ * previously took the whole import's transaction down with it.
+ *
+ * One findMany for the whole batch (not one query per element), run BEFORE
+ * the transaction opens — keeps the transaction short per CLAUDE.md and
+ * avoids doing this lookup once per createElements call.
+ */
+async function resolveExternalCitedElementIds(
+	elements: ElementV2[],
+	idMap: Map<string, string>
+): Promise<Set<string>> {
+	const externalIds = new Set<string>();
+	for (const el of elements) {
+		if (el.citedElementId && !idMap.has(el.citedElementId)) {
+			externalIds.add(el.citedElementId);
+		}
+	}
+
+	if (externalIds.size === 0) {
+		return externalIds;
+	}
+
+	const found = await prisma.assuranceElement.findMany({
+		where: { id: { in: [...externalIds] } },
+		select: { id: true },
+	});
+
+	return new Set(found.map((el) => el.id));
+}
+
+/**
  * Resolves a citedElementId (ADR 0004 D5) for the createMany row.
  *
  * citedElementId names an element in the case referenced by moduleReferenceId
@@ -177,24 +214,37 @@ async function createCaseWithPermission(
  * brief, cid 2026-07-19): try the idMap first (covers the edge case where a
  * test fixture or self-contained export happens to include the cited element
  * in the same payload — then the remap keeps the reference internally
- * consistent with the new ids); otherwise PRESERVE THE ORIGINAL ID VERBATIM.
+ * consistent with the new ids); otherwise PRESERVE THE ORIGINAL ID VERBATIM
+ * if — and only if — resolveExternalCitedElementIds proved it actually
+ * exists in the target DB.
  *
- * Flag: on import into a fresh/different deployment, a preserved id may not
- * resolve to any element at all (the away-case wasn't part of this import
- * and may not exist there under that id). moduleReferenceId itself has the
- * same exposure today and isn't carried through createElements at all yet —
- * pre-existing gap, not introduced here. No id-remapping table exists for
- * cross-case references in this codebase; guessing one up would be worse
- * than an honest verbatim pass-through.
+ * Review fix item 1: a preserved id that resolves NOWHERE in the target DB
+ * (the away-case wasn't part of this import and doesn't exist there under
+ * that id) used to hit the createMany FK and roll back the entire import.
+ * That is now a flagged, non-fatal outcome: citedElementId is dropped to
+ * null and citationDangling is set, matching the existing detach/delete
+ * dangling-citation contract in element-service.ts.
  */
 function resolveImportedCitedElementId(
 	citedElementId: string | null | undefined,
-	idMap: Map<string, string>
-): string | null {
+	idMap: Map<string, string>,
+	resolvedExternalIds: Set<string>
+): { citedElementId: string | null; citationDangling: boolean } {
 	if (!citedElementId) {
-		return null;
+		return { citedElementId: null, citationDangling: false };
 	}
-	return idMap.get(citedElementId) ?? citedElementId;
+
+	const remapped = idMap.get(citedElementId);
+	if (remapped) {
+		return { citedElementId: remapped, citationDangling: false };
+	}
+
+	if (resolvedExternalIds.has(citedElementId)) {
+		return { citedElementId, citationDangling: false };
+	}
+
+	// Unresolvable anywhere in the target DB — flag, don't fail the import.
+	return { citedElementId: null, citationDangling: true };
 }
 
 /**
@@ -204,6 +254,7 @@ async function createElements(
 	caseId: string,
 	elements: ElementV2[],
 	idMap: Map<string, string>,
+	resolvedExternalCitedElementIds: Set<string>,
 	userId: string
 ): Promise<number> {
 	// Sort elements topologically so parents are created before children
@@ -215,6 +266,16 @@ async function createElements(
 			if (!newId) {
 				return null;
 			}
+
+			// Element-level citation (ADR 0004 D5) — see
+			// resolveImportedCitedElementId's docstring for the
+			// remap-else-preserve-verbatim-else-flag-dangling decision.
+			const { citedElementId, citationDangling } =
+				resolveImportedCitedElementId(
+					el.citedElementId,
+					idMap,
+					resolvedExternalCitedElementIds
+				);
 
 			return {
 				id: newId,
@@ -240,10 +301,8 @@ async function createElements(
 				// an author declaring a NEW status, and the source data already
 				// passed through export's own AS_CITED derivation.
 				assertionStatus: el.assertionStatus,
-				// Element-level citation (ADR 0004 D5) — see
-				// resolveImportedCitedElementId's docstring for the
-				// remap-else-preserve-verbatim decision.
-				citedElementId: resolveImportedCitedElementId(el.citedElementId, idMap),
+				citedElementId,
+				citationDangling,
 				createdById: userId,
 			};
 		})
@@ -357,6 +416,12 @@ export async function importCase(
 		// Build ID mapping
 		const idMap = buildIdMap(v2Data.elements);
 
+		// Review fix item 1: batch-resolve external citedElementIds against the
+		// target DB BEFORE opening the transaction — keeps the transaction
+		// short and means the createMany insert never has to guess.
+		const resolvedExternalCitedElementIds =
+			await resolveExternalCitedElementIds(v2Data.elements, idMap);
+
 		// Use a transaction to ensure atomicity
 		const result = await prisma.$transaction(async () => {
 			// Create case
@@ -367,6 +432,7 @@ export async function importCase(
 				caseId,
 				v2Data.elements,
 				idMap,
+				resolvedExternalCitedElementIds,
 				userId
 			);
 

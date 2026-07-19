@@ -13,7 +13,7 @@ ALTER TABLE "assurance_elements" ADD COLUMN "cited_element_id" TEXT;
 ALTER TABLE "assurance_elements" ADD COLUMN "citation_dangling" BOOLEAN NOT NULL DEFAULT false;
 
 -- CreateIndex
-CREATE INDEX "assurance_elements_citedElementId_idx" ON "assurance_elements"("cited_element_id");
+CREATE INDEX "assurance_elements_cited_element_id_idx" ON "assurance_elements"("cited_element_id");
 
 -- AddForeignKey
 ALTER TABLE "assurance_elements" ADD CONSTRAINT "assurance_elements_cited_element_id_fkey" FOREIGN KEY ("cited_element_id") REFERENCES "assurance_elements"("id") ON DELETE SET NULL ON UPDATE CASCADE;

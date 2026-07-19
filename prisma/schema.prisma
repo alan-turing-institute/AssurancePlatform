@@ -434,6 +434,11 @@ model AssuranceElement {
   // True when citedElementId was nullified because the cited element was
   // deleted or detached from its case (dangling-citation indicator). Cleared
   // whenever the author explicitly sets/clears citedElementId again.
+  // Deliberately excluded from the case export/import exchange format
+  // (ADR 0004 D2 precedent: derived, deployment-relative state, not
+  // author-authored content) — recomputed at import time by the
+  // citedElementId resolution step in case-import-service.ts, not carried
+  // through the export/import payload itself.
   citationDangling    Boolean          @default(false) @map("citation_dangling")
 
   // Timestamps
@@ -470,7 +475,7 @@ model AssuranceElement {
   @@index([caseId, elementType])
   @@index([caseId, deletedAt], map: "assurance_elements_case_deleted_idx")
   @@index([parentId])
-  @@index([citedElementId])
+  @@index([citedElementId], map: "assurance_elements_cited_element_id_idx")
   @@map("assurance_elements")
 }
 

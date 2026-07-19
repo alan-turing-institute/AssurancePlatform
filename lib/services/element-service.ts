@@ -167,6 +167,31 @@ async function validateCitedElementId(
 }
 
 /**
+ * ADR 0004 D5: runs both citedElementId guards (applicability, then
+ * existence/self-citation) in the order createElement and updateElement both
+ * need — extracted so the checks live in exactly one place instead of being
+ * duplicated verbatim at each call site. `ownElementId` is only meaningful
+ * on update (see validateCitedElementId above).
+ */
+async function enforceCitedElementIdRules(
+	elementType: string,
+	citedElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (citedElementId === undefined) {
+		return;
+	}
+	const applicabilityError = rejectCitedElementIdIfNotApplicable(
+		elementType,
+		citedElementId
+	);
+	if (applicabilityError) {
+		return applicabilityError;
+	}
+	return await validateCitedElementId(citedElementId, ownElementId);
+}
+
+/**
  * Resolves parent ID from input.
  * Returns undefined if no parent field is specified (to distinguish from explicitly setting null).
  */
@@ -506,18 +531,12 @@ export async function createElement(
 		return { error: "A case can only have one goal claim" };
 	}
 
-	if (input.citedElementId !== undefined) {
-		const applicabilityError = rejectCitedElementIdIfNotApplicable(
-			elementType,
-			input.citedElementId
-		);
-		if (applicabilityError) {
-			return { error: applicabilityError };
-		}
-		const citedError = await validateCitedElementId(input.citedElementId);
-		if (citedError) {
-			return { error: citedError };
-		}
+	const citedElementIdError = await enforceCitedElementIdRules(
+		elementType,
+		input.citedElementId
+	);
+	if (citedElementIdError) {
+		return { error: citedElementIdError };
 	}
 
 	const { level, parentInfo } =
@@ -716,21 +735,13 @@ export async function updateElement(
 
 		// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
 		// existing element, and cannot reference the element itself.
-		if (input.citedElementId !== undefined) {
-			const applicabilityError = rejectCitedElementIdIfNotApplicable(
-				existing.elementType,
-				input.citedElementId
-			);
-			if (applicabilityError) {
-				return { error: applicabilityError };
-			}
-			const citedError = await validateCitedElementId(
-				input.citedElementId,
-				elementId
-			);
-			if (citedError) {
-				return { error: citedError };
-			}
+		const citedElementIdError = await enforceCitedElementIdRules(
+			existing.elementType,
+			input.citedElementId,
+			elementId
+		);
+		if (citedElementIdError) {
+			return { error: citedElementIdError };
 		}
 
 		// Build update data from input fields

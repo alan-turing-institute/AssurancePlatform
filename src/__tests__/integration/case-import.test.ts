@@ -304,5 +304,59 @@ describe("validateImportData", () => {
 		);
 		expect(reexportedAwayGoal?.citedElementId).toBe(citedGoal.id);
 	});
+
+	/**
+	 * Review fix item 1 (BLOCKING, P2003 trace): a citedElementId that
+	 * resolves NOWHERE in the target DB used to hit createElements'
+	 * createMany FK (assurance_elements_cited_element_id_fkey) and roll back
+	 * prisma.$transaction — the entire import failed, not just the one
+	 * citation. The fix batch-resolves citedElementId before the insert
+	 * (idMap first, then one findMany against the target DB); anything left
+	 * unresolvable is downgraded to citedElementId: null,
+	 * citationDangling: true instead of failing the import. This test
+	 * exercises exactly that path with an id that exists nowhere in the
+	 * (fresh, per-test) target DB.
+	 */
+	it("imports successfully when citedElementId resolves nowhere in the target DB, flagging citationDangling instead of failing the whole import", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const rootGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			role: "TOP_LEVEL",
+		});
+		const unresolvableCitedId = crypto.randomUUID();
+		await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			name: "Reference",
+			parentId: rootGoal.id,
+			moduleReferenceId: homeCase.id,
+			citedElementId: unresolvableCitedId,
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const exported = expectSuccess(await exportCase(owner.id, homeCase.id));
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, exported));
+
+		// The import SUCCEEDED — not rolled back — and both elements landed.
+		expect(imported.elementCount).toBe(2);
+
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		expect(importedAwayGoal?.citedElementId).toBeNull();
+		expect(importedAwayGoal?.citationDangling).toBe(true);
+
+		// The unrelated goal is intact — proves this isn't a partial/silent
+		// drop of the rest of the import.
+		const importedGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
+		expect(importedGoal).not.toBeNull();
+		expect(importedGoal?.name).toBe("Root Goal");
 	});
 });
