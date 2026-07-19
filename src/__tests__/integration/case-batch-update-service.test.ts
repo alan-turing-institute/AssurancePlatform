@@ -506,7 +506,7 @@ describe("applyBatchUpdate", () => {
 					citedElementId: smuggledCitedGoal.id,
 				},
 			},
-		] as ElementChange[];
+		] as unknown as ElementChange[];
 
 		expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
 

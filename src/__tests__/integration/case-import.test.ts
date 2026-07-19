@@ -318,29 +318,51 @@ describe("validateImportData", () => {
 	 * (fresh, per-test) target DB.
 	 */
 	it("imports successfully when citedElementId resolves nowhere in the target DB, flagging citationDangling instead of failing the whole import", async () => {
+		// The fixture is a hand-built import JSON, not seeded via
+		// createTestElement — createTestElement writes through Prisma
+		// directly, so an unresolvable citedElementId would hit the
+		// assurance_elements_cited_element_id_fkey FK at SEED time and never
+		// reach the import path this test targets. moduleReferenceId still
+		// needs to point at a real case (a pre-existing, unrelated FK on
+		// AWAY_GOAL, not part of this fix) — an actual case covers that
+		// without touching citedElementId resolution.
 		const owner = await createTestUser();
-		const homeCase = await createTestCase(owner.id);
-		const rootGoal = await createTestElement(homeCase.id, owner.id, {
-			elementType: "GOAL",
-			name: "Root Goal",
-			role: "TOP_LEVEL",
-		});
+		const awayCase = await createTestCase(owner.id);
 		const unresolvableCitedId = crypto.randomUUID();
-		await createTestElement(homeCase.id, owner.id, {
-			elementType: "AWAY_GOAL",
-			name: "Reference",
-			parentId: rootGoal.id,
-			moduleReferenceId: homeCase.id,
-			citedElementId: unresolvableCitedId,
-		});
 
-		const { exportCase } = await import("@/lib/services/case-export-service");
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Dangling Citation Case",
+				description: "AWAY_GOAL cites an id absent from the target DB",
+			},
+			tree: {
+				id: "40000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "40000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "Reference",
+						description: "Cites an element that doesn't exist anywhere",
+						inSandbox: false,
+						moduleReferenceId: awayCase.id,
+						citedElementId: unresolvableCitedId,
+						children: [],
+					},
+				],
+			},
+		};
+
 		const { importCase } = await import("@/lib/services/case-import-service");
 
-		const exported = expectSuccess(await exportCase(owner.id, homeCase.id));
-
 		const importer = await createTestUser();
-		const imported = expectSuccess(await importCase(importer.id, exported));
+		const imported = expectSuccess(await importCase(importer.id, json));
 
 		// The import SUCCEEDED — not rolled back — and both elements landed.
 		expect(imported.elementCount).toBe(2);
