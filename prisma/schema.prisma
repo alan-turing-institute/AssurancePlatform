@@ -413,6 +413,13 @@ model AssuranceElement {
   // Level (calculated, for property claims)
   level               Int?             /// Hierarchy depth level for property claims
 
+  // Per-assertion status (ADR 0004 D3): author-declared argumentation
+  // semantics mirroring SACM §11.8. Nullable — null means unset and is
+  // interpreted/exported as the SACM default (ASSERTED). Write rule
+  // (author-declared, machine-derivable/proposable, never machine-
+  // overwritten) is enforced in lib/services/element-service.ts, not here.
+  assertionStatus     AssertionStatus? @map("assertion_status")
+
   // Timestamps
   createdAt           DateTime         @default(now()) @map("created_at")
   updatedAt           DateTime         @updatedAt @map("updated_at")
@@ -459,6 +466,18 @@ enum ElementType {
   MODULE
   AWAY_GOAL
   CONTRACT
+}
+
+/// Per-assertion status (ADR 0004 D3), mirroring SACM §11.8. AS_CITED is
+/// machine-derivable (transitively computed from the cited claim's own
+/// status) — the other five are author-declared only.
+enum AssertionStatus {
+  ASSERTED
+  NEEDS_SUPPORT
+  ASSUMED
+  AXIOMATIC
+  DEFEATED
+  AS_CITED
 }
 
 enum ElementRole {

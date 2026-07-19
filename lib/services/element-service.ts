@@ -10,6 +10,7 @@ import {
 	getDescendantIds,
 } from "@/lib/utils/tree-traversal";
 import type {
+	AssertionStatus,
 	PermissionLevel,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
@@ -32,6 +33,7 @@ export type CreateElementInput = CreateElementSchemaOutput & {
 export type UpdateElementInput = UpdateElementSchemaOutput;
 
 export interface ElementResponse {
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string;
 	assuranceCaseId: string;
 	comments?: unknown[];
@@ -61,6 +63,32 @@ async function validateCaseAccess(
 ): Promise<boolean> {
 	const { canAccessCase } = await import("@/lib/permissions");
 	return canAccessCase({ userId, caseId }, requiredLevel);
+}
+
+/**
+ * ADR 0004 D3 write rule: `assertionStatus` is author-declared and must
+ * never be machine-overwritten. Case-level permission (`validateCaseAccess`)
+ * is necessary but not sufficient — an integration's system user can hold a
+ * genuine EDIT grant on a case (`grantIntegrationCaseAccess`) and would
+ * otherwise pass that check identically to a human author. This is the
+ * dedicated, defense-in-depth check that keeps the standard element
+ * mutation path (`createElement`/`updateElement`) as the ONLY route that can
+ * set the field, regardless of what future machine/plugin routes end up
+ * calling into this service. Returns an error string (matching this
+ * service's `ServiceResult` convention) when the acting user is a system
+ * user; `undefined` when the write may proceed.
+ */
+async function guardAssertionStatusWrite(
+	userId: string
+): Promise<string | undefined> {
+	const actor = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { isSystemUser: true },
+	});
+	if (actor?.isSystemUser) {
+		return "Permission denied: assertionStatus can only be set by a case author, not a machine or integration principal";
+	}
+	return;
 }
 
 /**
@@ -340,6 +368,7 @@ async function createElementInDatabase(
 			justification: input.justification,
 			context: input.context ?? [],
 			level,
+			assertionStatus: input.assertionStatus,
 			createdById: userId,
 		},
 		include: {
@@ -378,6 +407,13 @@ export async function createElement(
 	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
 	if (!hasAccess) {
 		return { error: "Permission denied" };
+	}
+
+	if (input.assertionStatus !== undefined) {
+		const writeError = await guardAssertionStatusWrite(userId);
+		if (writeError) {
+			return { error: writeError };
+		}
 	}
 
 	const elementType = toPrismaType(input.elementType);
@@ -488,6 +524,9 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.inSandbox !== undefined) {
 		updateData.inSandbox = input.inSandbox;
 	}
+	if (input.assertionStatus !== undefined) {
+		updateData.assertionStatus = input.assertionStatus;
+	}
 
 	return updateData;
 }
@@ -555,6 +594,16 @@ export async function updateElement(
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
 			return { error: "Element not found" };
+		}
+
+		// ADR 0004 D3 write rule: assertionStatus is author-declared only —
+		// see guardAssertionStatusWrite's docstring for why case-level EDIT
+		// access alone isn't a sufficient gate.
+		if (input.assertionStatus !== undefined) {
+			const writeError = await guardAssertionStatusWrite(userId);
+			if (writeError) {
+				return { error: writeError };
+			}
 		}
 
 		// Build update data from input fields

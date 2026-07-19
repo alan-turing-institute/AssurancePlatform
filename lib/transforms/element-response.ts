@@ -1,5 +1,6 @@
 import { toDisplayType } from "@/lib/element-types";
 import type { ElementResponse } from "@/lib/services/element-service";
+import type { AssertionStatus } from "@/src/generated/prisma";
 
 /**
  * Adds parent reference to response based on parent element type
@@ -46,6 +47,10 @@ export function transformToResponse(element: {
 	urls: string[];
 	inSandbox: boolean;
 	level: number | null;
+	// ADR 0004 D3 — nullable; null means unset (interpreted as ASSERTED at
+	// export time in build-tree.ts, not here — this response mirrors the
+	// raw stored value for the canvas/JSON-editor UI).
+	assertionStatus?: AssertionStatus | null;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;
@@ -89,6 +94,9 @@ export function transformToResponse(element: {
 	}
 	if (element.level !== null) {
 		response.level = element.level;
+	}
+	if (element.assertionStatus) {
+		response.assertionStatus = element.assertionStatus;
 	}
 
 	return response;

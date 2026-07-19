@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { lenientUrlSchema, optionalString, optionalUrlSchema } from "./base";
+import { AssertionStatusSchema } from "./case-export";
+
+/**
+ * Per-assertion status on create/update input (ADR 0004 D3). Author-writable
+ * via the standard element mutation path only — element-service.ts rejects
+ * this field when the acting principal is a machine/integration system user.
+ */
+const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
 
 /**
  * Element type enum — accepts various frontend formats
@@ -33,6 +41,9 @@ export const createElementSchema = z.object({
 	assumption: optionalString(5000),
 	justification: optionalString(5000),
 	context: z.array(z.string()).optional(),
+
+	// Per-assertion status (ADR 0004 D3)
+	assertionStatus: assertionStatusInputSchema,
 });
 
 export type CreateElementSchemaInput = z.input<typeof createElementSchema>;
@@ -60,6 +71,9 @@ export const updateElementSchema = z.object({
 	assumption: optionalString(5000),
 	justification: optionalString(5000),
 	context: z.array(z.string()).optional(),
+
+	// Per-assertion status (ADR 0004 D3)
+	assertionStatus: assertionStatusInputSchema,
 
 	// Sandbox flag
 	inSandbox: z.boolean().optional(),

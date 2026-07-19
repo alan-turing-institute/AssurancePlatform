@@ -159,6 +159,14 @@ type ElementOverrides = Partial<{
 	role: "TOP_LEVEL" | "SUPPORTING";
 	url: string;
 	inSandbox: boolean;
+	// ADR 0004 D3
+	assertionStatus:
+		| "ASSERTED"
+		| "NEEDS_SUPPORT"
+		| "ASSUMED"
+		| "AXIOMATIC"
+		| "DEFEATED"
+		| "AS_CITED";
 }>;
 
 export function createTestElement(
@@ -178,6 +186,7 @@ export function createTestElement(
 			role: overrides.role,
 			url: overrides.url,
 			inSandbox: overrides.inSandbox ?? false,
+			assertionStatus: overrides.assertionStatus,
 		},
 	});
 }

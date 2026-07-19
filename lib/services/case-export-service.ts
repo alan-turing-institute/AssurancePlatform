@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type {
+	AssertionStatus,
 	CaseExportNested,
 	ElementRole,
 	ElementType,
@@ -139,6 +140,8 @@ export async function exportCase(
 						// Dialogical reasoning
 						isDefeater: true,
 						defeatsElementId: true,
+						// Per-assertion status (ADR 0004 D3)
+						assertionStatus: true,
 						// Include evidence linked TO this element (claims get their evidence)
 						evidenceLinksTo: {
 							where: {
@@ -170,6 +173,8 @@ export async function exportCase(
 										// Dialogical reasoning
 										isDefeater: true,
 										defeatsElementId: true,
+										// Per-assertion status (ADR 0004 D3)
+										assertionStatus: true,
 									},
 								},
 							},
@@ -226,6 +231,8 @@ export async function exportCase(
 			// Dialogical reasoning
 			isDefeater: el.isDefeater,
 			defeatsElementId: el.defeatsElementId,
+			// Per-assertion status (ADR 0004 D3)
+			assertionStatus: el.assertionStatus as AssertionStatus | null,
 			// Comments (if requested)
 			comments: includeComments ? commentsMap.get(el.id) : undefined,
 			evidenceLinksTo: el.evidenceLinksTo.map((link) => ({
@@ -254,6 +261,9 @@ export async function exportCase(
 					// Dialogical reasoning
 					isDefeater: link.evidence.isDefeater,
 					defeatsElementId: link.evidence.defeatsElementId,
+					// Per-assertion status (ADR 0004 D3)
+					assertionStatus: link.evidence
+						.assertionStatus as AssertionStatus | null,
 					// Comments for evidence (if requested)
 					comments: includeComments
 						? commentsMap.get(link.evidence.id)

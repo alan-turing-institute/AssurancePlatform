@@ -6,6 +6,7 @@
  */
 
 import type {
+	AssertionStatus,
 	ElementRole,
 	ElementType,
 	ExportComment,
@@ -18,6 +19,10 @@ import { fieldAppliesTo } from "../schemas/element-validation";
  * Element with evidence links as returned from Prisma query.
  */
 export interface ElementWithLinks {
+	// ADR 0004 D3 — null means unset; buildCleanNode resolves it to
+	// "ASSERTED" (SACM's own default) rather than omitting the field, unlike
+	// every other field below.
+	assertionStatus: AssertionStatus | null;
 	assumption: string | null;
 	// Comments (optional - only included when export includes comments)
 	comments?: ExportComment[];
@@ -137,6 +142,10 @@ function buildCleanNode(
 		name: element.name,
 		description: element.description,
 		inSandbox: element.inSandbox,
+		// ADR 0004 D3: always present on export, never omitted — null/unset
+		// resolves to the SACM default rather than disappearing like the
+		// TYPE_SPECIFIC_FIELDS below.
+		assertionStatus: element.assertionStatus ?? "ASSERTED",
 	};
 
 	// Cast to allow dynamic field assignment
