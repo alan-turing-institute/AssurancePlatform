@@ -34,7 +34,7 @@ export async function applyUndo(command: HistoryCommand): Promise<void> {
 						assumption: command.before.assumption,
 						justification: command.before.justification,
 						context: command.before.context,
-						in_sandbox: command.before.inSandbox,
+						inSandbox: command.before.inSandbox,
 					}),
 				});
 			}
@@ -109,7 +109,7 @@ export async function applyRedo(command: HistoryCommand): Promise<void> {
 						assumption: command.after.assumption,
 						justification: command.after.justification,
 						context: command.after.context,
-						in_sandbox: command.after.inSandbox,
+						inSandbox: command.after.inSandbox,
 					}),
 				});
 			}

@@ -258,6 +258,48 @@ describe("PUT /api/cases/[id]", () => {
 		const body = await response.json();
 		expect(body.description).toBe("Collaboratively updated");
 	});
+
+	it("persists layoutDirection sent in the UI's actual payload shape and survives a refetch", async () => {
+		// Regression test for the case-settings-popover toggle: the client must
+		// send `layoutDirection` (camelCase) — a `layout_direction` (snake_case)
+		// body is silently stripped by the zod schema and never persists.
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, { name: "Layout Toggle" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PUT, GET } = await import("@/app/api/cases/[id]/route");
+
+		// This is exactly the body components/cases/case-settings-popover.tsx
+		// constructs in handleDirectionChange.
+		const putReq = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ layoutDirection: "LR" }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const putResponse = await PUT(putReq, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(putResponse.status).toBe(200);
+		const putBody = await putResponse.json();
+		expect(putBody.layoutDirection).toBe("LR");
+
+		// Refetch on a fresh request to prove the value was actually persisted,
+		// not just echoed back from the PUT response.
+		const getReq = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}`
+		);
+		const getResponse = await GET(getReq, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(getResponse.status).toBe(200);
+		const getBody = await getResponse.json();
+		expect(getBody.layoutDirection).toBe("LR");
+	});
 });
 
 // ============================================
