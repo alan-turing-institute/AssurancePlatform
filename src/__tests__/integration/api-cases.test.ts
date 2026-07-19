@@ -300,6 +300,45 @@ describe("PUT /api/cases/[id]", () => {
 		const getBody = await getResponse.json();
 		expect(getBody.layoutDirection).toBe("LR");
 	});
+
+	it("persists the other layoutDirection enum value (TB) and survives a refetch", async () => {
+		// Enum-symmetry companion to the "LR" case above — only one of the two
+		// valid layoutDirection values was exercised by the regression test.
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, {
+			name: "Layout Toggle TB",
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PUT, GET } = await import("@/app/api/cases/[id]/route");
+
+		const putReq = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ layoutDirection: "TB" }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const putResponse = await PUT(putReq, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(putResponse.status).toBe(200);
+		const putBody = await putResponse.json();
+		expect(putBody.layoutDirection).toBe("TB");
+
+		const getReq = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}`
+		);
+		const getResponse = await GET(getReq, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(getResponse.status).toBe(200);
+		const getBody = await getResponse.json();
+		expect(getBody.layoutDirection).toBe("TB");
+	});
 });
 
 // ============================================

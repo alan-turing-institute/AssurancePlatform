@@ -319,6 +319,84 @@ describe('applyUndo("move")', () => {
 });
 
 // ---------------------------------------------------------------------------
+// applyUndo -- update
+// ---------------------------------------------------------------------------
+
+describe('applyUndo("update")', () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockOkResponse()));
+	});
+
+	it("fetches the element endpoint with the before snapshot, including inSandbox", async () => {
+		// Regression test for the history-service half of the layout-direction
+		// key-case fix: undo of an "update" command must send `inSandbox`
+		// (camelCase) — an `in_sandbox` body is silently stripped by the zod
+		// schema and the undo never persists. This assertion pins the exact
+		// request body, so it fails against the pre-fix `in_sandbox` key.
+		const command: HistoryCommand = {
+			type: "update",
+			elementId: "elem-90",
+			elementType: "evidence",
+			before: {
+				id: "elem-90",
+				elementType: "evidence",
+				name: "Before Name",
+				description: "Before description",
+				url: "https://example.com/before",
+				urls: ["https://example.com/before"],
+				assumption: null,
+				justification: null,
+				context: [],
+				inSandbox: true,
+			},
+			after: {
+				id: "elem-90",
+				elementType: "evidence",
+				name: "After Name",
+				description: "After description",
+				url: "https://example.com/after",
+				urls: ["https://example.com/after"],
+				assumption: null,
+				justification: null,
+				context: [],
+				inSandbox: false,
+			},
+		};
+
+		await applyUndo(command);
+
+		expect(fetch).toHaveBeenCalledWith("/api/elements/elem-90", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: "Before Name",
+				description: "Before description",
+				url: "https://example.com/before",
+				urls: ["https://example.com/before"],
+				assumption: null,
+				justification: null,
+				context: [],
+				inSandbox: true,
+			}),
+		});
+	});
+
+	it("does not fetch when before is null", async () => {
+		const command: HistoryCommand = {
+			type: "update",
+			elementId: "elem-91",
+			elementType: "evidence",
+			before: null,
+			after: null,
+		};
+
+		await applyUndo(command);
+
+		expect(fetch).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
 // applyUndo -- detach
 // ---------------------------------------------------------------------------
 
@@ -570,6 +648,79 @@ describe('applyRedo("attach")', () => {
 			type: "attach",
 			elementId: "elem-82",
 			elementType: "strategy",
+			before: null,
+			after: null,
+		};
+
+		await applyRedo(command);
+
+		expect(fetch).not.toHaveBeenCalled();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// applyRedo -- update
+// ---------------------------------------------------------------------------
+
+describe('applyRedo("update")', () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockOkResponse()));
+	});
+
+	it("fetches the element endpoint with the after snapshot, including inSandbox", async () => {
+		const command: HistoryCommand = {
+			type: "update",
+			elementId: "elem-92",
+			elementType: "evidence",
+			before: {
+				id: "elem-92",
+				elementType: "evidence",
+				name: "Before Name",
+				description: "Before description",
+				url: "https://example.com/before",
+				urls: ["https://example.com/before"],
+				assumption: null,
+				justification: null,
+				context: [],
+				inSandbox: false,
+			},
+			after: {
+				id: "elem-92",
+				elementType: "evidence",
+				name: "After Name",
+				description: "After description",
+				url: "https://example.com/after",
+				urls: ["https://example.com/after"],
+				assumption: null,
+				justification: null,
+				context: [],
+				inSandbox: true,
+			},
+		};
+
+		await applyRedo(command);
+
+		expect(fetch).toHaveBeenCalledWith("/api/elements/elem-92", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: "After Name",
+				description: "After description",
+				url: "https://example.com/after",
+				urls: ["https://example.com/after"],
+				assumption: null,
+				justification: null,
+				context: [],
+				inSandbox: true,
+			}),
+		});
+	});
+
+	it("does not fetch when after is null", async () => {
+		const command: HistoryCommand = {
+			type: "update",
+			elementId: "elem-93",
+			elementType: "evidence",
 			before: null,
 			after: null,
 		};
