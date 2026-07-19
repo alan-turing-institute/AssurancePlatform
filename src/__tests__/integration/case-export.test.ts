@@ -255,4 +255,61 @@ describe("exportCase", () => {
 			expect(evidenceNode?.assertionStatus).toBe("AS_CITED");
 		});
 	});
+
+	describe("citedElementId (ADR 0004 D5)", () => {
+		it("carries citedElementId on an AWAY_GOAL node", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const awayCase = await createTestCase(owner.id);
+			const citedGoal = await createTestElement(awayCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Away Goal",
+			});
+			const rootGoal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				role: "TOP_LEVEL",
+			});
+			await createTestElement(testCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				name: "Reference",
+				parentId: rootGoal.id,
+				moduleReferenceId: awayCase.id,
+				citedElementId: citedGoal.id,
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			const awayGoalNode = data.tree.children.find(
+				(c: { type: string }) => c.type === "AWAY_GOAL"
+			);
+			expect(awayGoalNode?.citedElementId).toBe(citedGoal.id);
+		});
+
+		it("omits citedElementId when unset", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const awayCase = await createTestCase(owner.id);
+			const rootGoal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				role: "TOP_LEVEL",
+			});
+			await createTestElement(testCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				name: "Reference",
+				parentId: rootGoal.id,
+				moduleReferenceId: awayCase.id,
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			const awayGoalNode = data.tree.children.find(
+				(c: { type: string }) => c.type === "AWAY_GOAL"
+			);
+			expect(awayGoalNode?.citedElementId).toBeUndefined();
+		});
+	});
 });

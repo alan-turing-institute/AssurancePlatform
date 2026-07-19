@@ -113,6 +113,14 @@ export const ElementV2Schema = z
 			.describe(
 				"Per-assertion status (ADR 0004 D3); null/unset means ASSERTED"
 			),
+		// Element-level citation (ADR 0004 D5) — AWAY_GOAL only. Names the
+		// specific element cited within the case named by moduleReferenceId.
+		citedElementId: z
+			.string()
+			.uuid()
+			.nullable()
+			.optional()
+			.describe("ID of the element cited by an AWAY_GOAL (ADR 0004 D5)"),
 		inSandbox: z
 			.boolean()
 			.default(false)
@@ -212,6 +220,7 @@ export interface ExportComment {
  * - moduleReferenceId: MODULE (required), AWAY_GOAL (required)
  * - moduleEmbedType: MODULE only (required)
  * - modulePublicSummary: MODULE only
+ * - citedElementId: AWAY_GOAL only (ADR 0004 D5)
  * - isDefeater, defeatsElementId: any type (dialogical reasoning)
  * - comments: optional, included when includeComments export option is true
  * - assertionStatus: any type (ADR 0004 D3). Typed optional here (so
@@ -225,6 +234,8 @@ export interface TreeNode {
 	assertionStatus?: AssertionStatus;
 	assumption?: string | null;
 	children: TreeNode[];
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
 	// Comments (optional - included when export option enabled)
 	comments?: ExportComment[];
 	context?: string[];
@@ -279,6 +290,9 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		moduleReferenceId: z.string().uuid().optional(),
 		moduleEmbedType: ModuleEmbedTypeSchema.optional(),
 		modulePublicSummary: z.string().nullable().optional(),
+		// Element-level citation (ADR 0004 D5) — AWAY_GOAL only; nullable/
+		// optional here for import leniency with pre-D5 exports.
+		citedElementId: z.string().uuid().nullable().optional(),
 		// Pattern metadata (optional - only included when true)
 		fromPattern: z.boolean().default(false).optional(),
 		modifiedFromPattern: z.boolean().default(false).optional(),

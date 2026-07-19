@@ -420,6 +420,22 @@ model AssuranceElement {
   // overwritten) is enforced in lib/services/element-service.ts, not here.
   assertionStatus     AssertionStatus? @map("assertion_status")
 
+  // Element-level citation (ADR 0004 D5): lets an AWAY_GOAL name the specific
+  // element it cites within the referenced case (moduleReferenceId names the
+  // case; citedElementId names the element within it). Applicability
+  // (AWAY_GOAL only) is enforced in lib/schemas/element-validation.ts and
+  // lib/services/element-service.ts, not here. No onDelete override — Prisma
+  // infers SetNull for this optional self-relation (matching defeatsElementId
+  // above), which is a defence-in-depth safety net for the rare hard-delete
+  // path (case purge); the primary soft-delete/detach integrity rule
+  // (nullify + flag) is enforced explicitly in element-service.ts since it
+  // also has to set citationDangling, which a bare DB-level action can't do.
+  citedElementId      String?          @map("cited_element_id")
+  // True when citedElementId was nullified because the cited element was
+  // deleted or detached from its case (dangling-citation indicator). Cleared
+  // whenever the author explicitly sets/clears citedElementId again.
+  citationDangling    Boolean          @default(false) @map("citation_dangling")
+
   // Timestamps
   createdAt           DateTime         @default(now()) @map("created_at")
   updatedAt           DateTime         @updatedAt @map("updated_at")
@@ -438,6 +454,8 @@ model AssuranceElement {
   defeatsElement      AssuranceElement? @relation("Defeater", fields: [defeatsElementId], references: [id])
   defeatedBy          AssuranceElement[] @relation("Defeater")
   moduleReference     AssuranceCase?   @relation("ModuleReference", fields: [moduleReferenceId], references: [id])
+  citedElement        AssuranceElement? @relation("Citation", fields: [citedElementId], references: [id])
+  citedBy             AssuranceElement[] @relation("Citation")
 
   // Evidence many-to-many
   evidenceLinksFrom   EvidenceLink[]   @relation("EvidenceSource")
@@ -452,6 +470,7 @@ model AssuranceElement {
   @@index([caseId, elementType])
   @@index([caseId, deletedAt], map: "assurance_elements_case_deleted_idx")
   @@index([parentId])
+  @@index([citedElementId])
   @@map("assurance_elements")
 }
 

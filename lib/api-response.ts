@@ -136,6 +136,11 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^assertionStatus cannot be set to AS_CITED/,
 		factory: () => validationError(""),
 	},
+	// `element-service.ts`'s `rejectCitedElementIdIfNotApplicable` /
+	// `validateCitedElementId` (ADR 0004 D5): a bad `citedElementId` (wrong
+	// element type, nonexistent target, self-citation) is a validation
+	// failure (400), not a 500.
+	{ pattern: /^citedElementId /, factory: () => validationError("") },
 	// Lifecycle/state-guard errors from the integration registry service —
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state

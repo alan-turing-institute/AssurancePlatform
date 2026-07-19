@@ -134,6 +134,8 @@ export async function exportCase(
 						moduleReferenceId: true,
 						moduleEmbedType: true,
 						modulePublicSummary: true,
+						// Element-level citation (ADR 0004 D5)
+						citedElementId: true,
 						// Pattern metadata
 						fromPattern: true,
 						modifiedFromPattern: true,
@@ -167,6 +169,8 @@ export async function exportCase(
 										moduleReferenceId: true,
 										moduleEmbedType: true,
 										modulePublicSummary: true,
+										// Element-level citation (ADR 0004 D5)
+										citedElementId: true,
 										// Pattern metadata
 										fromPattern: true,
 										modifiedFromPattern: true,
@@ -225,6 +229,8 @@ export async function exportCase(
 			moduleReferenceId: el.moduleReferenceId,
 			moduleEmbedType: el.moduleEmbedType as ModuleEmbedType | null,
 			modulePublicSummary: el.modulePublicSummary,
+			// Element-level citation (ADR 0004 D5)
+			citedElementId: el.citedElementId,
 			// Pattern metadata
 			fromPattern: el.fromPattern,
 			modifiedFromPattern: el.modifiedFromPattern,
@@ -255,6 +261,8 @@ export async function exportCase(
 					moduleEmbedType: link.evidence
 						.moduleEmbedType as ModuleEmbedType | null,
 					modulePublicSummary: link.evidence.modulePublicSummary,
+					// Element-level citation (ADR 0004 D5)
+					citedElementId: link.evidence.citedElementId,
 					// Pattern metadata
 					fromPattern: link.evidence.fromPattern,
 					modifiedFromPattern: link.evidence.modifiedFromPattern,

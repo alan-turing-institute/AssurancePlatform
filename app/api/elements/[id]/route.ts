@@ -60,6 +60,10 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		// the guard against machine/integration writers and AS_CITED declaration
 		// lives in element-service.ts (updateElement), not here.
 		assertionStatus: body.assertionStatus as AssertionStatus | null | undefined,
+		// Element-level citation (ADR 0004 D5) — validated by
+		// updateElementSchema; applicability/existence/self-citation checks
+		// live in element-service.ts (updateElement), not here.
+		citedElementId: body.citedElementId as string | null | undefined,
 	};
 }
 

@@ -167,6 +167,12 @@ type ElementOverrides = Partial<{
 		| "AXIOMATIC"
 		| "DEFEATED"
 		| "AS_CITED";
+	// MODULE/AWAY_GOAL — required by AwayGoalSchema/ModuleSchema when
+	// elementType is MODULE or AWAY_GOAL (lib/schemas/element-validation.ts).
+	moduleReferenceId: string;
+	// ADR 0004 D5 — AWAY_GOAL only
+	citedElementId: string | null;
+	citationDangling: boolean;
 }>;
 
 export function createTestElement(
@@ -187,6 +193,9 @@ export function createTestElement(
 			url: overrides.url,
 			inSandbox: overrides.inSandbox ?? false,
 			assertionStatus: overrides.assertionStatus,
+			moduleReferenceId: overrides.moduleReferenceId,
+			citedElementId: overrides.citedElementId,
+			citationDangling: overrides.citationDangling ?? false,
 		},
 	});
 }

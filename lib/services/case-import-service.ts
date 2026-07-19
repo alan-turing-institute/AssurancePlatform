@@ -169,6 +169,35 @@ async function createCaseWithPermission(
 }
 
 /**
+ * Resolves a citedElementId (ADR 0004 D5) for the createMany row.
+ *
+ * citedElementId names an element in the case referenced by moduleReferenceId
+ * — i.e. normally a DIFFERENT case from the one being imported here, so it is
+ * almost never present in this import's own idMap. Lead ruling (dispatch
+ * brief, cid 2026-07-19): try the idMap first (covers the edge case where a
+ * test fixture or self-contained export happens to include the cited element
+ * in the same payload — then the remap keeps the reference internally
+ * consistent with the new ids); otherwise PRESERVE THE ORIGINAL ID VERBATIM.
+ *
+ * Flag: on import into a fresh/different deployment, a preserved id may not
+ * resolve to any element at all (the away-case wasn't part of this import
+ * and may not exist there under that id). moduleReferenceId itself has the
+ * same exposure today and isn't carried through createElements at all yet —
+ * pre-existing gap, not introduced here. No id-remapping table exists for
+ * cross-case references in this codebase; guessing one up would be worse
+ * than an honest verbatim pass-through.
+ */
+function resolveImportedCitedElementId(
+	citedElementId: string | null | undefined,
+	idMap: Map<string, string>
+): string | null {
+	if (!citedElementId) {
+		return null;
+	}
+	return idMap.get(citedElementId) ?? citedElementId;
+}
+
+/**
  * Creates all elements in the correct order (parents before children).
  */
 async function createElements(
@@ -211,6 +240,10 @@ async function createElements(
 				// an author declaring a NEW status, and the source data already
 				// passed through export's own AS_CITED derivation.
 				assertionStatus: el.assertionStatus,
+				// Element-level citation (ADR 0004 D5) — see
+				// resolveImportedCitedElementId's docstring for the
+				// remap-else-preserve-verbatim decision.
+				citedElementId: resolveImportedCitedElementId(el.citedElementId, idMap),
 				createdById: userId,
 			};
 		})

@@ -206,6 +206,7 @@ describe("validateImportData", () => {
 	});
 
 	/**
+	/**
 	 * ADR 0004 D3, review follow-up (round 2, both reviewers independently):
 	 * `createElements` (case-import-service.ts) previously dropped
 	 * `assertionStatus` from the createMany rows, so any declared status
@@ -243,5 +244,65 @@ describe("validateImportData", () => {
 			await exportCase(importer.id, imported.caseId)
 		);
 		expect(secondExport.tree.assertionStatus).toBe("NEEDS_SUPPORT");
+	});
+
+	/**
+	 * ADR 0004 D5: citedElementId names an element in the case referenced by
+	 * moduleReferenceId — i.e. normally a DIFFERENT case from the one being
+	 * exported/imported here, so the cited id is almost never part of the
+	 * import's own idMap. Lead ruling (dispatch brief, cid 2026-07-19):
+	 * preserve the original id VERBATIM in that case rather than guessing at
+	 * a remap — there is no cross-case id-remapping table in this codebase
+	 * (moduleReferenceId itself isn't remapped either). This test proves the
+	 * verbatim-preserve path with a direct DB assertion on the imported row.
+	 */
+	it("preserves a citedElementId pointing outside the export verbatim through export -> import (round-trip fidelity)", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		const citedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Away Goal",
+		});
+		const rootGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			role: "TOP_LEVEL",
+		});
+		await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			name: "Reference",
+			parentId: rootGoal.id,
+			moduleReferenceId: awayCase.id,
+			citedElementId: citedGoal.id,
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const firstExport = expectSuccess(await exportCase(owner.id, homeCase.id));
+		const exportedAwayGoal = firstExport.tree.children.find(
+			(c: { type: string }) => c.type === "AWAY_GOAL"
+		);
+		expect(exportedAwayGoal?.citedElementId).toBe(citedGoal.id);
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, firstExport));
+
+		// Direct DB check — proves the createMany write itself carries the
+		// (unmapped) id, not just whatever a later export happens to resolve.
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		expect(importedAwayGoal?.citedElementId).toBe(citedGoal.id);
+
+		const secondExport = expectSuccess(
+			await exportCase(importer.id, imported.caseId)
+		);
+		const reexportedAwayGoal = secondExport.tree.children.find(
+			(c: { type: string }) => c.type === "AWAY_GOAL"
+		);
+		expect(reexportedAwayGoal?.citedElementId).toBe(citedGoal.id);
+	});
 	});
 });

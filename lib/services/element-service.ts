@@ -4,10 +4,12 @@ import type {
 	CreateElementSchemaOutput,
 	UpdateElementSchemaOutput,
 } from "@/lib/schemas/element";
+import { fieldAppliesTo } from "@/lib/schemas/element-validation";
 import { transformToResponse } from "@/lib/transforms/element-response";
 import {
 	getDeletedDescendantIds,
 	getDescendantIds,
+	type TxClient,
 } from "@/lib/utils/tree-traversal";
 import type {
 	AssertionStatus,
@@ -36,6 +38,12 @@ export interface ElementResponse {
 	assertionStatus?: AssertionStatus | null;
 	assumption?: string;
 	assuranceCaseId: string;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
+	// Dangling-citation indicator: true when citedElementId was nullified
+	// because the cited element was deleted/detached (see deleteElement /
+	// detachElement below). Omitted (not false) when there is nothing to flag.
+	citationDangling?: boolean;
 	comments?: unknown[];
 	context?: string[];
 	createdDate: string;
@@ -92,6 +100,29 @@ async function guardAssertionStatusWrite(
 }
 
 /**
+ * ADR 0004 D5: `citedElementId` is applicable to AWAY_GOAL only. On create,
+ * the elementType is always known and the Prisma extension's
+ * `cleanElementDataForType` (lib/prisma.ts) would silently strip an
+ * inapplicable value anyway — but a silent drop is a worse UX than an
+ * explicit rejection, so this is checked here too for a consistent error on
+ * both routes. On update, `buildUpdateData` never puts `elementType` in the
+ * Prisma payload, so the extension's cleaning step is a no-op there — this
+ * check is the ONLY enforcement point on the update path.
+ */
+function rejectCitedElementIdIfNotApplicable(
+	elementType: string,
+	citedElementId: string | null | undefined
+): string | undefined {
+	if (citedElementId === undefined) {
+		return;
+	}
+	if (!fieldAppliesTo("citedElementId", elementType)) {
+		return "citedElementId is only applicable to AWAY_GOAL elements";
+	}
+	return;
+}
+
+/**
  * ADR 0004 D3: AS_CITED is transitively DERIVED by the exporter from the
  * cited element's own status (see build-tree.ts) — it is never author-
  * declared. This is a value constraint (applies to every acting principal,
@@ -105,6 +136,32 @@ function rejectDeclaredAsCited(
 ): string | undefined {
 	if (status === "AS_CITED") {
 		return "assertionStatus cannot be set to AS_CITED: it is derived automatically from the cited element's status, not author-declared";
+	}
+	return;
+}
+
+/**
+ * ADR 0004 D5: `citedElementId` must reference an existing, non-deleted
+ * element, and an element cannot cite itself. `ownElementId` is only
+ * available (and only checked) on update — a not-yet-created element has no
+ * id to collide with.
+ */
+async function validateCitedElementId(
+	citedElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (!citedElementId) {
+		return;
+	}
+	if (ownElementId && citedElementId === ownElementId) {
+		return "citedElementId cannot reference the element itself";
+	}
+	const target = await prisma.assuranceElement.findFirst({
+		where: { id: citedElementId, deletedAt: null },
+		select: { id: true },
+	});
+	if (!target) {
+		return "citedElementId must reference an existing element";
 	}
 	return;
 }
@@ -387,6 +444,10 @@ async function createElementInDatabase(
 			context: input.context ?? [],
 			level,
 			assertionStatus: input.assertionStatus,
+			// Element-level citation (ADR 0004 D5) — applicability, existence,
+			// and self-citation are validated in createElement before this
+			// function is called.
+			citedElementId: input.citedElementId,
 			createdById: userId,
 		},
 		include: {
@@ -443,6 +504,20 @@ export async function createElement(
 
 	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
 		return { error: "A case can only have one goal claim" };
+	}
+
+	if (input.citedElementId !== undefined) {
+		const applicabilityError = rejectCitedElementIdIfNotApplicable(
+			elementType,
+			input.citedElementId
+		);
+		if (applicabilityError) {
+			return { error: applicabilityError };
+		}
+		const citedError = await validateCitedElementId(input.citedElementId);
+		if (citedError) {
+			return { error: citedError };
+		}
 	}
 
 	const { level, parentInfo } =
@@ -549,6 +624,13 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.assertionStatus !== undefined) {
 		updateData.assertionStatus = input.assertionStatus;
 	}
+	if (input.citedElementId !== undefined) {
+		updateData.citedElementId = input.citedElementId;
+		// The author explicitly set (or cleared) the citation — whatever
+		// dangling flag was left over from a previous deletion/detachment no
+		// longer describes the current state, declared or not.
+		updateData.citationDangling = false;
+	}
 
 	return updateData;
 }
@@ -632,6 +714,25 @@ export async function updateElement(
 			}
 		}
 
+		// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
+		// existing element, and cannot reference the element itself.
+		if (input.citedElementId !== undefined) {
+			const applicabilityError = rejectCitedElementIdIfNotApplicable(
+				existing.elementType,
+				input.citedElementId
+			);
+			if (applicabilityError) {
+				return { error: applicabilityError };
+			}
+			const citedError = await validateCitedElementId(
+				input.citedElementId,
+				elementId
+			);
+			if (citedError) {
+				return { error: citedError };
+			}
+		}
+
 		// Build update data from input fields
 		const updateData = buildUpdateData(input);
 
@@ -690,6 +791,29 @@ export async function updateElement(
 }
 
 /**
+ * ADR 0004 D5 integrity rule (ruled by cid + Chris, 2026-07-19): when a cited
+ * element is deleted or detached from its case, citing elements are NOT left
+ * pointing at a dangling id — `citedElementId` is nullified and
+ * `citationDangling` is set so the citing element's own response can surface
+ * a "this citation broke" indicator (consistent with the rest of the
+ * codebase's soft-delete conventions: nothing is silently lost, but nothing
+ * blocks the deletion/detach either). Takes the Prisma client or an open
+ * transaction so callers can run it atomically with the delete/detach itself.
+ */
+async function nullifyDanglingCitations(
+	tx: TxClient,
+	citedElementIds: string[]
+): Promise<void> {
+	if (citedElementIds.length === 0) {
+		return;
+	}
+	await tx.assuranceElement.updateMany({
+		where: { citedElementId: { in: citedElementIds } },
+		data: { citedElementId: null, citationDangling: true },
+	});
+}
+
+/**
  * Soft-deletes an element and all its descendants
  */
 export async function deleteElement(
@@ -717,7 +841,8 @@ export async function deleteElement(
 			return { error: "Element not found" };
 		}
 
-		// Gather descendants and soft-delete atomically
+		// Gather descendants, soft-delete, and nullify+flag any dangling
+		// citations (ADR 0004 D5) atomically
 		await prisma.$transaction(async (tx) => {
 			const descendantIds = await getDescendantIds(elementId, tx);
 			const allIds = [elementId, ...descendantIds];
@@ -725,6 +850,11 @@ export async function deleteElement(
 				where: { id: { in: allIds } },
 				data: { deletedAt: new Date(), deletedById: userId },
 			});
+			// Citations are cross-case by design (an AWAY_GOAL cites an element
+			// in a DIFFERENT case), so this deliberately isn't scoped to
+			// `existing.caseId` — every deleted id (the element and its
+			// descendants) may be cited from anywhere.
+			await nullifyDanglingCitations(tx, allIds);
 		});
 
 		return { data: true };
@@ -762,13 +892,19 @@ export async function detachElement(
 			return { error: "Element not found" };
 		}
 
-		// Move to sandbox by clearing parent and setting inSandbox
-		await prisma.assuranceElement.update({
-			where: { id: elementId },
-			data: {
-				parentId: null,
-				inSandbox: true,
-			},
+		// Move to sandbox, clear parent, and nullify+flag any dangling
+		// citations (ADR 0004 D5) atomically — a detached element is no
+		// longer part of the case's argument tree, so a citation pointing at
+		// it is just as broken as one pointing at a deleted element.
+		await prisma.$transaction(async (tx) => {
+			await tx.assuranceElement.update({
+				where: { id: elementId },
+				data: {
+					parentId: null,
+					inSandbox: true,
+				},
+			});
+			await nullifyDanglingCitations(tx, [elementId]);
 		});
 
 		return { data: true };
