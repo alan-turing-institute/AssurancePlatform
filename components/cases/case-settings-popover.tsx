@@ -64,7 +64,7 @@ export function CaseSettingsPopover() {
 			fetch(`/api/cases/${assuranceCase.id}`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ layout_direction: dir }),
+				body: JSON.stringify({ layoutDirection: dir }),
 			}).catch(() => {
 				toast({
 					variant: "destructive",
