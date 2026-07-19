@@ -38,12 +38,12 @@ export interface ElementResponse {
 	assertionStatus?: AssertionStatus | null;
 	assumption?: string;
 	assuranceCaseId: string;
-	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
-	citedElementId?: string | null;
 	// Dangling-citation indicator: true when citedElementId was nullified
 	// because the cited element was deleted/detached (see deleteElement /
 	// detachElement below). Omitted (not false) when there is nothing to flag.
 	citationDangling?: boolean;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
 	comments?: unknown[];
 	context?: string[];
 	createdDate: string;
