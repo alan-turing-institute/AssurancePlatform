@@ -43,9 +43,30 @@ export const ModuleEmbedTypeSchema = z
 		"How a module is embedded - COPY creates independent copy, REFERENCE links to original"
 	);
 
+/**
+ * Per-assertion status (ADR 0004 D3), mirroring SACM §11.8. Author-declared
+ * except AS_CITED, which is machine-derivable (transitively computed from
+ * the cited claim's own status) rather than author-set. Unset (null) means
+ * ASSERTED — SACM's own default — and the export layer always resolves the
+ * field to a concrete value rather than omitting it.
+ */
+export const AssertionStatusSchema = z
+	.enum([
+		"ASSERTED",
+		"NEEDS_SUPPORT",
+		"ASSUMED",
+		"AXIOMATIC",
+		"DEFEATED",
+		"AS_CITED",
+	])
+	.describe(
+		"Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+	);
+
 export type ElementType = z.infer<typeof ElementTypeSchema>;
 export type ElementRole = z.infer<typeof ElementRoleSchema>;
 export type ModuleEmbedType = z.infer<typeof ModuleEmbedTypeSchema>;
+export type AssertionStatus = z.infer<typeof AssertionStatusSchema>;
 
 // ============================================
 // V2 SCHEMAS (New Prisma Format)
@@ -87,6 +108,11 @@ export const ElementV2Schema = z
 			.nullable()
 			.optional()
 			.describe("Hierarchy level for property claims"),
+		assertionStatus: AssertionStatusSchema.nullable()
+			.optional()
+			.describe(
+				"Per-assertion status (ADR 0004 D3); null/unset means ASSERTED"
+			),
 		inSandbox: z
 			.boolean()
 			.default(false)
@@ -188,8 +214,15 @@ export interface ExportComment {
  * - modulePublicSummary: MODULE only
  * - isDefeater, defeatsElementId: any type (dialogical reasoning)
  * - comments: optional, included when includeComments export option is true
+ * - assertionStatus: any type (ADR 0004 D3). Typed optional here (so
+ *   existing TreeNode-typed fixtures/consumers elsewhere in the codebase
+ *   don't all need updating), but exports THIS repo produces always set it —
+ *   buildCleanNode (lib/transforms/build-tree.ts) resolves a null/unset
+ *   stored value to "ASSERTED" (SACM's own default) rather than omitting
+ *   the field, unlike the type-specific fields above.
  */
 export interface TreeNode {
+	assertionStatus?: AssertionStatus;
 	assumption?: string | null;
 	children: TreeNode[];
 	// Comments (optional - included when export option enabled)
@@ -252,6 +285,10 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		// Dialogical reasoning
 		isDefeater: z.boolean().optional(),
 		defeatsElementId: z.string().uuid().optional(),
+		// Per-assertion status (ADR 0004 D3) — optional/nullable here purely
+		// for import leniency with pre-D3 exports that never had the field;
+		// exports WE produce always set it (see buildCleanNode in build-tree.ts).
+		assertionStatus: AssertionStatusSchema.nullable().optional(),
 		// Comments (optional - included when export option enabled)
 		comments: z.array(ExportCommentSchema).optional(),
 	})

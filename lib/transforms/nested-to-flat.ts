@@ -91,6 +91,10 @@ function nodeToElement(
 		inSandbox: node.inSandbox,
 		fromPattern: node.fromPattern,
 		modifiedFromPattern: node.modifiedFromPattern,
+		// Per-assertion status (ADR 0004 D3) — preserve the declared status
+		// through the nested→flat step; case-import-service.ts's createElements
+		// carries it the rest of the way into the createMany rows.
+		assertionStatus: node.assertionStatus,
 	};
 
 	// Preserve comments if present

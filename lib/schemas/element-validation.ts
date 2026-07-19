@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { AssertionStatusSchema } from "./case-export";
 
 // ============================================
 // ELEMENT TYPE DEFINITIONS
@@ -173,6 +174,8 @@ const BaseElementSchema = z
 			.nullable()
 			.optional()
 			.describe("ID of the element this defeats"),
+		// Per-assertion status (ADR 0004 D3) - available to all types
+		assertionStatus: AssertionStatusSchema.nullable().optional(),
 	})
 	.describe("Base fields common to all element types");
 
@@ -352,6 +355,10 @@ export function getValidFieldsForType(elementType: string): string[] {
 		"modifiedFromPattern",
 		"isDefeater",
 		"defeatsElementId",
+		// Per-assertion status (ADR 0004 D3) — applies to every element type,
+		// same as isDefeater/defeatsElementId above, so it belongs with the
+		// base fields rather than FIELD_APPLICABILITY.
+		"assertionStatus",
 		"createdAt",
 		"updatedAt",
 		"createdById",

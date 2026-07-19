@@ -8,6 +8,8 @@ import {
 import {
 	createNestedCaseJSON,
 	createNestedCaseWithChainJSON,
+	createTestCase,
+	createTestElement,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -201,5 +203,45 @@ describe("validateImportData", () => {
 		expect(exportData.tree.type).toBe("GOAL");
 		// Should have at least the strategy as a child
 		expect(exportData.tree.children.length).toBeGreaterThanOrEqual(1);
+	});
+
+	/**
+	 * ADR 0004 D3, review follow-up (round 2, both reviewers independently):
+	 * `createElements` (case-import-service.ts) previously dropped
+	 * `assertionStatus` from the createMany rows, so any declared status
+	 * silently reset to unset on import — a 1.0 round-trip fidelity break.
+	 * Lead ruling: import PRESERVES a declared status, it does not drop it.
+	 */
+	it("preserves a declared assertionStatus through export -> import -> export (round-trip fidelity)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			description: "Top-level goal",
+			role: "TOP_LEVEL",
+			assertionStatus: "NEEDS_SUPPORT",
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const firstExport = expectSuccess(await exportCase(owner.id, testCase.id));
+		expect(firstExport.tree.assertionStatus).toBe("NEEDS_SUPPORT");
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, firstExport));
+
+		// Direct DB check — proves the createMany write itself carries the
+		// status, not just whatever the next export happens to resolve.
+		const importedGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
+		expect(importedGoal?.assertionStatus).toBe("NEEDS_SUPPORT");
+
+		const secondExport = expectSuccess(
+			await exportCase(importer.id, imported.caseId)
+		);
+		expect(secondExport.tree.assertionStatus).toBe("NEEDS_SUPPORT");
 	});
 });

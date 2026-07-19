@@ -203,6 +203,14 @@ async function createElements(
 				inSandbox: el.inSandbox,
 				fromPattern: el.fromPattern ?? false,
 				modifiedFromPattern: el.modifiedFromPattern ?? false,
+				// Per-assertion status (ADR 0004 D3) — lead ruling: import
+				// PRESERVES a declared status rather than dropping it. This is a
+				// direct createMany write (not through createElement/updateElement),
+				// so it intentionally bypasses guardAssertionStatusWrite/
+				// rejectDeclaredAsCited: import is a bulk data-load operation, not
+				// an author declaring a NEW status, and the source data already
+				// passed through export's own AS_CITED derivation.
+				assertionStatus: el.assertionStatus,
 				createdById: userId,
 			};
 		})
