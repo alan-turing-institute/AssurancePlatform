@@ -129,6 +129,13 @@ const ERROR_MAPPINGS: Array<{
 	// (integration management API, work item 7): an unknown scope is a
 	// validation failure (400), not an unmapped 500.
 	{ pattern: /^Unknown scope/, factory: () => validationError("") },
+	// `element-service.ts`'s `rejectDeclaredAsCited` (ADR 0004 D3): AS_CITED
+	// is machine-derived from the cited element's own status, never author-
+	// declared — a rejected write is a validation failure (400), not a 500.
+	{
+		pattern: /^assertionStatus cannot be set to AS_CITED/,
+		factory: () => validationError(""),
+	},
 	// Lifecycle/state-guard errors from the integration registry service —
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state

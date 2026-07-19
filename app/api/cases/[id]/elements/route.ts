@@ -9,6 +9,7 @@ import { validationError } from "@/lib/errors";
 import { createElementSchema } from "@/lib/schemas/element";
 import type { CreateElementInput } from "@/lib/services/element-service";
 import { createElement } from "@/lib/services/element-service";
+import type { AssertionStatus } from "@/src/generated/prisma";
 
 /**
  * Resolves `parentId` from the request body.
@@ -60,6 +61,10 @@ function buildCreateInput(
 		urls: body.urls as string[] | undefined,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
+		// Per-assertion status (ADR 0004 D3) — validated by createElementSchema;
+		// the guard against machine/integration writers and AS_CITED declaration
+		// lives in element-service.ts (createElement), not here.
+		assertionStatus: body.assertionStatus as AssertionStatus | null | undefined,
 	};
 }
 

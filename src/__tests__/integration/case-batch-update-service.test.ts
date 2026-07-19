@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ElementChange } from "@/lib/case/tree-diff";
+import type { ElementChange, UpdateElementData } from "@/lib/case/tree-diff";
 import prisma from "@/lib/prisma";
 import {
 	expectError,
@@ -404,5 +404,58 @@ describe("applyBatchUpdate", () => {
 			where: { id: element.id },
 		});
 		expect(unchanged?.name).toBe("Should Remain Unchanged");
+	});
+
+	/**
+	 * ADR 0004 D3, review follow-up: the batch/JSON-editor path is deliberately
+	 * NOT wired for assertionStatus (deferred to
+	 * "TEA — assertionStatus surface completion (batch, undo-redo, UI)").
+	 * `UpdateElementData` has no `assertionStatus` field and `buildUpdateData`'s
+	 * fixed field allowlist doesn't include it, so this is structurally
+	 * impossible today. This test locks that down: a future refactor of the
+	 * field list (e.g. spreading `data` instead of allowlisting fields) could
+	 * silently open an unguarded write route that bypasses
+	 * `guardAssertionStatusWrite`/`rejectDeclaredAsCited` entirely — this test
+	 * pins the current safe behaviour so that regression fails loudly.
+	 */
+	it("PINS: a batch update payload carrying assertionStatus cannot set or alter a stored value", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const element = await createTestElement(testCase.id, user.id, {
+			elementType: "GOAL",
+			name: "Batch Target",
+			description: "Original description",
+		});
+		expect(element.assertionStatus).toBeNull();
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "update",
+				elementId: element.id,
+				// UpdateElementData has no assertionStatus field — this cast
+				// simulates a payload that tries to smuggle it in anyway.
+				data: {
+					name: "Batch Target Renamed",
+					assertionStatus: "DEFEATED",
+				} as unknown as UpdateElementData,
+			},
+		];
+
+		const data = expectSuccess(
+			await applyBatchUpdate(user.id, testCase.id, changes)
+		);
+		expect(data.summary.updated).toBe(1);
+
+		const afterBatch = await prisma.assuranceElement.findUnique({
+			where: { id: element.id },
+		});
+		// The allowlisted field DID apply...
+		expect(afterBatch?.name).toBe("Batch Target Renamed");
+		// ...but the smuggled field did not.
+		expect(afterBatch?.assertionStatus).toBeNull();
 	});
 });

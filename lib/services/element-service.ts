@@ -92,6 +92,24 @@ async function guardAssertionStatusWrite(
 }
 
 /**
+ * ADR 0004 D3: AS_CITED is transitively DERIVED by the exporter from the
+ * cited element's own status (see build-tree.ts) — it is never author-
+ * declared. This is a value constraint (applies to every acting principal,
+ * including a genuine human author), so it is checked independently of
+ * `guardAssertionStatusWrite`, which is a principal constraint. No live
+ * exploit today (the D5 auto-derivation work hasn't landed), but the write
+ * rule must hold before these routes open to authors.
+ */
+function rejectDeclaredAsCited(
+	status: AssertionStatus | null | undefined
+): string | undefined {
+	if (status === "AS_CITED") {
+		return "assertionStatus cannot be set to AS_CITED: it is derived automatically from the cited element's status, not author-declared";
+	}
+	return;
+}
+
+/**
  * Resolves parent ID from input.
  * Returns undefined if no parent field is specified (to distinguish from explicitly setting null).
  */
@@ -410,6 +428,10 @@ export async function createElement(
 	}
 
 	if (input.assertionStatus !== undefined) {
+		const citedError = rejectDeclaredAsCited(input.assertionStatus);
+		if (citedError) {
+			return { error: citedError };
+		}
 		const writeError = await guardAssertionStatusWrite(userId);
 		if (writeError) {
 			return { error: writeError };
@@ -600,6 +622,10 @@ export async function updateElement(
 		// see guardAssertionStatusWrite's docstring for why case-level EDIT
 		// access alone isn't a sufficient gate.
 		if (input.assertionStatus !== undefined) {
+			const citedError = rejectDeclaredAsCited(input.assertionStatus);
+			if (citedError) {
+				return { error: citedError };
+			}
 			const writeError = await guardAssertionStatusWrite(userId);
 			if (writeError) {
 				return { error: writeError };

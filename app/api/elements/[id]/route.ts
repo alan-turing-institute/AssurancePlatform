@@ -13,6 +13,7 @@ import {
 	getElement,
 	updateElement,
 } from "@/lib/services/element-service";
+import type { AssertionStatus } from "@/src/generated/prisma";
 
 /**
  * GET /api/elements/[id]
@@ -55,6 +56,10 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		justification: body.justification as string | undefined,
 		context: body.context as string[] | undefined,
 		inSandbox: body.inSandbox as boolean | undefined,
+		// Per-assertion status (ADR 0004 D3) — validated by updateElementSchema;
+		// the guard against machine/integration writers and AS_CITED declaration
+		// lives in element-service.ts (updateElement), not here.
+		assertionStatus: body.assertionStatus as AssertionStatus | null | undefined,
 	};
 }
 

@@ -10,6 +10,7 @@ import {
 } from "../utils/prisma-factories";
 
 const PERMISSION_DENIED_PATTERN = /Permission denied/;
+const AS_CITED_PATTERN = /AS_CITED/;
 
 /**
  * ADR 0004 D3 write rule: assertionStatus is author-declared, machine-
@@ -217,6 +218,82 @@ describe("assertionStatus write-rule permission matrix", () => {
 				}),
 				PERMISSION_DENIED_PATTERN
 			);
+		});
+	});
+
+	/**
+	 * ADR 0004 D3: AS_CITED is transitively DERIVED by the exporter from the
+	 * cited element's own status (build-tree.ts) — never author-declared.
+	 * Review follow-up (round 2, vincent): no live exploit today since D5
+	 * (auto-derivation) hasn't landed, but the write rule must hold before
+	 * routes open. This is a VALUE constraint, independent of the principal
+	 * checks above — even a genuine human author is rejected.
+	 */
+	describe("AS_CITED value rejection (write rule)", () => {
+		it("rejects an author declaring AS_CITED via createElement", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+
+			expectError(
+				await createElement(owner.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					assertionStatus: "AS_CITED",
+				}),
+				AS_CITED_PATTERN
+			);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id },
+			});
+			expect(elements).toHaveLength(0);
+		});
+
+		it("rejects an author declaring AS_CITED via updateElement", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const created = expectSuccess(
+				await createElement(owner.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			expectError(
+				await updateElement(owner.id, created.id, {
+					assertionStatus: "AS_CITED",
+				}),
+				AS_CITED_PATTERN
+			);
+
+			const inDb = await prisma.assuranceElement.findUnique({
+				where: { id: created.id },
+			});
+			expect(inDb?.assertionStatus).toBeNull();
+		});
+
+		it.each([
+			"ASSERTED",
+			"NEEDS_SUPPORT",
+			"ASSUMED",
+			"AXIOMATIC",
+			"DEFEATED",
+		] as const)("accepts the author-declared, non-derived value %s via updateElement", async (status) => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const created = expectSuccess(
+				await createElement(owner.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			const data = expectSuccess(
+				await updateElement(owner.id, created.id, {
+					assertionStatus: status,
+				})
+			);
+			expect(data.assertionStatus).toBe(status);
 		});
 	});
 });
