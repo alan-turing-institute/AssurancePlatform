@@ -3,7 +3,11 @@
 import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import {
+	BaseNode,
+	getAssertionStatusIndicator,
+	NodeActionGroup,
+} from "@/components/shared/nodes";
 import ActionTooltip from "@/components/ui/action-tooltip";
 import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
 import useStore from "@/store/store";
@@ -23,6 +27,14 @@ function StrategyNode({ data, ...props }: NodeProps) {
 		elementId: String(data.id),
 		elementType: "strategy",
 	});
+	const assertionBadge = getAssertionStatusIndicator(data.assertionStatus);
+	const topRightActions =
+		assertionBadge || badgeSlot ? (
+			<div className="flex items-center gap-1.5">
+				{assertionBadge}
+				{badgeSlot}
+			</div>
+		) : null;
 
 	const addPopover = (
 		<NodeAddPopover
@@ -74,7 +86,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="strategy"
 				selected={props.selected}
-				topRightActions={badgeSlot}
+				topRightActions={topRightActions}
 			/>
 
 			{/* Edit Dialog */}
