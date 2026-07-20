@@ -94,6 +94,10 @@ function buildGoalStructure(
 		assumption: goal.assumption ?? "",
 		justification: goal.justification ?? "",
 		inSandbox: goal.inSandbox,
+		// Per-assertion status (ADR 0004 D3); omitted (not forced to
+		// "ASSERTED") when unset, matching element-response.ts's convention —
+		// the badge/setter treat undefined the same as the default.
+		assertionStatus: goal.assertionStatus ?? undefined,
 	};
 }
 
@@ -124,6 +128,8 @@ function buildStrategyStructure(
 		justification: strategy.justification ?? "",
 		context: strategy.context || [],
 		inSandbox: strategy.inSandbox,
+		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
+		assertionStatus: strategy.assertionStatus ?? undefined,
 	};
 }
 
@@ -185,6 +191,8 @@ function buildPropertyClaimStructure(
 		justification: claim.justification ?? "",
 		context: claim.context || [],
 		inSandbox: claim.inSandbox,
+		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
+		assertionStatus: claim.assertionStatus ?? undefined,
 	};
 }
 

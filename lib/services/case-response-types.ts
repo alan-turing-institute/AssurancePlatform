@@ -12,7 +12,21 @@ import type { CommentResponse } from "./comment-service";
 // and PUBLISHED are the only two states now.
 export type PublishStatusType = "DRAFT" | "PUBLISHED";
 
+// Per-assertion status (ADR 0004 D3), mirroring the Prisma `AssertionStatus`
+// enum and `AssertionStatusSchema` (lib/schemas/case-export.ts). Kept as a
+// plain string union here rather than imported from generated Prisma types,
+// matching this file's convention (see PublishStatusType above) of
+// UI-facing response types staying independent of the Prisma client.
+export type AssertionStatusResponseType =
+	| "ASSERTED"
+	| "NEEDS_SUPPORT"
+	| "ASSUMED"
+	| "AXIOMATIC"
+	| "DEFEATED"
+	| "AS_CITED";
+
 export interface GoalResponse {
+	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	assuranceCaseId: string;
 	comments?: CommentResponse[];
@@ -34,6 +48,7 @@ export interface GoalResponse {
 }
 
 export interface StrategyResponse {
+	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	comments?: CommentResponse[];
 	context?: string[];
@@ -53,6 +68,7 @@ export interface StrategyResponse {
 }
 
 export interface PropertyClaimResponse {
+	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	claimType: string;
 	comments?: CommentResponse[];
