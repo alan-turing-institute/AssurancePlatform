@@ -10,12 +10,17 @@
  * and generates link/unlink changes for evidence moves.
  */
 
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import type {
+	AssertionStatus,
+	CaseExportNested,
+	TreeNode,
+} from "@/lib/schemas/case-export";
 
 /**
  * Element data for creating a new element
  */
 export interface CreateElementData {
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
 	context?: string[];
 	defeatsElementId?: string;
@@ -40,6 +45,7 @@ export interface CreateElementData {
  * Element data for updating an existing element
  */
 export interface UpdateElementData {
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
 	context?: string[];
 	defeatsElementId?: string;
@@ -78,6 +84,7 @@ export type ElementChange =
  * Flat representation of a tree node for comparison
  */
 interface FlatElement {
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
 	context?: string[];
 	defeatsElementId?: string;
@@ -175,6 +182,7 @@ function createFlatElement(
 		modifiedFromPattern: node.modifiedFromPattern,
 		isDefeater: node.isDefeater,
 		defeatsElementId: node.defeatsElementId,
+		assertionStatus: node.assertionStatus,
 	};
 }
 
@@ -264,6 +272,7 @@ const SCALAR_FIELDS = [
 	"description",
 	"inSandbox",
 	"role",
+	"assertionStatus",
 	"assumption",
 	"justification",
 	"url",
@@ -335,6 +344,7 @@ function toCreateElementData(element: FlatElement): CreateElementData {
 		modifiedFromPattern: element.modifiedFromPattern,
 		isDefeater: element.isDefeater,
 		defeatsElementId: element.defeatsElementId,
+		assertionStatus: element.assertionStatus,
 	};
 }
 
