@@ -24,9 +24,22 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useElementPanelSlot } from "@/hooks/use-element-panel-slot";
+import {
+	ASSERTION_STATUS_LABELS,
+	AUTHOR_ASSERTION_STATUS_VALUES,
+	type AuthorAssertionStatusValue,
+	isAuthorAssertionStatusValue,
+} from "@/lib/assertion-status";
 import { updateAssuranceCaseNode } from "@/lib/case";
 import {
 	type NodeEditFormInput,
@@ -40,6 +53,20 @@ type FormValues = NodeEditFormInput;
 // Helper to check if element type supports attributes
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
 	["goal", "strategy", "property"].includes(nodeType);
+
+/**
+ * Resolves a node's current `assertionStatus` to one of the five
+ * author-declarable values for the Select's initial value. Falls back to
+ * "ASSERTED" for `null`/`undefined` (unset means ASSERTED) and for
+ * `AS_CITED` (derived-only — never offered as a choice here, so a node that
+ * currently carries it shows the default rather than an invalid selection).
+ */
+function getInitialAssertionStatus(
+	nodeData: Record<string, unknown>
+): AuthorAssertionStatusValue {
+	const value = nodeData?.assertionStatus;
+	return isAuthorAssertionStatusValue(value) ? value : "ASSERTED";
+}
 
 /**
  * Converts node data URLs to field array format.
@@ -71,6 +98,9 @@ function buildUpdatePayload(
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
 		updateItem.context = values.context || [];
+		// Per-assertion status (ADR 0004 D3) — always one of the five
+		// author-declarable values; the Select never offers AS_CITED.
+		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
 	}
 
 	if (nodeType === "evidence") {
@@ -122,6 +152,61 @@ function TextFieldSection({
 							{...field}
 						/>
 					</FormControl>
+					<FormMessage />
+				</FormItem>
+			)}
+		/>
+	);
+}
+
+interface AssertionStatusSectionProps {
+	form: UseFormReturn<FormValues>;
+	readOnly: boolean;
+}
+
+/**
+ * The assertion-status setter (ADR 0004 D3). Offers exactly the five
+ * author-declarable values — `AS_CITED` is derived-only (computed by the
+ * server from a cited element's own status) and must never appear as a
+ * choice here, so `AUTHOR_ASSERTION_STATUS_VALUES` (not the full six-value
+ * enum) drives this list.
+ */
+function AssertionStatusSection({
+	form,
+	readOnly,
+}: AssertionStatusSectionProps) {
+	return (
+		<FormField
+			control={form.control}
+			name="assertionStatus"
+			render={({ field }) => (
+				<FormItem>
+					<FormLabel className="flex items-center gap-2">
+						Assertion status
+						{readOnly && (
+							<span className="text-muted-foreground" title="Read Only">
+								<Lock className="h-3 w-3" />
+							</span>
+						)}
+					</FormLabel>
+					<Select
+						disabled={readOnly}
+						onValueChange={field.onChange}
+						value={field.value}
+					>
+						<FormControl>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+						</FormControl>
+						<SelectContent>
+							{AUTHOR_ASSERTION_STATUS_VALUES.map((value) => (
+								<SelectItem key={value} value={value}>
+									{ASSERTION_STATUS_LABELS[value]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					<FormMessage />
 				</FormItem>
 			)}
@@ -310,6 +395,9 @@ export default function NodeEditDialog({
 			justification: (node.data?.justification as string) ?? "",
 			context: (node.data?.context as string[]) ?? [],
 			urls: getInitialUrls(node.data as Record<string, unknown>),
+			assertionStatus: getInitialAssertionStatus(
+				node.data as Record<string, unknown>
+			),
 		},
 	});
 
@@ -364,6 +452,9 @@ export default function NodeEditDialog({
 				justification: (n.data?.justification as string) ?? "",
 				context: contextData,
 				urls: getInitialUrls(n.data as Record<string, unknown>),
+				assertionStatus: getInitialAssertionStatus(
+					n.data as Record<string, unknown>
+				),
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
@@ -451,6 +542,7 @@ export default function NodeEditDialog({
 							placeholder="Type your justification here (optional)."
 							readOnly={readOnly}
 						/>
+						<AssertionStatusSection form={form} readOnly={readOnly} />
 						<ContextSection
 							contextItems={contextItems}
 							newContextValue={newContextValue}
