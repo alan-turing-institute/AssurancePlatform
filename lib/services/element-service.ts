@@ -192,6 +192,29 @@ async function enforceCitedElementIdRules(
 }
 
 /**
+ * ADR 0004 D3: runs both assertionStatus write guards (value constraint via
+ * `rejectDeclaredAsCited`, then principal constraint via
+ * `guardAssertionStatusWrite`) in the order createElement and updateElement
+ * both need — extracted so the checks live in exactly one place instead of
+ * being duplicated verbatim at each call site (mirrors
+ * `enforceCitedElementIdRules` above, and keeps both mutation paths under
+ * the cognitive-complexity budget).
+ */
+async function enforceAssertionStatusRules(
+	assertionStatus: AssertionStatus | null | undefined,
+	userId: string
+): Promise<string | undefined> {
+	if (assertionStatus === undefined) {
+		return;
+	}
+	const citedError = rejectDeclaredAsCited(assertionStatus);
+	if (citedError) {
+		return citedError;
+	}
+	return await guardAssertionStatusWrite(userId);
+}
+
+/**
  * Resolves parent ID from input.
  * Returns undefined if no parent field is specified (to distinguish from explicitly setting null).
  */
@@ -513,15 +536,12 @@ export async function createElement(
 		return { error: "Permission denied" };
 	}
 
-	if (input.assertionStatus !== undefined) {
-		const citedError = rejectDeclaredAsCited(input.assertionStatus);
-		if (citedError) {
-			return { error: citedError };
-		}
-		const writeError = await guardAssertionStatusWrite(userId);
-		if (writeError) {
-			return { error: writeError };
-		}
+	const assertionStatusError = await enforceAssertionStatusRules(
+		input.assertionStatus,
+		userId
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
 	}
 
 	const elementType = toPrismaType(input.elementType);
@@ -722,15 +742,12 @@ export async function updateElement(
 		// ADR 0004 D3 write rule: assertionStatus is author-declared only —
 		// see guardAssertionStatusWrite's docstring for why case-level EDIT
 		// access alone isn't a sufficient gate.
-		if (input.assertionStatus !== undefined) {
-			const citedError = rejectDeclaredAsCited(input.assertionStatus);
-			if (citedError) {
-				return { error: citedError };
-			}
-			const writeError = await guardAssertionStatusWrite(userId);
-			if (writeError) {
-				return { error: writeError };
-			}
+		const assertionStatusError = await enforceAssertionStatusRules(
+			input.assertionStatus,
+			userId
+		);
+		if (assertionStatusError) {
+			return { error: assertionStatusError };
 		}
 
 		// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
