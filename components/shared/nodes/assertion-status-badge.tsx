@@ -16,7 +16,7 @@ import {
 } from "@/lib/assertion-status";
 import { cn } from "@/lib/utils";
 
-export interface AssertionStatusBadgeProps {
+interface AssertionStatusBadgeProps {
 	className?: string;
 	/** The element's per-assertion status (ADR 0004 D3). */
 	status: AssertionStatusValue;
@@ -57,7 +57,7 @@ const STATUS_CLASSES: Record<AssertionStatusValue, string> = {
  * all (see `useElementBadgeSlot`'s docstring for why that distinction
  * matters to `BaseNode`'s `topRightActions` guard).
  */
-export function AssertionStatusBadge({
+function AssertionStatusBadge({
 	status,
 	className,
 }: AssertionStatusBadgeProps) {

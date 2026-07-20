@@ -61,7 +61,7 @@ const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
  * `AS_CITED` (derived-only — never offered as a choice here, so a node that
  * currently carries it shows the default rather than an invalid selection).
  */
-function getInitialAssertionStatus(
+export function getInitialAssertionStatus(
 	nodeData: Record<string, unknown>
 ): AuthorAssertionStatusValue {
 	const value = nodeData?.assertionStatus;

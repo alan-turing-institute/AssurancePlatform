@@ -3,14 +3,9 @@
 import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import {
-	BaseNode,
-	getAssertionStatusIndicator,
-	NodeActionGroup,
-} from "@/components/shared/nodes";
+import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
 import ActionTooltip from "@/components/ui/action-tooltip";
-import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
-import useStore from "@/store/store";
+import { useNodeTopRightActions } from "@/hooks/use-node-top-right-actions";
 import NodeAddPopover from "./node-add-popover";
 import NodeEditDialog from "./node-edit-dialog";
 import ToggleButton from "./toggle-button";
@@ -18,23 +13,10 @@ import ToggleButton from "./toggle-button";
 function PropertyNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
-	const { assuranceCase } = useStore();
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
-	const badgeSlot = useElementBadgeSlot({
-		caseId: assuranceCase?.id?.toString() ?? "",
-		elementId: String(data.id),
-		elementType: "property",
-	});
-	const assertionBadge = getAssertionStatusIndicator(data.assertionStatus);
-	const topRightActions =
-		assertionBadge || badgeSlot ? (
-			<div className="flex items-center gap-1.5">
-				{assertionBadge}
-				{badgeSlot}
-			</div>
-		) : null;
+	const topRightActions = useNodeTopRightActions(data, "property");
 
 	const addPopover = (
 		<NodeAddPopover

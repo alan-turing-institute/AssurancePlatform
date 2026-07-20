@@ -12,7 +12,7 @@ import { AssertionStatusSchema } from "@/lib/schemas/case-export";
 
 export type AssertionStatusValue = z.infer<typeof AssertionStatusSchema>;
 
-export const ASSERTION_STATUS_VALUES = AssertionStatusSchema.options;
+const ASSERTION_STATUS_VALUES = AssertionStatusSchema.options;
 
 /**
  * The five author-declarable values (ADR 0004 D3). `AS_CITED` is
