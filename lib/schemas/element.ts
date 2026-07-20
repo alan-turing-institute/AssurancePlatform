@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AuthorAssertionStatusSchema } from "@/lib/assertion-status";
 import { lenientUrlSchema, optionalString, optionalUrlSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
 
@@ -177,6 +178,12 @@ export const nodeEditFormSchema = z.object({
 	justification: z.string().optional(),
 	context: z.array(z.string()).optional(),
 	urls: z.array(z.object({ value: z.string() })),
+	// Per-assertion status (ADR 0004 D3). The five author-declarable values
+	// only — `AS_CITED` is derived-only and must never be offered in this
+	// form's Select (components/cases/node-edit-dialog.tsx). "Unset" is
+	// represented by the explicit "ASSERTED" option, not by omitting the
+	// field, since the Select always needs a concrete value to display.
+	assertionStatus: AuthorAssertionStatusSchema.optional(),
 });
 
 export type NodeEditFormInput = z.input<typeof nodeEditFormSchema>;

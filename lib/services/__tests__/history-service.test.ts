@@ -4,10 +4,12 @@ import type { HistoryCommand } from "@/types/history";
 import {
 	applyRedo,
 	applyUndo,
+	createSnapshot,
 	generateOperationDescription,
 	recordAttach,
 	recordDetach,
 	recordMove,
+	recordUpdate,
 } from "../history-service";
 
 // ---------------------------------------------------------------------------
@@ -245,6 +247,69 @@ describe("recordAttach", () => {
 });
 
 // ---------------------------------------------------------------------------
+// createSnapshot -- assertionStatus (ADR 0004 D3)
+// ---------------------------------------------------------------------------
+
+describe("createSnapshot", () => {
+	it("captures assertionStatus from the source data", () => {
+		const snapshot = createSnapshot({
+			id: "elem-1",
+			type: "property_claim",
+			name: "Claim",
+			description: "A claim",
+			assertionStatus: "NEEDS_SUPPORT",
+		});
+
+		expect(snapshot.assertionStatus).toBe("NEEDS_SUPPORT");
+	});
+
+	it("leaves assertionStatus undefined when the source data omits it", () => {
+		const snapshot = createSnapshot({
+			id: "elem-2",
+			type: "goal",
+			name: "Goal",
+			description: "A goal",
+		});
+
+		expect(snapshot.assertionStatus).toBeUndefined();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// recordUpdate + applyUndo/applyRedo -- assertionStatus end-to-end round-trip
+// ---------------------------------------------------------------------------
+
+describe("assertionStatus undo/redo round-trip", () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockOkResponse()));
+	});
+
+	it("replays the pre-change status on undo and the post-change status on redo", async () => {
+		recordUpdate(
+			"elem-96",
+			"property_claim",
+			{ name: "Claim", description: "Desc", assertionStatus: "ASSERTED" },
+			{ name: "Claim", description: "Desc", assertionStatus: "DEFEATED" }
+		);
+
+		const { undoStack } = useHistoryStore.getState();
+		const command = undoStack[0]!.commands[0]!;
+
+		await applyUndo(command);
+		const undoCall = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+			.calls[0]!;
+		const undoBody = JSON.parse(undoCall[1].body as string);
+		expect(undoBody.assertionStatus).toBe("ASSERTED");
+
+		await applyRedo(command);
+		const redoCall = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+			.calls[1]!;
+		const redoBody = JSON.parse(redoCall[1].body as string);
+		expect(redoBody.assertionStatus).toBe("DEFEATED");
+	});
+});
+
+// ---------------------------------------------------------------------------
 // applyUndo -- move
 // ---------------------------------------------------------------------------
 
@@ -393,6 +458,34 @@ describe('applyUndo("update")', () => {
 		await applyUndo(command);
 
 		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it("carries assertionStatus (ADR 0004 D3) in the replayed PUT body", async () => {
+		const command: HistoryCommand = {
+			type: "update",
+			elementId: "elem-94",
+			elementType: "property_claim",
+			before: {
+				id: "elem-94",
+				elementType: "property_claim",
+				name: "Claim",
+				description: "Before description",
+				assertionStatus: "ASSERTED",
+			},
+			after: {
+				id: "elem-94",
+				elementType: "property_claim",
+				name: "Claim",
+				description: "After description",
+				assertionStatus: "DEFEATED",
+			},
+		};
+
+		await applyUndo(command);
+
+		const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+		const body = JSON.parse(call[1].body as string);
+		expect(body.assertionStatus).toBe("ASSERTED");
 	});
 });
 
@@ -728,6 +821,34 @@ describe('applyRedo("update")', () => {
 		await applyRedo(command);
 
 		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it("carries assertionStatus (ADR 0004 D3) in the replayed PUT body", async () => {
+		const command: HistoryCommand = {
+			type: "update",
+			elementId: "elem-95",
+			elementType: "property_claim",
+			before: {
+				id: "elem-95",
+				elementType: "property_claim",
+				name: "Claim",
+				description: "Before description",
+				assertionStatus: "ASSERTED",
+			},
+			after: {
+				id: "elem-95",
+				elementType: "property_claim",
+				name: "Claim",
+				description: "After description",
+				assertionStatus: "DEFEATED",
+			},
+		};
+
+		await applyRedo(command);
+
+		const call = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+		const body = JSON.parse(call[1].body as string);
+		expect(body.assertionStatus).toBe("DEFEATED");
 	});
 });
 

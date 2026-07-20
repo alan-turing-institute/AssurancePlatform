@@ -6,6 +6,7 @@ import {
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
+	createTestElement,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
@@ -125,6 +126,63 @@ describe("case-fetch-service", () => {
 
 			const data = expectSuccess(result);
 			expect(data.permissions).toBe("manage");
+		});
+	});
+
+	describe("fetchCaseFromPrisma — assertionStatus read-carry (ADR 0004 D3)", () => {
+		it("carries assertionStatus through to the goal, strategy, and property claim in the response", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id, {
+				name: "Assertion Status Case",
+			});
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+				role: "TOP_LEVEL",
+				assertionStatus: "NEEDS_SUPPORT",
+			});
+			const strategy = await createTestElement(testCase.id, user.id, {
+				elementType: "STRATEGY",
+				name: "S1",
+				parentId: goal.id,
+				assertionStatus: "ASSUMED",
+			});
+			await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: strategy.id,
+				assertionStatus: "DEFEATED",
+			});
+
+			const result = await fetchCaseFromPrisma(testCase.id, user.id);
+			const data = expectSuccess(result);
+
+			const fetchedGoal = data.goals?.[0];
+			expect(fetchedGoal?.assertionStatus).toBe("NEEDS_SUPPORT");
+
+			const fetchedStrategy = fetchedGoal?.strategies?.[0];
+			expect(fetchedStrategy?.assertionStatus).toBe("ASSUMED");
+
+			const fetchedClaim = fetchedStrategy?.propertyClaims?.[0];
+			expect(fetchedClaim?.assertionStatus).toBe("DEFEATED");
+		});
+
+		it("omits assertionStatus when unset (null), leaving it undefined rather than forcing ASSERTED", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id, {
+				name: "Unset Assertion Status Case",
+			});
+			await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+				role: "TOP_LEVEL",
+				// assertionStatus omitted — column default (null/unset)
+			});
+
+			const result = await fetchCaseFromPrisma(testCase.id, user.id);
+			const data = expectSuccess(result);
+
+			expect(data.goals?.[0]?.assertionStatus).toBeUndefined();
 		});
 	});
 
