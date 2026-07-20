@@ -51,6 +51,11 @@ export function transformToResponse(element: {
 	// export time in build-tree.ts, not here — this response mirrors the
 	// raw stored value for the canvas/JSON-editor UI).
 	assertionStatus?: AssertionStatus | null;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
+	// Dangling-citation indicator (ADR 0004 D5) — true when citedElementId
+	// was nullified because the cited element was deleted/detached
+	citationDangling?: boolean;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;
@@ -97,6 +102,12 @@ export function transformToResponse(element: {
 	}
 	if (element.assertionStatus) {
 		response.assertionStatus = element.assertionStatus;
+	}
+	if (element.citedElementId) {
+		response.citedElementId = element.citedElementId;
+	}
+	if (element.citationDangling) {
+		response.citationDangling = true;
 	}
 
 	return response;

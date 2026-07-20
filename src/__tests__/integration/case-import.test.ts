@@ -206,6 +206,7 @@ describe("validateImportData", () => {
 	});
 
 	/**
+	/**
 	 * ADR 0004 D3, review follow-up (round 2, both reviewers independently):
 	 * `createElements` (case-import-service.ts) previously dropped
 	 * `assertionStatus` from the createMany rows, so any declared status
@@ -243,5 +244,141 @@ describe("validateImportData", () => {
 			await exportCase(importer.id, imported.caseId)
 		);
 		expect(secondExport.tree.assertionStatus).toBe("NEEDS_SUPPORT");
+	});
+
+	/**
+	 * ADR 0004 D5: citedElementId names an element in the case referenced by
+	 * moduleReferenceId — i.e. normally a DIFFERENT case from the one being
+	 * exported/imported here, so the cited id is almost never part of the
+	 * import's own idMap. Lead ruling (dispatch brief, cid 2026-07-19):
+	 * preserve the original id VERBATIM in that case rather than guessing at
+	 * a remap — there is no cross-case id-remapping table in this codebase
+	 * (moduleReferenceId itself isn't remapped either). This test proves the
+	 * verbatim-preserve path with a direct DB assertion on the imported row.
+	 */
+	it("preserves a citedElementId pointing outside the export verbatim through export -> import (round-trip fidelity)", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		const citedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Away Goal",
+		});
+		const rootGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			role: "TOP_LEVEL",
+		});
+		await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			name: "Reference",
+			parentId: rootGoal.id,
+			moduleReferenceId: awayCase.id,
+			citedElementId: citedGoal.id,
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const firstExport = expectSuccess(await exportCase(owner.id, homeCase.id));
+		const exportedAwayGoal = firstExport.tree.children.find(
+			(c: { type: string }) => c.type === "AWAY_GOAL"
+		);
+		expect(exportedAwayGoal?.citedElementId).toBe(citedGoal.id);
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, firstExport));
+
+		// Direct DB check — proves the createMany write itself carries the
+		// (unmapped) id, not just whatever a later export happens to resolve.
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		expect(importedAwayGoal?.citedElementId).toBe(citedGoal.id);
+
+		const secondExport = expectSuccess(
+			await exportCase(importer.id, imported.caseId)
+		);
+		const reexportedAwayGoal = secondExport.tree.children.find(
+			(c: { type: string }) => c.type === "AWAY_GOAL"
+		);
+		expect(reexportedAwayGoal?.citedElementId).toBe(citedGoal.id);
+	});
+
+	/**
+	 * Review fix item 1 (BLOCKING, P2003 trace): a citedElementId that
+	 * resolves NOWHERE in the target DB used to hit createElements'
+	 * createMany FK (assurance_elements_cited_element_id_fkey) and roll back
+	 * prisma.$transaction — the entire import failed, not just the one
+	 * citation. The fix batch-resolves citedElementId before the insert
+	 * (idMap first, then one findMany against the target DB); anything left
+	 * unresolvable is downgraded to citedElementId: null,
+	 * citationDangling: true instead of failing the import. This test
+	 * exercises exactly that path with an id that exists nowhere in the
+	 * (fresh, per-test) target DB.
+	 */
+	it("imports successfully when citedElementId resolves nowhere in the target DB, flagging citationDangling instead of failing the whole import", async () => {
+		// The fixture is a hand-built import JSON, not seeded via
+		// createTestElement — createTestElement writes through Prisma
+		// directly, so an unresolvable citedElementId would hit the
+		// assurance_elements_cited_element_id_fkey FK at SEED time and never
+		// reach the import path this test targets. moduleReferenceId still
+		// needs to point at a real case (a pre-existing, unrelated FK on
+		// AWAY_GOAL, not part of this fix) — an actual case covers that
+		// without touching citedElementId resolution.
+		const owner = await createTestUser();
+		const awayCase = await createTestCase(owner.id);
+		const unresolvableCitedId = crypto.randomUUID();
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Dangling Citation Case",
+				description: "AWAY_GOAL cites an id absent from the target DB",
+			},
+			tree: {
+				id: "40000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "40000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "Reference",
+						description: "Cites an element that doesn't exist anywhere",
+						inSandbox: false,
+						moduleReferenceId: awayCase.id,
+						citedElementId: unresolvableCitedId,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		// The import SUCCEEDED — not rolled back — and both elements landed.
+		expect(imported.elementCount).toBe(2);
+
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		expect(importedAwayGoal?.citedElementId).toBeNull();
+		expect(importedAwayGoal?.citationDangling).toBe(true);
+
+		// The unrelated goal is intact — proves this isn't a partial/silent
+		// drop of the rest of the import.
+		const importedGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
+		expect(importedGoal).not.toBeNull();
+		expect(importedGoal?.name).toBe("Root Goal");
 	});
 });

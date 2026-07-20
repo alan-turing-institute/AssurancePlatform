@@ -56,6 +56,9 @@ export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
 	moduleReferenceId: new Set(["MODULE", "AWAY_GOAL"]),
 	moduleEmbedType: new Set(["MODULE"]),
 	modulePublicSummary: new Set(["MODULE"]),
+	// Element-level citation (ADR 0004 D5) — names the specific element an
+	// AWAY_GOAL cites within the case named by moduleReferenceId.
+	citedElementId: new Set(["AWAY_GOAL"]),
 };
 
 /**
@@ -234,6 +237,11 @@ const AwayGoalSchema = BaseElementSchema.extend({
 	elementType: z.literal("AWAY_GOAL"),
 	assumption: z.string().nullable().optional(),
 	moduleReferenceId: z.string().uuid(),
+	// Element-level citation (ADR 0004 D5) — the specific element within the
+	// referenced case (moduleReferenceId) that this AWAY_GOAL cites.
+	// Existence and self-citation are validated at the service layer
+	// (element-service.ts), not here — this schema only checks shape.
+	citedElementId: z.string().uuid().nullable().optional(),
 });
 
 const ContractSchema = BaseElementSchema.extend({
@@ -313,6 +321,7 @@ export function cleanElementDataForType(
 		"moduleReferenceId",
 		"moduleEmbedType",
 		"modulePublicSummary",
+		"citedElementId",
 	];
 
 	for (const [key, value] of Object.entries(data)) {

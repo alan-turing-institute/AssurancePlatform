@@ -95,6 +95,13 @@ function nodeToElement(
 		// through the nested→flat step; case-import-service.ts's createElements
 		// carries it the rest of the way into the createMany rows.
 		assertionStatus: node.assertionStatus,
+		// Element-level citation (ADR 0004 D5) — preserve the cited id through
+		// the nested->flat step; case-import-service.ts's createElements
+		// carries it the rest of the way into the createMany rows (remapped
+		// through the import's idMap when the cited element is part of the
+		// SAME import payload, preserved verbatim otherwise — see that
+		// function's docstring for why).
+		citedElementId: node.citedElementId,
 	};
 
 	// Preserve comments if present

@@ -458,4 +458,64 @@ describe("applyBatchUpdate", () => {
 		// ...but the smuggled field did not.
 		expect(afterBatch?.assertionStatus).toBeNull();
 	});
+
+	/**
+	 * ADR 0004 D5 review fix item 2 — D3-pattern negative test (same lesson
+	 * as api-elements-cited-element-id.test.ts's header comment: hand-
+	 * maintained field allowlists silently drop unforwarded fields, so a
+	 * malicious/careless payload can't smuggle a field through by riding
+	 * along with a legitimate change). `UpdateElementData`
+	 * (lib/case/tree-diff.ts) and `buildUpdateData`'s field allowlist
+	 * (case-batch-update-service.ts) do not include citedElementId, so it is
+	 * silently dropped here even though the object smuggling it is well-
+	 * typed enough to pass a loose caller. No production change accompanies
+	 * this test — it pins existing (correct) behaviour.
+	 */
+	it("ignores a smuggled citedElementId in a batch update, applying only the allowlisted change", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const awayCase = await createTestCase(user.id);
+		const originalCitedGoal = await createTestElement(awayCase.id, user.id, {
+			elementType: "GOAL",
+			name: "Original Cited Goal",
+		});
+		const smuggledCitedGoal = await createTestElement(awayCase.id, user.id, {
+			elementType: "GOAL",
+			name: "Smuggled Cited Goal",
+		});
+		const awayGoal = await createTestElement(testCase.id, user.id, {
+			elementType: "AWAY_GOAL",
+			name: "Original Name",
+			moduleReferenceId: awayCase.id,
+			citedElementId: originalCitedGoal.id,
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		// citedElementId is not part of UpdateElementData — smuggled here via
+		// an `as` cast to simulate a caller that bypasses the type system
+		// (e.g. a hand-built JSON payload to the batch API route).
+		const changes = [
+			{
+				type: "update",
+				elementId: awayGoal.id,
+				data: {
+					name: "Updated Name",
+					citedElementId: smuggledCitedGoal.id,
+				},
+			},
+		] as unknown as ElementChange[];
+
+		expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+		const updated = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		// Allowlisted change applied.
+		expect(updated?.name).toBe("Updated Name");
+		// Smuggled field had no effect — original citation is untouched.
+		expect(updated?.citedElementId).toBe(originalCitedGoal.id);
+	});
 });

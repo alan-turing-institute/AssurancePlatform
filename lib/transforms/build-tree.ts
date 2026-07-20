@@ -24,6 +24,8 @@ export interface ElementWithLinks {
 	// every other field below.
 	assertionStatus: AssertionStatus | null;
 	assumption: string | null;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId: string | null;
 	// Comments (optional - only included when export includes comments)
 	comments?: ExportComment[];
 	context: string[];
@@ -68,6 +70,7 @@ const TYPE_SPECIFIC_FIELDS = [
 	"moduleReferenceId",
 	"moduleEmbedType",
 	"modulePublicSummary",
+	"citedElementId",
 ] as const;
 
 /**

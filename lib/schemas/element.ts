@@ -44,6 +44,9 @@ export const createElementSchema = z.object({
 
 	// Per-assertion status (ADR 0004 D3)
 	assertionStatus: assertionStatusInputSchema,
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only; applicability,
+	// existence, and self-citation are enforced in element-service.ts.
+	citedElementId: z.string().uuid().nullable().optional(),
 });
 
 export type CreateElementSchemaInput = z.input<typeof createElementSchema>;
@@ -74,6 +77,9 @@ export const updateElementSchema = z.object({
 
 	// Per-assertion status (ADR 0004 D3)
 	assertionStatus: assertionStatusInputSchema,
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only; applicability,
+	// existence, and self-citation are enforced in element-service.ts.
+	citedElementId: z.string().uuid().nullable().optional(),
 
 	// Sandbox flag
 	inSandbox: z.boolean().optional(),
