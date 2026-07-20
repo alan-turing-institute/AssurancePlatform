@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ElementChange, UpdateElementData } from "@/lib/case/tree-diff";
+import type { ElementChange } from "@/lib/case/tree-diff";
 import prisma from "@/lib/prisma";
 import {
 	expectError,
@@ -9,6 +9,7 @@ import {
 import {
 	createTestCase,
 	createTestElement,
+	createTestIntegrationWithSystemUser,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
@@ -21,6 +22,10 @@ vi.mock("@/lib/services/sse-connection-manager", () => ({
 	emitSSEEvent: vi.fn(),
 	sseConnectionManager: { broadcast: vi.fn() },
 }));
+
+const ASSERTION_STATUS_PERMISSION_DENIED_PATTERN =
+	/Permission denied.*assertionStatus/;
+const AS_CITED_PATTERN = /AS_CITED/;
 
 // ============================================
 // applyBatchUpdate
@@ -407,56 +412,228 @@ describe("applyBatchUpdate", () => {
 	});
 
 	/**
-	 * ADR 0004 D3, review follow-up: the batch/JSON-editor path is deliberately
-	 * NOT wired for assertionStatus (deferred to
+	 * ADR 0004 D3: the batch/JSON-editor path now carries assertionStatus
+	 * end-to-end (tree-diff.ts, case-batch-update-service.ts), enforcing the
+	 * same write rule as the single-element route via element-service.ts's
+	 * shared enforceAssertionStatusRules. Supersedes the former "PINS" test
+	 * that documented this surface as deliberately unwired (see
 	 * "TEA — assertionStatus surface completion (batch, undo-redo, UI)").
-	 * `UpdateElementData` has no `assertionStatus` field and `buildUpdateData`'s
-	 * fixed field allowlist doesn't include it, so this is structurally
-	 * impossible today. This test locks that down: a future refactor of the
-	 * field list (e.g. spreading `data` instead of allowlisting fields) could
-	 * silently open an unguarded write route that bypasses
-	 * `guardAssertionStatusWrite`/`rejectDeclaredAsCited` entirely — this test
-	 * pins the current safe behaviour so that regression fails loudly.
 	 */
-	it("PINS: a batch update payload carrying assertionStatus cannot set or alter a stored value", async () => {
-		const user = await createTestUser();
-		const testCase = await createTestCase(user.id);
-		const element = await createTestElement(testCase.id, user.id, {
-			elementType: "GOAL",
-			name: "Batch Target",
-			description: "Original description",
+	describe("assertionStatus", () => {
+		it("sets assertionStatus via a batch update and persists it", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "Batch Target",
+				description: "Original description",
+			});
+			expect(element.assertionStatus).toBeNull();
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: {
+						name: "Batch Target Renamed",
+						assertionStatus: "DEFEATED",
+					},
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.updated).toBe(1);
+
+			const afterBatch = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(afterBatch?.name).toBe("Batch Target Renamed");
+			expect(afterBatch?.assertionStatus).toBe("DEFEATED");
 		});
-		expect(element.assertionStatus).toBeNull();
 
-		const { applyBatchUpdate } = await import(
-			"@/lib/services/case-batch-update-service"
-		);
+		it("leaves a previously-stored assertionStatus untouched when the field is absent from a partial update", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "Batch Target",
+				description: "Original description",
+				assertionStatus: "ASSUMED",
+			});
+			expect(element.assertionStatus).toBe("ASSUMED");
 
-		const changes: ElementChange[] = [
-			{
-				type: "update",
-				elementId: element.id,
-				// UpdateElementData has no assertionStatus field — this cast
-				// simulates a payload that tries to smuggle it in anyway.
-				data: {
-					name: "Batch Target Renamed",
-					assertionStatus: "DEFEATED",
-				} as unknown as UpdateElementData,
-			},
-		];
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
 
-		const data = expectSuccess(
-			await applyBatchUpdate(user.id, testCase.id, changes)
-		);
-		expect(data.summary.updated).toBe(1);
+			// data carries no assertionStatus key at all (not even null) —
+			// a partial update that only touches name.
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { name: "Renamed, Status Untouched" },
+				},
+			];
 
-		const afterBatch = await prisma.assuranceElement.findUnique({
-			where: { id: element.id },
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.updated).toBe(1);
+
+			const afterBatch = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(afterBatch?.name).toBe("Renamed, Status Untouched");
+			// The stored value survives the omission — omission must never
+			// be conflated with an explicit clear (null).
+			expect(afterBatch?.assertionStatus).toBe("ASSUMED");
 		});
-		// The allowlisted field DID apply...
-		expect(afterBatch?.name).toBe("Batch Target Renamed");
-		// ...but the smuggled field did not.
-		expect(afterBatch?.assertionStatus).toBeNull();
+
+		it("explicitly clears a previously-stored assertionStatus when the field is set to null", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "Batch Target",
+				description: "Original description",
+				assertionStatus: "ASSUMED",
+			});
+			expect(element.assertionStatus).toBe("ASSUMED");
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { assertionStatus: null },
+				},
+			];
+
+			expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const afterBatch = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(afterBatch?.assertionStatus).toBeNull();
+		});
+
+		it("rejects a system/machine principal batch-setting assertionStatus", async () => {
+			const owner = await createTestUser();
+			const { systemUser } = await createTestIntegrationWithSystemUser(
+				owner.id
+			);
+			const testCase = await createTestCase(owner.id);
+			// Genuine EDIT grant, same as grantIntegrationCaseAccess in production.
+			await createTestPermission(testCase.id, systemUser.id, owner.id, "EDIT");
+			const element = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Batch Target",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { assertionStatus: "DEFEATED" },
+				},
+			];
+
+			expectError(
+				await applyBatchUpdate(systemUser.id, testCase.id, changes),
+				ASSERTION_STATUS_PERMISSION_DENIED_PATTERN
+			);
+
+			const afterBatch = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(afterBatch?.assertionStatus).toBeNull();
+		});
+
+		it("rejects a hand-declared AS_CITED via a batch update", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "Batch Target",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { assertionStatus: "AS_CITED" },
+				},
+			];
+
+			expectError(
+				await applyBatchUpdate(user.id, testCase.id, changes),
+				AS_CITED_PATTERN
+			);
+
+			const afterBatch = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(afterBatch?.assertionStatus).toBeNull();
+		});
+
+		it("rejects a system/machine principal batch-creating an element with assertionStatus", async () => {
+			const owner = await createTestUser();
+			const { systemUser } = await createTestIntegrationWithSystemUser(
+				owner.id
+			);
+			const testCase = await createTestCase(owner.id);
+			await createTestPermission(testCase.id, systemUser.id, owner.id, "EDIT");
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const newId = `element-assertion-status-create-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: newId,
+					parentId: null,
+					data: {
+						id: newId,
+						type: "GOAL",
+						name: "Machine-Created Goal",
+						description: "Created by a system user",
+						inSandbox: false,
+						role: "TOP_LEVEL",
+						assertionStatus: "ASSUMED",
+					},
+				},
+			];
+
+			expectError(
+				await applyBatchUpdate(systemUser.id, testCase.id, changes),
+				ASSERTION_STATUS_PERMISSION_DENIED_PATTERN
+			);
+
+			const created = await prisma.assuranceElement.findUnique({
+				where: { id: newId },
+			});
+			expect(created).toBeNull();
+		});
 	});
 
 	/**

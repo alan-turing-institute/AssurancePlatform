@@ -298,9 +298,11 @@ async function enforceModuleReferenceIdRules(
  * both need — extracted so the checks live in exactly one place instead of
  * being duplicated verbatim at each call site (mirrors
  * `enforceCitedElementIdRules` above, and keeps both mutation paths under
- * the cognitive-complexity budget).
+ * the cognitive-complexity budget). Exported so other write surfaces that
+ * must obey the same D3 rule (currently: case-batch-update-service.ts) can
+ * reuse it rather than re-implementing the principal/value checks.
  */
-async function enforceAssertionStatusRules(
+export async function enforceAssertionStatusRules(
 	assertionStatus: AssertionStatus | null | undefined,
 	userId: string
 ): Promise<string | undefined> {

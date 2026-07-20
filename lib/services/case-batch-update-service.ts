@@ -11,12 +11,48 @@ import type {
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
+import { enforceAssertionStatusRules } from "@/lib/services/element-service";
 import { getDescendantIds } from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
+
+/**
+ * ADR 0004 D3 write rule (author-declared, machine-proposable, never
+ * machine-overwritten; AS_CITED is derived-only): validates every create
+ * and update change that carries an assertionStatus value, reusing
+ * element-service.ts's enforceAssertionStatusRules rather than
+ * re-implementing the principal (guardAssertionStatusWrite) and value
+ * (rejectDeclaredAsCited) checks — keeps the rule single-sourced across the
+ * single-element route and this batch/JSON-editor path.
+ */
+async function validateAssertionStatusChanges(
+	userId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	for (const change of creates) {
+		const error = await enforceAssertionStatusRules(
+			change.data.assertionStatus,
+			userId
+		);
+		if (error) {
+			return error;
+		}
+	}
+	for (const change of updates) {
+		const error = await enforceAssertionStatusRules(
+			change.data.assertionStatus,
+			userId
+		);
+		if (error) {
+			return error;
+		}
+	}
+	return null;
+}
 
 /**
  * Result of a batch update operation
@@ -221,6 +257,7 @@ function buildCreateData(
 		inSandbox: data.inSandbox,
 		parentId: effectiveParentId,
 		role: data.role as ElementRole | null | undefined,
+		assertionStatus: data.assertionStatus,
 		assumption: data.assumption,
 		justification: data.justification,
 		context: data.context ?? [],
@@ -310,6 +347,7 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 		"inSandbox",
 		"parentId",
 		"role",
+		"assertionStatus",
 		"assumption",
 		"justification",
 		"context",
@@ -447,6 +485,18 @@ export async function applyBatchUpdate(
 	const links = changes.filter(
 		(c): c is LinkEvidenceChange => c.type === "link_evidence"
 	);
+
+	// ADR 0004 D3 write rule: assertionStatus is author-declared only — see
+	// enforceAssertionStatusRules's docstring (element-service.ts) for why
+	// case-level EDIT access alone isn't a sufficient gate.
+	const assertionStatusError = await validateAssertionStatusChanges(
+		userId,
+		creates,
+		updates
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
+	}
 
 	// Validate parent references
 	const createParentError = await validateCreateParents(creates, deletes);

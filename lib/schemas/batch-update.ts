@@ -1,4 +1,14 @@
 import { z } from "zod";
+import { AssertionStatusSchema } from "./case-export";
+
+/**
+ * Per-assertion status on a batch create/update payload (ADR 0004 D3).
+ * Shape only — the D3 write rule (author-declared, never machine-
+ * overwritten; AS_CITED is derived-only) is enforced in
+ * case-batch-update-service.ts via element-service.ts's shared guard, not
+ * here — mirrors lib/schemas/element.ts's assertionStatusInputSchema.
+ */
+const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
 
 /**
  * Schema for batch update request body.
@@ -18,6 +28,7 @@ export const batchUpdateRequestSchema = z.object({
 					description: z.string(),
 					inSandbox: z.boolean(),
 					role: z.string().nullable().optional(),
+					assertionStatus: assertionStatusInputSchema,
 					assumption: z.string().nullable().optional(),
 					justification: z.string().nullable().optional(),
 					context: z.array(z.string()).optional(),
@@ -41,6 +52,7 @@ export const batchUpdateRequestSchema = z.object({
 					inSandbox: z.boolean().optional(),
 					parentId: z.string().uuid().nullable().optional(),
 					role: z.string().nullable().optional(),
+					assertionStatus: assertionStatusInputSchema,
 					assumption: z.string().nullable().optional(),
 					justification: z.string().nullable().optional(),
 					context: z.array(z.string()).optional(),
