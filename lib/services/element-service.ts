@@ -4,7 +4,10 @@ import type {
 	CreateElementSchemaOutput,
 	UpdateElementSchemaOutput,
 } from "@/lib/schemas/element";
-import { fieldAppliesTo } from "@/lib/schemas/element-validation";
+import {
+	fieldAppliesTo,
+	fieldRequiredFor,
+} from "@/lib/schemas/element-validation";
 import { transformToResponse } from "@/lib/transforms/element-response";
 import {
 	getDeletedDescendantIds,
@@ -53,6 +56,8 @@ export interface ElementResponse {
 	inSandbox: boolean;
 	justification?: string;
 	level?: number;
+	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
+	moduleReferenceId?: string | null;
 	name: string;
 	propertyClaimId?: string | string[] | null;
 	strategyId?: string | null;
@@ -189,6 +194,101 @@ async function enforceCitedElementIdRules(
 		return applicabilityError;
 	}
 	return await validateCitedElementId(citedElementId, ownElementId);
+}
+
+/**
+ * `moduleReferenceId` is applicable to MODULE and AWAY_GOAL only
+ * (FIELD_APPLICABILITY, lib/schemas/element-validation.ts). Checked whenever
+ * the field is explicitly present in the input, mirroring
+ * `rejectCitedElementIdIfNotApplicable` above — a silent drop is a worse UX
+ * than an explicit rejection, and the single-element route has no
+ * discriminated-union schema (unlike the batch path's AwayGoalSchema/
+ * ModuleSchema) to lean on for this.
+ */
+function rejectModuleReferenceIdIfNotApplicable(
+	elementType: string,
+	moduleReferenceId: string | null | undefined
+): string | undefined {
+	if (moduleReferenceId === undefined) {
+		return;
+	}
+	if (!fieldAppliesTo("moduleReferenceId", elementType)) {
+		return "moduleReferenceId is only applicable to MODULE and AWAY_GOAL elements";
+	}
+	return;
+}
+
+/**
+ * `moduleReferenceId` is required for MODULE and AWAY_GOAL on create
+ * (REQUIRED_FIELDS, lib/schemas/element-validation.ts — the same rule the
+ * batch path enforces via AwayGoalSchema/ModuleSchema's non-optional
+ * `z.string().uuid()`). Create-only: the batch UPDATE path
+ * (case-batch-update-service.ts) allows changing/clearing the field without
+ * a requiredness guard, so `updateElement` below does not call this.
+ */
+function rejectMissingModuleReferenceId(
+	elementType: string,
+	moduleReferenceId: string | null | undefined
+): string | undefined {
+	if (!fieldRequiredFor("moduleReferenceId", elementType)) {
+		return;
+	}
+	if (!moduleReferenceId) {
+		return "moduleReferenceId is required for MODULE and AWAY_GOAL elements";
+	}
+	return;
+}
+
+/**
+ * `moduleReferenceId` must reference an existing, non-trashed case.
+ * Mirrors `validateCitedElementId`'s existence check (ADR 0004 D5) — the
+ * batch path relies on the DB foreign key to reject a bad reference (which
+ * would surface as an opaque 500), so this route holds itself to the
+ * stricter, already-established precedent instead.
+ */
+async function validateModuleReferenceId(
+	moduleReferenceId: string | null | undefined
+): Promise<string | undefined> {
+	if (!moduleReferenceId) {
+		return;
+	}
+	const target = await prisma.assuranceCase.findFirst({
+		where: { id: moduleReferenceId, deletedAt: null },
+		select: { id: true },
+	});
+	if (!target) {
+		return "moduleReferenceId must reference an existing case";
+	}
+	return;
+}
+
+/**
+ * Runs the moduleReferenceId guards (applicability, then — create only —
+ * requiredness, then existence) in the order createElement and updateElement
+ * both need. Mirrors `enforceCitedElementIdRules`'s extraction rationale.
+ */
+async function enforceModuleReferenceIdRules(
+	elementType: string,
+	moduleReferenceId: string | null | undefined,
+	options: { requireOnCreate: boolean }
+): Promise<string | undefined> {
+	const applicabilityError = rejectModuleReferenceIdIfNotApplicable(
+		elementType,
+		moduleReferenceId
+	);
+	if (applicabilityError) {
+		return applicabilityError;
+	}
+	if (options.requireOnCreate) {
+		const requiredError = rejectMissingModuleReferenceId(
+			elementType,
+			moduleReferenceId
+		);
+		if (requiredError) {
+			return requiredError;
+		}
+	}
+	return await validateModuleReferenceId(moduleReferenceId);
 }
 
 /**
@@ -496,6 +596,10 @@ async function createElementInDatabase(
 			// and self-citation are validated in createElement before this
 			// function is called.
 			citedElementId: input.citedElementId,
+			// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
+			// and existence are validated in createElement before this function
+			// is called.
+			moduleReferenceId: input.moduleReferenceId,
 			createdById: userId,
 		},
 		include: {
@@ -549,6 +653,15 @@ export async function createElement(
 
 	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
 		return { error: "A case can only have one goal claim" };
+	}
+
+	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+		elementType,
+		input.moduleReferenceId,
+		{ requireOnCreate: true }
+	);
+	if (moduleReferenceIdError) {
+		return { error: moduleReferenceIdError };
 	}
 
 	const citedElementIdError = await enforceCitedElementIdRules(
@@ -670,6 +783,9 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 		// longer describes the current state, declared or not.
 		updateData.citationDangling = false;
 	}
+	if (input.moduleReferenceId !== undefined) {
+		updateData.moduleReferenceId = input.moduleReferenceId;
+	}
 
 	return updateData;
 }
@@ -748,6 +864,19 @@ export async function updateElement(
 		);
 		if (assertionStatusError) {
 			return { error: assertionStatusError };
+		}
+
+		// moduleReferenceId is MODULE/AWAY_GOAL-only and must reference an
+		// existing case. No requiredness check on update — mirrors the batch
+		// update path (case-batch-update-service.ts), see
+		// enforceModuleReferenceIdRules's docstring.
+		const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+			existing.elementType,
+			input.moduleReferenceId,
+			{ requireOnCreate: false }
+		);
+		if (moduleReferenceIdError) {
+			return { error: moduleReferenceIdError };
 		}
 
 		// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an

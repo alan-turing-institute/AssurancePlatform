@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
 	expectError,
@@ -380,5 +380,225 @@ describe("validateImportData", () => {
 		});
 		expect(importedGoal).not.toBeNull();
 		expect(importedGoal?.name).toBe("Root Goal");
+	});
+
+	/**
+	 * Resolve-window race (the backstop the P2003 catch in
+	 * case-import-service.ts's createElements exists for): unlike the test
+	 * above, this citedElementId genuinely EXISTS — and resolves successfully
+	 * — when resolveExternalCitedElementIds checks it. It is then deleted
+	 * before the createMany insert actually runs, simulated here by spying on
+	 * prisma.assuranceElement.findMany (which resolveExternalCitedElementIds
+	 * calls) to delete the row, for real, immediately after confirming it
+	 * exists — the exact window described in the issue. The insert that
+	 * follows hits a REAL Postgres P2003 on
+	 * assurance_elements_cited_element_id_fkey (not a mocked error shape);
+	 * the catch re-resolves, finds the id gone, and retries once with it
+	 * nulled + flagged, instead of rolling back the whole import.
+	 */
+	it("degrades a citedElementId to dangling when the cited element is deleted between resolve and insert (resolve-window race)", async () => {
+		const owner = await createTestUser();
+		const awayCase = await createTestCase(owner.id);
+		const citedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Away Goal",
+		});
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Race Window Case",
+				description: "AWAY_GOAL cites an element deleted mid-import",
+			},
+			tree: {
+				id: "50000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "50000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "Reference",
+						description: "Cites an element that vanishes mid-import",
+						inSandbox: false,
+						moduleReferenceId: awayCase.id,
+						citedElementId: citedGoal.id,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const originalFindMany = prisma.assuranceElement.findMany.bind(
+			prisma.assuranceElement
+		);
+		let deletedMidImport = false;
+		// Cast: mockImplementation's real Prisma type wants a `PrismaPromise`
+		// return, not a plain `Promise` — an implementation detail the mock
+		// doesn't need to satisfy to behave correctly at runtime (it just needs
+		// to resolve to the same array `originalFindMany` would have).
+		const findManySpy = vi
+			.spyOn(prisma.assuranceElement, "findMany")
+			.mockImplementation((async (args) => {
+				const result = await originalFindMany(args);
+				const idFilter = (args as { where?: { id?: { in?: string[] } } })?.where
+					?.id?.in;
+				if (
+					!deletedMidImport &&
+					Array.isArray(idFilter) &&
+					idFilter.includes(citedGoal.id)
+				) {
+					deletedMidImport = true;
+					await prisma.assuranceElement.delete({
+						where: { id: citedGoal.id },
+					});
+				}
+				return result;
+			}) as typeof prisma.assuranceElement.findMany);
+
+		try {
+			const importer = await createTestUser();
+			const imported = expectSuccess(await importCase(importer.id, json));
+
+			// The import SUCCEEDED — not rolled back by the raced FK violation —
+			// and the race was actually triggered (not a no-op assertion).
+			expect(deletedMidImport).toBe(true);
+			expect(imported.elementCount).toBe(2);
+
+			const importedAwayGoal = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+			});
+			expect(importedAwayGoal?.citedElementId).toBeNull();
+			expect(importedAwayGoal?.citationDangling).toBe(true);
+			// moduleReferenceId is an UNRELATED foreign key (a real case, never
+			// deleted) — proves the retry rebuilt the full row, not just the
+			// citedElementId field.
+			expect(importedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
+
+			// The unrelated goal is intact — proves this isn't a partial/silent
+			// drop of the rest of the import.
+			const importedGoal = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "GOAL" },
+			});
+			expect(importedGoal).not.toBeNull();
+			expect(importedGoal?.name).toBe("Root Goal");
+		} finally {
+			findManySpy.mockRestore();
+		}
+	});
+
+	/**
+	 * The P2003 catch in createElements is anchored to the exact
+	 * `assurance_elements_cited_element_id_fkey` constraint name specifically
+	 * so it does NOT swallow a P2003 on a DIFFERENT foreign key on the same
+	 * createMany insert. moduleReferenceId is a convenient other FK to exploit
+	 * here: it isn't part of the resolve-before-insert machinery at all, so a
+	 * value that never existed reaches the insert unresolved and must fail
+	 * the whole import loudly, same as before this fix.
+	 */
+	it("still fails the whole import on a P2003 from an unrelated foreign key (moduleReferenceId)", async () => {
+		const nonExistentCaseId = crypto.randomUUID();
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Bad Module Reference Case",
+				description: "AWAY_GOAL references a case that doesn't exist",
+			},
+			tree: {
+				id: "60000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "60000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "Reference",
+						description: "References a nonexistent case",
+						inSandbox: false,
+						moduleReferenceId: nonExistentCaseId,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const importer = await createTestUser();
+		expectError(await importCase(importer.id, json));
+
+		// Nothing from this failed import landed — proves the P2003 catch
+		// didn't mask (and thus didn't half-succeed) an unrelated FK failure.
+		const elements = await prisma.assuranceElement.findMany({
+			where: { name: "Root Goal" },
+		});
+		expect(elements).toHaveLength(0);
+	});
+
+	/**
+	 * moduleReferenceId gap: before this fix, nodeToElement
+	 * (lib/transforms/nested-to-flat.ts) never carried moduleReferenceId from
+	 * the nested tree into the flat ElementV2 row, and ElementV2Schema
+	 * (lib/schemas/case-export.ts) didn't even declare the field — so ANY
+	 * import (nested or flat) silently dropped it, and a re-imported AWAY_GOAL
+	 * lost the case it referenced. Unlike citedElementId, moduleReferenceId
+	 * names a CASE (not an element in this import's own payload), so it is
+	 * preserved verbatim rather than remapped through idMap — there is no
+	 * cross-case id-remapping table here either.
+	 */
+	it("preserves an AWAY_GOAL's moduleReferenceId through export -> import (round-trip fidelity)", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		const rootGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			role: "TOP_LEVEL",
+		});
+		await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			name: "Reference",
+			parentId: rootGoal.id,
+			moduleReferenceId: awayCase.id,
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const firstExport = expectSuccess(await exportCase(owner.id, homeCase.id));
+		const exportedAwayGoal = firstExport.tree.children.find(
+			(c: { type: string }) => c.type === "AWAY_GOAL"
+		);
+		expect(exportedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, firstExport));
+
+		// Direct DB check — proves the createMany write itself carries the
+		// (unmapped) case id, not just whatever a later export happens to
+		// resolve.
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		expect(importedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
+
+		const secondExport = expectSuccess(
+			await exportCase(importer.id, imported.caseId)
+		);
+		const reexportedAwayGoal = secondExport.tree.children.find(
+			(c: { type: string }) => c.type === "AWAY_GOAL"
+		);
+		expect(reexportedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
 	});
 });

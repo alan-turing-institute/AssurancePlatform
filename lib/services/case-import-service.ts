@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
+import { Prisma } from "@/src/generated/prisma";
 
 export type ImportResult =
 	| {
@@ -181,6 +182,11 @@ async function createCaseWithPermission(
  * One findMany for the whole batch (not one query per element), run BEFORE
  * the transaction opens — keeps the transaction short per CLAUDE.md and
  * avoids doing this lookup once per createElements call.
+ *
+ * Also reused (a second time, with a fresh query) by createElements' resolve-
+ * window race backstop: if an id resolved here is deleted before the insert
+ * actually runs, re-calling this same function after that P2003 correctly
+ * comes back without it — see createElements' docstring.
  */
 async function resolveExternalCitedElementIds(
 	elements: ElementV2[],
@@ -248,7 +254,140 @@ function resolveImportedCitedElementId(
 }
 
 /**
+ * Foreign key constraint name for `citedElementId` (see the ADR 0004 D5
+ * migration, `assurance_elements_cited_element_id_fkey`). Anchoring the P2003
+ * catch below to this exact constraint name — rather than treating any
+ * P2003 from this insert as recoverable — matters because the same
+ * `createMany` call also carries `caseId`, `parentId`, `defeatsElementId`,
+ * and `moduleReferenceId` foreign keys: a P2003 on any of THOSE means real
+ * corrupt/inconsistent import data and must still fail the whole import
+ * loudly, not be silently downgraded.
+ */
+const CITED_ELEMENT_ID_FK_CONSTRAINT =
+	"assurance_elements_cited_element_id_fkey";
+
+/**
+ * True when `error` is the specific FK violation this module knows how to
+ * recover from: a `citedElementId` that pointed at a real row when
+ * `resolveExternalCitedElementIds` checked it, but was deleted before this
+ * `createMany` actually ran (the resolve-window race — see `createElements`'
+ * docstring). Matches on the Postgres constraint name Prisma echoes into the
+ * error message (verified against a live P2003: `error.message` contains
+ * "Foreign key constraint violated on the constraint: `<name>`"), not on
+ * `error.meta`'s shape, which is adapter-internal and not a stable contract.
+ */
+function isCitedElementIdForeignKeyError(error: unknown): boolean {
+	return (
+		error instanceof Prisma.PrismaClientKnownRequestError &&
+		error.code === "P2003" &&
+		error.message.includes(CITED_ELEMENT_ID_FK_CONSTRAINT)
+	);
+}
+
+/**
+ * Builds the createMany row for one element, resolving its citedElementId
+ * against the given (already-resolved) external-id set. Extracted from
+ * createElements so the resolve-window race backstop there can rebuild rows
+ * a second time, against a freshly re-resolved set, without duplicating the
+ * per-row field mapping.
+ */
+function buildElementRow(
+	el: ElementV2,
+	idMap: Map<string, string>,
+	resolvedExternalCitedElementIds: Set<string>,
+	caseId: string,
+	userId: string
+) {
+	const newId = idMap.get(el.id);
+	if (!newId) {
+		return null;
+	}
+
+	// Element-level citation (ADR 0004 D5) — see
+	// resolveImportedCitedElementId's docstring for the
+	// remap-else-preserve-verbatim-else-flag-dangling decision.
+	const { citedElementId, citationDangling } = resolveImportedCitedElementId(
+		el.citedElementId,
+		idMap,
+		resolvedExternalCitedElementIds
+	);
+
+	return {
+		id: newId,
+		caseId,
+		elementType: el.elementType,
+		role: el.role,
+		parentId: el.parentId ? (idMap.get(el.parentId) ?? null) : null,
+		name: el.name,
+		description: el.description,
+		assumption: el.assumption,
+		justification: el.justification,
+		context: el.context ?? [],
+		url: el.url,
+		level: el.level,
+		inSandbox: el.inSandbox,
+		fromPattern: el.fromPattern ?? false,
+		modifiedFromPattern: el.modifiedFromPattern ?? false,
+		// Per-assertion status (ADR 0004 D3) — lead ruling: import
+		// PRESERVES a declared status rather than dropping it. This is a
+		// direct createMany write (not through createElement/updateElement),
+		// so it intentionally bypasses guardAssertionStatusWrite/
+		// rejectDeclaredAsCited: import is a bulk data-load operation, not
+		// an author declaring a NEW status, and the source data already
+		// passed through export's own AS_CITED derivation.
+		assertionStatus: el.assertionStatus,
+		citedElementId,
+		citationDangling,
+		// Module reference (MODULE/AWAY_GOAL) — names a CASE, not an element
+		// in this import's own payload, so (unlike citedElementId) there is
+		// nothing in idMap to remap it through; preserved verbatim. A value
+		// that doesn't resolve in the target DB fails this createMany loudly
+		// via the module_reference_id foreign key — deliberately NOT given
+		// the citedElementId FK's soft-degrade treatment below, since it was
+		// never flagged as needing one (see nested-to-flat.ts for the same
+		// note at the point this value is first carried through).
+		moduleReferenceId: el.moduleReferenceId,
+		createdById: userId,
+	};
+}
+
+function buildElementRows(
+	sortedElements: ElementV2[],
+	idMap: Map<string, string>,
+	resolvedExternalCitedElementIds: Set<string>,
+	caseId: string,
+	userId: string
+) {
+	return sortedElements
+		.map((el) =>
+			buildElementRow(
+				el,
+				idMap,
+				resolvedExternalCitedElementIds,
+				caseId,
+				userId
+			)
+		)
+		.filter((d) => d !== null);
+}
+
+/**
  * Creates all elements in the correct order (parents before children).
+ *
+ * Resolve-window race backstop: `resolveExternalCitedElementIds` (called by
+ * `importCase` before this function runs) confirms each external
+ * citedElementId exists, but that check and this insert are not atomic —
+ * the cited element can be deleted in between. Before this fix, that raced
+ * insert would throw a raw P2003 on `assurance_elements_cited_element_id_fkey`
+ * and roll back the ENTIRE import (case, unrelated elements, everything),
+ * for a single citation that should just degrade to dangling like the
+ * already-unresolvable case review fix item 1 handles. The catch below is
+ * the backstop: on exactly that FK error, re-resolve the external
+ * citedElementIds against the DB (this time the raced-away id correctly
+ * comes back unresolved), rebuild the rows, and retry the insert once. A
+ * P2003 on any OTHER foreign key (caseId, parentId, defeatsElementId,
+ * moduleReferenceId) — or a second failure on retry — is not this module's
+ * to recover from and propagates, failing the import as before.
  */
 async function createElements(
 	caseId: string,
@@ -260,55 +399,32 @@ async function createElements(
 	// Sort elements topologically so parents are created before children
 	const sortedElements = topologicalSort(elements);
 
-	const data = sortedElements
-		.map((el) => {
-			const newId = idMap.get(el.id);
-			if (!newId) {
-				return null;
-			}
+	const data = buildElementRows(
+		sortedElements,
+		idMap,
+		resolvedExternalCitedElementIds,
+		caseId,
+		userId
+	);
 
-			// Element-level citation (ADR 0004 D5) — see
-			// resolveImportedCitedElementId's docstring for the
-			// remap-else-preserve-verbatim-else-flag-dangling decision.
-			const { citedElementId, citationDangling } =
-				resolveImportedCitedElementId(
-					el.citedElementId,
-					idMap,
-					resolvedExternalCitedElementIds
-				);
+	try {
+		await prisma.assuranceElement.createMany({ data });
+	} catch (error) {
+		if (!isCitedElementIdForeignKeyError(error)) {
+			throw error;
+		}
 
-			return {
-				id: newId,
-				caseId,
-				elementType: el.elementType,
-				role: el.role,
-				parentId: el.parentId ? (idMap.get(el.parentId) ?? null) : null,
-				name: el.name,
-				description: el.description,
-				assumption: el.assumption,
-				justification: el.justification,
-				context: el.context ?? [],
-				url: el.url,
-				level: el.level,
-				inSandbox: el.inSandbox,
-				fromPattern: el.fromPattern ?? false,
-				modifiedFromPattern: el.modifiedFromPattern ?? false,
-				// Per-assertion status (ADR 0004 D3) — lead ruling: import
-				// PRESERVES a declared status rather than dropping it. This is a
-				// direct createMany write (not through createElement/updateElement),
-				// so it intentionally bypasses guardAssertionStatusWrite/
-				// rejectDeclaredAsCited: import is a bulk data-load operation, not
-				// an author declaring a NEW status, and the source data already
-				// passed through export's own AS_CITED derivation.
-				assertionStatus: el.assertionStatus,
-				citedElementId,
-				citationDangling,
-				createdById: userId,
-			};
-		})
-		.filter((d) => d !== null);
-
-	await prisma.assuranceElement.createMany({ data });
+		const reResolvedExternalCitedElementIds =
+			await resolveExternalCitedElementIds(elements, idMap);
+		const retryData = buildElementRows(
+			sortedElements,
+			idMap,
+			reResolvedExternalCitedElementIds,
+			caseId,
+			userId
+		);
+		await prisma.assuranceElement.createMany({ data: retryData });
+	}
 
 	return data.length;
 }

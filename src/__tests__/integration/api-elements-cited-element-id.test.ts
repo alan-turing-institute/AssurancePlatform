@@ -16,14 +16,18 @@ import {
  * hand-maintained allowlists that silently drop unforwarded fields, so these
  * tests exercise the ACTUAL route handlers, not just the service layer.
  *
- * Creating an AWAY_GOAL via the single-element POST route is not exercised
- * here: `moduleReferenceId` (required by AwayGoalSchema) is not wired into
- * `createElementSchema`/`buildCreateInput` today — a pre-existing gap, not
- * introduced by this change (AWAY_GOAL elements are created via the batch
- * path — case-batch-update-service.ts — which already handles
- * moduleReferenceId). AWAY_GOAL fixtures here are seeded directly via the
- * test factory; the PUT route is exercised as "the real route" per the
- * dispatch brief.
+ * Creating an AWAY_GOAL via the single-element POST route used to be
+ * untestable here: `moduleReferenceId` (required by AwayGoalSchema) wasn't
+ * wired into `createElementSchema`/`buildCreateInput`, so AWAY_GOAL elements
+ * could only be created via the batch path (case-batch-update-service.ts).
+ * That gap is closed (moduleReferenceId route wiring dispatch) — the first
+ * test below now creates a real AWAY_GOAL end to end through this route,
+ * with both moduleReferenceId and citedElementId set in the same request.
+ * moduleReferenceId's own dedicated coverage (required-field rejection,
+ * applicability, existence) lives in
+ * api-elements-module-reference-id.test.ts; the rest of this file still
+ * seeds AWAY_GOAL fixtures directly via the test factory where the point of
+ * the test is citedElementId behaviour specifically.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -44,6 +48,48 @@ beforeEach(async () => {
 });
 
 describe("POST /api/cases/[id]/elements — citedElementId (ADR 0004 D5)", () => {
+	it("creates an AWAY_GOAL end to end with moduleReferenceId and citedElementId, persisted per a separate refetch", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		const citedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Away Goal",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/elements/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${homeCase.id}/elements`,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					type: "away_goal",
+					name: "Reference",
+					description: "Cites a specific element in another case",
+					moduleReferenceId: awayCase.id,
+					citedElementId: citedGoal.id,
+				}),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: homeCase.id }),
+		});
+
+		expect(response.status).toBe(201);
+		const body = await response.json();
+		expect(body.moduleReferenceId).toBe(awayCase.id);
+		expect(body.citedElementId).toBe(citedGoal.id);
+
+		// Separate refetch — proves DB persistence, not just an echoed response.
+		const inDb = await prisma.assuranceElement.findFirst({
+			where: { caseId: homeCase.id, elementType: "AWAY_GOAL" },
+		});
+		expect(inDb?.moduleReferenceId).toBe(awayCase.id);
+		expect(inDb?.citedElementId).toBe(citedGoal.id);
+	});
+
 	it("rejects citedElementId on a non-AWAY_GOAL type through the route handler", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);

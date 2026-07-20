@@ -102,6 +102,17 @@ function nodeToElement(
 		// SAME import payload, preserved verbatim otherwise — see that
 		// function's docstring for why).
 		citedElementId: node.citedElementId,
+		// Module reference (MODULE/AWAY_GOAL) — preserve verbatim through the
+		// nested->flat step. Unlike citedElementId, this is never remapped
+		// through the import's idMap: it names a CASE, not an element in this
+		// import's own payload, so there is nothing in idMap to look it up
+		// against (idMap only maps element ids). A moduleReferenceId that
+		// doesn't resolve in the target DB fails loudly via the DB foreign key
+		// (assurance_elements_module_reference_id_fkey) — deliberately NOT
+		// given the citedElementId FK's soft-degrade treatment (ADR 0004 D5
+		// review fix item 1 / the resolve-window race fix), since it was never
+		// flagged as needing one.
+		moduleReferenceId: node.moduleReferenceId,
 	};
 
 	// Preserve comments if present

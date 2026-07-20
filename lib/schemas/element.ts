@@ -47,6 +47,12 @@ export const createElementSchema = z.object({
 	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only; applicability,
 	// existence, and self-citation are enforced in element-service.ts.
 	citedElementId: z.string().uuid().nullable().optional(),
+	// Module reference — MODULE and AWAY_GOAL only; required for both on
+	// create (mirrors the batch path's AwayGoalSchema/ModuleSchema in
+	// lib/schemas/element-validation.ts). Only shape is validated here;
+	// applicability, requiredness, and existence are enforced in
+	// element-service.ts, matching the citedElementId pattern above.
+	moduleReferenceId: z.string().uuid().nullable().optional(),
 });
 
 export type CreateElementSchemaInput = z.input<typeof createElementSchema>;
@@ -80,6 +86,11 @@ export const updateElementSchema = z.object({
 	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only; applicability,
 	// existence, and self-citation are enforced in element-service.ts.
 	citedElementId: z.string().uuid().nullable().optional(),
+	// Module reference — MODULE and AWAY_GOAL only. No requiredness check on
+	// update (mirrors the batch update path, case-batch-update-service.ts,
+	// which allows changing/clearing it without a required-field guard);
+	// applicability and existence are still enforced in element-service.ts.
+	moduleReferenceId: z.string().uuid().nullable().optional(),
 
 	// Sandbox flag
 	inSandbox: z.boolean().optional(),

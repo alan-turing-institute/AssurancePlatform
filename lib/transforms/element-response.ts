@@ -56,6 +56,8 @@ export function transformToResponse(element: {
 	// Dangling-citation indicator (ADR 0004 D5) — true when citedElementId
 	// was nullified because the cited element was deleted/detached
 	citationDangling?: boolean;
+	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
+	moduleReferenceId?: string | null;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;
@@ -108,6 +110,9 @@ export function transformToResponse(element: {
 	}
 	if (element.citationDangling) {
 		response.citationDangling = true;
+	}
+	if (element.moduleReferenceId) {
+		response.moduleReferenceId = element.moduleReferenceId;
 	}
 
 	return response;
