@@ -121,6 +121,20 @@ export const ElementV2Schema = z
 			.nullable()
 			.optional()
 			.describe("ID of the element cited by an AWAY_GOAL (ADR 0004 D5)"),
+		// Module reference — MODULE (required) and AWAY_GOAL (required) name
+		// the case they reference/cite into. Nullable/optional here (like
+		// citedElementId above) for import leniency with pre-existing exports
+		// that never carried the field — requiredness for MODULE/AWAY_GOAL is
+		// enforced by the DB foreign key and element-service.ts on the
+		// author-facing mutation routes, not by this exchange-format schema.
+		moduleReferenceId: z
+			.string()
+			.uuid()
+			.nullable()
+			.optional()
+			.describe(
+				"ID of the case referenced by a MODULE, or cited by an AWAY_GOAL"
+			),
 		inSandbox: z
 			.boolean()
 			.default(false)
