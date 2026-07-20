@@ -69,6 +69,10 @@ function buildCreateInput(
 		// createElementSchema; applicability/existence/self-citation checks
 		// live in element-service.ts (createElement), not here.
 		citedElementId: body.citedElementId as string | null | undefined,
+		// Module reference (MODULE/AWAY_GOAL) — validated by
+		// createElementSchema; applicability/requiredness/existence checks
+		// live in element-service.ts (createElement), not here.
+		moduleReferenceId: body.moduleReferenceId as string | null | undefined,
 	};
 }
 

@@ -64,6 +64,10 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		// updateElementSchema; applicability/existence/self-citation checks
 		// live in element-service.ts (updateElement), not here.
 		citedElementId: body.citedElementId as string | null | undefined,
+		// Module reference (MODULE/AWAY_GOAL) — validated by
+		// updateElementSchema; applicability/existence checks live in
+		// element-service.ts (updateElement), not here.
+		moduleReferenceId: body.moduleReferenceId as string | null | undefined,
 	};
 }
 
