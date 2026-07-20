@@ -21,6 +21,9 @@ export type OperationType =
  */
 // Captures arbitrary element fields for history snapshots (undo/redo)
 export interface ElementSnapshot {
+	// Per-assertion status (ADR 0004 D3); nullable, null/undefined means the
+	// default ASSERTED.
+	assertionStatus?: string | null;
 	assumption?: string | null;
 	context?: string[];
 	description: string;
