@@ -127,7 +127,16 @@ export default function NodeAddPopover({
 
 	return (
 		<>
-			<Popover onOpenChange={onOpenChange} open={open}>
+			{/* `modal` matters here, not just accessibility polish: ReactFlow's
+			pane (d3-zoom) has its own native pointerdown/mousedown handlers
+			that stop propagation for pan/zoom gestures. Radix's non-modal
+			outside-click dismiss listens on `document` in the bubble phase, so
+			a click on the canvas never reached it and the popover stayed open
+			— only the trigger itself could close it. `modal` disables pointer
+			events on the rest of the page while open
+			(`disableOutsidePointerEvents`), so the canvas never intercepts the
+			click in the first place. */}
+			<Popover modal onOpenChange={onOpenChange} open={open}>
 				<PopoverAnchor className="inline-flex">{children}</PopoverAnchor>
 				<PopoverContent align="start" className="w-56 p-2" side="top">
 					<div className="flex flex-col gap-1">
