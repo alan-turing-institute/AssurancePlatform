@@ -119,3 +119,57 @@ describe("NodeAddPopover — controlled open/onOpenChange still works under moda
 		});
 	});
 });
+
+// Focus restoration (review follow-up, PR #885 G3): NOT the same regression
+// vector here as the other modal popovers. Radix's modal PopoverContent only
+// restores focus via `context.triggerRef.current?.focus()` — and
+// `context.triggerRef` is populated exclusively by `<PopoverTrigger>`.
+// NodeAddPopover wires its `children` through `<PopoverAnchor>` instead (the
+// component is externally controlled — every real caller, e.g. goal-node.tsx,
+// opens it from its own `onClick`, not Radix's), which is purely a popper
+// positioning primitive and never touches `triggerRef`. So
+// `triggerRef.current` stays `null` for the lifetime of this component, the
+// optional-chained `.focus()` call is a no-op, and — because
+// `onCloseAutoFocus` also calls `event.preventDefault()` unconditionally —
+// FocusScope's own "focus the previously-focused element" fallback never
+// runs either. Net effect: dismissing this popover restores focus to
+// nothing; the browser's default (the focused node was removed) takes over.
+//
+// Verified this is a real behavioural fact, not a jsdom limitation: an
+// identical harness against QuickEditPopover (components/docs/curriculum/
+// enhanced/dialogs/quick-edit-popover.tsx — a real `<PopoverTrigger>`) DOES
+// land focus back on its trigger button under jsdom. Asserting "focus
+// returns to the trigger" against NodeAddPopover would therefore be
+// asserting something the component doesn't do — a test that's always
+// falsely red, not a true regression guard. Per the brief: documenting why
+// here rather than shipping either a false-failing test or a vacuous one
+// that asserts nothing meaningful. The alternative locked in below is the
+// one thing that IS true and worth guarding: the trigger stays mounted,
+// unbroken and re-clickable after a dismiss cycle (no stale-ref crash, no
+// focus trap on a removed node). Wiring `<PopoverTrigger>` properly (so
+// focus restoration starts working) is production code and out of scope for
+// this test-only commit — worth a follow-up issue.
+describe("NodeAddPopover — trigger survives a dismiss cycle (focus restoration does not apply — see comment above)", () => {
+	it("leaves the trigger mounted and reusable after dismissing via Escape", async () => {
+		const user = userEvent.setup();
+		render(<ControlledHarness />);
+
+		const trigger = screen.getByRole("button", { name: "Add child element" });
+		await user.click(trigger);
+		await screen.findByText("Add Element");
+
+		fireEvent.keyDown(document, { key: "Escape" });
+
+		await waitFor(() => {
+			expect(screen.queryByText("Add Element")).not.toBeInTheDocument();
+		});
+		expect(trigger).toBeInTheDocument();
+
+		// Reopening still works — the dismiss cycle didn't leave the trigger
+		// (or its wiring to `open`/`onOpenChange`) in a broken state.
+		await user.click(trigger);
+		await waitFor(() => {
+			expect(screen.getByText("Add Element")).toBeInTheDocument();
+		});
+	});
+});
