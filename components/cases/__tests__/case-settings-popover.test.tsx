@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import useStore from "@/store/store";
@@ -14,6 +14,13 @@ vi.mock("@/providers/theme-preset-provider", () => ({
 		availablePresets: [],
 	}),
 }));
+
+// The repo-wide Radix mocks (src/__tests__/setup/component-mocks.tsx) are
+// simplified state containers that don't implement real dismiss behaviour
+// (outside click / Escape), so this whole file needs the actual primitives —
+// the dismiss-behaviour tests below would be false-green against the mocks.
+vi.unmock("@radix-ui/react-popover");
+vi.unmock("@radix-ui/react-tooltip");
 
 function resetStore(): void {
 	useStore.setState({
@@ -87,5 +94,83 @@ describe("CaseSettingsPopover — layout direction persistence", () => {
 		await user.click(topDownOption);
 
 		expect(fetch).not.toHaveBeenCalled();
+	});
+});
+
+describe("CaseSettingsPopover — dismiss on outside click / Escape", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	it("closes on Escape", async () => {
+		const user = userEvent.setup();
+		render(<CaseSettingsPopover />);
+
+		await user.click(await screen.findByRole("button", { name: "Settings" }));
+		await screen.findByText("Mode");
+
+		await user.keyboard("{Escape}");
+
+		await waitFor(() => {
+			expect(screen.queryByText("Mode")).not.toBeInTheDocument();
+		});
+	});
+
+	it("the trigger still toggles the popover open and closed", async () => {
+		const user = userEvent.setup();
+		render(<CaseSettingsPopover />);
+		const trigger = await screen.findByRole("button", { name: "Settings" });
+
+		await user.click(trigger);
+		await screen.findByText("Mode");
+
+		// `modal` sets `body.style.pointerEvents = "none"` while open, so a
+		// full realistic press-and-release (userEvent.click) on the trigger
+		// legitimately fails jsdom's hit-testing partway through — the same
+		// way a real browser would redirect the click elsewhere for the
+		// duration the CSS override is in effect. `fireEvent.click` exercises
+		// the trigger's actual composed onClick (open-toggle) handler without
+		// that pointer-events pre-check, which is what actually determines
+		// whether re-clicking still closes it.
+		fireEvent.click(trigger);
+		await waitFor(() => {
+			expect(screen.queryByText("Mode")).not.toBeInTheDocument();
+		});
+	});
+
+	it("closes on an outside click even when the click target stops event propagation — the exact ReactFlow-canvas scenario that defeated the pre-fix non-modal popover", async () => {
+		render(
+			<div>
+				{/* Stands in for ReactFlow's pane: d3-zoom attaches native
+				 * pointerdown/mousedown handlers there that stop propagation
+				 * for its own pan-gesture handling. A non-modal Popover's
+				 * outside-click dismiss listens on `document` in the bubble
+				 * phase, so that stopPropagation() silently swallowed the
+				 * dismiss pre-fix. */}
+				<div data-testid="canvas-pane">canvas</div>
+				<CaseSettingsPopover />
+			</div>
+		);
+		const pane = screen.getByTestId("canvas-pane");
+		pane.addEventListener("pointerdown", (e) => e.stopPropagation());
+		pane.addEventListener("mousedown", (e) => e.stopPropagation());
+
+		fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+		await screen.findByText("Mode");
+
+		// `modal` sets `document.body.style.pointerEvents = "none"` while
+		// open, so a real click over the canvas never reaches `pane` at all —
+		// confirm that's actually in effect, then dispatch where the click
+		// would really land (fireEvent skips CSS hit-testing, unlike a real
+		// browser or user-event, so we simulate the redirect explicitly).
+		expect(document.body.style.pointerEvents).toBe("none");
+		fireEvent.pointerDown(document.body);
+		fireEvent.mouseDown(document.body);
+		fireEvent.mouseUp(document.body);
+		fireEvent.click(document.body);
+
+		await waitFor(() => {
+			expect(screen.queryByText("Mode")).not.toBeInTheDocument();
+		});
 	});
 });

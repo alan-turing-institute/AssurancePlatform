@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import { Form } from "@/components/ui/form";
 import {
+	getNodeMutationErrorMessage,
 	type ReactFlowNode,
 	updateAssuranceCase,
 	updateAssuranceCaseNode,
@@ -17,6 +18,7 @@ import {
 	elementAttributesFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import AddAttributeButtons from "./add-attribute-buttons";
@@ -105,7 +107,7 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 			updateItem
 		);
 
-		if (updated) {
+		if (updated === true) {
 			// Record update operation for undo/redo
 			const afterData = { ...beforeData, ...updateItem };
 			recordUpdate(node.data.id, node.type, beforeData, afterData);
@@ -122,7 +124,17 @@ const NodeAttributes: React.FC<NodeAttributesProps> = ({
 				setLoading(false);
 				onClose();
 			}
+			return;
 		}
+		toast({
+			variant: "destructive",
+			title: "Failed to update attributes",
+			description: getNodeMutationErrorMessage(
+				updated,
+				"Something went wrong trying to update this element's attributes."
+			),
+		});
+		setLoading(false);
 	}
 
 	const readOnly = !!(

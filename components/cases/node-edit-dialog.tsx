@@ -2,7 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
@@ -40,12 +47,16 @@ import {
 	type AuthorAssertionStatusValue,
 	isAuthorAssertionStatusValue,
 } from "@/lib/assertion-status";
-import { updateAssuranceCaseNode } from "@/lib/case";
+import {
+	getNodeMutationErrorMessage,
+	updateAssuranceCaseNode,
+} from "@/lib/case";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 
 type FormValues = NodeEditFormInput;
@@ -406,6 +417,11 @@ export default function NodeEditDialog({
 		name: "urls",
 	});
 
+	// Subscribing to `isDirty` here (rather than only inside the effect below)
+	// makes react-hook-form's formState Proxy track it, so the effect sees
+	// up-to-date values as the user types.
+	const { isDirty } = form.formState;
+
 	// Context management
 	const contextValues = form.watch("context") || [];
 	const [itemIds, setItemIds] = useState<string[]>(() =>
@@ -443,6 +459,12 @@ export default function NodeEditDialog({
 		);
 	};
 
+	// The id of the node whose data is currently loaded into the form. Used
+	// (not `node` object identity — host node components rebuild that object
+	// inline on every render, e.g. `goal-node.tsx`) to tell a genuine element
+	// change apart from an unrelated re-render of the currently-open node.
+	const loadedNodeIdRef = useRef(node.data?.id);
+
 	const resetFormToNode = useCallback(
 		(n: Node) => {
 			const contextData = (n.data?.context as string[]) ?? [];
@@ -458,6 +480,7 @@ export default function NodeEditDialog({
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
+			loadedNodeIdRef.current = n.data?.id;
 		},
 		[form, componentId]
 	);
@@ -469,15 +492,48 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
-	// Re-reset when node changes while dialog is already open
+	// Tracks whether the dialog was open on the previous render, so a
+	// closed→open transition (reopen) can be told apart from staying open
+	// across re-renders.
+	const wasOpenRef = useRef(open);
+
+	// Re-reset when the dialog is reopened, or a genuine element change
+	// arrives while it stays open (a different `node.data.id`) — both always
+	// reload, even over an unsaved draft, since that draft either belongs to
+	// a stale close/reopen cycle or to a *different* element entirely. Only a
+	// same-element re-render while the dialog stays open and the user is
+	// actively editing is guarded by `isDirty`, so an in-flight change is
+	// never silently discarded by unrelated identity churn.
 	useEffect(() => {
-		if (open) {
-			resetFormToNode(node);
+		const justOpened = open && !wasOpenRef.current;
+		wasOpenRef.current = open;
+
+		if (!open) {
+			return;
 		}
-	}, [node, open, resetFormToNode]);
+		const currentNodeId = node.data?.id;
+		// Currently unreachable in production: each dialog instance mounts
+		// 1:1 with a single node id (`${nodeType}-${item.id}` in
+		// convert-case.ts), so `node.data.id` never changes under a live
+		// dialog. Kept as defensive correctness in case that mounting
+		// invariant ever changes.
+		const isGenuineElementChange = currentNodeId !== loadedNodeIdRef.current;
+		if (!(justOpened || isGenuineElementChange) && isDirty) {
+			return;
+		}
+		resetFormToNode(node);
+	}, [node, open, resetFormToNode, isDirty]);
 
 	const handleClose = () => handleOpenChange(false);
 
+	// Trade-off (accepted): `buildUpdatePayload` sends a full snapshot of the
+	// form's attribute fields, not a diff. Now that a dirty draft can survive
+	// longer (reopen no longer discards it — see the effect above), the
+	// window in which a field the user never touched could have been changed
+	// concurrently elsewhere and then get overwritten by this stale snapshot
+	// on save is correspondingly longer too. Accepted because the
+	// alternative — silently discarding the user's in-flight edit, which is
+	// the bug this fix addresses — is worse.
 	const handleSubmit = async (values: FormValues) => {
 		// Auto-add any unsaved draft context text
 		if (newContextValue.trim()) {
@@ -495,7 +551,7 @@ export default function NodeEditDialog({
 			updateItem
 		);
 
-		if (updated) {
+		if (updated === true) {
 			recordUpdate(node.data.id as number, node.type || "unknown", beforeData, {
 				...beforeData,
 				...updateItem,
@@ -504,6 +560,14 @@ export default function NodeEditDialog({
 			handleClose();
 			return;
 		}
+		toast({
+			variant: "destructive",
+			title: `Failed to update ${nodeTypeLabel.toLowerCase()}`,
+			description: getNodeMutationErrorMessage(
+				updated,
+				"Something went wrong trying to update this element."
+			),
+		});
 		setLoading(false);
 	};
 

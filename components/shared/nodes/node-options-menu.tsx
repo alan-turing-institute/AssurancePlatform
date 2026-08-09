@@ -31,6 +31,7 @@ import {
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
+	getNodeMutationErrorMessage,
 	type ReactFlowNode,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
@@ -41,6 +42,7 @@ import {
 } from "@/lib/element-compatibility";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { recordDelete, recordDetach } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
@@ -220,7 +222,21 @@ function ConfirmationDialogs({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
-						<AlertDialogAction disabled={loading} onClick={onConfirmDetach}>
+						{/* AlertDialogAction is Radix's `Dialog.Close` under the hood
+						    (@radix-ui/react-alert-dialog), so it closes the dialog
+						    synchronously on click *before* our async handler's
+						    request resolves — regardless of outcome. `preventDefault`
+						    stops that built-in close so the handler's own
+						    `setDetachDialogOpen(false)` (success only; a failed
+						    detach toasts instead) is what governs visibility,
+						    keeping the dialog open on failure. */}
+						<AlertDialogAction
+							disabled={loading}
+							onClick={(e) => {
+								e.preventDefault();
+								onConfirmDetach();
+							}}
+						>
 							{loading ? "Detaching..." : "Detach"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -238,10 +254,16 @@ function ConfirmationDialogs({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+						{/* See the Detach action above: prevent Radix's built-in
+						    close so a failed delete leaves the confirmation open
+						    instead of vanishing under the error toast. */}
 						<AlertDialogAction
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 							disabled={loading}
-							onClick={onConfirmDelete}
+							onClick={(e) => {
+								e.preventDefault();
+								onConfirmDelete();
+							}}
 						>
 							{loading ? "Deleting..." : "Delete"}
 						</AlertDialogAction>
@@ -325,9 +347,20 @@ export default function NodeOptionsMenu({
 				setAssuranceCase,
 				setOrphanedElements
 			);
+			setLoading(false);
+			setDetachDialogOpen(false);
+			return;
 		}
+		const errorMessage =
+			"error" in result && typeof result.error === "string"
+				? result.error
+				: "Something went wrong trying to detach this element.";
+		toast({
+			variant: "destructive",
+			title: "Failed to detach element",
+			description: errorMessage,
+		});
 		setLoading(false);
-		setDetachDialogOpen(false);
 	};
 
 	const handleDelete = async () => {
@@ -340,11 +373,21 @@ export default function NodeOptionsMenu({
 			node.data.id as string,
 			""
 		);
-		if (deleted) {
+		if (deleted === true) {
 			processDeleteResult(node, assuranceCase, setAssuranceCase);
+			setLoading(false);
+			setDeleteDialogOpen(false);
+			return;
 		}
+		toast({
+			variant: "destructive",
+			title: "Failed to delete element",
+			description: getNodeMutationErrorMessage(
+				deleted,
+				"Something went wrong trying to delete this element."
+			),
+		});
 		setLoading(false);
-		setDeleteDialogOpen(false);
 	};
 
 	return (
