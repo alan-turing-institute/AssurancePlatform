@@ -222,7 +222,20 @@ function ConfirmationDialogs({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
-						<AlertDialogAction disabled={loading} onClick={onConfirmDetach}>
+						{/* AlertDialogAction is Radix's `Dialog.Close` under the hood
+						    (@radix-ui/react-alert-dialog), so it closes the dialog
+						    synchronously on click *before* our async handler's
+						    request resolves — regardless of outcome. `preventDefault`
+						    stops that built-in close so the handler's own
+						    `setDetachDialogOpen(false)` (success only) is what
+						    governs visibility, keeping the dialog open on failure. */}
+						<AlertDialogAction
+							disabled={loading}
+							onClick={(e) => {
+								e.preventDefault();
+								onConfirmDetach();
+							}}
+						>
 							{loading ? "Detaching..." : "Detach"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -240,10 +253,16 @@ function ConfirmationDialogs({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+						{/* See the Detach action above: prevent Radix's built-in
+						    close so a failed delete leaves the confirmation open
+						    instead of vanishing under the error toast. */}
 						<AlertDialogAction
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 							disabled={loading}
-							onClick={onConfirmDelete}
+							onClick={(e) => {
+								e.preventDefault();
+								onConfirmDelete();
+							}}
 						>
 							{loading ? "Deleting..." : "Delete"}
 						</AlertDialogAction>

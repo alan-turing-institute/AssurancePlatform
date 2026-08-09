@@ -74,7 +74,7 @@ describe("NodeOptionsMenu — delete failure handling", () => {
 		vi.mocked(recordDelete).mockClear();
 	});
 
-	it("surfaces the server error and records no undo entry on failure", async () => {
+	it("surfaces the server error, keeps the delete-confirmation dialog open, and records no undo entry on failure", async () => {
 		const user = userEvent.setup();
 		server.use(
 			http.delete("/api/elements/1", () =>
@@ -100,6 +100,9 @@ describe("NodeOptionsMenu — delete failure handling", () => {
 			)
 		);
 		expect(recordDelete).not.toHaveBeenCalled();
+		expect(
+			screen.getByRole("heading", { name: "Delete S1?" })
+		).toBeInTheDocument();
 	});
 
 	it("records the undo entry on a successful delete", async () => {

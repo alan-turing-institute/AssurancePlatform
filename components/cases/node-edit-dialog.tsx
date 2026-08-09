@@ -492,18 +492,33 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
-	// Re-reset only for a genuine element change while the dialog stays open
-	// (a different `node.data.id`), never merely because the host re-rendered
-	// and passed a new `node` object for the *same* element — and never while
-	// the user has unsaved edits, so an in-flight change is never silently
-	// discarded.
+	// Tracks whether the dialog was open on the previous render, so a
+	// closed→open transition (reopen) can be told apart from staying open
+	// across re-renders.
+	const wasOpenRef = useRef(open);
+
+	// Re-reset when the dialog is reopened, or a genuine element change
+	// arrives while it stays open (a different `node.data.id`) — both always
+	// reload, even over an unsaved draft, since that draft either belongs to
+	// a stale close/reopen cycle or to a *different* element entirely. Only a
+	// same-element re-render while the dialog stays open and the user is
+	// actively editing is guarded by `isDirty`, so an in-flight change is
+	// never silently discarded by unrelated identity churn.
 	useEffect(() => {
+		const justOpened = open && !wasOpenRef.current;
+		wasOpenRef.current = open;
+
 		if (!open) {
 			return;
 		}
 		const currentNodeId = node.data?.id;
+		// Currently unreachable in production: each dialog instance mounts
+		// 1:1 with a single node id (`${nodeType}-${item.id}` in
+		// convert-case.ts), so `node.data.id` never changes under a live
+		// dialog. Kept as defensive correctness in case that mounting
+		// invariant ever changes.
 		const isGenuineElementChange = currentNodeId !== loadedNodeIdRef.current;
-		if (!isGenuineElementChange || isDirty) {
+		if (!(justOpened || isGenuineElementChange) && isDirty) {
 			return;
 		}
 		resetFormToNode(node);
@@ -511,6 +526,14 @@ export default function NodeEditDialog({
 
 	const handleClose = () => handleOpenChange(false);
 
+	// Trade-off (accepted): `buildUpdatePayload` sends a full snapshot of the
+	// form's attribute fields, not a diff. Now that a dirty draft can survive
+	// longer (reopen no longer discards it — see the effect above), the
+	// window in which a field the user never touched could have been changed
+	// concurrently elsewhere and then get overwritten by this stale snapshot
+	// on save is correspondingly longer too. Accepted because the
+	// alternative — silently discarding the user's in-flight edit, which is
+	// the bug this fix addresses — is worse.
 	const handleSubmit = async (values: FormValues) => {
 		// Auto-add any unsaved draft context text
 		if (newContextValue.trim()) {

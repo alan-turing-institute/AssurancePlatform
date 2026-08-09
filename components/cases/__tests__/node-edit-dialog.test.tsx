@@ -246,6 +246,117 @@ describe("NodeEditDialog — form reset on node changes while open", () => {
 			)
 		);
 	});
+
+	it("discards an unsaved draft on a parent-driven close/reopen cycle (reopen is never told apart from staying open by Radix's onOpenChange, which only fires for internally-driven changes)", async () => {
+		const user = userEvent.setup();
+		mockPluginsResponse(true);
+
+		const { rerender } = render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op — this test drives `open` directly, as the parent
+					// would, rather than routing through Radix's callback.
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		await user.clear(description);
+		await user.type(description, "Draft edit not yet saved");
+		expect(description).toHaveValue("Draft edit not yet saved");
+
+		// Parent-driven close: flips the controlled `open` prop directly,
+		// the way a parent would in response to state elsewhere in the
+		// app — never via the dialog's own onOpenChange.
+		rerender(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={false}
+			/>
+		);
+
+		// Parent-driven reopen of the same element.
+		rerender(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>
+		);
+
+		await waitFor(() =>
+			expect(screen.getByLabelText("Description")).toHaveValue(
+				"System is acceptably safe"
+			)
+		);
+		expect(
+			screen.queryByDisplayValue("Draft edit not yet saved")
+		).not.toBeInTheDocument();
+	});
+
+	it("reloads over an unsaved draft when a different element's data.id arrives while the dialog stays open", async () => {
+		const user = userEvent.setup();
+		mockPluginsResponse(true);
+
+		const { rerender } = render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		await user.clear(description);
+		await user.type(description, "Draft edit not yet saved");
+		expect(description).toHaveValue("Draft edit not yet saved");
+
+		const otherNode: Node = {
+			id: "2",
+			type: "goal",
+			position: { x: 0, y: 0 },
+			data: {
+				id: 2,
+				name: "G2",
+				description: "System is appropriately monitored",
+			},
+		};
+
+		rerender(
+			<NodeEditDialog
+				node={otherNode}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>
+		);
+
+		await waitFor(() =>
+			expect(screen.getByLabelText("Description")).toHaveValue(
+				"System is appropriately monitored"
+			)
+		);
+		expect(
+			screen.queryByDisplayValue("Draft edit not yet saved")
+		).not.toBeInTheDocument();
+	});
 });
 
 describe("NodeEditDialog — save failure handling", () => {

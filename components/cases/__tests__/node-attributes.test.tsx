@@ -60,8 +60,9 @@ describe("NodeAttributes — save failure handling", () => {
 		vi.mocked(recordUpdate).mockClear();
 	});
 
-	it("surfaces the server error and records no undo entry on failure", async () => {
+	it("surfaces the server error, keeps the dialog open, and records no undo entry on failure", async () => {
 		const user = userEvent.setup();
+		const onClose = vi.fn();
 		server.use(
 			http.put("/api/elements/1", () =>
 				HttpResponse.json({ error: "Assumption is too long" }, { status: 400 })
@@ -72,7 +73,7 @@ describe("NodeAttributes — save failure handling", () => {
 			<NodeAttributes
 				actions={{ setAction: vi.fn(), setSelectedLink: vi.fn() }}
 				node={NODE}
-				onClose={vi.fn()}
+				onClose={onClose}
 				setUnresolvedChanges={vi.fn()}
 			/>
 		);
@@ -88,6 +89,7 @@ describe("NodeAttributes — save failure handling", () => {
 			)
 		);
 		expect(recordUpdate).not.toHaveBeenCalled();
+		expect(onClose).not.toHaveBeenCalled();
 	});
 
 	it("records the undo entry on a successful save", async () => {
