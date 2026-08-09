@@ -31,6 +31,7 @@ import {
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
+	getNodeMutationErrorMessage,
 	type ReactFlowNode,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
@@ -41,6 +42,7 @@ import {
 } from "@/lib/element-compatibility";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { recordDelete, recordDetach } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
@@ -340,11 +342,21 @@ export default function NodeOptionsMenu({
 			node.data.id as string,
 			""
 		);
-		if (deleted) {
+		if (deleted === true) {
 			processDeleteResult(node, assuranceCase, setAssuranceCase);
+			setLoading(false);
+			setDeleteDialogOpen(false);
+			return;
 		}
+		toast({
+			variant: "destructive",
+			title: "Failed to delete element",
+			description: getNodeMutationErrorMessage(
+				deleted,
+				"Something went wrong trying to delete this element."
+			),
+		});
 		setLoading(false);
-		setDeleteDialogOpen(false);
 	};
 
 	return (

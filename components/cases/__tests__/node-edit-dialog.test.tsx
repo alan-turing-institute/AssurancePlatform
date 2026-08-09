@@ -2,13 +2,26 @@ import { waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import type { Node } from "reactflow";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { elementPanelSlot } from "@/lib/plugins/slots";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
+import { recordUpdate } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import { server } from "@/src/__tests__/mocks/server";
 import { render, screen } from "@/src/__tests__/utils/test-utils";
 import NodeEditDialog from "../node-edit-dialog";
+
+vi.mock("@/lib/services/history-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/services/history-service")>();
+	return { ...actual, recordUpdate: vi.fn() };
+});
+
+vi.mock("@/lib/toast", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/toast")>();
+	return { ...actual, toast: vi.fn() };
+});
 
 const NODE: Node = {
 	id: "1",
@@ -232,5 +245,73 @@ describe("NodeEditDialog — form reset on node changes while open", () => {
 				"System is appropriately monitored"
 			)
 		);
+	});
+});
+
+describe("NodeEditDialog — save failure handling", () => {
+	beforeEach(() => {
+		vi.mocked(toast).mockClear();
+		vi.mocked(recordUpdate).mockClear();
+	});
+
+	it("surfaces the server error, keeps the dialog open, and records no undo entry on failure", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+		server.use(
+			http.put("/api/elements/1", () =>
+				HttpResponse.json({ error: "Description is required" }, { status: 400 })
+			)
+		);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await screen.findByLabelText("Description");
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() =>
+			expect(toast).toHaveBeenCalledWith(
+				expect.objectContaining({
+					variant: "destructive",
+					description: "Description is required",
+				})
+			)
+		);
+		expect(onOpenChange).not.toHaveBeenCalledWith(false);
+		expect(recordUpdate).not.toHaveBeenCalled();
+	});
+
+	it("records the undo entry and closes the dialog on a successful save", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+		server.use(
+			http.put("/api/elements/1", () => HttpResponse.json({}, { status: 200 }))
+		);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await screen.findByLabelText("Description");
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(recordUpdate).toHaveBeenCalledTimes(1);
+		expect(toast).not.toHaveBeenCalled();
 	});
 });

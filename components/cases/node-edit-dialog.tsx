@@ -47,12 +47,16 @@ import {
 	type AuthorAssertionStatusValue,
 	isAuthorAssertionStatusValue,
 } from "@/lib/assertion-status";
-import { updateAssuranceCaseNode } from "@/lib/case";
+import {
+	getNodeMutationErrorMessage,
+	updateAssuranceCaseNode,
+} from "@/lib/case";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 
 type FormValues = NodeEditFormInput;
@@ -524,7 +528,7 @@ export default function NodeEditDialog({
 			updateItem
 		);
 
-		if (updated) {
+		if (updated === true) {
 			recordUpdate(node.data.id as number, node.type || "unknown", beforeData, {
 				...beforeData,
 				...updateItem,
@@ -533,6 +537,14 @@ export default function NodeEditDialog({
 			handleClose();
 			return;
 		}
+		toast({
+			variant: "destructive",
+			title: `Failed to update ${nodeTypeLabel.toLowerCase()}`,
+			description: getNodeMutationErrorMessage(
+				updated,
+				"Something went wrong trying to update this element."
+			),
+		});
 		setLoading(false);
 	};
 

@@ -12,6 +12,23 @@ import type {
 } from "./types";
 
 /**
+ * Extracts a user-facing message from an `updateAssuranceCaseNode` /
+ * `deleteAssuranceCaseNode` result. These return `true` on success or
+ * `{ error: string }` on failure — never `false` — so callers must check
+ * `=== true` rather than truthiness, and use this helper (rather than
+ * assuming a particular shape) to surface the failure.
+ */
+export function getNodeMutationErrorMessage(
+	result: boolean | { error: string },
+	fallback: string
+): string {
+	if (typeof result === "object" && result !== null && "error" in result) {
+		return result.error || fallback;
+	}
+	return fallback;
+}
+
+/**
  * Creates a new assurance case node by sending a POST request to the specified API endpoint.
  * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
