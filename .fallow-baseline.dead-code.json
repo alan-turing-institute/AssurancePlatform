@@ -1,10 +1,14 @@
 {
+  "analysis_identity": {
+    "mode": "syntactic",
+    "semantic_schema_version": 1,
+    "capabilities": [],
+    "project_config_hash": "",
+    "backend_family": "",
+    "completeness": "complete"
+  },
   "unused_files": [
-    "components/cases/add-attribute-buttons.tsx",
-    "components/cases/attribute-text-field.tsx",
     "components/cases/case-media-preview.tsx",
-    "components/cases/context-editor.tsx",
-    "components/cases/node-attributes.tsx",
     "components/cases/resources-info.tsx",
     "components/docs/description-card.tsx",
     "components/modals/delete-element-modal.tsx",
@@ -23,9 +27,6 @@
   ],
   "unused_exports": [
     "app/(authenticated)/dashboard/case-studies/_components/_form/form-schema.ts:assuranceCaseSchema",
-    "components/cases/add-attribute-buttons.tsx:default",
-    "components/cases/attribute-text-field.tsx:default",
-    "components/cases/context-editor.tsx:default",
     "components/docs/case-studies-index.tsx:CaseStudiesIndex",
     "components/docs/curriculum/enhanced/animations/animation-presets.ts:EASING",
     "components/docs/curriculum/enhanced/animations/animation-presets.ts:EXIT_ANIMATIONS",
@@ -679,11 +680,11 @@
     "lib/schemas/case-export.ts:EvidenceLinkV2Schema",
     "lib/schemas/case-export.ts:ExportCommentSchema",
     "lib/schemas/case-export.ts:TreeNodeSchema",
+    "lib/schemas/case-information.ts:caseInformationSchema",
     "lib/schemas/element-validation.ts:ELEMENT_TYPES",
     "lib/schemas/element-validation.ts:FIELD_APPLICABILITY",
     "lib/schemas/element-validation.ts:ATTRIBUTE_ELEMENT_TYPES",
     "lib/schemas/element-validation.ts:REQUIRED_FIELDS",
-    "lib/schemas/element-validation.ts:fieldRequiredFor",
     "lib/schemas/element-validation.ts:isAttributeType",
     "lib/schemas/element-validation.ts:ElementValidationSchema",
     "lib/schemas/element-validation.ts:getValidFieldsForType",
@@ -705,12 +706,10 @@
     "lib/services/email-service.ts:sendWelcomeEmail",
     "lib/services/email-service.ts:sendAccountDeletedEmail",
     "lib/services/file-storage-service.ts:getFilesystemPath",
-    "lib/services/file-storage-service.ts:fileExists",
     "lib/services/github-api-service.ts:GITHUB_ERROR_MAP",
     "lib/services/google-drive-service.ts:DRIVE_ERROR_MAP",
     "lib/services/password-reset-service.ts:cleanupExpiredTokens",
     "lib/services/publish-service.ts:getPublishedCasesByUser",
-    "lib/services/publish-service.ts:getReadyToPublishCases",
     "lib/services/rate-limit-service.ts:cleanupRateLimitAttempts",
     "lib/services/tour-service.ts:isKnownTourId",
     "lib/services/user-service.ts:getUserById",
@@ -800,7 +799,6 @@
     "src/__tests__/utils/test-utils.tsx:createMockFormEvent",
     "src/__tests__/utils/test-utils.tsx:createMockFile",
     "src/__tests__/utils/test-utils.tsx:userEvent",
-    "src/__tests__/utils/test-utils.tsx:renderWithReactFlow",
     "src/__tests__/utils/test-utils.tsx:renderWithReactFlowAndAuth",
     "src/__tests__/utils/test-utils.tsx:mockSession",
     "src/__tests__/utils/websocket-test-utils.ts:MessageQueue",
@@ -990,6 +988,7 @@
   "unprovided_injects": [],
   "unrendered_components": [],
   "unused_component_props": [
+    "components/cases/node-attributes.tsx:setUnresolvedChanges",
     "components/cases/node-comment.tsx:handleClose",
     "components/cases/node-comment.tsx:setAction",
     "components/docs/curriculum/enhanced/edges/smart-edge.tsx:source",
@@ -1009,8 +1008,10 @@
     "@radix-ui/react-menu"
   ],
   "duplicate_exports": [
+    "CaseInformationInput|lib/schemas/case-information.ts|lib/services/case-information-service.ts",
     "ChangePasswordInput|lib/schemas/auth.ts|lib/services/user-management-service.ts",
     "ElementType|lib/schemas/case-export.ts|lib/schemas/element-validation.ts",
+    "IntegrationCaseGrant|lib/schemas/integration.ts|lib/services/integration-registry-service.ts",
     "IntegrationListItem|lib/schemas/integration.ts|lib/services/integration-registry-service.ts",
     "IntegrationTokenSummary|lib/schemas/integration.ts|lib/services/integration-registry-service.ts",
     "Provider|lib/schemas/connected-accounts.ts|lib/services/connected-accounts-service.ts",
@@ -1029,7 +1030,9 @@
   "boundary_coverage_violations": [],
   "boundary_call_violations": [],
   "policy_violations": [],
-  "stale_suppressions": [],
+  "stale_suppressions": [
+    "stale-suppression:lib/plugins/slots/index.ts:31"
+  ],
   "unused_catalog_entries": [],
   "empty_catalog_groups": [],
   "unresolved_catalog_references": [],
