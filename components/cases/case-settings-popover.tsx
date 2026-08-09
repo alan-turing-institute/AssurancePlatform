@@ -91,7 +91,15 @@ export function CaseSettingsPopover() {
 	}
 
 	return (
-		<Popover>
+		// `modal` matters here, not just accessibility polish: ReactFlow's pane
+		// (d3-zoom) has its own native pointerdown/mousedown handlers that stop
+		// propagation for pan/zoom gestures. Radix's non-modal outside-click
+		// dismiss listens on `document` in the bubble phase, so a click on the
+		// canvas never reached it and the popover stayed open — only the
+		// trigger button itself could close it. `modal` disables pointer events
+		// on the rest of the page while open (`disableOutsidePointerEvents`),
+		// so the canvas never intercepts the click in the first place.
+		<Popover modal>
 			<ActionTooltip label="Settings">
 				<PopoverTrigger asChild>
 					<Button className="rounded-full p-3" size="icon" type="button">
