@@ -52,6 +52,7 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		parentId: body.parentId as string | undefined,
 		url,
 		URL: url,
+		urls: body.urls as string[] | undefined,
 		assumption: body.assumption as string | undefined,
 		justification: body.justification as string | undefined,
 		context: body.context as string[] | undefined,
