@@ -343,10 +343,12 @@ function UrlsSection({
 										{...inputField}
 									/>
 								</FormControl>
-								{!readOnly && fields.length > 1 && (
+								{!readOnly && (
 									<Button
+										aria-label="Remove URL"
 										onClick={() => onRemove(index)}
 										size="icon"
+										title="Remove URL"
 										type="button"
 										variant="outline"
 									>

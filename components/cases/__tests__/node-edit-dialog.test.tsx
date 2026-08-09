@@ -426,3 +426,107 @@ describe("NodeEditDialog — save failure handling", () => {
 		expect(toast).not.toHaveBeenCalled();
 	});
 });
+
+describe("NodeEditDialog — evidence URL removal", () => {
+	const EVIDENCE_NODE: Node = {
+		id: "3",
+		type: "evidence",
+		position: { x: 0, y: 0 },
+		data: {
+			id: 3,
+			name: "E1",
+			description: "Test results for the acceptance suite",
+			urls: ["https://example.com/evidence"],
+		},
+	};
+
+	it("shows the remove button on the last remaining URL row", async () => {
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={EVIDENCE_NODE}
+				nodeType="evidence"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await screen.findByDisplayValue("https://example.com/evidence");
+		expect(
+			screen.getByRole("button", { name: "Remove URL" })
+		).toBeInTheDocument();
+	});
+
+	it("removing the last URL then saving clears urls server-side", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.put("/api/elements/3", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+
+		render(
+			<NodeEditDialog
+				node={EVIDENCE_NODE}
+				nodeType="evidence"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await screen.findByDisplayValue("https://example.com/evidence");
+		await user.click(screen.getByRole("button", { name: "Remove URL" }));
+
+		expect(
+			screen.queryByDisplayValue("https://example.com/evidence")
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Remove URL" })
+		).not.toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Update Evidence" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(capturedBody).toEqual(
+			expect.objectContaining({ urls: [], URL: "" })
+		);
+	});
+
+	it("re-adding a URL after removing the last row works via the Add URL button", async () => {
+		const user = userEvent.setup();
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={EVIDENCE_NODE}
+				nodeType="evidence"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await screen.findByDisplayValue("https://example.com/evidence");
+		await user.click(screen.getByRole("button", { name: "Remove URL" }));
+		expect(
+			screen.queryByPlaceholderText("https://example.com/evidence")
+		).not.toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Add URL" }));
+		expect(
+			screen.getByPlaceholderText("https://example.com/evidence")
+		).toHaveValue("");
+	});
+});
