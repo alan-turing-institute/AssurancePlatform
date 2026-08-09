@@ -138,3 +138,99 @@ describe("NodeEditDialog — element-panel slot", () => {
 		expect(screen.queryByText("Evidence")).not.toBeInTheDocument();
 	});
 });
+
+describe("NodeEditDialog — form reset on node changes while open", () => {
+	it("keeps unsaved edits when the host re-renders with a new `node` object for the same element", async () => {
+		const user = userEvent.setup();
+		mockPluginsResponse(true);
+
+		const { rerender } = render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		await user.clear(description);
+		await user.type(description, "Draft edit not yet saved");
+		expect(description).toHaveValue("Draft edit not yet saved");
+
+		// Same element (same `node.data.id`), but a brand-new object — as
+		// every host node component builds inline on each render.
+		const churnedNode: Node = {
+			...NODE,
+			data: { ...NODE.data },
+		};
+		expect(churnedNode).not.toBe(NODE);
+
+		rerender(
+			<NodeEditDialog
+				node={churnedNode}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>
+		);
+
+		expect(screen.getByLabelText("Description")).toHaveValue(
+			"Draft edit not yet saved"
+		);
+	});
+
+	it("reloads the form when a genuinely different element is passed in while open", async () => {
+		mockPluginsResponse(true);
+
+		const { rerender } = render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await screen.findByLabelText("Description");
+		expect(screen.getByLabelText("Description")).toHaveValue(
+			"System is acceptably safe"
+		);
+
+		const otherNode: Node = {
+			id: "2",
+			type: "goal",
+			position: { x: 0, y: 0 },
+			data: {
+				id: 2,
+				name: "G2",
+				description: "System is appropriately monitored",
+			},
+		};
+
+		rerender(
+			<NodeEditDialog
+				node={otherNode}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>
+		);
+
+		await waitFor(() =>
+			expect(screen.getByLabelText("Description")).toHaveValue(
+				"System is appropriately monitored"
+			)
+		);
+	});
+});

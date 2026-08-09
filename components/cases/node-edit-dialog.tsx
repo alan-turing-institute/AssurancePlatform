@@ -2,7 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
@@ -406,6 +413,11 @@ export default function NodeEditDialog({
 		name: "urls",
 	});
 
+	// Subscribing to `isDirty` here (rather than only inside the effect below)
+	// makes react-hook-form's formState Proxy track it, so the effect sees
+	// up-to-date values as the user types.
+	const { isDirty } = form.formState;
+
 	// Context management
 	const contextValues = form.watch("context") || [];
 	const [itemIds, setItemIds] = useState<string[]>(() =>
@@ -443,6 +455,12 @@ export default function NodeEditDialog({
 		);
 	};
 
+	// The id of the node whose data is currently loaded into the form. Used
+	// (not `node` object identity — host node components rebuild that object
+	// inline on every render, e.g. `goal-node.tsx`) to tell a genuine element
+	// change apart from an unrelated re-render of the currently-open node.
+	const loadedNodeIdRef = useRef(node.data?.id);
+
 	const resetFormToNode = useCallback(
 		(n: Node) => {
 			const contextData = (n.data?.context as string[]) ?? [];
@@ -458,6 +476,7 @@ export default function NodeEditDialog({
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
+			loadedNodeIdRef.current = n.data?.id;
 		},
 		[form, componentId]
 	);
@@ -469,12 +488,22 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
-	// Re-reset when node changes while dialog is already open
+	// Re-reset only for a genuine element change while the dialog stays open
+	// (a different `node.data.id`), never merely because the host re-rendered
+	// and passed a new `node` object for the *same* element — and never while
+	// the user has unsaved edits, so an in-flight change is never silently
+	// discarded.
 	useEffect(() => {
-		if (open) {
-			resetFormToNode(node);
+		if (!open) {
+			return;
 		}
-	}, [node, open, resetFormToNode]);
+		const currentNodeId = node.data?.id;
+		const isGenuineElementChange = currentNodeId !== loadedNodeIdRef.current;
+		if (!isGenuineElementChange || isDirty) {
+			return;
+		}
+		resetFormToNode(node);
+	}, [node, open, resetFormToNode, isDirty]);
 
 	const handleClose = () => handleOpenChange(false);
 
