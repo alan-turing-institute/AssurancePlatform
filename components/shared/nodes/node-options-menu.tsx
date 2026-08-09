@@ -227,8 +227,9 @@ function ConfirmationDialogs({
 						    synchronously on click *before* our async handler's
 						    request resolves — regardless of outcome. `preventDefault`
 						    stops that built-in close so the handler's own
-						    `setDetachDialogOpen(false)` (success only) is what
-						    governs visibility, keeping the dialog open on failure. */}
+						    `setDetachDialogOpen(false)` (success only; a failed
+						    detach toasts instead) is what governs visibility,
+						    keeping the dialog open on failure. */}
 						<AlertDialogAction
 							disabled={loading}
 							onClick={(e) => {
@@ -346,9 +347,20 @@ export default function NodeOptionsMenu({
 				setAssuranceCase,
 				setOrphanedElements
 			);
+			setLoading(false);
+			setDetachDialogOpen(false);
+			return;
 		}
+		const errorMessage =
+			"error" in result && typeof result.error === "string"
+				? result.error
+				: "Something went wrong trying to detach this element.";
+		toast({
+			variant: "destructive",
+			title: "Failed to detach element",
+			description: errorMessage,
+		});
 		setLoading(false);
-		setDetachDialogOpen(false);
 	};
 
 	const handleDelete = async () => {

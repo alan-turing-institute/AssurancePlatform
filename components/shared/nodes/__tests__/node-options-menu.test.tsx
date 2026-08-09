@@ -4,7 +4,7 @@ import { HttpResponse, http } from "msw";
 import type React from "react";
 import type { Node } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { recordDelete } from "@/lib/services/history-service";
+import { recordDelete, recordDetach } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import { server } from "@/src/__tests__/mocks/server";
 import { renderWithReactFlow, screen } from "@/src/__tests__/utils/test-utils";
@@ -67,6 +67,15 @@ async function openDeleteConfirmation(
 	await user.click(await screen.findByRole("button", { name: "Delete" }));
 }
 
+async function openDetachConfirmation(
+	user: ReturnType<typeof userEvent.setup>
+) {
+	const trigger = screen.getByRole("button");
+	await user.click(trigger);
+	await user.click(await screen.findByText("Detach"));
+	await user.click(await screen.findByRole("button", { name: "Detach" }));
+}
+
 describe("NodeOptionsMenu — delete failure handling", () => {
 	beforeEach(() => {
 		resetStore();
@@ -119,5 +128,44 @@ describe("NodeOptionsMenu — delete failure handling", () => {
 
 		await waitFor(() => expect(recordDelete).toHaveBeenCalledTimes(1));
 		expect(toast).not.toHaveBeenCalled();
+	});
+});
+
+describe("NodeOptionsMenu — detach failure handling", () => {
+	beforeEach(() => {
+		resetStore();
+		vi.mocked(toast).mockClear();
+		vi.mocked(recordDetach).mockClear();
+	});
+
+	it("surfaces the server error, keeps the detach-confirmation dialog open, and records no undo entry on failure", async () => {
+		const user = userEvent.setup();
+		server.use(
+			http.post("/api/elements/1/detach", () =>
+				HttpResponse.json(
+					{ error: "Strategy has dependent claims" },
+					{
+						status: 400,
+					}
+				)
+			)
+		);
+
+		renderWithReactFlow(<NodeOptionsMenu node={NODE} nodeType="strategy" />);
+
+		await openDetachConfirmation(user);
+
+		await waitFor(() =>
+			expect(toast).toHaveBeenCalledWith(
+				expect.objectContaining({
+					variant: "destructive",
+					description: "Strategy has dependent claims",
+				})
+			)
+		);
+		expect(recordDetach).not.toHaveBeenCalled();
+		expect(
+			screen.getByRole("heading", { name: "Detach S1?" })
+		).toBeInTheDocument();
 	});
 });
