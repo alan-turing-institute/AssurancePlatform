@@ -77,7 +77,18 @@ export const QuickEditPopover = ({
 	};
 
 	return (
-		<Popover onOpenChange={setIsOpen} open={isOpen}>
+		// `modal` matters here, not just accessibility polish: this popover is
+		// mounted (via node-action-toolbar.tsx) inside
+		// enhanced-interactive-case-viewer.tsx's ReactFlow canvas, whose pane
+		// (d3-zoom) has its own native pointerdown/mousedown handlers that stop
+		// propagation for pan/zoom gestures. Radix's non-modal outside-click
+		// dismiss listens on `document` in the bubble phase, so a click on the
+		// canvas never reached it and the popover stayed open — only the
+		// trigger itself could close it. `modal` disables pointer events on
+		// the rest of the page while open (`disableOutsidePointerEvents`), so
+		// the canvas never intercepts the click in the first place. Same
+		// pattern as case-settings-popover.tsx and node-add-popover.tsx.
+		<Popover modal onOpenChange={setIsOpen} open={isOpen}>
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<PopoverTrigger asChild>
