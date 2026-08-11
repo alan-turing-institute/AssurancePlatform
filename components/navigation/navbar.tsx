@@ -27,9 +27,6 @@ export const Navbar = ({ children, teams }: NavbarProps) => {
 		if (path === "/") {
 			return "assurance cases";
 		}
-		if (path.includes("/dashboard/case-studies")) {
-			return "Case Studies";
-		}
 		if (path.includes("/dashboard/teams/")) {
 			return "Teams";
 		}

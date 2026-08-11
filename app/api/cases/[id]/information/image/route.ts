@@ -45,11 +45,10 @@ async function requireExistingCaseInformation(params: RouteParams["params"]) {
  * POST /api/cases/[id]/information/image
  *
  * @description Uploads the feature image for a case's case-information
- * record (ADR 0003 §1). Mirrors the case-study feature-image upload
- * pattern (`/api/case-studies/[id]/image`): the file is saved via the
- * shared file-storage service (Azure Blob in production, local disk in
- * development), then the resulting URL is persisted onto the
- * case-information record. Requires EDIT permission, enforced by
+ * record (ADR 0003 §1): the file is saved via the shared file-storage
+ * service (Azure Blob in production, local disk in development), then the
+ * resulting URL is persisted onto the case-information record. Requires
+ * EDIT permission, enforced by
  * `upsertCaseInformation` — if the persist step rejects (no EDIT access),
  * the just-saved file is deleted so nothing orphans in storage.
  *

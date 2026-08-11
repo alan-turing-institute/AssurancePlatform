@@ -5,7 +5,6 @@ import type {
 	AssuranceElement,
 	CaseInformation,
 	CasePermission,
-	CaseStudy,
 	CaseTeamPermission,
 	Comment,
 	Integration,
@@ -544,42 +543,6 @@ export function createNestedCaseWithChainJSON(): Record<string, unknown> {
 			],
 		},
 	};
-}
-
-// ============================================
-// CASE STUDY
-// ============================================
-
-type CaseStudyOverrides = Partial<{
-	title: string;
-	description: string;
-	authors: string;
-	category: string;
-	sector: string;
-	published: boolean;
-}>;
-
-export function createTestCaseStudy(
-	ownerId: string,
-	overrides: CaseStudyOverrides = {}
-): Promise<CaseStudy> {
-	const n = nextId();
-	const now = new Date();
-	const published = overrides.published ?? false;
-	return prisma.caseStudy.create({
-		data: {
-			title: overrides.title ?? `Test Case Study ${n}`,
-			description: overrides.description ?? null,
-			authors: overrides.authors ?? null,
-			category: overrides.category ?? null,
-			sector: overrides.sector ?? null,
-			published,
-			publishedDate: published ? now : null,
-			ownerId,
-			createdOn: now,
-			lastModifiedOn: now,
-		},
-	});
 }
 
 // ============================================

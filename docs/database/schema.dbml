@@ -47,7 +47,6 @@ Table users {
   resolvedComments comments [not null]
   releaseComments release_comments [not null]
   githubRepositories github_repositories [not null]
-  caseStudies case_studies [not null]
   markedReadyCases assurance_cases [not null]
   deletedCases assurance_cases [not null]
   ownedIntegrations integrations [not null]
@@ -529,52 +528,6 @@ Table github_repositories {
   Note: 'GitHub repository linked to a user account. Used for evidence gathering and repository integration.'
 }
 
-Table case_studies {
-  id Int [pk, increment]
-  title String [not null, note: 'Case study title']
-  description String [note: 'Full description/narrative']
-  authors String [note: 'Author names']
-  category String [note: 'Category (e.g., "Healthcare", "Automotive")']
-  publishedDate DateTime [note: 'When first published']
-  lastModifiedOn DateTime [not null]
-  createdOn DateTime [not null]
-  sector String [note: 'Industry sector']
-  contact String [note: 'Contact email']
-  image String [note: 'Legacy image path']
-  published Boolean [not null, note: 'Whether the case study is publicly visible']
-  ownerId String [note: 'Creator/owner of the case study']
-  type String [note: 'Case study type classification']
-  owner users
-  publishedCases case_study_published_cases [not null]
-  featureImage case_study_images
-
-  Note: 'Public community document showcasing published assurance cases with narrative context.'
-}
-
-Table case_study_published_cases {
-  id BigInt [pk, increment]
-  caseStudyId Int [not null, note: 'The case study']
-  publishedAssuranceCaseId String [not null, note: 'The published case']
-  caseStudy case_studies [not null]
-  publishedAssuranceCase published_assurance_cases [not null]
-
-  indexes {
-    (caseStudyId, publishedAssuranceCaseId) [unique]
-  }
-
-  Note: 'Junction table linking case studies to published assurance case snapshots.'
-}
-
-Table case_study_images {
-  id BigInt [pk, increment]
-  image String [not null, note: 'Image URL or path']
-  uploadedAt DateTime [not null]
-  caseStudyId Int [unique, not null]
-  caseStudy case_studies [not null]
-
-  Note: 'Feature image for a case study. One image per case study.'
-}
-
 Table published_assurance_cases {
   id String [pk]
   type PublishableItemType [not null, default: 'ASSURANCE_CASE', note: 'Discriminator (ADR 0003 §5) — only ASSURANCE_CASE is implemented; ready for a future pattern type with no rework.']
@@ -586,7 +539,6 @@ Table published_assurance_cases {
   assuranceCaseId String [not null, note: 'Source case this was published from']
   description String [note: 'Description at time of publishing']
   assuranceCase assurance_cases [not null]
-  caseStudyLinks case_study_published_cases [not null]
 
   Note: 'Frozen, point-in-time snapshot of an assurance case (ADR 0003 §3): the
 public/Discover-facing published record. Content stored as JSON;
@@ -909,14 +861,6 @@ Ref: case_type_assignments.caseId > assurance_cases.id [delete: Cascade]
 Ref: case_type_assignments.caseTypeId > case_types.id [delete: Cascade]
 
 Ref: github_repositories.userId > users.id [delete: Cascade]
-
-Ref: case_studies.ownerId > users.id
-
-Ref: case_study_published_cases.caseStudyId > case_studies.id [delete: No Action]
-
-Ref: case_study_published_cases.publishedAssuranceCaseId > published_assurance_cases.id [delete: No Action]
-
-Ref: case_study_images.caseStudyId - case_studies.id [delete: No Action]
 
 Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id
 

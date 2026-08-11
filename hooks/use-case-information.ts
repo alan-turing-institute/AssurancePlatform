@@ -22,8 +22,7 @@ interface UseCaseInformationReturn {
  * Client-side data access for a case's case-information record (ADR 0003
  * §1). Fetches on mount/caseId change, and exposes save / feature-image
  * upload / feature-image remove actions against the `/api/cases/[id]/
- * information` route pair. Mirrors the shape of `use-case-study-image.ts`
- * for the image half — this is the case-information analogue.
+ * information` route pair.
  */
 export function useCaseInformation(
 	caseId: string | undefined

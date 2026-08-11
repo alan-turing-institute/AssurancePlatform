@@ -19,10 +19,10 @@ before writing similar code:
 
 | Layer | Rule | Exemplar |
 |---|---|---|
-| Route / action | Auth + validate + delegate. No business logic, no Prisma. | `app/api/case-studies/route.ts` |
-| Schema | All input validation is **zod**, in `lib/schemas/` (shared primitives in `lib/schemas/base.ts`, re-exported via `lib/schemas/index.ts`). | `lib/schemas/case-study.ts` |
-| Service | Owns all business logic, **all Prisma access**, and **all permission checks**. Returns `ServiceResult` (`types/service.ts`), never throws for expected failures. | `lib/services/case-study-service.ts` |
-| Responses | Uniform envelopes via `apiSuccess` / `apiError` (`lib/api-response.ts`) and typed errors (`lib/errors.ts`). | `app/api/case-studies/route.ts` |
+| Route / action | Auth + validate + delegate. No business logic, no Prisma. | `app/api/cases/[id]/information/route.ts` |
+| Schema | All input validation is **zod**, in `lib/schemas/` (shared primitives in `lib/schemas/base.ts`, re-exported via `lib/schemas/index.ts`). | `lib/schemas/case-information.ts` |
+| Service | Owns all business logic, **all Prisma access**, and **all permission checks**. Returns `ServiceResult` (`types/service.ts`), never throws for expected failures. | `lib/services/case-information-service.ts` |
+| Responses | Uniform envelopes via `apiSuccess` / `apiError` (`lib/api-response.ts`) and typed errors (`lib/errors.ts`). | `app/api/cases/[id]/information/route.ts` |
 
 Hard rules:
 

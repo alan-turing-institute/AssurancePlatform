@@ -41,7 +41,6 @@ export async function GET(
 			is_published: result.data.isPublished,
 			published_id: result.data.publishedId,
 			published_at: result.data.publishedAt?.toISOString() ?? null,
-			linked_case_study_count: result.data.linkedCaseStudyCount,
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
@@ -124,18 +123,16 @@ export async function POST(
 /**
  * DELETE /api/cases/[id]/publish
  * Unpublishes an assurance case.
- * Query: ?force=true to bypass case study link warning
  */
 export async function DELETE(
-	request: NextRequest,
+	_request: NextRequest,
 	{ params }: RouteParams
 ): Promise<Response> {
 	try {
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
-		const force = request.nextUrl.searchParams.get("force") === "true";
 
-		const result = await unpublishAssuranceCase(session.userId, caseId, force);
+		const result = await unpublishAssuranceCase(session.userId, caseId);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

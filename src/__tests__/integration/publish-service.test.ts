@@ -18,7 +18,6 @@ import {
 import {
 	createTestCase,
 	createTestCaseInformation,
-	createTestCaseStudy,
 	createTestCaseWithGoal,
 	createTestElement,
 	createTestPermission,
@@ -136,53 +135,16 @@ describe("unpublishAssuranceCase", () => {
 		);
 	});
 
-	it("returns error when case is linked to case studies and force is false", async () => {
+	it("deletes every published version on unpublish", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
 
-		// Publish the case
-		const publishData = expectSuccess(
-			await publishAssuranceCase(owner.id, testCase.id)
-		);
-
-		// Create a case study and link to the published version
-		const caseStudy = await createTestCaseStudy(owner.id, {
-			published: true,
-		});
-		await prisma.caseStudyPublishedCase.create({
-			data: {
-				caseStudyId: caseStudy.id,
-				publishedAssuranceCaseId: publishData.publishedId,
-			},
-		});
-
-		expectError(
-			await unpublishAssuranceCase(owner.id, testCase.id, false),
-			"Cannot unpublish: linked to case studies"
-		);
-	});
-
-	it("deletes case study links and unpublishes when force is true", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCaseWithGoal(owner.id);
-
-		// Publish the case
-		const publishData = expectSuccess(
-			await publishAssuranceCase(owner.id, testCase.id)
-		);
-
-		const caseStudy = await createTestCaseStudy(owner.id, {
-			published: true,
-		});
-		await prisma.caseStudyPublishedCase.create({
-			data: {
-				caseStudyId: caseStudy.id,
-				publishedAssuranceCaseId: publishData.publishedId,
-			},
-		});
+		// Publish, then republish so more than one historical row exists.
+		await publishAssuranceCase(owner.id, testCase.id);
+		await updatePublishedCase(owner.id, testCase.id);
 
 		const data = expectSuccess(
-			await unpublishAssuranceCase(owner.id, testCase.id, true)
+			await unpublishAssuranceCase(owner.id, testCase.id)
 		);
 		expect(data.success).toBe(true);
 
@@ -285,7 +247,6 @@ describe("getPublishStatus", () => {
 		const data = expectSuccess(await getPublishStatus(owner.id, testCase.id));
 		expect(data.isPublished).toBe(false);
 		expect(data.publishedAt).toBeNull();
-		expect(data.linkedCaseStudyCount).toBe(0);
 	});
 
 	it("returns error when caller has no access", async () => {
@@ -326,7 +287,6 @@ describe("getFullPublishStatus", () => {
 		expect(result.data?.isPublished).toBe(false);
 		expect(result.data?.publishedAt).toBeNull();
 		expect(result.data?.markedReadyAt).toBeNull();
-		expect(result.data?.linkedCaseStudyCount).toBe(0);
 		expect(typeof result.data?.hasChanges).toBe("boolean");
 	});
 

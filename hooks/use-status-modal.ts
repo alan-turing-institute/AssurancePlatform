@@ -20,11 +20,6 @@ interface StatusModalStore {
 	isOpen: boolean;
 
 	/**
-	 * Number of case studies linked to this published case.
-	 */
-	linkedCaseStudyCount: number;
-
-	/**
 	 * Function to close the modal.
 	 */
 	onClose: () => void;
@@ -37,7 +32,6 @@ interface StatusModalStore {
 		status: PublishStatusType;
 		hasChanges?: boolean;
 		publishedAt?: Date | string | null;
-		linkedCaseStudyCount?: number;
 	}) => void;
 
 	/**
@@ -70,21 +64,13 @@ export const useStatusModal = create<StatusModalStore>((set) => ({
 	status: "DRAFT",
 	hasChanges: false,
 	publishedAt: null,
-	linkedCaseStudyCount: 0,
-	onOpen: ({
-		caseId,
-		status,
-		hasChanges = false,
-		publishedAt = null,
-		linkedCaseStudyCount = 0,
-	}) =>
+	onOpen: ({ caseId, status, hasChanges = false, publishedAt = null }) =>
 		set({
 			isOpen: true,
 			caseId,
 			status,
 			hasChanges,
 			publishedAt,
-			linkedCaseStudyCount,
 		}),
 	updateState: (params) => set(params),
 	onClose: () =>
@@ -94,6 +80,5 @@ export const useStatusModal = create<StatusModalStore>((set) => ({
 			status: "DRAFT",
 			hasChanges: false,
 			publishedAt: null,
-			linkedCaseStudyCount: 0,
 		}),
 }));

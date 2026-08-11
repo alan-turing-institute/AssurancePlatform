@@ -5,7 +5,6 @@ export * from "./assurance-case";
 export * from "./auth";
 export * from "./base";
 export * from "./case-information";
-export * from "./case-study";
 export * from "./comment";
 export * from "./element";
 export * from "./google-drive";

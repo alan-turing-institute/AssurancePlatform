@@ -34,10 +34,7 @@ afterEach(async () => {
 		// Truncate all application tables in one statement with CASCADE
 		await client.query(`
       TRUNCATE TABLE
-        case_study_images,
-        case_study_published_cases,
         published_assurance_cases,
-        case_studies,
         release_images,
         release_comments,
         release_snapshots,

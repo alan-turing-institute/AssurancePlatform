@@ -201,7 +201,6 @@ export function StatusModalWrapper() {
 		<StatusModal
 			caseId={statusModal.caseId}
 			hasChanges={hasChanges || statusModal.hasChanges}
-			linkedCaseStudyCount={statusModal.linkedCaseStudyCount}
 			onOpenChange={(open) => {
 				if (!open) {
 					statusModal.onClose();

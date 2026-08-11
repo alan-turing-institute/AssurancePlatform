@@ -1,7 +1,6 @@
 import { HttpResponse, http } from "msw";
 import {
 	mockCasePermission,
-	mockCaseStudy,
 	mockInvitation,
 	mockTeam,
 	mockUser,
@@ -774,116 +773,6 @@ export const handlers = [
 		`${API_BASE_URL}/api/cases/:id/permissions/:permId/`,
 		() => new HttpResponse(null, { status: 204 })
 	),
-
-	// Case study endpoints
-	http.get(`${API_BASE_URL}/api/case-studies/`, () =>
-		HttpResponse.json([
-			mockCaseStudy,
-			{
-				id: 2,
-				title: "Advanced Case Study",
-				description: "An advanced case study for experts",
-				content: "Advanced case study content...",
-				type: "research",
-				owner: mockUser.id,
-				created_date: "2024-01-02T00:00:00Z",
-				image: "/images/case-study-2.jpg",
-			},
-		])
-	),
-
-	http.post(`${API_BASE_URL}/api/case-studies/`, async ({ request }) => {
-		const body = await request.formData();
-		return HttpResponse.json(
-			{
-				id: Date.now(),
-				title: body.get("title") || "Default Title",
-				description: body.get("description") || "",
-				content: body.get("content") || "",
-				type: body.get("type") || "learning",
-				owner: mockUser.id,
-				created_date: new Date().toISOString(),
-				image: body.get("image") ? "/media/case-studies/123/image.png" : null,
-			},
-			{ status: 201 }
-		);
-	}),
-
-	// Update case study endpoint
-	http.put(
-		`${API_BASE_URL}/api/case-studies/:id/`,
-		async ({ params, request }) => {
-			const caseStudyId = Number.parseInt(params.id as string, 10);
-			const body = await request.formData();
-			return HttpResponse.json({
-				id: caseStudyId,
-				title: body.get("title") || "Updated Title",
-				description: body.get("description") || "",
-				content: body.get("content") || "",
-				type: body.get("type") || "learning",
-				owner: mockUser.id,
-				updated_date: new Date().toISOString(),
-				image: body.get("image")
-					? `/media/case-studies/${caseStudyId}/image.png`
-					: null,
-			});
-		}
-	),
-
-	// Delete case study endpoint
-	http.delete(`${API_BASE_URL}/api/case-studies/:id/`, ({ params }) => {
-		const _caseStudyId = Number.parseInt(params.id as string, 10);
-		return new HttpResponse(null, { status: 204 });
-	}),
-
-	// Get case study by ID endpoint
-	http.get(`${API_BASE_URL}/api/case-studies/:id/`, ({ params }) => {
-		const caseStudyId = Number.parseInt(params.id as string, 10);
-		return HttpResponse.json({
-			id: caseStudyId,
-			title: "Private Case Study",
-			description: "A private case study",
-			type: "learning",
-			owner: mockUser.id,
-			created_date: "2024-01-01T00:00:00Z",
-		});
-	}),
-
-	http.get(`${API_BASE_URL}/api/public/case-studies/`, () =>
-		HttpResponse.json([
-			{
-				...mockCaseStudy,
-				published: true,
-				published_date: "2024-01-01T00:00:00Z",
-			},
-			{
-				id: 3,
-				title: "Public Safety Case Study",
-				description: "A publicly available case study on safety",
-				content: "Public safety case study content...",
-				type: "reference",
-				owner: 2,
-				created_date: "2024-01-03T00:00:00Z",
-				published: true,
-				published_date: "2024-01-04T00:00:00Z",
-				image: "/images/public-case-study.jpg",
-			},
-		])
-	),
-
-	// Public case study by ID
-	http.get(`${API_BASE_URL}/api/public/case-studies/:id`, ({ params }) => {
-		const caseStudyId = Number.parseInt(params.id as string, 10);
-		return HttpResponse.json({
-			id: caseStudyId,
-			title: "Public Case Study",
-			description: "A publicly available case study",
-			content: "Detailed case study content",
-			type: "reference",
-			published: true,
-			published_date: "2024-01-01T00:00:00Z",
-		});
-	}),
 
 	// Team Member Management endpoints
 	http.get(`${API_BASE_URL}/api/team-members/`, () =>

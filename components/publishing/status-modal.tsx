@@ -25,7 +25,6 @@ import type { PublishStatusType } from "@/lib/services/case-response-types";
 interface StatusModalProps {
 	caseId?: string | null;
 	hasChanges?: boolean;
-	linkedCaseStudyCount?: number;
 	onOpenChange: (open: boolean) => void;
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
@@ -56,7 +55,6 @@ export function StatusModal({
 	status,
 	hasChanges = false,
 	publishedAt,
-	linkedCaseStudyCount = 0,
 	onUpdatePublished,
 	onPublish,
 	onUnpublish,
@@ -122,7 +120,6 @@ export function StatusModal({
 						formattedDate={formattedDate}
 						handleAction={handleAction}
 						hasChanges={hasChanges}
-						linkedCaseStudyCount={linkedCaseStudyCount}
 						loading={loading}
 						onRequestCaseInformation={onRequestCaseInformation}
 						onUnpublish={onUnpublish}
@@ -161,7 +158,7 @@ function getStatusDescription(status: PublishStatusType): string {
 		case "DRAFT":
 			return "This case is private. Publish it to make it available on Discover.";
 		case "PUBLISHED":
-			return "This case is published and visible in case studies.";
+			return "This case is published and visible on Discover.";
 		default:
 			return status satisfies never;
 	}
@@ -291,7 +288,6 @@ interface PublishedContentProps {
 	formattedDate: string | null;
 	handleAction: (action: (() => Promise<void>) | undefined) => void;
 	hasChanges: boolean;
-	linkedCaseStudyCount: number;
 	loading: boolean;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	onUnpublish?: () => Promise<void>;
@@ -312,7 +308,6 @@ function PublishedContent({
 	caseId,
 	hasChanges,
 	formattedDate,
-	linkedCaseStudyCount,
 	loading,
 	onUpdatePublished,
 	onUnpublish,
@@ -321,7 +316,6 @@ function PublishedContent({
 	handleAction,
 }: PublishedContentProps) {
 	const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
-	const canUnpublish = linkedCaseStudyCount === 0;
 	const { information } = useCaseInformation(caseId ?? undefined);
 	const missingFields = getMissingCaseInformationFields(information);
 	const republishBlocked = hasChanges && missingFields.length > 0;
@@ -332,17 +326,6 @@ function PublishedContent({
 				<p className="text-muted-foreground text-sm">
 					Published on: {formattedDate}
 				</p>
-			)}
-
-			{linkedCaseStudyCount > 0 && (
-				<Alert>
-					<Info className="h-4 w-4" />
-					<AlertDescription>
-						This case is linked to {linkedCaseStudyCount} case{" "}
-						{linkedCaseStudyCount === 1 ? "study" : "studies"}. To unpublish,
-						remove this case from the linked case studies first.
-					</AlertDescription>
-				</Alert>
 			)}
 
 			{hasChanges && !republishBlocked && (
@@ -374,7 +357,7 @@ function PublishedContent({
 				</Button>
 			)}
 
-			{canUnpublish && onUnpublish && (
+			{onUnpublish && (
 				<>
 					<Separator />
 					{confirmingUnpublish ? (
