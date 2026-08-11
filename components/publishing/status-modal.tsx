@@ -118,11 +118,13 @@ export function StatusModal({
 
 				{status === "PUBLISHED" && (
 					<PublishedContent
+						caseId={caseId}
 						formattedDate={formattedDate}
 						handleAction={handleAction}
 						hasChanges={hasChanges}
 						linkedCaseStudyCount={linkedCaseStudyCount}
 						loading={loading}
+						onRequestCaseInformation={onRequestCaseInformation}
 						onUnpublish={onUnpublish}
 						onUpdatePublished={onUpdatePublished}
 						unpublishLoading={unpublishLoading}
@@ -250,28 +252,44 @@ function PublishContent({
 // ============================================
 
 interface PublishedContentProps {
+	caseId?: string | null;
 	formattedDate: string | null;
 	handleAction: (action: (() => Promise<void>) | undefined) => void;
 	hasChanges: boolean;
 	linkedCaseStudyCount: number;
 	loading: boolean;
+	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	onUnpublish?: () => Promise<void>;
 	onUpdatePublished?: () => Promise<void>;
 	unpublishLoading: boolean;
 }
 
+/**
+ * Republish ("Update Published") re-runs the same case-information
+ * completeness gate first publish does (ADR 0003 §4 — lead adjudication,
+ * 2026-08-11): a previously-complete published record could otherwise
+ * regress via an edit that clears a required field, then a republish. Shown
+ * in place of the Update Published button, mirroring the Draft flow's
+ * missing-fields gate (`PublishContent` above) rather than letting the
+ * request round-trip to a raw 400.
+ */
 function PublishedContent({
+	caseId,
 	hasChanges,
 	formattedDate,
 	linkedCaseStudyCount,
 	loading,
 	onUpdatePublished,
 	onUnpublish,
+	onRequestCaseInformation,
 	unpublishLoading,
 	handleAction,
 }: PublishedContentProps) {
 	const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
 	const canUnpublish = linkedCaseStudyCount === 0;
+	const { information } = useCaseInformation(caseId ?? undefined);
+	const missingFields = getMissingCaseInformationFields(information);
+	const republishBlocked = hasChanges && missingFields.length > 0;
 
 	return (
 		<div className="space-y-4">
@@ -292,7 +310,7 @@ function PublishedContent({
 				</Alert>
 			)}
 
-			{hasChanges && (
+			{hasChanges && !republishBlocked && (
 				<Alert>
 					<AlertDescription>
 						Changes have been made since this case was last published. Update
@@ -301,7 +319,31 @@ function PublishedContent({
 				</Alert>
 			)}
 
-			{hasChanges && onUpdatePublished && (
+			{republishBlocked && (
+				<div className="space-y-4" data-testid="republish-content-incomplete">
+					<Alert>
+						<Info className="h-4 w-4" />
+						<AlertDescription>
+							Add{" "}
+							{missingFields
+								.map((field) => CASE_INFORMATION_FIELD_LABELS[field])
+								.join(", ")}{" "}
+							to the case information before updating the published version.
+						</AlertDescription>
+					</Alert>
+					<Button
+						onClick={() =>
+							onRequestCaseInformation?.(
+								missingFields[0] as RequiredCaseInformationField
+							)
+						}
+					>
+						Complete case information
+					</Button>
+				</div>
+			)}
+
+			{hasChanges && !republishBlocked && onUpdatePublished && (
 				<Button
 					className="w-full bg-success text-success-foreground hover:bg-success/90"
 					disabled={loading}

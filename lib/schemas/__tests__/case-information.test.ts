@@ -16,24 +16,62 @@ describe("getMissingCaseInformationFields (ADR 0003 §4 — the publish gate)", 
 		]);
 	});
 
-	it("returns 'description' when the record exists but description is empty", () => {
-		expect(getMissingCaseInformationFields({ description: "" })).toStrictEqual([
+	it("requires description, authors AND sector (Chris's ruling, 2026-08-11)", () => {
+		expect(REQUIRED_CASE_INFORMATION_FIELDS).toStrictEqual([
 			"description",
+			"authors",
+			"sector",
 		]);
-		expect(
-			getMissingCaseInformationFields({ description: null })
-		).toStrictEqual(["description"]);
 	});
 
-	it("treats a whitespace-only description as missing", () => {
+	it("returns only the fields that are blank, not every required field", () => {
 		expect(
-			getMissingCaseInformationFields({ description: "   " })
+			getMissingCaseInformationFields({
+				description: "",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+			})
 		).toStrictEqual(["description"]);
+		expect(
+			getMissingCaseInformationFields({
+				description: "A worked example",
+				authors: null,
+				sector: "Healthcare",
+			})
+		).toStrictEqual(["authors"]);
+		expect(
+			getMissingCaseInformationFields({
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "",
+			})
+		).toStrictEqual(["sector"]);
 	});
 
-	it("returns an empty list once description is present", () => {
+	it("treats a whitespace-only value as missing, for any required field", () => {
 		expect(
-			getMissingCaseInformationFields({ description: "A worked example" })
+			getMissingCaseInformationFields({
+				description: "   ",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+			})
+		).toStrictEqual(["description"]);
+		expect(
+			getMissingCaseInformationFields({
+				description: "A worked example",
+				authors: "   ",
+				sector: "Healthcare",
+			})
+		).toStrictEqual(["authors"]);
+	});
+
+	it("returns an empty list once description, authors and sector are all present, feature image not required", () => {
+		expect(
+			getMissingCaseInformationFields({
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+			})
 		).toStrictEqual([]);
 	});
 

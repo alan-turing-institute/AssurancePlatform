@@ -510,7 +510,7 @@ describe("captureCaseInformationForSnapshot", () => {
 // ============================================
 
 describe("checkCaseInformationCompleteness", () => {
-	it("is incomplete, missing description, when no case information exists at all", async () => {
+	it("is incomplete, missing description/authors/sector, when no case information exists at all", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 
@@ -519,7 +519,7 @@ describe("checkCaseInformationCompleteness", () => {
 		);
 		expect(data).toStrictEqual({
 			complete: false,
-			missingFields: ["description"],
+			missingFields: ["description", "authors", "sector"],
 		});
 	});
 
@@ -529,22 +529,53 @@ describe("checkCaseInformationCompleteness", () => {
 		await createTestCaseInformation(testCase.id, {
 			description: "",
 			authors: "Ada Lovelace",
+			sector: "Healthcare",
 		});
 
 		const data = expectSuccess(
 			await checkCaseInformationCompleteness(owner.id, testCase.id)
 		);
 		expect(data.complete).toBe(false);
-		expect(data.missingFields).toContain("description");
+		expect(data.missingFields).toStrictEqual(["description"]);
 	});
 
-	it("is complete once a description is present, even with no other fields", async () => {
+	it("is incomplete when description and sector are present but authors is blank (three-field gate, Chris's ruling 2026-08-11)", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		await createTestCaseInformation(testCase.id, {
 			description: "A worked example",
 			authors: "",
+			sector: "Healthcare",
+		});
+
+		const data = expectSuccess(
+			await checkCaseInformationCompleteness(owner.id, testCase.id)
+		);
+		expect(data).toStrictEqual({ complete: false, missingFields: ["authors"] });
+	});
+
+	it("is incomplete when description and authors are present but sector is blank", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example",
+			authors: "Ada Lovelace",
 			sector: "",
+		});
+
+		const data = expectSuccess(
+			await checkCaseInformationCompleteness(owner.id, testCase.id)
+		);
+		expect(data).toStrictEqual({ complete: false, missingFields: ["sector"] });
+	});
+
+	it("is complete once description, authors and sector are all present, even with no feature image", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example",
+			authors: "Ada Lovelace",
+			sector: "Healthcare",
 			featureImageUrl: "",
 		});
 

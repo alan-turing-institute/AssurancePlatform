@@ -11,6 +11,7 @@ vi.mock("@/hooks/use-case-information", () => ({
 const mockedUseCaseInformation = vi.mocked(useCaseInformation);
 
 const ADD_DESCRIPTION_PATTERN = /Add Description/;
+const ADD_AUTHORS_SECTOR_PATTERN = /Add Authors, Sector/;
 const PUBLISH_BUTTON_PATTERN = /Publish/;
 const UNPUBLISH_CONSEQUENCE_PATTERN = /Unpublishing removes the public record/;
 const LINKED_CASE_STUDIES_PATTERN = /linked to 2 case studies/;
@@ -82,12 +83,12 @@ describe("StatusModal — Draft (the Publish flow, ADR 0003 §2)", () => {
 		expect(onRequestCaseInformation).toHaveBeenCalledWith("description");
 	});
 
-	it("offers a single-confirm Publish when case information is complete", async () => {
+	it("offers a single-confirm Publish when case information is complete (description, authors AND sector)", async () => {
 		stubCaseInformation({
 			information: {
 				description: "A worked example",
-				authors: null,
-				sector: null,
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
 				featureImageUrl: null,
 			},
 		});
@@ -110,12 +111,41 @@ describe("StatusModal — Draft (the Publish flow, ADR 0003 §2)", () => {
 		expect(onPublish).toHaveBeenCalledTimes(1);
 	});
 
+	it("still shows the missing-fields gate, not Publish, when only description is present (three-field gate)", () => {
+		stubCaseInformation({
+			information: {
+				description: "A worked example",
+				authors: null,
+				sector: null,
+				featureImageUrl: null,
+			},
+		});
+
+		render(
+			<StatusModal
+				caseId="case-1"
+				onOpenChange={vi.fn()}
+				onPublish={vi.fn()}
+				open={true}
+				status="DRAFT"
+			/>
+		);
+
+		expect(
+			screen.getByTestId("publish-content-incomplete")
+		).toBeInTheDocument();
+		expect(screen.getByText(ADD_AUTHORS_SECTOR_PATTERN)).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Publish" })
+		).not.toBeInTheDocument();
+	});
+
 	it("disables Publish while a publish is in flight", () => {
 		stubCaseInformation({
 			information: {
 				description: "Ready",
-				authors: null,
-				sector: null,
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
 				featureImageUrl: null,
 			},
 		});
@@ -140,10 +170,20 @@ describe("StatusModal — Draft (the Publish flow, ADR 0003 §2)", () => {
 describe("StatusModal — Published (divergence + unpublish)", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		stubCaseInformation({});
+		// Complete case information by default — most tests in this describe
+		// block are not about the completeness gate, so they shouldn't be
+		// coupled to it. Tests exercising the gate itself override this.
+		stubCaseInformation({
+			information: {
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+				featureImageUrl: null,
+			},
+		});
 	});
 
-	it("shows the Update Published action when there are unpublished changes", async () => {
+	it("shows the Update Published action when there are unpublished changes and case information is complete", async () => {
 		const onUpdatePublished = vi.fn().mockResolvedValue(undefined);
 		const user = userEvent.setup();
 
@@ -162,6 +202,59 @@ describe("StatusModal — Published (divergence + unpublish)", () => {
 		});
 		await user.click(updateButton);
 		expect(onUpdatePublished).toHaveBeenCalledTimes(1);
+	});
+
+	it("blocks republish and surfaces the missing-fields gate when case information is incomplete (lead adjudication, 2026-08-11)", async () => {
+		stubCaseInformation({ information: null });
+		const onUpdatePublished = vi.fn().mockResolvedValue(undefined);
+		const onRequestCaseInformation = vi.fn();
+		const user = userEvent.setup();
+
+		render(
+			<StatusModal
+				hasChanges={true}
+				onOpenChange={vi.fn()}
+				onRequestCaseInformation={onRequestCaseInformation}
+				onUpdatePublished={onUpdatePublished}
+				open={true}
+				status="PUBLISHED"
+			/>
+		);
+
+		expect(
+			screen.getByTestId("republish-content-incomplete")
+		).toBeInTheDocument();
+		expect(screen.getByText(ADD_DESCRIPTION_PATTERN)).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Update Published" })
+		).not.toBeInTheDocument();
+
+		await user.click(
+			screen.getByRole("button", { name: "Complete case information" })
+		);
+		expect(onRequestCaseInformation).toHaveBeenCalledWith("description");
+		expect(onUpdatePublished).not.toHaveBeenCalled();
+	});
+
+	it("does not show the republish gate when there are no unpublished changes, even if case information is incomplete", () => {
+		stubCaseInformation({ information: null });
+
+		render(
+			<StatusModal
+				hasChanges={false}
+				onOpenChange={vi.fn()}
+				onUpdatePublished={vi.fn()}
+				open={true}
+				status="PUBLISHED"
+			/>
+		);
+
+		expect(
+			screen.queryByTestId("republish-content-incomplete")
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Update Published" })
+		).not.toBeInTheDocument();
 	});
 
 	it("requires a plain-consequences confirm before unpublishing", async () => {

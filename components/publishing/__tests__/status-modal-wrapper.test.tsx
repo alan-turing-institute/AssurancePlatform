@@ -67,8 +67,8 @@ describe("StatusModalWrapper — Draft: the guided Publish action", () => {
 		stubCaseInformation({
 			information: {
 				description: "A worked example",
-				authors: null,
-				sector: null,
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
 				featureImageUrl: null,
 			},
 		});
@@ -168,5 +168,96 @@ describe("StatusModalWrapper — Published: unpublish", () => {
 		);
 		expect(patchBody).toMatchObject({ targetStatus: "DRAFT" });
 		await waitFor(() => expect(useStatusModal.getState().isOpen).toBe(false));
+	});
+});
+
+describe("StatusModalWrapper — Published: republish (Update Published)", () => {
+	beforeEach(() => {
+		resetStores();
+		// Unpublished changes, so the divergence indicator and Update
+		// Published action are on offer.
+		server.use(
+			http.get(`/api/cases/${CASE_ID}/changes`, () =>
+				HttpResponse.json({
+					hasChanges: true,
+					publishedAt: "2026-08-01T00:00:00.000Z",
+					publishedId: "pub-1",
+				})
+			)
+		);
+	});
+
+	it("republishes via PATCH /api/cases/[id]/status PUBLISHED->PUBLISHED when case information is complete", async () => {
+		stubCaseInformation({
+			information: {
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+				featureImageUrl: null,
+			},
+		});
+
+		let patchBody: unknown;
+		server.use(
+			http.patch(`/api/cases/${CASE_ID}/status`, async ({ request }) => {
+				patchBody = await request.json();
+				return HttpResponse.json({
+					success: true,
+					newStatus: "PUBLISHED",
+					publishedId: "pub-2",
+					publishedAt: "2026-08-11T00:00:00.000Z",
+				});
+			})
+		);
+
+		useStatusModal.getState().onOpen({
+			caseId: CASE_ID,
+			status: "PUBLISHED",
+			publishedAt: "2026-08-01T00:00:00.000Z",
+		});
+
+		const user = userEvent.setup();
+		render(<StatusModalWrapper />);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Update Published" })
+		);
+
+		await waitFor(() =>
+			expect(patchBody).toMatchObject({
+				targetStatus: "PUBLISHED",
+			})
+		);
+		await waitFor(() => expect(useStatusModal.getState().isOpen).toBe(false));
+	});
+
+	it("does not republish, and instead routes to the case-information pane, when a required field is missing", async () => {
+		stubCaseInformation({ information: null });
+
+		let patchRequests = 0;
+		server.use(
+			http.patch(`/api/cases/${CASE_ID}/status`, () => {
+				patchRequests += 1;
+				return HttpResponse.json({ success: true, newStatus: "PUBLISHED" });
+			})
+		);
+
+		useStatusModal.getState().onOpen({
+			caseId: CASE_ID,
+			status: "PUBLISHED",
+			publishedAt: "2026-08-01T00:00:00.000Z",
+		});
+
+		const user = userEvent.setup();
+		render(<StatusModalWrapper />);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Complete case information" })
+		);
+
+		expect(patchRequests).toBe(0);
+		expect(useStatusModal.getState().isOpen).toBe(false);
+		expect(useStore.getState().caseDetailsOpen).toBe(true);
+		expect(useStore.getState().caseInformationFocusField).toBe("description");
 	});
 });

@@ -11,6 +11,9 @@ import { CaseEditorPage } from "./pages/case-editor-page";
 // these specs pin the current behaviour of the status dialog itself.
 
 const ADD_DESCRIPTION_PATTERN = /Add Description/;
+// Chris's ruling, 2026-08-11: the publish gate widened from description-only
+// to description + authors + sector — this pins that all three are named.
+const ADD_ALL_THREE_FIELDS_PATTERN = /Add Description, Authors, Sector/;
 
 test.describe("Publishing", () => {
 	test("discover page loads with community heading", async ({ page }) => {
@@ -45,6 +48,9 @@ test.describe("Publishing", () => {
 		await expect(page.getByText("Case Status: Draft")).toBeVisible();
 		await expect(page.getByTestId("publish-content-incomplete")).toBeVisible();
 		await expect(page.getByText(ADD_DESCRIPTION_PATTERN)).toBeVisible();
+		// The bar was widened (Chris's ruling, 2026-08-11): description alone
+		// no longer clears it — authors and sector are also required.
+		await expect(page.getByText(ADD_ALL_THREE_FIELDS_PATTERN)).toBeVisible();
 
 		// The gap is surfaced in place: this opens the existing case
 		// information pane focused on the missing field, not a from-scratch
