@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { fetchPublishedCaseStudies } from "@/actions/case-studies";
-import CaseStudies from "../_components/case-studies";
+import { fetchPublishedItems } from "@/actions/discover";
+import PublishedItems from "./_components/published-items";
 
 export const metadata: Metadata = {
 	title: "Community Case Studies | TEA Platform",
 };
 
 const DiscoverPage = async () => {
-	const publishedCaseStudies = await fetchPublishedCaseStudies();
+	const publishedItems = await fetchPublishedItems();
 
 	return (
 		<>
@@ -20,13 +20,13 @@ const DiscoverPage = async () => {
 						Community Case Studies
 					</h2>
 					<p className="mt-8 text-pretty font-medium text-lg text-muted-foreground sm:text-xl/8">
-						Browse through all the case studies that have been created by our
-						community.
+						Browse published assurance cases from our community — each one a
+						frozen, citable snapshot.
 					</p>
 				</div>
 			</div>
 
-			<CaseStudies caseStudies={publishedCaseStudies ?? []} />
+			<PublishedItems items={publishedItems} />
 		</>
 	);
 };

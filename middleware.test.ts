@@ -38,6 +38,7 @@ describe("middleware route matcher", () => {
 			"/api/public/assurance-case/123",
 			"/api/public/case-studies",
 			"/api/public/case-studies/456",
+			"/api/public/discover/medium-case",
 		];
 		for (const path of publicApiPaths) {
 			expect(re.test(path)).toBe(false);

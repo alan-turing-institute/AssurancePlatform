@@ -1,9 +1,11 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { publishAssuranceCase } from "@/lib/services/publish-service";
 import {
 	createTestCase,
 	createTestCaseStudy,
+	createTestCaseWithGoal,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -166,6 +168,75 @@ describe("GET /api/public/case-studies/[id]", () => {
 		);
 		const response = await GET(req, {
 			params: Promise.resolve({ id: "not-a-number" }),
+		});
+
+		expect(response.status).toBe(400);
+	});
+});
+
+// ============================================
+// GET /api/public/discover/[slug]
+// ============================================
+
+describe("GET /api/public/discover/[slug]", () => {
+	it("reaches the handler with no auth mock configured and returns the published item's snapshot by slug", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Discover Slug Case"
+		);
+		const published = await publishAssuranceCase(owner.id, testCase.id);
+		if ("error" in published) {
+			throw new Error(published.error);
+		}
+
+		const { GET } = await import("@/app/api/public/discover/[slug]/route");
+		const req = new NextRequest(
+			"http://localhost:3000/api/public/discover/discover-slug-case"
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ slug: "discover-slug-case" }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.slug).toBe("discover-slug-case");
+		expect(body.title).toBe("Discover Slug Case");
+		expect(body.type).toBe("ASSURANCE_CASE");
+		expect(body.content).toBeDefined();
+	});
+
+	it("returns 404 (never a redirect) for an unknown slug", async () => {
+		const { GET } = await import("@/app/api/public/discover/[slug]/route");
+		const req = new NextRequest(
+			"http://localhost:3000/api/public/discover/no-such-slug"
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ slug: "no-such-slug" }),
+		});
+
+		expect(response.status).toBe(404);
+	});
+
+	it("returns 404 (never a redirect) for a legacy numeric id — the retired /discover/[id] path", async () => {
+		const { GET } = await import("@/app/api/public/discover/[slug]/route");
+		const req = new NextRequest(
+			"http://localhost:3000/api/public/discover/123"
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ slug: "123" }),
+		});
+
+		expect(response.status).toBe(404);
+	});
+
+	it("returns 400 for an invalid slug shape", async () => {
+		const { GET } = await import("@/app/api/public/discover/[slug]/route");
+		const req = new NextRequest(
+			"http://localhost:3000/api/public/discover/Not%20A%20Slug!"
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ slug: "Not A Slug!" }),
 		});
 
 		expect(response.status).toBe(400);
