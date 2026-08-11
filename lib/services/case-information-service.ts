@@ -1,5 +1,9 @@
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import {
+	getMissingCaseInformationFields,
+	type RequiredCaseInformationField,
+} from "@/lib/schemas/case-information";
 import type { CaseInformation } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -118,6 +122,37 @@ export async function deleteCaseInformation(
 		console.error("Failed to delete case information:", error);
 		return { error: "Failed to delete case information" };
 	}
+}
+
+export interface CaseInformationCompleteness {
+	complete: boolean;
+	missingFields: RequiredCaseInformationField[];
+}
+
+/**
+ * Checks a case's case-information record against the publish-readiness
+ * gate (ADR 0003 §4). Requires VIEW — the same read gate as
+ * `getCaseInformation`, which this wraps; callers that intend to publish
+ * (e.g. `POST /api/cases/[id]/publish`) additionally require EDIT before
+ * ever reaching a mutating call, so this alone does not authorise a
+ * publish.
+ *
+ * Server-side defence in depth: the publish flow's UI already runs this
+ * same check (via `getMissingCaseInformationFields`) before it ever shows a
+ * confirm step, so a genuine miss here means the record changed between the
+ * client's check and the request landing, not a client bug.
+ */
+export async function checkCaseInformationCompleteness(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseInformationCompleteness> {
+	const result = await getCaseInformation(userId, caseId);
+	if ("error" in result) {
+		return result;
+	}
+
+	const missingFields = getMissingCaseInformationFields(result.data);
+	return { data: { complete: missingFields.length === 0, missingFields } };
 }
 
 /** Case-information fields frozen verbatim into a publish snapshot. */

@@ -12,6 +12,7 @@ export * from "./google-drive";
 export * from "./integration";
 export * from "./permission";
 export * from "./plugin";
+export * from "./publish";
 export * from "./status";
 // Domain schemas for API routes
 export * from "./team";

@@ -1,20 +1,16 @@
-import type { Request, Response } from "@playwright/test";
 import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, LOGIN_PATTERN } from "./helpers/constants";
 import { CaseEditorPage } from "./pages/case-editor-page";
 
-// Matches the case-status endpoint's path so the waitForResponse predicate in
-// the published-modal spec below can identify it regardless of query string.
-const STATUS_ENDPOINT_PATTERN = /\/api\/cases\/[^/]+\/status$/;
-
 // ADR 0003 §2 retired the READY_TO_PUBLISH intermediate state — a case is
-// now either DRAFT or PUBLISHED, with no "mark as ready" step in between.
-// These specs pin the current interim behaviour: a draft case shows an
-// informational status modal with no publish control, and a published case
-// shows the green "Published" badge. The guided single-action Publish flow
-// that replaces the old "mark as ready" journey is not built yet — its e2e
-// coverage lands with [[TEA — Retire case studies and land the publish
-// journey e2e (ADR 0003)]], the next issue in the chain.
+// now either DRAFT or PUBLISHED. The status pill opens the guided Publish
+// flow (draft) or the divergence/unpublish view (published). Full
+// end-to-end journey coverage (fill case information → publish → visit
+// Discover → republish → unpublish) lands with the next issue in the
+// chain, which retires case studies and lands the publish journey e2e —
+// these specs pin the current behaviour of the status dialog itself.
+
+const ADD_DESCRIPTION_PATTERN = /Add Description/;
 
 test.describe("Publishing", () => {
 	test("discover page loads with community heading", async ({ page }) => {
@@ -33,9 +29,11 @@ test.describe("Publishing", () => {
 		await expect(editor.statusButton).toHaveText("Draft");
 	});
 
-	test("status modal opens with Draft content and no publish control", async ({
+	test("draft case with no case information shows the missing-fields publish gate", async ({
 		page,
 	}) => {
+		// "Simple Case" is seeded DRAFT with no case-information record
+		// (prisma/seed/dev-seed.ts) — every required field is missing.
 		await page.goto("/dashboard");
 		await page.getByText("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
@@ -45,15 +43,20 @@ test.describe("Publishing", () => {
 
 		await expect(editor.statusModalTitle).toBeVisible();
 		await expect(page.getByText("Case Status: Draft")).toBeVisible();
+		await expect(page.getByTestId("publish-content-incomplete")).toBeVisible();
+		await expect(page.getByText(ADD_DESCRIPTION_PATTERN)).toBeVisible();
+
+		// The gap is surfaced in place: this opens the existing case
+		// information pane focused on the missing field, not a from-scratch
+		// questionnaire (ADR 0003 §2).
+		await page
+			.getByRole("button", { name: "Complete case information" })
+			.click();
+
+		await expect(page.getByText("Case Status: Draft")).toHaveCount(0);
 		await expect(
-			page.getByText(
-				"Draft cases are only visible to you and collaborators with edit permissions."
-			)
+			page.getByRole("heading", { name: "Case Information" })
 		).toBeVisible();
-		// The retired "mark as ready" control must not be present.
-		await expect(
-			page.getByRole("button", { name: "Mark as Ready to Publish" })
-		).toHaveCount(0);
 	});
 
 	test("status button shows Published for a published case", async ({
@@ -69,110 +72,27 @@ test.describe("Publishing", () => {
 		await expect(editor.statusButton).toHaveText("Published");
 	});
 
-	// Skipped 2026-07-17 — GET /api/cases/[id]/status can hang indefinitely
-	// for published cases on constrained runners (request fires, no response;
-	// evidenced in the tracked investigation). Re-enable when that lands. The
-	// diagnostics below are kept intact as the regression tripwire for that
-	// re-enable.
-	// biome-ignore lint/suspicious/noSkippedTests: intentional, tracked skip — see comment above.
-	test.skip("status modal opens with Published content for a published case", async ({
+	test("status modal opens immediately with Published content, not gated on change-detection", async ({
 		page,
-	}, testInfo) => {
+	}) => {
 		await page.goto("/dashboard");
 		await page.getByText("Medium Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);
+		await editor.statusButton.click();
 
-		// CI diagnostics (2026-07): this spec flakes in CI — the status endpoint
-		// appears never to resolve with 200 inside the 20s window below, though
-		// it's ~185ms locally. The listeners and trace here don't change the
-		// wait itself; they exist so the next CI failure names the actual
-		// outcome — a non-200 status, a network-level failure, or genuinely no
-		// request/response at all — instead of a bare timeout.
-		const startedAt = Date.now();
-		const elapsed = () => `${Date.now() - startedAt}ms`;
-		const trace: string[] = [];
-
-		const isStatusEndpoint = (url: string) =>
-			STATUS_ENDPOINT_PATTERN.test(new URL(url).pathname);
-
-		const onRequest = (request: Request) => {
-			if (isStatusEndpoint(request.url())) {
-				trace.push(
-					`[+${elapsed()}] request: ${request.method()} ${request.url()}`
-				);
-			}
-		};
-		const onRequestFailed = (request: Request) => {
-			if (isStatusEndpoint(request.url())) {
-				trace.push(
-					`[+${elapsed()}] requestfailed: ${request.url()} — ${
-						request.failure()?.errorText ?? "no failure text"
-					}`
-				);
-			}
-		};
-		const onResponse = (response: Response) => {
-			if (isStatusEndpoint(response.url())) {
-				trace.push(
-					`[+${elapsed()}] response: ${response.status()} ${response.url()}`
-				);
-			}
-		};
-
-		page.on("request", onRequest);
-		page.on("requestfailed", onRequestFailed);
-		page.on("response", onResponse);
-
-		try {
-			// For a case with a current published snapshot, GET /api/cases/[id]/status
-			// synchronously runs full export + change-detection (getFullPublishStatus's
-			// expensive path) before the modal is allowed to open — see
-			// handleStatusButtonClick in components/cases/header.tsx. That can be slow
-			// on CI runners; arming this wait BEFORE the click means a slow/hung fetch
-			// fails here, naming the endpoint, instead of surfacing 5s later as a mute
-			// "element not found" on the modal assertions below. Making the open itself
-			// fast is tracked separately: [[TEA — Publish flow — validate, publish,
-			// republish, unpublish (ADR 0003)]].
-			//
-			// The predicate below accepts ANY response for the endpoint (not just
-			// 200) so a non-200 status surfaces as an assertion failure naming the
-			// code, rather than as a timeout with no diagnostic content.
-			const statusResponsePromise = page.waitForResponse(
-				(response) => isStatusEndpoint(response.url()),
-				{ timeout: 20_000 }
-			);
-			await editor.statusButton.click();
-			const statusResponse = await statusResponsePromise;
-
-			if (statusResponse.status() !== 200) {
-				const body = (await statusResponse.text()).slice(0, 500);
-				expect(
-					statusResponse.status(),
-					`expected 200 from ${statusResponse.url()}, got ${statusResponse.status()}. Body (truncated to 500 chars): ${body}`
-				).toBe(200);
-			}
-
-			// Extra headroom on the first assertion for render-after-response on slow
-			// runners; the response above already absorbed the expensive-path wait.
-			await expect(editor.statusModalTitle).toBeVisible({ timeout: 10_000 });
-			await expect(page.getByText("Case Status: Published")).toBeVisible();
-			await expect(
-				page.getByText("This case is published and visible in case studies.")
-			).toBeVisible();
-		} finally {
-			page.off("request", onRequest);
-			page.off("requestfailed", onRequestFailed);
-			page.off("response", onResponse);
-			await testInfo.attach("status-endpoint-trace", {
-				body:
-					trace.length > 0
-						? trace.join("\n")
-						: `(no request/response/requestfailed events observed for ${STATUS_ENDPOINT_PATTERN} in ${elapsed()})`,
-				contentType: "text/plain",
-			});
-		}
+		// Deliberately no `waitForResponse` gate here: opening this dialog
+		// must never wait on `GET /api/cases/[id]/status` or `/changes`
+		// (both run a full export + tree diff when a published snapshot
+		// exists). A default-timeout visibility check is itself the
+		// regression tripwire — if the open ever regresses to blocking on
+		// that fetch, this assertion times out instead of quietly passing.
+		await expect(editor.statusModalTitle).toBeVisible();
+		await expect(page.getByText("Case Status: Published")).toBeVisible();
+		await expect(
+			page.getByText("This case is published and visible in case studies.")
+		).toBeVisible();
 	});
 
 	test("case studies page is accessible", async ({ page }) => {

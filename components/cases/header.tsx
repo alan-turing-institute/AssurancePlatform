@@ -29,7 +29,6 @@ const Header = ({ setOpen }: HeaderProps) => {
 	const [newCaseName, setNewCaseName] = useState<string>(
 		assuranceCase?.name || ""
 	);
-	const [statusLoading, setStatusLoading] = useState(false);
 	const _inputRef = useRef<HTMLInputElement>(null);
 
 	const { setCenter } = useReactFlow();
@@ -142,32 +141,26 @@ const Header = ({ setOpen }: HeaderProps) => {
 		assuranceCase?.permissions === "manage" ||
 		assuranceCase?.permissions === "edit";
 
-	const handleStatusButtonClick = async () => {
+	// Opens the status/publish dialog immediately using state already known
+	// (from `assuranceCase` and this header's own `useChangeDetection` call
+	// above) rather than gating the open on a fetch. `GET /api/cases/[id]/
+	// status` runs a full export + change-detection synchronously when a
+	// published snapshot exists (`getFullPublishStatus`), which can take
+	// several seconds — awaiting it before opening was the bug this issue's
+	// hard requirement fixes. `StatusModalWrapper` loads any state that's
+	// still asynchronous (divergence) after the dialog is already visible.
+	const handleStatusButtonClick = () => {
 		if (!(assuranceCase?.id && canEditCase)) {
 			return;
 		}
 
-		setStatusLoading(true);
-
-		try {
-			// Fetch the full status info from the API
-			const response = await fetch(`/api/cases/${assuranceCase.id}/status`);
-			const data = await response.json();
-
-			if (response.ok) {
-				statusModal.onOpen({
-					caseId: assuranceCase.id,
-					status: data.publishStatus ?? currentStatus,
-					hasChanges: data.hasChanges ?? hasChanges,
-					publishedAt: data.publishedAt ?? assuranceCase.publishedAt,
-					linkedCaseStudyCount: data.linkedCaseStudyCount ?? 0,
-				});
-			}
-		} catch {
-			// Silently fail - user can try clicking again
-		} finally {
-			setStatusLoading(false);
-		}
+		statusModal.onOpen({
+			caseId: assuranceCase.id,
+			status: currentStatus,
+			hasChanges,
+			publishedAt: assuranceCase.publishedAt,
+			linkedCaseStudyCount: assuranceCase.linkedCaseStudyCount ?? 0,
+		});
 	};
 
 	const publishedAt = assuranceCase?.publishedAt;
@@ -206,7 +199,6 @@ const Header = ({ setOpen }: HeaderProps) => {
 						<StatusButton
 							disabled={!canEditCase}
 							hasChanges={hasChanges}
-							loading={statusLoading}
 							onClick={handleStatusButtonClick}
 							publishedAt={publishedAt}
 							status={currentStatus}

@@ -6,6 +6,10 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { validationError } from "@/lib/errors";
+import { CASE_INFORMATION_FIELD_LABELS } from "@/lib/schemas/case-information";
+import { publishCaseBodySchema } from "@/lib/schemas/publish";
+import { checkCaseInformationCompleteness } from "@/lib/services/case-information-service";
 import {
 	getPublishStatus,
 	publishAssuranceCase,
@@ -48,7 +52,13 @@ export async function GET(
 /**
  * POST /api/cases/[id]/publish
  * Publishes an assurance case.
- * Body: { description?: string }
+ * Body: { description?: string } (optional — no body at all is valid)
+ *
+ * Gated on case-information completeness (ADR 0003 §4 — "the admission
+ * ticket to Discover"): the guided publish flow in the case editor already
+ * runs this same check before it ever shows a confirm step, so a 400 here
+ * means either a direct API call bypassing that flow, or the record
+ * changed after the client checked it.
  */
 export async function POST(
 	request: NextRequest,
@@ -58,13 +68,38 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 
-		// Parse request body
-		let description: string | undefined;
-		try {
-			const body = await request.json();
-			description = body.description;
-		} catch {
-			// Body is optional, ignore parse errors
+		// Body is optional — an empty/absent body parses to {} and validates
+		// fine, since `description` itself is optional.
+		const parsed = publishCaseBodySchema.safeParse(
+			await request.json().catch(() => ({}))
+		);
+		if (!parsed.success) {
+			return apiError(
+				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
+			);
+		}
+		const { description } = parsed.data;
+
+		const completeness = await checkCaseInformationCompleteness(
+			session.userId,
+			caseId
+		);
+		if ("error" in completeness) {
+			return apiError(serviceErrorToAppError(completeness.error));
+		}
+		if (!completeness.data.complete) {
+			const fieldErrors = Object.fromEntries(
+				completeness.data.missingFields.map((field) => [
+					field,
+					`${CASE_INFORMATION_FIELD_LABELS[field]} is required before publishing`,
+				])
+			);
+			return apiError(
+				validationError(
+					"Case information is incomplete — add the missing fields before publishing",
+					fieldErrors
+				)
+			);
 		}
 
 		const result = await publishAssuranceCase(

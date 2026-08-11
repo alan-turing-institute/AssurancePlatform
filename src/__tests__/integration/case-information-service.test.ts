@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
 import {
 	captureCaseInformationForSnapshot,
+	checkCaseInformationCompleteness,
 	deleteCaseInformation,
 	getCaseInformation,
 	upsertCaseInformation,
@@ -501,5 +502,66 @@ describe("captureCaseInformationForSnapshot", () => {
 			sector: "Snapshot sector",
 			featureImageUrl: "https://example.com/snapshot.png",
 		});
+	});
+});
+
+// ============================================
+// checkCaseInformationCompleteness (ADR 0003 §4 — the publish gate)
+// ============================================
+
+describe("checkCaseInformationCompleteness", () => {
+	it("is incomplete, missing description, when no case information exists at all", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+
+		const data = expectSuccess(
+			await checkCaseInformationCompleteness(owner.id, testCase.id)
+		);
+		expect(data).toStrictEqual({
+			complete: false,
+			missingFields: ["description"],
+		});
+	});
+
+	it("is incomplete when a case-information record exists but description is blank", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "",
+			authors: "Ada Lovelace",
+		});
+
+		const data = expectSuccess(
+			await checkCaseInformationCompleteness(owner.id, testCase.id)
+		);
+		expect(data.complete).toBe(false);
+		expect(data.missingFields).toContain("description");
+	});
+
+	it("is complete once a description is present, even with no other fields", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example",
+			authors: "",
+			sector: "",
+			featureImageUrl: "",
+		});
+
+		const data = expectSuccess(
+			await checkCaseInformationCompleteness(owner.id, testCase.id)
+		);
+		expect(data).toStrictEqual({ complete: true, missingFields: [] });
+	});
+
+	it("returns error when caller has no access", async () => {
+		const owner = await createTestUser();
+		const stranger = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+
+		expectError(
+			await checkCaseInformationCompleteness(stranger.id, testCase.id),
+			"Permission denied"
+		);
 	});
 });
