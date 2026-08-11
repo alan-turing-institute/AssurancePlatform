@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
+	createTestCaseInformation,
 	createTestElement,
 	createTestPermission,
 	createTestUser,
@@ -115,6 +116,11 @@ describe("POST /api/cases/[id]/publish", () => {
 			elementType: "GOAL",
 			name: "G1",
 		});
+		// Case information (with a description) is required before publish —
+		// ADR 0003 §4.
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example for publish coverage",
+		});
 		await mockAuth(user.id, user.username, user.email);
 
 		const { POST } = await import("@/app/api/cases/[id]/publish/route");
@@ -148,6 +154,11 @@ describe("POST /api/cases/[id]/publish", () => {
 		const viewer = await createTestUser();
 		const testCase = await createTestCase(owner.id, {
 			name: "View-Only Case",
+		});
+		// Case information complete, so the permission check (not the
+		// completeness gate) is what's under test here.
+		await createTestCaseInformation(testCase.id, {
+			description: "Already complete",
 		});
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
@@ -188,6 +199,9 @@ describe("POST /api/cases/[id]/publish", () => {
 			elementType: "GOAL",
 			name: "G1",
 		});
+		await createTestCaseInformation(testCase.id, {
+			description: "Present, so the empty POST body itself is what's tested",
+		});
 		await mockAuth(user.id, user.username, user.email);
 
 		const { POST } = await import("@/app/api/cases/[id]/publish/route");
@@ -204,6 +218,123 @@ describe("POST /api/cases/[id]/publish", () => {
 		const body = await response.json();
 		expect(body.published_id).toBeDefined();
 	});
+
+	it("returns 400 and does not publish when case information is missing entirely (ADR 0003 §4 — description, authors AND sector, Chris's ruling 2026-08-11)", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, {
+			name: "No Case Information",
+		});
+		await createTestElement(testCase.id, user.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/publish/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/publish`,
+			{ method: "POST" }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.code).toBe("VALIDATION");
+		expect(body.fieldErrors).toHaveProperty("description");
+		expect(body.fieldErrors).toHaveProperty("authors");
+		expect(body.fieldErrors).toHaveProperty("sector");
+
+		const updated = await prisma.assuranceCase.findUnique({
+			where: { id: testCase.id },
+		});
+		expect(updated?.published).toBe(false);
+	});
+
+	it("returns 400 when case information exists but its description is blank", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, {
+			name: "Blank Description",
+		});
+		await createTestCaseInformation(testCase.id, {
+			description: "",
+			authors: "Someone",
+			sector: "Finance",
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/publish/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/publish`,
+			{ method: "POST" }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.fieldErrors).toStrictEqual({
+			description: "Description is required before publishing",
+		});
+	});
+
+	it("returns 400 when description and sector are present but authors is blank (three-field gate)", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, {
+			name: "Blank Authors",
+		});
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example",
+			authors: "",
+			sector: "Finance",
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/publish/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/publish`,
+			{ method: "POST" }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.fieldErrors).toStrictEqual({
+			authors: "Authors is required before publishing",
+		});
+	});
+
+	it("returns 400 when description and authors are present but sector is blank (three-field gate)", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, {
+			name: "Blank Sector",
+		});
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example",
+			authors: "Someone",
+			sector: "",
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/publish/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/publish`,
+			{ method: "POST" }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.fieldErrors).toStrictEqual({
+			sector: "Sector is required before publishing",
+		});
+	});
 });
 
 // ============================================
@@ -219,6 +350,9 @@ describe("DELETE /api/cases/[id]/publish", () => {
 		await createTestElement(testCase.id, user.id, {
 			elementType: "GOAL",
 			name: "G1",
+		});
+		await createTestCaseInformation(testCase.id, {
+			description: "Needed to get through the publish leg of this test",
 		});
 		await mockAuth(user.id, user.username, user.email);
 

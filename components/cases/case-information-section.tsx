@@ -24,6 +24,7 @@ import type {
 	CaseInformationInput,
 } from "@/lib/schemas/case-information";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
+import useStore from "@/store/store";
 import { Button } from "../ui/button";
 
 interface CaseInformationSectionProps {
@@ -63,7 +64,7 @@ export function CaseInformationSection({
 			featureImageUrl: "",
 		},
 	});
-	const { reset } = form;
+	const { reset, setFocus, getValues } = form;
 
 	// Sync fetched values into the form once they arrive (the form mounts
 	// before the fetch resolves).
@@ -75,6 +76,33 @@ export function CaseInformationSection({
 			featureImageUrl: information?.featureImageUrl ?? "",
 		});
 	}, [information, reset]);
+
+	// The publish flow (ADR 0003 §2) sends the user here with a specific
+	// missing field named — focus it once the fetched values have synced in,
+	// then clear the request so a later manual open of this sheet doesn't
+	// re-focus anything.
+	const caseInformationFocusField = useStore(
+		(state) => state.caseInformationFocusField
+	);
+	const setCaseInformationFocusField = useStore(
+		(state) => state.setCaseInformationFocusField
+	);
+	useEffect(() => {
+		if (loading || !(canEdit && caseInformationFocusField)) {
+			return;
+		}
+		if (caseInformationFocusField in getValues()) {
+			setFocus(caseInformationFocusField as keyof CaseInformationInput);
+		}
+		setCaseInformationFocusField(null);
+	}, [
+		loading,
+		canEdit,
+		caseInformationFocusField,
+		getValues,
+		setFocus,
+		setCaseInformationFocusField,
+	]);
 
 	const onSubmit = async (values: CaseInformationData) => {
 		await save(values);

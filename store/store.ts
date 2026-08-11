@@ -45,6 +45,13 @@ interface Store {
 	// same component; both flip this one flag so the sheet lives in a single
 	// place in the tree, same pattern as `commentsSheetOpen` below).
 	caseDetailsOpen: boolean;
+	// Name of the case-information field the sheet should focus once it
+	// opens — set by the publish flow (ADR 0003 §2 "surfaces exactly those
+	// gaps... opening the case information form focused on them") when a
+	// required field is missing. `CaseInformationSection` consumes and
+	// clears it after focusing, so it doesn't stick around for the next
+	// manual open.
+	caseInformationFocusField: string | null;
 	caseNotes: CommentResponse[];
 	commentsSheetNode: Node | null;
 	// Comments sheet state
@@ -64,6 +71,7 @@ interface Store {
 	setActiveUsers: (users: UserResponse[]) => void;
 	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => void;
 	setCaseDetailsOpen: (open: boolean) => void;
+	setCaseInformationFocusField: (field: string | null) => void;
 	setCaseNotes: (comments: CommentResponse[]) => void;
 	setCommentsSheetNode: (node: Node | null) => void;
 	setCommentsSheetOpen: (open: boolean) => void;
@@ -242,6 +250,10 @@ const useStore = create<Store>((set, get) => ({
 	caseDetailsOpen: false,
 	setCaseDetailsOpen: (open: boolean) => {
 		set({ caseDetailsOpen: open });
+	},
+	caseInformationFocusField: null,
+	setCaseInformationFocusField: (field: string | null) => {
+		set({ caseInformationFocusField: field });
 	},
 }));
 

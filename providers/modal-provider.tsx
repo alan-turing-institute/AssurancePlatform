@@ -39,10 +39,6 @@ const PermissionsModal = dynamic(
 		),
 	{ ssr: false }
 );
-const PublishModal = dynamic(
-	() => import("@/components/modals/publish-modal").then((m) => m.PublishModal),
-	{ ssr: false }
-);
 const HelpModal = dynamic(
 	() => import("@/components/modals/help-modal").then((m) => m.HelpModal),
 	{ ssr: false }
@@ -93,7 +89,6 @@ export const ModalProvider = (): ReactNode => (
 		<MigrationModal />
 		<ShareModal />
 		<PermissionsModal />
-		<PublishModal />
 		<StatusModalWrapper />
 		<EmailModal />
 		<HelpModal />
