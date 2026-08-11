@@ -1,0 +1,161 @@
+import { MoveLeftIcon, Users2Icon } from "lucide-react";
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { fetchPublishedItemBySlug } from "@/actions/discover";
+import { SanitisedHtml } from "@/components/cases/sanitised-html";
+import { formatShortDate } from "@/lib/date";
+import DownloadPublishedItemButton from "../_components/download-published-item-button";
+import PublishableItemTypeBadge from "../_components/publishable-item-type-badge";
+
+const FALLBACK_IMAGE =
+	"https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+
+interface DiscoverItemPageProps {
+	params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({
+	params,
+}: DiscoverItemPageProps): Promise<Metadata> {
+	const { slug } = await params;
+	const item = await fetchPublishedItemBySlug(slug);
+	return {
+		title: `${item.title} | TEA Platform`,
+	};
+}
+
+/**
+ * Discover detail page (ADR 0003 §4/§6) — renders a single published item
+ * from its own frozen snapshot metadata only, addressed by its stable slug.
+ * The old numeric `/discover/[id]` route is retired outright (Chris's G1
+ * ruling, 2026-08-11): any path that isn't a real, currently-published
+ * slug — including a legacy numeric id — resolves through
+ * `fetchPublishedItemBySlug`'s `notFound()` to the standard 404, with no
+ * redirect.
+ */
+const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
+	const { slug } = await params;
+	const item = await fetchPublishedItemBySlug(slug);
+
+	return (
+		<div className="overflow-hidden bg-background">
+			<div className="relative mx-auto max-w-7xl px-6 py-16 lg:px-8">
+				<div className="absolute top-0 bottom-0 left-3/4 hidden w-screen bg-muted lg:block" />
+				<div className="mx-auto text-base lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-8">
+					<div>
+						<Link
+							className="mb-12 inline-flex items-center justify-start gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90"
+							href={"/discover"}
+						>
+							<MoveLeftIcon className="size-3" />
+							Back
+						</Link>
+
+						<h3 className="mt-2 font-bold text-3xl/8 text-foreground tracking-tight sm:text-4xl">
+							{item.title}
+						</h3>
+						<div className="mt-3 flex items-center justify-start gap-3">
+							<PublishableItemTypeBadge type={item.type} />
+							{item.sector && (
+								<span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 font-medium text-primary text-xs">
+									{item.sector}
+								</span>
+							)}
+							<p className="text-muted-foreground text-sm">
+								Published On {formatShortDate(item.publishedAt)}
+							</p>
+						</div>
+					</div>
+				</div>
+				<div className="mt-8 lg:grid lg:grid-cols-2 lg:gap-8">
+					<div className="relative lg:col-start-2 lg:row-start-1">
+						<svg
+							aria-hidden="true"
+							className="absolute top-0 right-0 -mt-20 -mr-20 hidden lg:block"
+							fill="none"
+							height={384}
+							viewBox="0 0 404 384"
+							width={404}
+						>
+							<defs>
+								<pattern
+									height={20}
+									id="de316486-4a29-4312-bdfc-fbce2132a2c1"
+									patternUnits="userSpaceOnUse"
+									width={20}
+									x={0}
+									y={0}
+								>
+									<rect
+										className="text-muted"
+										fill="currentColor"
+										height={4}
+										width={4}
+										x={0}
+										y={0}
+									/>
+								</pattern>
+							</defs>
+							<rect
+								fill="url(#de316486-4a29-4312-bdfc-fbce2132a2c1)"
+								height={384}
+								width={404}
+							/>
+						</svg>
+						<div className="relative mx-auto text-base lg:max-w-none">
+							<figure>
+								<Image
+									alt={item.title}
+									className="aspect-12/7 w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
+									height={1376}
+									src={item.featureImageUrl ?? FALLBACK_IMAGE}
+									width={1184}
+								/>
+								<figcaption className="mt-3 flex text-muted-foreground text-sm">
+									<span className="ml-2">{`${item.title} featured image`}</span>
+								</figcaption>
+							</figure>
+						</div>
+					</div>
+					<div className="mt-8 lg:mt-0">
+						<div className="mx-auto text-base/7 text-muted-foreground">
+							{item.authors && (
+								<div className="mb-10 flex items-center justify-start gap-2 text-foreground">
+									<div className="flex items-center justify-start gap-2 text-sm">
+										<Users2Icon className="size-4" />
+										{item.authors}
+									</div>
+								</div>
+							)}
+							{item.description ? (
+								<SanitisedHtml
+									className="prose max-w-none prose-a:text-primary"
+									html={item.description}
+								/>
+							) : (
+								<p>No description has been provided for this item.</p>
+							)}
+
+							<div className="pt-6">
+								<h3 className="font-semibold text-foreground text-lg">
+									Frozen snapshot
+								</h3>
+								<p className="mt-2 text-sm">
+									Download the full, point-in-time snapshot published for this
+									item, including its argument structure.
+								</p>
+								<DownloadPublishedItemButton
+									content={JSON.stringify(item.content)}
+									title={item.title}
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export default DiscoverItemPage;

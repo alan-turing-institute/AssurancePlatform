@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import DownloadCaseButton from "../download-case-button";
+import DownloadPublishedItemButton from "../download-published-item-button";
 
 // Constants for regex patterns
 const DOWNLOAD_BUTTON_REGEX = /download/i;
@@ -59,7 +59,7 @@ global.URL.revokeObjectURL = mockRevokeObjectURL;
 // Keep a reference to the real Blob constructor so we can create genuine Blob instances
 const RealBlob = global.Blob;
 
-describe("DownloadCaseButton", () => {
+describe("DownloadPublishedItemButton", () => {
 	// Store original createElement for spy fallback
 	let originalCreateElement: typeof document.createElement;
 
@@ -121,7 +121,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -134,7 +136,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const icon = screen.getByTestId("download-icon");
 			expect(icon).toBeInTheDocument();
@@ -146,7 +150,7 @@ describe("DownloadCaseButton", () => {
 			const mockTitle = "Test Case";
 
 			const { container } = render(
-				<DownloadCaseButton content={mockContent} title={mockTitle} />
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
 			);
 
 			const wrapper = container.firstChild;
@@ -166,7 +170,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test", "description": "A test case"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -205,7 +211,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test", "id": 123}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -245,7 +253,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case With Spaces";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Set up mocks before clicking
 			const createElementSpy = vi
@@ -282,7 +292,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Set up mocks before clicking
 			const createElementSpy = vi
@@ -319,7 +331,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test  Case    With   Multiple     Spaces";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -358,7 +372,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name":"test","id":123,"nested":{"value":true}}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -410,7 +426,9 @@ describe("DownloadCaseButton", () => {
 			});
 			const mockTitle = "Complex Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -447,7 +465,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = "{}";
 			const mockTitle = "Empty Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -487,7 +507,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = "invalid json";
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -505,7 +527,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = "";
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -523,7 +547,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test", "unclosed": ';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -538,7 +564,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock appendChild to throw an error
 			const appendChildSpy = vi
@@ -564,7 +592,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test/Case\\With:Special*Characters?";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -603,7 +633,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = `${"A".repeat(200)} Very Long Title`;
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -640,7 +672,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "     ";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -676,7 +710,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			// Mock DOM methods just before clicking
 			const createElementSpy = vi
@@ -720,7 +756,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -759,7 +797,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,
@@ -771,7 +811,9 @@ describe("DownloadCaseButton", () => {
 			const mockContent = '{"name": "test"}';
 			const mockTitle = "Test Case";
 
-			render(<DownloadCaseButton content={mockContent} title={mockTitle} />);
+			render(
+				<DownloadPublishedItemButton content={mockContent} title={mockTitle} />
+			);
 
 			const button = screen.getByRole("button", {
 				name: DOWNLOAD_BUTTON_REGEX,

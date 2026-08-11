@@ -14,6 +14,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 import { Pool } from "pg";
 import { prisma as appPrisma } from "../../lib/prisma";
+import { upsertCaseInformation } from "../../lib/services/case-information-service";
 import {
 	DARTER_INTEGRATION_NAME,
 	ensureDarterCaseGrant,
@@ -817,13 +818,37 @@ async function main() {
 	const { chrisId, demoCaseId, demoClaim1Id, mediumCaseId } = seeded;
 
 	// ============================================
-	// 5. PUBLISH MEDIUM CASE (via the real publish service)
+	// 5. CURATE + PUBLISH MEDIUM CASE (via the real services)
 	// ============================================
 	// Runs OUTSIDE the transaction above, through the app's own `prisma`
-	// client, for the same reason as the DARTER registration below: publishing
-	// needs to read back Medium Case's elements, which only exist once this
-	// script's own transaction has committed and is visible to that separate
-	// connection. Calling `publishAssuranceCase` — not hand-setting the
+	// client, for the same reason as the DARTER registration below: both
+	// steps need to read back Medium Case (and, for publishing, its
+	// elements), which only exist once this script's own transaction has
+	// committed and is visible to that separate connection.
+	//
+	// Case information (ADR 0003 §1) is curated first so Discover has
+	// something to render beyond a bare title — publishing freezes it into
+	// the snapshot's `content.caseInformation`, exercised by
+	// `discover-service.ts`.
+	console.log("\nCurating case information for Medium Case...");
+	const caseInformationResult = await upsertCaseInformation(
+		chrisId,
+		mediumCaseId,
+		{
+			description:
+				"A worked example assurance case covering ML trustworthiness, used to exercise sharing, comments and publishing in local development.",
+			authors: "Chris Burr",
+			sector: "Healthcare",
+		}
+	);
+	if ("error" in caseInformationResult) {
+		throw new Error(
+			`Failed to curate case information for Medium Case: ${caseInformationResult.error}`
+		);
+	}
+	console.log("Curated case information for Medium Case.");
+
+	// Calling `publishAssuranceCase` — not hand-setting the
 	// `published`/`publishStatus`/`publishedAt` columns — is deliberate: ADR
 	// 0003 defines "published" as the flag AND a `PublishedAssuranceCase`
 	// snapshot row (slug + isCurrent) created together, and this is the one
