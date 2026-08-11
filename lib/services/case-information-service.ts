@@ -1,11 +1,25 @@
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
+	CASE_INFORMATION_FIELD_LABELS,
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
 import type { CaseInformation } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+/**
+ * Failure shape for `requireCaseInformationComplete` — a plain `error`
+ * string (the `ServiceResult` convention, mapped via `serviceErrorToAppError`
+ * at the route layer for a genuine service failure such as permission
+ * denial), optionally carrying `fieldErrors` when the failure is specifically
+ * "case information exists but is incomplete" — the one branch that needs
+ * field-level messages rather than a single mapped error code.
+ */
+export interface CaseInformationGateFailure {
+	error: string;
+	fieldErrors?: Record<string, string>;
+}
 
 /**
  * Case information CRUD (ADR 0003 §1) — the canonical, curatorial record on
@@ -153,6 +167,46 @@ export async function checkCaseInformationCompleteness(
 
 	const missingFields = getMissingCaseInformationFields(result.data);
 	return { data: { complete: missingFields.length === 0, missingFields } };
+}
+
+/**
+ * The publish-readiness gate itself (ADR 0003 §4), shared by every route
+ * that can move a case to PUBLISHED — first publish
+ * (`POST /api/cases/[id]/publish`) and republish
+ * (`PATCH /api/cases/[id]/status`, `targetStatus: "PUBLISHED"` against an
+ * already-published case). Wraps `checkCaseInformationCompleteness` and adds
+ * the field-error formatting each of those routes used to duplicate inline.
+ *
+ * Callers should treat `{ data: true }` as "proceed" and, on failure, prefer
+ * `fieldErrors` (via `validationError`) when present — its absence means the
+ * failure came from `checkCaseInformationCompleteness` itself (e.g.
+ * permission denial), which the caller should map with
+ * `serviceErrorToAppError` as usual.
+ */
+export async function requireCaseInformationComplete(
+	userId: string,
+	caseId: string
+): Promise<{ data: true } | CaseInformationGateFailure> {
+	const completeness = await checkCaseInformationCompleteness(userId, caseId);
+	if ("error" in completeness) {
+		return completeness;
+	}
+
+	if (!completeness.data.complete) {
+		const fieldErrors = Object.fromEntries(
+			completeness.data.missingFields.map((field) => [
+				field,
+				`${CASE_INFORMATION_FIELD_LABELS[field]} is required before publishing`,
+			])
+		);
+		return {
+			error:
+				"Case information is incomplete — add the missing fields before publishing",
+			fieldErrors,
+		};
+	}
+
+	return { data: true };
 }
 
 /** Case-information fields frozen verbatim into a publish snapshot. */

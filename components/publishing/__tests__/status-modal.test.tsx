@@ -15,6 +15,8 @@ const ADD_AUTHORS_SECTOR_PATTERN = /Add Authors, Sector/;
 const PUBLISH_BUTTON_PATTERN = /Publish/;
 const UNPUBLISH_CONSEQUENCE_PATTERN = /Unpublishing removes the public record/;
 const LINKED_CASE_STUDIES_PATTERN = /linked to 2 case studies/;
+const DIVERGENCE_INDICATOR_PATTERN =
+	/Changes have been made since this case was last published/;
 
 function stubCaseInformation(
 	overrides: Partial<ReturnType<typeof useCaseInformation>>
@@ -202,6 +204,20 @@ describe("StatusModal — Published (divergence + unpublish)", () => {
 		});
 		await user.click(updateButton);
 		expect(onUpdatePublished).toHaveBeenCalledTimes(1);
+	});
+
+	it("shows the divergence indicator (the 'changes since last published' Alert) when there are unpublished changes and case information is complete (QA finding, 2026-08-11 — previously only the button was asserted)", () => {
+		render(
+			<StatusModal
+				hasChanges={true}
+				onOpenChange={vi.fn()}
+				onUpdatePublished={vi.fn()}
+				open={true}
+				status="PUBLISHED"
+			/>
+		);
+
+		expect(screen.getByText(DIVERGENCE_INDICATOR_PATTERN)).toBeInTheDocument();
 	});
 
 	it("blocks republish and surfaces the missing-fields gate when case information is incomplete (lead adjudication, 2026-08-11)", async () => {

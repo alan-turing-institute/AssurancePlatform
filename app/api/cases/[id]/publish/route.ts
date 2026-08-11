@@ -7,9 +7,8 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
-import { CASE_INFORMATION_FIELD_LABELS } from "@/lib/schemas/case-information";
 import { publishCaseBodySchema } from "@/lib/schemas/publish";
-import { checkCaseInformationCompleteness } from "@/lib/services/case-information-service";
+import { requireCaseInformationComplete } from "@/lib/services/case-information-service";
 import {
 	getPublishStatus,
 	publishAssuranceCase,
@@ -80,25 +79,15 @@ export async function POST(
 		}
 		const { description } = parsed.data;
 
-		const completeness = await checkCaseInformationCompleteness(
+		const completeness = await requireCaseInformationComplete(
 			session.userId,
 			caseId
 		);
 		if ("error" in completeness) {
-			return apiError(serviceErrorToAppError(completeness.error));
-		}
-		if (!completeness.data.complete) {
-			const fieldErrors = Object.fromEntries(
-				completeness.data.missingFields.map((field) => [
-					field,
-					`${CASE_INFORMATION_FIELD_LABELS[field]} is required before publishing`,
-				])
-			);
 			return apiError(
-				validationError(
-					"Case information is incomplete — add the missing fields before publishing",
-					fieldErrors
-				)
+				completeness.fieldErrors
+					? validationError(completeness.error, completeness.fieldErrors)
+					: serviceErrorToAppError(completeness.error)
 			);
 		}
 

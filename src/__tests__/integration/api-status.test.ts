@@ -40,6 +40,50 @@ function patchStatusRequest(
 // previously-complete published record could regress via an edit that
 // clears a required field, then a republish.
 
+// ============================================
+// PATCH /api/cases/[id]/status — DRAFT -> PUBLISHED (first publish, raw API)
+// ============================================
+//
+// QA finding, 2026-08-11: this route used to run the completeness gate only
+// `if (isRepublish)`, so a direct PATCH to this route (bypassing the
+// dedicated `POST /api/cases/[id]/publish` route the guided UI flow uses)
+// could first-publish an incomplete case with no gate at all.
+
+describe("PATCH /api/cases/[id]/status — first-publish completeness gate (raw API)", () => {
+	it("cannot publish a DRAFT case directly via PATCH when case information is incomplete", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCaseWithGoal(user.id);
+		// No case information record at all — every required field missing.
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/cases/[id]/status/route");
+		const response = await PATCH(patchStatusRequest(testCase.id, "PUBLISHED"), {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.code).toBe("VALIDATION");
+		expect(body.fieldErrors).toStrictEqual({
+			description: "Description is required before publishing",
+			authors: "Authors is required before publishing",
+			sector: "Sector is required before publishing",
+		});
+
+		// No snapshot was created — the gate must block before the write.
+		const snapshot = await prisma.publishedAssuranceCase.findFirst({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(snapshot).toBeNull();
+
+		// The case remains DRAFT.
+		const updated = await prisma.assuranceCase.findUnique({
+			where: { id: testCase.id },
+		});
+		expect(updated?.publishStatus).toBe("DRAFT");
+	});
+});
+
 describe("PATCH /api/cases/[id]/status — republish completeness gate", () => {
 	it("cannot republish when case information is incomplete", async () => {
 		const user = await createTestUser();

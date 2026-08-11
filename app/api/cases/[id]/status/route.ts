@@ -7,12 +7,10 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
-import { CASE_INFORMATION_FIELD_LABELS } from "@/lib/schemas/case-information";
 import { updateCaseStatusSchema } from "@/lib/schemas/status";
-import { checkCaseInformationCompleteness } from "@/lib/services/case-information-service";
+import { requireCaseInformationComplete } from "@/lib/services/case-information-service";
 import {
 	getFullPublishStatus,
-	getPublishStatus,
 	transitionStatus,
 } from "@/lib/services/publish-service";
 import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma";
@@ -64,14 +62,16 @@ export async function GET(
  * - PUBLISHED -> DRAFT (unpublish)
  * - PUBLISHED -> PUBLISHED (republish: fresh snapshot, same slug)
  *
- * Republish is gated on case-information completeness (ADR 0003 §4), the
- * same check `POST /api/cases/[id]/publish` runs for first publish — lead
- * adjudication, 2026-08-11: without it, a published record could regress to
- * incomplete via an edit that clears a required field then a republish. The
- * case editor's "Update Published" action always goes through this route,
- * so this is the one place a republish-flavoured request can land; DRAFT ->
- * PUBLISHED here is unaffected — first publish is unreachable from the UI
- * except via the dedicated publish route, which already gates it.
+ * DRAFT -> PUBLISHED and republish (PUBLISHED -> PUBLISHED) are both gated
+ * on case-information completeness (ADR 0003 §4), via the same
+ * `requireCaseInformationComplete` helper `POST /api/cases/[id]/publish`
+ * uses for its own first-publish path. The case editor's guided publish flow
+ * always goes through the dedicated publish route, which already gated this
+ * — but this route is a raw API surface too (QA finding, 2026-08-11: a
+ * direct PATCH here bypassed the gate for first publish, since the check
+ * used to run `if (isRepublish)` only). Republish is gated for the same
+ * reason it always was: without it, a published record could regress to
+ * incomplete via an edit that clears a required field then a republish.
  */
 export async function PATCH(
 	request: Request,
@@ -93,31 +93,13 @@ export async function PATCH(
 		const { targetStatus, description } = parsed.data;
 
 		if (targetStatus === "PUBLISHED") {
-			const currentStatus = await getPublishStatus(userId, id);
-			if ("error" in currentStatus) {
-				return apiError(serviceErrorToAppError(currentStatus.error));
-			}
-
-			const isRepublish = currentStatus.data.isPublished;
-			if (isRepublish) {
-				const completeness = await checkCaseInformationCompleteness(userId, id);
-				if ("error" in completeness) {
-					return apiError(serviceErrorToAppError(completeness.error));
-				}
-				if (!completeness.data.complete) {
-					const fieldErrors = Object.fromEntries(
-						completeness.data.missingFields.map((field) => [
-							field,
-							`${CASE_INFORMATION_FIELD_LABELS[field]} is required before publishing`,
-						])
-					);
-					return apiError(
-						validationError(
-							"Case information is incomplete — add the missing fields before publishing",
-							fieldErrors
-						)
-					);
-				}
+			const completeness = await requireCaseInformationComplete(userId, id);
+			if ("error" in completeness) {
+				return apiError(
+					completeness.fieldErrors
+						? validationError(completeness.error, completeness.fieldErrors)
+						: serviceErrorToAppError(completeness.error)
+				);
 			}
 		}
 

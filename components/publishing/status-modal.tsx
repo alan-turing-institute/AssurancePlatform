@@ -168,6 +168,56 @@ function getStatusDescription(status: PublishStatusType): string {
 }
 
 // ============================================
+// Shared — missing case-information fields gate
+// ============================================
+
+interface MissingFieldsGateProps {
+	missingFields: RequiredCaseInformationField[];
+	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
+	testId: string;
+	trailingCopy: string;
+}
+
+/**
+ * "Add the missing fields, then complete case information" — shown in place
+ * of the Publish action (Draft) or the Update Published action (Published)
+ * when the case-information completeness gate (ADR 0003 §4) isn't met.
+ * Shared because both flows surface exactly the same missing-fields message
+ * and "Complete case information" action, differing only in the testid and
+ * the trailing sentence naming which action is blocked.
+ */
+function MissingFieldsGate({
+	missingFields,
+	onRequestCaseInformation,
+	testId,
+	trailingCopy,
+}: MissingFieldsGateProps) {
+	return (
+		<div className="space-y-4" data-testid={testId}>
+			<Alert>
+				<Info className="h-4 w-4" />
+				<AlertDescription>
+					Add{" "}
+					{missingFields
+						.map((field) => CASE_INFORMATION_FIELD_LABELS[field])
+						.join(", ")}{" "}
+					to the case information {trailingCopy}
+				</AlertDescription>
+			</Alert>
+			<Button
+				onClick={() =>
+					onRequestCaseInformation?.(
+						missingFields[0] as RequiredCaseInformationField
+					)
+				}
+			>
+				Complete case information
+			</Button>
+		</div>
+	);
+}
+
+// ============================================
 // Draft — the Publish flow (ADR 0003 §2)
 // ============================================
 
@@ -206,27 +256,12 @@ function PublishContent({
 
 	if (missingFields.length > 0) {
 		return (
-			<div className="space-y-4" data-testid="publish-content-incomplete">
-				<Alert>
-					<Info className="h-4 w-4" />
-					<AlertDescription>
-						Add{" "}
-						{missingFields
-							.map((field) => CASE_INFORMATION_FIELD_LABELS[field])
-							.join(", ")}{" "}
-						to the case information before publishing.
-					</AlertDescription>
-				</Alert>
-				<Button
-					onClick={() =>
-						onRequestCaseInformation?.(
-							missingFields[0] as RequiredCaseInformationField
-						)
-					}
-				>
-					Complete case information
-				</Button>
-			</div>
+			<MissingFieldsGate
+				missingFields={missingFields}
+				onRequestCaseInformation={onRequestCaseInformation}
+				testId="publish-content-incomplete"
+				trailingCopy="before publishing."
+			/>
 		);
 	}
 
@@ -320,27 +355,12 @@ function PublishedContent({
 			)}
 
 			{republishBlocked && (
-				<div className="space-y-4" data-testid="republish-content-incomplete">
-					<Alert>
-						<Info className="h-4 w-4" />
-						<AlertDescription>
-							Add{" "}
-							{missingFields
-								.map((field) => CASE_INFORMATION_FIELD_LABELS[field])
-								.join(", ")}{" "}
-							to the case information before updating the published version.
-						</AlertDescription>
-					</Alert>
-					<Button
-						onClick={() =>
-							onRequestCaseInformation?.(
-								missingFields[0] as RequiredCaseInformationField
-							)
-						}
-					>
-						Complete case information
-					</Button>
-				</div>
+				<MissingFieldsGate
+					missingFields={missingFields}
+					onRequestCaseInformation={onRequestCaseInformation}
+					testId="republish-content-incomplete"
+					trailingCopy="before updating the published version."
+				/>
 			)}
 
 			{hasChanges && !republishBlocked && onUpdatePublished && (
