@@ -8,6 +8,7 @@ import {
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { updateCaseStatusSchema } from "@/lib/schemas/status";
+import { requireCaseInformationComplete } from "@/lib/services/case-information-service";
 import {
 	getFullPublishStatus,
 	transitionStatus,
@@ -60,6 +61,17 @@ export async function GET(
  * - DRAFT -> PUBLISHED (publish)
  * - PUBLISHED -> DRAFT (unpublish)
  * - PUBLISHED -> PUBLISHED (republish: fresh snapshot, same slug)
+ *
+ * DRAFT -> PUBLISHED and republish (PUBLISHED -> PUBLISHED) are both gated
+ * on case-information completeness (ADR 0003 §4), via the same
+ * `requireCaseInformationComplete` helper `POST /api/cases/[id]/publish`
+ * uses for its own first-publish path. The case editor's guided publish flow
+ * always goes through the dedicated publish route, which already gated this
+ * — but this route is a raw API surface too (QA finding, 2026-08-11: a
+ * direct PATCH here bypassed the gate for first publish, since the check
+ * used to run `if (isRepublish)` only). Republish is gated for the same
+ * reason it always was: without it, a published record could regress to
+ * incomplete via an edit that clears a required field then a republish.
  */
 export async function PATCH(
 	request: Request,
@@ -79,6 +91,17 @@ export async function PATCH(
 		}
 
 		const { targetStatus, description } = parsed.data;
+
+		if (targetStatus === "PUBLISHED") {
+			const completeness = await requireCaseInformationComplete(userId, id);
+			if ("error" in completeness) {
+				return apiError(
+					completeness.fieldErrors
+						? validationError(completeness.error, completeness.fieldErrors)
+						: serviceErrorToAppError(completeness.error)
+				);
+			}
+		}
 
 		const result = await transitionStatus(
 			userId,

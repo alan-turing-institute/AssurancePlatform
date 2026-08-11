@@ -44,3 +44,55 @@ export const upsertCaseInformationSchema = caseInformationSchema.refine(
 
 export type CaseInformationInput = z.input<typeof upsertCaseInformationSchema>;
 export type CaseInformationData = z.output<typeof upsertCaseInformationSchema>;
+
+/**
+ * Fields required before a case can be published (ADR 0003 §4 — "the
+ * admission ticket to Discover"): description, authors and sector, so
+ * nothing reaches the public page without explanation, attribution or
+ * classification (Chris's ruling, 2026-08-11 — widened from
+ * description-only). The feature image stays optional curation. Mirrors the
+ * one field the retired case-study form enforced beyond its own title
+ * (`app/(authenticated)/dashboard/case-studies/_components/_form/form-schema.ts`'s
+ * `description: z.string().min(1, ...)`) — title has no case-information
+ * analogue because the assurance case already carries a required `name`.
+ *
+ * Kept as an array (not separate constants) so a future required field only
+ * needs adding here — the publish flow and its "surface exactly the missing
+ * fields" UI both read this list rather than hard-coding field names.
+ */
+export const REQUIRED_CASE_INFORMATION_FIELDS = [
+	"description",
+	"authors",
+	"sector",
+] as const;
+
+export type RequiredCaseInformationField =
+	(typeof REQUIRED_CASE_INFORMATION_FIELDS)[number];
+
+/** Human-readable label for a required field, for publish-gate UI copy. */
+export const CASE_INFORMATION_FIELD_LABELS: Record<
+	RequiredCaseInformationField,
+	string
+> = {
+	description: "Description",
+	authors: "Authors",
+	sector: "Sector",
+};
+
+/**
+ * Returns the required case-information fields that are missing or blank —
+ * exactly the gaps the publish flow surfaces in place (ADR 0003 §2), rather
+ * than a from-scratch questionnaire. A case with no case-information record
+ * at all (`information` is `null`/`undefined`) is every required field
+ * missing.
+ */
+export function getMissingCaseInformationFields(
+	information:
+		| Partial<Record<RequiredCaseInformationField, string | null>>
+		| null
+		| undefined
+): RequiredCaseInformationField[] {
+	return REQUIRED_CASE_INFORMATION_FIELDS.filter(
+		(field) => !information?.[field]?.trim()
+	);
+}
