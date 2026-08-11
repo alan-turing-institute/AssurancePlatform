@@ -37,6 +37,15 @@ type TransactionClient = TransactionCallback extends (
  * not an empty object, when there is none — so a snapshot never gains a key
  * for data the case doesn't hold.
  *
+ * Comments are excluded (`includeComments: false`) — ADR 0003 §3 scopes a
+ * snapshot to structure/arguments/evidence/plugin-data; comments (and their
+ * commenter identities, including email) are internal collaboration on the
+ * live case, never part of the published record (privacy fix, Chris's
+ * ruling 2026-08-11 — the public Discover surface was serving them
+ * unfiltered). `exportCase`'s `includeComments` option itself is untouched
+ * for authenticated export use elsewhere (e.g. `actions/export-document.ts`,
+ * `app/api/cases/export/route.ts`) — only this publish-time call opts out.
+ *
  * Shared verbatim between `publishAssuranceCase` (first publish) and
  * `updatePublishedCase` (republish) — both must freeze identical content
  * shapes, so this is the single place that composition happens.
@@ -46,7 +55,7 @@ async function composeSnapshotContent(
 	caseId: string
 ): Promise<{ data: Record<string, unknown> } | { error: string }> {
 	const exportResult = await exportCase(userId, caseId, {
-		includeComments: true,
+		includeComments: false,
 	});
 	if ("error" in exportResult) {
 		return { error: exportResult.error };
