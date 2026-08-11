@@ -44,6 +44,7 @@ const NEW_STRATEGY_DESCRIPTION = "New strategy added for divergence coverage";
 
 const DIVERGENCE_TEXT =
 	"Changes have been made since this case was last published.";
+const CASE_ID_FROM_URL_PATTERN = /\/case\/([a-f0-9-]+)/;
 
 test.describe("ADR 0003 — publish journey", () => {
 	let caseId: string | undefined;
@@ -72,7 +73,7 @@ test.describe("ADR 0003 — publish journey", () => {
 		await page.getByRole("button", { name: "Submit" }).click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		caseId = page.url().match(/\/case\/([a-f0-9-]+)/)?.[1];
+		caseId = page.url().match(CASE_ID_FROM_URL_PATTERN)?.[1];
 		expect(caseId).toBeTruthy();
 
 		await expect(editor.statusButton).toHaveText("Draft");
@@ -214,9 +215,7 @@ test.describe("ADR 0003 — publish journey", () => {
 
 		await expect(editor.statusButton).toHaveText("Draft");
 
-		const goneResponse = await page.request.get(
-			`/api/public/discover/${slug}`
-		);
+		const goneResponse = await page.request.get(`/api/public/discover/${slug}`);
 		expect(goneResponse.status()).toBe(404);
 
 		const gonePage = await page.goto(`/discover/${slug}`);

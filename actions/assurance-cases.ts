@@ -88,4 +88,3 @@ export const fetchPublishedAssuranceCases = async (): Promise<
 	// This function is retained for backwards compatibility but returns empty array
 	return await Promise.resolve([]);
 };
-
