@@ -9,7 +9,11 @@ import { workerDatabaseName } from "./scripts/test-db-config";
 // load before test files in each vitest fork — so this override always lands
 // first. `VITEST_POOL_ID` is vitest's 1-indexed fork id; it's stable for the
 // lifetime of the worker process, so every test file the worker picks up
-// shares the same worker-scoped database.
+// shares the same worker-scoped database. `workerDatabaseName` also scopes
+// the name to this invocation (`INTEGRATION_TEST_INVOCATION_ID`, read from
+// the environment globalSetup set it in — inherited by this fork at spawn
+// time), so two overlapping `vitest run` invocations never land on the same
+// database name.
 const workerId = process.env.VITEST_POOL_ID ?? "1";
 const baseDatabaseUrl = process.env.DATABASE_URL;
 if (!baseDatabaseUrl) {
