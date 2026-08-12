@@ -84,8 +84,19 @@ function setUpTmpProject(): void {
 	);
 }
 
-describe("publishing-schema-and-state-model migration", () => {
-	afterAll(async () => {
+/**
+ * Drops the scratch database, retrying on transient failure. Under full-suite
+ * parallel load `DROP DATABASE … WITH (FORCE)` (which itself has to wait for
+ * and terminate other backends) can be slow enough to blow past a tight
+ * timeout even though nothing is actually wrong — that's the CI-only flake
+ * on this file (see the issue's 2026-08-11 note: `afterAll` timed out at 30s
+ * four times under parallel load, always green in isolation at 12–27s). A
+ * couple of short retries absorb that contention without masking a real
+ * failure (each attempt still surfaces its error on the final try).
+ */
+async function dropScratchDatabaseWithRetries(): Promise<void> {
+	const maxAttempts = 3;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		const adminPool = new Pool({
 			connectionString: INTEGRATION_TEST_ADMIN_DATABASE_URL,
 		});
@@ -93,11 +104,29 @@ describe("publishing-schema-and-state-model migration", () => {
 			await adminPool.query(
 				`DROP DATABASE IF EXISTS "${scratchDbName}" WITH (FORCE)`
 			);
+			return;
+		} catch (error) {
+			if (attempt === maxAttempts) {
+				throw error;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
 		} finally {
 			await adminPool.end();
 		}
+	}
+}
+
+describe("publishing-schema-and-state-model migration", () => {
+	// Raised from 30s: under full-suite parallel load this teardown competes
+	// with three other worker databases' worth of connection/DDL contention
+	// on the same Postgres instance — 12–27s in isolation, occasionally over
+	// 30s under load (issue's 2026-08-11 note). The retried drop above
+	// absorbs most of that; the higher ceiling covers what's left without
+	// papering over a genuinely stuck teardown.
+	afterAll(async () => {
+		await dropScratchDatabaseWithRetries();
 		fs.rmSync(tmpDir, { recursive: true, force: true });
-	}, 30_000);
+	}, 60_000);
 
 	it("maps legacy READY_TO_PUBLISH rows to DRAFT and backfills a unique slug, before rebuilding the enum", async () => {
 		const allMigrations = fs
