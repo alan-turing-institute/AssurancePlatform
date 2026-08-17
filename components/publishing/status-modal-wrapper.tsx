@@ -33,6 +33,7 @@ export function StatusModalWrapper() {
 	const { hasChanges, refresh: refreshChanges } = useChangeDetection({
 		caseId: statusModal.caseId,
 		enabled: statusModal.isOpen && statusModal.status === "PUBLISHED",
+		refreshKey: assuranceCase,
 	});
 
 	const handleStatusTransition = async (

@@ -47,10 +47,15 @@ const Header = ({ setOpen }: HeaderProps) => {
 
 	const currentStatus: PublishStatusType = getDisplayStatus();
 
-	// Use change detection for published cases
+	// Use change detection for published cases. `refreshKey: assuranceCase`
+	// re-fetches whenever the case content changes (structural edits replace
+	// this object; comment mutations live in separate store slices and never
+	// touch it) — without it this only fetched once on mount and the canvas
+	// badge's amber "changes pending" dot stayed stale until a page reload.
 	const { hasChanges } = useChangeDetection({
 		caseId: assuranceCase?.id ?? null,
 		enabled: currentStatus === "PUBLISHED",
+		refreshKey: assuranceCase,
 	});
 
 	const _handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
