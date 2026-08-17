@@ -474,6 +474,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Planning migration from Docker Hub to GitHub Container Registry (ghcr.io)
 - Directory naming conventions from EAP to TEA branding
 
+### Removed
+- Retired the case-study system (ADR 0003): the `/api/case-studies/*` and
+  `/api/published-assurance-cases` routes, and the public
+  `/api/public/case-studies`, `/api/public/case-studies/[id]`, and
+  `/api/public/assurance-case/[id]` endpoints. Publishing an assurance case
+  now goes through the publish flow's snapshot endpoint, and published cases
+  are served from the Discover pages at `/discover/<slug>`.
+
 ## [0.2.0] - TBD
 
 ### Added

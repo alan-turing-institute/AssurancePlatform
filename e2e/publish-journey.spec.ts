@@ -23,7 +23,10 @@
  *
  * Published payloads carry no comments (an existing strip layer handles
  * that, see `discover-comments-privacy.test.ts`) — this file doesn't
- * exercise or re-assert that; it isn't fighting or duplicating it.
+ * exercise or re-assert that; it isn't fighting or duplicating it. This file
+ * does cover a related but distinct behaviour: a comment added after publish
+ * must not trip the divergence indicator (the change-detection comparison
+ * excludes comments from what counts as "content").
  */
 import prisma from "@/lib/prisma";
 import { expect, test } from "./helpers/auth";
@@ -146,6 +149,25 @@ test.describe("ADR 0003 — publish journey", () => {
 		expect(snapshotBody.slug).toBe(slug);
 		expect(snapshotBody.title).toBe(CASE_NAME);
 		expect(snapshotBody.content).toBeTruthy();
+
+		// ---- Comment immunity: a comment is not case content, so adding one
+		// must not trip the published-version-behind indicator (human-verified
+		// in the 2026-08-12 staging walkthrough, finding 6). Distinct from
+		// `discover-comments-privacy.test.ts`, which covers comments being
+		// stripped from the published payload — this covers the divergence
+		// check excluding comments from what it compares. ----
+		const commentResponse = await page.request.post(
+			`/api/cases/${caseId}/comments`,
+			{ data: { content: "A comment left after publishing." } }
+		);
+		expect(commentResponse.status()).toBe(201);
+
+		await page.reload();
+		await editor.statusButton.click();
+		await expect(editor.statusModalTitle).toBeVisible();
+		await expect(page.getByText(DIVERGENCE_TEXT)).toBeHidden();
+		await page.keyboard.press("Escape");
+		await expect(editor.statusModalTitle).toBeHidden();
 
 		// ---- Edit: a real structural change via the elements API (the same
 		// route the canvas "Add child element" action calls) ----

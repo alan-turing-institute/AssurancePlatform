@@ -34,8 +34,7 @@ export const caseInformationSchema = z.object({
  * Create-or-update input. A case's information is a single optional 1:1
  * record edited in place (ADR §1: "editable any time") — there is no
  * separate create-vs-update distinction at the API boundary, only "save
- * whatever fields are provided". At least one field must be provided, same
- * rule as `updateCaseStudySchema`.
+ * whatever fields are provided". At least one field must be provided.
  */
 export const upsertCaseInformationSchema = caseInformationSchema.refine(
 	(data) => Object.values(data).some((v) => v !== undefined),
