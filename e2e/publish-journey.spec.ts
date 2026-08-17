@@ -57,6 +57,13 @@ test.describe("ADR 0003 — publish journey", () => {
 		// case itself is cleaned up here so repeated runs don't accumulate in
 		// a shared dev DB (mirrors machine-whoami.spec.ts's afterAll).
 		if (caseId) {
+			// Failure-tolerant: an aborted run can die while the case is still
+			// published, leaving a `published_assurance_cases` row that
+			// foreign-keys onto the case — delete those first or the case
+			// delete throws `published_assurance_cases_assurance_case_id_fkey`.
+			await prisma.publishedAssuranceCase.deleteMany({
+				where: { assuranceCaseId: caseId },
+			});
 			await prisma.assuranceCase.deleteMany({ where: { id: caseId } });
 		}
 	});
@@ -162,7 +169,7 @@ test.describe("ADR 0003 — publish journey", () => {
 		);
 		expect(commentResponse.status()).toBe(201);
 
-		await page.reload();
+		await page.goto(`/case/${caseId}`);
 		await editor.statusButton.click();
 		await expect(editor.statusModalTitle).toBeVisible();
 		await expect(page.getByText(DIVERGENCE_TEXT)).toBeHidden();
