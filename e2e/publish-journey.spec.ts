@@ -41,7 +41,10 @@ const CASE_INFO = {
 	description:
 		"A worked example built for end-to-end publish-journey coverage.",
 	authors: "E2E Test Suite",
-	sector: "Technology",
+	// Must be a canonical value from `lib/sectors.ts` (ADR 0003 §1) — the
+	// Sector field is a Radix Select, not free text, so an arbitrary string
+	// can't be chosen.
+	sector: "Information, Communication & Media",
 };
 const NEW_STRATEGY_DESCRIPTION = "New strategy added for divergence coverage";
 
@@ -100,8 +103,19 @@ test.describe("ADR 0003 — publish journey", () => {
 		// its own "Description" label.
 		const infoForm = page.getByTestId("case-information-form");
 		await infoForm.getByLabel("Description").fill(CASE_INFO.description);
+
+		// Authors is a tag input (AuthorsTagInput): typing text alone never
+		// commits it — press Enter to add the chip, then assert it rendered.
 		await infoForm.getByLabel("Authors").fill(CASE_INFO.authors);
-		await infoForm.getByLabel("Sector").fill(CASE_INFO.sector);
+		await infoForm.getByLabel("Authors").press("Enter");
+		await expect(
+			infoForm.getByTestId("authors-tag-list").getByText(CASE_INFO.authors)
+		).toBeVisible();
+
+		// Sector is a Radix Select, not free text: open it and choose the
+		// canonical option.
+		await infoForm.getByLabel("Sector").click();
+		await page.getByRole("option", { name: CASE_INFO.sector }).click();
 
 		await Promise.all([
 			page.waitForResponse(

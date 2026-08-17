@@ -13,6 +13,13 @@ import {
 
 interface AuthorsTagInputProps {
 	disabled?: boolean;
+	/**
+	 * Forwarded by `FormControl` (`components/ui/form.tsx`) so the field's
+	 * `FormLabel` associates with the real text input, not this component's
+	 * outer wrapper — without it, `getByLabel("Authors")` (and screen readers)
+	 * can't find a control to label.
+	 */
+	id?: string;
 	onChange: (value: string) => void;
 	placeholder?: string;
 	value: string;
@@ -47,6 +54,7 @@ export function AuthorsTagInput({
 	value,
 	onChange,
 	disabled,
+	id,
 	placeholder = "e.g. Ada Lovelace",
 }: AuthorsTagInputProps) {
 	const [draft, setDraft] = useState("");
@@ -88,6 +96,7 @@ export function AuthorsTagInput({
 				<Input
 					aria-describedby="authors-tag-input-help"
 					disabled={disabled}
+					id={id}
 					onChange={(event) => setDraft(event.target.value)}
 					onKeyDown={onKeyDown}
 					placeholder={placeholder}
