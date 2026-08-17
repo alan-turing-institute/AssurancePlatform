@@ -24,6 +24,17 @@ interface UseChangeDetectionOptions {
 	includeDetails?: boolean;
 	/** Poll interval in milliseconds (0 to disable polling) */
 	pollInterval?: number;
+	/**
+	 * Opaque value that, when it changes by reference, triggers a refetch
+	 * without waiting for `enabled`/`caseId` to change. Pass something that
+	 * only changes when case *content* changes — e.g. the `assuranceCase`
+	 * object from the canvas store, which is replaced (never mutated) on
+	 * every structural edit (create/update/delete/move of an element) but is
+	 * untouched by comment mutations, which live in separate store slices.
+	 * This is what makes the divergence indicator reactive to edits landing
+	 * while it's already mounted, instead of only refreshing on next mount.
+	 */
+	refreshKey?: unknown;
 }
 
 interface UseChangeDetectionReturn {
@@ -117,6 +128,7 @@ export function useChangeDetection({
 	includeDetails = false,
 	enabled = true,
 	pollInterval = 0,
+	refreshKey,
 }: UseChangeDetectionOptions): UseChangeDetectionReturn {
 	const [state, setState] = useState<ChangeDetectionState>(initialState);
 
@@ -145,14 +157,18 @@ export function useChangeDetection({
 		}
 	}, [caseId, includeDetails]);
 
-	// Initial fetch and when dependencies change
+	// Initial fetch, when dependencies change, and whenever `refreshKey`
+	// changes reference while enabled — the structural-edit invalidation
+	// path (see the option's doc comment above). `refreshKey` isn't read in
+	// the effect body, only used to force a re-run on change.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is an intentional opaque invalidation signal, not a value read inside the effect
 	useEffect(() => {
 		if (enabled && caseId) {
 			fetchChanges();
 		} else {
 			setState(initialState);
 		}
-	}, [enabled, caseId, fetchChanges]);
+	}, [enabled, caseId, fetchChanges, refreshKey]);
 
 	// Optional polling
 	useEffect(() => {
