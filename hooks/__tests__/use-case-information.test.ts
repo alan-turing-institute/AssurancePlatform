@@ -34,6 +34,26 @@ describe("useCaseInformation", () => {
 		expect(result.current.information?.description).toBe("A worked example");
 	});
 
+	it("reports forCaseId matching the caseId the record was fetched for", async () => {
+		server.use(
+			http.get(INFORMATION_PATH, () =>
+				HttpResponse.json({
+					description: "A worked example",
+					authors: "Ada Lovelace",
+					sector: "Healthcare",
+					featureImageUrl: null,
+				})
+			)
+		);
+
+		const { result } = renderHook(() => useCaseInformation(CASE_ID));
+
+		expect(result.current.forCaseId).toBeUndefined();
+		await waitFor(() => expect(result.current.loading).toBe(false));
+
+		expect(result.current.forCaseId).toBe(CASE_ID);
+	});
+
 	it("resolves to null information when the case has none yet", async () => {
 		server.use(http.get(INFORMATION_PATH, () => HttpResponse.json(null)));
 

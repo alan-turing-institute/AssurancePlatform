@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AuthorsTagInput } from "@/components/cases/authors-tag-input";
 import {
@@ -54,6 +54,7 @@ export function CaseInformationSection({
 	canEdit,
 }: CaseInformationSectionProps) {
 	const {
+		forCaseId,
 		information,
 		loading,
 		saving,
@@ -82,11 +83,30 @@ export function CaseInformationSection({
 	// not yet saved (the "upload wipes unsaved fields" bug: uploading an
 	// image replaced `information` with the last-saved server values, and
 	// this effect used to reset the whole form to match, clobbering in-flight
-	// edits to Authors/Sector). Keyed on caseId so switching to a different
-	// case still re-hydrates the form.
-	const hydratedCaseIdRef = useRef<string | undefined>(undefined);
+	// edits to Authors/Sector).
+	//
+	// Gated on `forCaseId === caseId` rather than on `loading` alone —
+	// `useCaseInformation` reports `forCaseId`, the caseId the current
+	// `information` was actually fetched for, so hydration can't fire against
+	// a stale record that happens to still be in state when `loading` flips
+	// false on a fast case switch (the same-tick staleness window a purely
+	// timing-based guard couldn't see). Keyed on `forCaseId` so switching to a
+	// different case still re-hydrates the form once its own record arrives.
+	//
+	// Deliberately **state**, not a ref: `reset()` re-renders every
+	// `Controller`-backed field (react-hook-form gives each one a fresh
+	// `field.ref` closure per render, so Radix/our components re-attach their
+	// DOM ref as part of that commit). The focus effect below needs to run
+	// *after* that reattachment lands, and a ref write doesn't trigger a
+	// re-run of anything — only a state change reliably schedules the extra
+	// render that separates "hydrate" from "focus" into two commits. Calling
+	// `setFocus` in the very same effect flush as `reset()` silently no-ops
+	// (`setFocus`'s search for the field's DOM ref lands mid-reattachment).
+	const [hydratedForCaseId, setHydratedForCaseId] = useState<
+		string | undefined
+	>(undefined);
 	useEffect(() => {
-		if (loading || hydratedCaseIdRef.current === caseId) {
+		if (loading || forCaseId !== caseId || hydratedForCaseId === forCaseId) {
 			return;
 		}
 		reset({
@@ -95,23 +115,31 @@ export function CaseInformationSection({
 			sector: information?.sector ?? "",
 			featureImageUrl: information?.featureImageUrl ?? "",
 		});
-		hydratedCaseIdRef.current = caseId;
-	}, [information, reset, caseId, loading]);
+		setHydratedForCaseId(forCaseId);
+	}, [information, reset, caseId, forCaseId, loading, hydratedForCaseId]);
 
 	// The feature image is the one field a background upload/remove legitimately
 	// needs to push into the form after initial hydration — sync just that
 	// field (never the others) so it reflects the freshly uploaded URL.
 	useEffect(() => {
-		if (loading || hydratedCaseIdRef.current !== caseId) {
+		if (loading || hydratedForCaseId !== caseId) {
 			return;
 		}
 		setValue("featureImageUrl", information?.featureImageUrl ?? "");
-	}, [information?.featureImageUrl, setValue, caseId, loading]);
+	}, [
+		information?.featureImageUrl,
+		setValue,
+		caseId,
+		loading,
+		hydratedForCaseId,
+	]);
 
 	// The publish flow (ADR 0003 §2) sends the user here with a specific
 	// missing field named — focus it once the fetched values have synced in,
 	// then clear the request so a later manual open of this sheet doesn't
-	// re-focus anything.
+	// re-focus anything. Gated on `hydratedForCaseId === caseId` (not just
+	// `loading`) so this only fires on the commit *after* the hydration
+	// effect's `reset()` has settled — see the comment above.
 	const caseInformationFocusField = useStore(
 		(state) => state.caseInformationFocusField
 	);
@@ -119,7 +147,11 @@ export function CaseInformationSection({
 		(state) => state.setCaseInformationFocusField
 	);
 	useEffect(() => {
-		if (loading || !(canEdit && caseInformationFocusField)) {
+		if (
+			loading ||
+			hydratedForCaseId !== caseId ||
+			!(canEdit && caseInformationFocusField)
+		) {
 			return;
 		}
 		if (caseInformationFocusField in getValues()) {
@@ -128,6 +160,8 @@ export function CaseInformationSection({
 		setCaseInformationFocusField(null);
 	}, [
 		loading,
+		hydratedForCaseId,
+		caseId,
 		canEdit,
 		caseInformationFocusField,
 		getValues,
@@ -233,6 +267,7 @@ export function CaseInformationSection({
 							<FormControl>
 								<AuthorsTagInput
 									onChange={field.onChange}
+									ref={field.ref}
 									value={field.value ?? ""}
 								/>
 							</FormControl>
@@ -262,7 +297,7 @@ export function CaseInformationSection({
 									value={currentValue || undefined}
 								>
 									<FormControl>
-										<SelectTrigger>
+										<SelectTrigger ref={field.ref}>
 											<SelectValue placeholder="Select a sector" />
 										</SelectTrigger>
 									</FormControl>
