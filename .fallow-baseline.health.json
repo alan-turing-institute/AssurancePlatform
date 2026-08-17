@@ -1,28 +1,5 @@
 {
   "finding_counts": {
-    "app/(authenticated)/dashboard/case-studies/_components/_form/form-actions.tsx": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
-    "app/(authenticated)/dashboard/case-studies/_components/_form/form-schema.ts": {
-      "crap_critical": {
-        "count": 1
-      }
-    },
-    "app/(authenticated)/dashboard/case-studies/_components/case-study-form.tsx": {
-      "crap_high": {
-        "count": 3
-      },
-      "crap_moderate": {
-        "count": 1
-      }
-    },
-    "app/(authenticated)/dashboard/case-studies/_components/related-assurance-case-list.tsx": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
     "app/(authenticated)/dashboard/page.tsx": {
       "crap_moderate": {
         "count": 1
@@ -87,29 +64,14 @@
         "count": 1
       }
     },
-    "app/(landing)/_components/case-studies.tsx": {
+    "app/(landing)/discover/[slug]/page.tsx": {
       "crap_moderate": {
         "count": 1
       }
     },
-    "app/(landing)/discover/__tests__/mocks/case-editor-mock.tsx": {
+    "app/(landing)/discover/_components/published-items.tsx": {
       "crap_moderate": {
-        "count": 1
-      }
-    },
-    "app/(landing)/discover/__tests__/mocks/case-study-view-mock.tsx": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
-    "app/(landing)/discover/__tests__/mocks/discover-page-mock.tsx": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
-    "app/(landing)/discover/__tests__/mocks/public-case-view-mock.tsx": {
-      "crap_moderate": {
-        "count": 1
+        "count": 2
       }
     },
     "app/api/auth/forgot-password/route.ts": {
@@ -118,27 +80,6 @@
       }
     },
     "app/api/auth/reset-password/route.ts": {
-      "crap_critical": {
-        "count": 1
-      }
-    },
-    "app/api/case-studies/[id]/image/route.ts": {
-      "crap_critical": {
-        "count": 1
-      },
-      "crap_high": {
-        "count": 1
-      },
-      "crap_moderate": {
-        "count": 1
-      }
-    },
-    "app/api/case-studies/[id]/route.ts": {
-      "crap_critical": {
-        "count": 1
-      }
-    },
-    "app/api/case-studies/route.ts": {
       "crap_critical": {
         "count": 1
       }
@@ -168,11 +109,6 @@
     },
     "app/api/cases/[id]/permissions/route.ts": {
       "complexity_moderate": {
-        "count": 1
-      }
-    },
-    "app/api/cases/[id]/status/route.ts": {
-      "crap_high": {
         "count": 1
       }
     },
@@ -377,11 +313,8 @@
       }
     },
     "components/cases/header.tsx": {
-      "crap_critical": {
-        "count": 2
-      },
       "crap_moderate": {
-        "count": 2
+        "count": 1
       }
     },
     "components/cases/json-view-panel.tsx": {
@@ -507,14 +440,6 @@
         "count": 1
       },
       "crap_critical": {
-        "count": 1
-      }
-    },
-    "components/docs/curriculum/enhanced/dialogs/quick-edit-popover.tsx": {
-      "crap_high": {
-        "count": 1
-      },
-      "crap_moderate": {
         "count": 1
       }
     },
@@ -795,12 +720,10 @@
         "count": 1
       }
     },
-    "components/navigation/navbar.tsx": {
-      "crap_moderate": {
+    "components/publishing/status-modal.tsx": {
+      "complexity_high": {
         "count": 1
-      }
-    },
-    "components/publishing/status-button.tsx": {
+      },
       "crap_high": {
         "count": 1
       }
@@ -848,16 +771,6 @@
     },
     "components/ui/image-upload.tsx": {
       "complexity_moderate": {
-        "count": 1
-      }
-    },
-    "components/ui/page-heading.tsx": {
-      "crap_high": {
-        "count": 1
-      }
-    },
-    "components/ui/publish-button.tsx": {
-      "crap_moderate": {
         "count": 1
       }
     },
@@ -967,17 +880,17 @@
         "count": 1
       }
     },
-    "lib/services/case-study-service.ts": {
-      "crap_moderate": {
-        "count": 1
-      }
-    },
     "lib/services/change-detection-service.ts": {
       "crap_moderate": {
         "count": 1
       }
     },
     "lib/services/comment-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/discover-service.ts": {
       "crap_moderate": {
         "count": 1
       }
@@ -1077,7 +990,7 @@
     },
     "src/__tests__/utils/test-factories.ts": {
       "crap_moderate": {
-        "count": 3
+        "count": 2
       }
     }
   },
@@ -1087,41 +1000,41 @@
     "components/docs/curriculum/enhanced/nodes/collapsible-node.tsx:dead code",
     "lib/case/node-utils.ts:dead code",
     "components/docs/curriculum/enhanced/edges/index.ts:dead code",
+    "lib/export/schemas/template-config.ts:dead code",
     "components/docs/curriculum/enhanced/nodes/goal-node.tsx:dead code",
     "src/__tests__/utils/react-18-test-utils.ts:dead code",
     "components/docs/curriculum/enhanced/nodes/strategy-node.tsx:dead code",
-    "lib/export/schemas/template-config.ts:dead code",
     "src/__tests__/utils/modal-test-utils.tsx:dead code",
-    "lib/export/utils/content-helpers.ts:dead code",
-    "components/ui/navigation-menu.tsx:dead code",
     "components/cases/node-edit-dialog.tsx:complexity",
+    "lib/export/utils/content-helpers.ts:dead code",
     "components/ui/dropdown-menu.tsx:dead code",
+    "components/ui/navigation-menu.tsx:dead code",
+    "src/__tests__/utils/mock-data.ts:dead code",
     "components/docs/curriculum/task-registry.ts:dead code",
     "components/docs/curriculum/enhanced/nodes/base-node.tsx:dead code",
-    "src/__tests__/utils/mock-data.ts:dead code",
     "lib/schemas/element-validation.ts:dead code",
     "app/(authenticated)/dashboard/settings/integrations/_components/integration-card.tsx:complexity",
     "components/docs/curriculum/enhanced/nodes/node-types.tsx:dead code",
     "components/docs/curriculum/stage-definitions.ts:dead code",
-    "src/__tests__/utils/team-mock-data.ts:dead code",
     "lib/schemas/version-detection.ts:dead code",
-    "src/__tests__/utils/test-utils.tsx:dead code",
+    "src/__tests__/utils/team-mock-data.ts:dead code",
     "components/modals/_import-modal/use-case-import.ts:dead code",
+    "src/__tests__/utils/test-utils.tsx:dead code",
     "components/docs/curriculum/enhanced/nodes/node-state-manager.tsx:dead code",
     "components/docs/curriculum/enhanced/utils/node-styles.ts:dead code",
-    "src/__tests__/utils/integration-test-utils.tsx:dead code",
     "components/docs/curriculum/enhanced/edges/edge-utils.ts:dead code",
+    "src/__tests__/utils/integration-test-utils.tsx:dead code",
     "components/docs/curriculum/enhanced/nodes/property-claim-node.tsx:dead code",
-    "lib/schemas/case-export.ts:dead code",
     "components/docs/curriculum/enhanced/nodes/evidence-node.tsx:dead code",
+    "lib/schemas/case-export.ts:dead code",
     "lib/services/email-service.ts:dead code",
     "components/docs/curriculum/enhanced/animations/micro-interactions.tsx:dead code",
     "components/docs/curriculum/enhanced/animations/transition-effects.tsx:dead code",
     "components/docs/curriculum/enhanced/animations/loading-states.tsx:dead code",
     "components/docs/curriculum/enhanced/animations/spring-animations.tsx:dead code",
     "components/docs/curriculum/enhanced/nodes/attribute-badges.tsx:dead code",
-    "components/docs/curriculum/enhanced/handles/custom-handle.tsx:dead code",
     "components/docs/curriculum/enhanced/utils/theme-config.ts:dead code",
+    "components/docs/curriculum/enhanced/handles/custom-handle.tsx:dead code",
     "lib/routes.ts:dead code",
     "components/shared/nodes/animations.ts:dead code",
     "components/docs/curriculum/enhanced/utils/animations.ts:dead code",
