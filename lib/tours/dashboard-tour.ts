@@ -74,18 +74,6 @@ export const dashboardTour: Tour = {
 			pointerRadius: 8,
 		},
 		{
-			icon: "📚",
-			title: "Case Studies",
-			content:
-				"Browse published case studies for guidance and inspiration on building your own assurance cases.",
-			selector: "[data-tour='sidebar-case-studies']",
-			side: "right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
 			icon: "👥",
 			title: "Teams",
 			content:

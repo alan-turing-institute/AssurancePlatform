@@ -1,8 +1,5 @@
 // Mock data generators for tests
-import type {
-	AssuranceCaseResponse,
-	CaseStudyResponse,
-} from "@/lib/services/case-response-types";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { CommentResponse } from "@/lib/services/comment-service";
 
 export const mockUser = {
@@ -94,23 +91,11 @@ export const mockComment: CommentResponse = {
 	createdAt: "2024-01-01T10:00:00Z",
 };
 
-export const mockCaseStudy: CaseStudyResponse = {
-	id: 1,
-	title: "Sample Case Study",
-	description: "A comprehensive case study for learning",
-	sector: "learning",
-	createdOn: "2024-01-01T00:00:00Z",
-	authors: "Test User",
-	published: false,
-	featuredImage: undefined,
-};
-
 export const mockPublishedCase = {
 	id: "1",
 	name: "Published Safety Case",
 	description: "A published assurance case for public viewing",
 	publishedDate: "2024-01-01T00:00:00Z",
-	caseStudy: mockCaseStudy.id,
 };
 
 // Factory functions for creating multiple instances
@@ -163,13 +148,6 @@ export const createMockComment = (
 	overrides: Partial<CommentResponse> = {}
 ): CommentResponse => ({
 	...mockComment,
-	...overrides,
-});
-
-export const createMockCaseStudy = (
-	overrides: Partial<CaseStudyResponse> = {}
-): CaseStudyResponse => ({
-	...mockCaseStudy,
 	...overrides,
 });
 

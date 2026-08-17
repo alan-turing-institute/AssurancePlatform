@@ -33,19 +33,12 @@ const Header = ({ setOpen }: HeaderProps) => {
 
 	const { setCenter } = useReactFlow();
 
-	// Show "Published" when linked to a public case study, or when the case's
-	// own publishStatus is PUBLISHED. (The "Ready to Publish" intermediate
-	// display was retired alongside the status itself, ADR 0003 §2 — there is
-	// no longer a distinct "published but not yet public" state to show.)
+	// Show "Published" when the case's own publishStatus is PUBLISHED. (The
+	// "Ready to Publish" intermediate display was retired alongside the
+	// status itself, ADR 0003 §2 — there is no longer a distinct "published
+	// but not yet public" state to show.)
 	const getDisplayStatus = (): PublishStatusType => {
-		if (!assuranceCase) {
-			return "DRAFT";
-		}
-
-		if (
-			assuranceCase.hasPublicCaseStudy ||
-			assuranceCase.publishStatus === "PUBLISHED"
-		) {
+		if (assuranceCase?.publishStatus === "PUBLISHED") {
 			return "PUBLISHED";
 		}
 
@@ -159,7 +152,6 @@ const Header = ({ setOpen }: HeaderProps) => {
 			status: currentStatus,
 			hasChanges,
 			publishedAt: assuranceCase.publishedAt,
-			linkedCaseStudyCount: assuranceCase.linkedCaseStudyCount ?? 0,
 		});
 	};
 

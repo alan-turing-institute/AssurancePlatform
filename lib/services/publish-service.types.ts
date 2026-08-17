@@ -6,7 +6,6 @@ export type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prism
 // Legacy type kept for backward compatibility
 export interface PublishStatus {
 	isPublished: boolean;
-	linkedCaseStudyCount: number;
 	publishedAt: Date | null;
 	publishedId: string | null;
 }
@@ -16,7 +15,6 @@ export interface PublishStatus {
 export interface FullPublishStatus {
 	hasChanges: boolean;
 	isPublished: boolean;
-	linkedCaseStudyCount: number;
 	markedReadyAt: Date | null;
 	publishedAt: Date | null;
 	publishedId: string | null;
@@ -27,9 +25,7 @@ export type PublishResult =
 	| { data: { publishedId: string; publishedAt: Date } }
 	| { error: string };
 
-export type UnpublishResult =
-	| { data: { success: true } }
-	| { error: string; linkedCaseStudies?: { id: number; title: string }[] };
+export type UnpublishResult = { data: { success: true } } | { error: string };
 
 // MarkReadyResult / UnmarkReadyResult retired alongside READY_TO_PUBLISH
 // (ADR 0003 §2/§4) — the "Ready to Publish" intermediate step no longer
@@ -45,5 +41,4 @@ export type StatusTransitionResult =
 	  }
 	| {
 			error: string;
-			linkedCaseStudies?: { id: number; title: string }[];
 	  };

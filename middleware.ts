@@ -78,8 +78,8 @@ export const config = {
 		 *   reaching the route handler.)
 		 * - api/health (health checks)
 		 * - api/public (published-content read endpoints — no auth by
-		 *   design, e.g. GET /api/public/assurance-case/[id] and
-		 *   /api/public/case-studies. Every route under this prefix is
+		 *   design, e.g. GET /api/public/discover/[slug]. Every route under
+		 *   this prefix is
 		 *   audited to serve only already-published content via read-only
 		 *   GET handlers with no session-derived data — see the route
 		 *   audit in the fix-public-api-auth issue. Without this exemption

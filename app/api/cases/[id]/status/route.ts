@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -23,7 +22,6 @@ import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prism
  * - isPublished
  * - publishedAt
  * - markedReadyAt
- * - linkedCaseStudyCount
  * - hasChanges
  */
 export async function GET(
@@ -111,23 +109,6 @@ export async function PATCH(
 		);
 
 		if ("error" in result) {
-			// Check for specific error types
-			if (result.error === "Permission denied") {
-				return apiError(serviceErrorToAppError(result.error));
-			}
-
-			// Include linkedCaseStudies in response if present (for unpublish warning)
-			if (result.linkedCaseStudies) {
-				return NextResponse.json(
-					{
-						error: result.error,
-						code: "CONFLICT" as const,
-						linkedCaseStudies: result.linkedCaseStudies,
-					},
-					{ status: 409 }
-				);
-			}
-
 			return apiError(serviceErrorToAppError(result.error));
 		}
 

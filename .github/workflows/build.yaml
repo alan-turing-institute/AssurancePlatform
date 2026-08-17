@@ -188,8 +188,8 @@ jobs:
         run: |
           PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "
             TRUNCATE TABLE
-              case_study_images, case_study_published_cases, published_assurance_cases,
-              case_studies, release_images, release_comments, release_snapshots, releases,
+              published_assurance_cases,
+              release_images, release_comments, release_snapshots, releases,
               comments, evidence_links, case_images, case_type_assignments, case_types,
               case_invites, case_team_permissions, case_permissions, assurance_elements,
               assurance_cases, pattern_permissions, pattern_team_permissions,

@@ -1,13 +1,12 @@
 import { expect, test } from "./helpers/auth";
-import { CASE_URL_PATTERN, LOGIN_PATTERN } from "./helpers/constants";
+import { CASE_URL_PATTERN } from "./helpers/constants";
 import { CaseEditorPage } from "./pages/case-editor-page";
 
 // ADR 0003 §2 retired the READY_TO_PUBLISH intermediate state — a case is
 // now either DRAFT or PUBLISHED. The status pill opens the guided Publish
 // flow (draft) or the divergence/unpublish view (published). Full
 // end-to-end journey coverage (fill case information → publish → visit
-// Discover → republish → unpublish) lands with the next issue in the
-// chain, which retires case studies and lands the publish journey e2e —
+// Discover → republish → unpublish) lives in `publish-journey.spec.ts` —
 // these specs pin the current behaviour of the status dialog itself.
 
 const ADD_DESCRIPTION_PATTERN = /Add Description/;
@@ -97,14 +96,7 @@ test.describe("Publishing", () => {
 		await expect(editor.statusModalTitle).toBeVisible();
 		await expect(page.getByText("Case Status: Published")).toBeVisible();
 		await expect(
-			page.getByText("This case is published and visible in case studies.")
+			page.getByText("This case is published and visible on Discover.")
 		).toBeVisible();
-	});
-
-	test("case studies page is accessible", async ({ page }) => {
-		await page.goto("/dashboard/case-studies");
-
-		// Should not redirect to login (authenticated via saved state)
-		await expect(page).not.toHaveURL(LOGIN_PATTERN);
 	});
 });

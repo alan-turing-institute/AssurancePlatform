@@ -41,7 +41,6 @@ function resetStore(published: boolean): void {
 			published,
 			publishStatus: published ? "PUBLISHED" : "DRAFT",
 			publishedAt: published ? "2026-08-01T00:00:00.000Z" : null,
-			linkedCaseStudyCount: 0,
 		},
 	});
 	useStatusModal.getState().onClose();

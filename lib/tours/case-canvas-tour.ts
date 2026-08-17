@@ -30,7 +30,7 @@ export const caseCanvasTour: Tour = {
 			icon: "📋",
 			title: "Publication Status",
 			content:
-				"Track whether your case is a Draft, Ready to Publish, or Published. Click to manage the publication workflow.",
+				"Track whether your case is a Draft or Published. Click to manage the publication workflow.",
 			selector: "[data-tour='case-status']",
 			side: "bottom-right",
 			showControls: true,

@@ -132,7 +132,6 @@ async function swapCurrentPublishedVersion(
 
 /**
  * Gets the publish status of an assurance case.
- * Returns whether the case is published and how many case studies link to it.
  */
 export async function getPublishStatus(
 	userId: string,
@@ -153,11 +152,6 @@ export async function getPublishStatus(
 			publishedVersions: {
 				select: {
 					id: true,
-					caseStudyLinks: {
-						select: {
-							caseStudyId: true,
-						},
-					},
 				},
 				orderBy: {
 					createdAt: "desc",
@@ -174,20 +168,11 @@ export async function getPublishStatus(
 	// Get the most recent published version
 	const latestPublished = assuranceCase.publishedVersions[0];
 
-	// Count unique linked case studies
-	const linkedCaseStudyIds = new Set<number>();
-	if (latestPublished) {
-		for (const link of latestPublished.caseStudyLinks) {
-			linkedCaseStudyIds.add(link.caseStudyId);
-		}
-	}
-
 	return {
 		data: {
 			isPublished: assuranceCase.published,
 			publishedId: latestPublished?.id ?? null,
 			publishedAt: assuranceCase.publishedAt,
-			linkedCaseStudyCount: linkedCaseStudyIds.size,
 		},
 	};
 }
@@ -279,15 +264,14 @@ export async function publishAssuranceCase(
 }
 
 /**
- * Unpublishes an assurance case.
- * If the case is linked to case studies and force is false, returns a warning.
+ * Unpublishes an assurance case: removes every published version and
+ * returns the case to DRAFT.
  *
  * Requires EDIT permission or higher.
  */
 export async function unpublishAssuranceCase(
 	userId: string,
-	caseId: string,
-	force = false
+	caseId: string
 ): Promise<UnpublishResult> {
 	// Check user has EDIT permission
 	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
@@ -295,7 +279,7 @@ export async function unpublishAssuranceCase(
 		return { error: "Permission denied" };
 	}
 
-	// Get the case with its published versions and linked case studies
+	// Get the case with its published versions
 	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
 		select: {
@@ -304,16 +288,6 @@ export async function unpublishAssuranceCase(
 			publishedVersions: {
 				select: {
 					id: true,
-					caseStudyLinks: {
-						select: {
-							caseStudy: {
-								select: {
-									id: true,
-									title: true,
-								},
-							},
-						},
-					},
 				},
 			},
 		},
@@ -327,45 +301,14 @@ export async function unpublishAssuranceCase(
 		return { error: "Case is not published" };
 	}
 
-	// Collect all linked case studies
-	const linkedCaseStudies: { id: number; title: string }[] = [];
-	for (const publishedVersion of assuranceCase.publishedVersions) {
-		for (const link of publishedVersion.caseStudyLinks) {
-			// Avoid duplicates
-			if (!linkedCaseStudies.some((cs) => cs.id === link.caseStudy.id)) {
-				linkedCaseStudies.push({
-					id: link.caseStudy.id,
-					title: link.caseStudy.title,
-				});
-			}
-		}
-	}
-
-	// If linked to case studies and not forcing, return warning
-	if (linkedCaseStudies.length > 0 && !force) {
-		return {
-			error: "Cannot unpublish: linked to case studies",
-			linkedCaseStudies,
-		};
-	}
-
 	try {
-		// Delete all published versions and their links, then update the case
+		// Delete all published versions, then update the case
 		await prisma.$transaction(async (tx) => {
-			// Get all published version IDs
 			const publishedVersionIds = assuranceCase.publishedVersions.map(
 				(pv) => pv.id
 			);
 
-			// Delete case study links
 			if (publishedVersionIds.length > 0) {
-				await tx.caseStudyPublishedCase.deleteMany({
-					where: {
-						publishedAssuranceCaseId: { in: publishedVersionIds },
-					},
-				});
-
-				// Delete published versions
 				await tx.publishedAssuranceCase.deleteMany({
 					where: {
 						id: { in: publishedVersionIds },
@@ -459,23 +402,15 @@ export async function getFullPublishStatus(
 		return { error: "Case not found" };
 	}
 
-	// Try to get published versions separately to handle legacy table issues gracefully
-	let latestPublished: {
-		id: string;
-		caseStudyLinks: { caseStudyId: number }[];
-	} | null = null;
-	let linkedCaseStudyCount = 0;
+	// Try to get the latest published version separately to handle legacy
+	// table issues gracefully.
+	let latestPublished: { id: string } | null = null;
 
 	try {
 		const publishedVersions = await prisma.publishedAssuranceCase.findMany({
 			where: { assuranceCaseId: caseId },
 			select: {
 				id: true,
-				caseStudyLinks: {
-					select: {
-						caseStudyId: true,
-					},
-				},
 			},
 			orderBy: {
 				createdAt: "desc",
@@ -484,15 +419,6 @@ export async function getFullPublishStatus(
 		});
 
 		latestPublished = publishedVersions[0] ?? null;
-
-		// Count unique linked case studies
-		if (latestPublished) {
-			const linkedCaseStudyIds = new Set<number>();
-			for (const link of latestPublished.caseStudyLinks) {
-				linkedCaseStudyIds.add(link.caseStudyId);
-			}
-			linkedCaseStudyCount = linkedCaseStudyIds.size;
-		}
 	} catch (error) {
 		// Log but don't fail - legacy table may have issues
 		console.warn(
@@ -520,7 +446,6 @@ export async function getFullPublishStatus(
 			publishedId: latestPublished?.id ?? null,
 			publishedAt: assuranceCase.publishedAt,
 			markedReadyAt: assuranceCase.markedReadyAt,
-			linkedCaseStudyCount,
 			hasChanges,
 		},
 	};
@@ -556,11 +481,6 @@ export async function updatePublishedCase(
 				select: {
 					id: true,
 					slug: true,
-					caseStudyLinks: {
-						select: {
-							caseStudyId: true,
-						},
-					},
 				},
 				orderBy: {
 					createdAt: "desc",
@@ -595,7 +515,7 @@ export async function updatePublishedCase(
 	const now = new Date();
 
 	try {
-		// Create new version and migrate links in a transaction
+		// Create the new version in a transaction
 		const newPublished = await prisma.$transaction(async (tx) => {
 			// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
 			// across renames) — never regenerated here, even if
@@ -608,29 +528,6 @@ export async function updatePublishedCase(
 				description: description ?? null,
 				createdAt: now,
 			});
-
-			// Get case study IDs linked to old version
-			const linkedCaseStudyIds = currentPublished.caseStudyLinks.map(
-				(link) => link.caseStudyId
-			);
-
-			// Migrate links to new version
-			if (linkedCaseStudyIds.length > 0) {
-				// Delete old links
-				await tx.caseStudyPublishedCase.deleteMany({
-					where: {
-						publishedAssuranceCaseId: currentPublished.id,
-					},
-				});
-
-				// Create new links
-				await tx.caseStudyPublishedCase.createMany({
-					data: linkedCaseStudyIds.map((caseStudyId) => ({
-						caseStudyId,
-						publishedAssuranceCaseId: published.id,
-					})),
-				});
-			}
 
 			// Update case's publishedAt timestamp
 			await tx.assuranceCase.update({
@@ -725,10 +622,7 @@ async function handleUnpublish(
 ): Promise<StatusTransitionResult> {
 	const result = await unpublishAssuranceCase(userId, caseId);
 	if ("error" in result) {
-		return {
-			error: result.error,
-			linkedCaseStudies: result.linkedCaseStudies,
-		};
+		return { error: result.error };
 	}
 	return { data: { newStatus: "DRAFT" } };
 }

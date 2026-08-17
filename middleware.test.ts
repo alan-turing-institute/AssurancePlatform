@@ -35,10 +35,8 @@ describe("middleware route matcher", () => {
 		const re = await getMatcherRegex();
 		const publicApiPaths = [
 			"/api/public",
-			"/api/public/assurance-case/123",
-			"/api/public/case-studies",
-			"/api/public/case-studies/456",
 			"/api/public/discover/medium-case",
+			"/api/public/discover/some-other-slug",
 		];
 		for (const path of publicApiPaths) {
 			expect(re.test(path)).toBe(false);
@@ -65,11 +63,7 @@ describe("middleware route matcher", () => {
 
 	it("still enforces session auth on unrelated API and page routes", async () => {
 		const re = await getMatcherRegex();
-		const protectedPaths = [
-			"/dashboard",
-			"/api/cases/123",
-			"/api/case-studies",
-		];
+		const protectedPaths = ["/dashboard", "/api/cases/123", "/api/teams"];
 		for (const path of protectedPaths) {
 			expect(re.test(path)).toBe(true);
 		}

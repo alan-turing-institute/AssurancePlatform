@@ -201,21 +201,6 @@ export function generateScreenshotBlobPath(caseId: string): string {
 }
 
 /**
- * Generates a unique blob path for a case study image.
- *
- * @param caseStudyId - The case study ID
- * @param extension - The file extension (e.g., '.png', '.jpg')
- * @returns A blob path (e.g., 'case_study_images/case-study-123-456789.png')
- */
-export function generateCaseStudyImageBlobPath(
-	caseStudyId: number,
-	extension: string
-): string {
-	const timestamp = Date.now();
-	return `case_study_images/case-study-${caseStudyId}-${timestamp}${extension}`;
-}
-
-/**
  * Gets the MIME type from a file extension.
  */
 export function getMimeTypeFromExtension(extension: string): string {

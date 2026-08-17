@@ -84,7 +84,6 @@ model User {
   resolvedComments     Comment[]          @relation("CommentResolver")
   releaseComments      ReleaseComment[]
   githubRepositories   GitHubRepository[]
-  caseStudies          CaseStudy[]
   markedReadyCases     AssuranceCase[]    @relation("CaseMarkedReady")
   deletedCases         AssuranceCase[]    @relation("CaseDeleter")
   ownedIntegrations    Integration[]      @relation("IntegrationOwner")
@@ -285,7 +284,7 @@ model AssuranceCase {
   sourceReleases    Release[] @relation("SourceCase")
   publishedReleases Release[] @relation("PublishedCase")
 
-  // Published versions (legacy model for case study integration)
+  // Published versions (frozen publish snapshots — ADR 0003 §3)
   publishedVersions PublishedAssuranceCase[]
 
   // Module references (cases that embed this one)
@@ -919,68 +918,6 @@ model GitHubRepository {
   @@map("github_repositories")
 }
 
-// ============================================
-// CASE STUDIES
-// ============================================
-
-/// Public community document showcasing published assurance cases with narrative context.
-// Distinct from AssuranceCase (the structured argument). Links to PublishedAssuranceCase snapshots.
-// When creating, READY_TO_PUBLISH cases are automatically published and linked.
-model CaseStudy {
-  id             Int       @id @default(autoincrement()) @map("id")
-  title          String    @db.VarChar(255) /// Case study title
-  description    String?   /// Full description/narrative
-  authors        String?   @db.VarChar(255) /// Author names
-  category       String?   @db.VarChar(100) /// Category (e.g., "Healthcare", "Automotive")
-  publishedDate  DateTime? @map("published_date") @db.Timestamptz(6) /// When first published
-  lastModifiedOn DateTime  @map("last_modified_on") @db.Timestamptz(6)
-  createdOn      DateTime  @map("created_on") @db.Timestamptz(6)
-  sector         String?   @db.VarChar(100) /// Industry sector
-  contact        String?   @db.VarChar(254) /// Contact email
-  image          String?   @db.VarChar(200) /// Legacy image path
-  published      Boolean   /// Whether the case study is publicly visible
-  ownerId        String?   @map("owner_id") /// Creator/owner of the case study
-  type           String?   @db.VarChar(100) /// Case study type classification
-
-  // Relations
-  owner          User?                    @relation(fields: [ownerId], references: [id])
-  publishedCases CaseStudyPublishedCase[]
-  featureImage   CaseStudyImage?
-
-  @@index([ownerId], map: "case_studies_owner_id_idx")
-  @@map("case_studies")
-}
-
-/// Junction table linking case studies to published assurance case snapshots.
-// Auto-publishes READY_TO_PUBLISH cases, creates links, migrates when published case is updated.
-model CaseStudyPublishedCase {
-  id                      BigInt                @id @default(autoincrement())
-  caseStudyId             Int                   @map("casestudy_id") /// The case study
-  publishedAssuranceCaseId String               @map("publishedassurancecase_id") @db.Uuid /// The published case
-
-  // Relations
-  caseStudy               CaseStudy             @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  publishedAssuranceCase  PublishedAssuranceCase @relation(fields: [publishedAssuranceCaseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([caseStudyId, publishedAssuranceCaseId], map: "case_study_published_cases_unique")
-  @@index([caseStudyId], map: "case_study_published_cases_case_study_id_idx")
-  @@index([publishedAssuranceCaseId], map: "case_study_published_cases_published_case_id_idx")
-  @@map("case_study_published_cases")
-}
-
-/// Feature image for a case study. One image per case study.
-model CaseStudyImage {
-  id          BigInt    @id @default(autoincrement())
-  image       String    @db.VarChar(500) /// Image URL or path
-  uploadedAt  DateTime  @map("uploaded_at") @db.Timestamptz(6)
-  caseStudyId Int       @unique @map("case_study_id")
-
-  // Relations
-  caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("case_study_images")
-}
-
 /// A publishable item's concrete type (ADR 0003 §5). Only ASSURANCE_CASE
 /// ships in 1.0 — ARGUMENT_PATTERN is a discriminator placeholder so the
 /// fast-follow issue that publishes reusable pattern templates needs no
@@ -1016,8 +953,7 @@ model PublishedAssuranceCase {
   description     String?             @db.VarChar(1000) /// Description at time of publishing
 
   // Relations
-  assuranceCase   AssuranceCase            @relation(fields: [assuranceCaseId], references: [id])
-  caseStudyLinks  CaseStudyPublishedCase[]
+  assuranceCase   AssuranceCase @relation(fields: [assuranceCaseId], references: [id])
 
   // @@unique/@@index below cover most access patterns, but the slug's TRUE
   // uniqueness constraint (current version only) is a hand-written partial

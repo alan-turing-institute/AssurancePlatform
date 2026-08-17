@@ -45,7 +45,6 @@ describe("GET /api/cases/[id]/publish", () => {
 		expect(body).toHaveProperty("is_published");
 		expect(body).toHaveProperty("published_id");
 		expect(body).toHaveProperty("published_at");
-		expect(body).toHaveProperty("linked_case_study_count");
 		expect(body.is_published).toBe(false);
 	});
 

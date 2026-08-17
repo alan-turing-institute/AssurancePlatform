@@ -14,7 +14,6 @@ const ADD_DESCRIPTION_PATTERN = /Add Description/;
 const ADD_AUTHORS_SECTOR_PATTERN = /Add Authors, Sector/;
 const PUBLISH_BUTTON_PATTERN = /Publish/;
 const UNPUBLISH_CONSEQUENCE_PATTERN = /Unpublishing removes the public record/;
-const LINKED_CASE_STUDIES_PATTERN = /linked to 2 case studies/;
 const DIVERGENCE_INDICATOR_PATTERN =
 	/Changes have been made since this case was last published/;
 
@@ -315,22 +314,5 @@ describe("StatusModal — Published (divergence + unpublish)", () => {
 
 		expect(screen.queryByTestId("unpublish-confirm")).not.toBeInTheDocument();
 		expect(onUnpublish).not.toHaveBeenCalled();
-	});
-
-	it("hides Unpublish while the case is linked to case studies", () => {
-		render(
-			<StatusModal
-				linkedCaseStudyCount={2}
-				onOpenChange={vi.fn()}
-				onUnpublish={vi.fn()}
-				open={true}
-				status="PUBLISHED"
-			/>
-		);
-
-		expect(
-			screen.queryByRole("button", { name: "Unpublish" })
-		).not.toBeInTheDocument();
-		expect(screen.getByText(LINKED_CASE_STUDIES_PATTERN)).toBeInTheDocument();
 	});
 });
