@@ -3,8 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { AuthorsTagInput } from "@/components/cases/authors-tag-input";
 import {
 	Form,
 	FormControl,
@@ -14,7 +15,13 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +31,7 @@ import type {
 	CaseInformationInput,
 } from "@/lib/schemas/case-information";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
+import { sectors } from "@/lib/sectors";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 
@@ -46,6 +54,7 @@ export function CaseInformationSection({
 	canEdit,
 }: CaseInformationSectionProps) {
 	const {
+		forCaseId,
 		information,
 		loading,
 		saving,
@@ -64,23 +73,73 @@ export function CaseInformationSection({
 			featureImageUrl: "",
 		},
 	});
-	const { reset, setFocus, getValues } = form;
+	const { reset, setValue, setFocus, getValues } = form;
 
-	// Sync fetched values into the form once they arrive (the form mounts
-	// before the fetch resolves).
+	// Sync fetched values into the form once, when the record for this case
+	// first arrives (the form mounts before the fetch resolves). Deliberately
+	// does NOT re-run on every `information` change — `information` is also
+	// updated by feature-image upload/remove and by a successful save, and a
+	// full `reset()` on those would overwrite whatever the user has typed but
+	// not yet saved (the "upload wipes unsaved fields" bug: uploading an
+	// image replaced `information` with the last-saved server values, and
+	// this effect used to reset the whole form to match, clobbering in-flight
+	// edits to Authors/Sector).
+	//
+	// Gated on `forCaseId === caseId` rather than on `loading` alone —
+	// `useCaseInformation` reports `forCaseId`, the caseId the current
+	// `information` was actually fetched for, so hydration can't fire against
+	// a stale record that happens to still be in state when `loading` flips
+	// false on a fast case switch (the same-tick staleness window a purely
+	// timing-based guard couldn't see). Keyed on `forCaseId` so switching to a
+	// different case still re-hydrates the form once its own record arrives.
+	//
+	// Deliberately **state**, not a ref: `reset()` re-renders every
+	// `Controller`-backed field (react-hook-form gives each one a fresh
+	// `field.ref` closure per render, so Radix/our components re-attach their
+	// DOM ref as part of that commit). The focus effect below needs to run
+	// *after* that reattachment lands, and a ref write doesn't trigger a
+	// re-run of anything — only a state change reliably schedules the extra
+	// render that separates "hydrate" from "focus" into two commits. Calling
+	// `setFocus` in the very same effect flush as `reset()` silently no-ops
+	// (`setFocus`'s search for the field's DOM ref lands mid-reattachment).
+	const [hydratedForCaseId, setHydratedForCaseId] = useState<
+		string | undefined
+	>(undefined);
 	useEffect(() => {
+		if (loading || forCaseId !== caseId || hydratedForCaseId === forCaseId) {
+			return;
+		}
 		reset({
 			description: information?.description ?? "",
 			authors: information?.authors ?? "",
 			sector: information?.sector ?? "",
 			featureImageUrl: information?.featureImageUrl ?? "",
 		});
-	}, [information, reset]);
+		setHydratedForCaseId(forCaseId);
+	}, [information, reset, caseId, forCaseId, loading, hydratedForCaseId]);
+
+	// The feature image is the one field a background upload/remove legitimately
+	// needs to push into the form after initial hydration — sync just that
+	// field (never the others) so it reflects the freshly uploaded URL.
+	useEffect(() => {
+		if (loading || hydratedForCaseId !== caseId) {
+			return;
+		}
+		setValue("featureImageUrl", information?.featureImageUrl ?? "");
+	}, [
+		information?.featureImageUrl,
+		setValue,
+		caseId,
+		loading,
+		hydratedForCaseId,
+	]);
 
 	// The publish flow (ADR 0003 §2) sends the user here with a specific
 	// missing field named — focus it once the fetched values have synced in,
 	// then clear the request so a later manual open of this sheet doesn't
-	// re-focus anything.
+	// re-focus anything. Gated on `hydratedForCaseId === caseId` (not just
+	// `loading`) so this only fires on the commit *after* the hydration
+	// effect's `reset()` has settled — see the comment above.
 	const caseInformationFocusField = useStore(
 		(state) => state.caseInformationFocusField
 	);
@@ -88,7 +147,11 @@ export function CaseInformationSection({
 		(state) => state.setCaseInformationFocusField
 	);
 	useEffect(() => {
-		if (loading || !(canEdit && caseInformationFocusField)) {
+		if (
+			loading ||
+			hydratedForCaseId !== caseId ||
+			!(canEdit && caseInformationFocusField)
+		) {
 			return;
 		}
 		if (caseInformationFocusField in getValues()) {
@@ -97,6 +160,8 @@ export function CaseInformationSection({
 		setCaseInformationFocusField(null);
 	}, [
 		loading,
+		hydratedForCaseId,
+		caseId,
 		canEdit,
 		caseInformationFocusField,
 		getValues,
@@ -200,9 +265,9 @@ export function CaseInformationSection({
 						<FormItem>
 							<FormLabel>Authors</FormLabel>
 							<FormControl>
-								<Input
-									placeholder="e.g. Ada Lovelace"
-									{...field}
+								<AuthorsTagInput
+									onChange={field.onChange}
+									ref={field.ref}
 									value={field.value ?? ""}
 								/>
 							</FormControl>
@@ -213,19 +278,46 @@ export function CaseInformationSection({
 				<FormField
 					control={form.control}
 					name="sector"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Sector</FormLabel>
-							<FormControl>
-								<Input
-									placeholder="e.g. Healthcare"
-									{...field}
-									value={field.value ?? ""}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
+					render={({ field }) => {
+						// A case saved before this select existed can hold a
+						// free-text sector value that isn't in the canonical
+						// list (e.g. "Healthcare"). Tolerate it: show it as
+						// the current selection rather than crashing or
+						// silently discarding it — replacing it with a
+						// canonical choice is the user's action, not ours.
+						const currentValue = field.value ?? "";
+						const isLegacyValue =
+							currentValue !== "" &&
+							!sectors.some((sector) => sector.Name === currentValue);
+						return (
+							<FormItem>
+								<FormLabel>Sector</FormLabel>
+								<Select
+									onValueChange={field.onChange}
+									value={currentValue || undefined}
+								>
+									<FormControl>
+										<SelectTrigger ref={field.ref}>
+											<SelectValue placeholder="Select a sector" />
+										</SelectTrigger>
+									</FormControl>
+									<SelectContent>
+										{isLegacyValue && (
+											<SelectItem value={currentValue}>
+												{currentValue} (legacy value)
+											</SelectItem>
+										)}
+										{sectors.map((sector) => (
+											<SelectItem key={sector.ID} value={sector.Name}>
+												{sector.Name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								<FormMessage />
+							</FormItem>
+						);
+					}}
 				/>
 				<div className="space-y-2">
 					<span className="font-medium text-sm">Feature image</span>

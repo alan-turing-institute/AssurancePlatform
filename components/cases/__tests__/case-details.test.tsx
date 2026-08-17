@@ -7,6 +7,7 @@ import CaseDetails from "../case-details";
 // behaviour has its own dedicated test in case-information-section.test.tsx.
 vi.mock("@/hooks/use-case-information", () => ({
 	useCaseInformation: () => ({
+		forCaseId: "case-1",
 		information: null,
 		loading: false,
 		saving: false,

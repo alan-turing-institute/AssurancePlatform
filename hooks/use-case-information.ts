@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CaseInformationData } from "@/lib/schemas/case-information";
 // Reusing the service's snapshot shape rather than hand-declaring a parallel
 // type: it already names exactly the four case-information fields (ADR 0003
@@ -9,6 +9,15 @@ import type { CaseInformationSnapshot } from "@/lib/services/case-information-se
 import { toast } from "@/lib/toast";
 
 interface UseCaseInformationReturn {
+	/**
+	 * The caseId that `information` was fetched for. Consumers that hydrate
+	 * local state from `information` (e.g. a form's `reset()`) should gate on
+	 * `forCaseId === caseId` rather than on `loading` alone — `loading` only
+	 * says a request finished, not which case it was for, and a fast
+	 * caseId-switch can otherwise land a stale record against the new case in
+	 * the same tick.
+	 */
+	forCaseId: string | undefined;
 	information: CaseInformationSnapshot | null;
 	loading: boolean;
 	removeFeatureImage: () => Promise<boolean>;
@@ -29,29 +38,52 @@ export function useCaseInformation(
 ): UseCaseInformationReturn {
 	const [information, setInformation] =
 		useState<CaseInformationSnapshot | null>(null);
+	const [forCaseId, setForCaseId] = useState<string | undefined>(undefined);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [uploadingImage, setUploadingImage] = useState(false);
 
+	// Tracks the most recently *requested* caseId so an in-flight fetch that
+	// resolves after a later caseId change (e.g. a fast case switch) doesn't
+	// stamp its result with the wrong provenance — the response is ignored
+	// once a newer request has superseded it.
+	const latestRequestedCaseIdRef = useRef<string | undefined>(undefined);
+
 	const fetchInformation = useCallback(async () => {
-		if (!caseId) {
+		const requestedCaseId = caseId;
+		latestRequestedCaseIdRef.current = requestedCaseId;
+
+		if (!requestedCaseId) {
 			setLoading(false);
+			setInformation(null);
+			setForCaseId(undefined);
 			return;
 		}
 
 		setLoading(true);
 		try {
-			const response = await fetch(`/api/cases/${caseId}/information`);
+			const response = await fetch(`/api/cases/${requestedCaseId}/information`);
+			if (latestRequestedCaseIdRef.current !== requestedCaseId) {
+				return;
+			}
 			if (!response.ok) {
 				setInformation(null);
+				setForCaseId(requestedCaseId);
 				return;
 			}
 			const data = await response.json();
 			setInformation(data);
+			setForCaseId(requestedCaseId);
 		} catch {
+			if (latestRequestedCaseIdRef.current !== requestedCaseId) {
+				return;
+			}
 			setInformation(null);
+			setForCaseId(requestedCaseId);
 		} finally {
-			setLoading(false);
+			if (latestRequestedCaseIdRef.current === requestedCaseId) {
+				setLoading(false);
+			}
 		}
 	}, [caseId]);
 
@@ -187,6 +219,7 @@ export function useCaseInformation(
 	}, [caseId]);
 
 	return {
+		forCaseId,
 		information,
 		loading,
 		saving,

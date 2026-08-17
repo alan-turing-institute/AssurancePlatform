@@ -21,6 +21,7 @@ function stubCaseInformation(
 	overrides: Partial<ReturnType<typeof useCaseInformation>>
 ) {
 	mockedUseCaseInformation.mockReturnValue({
+		forCaseId: "case-1",
 		information: null,
 		loading: false,
 		saving: false,

@@ -995,11 +995,14 @@ export const MockSelectRoot = ({
 	);
 };
 
-export const MockSelectTrigger = ({
-	children,
-	asChild: _asChild,
-	...props
-}: MockTriggerProps) => {
+type MockSelectTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+	asChild?: boolean;
+};
+
+export const MockSelectTrigger = React.forwardRef<
+	HTMLButtonElement,
+	MockSelectTriggerProps
+>(({ children, asChild: _asChild, ...props }, ref) => {
 	const context = React.useContext(SelectContext);
 
 	const handleClick = () => {
@@ -1013,6 +1016,7 @@ export const MockSelectTrigger = ({
 			aria-haspopup="listbox"
 			data-state={context?.open ? "open" : "closed"}
 			onClick={handleClick}
+			ref={ref}
 			role="combobox"
 			type="button"
 			{...props}
@@ -1020,7 +1024,8 @@ export const MockSelectTrigger = ({
 			{children}
 		</button>
 	);
-};
+});
+MockSelectTrigger.displayName = "MockSelectTrigger";
 
 export const MockSelectValue = ({ placeholder }: { placeholder?: string }) => {
 	const context = React.useContext(SelectContext);
