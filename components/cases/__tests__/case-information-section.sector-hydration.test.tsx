@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 // Real Radix Select, not the suite-wide mock (`src/__tests__/mocks/radix-ui-mocks.tsx`).
@@ -79,5 +80,79 @@ describe("CaseInformationSection sector hydration (real Radix Select)", () => {
 				LEGACY_MEDICAL_DEVICES_PATTERN
 			);
 		});
+	});
+
+	it("propagates a genuine user selection to the form value and the closed trigger", async () => {
+		stubHook({
+			information: {
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "",
+				featureImageUrl: null,
+			},
+		});
+		const user = userEvent.setup();
+
+		render(<CaseInformationSection canEdit={true} caseId="case-1" />);
+		await screen.findByTestId("case-information-form");
+
+		const trigger = screen.getByRole("combobox");
+		await user.click(trigger);
+		await user.click(
+			await screen.findByRole("option", { name: FINANCIAL_SERVICES_PATTERN })
+		);
+
+		// This is the assertion the fix's premise rests on: a real user
+		// selection (a genuine `onValueChange` call carrying a non-empty
+		// value) must still reach `field.onChange` and update the trigger.
+		// The empty-string guard added for the phantom-hydration bug only
+		// filters `nextValue === ""` — it must never suppress this path.
+		await waitFor(() => {
+			expect(trigger).toHaveTextContent(FINANCIAL_SERVICES_PATTERN);
+		});
+	});
+
+	it("never clears an already-hydrated value on a phantom empty onValueChange (no clear affordance exists in this list)", async () => {
+		stubHook({
+			information: {
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "Financial Services",
+				featureImageUrl: null,
+			},
+		});
+
+		const { container } = render(
+			<CaseInformationSection canEdit={true} caseId="case-1" />
+		);
+		await screen.findByTestId("case-information-form");
+
+		const trigger = screen.getByRole("combobox");
+		await waitFor(() => {
+			expect(trigger).toHaveTextContent(FINANCIAL_SERVICES_PATTERN);
+		});
+
+		// Reproduce the phantom event directly, rather than relying on mount
+		// timing: Radix's hidden `SelectBubbleInput` mirrors the controlled
+		// value onto a real native `<select aria-hidden>` and wires its
+		// `onChange` straight to `context.onValueChange` (see
+		// @radix-ui/react-select's `Select` — `onChange: (event) =>
+		// setValue(event.target.value)`). Firing a native "change" with an
+		// empty value on that element is exactly the event our guard exists
+		// to ignore.
+		const nativeSelect = container.querySelector('select[aria-hidden="true"]');
+		expect(nativeSelect).not.toBeNull();
+		if (nativeSelect) {
+			fireEvent.change(nativeSelect, { target: { value: "" } });
+		}
+
+		// The guard in case-information-section.tsx's `onValueChange` treats
+		// any empty-string callback as the phantom mount-time sync described
+		// above and ignores it, because no `SelectItem value=""` exists in
+		// this list — there is no "clear sector" affordance a user could have
+		// triggered instead. If a Clear control is ever added, it will need
+		// its own non-empty sentinel (not "") or this guard will silently eat
+		// its event too — see the comment at that guard.
+		expect(trigger).toHaveTextContent(FINANCIAL_SERVICES_PATTERN);
 	});
 });

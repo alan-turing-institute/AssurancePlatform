@@ -15,6 +15,8 @@ export interface Sector {
 	Name: string;
 }
 
+// Empty string ("") is a reserved sentinel for "no sector selected" — never add a
+// sector with that value here; see the onValueChange guard in case-information-section.tsx.
 export const sectors: Sector[] = [
 	{
 		ID: 1,
