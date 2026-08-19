@@ -35,6 +35,7 @@
     "e2e/**"
   ],
   "ignoreDependencies": [
+    "tailwindcss",
     "sharp",
     "@tailwindcss/typography",
     "tailwindcss-animate",

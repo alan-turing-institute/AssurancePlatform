@@ -1,8 +1,10 @@
-name: Fallow Report
+name: Fallow Audit
 
-# Structural-quality report (dead code, duplication, cycles, complexity) on
-# changed files. Report-only: posts a PR comment, never fails the build.
-# Config: .fallowrc.json. Flip to blocking once tuned (tracked in the vault).
+# Structural-quality gate (dead code, duplication, cycles, complexity) on
+# changed files, scoped to NEW findings only. Posts/updates a PR comment and
+# fails the job when the changeset introduces a finding; inherited debt
+# (tracked via .fallow-baseline.*.json, wired through .fallowrc.json's
+# `audit` block) does not block. Config: .fallowrc.json.
 
 on:
   pull_request:
@@ -20,7 +22,7 @@ permissions:
 
 jobs:
   fallow:
-    name: Structural Quality (report-only)
+    name: Structural Quality (blocking)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -34,18 +36,43 @@ jobs:
         with:
           node-version: 22
 
-      - name: Run fallow on changed files
+      - name: Run fallow audit on changed files
+        id: fallow-audit
         run: |
-          npx -y fallow \
+          set +e
+          npx -y fallow audit \
             --changed-since "origin/${{ github.base_ref }}" \
             --format pr-comment-github \
             --output-file fallow-comment.md \
-            --quiet || true
+            --quiet
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          set -e
           if [ ! -s fallow-comment.md ]; then
-            echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
+            if [ "$EXIT_CODE" -eq 0 ]; then
+              echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
+            else
+              {
+                echo "_fallow audit failed to run (exit $EXIT_CODE) — see the job log for the underlying error._"
+                echo "_This is NOT a clean result: the gate could not evaluate this changeset._"
+              } > fallow-comment.md
+            fi
           fi
 
+      # Skipped on fork PRs: github.token is read-only for pull_request events
+      # from a fork regardless of the permissions block above, so the gh api
+      # calls below would 403 and fail this step before the verdict is even
+      # evaluated in "Fail on new structural-quality findings" — masking the
+      # real gate result behind an unrelated permissions error. Fork PRs still
+      # get the full verdict; they just get it from the job log/annotation
+      # (see the next step) instead of a bot comment, since only a PR from
+      # this repository can hold a write token here.
+      # Also skipped for Dependabot: GitHub forces GITHUB_TOKEN to read-only
+      # on pull_request events opened by dependabot[bot], same-repo or not
+      # (this workflow triggers on package.json, so it sees these routinely) —
+      # the gh api calls would 403 for the same reason as a fork PR.
       - name: Post or update PR comment
+        if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -62,3 +89,23 @@ jobs:
           else
             gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
           fi
+
+      # always() so this verdict step can never be skipped because the
+      # comment step above failed or was skipped (fork/Dependabot 403, or any
+      # other cause) — that would mask the real gate result. If the audit
+      # step itself never wrote exit_code (e.g. it failed before that line),
+      # the empty string compares unequal to '0' and this fails the job,
+      # which is the correct fail-closed behaviour for an unevaluated gate.
+      - name: Fail on new structural-quality findings
+        if: always() && steps.fallow-audit.outputs.exit_code != '0'
+        run: |
+          EXIT_CODE="${{ steps.fallow-audit.outputs.exit_code }}"
+          echo "----- fallow findings (also posted as a PR comment on non-fork PRs) -----"
+          cat fallow-comment.md
+          echo "---------------------------------------------------------------------"
+          if [ "$EXIT_CODE" = "1" ]; then
+            echo "::error::fallow audit found structural-quality findings introduced by this changeset — see the findings above (and the PR comment, on non-fork PRs) for detail."
+          else
+            echo "::error::fallow audit failed to run cleanly (exit $EXIT_CODE) — this is a tool/config error, not a findings verdict. See the log above and preceding steps for the underlying error."
+          fi
+          exit 1
