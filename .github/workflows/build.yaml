@@ -178,8 +178,11 @@ jobs:
       - name: Seed database
         run: npx tsx prisma/seed/dev-seed.ts
 
-      - name: Run unit tests
-        run: pnpm exec vitest run --config vitest.workspace.ts --project unit
+      - name: Run unit tests with coverage
+        # Enforces the vitest.config.ts coverage ratchet (statements/branches/
+        # functions/lines) on the full unit suite; fails the job on breach.
+        # Local `pnpm test` stays coverage-optional for a fast inner loop.
+        run: pnpm test:coverage:check
 
       - name: Run integration tests
         run: pnpm exec vitest run --config vitest.workspace.ts --project integration
