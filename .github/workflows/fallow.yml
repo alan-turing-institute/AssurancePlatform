@@ -45,13 +45,30 @@ jobs:
             --format pr-comment-github \
             --output-file fallow-comment.md \
             --quiet
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
           set -e
           if [ ! -s fallow-comment.md ]; then
-            echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
+            if [ "$EXIT_CODE" -eq 0 ]; then
+              echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
+            else
+              {
+                echo "_fallow audit failed to run (exit $EXIT_CODE) — see the job log for the underlying error._"
+                echo "_This is NOT a clean result: the gate could not evaluate this changeset._"
+              } > fallow-comment.md
+            fi
           fi
 
+      # Skipped on fork PRs: github.token is read-only for pull_request events
+      # from a fork regardless of the permissions block above, so the gh api
+      # calls below would 403 and fail this step before the verdict is even
+      # evaluated in "Fail on new structural-quality findings" — masking the
+      # real gate result behind an unrelated permissions error. Fork PRs still
+      # get the full verdict; they just get it from the job log/annotation
+      # (see the next step) instead of a bot comment, since only a PR from
+      # this repository can hold a write token here.
       - name: Post or update PR comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -72,5 +89,13 @@ jobs:
       - name: Fail on new structural-quality findings
         if: steps.fallow-audit.outputs.exit_code != '0'
         run: |
-          echo "::error::fallow audit found structural-quality findings introduced by this changeset — see the PR comment for detail."
+          EXIT_CODE="${{ steps.fallow-audit.outputs.exit_code }}"
+          echo "----- fallow findings (also posted as a PR comment on non-fork PRs) -----"
+          cat fallow-comment.md
+          echo "---------------------------------------------------------------------"
+          if [ "$EXIT_CODE" = "1" ]; then
+            echo "::error::fallow audit found structural-quality findings introduced by this changeset — see the findings above (and the PR comment, on non-fork PRs) for detail."
+          else
+            echo "::error::fallow audit failed to run cleanly (exit $EXIT_CODE) — this is a tool/config error, not a findings verdict. See the log above and preceding steps for the underlying error."
+          fi
           exit 1
