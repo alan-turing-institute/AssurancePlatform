@@ -1,8 +1,10 @@
-name: Fallow Report
+name: Fallow Audit
 
-# Structural-quality report (dead code, duplication, cycles, complexity) on
-# changed files. Report-only: posts a PR comment, never fails the build.
-# Config: .fallowrc.json. Flip to blocking once tuned (tracked in the vault).
+# Structural-quality gate (dead code, duplication, cycles, complexity) on
+# changed files, scoped to NEW findings only. Posts/updates a PR comment and
+# fails the job when the changeset introduces a finding; inherited debt
+# (tracked via .fallow-baseline.*.json, wired through .fallowrc.json's
+# `audit` block) does not block. Config: .fallowrc.json.
 
 on:
   pull_request:
@@ -20,7 +22,7 @@ permissions:
 
 jobs:
   fallow:
-    name: Structural Quality (report-only)
+    name: Structural Quality (blocking)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -34,13 +36,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Run fallow on changed files
+      - name: Run fallow audit on changed files
+        id: fallow-audit
         run: |
-          npx -y fallow \
+          set +e
+          npx -y fallow audit \
             --changed-since "origin/${{ github.base_ref }}" \
             --format pr-comment-github \
             --output-file fallow-comment.md \
-            --quiet || true
+            --quiet
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
           if [ ! -s fallow-comment.md ]; then
             echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
           fi
@@ -62,3 +68,9 @@ jobs:
           else
             gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
           fi
+
+      - name: Fail on new structural-quality findings
+        if: steps.fallow-audit.outputs.exit_code != '0'
+        run: |
+          echo "::error::fallow audit found structural-quality findings introduced by this changeset — see the PR comment for detail."
+          exit 1
