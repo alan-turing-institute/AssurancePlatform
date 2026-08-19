@@ -67,8 +67,12 @@ jobs:
       # get the full verdict; they just get it from the job log/annotation
       # (see the next step) instead of a bot comment, since only a PR from
       # this repository can hold a write token here.
+      # Also skipped for Dependabot: GitHub forces GITHUB_TOKEN to read-only
+      # on pull_request events opened by dependabot[bot], same-repo or not
+      # (this workflow triggers on package.json, so it sees these routinely) —
+      # the gh api calls would 403 for the same reason as a fork PR.
       - name: Post or update PR comment
-        if: github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -86,8 +90,14 @@ jobs:
             gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
           fi
 
+      # always() so this verdict step can never be skipped because the
+      # comment step above failed or was skipped (fork/Dependabot 403, or any
+      # other cause) — that would mask the real gate result. If the audit
+      # step itself never wrote exit_code (e.g. it failed before that line),
+      # the empty string compares unequal to '0' and this fails the job,
+      # which is the correct fail-closed behaviour for an unevaluated gate.
       - name: Fail on new structural-quality findings
-        if: steps.fallow-audit.outputs.exit_code != '0'
+        if: always() && steps.fallow-audit.outputs.exit_code != '0'
         run: |
           EXIT_CODE="${{ steps.fallow-audit.outputs.exit_code }}"
           echo "----- fallow findings (also posted as a PR comment on non-fork PRs) -----"
