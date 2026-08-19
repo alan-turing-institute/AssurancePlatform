@@ -42,13 +42,18 @@ describe("CaseInformationSection sector hydration (real Radix Select)", () => {
 		vi.clearAllMocks();
 	});
 
-	// Deliberately the FIRST test in this file. React's controlled/
-	// uncontrolled warning is deduplicated process-wide after its first
-	// occurrence (an internal `console.error`-message cache, not reset
-	// between tests in the same file) — if any earlier test in this suite
-	// triggers the same warning first, this assertion would silently stop
-	// seeing it and pass even on a regression. Running first is what makes
-	// it a reliable guard.
+	// Deliberately the FIRST test in this file, as belt-and-braces — but this
+	// is not load-bearing. The warning this assertion captures comes from
+	// Radix's `@radix-ui/react-use-controllable-state` hook (see its
+	// `console.warn` call, caller "Select"), which tracks "was controlled" in
+	// a fresh `React.useRef` per component instance and carries no
+	// module-scoped dedup state; it fires on every mount that flips
+	// controlled/uncontrolled, regardless of what earlier tests in this file
+	// triggered. (React DOM does have a module-scoped deduped version of this
+	// warning — `didWarnUncontrolledToControlled` — but that guards native
+	// elements directly, not this Radix-wrapped one.) Verified empirically by
+	// moving this test to second position in the file: it still fails
+	// correctly on a regression.
 	it("never switches the Select between controlled and uncontrolled across the loading-to-hydrated transition", async () => {
 		// Real-browser evidence (2026-08-19) showed the actual failure mode
 		// wasn't the phantom-clear onValueChange this suite otherwise guards —
