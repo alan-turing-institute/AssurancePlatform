@@ -293,8 +293,36 @@ export function CaseInformationSection({
 							<FormItem>
 								<FormLabel>Sector</FormLabel>
 								<Select
-									onValueChange={field.onChange}
-									value={currentValue || undefined}
+									onValueChange={(nextValue) => {
+										// Radix's Select mirrors its controlled value onto a
+										// hidden native <select> (for native form semantics —
+										// see its `SelectBubbleInput`), and re-syncs that mirror
+										// with a dispatched native "change" event whenever the
+										// controlled value prop changes — including the change
+										// from empty to a hydrated value on mount. If that sync
+										// runs before the mirror's own <option> for the new
+										// value has committed, the native element silently
+										// falls back to "", and the bubbled event reports value
+										// "" — overwriting the value `reset()` just hydrated in
+										// with a phantom clear. There is no real SelectItem for
+										// "" (no "clear" affordance in this list), so an
+										// empty-string callback can only be that phantom event,
+										// never a genuine user selection — safe to ignore.
+										if (nextValue) {
+											field.onChange(nextValue);
+										}
+									}}
+									// Always pass a string (never `undefined`), even before
+									// hydration — Radix's hidden native <select> mirror
+									// (`SelectBubbleInput`) receives this value directly, and
+									// React warns (and can drop the value) if a form element
+									// switches between an uncontrolled (`undefined`) and
+									// controlled (string) value across renders. An empty
+									// string is a perfectly valid controlled value here: it
+									// matches no `SelectItem`, so Radix shows the placeholder,
+									// exactly like `undefined` did — but without ever being
+									// uncontrolled.
+									value={currentValue}
 								>
 									<FormControl>
 										<SelectTrigger ref={field.ref}>
