@@ -42,6 +42,63 @@ describe("CaseInformationSection sector hydration (real Radix Select)", () => {
 		vi.clearAllMocks();
 	});
 
+	// Deliberately the FIRST test in this file. React's controlled/
+	// uncontrolled warning is deduplicated process-wide after its first
+	// occurrence (an internal `console.error`-message cache, not reset
+	// between tests in the same file) — if any earlier test in this suite
+	// triggers the same warning first, this assertion would silently stop
+	// seeing it and pass even on a regression. Running first is what makes
+	// it a reliable guard.
+	it("never switches the Select between controlled and uncontrolled across the loading-to-hydrated transition", async () => {
+		// Real-browser evidence (2026-08-19) showed the actual failure mode
+		// wasn't the phantom-clear onValueChange this suite otherwise guards —
+		// it was the Select's `value` prop itself flipping between `undefined`
+		// (while loading, pre-hydration) and a string (post-hydration), which
+		// React treats as a controlled/uncontrolled switch and can silently
+		// drop. jsdom doesn't reproduce the drop (Radix's hidden native
+		// `<select>` mirror timing differs from a real browser's), but it DOES
+		// reproduce the warning React logs for the switch itself — so assert
+		// on that directly, synchronously. React logs this one via
+		// `console.error` for a native `<select>`, but Chromium categorises
+		// the equivalent as `console.warn` — spy on both so this doesn't
+		// depend on that implementation detail.
+		const consoleError = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		const consoleWarn = vi
+			.spyOn(console, "warn")
+			.mockImplementation(() => undefined);
+
+		stubHook({
+			information: {
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "Financial Services",
+				featureImageUrl: null,
+			},
+		});
+
+		render(<CaseInformationSection canEdit={true} caseId="case-1" />);
+		await screen.findByTestId("case-information-form");
+		await waitFor(() => {
+			expect(screen.getByRole("combobox")).toHaveTextContent(
+				FINANCIAL_SERVICES_PATTERN
+			);
+		});
+
+		const isControlledSwitchWarning = (call: unknown[]) =>
+			String(call[0]).includes("is changing from uncontrolled to controlled") ||
+			String(call[0]).includes("is changing from controlled to uncontrolled");
+		const controlledSwitchWarnings = [
+			...consoleError.mock.calls,
+			...consoleWarn.mock.calls,
+		].filter(isControlledSwitchWarning);
+		expect(controlledSwitchWarnings).toHaveLength(0);
+
+		consoleError.mockRestore();
+		consoleWarn.mockRestore();
+	});
+
 	it("shows a saved canonical sector on the closed trigger without any interaction", async () => {
 		stubHook({
 			information: {

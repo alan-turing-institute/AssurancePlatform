@@ -312,7 +312,17 @@ export function CaseInformationSection({
 											field.onChange(nextValue);
 										}
 									}}
-									value={currentValue || undefined}
+									// Always pass a string (never `undefined`), even before
+									// hydration — Radix's hidden native <select> mirror
+									// (`SelectBubbleInput`) receives this value directly, and
+									// React warns (and can drop the value) if a form element
+									// switches between an uncontrolled (`undefined`) and
+									// controlled (string) value across renders. An empty
+									// string is a perfectly valid controlled value here: it
+									// matches no `SelectItem`, so Radix shows the placeholder,
+									// exactly like `undefined` did — but without ever being
+									// uncontrolled.
+									value={currentValue}
 								>
 									<FormControl>
 										<SelectTrigger ref={field.ref}>
