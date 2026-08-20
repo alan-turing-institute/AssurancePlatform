@@ -78,7 +78,9 @@ describe("CaseInformationSection sector hydration (real Radix Select)", () => {
 			information: {
 				description: "A worked example",
 				authors: "Ada Lovelace",
-				sector: "Financial Services",
+				// Stored value is the stable ID (10 = "Financial Services" in
+				// lib/sectors.ts), not the display name.
+				sector: "10",
 				featureImageUrl: null,
 			},
 		});
@@ -109,7 +111,8 @@ describe("CaseInformationSection sector hydration (real Radix Select)", () => {
 			information: {
 				description: "A worked example",
 				authors: "Ada Lovelace",
-				sector: "Financial Services",
+				// Stable ID, not the display name — see the note above.
+				sector: "10",
 				featureImageUrl: null,
 			},
 		});
@@ -179,7 +182,7 @@ describe("CaseInformationSection sector hydration (real Radix Select)", () => {
 			information: {
 				description: "A worked example",
 				authors: "Ada Lovelace",
-				sector: "Financial Services",
+				sector: "10",
 				featureImageUrl: null,
 			},
 		});

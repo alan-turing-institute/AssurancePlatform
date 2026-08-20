@@ -14,6 +14,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 import { Pool } from "pg";
 import { prisma as appPrisma } from "../../lib/prisma";
+import { sectors } from "../../lib/sectors";
 import { upsertCaseInformation } from "../../lib/services/case-information-service";
 import {
 	DARTER_INTEGRATION_NAME,
@@ -22,6 +23,15 @@ import {
 } from "../../lib/services/darter-integration-service";
 import { publishAssuranceCase } from "../../lib/services/publish-service";
 import { PrismaClient } from "../../src/generated/prisma";
+
+const HEALTH_AND_SOCIAL_CARE_SECTOR_ID = sectors.find(
+	(sector) => sector.Name === "Health & Social Care"
+)?.ID;
+if (!HEALTH_AND_SOCIAL_CARE_SECTOR_ID) {
+	throw new Error(
+		"Seed data assumes a 'Health & Social Care' sector exists in lib/sectors.ts"
+	);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -838,7 +848,10 @@ async function main() {
 			description:
 				"A worked example assurance case covering ML trustworthiness, used to exercise sharing, comments and publishing in local development.",
 			authors: "Chris Burr",
-			sector: "Healthcare",
+			// Stored by stable ID, not display name (fixes the "Healthcare" vs
+			// canonical "Health & Social Care" drift this seed used to carry —
+			// see the sector-stable-id migration).
+			sector: String(HEALTH_AND_SOCIAL_CARE_SECTOR_ID),
 		}
 	);
 	if ("error" in caseInformationResult) {

@@ -850,6 +850,13 @@ model CaseInformation {
 
   description     String?
   authors         String?  @db.VarChar(255)
+  /// The sector's stable numeric ID from `lib/sectors.ts` (e.g. "15"),
+  /// stored as a string so this column can also tolerate free text saved
+  /// before the ID migration (`20260820000000_sector_stable_ids`) that
+  /// couldn't be mapped to a canonical sector — resolve for display with
+  /// `getSectorDisplayName`, never render this raw value. Storing the ID
+  /// rather than the display name means relabelling a sector in
+  /// `lib/sectors.ts` can never orphan a case that already selected it.
   sector          String?  @db.VarChar(100)
   featureImageUrl String?  @map("feature_image_url") @db.VarChar(2000)
 

@@ -947,6 +947,15 @@ export const MockDropdownMenuItemIndicator = ({
 
 // Select Mock with state management
 interface SelectContextValue {
+	// Maps each mounted item's `value` to its rendered label (`children`) —
+	// real Radix's `SelectValue` displays the selected item's rendered
+	// content, not its raw `value`, which matters once a consumer's item
+	// `value` differs from its display label (e.g. a stable ID stored
+	// under a human-readable name). A ref, not state: items register on
+	// mount as a side effect, and `MockSelectValue` reads it on whatever
+	// render already happens from a value/open change — no extra
+	// re-render needed to propagate a registration.
+	itemLabels: React.MutableRefObject<Map<string, ReactNode>>;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	setValue: (value: string) => void;
@@ -970,6 +979,7 @@ export const MockSelectRoot = ({
 }: SelectRootProps) => {
 	const [internalValue, setInternalValue] = useState(defaultValue ?? "");
 	const [open, setOpen] = useState(false);
+	const itemLabels = useRef(new Map<string, ReactNode>());
 	const isControlled = controlledValue !== undefined;
 	const currentValue = isControlled ? controlledValue : internalValue;
 
@@ -988,6 +998,7 @@ export const MockSelectRoot = ({
 				setValue: handleValueChange,
 				open,
 				setOpen,
+				itemLabels,
 			}}
 		>
 			{children}
@@ -1029,7 +1040,10 @@ MockSelectTrigger.displayName = "MockSelectTrigger";
 
 export const MockSelectValue = ({ placeholder }: { placeholder?: string }) => {
 	const context = React.useContext(SelectContext);
-	return <span>{context?.value || placeholder}</span>;
+	const label = context
+		? context.itemLabels.current.get(context.value)
+		: undefined;
+	return <span>{label || context?.value || placeholder}</span>;
 };
 
 interface SelectIconProps {
@@ -1087,6 +1101,13 @@ export const MockSelectItem = ({
 }: MockSelectItemProps) => {
 	const context = React.useContext(SelectContext);
 	const isSelected = context?.value === value;
+
+	// Register this item's rendered label against its value so
+	// `MockSelectValue` can display the label rather than the raw value —
+	// see the `itemLabels` doc comment on `SelectContextValue`.
+	useEffect(() => {
+		context?.itemLabels.current.set(value, children);
+	}, [context, value, children]);
 
 	const handleClick = () => {
 		if (!disabled) {
