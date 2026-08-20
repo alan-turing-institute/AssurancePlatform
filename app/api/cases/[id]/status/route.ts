@@ -12,7 +12,23 @@ import {
 	getFullPublishStatus,
 	transitionStatus,
 } from "@/lib/services/publish-service";
+import { withTimeout } from "@/lib/with-timeout";
 import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prisma";
+
+// Local baseline for this route is ~185ms; the observed CI hang was silent
+// for 20s+ with no server-side response. 15s gives the DB-pool acquisition
+// timeout (`lib/prisma.ts`, 5s) room to fire and surface its own error first
+// in the pool-contention case, while still guaranteeing this route always
+// answers the client — see "TEA — Status endpoint can hang indefinitely".
+//
+// The two timeouts therefore cover different failure shapes, on purpose:
+// pool-acquisition contention surfaces as the pool's own fast error (pg
+// rejects at ~5s, mapped to a generic 500/INTERNAL — see
+// `api-status-pool-starvation.test.ts`), while this 15s `withTimeout` is
+// the backstop for slow-but-not-erroring work with no bounded wait of its
+// own (mapped to 504/GATEWAY_TIMEOUT). Pool exhaustion never reaches the
+// 504 path, because the pool errors out first.
+const STATUS_REQUEST_TIMEOUT_MS = 15_000;
 
 /**
  * GET /api/cases/[id]/status
@@ -32,7 +48,10 @@ export async function GET(
 		const userId = await requireAuth();
 		const { id } = await params;
 
-		const result = await getFullPublishStatus(userId, id);
+		const result = await withTimeout(
+			getFullPublishStatus(userId, id),
+			STATUS_REQUEST_TIMEOUT_MS
+		);
 
 		if (result.error) {
 			return apiError(serviceErrorToAppError(result.error));

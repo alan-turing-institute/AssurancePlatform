@@ -3,12 +3,14 @@ import { serviceErrorToAppError } from "../api-response";
 import {
 	AppError,
 	forbidden,
+	gatewayTimeout,
 	handleError,
 	notFound,
 	toActionResult,
 	unauthorised,
 	validationError,
 } from "../errors";
+import { TimeoutError } from "../with-timeout";
 
 describe("AppError", () => {
 	it("stores code, message, and fieldErrors", () => {
@@ -46,6 +48,9 @@ describe("AppError", () => {
 		expect(new AppError({ code: "INTERNAL", message: "" }).statusCode).toBe(
 			500
 		);
+		expect(
+			new AppError({ code: "GATEWAY_TIMEOUT", message: "" }).statusCode
+		).toBe(504);
 	});
 
 	it("preserves cause", () => {
@@ -92,6 +97,17 @@ describe("factory functions", () => {
 		expect(err.statusCode).toBe(400);
 		expect(err.fieldErrors).toEqual({ email: "Required" });
 	});
+
+	it("gatewayTimeout() creates a 504 error", () => {
+		const err = gatewayTimeout();
+		expect(err.code).toBe("GATEWAY_TIMEOUT");
+		expect(err.statusCode).toBe(504);
+	});
+
+	it("gatewayTimeout() accepts a custom message", () => {
+		const err = gatewayTimeout("Status check timed out");
+		expect(err.message).toBe("Status check timed out");
+	});
 });
 
 describe("handleError", () => {
@@ -112,6 +128,19 @@ describe("handleError", () => {
 		expect(result).toBeInstanceOf(AppError);
 		expect(result.code).toBe("INTERNAL");
 		expect(result.cause).toBe(original);
+		consoleSpy.mockRestore();
+	});
+
+	it("maps TimeoutError to GATEWAY_TIMEOUT (504), not INTERNAL", () => {
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+			/* suppress */
+		});
+		const original = new TimeoutError(15_000);
+		const result = handleError(original);
+
+		expect(result).toBeInstanceOf(AppError);
+		expect(result.code).toBe("GATEWAY_TIMEOUT");
+		expect(result.statusCode).toBe(504);
 		consoleSpy.mockRestore();
 	});
 
