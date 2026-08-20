@@ -17,6 +17,26 @@ name: Fallow Audit
 # and overstates risk on well-tested code). Neither needs a database; the
 # DATABASE_URL values below are placeholders `prisma generate` and the
 # Prisma client's module-scope config resolve but never connect to.
+#
+# --baseline-mode identity (health only): fallow's own base-commit
+# re-analysis (the mechanism above, not this flag) does NOT get --coverage —
+# it re-checks out the base ref into a worktree fallow manages itself, so a
+# pre-existing, UNTOUCHED high-CRAP function scores low there (module-graph
+# estimate) and high on head (real 0% coverage). The two scores don't match,
+# so the base-side finding and the head-side finding fail to pair up and the
+# untouched function is misattributed introduced:true (confirmed: PATCH in
+# app/api/cases/[id]/status/route.ts, byte-identical function scored with
+# real coverage on both sides, flagged only because fallow's internal base
+# pass omits --coverage). fallow has no flag to feed coverage into that
+# internal base pass, so the fix instead routes health attribution through
+# .fallow-baseline.health.json (audit.healthBaseline in .fallowrc.json,
+# already wired) in --baseline-mode identity: a baseline saved from the base
+# ref WITH real coverage, matched per (file, function name, category) rather
+# than fallow's own coverage-blind base-commit diff. This flag requires
+# .fallow-baseline.health.json to have been saved with BOTH --coverage and
+# --baseline-mode identity — reading it in identity mode otherwise hard-errors
+# (exit 2, a tool-config failure, not a findings failure). Refresh command:
+# see "TEA — Fallow CI gate false positives" issue notes.
 
 on:
   pull_request:
@@ -90,6 +110,8 @@ jobs:
           npx -y fallow audit \
             --changed-since "origin/${{ github.base_ref }}" \
             --coverage coverage/coverage-final.json \
+            --health-baseline .fallow-baseline.health.json \
+            --baseline-mode identity \
             --format pr-comment-github \
             --output-file fallow-comment.md \
             --quiet
