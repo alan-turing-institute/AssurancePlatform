@@ -174,3 +174,80 @@ describe("transformPublishableItemDetailForApi — comment stripping", () => {
 		).toBe("not-an-object");
 	});
 });
+
+/**
+ * `content.caseInformation.sector` (the frozen snapshot's own copy, embedded
+ * inside the raw JSON returned to the public JSON API and the Discover
+ * detail page's Download JSON button) must resolve to the full canonical
+ * sector name exactly like the top-level `sector` field does — never the
+ * bare stable ID a post-migration snapshot stores. Blocking finding from
+ * review: `transformPublishableItemDetailForApi` was passing `content`
+ * through with only `stripComments`, leaking the raw ID.
+ */
+describe("transformPublishableItemDetailForApi — sector resolution in content", () => {
+	it("resolves a post-migration snapshot's stable-ID sector to its full name", () => {
+		const item = detailWith({
+			tree: { id: "el-1", name: "Goal", children: [] },
+			caseInformation: {
+				description: "x",
+				authors: "y",
+				sector: "15",
+			},
+		});
+
+		const result = transformPublishableItemDetailForApi(item);
+
+		expect(
+			(result.content as { caseInformation: { sector: string } })
+				.caseInformation.sector
+		).toBe("Health & Social Care");
+	});
+
+	it("passes a pre-migration snapshot's already-canonical sector name through unchanged", () => {
+		const item = detailWith({
+			tree: { id: "el-1", name: "Goal", children: [] },
+			caseInformation: {
+				description: "x",
+				authors: "y",
+				sector: "Health & Social Care",
+			},
+		});
+
+		const result = transformPublishableItemDetailForApi(item);
+
+		expect(
+			(result.content as { caseInformation: { sector: string } })
+				.caseInformation.sector
+		).toBe("Health & Social Care");
+	});
+
+	it("passes unmappable legacy free-text sector values through verbatim", () => {
+		const item = detailWith({
+			tree: { id: "el-1", name: "Goal", children: [] },
+			caseInformation: {
+				description: "x",
+				authors: "y",
+				sector: "Bespoke Legacy Sector Text",
+			},
+		});
+
+		const result = transformPublishableItemDetailForApi(item);
+
+		expect(
+			(result.content as { caseInformation: { sector: string } })
+				.caseInformation.sector
+		).toBe("Bespoke Legacy Sector Text");
+	});
+
+	it("leaves content with no caseInformation.sector key untouched", () => {
+		const content = {
+			tree: { id: "el-1", name: "Goal", children: [] },
+			caseInformation: { description: "x", authors: "y" },
+		};
+		const item = detailWith(content);
+
+		const result = transformPublishableItemDetailForApi(item);
+
+		expect(result.content).toStrictEqual(content);
+	});
+});
