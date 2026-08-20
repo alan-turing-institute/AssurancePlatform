@@ -323,6 +323,14 @@
         "count": 1
       }
     },
+    "app/uploads/[...path]/route.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "components/auth/forgot-password-form.tsx": {
       "crap_moderate": {
         "count": 1
@@ -1563,7 +1571,7 @@
         "count": 2
       },
       "crap_moderate": {
-        "count": 4
+        "count": 5
       }
     },
     "src/__tests__/setup/dom-polyfills.ts": {
@@ -1965,6 +1973,16 @@
       }
     },
     "app/api/users/register/route.ts\u0000POST": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "app/uploads/[...path]/route.ts\u0000GET": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/uploads/[...path]/route.ts\u0000resolveSafePath": {
       "crap_critical": {
         "count": 1
       }
@@ -4297,6 +4315,11 @@
         "count": 1
       }
     },
+    "src/__tests__/mocks/radix-ui-mocks.tsx\u0000MockSelectValue": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "src/__tests__/mocks/radix-ui-mocks.tsx\u0000MockTooltipTrigger": {
       "crap_critical": {
         "count": 1
@@ -4392,8 +4415,8 @@
     "components/docs/curriculum/enhanced/nodes/attribute-badges.tsx:dead code",
     "components/docs/curriculum/enhanced/utils/theme-config.ts:dead code",
     "components/docs/curriculum/enhanced/handles/custom-handle.tsx:dead code",
-    "components/shared/nodes/animations.ts:dead code",
     "lib/routes.ts:dead code",
+    "components/shared/nodes/animations.ts:dead code",
     "components/docs/curriculum/enhanced/utils/animations.ts:dead code",
     "components/docs/curriculum/enhanced/handles/handle-utils.ts:dead code",
     "src/__tests__/utils/file-test-utils.ts:dead code",
