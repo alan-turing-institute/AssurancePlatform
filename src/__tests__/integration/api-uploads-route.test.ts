@@ -2,7 +2,23 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs/promises")>();
+	return {
+		...actual,
+		// Wrapping (not replacing) the real implementation keeps every other
+		// test in this file exercising real disk I/O; only the one test that
+		// overrides this with `mockImplementationOnce` sees different
+		// behaviour.
+		stat: vi.fn(actual.stat),
+	};
+});
+
+const { stat: mockedStat } = await import("node:fs/promises");
+const { stat: actualStat } =
+	await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
 
 const UPLOAD_ROOT = join(process.cwd(), "public", "uploads");
 
@@ -81,6 +97,12 @@ describe("GET /uploads/[...path]", () => {
 		expect(response.status).toBe(404);
 	});
 
+	// Next's router collapses literal and percent-encoded dot-segments
+	// before a request ever reaches this handler, so this exact input is
+	// unreachable over real HTTP on the Next version this app runs. This
+	// test guards `resolveSafePath`'s own defensive contract (it must not
+	// rely on the router for safety), not an exploit that is actually
+	// reachable in production.
 	it("rejects a traversal attempt via a literal '..' segment", async () => {
 		const { GET } = await import("@/app/uploads/[...path]/route");
 		const response = await GET(buildRequest("/uploads/../../etc/passwd"), {
@@ -117,6 +139,55 @@ describe("GET /uploads/[...path]", () => {
 		const { GET } = await import("@/app/uploads/[...path]/route");
 		const response = await GET(buildRequest(`/uploads/${TEST_SUBDIR}`), {
 			params: Promise.resolve({ path: [TEST_SUBDIR] }),
+		});
+
+		expect(response.status).toBe(404);
+	});
+
+	it("streams a file nested at realistic production path depth (caseId/case-information/file)", async () => {
+		const contents = Buffer.from([7, 7, 7, 7]);
+		const caseId = randomUUID();
+		const nestedDir = join(TEST_DIR, caseId, "case-information");
+		await mkdir(nestedDir, { recursive: true });
+		await writeFile(join(nestedDir, "evidence.png"), contents);
+
+		const { GET } = await import("@/app/uploads/[...path]/route");
+		const response = await GET(
+			buildRequest(
+				`/uploads/${TEST_SUBDIR}/${caseId}/case-information/evidence.png`
+			),
+			{
+				params: Promise.resolve({
+					path: [TEST_SUBDIR, caseId, "case-information", "evidence.png"],
+				}),
+			}
+		);
+
+		expect(response.status).toBe(200);
+		const body = Buffer.from(await response.arrayBuffer());
+		expect(body.equals(contents)).toBe(true);
+	});
+
+	it("returns 404, not an unhandled stream error, if the file is deleted between stat() and the read starting", async () => {
+		const contents = Buffer.from([1, 2, 3]);
+		const url = await writeUploadedFile("race.png", contents);
+		const filePath = join(TEST_DIR, "race.png");
+
+		// stat() still sees the file (so the route proceeds past the
+		// existence check), but the file is gone by the time the route
+		// opens a read stream — reproducing the stat-then-read race a
+		// concurrent delete could cause.
+		vi.mocked(mockedStat).mockImplementationOnce(async (target) => {
+			const result = await actualStat(
+				target as Parameters<typeof actualStat>[0]
+			);
+			await rm(filePath);
+			return result;
+		});
+
+		const { GET } = await import("@/app/uploads/[...path]/route");
+		const response = await GET(buildRequest(url), {
+			params: Promise.resolve({ path: [TEST_SUBDIR, "race.png"] }),
 		});
 
 		expect(response.status).toBe(404);

@@ -100,7 +100,10 @@ export const config = {
 		 *   `/login` even for files that existed at build time (the file
 		 *   extension list happened to cover `.png`/`.jpg`/`.jpeg` but not
 		 *   every `ALLOWED_MIME_TYPES` extension); a bare `uploads` prefix
-		 *   here covers all of them without relying on an extension list.)
+		 *   here covers all of them without relying on an extension list.
+		 *   This exemption is extension-independent by construction: anything
+		 *   a future writer places under `public/uploads` becomes publicly
+		 *   readable, regardless of what it is.)
 		 *
 		 * Each of the five `api/*` prefixes above is boundary-anchored
 		 * (`(?:/|$)`) rather than a bare string prefix — otherwise a
