@@ -8,6 +8,7 @@ export type ErrorCode =
 	| "VALIDATION"
 	| "CONFLICT"
 	| "RATE_LIMITED"
+	| "GATEWAY_TIMEOUT"
 	| "INTERNAL";
 
 /**
@@ -25,6 +26,7 @@ const STATUS_MAP: Record<ErrorCode, number> = {
 	VALIDATION: 400,
 	CONFLICT: 409,
 	RATE_LIMITED: 429,
+	GATEWAY_TIMEOUT: 504,
 	INTERNAL: 500,
 };
 
@@ -79,6 +81,10 @@ export function validationError(
 	return new AppError({ code: "VALIDATION", message, fieldErrors });
 }
 
+export function gatewayTimeout(message = "Request timed out"): AppError {
+	return new AppError({ code: "GATEWAY_TIMEOUT", message });
+}
+
 // ---------------------------------------------------------------------------
 // Conversion helpers
 // ---------------------------------------------------------------------------
@@ -90,6 +96,17 @@ export function validationError(
 export function handleError(error: unknown): AppError {
 	if (error instanceof AppError) {
 		return error;
+	}
+
+	// `TimeoutError` (`lib/with-timeout.ts`) is checked by name, not
+	// `instanceof` — it's thrown from a plain module with no shared base
+	// class import here, and matching by `.name` avoids a circular import
+	// between `lib/errors.ts` and `lib/with-timeout.ts`.
+	if (error instanceof Error && error.name === "TimeoutError") {
+		console.error("[handleError] request timed out:", error.message);
+		return gatewayTimeout(
+			"The request took too long to complete. Please try again."
+		);
 	}
 
 	const message =
