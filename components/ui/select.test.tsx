@@ -99,7 +99,11 @@ describe("Select", () => {
 		await user.click(option2);
 
 		expect(handleValueChange).toHaveBeenCalledWith("option2");
-		expect(trigger).toHaveTextContent("option2");
+		// The trigger shows the selected item's rendered label ("Option 2"),
+		// not its raw `value` ("option2") — matching real Radix `SelectValue`,
+		// which are allowed to differ (see the sector select's stable-ID vs
+		// display-name split).
+		expect(trigger).toHaveTextContent(OPTION_TWO_REGEX);
 		expect(trigger).toHaveAttribute("aria-expanded", "false");
 	});
 
@@ -131,7 +135,8 @@ describe("Select", () => {
 		await user.click(option3);
 
 		expect(handleValueChange).toHaveBeenCalledWith("option3");
-		expect(trigger).toHaveTextContent("option3");
+		// See the label-vs-value note in "should handle option selection".
+		expect(trigger).toHaveTextContent(/option 3/i);
 	});
 
 	it("should handle disabled state", async () => {

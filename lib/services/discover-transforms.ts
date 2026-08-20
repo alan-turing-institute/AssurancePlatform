@@ -9,6 +9,7 @@
  */
 
 import type { PublishableItemTypeResponse } from "@/lib/schemas/publishable-item";
+import { getSectorDisplayName } from "@/lib/sectors";
 import type {
 	PublishableItemDetail,
 	PublishableItemSummary,
@@ -61,6 +62,62 @@ function stripComments(value: unknown): unknown {
 	return value;
 }
 
+/**
+ * Resolves `content.caseInformation.sector` to the full canonical display
+ * name before a frozen snapshot's `content` is ever served (Chris's hard
+ * constraint, 2026-08-18 — the stable ID is a storage detail, never
+ * UI/API surface). `discover-service.ts`'s `toSummary` already does this
+ * for the top-level summary `sector` field via `getSectorDisplayName`; this
+ * is the equivalent choke point for the embedded snapshot `content` that
+ * `transformPublishableItemDetailForApi` passes through — otherwise a
+ * post-migration snapshot serves the bare stable ID (e.g. `"15"`) inside
+ * `content.caseInformation.sector` even though the top-level `sector` field
+ * next to it is already resolved.
+ *
+ * Handles both stored shapes via `getSectorDisplayName` itself: a
+ * post-migration stable ID resolves to its `Name`; a pre-migration snapshot
+ * that already stored a display name, or genuinely unmappable legacy free
+ * text, passes through verbatim (there is nothing to resolve it to).
+ *
+ * Non-destructive and defensive, matching `readSnapshotMeta` in
+ * `discover-service.ts`: never mutates the stored snapshot, and any shape
+ * that doesn't match `{ caseInformation: { sector } }` (missing, malformed,
+ * non-object) is returned unchanged rather than throwing.
+ */
+function resolveSectorInContent(content: unknown): unknown {
+	if (
+		content === null ||
+		typeof content !== "object" ||
+		Array.isArray(content)
+	) {
+		return content;
+	}
+	const record = content as Record<string, unknown>;
+	const caseInformation = record.caseInformation;
+	if (
+		caseInformation === null ||
+		typeof caseInformation !== "object" ||
+		Array.isArray(caseInformation)
+	) {
+		return content;
+	}
+	const caseInfoRecord = caseInformation as Record<string, unknown>;
+	if (!("sector" in caseInfoRecord)) {
+		return content;
+	}
+	const sector = caseInfoRecord.sector;
+	if (sector !== null && typeof sector !== "string") {
+		return content;
+	}
+	return {
+		...record,
+		caseInformation: {
+			...caseInfoRecord,
+			sector: getSectorDisplayName(sector),
+		},
+	};
+}
+
 /** Transform a single published item summary for API response. */
 export function transformPublishableItemForApi(
 	item: PublishableItemSummary
@@ -87,17 +144,19 @@ export function transformPublishableItemsForApi(
 
 /**
  * Transform a published item's full detail (summary + frozen content) for
- * API response. `content` is stripped of comments (`stripComments`) here —
- * the single choke point both the public JSON API
- * (`GET /api/public/discover/[slug]`) and the Discover detail page's
- * Download JSON button (via `actions/discover.ts`'s `fetchPublishedItemBySlug`)
- * pass through, so both surfaces get the strip for free.
+ * API response. `content` is stripped of comments (`stripComments`) and has
+ * its embedded `caseInformation.sector` resolved to the full display name
+ * (`resolveSectorInContent`) here — the single choke point both the public
+ * JSON API (`GET /api/public/discover/[slug]`) and the Discover detail
+ * page's Download JSON button (via `actions/discover.ts`'s
+ * `fetchPublishedItemBySlug`) pass through, so both surfaces get both fixes
+ * for free.
  */
 export function transformPublishableItemDetailForApi(
 	item: PublishableItemDetail
 ): PublishableItemDetailResponse {
 	return {
 		...transformPublishableItemForApi(item),
-		content: stripComments(item.content),
+		content: stripComments(resolveSectorInContent(item.content)),
 	};
 }

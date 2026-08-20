@@ -31,7 +31,7 @@ import type {
 	CaseInformationInput,
 } from "@/lib/schemas/case-information";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
-import { sectors } from "@/lib/sectors";
+import { getSectorDisplayName, sectors } from "@/lib/sectors";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 
@@ -211,7 +211,9 @@ export function CaseInformationSection({
 				</div>
 				<div>
 					<h4 className="font-medium text-muted-foreground text-sm">Sector</h4>
-					<p className="text-sm">{information?.sector || "Not provided."}</p>
+					<p className="text-sm">
+						{getSectorDisplayName(information?.sector) || "Not provided."}
+					</p>
 				</div>
 				{information?.featureImageUrl && (
 					<div>
@@ -279,16 +281,26 @@ export function CaseInformationSection({
 					control={form.control}
 					name="sector"
 					render={({ field }) => {
-						// A case saved before this select existed can hold a
-						// free-text sector value that isn't in the canonical
-						// list (e.g. "Healthcare"). Tolerate it: show it as
-						// the current selection rather than crashing or
-						// silently discarding it — replacing it with a
-						// canonical choice is the user's action, not ours.
+						// The stored value is the sector's stable numeric ID
+						// (as a string — see `lib/sectors.ts`'s
+						// `getSectorById`), not its display name: renaming a
+						// sector label must never orphan cases that already
+						// selected it. A case saved before the ID migration
+						// (or one whose value was never mapped to a
+						// canonical sector) can still hold a free-text value
+						// that isn't a known ID — e.g. "Healthcare". Tolerate
+						// it: show it as the current selection rather than
+						// crashing or silently discarding it — replacing it
+						// with a canonical choice is the user's action, not
+						// ours.
 						const currentValue = field.value ?? "";
 						const isLegacyValue =
 							currentValue !== "" &&
-							!sectors.some((sector) => sector.Name === currentValue);
+							!sectors.some((sector) => String(sector.ID) === currentValue);
+						// The user must always see the full sector name, even
+						// for a legacy value — never the raw stored ID.
+						const currentDisplayValue =
+							getSectorDisplayName(currentValue) ?? currentValue;
 						return (
 							<FormItem>
 								<FormLabel>Sector</FormLabel>
@@ -332,11 +344,11 @@ export function CaseInformationSection({
 									<SelectContent>
 										{isLegacyValue && (
 											<SelectItem value={currentValue}>
-												{currentValue} (legacy value)
+												{currentDisplayValue} (legacy value)
 											</SelectItem>
 										)}
 										{sectors.map((sector) => (
-											<SelectItem key={sector.ID} value={sector.Name}>
+											<SelectItem key={sector.ID} value={String(sector.ID)}>
 												{sector.Name}
 											</SelectItem>
 										))}

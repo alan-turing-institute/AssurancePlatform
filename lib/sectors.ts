@@ -178,3 +178,48 @@ export const sectors: Sector[] = [
 		NACEcode: "U",
 	},
 ];
+
+/**
+ * Looks up a sector by its stable numeric ID (the value now stored on
+ * `CaseInformation.sector` — see the migration
+ * `20260820000000_sector_stable_ids`). Accepts the ID as a string because
+ * that is how it travels through forms and the database column, which
+ * stays `String?` for legacy free-text compatibility.
+ */
+export function getSectorById(
+	id: string | null | undefined
+): Sector | undefined {
+	if (!id) {
+		return undefined;
+	}
+	const numericId = Number(id);
+	if (!Number.isInteger(numericId)) {
+		return undefined;
+	}
+	return sectors.find((sector) => sector.ID === numericId);
+}
+
+/**
+ * Resolves a stored `sector` value to the full display name a user should
+ * always see (Chris's hard constraint, 2026-08-18 — the ID/code is a
+ * storage detail, never UI). Handles three shapes of stored value:
+ *
+ * - A known stable ID (e.g. `"15"`) → the canonical `Name`.
+ * - Free text that predates the ID migration and was never mapped (a
+ *   genuinely unmappable legacy value) → returned verbatim, since it is
+ *   already a human-readable string and there is nothing to resolve it to.
+ * - `null`/`undefined`/`""` → `null` (no sector recorded).
+ *
+ * Also tolerant of a frozen publish snapshot's `caseInformation.sector`,
+ * which may still hold a pre-migration display-name string verbatim
+ * (snapshots are never rewritten after the fact) — the same free-text
+ * fallback covers that case.
+ */
+export function getSectorDisplayName(
+	value: string | null | undefined
+): string | null {
+	if (!value) {
+		return null;
+	}
+	return getSectorById(value)?.Name ?? value;
+}

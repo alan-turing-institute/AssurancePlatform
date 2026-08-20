@@ -45,6 +45,22 @@ describe("getPublishedItems", () => {
 		expect(item?.featureImageUrl).toBe("https://example.com/feature.png");
 	});
 
+	it("resolves a stored stable sector ID to its full canonical name (never the raw ID)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "ID Sector Case");
+		await createTestCaseInformation(testCase.id, {
+			description: "Sector stored by ID",
+			// 15 = "Health & Social Care" in lib/sectors.ts.
+			sector: "15",
+		});
+		await publishAssuranceCase(owner.id, testCase.id);
+
+		const items = expectSuccess(await getPublishedItems());
+		const item = items.find((i) => i.title === "ID Sector Case");
+
+		expect(item?.sector).toBe("Health & Social Care");
+	});
+
 	it("falls back to the case's own description when there is no case information", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id, "Bare Case");

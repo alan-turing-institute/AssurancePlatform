@@ -3,6 +3,7 @@ import {
 	type PublishedSnapshotMeta,
 	publishedSnapshotMetaSchema,
 } from "@/lib/schemas/publishable-item";
+import { getSectorDisplayName } from "@/lib/sectors";
 import type { PublishableItemType } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -70,7 +71,14 @@ function toSummary(record: PublishedRecord): PublishableItemSummary {
 			record.description ??
 			meta.case?.description ??
 			null,
-		sector: meta.caseInformation?.sector ?? null,
+		// The frozen snapshot's `sector` may hold a stable ID (post-migration
+		// publishes) or a pre-migration display-name string (older, never
+		// rewritten, snapshots) — this single choke point resolves either
+		// shape to the full sector name every Discover surface renders, so
+		// no downstream component needs to know the storage detail (Chris's
+		// hard constraint, 2026-08-18: the user must always see the full
+		// name).
+		sector: getSectorDisplayName(meta.caseInformation?.sector),
 		authors: meta.caseInformation?.authors ?? null,
 		featureImageUrl: meta.caseInformation?.featureImageUrl ?? null,
 		publishedAt: record.createdAt,
