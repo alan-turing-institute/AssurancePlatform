@@ -46,6 +46,14 @@
     "conventional-changelog-conventionalcommits"
   ],
   "ignoreDependencyOverrides": [{ "package": "@isaacs/brace-expansion" }],
+  "ignoreUnresolvedImports": [
+    "@/src/generated/prisma",
+    "@/src/generated/prisma/**",
+    "../src/generated/prisma",
+    "../src/generated/prisma/**",
+    "../../src/generated/prisma",
+    "../../src/generated/prisma/**"
+  ],
   "audit": {
     "deadCodeBaseline": ".fallow-baseline.dead-code.json",
     "healthBaseline": ".fallow-baseline.health.json",
