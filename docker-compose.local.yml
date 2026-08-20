@@ -33,21 +33,32 @@ services:
     environment:
       # Override DATABASE_URL to use Docker network hostname
       - DATABASE_URL=postgresql://tea_user:tea_password@postgres:5432/tea_dev
-      # Increase Node.js memory limit for Next.js dev server
-      - NODE_OPTIONS=--max-old-space-size=4096
-    volumes:
-      - .:/app
-      - app_next:/app/.next
-      - node_modules_dev:/app/node_modules
+      # V8 heap cap for the running Next.js server. Kept well under mem_limit
+      # (below) so V8's own GC pressure valve kicks in before the kernel
+      # OOM-killer does - a heap cap close to or above the cgroup limit lets
+      # V8 grow toward it and get killed (exit 137) instead of collecting.
+      - NODE_OPTIONS=--max-old-space-size=1536
     networks:
       - tea_dev_network
-    # Memory limit (requires docker-compose v2)
-    mem_limit: 6g
-    memswap_limit: 6g
-    # Run in production mode to avoid Nextra dev compilation crashes
-    # For hot reload, run `pnpm dev` on localhost instead
+    # Runtime memory limit only. The Next.js/Nextra production build (measured
+    # ~12.7GB peak RSS) now runs during `docker build` (Dockerfile.dev), which
+    # is not subject to this limit. Measured peak RSS for migrate + seed +
+    # `next start` + several requests, with NODE_OPTIONS capped at 1536m
+    # above: ~472MiB (cgroup memory.peak = 495042560 bytes), so 2g leaves
+    # comfortable headroom on both the heap cap and the container limit;
+    # raise either if the app itself needs more.
+    mem_limit: 2g
+    memswap_limit: 2g
+    # Run in production mode to avoid Nextra dev compilation crashes.
+    # For hot reload, run `pnpm dev` on the host against this stack's Postgres.
+    #
+    # No bind mount of source: this image bakes the checked-out source in at
+    # `docker build` time (see Dockerfile.dev). After any source change,
+    # recreate with `docker compose -f docker-compose.local.yml up -d --build`
+    # to get a fresh build - Docker's layer cache makes this a fast no-op when
+    # nothing changed and a real rebuild when something did.
     command:
-      sh -c "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build && pnpm start; else npm run build && npm start; fi"
+      sh -c "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && npx next start"
 
 networks:
   tea_dev_network:
@@ -55,7 +66,3 @@ networks:
 
 volumes:
   postgres_data:
-  app_next:
-  # Named volume for container's node_modules (Linux binaries, separate from host's macOS binaries)
-  # Clear when dependencies change: docker volume rm assuranceplatform_node_modules_dev
-  node_modules_dev:

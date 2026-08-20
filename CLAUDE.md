@@ -129,8 +129,10 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
 ## Local development
 
 - Docker dev stack: `docker-compose -f docker-compose.local.yml up -d --build`.
-  **Never `docker-compose down -v`** — it wipes the local database volume. To
-  pick up new npm packages, remove only `assuranceplatform_node_modules_dev`.
+  **Never `docker-compose down -v`** — it wipes the local database volume. The
+  image bakes source and dependencies in at build time (no source bind
+  mount), so `--build` alone picks up new npm packages and source changes;
+  there is no separate volume to clear.
 - Docs run in production mode inside Docker (Nextra 4 dev-mode crash); for hot
   reload run `pnpm dev` on the host against Docker's Postgres.
 - Seed test users: `chris`, `alice`, `bob`, `charlie` (password from the
