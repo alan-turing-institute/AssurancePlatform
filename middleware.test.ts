@@ -68,4 +68,26 @@ describe("middleware route matcher", () => {
 			expect(re.test(path)).toBe(true);
 		}
 	});
+
+	it("exempts every route under uploads from session auth, regardless of extension", async () => {
+		const re = await getMatcherRegex();
+		const uploadPaths = [
+			"/uploads",
+			"/uploads/cases/123/case-information/abc.png",
+			// .gif and .webp aren't in the file-extension exemption list
+			// below, so without a dedicated `uploads` exemption these two
+			// (both in ALLOWED_MIME_TYPES, lib/services/file-storage-service.ts)
+			// would 307-redirect to /login same as any other protected route.
+			"/uploads/cases/123/case-information/abc.gif",
+			"/uploads/cases/123/case-information/abc.webp",
+		];
+		for (const path of uploadPaths) {
+			expect(re.test(path)).toBe(false);
+		}
+	});
+
+	it("boundary-anchors uploads — a hypothetical /uploadsfoo stays protected", async () => {
+		const re = await getMatcherRegex();
+		expect(re.test("/uploadsfoo")).toBe(true);
+	});
 });

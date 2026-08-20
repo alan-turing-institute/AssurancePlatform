@@ -90,6 +90,20 @@ export const config = {
 		 * - _next/image (image optimization files)
 		 * - favicon.ico (favicon file)
 		 * - public folder
+		 * - uploads (locally-stored user uploads — served via the
+		 *   `/uploads/[...path]` route handler at runtime, or straight off
+		 *   `public/` for anything present at build time; these are the same
+		 *   URLs Azure Blob Storage returns in production, which are public
+		 *   by URL, so this exemption keeps both storage backends behaving
+		 *   the same way. Without it, uploads whose extension isn't in the
+		 *   `.*\.ext$` list below — `.gif`, `.webp` — were 307-redirected to
+		 *   `/login` even for files that existed at build time (the file
+		 *   extension list happened to cover `.png`/`.jpg`/`.jpeg` but not
+		 *   every `ALLOWED_MIME_TYPES` extension); a bare `uploads` prefix
+		 *   here covers all of them without relying on an extension list.
+		 *   This exemption is extension-independent by construction: anything
+		 *   a future writer places under `public/uploads` becomes publicly
+		 *   readable, regardless of what it is.)
 		 *
 		 * Each of the five `api/*` prefixes above is boundary-anchored
 		 * (`(?:/|$)`) rather than a bare string prefix — otherwise a
@@ -100,6 +114,6 @@ export const config = {
 		 * existing route under any of the five prefixes relies on the
 		 * looser match, so all five are anchored the same way.
 		 */
-		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
+		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|uploads(?:/|$)|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
 	],
 };
