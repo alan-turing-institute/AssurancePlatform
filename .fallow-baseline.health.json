@@ -1228,7 +1228,7 @@
       }
     },
     "lib/permissions.ts": {
-      "crap_moderate": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -3550,7 +3550,7 @@
       }
     },
     "lib/permissions.ts\u0000getCasePermissionFromPrisma": {
-      "crap_moderate": {
+      "crap_high": {
         "count": 1
       }
     },
