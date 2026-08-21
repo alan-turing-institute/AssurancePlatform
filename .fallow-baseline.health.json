@@ -1421,10 +1421,10 @@
         "count": 2
       },
       "crap_high": {
-        "count": 2
+        "count": 3
       },
       "crap_moderate": {
-        "count": 4
+        "count": 3
       }
     },
     "lib/services/password-reset-service.ts": {
@@ -4071,7 +4071,7 @@
       }
     },
     "lib/services/integration-registry-service.ts\u0000writeAuditLog": {
-      "crap_moderate": {
+      "crap_high": {
         "count": 1
       }
     },

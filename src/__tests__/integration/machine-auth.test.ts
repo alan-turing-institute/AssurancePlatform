@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { GET as whoamiGET } from "@/app/api/machine/whoami/route";
 import {
 	generateApiTokenSecret,
@@ -540,6 +540,42 @@ describe("integration-registry-service — owner-deletion flow", () => {
 			where: { id: apiToken.id },
 		});
 		expect(tokenGone).toBeNull();
+	});
+
+	it("still reports success when the audit write fails after the delete has committed", async () => {
+		const { integration, owner } = await registerTestIntegration();
+
+		const createSpy = vi
+			.spyOn(prisma.securityAuditLog, "create")
+			.mockRejectedValueOnce(new Error("simulated audit write failure"));
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
+			// suppress expected [SECURITY] log noise for this test
+		});
+
+		try {
+			const result = await deleteIntegrationRegistration(
+				integration.id,
+				owner.id
+			);
+
+			expectSuccess(result);
+
+			const gone = await prisma.integration.findUnique({
+				where: { id: integration.id },
+			});
+			expect(gone).toBeNull();
+
+			const failureLogCall = warnSpy.mock.calls.find((call) =>
+				String(call[0]).includes("audit_log_write_failed")
+			);
+			expect(failureLogCall).toBeDefined();
+			expect(failureLogCall?.[1]).toMatchObject({
+				intendedEventType: "integration_deleted",
+			});
+		} finally {
+			createSpy.mockRestore();
+			warnSpy.mockRestore();
+		}
 	});
 
 	it("clears the way for owner deletion once integrations are reassigned or deleted (DB RESTRICT no longer blocks)", async () => {

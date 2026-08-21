@@ -117,7 +117,7 @@
     "lib/case/api.ts:164-172|lib/case/api.ts:198-208",
     "components/modals/case-create-modal.tsx:102-117|components/teams/create-team-dialog.tsx:93-106",
     "lib/services/user-service.ts:221-244|lib/services/user-service.ts:293-316",
-    "lib/services/integration-registry-service.ts:426-443|lib/services/integration-registry-service.ts:470-483",
+    "lib/services/integration-registry-service.ts:449-466|lib/services/integration-registry-service.ts:493-506",
     "lib/services/case-permission-service.ts:433-445|lib/services/case-permission-service.ts:509-521",
     "components/modals/_share-modal/document-export-section.tsx:289-303|components/modals/_share-modal/image-export-section.tsx:126-140",
     "components/docs/curriculum/enhanced/edges/flowing-edge.tsx:46-57|components/docs/curriculum/enhanced/edges/gradient-edge.tsx:48-59",
