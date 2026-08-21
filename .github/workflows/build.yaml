@@ -2,31 +2,13 @@ name: Build
 
 on:
   workflow_dispatch:
+  # No paths filter here: an unfiltered trigger means Validate Code Quality
+  # (lint + typecheck) runs on every PR, so it always produces a status check
+  # to satisfy branch protection. The `changes` job below still gates the
+  # expensive jobs (test/docker-build) on the same path list, per-job rather
+  # than at the workflow trigger. See PR #861, which merged with zero lint
+  # coverage because it only touched paths outside this filter.
   pull_request:
-    paths:
-      - "app/**"
-      - "components/**"
-      - "lib/**"
-      - "actions/**"
-      - "hooks/**"
-      - "prisma/**"
-      - "scripts/**"
-      - "content/**"
-      - "e2e/**"
-      - "src/__tests__/**"
-      - "theme.config.tsx"
-      - "mdx-components.tsx"
-      - "playwright.config.ts"
-      - "vitest.config.ts"
-      - "vitest.workspace.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "Dockerfile"
-      - "types/**"
-      - "next.config.*"
-      - "tsconfig.json"
-      - "biome.json"
-      - ".github/workflows/**"
   push:
     branches:
       - main
@@ -65,6 +47,48 @@ env:
   STAGING_APP_URL: https://staging-assuranceplatform.azurewebsites.net
 
 jobs:
+  changes:
+    name: Detect code-relevant changes
+    # Only needed to decide whether the expensive PR jobs (test, docker-build)
+    # can be skipped. Validate Code Quality never depends on this — it always
+    # runs, unconditionally, on every PR.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            code:
+              - "app/**"
+              - "components/**"
+              - "lib/**"
+              - "actions/**"
+              - "hooks/**"
+              - "prisma/**"
+              - "scripts/**"
+              - "content/**"
+              - "e2e/**"
+              - "src/__tests__/**"
+              - "theme.config.tsx"
+              - "mdx-components.tsx"
+              - "playwright.config.ts"
+              - "vitest.config.ts"
+              - "vitest.workspace.ts"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "Dockerfile"
+              - "types/**"
+              - "next.config.*"
+              - "tsconfig.json"
+              - "biome.json"
+              - ".github/workflows/**"
+
   validate:
     name: Validate Code Quality
     runs-on: ubuntu-latest
@@ -113,6 +137,16 @@ jobs:
 
   test:
     name: Run Tests
+    needs: [changes]
+    # `changes` only runs for pull_request events (see its own `if`), so for
+    # push/workflow_dispatch it is skipped, not failed. This is a custom `if`
+    # expression, which means GitHub does NOT apply its usual implicit
+    # `success()` check against `needs` — so a skipped `changes` job does not
+    # skip this one. The first clause covers push/workflow_dispatch (always
+    # run, unchanged from today); the second gates pull_request on whether
+    # code-relevant paths changed. Config-only PRs end up SKIPPED, not
+    # absent, which still satisfies a required status check.
+    if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
