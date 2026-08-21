@@ -140,6 +140,94 @@ describe("importCase", () => {
 
 		expectSameError(nullResult, badResult);
 	});
+
+	/**
+	 * Atomicity — the issue this fix addresses. `importCase`'s
+	 * `prisma.$transaction` callback previously called the global `prisma`
+	 * singleton throughout (not the transaction-scoped `tx` client), so every
+	 * statement auto-committed independently: a failure partway through left
+	 * the case and any elements already written stuck in the database. This
+	 * is an HONEST failure injection against a real constraint — not a mock
+	 * of the transaction, and not a spy on any Prisma method (spying on the
+	 * global `prisma` client's methods does not intercept calls made through
+	 * the transaction-scoped `tx` client the fix now uses throughout, so a
+	 * spy-based injection would silently no-op and prove nothing). The flat
+	 * V2 import payload below is hand-built (bypassing the nested→flat
+	 * transform) with a genuinely duplicated `evidenceLinks` entry — the same
+	 * `(evidenceId, claimId)` pair twice — which hits the real
+	 * `evidence_links_evidence_id_claim_id_key` unique constraint on
+	 * `createEvidenceLinks`' `createMany`, genuinely AFTER the case and both
+	 * elements have been written inside the same transaction. If the
+	 * transaction is truly atomic, that real Postgres error rolls back
+	 * everything; if it is not, the case and elements survive despite
+	 * `importCase` reporting an error.
+	 */
+	it("rolls back the entire case (and every element already written) when a real DB constraint failure hits partway through the import", async () => {
+		const user = await createTestUser();
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const claimId = "70000000-0000-4000-8000-000000000001";
+		const evidenceId = "70000000-0000-4000-8000-000000000002";
+		const json = {
+			version: "2.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Atomicity Rollback Case",
+				description:
+					"Case whose evidence links genuinely violate a DB constraint",
+			},
+			elements: [
+				{
+					id: claimId,
+					elementType: "PROPERTY_CLAIM",
+					role: "TOP_LEVEL",
+					parentId: null,
+					name: "Root Claim",
+					description: "A property claim",
+					inSandbox: false,
+				},
+				{
+					id: evidenceId,
+					elementType: "EVIDENCE",
+					role: null,
+					parentId: null,
+					name: "Supporting Evidence",
+					description: "Evidence for the claim",
+					inSandbox: false,
+					url: "https://example.com/evidence",
+				},
+			],
+			// Duplicated pair — a real unique-constraint violation
+			// (evidence_links_evidence_id_claim_id_key) on the createMany
+			// insert, not a mocked/injected error.
+			evidenceLinks: [
+				{ evidenceId, claimId },
+				{ evidenceId, claimId },
+			],
+		};
+
+		const result = await importCase(user.id, json);
+		expectError(result);
+
+		// Nothing from the failed import landed: not the case, not either of
+		// its elements. A partial write here (case/elements present despite
+		// the reported error) is exactly the non-atomic bug this test guards
+		// against.
+		const cases = await prisma.assuranceCase.findMany({
+			where: { name: "Atomicity Rollback Case", createdById: user.id },
+		});
+		expect(cases).toHaveLength(0);
+
+		const elements = await prisma.assuranceElement.findMany({
+			where: { id: { in: [claimId, evidenceId] } },
+		});
+		expect(elements).toHaveLength(0);
+
+		const links = await prisma.evidenceLink.findMany({
+			where: { evidenceId, claimId },
+		});
+		expect(links).toHaveLength(0);
+	});
 });
 
 // ============================================
