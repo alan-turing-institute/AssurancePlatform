@@ -136,6 +136,15 @@ interface AuditLogInput {
  * `SecurityAuditLog` row (the pattern's call shape has no DB write yet —
  * this service adds one, scoped to its own events, all Prisma access
  * staying inside this service per house rule).
+ *
+ * Contract: this function NEVER throws. The calling operation has already
+ * committed by the time this runs, so a failure here must never be allowed
+ * to surface as the operation's own failure (a caller told "Failed to
+ * delete integration" after the delete actually committed would retry and
+ * hit a confusing not-found). If the `SecurityAuditLog` write itself fails,
+ * that failure is logged as its own `audit_log_write_failed` event —
+ * carrying the event that was meant to be recorded — and swallowed here,
+ * not propagated to the caller's `try/catch`.
  */
 async function writeAuditLog(input: AuditLogInput): Promise<void> {
 	logSecurityEvent({
@@ -147,16 +156,30 @@ async function writeAuditLog(input: AuditLogInput): Promise<void> {
 			ipAddress: input.ipAddress,
 		},
 	});
-	await prisma.securityAuditLog.create({
-		data: {
-			userId: input.userId ?? null,
-			eventType: input.eventType,
-			ipAddress: input.ipAddress ?? null,
-			userAgent: input.userAgent ?? null,
-			// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-			metadata: (input.metadata ?? null) as any,
-		},
-	});
+	try {
+		await prisma.securityAuditLog.create({
+			data: {
+				userId: input.userId ?? null,
+				eventType: input.eventType,
+				ipAddress: input.ipAddress ?? null,
+				userAgent: input.userAgent ?? null,
+				// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
+				metadata: (input.metadata ?? null) as any,
+			},
+		});
+	} catch (error) {
+		logSecurityEvent({
+			event: "audit_log_write_failed",
+			severity: "high",
+			metadata: {
+				intendedEventType: input.eventType,
+				intendedMetadata: input.metadata,
+				userId: input.userId,
+				ipAddress: input.ipAddress,
+				error: error instanceof Error ? error.message : String(error),
+			},
+		});
+	}
 }
 
 /**
