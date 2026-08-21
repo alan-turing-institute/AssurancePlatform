@@ -1307,14 +1307,13 @@ async function requireIntegrationOwnerAndCaseAdmin(
  * suspend/revoke path harder to recover from, not safer.
  *
  * Rejects a soft-deleted (trashed) case identically to a nonexistent one —
- * `deletedAt` is checked locally, in the query below, rather than inside
- * `canAccessCase`/`lib/permissions.ts`: that helper ignoring soft-deletion
- * is a pre-existing, platform-wide gap (tracked separately —
- * "TEA — canAccessCase ignores soft-deleted cases (platform-wide)") that
- * affects every caller of `canAccessCase`, not just this one; fixing it here
- * only would paper over the general problem while leaving every other call
- * site exposed, so this closes just the local hole (granting NEW machine
- * access into trash) and leaves the platform-wide fix to that issue.
+ * `deletedAt` is checked locally, in the query below, as well as via
+ * `requireIntegrationOwnerAndCaseAdmin`'s `canAccessCase` call above.
+ * `canAccessCase`/`getCasePermission` (`lib/permissions.ts`) now deny a
+ * trashed case platform-wide by default, so the ADMIN check above already
+ * refuses this case on its own — this local check is not needed to close the
+ * hole any more, but it stays: deliberate defence in depth (cid's ruling),
+ * not a leftover to be deleted.
  *
  * Granting to a case the system user's integration already has access to
  * never throws a unique-constraint error — it always goes through
@@ -1333,9 +1332,9 @@ async function requireIntegrationOwnerAndCaseAdmin(
  * `canAccessCase` (inside `requireIntegrationOwnerAndCaseAdmin`) already
  * reads the same row internally — folding the two was considered (V6) and
  * NOT done: `canAccessCase` returns only a boolean, never the row, and
- * extending its return shape (or `lib/permissions.ts` generally) is exactly
- * the kind of platform-wide change the soft-delete issue above is already
- * scoped to weigh, not a trivial fold to make incidentally here.
+ * extending its return shape (or `lib/permissions.ts` generally) is a
+ * platform-wide change in its own right, not a trivial fold to make
+ * incidentally here.
  */
 export async function grantIntegrationCaseAccess(
 	integrationId: string,
