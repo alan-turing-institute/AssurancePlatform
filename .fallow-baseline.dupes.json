@@ -1,7 +1,7 @@
 {
   "clone_groups": [
-    "app/api/cases/[id]/permissions/[permissionId]/route.ts:31-40|app/api/cases/[id]/status/route.ts:82-89|app/api/elements/[id]/route.ts:87-94|app/api/integrations/[id]/route.ts:48-55|app/api/integrations/route.ts:70-77|app/api/machine/health/elements/[id]/evidence/route.ts:118-125|app/api/teams/[id]/members/route.ts:51-58|app/api/teams/[id]/route.ts:48-55|app/api/teams/route.ts:40-47|app/api/users/me/route.ts:44-51|app/api/users/register/route.ts:23-30",
-    "app/api/cases/[id]/permissions/[permissionId]/route.ts:31-43|app/api/cases/[id]/status/route.ts:82-91|app/api/elements/[id]/route.ts:87-98|app/api/integrations/[id]/route.ts:48-61|app/api/integrations/route.ts:70-86|app/api/teams/[id]/members/route.ts:51-60|app/api/teams/[id]/route.ts:48-57|app/api/teams/route.ts:40-49|app/api/users/me/route.ts:44-56|app/api/users/register/route.ts:23-32",
+    "app/api/cases/[id]/permissions/[permissionId]/route.ts:31-40|app/api/cases/[id]/status/route.ts:101-108|app/api/elements/[id]/route.ts:87-94|app/api/integrations/[id]/route.ts:48-55|app/api/integrations/route.ts:70-77|app/api/machine/health/elements/[id]/evidence/route.ts:118-125|app/api/teams/[id]/members/route.ts:51-58|app/api/teams/[id]/route.ts:48-55|app/api/teams/route.ts:40-47|app/api/users/me/route.ts:44-51|app/api/users/register/route.ts:23-30",
+    "app/api/cases/[id]/permissions/[permissionId]/route.ts:31-43|app/api/cases/[id]/status/route.ts:101-110|app/api/elements/[id]/route.ts:87-98|app/api/integrations/[id]/route.ts:48-61|app/api/integrations/route.ts:70-86|app/api/teams/[id]/members/route.ts:51-60|app/api/teams/[id]/route.ts:48-57|app/api/teams/route.ts:40-49|app/api/users/me/route.ts:44-56|app/api/users/register/route.ts:23-32",
     "lib/case/document-export.ts:107-158|lib/case/image-export.ts:70-125",
     "components/docs/curriculum/enhanced/nodes/evidence-node.tsx:426-445|components/docs/curriculum/enhanced/nodes/goal-node.tsx:338-357|components/docs/curriculum/enhanced/nodes/property-claim-node.tsx:444-463|components/docs/curriculum/enhanced/nodes/strategy-node.tsx:320-339",
     "components/cases/context-editor.tsx:47-70|components/cases/node-edit-dialog.tsx:439-462",
@@ -50,7 +50,7 @@
     "app/api/integrations/[id]/case-grants/route.ts:95-110|app/api/integrations/[id]/tokens/route.ts:36-51",
     "lib/services/change-detection-service.ts:40-65|lib/services/publish-service.ts:139-161|lib/services/publish-service.ts:383-398",
     "components/docs/curriculum/enhanced/utils/animations.ts:709-725|components/shared/nodes/animations.ts:98-113",
-    "app/api/cases/[id]/status/route.ts:37-80|app/api/teams/[id]/route.ts:26-46",
+    "app/api/cases/[id]/status/route.ts:56-99|app/api/teams/[id]/route.ts:26-46",
     "app/api/cases/import/gdrive/route.ts:80-95|app/api/cases/import/github/route.ts:147-164",
     "components/navigation/desktop-nav.tsx:63-93|components/navigation/mobile-nav.tsx:123-157",
     "app/api/comments/[id]/route.ts:57-76|app/api/teams/[id]/route.ts:24-45",
@@ -74,7 +74,7 @@
     "components/docs/curriculum/enhanced/edges/animated-edge.tsx:339-354|components/docs/curriculum/enhanced/edges/animated-edge.tsx:436-462",
     "lib/services/case-permission-service.ts:302-319|lib/services/case-permission-service.ts:476-493",
     "lib/services/case-fetch-service.ts:109-115|lib/services/case-fetch-service.ts:73-79",
-    "prisma/seed/dev-seed.ts:28-46|scripts/create-test-users.ts:6-79",
+    "prisma/seed/dev-seed.ts:38-56|scripts/create-test-users.ts:6-79",
     "components/shared/nodes/node-options-menu.tsx:93-101|lib/case/node-operations.ts:229-238",
     "components/docs/curriculum/enhanced/edges/flowing-edge.tsx:455-467|components/docs/curriculum/enhanced/edges/flowing-edge.tsx:521-542",
     "components/navigation/desktop-nav.tsx:142-180|components/navigation/mobile-nav.tsx:208-236",
@@ -141,7 +141,7 @@
     "hooks/use-plugin-enablement.ts:10-26|hooks/use-plugin-settings.ts:27-48",
     "components/cases/new-link-form.tsx:72-83|components/cases/node-edit-dialog.tsx:328-341",
     "lib/schemas/health-evidence.ts:65-69|lib/schemas/plugin.ts:48-52",
-    "lib/services/case-trash-service.ts:225-237|lib/services/health-staleness-sweep-service.ts:186-201",
+    "lib/services/case-trash-service.ts:230-242|lib/services/health-staleness-sweep-service.ts:186-201",
     "lib/export/templates/presets/full-report.ts:86-95|lib/export/templates/presets/summary.ts:56-65"
   ],
   "clone_fingerprints": [

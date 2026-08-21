@@ -215,6 +215,53 @@ describe("GET /api/integrations/[id]/case-grants", () => {
 		const body = await response.json();
 		expect(body.grants).toHaveLength(1);
 	});
+
+	/**
+	 * N4: a grant on a case that is later trashed disappears from the list —
+	 * `listIntegrationCaseGrants`'s per-row filter re-checks `canAccessCase`
+	 * (VIEW) for the actor on every case each time it runs, and that check
+	 * now denies a trashed case by default (`lib/permissions.ts`), so the row
+	 * drops out even though the underlying `CasePermission` is untouched.
+	 */
+	it("excludes a grant from the list once its case is soft-deleted", async () => {
+		const owner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id);
+		const testCase = await createTestCase(owner.id, { name: "Trashed target" });
+		await createTestPermission(testCase.id, systemUser.id, owner.id, "VIEW");
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const beforeResponse = await GET(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "GET"),
+			idParams(integration.id)
+		);
+		expect(beforeResponse.status).toBe(200);
+		const beforeBody = await beforeResponse.json();
+		expect(beforeBody.grants).toHaveLength(1);
+
+		await prisma.assuranceCase.update({
+			where: { id: testCase.id },
+			data: { deletedAt: new Date() },
+		});
+
+		const afterResponse = await GET(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "GET"),
+			idParams(integration.id)
+		);
+		expect(afterResponse.status).toBe(200);
+		const afterBody = await afterResponse.json();
+		expect(afterBody.grants).toHaveLength(0);
+
+		// The underlying grant is untouched — only the LIST response is
+		// filtered, same as the reassigned-owner case above.
+		const permission = await prisma.casePermission.findUnique({
+			where: { caseId_userId: { caseId: testCase.id, userId: systemUser.id } },
+		});
+		expect(permission).not.toBeNull();
+	});
 });
 
 describe("POST /api/integrations/[id]/case-grants", () => {
@@ -693,12 +740,12 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 
 	/**
 	 * N2: a soft-deleted (trashed) case is rejected identically to a
-	 * nonexistent one — `canAccessCase` itself doesn't know about
-	 * `deletedAt` (a separate, platform-wide gap — see
-	 * `grantIntegrationCaseAccess`'s doc comment), but the owner here IS the
-	 * case's creator, so `canAccessCase` still reports ADMIN regardless of
-	 * trashing; the LOCAL `deletedAt` check in the grant path is what must
-	 * catch this.
+	 * nonexistent one. `canAccessCase` (`lib/permissions.ts`) now denies a
+	 * trashed case platform-wide by default, so the ADMIN check inside
+	 * `requireIntegrationOwnerAndCaseAdmin` already refuses this on its own —
+	 * the LOCAL `deletedAt` check in the grant path (see
+	 * `grantIntegrationCaseAccess`'s doc comment) is kept regardless, as
+	 * deliberate defence in depth, and this test still passes either way.
 	 */
 	it("rejects granting access into a soft-deleted case, BYTE-IDENTICAL 404 to nonexistent", async () => {
 		const owner = await createTestUser();
@@ -977,5 +1024,58 @@ describe("DELETE /api/integrations/[id]/case-grants/[caseId]", () => {
 			integrationId: integration.id,
 			caseId: testCase.id,
 		});
+	});
+
+	/**
+	 * N5: revoking on a trashed case is denied, BYTE-IDENTICAL to a
+	 * nonexistent case — `requireIntegrationOwnerAndCaseAdmin`'s
+	 * `canAccessCase` (ADMIN) call now denies a trashed case by default
+	 * (`lib/permissions.ts`), so the owner here (also the case's creator,
+	 * hence implicit ADMIN before trashing) is refused once the case is in
+	 * the trash, and the existing grant is left in place.
+	 */
+	it("rejects revoking access on a soft-deleted case, BYTE-IDENTICAL 404 to nonexistent", async () => {
+		const owner = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id);
+		const testCase = await createTestCase(owner.id);
+		await createTestPermission(testCase.id, systemUser.id, owner.id, "VIEW");
+		await prisma.assuranceCase.update({
+			where: { id: testCase.id },
+			data: { deletedAt: new Date() },
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { DELETE } = await import(
+			"@/app/api/integrations/[id]/case-grants/[caseId]/route"
+		);
+		const trashedResponse = await DELETE(
+			jsonRequest(
+				`/api/integrations/${integration.id}/case-grants/${testCase.id}`,
+				"DELETE"
+			),
+			caseGrantParams(integration.id, testCase.id)
+		);
+		const nonexistentResponse = await DELETE(
+			jsonRequest(
+				`/api/integrations/${integration.id}/case-grants/${NOT_FOUND_ID}`,
+				"DELETE"
+			),
+			caseGrantParams(integration.id, NOT_FOUND_ID)
+		);
+
+		expect(trashedResponse.status).toBe(404);
+		expect(trashedResponse.status).toBe(nonexistentResponse.status);
+		const trashedBody = await trashedResponse.json();
+		const nonexistentBody = await nonexistentResponse.json();
+		expect(trashedBody).toEqual(nonexistentBody);
+		expect(trashedBody.error).toBe(CASE_NOT_FOUND);
+
+		const permission = await prisma.casePermission.findUnique({
+			where: {
+				caseId_userId: { caseId: testCase.id, userId: systemUser.id },
+			},
+		});
+		expect(permission).not.toBeNull();
 	});
 });

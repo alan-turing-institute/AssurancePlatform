@@ -115,8 +115,13 @@ export async function softDeleteCase(
 ): ServiceResult {
 	const { canAccessCase } = await import("@/lib/permissions");
 
-	// Check permission - only ADMIN can delete
-	const hasAccess = await canAccessCase({ userId, caseId }, "ADMIN");
+	// Check permission - only ADMIN can delete. `includeTrashed: true` so an
+	// already-trashed case still reaches the ADMIN check below, instead of
+	// being hidden by the default trash-invisibility gate: that lets this
+	// function report its own distinct "Case is already in trash" error.
+	const hasAccess = await canAccessCase({ userId, caseId }, "ADMIN", {
+		includeTrashed: true,
+	});
 	if (!hasAccess) {
 		return { error: "Permission denied" };
 	}
