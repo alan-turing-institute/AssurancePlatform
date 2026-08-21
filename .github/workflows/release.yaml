@@ -21,6 +21,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          # workflow_run always checks out the DEFAULT branch unless pinned —
+          # correct today only because main is the default. This checkout
+          # carries a write-scoped RELEASE_TOKEN feeding semantic-release, so
+          # pin explicitly. Same bug class as seed-staging.yml (fixed 2026-07-05).
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
 
