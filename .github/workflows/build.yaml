@@ -2,31 +2,13 @@ name: Build
 
 on:
   workflow_dispatch:
+  # No paths filter here: an unfiltered trigger means Validate Code Quality
+  # (lint + typecheck) runs on every PR, so it always produces a status check
+  # to satisfy branch protection. The `changes` job below still gates the
+  # expensive jobs (test/docker-build) on the same path list, per-job rather
+  # than at the workflow trigger. See PR #861, which merged with zero lint
+  # coverage because it only touched paths outside this filter.
   pull_request:
-    paths:
-      - "app/**"
-      - "components/**"
-      - "lib/**"
-      - "actions/**"
-      - "hooks/**"
-      - "prisma/**"
-      - "scripts/**"
-      - "content/**"
-      - "e2e/**"
-      - "src/__tests__/**"
-      - "theme.config.tsx"
-      - "mdx-components.tsx"
-      - "playwright.config.ts"
-      - "vitest.config.ts"
-      - "vitest.workspace.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "Dockerfile"
-      - "types/**"
-      - "next.config.*"
-      - "tsconfig.json"
-      - "biome.json"
-      - ".github/workflows/**"
   push:
     branches:
       - main
@@ -65,6 +47,59 @@ env:
   STAGING_APP_URL: https://staging-assuranceplatform.azurewebsites.net
 
 jobs:
+  changes:
+    name: Detect code-relevant changes
+    # Runs on EVERY event, unfiltered — not just pull_request. Two reasons:
+    # 1. `test` (below) declares `needs: [changes]`. Per GitHub's docs and
+    #    actions/runner#2205, a dependent job is skipped when a needed job is
+    #    skipped UNLESS the dependent's `if:` contains a status-check function
+    #    (always()/!cancelled()/etc). Community reports on the exact trigger
+    #    conditions for that behaviour are contradictory, so rather than rely
+    #    on the subtlety at all, this job simply never skips itself — there is
+    #    no skipped `needs` for push/workflow_dispatch to propagate from.
+    # 2. The dorny/paths-filter step below is the only part that actually
+    #    needs the pull_request event (it reads the PR's changed-files API);
+    #    it is gated on its own `if:`, not the job's.
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      # For any non-PR event (push, workflow_dispatch) there is no PR diff to
+      # filter, so treat everything as code-relevant: 'true'. For pull_request
+      # events, defer to the filter step's actual answer.
+      code: ${{ github.event_name != 'pull_request' && 'true' || steps.filter.outputs.code }}
+    steps:
+      - name: Filter changed paths
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            code:
+              - "app/**"
+              - "components/**"
+              - "lib/**"
+              - "actions/**"
+              - "hooks/**"
+              - "prisma/**"
+              - "scripts/**"
+              - "content/**"
+              - "e2e/**"
+              - "src/__tests__/**"
+              - "theme.config.tsx"
+              - "mdx-components.tsx"
+              - "playwright.config.ts"
+              - "vitest.config.ts"
+              - "vitest.workspace.ts"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "Dockerfile"
+              - "types/**"
+              - "next.config.*"
+              - "tsconfig.json"
+              - "biome.json"
+              - ".github/workflows/**"
+
   validate:
     name: Validate Code Quality
     runs-on: ubuntu-latest
@@ -113,6 +148,28 @@ jobs:
 
   test:
     name: Run Tests
+    needs: [changes]
+    # `changes` now runs unconditionally (see its own comment), so it is never
+    # itself skipped — the skip-propagation subtlety documented there
+    # (GitHub docs + actions/runner#2205; community reports are contradictory
+    # on the precise trigger conditions) cannot bite this job either way, but
+    # we still write this `if:` defensively with an explicit status function
+    # rather than depend on that reasoning holding.
+    #
+    # Fail CLOSED: `!cancelled()` means this only skips evaluation if the
+    # workflow run itself is being cancelled. `needs.changes.result !=
+    # 'success'` covers `changes` failing or erroring (e.g. paths-filter
+    # throwing on a malformed PR diff) — in that case `needs.changes.outputs.
+    # code` would be empty/undefined, and we must NOT silently skip tests
+    # behind a green required check, so this clause runs tests instead.
+    # `needs.changes.outputs.code == 'true'` is the normal path: push/
+    # workflow_dispatch always get code=true from `changes`; PRs get the
+    # paths-filter's real answer. Net effect: push/dispatch → run; PR
+    # touching code paths → run; config-only PR → changes succeeds with
+    # code=false → SKIPPED (skipped still satisfies a required status
+    # check); changes fails or the run is cancelled mid-PR → run (fail
+    # closed), except a genuine cancellation short-circuits via !cancelled().
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
