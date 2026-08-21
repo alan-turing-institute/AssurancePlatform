@@ -91,6 +91,56 @@ describe("importCase", () => {
 		expect(links.length).toBeGreaterThanOrEqual(1);
 	});
 
+	it("creates comment rows for an element carrying a comments array", async () => {
+		const user = await createTestUser();
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const json = createNestedCaseJSON({
+			tree: {
+				id: "20000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Commented Goal",
+				description: "The root goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				comments: [
+					{
+						author: "reviewer",
+						content: "Looks good, one nit below.",
+						createdAt: new Date().toISOString(),
+					},
+					{
+						author: "reviewer",
+						content: "Please add a citation here.",
+						createdAt: new Date().toISOString(),
+					},
+				],
+				children: [],
+			},
+		});
+
+		const data = expectSuccess(await importCase(user.id, json));
+		expect(data.commentCount).toBe(2);
+
+		const goal = await prisma.assuranceElement.findFirst({
+			where: { caseId: data.caseId, name: "Commented Goal" },
+		});
+		expect(goal).not.toBeNull();
+
+		const comments = await prisma.comment.findMany({
+			where: { elementId: goal?.id },
+			orderBy: { content: "asc" },
+		});
+		expect(comments).toHaveLength(2);
+		expect(comments.map((c) => c.content).sort()).toEqual(
+			["Looks good, one nit below.", "Please add a citation here."].sort()
+		);
+		for (const comment of comments) {
+			expect(comment.authorId).toBe(user.id);
+			expect(comment.elementId).toBe(goal?.id);
+		}
+	});
+
 	it("returns an error for null/empty JSON input", async () => {
 		const user = await createTestUser();
 		const { importCase } = await import("@/lib/services/case-import-service");
@@ -632,6 +682,14 @@ describe("validateImportData", () => {
 			where: { name: "Root Goal" },
 		});
 		expect(elements).toHaveLength(0);
+
+		// The case row itself must also be gone — createCaseWithPermission
+		// runs inside the same transaction as createElements, so the whole
+		// import (case included) rolls back on the unrelated FK failure.
+		const cases = await prisma.assuranceCase.findMany({
+			where: { name: "Bad Module Reference Case" },
+		});
+		expect(cases).toHaveLength(0);
 	});
 
 	/**

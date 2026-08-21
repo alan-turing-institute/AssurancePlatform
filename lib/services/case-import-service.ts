@@ -466,6 +466,11 @@ async function createElements(
 
 	try {
 		await tx.assuranceElement.createMany({ data });
+		// Success path: deliberately not RELEASE-ing the savepoint here.
+		// Postgres releases it automatically when the enclosing
+		// transaction commits; an explicit RELEASE could race with a
+		// later ROLLBACK TO SAVEPOINT issued by another helper further
+		// down the import chain. Do not "fix" this by adding one.
 	} catch (error) {
 		if (!isCitedElementIdForeignKeyError(error)) {
 			throw error;
@@ -608,6 +613,11 @@ export async function importCase(
 		// leaving a partial case (each helper previously called the global
 		// `prisma` singleton, which auto-commits per statement regardless of
 		// this wrapper).
+		// No explicit timeout/maxWait: the default 5s interactive-transaction
+		// timeout is fine here because the in-transaction round-trips are
+		// O(1) — a fixed ~4-6 calls (createCaseWithPermission, createElements,
+		// createEvidenceLinks, createComments, plus one retry on the
+		// savepoint path) — regardless of import payload size, not O(elements).
 		const result = await prisma.$transaction(async (tx) => {
 			// Create case
 			const caseId = await createCaseWithPermission(tx, v2Data.case, userId);
