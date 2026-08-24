@@ -7,6 +7,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import { acceptInvite } from "@/lib/services/case-invite-service";
 import {
 	checkAndRecordRateLimit,
@@ -28,10 +29,7 @@ export async function POST(
 
 		// Extract security context for audit logging
 		const headersList = await headers();
-		const forwarded = headersList.get("x-forwarded-for");
-		const ipAddress = forwarded
-			? (forwarded.split(",")[0]?.trim() ?? "unknown")
-			: (headersList.get("x-real-ip") ?? "unknown");
+		const ipAddress = extractClientIp(headersList);
 		const userAgent = headersList.get("user-agent") ?? null;
 
 		// Check rate limit before processing

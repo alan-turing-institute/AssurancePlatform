@@ -6,6 +6,7 @@ import {
 	apiSuccess,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import { validationError } from "@/lib/errors";
 import { registerUserSchema } from "@/lib/schemas/user";
 import {
@@ -33,10 +34,7 @@ export async function POST(request: Request) {
 
 		// Extract IP address and user agent for rate limiting
 		const headersList = await headers();
-		const forwarded = headersList.get("x-forwarded-for");
-		const ipAddress = forwarded
-			? (forwarded.split(",")[0]?.trim() ?? "unknown")
-			: (headersList.get("x-real-ip") ?? "unknown");
+		const ipAddress = extractClientIp(headersList);
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		// Check rate limit before processing

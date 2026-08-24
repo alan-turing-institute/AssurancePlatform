@@ -40,6 +40,12 @@ Hard rules:
 - **API routes:** `requireAuth()` → `userId` (throws `unauthorised()`).
   **Server actions:** `validateSession()` → `{userId, username, email}`.
 - **Never trust a client-supplied user ID** — always derive identity from the session.
+- **Client IP for rate limiting / audit logging:** use `extractClientIp` from
+  `lib/auth/extract-client-ip.ts` — the one sanctioned way to read a client
+  IP. Never read `x-forwarded-for`'s first hop or `x-real-ip` directly; both
+  are attacker-controllable in our deployment. If a CDN or Front Door is
+  ever added in front of App Service, the helper's trusted-hop policy must
+  be revisited.
 - Permission checks live in the **service layer** via `canAccessCase` / helpers
   in `lib/permissions.ts`, not in routes.
 - Return the **same error for not-found and no-permission** — prevents

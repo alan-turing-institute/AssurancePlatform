@@ -974,8 +974,8 @@ describe("requireApiToken — header shapes", () => {
 	});
 });
 
-describe("requireApiToken — extractIpAddress, via whoami's failed-attempt audit trail", () => {
-	/** A failed whoami call always audit-logs the IP `extractIpAddress` resolved — the cheapest observable proxy for a private helper. */
+describe("requireApiToken — extractClientIp, via whoami's failed-attempt audit trail", () => {
+	/** A failed whoami call always audit-logs the IP `extractClientIp` resolved — the cheapest observable proxy for a private helper. */
 	async function failedWhoamiIpAddress(
 		headers: Record<string, string>
 	): Promise<void> {
@@ -989,6 +989,18 @@ describe("requireApiToken — extractIpAddress, via whoami's failed-attempt audi
 		expect(response.status).toBe(401);
 	}
 
+	it("prefers x-client-ip over x-forwarded-for", async () => {
+		await failedWhoamiIpAddress({
+			"x-client-ip": "203.0.113.59",
+			"x-forwarded-for": "198.51.100.1:1000, 203.0.113.58:2000",
+		});
+
+		const event = await prisma.securityAuditLog.findFirst({
+			where: { eventType: "machine_auth_failed", ipAddress: "203.0.113.59" },
+		});
+		expect(event).not.toBeNull();
+	});
+
 	it("uses a single x-forwarded-for value as the client IP", async () => {
 		await failedWhoamiIpAddress({ "x-forwarded-for": "203.0.113.60" });
 
@@ -998,9 +1010,9 @@ describe("requireApiToken — extractIpAddress, via whoami's failed-attempt audi
 		expect(event).not.toBeNull();
 	});
 
-	it("takes the first entry of a comma-separated x-forwarded-for chain", async () => {
+	it("takes the RIGHTMOST entry of a comma-separated x-forwarded-for chain (Azure appends the true client IP last)", async () => {
 		await failedWhoamiIpAddress({
-			"x-forwarded-for": "203.0.113.61, 70.41.3.18, 150.172.238.178",
+			"x-forwarded-for": "150.172.238.178, 70.41.3.18, 203.0.113.61",
 		});
 
 		const event = await prisma.securityAuditLog.findFirst({
@@ -1009,11 +1021,11 @@ describe("requireApiToken — extractIpAddress, via whoami's failed-attempt audi
 		expect(event).not.toBeNull();
 	});
 
-	it("falls back to x-real-ip when x-forwarded-for is absent", async () => {
+	it("does NOT fall back to x-real-ip when x-forwarded-for is absent (that header is client-suppliable and untrusted)", async () => {
 		await failedWhoamiIpAddress({ "x-real-ip": "203.0.113.62" });
 
 		const event = await prisma.securityAuditLog.findFirst({
-			where: { eventType: "machine_auth_failed", ipAddress: "203.0.113.62" },
+			where: { eventType: "machine_auth_failed", ipAddress: "unknown" },
 		});
 		expect(event).not.toBeNull();
 	});
@@ -1048,6 +1060,72 @@ describe("HTTP 429 through whoami/requireApiToken", () => {
 		const body = await blocked.json();
 		expect(body.code).toBe("RATE_LIMITED");
 		expect(typeof body.error).toBe("string");
+	});
+
+	/**
+	 * Security regression for the x-forwarded-for trust fix: before it, the
+	 * throttle keyed on XFF's FIRST hop, which a caller controls. Rotating a
+	 * fake first hop on every request while keeping the real (rightmost)
+	 * hop fixed used to mint a fresh throttle bucket per request and evade
+	 * the limit entirely. Now the real IP is the one that decides the
+	 * bucket, so rotating the spoofable hop changes nothing.
+	 */
+	it("a spoofed leading x-forwarded-for hop no longer evades the machineAuth throttle — the true (rightmost) IP still gets blocked", async () => {
+		const realIp = "203.0.113.80";
+		const maxAttempts = RATE_LIMIT_CONFIGS.machineAuth.limits[0].maxAttempts;
+
+		for (let i = 0; i < maxAttempts; i++) {
+			const spoofedFirstHop = `10.0.${i}.${i}`;
+			const response = await whoamiGET(
+				whoamiRequest({
+					"x-forwarded-for": `${spoofedFirstHop}, ${realIp}`,
+				})
+			);
+			expect(response.status).toBe(401);
+		}
+
+		const blocked = await whoamiGET(
+			whoamiRequest({
+				"x-forwarded-for": `10.0.99.99, ${realIp}`,
+			})
+		);
+
+		expect(blocked.status).toBe(429);
+		const body = await blocked.json();
+		expect(body.code).toBe("RATE_LIMITED");
+
+		// All attempts landed in ONE bucket keyed on the real (rightmost) IP,
+		// not one bucket per spoofed first hop.
+		const attempts = await prisma.rateLimitAttempt.count({
+			where: { endpoint: "machine_auth", identifier: realIp },
+		});
+		expect(attempts).toBeGreaterThanOrEqual(maxAttempts);
+	});
+
+	/**
+	 * Same evasion attempt, but via `x-client-ip` — the header Azure sets
+	 * and overwrites on every request. A caller trying to defeat the
+	 * throttle by sending a different (attacker-supplied) x-client-ip per
+	 * request would, in a REAL deployment, have that value overwritten by
+	 * Azure's front end before it reaches this app. This test only proves
+	 * the code-level behaviour: a fixed x-client-ip still buckets together.
+	 */
+	it("shared x-client-ip requests count into one throttle bucket", async () => {
+		const clientIp = "203.0.113.81";
+		const maxAttempts = RATE_LIMIT_CONFIGS.machineAuth.limits[0].maxAttempts;
+
+		for (let i = 0; i < maxAttempts; i++) {
+			const response = await whoamiGET(
+				whoamiRequest({ "x-client-ip": clientIp })
+			);
+			expect(response.status).toBe(401);
+		}
+
+		const blocked = await whoamiGET(whoamiRequest({ "x-client-ip": clientIp }));
+
+		expect(blocked.status).toBe(429);
+		const body = await blocked.json();
+		expect(body.code).toBe("RATE_LIMITED");
 	});
 });
 
