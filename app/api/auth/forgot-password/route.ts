@@ -5,6 +5,7 @@ import {
 	apiRateLimited,
 	apiSuccess,
 } from "@/lib/api-response";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import { AppError, validationError } from "@/lib/errors";
 import { requestPasswordReset } from "@/lib/services/password-reset-service";
 
@@ -27,10 +28,7 @@ export async function POST(request: Request) {
 
 		// Get client IP and user agent for rate limiting
 		const headersList = await headers();
-		const forwarded = headersList.get("x-forwarded-for");
-		const ipAddress = forwarded
-			? (forwarded.split(",")[0]?.trim() ?? "unknown")
-			: (headersList.get("x-real-ip") ?? "unknown");
+		const ipAddress = extractClientIp(headersList);
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		const result = await requestPasswordReset(body.email, ipAddress, userAgent);
