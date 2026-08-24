@@ -79,4 +79,35 @@ describe("extractClientIp", () => {
 
 		expect(extractClientIp(headers)).toBe("203.0.113.10");
 	});
+
+	it("returns 'unknown' for a trailing comma (empty rightmost entry) — fails closed by design, no fallback to an earlier hop", () => {
+		const headers = headersOf({
+			"x-forwarded-for": "198.51.100.1, 203.0.113.7,",
+		});
+
+		expect(extractClientIp(headers)).toBe("unknown");
+	});
+
+	it("returns 'unknown' for a whitespace-only x-forwarded-for", () => {
+		const headers = headersOf({ "x-forwarded-for": "   " });
+
+		expect(extractClientIp(headers)).toBe("unknown");
+	});
+
+	it("falls through to x-forwarded-for when x-client-ip is present but empty", () => {
+		const headers = headersOf({
+			"x-client-ip": "",
+			"x-forwarded-for": "198.51.100.1, 203.0.113.11",
+		});
+
+		expect(extractClientIp(headers)).toBe("203.0.113.11");
+	});
+
+	it("strips the brackets from a [IPv6] rightmost entry with no port", () => {
+		const headers = headersOf({
+			"x-forwarded-for": "198.51.100.1, [2001:db8::1]",
+		});
+
+		expect(extractClientIp(headers)).toBe("2001:db8::1");
+	});
 });

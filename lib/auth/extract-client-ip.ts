@@ -11,15 +11,20 @@
  * 2. `x-forwarded-for` — Azure appends the true client IP as the LAST
  *    (rightmost) entry; every entry to its left can be attacker-supplied.
  *    Entries are formatted `IP:port` (or `[IPv6]:port`); the port is
- *    stripped.
- * 3. `"unknown"` if neither header is present.
+ *    stripped. If the rightmost entry is empty (e.g. a trailing comma,
+ *    `"1.2.3.4, 5.6.7.8,"`) this FAILS CLOSED to `"unknown"` by design —
+ *    it does not fall back to an earlier entry. Earlier entries are
+ *    attacker-controllable, so falling back to one would let a caller
+ *    reopen rate-limit-bucket rotation in any topology where this
+ *    deployment's Azure assumptions don't hold.
+ * 3. `"unknown"` if neither header is present (or both are empty/blank).
  *
  * If a CDN or Front Door is ever placed in front of App Service, this
  * trust chain must be revisited — a CDN can change which hop is safe to
  * trust, or introduce its own trusted-IP header.
  */
 export function extractClientIp(headers: Headers): string {
-	const clientIp = headers.get("x-client-ip");
+	const clientIp = headers.get("x-client-ip")?.trim();
 	if (clientIp) {
 		return clientIp;
 	}
