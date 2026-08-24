@@ -303,7 +303,14 @@ jobs:
   docker-build:
     name: Build and Push Docker Image
     needs: [validate, test]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # explicit needs-success checks: a custom if drops GitHub's implicit
+    # success() — fail-closed under either documented reading (actions/runner#2205,
+    # discussions 45058/26945)
+    if: >-
+      !cancelled() &&
+      needs.validate.result == 'success' &&
+      needs.test.result == 'success' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -413,7 +420,13 @@ jobs:
     name: Deploy to Azure
     runs-on: ubuntu-latest
     needs: [docker-build]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+    # explicit needs-success check: a custom if drops GitHub's implicit
+    # success() — fail-closed under either documented reading (actions/runner#2205,
+    # discussions 45058/26945)
+    if: >-
+      !cancelled() &&
+      needs.docker-build.result == 'success' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
 
     steps:
       - name: Deploy to Azure (Production)
