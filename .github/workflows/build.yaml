@@ -464,21 +464,36 @@ jobs:
     # merged from BOTH suites.
     name: Structural Quality (blocking)
     needs: [test]
-    # Runs for every needs.test outcome (only a whole-workflow cancellation
-    # skips it) and branches on the result itself, rather than relying on
-    # either documented "needs skip propagation" reading (actions/runner#2205
-    # class, see the `changes`/`test` comments above) or on the implicit
-    # success() a bare `if:` would otherwise drop (PR #904 lesson: a custom
-    # if with no status function silently loses fail-blocking). Concretely:
+    # Branches explicitly on needs.test.result rather than relying on either
+    # documented "needs skip propagation" reading (actions/runner#2205 class,
+    # see the `changes`/`test` comments above) or on the implicit success() a
+    # bare `if:` would otherwise drop (PR #904 lesson: a custom if with no
+    # status function silently loses fail-blocking). Concretely:
     #   - needs.test.result == 'skipped' (docs-only PR, gated by `changes`)
     #     -> this job SKIPS ITS AUDIT STEPS but still completes successfully;
     #        a skipped/successful required check satisfies branch protection,
     #        which is correct here because there is no code diff to audit.
     #   - needs.test.result == 'success' -> full audit, may fail on findings.
-    #   - anything else (failure, cancelled, timed_out) -> this job runs and
-    #     explicitly fails (see "Fail closed on non-success test result"
-    #     below) rather than being skipped, so a broken build can't leave the
+    #   - needs.test.result == 'failure' -> this job runs and explicitly
+    #     fails (see "Fail closed on non-success test result" below) rather
+    #     than being skipped, so a failed test run can't leave the
     #     Structural Quality check green-via-skip.
+    #
+    # NOT fail-closed on a whole-run CANCELLATION (confirmed on review,
+    # 2026-08-25): GitHub force-skips a not-yet-started job when the run is
+    # cancelled, BEFORE its `if:` is evaluated at all — `!cancelled()` below
+    # never gets the chance to run, and a skipped required check satisfies
+    # branch protection. This is a real gap, and a regression from the old
+    # standalone fallow.yml job, which reported its own 'cancelled'
+    # conclusion and blocked merge.
+    # Accepted risk: documented GitHub Actions limitation, no in-workflow
+    # fix exists (there is no hook that runs on a force-skip). Compensating
+    # control is process, not code — a cancelled run on this workflow must
+    # be re-run to completion before merge, same as any other required
+    # check that gets cancelled mid-run. A stronger technical fix (e.g. a
+    # separate always-runs job that sets the commit status via the API)
+    # is out of scope here and should be its own issue if this bites in
+    # practice.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

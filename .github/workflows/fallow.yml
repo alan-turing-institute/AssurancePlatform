@@ -20,10 +20,20 @@ name: Fallow Audit (retired)
 # posting, same fail-closed exit-code handling) and its header comment for
 # the baseline refresh recipe under the new merged-coverage input.
 #
-# This workflow has deliberately no `on:` trigger, so it never runs. It is
-# kept (not deleted) only so this retirement note is visible in the file
-# history at its old path; do not re-add a trigger here — that would
-# resurrect the second, coverage-blind audit this change removed.
+# `on: workflow_dispatch: {}` below exists ONLY to keep this file
+# schema-valid — verified 2026-08-25 that actionlint (and GitHub Actions'
+# own schema) reject a workflow with an empty or missing `on:` section
+# ("on section should not be empty" / "on section is missing"), so a truly
+# trigger-less file is not an option. This file is kept (not deleted; a
+# repo hook blocks deletions under .github/) only so this retirement note
+# is visible in the file history at its old path.
+#
+# workflow_dispatch means this CAN technically still be run manually from
+# the Actions UI — that is harmless: the job below is named "Retired — see
+# build.yaml's Structural Quality (blocking) job", not "Structural Quality
+# (blocking)", so a manual run neither satisfies nor collides with the
+# required check. Do not add `pull_request`/`push` triggers here — that
+# would resurrect the second, coverage-blind audit this change removed.
 
 on:
   workflow_dispatch: {}
