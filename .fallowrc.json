@@ -5,7 +5,10 @@
     "docs/**",
     "public/**",
     ".next/**",
-    "coverage/**"
+    "coverage/**",
+    "coverage-integration/**",
+    "coverage-merged/**",
+    "coverage-merge-input/**"
   ],
   "entry": [
     "components/docs/curriculum/index.ts",
