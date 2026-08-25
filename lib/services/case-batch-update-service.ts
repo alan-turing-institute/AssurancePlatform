@@ -530,6 +530,43 @@ interface DescendantRow {
  * it is itself one of the roots this function is called for, so its
  * subtree is recomputed from ITS new position via its own separate call.
  */
+/** One pending descendant row in `cascadeFromRoot`'s frontier walk. */
+interface CascadeFrontierEntry {
+	parentIsPropertyClaim: boolean;
+	parentLevel: number;
+	row: DescendantRow;
+}
+
+/**
+ * Processes a single descendant row for `cascadeFromRoot`: computes its
+ * level, records a level update when it's a property claim, and returns the
+ * next frontier entries for its children — or an empty array if this row is
+ * an explicit mover in `moveMap` (stop descending, per `cascadeFromRoot`'s
+ * contract).
+ */
+function cascadeFrontierStep(
+	entry: CascadeFrontierEntry,
+	childrenByParent: Map<string, DescendantRow[]>,
+	moveMap: Map<string, string>,
+	levelUpdates: Map<string, number>
+): CascadeFrontierEntry[] {
+	const { row, parentLevel, parentIsPropertyClaim } = entry;
+	const isPropertyClaim = row.elementType === "PROPERTY_CLAIM";
+	const level = parentIsPropertyClaim ? parentLevel + 1 : 1;
+
+	if (moveMap.has(row.id)) {
+		return [];
+	}
+	if (isPropertyClaim) {
+		levelUpdates.set(row.id, level);
+	}
+	return (childrenByParent.get(row.id) ?? []).map((child) => ({
+		row: child,
+		parentLevel: level,
+		parentIsPropertyClaim: isPropertyClaim,
+	}));
+}
+
 function cascadeFromRoot(
 	rootId: string,
 	rootLevel: number,
@@ -537,31 +574,20 @@ function cascadeFromRoot(
 	moveMap: Map<string, string>,
 	levelUpdates: Map<string, number>
 ): void {
-	let frontier = (childrenByParent.get(rootId) ?? []).map((row) => ({
+	let frontier: CascadeFrontierEntry[] = (
+		childrenByParent.get(rootId) ?? []
+	).map((row) => ({
 		row,
 		parentLevel: rootLevel,
 		parentIsPropertyClaim: true,
 	}));
 
 	while (frontier.length > 0) {
-		const next: typeof frontier = [];
-		for (const { row, parentLevel, parentIsPropertyClaim } of frontier) {
-			const isPropertyClaim = row.elementType === "PROPERTY_CLAIM";
-			const level = parentIsPropertyClaim ? parentLevel + 1 : 1;
-
-			if (moveMap.has(row.id)) {
-				continue;
-			}
-			if (isPropertyClaim) {
-				levelUpdates.set(row.id, level);
-			}
-			for (const child of childrenByParent.get(row.id) ?? []) {
-				next.push({
-					row: child,
-					parentLevel: level,
-					parentIsPropertyClaim: isPropertyClaim,
-				});
-			}
+		const next: CascadeFrontierEntry[] = [];
+		for (const entry of frontier) {
+			next.push(
+				...cascadeFrontierStep(entry, childrenByParent, moveMap, levelUpdates)
+			);
 		}
 		frontier = next;
 	}
