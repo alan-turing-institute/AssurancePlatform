@@ -464,6 +464,15 @@ jobs:
     # merged from BOTH suites.
     name: Structural Quality (blocking)
     needs: [test]
+    # PR events only. This workflow also triggers on push (the staging deploy
+    # path), where github.base_ref is EMPTY — the audit's
+    # `--changed-since "origin/${{ github.base_ref }}"` becomes `origin/`
+    # (invalid ref) and fallow exits 2, failing every staging merge closed
+    # (runs 32847546410 / 32861374911, 2026-08-25). The gate's enforcement
+    # point is the PR: nothing reaches staging without passing it there, so a
+    # push re-audit is redundant. Job-level custom `if:` drops the implicit
+    # success() (PR #904 lesson) — safe HERE because the steps below already
+    # branch explicitly on needs.test.result and fail closed on failure.
     # Branches explicitly on needs.test.result rather than relying on either
     # documented "needs skip propagation" reading (actions/runner#2205 class,
     # see the `changes`/`test` comments above) or on the implicit success() a
@@ -494,7 +503,7 @@ jobs:
     # separate always-runs job that sets the commit status via the API)
     # is out of scope here and should be its own issue if this bites in
     # practice.
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
