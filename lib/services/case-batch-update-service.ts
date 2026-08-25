@@ -445,6 +445,48 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 }
 
 /**
+ * Per-batch lookups `resolveUpdateLevel` needs to recompute an update's
+ * level without a query per row — see `applyUpdates` for how each map is
+ * built and why `recalculatedLevels` exists.
+ */
+interface UpdateLevelContext {
+	ownTypeById: Map<string, LevelInfo>;
+	parentInfoById: Map<string, LevelInfo>;
+	recalculatedLevels: Map<string, number | null>;
+}
+
+/**
+ * Mutates `updateData.level` in place when `change` moves a property claim,
+ * using the pre-fetched per-batch maps in `context` instead of a live query.
+ * Extracted out of `applyUpdates`'s loop (2026-08-25 fallow fix round) so
+ * that function's cognitive complexity stays under the project threshold;
+ * the resolution rule itself is unchanged.
+ */
+function resolveUpdateLevel(
+	change: UpdateChange,
+	updateData: Record<string, unknown>,
+	context: UpdateLevelContext
+): void {
+	if (change.data.parentId === undefined || change.data.parentId === null) {
+		return;
+	}
+
+	const ownType = context.ownTypeById.get(change.elementId)?.elementType;
+	if (ownType !== "PROPERTY_CLAIM") {
+		return;
+	}
+
+	const parentId = change.data.parentId;
+	const parentInfo = context.parentInfoById.get(parentId);
+	const parentLevel = context.recalculatedLevels.has(parentId)
+		? (context.recalculatedLevels.get(parentId) ?? null)
+		: (parentInfo?.level ?? null);
+
+	updateData.level =
+		parentInfo?.elementType === "PROPERTY_CLAIM" ? (parentLevel ?? 1) + 1 : 1;
+}
+
+/**
  * Applies update operations
  */
 async function applyUpdates(
@@ -474,25 +516,16 @@ async function applyUpdates(
 		Array.from(new Set(relevantForLevel.map((c) => c.data.parentId as string)))
 	);
 	const recalculatedLevels = new Map<string, number | null>();
+	const levelContext: UpdateLevelContext = {
+		ownTypeById,
+		parentInfoById,
+		recalculatedLevels,
+	};
 
 	for (const change of updates) {
 		const updateData = buildUpdateData(change.data);
 
-		// Recalculate level if moving a property claim
-		if (change.data.parentId !== undefined && change.data.parentId !== null) {
-			const ownType = ownTypeById.get(change.elementId)?.elementType;
-			if (ownType === "PROPERTY_CLAIM") {
-				const parentId = change.data.parentId;
-				const parentInfo = parentInfoById.get(parentId);
-				const parentLevel = recalculatedLevels.has(parentId)
-					? (recalculatedLevels.get(parentId) ?? null)
-					: (parentInfo?.level ?? null);
-				updateData.level =
-					parentInfo?.elementType === "PROPERTY_CLAIM"
-						? (parentLevel ?? 1) + 1
-						: 1;
-			}
-		}
+		resolveUpdateLevel(change, updateData, levelContext);
 
 		await tx.assuranceElement.update({
 			where: { id: change.elementId },

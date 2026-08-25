@@ -1284,4 +1284,79 @@ describe("applyBatchUpdate", () => {
 			expect(linkCount).toBe(0);
 		});
 	});
+
+	/**
+	 * COVERAGE FIX (2026-08-25 fallow round): `resolveParentLevel` — the
+	 * level-resolution closure inside `applyCreates` — was reachable only
+	 * through a batch CREATE of a PROPERTY_CLAIM with a `parentId`, a path
+	 * no existing test drove through (flagged at 0% coverage, CRAP 30.0).
+	 * This test exercises both of its branches in one batch: a property
+	 * claim parented to an element that already exists in the database
+	 * (the "external parent" branch), and a second property claim parented
+	 * to that FIRST one, which is only created earlier in this same batch
+	 * (the "within-batch parent" branch).
+	 */
+	describe("level calculation via applyCreates (resolveParentLevel coverage)", () => {
+		it("computes levels for a batch that creates a property claim under an existing parent, then another under it", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			// Existing property claim with no level set (null) — resolveParentLevel
+			// treats a null parent level as 1, per its `parentLevel ?? 1` rule.
+			const existingClaim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const childId = `element-level-child-${Date.now()}`;
+			const grandchildId = `element-level-grandchild-${Date.now()}`;
+
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: childId,
+					parentId: existingClaim.id,
+					data: {
+						id: childId,
+						type: "PROPERTY_CLAIM",
+						name: "Child Claim",
+						description: "Parented to an element already in the database",
+						inSandbox: false,
+					},
+				},
+				{
+					type: "create",
+					elementId: grandchildId,
+					parentId: childId,
+					data: {
+						id: grandchildId,
+						type: "PROPERTY_CLAIM",
+						name: "Grandchild Claim",
+						description:
+							"Parented to another element created earlier in this same batch",
+						inSandbox: false,
+					},
+				},
+			];
+
+			expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const child = await prisma.assuranceElement.findUnique({
+				where: { id: childId },
+			});
+			const grandchild = await prisma.assuranceElement.findUnique({
+				where: { id: grandchildId },
+			});
+
+			// existingClaim.level is null -> treated as 1, so child = 1 + 1 = 2.
+			expect(child?.level).toBe(2);
+			// child isn't in the database yet when grandchild's level is
+			// resolved (parent-before-child insert order within the same
+			// transaction) — resolveParentLevel must resolve it from the
+			// within-batch createMap/levelById tracking, not a DB read.
+			expect(grandchild?.level).toBe(3);
+		});
+	});
 });
