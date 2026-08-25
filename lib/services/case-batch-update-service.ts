@@ -445,45 +445,218 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 }
 
 /**
- * Per-batch lookups `resolveUpdateLevel` needs to recompute an update's
- * level without a query per row — see `applyUpdates` for how each map is
- * built and why `recalculatedLevels` exists.
+ * Computes each moved property claim's FINAL level from the post-batch
+ * parent arrangement — independent of the order updates appear in the
+ * `changes` array. `moveMap` is elementId -> new parentId for every update
+ * in this batch that sets a parentId. If a moved element's new parent is
+ * ALSO moved within the same batch, that parent's level is resolved first
+ * via memoised recursion over `moveMap` itself, so a child-move listed
+ * before its parent-move (or the reverse) always lands on the parent's
+ * POST-batch level rather than a stale pre-batch snapshot.
+ *
+ * Cycles created purely by this batch's own moves — e.g. two elements each
+ * moved under the other, where neither is currently a descendant of the
+ * other in the database, so `validateUpdateParents`'s pre-batch descendant
+ * check can't see it — are caught here (via the `visiting` set) and
+ * reported with the same "Circular reference detected" message the
+ * pre-batch check uses, so callers see one consistent error shape either
+ * way.
  */
-interface UpdateLevelContext {
-	ownTypeById: Map<string, LevelInfo>;
-	parentInfoById: Map<string, LevelInfo>;
-	recalculatedLevels: Map<string, number | null>;
+function resolveFinalLevelsForBatch(
+	moveMap: Map<string, string>,
+	ownTypeById: Map<string, LevelInfo>,
+	parentInfoById: Map<string, LevelInfo>
+): Map<string, number> {
+	const finalLevels = new Map<string, number>();
+	const visiting = new Set<string>();
+
+	const resolve = (elementId: string): number => {
+		const memoised = finalLevels.get(elementId);
+		if (memoised !== undefined) {
+			return memoised;
+		}
+		if (visiting.has(elementId)) {
+			throw new Error(
+				`Circular reference detected when moving element ${elementId}`
+			);
+		}
+		visiting.add(elementId);
+
+		const newParentId = moveMap.get(elementId);
+		let level = 1;
+		if (newParentId) {
+			const parentIsMoved = moveMap.has(newParentId);
+			const parentType = parentIsMoved
+				? ownTypeById.get(newParentId)?.elementType
+				: parentInfoById.get(newParentId)?.elementType;
+			if (parentType === "PROPERTY_CLAIM") {
+				const parentLevel = parentIsMoved
+					? resolve(newParentId)
+					: (parentInfoById.get(newParentId)?.level ?? 1);
+				level = parentLevel + 1;
+			}
+		}
+
+		visiting.delete(elementId);
+		finalLevels.set(elementId, level);
+		return level;
+	};
+
+	for (const [elementId] of moveMap) {
+		if (ownTypeById.get(elementId)?.elementType === "PROPERTY_CLAIM") {
+			resolve(elementId);
+		}
+	}
+
+	return finalLevels;
+}
+
+/** Minimal descendant row shape `cascadeFromRoot` needs to walk a subtree. */
+interface DescendantRow {
+	elementType: PrismaElementType;
+	id: string;
+	parentId: string | null;
 }
 
 /**
- * Mutates `updateData.level` in place when `change` moves a property claim,
- * using the pre-fetched per-batch maps in `context` instead of a live query.
- * Extracted out of `applyUpdates`'s loop (2026-08-25 fallow fix round) so
- * that function's cognitive complexity stays under the project threshold;
- * the resolution rule itself is unchanged.
+ * Walks one moved property claim's PRE-batch subtree (parent-child edges
+ * don't change when the claim itself moves — only its own parentId does)
+ * and recomputes the level of every descendant that ISN'T itself explicitly
+ * moved in this batch, propagating `rootLevel` down layer by layer.
+ *
+ * Stops descending (and skips writing) at any descendant that IS a
+ * `moveMap` key: that element's own level comes from
+ * `resolveFinalLevelsForBatch` instead, and — if it's a property claim —
+ * it is itself one of the roots this function is called for, so its
+ * subtree is recomputed from ITS new position via its own separate call.
  */
-function resolveUpdateLevel(
-	change: UpdateChange,
-	updateData: Record<string, unknown>,
-	context: UpdateLevelContext
+function cascadeFromRoot(
+	rootId: string,
+	rootLevel: number,
+	childrenByParent: Map<string, DescendantRow[]>,
+	moveMap: Map<string, string>,
+	levelUpdates: Map<string, number>
 ): void {
-	if (change.data.parentId === undefined || change.data.parentId === null) {
-		return;
+	let frontier = (childrenByParent.get(rootId) ?? []).map((row) => ({
+		row,
+		parentLevel: rootLevel,
+		parentIsPropertyClaim: true,
+	}));
+
+	while (frontier.length > 0) {
+		const next: typeof frontier = [];
+		for (const { row, parentLevel, parentIsPropertyClaim } of frontier) {
+			const isPropertyClaim = row.elementType === "PROPERTY_CLAIM";
+			const level = parentIsPropertyClaim ? parentLevel + 1 : 1;
+
+			if (moveMap.has(row.id)) {
+				continue;
+			}
+			if (isPropertyClaim) {
+				levelUpdates.set(row.id, level);
+			}
+			for (const child of childrenByParent.get(row.id) ?? []) {
+				next.push({
+					row: child,
+					parentLevel: level,
+					parentIsPropertyClaim: isPropertyClaim,
+				});
+			}
+		}
+		frontier = next;
+	}
+}
+
+/**
+ * Recomputes levels for descendants of moved property claims that are NOT
+ * themselves listed in `changes` — required so a moved claim's existing
+ * subtree reflects its new depth regardless of update order, not just the
+ * claim that was directly moved. Reuses `getDescendantIdsForRoots`
+ * (tree-traversal.ts) for the shared BFS rather than a bespoke walker; runs
+ * zero extra queries when no property claim is moved in this batch.
+ */
+async function resolveDescendantCascadeLevels(
+	tx: TransactionClient,
+	moveMap: Map<string, string>,
+	ownTypeById: Map<string, LevelInfo>,
+	finalLevels: Map<string, number>
+): Promise<Map<string, number>> {
+	const rootIds = Array.from(moveMap.keys()).filter(
+		(id) => ownTypeById.get(id)?.elementType === "PROPERTY_CLAIM"
+	);
+	if (rootIds.length === 0) {
+		return new Map();
 	}
 
-	const ownType = context.ownTypeById.get(change.elementId)?.elementType;
-	if (ownType !== "PROPERTY_CLAIM") {
-		return;
+	const descendantsByRoot = await getDescendantIdsForRoots(rootIds, tx);
+	const allDescendantIds = Array.from(
+		new Set(Array.from(descendantsByRoot.values()).flatMap((ids) => [...ids]))
+	);
+	if (allDescendantIds.length === 0) {
+		return new Map();
 	}
 
-	const parentId = change.data.parentId;
-	const parentInfo = context.parentInfoById.get(parentId);
-	const parentLevel = context.recalculatedLevels.has(parentId)
-		? (context.recalculatedLevels.get(parentId) ?? null)
-		: (parentInfo?.level ?? null);
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: allDescendantIds } },
+		select: { id: true, parentId: true, elementType: true },
+	});
+	const childrenByParent = new Map<string, DescendantRow[]>();
+	for (const row of rows) {
+		if (!row.parentId) {
+			continue;
+		}
+		const bucket = childrenByParent.get(row.parentId);
+		if (bucket) {
+			bucket.push(row);
+		} else {
+			childrenByParent.set(row.parentId, [row]);
+		}
+	}
 
-	updateData.level =
-		parentInfo?.elementType === "PROPERTY_CLAIM" ? (parentLevel ?? 1) + 1 : 1;
+	const levelUpdates = new Map<string, number>();
+	for (const rootId of rootIds) {
+		const rootLevel = finalLevels.get(rootId);
+		if (rootLevel !== undefined) {
+			cascadeFromRoot(
+				rootId,
+				rootLevel,
+				childrenByParent,
+				moveMap,
+				levelUpdates
+			);
+		}
+	}
+	return levelUpdates;
+}
+
+/**
+ * Writes recomputed levels for descendants that weren't themselves listed
+ * in `changes` (see `resolveDescendantCascadeLevels`) — grouped into one
+ * `updateMany` per distinct level value instead of one `update` per
+ * descendant.
+ */
+async function applyCascadeLevelUpdates(
+	tx: TransactionClient,
+	cascadeLevels: Map<string, number>
+): Promise<void> {
+	if (cascadeLevels.size === 0) {
+		return;
+	}
+	const idsByLevel = new Map<number, string[]>();
+	for (const [id, level] of cascadeLevels) {
+		const bucket = idsByLevel.get(level);
+		if (bucket) {
+			bucket.push(id);
+		} else {
+			idsByLevel.set(level, [id]);
+		}
+	}
+	for (const [level, ids] of idsByLevel) {
+		await tx.assuranceElement.updateMany({
+			where: { id: { in: ids } },
+			data: { level },
+		});
+	}
 }
 
 /**
@@ -505,40 +678,44 @@ async function applyUpdates(
 		relevantForLevel.map((c) => c.elementId)
 	);
 
-	// New-parent {elementType, level} as of the start of this call.
-	// elementType is immutable so this is always correct; level can go
-	// stale if an EARLIER update in this same loop moves that same parent —
-	// recalculatedLevels (populated as the loop runs) corrects for that, so
-	// a later item still sees the freshly-written level rather than this
-	// pre-transaction snapshot.
+	// New-parent {elementType, level} as of the start of this call, for
+	// parents NOT themselves moved in this batch. Parents that ARE moved in
+	// this batch resolve through `resolveFinalLevelsForBatch`'s own
+	// recursion instead, so this snapshot never goes stale for them.
 	const parentInfoById = await fetchLevelInfo(
 		tx,
 		Array.from(new Set(relevantForLevel.map((c) => c.data.parentId as string)))
 	);
-	const recalculatedLevels = new Map<string, number | null>();
-	const levelContext: UpdateLevelContext = {
+	const moveMap = new Map(
+		relevantForLevel.map((c) => [c.elementId, c.data.parentId as string])
+	);
+
+	const finalLevels = resolveFinalLevelsForBatch(
+		moveMap,
 		ownTypeById,
-		parentInfoById,
-		recalculatedLevels,
-	};
+		parentInfoById
+	);
+	const cascadeLevels = await resolveDescendantCascadeLevels(
+		tx,
+		moveMap,
+		ownTypeById,
+		finalLevels
+	);
 
 	for (const change of updates) {
 		const updateData = buildUpdateData(change.data);
 
-		resolveUpdateLevel(change, updateData, levelContext);
+		if (finalLevels.has(change.elementId)) {
+			updateData.level = finalLevels.get(change.elementId);
+		}
 
 		await tx.assuranceElement.update({
 			where: { id: change.elementId },
 			data: updateData,
 		});
-
-		if ("level" in updateData) {
-			recalculatedLevels.set(
-				change.elementId,
-				updateData.level as number | null
-			);
-		}
 	}
+
+	await applyCascadeLevelUpdates(tx, cascadeLevels);
 }
 
 /**
