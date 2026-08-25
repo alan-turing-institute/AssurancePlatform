@@ -92,16 +92,30 @@ async function validateCaseAccess(
  * user; `undefined` when the write may proceed.
  */
 async function guardAssertionStatusWrite(
-	userId: string
+	userId: string,
+	knownIsSystemUser?: boolean
 ): Promise<string | undefined> {
+	const isSystemUser =
+		knownIsSystemUser ?? (await isSystemUserPrincipal(userId));
+	if (isSystemUser) {
+		return "Permission denied: assertionStatus can only be set by a case author, not a machine or integration principal";
+	}
+	return;
+}
+
+/**
+ * Whether the acting user is a system/machine (integration) principal.
+ * Exported so batch-style callers that validate many changes for the same
+ * userId (e.g. case-batch-update-service.ts) can resolve this once per
+ * batch and pass it into `enforceAssertionStatusRules` via
+ * `knownIsSystemUser`, instead of re-querying it once per changed element.
+ */
+export async function isSystemUserPrincipal(userId: string): Promise<boolean> {
 	const actor = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { isSystemUser: true },
 	});
-	if (actor?.isSystemUser) {
-		return "Permission denied: assertionStatus can only be set by a case author, not a machine or integration principal";
-	}
-	return;
+	return Boolean(actor?.isSystemUser);
 }
 
 /**
@@ -301,10 +315,15 @@ async function enforceModuleReferenceIdRules(
  * the cognitive-complexity budget). Exported so other write surfaces that
  * must obey the same D3 rule (currently: case-batch-update-service.ts) can
  * reuse it rather than re-implementing the principal/value checks.
+ *
+ * `knownIsSystemUser` lets a batch caller resolve the principal check once
+ * for the whole batch (constant per userId) instead of once per element —
+ * see `isSystemUserPrincipal`.
  */
 export async function enforceAssertionStatusRules(
 	assertionStatus: AssertionStatus | null | undefined,
-	userId: string
+	userId: string,
+	knownIsSystemUser?: boolean
 ): Promise<string | undefined> {
 	if (assertionStatus === undefined) {
 		return;
@@ -313,7 +332,7 @@ export async function enforceAssertionStatusRules(
 	if (citedError) {
 		return citedError;
 	}
-	return await guardAssertionStatusWrite(userId);
+	return await guardAssertionStatusWrite(userId, knownIsSystemUser);
 }
 
 /**
