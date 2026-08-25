@@ -1014,16 +1014,670 @@ describe("applyBatchUpdate", () => {
 		});
 
 		/**
-		 * Same rule as the OLD per-row `calculateLevel`, which read the
-		 * parent's CURRENT row via `tx.findUnique` at the moment each update
-		 * ran: if the array lists the child-move before the parent-move,
-		 * neither the old code nor this batched replacement sees the
-		 * parent's new level yet, because the parent's own update hasn't
-		 * run. This is pre-existing, order-dependent behaviour that the
-		 * commit's `recalculatedLevels` map is explicit about (see its
-		 * docstring) — pinning it here, not flagging it as a regression.
+		 * fix/batch-level-order-independence (2026-08-25): levels are now
+		 * resolved from the FINAL post-batch parent arrangement
+		 * (`resolveFinalLevelsForBatch`), not by chaining updates in array
+		 * order — so a child-move listed before its parent-move produces
+		 * the SAME correct levels as the reverse order. Runs the batch both
+		 * ways against fresh fixtures and asserts identical results.
 		 */
-		it("chains only in array order — a child-move listed before its parent-move sees the parent's pre-batch level", async () => {
+		describe("order-independent level resolution", () => {
+			it("resolves the same correct levels whether the child-move or the parent-move is listed first", async () => {
+				const user = await createTestUser();
+
+				async function runBatch(order: "child-first" | "parent-first") {
+					const caseForRun = await createTestCase(user.id);
+					const goal = await createTestElement(caseForRun.id, user.id, {
+						elementType: "GOAL",
+					});
+					const newParent = await createTestElement(caseForRun.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: goal.id,
+					});
+					const claimA = await createTestElement(caseForRun.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: goal.id,
+					});
+					const claimB = await createTestElement(caseForRun.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: goal.id,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const parentMove: ElementChange = {
+						type: "update",
+						elementId: claimA.id,
+						data: { parentId: newParent.id },
+					};
+					const childMove: ElementChange = {
+						type: "update",
+						elementId: claimB.id,
+						data: { parentId: claimA.id },
+					};
+					const changes: ElementChange[] =
+						order === "child-first"
+							? [childMove, parentMove]
+							: [parentMove, childMove];
+
+					const data = expectSuccess(
+						await applyBatchUpdate(user.id, caseForRun.id, changes)
+					);
+					expect(data.summary.updated).toBe(2);
+
+					const [afterA, afterB] = await Promise.all([
+						prisma.assuranceElement.findUnique({ where: { id: claimA.id } }),
+						prisma.assuranceElement.findUnique({ where: { id: claimB.id } }),
+					]);
+					return { levelA: afterA?.level, levelB: afterB?.level };
+				}
+
+				const childFirst = await runBatch("child-first");
+				const parentFirst = await runBatch("parent-first");
+
+				// A moves under newParent (level 1, since newParent's own
+				// parent is the GOAL): A's new level is 1 + 1 = 2.
+				expect(childFirst.levelA).toBe(2);
+				expect(parentFirst.levelA).toBe(2);
+				// B moves under A. Correctly chained off A's FINAL level (2),
+				// not A's stale pre-batch level: B's new level is 2 + 1 = 3 —
+				// identically, regardless of which update was listed first.
+				expect(childFirst.levelB).toBe(3);
+				expect(parentFirst.levelB).toBe(3);
+				expect(childFirst).toEqual(parentFirst);
+			});
+
+			it("still rejects a cycle created purely by this batch's own moves (not visible to the pre-batch descendant check)", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = await createTestElement(testCase.id, user.id, {
+					elementType: "GOAL",
+				});
+				// Two property claims, both currently children of `goal` —
+				// neither is a descendant of the other in the database, so
+				// `validateUpdateParents`'s pre-batch BFS can't see the
+				// cycle this batch is about to create by moving each under
+				// the other.
+				const claimX = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				const claimY = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const changes: ElementChange[] = [
+					{
+						type: "update",
+						elementId: claimX.id,
+						data: { parentId: claimY.id },
+					},
+					{
+						type: "update",
+						elementId: claimY.id,
+						data: { parentId: claimX.id },
+					},
+				];
+
+				const result = await applyBatchUpdate(user.id, testCase.id, changes);
+				expect("error" in result).toBe(true);
+				if ("error" in result) {
+					expect(
+						result.error.startsWith(
+							"Circular reference detected when moving element "
+						)
+					).toBe(true);
+				}
+
+				// Atomic — neither move should have been applied.
+				const [unmovedX, unmovedY] = await Promise.all([
+					prisma.assuranceElement.findUnique({ where: { id: claimX.id } }),
+					prisma.assuranceElement.findUnique({ where: { id: claimY.id } }),
+				]);
+				expect(unmovedX?.parentId).toBe(goal.id);
+				expect(unmovedY?.parentId).toBe(goal.id);
+			});
+		});
+
+		describe("descendant cascade recompute", () => {
+			it("recomputes an un-listed descendant's level when its ancestor is moved deeper in the same batch", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = await createTestElement(testCase.id, user.id, {
+					elementType: "GOAL",
+				});
+				const newParent = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				// claimA moves under newParent (new level 2). claimChild
+				// stays put — it is NOT listed in `changes` — but its
+				// parent (claimA) just got deeper, so claimChild's level
+				// must cascade from 2 (1 + 1, under the old top-level
+				// claimA) to 3 (2 + 1, under claimA's new level).
+				const claimA = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				const claimChildRaw = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: claimA.id,
+				});
+				const claimChild = await prisma.assuranceElement.update({
+					where: { id: claimChildRaw.id },
+					data: { level: 2 },
+				});
+				const claimGrandchildRaw = await createTestElement(
+					testCase.id,
+					user.id,
+					{
+						elementType: "PROPERTY_CLAIM",
+						parentId: claimChild.id,
+					}
+				);
+				const claimGrandchild = await prisma.assuranceElement.update({
+					where: { id: claimGrandchildRaw.id },
+					data: { level: 3 },
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const changes: ElementChange[] = [
+					{
+						type: "update",
+						elementId: claimA.id,
+						data: { parentId: newParent.id },
+					},
+				];
+
+				const data = expectSuccess(
+					await applyBatchUpdate(user.id, testCase.id, changes)
+				);
+				expect(data.summary.updated).toBe(1);
+
+				const [afterA, afterChild, afterGrandchild] = await Promise.all([
+					prisma.assuranceElement.findUnique({ where: { id: claimA.id } }),
+					prisma.assuranceElement.findUnique({ where: { id: claimChild.id } }),
+					prisma.assuranceElement.findUnique({
+						where: { id: claimGrandchild.id },
+					}),
+				]);
+				expect(afterA?.level).toBe(2);
+				expect(afterChild?.level).toBe(3);
+				expect(afterGrandchild?.level).toBe(4);
+			});
+
+			/**
+			 * QA follow-up (fix/batch-level-order-independence): a moved
+			 * element's descendant can ITSELF be explicitly moved elsewhere
+			 * in the same batch. `cascadeFromRoot` documents that it stops
+			 * descending at such a node (its level comes from
+			 * `resolveFinalLevelsForBatch`/its own separate `cascadeFromRoot`
+			 * call instead) — this pins that both halves actually produce
+			 * the right numbers: the nested mover resolves off its OWN new
+			 * parent (not the ancestor that moved above it), and ITS
+			 * un-listed child cascades from the nested mover's new position,
+			 * not from the top-level move.
+			 */
+			it("resolves a nested mover (a moved descendant of another moved element) from its own new parent, and cascades its own un-listed child from there", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = await createTestElement(testCase.id, user.id, {
+					elementType: "GOAL",
+				});
+
+				// A's new parent chain: x1 (level 1) -> x (level 2).
+				const x1 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: x1.id },
+					data: { level: 1 },
+				});
+				const x = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: x1.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: x.id },
+					data: { level: 2 },
+				});
+
+				// B's new parent chain: y1 (level 1) -> y2 (level 2) -> y
+				// (level 3) — deliberately deeper than A's target, so a bug
+				// that resolved B off A's new position (rather than B's own
+				// new parent y) would produce a visibly different, wrong
+				// number.
+				const y1 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: y1.id },
+					data: { level: 1 },
+				});
+				const y2 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: y1.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: y2.id },
+					data: { level: 2 },
+				});
+				const y = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: y2.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: y.id },
+					data: { level: 3 },
+				});
+
+				// The pre-batch chain being rearranged: a (level 1, child of
+				// goal) -> b (level 2, child of a) -> c (level 3, child of
+				// b, NOT listed in this batch's changes).
+				const a = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: a.id },
+					data: { level: 1 },
+				});
+				const b = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: a.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: b.id },
+					data: { level: 2 },
+				});
+				const c = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: b.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: c.id },
+					data: { level: 3 },
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				// a moves under x (independent target); b — a's own
+				// pre-batch child — moves under y (also independent, NOT
+				// under a's new position). c is left unlisted.
+				const changes: ElementChange[] = [
+					{
+						type: "update",
+						elementId: a.id,
+						data: { parentId: x.id },
+					},
+					{
+						type: "update",
+						elementId: b.id,
+						data: { parentId: y.id },
+					},
+				];
+
+				const data = expectSuccess(
+					await applyBatchUpdate(user.id, testCase.id, changes)
+				);
+				expect(data.summary.updated).toBe(2);
+
+				const [afterA, afterB, afterC] = await Promise.all([
+					prisma.assuranceElement.findUnique({ where: { id: a.id } }),
+					prisma.assuranceElement.findUnique({ where: { id: b.id } }),
+					prisma.assuranceElement.findUnique({ where: { id: c.id } }),
+				]);
+
+				// a resolves off x (level 2): 2 + 1 = 3.
+				expect(afterA?.level).toBe(3);
+				// b resolves off ITS OWN new parent y (level 3), not off a's
+				// new level: 3 + 1 = 4. If the cascade/resolution wrongly
+				// chained b off a instead, this would read 4 too by
+				// coincidence in some configurations — the un-listed
+				// grandchild assertion below is what actually distinguishes
+				// "chained off a" from "resolved off b's own new parent".
+				expect(afterB?.level).toBe(4);
+				// c is un-listed, and its parent b is itself a nested mover
+				// (a moved descendant of a moved element). c must cascade
+				// from b's NEW position (4 + 1 = 5), not be left at its
+				// stale pre-batch value (3) and not be swept up into a's
+				// cascade (which must stop at b, since b is a listed move).
+				expect(afterC?.level).toBe(5);
+			});
+
+			/**
+			 * QA follow-up: three generations moved in the same batch,
+			 * listed in the worst possible order (child first, grandparent
+			 * last — the exact reverse of the dependency order a naive
+			 * chaining implementation would need).
+			 */
+			it("resolves a three-generation move chain correctly when listed child-first, parent-second, grandparent-last", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = await createTestElement(testCase.id, user.id, {
+					elementType: "GOAL",
+				});
+				// Grandparent's new external target: root (level 2).
+				const root1 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: root1.id },
+					data: { level: 1 },
+				});
+				const root = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: root1.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: root.id },
+					data: { level: 2 },
+				});
+
+				const gp = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				const p = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: gp.id,
+				});
+				const ch = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: p.id,
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				// Worst-case order: the child-move needs its parent's FINAL
+				// level, and the parent-move needs the grandparent's FINAL
+				// level — both listed before the moves they depend on.
+				const changes: ElementChange[] = [
+					{ type: "update", elementId: ch.id, data: { parentId: p.id } },
+					{ type: "update", elementId: p.id, data: { parentId: gp.id } },
+					{ type: "update", elementId: gp.id, data: { parentId: root.id } },
+				];
+
+				const data = expectSuccess(
+					await applyBatchUpdate(user.id, testCase.id, changes)
+				);
+				expect(data.summary.updated).toBe(3);
+
+				const [afterGp, afterP, afterCh] = await Promise.all([
+					prisma.assuranceElement.findUnique({ where: { id: gp.id } }),
+					prisma.assuranceElement.findUnique({ where: { id: p.id } }),
+					prisma.assuranceElement.findUnique({ where: { id: ch.id } }),
+				]);
+
+				// gp moves under root (level 2): 2 + 1 = 3.
+				expect(afterGp?.level).toBe(3);
+				// p moves under gp's FINAL level (3): 3 + 1 = 4.
+				expect(afterP?.level).toBe(4);
+				// ch moves under p's FINAL level (4): 4 + 1 = 5.
+				expect(afterCh?.level).toBe(5);
+			});
+
+			/**
+			 * QA follow-up: the cascade must also LOWER descendant levels
+			 * when a move makes an element shallower, not just raise them
+			 * (every existing cascade test only exercises a move that goes
+			 * deeper).
+			 */
+			it("cascades a level DECREASE to un-listed descendants when a move makes an element shallower", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = await createTestElement(testCase.id, user.id, {
+					elementType: "GOAL",
+				});
+
+				// mover's pre-batch chain: dp1 (1) -> dp2 (2) -> dp3 (3) ->
+				// mover (4) -> moverChild (5).
+				const dp1 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: dp1.id },
+					data: { level: 1 },
+				});
+				const dp2 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: dp1.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: dp2.id },
+					data: { level: 2 },
+				});
+				const dp3 = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: dp2.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: dp3.id },
+					data: { level: 3 },
+				});
+				const mover = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: dp3.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: mover.id },
+					data: { level: 4 },
+				});
+				const moverChild = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: mover.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: moverChild.id },
+					data: { level: 5 },
+				});
+
+				// mover's new, shallow target: a top-level property claim
+				// (level 1, direct child of goal).
+				const shallowTarget = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: goal.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: shallowTarget.id },
+					data: { level: 1 },
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const changes: ElementChange[] = [
+					{
+						type: "update",
+						elementId: mover.id,
+						data: { parentId: shallowTarget.id },
+					},
+				];
+
+				const data = expectSuccess(
+					await applyBatchUpdate(user.id, testCase.id, changes)
+				);
+				expect(data.summary.updated).toBe(1);
+
+				const [afterMover, afterChild] = await Promise.all([
+					prisma.assuranceElement.findUnique({ where: { id: mover.id } }),
+					prisma.assuranceElement.findUnique({
+						where: { id: moverChild.id },
+					}),
+				]);
+
+				// mover: 1 + 1 = 2, DOWN from 4.
+				expect(afterMover?.level).toBe(2);
+				// moverChild cascades DOWN too: 2 + 1 = 3, from a stale 5.
+				expect(afterChild?.level).toBe(3);
+			});
+		});
+
+		/**
+		 * QA follow-up: mirrors the existing "cycle created purely by this
+		 * batch's own moves" test with the two updates listed in the
+		 * OPPOSITE array order, to pin that cycle detection is as
+		 * order-independent as level resolution itself.
+		 */
+		it("still rejects a batch-created cycle when the moves are listed in the reverse order", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+			});
+			const claimX = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: goal.id,
+			});
+			const claimY = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: goal.id,
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			// Reverse of the existing test's order: Y's move is listed
+			// before X's.
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: claimY.id,
+					data: { parentId: claimX.id },
+				},
+				{
+					type: "update",
+					elementId: claimX.id,
+					data: { parentId: claimY.id },
+				},
+			];
+
+			const result = await applyBatchUpdate(user.id, testCase.id, changes);
+			expect("error" in result).toBe(true);
+			if ("error" in result) {
+				expect(
+					result.error.startsWith(
+						"Circular reference detected when moving element "
+					)
+				).toBe(true);
+			}
+
+			const [unmovedX, unmovedY] = await Promise.all([
+				prisma.assuranceElement.findUnique({ where: { id: claimX.id } }),
+				prisma.assuranceElement.findUnique({ where: { id: claimY.id } }),
+			]);
+			expect(unmovedX?.parentId).toBe(goal.id);
+			expect(unmovedY?.parentId).toBe(goal.id);
+		});
+
+		/**
+		 * QA follow-up: evidence elements are linked via evidence_links, not
+		 * parented (`buildCreateData` always forces their `parentId` to
+		 * null) — this pins that an evidence element riding along in a
+		 * batch that also moves property claims is never swept into level
+		 * resolution or the descendant cascade.
+		 */
+		it("leaves an evidence element's level and parentId untouched by a batch that also moves property claims", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+			});
+			const claim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: goal.id,
+			});
+			await prisma.assuranceElement.update({
+				where: { id: claim.id },
+				data: { level: 1 },
+			});
+			const newParent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: goal.id,
+			});
+			await prisma.assuranceElement.update({
+				where: { id: newParent.id },
+				data: { level: 1 },
+			});
+			const evidence = await createTestElement(testCase.id, user.id, {
+				elementType: "EVIDENCE",
+				name: "Supporting Evidence",
+			});
+			expect(evidence.parentId).toBeNull();
+			expect(evidence.level).toBeNull();
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: claim.id,
+					data: { parentId: newParent.id },
+				},
+				{
+					type: "update",
+					elementId: evidence.id,
+					data: { name: "Renamed Evidence" },
+				},
+				{
+					type: "link_evidence",
+					evidenceId: evidence.id,
+					claimId: claim.id,
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.updated).toBe(2);
+
+			const afterEvidence = await prisma.assuranceElement.findUnique({
+				where: { id: evidence.id },
+			});
+			expect(afterEvidence?.name).toBe("Renamed Evidence");
+			// Never entered level resolution or the cascade — stays null and
+			// unparented, evidence-link table carries the association.
+			expect(afterEvidence?.level).toBeNull();
+			expect(afterEvidence?.parentId).toBeNull();
+
+			const link = await prisma.evidenceLink.findFirst({
+				where: { evidenceId: evidence.id, claimId: claim.id },
+			});
+			expect(link).not.toBeNull();
+		});
+
+		/**
+		 * QA follow-up: the descendant cascade added by this commit
+		 * (`resolveDescendantCascadeLevels`/`applyCascadeLevelUpdates`) is
+		 * exactly the kind of change the existing N+1 query-count seam
+		 * exists to protect — pins that recomputing 6 un-listed descendants
+		 * across 2 distinct new levels costs one descendant-row fetch and
+		 * one grouped `updateMany` per distinct level (2 updateManys), not
+		 * one query per descendant.
+		 */
+		it("cascades N un-listed descendants across few distinct levels with one descendant fetch and one updateMany per distinct level", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 			const goal = await createTestElement(testCase.id, user.id, {
@@ -1033,49 +1687,102 @@ describe("applyBatchUpdate", () => {
 				elementType: "PROPERTY_CLAIM",
 				parentId: goal.id,
 			});
-			const claimA = await createTestElement(testCase.id, user.id, {
+			await prisma.assuranceElement.update({
+				where: { id: newParent.id },
+				data: { level: 1 },
+			});
+
+			// mover: level 1 (child of goal) -> moves under newParent
+			// (level 1), so mover's new level is 2.
+			const mover = await createTestElement(testCase.id, user.id, {
 				elementType: "PROPERTY_CLAIM",
 				parentId: goal.id,
 			});
-			const claimB = await createTestElement(testCase.id, user.id, {
-				elementType: "PROPERTY_CLAIM",
-				parentId: goal.id,
+			await prisma.assuranceElement.update({
+				where: { id: mover.id },
+				data: { level: 1 },
 			});
+
+			// Three children of mover (all level 2 pre-batch, un-listed —
+			// must cascade to 3), each with one child of its own (level 3
+			// pre-batch, un-listed — must cascade to 4).
+			for (let i = 0; i < 3; i++) {
+				const child = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: mover.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: child.id },
+					data: { level: 2 },
+				});
+				const grandchild = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					parentId: child.id,
+				});
+				await prisma.assuranceElement.update({
+					where: { id: grandchild.id },
+					data: { level: 3 },
+				});
+			}
 
 			const { applyBatchUpdate } = await import(
 				"@/lib/services/case-batch-update-service"
 			);
 
-			// B-under-A listed BEFORE A-under-newParent.
 			const changes: ElementChange[] = [
 				{
 					type: "update",
-					elementId: claimB.id,
-					data: { parentId: claimA.id },
-				},
-				{
-					type: "update",
-					elementId: claimA.id,
+					elementId: mover.id,
 					data: { parentId: newParent.id },
 				},
 			];
 
+			const spy = spyOnSql();
 			const data = expectSuccess(
 				await applyBatchUpdate(user.id, testCase.id, changes)
 			);
-			expect(data.summary.updated).toBe(2);
+			const texts = sqlTextsFrom(spy);
+			spy.mockRestore();
 
-			const [afterA, afterB] = await Promise.all([
-				prisma.assuranceElement.findUnique({ where: { id: claimA.id } }),
-				prisma.assuranceElement.findUnique({ where: { id: claimB.id } }),
-			]);
-			// A still resolves correctly regardless of order — its parent
-			// (newParent) was never itself moved in this batch.
-			expect(afterA?.level).toBe(2);
-			// B resolves against A's PRE-batch level (null, i.e. treated as
-			// base 1) because A hadn't been updated yet when B was
-			// processed: 1 + 1 = 2, not the "fully chained" 3.
-			expect(afterB?.level).toBe(2);
+			expect(data.summary.updated).toBe(1);
+
+			// Confirm the cascade actually ran and produced the expected
+			// two distinct new levels (3 for the 3 children, 4 for the 3
+			// grandchildren) before asserting query shape — a query-count
+			// assertion alone can't tell "correctly batched" from "silently
+			// did nothing".
+			const descendants = await prisma.assuranceElement.findMany({
+				where: { parentId: mover.id },
+				select: { level: true },
+			});
+			expect(descendants.map((d) => d.level).sort()).toEqual([3, 3, 3]);
+			const descendantsWithIds = await prisma.assuranceElement.findMany({
+				where: { parentId: mover.id },
+				select: { id: true, level: true },
+			});
+			const grandDescendants = await prisma.assuranceElement.findMany({
+				where: { parentId: { in: descendantsWithIds.map((d) => d.id) } },
+				select: { level: true },
+			});
+			expect(grandDescendants.map((d) => d.level).sort()).toEqual([4, 4, 4]);
+
+			// One shared findMany for the descendant rows the cascade walks
+			// (id/parent_id/element_type), regardless of how many
+			// descendants exist.
+			const descendantFetches = texts.filter((t) =>
+				t.startsWith(
+					'SELECT "public"."assurance_elements"."id", "public"."assurance_elements"."parent_id", "public"."assurance_elements"."element_type"'
+				)
+			);
+			expect(descendantFetches.length).toBe(1);
+
+			// One grouped updateMany per distinct new level (2: level 3 and
+			// level 4), not one UPDATE per descendant (which would be 6).
+			const cascadeUpdateManys = texts.filter((t) =>
+				t.startsWith('UPDATE "public"."assurance_elements" SET "level"')
+			);
+			expect(cascadeUpdateManys.length).toBe(2);
+			expect(cascadeUpdateManys.length).toBeLessThan(6);
 		});
 	});
 
