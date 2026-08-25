@@ -1,5 +1,66 @@
 name: Build
 
+# --- Structural Quality gate (fallow) — baseline refresh recipe ---
+#
+# The `structural-quality` job below (required check "Structural Quality
+# (blocking)") audits against coverage MERGED from the unit suite AND the
+# integration suite (see the `test` job's "Run integration tests" /  "Merge
+# unit + integration coverage" steps). `.fallow-baseline.health.json`
+# governs which findings on UNTOUCHED code are treated as pre-existing debt
+# (--baseline-mode identity) rather than newly introduced. A baseline saved
+# with unit-only coverage will not pair correctly against merged-coverage
+# head scores — same class of mismatch as fallow-rs/fallow#2347: coverage
+# measured differently on the two sides of a comparison produces scores
+# that don't line up, and an untouched function can be misattributed as a
+# new finding. This baseline MUST be refreshed under the new merged-coverage
+# recipe below before the gate can be trusted; until it is, the gate may
+# over-report on PRs that touch code near integration-only-tested functions.
+#
+# Cid runs this personally, from a clean `staging` checkout, and commits the
+# result:
+#
+#   git checkout staging && git pull
+#   pnpm install --frozen-lockfile
+#   DATABASE_URL="postgresql://fallow:fallow@localhost:5432/fallow" \
+#     npx prisma generate --schema prisma/schema.prisma
+#
+#   # Unit coverage (same command/env as pnpm test:coverage:check)
+#   COVERAGE=true pnpm exec vitest run --coverage
+#
+#   # Integration coverage — needs a real Postgres; see build.yaml's `test`
+#   # job for the service-container env vars (DATABASE_URL, tea_test/tea_dev,
+#   # migrations, seed) if running this outside CI.
+#   COVERAGE=true pnpm exec vitest run --config vitest.workspace.ts \
+#     --project integration --coverage \
+#     --coverage.reportsDirectory=coverage-integration
+#
+#   # Merge (fail closed — both files must exist; same tool as the CI step).
+#   # Sanitize first: vitest's v8-coverage provider can emit negative hit
+#   # counts under the integration project's multi-fork pool, which fallow's
+#   # coverage parser hard-errors on (expects u32) — see the "Merge unit +
+#   # integration coverage" step in the `test` job for the sanitize script;
+#   # run the same script here before nyc merge.
+#   mkdir -p coverage-merge-input coverage-merged
+#   cp coverage/coverage-final.json coverage-merge-input/unit.json
+#   cp coverage-integration/coverage-final.json coverage-merge-input/integration.json
+#   # <run the sanitize node -e script from the "Merge unit + integration
+#   # coverage" step here, against both files in coverage-merge-input/>
+#   npx -y nyc merge coverage-merge-input coverage-merged/coverage-final.json
+#
+#   # Save the baseline — identity mode, real merged coverage. This OVERWRITES
+#   # .fallow-baseline.health.json; review the diff before committing.
+#   npx -y fallow health \
+#     --coverage coverage-merged/coverage-final.json \
+#     --baseline-mode identity \
+#     --save-baseline .fallow-baseline.health.json
+#
+#   git add .fallow-baseline.health.json
+#   git commit -m "chore: refresh fallow health baseline with merged unit+integration coverage"
+#
+# .fallow-baseline.dead-code.json / .fallow-baseline.dupes.json are coverage-
+# independent and do not need refreshing for this change.
+# --- end baseline refresh recipe ---
+
 on:
   workflow_dispatch:
   # No paths filter here: an unfiltered trigger means Validate Code Quality
@@ -242,7 +303,99 @@ jobs:
         run: pnpm test:coverage:check
 
       - name: Run integration tests
-        run: pnpm exec vitest run --config vitest.workspace.ts --project integration
+        # COVERAGE=true + --coverage instruments this run (same suite,
+        # not a second run) so fallow's per-function CRAP score sees the
+        # integration-only functions (services/routes, per the testing-trophy
+        # convention in CLAUDE.md) that the unit suite never exercises and
+        # which otherwise score 0% coverage and false-fail the structural
+        # quality gate (PR #908). --coverage.reportsDirectory points this at
+        # its own directory so it can't clobber the unit run's ./coverage
+        # (pnpm test:coverage:check, above) — the two are merged in the next
+        # step. Reporters are vitest's coverage defaults (includes json,
+        # which writes coverage-final.json — the istanbul file the merge
+        # step and fallow both consume).
+        run: pnpm exec vitest run --config vitest.workspace.ts --project integration --coverage --coverage.reportsDirectory=coverage-integration
+        env:
+          COVERAGE: "true"
+
+      - name: Merge unit + integration coverage
+        # Fail closed: fallow's CRAP score must see BOTH suites, not
+        # whichever one happened to produce a file. If either input is
+        # missing this step errors rather than silently auditing on a
+        # partial (unit-only or integration-only) coverage view, which is
+        # exactly the blind spot this change fixes (see fallow.yml's old
+        # unit-only pass).
+        run: |
+          set -euo pipefail
+          UNIT_FILE="coverage/coverage-final.json"
+          INTEGRATION_FILE="coverage-integration/coverage-final.json"
+          if [ ! -f "$UNIT_FILE" ]; then
+            echo "::error::missing $UNIT_FILE — unit coverage step did not produce output, refusing to audit on a partial coverage view"
+            exit 1
+          fi
+          if [ ! -f "$INTEGRATION_FILE" ]; then
+            echo "::error::missing $INTEGRATION_FILE — integration coverage step did not produce output, refusing to audit on a partial coverage view"
+            exit 1
+          fi
+          mkdir -p coverage-merge-input coverage-merged
+          cp "$UNIT_FILE" coverage-merge-input/unit.json
+          cp "$INTEGRATION_FILE" coverage-merge-input/integration.json
+
+          # Sanitize negative hit counts BEFORE merging. Verified locally
+          # (2026-08-25): the integration run's raw coverage-final.json can
+          # itself contain negative statement/branch/function hit counts —
+          # an existing artefact of vitest's v8-coverage provider under the
+          # integration project's multi-fork pool (maxWorkers > 1), not
+          # something this merge introduces. fallow's coverage parser
+          # expects unsigned ints and hard-errors on any negative value
+          # ("invalid value: integer `-N`, expected u32"), so an
+          # un-sanitized file fails closed on every PR that touches
+          # instrumented code, not just the ones the gate should flag.
+          # Clamping to 0 is a deliberate under-count (never inflates
+          # coverage, so it can only make CRAP scores more conservative,
+          # never hide a real risk) — the alternative is the audit step
+          # hard-failing on unrelated PRs. Applied to both inputs so this
+          # is safe even if the unit run is ever affected the same way.
+          node -e '
+            const fs = require("fs");
+            function sanitize(path) {
+              const data = JSON.parse(fs.readFileSync(path, "utf8"));
+              let fixed = 0;
+              for (const file of Object.values(data)) {
+                for (const section of ["s", "f"]) {
+                  const map = file[section];
+                  if (!map) continue;
+                  for (const k of Object.keys(map)) {
+                    if (map[k] < 0) { map[k] = 0; fixed++; }
+                  }
+                }
+                if (file.b) {
+                  for (const k of Object.keys(file.b)) {
+                    file.b[k] = file.b[k].map((v) => (v < 0 ? (fixed++, 0) : v));
+                  }
+                }
+              }
+              fs.writeFileSync(path, JSON.stringify(data));
+              if (fixed > 0) {
+                console.log(`::warning::${path}: clamped ${fixed} negative coverage counts to 0 (see step comment for why)`);
+              }
+            }
+            sanitize("coverage-merge-input/unit.json");
+            sanitize("coverage-merge-input/integration.json");
+          '
+
+          npx -y nyc merge coverage-merge-input coverage-merged/coverage-final.json
+          if [ ! -s coverage-merged/coverage-final.json ]; then
+            echo "::error::nyc merge produced an empty or missing coverage-merged/coverage-final.json"
+            exit 1
+          fi
+
+      - name: Upload merged coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: merged-coverage
+          path: coverage-merged/coverage-final.json
+          retention-days: 14
 
       - name: Re-seed database for E2E
         run: |
@@ -299,6 +452,171 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 14
+
+  structural-quality:
+    # Required-check name is "Structural Quality (blocking)" (branch
+    # protection matches on this `name:`, not the job id) — this used to be
+    # the whole of fallow.yml, which audited against its OWN unit-only
+    # coverage pass and false-failed on functions covered exclusively by the
+    # integration suite (testing-trophy convention, CLAUDE.md — see PR #908,
+    # 5 false findings on functions with 11 dedicated integration tests).
+    # fallow.yml is retired; this job now consumes the coverage `test`
+    # merged from BOTH suites.
+    name: Structural Quality (blocking)
+    needs: [test]
+    # Runs for every needs.test outcome (only a whole-workflow cancellation
+    # skips it) and branches on the result itself, rather than relying on
+    # either documented "needs skip propagation" reading (actions/runner#2205
+    # class, see the `changes`/`test` comments above) or on the implicit
+    # success() a bare `if:` would otherwise drop (PR #904 lesson: a custom
+    # if with no status function silently loses fail-blocking). Concretely:
+    #   - needs.test.result == 'skipped' (docs-only PR, gated by `changes`)
+    #     -> this job SKIPS ITS AUDIT STEPS but still completes successfully;
+    #        a skipped/successful required check satisfies branch protection,
+    #        which is correct here because there is no code diff to audit.
+    #   - needs.test.result == 'success' -> full audit, may fail on findings.
+    #   - anything else (failure, cancelled, timed_out) -> this job runs and
+    #     explicitly fails (see "Fail closed on non-success test result"
+    #     below) rather than being skipped, so a broken build can't leave the
+    #     Structural Quality check green-via-skip.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Fail closed on non-success test result
+        if: needs.test.result != 'success' && needs.test.result != 'skipped'
+        run: |
+          echo "::error::upstream 'Run Tests' job did not succeed (result: ${{ needs.test.result }}) — Structural Quality cannot evaluate an unproven build, failing closed rather than skipping."
+          exit 1
+
+      - name: No code-relevant changes — gate not evaluated
+        if: needs.test.result == 'skipped'
+        run: echo "'Run Tests' was skipped (no code-relevant paths changed, see the 'changes' job) — Structural Quality has nothing to audit. Reporting success, not a findings verdict."
+
+      - name: Checkout repository
+        if: needs.test.result == 'success'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        if: needs.test.result == 'success'
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        if: needs.test.result == 'success'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        # Needed so fallow can resolve real imports (notably the generated
+        # Prisma client below); --frozen-lockfile never mutates the lockfile.
+        if: needs.test.result == 'success'
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        # discover-service.ts / dev-seed.ts import the generated client
+        # (`src/generated/prisma`, gitignored). Without this, fallow's
+        # import-resolution can't find it and reports a dead-code error —
+        # not a real finding, just an unbuilt environment. `generate` only
+        # needs DATABASE_URL to resolve (prisma.config.ts loads it), it
+        # never connects; the value is a placeholder.
+        if: needs.test.result == 'success'
+        run: npx prisma generate --schema prisma/schema.prisma
+        env:
+          DATABASE_URL: "postgresql://fallow:fallow@localhost:5432/fallow"
+
+      - name: Download merged coverage
+        if: needs.test.result == 'success'
+        uses: actions/download-artifact@v6
+        with:
+          name: merged-coverage
+          path: coverage-merged
+
+      - name: Run fallow audit on changed files
+        id: fallow-audit
+        if: needs.test.result == 'success'
+        run: |
+          set +e
+          npx -y fallow audit \
+            --changed-since "origin/${{ github.base_ref }}" \
+            --coverage coverage-merged/coverage-final.json \
+            --health-baseline .fallow-baseline.health.json \
+            --baseline-mode identity \
+            --format pr-comment-github \
+            --output-file fallow-comment.md \
+            --quiet
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          set -e
+          if [ ! -s fallow-comment.md ]; then
+            if [ "$EXIT_CODE" -eq 0 ]; then
+              echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
+            else
+              {
+                echo "_fallow audit failed to run (exit $EXIT_CODE) — see the job log for the underlying error._"
+                echo "_This is NOT a clean result: the gate could not evaluate this changeset._"
+              } > fallow-comment.md
+            fi
+          fi
+
+      # Skipped on fork PRs: github.token is read-only for pull_request events
+      # from a fork regardless of the permissions block above, so the gh api
+      # calls below would 403 and fail this step before the verdict is even
+      # evaluated in "Fail on new structural-quality findings" — masking the
+      # real gate result behind an unrelated permissions error. Fork PRs still
+      # get the full verdict; they just get it from the job log/annotation
+      # (see the next step) instead of a bot comment, since only a PR from
+      # this repository can hold a write token here.
+      # Also skipped for Dependabot: GitHub forces GITHUB_TOKEN to read-only
+      # on pull_request events opened by dependabot[bot], same-repo or not
+      # (this workflow triggers on package.json, so it sees these routinely) —
+      # the gh api calls would 403 for the same reason as a fork PR.
+      - name: Post or update PR comment
+        if: needs.test.result == 'success' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MARKER="<!-- fallow-id: fallow-results -->"
+          if grep -q "$MARKER" fallow-comment.md; then
+            cp fallow-comment.md comment.md
+          else
+            printf '%s\n\n' "$MARKER" | cat - fallow-comment.md > comment.md
+          fi
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$COMMENT_ID" ]; then
+            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" -F body=@comment.md > /dev/null
+          else
+            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
+          fi
+
+      # always() so this verdict step can never be skipped because the
+      # comment step above failed or was skipped (fork/Dependabot 403, or any
+      # other cause) — that would mask the real gate result. If the audit
+      # step itself never wrote exit_code (e.g. it failed before that line,
+      # or needs.test.result == 'skipped' so the audit step never ran), the
+      # empty string compares unequal to '0' and this step's `if:` below is
+      # gated on needs.test.result == 'success' so it correctly does not fire
+      # on the skip path (handled by its own earlier step instead).
+      - name: Fail on new structural-quality findings
+        if: needs.test.result == 'success' && always() && steps.fallow-audit.outputs.exit_code != '0'
+        run: |
+          EXIT_CODE="${{ steps.fallow-audit.outputs.exit_code }}"
+          echo "----- fallow findings (also posted as a PR comment on non-fork PRs) -----"
+          cat fallow-comment.md
+          echo "---------------------------------------------------------------------"
+          if [ "$EXIT_CODE" = "1" ]; then
+            echo "::error::fallow audit found structural-quality findings introduced by this changeset — see the findings above (and the PR comment, on non-fork PRs) for detail."
+          else
+            echo "::error::fallow audit failed to run cleanly (exit $EXIT_CODE) — this is a tool/config error, not a findings verdict. See the log above and preceding steps for the underlying error."
+          fi
+          exit 1
 
   docker-build:
     name: Build and Push Docker Image

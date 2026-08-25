@@ -184,6 +184,9 @@ pnpm-debug.log*
 
 # testing
 coverage/
+coverage-integration/
+coverage-merge-input/
+coverage-merged/
 e2e/.auth/
 test-results/
 playwright-report/

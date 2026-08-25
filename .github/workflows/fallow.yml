@@ -1,181 +1,37 @@
-name: Fallow Audit
+name: Fallow Audit (retired)
 
-# Structural-quality gate (dead code, duplication, cycles, complexity) on
-# changed files, scoped to NEW findings only. Posts/updates a PR comment and
-# fails the job when the changeset introduces a finding; inherited debt
-# (tracked via .fallow-baseline.*.json, wired through .fallowrc.json's
-# `audit` block, plus fallow's own base-commit re-analysis for `--gate
-# new-only`) does not block. Config: .fallowrc.json.
+# RETIRED 2026-08-25 — superseded by the `structural-quality` job in
+# build.yaml (job name "Structural Quality (blocking)", the required check).
 #
-# The gate needs a real, if minimal, project environment to evaluate
-# honestly rather than on tool-environment artefacts: deps installed so the
-# generated Prisma client resolves (`src/generated/prisma`, gitignored,
-# imported by discover-service.ts/dev-seed.ts — without it fallow reports a
-# hard unresolved-import error unrelated to any PR), and a plain-unit-suite
-# coverage run so fallow's per-function CRAP score is measured, not
-# estimated from the module graph (the estimate can't see test assertions
-# and overstates risk on well-tested code). Neither needs a database; the
-# DATABASE_URL values below are placeholders `prisma generate` and the
-# Prisma client's module-scope config resolve but never connect to.
+# This workflow used to run the fallow structural-quality audit against a
+# unit-only coverage pass it generated itself. That undercounted coverage
+# for any function exercised exclusively by the integration suite (this
+# repo's testing-trophy convention for services/routes — see CLAUDE.md),
+# which scored those functions 0% and produced false CRAP-inflation
+# findings (PR #908: 5 false findings on functions covered by 11 dedicated
+# integration tests).
 #
-# --baseline-mode identity (health only): fallow's own base-commit
-# re-analysis (the mechanism above, not this flag) does NOT get --coverage —
-# it re-checks out the base ref into a worktree fallow manages itself, so a
-# pre-existing, UNTOUCHED high-CRAP function scores low there (module-graph
-# estimate) and high on head (real 0% coverage). The two scores don't match,
-# so the base-side finding and the head-side finding fail to pair up and the
-# untouched function is misattributed introduced:true (confirmed: PATCH in
-# app/api/cases/[id]/status/route.ts, byte-identical function scored with
-# real coverage on both sides, flagged only because fallow's internal base
-# pass omits --coverage). fallow has no flag to feed coverage into that
-# internal base pass, so the fix instead routes health attribution through
-# .fallow-baseline.health.json (audit.healthBaseline in .fallowrc.json,
-# already wired) in --baseline-mode identity: a baseline saved from the base
-# ref WITH real coverage, matched per (file, function name, category) rather
-# than fallow's own coverage-blind base-commit diff. This flag requires
-# .fallow-baseline.health.json to have been saved with BOTH --coverage and
-# --baseline-mode identity — reading it in identity mode otherwise hard-errors
-# (exit 2, a tool-config failure, not a findings failure). Refresh command:
-# see "TEA — Fallow CI gate false positives" issue notes.
+# The audit now runs inside build.yaml, fed by coverage merged from BOTH the
+# unit suite (`pnpm test:coverage:check`) and the integration suite
+# (`vitest --project integration --coverage`, instrumented in the existing
+# "Run integration tests" step rather than run twice). See build.yaml's
+# `structural-quality` job for the full audit invocation (kept verbatim in
+# semantics from this file's history — same fallow flags, same PR-comment
+# posting, same fail-closed exit-code handling) and its header comment for
+# the baseline refresh recipe under the new merged-coverage input.
+#
+# This workflow has deliberately no `on:` trigger, so it never runs. It is
+# kept (not deleted) only so this retirement note is visible in the file
+# history at its old path; do not re-add a trigger here — that would
+# resurrect the second, coverage-blind audit this change removed.
 
 on:
-  pull_request:
-    paths:
-      - "**/*.ts"
-      - "**/*.tsx"
-      - "**/*.js"
-      - "**/*.jsx"
-      - "package.json"
-      - ".fallowrc.json"
-
-permissions:
-  contents: read
-  pull-requests: write
+  workflow_dispatch: {}
 
 jobs:
-  fallow:
-    name: Structural Quality (blocking)
+  retired:
+    name: Retired — see build.yaml's Structural Quality (blocking) job
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: "pnpm"
-
-      - name: Install dependencies
-        # Needed so fallow can resolve real imports (notably the generated
-        # Prisma client below) and so the coverage step has a tree to run in.
-        # --frozen-lockfile: never mutate the lockfile in CI.
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        # discover-service.ts / dev-seed.ts import the generated client
-        # (`src/generated/prisma`, gitignored). Without this, fallow's
-        # import-resolution can't find it and reports a dead-code error —
-        # not a real finding, just an unbuilt environment. `generate` only
-        # needs DATABASE_URL to resolve (prisma.config.ts loads it), it
-        # never connects; the value is a placeholder.
-        run: npx prisma generate --schema prisma/schema.prisma
-        env:
-          DATABASE_URL: "postgresql://fallow:fallow@localhost:5432/fallow"
-
-      - name: Run unit tests with coverage
-        # Istanbul coverage feeds fallow's per-function CRAP score. Without
-        # it, fallow estimates coverage from the module graph, which
-        # overstates risk for functions that ARE tested (module-graph
-        # estimation can't see test assertions, only import structure) and
-        # produces false-positive high-CRAP findings on well-tested code.
-        # This is the plain unit suite (vitest.config.ts), not the
-        # Postgres-backed integration/e2e suites build.yaml runs — no DB
-        # needed, ~10-15s.
-        run: pnpm exec vitest run --coverage
-        env:
-          COVERAGE: "true"
-          DATABASE_URL: "postgresql://fallow:fallow@localhost:5432/fallow"
-
-      - name: Run fallow audit on changed files
-        id: fallow-audit
-        run: |
-          set +e
-          npx -y fallow audit \
-            --changed-since "origin/${{ github.base_ref }}" \
-            --coverage coverage/coverage-final.json \
-            --health-baseline .fallow-baseline.health.json \
-            --baseline-mode identity \
-            --format pr-comment-github \
-            --output-file fallow-comment.md \
-            --quiet
-          EXIT_CODE=$?
-          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-          set -e
-          if [ ! -s fallow-comment.md ]; then
-            if [ "$EXIT_CODE" -eq 0 ]; then
-              echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
-            else
-              {
-                echo "_fallow audit failed to run (exit $EXIT_CODE) — see the job log for the underlying error._"
-                echo "_This is NOT a clean result: the gate could not evaluate this changeset._"
-              } > fallow-comment.md
-            fi
-          fi
-
-      # Skipped on fork PRs: github.token is read-only for pull_request events
-      # from a fork regardless of the permissions block above, so the gh api
-      # calls below would 403 and fail this step before the verdict is even
-      # evaluated in "Fail on new structural-quality findings" — masking the
-      # real gate result behind an unrelated permissions error. Fork PRs still
-      # get the full verdict; they just get it from the job log/annotation
-      # (see the next step) instead of a bot comment, since only a PR from
-      # this repository can hold a write token here.
-      # Also skipped for Dependabot: GitHub forces GITHUB_TOKEN to read-only
-      # on pull_request events opened by dependabot[bot], same-repo or not
-      # (this workflow triggers on package.json, so it sees these routinely) —
-      # the gh api calls would 403 for the same reason as a fork PR.
-      - name: Post or update PR comment
-        if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          MARKER="<!-- fallow-id: fallow-results -->"
-          if grep -q "$MARKER" fallow-comment.md; then
-            cp fallow-comment.md comment.md
-          else
-            printf '%s\n\n' "$MARKER" | cat - fallow-comment.md > comment.md
-          fi
-          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
-            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
-          if [ -n "$COMMENT_ID" ]; then
-            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" -F body=@comment.md > /dev/null
-          else
-            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
-          fi
-
-      # always() so this verdict step can never be skipped because the
-      # comment step above failed or was skipped (fork/Dependabot 403, or any
-      # other cause) — that would mask the real gate result. If the audit
-      # step itself never wrote exit_code (e.g. it failed before that line),
-      # the empty string compares unequal to '0' and this fails the job,
-      # which is the correct fail-closed behaviour for an unevaluated gate.
-      - name: Fail on new structural-quality findings
-        if: always() && steps.fallow-audit.outputs.exit_code != '0'
-        run: |
-          EXIT_CODE="${{ steps.fallow-audit.outputs.exit_code }}"
-          echo "----- fallow findings (also posted as a PR comment on non-fork PRs) -----"
-          cat fallow-comment.md
-          echo "---------------------------------------------------------------------"
-          if [ "$EXIT_CODE" = "1" ]; then
-            echo "::error::fallow audit found structural-quality findings introduced by this changeset — see the findings above (and the PR comment, on non-fork PRs) for detail."
-          else
-            echo "::error::fallow audit failed to run cleanly (exit $EXIT_CODE) — this is a tool/config error, not a findings verdict. See the log above and preceding steps for the underlying error."
-          fi
-          exit 1
+      - name: No-op
+        run: echo "fallow.yml is retired; the audit runs in build.yaml's structural-quality job."
