@@ -702,8 +702,6 @@
     "lib/services/comment-service.ts:buildCommentTree",
     "lib/services/email-service.ts:sendWelcomeEmail",
     "lib/services/email-service.ts:sendAccountDeletedEmail",
-    "lib/services/file-storage-service.ts:deleteDirectory",
-    "lib/services/file-storage-service.ts:getFilesystemPath",
     "lib/services/github-api-service.ts:GITHUB_ERROR_MAP",
     "lib/services/google-drive-service.ts:DRIVE_ERROR_MAP",
     "lib/services/password-reset-service.ts:cleanupExpiredTokens",

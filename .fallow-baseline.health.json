@@ -1,5 +1,10 @@
 {
   "finding_counts": {
+    "actions/cases.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
     "app/(authenticated)/dashboard/page.tsx": {
       "crap_moderate": {
         "count": 1
@@ -178,6 +183,11 @@
         "count": 1
       }
     },
+    "app/api/elements/[id]/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
     "app/api/health/route.ts": {
       "crap_high": {
         "count": 1
@@ -195,6 +205,11 @@
     },
     "app/api/templates/route.ts": {
       "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/users/me/route.ts": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -233,8 +248,14 @@
       }
     },
     "components/cases/action-buttons.tsx": {
-      "complexity_moderate": {
+      "complexity_high": {
         "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
       }
     },
     "components/cases/case-card.tsx": {
@@ -263,6 +284,11 @@
     },
     "components/cases/case-list.tsx": {
       "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/case-settings-popover.tsx": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -314,9 +340,31 @@
         "count": 1
       }
     },
+    "components/cases/header.tsx": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/cases/json-editor-toolbar.tsx": {
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
     "components/cases/json-view-panel.tsx": {
       "complexity_high": {
         "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
       }
     },
     "components/cases/node-attributes.tsx": {
@@ -331,6 +379,14 @@
     },
     "components/cases/node-edit-dialog.tsx": {
       "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/notes-feed.tsx": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -679,9 +735,68 @@
         "count": 1
       }
     },
+    "components/modals/_import-modal/github-import-tab.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/google-drive-import-tab.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/use-case-import.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "components/modals/_share-modal/document-export-section.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/google-backup-section.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/image-export-section.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/json-export-section.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/case-create-modal.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "components/modals/delete-element-modal.tsx": {
       "crap_moderate": {
         "count": 1
+      }
+    },
+    "components/modals/migration-modal.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/permissions-modal.tsx": {
+      "crap_high": {
+        "count": 2
       }
     },
     "components/navigation/desktop-nav.tsx": {
@@ -712,6 +827,14 @@
         "count": 1
       }
     },
+    "components/shared/nodes/attach-element-dialog.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "components/shared/nodes/attribute-section.tsx": {
       "crap_critical": {
         "count": 1
@@ -728,8 +851,55 @@
         "count": 1
       }
     },
+    "components/shared/nodes/move-element-dialog.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "components/shared/nodes/node-action-group.tsx": {
       "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/sharing/_case-sharing/use-case-permissions.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/sharing/case-sharing-dialog.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/create-team-dialog.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/teams/invite-member-dialog.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/team-card.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/team-member-list.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -743,8 +913,21 @@
         "count": 1
       }
     },
+    "hooks/use-history.ts": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
     "hooks/use-integrations.ts": {
       "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-json-validation.ts": {
+      "crap_high": {
+        "count": 3
+      },
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -753,9 +936,140 @@
         "count": 2
       }
     },
+    "hooks/use-new-link-form.ts": {
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
     "hooks/use-sidebar-logo.ts": {
       "crap_moderate": {
         "count": 1
+      }
+    },
+    "lib/auth/config.ts": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/auth/password-service.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/auth/validate-session.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/api.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/branch-utils.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/case-updates.ts": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/case/document-export.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/case/evidence.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "lib/case/identifier-utils.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/image-export.ts": {
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/case/node-operations.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 4
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/case/property-claims.ts": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 3
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/case/tree-diff.ts": {
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 5
+      }
+    },
+    "lib/case/tree-utils.ts": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 3
       }
     },
     "lib/docs/case-data-transformer.ts": {
@@ -771,13 +1085,125 @@
         "count": 1
       }
     },
+    "lib/export/exporters/pdf-components.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/export/templates/base-template.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/export/templates/presets/full-report.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/blob-storage-service.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/services/case-batch-update-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/case-fetch-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "lib/services/case-image-service.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/case-trash-service.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/connected-accounts-service.ts": {
       "crap_high": {
         "count": 1
       }
     },
     "lib/services/element-service.ts": {
       "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/email-service.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/github-api-service.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "lib/services/google-drive-service.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "lib/services/sse-connection-manager.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/services/user-management-service.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "lib/services/user-service.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/toast.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "middleware.ts": {
+      "crap_critical": {
         "count": 1
       }
     },
@@ -835,6 +1261,16 @@
     }
   },
   "identity_finding_counts": {
+    "actions/cases.ts\u0000deleteAssuranceCase": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "actions/cases.ts\u0000updateCaseIdentifiers": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "app/(authenticated)/dashboard/page.tsx\u0000Dashboard": {
       "crap_moderate": {
         "count": 1
@@ -1055,6 +1491,11 @@
         "count": 1
       }
     },
+    "app/api/elements/[id]/route.ts\u0000DELETE": {
+      "crap_high": {
+        "count": 1
+      }
+    },
     "app/api/health/route.ts\u0000GET": {
       "crap_high": {
         "count": 1
@@ -1072,6 +1513,11 @@
     },
     "app/api/templates/route.ts\u0000GET": {
       "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/users/me/route.ts\u0000PATCH": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -1119,7 +1565,20 @@
       }
     },
     "components/cases/action-buttons.tsx\u0000ActionButtons": {
-      "complexity_moderate": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/action-buttons.tsx\u0000handleNameReset": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/action-buttons.tsx\u0000onDelete": {
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -1176,6 +1635,11 @@
     },
     "components/cases/case-list.tsx\u0000compareCases": {
       "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/case-settings-popover.tsx\u0000<arrow>": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -1248,8 +1712,68 @@
         "count": 1
       }
     },
+    "components/cases/header.tsx\u0000Header": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/header.tsx\u0000_updateAssuranceCaseName": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/header.tsx\u0000focusNode": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/json-editor-toolbar.tsx\u0000ActionButtons": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/json-editor-toolbar.tsx\u0000JsonEditorToolbar": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/json-editor-toolbar.tsx\u0000formatChangeSummary": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/json-editor-toolbar.tsx\u0000getStatusContent": {
+      "crap_high": {
+        "count": 1
+      }
+    },
     "components/cases/json-view-panel.tsx\u0000JsonViewPanel": {
       "complexity_high": {
+        "count": 1
+      }
+    },
+    "components/cases/json-view-panel.tsx\u0000fetchJson": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/json-view-panel.tsx\u0000handleApply": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/json-view-panel.tsx\u0000handleBatchResult": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/cases/json-view-panel.tsx\u0000processChangeToCommand": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/cases/json-view-panel.tsx\u0000syncAfterApply": {
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -1270,6 +1794,14 @@
     },
     "components/cases/node-edit-dialog.tsx\u0000NodeEditDialog": {
       "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/cases/notes-feed.tsx\u0000<arrow>": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -1853,8 +2385,88 @@
         "count": 1
       }
     },
+    "components/modals/_import-modal/github-import-tab.tsx\u0000GitHubImportTab": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/google-drive-import-tab.tsx\u0000GoogleDriveImportTab": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/use-case-import.ts\u0000extractErrorMessage": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/use-case-import.ts\u0000importCase": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/use-case-import.ts\u0000importFromGitHub": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_import-modal/use-case-import.ts\u0000importFromGoogleDrive": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/document-export-section.tsx\u0000DocumentExportSection": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/document-export-section.tsx\u0000handleDocumentExport": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/google-backup-section.tsx\u0000GoogleBackupSection": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/google-backup-section.tsx\u0000handleBackupToDrive": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/image-export-section.tsx\u0000handleImageExport": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/modals/_share-modal/json-export-section.tsx\u0000handleExport": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/case-create-modal.tsx\u0000CreateCase": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "components/modals/delete-element-modal.tsx\u0000DeleteElementModal": {
       "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/migration-modal.tsx\u0000MigrationModal": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/modals/permissions-modal.tsx\u0000<arrow>": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/modals/permissions-modal.tsx\u0000handleRemovePermissions": {
+      "crap_high": {
         "count": 1
       }
     },
@@ -1888,6 +2500,16 @@
         "count": 1
       }
     },
+    "components/shared/nodes/attach-element-dialog.tsx\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/attach-element-dialog.tsx\u0000handleAttach": {
+      "crap_high": {
+        "count": 1
+      }
+    },
     "components/shared/nodes/attribute-section.tsx\u0000AttributeItem": {
       "crap_moderate": {
         "count": 1
@@ -1906,8 +2528,63 @@
         "count": 1
       }
     },
+    "components/shared/nodes/move-element-dialog.tsx\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/move-element-dialog.tsx\u0000candidates": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/shared/nodes/move-element-dialog.tsx\u0000handleMove": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
     "components/shared/nodes/node-action-group.tsx\u0000NodeActionGroup": {
       "crap_critical": {
+        "count": 1
+      }
+    },
+    "components/sharing/_case-sharing/use-case-permissions.ts\u0000fetchPermissions": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/sharing/_case-sharing/use-case-permissions.ts\u0000onShareByEmail": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/sharing/case-sharing-dialog.tsx\u0000CaseSharingDialog": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/create-team-dialog.tsx\u0000onSubmit": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/teams/invite-member-dialog.tsx\u0000onSubmit": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/team-card.tsx\u0000TeamCard": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/team-member-list.tsx\u0000<arrow>": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "components/teams/team-member-list.tsx\u0000handleRemoveMember": {
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -1926,8 +2603,43 @@
         "count": 1
       }
     },
+    "hooks/use-history.ts\u0000redo": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-history.ts\u0000refetchCase": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-history.ts\u0000undo": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "hooks/use-integrations.ts\u0000useIntegrations": {
       "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-json-validation.ts\u0000errorToDiagnostic": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "hooks/use-json-validation.ts\u0000findPositionForPath": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "hooks/use-json-validation.ts\u0000parseJsonWithPosition": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "hooks/use-json-validation.ts\u0000validate": {
+      "crap_moderate": {
         "count": 1
       }
     },
@@ -1941,8 +2653,368 @@
         "count": 1
       }
     },
+    "hooks/use-new-link-form.ts\u0000createPropertyClaimItem": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000createStrategyPayload": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000handleClaimAdd": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000handleContextAdd": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000handleGoalClaimUpdate": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000handlePropertyClaim": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000handleStrategyAdd": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000handleStrategyClaimUpdate": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "hooks/use-new-link-form.ts\u0000updateGoalWithStrategy": {
+      "crap_high": {
+        "count": 1
+      }
+    },
     "hooks/use-sidebar-logo.ts\u0000updateLogo": {
       "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts\u0000authenticateGitHubWithPrisma": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts\u0000authenticateGoogleWithPrisma": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts\u0000authenticateWithPrisma": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts\u0000authorize": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts\u0000redirect": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/auth/config.ts\u0000signIn": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/auth/password-service.ts\u0000verifyPassword": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/auth/validate-session.ts\u0000validateSession": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/api.ts\u0000attachCaseElement": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/branch-utils.ts\u0000collectSubtree": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/branch-utils.ts\u0000extractBranches": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/case-updates.ts\u0000updateEvidence": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/case-updates.ts\u0000updatePropertyClaim": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/case-updates.ts\u0000updateStrategy": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/case-updates.ts\u0000updatedStrategies": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "lib/case/document-export.ts\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/document-export.ts\u0000exportDocument": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/document-export.ts\u0000layoutForExport": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/document-export.ts\u0000shouldIncludeInDiagram": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts\u0000addEvidenceToClaim": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts\u0000processClaimForEvidenceUpdate": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts\u0000result": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts\u0000searchInStrategiesForEvidence": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/evidence.ts\u0000searchSinglePropertyClaimForEvidence": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/identifier-utils.ts\u0000compareIdentifiers": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/image-export.ts\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/image-export.ts\u0000captureAndDownload": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/image-export.ts\u0000shouldInclude": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-operations.ts\u0000collectOrphanElements": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/node-operations.ts\u0000collectStrategyOrphans": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/node-operations.ts\u0000deleteNode": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-operations.ts\u0000detachNode": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000<arrow>": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000calculateIdentifierFromLastItem": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000getNodeArray": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000searchInAllNestedStructures": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000searchInPropertyClaims": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000searchInStrategyItems": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000setNodeIdentifier": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/node-utils.ts\u0000traverseNestedStructures": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000addPropertyClaimToList": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000addPropertyClaimToNested": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000listPropertyClaims": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000processClaimUpdate": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000result": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000searchInStrategies": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/property-claims.ts\u0000searchPropertyClaimItem": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000arraysEqual": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000computeElementChanges": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000computeEvidenceLinkChanges": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000detectCircularReference": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000flattenTreeWithLinks": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000processElementChange": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-diff.ts\u0000validateParentReferences": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000addHiddenProp": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000findParentNode": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000getAdjacent": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000handleChildVisibility": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000processChildrenForHiddenStatus": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000searchWithDeepFirst": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/case/tree-utils.ts\u0000toggleChildren": {
+      "crap_critical": {
         "count": 1
       }
     },
@@ -1961,13 +3033,206 @@
         "count": 1
       }
     },
+    "lib/export/exporters/pdf-components.tsx\u0000formatImageSrc": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts\u0000createDiagramPage": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts\u0000createElementBlock": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts\u0000detectImageType": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts\u0000export": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/exporters/word-exporter.ts\u0000renderContentBlock": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/base-template.ts\u0000collectAllComments": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/base-template.ts\u0000collectElementsByType": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/base-template.ts\u0000shouldIncludeElement": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/presets/full-report.ts\u0000renderElementWithContext": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/export/templates/presets/full-report.ts\u0000renderEvidenceItem": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/blob-storage-service.ts\u0000deleteBlob": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/blob-storage-service.ts\u0000uploadToBlob": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/case-batch-update-service.ts\u0000calculateLevel": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/case-fetch-service.ts\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "lib/services/case-image-service.ts\u0000uploadCaseImage": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/case-trash-service.ts\u0000purgeExpiredCases": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/connected-accounts-service.ts\u0000getNewAuthProvider": {
       "crap_high": {
         "count": 1
       }
     },
     "lib/services/element-service.ts\u0000updateElement": {
       "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/email-service.ts\u0000sendEmail": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/github-api-service.ts\u0000buildParsedUrl": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/github-api-service.ts\u0000fetchFileFromGitHub": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/github-api-service.ts\u0000getUserGitHubToken": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/github-api-service.ts\u0000handleOctokitError": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/github-api-service.ts\u0000parseGitHubUrl": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/google-drive-service.ts\u0000downloadFileFromDrive": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/google-drive-service.ts\u0000getOrCreateBackupFolder": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/google-drive-service.ts\u0000getUserGoogleTokens": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/google-drive-service.ts\u0000listBackupFiles": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/google-drive-service.ts\u0000uploadBackupToDrive": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/sse-connection-manager.ts\u0000addConnection": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/sse-connection-manager.ts\u0000sendHeartbeat": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/user-management-service.ts\u0000buildProfileUpdateData": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/user-management-service.ts\u0000changePassword": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/services/user-management-service.ts\u0000updateUserProfile": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/user-management-service.ts\u0000validateProfileInput": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/user-service.ts\u0000dismissMigrationNotice": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "lib/services/user-service.ts\u0000registerUser": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "lib/toast.ts\u0000toast": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "middleware.ts\u0000middleware": {
+      "crap_critical": {
         "count": 1
       }
     },
