@@ -11,8 +11,11 @@ import type {
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
-import { enforceAssertionStatusRules } from "@/lib/services/element-service";
-import { getDescendantIds } from "@/lib/utils/tree-traversal";
+import {
+	enforceAssertionStatusRules,
+	isSystemUserPrincipal,
+} from "@/lib/services/element-service";
+import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
@@ -33,10 +36,23 @@ async function validateAssertionStatusChanges(
 	creates: CreateChange[],
 	updates: UpdateChange[]
 ): Promise<string | null> {
+	const touchesAssertionStatus =
+		creates.some((c) => c.data.assertionStatus !== undefined) ||
+		updates.some((c) => c.data.assertionStatus !== undefined);
+
+	// enforceAssertionStatusRules's principal check (guardAssertionStatusWrite)
+	// depends only on the acting user, which is constant across the whole
+	// batch — resolve it once instead of once per create/update that sets
+	// assertionStatus.
+	const isSystemUser = touchesAssertionStatus
+		? await isSystemUserPrincipal(userId)
+		: false;
+
 	for (const change of creates) {
 		const error = await enforceAssertionStatusRules(
 			change.data.assertionStatus,
-			userId
+			userId,
+			isSystemUser
 		);
 		if (error) {
 			return error;
@@ -45,7 +61,8 @@ async function validateAssertionStatusChanges(
 	for (const change of updates) {
 		const error = await enforceAssertionStatusRules(
 			change.data.assertionStatus,
-			userId
+			userId,
+			isSystemUser
 		);
 		if (error) {
 			return error;
@@ -126,21 +143,6 @@ async function checkForConflict(
 }
 
 /**
- * Validates parent change doesn't create a circular reference
- */
-async function validateNoCircularReference(
-	elementId: string,
-	newParentId: string
-): Promise<boolean> {
-	if (elementId === newParentId) {
-		return false;
-	}
-
-	const descendants = await getDescendantIds(elementId);
-	return !descendants.includes(newParentId);
-}
-
-/**
  * Maps element type string to Prisma enum
  */
 function mapElementType(type: string): PrismaElementType {
@@ -160,15 +162,28 @@ async function validateCreateParents(
 	creates: CreateChange[],
 	deletes: DeleteChange[]
 ): Promise<string | null> {
+	// One batched lookup for every parentId referenced by a create, instead
+	// of one findUnique per create.
+	const parentIdsToCheck = Array.from(
+		new Set(
+			creates.map((c) => c.parentId).filter((id): id is string => Boolean(id))
+		)
+	);
+	const existingParents =
+		parentIdsToCheck.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: parentIdsToCheck } },
+					select: { id: true },
+				})
+			: [];
+	const existingParentIds = new Set(existingParents.map((p) => p.id));
+
 	for (const change of creates) {
 		if (!change.parentId) {
 			continue;
 		}
 
-		const parentExists = await prisma.assuranceElement.findUnique({
-			where: { id: change.parentId },
-			select: { id: true },
-		});
+		const parentExists = existingParentIds.has(change.parentId);
 		const parentBeingCreated = creates.some(
 			(c) => c.elementId === change.parentId
 		);
@@ -188,22 +203,33 @@ async function validateCreateParents(
 }
 
 /**
- * Validates that all parent moves don't create circular references
+ * Validates that all parent moves don't create circular references.
+ *
+ * Descendants for every relevant update are fetched with a single shared
+ * breadth-first sweep (`getDescendantIdsForRoots`) rather than one
+ * `getDescendantIds` walk per update — same self-reference/circular checks,
+ * same order, same error text, just one batch of queries instead of N.
  */
 async function validateUpdateParents(
 	updates: UpdateChange[]
 ): Promise<string | null> {
-	for (const change of updates) {
-		const newParentId = change.data.parentId;
-		if (newParentId === undefined || newParentId === null) {
-			continue;
-		}
+	const relevant = updates.filter(
+		(c) => c.data.parentId !== undefined && c.data.parentId !== null
+	);
+	if (relevant.length === 0) {
+		return null;
+	}
 
-		const isValid = await validateNoCircularReference(
-			change.elementId,
-			newParentId
-		);
-		if (!isValid) {
+	const descendantsByElement = await getDescendantIdsForRoots(
+		relevant.map((c) => c.elementId)
+	);
+
+	for (const change of relevant) {
+		const newParentId = change.data.parentId as string;
+		if (change.elementId === newParentId) {
+			return `Circular reference detected when moving element ${change.elementId}`;
+		}
+		if (descendantsByElement.get(change.elementId)?.has(newParentId)) {
 			return `Circular reference detected when moving element ${change.elementId}`;
 		}
 	}
@@ -211,24 +237,43 @@ async function validateUpdateParents(
 	return null;
 }
 
+/** Minimal shape needed to decide a child's level from its parent row. */
+interface LevelInfo {
+	elementType: PrismaElementType;
+	level: number | null;
+}
+
 /**
- * Calculates the level for a property claim based on its parent
+ * Batched replacement for calling `tx.assuranceElement.findUnique` once per
+ * id: fetches {level, elementType} for every id in one `findMany`. Used by
+ * `applyCreates`/`applyUpdates` so level lookups for a whole batch cost one
+ * query instead of one per element.
  */
-async function calculateLevel(
+async function fetchLevelInfo(
 	tx: TransactionClient,
-	parentId: string | null
-): Promise<number | null> {
-	if (!parentId) {
-		return null;
+	ids: string[]
+): Promise<Map<string, LevelInfo>> {
+	if (ids.length === 0) {
+		return new Map();
 	}
-
-	const parent = await tx.assuranceElement.findUnique({
-		where: { id: parentId },
-		select: { level: true, elementType: true },
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: ids } },
+		select: { id: true, level: true, elementType: true },
 	});
+	return new Map(
+		rows.map((r) => [r.id, { level: r.level, elementType: r.elementType }])
+	);
+}
 
-	if (parent?.elementType === "PROPERTY_CLAIM") {
-		return (parent.level ?? 1) + 1;
+/**
+ * Calculates a child's level from its parent's {level, elementType} — same
+ * rule as the old per-row `calculateLevel`: a PROPERTY_CLAIM parent yields
+ * parent.level+1 (defaulting the parent's own level to 1 if unset), anything
+ * else (including an unresolvable/absent parent) yields 1.
+ */
+function levelFromParentInfo(parentInfo: LevelInfo | undefined): number {
+	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
+		return (parentInfo.level ?? 1) + 1;
 	}
 	return 1;
 }
@@ -299,6 +344,33 @@ async function applyCreates(
 ): Promise<void> {
 	const createMap = new Map(creates.map((c) => [c.elementId, c]));
 	const created = new Set<string>();
+	// Levels of elements created earlier in this same call, keyed by
+	// elementId — populated as createOne runs (parent-before-child order is
+	// required by the self-referencing FK, so creates stay per-row writes).
+	const levelById = new Map<string, number | null>();
+
+	// Parents referenced by property-claim creates that are NOT themselves
+	// part of this batch: their level is fixed pre-transaction state, so
+	// fetch it once for all of them instead of once per create.
+	const externalParentIds = Array.from(
+		new Set(
+			creates
+				.filter((c) => c.data.type === "PROPERTY_CLAIM" && c.parentId)
+				.map((c) => c.parentId as string)
+				.filter((id) => !createMap.has(id))
+		)
+	);
+	const externalParentInfo = await fetchLevelInfo(tx, externalParentIds);
+
+	const resolveParentLevel = (parentId: string): number => {
+		const withinBatchParent = createMap.get(parentId);
+		if (withinBatchParent) {
+			const parentType = mapElementType(withinBatchParent.data.type);
+			const parentLevel = levelById.get(parentId) ?? null;
+			return parentType === "PROPERTY_CLAIM" ? (parentLevel ?? 1) + 1 : 1;
+		}
+		return levelFromParentInfo(externalParentInfo.get(parentId));
+	};
 
 	const createOne = async (change: CreateChange): Promise<void> => {
 		if (created.has(change.elementId)) {
@@ -316,7 +388,7 @@ async function applyCreates(
 		// Calculate level for property claims
 		let level: number | null = null;
 		if (change.data.type === "PROPERTY_CLAIM" && change.parentId) {
-			level = await calculateLevel(tx, change.parentId);
+			level = resolveParentLevel(change.parentId);
 		}
 
 		const createData = buildCreateData(
@@ -328,6 +400,7 @@ async function applyCreates(
 		);
 		await tx.assuranceElement.create({ data: createData });
 		created.add(change.elementId);
+		levelById.set(change.elementId, level);
 	};
 
 	for (const change of creates) {
@@ -372,75 +445,145 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 }
 
 /**
+ * Per-batch lookups `resolveUpdateLevel` needs to recompute an update's
+ * level without a query per row — see `applyUpdates` for how each map is
+ * built and why `recalculatedLevels` exists.
+ */
+interface UpdateLevelContext {
+	ownTypeById: Map<string, LevelInfo>;
+	parentInfoById: Map<string, LevelInfo>;
+	recalculatedLevels: Map<string, number | null>;
+}
+
+/**
+ * Mutates `updateData.level` in place when `change` moves a property claim,
+ * using the pre-fetched per-batch maps in `context` instead of a live query.
+ * Extracted out of `applyUpdates`'s loop (2026-08-25 fallow fix round) so
+ * that function's cognitive complexity stays under the project threshold;
+ * the resolution rule itself is unchanged.
+ */
+function resolveUpdateLevel(
+	change: UpdateChange,
+	updateData: Record<string, unknown>,
+	context: UpdateLevelContext
+): void {
+	if (change.data.parentId === undefined || change.data.parentId === null) {
+		return;
+	}
+
+	const ownType = context.ownTypeById.get(change.elementId)?.elementType;
+	if (ownType !== "PROPERTY_CLAIM") {
+		return;
+	}
+
+	const parentId = change.data.parentId;
+	const parentInfo = context.parentInfoById.get(parentId);
+	const parentLevel = context.recalculatedLevels.has(parentId)
+		? (context.recalculatedLevels.get(parentId) ?? null)
+		: (parentInfo?.level ?? null);
+
+	updateData.level =
+		parentInfo?.elementType === "PROPERTY_CLAIM" ? (parentLevel ?? 1) + 1 : 1;
+}
+
+/**
  * Applies update operations
  */
 async function applyUpdates(
 	tx: TransactionClient,
 	updates: UpdateChange[]
 ): Promise<void> {
+	const relevantForLevel = updates.filter(
+		(c) => c.data.parentId !== undefined && c.data.parentId !== null
+	);
+
+	// Each update's own elementType (never touched by buildUpdateData, so
+	// it's immutable for the lifetime of this call) — one batched fetch
+	// instead of one findUnique per update that moves an element.
+	const ownTypeById = await fetchLevelInfo(
+		tx,
+		relevantForLevel.map((c) => c.elementId)
+	);
+
+	// New-parent {elementType, level} as of the start of this call.
+	// elementType is immutable so this is always correct; level can go
+	// stale if an EARLIER update in this same loop moves that same parent —
+	// recalculatedLevels (populated as the loop runs) corrects for that, so
+	// a later item still sees the freshly-written level rather than this
+	// pre-transaction snapshot.
+	const parentInfoById = await fetchLevelInfo(
+		tx,
+		Array.from(new Set(relevantForLevel.map((c) => c.data.parentId as string)))
+	);
+	const recalculatedLevels = new Map<string, number | null>();
+	const levelContext: UpdateLevelContext = {
+		ownTypeById,
+		parentInfoById,
+		recalculatedLevels,
+	};
+
 	for (const change of updates) {
 		const updateData = buildUpdateData(change.data);
 
-		// Recalculate level if moving a property claim
-		if (change.data.parentId !== undefined && change.data.parentId !== null) {
-			const element = await tx.assuranceElement.findUnique({
-				where: { id: change.elementId },
-				select: { elementType: true },
-			});
-			if (element?.elementType === "PROPERTY_CLAIM") {
-				updateData.level = await calculateLevel(tx, change.data.parentId);
-			}
-		}
+		resolveUpdateLevel(change, updateData, levelContext);
 
 		await tx.assuranceElement.update({
 			where: { id: change.elementId },
 			data: updateData,
 		});
+
+		if ("level" in updateData) {
+			recalculatedLevels.set(
+				change.elementId,
+				updateData.level as number | null
+			);
+		}
 	}
 }
 
 /**
- * Removes evidence links (unlinks evidence from claims)
+ * Removes evidence links (unlinks evidence from claims). Batched into a
+ * single deleteMany with an OR of every (evidenceId, claimId) pair instead
+ * of one deleteMany per unlink change.
  */
 async function applyUnlinkEvidence(
 	tx: TransactionClient,
 	unlinks: UnlinkEvidenceChange[]
 ): Promise<void> {
-	for (const change of unlinks) {
-		await tx.evidenceLink.deleteMany({
-			where: {
+	if (unlinks.length === 0) {
+		return;
+	}
+	await tx.evidenceLink.deleteMany({
+		where: {
+			OR: unlinks.map((change) => ({
 				evidenceId: change.evidenceId,
 				claimId: change.claimId,
-			},
-		});
-	}
+			})),
+		},
+	});
 }
 
 /**
- * Creates evidence links (links evidence to claims)
+ * Creates evidence links (links evidence to claims). `evidenceLink` has a
+ * `@@unique([evidenceId, claimId])` constraint, so a single `createMany`
+ * with `skipDuplicates` gets the same "create only if not already linked"
+ * behaviour as the old per-item findFirst-then-create, in one query instead
+ * of up to two per link.
  */
 async function applyLinkEvidence(
 	tx: TransactionClient,
 	links: LinkEvidenceChange[]
 ): Promise<void> {
-	for (const change of links) {
-		// Check if link already exists to avoid duplicates
-		const existing = await tx.evidenceLink.findFirst({
-			where: {
-				evidenceId: change.evidenceId,
-				claimId: change.claimId,
-			},
-		});
-
-		if (!existing) {
-			await tx.evidenceLink.create({
-				data: {
-					evidenceId: change.evidenceId,
-					claimId: change.claimId,
-				},
-			});
-		}
+	if (links.length === 0) {
+		return;
 	}
+	await tx.evidenceLink.createMany({
+		data: links.map((change) => ({
+			evidenceId: change.evidenceId,
+			claimId: change.claimId,
+		})),
+		skipDuplicates: true,
+	});
 }
 
 /**
