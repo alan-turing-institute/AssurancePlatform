@@ -379,48 +379,23 @@ function UrlsSection({
 	);
 }
 
-// Radix's Select and Dialog each open a `DismissableLayer` with
-// `disableOutsidePointerEvents: true`. While the assertion-status Select is
-// open, that makes Radix set `pointer-events: none` on the Dialog's own
-// content (it's the lower-priority layer), so a click anywhere in the dialog
-// body falls through to the Dialog's own overlay — which the Dialog's
-// independent outside-click detection then reads as a genuine outside click
-// and closes on.
+// Radix's Select and Dialog each open a DismissableLayer with
+// disableOutsidePointerEvents: true. While the assertion-status Select is
+// open, Radix sets pointer-events: none on the Dialog's own content (the
+// lower-priority layer), so a click anywhere in the dialog body falls
+// through to the Dialog's own overlay — which the Dialog's own outside-click
+// detection then reads as a genuine outside click and closes on.
 //
-// Time-bounded guard (see `useAssertionSelectDismissGuard` below): the
-// Dialog's outside-interaction handlers ignore the event if the Select is
-// currently open, OR if the Select closed within the last
-// `SELECT_CLOSE_GUARD_WINDOW_MS`. Both the open flag and the close timestamp
-// are written synchronously, in the Select's own `onOpenChange` — no
-// `setTimeout`, so there is no timer to race and nothing that can be left
-// stuck. The window is what makes this correct rather than just "usually
-// works": in a real browser the Select's own popper (`[role="listbox"]`) is
-// often already unmounted by the time the Dialog's outside handler runs for
-// the SAME dismissing pointerdown — confirmed by direct instrumentation
-// against real Chromium, contrary to the (unverified) assumption that React
-// hadn't re-rendered yet — so a same-tick DOM-presence check reads `false`
-// and does not guard the very click it exists to guard against. A short
-// trailing window survives that ordering: it does not depend on which of
-// the Select's/Dialog's callbacks Radix happens to run first, and it expires
-// on its own, so a rapid sequence of opens/closes can only ever extend how
-// recently the ref was touched, never leave it stuck. This replaces an
-// earlier ref-plus-deferred-`setTimeout(0)`-clear design, which had no
-// `clearTimeout`: repeated rapid open/close cycles queued multiple
-// independent clear-timers with no ordering guarantee relative to Radix's
-// own open/close callbacks, and the losing interleaving occasionally left
-// the ref permanently `true` — the dialog then ignored every future outside
-// click, i.e. got stuck open (confirmed 8/19 runs under a 5-cycle rapid
-// open/close repro).
-//
-// The window only needs to bridge a same-event-tick ordering gap (measured
-// close to 0ms in Chromium instrumentation), so it's kept short: a value
-// close to 100ms turned out to be long enough to also swallow a *second*,
-// genuinely separate outside click that followed within the window in an
-// automated test with no human-speed pauses between actions (caught by the
-// stability e2e case) — i.e. long enough to reintroduce a milder version of
-// the exact "outside click doesn't dismiss" bug this exists to fix, just
-// bounded instead of permanent. 40ms comfortably covers a couple of
-// animation frames without being long enough for that.
+// Guard: the Select's onOpenChange writes an open flag and a close
+// timestamp synchronously (no setTimeout, nothing to leave stuck). The
+// Dialog's outside handlers ignore the event if the Select is open, or
+// closed within SELECT_CLOSE_GUARD_WINDOW_MS — a short window is needed
+// because in a real browser the Select's own popper can already be
+// unmounted by the time the Dialog's outside handler runs for the same
+// dismissing click, so a same-tick DOM-presence check cannot be used
+// instead. The window must stay short: long enough to bridge that
+// same-tick gap, short enough not to also swallow a second, genuinely
+// separate outside click that follows quickly.
 const SELECT_CLOSE_GUARD_WINDOW_MS = 40;
 
 function useAssertionSelectDismissGuard() {

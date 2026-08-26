@@ -160,16 +160,11 @@ test.describe("Case management", () => {
 	test("rapid open/close of the assertion status dropdown does not leave the dialog stuck open or stuck unable to close", async ({
 		page,
 	}) => {
-		// Stability regression: the original fix (a ref tracking the Select's
-		// open state, cleared via a bare `setTimeout(0)` with no
-		// `clearTimeout`) raced under rapid toggling — repeated open/close
-		// cycles could queue clear-timers with no ordering guarantee against
-		// Radix's own open/close callbacks, and the losing interleaving left
-		// the ref permanently `true`, so the dialog then ignored every
-		// subsequent outside click. Replaced with a time-bounded guard (see
-		// `useAssertionSelectDismissGuard` in node-edit-dialog.tsx): both the
-		// open flag and the close timestamp are written synchronously, with
-		// no timer to race and nothing that can be left stuck.
+		// Stability regression: rapid open/close cycling of the Select must
+		// not leave the dialog's outside-dismiss guard (see
+		// `useAssertionSelectDismissGuard` in node-edit-dialog.tsx) stuck
+		// open, since that would make the dialog ignore every subsequent
+		// outside click.
 		const dashboard = new DashboardPage(page);
 		await dashboard.goto();
 
@@ -205,6 +200,8 @@ test.describe("Case management", () => {
 		// than a second click still inside the window the guard uses to
 		// bridge the same-tick dismissal race — real users don't triple
 		// click within a few tens of milliseconds either.
+		// Must stay well above SELECT_CLOSE_GUARD_WINDOW_MS in
+		// node-edit-dialog.tsx.
 		await page.waitForTimeout(250);
 
 		// The dialog must still be dismissable by a subsequent overlay
