@@ -182,6 +182,8 @@ test.describe("Case management", () => {
 			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
 		});
 
+		// Five cycles is enough to expose ordering/state-leak bugs between
+		// rapid open/close toggles; the exact count is arbitrary.
 		for (let i = 0; i < 5; i++) {
 			await assertionStatusTrigger.click();
 			await expect(page.getByRole("listbox")).toBeVisible();
@@ -226,6 +228,8 @@ test.describe("Case management", () => {
 			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
 		});
 
+		// Five cycles is enough to expose ordering/state-leak bugs between
+		// rapid open/close toggles; the exact count is arbitrary.
 		for (let i = 0; i < 5; i++) {
 			await assertionStatusTrigger.click();
 			await expect(page.getByRole("listbox")).toBeVisible();

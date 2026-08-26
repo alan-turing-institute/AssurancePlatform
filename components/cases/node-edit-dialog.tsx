@@ -426,7 +426,10 @@ function useAssertionSelectDismissGuard() {
 	);
 
 	// Focus dismissal (e.g. Tab out of the Select) has no pointerdown to
-	// snapshot, so it falls back to the Select's live open state.
+	// snapshot, so it falls back to the Select's live open state. In
+	// practice Radix already blocks focus-outside dismissal on a modal
+	// DialogContent, so this branch is not known to be exercised — it's
+	// kept for consistency with the pointer guard above.
 	const shouldGuardFocusDismiss = useCallback(
 		() => selectOpenAtPointerDownRef.current || isOpenRef.current,
 		[]
@@ -738,13 +741,15 @@ export default function NodeEditDialog({
 		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent
 				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
-				// Both handlers are guarded: `onPointerDownOutside` covers
-				// dismissal by pointer (the click-through case this fix
-				// targets), `onInteractOutside` also covers dismissal by
-				// focus movement (e.g. Tab out of the Select while it's
-				// open) — Radix fires that independently of a pointerdown,
-				// so only guarding the pointer handler would leave the
-				// focus path unfixed.
+				// `onPointerDownOutside` is the path this fix targets: it's
+				// the click-through case where a click inside the dialog
+				// falls through to the Dialog's own overlay while the
+				// Select is open. `onInteractOutside` is guarded too, for
+				// consistency, but Radix's own DialogContentModal already
+				// calls event.preventDefault() on every focus-outside event
+				// for a modal DialogContent (react-dialog dist
+				// index.mjs, ~L157-160), so that branch never actually runs
+				// against a live dismissal — it's defensive only.
 				onInteractOutside={(event) => {
 					if (shouldGuardFocusDismiss()) {
 						event.preventDefault();
