@@ -503,10 +503,49 @@ async function generateElementName(
 }
 
 /**
+ * Minimal {level, elementType} shape needed to decide a PROPERTY_CLAIM
+ * child's level from a parent or grandparent row. Shared between the
+ * single-element create path here and the batch/JSON-editor path
+ * (case-batch-update-service.ts) so both compute levels the same way.
+ */
+export interface LevelRuleParentInfo {
+	elementType: string;
+	level: number | null;
+}
+
+/**
+ * Single source of truth for the property-claim level rule: a PROPERTY_CLAIM
+ * parent yields parent.level+1 (defaulting an unset parent level to 1); a
+ * STRATEGY parent whose OWN parent is a PROPERTY_CLAIM is transparent —
+ * strategies don't carry a level themselves, so the child's level is derived
+ * from that grandparent instead (grandparent.level+1); anything else
+ * (including an unresolvable parent) yields 1. Takes pre-fetched info only —
+ * no DB calls, so both the single-element and batch paths can call it after
+ * their own (very different) fetch strategies.
+ */
+export function calculateLevelFromParentChain(
+	parentInfo: LevelRuleParentInfo | null | undefined,
+	grandparentInfo: LevelRuleParentInfo | null | undefined
+): number {
+	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
+		return (parentInfo.level ?? 1) + 1;
+	}
+	if (
+		parentInfo?.elementType === "STRATEGY" &&
+		grandparentInfo?.elementType === "PROPERTY_CLAIM"
+	) {
+		return (grandparentInfo.level ?? 1) + 1;
+	}
+	return 1;
+}
+
+/**
  * Calculates level for property claims and retrieves parent info.
  *
  * Strategies are transparent: if the parent is a strategy whose parent is a
  * property claim, the level is derived from that ancestor claim (one hop up).
+ * The rule itself lives in `calculateLevelFromParentChain`; this function
+ * only owns the fetching (parent, then grandparent if needed).
  */
 async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	level: number;
@@ -524,23 +563,23 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 		parentId?: string | null;
 	};
 
-	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
-		return { level: (parentInfo.level || 1) + 1, parentInfo };
-	}
-
-	// Transparent strategy: look one hop further to find ancestor property claim
+	let grandparentInfo: LevelRuleParentInfo | undefined;
 	if (parentInfo?.elementType === "STRATEGY" && parentInfo.parentId) {
 		const grandparent = await prisma.assuranceElement.findFirst({
 			where: { id: parentInfo.parentId, deletedAt: null },
 			select: { level: true, elementType: true, name: true },
 		});
-
-		if (grandparent?.elementType === "PROPERTY_CLAIM") {
-			return { level: (grandparent.level || 1) + 1, parentInfo };
-		}
+		grandparentInfo = grandparent ?? undefined;
 	}
 
-	return { level: 1, parentInfo };
+	const level = calculateLevelFromParentChain(
+		parentInfo
+			? { elementType: parentInfo.elementType, level: parentInfo.level ?? null }
+			: undefined,
+		grandparentInfo
+	);
+
+	return { level, parentInfo };
 }
 
 /**
