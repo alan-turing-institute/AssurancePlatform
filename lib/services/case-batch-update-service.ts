@@ -131,13 +131,30 @@ async function validateEditAccess(
  * update, delete, re-parent, or evidence-link/unlink elements that live in
  * case B.
  *
- * Collects every id this batch references that is expected to ALREADY
- * exist — update/delete targets, parentIds set on updates or creates, and
- * both sides of a link/unlink evidence change — excluding ids this same
- * batch is about to create (those don't exist yet, so they can't be
- * cross-case). One batched `findMany` then rejects the WHOLE batch if any
- * referenced id is missing or belongs to a different case, so a batch is
- * atomic in its acceptance as well as its application.
+ * Two different kinds of reference are collected, and only one of them is
+ * ever exempted by an in-batch create:
+ *
+ * - MUST-EXIST-REGARDLESS ids — a delete's own `elementId`, an update's own
+ *   `elementId`. These name a row the batch claims ALREADY exists and is
+ *   being mutated in place; nothing a batch also creates can satisfy that.
+ *   Checked unconditionally, even if the SAME id also appears as a create's
+ *   `elementId` in this batch — otherwise a batch containing both
+ *   `{type:"delete", elementId:X}` and `{type:"create", elementId:X, ...}`
+ *   for a foreign X would pass ownership (X "will exist" by the time the
+ *   create runs), and since `applyDeletes` runs before `applyCreates` and
+ *   deletes by bare PK with no case filter, the victim's row would be
+ *   hard-deleted and silently recreated under the attacker's case.
+ * - MAY-BE-SATISFIED-BY-A-SIBLING-CREATE ids — parent references
+ *   (`parentId` on a create/update) and FK-style references to another
+ *   element (`defeatsElementId` on a create/update, both sides of a
+ *   link/unlink evidence change). These are legitimately allowed to point
+ *   at an id this SAME batch is creating (e.g. a new claim citing another
+ *   new claim as its defeater), so — and only so — they're exempted when the
+ *   referenced id is also this batch's own create `elementId`.
+ *
+ * One batched `findMany` then rejects the WHOLE batch if any checked
+ * reference is missing or belongs to a different case, so a batch is atomic
+ * in its acceptance as well as its application.
  *
  * Soft-deleted elements (`deletedAt` set) are NOT excluded from the lookup:
  * every other query in this file (`fetchLevelInfo`, `validateCreateParents`)
@@ -162,29 +179,42 @@ async function validateElementOwnership(
 	const createdIds = new Set(creates.map((c) => c.elementId));
 
 	const referencedIds = new Set<string>();
-	const addIfExisting = (id: string | null | undefined) => {
+	// A delete's/update's OWN target: must already exist, full stop — never
+	// exempted just because the same id also appears as a create in this
+	// batch (see the delete+recreate id-reuse note above).
+	const addAlways = (id: string | null | undefined) => {
+		if (id) {
+			referencedIds.add(id);
+		}
+	};
+	// A reference that's legitimately satisfiable by a sibling create in
+	// this same batch (parentId, defeatsElementId, evidence link/unlink
+	// ids) — exempted only when the id IS one of this batch's own creates.
+	const addUnlessSiblingCreate = (id: string | null | undefined) => {
 		if (id && !createdIds.has(id)) {
 			referencedIds.add(id);
 		}
 	};
 
 	for (const change of updates) {
-		addIfExisting(change.elementId);
-		addIfExisting(change.data.parentId);
+		addAlways(change.elementId);
+		addUnlessSiblingCreate(change.data.parentId);
+		addUnlessSiblingCreate(change.data.defeatsElementId);
 	}
 	for (const change of deletes) {
-		addIfExisting(change.elementId);
+		addAlways(change.elementId);
 	}
 	for (const change of creates) {
-		addIfExisting(change.parentId);
+		addUnlessSiblingCreate(change.parentId);
+		addUnlessSiblingCreate(change.data.defeatsElementId);
 	}
 	for (const change of links) {
-		addIfExisting(change.evidenceId);
-		addIfExisting(change.claimId);
+		addUnlessSiblingCreate(change.evidenceId);
+		addUnlessSiblingCreate(change.claimId);
 	}
 	for (const change of unlinks) {
-		addIfExisting(change.evidenceId);
-		addIfExisting(change.claimId);
+		addUnlessSiblingCreate(change.evidenceId);
+		addUnlessSiblingCreate(change.claimId);
 	}
 
 	if (referencedIds.size === 0) {
@@ -880,6 +910,16 @@ async function applyUpdates(
 	);
 	// Grandparent {elementType, level} for any new parent that is a STRATEGY —
 	// the transparent-strategy hop (see calculateLevelFromParentChain).
+	//
+	// KNOWN LIMITATION (flagged in review, tracked as a follow-up, not fixed
+	// here): this snapshot is taken once, before any of this batch's own
+	// moves are applied. If the SAME batch both moves a STRATEGY to a new
+	// PROPERTY_CLAIM parent AND reparents some other element to be a child
+	// of that STRATEGY, the child's level is computed from the STRATEGY's
+	// OLD (pre-batch) grandparent, not its post-batch one — a narrower gap
+	// than the delete/create-reuse and defeatsElementId issues fixed
+	// alongside this comment, and still an improvement over the pre-existing
+	// behaviour (which ignored the transparent-strategy hop here entirely).
 	const grandparentInfoById = await fetchGrandparentInfoForStrategies(
 		tx,
 		parentInfoById
