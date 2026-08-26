@@ -156,4 +156,61 @@ test.describe("Case management", () => {
 		await page.getByRole("button", { name: "Cancel" }).click();
 		await expect(dialogTitle).not.toBeVisible();
 	});
+
+	test("rapid open/close of the assertion status dropdown does not leave the dialog stuck open or stuck unable to close", async ({
+		page,
+	}) => {
+		// Stability regression: the original fix (a ref tracking the Select's
+		// open state, cleared via a bare `setTimeout(0)` with no
+		// `clearTimeout`) raced under rapid toggling — repeated open/close
+		// cycles could queue clear-timers with no ordering guarantee against
+		// Radix's own open/close callbacks, and the losing interleaving left
+		// the ref permanently `true`, so the dialog then ignored every
+		// subsequent outside click. Replaced with a time-bounded guard (see
+		// `useAssertionSelectDismissGuard` in node-edit-dialog.tsx): both the
+		// open flag and the close timestamp are written synchronously, with
+		// no timer to race and nothing that can be left stuck.
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = page.locator("button:has(svg.lucide-pencil)").first();
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		const dialogTitle = page.getByText("Editing G1", { exact: true });
+		await expect(dialogTitle).toBeVisible();
+
+		const assertionStatusTrigger = page.getByRole("combobox", {
+			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
+		});
+
+		for (let i = 0; i < 5; i++) {
+			await assertionStatusTrigger.click();
+			await expect(page.getByRole("listbox")).toBeVisible();
+			await page.keyboard.press("Escape");
+			await expect(page.getByRole("listbox")).not.toBeVisible();
+		}
+
+		// Click the dialog body (not the Select, which is now closed) —
+		// this must be a genuine outside-of-Select click and must not
+		// dismiss the dialog.
+		await dialogTitle.click({ force: true });
+		await expect(dialogTitle).toBeVisible();
+
+		// A short pause past the guard's own close-window, so the next
+		// click is unambiguously a *separate*, later interaction rather
+		// than a second click still inside the window the guard uses to
+		// bridge the same-tick dismissal race — real users don't triple
+		// click within a few tens of milliseconds either.
+		await page.waitForTimeout(250);
+
+		// The dialog must still be dismissable by a subsequent overlay
+		// click — this is the assertion that catches the stuck-open race:
+		// a stuck-`true` guard would swallow this click too.
+		await page.mouse.click(5, 5);
+		await expect(dialogTitle).not.toBeVisible();
+	});
 });

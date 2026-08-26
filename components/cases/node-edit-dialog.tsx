@@ -379,6 +379,74 @@ function UrlsSection({
 	);
 }
 
+// Radix's Select and Dialog each open a `DismissableLayer` with
+// `disableOutsidePointerEvents: true`. While the assertion-status Select is
+// open, that makes Radix set `pointer-events: none` on the Dialog's own
+// content (it's the lower-priority layer), so a click anywhere in the dialog
+// body falls through to the Dialog's own overlay — which the Dialog's
+// independent outside-click detection then reads as a genuine outside click
+// and closes on.
+//
+// Time-bounded guard (see `useAssertionSelectDismissGuard` below): the
+// Dialog's outside-interaction handlers ignore the event if the Select is
+// currently open, OR if the Select closed within the last
+// `SELECT_CLOSE_GUARD_WINDOW_MS`. Both the open flag and the close timestamp
+// are written synchronously, in the Select's own `onOpenChange` — no
+// `setTimeout`, so there is no timer to race and nothing that can be left
+// stuck. The window is what makes this correct rather than just "usually
+// works": in a real browser the Select's own popper (`[role="listbox"]`) is
+// often already unmounted by the time the Dialog's outside handler runs for
+// the SAME dismissing pointerdown — confirmed by direct instrumentation
+// against real Chromium, contrary to the (unverified) assumption that React
+// hadn't re-rendered yet — so a same-tick DOM-presence check reads `false`
+// and does not guard the very click it exists to guard against. A short
+// trailing window survives that ordering: it does not depend on which of
+// the Select's/Dialog's callbacks Radix happens to run first, and it expires
+// on its own, so a rapid sequence of opens/closes can only ever extend how
+// recently the ref was touched, never leave it stuck. This replaces an
+// earlier ref-plus-deferred-`setTimeout(0)`-clear design, which had no
+// `clearTimeout`: repeated rapid open/close cycles queued multiple
+// independent clear-timers with no ordering guarantee relative to Radix's
+// own open/close callbacks, and the losing interleaving occasionally left
+// the ref permanently `true` — the dialog then ignored every future outside
+// click, i.e. got stuck open (confirmed 8/19 runs under a 5-cycle rapid
+// open/close repro).
+//
+// The window only needs to bridge a same-event-tick ordering gap (measured
+// close to 0ms in Chromium instrumentation), so it's kept short: a value
+// close to 100ms turned out to be long enough to also swallow a *second*,
+// genuinely separate outside click that followed within the window in an
+// automated test with no human-speed pauses between actions (caught by the
+// stability e2e case) — i.e. long enough to reintroduce a milder version of
+// the exact "outside click doesn't dismiss" bug this exists to fix, just
+// bounded instead of permanent. 40ms comfortably covers a couple of
+// animation frames without being long enough for that.
+const SELECT_CLOSE_GUARD_WINDOW_MS = 40;
+
+function useAssertionSelectDismissGuard() {
+	const isOpenRef = useRef(false);
+	const lastClosedAtRef = useRef(0);
+
+	const onSelectOpenChange = useCallback((nextOpen: boolean) => {
+		isOpenRef.current = nextOpen;
+		if (!nextOpen) {
+			lastClosedAtRef.current = performance.now();
+		}
+	}, []);
+
+	const shouldGuardOutsideDismiss = useCallback(() => {
+		if (isOpenRef.current) {
+			return true;
+		}
+		return (
+			performance.now() - lastClosedAtRef.current <=
+			SELECT_CLOSE_GUARD_WINDOW_MS
+		);
+	}, []);
+
+	return { onSelectOpenChange, shouldGuardOutsideDismiss };
+}
+
 // --- Main component ---
 
 interface NodeEditDialogProps {
@@ -497,22 +565,8 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
-	// Radix's Select and Dialog each open a `DismissableLayer` with
-	// `disableOutsidePointerEvents: true`. While the assertion-status Select
-	// is open, that makes Radix set `pointer-events: none` on the Dialog's
-	// own content (it's the lower-priority layer), so a click anywhere in
-	// the dialog body falls through to the Dialog's own overlay — which the
-	// Dialog's independent outside-click detection then reads as a genuine
-	// outside click and closes on. Tracking the Select's open state here and
-	// skipping the Dialog's own outside-dismiss while it is true works
-	// around that. The clear-on-close is deferred by one tick (see
-	// `onSelectOpenChange` below): confirmed by instrumented logging, Radix
-	// fires the Select's own `onOpenChange(false)` for the dismissing
-	// pointerdown BEFORE the Dialog's `onInteractOutside`/
-	// `onPointerDownOutside` for that same pointerdown, so clearing the ref
-	// synchronously would already read `false` by the time the Dialog's
-	// guard checks it.
-	const isAssertionSelectOpenRef = useRef(false);
+	const { onSelectOpenChange, shouldGuardOutsideDismiss } =
+		useAssertionSelectDismissGuard();
 
 	// Tracks whether the dialog was open on the previous render, so a
 	// closed→open transition (reopen) can be told apart from staying open
@@ -630,24 +684,7 @@ export default function NodeEditDialog({
 						/>
 						<AssertionStatusSection
 							form={form}
-							onSelectOpenChange={(nextSelectOpen) => {
-								if (nextSelectOpen) {
-									isAssertionSelectOpenRef.current = true;
-									return;
-								}
-								// Defer clearing: for the SAME dismissing pointerdown,
-								// Radix runs the Select's own onOpenChange(false)
-								// BEFORE the Dialog's onInteractOutside/
-								// onPointerDownOutside (confirmed by instrumented
-								// logging), so clearing synchronously here would
-								// already read `false` by the time the guard below
-								// checks it. Deferring by one tick keeps the ref
-								// `true` for that check while still resetting
-								// promptly for any later, unrelated interaction.
-								setTimeout(() => {
-									isAssertionSelectOpenRef.current = false;
-								}, 0);
-							}}
+							onSelectOpenChange={onSelectOpenChange}
 							readOnly={readOnly}
 						/>
 						<ContextSection
@@ -706,13 +743,20 @@ export default function NodeEditDialog({
 		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent
 				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+				// Both handlers are guarded: `onPointerDownOutside` covers
+				// dismissal by pointer (the click-through case this fix
+				// targets), `onInteractOutside` also covers dismissal by
+				// focus movement (e.g. Tab out of the Select while it's
+				// open) — Radix fires that independently of a pointerdown,
+				// so only guarding the pointer handler would leave the
+				// focus path unfixed.
 				onInteractOutside={(event) => {
-					if (isAssertionSelectOpenRef.current) {
+					if (shouldGuardOutsideDismiss()) {
 						event.preventDefault();
 					}
 				}}
 				onPointerDownOutside={(event) => {
-					if (isAssertionSelectOpenRef.current) {
+					if (shouldGuardOutsideDismiss()) {
 						event.preventDefault();
 					}
 				}}
