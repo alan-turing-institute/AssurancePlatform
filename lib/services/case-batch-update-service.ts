@@ -12,6 +12,7 @@ import type {
 } from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
 import {
+	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
 	isSystemUserPrincipal,
 } from "@/lib/services/element-service";
@@ -120,6 +121,119 @@ async function validateEditAccess(
 ): Promise<boolean> {
 	const { canAccessCase } = await import("@/lib/permissions");
 	return canAccessCase({ userId, caseId }, "EDIT");
+}
+
+/**
+ * Guards against cross-case writes through the batch endpoint (IDOR):
+ * `validateEditAccess` only checks the caller has EDIT permission on the
+ * target case, it never confirms the element ids in `changes` actually
+ * belong to that case. Without this, a user with edit access to case A could
+ * update, delete, re-parent, or evidence-link/unlink elements that live in
+ * case B.
+ *
+ * Two different kinds of reference are collected, and only one of them is
+ * ever exempted by an in-batch create:
+ *
+ * - MUST-EXIST-REGARDLESS ids — a delete's own `elementId`, an update's own
+ *   `elementId`. These name a row the batch claims ALREADY exists and is
+ *   being mutated in place; nothing a batch also creates can satisfy that.
+ *   Checked unconditionally, even if the SAME id also appears as a create's
+ *   `elementId` in this batch — otherwise a batch containing both
+ *   `{type:"delete", elementId:X}` and `{type:"create", elementId:X, ...}`
+ *   for a foreign X would pass ownership (X "will exist" by the time the
+ *   create runs), and since `applyDeletes` runs before `applyCreates` and
+ *   deletes by bare PK with no case filter, the victim's row would be
+ *   hard-deleted and silently recreated under the attacker's case.
+ * - MAY-BE-SATISFIED-BY-A-SIBLING-CREATE ids — parent references
+ *   (`parentId` on a create/update) and FK-style references to another
+ *   element (`defeatsElementId` on a create/update, both sides of a
+ *   link/unlink evidence change). These are legitimately allowed to point
+ *   at an id this SAME batch is creating (e.g. a new claim citing another
+ *   new claim as its defeater), so — and only so — they're exempted when the
+ *   referenced id is also this batch's own create `elementId`.
+ *
+ * One batched `findMany` then rejects the WHOLE batch if any checked
+ * reference is missing or belongs to a different case, so a batch is atomic
+ * in its acceptance as well as its application.
+ *
+ * Soft-deleted elements (`deletedAt` set) are NOT excluded from the lookup:
+ * every other query in this file (`fetchLevelInfo`, `validateCreateParents`)
+ * already ignores `deletedAt`, and `applyDeletes` hard-deletes rows, so
+ * treating a soft-deleted row as still "belonging to its case" here matches
+ * how the rest of this file already behaves — it does not open a new hole,
+ * and excluding them would just add an inconsistent extra rule for this one
+ * validator.
+ *
+ * The error message names the offending id(s) but never the case they
+ * actually belong to, so a caller probing for other cases' element ids
+ * learns only "not in this case", not which case it's really in.
+ */
+async function validateElementOwnership(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[],
+	links: LinkEvidenceChange[],
+	unlinks: UnlinkEvidenceChange[]
+): Promise<string | null> {
+	const createdIds = new Set(creates.map((c) => c.elementId));
+
+	const referencedIds = new Set<string>();
+	// A delete's/update's OWN target: must already exist, full stop — never
+	// exempted just because the same id also appears as a create in this
+	// batch (see the delete+recreate id-reuse note above).
+	const addAlways = (id: string | null | undefined) => {
+		if (id) {
+			referencedIds.add(id);
+		}
+	};
+	// A reference that's legitimately satisfiable by a sibling create in
+	// this same batch (parentId, defeatsElementId, evidence link/unlink
+	// ids) — exempted only when the id IS one of this batch's own creates.
+	const addUnlessSiblingCreate = (id: string | null | undefined) => {
+		if (id && !createdIds.has(id)) {
+			referencedIds.add(id);
+		}
+	};
+
+	for (const change of updates) {
+		addAlways(change.elementId);
+		addUnlessSiblingCreate(change.data.parentId);
+		addUnlessSiblingCreate(change.data.defeatsElementId);
+	}
+	for (const change of deletes) {
+		addAlways(change.elementId);
+	}
+	for (const change of creates) {
+		addUnlessSiblingCreate(change.parentId);
+		addUnlessSiblingCreate(change.data.defeatsElementId);
+	}
+	for (const change of links) {
+		addUnlessSiblingCreate(change.evidenceId);
+		addUnlessSiblingCreate(change.claimId);
+	}
+	for (const change of unlinks) {
+		addUnlessSiblingCreate(change.evidenceId);
+		addUnlessSiblingCreate(change.claimId);
+	}
+
+	if (referencedIds.size === 0) {
+		return null;
+	}
+
+	const ids = Array.from(referencedIds);
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: ids } },
+		select: { id: true, caseId: true },
+	});
+	const rowById = new Map(rows.map((r) => [r.id, r]));
+
+	const offendingIds = ids.filter((id) => rowById.get(id)?.caseId !== caseId);
+	if (offendingIds.length > 0) {
+		return `Element${offendingIds.length > 1 ? "s" : ""} ${offendingIds.join(", ")} not found in this case`;
+	}
+
+	return null;
 }
 
 /**
@@ -237,17 +351,23 @@ async function validateUpdateParents(
 	return null;
 }
 
-/** Minimal shape needed to decide a child's level from its parent row. */
+/**
+ * Minimal shape needed to decide a child's level from its parent row —
+ * `parentId` is included so a STRATEGY parent's own parent (the transparent
+ * grandparent hop — see `calculateLevelFromParentChain`) can be looked up
+ * from the same batched-fetch shape.
+ */
 interface LevelInfo {
 	elementType: PrismaElementType;
 	level: number | null;
+	parentId: string | null;
 }
 
 /**
  * Batched replacement for calling `tx.assuranceElement.findUnique` once per
- * id: fetches {level, elementType} for every id in one `findMany`. Used by
- * `applyCreates`/`applyUpdates` so level lookups for a whole batch cost one
- * query instead of one per element.
+ * id: fetches {level, elementType, parentId} for every id in one
+ * `findMany`. Used by `applyCreates`/`applyUpdates`/the cascade so level
+ * lookups for a whole batch cost one query instead of one per element.
  */
 async function fetchLevelInfo(
 	tx: TransactionClient,
@@ -258,24 +378,38 @@ async function fetchLevelInfo(
 	}
 	const rows = await tx.assuranceElement.findMany({
 		where: { id: { in: ids } },
-		select: { id: true, level: true, elementType: true },
+		select: { id: true, level: true, elementType: true, parentId: true },
 	});
 	return new Map(
-		rows.map((r) => [r.id, { level: r.level, elementType: r.elementType }])
+		rows.map((r) => [
+			r.id,
+			{ level: r.level, elementType: r.elementType, parentId: r.parentId },
+		])
 	);
 }
 
 /**
- * Calculates a child's level from its parent's {level, elementType} — same
- * rule as the old per-row `calculateLevel`: a PROPERTY_CLAIM parent yields
- * parent.level+1 (defaulting the parent's own level to 1 if unset), anything
- * else (including an unresolvable/absent parent) yields 1.
+ * For every STRATEGY entry in `parentInfoById`, batch-fetches its OWN parent
+ * (the grandparent, from the child's point of view) — the extra hop
+ * `calculateLevelFromParentChain` needs to apply the transparent-strategy
+ * rule. Keyed by grandparent id, same shape as `fetchLevelInfo` so it can be
+ * looked up alongside `parentInfoById`/`ownTypeById` interchangeably.
  */
-function levelFromParentInfo(parentInfo: LevelInfo | undefined): number {
-	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
-		return (parentInfo.level ?? 1) + 1;
-	}
-	return 1;
+function fetchGrandparentInfoForStrategies(
+	tx: TransactionClient,
+	parentInfoById: Map<string, LevelInfo>
+): Promise<Map<string, LevelInfo>> {
+	const grandparentIds = Array.from(
+		new Set(
+			Array.from(parentInfoById.values())
+				.filter(
+					(info): info is LevelInfo & { parentId: string } =>
+						info.elementType === "STRATEGY" && Boolean(info.parentId)
+				)
+				.map((info) => info.parentId)
+		)
+	);
+	return fetchLevelInfo(tx, grandparentIds);
 }
 
 /**
@@ -351,7 +485,9 @@ async function applyCreates(
 
 	// Parents referenced by property-claim creates that are NOT themselves
 	// part of this batch: their level is fixed pre-transaction state, so
-	// fetch it once for all of them instead of once per create.
+	// fetch it once for all of them instead of once per create. A second pass
+	// fetches the grandparent of any of those parents that is a STRATEGY —
+	// the transparent-strategy hop `calculateLevelFromParentChain` needs.
 	const externalParentIds = Array.from(
 		new Set(
 			creates
@@ -361,15 +497,38 @@ async function applyCreates(
 		)
 	);
 	const externalParentInfo = await fetchLevelInfo(tx, externalParentIds);
+	const externalGrandparentInfo = await fetchGrandparentInfoForStrategies(
+		tx,
+		externalParentInfo
+	);
+	const externalInfo = new Map([
+		...externalParentInfo,
+		...externalGrandparentInfo,
+	]);
+
+	// Resolves {elementType, level, parentId} for any id referenced by this
+	// batch's creates, whether it's being created in this same call (in which
+	// case its level was just computed by an earlier, parent-first `createOne`
+	// call) or already exists (the pre-transaction snapshot above).
+	const resolveInfo = (id: string): LevelInfo | undefined => {
+		const withinBatch = createMap.get(id);
+		if (withinBatch) {
+			return {
+				elementType: mapElementType(withinBatch.data.type),
+				level: levelById.get(id) ?? null,
+				parentId: withinBatch.parentId ?? null,
+			};
+		}
+		return externalInfo.get(id);
+	};
 
 	const resolveParentLevel = (parentId: string): number => {
-		const withinBatchParent = createMap.get(parentId);
-		if (withinBatchParent) {
-			const parentType = mapElementType(withinBatchParent.data.type);
-			const parentLevel = levelById.get(parentId) ?? null;
-			return parentType === "PROPERTY_CLAIM" ? (parentLevel ?? 1) + 1 : 1;
-		}
-		return levelFromParentInfo(externalParentInfo.get(parentId));
+		const parentInfo = resolveInfo(parentId);
+		const grandparentInfo =
+			parentInfo?.elementType === "STRATEGY" && parentInfo.parentId
+				? resolveInfo(parentInfo.parentId)
+				: undefined;
+		return calculateLevelFromParentChain(parentInfo, grandparentInfo);
 	};
 
 	const createOne = async (change: CreateChange): Promise<void> => {
@@ -465,10 +624,32 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 function resolveFinalLevelsForBatch(
 	moveMap: Map<string, string>,
 	ownTypeById: Map<string, LevelInfo>,
-	parentInfoById: Map<string, LevelInfo>
+	externalInfoById: Map<string, LevelInfo>
 ): Map<string, number> {
 	const finalLevels = new Map<string, number>();
 	const visiting = new Set<string>();
+
+	// Static (pre-batch) info for any id this batch references, whether it's
+	// one of the moved elements themselves or one of their (non-moved) new
+	// parents/grandparents.
+	const getInfo = (id: string): LevelInfo | undefined =>
+		ownTypeById.get(id) ?? externalInfoById.get(id);
+
+	// Resolves {elementType, level, parentId} for `id` as it will stand AFTER
+	// this batch: if `id` is itself being moved and is a PROPERTY_CLAIM, its
+	// level comes from `resolve` (below); otherwise it's the static snapshot.
+	// Only ever recurses into `resolve` for ids already known to be
+	// PROPERTY_CLAIM, so `finalLevels` never gets a spurious entry for a
+	// STRATEGY (which would wrongly cause its own update to write a level).
+	const resolvedInfo = (id: string): LevelInfo | undefined => {
+		const info = getInfo(id);
+		if (!info) {
+			return undefined;
+		}
+		const isMovedClaim =
+			moveMap.has(id) && info.elementType === "PROPERTY_CLAIM";
+		return isMovedClaim ? { ...info, level: resolve(id) } : info;
+	};
 
 	const resolve = (elementId: string): number => {
 		const memoised = finalLevels.get(elementId);
@@ -485,16 +666,12 @@ function resolveFinalLevelsForBatch(
 		const newParentId = moveMap.get(elementId);
 		let level = 1;
 		if (newParentId) {
-			const parentIsMoved = moveMap.has(newParentId);
-			const parentType = parentIsMoved
-				? ownTypeById.get(newParentId)?.elementType
-				: parentInfoById.get(newParentId)?.elementType;
-			if (parentType === "PROPERTY_CLAIM") {
-				const parentLevel = parentIsMoved
-					? resolve(newParentId)
-					: (parentInfoById.get(newParentId)?.level ?? 1);
-				level = parentLevel + 1;
-			}
+			const parentInfo = resolvedInfo(newParentId);
+			const grandparentInfo =
+				parentInfo?.elementType === "STRATEGY" && parentInfo.parentId
+					? resolvedInfo(parentInfo.parentId)
+					: undefined;
+			level = calculateLevelFromParentChain(parentInfo, grandparentInfo);
 		}
 
 		visiting.delete(elementId);
@@ -530,19 +707,27 @@ interface DescendantRow {
  * it is itself one of the roots this function is called for, so its
  * subtree is recomputed from ITS new position via its own separate call.
  */
-/** One pending descendant row in `cascadeFromRoot`'s frontier walk. */
+/**
+ * One pending descendant row in `cascadeFromRoot`'s frontier walk.
+ * `parentInfo`/`grandparentInfo` are the {elementType, level} of the row's
+ * OWN actual parent and grandparent (not a rolling "nearest property claim"
+ * anchor) — same shape `calculateLevelFromParentChain` takes everywhere
+ * else, so a STRATEGY row in the middle of a subtree is transparent here
+ * too: its level is computed but never used to gate its children (its
+ * elementType, not its level, is what the shared rule looks at).
+ */
 interface CascadeFrontierEntry {
-	parentIsPropertyClaim: boolean;
-	parentLevel: number;
+	grandparentInfo: LevelInfo | undefined;
+	parentInfo: LevelInfo;
 	row: DescendantRow;
 }
 
 /**
  * Processes a single descendant row for `cascadeFromRoot`: computes its
- * level, records a level update when it's a property claim, and returns the
- * next frontier entries for its children — or an empty array if this row is
- * an explicit mover in `moveMap` (stop descending, per `cascadeFromRoot`'s
- * contract).
+ * level via the shared `calculateLevelFromParentChain` rule, records a level
+ * update when it's a property claim, and returns the next frontier entries
+ * for its children — or an empty array if this row is an explicit mover in
+ * `moveMap` (stop descending, per `cascadeFromRoot`'s contract).
  */
 function cascadeFrontierStep(
 	entry: CascadeFrontierEntry,
@@ -550,9 +735,9 @@ function cascadeFrontierStep(
 	moveMap: Map<string, string>,
 	levelUpdates: Map<string, number>
 ): CascadeFrontierEntry[] {
-	const { row, parentLevel, parentIsPropertyClaim } = entry;
+	const { row, parentInfo, grandparentInfo } = entry;
 	const isPropertyClaim = row.elementType === "PROPERTY_CLAIM";
-	const level = parentIsPropertyClaim ? parentLevel + 1 : 1;
+	const level = calculateLevelFromParentChain(parentInfo, grandparentInfo);
 
 	if (moveMap.has(row.id)) {
 		return [];
@@ -560,10 +745,16 @@ function cascadeFrontierStep(
 	if (isPropertyClaim) {
 		levelUpdates.set(row.id, level);
 	}
+
+	const ownInfo: LevelInfo = {
+		elementType: row.elementType,
+		level,
+		parentId: row.parentId,
+	};
 	return (childrenByParent.get(row.id) ?? []).map((child) => ({
 		row: child,
-		parentLevel: level,
-		parentIsPropertyClaim: isPropertyClaim,
+		parentInfo: ownInfo,
+		grandparentInfo: parentInfo,
 	}));
 }
 
@@ -574,12 +765,17 @@ function cascadeFromRoot(
 	moveMap: Map<string, string>,
 	levelUpdates: Map<string, number>
 ): void {
+	const rootInfo: LevelInfo = {
+		elementType: "PROPERTY_CLAIM" as PrismaElementType,
+		level: rootLevel,
+		parentId: null,
+	};
 	let frontier: CascadeFrontierEntry[] = (
 		childrenByParent.get(rootId) ?? []
 	).map((row) => ({
 		row,
-		parentLevel: rootLevel,
-		parentIsPropertyClaim: true,
+		parentInfo: rootInfo,
+		grandparentInfo: undefined,
 	}));
 
 	while (frontier.length > 0) {
@@ -712,6 +908,23 @@ async function applyUpdates(
 		tx,
 		Array.from(new Set(relevantForLevel.map((c) => c.data.parentId as string)))
 	);
+	// Grandparent {elementType, level} for any new parent that is a STRATEGY —
+	// the transparent-strategy hop (see calculateLevelFromParentChain).
+	//
+	// KNOWN LIMITATION (flagged in review, tracked as a follow-up, not fixed
+	// here): this snapshot is taken once, before any of this batch's own
+	// moves are applied. If the SAME batch both moves a STRATEGY to a new
+	// PROPERTY_CLAIM parent AND reparents some other element to be a child
+	// of that STRATEGY, the child's level is computed from the STRATEGY's
+	// OLD (pre-batch) grandparent, not its post-batch one — a narrower gap
+	// than the delete/create-reuse and defeatsElementId issues fixed
+	// alongside this comment, and still an improvement over the pre-existing
+	// behaviour (which ignored the transparent-strategy hop here entirely).
+	const grandparentInfoById = await fetchGrandparentInfoForStrategies(
+		tx,
+		parentInfoById
+	);
+	const externalInfoById = new Map([...parentInfoById, ...grandparentInfoById]);
 	const moveMap = new Map(
 		relevantForLevel.map((c) => [c.elementId, c.data.parentId as string])
 	);
@@ -719,7 +932,7 @@ async function applyUpdates(
 	const finalLevels = resolveFinalLevelsForBatch(
 		moveMap,
 		ownTypeById,
-		parentInfoById
+		externalInfoById
 	);
 	const cascadeLevels = await resolveDescendantCascadeLevels(
 		tx,
@@ -831,6 +1044,21 @@ export async function applyBatchUpdate(
 	const links = changes.filter(
 		(c): c is LinkEvidenceChange => c.type === "link_evidence"
 	);
+
+	// IDOR guard: confirms every existing element this batch references
+	// (update/delete targets, parent references, evidence links) actually
+	// belongs to `caseId` — case-level EDIT access alone doesn't prove that.
+	const ownershipError = await validateElementOwnership(
+		caseId,
+		creates,
+		updates,
+		deletes,
+		links,
+		unlinks
+	);
+	if (ownershipError) {
+		return { error: ownershipError };
+	}
 
 	// ADR 0004 D3 write rule: assertionStatus is author-declared only — see
 	// enforceAssertionStatusRules's docstring (element-service.ts) for why

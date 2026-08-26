@@ -2066,4 +2066,616 @@ describe("applyBatchUpdate", () => {
 			expect(grandchild?.level).toBe(3);
 		});
 	});
+
+	/**
+	 * TEA — Batch endpoint does not verify element ownership against the
+	 * case: `validateEditAccess` only confirms the caller has EDIT access to
+	 * the TARGET case, never that the element ids the batch actually touches
+	 * belong to that case. Without `validateElementOwnership`, a user with
+	 * edit access to case A could write to, delete, re-parent, or evidence-
+	 * link/unlink elements that live in case B (IDOR). Every change type
+	 * that references an id expected to already exist is covered here.
+	 */
+	describe("cross-case element ownership (IDOR guard)", () => {
+		it("rejects an update targeting an element that belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const otherCase = await createTestCase(user.id);
+			const foreignElement = await createTestElement(otherCase.id, user.id, {
+				elementType: "GOAL",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: foreignElement.id,
+					data: { name: "Hijacked" },
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const unchanged = await prisma.assuranceElement.findUnique({
+				where: { id: foreignElement.id },
+			});
+			expect(unchanged?.name).not.toBe("Hijacked");
+		});
+
+		it("rejects a delete targeting an element that belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const otherCase = await createTestCase(user.id);
+			const foreignElement = await createTestElement(otherCase.id, user.id, {
+				elementType: "GOAL",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{ type: "delete", elementId: foreignElement.id },
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const stillThere = await prisma.assuranceElement.findUnique({
+				where: { id: foreignElement.id },
+			});
+			expect(stillThere).not.toBeNull();
+		});
+
+		it("rejects a create whose parentId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const otherCase = await createTestCase(user.id);
+			const foreignParent = await createTestElement(otherCase.id, user.id, {
+				elementType: "GOAL",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const newId = `element-foreign-parent-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: newId,
+					parentId: foreignParent.id,
+					data: {
+						id: newId,
+						type: "PROPERTY_CLAIM",
+						name: "Smuggled Under Foreign Parent",
+						description: "Should never be created",
+						inSandbox: false,
+					},
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const created = await prisma.assuranceElement.findUnique({
+				where: { id: newId },
+			});
+			expect(created).toBeNull();
+		});
+
+		it("rejects an update that moves an element to a parentId belonging to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const mover = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+			const otherCase = await createTestCase(user.id);
+			const foreignParent = await createTestElement(otherCase.id, user.id, {
+				elementType: "GOAL",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: mover.id,
+					data: { parentId: foreignParent.id },
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const unmoved = await prisma.assuranceElement.findUnique({
+				where: { id: mover.id },
+			});
+			expect(unmoved?.parentId).toBeNull();
+		});
+
+		it("rejects link_evidence when the evidenceId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const claim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+			const otherCase = await createTestCase(user.id);
+			const foreignEvidence = await createTestElement(otherCase.id, user.id, {
+				elementType: "EVIDENCE",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "link_evidence",
+					evidenceId: foreignEvidence.id,
+					claimId: claim.id,
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const link = await prisma.evidenceLink.findFirst({
+				where: { evidenceId: foreignEvidence.id, claimId: claim.id },
+			});
+			expect(link).toBeNull();
+		});
+
+		it("rejects link_evidence when the claimId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const evidence = await createTestElement(testCase.id, user.id, {
+				elementType: "EVIDENCE",
+			});
+			const otherCase = await createTestCase(user.id);
+			const foreignClaim = await createTestElement(otherCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "link_evidence",
+					evidenceId: evidence.id,
+					claimId: foreignClaim.id,
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const link = await prisma.evidenceLink.findFirst({
+				where: { evidenceId: evidence.id, claimId: foreignClaim.id },
+			});
+			expect(link).toBeNull();
+		});
+
+		it("rejects unlink_evidence when the evidenceId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const claim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+			const otherCase = await createTestCase(user.id);
+			const foreignEvidence = await createTestElement(otherCase.id, user.id, {
+				elementType: "EVIDENCE",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "unlink_evidence",
+					evidenceId: foreignEvidence.id,
+					claimId: claim.id,
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+		});
+
+		it("rejects unlink_evidence when the claimId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const evidence = await createTestElement(testCase.id, user.id, {
+				elementType: "EVIDENCE",
+			});
+			const otherCase = await createTestCase(user.id);
+			const foreignClaim = await createTestElement(otherCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "unlink_evidence",
+					evidenceId: evidence.id,
+					claimId: foreignClaim.id,
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+		});
+
+		it("rejects the whole batch when a referenced elementId does not exist at all", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: "00000000-0000-0000-0000-000000000099",
+					data: { name: "Ghost" },
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+		});
+
+		it("accepts a batch-created id used as a parentId elsewhere in the same batch", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const parentId = `element-ownership-parent-${Date.now()}`;
+			const childId = `element-ownership-child-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: parentId,
+					parentId: null,
+					data: {
+						id: parentId,
+						type: "GOAL",
+						name: "Batch Parent",
+						description: "Created earlier in this same batch",
+						inSandbox: false,
+					},
+				},
+				{
+					type: "create",
+					elementId: childId,
+					parentId,
+					data: {
+						id: childId,
+						type: "STRATEGY",
+						name: "Batch Child",
+						description: "Parented to a sibling create in this same batch",
+						inSandbox: false,
+					},
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.created).toBe(2);
+
+			const child = await prisma.assuranceElement.findUnique({
+				where: { id: childId },
+			});
+			expect(child?.parentId).toBe(parentId);
+		});
+	});
+
+	/**
+	 * TEA — Batch endpoint does not verify element ownership against the
+	 * case (fold-in): the batch path's level rule (`levelFromParentInfo`,
+	 * now `calculateLevelFromParentChain`) lacked the transparent-strategy
+	 * grandparent hop that `element-service.ts`'s `calculatePropertyClaimLevel`
+	 * already had for the single-element create route — a batch create under
+	 * a STRATEGY silently landed at level 1 instead of following the
+	 * grandparent PROPERTY_CLAIM. This pins that the batch and single-element
+	 * paths now agree.
+	 */
+	describe("transparent-strategy grandparent hop (batch creates)", () => {
+		it("computes a batch-created claim's level from its STRATEGY parent's PROPERTY_CLAIM grandparent", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+			});
+			// grandparent: a top-level property claim.
+			const grandparent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: goal.id,
+			});
+			await prisma.assuranceElement.update({
+				where: { id: grandparent.id },
+				data: { level: 1 },
+			});
+			// parent: a strategy directly under the grandparent claim.
+			const strategy = await createTestElement(testCase.id, user.id, {
+				elementType: "STRATEGY",
+				parentId: grandparent.id,
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const newId = `element-transparent-strategy-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: newId,
+					parentId: strategy.id,
+					data: {
+						id: newId,
+						type: "PROPERTY_CLAIM",
+						name: "Claim Under Strategy",
+						description: "Should skip the strategy and use the grandparent",
+						inSandbox: false,
+					},
+				},
+			];
+
+			expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const created = await prisma.assuranceElement.findUnique({
+				where: { id: newId },
+			});
+			// grandparent.level (1) + 1 = 2 — matches the single-element route
+			// (element-service.ts's calculatePropertyClaimLevel).
+			expect(created?.level).toBe(2);
+		});
+	});
+
+	/**
+	 * TEA — Batch endpoint does not verify element ownership against the
+	 * case (fix round, nanaki-verified repro): a batch containing BOTH a
+	 * delete AND a create for the SAME elementId let a foreign element's id
+	 * slip through `validateElementOwnership`'s createdIds exemption — the
+	 * exemption was meant only for parent-style references that a sibling
+	 * create can legitimately satisfy, not for a delete's own target.
+	 * `applyDeletes` runs before `applyCreates` and deletes by bare PK with
+	 * no case filter, so this pattern hard-deleted the victim's row and
+	 * recreated it under the attacker's case — a cross-case delete-and-
+	 * hijack. `addAlways` now checks a delete's/update's own elementId
+	 * unconditionally, regardless of what else the same batch creates.
+	 */
+	describe("delete+recreate id-reuse bypass (regression)", () => {
+		it("rejects a batch that deletes and recreates the same id when that id belongs to a different case", async () => {
+			const attacker = await createTestUser();
+			const attackerCase = await createTestCase(attacker.id);
+			const victimCase = await createTestCase(attacker.id);
+			const victimElement = await createTestElement(
+				victimCase.id,
+				attacker.id,
+				{ elementType: "GOAL", name: "Victim Element" }
+			);
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			// Same elementId used for BOTH a delete and a create in one batch —
+			// the id-reuse pattern that bypassed the old createdIds exemption.
+			const changes: ElementChange[] = [
+				{ type: "delete", elementId: victimElement.id },
+				{
+					type: "create",
+					elementId: victimElement.id,
+					parentId: null,
+					data: {
+						id: victimElement.id,
+						type: "GOAL",
+						name: "Hijacked Into Attacker Case",
+						description: "Should never be created",
+						inSandbox: false,
+					},
+				},
+			];
+
+			expectError(
+				await applyBatchUpdate(attacker.id, attackerCase.id, changes)
+			);
+
+			// The victim's element must survive, untouched, in its own case.
+			const stillThere = await prisma.assuranceElement.findUnique({
+				where: { id: victimElement.id },
+			});
+			expect(stillThere).not.toBeNull();
+			expect(stillThere?.caseId).toBe(victimCase.id);
+			expect(stillThere?.name).toBe("Victim Element");
+		});
+
+		it("still allows a same-batch delete+recreate of the same id when the id genuinely belongs to the target case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "Original",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{ type: "delete", elementId: element.id },
+				{
+					type: "create",
+					elementId: element.id,
+					parentId: null,
+					data: {
+						id: element.id,
+						type: "GOAL",
+						name: "Recreated",
+						description: "Legitimate delete+recreate within the owning case",
+						inSandbox: false,
+					},
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.created).toBe(1);
+			expect(data.summary.deleted).toBe(1);
+
+			const recreated = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(recreated?.name).toBe("Recreated");
+			expect(recreated?.caseId).toBe(testCase.id);
+		});
+	});
+
+	/**
+	 * TEA — Batch endpoint does not verify element ownership against the
+	 * case (fix round, vincent): `defeatsElementId` is a real FK to
+	 * AssuranceElement (`defeatsElement` relation "Defeater",
+	 * prisma/schema.prisma) carried on both the create and update payload
+	 * shapes (lib/schemas/batch-update.ts), but `validateElementOwnership`
+	 * never collected it — the same IDOR class already closed for
+	 * `parentId` and the evidence-link ids. Scoped to the batch path only;
+	 * the single-element route (element-service.ts) has the same gap,
+	 * tracked as a separate issue.
+	 */
+	describe("defeatsElementId cross-case reference (regression)", () => {
+		it("rejects a create whose defeatsElementId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const otherCase = await createTestCase(user.id);
+			const foreignTarget = await createTestElement(otherCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const newId = `element-defeats-foreign-create-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: newId,
+					parentId: null,
+					data: {
+						id: newId,
+						type: "PROPERTY_CLAIM",
+						name: "Smuggled Defeater",
+						description: "Should never be created",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: foreignTarget.id,
+					},
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const created = await prisma.assuranceElement.findUnique({
+				where: { id: newId },
+			});
+			expect(created).toBeNull();
+		});
+
+		it("rejects an update whose defeatsElementId belongs to a different case", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const claim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "Not Yet A Defeater",
+			});
+			const otherCase = await createTestCase(user.id);
+			const foreignTarget = await createTestElement(otherCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: claim.id,
+					data: { isDefeater: true, defeatsElementId: foreignTarget.id },
+				},
+			];
+
+			expectError(await applyBatchUpdate(user.id, testCase.id, changes));
+
+			const unchanged = await prisma.assuranceElement.findUnique({
+				where: { id: claim.id },
+			});
+			expect(unchanged?.defeatsElementId).toBeNull();
+		});
+
+		it("accepts a defeatsElementId that points at a sibling create in the same batch", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			// defeatsElementId is validated as a UUID by the element-data
+			// validation layer (lib/schemas/element-validation.ts), so both
+			// ids here must be real UUIDs, not the plain test-fixture strings
+			// used for elementId elsewhere in this file.
+			const targetId = crypto.randomUUID();
+			const defeaterId = crypto.randomUUID();
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: targetId,
+					parentId: null,
+					data: {
+						id: targetId,
+						type: "PROPERTY_CLAIM",
+						name: "Defeated Claim",
+						description: "Created in the same batch as its defeater",
+						inSandbox: false,
+					},
+				},
+				{
+					type: "create",
+					elementId: defeaterId,
+					parentId: null,
+					data: {
+						id: defeaterId,
+						type: "PROPERTY_CLAIM",
+						name: "Defeater Claim",
+						description: "References a sibling create as its defeats target",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: targetId,
+					},
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.created).toBe(2);
+
+			const defeater = await prisma.assuranceElement.findUnique({
+				where: { id: defeaterId },
+			});
+			expect(defeater?.defeatsElementId).toBe(targetId);
+		});
+	});
 });
