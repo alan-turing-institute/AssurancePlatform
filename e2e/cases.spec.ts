@@ -2,6 +2,8 @@ import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, STATUS_BUTTON_PATTERN } from "./helpers/constants";
 import { DashboardPage } from "./pages/dashboard-page";
 
+const ASSERTION_STATUS_COMBOBOX_PATTERN = /assertion status/i;
+
 test.describe("Case management", () => {
 	test("dashboard shows seeded cases", async ({ page }) => {
 		const dashboard = new DashboardPage(page);
@@ -101,5 +103,57 @@ test.describe("Case management", () => {
 		await expect(
 			page.getByRole("heading", { name: "Case Information" })
 		).toBeVisible();
+	});
+
+	test("dismissing the assertion status dropdown by clicking the edit dialog body leaves the dialog open", async ({
+		page,
+	}) => {
+		// Regression test: opening the "Assertion status" Select inside the
+		// element edit dialog and then clicking elsewhere in the dialog body
+		// (without picking an option) used to close the whole dialog too —
+		// jsdom can't reproduce this, because it relies on real pointer-events
+		// hit-testing falling through the dialog's own (now pointer-events:
+		// none) content to its overlay once a nested Radix Select is open.
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = page.locator("button:has(svg.lucide-pencil)").first();
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		// A plain text locator, not `getByRole("dialog")`: while the Select
+		// below is open, Radix's `hideOthers` marks the whole dialog
+		// `aria-hidden="true"` (everything outside the Select's own popper is
+		// hidden from assistive tech while it's open), which would make any
+		// role-based query against the dialog time out for the rest of this
+		// test even though the dialog is still visibly on screen.
+		const dialogTitle = page.getByText("Editing G1", { exact: true });
+		await expect(dialogTitle).toBeVisible();
+
+		const assertionStatusTrigger = page.getByRole("combobox", {
+			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
+		});
+		await assertionStatusTrigger.click();
+		await expect(page.getByRole("listbox")).toBeVisible();
+
+		// Click on the dialog body — the dialog's own title, well clear of
+		// the open dropdown's own popper — without choosing an option from
+		// the open dropdown. `force: true` because, pre-fix, Radix sets
+		// `pointer-events: none` on the dialog's own content while the
+		// Select is open — Playwright's default click would otherwise wait
+		// forever for a target that (correctly, per the bug) never becomes
+		// clickable; a real user's click still lands there and falls through
+		// to the dialog's own overlay underneath.
+		await dialogTitle.click({ force: true });
+
+		await expect(page.getByRole("listbox")).not.toBeVisible();
+		await expect(dialogTitle).toBeVisible();
+
+		// The dialog's own close paths must still work.
+		await page.getByRole("button", { name: "Cancel" }).click();
+		await expect(dialogTitle).not.toBeVisible();
 	});
 });

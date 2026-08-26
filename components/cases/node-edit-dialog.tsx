@@ -172,6 +172,7 @@ function TextFieldSection({
 
 interface AssertionStatusSectionProps {
 	form: UseFormReturn<FormValues>;
+	onSelectOpenChange: (open: boolean) => void;
 	readOnly: boolean;
 }
 
@@ -184,6 +185,7 @@ interface AssertionStatusSectionProps {
  */
 function AssertionStatusSection({
 	form,
+	onSelectOpenChange,
 	readOnly,
 }: AssertionStatusSectionProps) {
 	return (
@@ -202,6 +204,7 @@ function AssertionStatusSection({
 					</FormLabel>
 					<Select
 						disabled={readOnly}
+						onOpenChange={onSelectOpenChange}
 						onValueChange={field.onChange}
 						value={field.value}
 					>
@@ -494,6 +497,23 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
+	// Radix's Select and Dialog each open a `DismissableLayer` with
+	// `disableOutsidePointerEvents: true`. While the assertion-status Select
+	// is open, that makes Radix set `pointer-events: none` on the Dialog's
+	// own content (it's the lower-priority layer), so a click anywhere in
+	// the dialog body falls through to the Dialog's own overlay — which the
+	// Dialog's independent outside-click detection then reads as a genuine
+	// outside click and closes on. Tracking the Select's open state here and
+	// skipping the Dialog's own outside-dismiss while it is true works
+	// around that. The clear-on-close is deferred by one tick (see
+	// `onSelectOpenChange` below): confirmed by instrumented logging, Radix
+	// fires the Select's own `onOpenChange(false)` for the dismissing
+	// pointerdown BEFORE the Dialog's `onInteractOutside`/
+	// `onPointerDownOutside` for that same pointerdown, so clearing the ref
+	// synchronously would already read `false` by the time the Dialog's
+	// guard checks it.
+	const isAssertionSelectOpenRef = useRef(false);
+
 	// Tracks whether the dialog was open on the previous render, so a
 	// closed→open transition (reopen) can be told apart from staying open
 	// across re-renders.
@@ -608,7 +628,28 @@ export default function NodeEditDialog({
 							placeholder="Type your justification here (optional)."
 							readOnly={readOnly}
 						/>
-						<AssertionStatusSection form={form} readOnly={readOnly} />
+						<AssertionStatusSection
+							form={form}
+							onSelectOpenChange={(nextSelectOpen) => {
+								if (nextSelectOpen) {
+									isAssertionSelectOpenRef.current = true;
+									return;
+								}
+								// Defer clearing: for the SAME dismissing pointerdown,
+								// Radix runs the Select's own onOpenChange(false)
+								// BEFORE the Dialog's onInteractOutside/
+								// onPointerDownOutside (confirmed by instrumented
+								// logging), so clearing synchronously here would
+								// already read `false` by the time the guard below
+								// checks it. Deferring by one tick keeps the ref
+								// `true` for that check while still resetting
+								// promptly for any later, unrelated interaction.
+								setTimeout(() => {
+									isAssertionSelectOpenRef.current = false;
+								}, 0);
+							}}
+							readOnly={readOnly}
+						/>
 						<ContextSection
 							contextItems={contextItems}
 							newContextValue={newContextValue}
@@ -663,7 +704,19 @@ export default function NodeEditDialog({
 
 	return (
 		<Dialog onOpenChange={handleOpenChange} open={open}>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+			<DialogContent
+				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+				onInteractOutside={(event) => {
+					if (isAssertionSelectOpenRef.current) {
+						event.preventDefault();
+					}
+				}}
+				onPointerDownOutside={(event) => {
+					if (isAssertionSelectOpenRef.current) {
+						event.preventDefault();
+					}
+				}}
+			>
 				<DialogHeader>
 					<DialogTitle>
 						{readOnly ? "Viewing" : "Editing"} {nodeName}
