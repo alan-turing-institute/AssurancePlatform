@@ -317,4 +317,265 @@ describe("batch ownership — adversarial (QA G3)", () => {
 
 		expectError(await applyBatchUpdate(user.id, testCase.id, changes));
 	});
+
+	/**
+	 * Re-verification round (dba9edf6): confirms the delete/update
+	 * "addAlways" fix holds under a slightly harder id-reuse variant — the
+	 * recreate ALSO smuggles a second, DIFFERENT foreign id in as its
+	 * parentId, so a fix that only special-cased the single-id
+	 * delete+recreate pattern (and forgot parentId is still
+	 * addUnlessSiblingCreate) would wrongly accept this.
+	 */
+	it("rejects delete+recreate id-reuse when the recreate's parentId ALSO reuses a second, different foreign id", async () => {
+		const attacker = await createTestUser();
+		const attackerCase = await createTestCase(attacker.id);
+		const victimCase = await createTestCase(attacker.id);
+		const victimElement = await createTestElement(victimCase.id, attacker.id, {
+			elementType: "GOAL",
+			name: "Victim Element",
+		});
+		const secondForeignParent = await createTestElement(
+			victimCase.id,
+			attacker.id,
+			{ elementType: "GOAL", name: "Second Foreign Element" }
+		);
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{ type: "delete", elementId: victimElement.id },
+			{
+				type: "create",
+				elementId: victimElement.id,
+				parentId: secondForeignParent.id,
+				data: {
+					id: victimElement.id,
+					type: "GOAL",
+					name: "Hijacked, parented under a second foreign element",
+					description: "Should never be created",
+					inSandbox: false,
+				},
+			},
+		];
+
+		expectError(await applyBatchUpdate(attacker.id, attackerCase.id, changes));
+
+		const stillThere = await prisma.assuranceElement.findUnique({
+			where: { id: victimElement.id },
+		});
+		expect(stillThere).not.toBeNull();
+		expect(stillThere?.caseId).toBe(victimCase.id);
+		expect(stillThere?.name).toBe("Victim Element");
+
+		const secondUntouched = await prisma.assuranceElement.findUnique({
+			where: { id: secondForeignParent.id },
+		});
+		expect(secondUntouched).not.toBeNull();
+	});
+
+	/**
+	 * The `addAlways` split applies to BOTH delete's and update's own
+	 * elementId. This pins the update side specifically: a batch that both
+	 * updates a foreign element AND (elsewhere in the same batch) creates a
+	 * NEW element reusing that same id must still reject — an
+	 * implementation that only fixed the delete path, or that special-cased
+	 * "update+create pairs" differently from "delete+create pairs", would
+	 * miss this.
+	 */
+	it("rejects an update whose elementId is foreign even when that same id is also used by a create elsewhere in the batch", async () => {
+		const attacker = await createTestUser();
+		const attackerCase = await createTestCase(attacker.id);
+		const victimCase = await createTestCase(attacker.id);
+		const victimElement = await createTestElement(victimCase.id, attacker.id, {
+			elementType: "GOAL",
+			name: "Victim Element",
+		});
+		const otherNewId = `element-update-plus-create-${Date.now()}`;
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "update",
+				elementId: victimElement.id,
+				data: { name: "Hijacked via update" },
+			},
+			{
+				// Same id as the update target, reused by an UNRELATED create
+				// elsewhere in the batch — must not exempt the update above.
+				type: "create",
+				elementId: victimElement.id,
+				parentId: null,
+				data: {
+					id: victimElement.id,
+					type: "GOAL",
+					name: "Should never be created (duplicate id)",
+					description: "id collides with the update target above",
+					inSandbox: false,
+				},
+			},
+			{
+				type: "create",
+				elementId: otherNewId,
+				parentId: null,
+				data: {
+					id: otherNewId,
+					type: "GOAL",
+					name: "Unrelated legitimate create",
+					description: "Should not be created either — whole batch rejected",
+					inSandbox: false,
+				},
+			},
+		];
+
+		expectError(await applyBatchUpdate(attacker.id, attackerCase.id, changes));
+
+		const unchanged = await prisma.assuranceElement.findUnique({
+			where: { id: victimElement.id },
+		});
+		expect(unchanged?.name).toBe("Victim Element");
+		expect(unchanged?.caseId).toBe(victimCase.id);
+
+		const notCreated = await prisma.assuranceElement.findUnique({
+			where: { id: otherNewId },
+		});
+		expect(notCreated).toBeNull();
+	});
+
+	/**
+	 * Combines the delete+recreate id-reuse pattern with defeatsElementId:
+	 * a sibling create's defeatsElementId points at the SAME foreign id the
+	 * batch deletes and recreates. The delete's own `addAlways` check must
+	 * still catch this even though defeatsElementId (addUnlessSiblingCreate)
+	 * would, on its own, exempt a reference to that id once it's also a
+	 * batch create target.
+	 */
+	it("rejects delete+recreate id-reuse even when a sibling create's defeatsElementId also points at the reused id", async () => {
+		const attacker = await createTestUser();
+		const attackerCase = await createTestCase(attacker.id);
+		const victimCase = await createTestCase(attacker.id);
+		const victimElement = await createTestElement(victimCase.id, attacker.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const defeaterId = crypto.randomUUID();
+		const changes: ElementChange[] = [
+			{ type: "delete", elementId: victimElement.id },
+			{
+				type: "create",
+				elementId: victimElement.id,
+				parentId: null,
+				data: {
+					id: victimElement.id,
+					type: "PROPERTY_CLAIM",
+					name: "Hijacked",
+					description: "Should never be created",
+					inSandbox: false,
+				},
+			},
+			{
+				type: "create",
+				elementId: defeaterId,
+				parentId: null,
+				data: {
+					id: defeaterId,
+					type: "PROPERTY_CLAIM",
+					name: "Defeater citing the reused id",
+					description: "defeatsElementId points at the delete+recreate target",
+					inSandbox: false,
+					isDefeater: true,
+					defeatsElementId: victimElement.id,
+				},
+			},
+		];
+
+		expectError(await applyBatchUpdate(attacker.id, attackerCase.id, changes));
+
+		const stillThere = await prisma.assuranceElement.findUnique({
+			where: { id: victimElement.id },
+		});
+		expect(stillThere).not.toBeNull();
+		expect(stillThere?.caseId).toBe(victimCase.id);
+
+		const defeaterCreated = await prisma.assuranceElement.findUnique({
+			where: { id: defeaterId },
+		});
+		expect(defeaterCreated).toBeNull();
+	});
+
+	/**
+	 * Residual-gap probe (not an exploit — documents why): `unlink_evidence`
+	 * ids still use `addUnlessSiblingCreate`, so an unlink whose evidenceId
+	 * equals a batch create's elementId is exempted from the ownership
+	 * check even when that id is a REAL foreign row (no delete involved,
+	 * unlike the fixed pattern above). If it were exploitable, an attacker
+	 * could unlink a foreign evidence/claim pair by "recreating" the
+	 * foreign id. It is NOT exploitable in practice: `applyUnlinkEvidence`
+	 * runs first in transaction order, but `tx.assuranceElement.create`
+	 * with an id that already exists always throws a unique-constraint
+	 * error, which rolls back the WHOLE transaction (including the unlink
+	 * that ran earlier in the same `$transaction` callback) — Prisma
+	 * interactive transactions are all-or-nothing. This test pins that the
+	 * net effect is still a full rejection with no persisted change, as a
+	 * regression guard on that safety net rather than on the validator
+	 * itself.
+	 */
+	it("leaves no persisted change when unlink_evidence's evidenceId is exempted via a same-id create that collides with a real foreign row", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const claim = await createTestElement(testCase.id, user.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		const otherCase = await createTestCase(user.id);
+		const foreignEvidence = await createTestElement(otherCase.id, user.id, {
+			elementType: "EVIDENCE",
+		});
+		await prisma.evidenceLink.create({
+			data: { evidenceId: foreignEvidence.id, claimId: claim.id },
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "unlink_evidence",
+				evidenceId: foreignEvidence.id,
+				claimId: claim.id,
+			},
+			{
+				// Reuses the foreign evidence's id as a create target WITHOUT
+				// deleting it first — this "exempts" the unlink's evidenceId
+				// from the ownership check, but the create itself must fail
+				// (id already exists), rolling back the whole transaction.
+				type: "create",
+				elementId: foreignEvidence.id,
+				parentId: null,
+				data: {
+					id: foreignEvidence.id,
+					type: "EVIDENCE",
+					name: "Attempted id collision",
+					description: "Should never persist — unique constraint + rollback",
+					inSandbox: false,
+				},
+			},
+		];
+
+		const result = await applyBatchUpdate(user.id, testCase.id, changes);
+		expect(result.error).toBeDefined();
+
+		const linkStillThere = await prisma.evidenceLink.findFirst({
+			where: { evidenceId: foreignEvidence.id, claimId: claim.id },
+		});
+		expect(linkStillThere).not.toBeNull();
+	});
 });
