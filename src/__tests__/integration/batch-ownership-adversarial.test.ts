@@ -571,7 +571,7 @@ describe("batch ownership — adversarial (QA G3)", () => {
 		];
 
 		const result = await applyBatchUpdate(user.id, testCase.id, changes);
-		expect(result.error).toBeDefined();
+		expect("error" in result && result.error).toBeTruthy();
 
 		const linkStillThere = await prisma.evidenceLink.findFirst({
 			where: { evidenceId: foreignEvidence.id, claimId: claim.id },
