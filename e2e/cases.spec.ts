@@ -195,18 +195,48 @@ test.describe("Case management", () => {
 		await dialogTitle.click({ force: true });
 		await expect(dialogTitle).toBeVisible();
 
-		// A short pause past the guard's own close-window, so the next
-		// click is unambiguously a *separate*, later interaction rather
-		// than a second click still inside the window the guard uses to
-		// bridge the same-tick dismissal race — real users don't triple
-		// click within a few tens of milliseconds either.
-		// Must stay well above SELECT_CLOSE_GUARD_WINDOW_MS in
-		// node-edit-dialog.tsx.
-		await page.waitForTimeout(250);
-
 		// The dialog must still be dismissable by a subsequent overlay
-		// click — this is the assertion that catches the stuck-open race:
-		// a stuck-`true` guard would swallow this click too.
+		// click — this is the assertion that catches a stuck-open guard.
+		await page.mouse.click(5, 5);
+		await expect(dialogTitle).not.toBeVisible();
+	});
+
+	test("Escape-closing the assertion status dropdown, then immediately clicking outside the dialog, still closes the dialog", async ({
+		page,
+	}) => {
+		// Regression: the dismiss guard reads whether the Select was open at
+		// the start of the outside click's own pointerdown event, not a
+		// time window since the Select last closed — so a click that lands
+		// immediately after an Escape-close is not mistaken for the pointer
+		// event that closed the Select.
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = page.locator("button:has(svg.lucide-pencil)").first();
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		const dialogTitle = page.getByText("Editing G1", { exact: true });
+		await expect(dialogTitle).toBeVisible();
+
+		const assertionStatusTrigger = page.getByRole("combobox", {
+			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
+		});
+
+		for (let i = 0; i < 5; i++) {
+			await assertionStatusTrigger.click();
+			await expect(page.getByRole("listbox")).toBeVisible();
+			await page.keyboard.press("Escape");
+			await expect(page.getByRole("listbox")).not.toBeVisible();
+		}
+
+		await expect(dialogTitle).toBeVisible();
+
+		// No artificial pause: this click must be indistinguishable from a
+		// genuine outside click landing right after the last Escape-close.
 		await page.mouse.click(5, 5);
 		await expect(dialogTitle).not.toBeVisible();
 	});

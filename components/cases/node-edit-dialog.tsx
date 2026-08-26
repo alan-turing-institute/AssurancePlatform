@@ -386,40 +386,57 @@ function UrlsSection({
 // through to the Dialog's own overlay — which the Dialog's own outside-click
 // detection then reads as a genuine outside click and closes on.
 //
-// Guard: the Select's onOpenChange writes an open flag and a close
-// timestamp synchronously (no setTimeout, nothing to leave stuck). The
-// Dialog's outside handlers ignore the event if the Select is open, or
-// closed within SELECT_CLOSE_GUARD_WINDOW_MS — a short window is needed
-// because in a real browser the Select's own popper can already be
-// unmounted by the time the Dialog's outside handler runs for the same
-// dismissing click, so a same-tick DOM-presence check cannot be used
-// instead. The window must stay short: long enough to bridge that
-// same-tick gap, short enough not to also swallow a second, genuinely
-// separate outside click that follows quickly.
-const SELECT_CLOSE_GUARD_WINDOW_MS = 40;
-
+// The dismissing click is a single pointerdown event. Both DismissableLayers
+// (Select's and Dialog's) react to it through their own document-level
+// listeners registered in the bubbling phase: the Select's runs first and
+// calls its onOpenChange(false), then the Dialog's runs and fires
+// onPointerDownOutside/onInteractOutside. A document listener registered in
+// the capture phase always runs before any bubbling-phase listener for the
+// same event, so it can snapshot whether the Select was open at the start of
+// this specific pointerdown — before either DismissableLayer has reacted to
+// it — with no timer and no assumption about which bubble listener runs
+// first.
 function useAssertionSelectDismissGuard() {
 	const isOpenRef = useRef(false);
-	const lastClosedAtRef = useRef(0);
+	const selectOpenAtPointerDownRef = useRef(false);
 
 	const onSelectOpenChange = useCallback((nextOpen: boolean) => {
 		isOpenRef.current = nextOpen;
-		if (!nextOpen) {
-			lastClosedAtRef.current = performance.now();
-		}
 	}, []);
 
-	const shouldGuardOutsideDismiss = useCallback(() => {
-		if (isOpenRef.current) {
-			return true;
-		}
-		return (
-			performance.now() - lastClosedAtRef.current <=
-			SELECT_CLOSE_GUARD_WINDOW_MS
-		);
+	useEffect(() => {
+		const handlePointerDownCapture = () => {
+			selectOpenAtPointerDownRef.current = isOpenRef.current;
+		};
+		document.addEventListener("pointerdown", handlePointerDownCapture, {
+			capture: true,
+		});
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDownCapture, {
+				capture: true,
+			});
+		};
 	}, []);
 
-	return { onSelectOpenChange, shouldGuardOutsideDismiss };
+	// Pointer dismissal: guard only on the per-event snapshot, so a click
+	// that lands after the Select has genuinely closed is never swallowed.
+	const shouldGuardPointerDismiss = useCallback(
+		() => selectOpenAtPointerDownRef.current,
+		[]
+	);
+
+	// Focus dismissal (e.g. Tab out of the Select) has no pointerdown to
+	// snapshot, so it falls back to the Select's live open state.
+	const shouldGuardFocusDismiss = useCallback(
+		() => selectOpenAtPointerDownRef.current || isOpenRef.current,
+		[]
+	);
+
+	return {
+		onSelectOpenChange,
+		shouldGuardFocusDismiss,
+		shouldGuardPointerDismiss,
+	};
 }
 
 // --- Main component ---
@@ -540,8 +557,11 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
-	const { onSelectOpenChange, shouldGuardOutsideDismiss } =
-		useAssertionSelectDismissGuard();
+	const {
+		onSelectOpenChange,
+		shouldGuardFocusDismiss,
+		shouldGuardPointerDismiss,
+	} = useAssertionSelectDismissGuard();
 
 	// Tracks whether the dialog was open on the previous render, so a
 	// closed→open transition (reopen) can be told apart from staying open
@@ -726,12 +746,12 @@ export default function NodeEditDialog({
 				// so only guarding the pointer handler would leave the
 				// focus path unfixed.
 				onInteractOutside={(event) => {
-					if (shouldGuardOutsideDismiss()) {
+					if (shouldGuardFocusDismiss()) {
 						event.preventDefault();
 					}
 				}}
 				onPointerDownOutside={(event) => {
-					if (shouldGuardOutsideDismiss()) {
+					if (shouldGuardPointerDismiss()) {
 						event.preventDefault();
 					}
 				}}
