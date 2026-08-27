@@ -10,7 +10,24 @@ import { recordUpdate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import { server } from "@/src/__tests__/mocks/server";
 import { render, screen } from "@/src/__tests__/utils/test-utils";
+import useStore from "@/store/store";
 import NodeEditDialog from "../node-edit-dialog";
+
+// NodeEditDialog derives its read-only state from the case permission held
+// in the store, so every test in this file needs a permission that renders
+// it editable unless the test is specifically exercising read-only mode.
+function resetStoreToEditable(): void {
+	useStore.setState({
+		assuranceCase: {
+			id: "case-1",
+			name: "Test Case",
+			type: "assurance-case",
+			permissions: "manage",
+			createdDate: new Date().toISOString(),
+			comments: [],
+		},
+	});
+}
 
 vi.mock("@/lib/services/history-service", async (importOriginal) => {
 	const actual =
@@ -57,6 +74,10 @@ function mockPluginsResponse(enabled: boolean) {
 		)
 	);
 }
+
+beforeEach(() => {
+	resetStoreToEditable();
+});
 
 afterEach(() => {
 	elementPanelSlot.resetForTests();
@@ -528,5 +549,114 @@ describe("NodeEditDialog — evidence URL removal", () => {
 		expect(
 			screen.getByPlaceholderText("https://example.com/evidence")
 		).toHaveValue("");
+	});
+});
+
+describe("NodeEditDialog — read-only mode by case permission", () => {
+	function setPermissions(permissions: string): void {
+		useStore.setState({
+			assuranceCase: {
+				id: "case-1",
+				name: "Test Case",
+				type: "assurance-case",
+				permissions,
+				createdDate: new Date().toISOString(),
+				comments: [],
+			},
+		});
+	}
+
+	function setNoAssuranceCase(): void {
+		useStore.setState({ assuranceCase: null });
+	}
+
+	it.each([
+		"edit",
+		"manage",
+	])('permissions "%s" renders editable: Save button present, fields enabled, title starts "Editing"', async (permissions) => {
+		setPermissions(permissions);
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		expect(description).not.toHaveAttribute("readonly");
+		expect(
+			screen.getByRole("button", { name: "Update Goal" })
+		).toBeInTheDocument();
+		expect(screen.getByText("Editing G1")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+	});
+
+	it.each([
+		"view",
+		"comment",
+	])('permissions "%s" renders read-only: no Save button, fields disabled, title starts "Viewing", footer button reads "Close"', async (permissions) => {
+		setPermissions(permissions);
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		expect(description).toHaveAttribute("readonly");
+		expect(
+			screen.queryByRole("button", { name: "Update Goal" })
+		).not.toBeInTheDocument();
+		expect(screen.getByText("Viewing G1")).toBeInTheDocument();
+		// Two "Close"-named buttons: Radix's own dialog-corner close control
+		// (always present, sr-only-labelled "Close") plus the footer button,
+		// which reads "Close" instead of "Cancel" only in read-only mode.
+		expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
+		expect(
+			screen.queryByRole("button", { name: "Cancel" })
+		).not.toBeInTheDocument();
+	});
+
+	it('no assurance case loaded (permissions undefined) renders read-only: no Save button, fields disabled, title starts "Viewing", footer button reads "Close"', async () => {
+		setNoAssuranceCase();
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		expect(description).toHaveAttribute("readonly");
+		expect(
+			screen.queryByRole("button", { name: "Update Goal" })
+		).not.toBeInTheDocument();
+		expect(screen.getByText("Viewing G1")).toBeInTheDocument();
+		// Two "Close"-named buttons: Radix's own dialog-corner close control
+		// (always present, sr-only-labelled "Close") plus the footer button,
+		// which reads "Close" instead of "Cancel" only in read-only mode.
+		expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
 	});
 });

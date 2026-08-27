@@ -449,7 +449,6 @@ interface NodeEditDialogProps {
 	nodeType: DiagramNodeType;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
-	readOnly?: boolean;
 }
 
 export default function NodeEditDialog({
@@ -457,7 +456,6 @@ export default function NodeEditDialog({
 	nodeType,
 	open,
 	onOpenChange,
-	readOnly = false,
 }: NodeEditDialogProps) {
 	const [loading, setLoading] = useState(false);
 	const [newContextValue, setNewContextValue] = useState("");
@@ -465,6 +463,13 @@ export default function NodeEditDialog({
 	const [idCounter, setIdCounter] = useState(0);
 	const { assuranceCase } = useStore();
 	const panelSlot = useElementPanelSlot();
+	// Fail-closed, positive rule: editable only when the case permission is
+	// explicitly "edit" or "manage". Any other value — "view", "comment",
+	// or unset/unknown while the case is still loading — renders read-only.
+	const readOnly = !(
+		assuranceCase?.permissions === "edit" ||
+		assuranceCase?.permissions === "manage"
+	);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),

@@ -4,6 +4,10 @@ import { CASE_URL_PATTERN } from "./helpers/constants";
 // Sharing tests use different user sessions — no pre-saved state
 test.use({ storageState: { cookies: [], origins: [] } });
 
+// Matches NodeEditDialog's Save button ("Update Goal", "Update Evidence",
+// etc.) — must be absent in read-only mode regardless of element type.
+const UPDATE_BUTTON_PATTERN = /^Update /i;
+
 test.describe("Sharing and permissions", () => {
 	test("alice sees Medium Case on shared page", async ({
 		page,
@@ -89,5 +93,19 @@ test.describe("Sharing and permissions", () => {
 		await expect(page.getByTestId("action-buttons")).toBeVisible();
 		// Viewer should NOT see the share button (requires manage permission)
 		await expect(page.getByTestId("toolbar-share")).not.toBeVisible();
+
+		// Opening an element's dialog (the pencil icon relabels itself "View
+		// details" for a viewer, but always opens the same dialog) must land
+		// in read-only mode, not the editable form.
+		const viewDetailsButton = page
+			.locator("button:has(svg.lucide-pencil)")
+			.first();
+		await viewDetailsButton.waitFor({ state: "visible" });
+		await viewDetailsButton.click();
+
+		await expect(page.getByText("Viewing G1", { exact: true })).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: UPDATE_BUTTON_PATTERN })
+		).not.toBeVisible();
 	});
 });
