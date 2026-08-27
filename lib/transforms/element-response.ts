@@ -33,6 +33,71 @@ function addParentReference(
 }
 
 /**
+ * Applies the optional single-value response fields (URLs, prose fields,
+ * assertion status, and the citation/module-reference/dialogical-reasoning
+ * metadata) that are only present on the response when the underlying
+ * element data is present. Extracted out of transformToResponse — verbatim,
+ * same conditions, same assignments — to keep that function under the
+ * cognitive-complexity budget.
+ */
+function applyOptionalFields(
+	response: ElementResponse,
+	element: {
+		assumption: string | null;
+		justification: string | null;
+		context: string[];
+		url: string | null;
+		urls: string[];
+		level: number | null;
+		assertionStatus?: AssertionStatus | null;
+		citedElementId?: string | null;
+		citationDangling?: boolean;
+		moduleReferenceId?: string | null;
+		isDefeater?: boolean;
+		defeatsElementId?: string | null;
+	}
+): void {
+	// Handle URLs: prefer urls array, fall back to legacy url field
+	if (element.urls && element.urls.length > 0) {
+		response.urls = element.urls;
+		response.URL = element.urls[0]; // Backward compatibility: first URL
+	} else if (element.url) {
+		response.URL = element.url;
+		response.urls = [element.url]; // Backward compatibility
+	}
+	if (element.assumption) {
+		response.assumption = element.assumption;
+	}
+	if (element.justification) {
+		response.justification = element.justification;
+	}
+	if (element.context && element.context.length > 0) {
+		response.context = element.context;
+	}
+	if (element.level !== null) {
+		response.level = element.level;
+	}
+	if (element.assertionStatus) {
+		response.assertionStatus = element.assertionStatus;
+	}
+	if (element.citedElementId) {
+		response.citedElementId = element.citedElementId;
+	}
+	if (element.citationDangling) {
+		response.citationDangling = true;
+	}
+	if (element.moduleReferenceId) {
+		response.moduleReferenceId = element.moduleReferenceId;
+	}
+	if (element.isDefeater) {
+		response.isDefeater = true;
+	}
+	if (element.defeatsElementId) {
+		response.defeatsElementId = element.defeatsElementId;
+	}
+}
+
+/**
  * Transforms a Prisma element to API response format
  */
 export function transformToResponse(element: {
@@ -85,44 +150,7 @@ export function transformToResponse(element: {
 		addParentReference(response, element.parent, element.elementType);
 	}
 
-	// Handle URLs: prefer urls array, fall back to legacy url field
-	if (element.urls && element.urls.length > 0) {
-		response.urls = element.urls;
-		response.URL = element.urls[0]; // Backward compatibility: first URL
-	} else if (element.url) {
-		response.URL = element.url;
-		response.urls = [element.url]; // Backward compatibility
-	}
-	if (element.assumption) {
-		response.assumption = element.assumption;
-	}
-	if (element.justification) {
-		response.justification = element.justification;
-	}
-	if (element.context && element.context.length > 0) {
-		response.context = element.context;
-	}
-	if (element.level !== null) {
-		response.level = element.level;
-	}
-	if (element.assertionStatus) {
-		response.assertionStatus = element.assertionStatus;
-	}
-	if (element.citedElementId) {
-		response.citedElementId = element.citedElementId;
-	}
-	if (element.citationDangling) {
-		response.citationDangling = true;
-	}
-	if (element.moduleReferenceId) {
-		response.moduleReferenceId = element.moduleReferenceId;
-	}
-	if (element.isDefeater) {
-		response.isDefeater = true;
-	}
-	if (element.defeatsElementId) {
-		response.defeatsElementId = element.defeatsElementId;
-	}
+	applyOptionalFields(response, element);
 
 	return response;
 }

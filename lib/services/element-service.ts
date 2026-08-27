@@ -774,33 +774,20 @@ async function createElementInDatabase(
 }
 
 /**
- * Creates a new element in a case
+ * Runs every create-path reference/uniqueness guard createElement needs, in
+ * the exact order it previously ran them inline: parentId case-membership,
+ * single-goal uniqueness, moduleReferenceId, citedElementId, then
+ * defeatsElementId. Extracted (rather than left as five sequential
+ * `if`-blocks in createElement) to keep createElement under the
+ * cognitive-complexity budget; order is preserved byte-for-byte because nothing
+ * here changes which check fires first when more than one would fail.
  */
-export async function createElement(
-	userId: string,
+async function validateElementReferences(
+	caseId: string,
+	elementType: PrismaElementType,
+	parentId: string | null | undefined,
 	input: CreateElementInput
-): ServiceResult<ElementResponse> {
-	const caseId = input.caseId;
-	if (!caseId) {
-		return { error: "Case ID is required" };
-	}
-
-	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
-	if (!hasAccess) {
-		return { error: "Permission denied" };
-	}
-
-	const assertionStatusError = await enforceAssertionStatusRules(
-		input.assertionStatus,
-		userId
-	);
-	if (assertionStatusError) {
-		return { error: assertionStatusError };
-	}
-
-	const elementType = toPrismaType(input.elementType);
-	const parentId = resolveParentId(input);
-
+): Promise<{ error: string } | undefined> {
 	if (parentId) {
 		const parentError = await validateParentIdInCase(caseId, parentId);
 		if (parentError) {
@@ -835,6 +822,47 @@ export async function createElement(
 	);
 	if (defeatsElementIdError) {
 		return { error: defeatsElementIdError };
+	}
+
+	return;
+}
+
+/**
+ * Creates a new element in a case
+ */
+export async function createElement(
+	userId: string,
+	input: CreateElementInput
+): ServiceResult<ElementResponse> {
+	const caseId = input.caseId;
+	if (!caseId) {
+		return { error: "Case ID is required" };
+	}
+
+	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	const assertionStatusError = await enforceAssertionStatusRules(
+		input.assertionStatus,
+		userId
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
+	}
+
+	const elementType = toPrismaType(input.elementType);
+	const parentId = resolveParentId(input);
+
+	const referenceError = await validateElementReferences(
+		caseId,
+		elementType,
+		parentId,
+		input
+	);
+	if (referenceError) {
+		return referenceError;
 	}
 
 	const { level, parentInfo } =
