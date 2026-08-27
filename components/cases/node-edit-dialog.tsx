@@ -172,6 +172,7 @@ function TextFieldSection({
 
 interface AssertionStatusSectionProps {
 	form: UseFormReturn<FormValues>;
+	onSelectOpenChange: (open: boolean) => void;
 	readOnly: boolean;
 }
 
@@ -184,6 +185,7 @@ interface AssertionStatusSectionProps {
  */
 function AssertionStatusSection({
 	form,
+	onSelectOpenChange,
 	readOnly,
 }: AssertionStatusSectionProps) {
 	return (
@@ -202,6 +204,7 @@ function AssertionStatusSection({
 					</FormLabel>
 					<Select
 						disabled={readOnly}
+						onOpenChange={onSelectOpenChange}
 						onValueChange={field.onChange}
 						value={field.value}
 					>
@@ -376,6 +379,69 @@ function UrlsSection({
 	);
 }
 
+// Radix's Select and Dialog each open a DismissableLayer with
+// disableOutsidePointerEvents: true. While the assertion-status Select is
+// open, Radix sets pointer-events: none on the Dialog's own content (the
+// lower-priority layer), so a click anywhere in the dialog body falls
+// through to the Dialog's own overlay — which the Dialog's own outside-click
+// detection then reads as a genuine outside click and closes on.
+//
+// The dismissing click is a single pointerdown event. Both DismissableLayers
+// (Select's and Dialog's) react to it through their own document-level
+// listeners registered in the bubbling phase: the Select's runs first and
+// calls its onOpenChange(false), then the Dialog's runs and fires
+// onPointerDownOutside/onInteractOutside. A document listener registered in
+// the capture phase always runs before any bubbling-phase listener for the
+// same event, so it can snapshot whether the Select was open at the start of
+// this specific pointerdown — before either DismissableLayer has reacted to
+// it — with no timer and no assumption about which bubble listener runs
+// first.
+function useAssertionSelectDismissGuard() {
+	const isOpenRef = useRef(false);
+	const selectOpenAtPointerDownRef = useRef(false);
+
+	const onSelectOpenChange = useCallback((nextOpen: boolean) => {
+		isOpenRef.current = nextOpen;
+	}, []);
+
+	useEffect(() => {
+		const handlePointerDownCapture = () => {
+			selectOpenAtPointerDownRef.current = isOpenRef.current;
+		};
+		document.addEventListener("pointerdown", handlePointerDownCapture, {
+			capture: true,
+		});
+		return () => {
+			document.removeEventListener("pointerdown", handlePointerDownCapture, {
+				capture: true,
+			});
+		};
+	}, []);
+
+	// Pointer dismissal: guard only on the per-event snapshot, so a click
+	// that lands after the Select has genuinely closed is never swallowed.
+	const shouldGuardPointerDismiss = useCallback(
+		() => selectOpenAtPointerDownRef.current,
+		[]
+	);
+
+	// Focus dismissal (e.g. Tab out of the Select) has no pointerdown to
+	// snapshot, so it falls back to the Select's live open state. In
+	// practice Radix already blocks focus-outside dismissal on a modal
+	// DialogContent, so this branch is not known to be exercised — it's
+	// kept for consistency with the pointer guard above.
+	const shouldGuardFocusDismiss = useCallback(
+		() => selectOpenAtPointerDownRef.current || isOpenRef.current,
+		[]
+	);
+
+	return {
+		onSelectOpenChange,
+		shouldGuardFocusDismiss,
+		shouldGuardPointerDismiss,
+	};
+}
+
 // --- Main component ---
 
 interface NodeEditDialogProps {
@@ -494,6 +560,12 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
+	const {
+		onSelectOpenChange,
+		shouldGuardFocusDismiss,
+		shouldGuardPointerDismiss,
+	} = useAssertionSelectDismissGuard();
+
 	// Tracks whether the dialog was open on the previous render, so a
 	// closed→open transition (reopen) can be told apart from staying open
 	// across re-renders.
@@ -608,7 +680,11 @@ export default function NodeEditDialog({
 							placeholder="Type your justification here (optional)."
 							readOnly={readOnly}
 						/>
-						<AssertionStatusSection form={form} readOnly={readOnly} />
+						<AssertionStatusSection
+							form={form}
+							onSelectOpenChange={onSelectOpenChange}
+							readOnly={readOnly}
+						/>
 						<ContextSection
 							contextItems={contextItems}
 							newContextValue={newContextValue}
@@ -663,7 +739,28 @@ export default function NodeEditDialog({
 
 	return (
 		<Dialog onOpenChange={handleOpenChange} open={open}>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+			<DialogContent
+				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+				// `onPointerDownOutside` is the path this fix targets: it's
+				// the click-through case where a click inside the dialog
+				// falls through to the Dialog's own overlay while the
+				// Select is open. `onInteractOutside` is guarded too, for
+				// consistency, but Radix's own DialogContentModal already
+				// calls event.preventDefault() on every focus-outside event
+				// for a modal DialogContent (react-dialog dist
+				// index.mjs, ~L157-160), so that branch never actually runs
+				// against a live dismissal — it's defensive only.
+				onInteractOutside={(event) => {
+					if (shouldGuardFocusDismiss()) {
+						event.preventDefault();
+					}
+				}}
+				onPointerDownOutside={(event) => {
+					if (shouldGuardPointerDismiss()) {
+						event.preventDefault();
+					}
+				}}
+			>
 				<DialogHeader>
 					<DialogTitle>
 						{readOnly ? "Viewing" : "Editing"} {nodeName}
