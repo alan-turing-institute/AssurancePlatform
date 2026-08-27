@@ -146,6 +146,11 @@ const ERROR_MAPPINGS: Array<{
 	// `moduleReferenceId` (wrong element type, missing on a required type,
 	// nonexistent target case) is a validation failure (400), not a 500.
 	{ pattern: /^moduleReferenceId /, factory: () => validationError("") },
+	// `element-service.ts`'s `validateDefeatsElementId`: a bad
+	// `defeatsElementId` (cross-case, nonexistent, soft-deleted, or
+	// self-reference target) is a validation failure (400), not a 500 —
+	// same shape as citedElementId/moduleReferenceId above.
+	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
 	// Lifecycle/state-guard errors from the integration registry service —
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state

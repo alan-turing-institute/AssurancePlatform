@@ -58,6 +58,9 @@ export function transformToResponse(element: {
 	citationDangling?: boolean;
 	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
 	moduleReferenceId?: string | null;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	isDefeater?: boolean;
+	defeatsElementId?: string | null;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;
@@ -113,6 +116,12 @@ export function transformToResponse(element: {
 	}
 	if (element.moduleReferenceId) {
 		response.moduleReferenceId = element.moduleReferenceId;
+	}
+	if (element.isDefeater) {
+		response.isDefeater = true;
+	}
+	if (element.defeatsElementId) {
+		response.defeatsElementId = element.defeatsElementId;
 	}
 
 	return response;
