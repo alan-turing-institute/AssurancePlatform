@@ -172,6 +172,9 @@ type ElementOverrides = Partial<{
 	// ADR 0004 D5 — AWAY_GOAL only
 	citedElementId: string | null;
 	citationDangling: boolean;
+	// Dialogical reasoning (defeaters) — applies to every element type
+	isDefeater: boolean;
+	defeatsElementId: string | null;
 }>;
 
 export function createTestElement(
@@ -195,6 +198,8 @@ export function createTestElement(
 			moduleReferenceId: overrides.moduleReferenceId,
 			citedElementId: overrides.citedElementId,
 			citationDangling: overrides.citationDangling ?? false,
+			isDefeater: overrides.isDefeater ?? false,
+			defeatsElementId: overrides.defeatsElementId,
 		},
 	});
 }

@@ -50,10 +50,14 @@ export interface ElementResponse {
 	comments?: unknown[];
 	context?: string[];
 	createdDate: string;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	defeatsElementId?: string | null;
 	description: string;
 	goalId?: string | null;
 	id: string;
 	inSandbox: boolean;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	isDefeater?: boolean;
 	justification?: string;
 	level?: number;
 	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
@@ -208,6 +212,87 @@ async function enforceCitedElementIdRules(
 		return applicabilityError;
 	}
 	return await validateCitedElementId(citedElementId, ownElementId);
+}
+
+/**
+ * Dialogical reasoning (defeaters): `defeatsElementId` applies to every
+ * element type (unlike `citedElementId`, which is AWAY_GOAL-only and
+ * deliberately cross-case per ADR 0004 D5) and, unlike citations, must stay
+ * inside the case it is written from — this is a same-case FK, not a
+ * cross-case reference. Parity with the batch endpoint's ownership check
+ * (`validateElementOwnership` in case-batch-update-service.ts): target must
+ * exist, be non-deleted, and belong to `caseId`; on update it additionally
+ * cannot be the element itself. The existence and case-membership checks are
+ * combined into a single query (`caseId` in the `where`) so a foreign-case
+ * id and a nonexistent id are indistinguishable in the response — matching
+ * `validateCitedElementId`'s anti-enumeration shape, just scoped to the case
+ * instead of scoped to nothing.
+ */
+async function validateDefeatsElementId(
+	caseId: string,
+	defeatsElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (!defeatsElementId) {
+		return;
+	}
+	if (ownElementId && defeatsElementId === ownElementId) {
+		return "defeatsElementId cannot reference the element itself";
+	}
+	const target = await prisma.assuranceElement.findFirst({
+		where: { id: defeatsElementId, deletedAt: null, caseId },
+		select: { id: true },
+	});
+	if (!target) {
+		return "defeatsElementId must reference an existing element in this case";
+	}
+	return;
+}
+
+/**
+ * Runs the defeatsElementId guard in the order createElement and
+ * updateElement both need. Only one check today (no applicability
+ * restriction — `fieldAppliesTo("defeatsElementId", ...)` is true for every
+ * element type — so this is a thin wrapper today, kept for symmetry with
+ * `enforceCitedElementIdRules`/`enforceModuleReferenceIdRules` and as the
+ * single extension point if a future applicability rule is added.
+ */
+async function enforceDefeatsElementIdRules(
+	caseId: string,
+	defeatsElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (defeatsElementId === undefined) {
+		return;
+	}
+	return await validateDefeatsElementId(caseId, defeatsElementId, ownElementId);
+}
+
+/**
+ * `parentId` must reference an existing, non-deleted element in the SAME
+ * case (`caseId`). This is the create-path counterpart to `updateElement`'s
+ * existing new-parent check (~line 960 below) — that check already scopes a
+ * parent CHANGE to the same case; this closes the equivalent gap on
+ * CREATE, where `parentId` was previously written straight into the
+ * `AssuranceElement.create` call (and, for EVIDENCE, into `EvidenceLink`)
+ * with no case-membership check at all. Found during the element-service.ts
+ * unscoped-reference audit (TEA — Element-service reference integrity).
+ * Same anti-enumeration shape as `validateDefeatsElementId`: existence and
+ * case-membership are one query, so a foreign-case id and a nonexistent id
+ * both come back "not found".
+ */
+async function validateParentIdInCase(
+	caseId: string,
+	parentId: string
+): Promise<string | undefined> {
+	const parent = await prisma.assuranceElement.findFirst({
+		where: { id: parentId, deletedAt: null, caseId },
+		select: { id: true },
+	});
+	if (!parent) {
+		return "Parent element not found";
+	}
+	return;
 }
 
 /**
@@ -660,6 +745,11 @@ async function createElementInDatabase(
 			// and existence are validated in createElement before this function
 			// is called.
 			moduleReferenceId: input.moduleReferenceId,
+			// Dialogical reasoning (defeaters) — same-case existence and
+			// self-reference are validated in createElement before this
+			// function is called.
+			isDefeater: input.isDefeater ?? false,
+			defeatsElementId: input.defeatsElementId,
 			createdById: userId,
 		},
 		include: {
@@ -681,6 +771,60 @@ async function createElementInDatabase(
 	}
 
 	return { data: response };
+}
+
+/**
+ * Runs every create-path reference/uniqueness guard createElement needs, in
+ * the exact order it previously ran them inline: parentId case-membership,
+ * single-goal uniqueness, moduleReferenceId, citedElementId, then
+ * defeatsElementId. Extracted (rather than left as five sequential
+ * `if`-blocks in createElement) to keep createElement under the
+ * cognitive-complexity budget; order is preserved byte-for-byte because nothing
+ * here changes which check fires first when more than one would fail.
+ */
+async function validateElementReferences(
+	caseId: string,
+	elementType: PrismaElementType,
+	parentId: string | null | undefined,
+	input: CreateElementInput
+): Promise<{ error: string } | undefined> {
+	if (parentId) {
+		const parentError = await validateParentIdInCase(caseId, parentId);
+		if (parentError) {
+			return { error: parentError };
+		}
+	}
+
+	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
+		return { error: "A case can only have one goal claim" };
+	}
+
+	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+		elementType,
+		input.moduleReferenceId,
+		{ requireOnCreate: true }
+	);
+	if (moduleReferenceIdError) {
+		return { error: moduleReferenceIdError };
+	}
+
+	const citedElementIdError = await enforceCitedElementIdRules(
+		elementType,
+		input.citedElementId
+	);
+	if (citedElementIdError) {
+		return { error: citedElementIdError };
+	}
+
+	const defeatsElementIdError = await enforceDefeatsElementIdRules(
+		caseId,
+		input.defeatsElementId
+	);
+	if (defeatsElementIdError) {
+		return { error: defeatsElementIdError };
+	}
+
+	return;
 }
 
 /**
@@ -711,25 +855,14 @@ export async function createElement(
 	const elementType = toPrismaType(input.elementType);
 	const parentId = resolveParentId(input);
 
-	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
-		return { error: "A case can only have one goal claim" };
-	}
-
-	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+	const referenceError = await validateElementReferences(
+		caseId,
 		elementType,
-		input.moduleReferenceId,
-		{ requireOnCreate: true }
+		parentId,
+		input
 	);
-	if (moduleReferenceIdError) {
-		return { error: moduleReferenceIdError };
-	}
-
-	const citedElementIdError = await enforceCitedElementIdRules(
-		elementType,
-		input.citedElementId
-	);
-	if (citedElementIdError) {
-		return { error: citedElementIdError };
+	if (referenceError) {
+		return referenceError;
 	}
 
 	const { level, parentInfo } =
@@ -846,6 +979,12 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.moduleReferenceId !== undefined) {
 		updateData.moduleReferenceId = input.moduleReferenceId;
 	}
+	if (input.isDefeater !== undefined) {
+		updateData.isDefeater = input.isDefeater;
+	}
+	if (input.defeatsElementId !== undefined) {
+		updateData.defeatsElementId = input.defeatsElementId;
+	}
 
 	return updateData;
 }
@@ -948,6 +1087,18 @@ export async function updateElement(
 		);
 		if (citedElementIdError) {
 			return { error: citedElementIdError };
+		}
+
+		// Dialogical reasoning (defeaters): defeatsElementId must stay inside
+		// the element's own case (existing.caseId), unlike citedElementId
+		// above — see enforceDefeatsElementIdRules's docstring.
+		const defeatsElementIdError = await enforceDefeatsElementIdRules(
+			existing.caseId,
+			input.defeatsElementId,
+			elementId
+		);
+		if (defeatsElementIdError) {
+			return { error: defeatsElementIdError };
 		}
 
 		// Build update data from input fields
@@ -1112,7 +1263,10 @@ export async function detachElement(
 		// Move to sandbox, clear parent, and nullify+flag any dangling
 		// citations (ADR 0004 D5) atomically — a detached element is no
 		// longer part of the case's argument tree, so a citation pointing at
-		// it is just as broken as one pointing at a deleted element.
+		// it is just as broken as one pointing at a deleted element. A detach
+		// moves the WHOLE subtree out of the tree (children stay parented to
+		// the detached element — see attachElement's cascade below), so the
+		// sweep covers descendants too, the same way deleteElement's does.
 		await prisma.$transaction(async (tx) => {
 			await tx.assuranceElement.update({
 				where: { id: elementId },
@@ -1121,7 +1275,8 @@ export async function detachElement(
 					inSandbox: true,
 				},
 			});
-			await nullifyDanglingCitations(tx, [elementId]);
+			const descendantIds = await getDescendantIds(elementId, tx);
+			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
 		});
 
 		return { data: true };
@@ -1134,6 +1289,15 @@ export async function detachElement(
 /**
  * Attaches an element (moves from sandbox to parent)
  * Also cascades to all descendants, removing them from sandbox
+ *
+ * ADR 0004 D5 scope call: attaching (or restoring, in restoreElement below)
+ * does NOT re-heal citations that were nullified and flagged
+ * (`citationDangling`) when this element or a descendant was previously
+ * detached/deleted. Re-attachment is not the same fact as "the citation is
+ * valid again" — the citing AWAY_GOAL's citedElementId was already cleared,
+ * and silently re-populating it here would restore a reference the author
+ * never re-declared. Pinned by the "restore does not re-heal citedElementId"
+ * test in element-citation-integrity.test.ts.
  */
 export async function attachElement(
 	userId: string,

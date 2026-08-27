@@ -33,55 +33,30 @@ function addParentReference(
 }
 
 /**
- * Transforms a Prisma element to API response format
+ * Applies the optional single-value response fields (URLs, prose fields,
+ * assertion status, and the citation/module-reference/dialogical-reasoning
+ * metadata) that are only present on the response when the underlying
+ * element data is present. Extracted out of transformToResponse — verbatim,
+ * same conditions, same assignments — to keep that function under the
+ * cognitive-complexity budget.
  */
-export function transformToResponse(element: {
-	id: string;
-	elementType: string;
-	name: string | null;
-	description: string;
-	assumption: string | null;
-	justification: string | null;
-	context: string[];
-	url: string | null;
-	urls: string[];
-	inSandbox: boolean;
-	level: number | null;
-	// ADR 0004 D3 — nullable; null means unset (interpreted as ASSERTED at
-	// export time in build-tree.ts, not here — this response mirrors the
-	// raw stored value for the canvas/JSON-editor UI).
-	assertionStatus?: AssertionStatus | null;
-	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
-	citedElementId?: string | null;
-	// Dangling-citation indicator (ADR 0004 D5) — true when citedElementId
-	// was nullified because the cited element was deleted/detached
-	citationDangling?: boolean;
-	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
-	moduleReferenceId?: string | null;
-	caseId: string;
-	parentId: string | null;
-	createdAt: Date;
-	parent?: {
-		id: string;
-		elementType: string;
-	} | null;
-}): ElementResponse {
-	const response: ElementResponse = {
-		id: element.id,
-		type: toDisplayType(element.elementType),
-		name: element.name || "",
-		description: element.description || "",
-		createdDate: element.createdAt.toISOString(),
-		inSandbox: element.inSandbox,
-		assuranceCaseId: element.caseId,
-		comments: [],
-	};
-
-	// Add parent reference
-	if (element.parent) {
-		addParentReference(response, element.parent, element.elementType);
+function applyOptionalFields(
+	response: ElementResponse,
+	element: {
+		assumption: string | null;
+		justification: string | null;
+		context: string[];
+		url: string | null;
+		urls: string[];
+		level: number | null;
+		assertionStatus?: AssertionStatus | null;
+		citedElementId?: string | null;
+		citationDangling?: boolean;
+		moduleReferenceId?: string | null;
+		isDefeater?: boolean;
+		defeatsElementId?: string | null;
 	}
-
+): void {
 	// Handle URLs: prefer urls array, fall back to legacy url field
 	if (element.urls && element.urls.length > 0) {
 		response.urls = element.urls;
@@ -114,6 +89,68 @@ export function transformToResponse(element: {
 	if (element.moduleReferenceId) {
 		response.moduleReferenceId = element.moduleReferenceId;
 	}
+	if (element.isDefeater) {
+		response.isDefeater = true;
+	}
+	if (element.defeatsElementId) {
+		response.defeatsElementId = element.defeatsElementId;
+	}
+}
+
+/**
+ * Transforms a Prisma element to API response format
+ */
+export function transformToResponse(element: {
+	id: string;
+	elementType: string;
+	name: string | null;
+	description: string;
+	assumption: string | null;
+	justification: string | null;
+	context: string[];
+	url: string | null;
+	urls: string[];
+	inSandbox: boolean;
+	level: number | null;
+	// ADR 0004 D3 — nullable; null means unset (interpreted as ASSERTED at
+	// export time in build-tree.ts, not here — this response mirrors the
+	// raw stored value for the canvas/JSON-editor UI).
+	assertionStatus?: AssertionStatus | null;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
+	// Dangling-citation indicator (ADR 0004 D5) — true when citedElementId
+	// was nullified because the cited element was deleted/detached
+	citationDangling?: boolean;
+	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
+	moduleReferenceId?: string | null;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	isDefeater?: boolean;
+	defeatsElementId?: string | null;
+	caseId: string;
+	parentId: string | null;
+	createdAt: Date;
+	parent?: {
+		id: string;
+		elementType: string;
+	} | null;
+}): ElementResponse {
+	const response: ElementResponse = {
+		id: element.id,
+		type: toDisplayType(element.elementType),
+		name: element.name || "",
+		description: element.description || "",
+		createdDate: element.createdAt.toISOString(),
+		inSandbox: element.inSandbox,
+		assuranceCaseId: element.caseId,
+		comments: [],
+	};
+
+	// Add parent reference
+	if (element.parent) {
+		addParentReference(response, element.parent, element.elementType);
+	}
+
+	applyOptionalFields(response, element);
 
 	return response;
 }

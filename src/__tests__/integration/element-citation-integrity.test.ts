@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
-import { deleteElement, detachElement } from "@/lib/services/element-service";
+import {
+	attachElement,
+	deleteElement,
+	detachElement,
+} from "@/lib/services/element-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
@@ -161,6 +165,95 @@ describe("element citation integrity (ADR 0004 D5)", () => {
 			});
 			expect(inDb?.citedElementId).toBe(citedClaim.id);
 			expect(inDb?.citationDangling).toBe(false);
+		});
+
+		it("nullifies citations pointing at a descendant swept up by a parent detach", async () => {
+			const owner = await createTestUser();
+			const homeCase = await createTestCase(owner.id);
+			const awayCase = await createTestCase(owner.id);
+			const parentGoal = await createTestElement(awayCase.id, owner.id, {
+				elementType: "GOAL",
+			});
+			const citedChild = await createTestElement(awayCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: parentGoal.id,
+			});
+			const awayGoal = await createTestElement(homeCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				moduleReferenceId: awayCase.id,
+				citedElementId: citedChild.id,
+			});
+			// An unrelated citation, elsewhere in the SAME case but under a
+			// different root — not a descendant of parentGoal — that must stay
+			// untouched by the detach.
+			const otherRoot = await createTestElement(awayCase.id, owner.id, {
+				elementType: "STRATEGY",
+			});
+			const unrelatedTarget = await createTestElement(awayCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: otherRoot.id,
+			});
+			const unrelatedAwayGoal = await createTestElement(homeCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				moduleReferenceId: awayCase.id,
+				citedElementId: unrelatedTarget.id,
+			});
+
+			// Detaching the PARENT moves the whole subtree — citedChild included
+			// — out of the case tree, so a citation to citedChild is just as
+			// dangling as one to parentGoal itself.
+			expectSuccess(await detachElement(owner.id, parentGoal.id));
+
+			const inDb = await prisma.assuranceElement.findUnique({
+				where: { id: awayGoal.id },
+			});
+			expect(inDb?.citedElementId).toBeNull();
+			expect(inDb?.citationDangling).toBe(true);
+
+			const unrelatedInDb = await prisma.assuranceElement.findUnique({
+				where: { id: unrelatedAwayGoal.id },
+			});
+			expect(unrelatedInDb?.citedElementId).toBe(unrelatedTarget.id);
+			expect(unrelatedInDb?.citationDangling).toBe(false);
+		});
+	});
+
+	describe("attaching/restoring does not re-heal a dangling citation", () => {
+		it("attachElement leaves a previously-nullified citation dangling (ADR 0004 D5 scope call)", async () => {
+			const owner = await createTestUser();
+			const homeCase = await createTestCase(owner.id);
+			const awayCase = await createTestCase(owner.id);
+			const parentGoal = await createTestElement(awayCase.id, owner.id, {
+				elementType: "GOAL",
+			});
+			const citedClaim = await createTestElement(awayCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				parentId: parentGoal.id,
+			});
+			const awayGoal = await createTestElement(homeCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				moduleReferenceId: awayCase.id,
+				citedElementId: citedClaim.id,
+			});
+
+			expectSuccess(await detachElement(owner.id, citedClaim.id));
+
+			const afterDetach = await prisma.assuranceElement.findUnique({
+				where: { id: awayGoal.id },
+			});
+			expect(afterDetach?.citedElementId).toBeNull();
+			expect(afterDetach?.citationDangling).toBe(true);
+
+			// Re-attach citedClaim to the same parent it was detached from.
+			expectSuccess(
+				await attachElement(owner.id, citedClaim.id, parentGoal.id)
+			);
+
+			const afterAttach = await prisma.assuranceElement.findUnique({
+				where: { id: awayGoal.id },
+			});
+			expect(afterAttach?.citedElementId).toBeNull();
+			expect(afterAttach?.citationDangling).toBe(true);
 		});
 	});
 });

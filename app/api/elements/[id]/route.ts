@@ -69,6 +69,11 @@ function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
 		// updateElementSchema; applicability/existence checks live in
 		// element-service.ts (updateElement), not here.
 		moduleReferenceId: body.moduleReferenceId as string | null | undefined,
+		// Dialogical reasoning (defeaters) — validated by updateElementSchema;
+		// same-case/existence/self-reference checks live in element-service.ts
+		// (updateElement), not here.
+		isDefeater: body.isDefeater as boolean | undefined,
+		defeatsElementId: body.defeatsElementId as string | null | undefined,
 	};
 }
 

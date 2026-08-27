@@ -54,6 +54,12 @@ export const createElementSchema = z.object({
 	// applicability, requiredness, and existence are enforced in
 	// element-service.ts, matching the citedElementId pattern above.
 	moduleReferenceId: z.string().uuid().nullable().optional(),
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	// Same-case, exists, not-deleted, not-self checks are enforced in
+	// element-service.ts, mirroring the batch path
+	// (case-batch-update-service.ts's validateElementOwnership).
+	isDefeater: z.boolean().optional(),
+	defeatsElementId: z.string().uuid().nullable().optional(),
 });
 
 export type CreateElementSchemaInput = z.input<typeof createElementSchema>;
@@ -92,6 +98,12 @@ export const updateElementSchema = z.object({
 	// which allows changing/clearing it without a required-field guard);
 	// applicability and existence are still enforced in element-service.ts.
 	moduleReferenceId: z.string().uuid().nullable().optional(),
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	// Same-case, exists, not-deleted, not-self checks are enforced in
+	// element-service.ts, mirroring the batch path
+	// (case-batch-update-service.ts's validateElementOwnership).
+	isDefeater: z.boolean().optional(),
+	defeatsElementId: z.string().uuid().nullable().optional(),
 
 	// Sandbox flag
 	inSandbox: z.boolean().optional(),

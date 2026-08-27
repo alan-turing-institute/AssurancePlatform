@@ -73,6 +73,11 @@ function buildCreateInput(
 		// createElementSchema; applicability/requiredness/existence checks
 		// live in element-service.ts (createElement), not here.
 		moduleReferenceId: body.moduleReferenceId as string | null | undefined,
+		// Dialogical reasoning (defeaters) — validated by createElementSchema;
+		// same-case/existence/self-reference checks live in element-service.ts
+		// (createElement), not here.
+		isDefeater: body.isDefeater as boolean | undefined,
+		defeatsElementId: body.defeatsElementId as string | null | undefined,
 	};
 }
 
