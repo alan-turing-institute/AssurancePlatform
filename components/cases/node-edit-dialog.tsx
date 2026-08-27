@@ -449,7 +449,6 @@ interface NodeEditDialogProps {
 	nodeType: DiagramNodeType;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
-	readOnly?: boolean;
 }
 
 export default function NodeEditDialog({
@@ -457,7 +456,6 @@ export default function NodeEditDialog({
 	nodeType,
 	open,
 	onOpenChange,
-	readOnly = false,
 }: NodeEditDialogProps) {
 	const [loading, setLoading] = useState(false);
 	const [newContextValue, setNewContextValue] = useState("");
@@ -465,6 +463,13 @@ export default function NodeEditDialog({
 	const [idCounter, setIdCounter] = useState(0);
 	const { assuranceCase } = useStore();
 	const panelSlot = useElementPanelSlot();
+	// Fail-closed, positive rule: editable only when the case permission is
+	// explicitly "edit" or "manage". Any other value — "view", "comment",
+	// or unset/unknown while the case is still loading — renders read-only.
+	const readOnly = !(
+		assuranceCase?.permissions === "edit" ||
+		assuranceCase?.permissions === "manage"
+	);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
@@ -609,6 +614,12 @@ export default function NodeEditDialog({
 	// alternative — silently discarding the user's in-flight edit, which is
 	// the bug this fix addresses — is worse.
 	const handleSubmit = async (values: FormValues) => {
+		// A single-line `readOnly` input still submits its form implicitly on
+		// Enter per the HTML spec (unlike `disabled`, which suppresses that).
+		// Guard here so that keystroke can never reach the update request.
+		if (readOnly) {
+			return;
+		}
 		// Auto-add any unsaved draft context text
 		if (newContextValue.trim()) {
 			values.context = [...(values.context || []), newContextValue.trim()];
