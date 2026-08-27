@@ -614,6 +614,12 @@ export default function NodeEditDialog({
 	// alternative — silently discarding the user's in-flight edit, which is
 	// the bug this fix addresses — is worse.
 	const handleSubmit = async (values: FormValues) => {
+		// A single-line `readOnly` input still submits its form implicitly on
+		// Enter per the HTML spec (unlike `disabled`, which suppresses that).
+		// Guard here so that keystroke can never reach the update request.
+		if (readOnly) {
+			return;
+		}
 		// Auto-add any unsaved draft context text
 		if (newContextValue.trim()) {
 			values.context = [...(values.context || []), newContextValue.trim()];

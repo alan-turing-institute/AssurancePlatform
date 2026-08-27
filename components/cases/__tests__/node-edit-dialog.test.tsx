@@ -553,6 +553,18 @@ describe("NodeEditDialog — evidence URL removal", () => {
 });
 
 describe("NodeEditDialog — read-only mode by case permission", () => {
+	const EVIDENCE_NODE: Node = {
+		id: "3",
+		type: "evidence",
+		position: { x: 0, y: 0 },
+		data: {
+			id: 3,
+			name: "E1",
+			description: "Test results for the acceptance suite",
+			urls: ["https://example.com/evidence"],
+		},
+	};
+
 	function setPermissions(permissions: string): void {
 		useStore.setState({
 			assuranceCase: {
@@ -658,5 +670,70 @@ describe("NodeEditDialog — read-only mode by case permission", () => {
 		// (always present, sr-only-labelled "Close") plus the footer button,
 		// which reads "Close" instead of "Cancel" only in read-only mode.
 		expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
+	});
+
+	it('permissions "view" on an evidence node renders read-only: URL input readonly, no Add/Remove URL controls, no Update button', async () => {
+		setPermissions("view");
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={EVIDENCE_NODE}
+				nodeType="evidence"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const url = await screen.findByDisplayValue("https://example.com/evidence");
+		expect(url).toHaveAttribute("readonly");
+		expect(
+			screen.queryByRole("button", { name: "Add URL" })
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Remove URL" })
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Update Evidence" })
+		).not.toBeInTheDocument();
+	});
+
+	it("does not submit when Enter is pressed in a read-only evidence URL input (a single-field form still submits implicitly on Enter; `readonly`, unlike `disabled`, does not block that)", async () => {
+		const user = userEvent.setup();
+		setPermissions("view");
+		mockPluginsResponse(true);
+
+		let updateRequestCount = 0;
+		server.use(
+			http.put("/api/elements/3", () => {
+				updateRequestCount++;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+
+		render(
+			<NodeEditDialog
+				node={EVIDENCE_NODE}
+				nodeType="evidence"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const url = await screen.findByDisplayValue("https://example.com/evidence");
+		url.focus();
+		await user.keyboard("{Enter}");
+
+		// Give any (incorrect) implicit-submit request a chance to land
+		// before asserting its absence.
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(updateRequestCount).toBe(0);
+		expect(toast).not.toHaveBeenCalled();
 	});
 });
