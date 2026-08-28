@@ -1,65 +1,30 @@
 name: Build
 
-# --- Structural Quality gate (fallow) — baseline refresh recipe ---
+# --- Structural Quality gate (fallow) ---
 #
 # The `structural-quality` job below (required check "Structural Quality
 # (blocking)") audits against coverage MERGED from the unit suite AND the
-# integration suite (see the `test` job's "Run integration tests" /  "Merge
-# unit + integration coverage" steps). `.fallow-baseline.health.json`
-# governs which findings on UNTOUCHED code are treated as pre-existing debt
-# (--baseline-mode identity) rather than newly introduced. A baseline saved
-# with unit-only coverage will not pair correctly against merged-coverage
-# head scores — same class of mismatch as fallow-rs/fallow#2347: coverage
-# measured differently on the two sides of a comparison produces scores
-# that don't line up, and an untouched function can be misattributed as a
-# new finding. This baseline MUST be refreshed under the new merged-coverage
-# recipe below before the gate can be trusted; until it is, the gate may
-# over-report on PRs that touch code near integration-only-tested functions.
+# integration suite (see the `test` job's "Run integration tests" / "Merge
+# unit + integration coverage" steps), so integration-only-tested functions
+# (routes/services, per the testing-trophy convention in CLAUDE.md) score
+# real coverage instead of a false 0%.
 #
-# Cid runs this personally, from a clean `staging` checkout, and commits the
-# result:
+# This used to also need a hand-maintained identity-mode health baseline
+# (`.fallow-baseline.health.json`, `--baseline-mode identity`), refreshed by
+# hand after every merge, to mask fallow-rs/fallow#2347: the base-commit
+# pass never received coverage, so an untouched integration-only-tested
+# function could be misattributed as a NEW finding purely because base and
+# head measured its coverage differently. Fixed upstream in fallow 3.18.0
+# (base pass now reads the same coverage map, rebased onto the base
+# checkout's paths) — verified against our own repro without the baseline
+# on the pinned version below, 2026-08-28. The health baseline and its
+# refresh step are retired; `audit`'s live base-vs-head attribution is
+# sufficient on its own.
 #
-#   git checkout staging && git pull
-#   pnpm install --frozen-lockfile
-#   DATABASE_URL="postgresql://fallow:fallow@localhost:5432/fallow" \
-#     npx prisma generate --schema prisma/schema.prisma
-#
-#   # Unit coverage (same command/env as pnpm test:coverage:check)
-#   COVERAGE=true pnpm exec vitest run --coverage
-#
-#   # Integration coverage — needs a real Postgres; see build.yaml's `test`
-#   # job for the service-container env vars (DATABASE_URL, tea_test/tea_dev,
-#   # migrations, seed) if running this outside CI.
-#   COVERAGE=true pnpm exec vitest run --config vitest.workspace.ts \
-#     --project integration --coverage \
-#     --coverage.reportsDirectory=coverage-integration
-#
-#   # Merge (fail closed — both files must exist; same tool as the CI step).
-#   # Sanitize first: vitest's v8-coverage provider can emit negative hit
-#   # counts under the integration project's multi-fork pool, which fallow's
-#   # coverage parser hard-errors on (expects u32) — see the "Merge unit +
-#   # integration coverage" step in the `test` job for the sanitize script;
-#   # run the same script here before nyc merge.
-#   mkdir -p coverage-merge-input coverage-merged
-#   cp coverage/coverage-final.json coverage-merge-input/unit.json
-#   cp coverage-integration/coverage-final.json coverage-merge-input/integration.json
-#   # <run the sanitize node -e script from the "Merge unit + integration
-#   # coverage" step here, against both files in coverage-merge-input/>
-#   npx -y nyc merge coverage-merge-input coverage-merged/coverage-final.json
-#
-#   # Save the baseline — identity mode, real merged coverage. This OVERWRITES
-#   # .fallow-baseline.health.json; review the diff before committing.
-#   npx -y fallow@3.20.0 health \
-#     --coverage coverage-merged/coverage-final.json \
-#     --baseline-mode identity \
-#     --save-baseline .fallow-baseline.health.json
-#
-#   git add .fallow-baseline.health.json
-#   git commit -m "chore: refresh fallow health baseline with merged unit+integration coverage"
-#
-# .fallow-baseline.dead-code.json / .fallow-baseline.dupes.json are coverage-
-# independent and do not need refreshing for this change.
-# --- end baseline refresh recipe ---
+# `.fallow-baseline.dead-code.json` / `.fallow-baseline.dupes.json` are
+# coverage-independent (they don't depend on the bug above) and still need
+# refreshing by hand after a merge that changes what they track.
+# --- end ---
 
 on:
   workflow_dispatch:
@@ -570,8 +535,6 @@ jobs:
           npx -y fallow@3.20.0 audit \
             --changed-since "origin/${{ github.base_ref }}" \
             --coverage coverage-merged/coverage-final.json \
-            --health-baseline .fallow-baseline.health.json \
-            --baseline-mode identity \
             --format pr-comment-github \
             --output-file fallow-comment.md \
             --quiet
