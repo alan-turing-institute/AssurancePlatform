@@ -18,7 +18,7 @@ name: Fallow Audit (retired)
 # `structural-quality` job for the full audit invocation (kept verbatim in
 # semantics from this file's history — same fallow flags, same PR-comment
 # posting, same fail-closed exit-code handling) and its header comment for
-# the baseline refresh recipe under the new merged-coverage input.
+# how the merged-coverage input is produced.
 #
 # `on: workflow_dispatch: {}` below exists ONLY to keep this file
 # schema-valid — verified 2026-08-25 that actionlint (and GitHub Actions'
