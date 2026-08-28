@@ -49,7 +49,7 @@ name: Build
 #
 #   # Save the baseline — identity mode, real merged coverage. This OVERWRITES
 #   # .fallow-baseline.health.json; review the diff before committing.
-#   npx -y fallow health \
+#   npx -y fallow@3.20.0 health \
 #     --coverage coverage-merged/coverage-final.json \
 #     --baseline-mode identity \
 #     --save-baseline .fallow-baseline.health.json
@@ -567,7 +567,7 @@ jobs:
         if: needs.test.result == 'success'
         run: |
           set +e
-          npx -y fallow audit \
+          npx -y fallow@3.20.0 audit \
             --changed-since "origin/${{ github.base_ref }}" \
             --coverage coverage-merged/coverage-final.json \
             --health-baseline .fallow-baseline.health.json \
