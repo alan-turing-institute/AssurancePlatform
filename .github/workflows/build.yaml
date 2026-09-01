@@ -780,7 +780,7 @@ jobs:
             echo "Health check attempt $i of 10..."
             HEALTH_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
               --max-time 10 \
-              "${{ env.PROD_APP_URL }}/api/health")
+              "${{ env.PROD_APP_URL }}/api/health" || true)
 
             if [ "$HEALTH_STATUS" = "200" ]; then
               echo "Application is healthy!"
@@ -843,7 +843,7 @@ jobs:
             echo "Health check attempt $i of 10..."
             HEALTH_STATUS=$(curl -sL -o /dev/null -w "%{http_code}" \
               --max-time 10 \
-              "${{ env.STAGING_APP_URL }}/api/health")
+              "${{ env.STAGING_APP_URL }}/api/health" || true)
 
             if [ "$HEALTH_STATUS" = "200" ]; then
               echo "Application is healthy!"
