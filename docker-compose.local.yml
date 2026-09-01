@@ -2,6 +2,13 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: tea_postgres_dev
+    # The integration suite TRUNCATEs 30 tables after every test; on the image
+    # defaults (shared_buffers=128MB) that's cache-starved and dominates the
+    # run's wall-clock (see the perf/test-db-memory issue). shm_size must rise
+    # in step with shared_buffers, or Postgres fails to start (default shm is
+    # 64MB).
+    command: postgres -c shared_buffers=1GB -c max_wal_size=4GB
+    shm_size: 1gb
     environment:
       POSTGRES_DB: tea_dev
       POSTGRES_USER: tea_user

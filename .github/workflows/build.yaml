@@ -208,7 +208,13 @@ jobs:
           POSTGRES_DB: tea_test
         ports:
           - 5432:5432
+        # GitHub Actions service containers have no `command:` key, so
+        # shared_buffers/max_wal_size can't be set at container-create time
+        # the way docker-compose.local.yml does it (see the "Tune Postgres"
+        # step below). --shm-size can be set here, though: it's a `docker
+        # create` option, which `options:` does pass through.
         options: >-
+          --shm-size=1gb
           --health-cmd "pg_isready -U tea_user"
           --health-interval 10s
           --health-timeout 5s
@@ -224,6 +230,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Tune Postgres service container (shared_buffers/max_wal_size)
+        # The integration suite's dominant cost is the per-test TRUNCATE
+        # CASCADE in src/__tests__/setup.integration.tsx, slow on the image
+        # default shared_buffers=128MB (cache-starved: pg_stat_bgwriter
+        # buffers_backend:buffers_checkpoint ~13:1). docker-compose.local.yml
+        # fixes this locally via `command:`, which service containers don't
+        # support, so this does it with ALTER SYSTEM (writes
+        # postgresql.auto.conf inside the container) followed by a restart.
+        # A restart, not just a config reload, is required: shared_buffers is
+        # a PGC_POSTMASTER setting in Postgres and only takes effect when the
+        # postmaster restarts (max_wal_size would reload with a SIGHUP alone,
+        # but there's no reason to split the two). `docker restart` targets
+        # the container Docker already created for this job's `postgres`
+        # service (found by image — this job runs exactly one postgres:16
+        # container) — it is not a `docker compose` invocation, so there's no
+        # compose project-name collision.
+        run: |
+          set -euo pipefail
+          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test \
+            -c "ALTER SYSTEM SET shared_buffers = '1GB';" \
+            -c "ALTER SYSTEM SET max_wal_size = '4GB';"
+          cid=$(docker ps --filter "ancestor=postgres:16" --format "{{.ID}}")
+          docker restart "$cid"
+          for _ in $(seq 1 30); do
+            PGPASSWORD=tea_password pg_isready -h localhost -U tea_user -d tea_test && break
+            sleep 1
+          done
+          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "SHOW shared_buffers; SHOW max_wal_size;"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
