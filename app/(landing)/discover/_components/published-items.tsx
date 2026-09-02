@@ -13,12 +13,10 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { formatShortDate } from "@/lib/date";
+import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { PublishableItemSummaryResponse } from "@/lib/services/discover-transforms";
 import PublishableItemTypeBadge from "./publishable-item-type-badge";
-
-const FALLBACK_IMAGE =
-	"https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
 
 interface PublishedItemsProps {
 	items: PublishableItemSummaryResponse[];
@@ -99,7 +97,7 @@ function PublishedItems({ items }: PublishedItemsProps) {
 											alt={`${item.title} featured image`}
 											className="aspect-video w-full rounded-2xl bg-muted object-cover sm:aspect-2/1 lg:aspect-3/2"
 											height={400}
-											src={item.featureImageUrl || FALLBACK_IMAGE}
+											src={resolveFeatureImageSrc(item.featureImageUrl)}
 											width={600}
 										/>
 										<div className="absolute inset-0 rounded-2xl ring-1 ring-border ring-inset" />

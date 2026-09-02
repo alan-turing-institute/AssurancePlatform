@@ -52,9 +52,11 @@ const DIVERGENCE_TEXT =
 	"Changes have been made since this case was last published.";
 const CASE_ID_FROM_URL_PATTERN = /\/case\/([a-f0-9-]+)/;
 
-// A 1x1 transparent PNG, base64-encoded — the smallest file the upload
-// control's mime-type check (`file-storage-service.ts`'s `validateFile`)
-// will accept, generated in-test rather than adding a binary fixture.
+// A 1x1 transparent PNG, base64-encoded — the smallest file that clears both
+// the client-side dropzone gate (`components/ui/image-upload.tsx`'s
+// react-dropzone `accept`/`maxSize`) and the server's mime-type check
+// (`file-storage-service.ts`'s `validateFile`), generated in-test rather
+// than adding a binary fixture.
 const TINY_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
@@ -155,7 +157,12 @@ test.describe("ADR 0003 — publish journey", () => {
 		// The dropzone swaps its "Upload an image" prompt for a preview and a
 		// "Remove Image" control once `ImageUpload`'s `imageToShow` is truthy
 		// (image-upload.tsx) — the client-visible confirmation that the
-		// upload round-trip completed and the form now reflects it.
+		// upload round-trip completed and the form now reflects it. This wait
+		// is not just a UI nicety: it also gives `CaseInformationSection`'s
+		// post-upload `featureImageUrl` sync effect time to flush into the
+		// form before "Save case information" fires below — remove it and the
+		// PUT can race ahead of that effect, submitting a stale `""` that
+		// blanks the image the upload just set.
 		await expect(
 			infoForm.getByRole("button", { name: "Remove Image" })
 		).toBeVisible();
@@ -205,14 +212,11 @@ test.describe("ADR 0003 — publish journey", () => {
 		// test exists to catch (the image showed on the /discover index card
 		// but not on /discover/<slug>). The uploaded image's alt text is the
 		// case title (app/(landing)/discover/[slug]/page.tsx); assert it's
-		// visible and its src is the uploaded upload, not the Unsplash
+		// visible and its src is the uploaded image, not the Unsplash
 		// fallback used when a case has no image.
 		const detailImage = page.getByRole("img", { name: CASE_NAME });
 		await expect(detailImage).toBeVisible();
 		await expect(detailImage).toHaveAttribute("src", UPLOADED_IMAGE_PATTERN);
-		expect(await detailImage.getAttribute("src")).not.toContain(
-			"images.unsplash.com"
-		);
 
 		// ---- Same check on the /discover index card for this case.
 		await page.goto("/discover");

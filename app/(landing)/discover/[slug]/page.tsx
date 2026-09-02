@@ -5,11 +5,9 @@ import Link from "next/link";
 import { fetchPublishedItemBySlug } from "@/actions/discover";
 import { SanitisedHtml } from "@/components/cases/sanitised-html";
 import { formatShortDate } from "@/lib/date";
+import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import DownloadPublishedItemButton from "../_components/download-published-item-button";
 import PublishableItemTypeBadge from "../_components/publishable-item-type-badge";
-
-const FALLBACK_IMAGE =
-	"https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
 
 interface DiscoverItemPageProps {
 	params: Promise<{ slug: string }>;
@@ -109,7 +107,7 @@ const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 									alt={item.title}
 									className="aspect-12/7 w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
 									height={1376}
-									src={item.featureImageUrl || FALLBACK_IMAGE}
+									src={resolveFeatureImageSrc(item.featureImageUrl)}
 									width={1184}
 								/>
 								<figcaption className="mt-3 flex text-muted-foreground text-sm">
