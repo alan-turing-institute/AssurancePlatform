@@ -107,7 +107,9 @@ export async function POST(
 			return apiError(validationError("Invalid integration id"));
 		}
 
-		const data = await parseJsonBody(request, grantCaseAccessSchema);
+		const data = await parseJsonBody(request, grantCaseAccessSchema, {
+			emptyBodyAs: {},
+		});
 
 		const result = await grantIntegrationCaseAccess(
 			parsedId.data,

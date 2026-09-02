@@ -1,4 +1,4 @@
-import { parseJsonBody, readJsonBody } from "@/lib/api-request";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import {
 	deleteAccountSchema,
 	updateUserProfileSchema,
@@ -77,17 +76,12 @@ export async function DELETE(request: Request) {
 		const userId = await requireAuth();
 
 		// Body carries a password for confirmation, but may be empty for
-		// OAuth users — `readJsonBody` returns `undefined` for an absent
-		// body, and the schema is a strictObject, so `?? {}` defaults it
-		// the same way `POST /api/cases/[id]/publish` does.
-		const raw = await readJsonBody(request);
-		const parsed = deleteAccountSchema.safeParse(raw ?? {});
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-		const { password } = parsed.data;
+		// OAuth users, who have none to send — treated the same as {}
+		// (emptyBodyAs), the same way POST /api/cases/[id]/publish treats an
+		// absent body as "use defaults".
+		const { password } = await parseJsonBody(request, deleteAccountSchema, {
+			emptyBodyAs: {},
+		});
 
 		// Call service to delete account
 		const { deleteAccount } = await import(

@@ -48,7 +48,9 @@ export async function POST(
 			return apiError(validationError("Invalid integration id"));
 		}
 
-		const data = await parseJsonBody(request, issueTokenSchema);
+		const data = await parseJsonBody(request, issueTokenSchema, {
+			emptyBodyAs: {},
+		});
 
 		const result = await issueToken(parsedId.data, userId, {
 			expiresAt: data.expiresAt,

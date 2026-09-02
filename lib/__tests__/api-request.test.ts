@@ -126,6 +126,31 @@ describe("readJsonBody", () => {
 		expect(DEFAULT_MAX_JSON_BODY_BYTES).toBe(1024 * 1024);
 	});
 
+	it("returns emptyBodyAs for a missing body when given, instead of undefined", async () => {
+		const request = new NextRequest(URL, { method: "POST" });
+
+		await expect(readJsonBody(request, { emptyBodyAs: {} })).resolves.toEqual(
+			{}
+		);
+	});
+
+	it("still returns undefined for a missing body when emptyBodyAs is not given", async () => {
+		const request = new NextRequest(URL, { method: "POST" });
+
+		await expect(readJsonBody(request)).resolves.toBeUndefined();
+	});
+
+	it("does not apply emptyBodyAs to a non-empty body that fails to parse as JSON", async () => {
+		const { request } = chunkedRequest(["not json"]);
+
+		await expect(
+			readJsonBody(request, { emptyBodyAs: {} })
+		).rejects.toMatchObject({
+			code: "VALIDATION",
+			message: "Request body must be valid JSON",
+		});
+	});
+
 	it("throws a 400 validation error for malformed JSON", async () => {
 		const { request } = chunkedRequest(["not json"]);
 

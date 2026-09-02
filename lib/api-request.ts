@@ -21,13 +21,29 @@ export const JSON_BODY_LIMITS = {
 	caseImage: 10 * 1024 * 1024, // base64 PNG of the canvas
 } as const;
 
+interface ReadJsonBodyOptions {
+	/**
+	 * Value to return for a missing or zero-byte body, in place of
+	 * `undefined`. Several routes treat "no body at all" as a deliberate,
+	 * documented affordance rather than an error — `POST
+	 * /api/integrations/[id]/tokens` and `.../case-grants` accept a bodyless
+	 * request the same way they accept `{}` (all their fields are optional),
+	 * `POST /api/cases/[id]/publish` treats an absent body as "publish with
+	 * defaults", and `DELETE /api/users/me` treats it as "no password"
+	 * (OAuth users have none to send). Does NOT apply to a non-empty body
+	 * that fails to parse as JSON — that is still a 400, never silently
+	 * substituted.
+	 */
+	emptyBodyAs?: unknown;
+	maxBytes?: number;
+}
+
 /**
  * Reads a JSON request body with a byte cap, before the body is ever
  * parsed. Throws `payloadTooLarge()` (413) if the body exceeds `maxBytes`,
  * or `validationError()` (400) if what is read is not valid JSON. Resolves
- * to `undefined` for a missing or empty body — callers that treat an
- * absent body as "use defaults" (e.g. `POST /api/cases/[id]/publish`) rely
- * on this.
+ * to `undefined` for a missing or empty body, or to `options.emptyBodyAs`
+ * if given.
  *
  * Enforcement has two layers, because either alone can be defeated by a
  * client:
@@ -46,9 +62,10 @@ export const JSON_BODY_LIMITS = {
  */
 export async function readJsonBody(
 	request: Request,
-	options?: { maxBytes?: number }
+	options?: ReadJsonBodyOptions
 ): Promise<unknown> {
 	const maxBytes = options?.maxBytes ?? DEFAULT_MAX_JSON_BODY_BYTES;
+	const emptyBodyResult = options?.emptyBodyAs;
 
 	const declaredLength = request.headers.get("content-length");
 	if (declaredLength !== null) {
@@ -59,7 +76,7 @@ export async function readJsonBody(
 	}
 
 	if (!request.body) {
-		return undefined;
+		return emptyBodyResult;
 	}
 
 	const reader = request.body.getReader();
@@ -80,7 +97,7 @@ export async function readJsonBody(
 	}
 
 	if (receivedBytes === 0) {
-		return undefined;
+		return emptyBodyResult;
 	}
 
 	const bytes = new Uint8Array(receivedBytes);
@@ -106,7 +123,7 @@ export async function readJsonBody(
 export async function parseJsonBody<S extends z.ZodType>(
 	request: Request,
 	schema: S,
-	options?: { maxBytes?: number }
+	options?: ReadJsonBodyOptions
 ): Promise<z.output<S>> {
 	const raw = await readJsonBody(request, options);
 	const parsed = schema.safeParse(raw);

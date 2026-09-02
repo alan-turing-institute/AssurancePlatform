@@ -4,6 +4,7 @@ import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
 	createTestElement,
+	createTestIntegrationWithSystemUser,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -166,5 +167,30 @@ describe("POST /api/cases/[id]/batch — named override raises the cap", () => {
 		});
 
 		expect(response.status).toBe(200);
+	});
+});
+
+describe("POST /api/integrations/[id]/tokens — bodyless request stays valid", () => {
+	it("issues a token for a request with no body at all, not just an empty {}", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import("@/app/api/integrations/[id]/tokens/route");
+		// No `body` key at all — issueTokenSchema is all-optional, and the
+		// route documents a bodyless POST as valid (emptyBodyAs: {}).
+		const req = new NextRequest(
+			`http://localhost:3000/api/integrations/${integration.id}/tokens`,
+			{ method: "POST" }
+		);
+
+		const response = await POST(req, {
+			params: Promise.resolve({ id: integration.id }),
+		});
+
+		expect(response.status).toBe(201);
+		const body = await response.json();
+		expect(typeof body.secret).toBe("string");
+		expect(body.secret.length).toBeGreaterThan(0);
 	});
 });

@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { readJsonBody } from "@/lib/api-request";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -67,19 +67,14 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 
-		// Body is optional — an empty/absent body parses to {} and validates
-		// fine, since `description` itself is optional. `readJsonBody`
-		// returns `undefined` (not `{}`) for an absent body, and the schema
-		// is a z.strictObject (which rejects `undefined` outright), so the
-		// `?? {}` default is applied here rather than via parseJsonBody.
-		const raw = await readJsonBody(request);
-		const parsed = publishCaseBodySchema.safeParse(raw ?? {});
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-		const { description } = parsed.data;
+		// Body is optional — an empty/absent body is treated the same as {}
+		// (emptyBodyAs), and validates fine since `description` itself is
+		// optional.
+		const { description } = await parseJsonBody(
+			request,
+			publishCaseBodySchema,
+			{ emptyBodyAs: {} }
+		);
 
 		const completeness = await requireCaseInformationComplete(
 			session.userId,
