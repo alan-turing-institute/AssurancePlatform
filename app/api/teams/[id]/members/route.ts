@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { addTeamMemberSchema } from "@/lib/schemas/team";
 import {
 	addTeamMember,
@@ -48,16 +48,9 @@ export async function POST(
 		const userId = await requireAuth();
 		const { id: teamId } = await params;
 
-		const parsed = addTeamMemberSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, addTeamMemberSchema);
 
-		const result = await addTeamMember(userId, teamId, parsed.data);
+		const result = await addTeamMember(userId, teamId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { createElementSchema } from "@/lib/schemas/element";
 import { createElement } from "@/lib/services/element-service";
 
@@ -21,6 +21,7 @@ import { createElement } from "@/lib/services/element-service";
  * @response 400 - Validation error
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Elements
  */
@@ -32,23 +33,14 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 
-		const rawBody = (await request.json().catch(() => null)) as Record<
-			string,
-			unknown
-		> | null;
-		const parsed = createElementSchema.safeParse(rawBody);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, createElementSchema);
 
 		// element-service.ts's createElement resolves url/URL itself
 		// (url || URL) — do not collapse them here.
 		const result = await createElement(session.userId, {
-			...parsed.data,
+			...data,
 			caseId,
-			elementType: parsed.data.type ?? parsed.data.elementType ?? "",
+			elementType: data.type ?? data.elementType ?? "",
 		});
 
 		if ("error" in result) {

@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -35,6 +36,7 @@ const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
  *
  * @body { fileId: string }
  * @response ImportResult
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -51,14 +53,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const parseResult = importFromDriveSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parseResult.success) {
-			return apiError(validationError("Invalid request"));
-		}
-
-		const { fileId } = parseResult.data;
+		const { fileId } = await parseJsonBody(request, importFromDriveSchema);
 
 		// Download file from Drive
 		const downloadResult = await downloadFileFromDrive(userId, fileId);

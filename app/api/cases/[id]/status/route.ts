@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -98,16 +99,10 @@ export async function PATCH(
 		const userId = await requireAuth();
 		const { id } = await params;
 
-		const parsed = updateCaseStatusSchema.safeParse(
-			await request.json().catch(() => null)
+		const { targetStatus, description } = await parseJsonBody(
+			request,
+			updateCaseStatusSchema
 		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-
-		const { targetStatus, description } = parsed.data;
 
 		if (targetStatus === "PUBLISHED") {
 			const completeness = await requireCaseInformationComplete(userId, id);

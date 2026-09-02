@@ -1,3 +1,4 @@
+import { JSON_BODY_LIMITS, readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -18,6 +19,7 @@ import { importCase } from "@/lib/services/case-import-service";
  * @response 200 - { id, name, elementCount, evidenceLinkCount, warnings }
  * @response 400 - Validation errors
  * @response 401 - Unauthorised
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -25,12 +27,15 @@ export async function POST(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		let jsonData: unknown;
-		try {
-			jsonData = await request.json();
-		} catch {
-			return apiError(validationError("Invalid JSON in request body"));
-		}
+		// The body is a whole case document whose format is detected by the
+		// import service itself (`importCase` -> `validateImportData`), not
+		// by a zod schema here — the accepted shapes (v1, v2, nested v1.0)
+		// vary too much for one schema to usefully bound, so this is the one
+		// sanctioned schema-less body read (Design §4). Still size-capped,
+		// at the larger `caseImport` limit rather than the 1 MiB default.
+		const jsonData = await readJsonBody(request, {
+			maxBytes: JSON_BODY_LIMITS.caseImport,
+		});
 
 		const result = await importCase(userId, jsonData);
 
@@ -66,6 +71,7 @@ export async function POST(request: Request) {
  * @response 200 - { isValid, version, caseName, elementCount, evidenceLinkCount, warnings }
  * @response 400 - Validation errors
  * @response 401 - Unauthorised
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -77,12 +83,10 @@ export async function PUT(request: Request) {
 			"@/lib/services/case-import-service"
 		);
 
-		let jsonData: unknown;
-		try {
-			jsonData = await request.json();
-		} catch {
-			return apiError(validationError("Invalid JSON in request body"));
-		}
+		// Schema-less for the same reason as POST above — see its comment.
+		const jsonData = await readJsonBody(request, {
+			maxBytes: JSON_BODY_LIMITS.caseImport,
+		});
 
 		const result = await validateImportData(jsonData);
 

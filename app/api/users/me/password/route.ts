@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { changePasswordSchema } from "@/lib/schemas/auth";
 import { changePassword } from "@/lib/services/user-management-service";
 
@@ -17,18 +17,14 @@ export async function PUT(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		// Parse and validate request body
-		const body: unknown = await request.json();
-		const parsed = changePasswordSchema.safeParse(body);
-		if (!parsed.success) {
-			return apiError(
-				validationError("Current password and new password are required")
-			);
-		}
+		const { currentPassword, newPassword } = await parseJsonBody(
+			request,
+			changePasswordSchema
+		);
 
 		const result = await changePassword(userId, {
-			currentPassword: parsed.data.currentPassword,
-			newPassword: parsed.data.newPassword,
+			currentPassword,
+			newPassword,
 		});
 
 		if ("error" in result) {

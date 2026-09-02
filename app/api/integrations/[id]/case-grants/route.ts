@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -89,6 +90,7 @@ export async function GET(
  * @response 401 - Unauthorised
  * @response 404 - Integration not found, OR case not found (incl. soft-deleted/trashed), OR caller lacks case ADMIN (identical message/status for all — no enumeration oracle)
  * @response 409 - The integration is not ACTIVE — `error` is one of two distinct, status-specific strings, not a uniform message: "Cannot grant case access for a suspended integration" or "Cannot grant case access for a revoked integration" (safe to disclose — this only fires after the owner + case-admin checks above already pass)
+ * @response 413 - Payload too large
  * @auth SessionAuth
  * @tag Integrations
  */
@@ -105,19 +107,14 @@ export async function POST(
 			return apiError(validationError("Invalid integration id"));
 		}
 
-		const parsed = grantCaseAccessSchema.safeParse(
-			await request.json().catch(() => ({}))
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, grantCaseAccessSchema, {
+			emptyBodyAs: {},
+		});
 
 		const result = await grantIntegrationCaseAccess(
 			parsedId.data,
-			parsed.data.caseId,
-			parsed.data.permission,
+			data.caseId,
+			data.permission,
 			userId
 		);
 		if ("error" in result) {

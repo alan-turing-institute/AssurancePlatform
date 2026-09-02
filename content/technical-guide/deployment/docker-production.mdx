@@ -87,6 +87,12 @@ server {
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
 
+    # Match the app's largest request-body limit (screenshot/case-import
+    # uploads, capped at 10 MiB — see lib/api-request.ts). nginx's own
+    # default is 1m, which would reject those uploads at the proxy before
+    # the app ever sees them.
+    client_max_body_size 10m;
+
     location / {
         proxy_pass http://localhost:3000;
         proxy_set_header Host $host;

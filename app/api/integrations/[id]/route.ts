@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -29,6 +30,7 @@ import {
  * @response 400 - Validation error (including an unknown scope)
  * @response 401 - Unauthorised
  * @response 404 - Integration not found (covers non-existent and not-owned — same message)
+ * @response 413 - Payload too large
  * @auth SessionAuth
  * @tag Integrations
  */
@@ -45,18 +47,11 @@ export async function PATCH(
 			return apiError(validationError("Invalid integration id"));
 		}
 
-		const parsed = updateIntegrationSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, updateIntegrationSchema);
 
 		const result = await updateIntegration(
 			parsedId.data,
-			{ description: parsed.data.description, scopes: parsed.data.scopes },
+			{ description: data.description, scopes: data.scopes },
 			userId
 		);
 		if ("error" in result) {

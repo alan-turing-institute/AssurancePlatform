@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { attachElementSchema } from "@/lib/schemas/element";
 import { attachElement } from "@/lib/services/element-service";
 
@@ -21,14 +21,7 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const body = await request.json();
-		const parsed = attachElementSchema.safeParse(body);
-
-		if (!parsed.success) {
-			return apiError(validationError("Invalid parent ID format"));
-		}
-
-		const { parentId } = parsed.data;
+		const { parentId } = await parseJsonBody(request, attachElementSchema);
 		const result = await attachElement(session.userId, elementId, parentId);
 
 		if ("error" in result) {

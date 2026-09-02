@@ -172,3 +172,14 @@ export type UpdateUserProfileSchemaInput = z.input<
 export type UpdateUserProfileSchemaOutput = z.output<
 	typeof updateUserProfileSchema
 >;
+
+/**
+ * Delete-account confirmation input. `password` is optional — OAuth-only
+ * users have no password to confirm with, so the route (and
+ * `deleteAccount`, `user-management-service.ts`) already treat an absent
+ * password as valid; this schema only bounds the shape of what's sent, not
+ * whether a password is required.
+ */
+export const deleteAccountSchema = z.strictObject({
+	password: z.string().optional(),
+});

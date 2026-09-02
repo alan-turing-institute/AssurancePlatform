@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,12 +7,9 @@ import {
 	apiSuccess,
 } from "@/lib/api-response";
 import { extractClientIp } from "@/lib/auth/extract-client-ip";
-import { AppError, validationError } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
+import { forgotPasswordSchema } from "@/lib/schemas/auth";
 import { requestPasswordReset } from "@/lib/services/password-reset-service";
-
-interface ForgotPasswordRequest {
-	email: string;
-}
 
 /**
  * POST /api/auth/forgot-password
@@ -19,19 +17,14 @@ interface ForgotPasswordRequest {
  */
 export async function POST(request: Request) {
 	try {
-		// Parse request body
-		const body = (await request.json()) as ForgotPasswordRequest;
-
-		if (!body.email) {
-			return apiError(validationError("Email is required"));
-		}
+		const { email } = await parseJsonBody(request, forgotPasswordSchema);
 
 		// Get client IP and user agent for rate limiting
 		const headersList = await headers();
 		const ipAddress = extractClientIp(headersList);
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
-		const result = await requestPasswordReset(body.email, ipAddress, userAgent);
+		const result = await requestPasswordReset(email, ipAddress, userAgent);
 
 		if ("error" in result) {
 			if (result.rateLimited) {

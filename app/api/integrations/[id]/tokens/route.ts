@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -30,6 +31,7 @@ import { issueToken } from "@/lib/services/integration-registry-service";
  * @response 401 - Unauthorised
  * @response 404 - Integration not found (covers non-existent and not-owned — same message)
  * @response 409 - The integration is not ACTIVE
+ * @response 413 - Payload too large
  * @auth SessionAuth
  * @tag Integrations
  */
@@ -46,17 +48,12 @@ export async function POST(
 			return apiError(validationError("Invalid integration id"));
 		}
 
-		const parsed = issueTokenSchema.safeParse(
-			await request.json().catch(() => ({}))
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, issueTokenSchema, {
+			emptyBodyAs: {},
+		});
 
 		const result = await issueToken(parsedId.data, userId, {
-			expiresAt: parsed.data.expiresAt,
+			expiresAt: data.expiresAt,
 		});
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
