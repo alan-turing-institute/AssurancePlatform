@@ -213,6 +213,35 @@ describe("PUT /api/cases/[id]", () => {
 		expect(response.status).toBe(400);
 	});
 
+	it("rejects an unrecognised key (snake_case layout_direction) with 400 naming the key — the exact bug that motivated strict schemas", async () => {
+		// layoutDirection (camelCase) is the schema's declared field; a client
+		// sending layout_direction (snake_case) used to have it silently
+		// dropped by the old bare z.object() and return 200 while doing
+		// nothing (TEA — layoutDirection setting silently fails to persist,
+		// the key-case mismatch that motivated this hardening issue).
+		// z.strictObject() now rejects it outright, naming the key.
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, { name: "Case" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ layout_direction: "LR" }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toContain("layout_direction");
+	});
+
 	it("returns 401 when the request is not authenticated", async () => {
 		const { PUT } = await import("@/app/api/cases/[id]/route");
 		const req = new NextRequest(

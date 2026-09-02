@@ -120,3 +120,28 @@ describe("POST /api/cases/[id]/batch — evidence URL validation (nullableUrlSch
 		expect(inDb?.url).toBeNull();
 	});
 });
+
+describe("POST /api/cases/[id]/batch — strict schema (unrecognised key rejection)", () => {
+	it("rejects an update change whose data carries an unrecognised key (URL, uppercase — batchUpdateRequestSchema only declares lowercase url) with 400 naming the key", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const evidence = await createTestElement(testCase.id, owner.id, {
+			elementType: "EVIDENCE",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{
+					type: "update",
+					elementId: evidence.id,
+					data: { URL: "https://x.example" },
+				},
+			],
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toContain("URL");
+	});
+});
