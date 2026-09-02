@@ -119,6 +119,33 @@ describe("POST /api/cases/[id]/batch — evidence URL validation (nullableUrlSch
 		});
 		expect(inDb?.url).toBeNull();
 	});
+
+	it("leaves an existing URL unchanged when data omits url entirely (undefined means leave unchanged, not clear)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const evidence = await createTestElement(testCase.id, owner.id, {
+			elementType: "EVIDENCE",
+			url: "https://example.com/existing.pdf",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{
+					type: "update",
+					elementId: evidence.id,
+					data: { description: "Updated description, no url field at all" },
+				},
+			],
+		});
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: evidence.id },
+		});
+		expect(inDb?.url).toBe("https://example.com/existing.pdf");
+		expect(inDb?.description).toBe("Updated description, no url field at all");
+	});
 });
 
 describe("POST /api/cases/[id]/batch — strict schema (unrecognised key rejection)", () => {

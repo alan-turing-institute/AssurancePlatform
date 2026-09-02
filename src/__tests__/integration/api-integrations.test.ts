@@ -167,16 +167,24 @@ describe("POST /api/integrations", () => {
 		const other = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
+		const attemptedName = `spoof-attempt-${user.id}`;
 		const { POST } = await import("@/app/api/integrations/route");
 		const response = await POST(
 			jsonRequest("/api/integrations", "POST", {
-				name: `spoof-attempt-${user.id}`,
+				name: attemptedName,
 				scopes: ["case:read"],
 				ownerId: other.id,
 			})
 		);
 
 		expect(response.status).toBe(400);
+
+		// No integration row was written at all — the rejection happens at the
+		// schema boundary, before the service (or any owner) is ever reached.
+		const written = await prisma.integration.findFirst({
+			where: { name: attemptedName },
+		});
+		expect(written).toBeNull();
 	});
 
 	it("rejects an unknown scope with 400", async () => {

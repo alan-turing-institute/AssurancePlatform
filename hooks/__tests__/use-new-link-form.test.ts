@@ -58,21 +58,41 @@ const NODE: Node = {
 	data: { id: "claim-1" },
 };
 
+// A strategy node - for the createStrategyPayload/createPropertyClaimItem
+// branches keyed on node.type === "strategy".
+const STRATEGY_NODE: Node = {
+	id: "2",
+	type: "strategy",
+	position: { x: 0, y: 0 },
+	data: { id: "strategy-1" },
+};
+
+// A goal node - exercises the default/goal branch of createStrategyPayload
+// and createPropertyClaimItem, where parentId comes from
+// assuranceCase.goals[0].id rather than node.data.id.
+const GOAL_NODE: Node = {
+	id: "3",
+	type: "goal",
+	position: { x: 0, y: 0 },
+	data: { id: "goal-1" },
+};
+
 const CASE_WITH_CLAIM = {
 	id: "case-1",
 	goals: [
 		{
+			id: "goal-1",
 			propertyClaims: [{ id: "claim-1", propertyClaims: [], evidence: [] }],
 			strategies: [],
 		},
 	],
 } as unknown as AssuranceCaseResponse;
 
-function setup() {
+function setup(overrides: { node?: Node; linkType?: string } = {}) {
 	return renderHook(() =>
 		useNewLinkForm({
-			node: NODE,
-			linkType: "evidence",
+			node: overrides.node ?? NODE,
+			linkType: overrides.linkType ?? "evidence",
 			actions: {
 				setSelectedLink: vi.fn(),
 				setLinkToCreate: vi.fn(),
@@ -81,6 +101,20 @@ function setup() {
 			setUnresolvedChanges: vi.fn(),
 		})
 	);
+}
+
+/** Submits the description-only form (context/claim/strategy paths - no urls field). */
+async function submitDescription(
+	result: { current: ReturnType<typeof useNewLinkForm> },
+	description: string
+) {
+	act(() => {
+		result.current.form.setValue("description", description);
+	});
+	await act(async () => {
+		await result.current.onSubmit(result.current.form.getValues());
+	});
+	await waitFor(() => expect(result.current.loading).toBe(false));
 }
 
 beforeEach(() => {
@@ -132,5 +166,82 @@ describe("useNewLinkForm — evidence URL submission", () => {
 				description: "Enter a web address, such as example.com/report.pdf",
 			})
 		);
+	});
+});
+
+/**
+ * Each rewritten payload builder (TEA — Mutation-schema hardening, commit
+ * 00a77f7e) sends a narrow named shape — { description, parentId,
+ * assuranceCaseId } — instead of legacy relationship keys (goalId/
+ * strategyId/propertyClaimId). These pin that every branch of every
+ * builder still resolves parentId correctly and produces a body the real
+ * createElementSchema accepts (via mockElementsRoute's real-schema check,
+ * same as the evidence describe block above) — no DB, mocked fetch only.
+ */
+describe("useNewLinkForm — rewritten payload builders (parentId resolution)", () => {
+	it("handleContextAdd sends parentId = the goal's id (context is always attached under the goal)", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: GOAL_NODE, linkType: "context" });
+
+		await submitDescription(result, "A context description");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.parentId).toBe("goal-1");
+	});
+
+	it("createStrategyPayload sends parentId = node.data.id when node.type is 'property'", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: NODE, linkType: "strategy" });
+
+		await submitDescription(result, "A strategy description");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.parentId).toBe("claim-1");
+	});
+
+	it("createStrategyPayload sends parentId = the goal's id for the goal/default branch", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: GOAL_NODE, linkType: "strategy" });
+
+		await submitDescription(result, "A strategy description");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.parentId).toBe("goal-1");
+	});
+
+	it("createPropertyClaimItem sends parentId = node.data.id for the strategy branch", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: STRATEGY_NODE, linkType: "claim" });
+
+		await submitDescription(result, "A property claim description");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.parentId).toBe("strategy-1");
+	});
+
+	it("createPropertyClaimItem sends parentId = node.data.id for the property branch", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: NODE, linkType: "claim" });
+
+		await submitDescription(result, "A property claim description");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.parentId).toBe("claim-1");
+	});
+
+	it("createPropertyClaimItem sends parentId = the goal's id for the goal/default branch", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: GOAL_NODE, linkType: "claim" });
+
+		await submitDescription(result, "A property claim description");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.parentId).toBe("goal-1");
 	});
 });
