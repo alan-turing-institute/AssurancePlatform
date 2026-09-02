@@ -43,6 +43,8 @@ const FOLDER_MIME = "application/vnd.google-apps.folder";
 const JSON_MIME = "application/json";
 const BACKUP_FILE_NAME_PATTERN =
 	/^My_Case___v2_-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json$/;
+const ALL_UNDERSCORES_FILE_NAME_PATTERN =
+	/^_______-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json$/;
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -173,10 +175,12 @@ describe("hasGoogleToken / getUserGoogleTokens (via hasGoogleToken)", () => {
 		expect(mockRefreshAccessToken).not.toHaveBeenCalled();
 	});
 
-	it("returns false when refreshAccessToken throws", async () => {
+	it("returns false when refreshAccessToken throws, and leaves the stored token/expiry unchanged", async () => {
 		const user = await createTestUser();
+		const originalExpiry = new Date(Date.now() - 60 * 1000);
 		await setGoogleTokens(user.id, {
-			googleTokenExpiresAt: new Date(Date.now() - 60 * 1000),
+			googleAccessToken: "stale-token",
+			googleTokenExpiresAt: originalExpiry,
 		});
 		mockRefreshAccessToken.mockRejectedValueOnce(new Error("refresh failed"));
 
@@ -184,6 +188,95 @@ describe("hasGoogleToken / getUserGoogleTokens (via hasGoogleToken)", () => {
 			"@/lib/services/google-drive-service"
 		);
 		expect(await hasGoogleToken(user.id)).toBe(false);
+
+		const unchanged = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(unchanged?.googleAccessToken).toBe("stale-token");
+		expect(unchanged?.googleTokenExpiresAt?.getTime()).toBe(
+			originalExpiry.getTime()
+		);
+	});
+
+	it("returns false and leaves the user row unchanged when the refresh response carries no access_token", async () => {
+		const user = await createTestUser();
+		const originalExpiry = new Date(Date.now() - 60 * 1000);
+		await setGoogleTokens(user.id, {
+			googleAccessToken: "stale-token",
+			googleTokenExpiresAt: originalExpiry,
+		});
+		// Refresh "succeeds" (resolves, doesn't throw) but the credentials
+		// object carries no access_token — the service's own defensive guard
+		// (google-drive-service.ts:117-119) must treat this the same as a
+		// thrown refresh failure.
+		mockRefreshAccessToken.mockResolvedValueOnce({ credentials: {} });
+
+		const { hasGoogleToken } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		expect(await hasGoogleToken(user.id)).toBe(false);
+
+		const unchanged = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(unchanged?.googleAccessToken).toBe("stale-token");
+		expect(unchanged?.googleTokenExpiresAt?.getTime()).toBe(
+			originalExpiry.getTime()
+		);
+	});
+
+	// The expiry check is `expiresAt.getTime() - bufferMs < now.getTime()` —
+	// strictly less-than, so an expiry exactly 5 minutes out is NOT expired.
+	// Fake timers freeze `now` for the whole call so the boundary can't be
+	// crossed by real elapsed time between building the fixture and the
+	// service reading `new Date()` internally (both dates are derived from
+	// one `Date.now()` snapshot, per the review request).
+	it("does not refresh when the expiry sits exactly on the 5-minute buffer boundary", async () => {
+		const user = await createTestUser();
+		const snapshot = new Date("2026-01-01T00:00:00.000Z");
+		vi.useFakeTimers();
+		vi.setSystemTime(snapshot);
+		try {
+			const exactlyFiveMinutesOut = new Date(
+				snapshot.getTime() + 5 * 60 * 1000
+			);
+			await setGoogleTokens(user.id, {
+				googleTokenExpiresAt: exactlyFiveMinutesOut,
+			});
+
+			const { hasGoogleToken } = await import(
+				"@/lib/services/google-drive-service"
+			);
+			expect(await hasGoogleToken(user.id)).toBe(true);
+			expect(mockRefreshAccessToken).not.toHaveBeenCalled();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("refreshes when the expiry sits 1ms inside the 5-minute buffer boundary", async () => {
+		const user = await createTestUser();
+		const snapshot = new Date("2026-01-01T00:00:00.000Z");
+		vi.useFakeTimers();
+		vi.setSystemTime(snapshot);
+		try {
+			const oneMsInsideBuffer = new Date(
+				snapshot.getTime() + 5 * 60 * 1000 - 1
+			);
+			await setGoogleTokens(user.id, {
+				googleTokenExpiresAt: oneMsInsideBuffer,
+			});
+			mockRefreshAccessToken.mockResolvedValueOnce({
+				credentials: {
+					access_token: "boundary-refreshed-token",
+					expiry_date: snapshot.getTime() + 60 * 60 * 1000,
+				},
+			});
+
+			const { hasGoogleToken } = await import(
+				"@/lib/services/google-drive-service"
+			);
+			expect(await hasGoogleToken(user.id)).toBe(true);
+			expect(mockRefreshAccessToken).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 
@@ -297,6 +390,53 @@ describe("uploadBackupToDrive", () => {
 				media: expect.objectContaining({ mimeType: JSON_MIME }),
 			})
 		);
+	});
+
+	it("passes the exact JSON content through the upload's media body stream", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id);
+		mockExistingFolder("folder-id");
+		const jsonContent = '{"hello":"world","nested":{"a":1}}';
+		let capturedBody = "";
+		mockFilesCreate.mockImplementationOnce(
+			async (args: { media: { body: AsyncIterable<string> } }) => {
+				for await (const chunk of args.media.body) {
+					capturedBody += chunk;
+				}
+				return { data: { id: "file-id", webViewLink: undefined } };
+			}
+		);
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "Case", jsonContent);
+
+		expect("data" in result).toBe(true);
+		expect(capturedBody).toBe(jsonContent);
+	});
+
+	it("sanitises a case name made entirely of stripped characters to all underscores", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id);
+		mockExistingFolder("folder-id");
+		mockFilesCreate.mockResolvedValueOnce({
+			data: { id: "file-id", webViewLink: undefined },
+		});
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "!!! ???", "{}");
+
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			throw new Error("expected success");
+		}
+		// "!!! ???" is 7 characters, every one of them stripped by
+		// `[^a-zA-Z0-9-_]` — the sanitised name is 7 underscores, not an
+		// empty string.
+		expect(result.data.fileName).toMatch(ALL_UNDERSCORES_FILE_NAME_PATTERN);
 	});
 
 	it("returns an API_ERROR result carrying the SDK's message when the upload throws", async () => {
