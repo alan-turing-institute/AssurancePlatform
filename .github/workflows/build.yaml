@@ -733,6 +733,21 @@ jobs:
       needs.docker-build.result == 'success' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
 
+    # Serialise deploys to the same branch: stacked merges to staging or
+    # main otherwise fire this job's Azure webhook concurrently, which is
+    # what failed the deploy on 2026-07-14 (three merges, webhook retries
+    # exhausted). cancel-in-progress stays false — cancelling a RUNNING job
+    # here wouldn't stop the Azure webhook it already fired, it would just
+    # abandon that deployment's health-check monitoring. GitHub's queueing
+    # semantics do the coalescing for us: only one job per group runs at a
+    # time and only one waits behind it, so a burst of pushes to the same
+    # branch collapses to "whatever's currently deploying" plus "the latest
+    # push", never two webhook calls in flight together. main and staging
+    # use different refs, so production and staging deploys stay parallel.
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false
+
     steps:
       - name: Deploy to Azure (Production)
         if: github.ref == 'refs/heads/main'
