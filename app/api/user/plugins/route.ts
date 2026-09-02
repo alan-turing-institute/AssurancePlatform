@@ -84,7 +84,6 @@ export async function GET() {
  * - `pluginToggleSchema` caps `settings` size/shape and rejects any
  *   pluginId absent from the manifest before this ever reaches the
  *   service layer, which trusts schema-validated input.
- * @response 413 - Payload too large
  */
 export async function PATCH(req: Request) {
 	try {

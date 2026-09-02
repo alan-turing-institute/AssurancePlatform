@@ -36,7 +36,6 @@ export async function GET(
 /**
  * POST /api/elements/[id]/comments
  * Creates a new comment on an element (supports threading via parentId).
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,

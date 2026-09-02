@@ -14,7 +14,6 @@ import { requestPasswordReset } from "@/lib/services/password-reset-service";
 /**
  * POST /api/auth/forgot-password
  * Request a password reset email.
- * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {

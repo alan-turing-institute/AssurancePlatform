@@ -40,7 +40,6 @@ export async function GET(
 /**
  * PUT /api/elements/[id]
  * Updates an existing element
- * @response 413 - Payload too large
  */
 export async function PUT(
 	request: Request,

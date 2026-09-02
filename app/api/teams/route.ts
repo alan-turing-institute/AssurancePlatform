@@ -32,7 +32,6 @@ export async function GET() {
 /**
  * POST /api/teams
  * Creates a new team with the authenticated user as ADMIN.
- * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {

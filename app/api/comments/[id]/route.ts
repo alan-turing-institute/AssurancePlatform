@@ -40,7 +40,6 @@ export async function DELETE(
 /**
  * PUT /api/comments/[id]
  * Updates a comment by ID.
- * @response 413 - Payload too large
  */
 export async function PUT(
 	request: Request,
@@ -64,7 +63,6 @@ export async function PUT(
 /**
  * PATCH /api/comments/[id]
  * Resolves or unresolves a comment thread.
- * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,

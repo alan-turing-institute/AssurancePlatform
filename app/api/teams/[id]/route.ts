@@ -36,7 +36,6 @@ export async function GET(
 /**
  * PATCH /api/teams/[id]
  * Updates a team. Requires ADMIN role.
- * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,

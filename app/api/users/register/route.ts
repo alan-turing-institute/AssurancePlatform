@@ -18,7 +18,6 @@ import { registerUser } from "@/lib/services/user-service";
 /**
  * POST /api/users/register
  * Registers a new user with Prisma auth.
- * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {

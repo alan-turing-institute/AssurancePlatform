@@ -45,7 +45,6 @@ export async function GET(request: Request) {
 /**
  * POST /api/auth/reset-password
  * Reset password using a valid token.
- * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {

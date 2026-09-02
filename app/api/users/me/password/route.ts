@@ -12,7 +12,6 @@ import { changePassword } from "@/lib/services/user-management-service";
 /**
  * PUT /api/users/me/password
  * Changes the current user's password.
- * @response 413 - Payload too large
  */
 export async function PUT(request: Request) {
 	try {

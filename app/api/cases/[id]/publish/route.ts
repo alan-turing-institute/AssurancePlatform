@@ -58,7 +58,6 @@ export async function GET(
  * runs this same check before it ever shows a confirm step, so a 400 here
  * means either a direct API call bypassing that flow, or the record
  * changed after the client checked it.
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: NextRequest,

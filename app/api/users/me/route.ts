@@ -36,7 +36,6 @@ export async function GET() {
 /**
  * PATCH /api/users/me
  * Updates the current user's profile.
- * @response 413 - Payload too large
  */
 export async function PATCH(request: Request) {
 	try {
@@ -72,7 +71,6 @@ export async function PATCH(request: Request) {
 /**
  * DELETE /api/users/me
  * Deletes the current user's account.
- * @response 413 - Payload too large
  */
 export async function DELETE(request: Request) {
 	try {

@@ -38,7 +38,6 @@ export async function GET(
 /**
  * POST /api/cases/[id]/image
  * Uploads a new screenshot for a case with throttling.
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: NextRequest,

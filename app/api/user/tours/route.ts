@@ -33,7 +33,6 @@ export async function GET() {
  * PATCH /api/user/tours
  * Marks a tour as completed for the current user.
  * Idempotent — completing an already-completed tour returns success.
- * @response 413 - Payload too large
  */
 export async function PATCH(req: Request) {
 	try {

@@ -15,7 +15,6 @@ import {
 /**
  * PATCH /api/teams/[id]/members/[userId]
  * Updates a team member's role. Requires ADMIN role.
- * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,

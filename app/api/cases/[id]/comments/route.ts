@@ -36,7 +36,6 @@ export async function GET(
 /**
  * POST /api/cases/[id]/comments
  * Creates a new case-level comment (note).
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,

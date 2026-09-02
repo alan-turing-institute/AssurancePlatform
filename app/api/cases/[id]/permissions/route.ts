@@ -48,7 +48,6 @@ export async function GET(
  *
  * Body: { type: "user", email: string, permission: string }
  *    or { type: "team", teamId: string, permission: string }
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,

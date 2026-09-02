@@ -39,7 +39,6 @@ export async function GET(
 /**
  * POST /api/teams/[id]/members
  * Adds a new member to a team by email. Requires ADMIN role.
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,

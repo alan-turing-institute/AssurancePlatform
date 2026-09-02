@@ -12,7 +12,6 @@ import { moveElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/move
  * Moves an element to a new parent within the same case.
- * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,

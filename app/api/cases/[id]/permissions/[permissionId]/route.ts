@@ -19,7 +19,6 @@ import { updatePermissionSchema } from "@/lib/schemas/permission";
  * Updates a permission level. Requires ADMIN permission.
  *
  * Body: { permission: string, type?: "user" | "team" }
- * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,
