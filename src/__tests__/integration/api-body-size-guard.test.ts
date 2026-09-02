@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import prisma from "@/lib/prisma";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -50,6 +51,35 @@ function oversizedStreamBody(totalBytes: number): ReadableStream<Uint8Array> {
 			sent += chunk.byteLength;
 		},
 	});
+}
+
+/**
+ * A `ReadableStream` that yields one 64 KiB chunk per `pull()` invocation
+ * (well past the 1 MiB cap given enough chunks), with a spy on `pull` —
+ * `reader.read()` maps roughly 1:1 to `pull()` for a default (count)
+ * queuing strategy, so the spy shows exactly which chunks the consumer
+ * actually asked for. Mirrors lib/__tests__/api-request.test.ts's
+ * chunkedStream.
+ */
+function oversizedStreamBodyWithSpy(totalBytes: number) {
+	const encoder = new TextEncoder();
+	const chunk = encoder.encode(`"${"x".repeat(64 * 1024)}"`); // ~64 KiB
+	let sent = 0;
+	const pull = vi.fn(() => {
+		// no-op body; the spy call itself is the signal
+	});
+	const stream = new ReadableStream<Uint8Array>({
+		pull(controller) {
+			pull();
+			if (sent >= totalBytes) {
+				controller.close();
+				return;
+			}
+			controller.enqueue(chunk);
+			sent += chunk.byteLength;
+		},
+	});
+	return { stream, pull };
 }
 
 describe("PUT /api/cases/[id]/information — body size guard", () => {
@@ -109,29 +139,39 @@ describe("PUT /api/cases/[id]/information — body size guard", () => {
 		const testCase = await createTestCase(owner.id);
 		// Deliberately no mockAuth() — stays unauthenticated (mockNoAuth in beforeEach).
 
-		const oversized = JSON.stringify({
-			description: "x".repeat(ONE_MIB + 1024),
-		});
+		const { stream, pull } = oversizedStreamBodyWithSpy(ONE_MIB + 128 * 1024);
 		const { PUT } = await import("@/app/api/cases/[id]/information/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/information`,
 			{
 				method: "PUT",
-				body: oversized,
-				headers: { "content-length": String(oversized.length) },
+				body: stream,
+				duplex: "half",
 			}
 		);
+
+		// Node's Request implementation (undici) does its own one-off,
+		// asynchronous readiness probe of a streaming body on construction —
+		// independent of anything route code does — so the baseline is
+		// taken after that settles, rather than asserting zero calls ever.
+		// See lib/__tests__/api-request.test.ts's identical technique. What
+		// this proves is the thing that matters: requireAuth()'s 401 causes
+		// no ADDITIONAL pulls beyond that runtime baseline — the body is
+		// never touched once the route has decided to reject on auth alone.
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		const baseline = pull.mock.calls.length;
 
 		const response = await PUT(req, {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 
 		expect(response.status).toBe(401);
+		expect(pull.mock.calls.length).toBe(baseline);
 	});
 });
 
 describe("POST /api/cases/[id]/batch — named override raises the cap", () => {
-	it("accepts a valid change list padded over 1 MiB but under the 5 MiB batchUpdate limit", async () => {
+	it("accepts a valid change list padded over 1 MiB but under the 5 MiB batchUpdate limit, and the change persists", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		const element = await createTestElement(testCase.id, owner.id, {
@@ -144,20 +184,27 @@ describe("POST /api/cases/[id]/batch — named override raises the cap", () => {
 		// route's size guard itself, not the zod schema, is what changed.
 		const longDescription = "x".repeat(2 * ONE_MIB);
 
+		const requestBody = JSON.stringify({
+			changes: [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { description: longDescription },
+				},
+			],
+		});
+		// Prove the constructed body is actually over the 1 MiB default —
+		// the assertion below is only meaningful if this really exceeds it.
+		expect(new TextEncoder().encode(requestBody).byteLength).toBeGreaterThan(
+			ONE_MIB
+		);
+
 		const { POST } = await import("@/app/api/cases/[id]/batch/route");
 		const req = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/batch`,
 			{
 				method: "POST",
-				body: JSON.stringify({
-					changes: [
-						{
-							type: "update",
-							elementId: element.id,
-							data: { description: longDescription },
-						},
-					],
-				}),
+				body: requestBody,
 				headers: { "Content-Type": "application/json" },
 			}
 		);
@@ -167,6 +214,12 @@ describe("POST /api/cases/[id]/batch — named override raises the cap", () => {
 		});
 
 		expect(response.status).toBe(200);
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: element.id },
+			select: { description: true },
+		});
+		expect(inDb?.description).toBe(longDescription);
 	});
 });
 

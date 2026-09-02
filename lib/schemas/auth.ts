@@ -32,5 +32,9 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
  * enumeration or format oracle.
  */
 export const forgotPasswordSchema = z.strictObject({
-	email: z.string().min(1, "Email is required"),
+	// Custom message on the base type error too, not just .min() — a wholly
+	// absent `email` key hits the type check first ("expected string,
+	// received undefined"), and the pre-migration route treated a missing
+	// key and an empty string identically ("Email is required" either way).
+	email: z.string({ error: "Email is required" }).min(1, "Email is required"),
 });

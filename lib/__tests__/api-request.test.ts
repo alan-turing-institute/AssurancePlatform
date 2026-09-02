@@ -116,6 +116,27 @@ describe("readJsonBody", () => {
 		});
 	});
 
+	it("passes at the exact byte boundary (maxBytes), split across multiple stream chunks", async () => {
+		const digits = "1234567890123456"; // 16 bytes, a valid JSON number
+		const maxBytes = new TextEncoder().encode(digits).byteLength;
+		const { request } = chunkedRequest([digits.slice(0, 8), digits.slice(8)]);
+
+		await expect(readJsonBody(request, { maxBytes })).resolves.toBe(
+			1_234_567_890_123_456
+		);
+	});
+
+	it("rejects one byte past the boundary (maxBytes + 1), split across multiple stream chunks", async () => {
+		const digits = "12345678901234567"; // 17 bytes
+		const maxBytes = new TextEncoder().encode(digits).byteLength - 1;
+		const { request } = chunkedRequest([digits.slice(0, 8), digits.slice(8)]);
+
+		await expect(readJsonBody(request, { maxBytes })).rejects.toMatchObject({
+			code: "PAYLOAD_TOO_LARGE",
+			statusCode: 413,
+		});
+	});
+
 	it("resolves to undefined for an empty body", async () => {
 		const request = new NextRequest(URL, { method: "POST" });
 
