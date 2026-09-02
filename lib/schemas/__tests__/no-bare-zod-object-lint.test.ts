@@ -38,6 +38,7 @@ const GOOD_SOURCE =
 
 function runBiomeCheck(filePath: string): {
 	status: number | null;
+	error: Error | undefined;
 	combinedOutput: string;
 } {
 	const result = spawnSync(BIOME_BIN, ["check", filePath], {
@@ -46,6 +47,7 @@ function runBiomeCheck(filePath: string): {
 	});
 	return {
 		status: result.status,
+		error: result.error,
 		combinedOutput: `${result.stdout ?? ""}${result.stderr ?? ""}`,
 	};
 }
@@ -69,8 +71,14 @@ describe("lint-rules/no-bare-zod-object.grit — fires via the biome.json overri
 		mkdirSync(PROBE_DIR, { recursive: true });
 		writeFileSync(BAD_PROBE_PATH, BAD_SOURCE);
 		try {
-			const { status, combinedOutput } = runBiomeCheck(BAD_PROBE_PATH);
-			expect(status).not.toBe(0);
+			const { status, error, combinedOutput } = runBiomeCheck(BAD_PROBE_PATH);
+			// A missing/unresolvable Biome binary makes spawnSync return
+			// status: null with `error` set, rather than throwing — status
+			// null would otherwise satisfy `not.toBe(0)` and pass this test
+			// without Biome ever having run. Assert error is unset AND status
+			// is a genuine positive exit code, not just "not zero".
+			expect(error).toBeUndefined();
+			expect(status).toBeGreaterThan(0);
 			expect(combinedOutput).toContain("Bare z.object()");
 		} finally {
 			deleteProbe(BAD_PROBE_PATH);
@@ -81,7 +89,8 @@ describe("lint-rules/no-bare-zod-object.grit — fires via the biome.json overri
 		mkdirSync(PROBE_DIR, { recursive: true });
 		writeFileSync(GOOD_PROBE_PATH, GOOD_SOURCE);
 		try {
-			const { status, combinedOutput } = runBiomeCheck(GOOD_PROBE_PATH);
+			const { status, error, combinedOutput } = runBiomeCheck(GOOD_PROBE_PATH);
+			expect(error).toBeUndefined();
 			expect(status).toBe(0);
 			expect(combinedOutput).not.toContain("Bare z.object()");
 		} finally {
