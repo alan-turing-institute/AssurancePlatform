@@ -7,13 +7,11 @@ import {
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { updateElementSchema } from "@/lib/schemas/element";
-import type { UpdateElementInput } from "@/lib/services/element-service";
 import {
 	deleteElement,
 	getElement,
 	updateElement,
 } from "@/lib/services/element-service";
-import type { AssertionStatus } from "@/src/generated/prisma";
 
 /**
  * GET /api/elements/[id]
@@ -40,44 +38,6 @@ export async function GET(
 }
 
 /**
- * Builds update input from validated body.
- */
-function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
-	const url = (body.url || body.URL) as string | undefined;
-	return {
-		name: body.name as string | undefined,
-		description: body.description as string | undefined,
-		shortDescription: body.shortDescription as string | undefined,
-		longDescription: body.longDescription as string | undefined,
-		parentId: body.parentId as string | undefined,
-		url,
-		URL: url,
-		urls: body.urls as string[] | undefined,
-		assumption: body.assumption as string | undefined,
-		justification: body.justification as string | undefined,
-		context: body.context as string[] | undefined,
-		inSandbox: body.inSandbox as boolean | undefined,
-		// Per-assertion status (ADR 0004 D3) — validated by updateElementSchema;
-		// the guard against machine/integration writers and AS_CITED declaration
-		// lives in element-service.ts (updateElement), not here.
-		assertionStatus: body.assertionStatus as AssertionStatus | null | undefined,
-		// Element-level citation (ADR 0004 D5) — validated by
-		// updateElementSchema; applicability/existence/self-citation checks
-		// live in element-service.ts (updateElement), not here.
-		citedElementId: body.citedElementId as string | null | undefined,
-		// Module reference (MODULE/AWAY_GOAL) — validated by
-		// updateElementSchema; applicability/existence checks live in
-		// element-service.ts (updateElement), not here.
-		moduleReferenceId: body.moduleReferenceId as string | null | undefined,
-		// Dialogical reasoning (defeaters) — validated by updateElementSchema;
-		// same-case/existence/self-reference checks live in element-service.ts
-		// (updateElement), not here.
-		isDefeater: body.isDefeater as boolean | undefined,
-		defeatsElementId: body.defeatsElementId as string | null | undefined,
-	};
-}
-
-/**
  * PUT /api/elements/[id]
  * Updates an existing element
  */
@@ -98,10 +58,9 @@ export async function PUT(
 			);
 		}
 
-		const input = buildUpdateInput(
-			parsed.data as unknown as Record<string, unknown>
-		);
-		const result = await updateElement(session.userId, elementId, input);
+		// element-service.ts's updateElement resolves url/URL itself
+		// (url || URL) — do not collapse them here.
+		const result = await updateElement(session.userId, elementId, parsed.data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

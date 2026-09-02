@@ -33,7 +33,7 @@ export const passwordSchema = z
 /**
  * Sign-in form — accepts email or username as identifier
  */
-export const signInFormSchema = z.object({
+export const signInFormSchema = z.strictObject({
 	identifier: z.string().min(2, "Please enter your email or username"),
 	password: z.string().min(8, "Password must be at least 8 characters"),
 });
@@ -45,7 +45,7 @@ export type SignInFormOutput = z.output<typeof signInFormSchema>;
  * Reset password form — requires matching passwords
  */
 export const resetPasswordFormSchema = z
-	.object({
+	.strictObject({
 		password: passwordSchema,
 		confirmPassword: z.string(),
 	})
@@ -61,7 +61,7 @@ export type ResetPasswordFormOutput = z.output<typeof resetPasswordFormSchema>;
  * Change password form — requires current password + matching new passwords
  */
 export const changePasswordFormSchema = z
-	.object({
+	.strictObject({
 		currentPassword: z
 			.string()
 			.min(2, "Current password must be at least 2 characters"),
@@ -84,7 +84,7 @@ export type ChangePasswordFormOutput = z.output<
  * Register form validation schema — UI-level constraints for the registration form.
  * Stricter than `registerUserSchema` (which is the API-level schema).
  */
-export const registerFormSchema = z.object({
+export const registerFormSchema = z.strictObject({
 	username: usernameSchema,
 	email: emailSchema,
 	password1: passwordSchema,
@@ -97,7 +97,7 @@ export type RegisterFormOutput = z.output<typeof registerFormSchema>;
 /**
  * Forgot password form schema — validates an email address
  */
-export const forgotPasswordFormSchema = z.object({
+export const forgotPasswordFormSchema = z.strictObject({
 	email: emailSchema,
 });
 
@@ -110,7 +110,7 @@ export type ForgotPasswordFormOutput = z.output<
  * Personal info form schema — UI-level validation for the settings profile form.
  * Stricter than `updateUserProfileSchema` (which is the API-level schema).
  */
-export const personalInfoFormSchema = z.object({
+export const personalInfoFormSchema = z.strictObject({
 	firstName: z.string().optional(),
 	lastName: z.string().optional(),
 	username: usernameSchema,
@@ -124,7 +124,7 @@ export type PersonalInfoFormOutput = z.output<typeof personalInfoFormSchema>;
  * Register user input
  */
 export const registerUserSchema = z
-	.object({
+	.strictObject({
 		username: usernameSchema,
 		email: emailSchema,
 		password: z.string().min(1, "Password is required").optional(),
@@ -156,7 +156,7 @@ export type RegisterUserSchemaOutput = z.output<typeof registerUserSchema>;
  * Update user profile input
  */
 export const updateUserProfileSchema = z
-	.object({
+	.strictObject({
 		username: requiredString("Username", 1, 150).optional(),
 		firstName: optionalString(150),
 		lastName: optionalString(150),

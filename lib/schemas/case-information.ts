@@ -9,7 +9,7 @@ import { optionalString } from "./base";
  * model (`category`, `contact`, `type`) — those are not part of the ADR's
  * named case-information set and are not carried forward.
  */
-export const caseInformationSchema = z.object({
+export const caseInformationSchema = z.strictObject({
 	description: optionalString(5000),
 	authors: optionalString(255),
 	sector: optionalString(100),

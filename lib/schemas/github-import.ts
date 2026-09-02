@@ -4,7 +4,7 @@ import { z } from "zod";
  * Request body schema for GitHub import
  */
 export const GitHubImportSchema = z
-	.object({
+	.strictObject({
 		url: z
 			.string()
 			.min(1, "GitHub URL is required")

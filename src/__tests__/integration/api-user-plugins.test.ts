@@ -112,7 +112,15 @@ describe("PATCH /api/user/plugins — auth and session-derived identity", () => 
 		expect(response.status).toBe(401);
 	});
 
-	it("ignores a body-supplied userId — the row is written for the session user, never the body's userId", async () => {
+	it("rejects a body-supplied userId outright (pluginToggleSchema is strict — userId is not a declared field)", async () => {
+		// Stronger than the old assertion this replaced: pluginToggleSchema
+		// went from a bare z.object() (which silently dropped userId and fell
+		// through to writing the session user's row) to z.strictObject() (TEA
+		// — Mutation-schema hardening). The request is now rejected at the
+		// boundary with 400 before any row is written — userId was already
+		// undeclared and session-derived (the route derives the acting user
+		// from requireAuth(), never from the body); nothing here relies on
+		// strict mode to stay secure.
 		const actingUser = await createTestUser();
 		const otherUser = await createTestUser();
 		await mockAuth(actingUser.id, actingUser.username, actingUser.email);
@@ -126,7 +134,7 @@ describe("PATCH /api/user/plugins — auth and session-derived identity", () => 
 			})
 		);
 
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(400);
 
 		const actingUserRow = await prisma.pluginState.findUnique({
 			where: {
@@ -147,8 +155,7 @@ describe("PATCH /api/user/plugins — auth and session-derived identity", () => 
 			},
 		});
 
-		expect(actingUserRow).not.toBeNull();
-		expect(actingUserRow?.enabled).toBe(false);
+		expect(actingUserRow).toBeNull();
 		expect(otherUserRow).toBeNull();
 	});
 });

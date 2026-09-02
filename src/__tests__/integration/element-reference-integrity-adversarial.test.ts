@@ -244,7 +244,7 @@ describe("parentId same-case scoping — EVIDENCE path specifically", () => {
 				body: JSON.stringify({
 					type: "evidence",
 					name: "Cross-case evidence",
-					propertyClaimId: foreignClaim.id,
+					parentId: foreignClaim.id,
 				}),
 				headers: { "Content-Type": "application/json" },
 			}

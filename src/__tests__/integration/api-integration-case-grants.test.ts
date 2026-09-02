@@ -600,7 +600,14 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		expect(response.status).toBe(400);
 	});
 
-	it("cannot grant access to an arbitrary userId — the body has no such field", async () => {
+	it("rejects a body naming an arbitrary userId outright (grantCaseAccessSchema is strict — userId is not a declared field)", async () => {
+		// Stronger than the old assertion this replaced: grantCaseAccessSchema
+		// went from a bare z.object() (which silently dropped userId and fell
+		// through to granting the integration's own system user) to
+		// z.strictObject() (TEA — Mutation-schema hardening). The attempt is
+		// now rejected at the boundary with 400 before any grant is written —
+		// userId was already undeclared and server-derived (see the schema's
+		// doc comment); nothing here relies on strict mode to stay secure.
 		const owner = await createTestUser();
 		const other = await createTestUser();
 		const { integration, systemUser } =
@@ -611,7 +618,7 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		const { POST } = await import(
 			"@/app/api/integrations/[id]/case-grants/route"
 		);
-		await POST(
+		const response = await POST(
 			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
 				caseId: testCase.id,
 				permission: "VIEW",
@@ -619,8 +626,10 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 			}),
 			idParams(integration.id)
 		);
+		expect(response.status).toBe(400);
 
-		// Only the integration's OWN system user ever gets a grant.
+		// No grant was written for anyone — not the named userId, not even the
+		// integration's own system user (the request never reached the service).
 		const grantedForOther = await prisma.casePermission.findUnique({
 			where: { caseId_userId: { caseId: testCase.id, userId: other.id } },
 		});
@@ -630,7 +639,7 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 				caseId_userId: { caseId: testCase.id, userId: systemUser.id },
 			},
 		});
-		expect(grantedForSystemUser).not.toBeNull();
+		expect(grantedForSystemUser).toBeNull();
 	});
 
 	/**

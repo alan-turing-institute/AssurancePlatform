@@ -48,13 +48,16 @@ export type PublishableItemSlug = z.infer<typeof publishableItemSlugSchema>;
  * are ever read back out — so a malformed or legacy-shaped snapshot
  * degrades to missing fields rather than throwing.
  */
+// biome-ignore lint/plugin: defensive read of frozen snapshots — older snapshots carry keys we no longer model, and only case/caseInformation are ever read back out, so unknown keys must be dropped silently, not rejected.
 export const publishedSnapshotMetaSchema = z.object({
+	// biome-ignore lint/plugin: defensive read of frozen snapshots — see the schema-level comment above.
 	case: z
 		.object({
 			name: z.string().optional(),
 			description: z.string().optional(),
 		})
 		.optional(),
+	// biome-ignore lint/plugin: defensive read of frozen snapshots — see the schema-level comment above.
 	caseInformation: z
 		.object({
 			description: z.string().nullable().optional(),

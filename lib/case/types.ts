@@ -75,12 +75,23 @@ export interface CommentPayload {
 	content: string;
 }
 
-// Type for node creation payloads
-export type CreateNodePayload =
-	| Partial<GoalResponse>
-	| Partial<StrategyResponse>
-	| Partial<PropertyClaimResponse>
-	| Partial<EvidenceResponse>;
+// Type for node creation payloads — sent to POST /api/cases/[id]/elements via
+// createAssuranceCaseNode. `assuranceCaseId` is read by createAssuranceCaseNode
+// to build the request URL and is NOT sent in the request body; `parentId` is
+// resolved client-side from the node the user clicked before calling in. This
+// replaced a union of Partial<XResponse> types (2026-09, mutation-schema
+// hardening) that let payloads carry legacy fields (goalId/strategyId/
+// propertyClaimId, claimType, propertyClaims, evidence, elementType) the
+// server schema never declared — silently dropped under lenient parsing,
+// rejected outright once request schemas went strict.
+export interface CreateNodePayload {
+	assuranceCaseId?: string;
+	description: string;
+	name?: string;
+	parentId: string | null;
+	URL?: string;
+	urls?: string[];
+}
 
 // Type for nested array items that can contain various node types
 export type NestedArrayItem =

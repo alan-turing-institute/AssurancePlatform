@@ -4,7 +4,7 @@ import { optionalString } from "./base";
 /**
  * Update case publish status input
  */
-export const updateCaseStatusSchema = z.object({
+export const updateCaseStatusSchema = z.strictObject({
 	targetStatus: z.enum(["DRAFT", "PUBLISHED"], {
 		message: "Invalid targetStatus. Must be one of: DRAFT, PUBLISHED",
 	}),
