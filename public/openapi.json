@@ -34,7 +34,33 @@
       "multipart": {},
       "ImportResult": {},
       "GitHubImportSchema": {
-        "type": "string",
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "GitHub URL or shorthand path to the JSON file"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (overrides URL parsing)"
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name (overrides URL parsing)"
+          },
+          "path": {
+            "type": "string",
+            "description": "File path (overrides URL parsing)"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name (optional, uses default branch if not specified)"
+          }
+        },
+        "required": [
+          "url"
+        ],
         "description": "GitHub import request parameters"
       }
     },
