@@ -8,6 +8,7 @@ export type ErrorCode =
 	| "VALIDATION"
 	| "CONFLICT"
 	| "RATE_LIMITED"
+	| "PAYLOAD_TOO_LARGE"
 	| "GATEWAY_TIMEOUT"
 	| "INTERNAL";
 
@@ -26,6 +27,7 @@ const STATUS_MAP: Record<ErrorCode, number> = {
 	VALIDATION: 400,
 	CONFLICT: 409,
 	RATE_LIMITED: 429,
+	PAYLOAD_TOO_LARGE: 413,
 	GATEWAY_TIMEOUT: 504,
 	INTERNAL: 500,
 };
@@ -83,6 +85,10 @@ export function validationError(
 
 export function gatewayTimeout(message = "Request timed out"): AppError {
 	return new AppError({ code: "GATEWAY_TIMEOUT", message });
+}
+
+export function payloadTooLarge(message = "Request body too large"): AppError {
+	return new AppError({ code: "PAYLOAD_TOO_LARGE", message });
 }
 
 // ---------------------------------------------------------------------------
