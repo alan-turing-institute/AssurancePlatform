@@ -10,6 +10,7 @@ import { readJsonBody } from "@/lib/api-request";
 import { validationError } from "@/lib/errors";
 import {
 	shareByEmailSchema,
+	shareTypeDiscriminatorSchema,
 	shareWithTeamSchema,
 } from "@/lib/schemas/permission";
 import {
@@ -56,14 +57,15 @@ export async function POST(
 	try {
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
-		// The schema to validate against depends on `type`, read directly
-		// off the raw (still size-capped) body before either schema runs.
-		const body = (await readJsonBody(request)) as
-			| Record<string, unknown>
-			| undefined;
+		// The schema to validate against depends on `type` — read the raw
+		// (still size-capped) body once, peek at the discriminator with a
+		// loose pre-parse, then run the real (strict) schema for whichever
+		// branch it names.
+		const raw = await readJsonBody(request);
+		const discriminator = shareTypeDiscriminatorSchema.safeParse(raw);
 
-		if (body?.type === "team") {
-			const parsed = shareWithTeamSchema.safeParse(body);
+		if (discriminator.data?.type === "team") {
+			const parsed = shareWithTeamSchema.safeParse(raw);
 			if (!parsed.success) {
 				return apiError(
 					validationError(
@@ -95,7 +97,7 @@ export async function POST(
 		}
 
 		// Default to user share (by email)
-		const parsed = shareByEmailSchema.safeParse(body);
+		const parsed = shareByEmailSchema.safeParse(raw);
 		if (!parsed.success) {
 			return apiError(
 				validationError(

@@ -90,7 +90,12 @@ export async function readJsonBody(
 		}
 		receivedBytes += value.byteLength;
 		if (receivedBytes > maxBytes) {
-			await reader.cancel();
+			// The cancel is best-effort clean-up (releases the underlying
+			// stream/socket) — its outcome must never change the response.
+			// If it rejects, the 413 below still fires; without the guard, an
+			// unhandled rejection from cancel() would surface as a generic
+			// 500 instead, hiding the size violation that triggered it.
+			await reader.cancel().catch(() => undefined);
 			throw payloadTooLarge();
 		}
 		chunks.push(value);

@@ -26,6 +26,19 @@ export type ShareWithTeamSchemaInput = z.input<typeof shareWithTeamSchema>;
 export type ShareWithTeamSchemaOutput = z.output<typeof shareWithTeamSchema>;
 
 /**
+ * Peeks at the `type` discriminator on a POST /api/cases/[id]/permissions
+ * body before either full schema below runs — shareWithTeamSchema and
+ * shareByEmailSchema require different fields, so the route needs to know
+ * which one to validate against before it can pick one. Loose (not
+ * strict): everything but `type` is exactly what the chosen full schema
+ * goes on to validate for real; this pre-parse only ever reads the
+ * discriminator.
+ */
+export const shareTypeDiscriminatorSchema = z.looseObject({
+	type: z.string().optional(),
+});
+
+/**
  * Discriminated union for sharing — either by email or with team
  */
 export const sharePermissionSchema = z.discriminatedUnion("type", [
