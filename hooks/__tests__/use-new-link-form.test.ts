@@ -31,12 +31,15 @@ function mockElementsRoute() {
 				);
 			}
 			// apiSuccess() returns the element flat (no envelope) — matches
-			// what createAssuranceCaseNode (lib/case/api.ts) expects.
+			// what createAssuranceCaseNode (lib/case/api.ts) expects. Mirrors
+			// element-service.ts's real response shape: propertyClaimId is
+			// derived from the request's parentId (the evidence link target),
+			// not sent as its own field.
 			return HttpResponse.json(
 				{
 					id: "evidence-1",
 					...parsed.data,
-					propertyClaimId: body.propertyClaimId,
+					propertyClaimId: [body.parentId],
 					name: "E1",
 				},
 				{ status: 201 }

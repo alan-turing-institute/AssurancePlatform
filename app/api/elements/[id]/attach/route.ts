@@ -10,19 +10,6 @@ import { attachElementSchema } from "@/lib/schemas/element";
 import { attachElement } from "@/lib/services/element-service";
 
 /**
- * Resolves parent ID from request body, handling legacy field names.
- */
-function resolveParentId(body: Record<string, unknown>): string | undefined {
-	const parentId =
-		body.parentId ||
-		body.parent_id ||
-		body.goal_id ||
-		body.strategy_id ||
-		body.property_claim_id;
-	return parentId ? String(parentId) : undefined;
-}
-
-/**
  * POST /api/elements/[id]/attach
  * Attaches an element to a parent (moves from sandbox)
  */
@@ -35,8 +22,7 @@ export async function POST(
 		const { id: elementId } = await params;
 
 		const body = await request.json();
-		const normalised = { parentId: resolveParentId(body) };
-		const parsed = attachElementSchema.safeParse(normalised);
+		const parsed = attachElementSchema.safeParse(body);
 
 		if (!parsed.success) {
 			return apiError(validationError("Invalid parent ID format"));

@@ -198,7 +198,7 @@ export const nullableUrlSchema = z
 		const result = lenientUrlSchema.safeParse(trimmed);
 		if (!result.success) {
 			for (const issue of result.error.issues) {
-				ctx.addIssue(issue);
+				ctx.addIssue({ code: "custom", message: issue.message });
 			}
 			return z.NEVER;
 		}

@@ -37,9 +37,9 @@ export const createAssuranceCaseNode = async (
 	newItem: CreateNodePayload,
 	_token: string | null
 ): Promise<{ data?: ApiNodeResponse; error?: string | unknown }> => {
-	// Get case ID from the payload
-	const caseId = (newItem as { assuranceCaseId?: number | string })
-		.assuranceCaseId;
+	// assuranceCaseId routes the request; it is not part of the body the
+	// server schema declares, so it must not be sent.
+	const { assuranceCaseId: caseId, ...namedFields } = newItem;
 	if (!caseId) {
 		return { error: "Case ID is required" };
 	}
@@ -55,8 +55,7 @@ export const createAssuranceCaseNode = async (
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				...newItem,
-				elementType: resolvedType,
+				...namedFields,
 				type: resolvedType,
 			}),
 		};
@@ -220,46 +219,17 @@ export const detachCaseElement = async (
  * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
 export const attachCaseElement = async (
-	orphan: ReactFlowNode,
+	_orphan: ReactFlowNode,
 	id: number | string,
 	_token: string | null,
 	parent: ReactFlowNode
 ): Promise<{ attached: boolean } | { error: string | unknown }> => {
-	// Build payload for attach operation
-	const payload: {
-		parentId?: string | number;
-		elementType?: string;
-		goalId?: string | null;
-		strategyId?: string | null;
-		propertyClaimId?: string | null;
-	} = {
-		parentId: parent.data.id,
-		elementType: orphan.type.toLowerCase(),
-	};
-
-	// Include camelCase parent references
-	switch (orphan.type.toLowerCase()) {
-		case "context":
-		case "strategy":
-			payload.goalId = parent.data.id;
-			break;
-		case "propertyclaim":
-			if (parent.type === "property") {
-				payload.propertyClaimId = parent.data.id;
-			}
-			if (parent.type === "strategy") {
-				payload.strategyId = parent.data.id;
-			}
-			if (parent.type === "goal") {
-				payload.goalId = parent.data.id;
-			}
-			break;
-		case "evidence":
-			payload.propertyClaimId = parent.data.id;
-			break;
-		default:
-			break;
-	}
+	// attachElementSchema only declares parentId — the legacy goalId/
+	// strategyId/propertyClaimId/elementType fields this used to send were
+	// dead weight even before strict mode (the route already resolved
+	// parentId from the payload's own parentId first); under strict
+	// z.strictObject() they would 400 outright.
+	const payload = { parentId: parent.data.id };
 
 	try {
 		// Use internal API route which handles Django/Prisma switching
