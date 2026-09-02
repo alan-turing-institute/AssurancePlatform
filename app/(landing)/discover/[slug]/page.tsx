@@ -109,7 +109,7 @@ const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 									alt={item.title}
 									className="aspect-12/7 w-full rounded-lg object-cover shadow-lg lg:aspect-auto"
 									height={1376}
-									src={item.featureImageUrl ?? FALLBACK_IMAGE}
+									src={item.featureImageUrl || FALLBACK_IMAGE}
 									width={1184}
 								/>
 								<figcaption className="mt-3 flex text-muted-foreground text-sm">
