@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateMemberRoleSchema } from "@/lib/schemas/team";
 import {
 	removeMember,
@@ -15,6 +15,7 @@ import {
 /**
  * PATCH /api/teams/[id]/members/[userId]
  * Updates a team member's role. Requires ADMIN role.
+ * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,
@@ -24,17 +25,13 @@ export async function PATCH(
 		const currentUserId = await requireAuth();
 		const { id: teamId, userId: targetUserId } = await params;
 
-		const body: unknown = await request.json();
-		const parsed = updateMemberRoleSchema.safeParse(body);
-		if (!parsed.success) {
-			return apiError(validationError("Invalid team role"));
-		}
+		const data = await parseJsonBody(request, updateMemberRoleSchema);
 
 		const result = await updateMemberRole(
 			currentUserId,
 			teamId,
 			targetUserId,
-			parsed.data
+			data
 		);
 
 		if ("error" in result) {

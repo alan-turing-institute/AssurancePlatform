@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,6 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateAssuranceCaseSchema } from "@/lib/schemas/assurance-case";
 import {
 	fetchCaseFromPrisma,
@@ -55,6 +55,7 @@ export async function GET(
  * @response 400 - Validation error
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -65,12 +66,8 @@ export async function PUT(
 	try {
 		const session = await requireAuthSession();
 		const { id } = await params;
-		const raw = await request.json();
-		const parsed = updateAssuranceCaseSchema.safeParse(raw);
-		if (!parsed.success) {
-			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
-		}
-		const result = await updateCaseWithPrisma(id, session.userId, parsed.data);
+		const data = await parseJsonBody(request, updateAssuranceCaseSchema);
+		const result = await updateCaseWithPrisma(id, session.userId, data);
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}

@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { createCommentSchema } from "@/lib/schemas/comment";
 import {
 	createCaseComment,
@@ -36,6 +36,7 @@ export async function GET(
 /**
  * POST /api/cases/[id]/comments
  * Creates a new case-level comment (note).
+ * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,
@@ -45,16 +46,12 @@ export async function POST(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const body = await request.json();
-		const parsed = createCommentSchema.safeParse(body);
-		if (!parsed.success) {
-			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
-		}
+		const data = await parseJsonBody(request, createCommentSchema);
 
 		const result = await createCaseComment(
 			caseId,
-			parsed.data.content,
-			parsed.data.parentId ?? null,
+			data.content,
+			data.parentId ?? null,
 			userId
 		);
 		if ("error" in result) {

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -44,18 +45,11 @@ export async function GET(request: Request) {
 /**
  * POST /api/auth/reset-password
  * Reset password using a valid token.
+ * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {
-		const body = await request.json().catch(() => null);
-		const parsed = resetPasswordSchema.safeParse(body);
-
-		if (!parsed.success) {
-			const firstError = parsed.error.issues[0];
-			return apiError(
-				validationError(firstError?.message ?? "Invalid request")
-			);
-		}
+		const data = await parseJsonBody(request, resetPasswordSchema);
 
 		// Get client IP and user agent for audit logging
 		const headersList = await headers();
@@ -63,8 +57,8 @@ export async function POST(request: Request) {
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		const result = await resetPassword(
-			parsed.data.token,
-			parsed.data.password,
+			data.token,
+			data.password,
 			ipAddress,
 			userAgent
 		);

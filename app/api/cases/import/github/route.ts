@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -41,27 +42,6 @@ const GITHUB_ERROR_MAP: Record<string, ErrorCode> = {
 };
 
 /**
- * Parses and validates the request body.
- * Returns the parsed data or throws a validation AppError.
- */
-async function parseRequestBody(request: Request): Promise<GitHubImportInput> {
-	let json: unknown;
-	try {
-		json = await request.json();
-	} catch {
-		throw validationError("Invalid JSON in request body");
-	}
-
-	const parsed = GitHubImportSchema.safeParse(json);
-	if (!parsed.success) {
-		throw validationError(
-			parsed.error.issues[0]?.message ?? "Invalid request body"
-		);
-	}
-	return parsed.data;
-}
-
-/**
  * Resolves GitHub location from request body.
  * Returns the location or throws a validation AppError.
  */
@@ -98,6 +78,7 @@ function resolveGitHubLocation(body: GitHubImportInput): GitHubLocation {
  *
  * @body GitHubImportSchema
  * @response ImportResult
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -116,7 +97,7 @@ export async function POST(request: Request) {
 		}
 
 		// Parse request body
-		const body = await parseRequestBody(request);
+		const body = await parseJsonBody(request, GitHubImportSchema);
 
 		// Resolve GitHub location
 		const { owner, repo, path, branch } = resolveGitHubLocation(body);

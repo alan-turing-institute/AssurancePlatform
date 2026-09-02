@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
 import {
 	getCaseInformation,
@@ -63,6 +63,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
  * @response 400 - Validation error
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -71,15 +72,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		const raw = await request.json().catch(() => null);
-		const parsed = upsertCaseInformationSchema.safeParse(raw);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, upsertCaseInformationSchema);
 
-		const result = await upsertCaseInformation(userId, caseId, parsed.data);
+		const result = await upsertCaseInformation(userId, caseId, data);
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}

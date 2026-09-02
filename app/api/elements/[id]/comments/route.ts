@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { createElementCommentSchema } from "@/lib/schemas/comment";
 import {
 	createElementComment,
@@ -36,6 +36,7 @@ export async function GET(
 /**
  * POST /api/elements/[id]/comments
  * Creates a new comment on an element (supports threading via parentId).
+ * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,
@@ -45,16 +46,12 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const body = await request.json();
-		const parsed = createElementCommentSchema.safeParse(body);
-		if (!parsed.success) {
-			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
-		}
+		const data = await parseJsonBody(request, createElementCommentSchema);
 
 		const result = await createElementComment(
 			elementId,
-			parsed.data.content,
-			parsed.data.parentId,
+			data.content,
+			data.parentId,
 			session
 		);
 		if ("error" in result) {

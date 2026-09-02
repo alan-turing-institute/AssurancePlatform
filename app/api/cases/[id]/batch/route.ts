@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import type { ElementChange } from "@/lib/case/tree-diff";
-import { AppError, validationError } from "@/lib/errors";
+import { AppError } from "@/lib/errors";
 import { batchUpdateRequestSchema } from "@/lib/schemas/batch-update";
 import {
 	applyBatchUpdate,
@@ -27,6 +28,7 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 409 - Conflict (case was modified)
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Elements
  */
@@ -38,24 +40,10 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 
-		let body: unknown;
-		try {
-			body = await request.json();
-		} catch {
-			return apiError(validationError("Invalid JSON in request body"));
-		}
-
-		// Validate request body
-		const parseResult = batchUpdateRequestSchema.safeParse(body);
-		if (!parseResult.success) {
-			return apiError(
-				validationError(
-					parseResult.error.issues[0]?.message ?? "Invalid request body"
-				)
-			);
-		}
-
-		const { changes, expectedVersion } = parseResult.data;
+		const { changes, expectedVersion } = await parseJsonBody(
+			request,
+			batchUpdateRequestSchema
+		);
 
 		// Apply the batch update
 		const options: BatchUpdateOptions = {};

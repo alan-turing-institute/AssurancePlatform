@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateElementSchema } from "@/lib/schemas/element";
 import {
 	deleteElement,
@@ -40,6 +40,7 @@ export async function GET(
 /**
  * PUT /api/elements/[id]
  * Updates an existing element
+ * @response 413 - Payload too large
  */
 export async function PUT(
 	request: Request,
@@ -49,18 +50,11 @@ export async function PUT(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const parsed = updateElementSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, updateElementSchema);
 
 		// element-service.ts's updateElement resolves url/URL itself
 		// (url || URL) — do not collapse them here.
-		const result = await updateElement(session.userId, elementId, parsed.data);
+		const result = await updateElement(session.userId, elementId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

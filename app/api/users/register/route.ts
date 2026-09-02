@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -7,7 +8,6 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { extractClientIp } from "@/lib/auth/extract-client-ip";
-import { validationError } from "@/lib/errors";
 import { registerUserSchema } from "@/lib/schemas/user";
 import {
 	checkAndRecordRateLimit,
@@ -18,19 +18,14 @@ import { registerUser } from "@/lib/services/user-service";
 /**
  * POST /api/users/register
  * Registers a new user with Prisma auth.
+ * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {
-		const parsed = registerUserSchema.safeParse(
-			await request.json().catch(() => null)
+		const { username, email, password } = await parseJsonBody(
+			request,
+			registerUserSchema
 		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-
-		const { username, email, password } = parsed.data;
 
 		// Extract IP address and user agent for rate limiting
 		const headersList = await headers();

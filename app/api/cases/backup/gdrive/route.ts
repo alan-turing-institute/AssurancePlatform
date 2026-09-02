@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import type { ErrorCode } from "@/lib/errors";
-import { AppError, forbidden, validationError } from "@/lib/errors";
+import { AppError, forbidden } from "@/lib/errors";
 import { backupToDriveSchema } from "@/lib/schemas/google-drive";
 import { exportCase } from "@/lib/services/case-export-service";
 import {
@@ -34,6 +35,7 @@ const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
  *
  * @body { caseId: string, includeComments?: boolean }
  * @response { success: boolean, fileId: string, fileName: string, webViewLink?: string }
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Cases
  */
@@ -50,14 +52,10 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const parseResult = backupToDriveSchema.safeParse(
-			await request.json().catch(() => null)
+		const { caseId, includeComments } = await parseJsonBody(
+			request,
+			backupToDriveSchema
 		);
-		if (!parseResult.success) {
-			return apiError(validationError("Invalid request"));
-		}
-
-		const { caseId, includeComments } = parseResult.data;
 
 		const exportResult = await exportCase(userId, caseId, {
 			includeComments,

@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,13 +6,13 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { moveElementSchema } from "@/lib/schemas/element";
 import { moveElement } from "@/lib/services/element-service";
 
 /**
  * POST /api/elements/[id]/move
  * Moves an element to a new parent within the same case.
+ * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,
@@ -21,20 +22,9 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const body = await request.json();
-		const parsed = moveElementSchema.safeParse(body);
+		const { parentId } = await parseJsonBody(request, moveElementSchema);
 
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-
-		const result = await moveElement(
-			session.userId,
-			elementId,
-			parsed.data.parentId
-		);
+		const result = await moveElement(session.userId, elementId, parentId);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
@@ -54,7 +44,7 @@ export async function POST(
 			const username = session.username ?? session.email ?? "Someone";
 			emitSSEEvent("element:moved", element.caseId, {
 				elementId,
-				parentId: parsed.data.parentId,
+				parentId,
 				username,
 				userId: session.userId,
 			});

@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateUserProfileSchema } from "@/lib/schemas/user";
 
 interface DeleteAccountRequest {
@@ -36,26 +36,20 @@ export async function GET() {
 /**
  * PATCH /api/users/me
  * Updates the current user's profile.
+ * @response 413 - Payload too large
  */
 export async function PATCH(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		const parsed = updateUserProfileSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, updateUserProfileSchema);
 
 		// Call service to update profile
 		const { updateUserProfile } = await import(
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await updateUserProfile(userId, parsed.data);
+		const result = await updateUserProfile(userId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

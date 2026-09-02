@@ -6,6 +6,7 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { readJsonBody } from "@/lib/api-request";
 import { validationError } from "@/lib/errors";
 import {
 	shareByEmailSchema,
@@ -47,6 +48,7 @@ export async function GET(
  *
  * Body: { type: "user", email: string, permission: string }
  *    or { type: "team", teamId: string, permission: string }
+ * @response 413 - Payload too large
  */
 export async function POST(
 	request: Request,
@@ -55,7 +57,11 @@ export async function POST(
 	try {
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
-		const body = await request.json().catch(() => null);
+		// The schema to validate against depends on `type`, read directly
+		// off the raw (still size-capped) body before either schema runs.
+		const body = (await readJsonBody(request)) as
+			| Record<string, unknown>
+			| undefined;
 
 		if (body?.type === "team") {
 			const parsed = shareWithTeamSchema.safeParse(body);

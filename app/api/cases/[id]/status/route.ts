@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -89,6 +90,7 @@ export async function GET(
  * used to run `if (isRepublish)` only). Republish is gated for the same
  * reason it always was: without it, a published record could regress to
  * incomplete via an edit that clears a required field then a republish.
+ * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,
@@ -98,16 +100,10 @@ export async function PATCH(
 		const userId = await requireAuth();
 		const { id } = await params;
 
-		const parsed = updateCaseStatusSchema.safeParse(
-			await request.json().catch(() => null)
+		const { targetStatus, description } = await parseJsonBody(
+			request,
+			updateCaseStatusSchema
 		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-
-		const { targetStatus, description } = parsed.data;
 
 		if (targetStatus === "PUBLISHED") {
 			const completeness = await requireCaseInformationComplete(userId, id);

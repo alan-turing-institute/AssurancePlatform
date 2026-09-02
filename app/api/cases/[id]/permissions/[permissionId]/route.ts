@@ -5,20 +5,21 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
-import { updatePermissionSchema } from "@/lib/schemas/permission";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	revokeTeamPermission,
 	revokeUserPermission,
 	updateTeamPermission,
 	updateUserPermission,
 } from "@/lib/services/case-permission-service";
+import { updatePermissionSchema } from "@/lib/schemas/permission";
 
 /**
  * PATCH /api/cases/[id]/permissions/[permissionId]
  * Updates a permission level. Requires ADMIN permission.
  *
  * Body: { permission: string, type?: "user" | "team" }
+ * @response 413 - Payload too large
  */
 export async function PATCH(
 	request: Request,
@@ -28,26 +29,17 @@ export async function PATCH(
 		const session = await requireAuthSession();
 		const { id: caseId, permissionId } = await params;
 
-		const parsed = updatePermissionSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(
-					parsed.error.issues[0]?.message ?? "Invalid input"
-				)
-			);
-		}
+		const data = await parseJsonBody(request, updatePermissionSchema);
 
 		// Determine if this is a user or team permission
-		const isTeamPermission = parsed.data.type === "team";
+		const isTeamPermission = data.type === "team";
 
 		const result = isTeamPermission
 			? await updateTeamPermission(session.userId, caseId, permissionId, {
-					permission: parsed.data.permission,
+					permission: data.permission,
 				})
 			: await updateUserPermission(session.userId, caseId, permissionId, {
-					permission: parsed.data.permission,
+					permission: data.permission,
 				});
 
 		if ("error" in result) {

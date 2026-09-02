@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { createTeamSchema } from "@/lib/schemas/team";
 import { createTeam, listUserTeams } from "@/lib/services/team-service";
 
@@ -32,21 +32,15 @@ export async function GET() {
 /**
  * POST /api/teams
  * Creates a new team with the authenticated user as ADMIN.
+ * @response 413 - Payload too large
  */
 export async function POST(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		const parsed = createTeamSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, createTeamSchema);
 
-		const result = await createTeam(userId, parsed.data);
+		const result = await createTeam(userId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

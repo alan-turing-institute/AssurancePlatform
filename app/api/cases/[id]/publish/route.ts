@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -57,6 +58,7 @@ export async function GET(
  * runs this same check before it ever shows a confirm step, so a 400 here
  * means either a direct API call bypassing that flow, or the record
  * changed after the client checked it.
+ * @response 413 - Payload too large
  */
 export async function POST(
 	request: NextRequest,
@@ -67,10 +69,12 @@ export async function POST(
 		const { id: caseId } = await params;
 
 		// Body is optional — an empty/absent body parses to {} and validates
-		// fine, since `description` itself is optional.
-		const parsed = publishCaseBodySchema.safeParse(
-			await request.json().catch(() => ({}))
-		);
+		// fine, since `description` itself is optional. `readJsonBody`
+		// returns `undefined` (not `{}`) for an absent body, and the schema
+		// is a z.strictObject (which rejects `undefined` outright), so the
+		// `?? {}` default is applied here rather than via parseJsonBody.
+		const raw = await readJsonBody(request);
+		const parsed = publishCaseBodySchema.safeParse(raw ?? {});
 		if (!parsed.success) {
 			return apiError(
 				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
