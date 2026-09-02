@@ -52,6 +52,20 @@ const DIVERGENCE_TEXT =
 	"Changes have been made since this case was last published.";
 const CASE_ID_FROM_URL_PATTERN = /\/case\/([a-f0-9-]+)/;
 
+// A 1x1 transparent PNG, base64-encoded — the smallest file that clears both
+// the client-side dropzone gate (`components/ui/image-upload.tsx`'s
+// react-dropzone `accept`/`maxSize`) and the server's mime-type check
+// (`file-storage-service.ts`'s `validateFile`), generated in-test rather
+// than adding a binary fixture.
+const TINY_PNG_BASE64 =
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
+// next/image rewrites `src` through `/_next/image?url=<url-encoded>` in a
+// production build (`images.unoptimized` is only true in dev — see
+// `next.config.mjs`), so the uploaded image's path has to be matched
+// tolerant of that encoding rather than as an exact `/uploads/...` string.
+const UPLOADED_IMAGE_PATTERN = /(?:\/|%2F)uploads(?:\/|%2F)/;
+
 test.describe("ADR 0003 — publish journey", () => {
 	let caseId: string | undefined;
 
@@ -117,6 +131,42 @@ test.describe("ADR 0003 — publish journey", () => {
 		await infoForm.getByLabel("Sector").click();
 		await page.getByRole("option", { name: CASE_INFO.sector }).click();
 
+		// ---- Feature image: the control at the heart of this test (Discover
+		// detail page not rendering the feature image, the original bug). The
+		// dropzone's file input is hidden (react-dropzone's `getInputProps()`
+		// in `components/ui/image-upload.tsx`), so it's driven directly with
+		// `setInputFiles` rather than a real drag-and-drop. The upload posts
+		// to its own route (`/api/cases/[id]/information/image`) and persists
+		// `featureImageUrl` independently of "Save case information" below —
+		// asserted here, at the step it happens, so a silent upload failure
+		// is caught immediately rather than only surfacing as a missing image
+		// several steps later on Discover.
+		await Promise.all([
+			page.waitForResponse(
+				(resp) =>
+					resp.url().includes(`/api/cases/${caseId}/information/image`) &&
+					resp.request().method() === "POST" &&
+					resp.ok()
+			),
+			infoForm.locator('input[type="file"]').setInputFiles({
+				name: "feature-image.png",
+				mimeType: "image/png",
+				buffer: Buffer.from(TINY_PNG_BASE64, "base64"),
+			}),
+		]);
+		// The dropzone swaps its "Upload an image" prompt for a preview and a
+		// "Remove Image" control once `ImageUpload`'s `imageToShow` is truthy
+		// (image-upload.tsx) — the client-visible confirmation that the
+		// upload round-trip completed and the form now reflects it. This wait
+		// is not just a UI nicety: it also gives `CaseInformationSection`'s
+		// post-upload `featureImageUrl` sync effect time to flush into the
+		// form before "Save case information" fires below — remove it and the
+		// PUT can race ahead of that effect, submitting a stale `""` that
+		// blanks the image the upload just set.
+		await expect(
+			infoForm.getByRole("button", { name: "Remove Image" })
+		).toBeVisible();
+
 		await Promise.all([
 			page.waitForResponse(
 				(resp) =>
@@ -157,6 +207,22 @@ test.describe("ADR 0003 — publish journey", () => {
 
 		await page.goto(`/discover/${slug}`);
 		await expect(page.getByRole("heading", { name: CASE_NAME })).toBeVisible();
+
+		// ---- Feature image renders on the detail page — the regression this
+		// test exists to catch (the image showed on the /discover index card
+		// but not on /discover/<slug>). The uploaded image's alt text is the
+		// case title (app/(landing)/discover/[slug]/page.tsx); assert it's
+		// visible and its src is the uploaded image, not the Unsplash
+		// fallback used when a case has no image.
+		const detailImage = page.getByRole("img", { name: CASE_NAME });
+		await expect(detailImage).toBeVisible();
+		await expect(detailImage).toHaveAttribute("src", UPLOADED_IMAGE_PATTERN);
+
+		// ---- Same check on the /discover index card for this case.
+		await page.goto("/discover");
+		await expect(
+			page.getByRole("img", { name: `${CASE_NAME} featured image` })
+		).toHaveAttribute("src", UPLOADED_IMAGE_PATTERN);
 
 		// `page.request` shares the signed-in browser context's cookies, but
 		// `/api/public/*` is exempted from session auth entirely (middleware.ts)
