@@ -15,15 +15,15 @@ const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
  * Schema for batch update request body.
  * Extracted from cases/[id]/batch/route.ts for reuse.
  */
-export const batchUpdateRequestSchema = z.object({
+export const batchUpdateRequestSchema = z.strictObject({
 	changes: z
 		.array(
 			z.discriminatedUnion("type", [
-				z.object({
+				z.strictObject({
 					type: z.literal("create"),
 					elementId: z.string().uuid(),
 					parentId: z.string().uuid().nullable(),
-					data: z.object({
+					data: z.strictObject({
 						id: z.string().uuid(),
 						type: z.string(),
 						name: z.string().nullable(),
@@ -45,10 +45,10 @@ export const batchUpdateRequestSchema = z.object({
 						defeatsElementId: z.string().optional(),
 					}),
 				}),
-				z.object({
+				z.strictObject({
 					type: z.literal("update"),
 					elementId: z.string().uuid(),
-					data: z.object({
+					data: z.strictObject({
 						name: z.string().nullable().optional(),
 						description: z.string().optional(),
 						inSandbox: z.boolean().optional(),
@@ -69,16 +69,16 @@ export const batchUpdateRequestSchema = z.object({
 						defeatsElementId: z.string().optional(),
 					}),
 				}),
-				z.object({
+				z.strictObject({
 					type: z.literal("delete"),
 					elementId: z.string().uuid(),
 				}),
-				z.object({
+				z.strictObject({
 					type: z.literal("link_evidence"),
 					evidenceId: z.string().uuid(),
 					claimId: z.string().uuid(),
 				}),
-				z.object({
+				z.strictObject({
 					type: z.literal("unlink_evidence"),
 					evidenceId: z.string().uuid(),
 					claimId: z.string().uuid(),

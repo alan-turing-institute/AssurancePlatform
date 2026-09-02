@@ -155,7 +155,14 @@ describe("POST /api/integrations", () => {
 		expect(body.integration).not.toHaveProperty("token");
 	});
 
-	it("binds ownership to the session user even if the body names a different owner", async () => {
+	it("rejects a body naming a different owner outright (registerIntegrationSchema is strict — ownerId is not a declared field)", async () => {
+		// Stronger than the old assertion this replaced: registerIntegrationSchema
+		// went from a bare z.object() (which silently dropped ownerId and fell
+		// through to the session-derived owner) to z.strictObject() (TEA —
+		// Mutation-schema hardening). A spoofing attempt is now rejected at the
+		// boundary with 400, not silently defused with a 201 — ownerId was
+		// already undeclared and session-derived (see the schema's doc
+		// comment); nothing here relies on strict mode to stay secure.
 		const user = await createTestUser();
 		const other = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
@@ -169,10 +176,7 @@ describe("POST /api/integrations", () => {
 			})
 		);
 
-		expect(response.status).toBe(201);
-		const body = await response.json();
-		expect(body.integration.ownerId).toBe(user.id);
-		expect(body.integration.ownerId).not.toBe(other.id);
+		expect(response.status).toBe(400);
 	});
 
 	it("rejects an unknown scope with 400", async () => {

@@ -75,6 +75,7 @@ export type AssertionStatus = z.infer<typeof AssertionStatusSchema>;
 /**
  * V2 Element schema - flat structure with parentId references
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const ElementV2Schema = z
 	.object({
 		id: z.string().uuid().describe("Unique identifier for the element"),
@@ -151,6 +152,7 @@ export const ElementV2Schema = z
 			.describe("Whether the element has been modified from its pattern"),
 		comments: z
 			.array(
+				// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 				z.object({
 					author: z.string().describe("Username of comment author"),
 					content: z.string().describe("Comment text content"),
@@ -169,6 +171,7 @@ export type ElementV2 = z.infer<typeof ElementV2Schema>;
 /**
  * V2 Evidence Link schema - many-to-many relationship
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const EvidenceLinkV2Schema = z
 	.object({
 		evidenceId: z.string().uuid().describe("ID of the evidence element"),
@@ -184,10 +187,12 @@ export type EvidenceLinkV2 = z.infer<typeof EvidenceLinkV2Schema>;
 /**
  * V2 Export format - the canonical export schema
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportV2Schema = z
 	.object({
 		version: z.literal("2.0").describe("Schema version identifier"),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
+		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 		case: z
 			.object({
 				name: z
@@ -276,6 +281,7 @@ export interface TreeNode {
 }
 
 // Comment schema for export/import
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const ExportCommentSchema = z
 	.object({
 		author: z.string().describe("Username of the comment author"),
@@ -286,6 +292,7 @@ export const ExportCommentSchema = z
 
 // biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing
 export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
+	// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 	z.object({
 		id: z.string().uuid(),
 		type: ElementTypeSchema,
@@ -328,10 +335,12 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
  * Uses version "1.0" as this is the first officially versioned export format
  * (the legacy Django format had no version field).
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportNestedSchema = z
 	.object({
 		version: z.literal("1.0").describe("Schema version identifier"),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
+		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 		case: z
 			.object({
 				name: z

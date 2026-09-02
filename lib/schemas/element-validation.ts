@@ -146,6 +146,7 @@ const ModuleEmbedTypeSchema = z
 /**
  * Base fields common to all element types.
  */
+// biome-ignore lint/plugin: import leniency, ADR-level decision — this validates data already persisted or being imported (Prisma middleware / element-service.ts), not a live request body; unknown keys from older records must be dropped silently, not rejected.
 const BaseElementSchema = z
 	.object({
 		name: z

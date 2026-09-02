@@ -21,7 +21,7 @@ const elementTypeSchema = z
 /**
  * Create element input schema
  */
-export const createElementSchema = z.object({
+export const createElementSchema = z.strictObject({
 	// Type (required)
 	type: elementTypeSchema.optional(),
 	elementType: elementTypeSchema.optional(),
@@ -68,7 +68,7 @@ export type CreateElementSchemaOutput = z.output<typeof createElementSchema>;
 /**
  * Update element input schema
  */
-export const updateElementSchema = z.object({
+export const updateElementSchema = z.strictObject({
 	// Names/descriptions
 	name: optionalString(500),
 	description: optionalString(5000),
@@ -115,7 +115,7 @@ export type UpdateElementSchemaOutput = z.output<typeof updateElementSchema>;
 /**
  * Move element input schema
  */
-export const moveElementSchema = z.object({
+export const moveElementSchema = z.strictObject({
 	parentId: z.string().uuid("Invalid parent ID format"),
 });
 
@@ -125,7 +125,7 @@ export type MoveElementSchemaOutput = z.output<typeof moveElementSchema>;
 /**
  * Attach element input schema
  */
-export const attachElementSchema = z.object({
+export const attachElementSchema = z.strictObject({
 	parentId: z.string().uuid("Invalid parent ID format"),
 });
 
@@ -139,7 +139,7 @@ export type AttachElementSchemaOutput = z.output<typeof attachElementSchema>;
 /**
  * Description field schema — used across create/edit forms
  */
-export const elementDescriptionFormSchema = z.object({
+export const elementDescriptionFormSchema = z.strictObject({
 	description: z.string().min(2, {
 		message: "Description must be at least 2 characters",
 	}),
@@ -155,7 +155,7 @@ export type ElementDescriptionFormOutput = z.output<
 /**
  * Attributes schema — assumption, justification, context (goal/strategy/property only)
  */
-export const elementAttributesFormSchema = z.object({
+export const elementAttributesFormSchema = z.strictObject({
 	assumption: z.string().optional(),
 	justification: z.string().optional(),
 	context: z.array(z.string()).optional(),
@@ -171,8 +171,8 @@ export type ElementAttributesFormOutput = z.output<
 /**
  * URLs field array schema — used in evidence edit/create forms
  */
-export const elementUrlsFormSchema = z.object({
-	urls: z.array(z.object({ value: z.string() })),
+export const elementUrlsFormSchema = z.strictObject({
+	urls: z.array(z.strictObject({ value: z.string() })),
 });
 
 export type ElementUrlsFormInput = z.input<typeof elementUrlsFormSchema>;
@@ -182,14 +182,14 @@ export type ElementUrlsFormOutput = z.output<typeof elementUrlsFormSchema>;
  * Combined node edit form schema — description + attributes + urls
  * Used by NodeEditDialog and EditForm components
  */
-export const nodeEditFormSchema = z.object({
+export const nodeEditFormSchema = z.strictObject({
 	description: z.string().min(2, {
 		message: "Description must be at least 2 characters",
 	}),
 	assumption: z.string().optional(),
 	justification: z.string().optional(),
 	context: z.array(z.string()).optional(),
-	urls: z.array(z.object({ value: z.string() })),
+	urls: z.array(z.strictObject({ value: z.string() })),
 	// Per-assertion status (ADR 0004 D3). The five author-declarable values
 	// only — `AS_CITED` is derived-only and must never be offered in this
 	// form's Select (components/cases/node-edit-dialog.tsx). "Unset" is

@@ -8,7 +8,7 @@ import { optionalString } from "./base";
  * (`lib/schemas/case-information.ts`), which is the public-facing summary
  * of the case itself.
  */
-export const publishCaseBodySchema = z.object({
+export const publishCaseBodySchema = z.strictObject({
 	description: optionalString(2000),
 });
 

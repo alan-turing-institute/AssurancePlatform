@@ -47,7 +47,7 @@ export const integrationScopesSchema = z
  * name a different owner (vincent's session-derived-identity trust
  * statement, 2026-07-03).
  */
-export const registerIntegrationSchema = z.object({
+export const registerIntegrationSchema = z.strictObject({
 	name: requiredString("Name", 1, 100),
 	description: optionalString(1000),
 	scopes: integrationScopesSchema,
@@ -81,7 +81,7 @@ export type RegisterIntegrationFormInput = z.input<
 // type outside the route's own `.safeParse` call. Add one back when an edit UI
 // lands and a caller needs the parsed shape by name.
 export const updateIntegrationSchema = z
-	.object({
+	.strictObject({
 		description: optionalString(1000),
 		scopes: integrationScopesSchema.optional(),
 	})
@@ -106,7 +106,7 @@ export const updateIntegrationSchema = z
 // No `z.infer` alias here — nothing currently consumes an issueTokenSchema
 // type outside the route's own `.safeParse` call. Add one back when an
 // expiry-picker UI lands and a caller needs the parsed shape by name.
-export const issueTokenSchema = z.object({
+export const issueTokenSchema = z.strictObject({
 	expiresAt: z.coerce
 		.date()
 		.refine((date) => date.getTime() > Date.now(), {
@@ -149,7 +149,7 @@ const grantableCasePermissionSchema = z.enum(["VIEW", "COMMENT", "EDIT"], {
 // type outside the route's own `.safeParse` call (file convention — see
 // `updateIntegrationSchema`/`issueTokenSchema` above). Add one back when a
 // caller needs the parsed shape by name.
-export const grantCaseAccessSchema = z.object({
+export const grantCaseAccessSchema = z.strictObject({
 	caseId: uuidSchema,
 	permission: grantableCasePermissionSchema,
 });

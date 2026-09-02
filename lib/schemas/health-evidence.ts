@@ -11,7 +11,7 @@ import {
 /**
  * Zod schema for `docs/specs/evidence-format-v0.1.md` — the FROZEN
  * ingestion contract for `POST /api/machine/health/elements/[id]/evidence`.
- * Implemented exactly: unknown top-level fields are rejected (`.strict()`),
+ * Implemented exactly: unknown top-level fields are rejected (`z.strictObject()`),
  * unknown `provenance` keys are preserved verbatim (`.catchall()`, not
  * `.strip()`). Any deviation from the spec is a question back to cid, not a
  * unilateral change — see the health-plugin delegation brief.
@@ -19,7 +19,7 @@ import {
  * Fields the spec says a producer does NOT send (`recordHash`,
  * `previousRecordHash`, `createdAt`, `createdById`) are simply absent from
  * this schema — they are set server-side by `health-evidence-service.ts`
- * and would be rejected anyway by `.strict()` if a caller tried to smuggle
+ * and would be rejected anyway by `z.strictObject()` if a caller tried to smuggle
  * them in.
  */
 
@@ -51,6 +51,7 @@ const PROVENANCE_MAX_BYTES = 8192;
  * additional key validated (and KEPT, never stripped) against the bounded
  * JSON schema shared with `lib/schemas/plugin.ts`.
  */
+// biome-ignore lint/plugin: evidence-format-v0.1 requires unknown provenance keys to be PRESERVED verbatim (.catchall(), see the schema comment above) — the opposite problem to the usual silent-strip leniency, but z.strictObject()'s reject-unknown-keys behaviour is just as wrong here.
 const provenanceSchema = z
 	.object({
 		check: z
@@ -78,51 +79,49 @@ const provenanceSchema = z
  * expressible in the body schema alone, since path and body are parsed
  * separately.
  */
-export const healthEvidenceItemSchema = z
-	.object({
-		formatVersion: z.literal(EVIDENCE_FORMAT_VERSION, {
-			message: `formatVersion must be "${EVIDENCE_FORMAT_VERSION}"`,
-		}),
-		claimId: uuidSchema,
-		metricName: z
-			.string()
-			.min(1, "metricName is required")
-			.max(
-				METRIC_NAME_MAX_LENGTH,
-				`metricName must be at most ${METRIC_NAME_MAX_LENGTH} characters`
-			),
-		value: z.number().finite().optional(),
-		threshold: z.number().finite().optional(),
-		verdict: z.enum(["PASS", "FAIL", "DEGRADED"], {
-			message: "verdict must be PASS, FAIL, or DEGRADED",
-		}),
-		oddDimensions: z
-			.array(
-				z
-					.string()
-					.min(1)
-					.max(
-						ODD_DIMENSION_MAX_LENGTH,
-						`Each oddDimensions entry must be at most ${ODD_DIMENSION_MAX_LENGTH} characters`
-					)
-			)
-			.max(
-				ODD_DIMENSION_MAX_ITEMS,
-				`oddDimensions must have at most ${ODD_DIMENSION_MAX_ITEMS} entries`
-			)
-			.default([]),
-		sourceSystem: z
-			.string()
-			.min(1, "sourceSystem is required")
-			.max(
-				SOURCE_SYSTEM_MAX_LENGTH,
-				`sourceSystem must be at most ${SOURCE_SYSTEM_MAX_LENGTH} characters`
-			),
-		provenance: provenanceSchema,
-		// "ISO 8601 UTC" (spec) — no offset variants accepted, matching the
-		// spec's own example ("...T09:41:07Z").
-		evaluatedAt: z
-			.string()
-			.datetime({ message: "evaluatedAt must be an ISO 8601 UTC timestamp" }),
-	})
-	.strict();
+export const healthEvidenceItemSchema = z.strictObject({
+	formatVersion: z.literal(EVIDENCE_FORMAT_VERSION, {
+		message: `formatVersion must be "${EVIDENCE_FORMAT_VERSION}"`,
+	}),
+	claimId: uuidSchema,
+	metricName: z
+		.string()
+		.min(1, "metricName is required")
+		.max(
+			METRIC_NAME_MAX_LENGTH,
+			`metricName must be at most ${METRIC_NAME_MAX_LENGTH} characters`
+		),
+	value: z.number().finite().optional(),
+	threshold: z.number().finite().optional(),
+	verdict: z.enum(["PASS", "FAIL", "DEGRADED"], {
+		message: "verdict must be PASS, FAIL, or DEGRADED",
+	}),
+	oddDimensions: z
+		.array(
+			z
+				.string()
+				.min(1)
+				.max(
+					ODD_DIMENSION_MAX_LENGTH,
+					`Each oddDimensions entry must be at most ${ODD_DIMENSION_MAX_LENGTH} characters`
+				)
+		)
+		.max(
+			ODD_DIMENSION_MAX_ITEMS,
+			`oddDimensions must have at most ${ODD_DIMENSION_MAX_ITEMS} entries`
+		)
+		.default([]),
+	sourceSystem: z
+		.string()
+		.min(1, "sourceSystem is required")
+		.max(
+			SOURCE_SYSTEM_MAX_LENGTH,
+			`sourceSystem must be at most ${SOURCE_SYSTEM_MAX_LENGTH} characters`
+		),
+	provenance: provenanceSchema,
+	// "ISO 8601 UTC" (spec) — no offset variants accepted, matching the
+	// spec's own example ("...T09:41:07Z").
+	evaluatedAt: z
+		.string()
+		.datetime({ message: "evaluatedAt must be an ISO 8601 UTC timestamp" }),
+});

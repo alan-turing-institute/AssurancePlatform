@@ -106,6 +106,10 @@
           }
         }
       }
+    },
+    {
+      "includes": ["lib/schemas/**"],
+      "plugins": ["./lint-rules/no-bare-zod-object.grit"]
     }
   ]
 }

@@ -6,7 +6,7 @@ import { requiredString, uuidSchema } from "@/lib/schemas/base";
 // Case-level comment (note)
 // ============================================
 
-export const createCommentSchema = z.object({
+export const createCommentSchema = z.strictObject({
 	content: requiredString("Content", 1, 5000),
 	parentId: uuidSchema.optional().nullable(),
 });
@@ -19,7 +19,7 @@ export type CreateCommentOutput = z.output<typeof createCommentSchema>;
 // ============================================
 
 export const createElementCommentSchema = z
-	.object({
+	.strictObject({
 		content: z.string().optional(),
 		comment: z.string().optional(),
 		parentId: uuidSchema.optional().nullable(),
@@ -29,7 +29,7 @@ export const createElementCommentSchema = z
 		parentId: val.parentId ?? null,
 	}))
 	.pipe(
-		z.object({
+		z.strictObject({
 			content: z.string().min(1, "Comment content is required"),
 			parentId: z.string().uuid().nullable(),
 		})
@@ -46,7 +46,7 @@ export type CreateElementCommentOutput = z.output<
 // Update comment content
 // ============================================
 
-export const updateCommentSchema = z.object({
+export const updateCommentSchema = z.strictObject({
 	content: requiredString("Content", 1, 5000),
 });
 
@@ -57,7 +57,7 @@ export type UpdateCommentOutput = z.output<typeof updateCommentSchema>;
 // Resolve / unresolve a comment thread
 // ============================================
 
-export const resolveCommentSchema = z.object({
+export const resolveCommentSchema = z.strictObject({
 	resolved: z.boolean({ error: "resolved must be a boolean" }),
 });
 
@@ -72,7 +72,7 @@ export type ResolveCommentOutput = z.output<typeof resolveCommentSchema>;
  * Comment form schema — for create and edit forms.
  * Field name is `comment` to match existing component field names.
  */
-export const commentFormSchema = z.object({
+export const commentFormSchema = z.strictObject({
 	comment: z
 		.string()
 		.min(2, "Comment must be at least 2 characters")
@@ -86,7 +86,7 @@ export type CommentFormOutput = z.output<typeof commentFormSchema>;
  * Note form schema — for case-level note create form.
  * Field name is `note` to match existing component field names.
  */
-export const noteFormSchema = z.object({
+export const noteFormSchema = z.strictObject({
 	note: z
 		.string()
 		.min(2, "Note must be at least 2 characters")

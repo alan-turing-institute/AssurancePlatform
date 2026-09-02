@@ -4,7 +4,7 @@ import { emailSchema, permissionLevelSchema, uuidSchema } from "./base";
 /**
  * Share case by email
  */
-export const shareByEmailSchema = z.object({
+export const shareByEmailSchema = z.strictObject({
 	type: z.literal("user").optional(),
 	email: emailSchema,
 	permission: permissionLevelSchema,
@@ -16,7 +16,7 @@ export type ShareByEmailSchemaOutput = z.output<typeof shareByEmailSchema>;
 /**
  * Share case with team
  */
-export const shareWithTeamSchema = z.object({
+export const shareWithTeamSchema = z.strictObject({
 	type: z.literal("team"),
 	teamId: uuidSchema,
 	permission: permissionLevelSchema,
@@ -41,7 +41,7 @@ export type SharePermissionSchemaOutput = z.output<
 /**
  * Update an existing permission
  */
-export const updatePermissionSchema = z.object({
+export const updatePermissionSchema = z.strictObject({
 	permission: permissionLevelSchema,
 	type: z.enum(["user", "team"]).optional(),
 });
