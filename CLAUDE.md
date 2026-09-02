@@ -127,6 +127,11 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
   test-db-config.ts` and `vitest.workspace.ts` default to port 5433 locally;
   CI overrides both via env vars (`build.yaml`) to keep using its own
   single, already test-only service container on 5432 instead.
+- **`postgres-test` is not started by anything else** — run
+  `docker compose -f docker-compose.local.yml up -d postgres-test` before
+  `pnpm test:integration` (or the pre-commit hook that runs it). It's a
+  separate container from dev's `postgres`, so unlike before, having dev's
+  stack up already is not enough.
 
 ## Quality gates & conventions
 

@@ -281,7 +281,22 @@ jobs:
             PGPASSWORD=tea_password pg_isready -h localhost -U tea_user -d tea_test && break
             sleep 1
           done
-          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "SHOW fsync; SHOW shared_buffers; SHOW max_wal_size;"
+          # Hard assertions, not just a log line: a silent regression here
+          # (e.g. the restart racing the ALTER SYSTEM writes, or a future
+          # image bump resetting defaults) would otherwise let the job pass
+          # green while quietly falling back to the slow 600s+ path.
+          check() {
+            local setting="$1" expected="$2" actual
+            actual=$(PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -tAc "SHOW ${setting};")
+            echo "${setting} = ${actual}"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Postgres ${setting} is '${actual}', expected '${expected}' — tuning did not take effect"
+              exit 1
+            fi
+          }
+          check fsync off
+          check shared_buffers 1GB
+          check max_wal_size 4GB
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
