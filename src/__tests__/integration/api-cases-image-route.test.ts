@@ -105,7 +105,10 @@ describe("POST /api/cases/[id]/image", () => {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 
-		expect(response.status).not.toBe(413);
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.success).toBe(true);
+		expect(typeof body.image).toBe("string");
 	});
 
 	it("rejects a body over the 10 MiB caseImage cap, declared via Content-Length, with 413", async () => {
