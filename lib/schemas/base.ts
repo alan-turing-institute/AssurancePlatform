@@ -110,6 +110,11 @@ const URL_ERROR_MESSAGE = "Enter a web address, such as example.com/report.pdf";
  * there is no silent divergence between what a user typed and what is
  * saved. A scheme that isn't followed by "//" (mailto:, javascript:,
  * data:, …) is rejected outright rather than mangled.
+ *
+ * Import paths (DOIs, URNs, file paths) deliberately do NOT use this
+ * schema — see element-validation.ts's BaseElementSchema `url` comment for
+ * the reverse pointer. This schema, and the two below it, are for entry
+ * points that mean "a web address": UI forms and the batch-update route.
  */
 export const lenientUrlSchema = z
 	.string()
@@ -157,6 +162,52 @@ export const optionalUrlSchema = z
 	// files.
 	.optional()
 	.describe("Optional web address field");
+
+/**
+ * Nullable web address field — for entry points where `null` is a
+ * meaningful instruction to CLEAR an existing value, not "no opinion".
+ *
+ * Do NOT reuse optionalUrlSchema here: it folds null to undefined, and any
+ * caller that treats undefined as "leave unchanged" (e.g. the batch-update
+ * service's field loop) would then be unable to clear a URL at all. This
+ * schema keeps null distinct from undefined all the way through:
+ *   - undefined -> undefined (field genuinely absent — leave unchanged)
+ *   - null, "", or whitespace-only -> null (explicit clear)
+ *   - anything else -> validated/normalised via lenientUrlSchema
+ */
+export const nullableUrlSchema = z
+	.string()
+	.nullable()
+	.optional()
+	// A z.union([z.undefined(), z.null(), lenientUrlSchema]).pipe(...) reads
+	// more like optionalUrlSchema's pattern, but zod's union error-picking
+	// swallows lenientUrlSchema's specific message (falls back to a generic
+	// "Invalid input") whenever the failure comes from lenientUrlSchema's
+	// leading .refine() rather than its trailing .url() check — e.g.
+	// "mailto:…". Calling lenientUrlSchema directly inside the transform and
+	// re-raising its own issues keeps the friendly message in every failure
+	// case.
+	.transform((v, ctx) => {
+		if (v === undefined) {
+			return undefined;
+		}
+		const trimmed = v?.trim();
+		if (!trimmed) {
+			return null;
+		}
+		const result = lenientUrlSchema.safeParse(trimmed);
+		if (!result.success) {
+			for (const issue of result.error.issues) {
+				ctx.addIssue(issue);
+			}
+			return z.NEVER;
+		}
+		return result.data;
+	})
+	// See optionalUrlSchema's NOTE above — kept for the same type-inference
+	// reason (an optional key on the object schema, not required|undefined).
+	.optional()
+	.describe("Nullable web address field — null means 'clear this value'");
 
 // ============================================
 // Number Primitives

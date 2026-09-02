@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { lenientUrlSchema, optionalUrlSchema } from "../base";
+import {
+	lenientUrlSchema,
+	nullableUrlSchema,
+	optionalUrlSchema,
+} from "../base";
 import { createElementSchema, updateElementSchema } from "../element";
 
 const SCHEME_MESSAGE = "Enter a web address, such as example.com/report.pdf";
@@ -230,5 +234,63 @@ describe("updateElementSchema — evidence urls field", () => {
 		const result = updateElementSchema.safeParse({ URL: "example.com" });
 		expect(result.success).toBe(true);
 		expect(result.success && result.data.URL).toBe("https://example.com");
+	});
+});
+
+describe("nullableUrlSchema", () => {
+	it("passes undefined through as undefined (field absent - leave unchanged)", () => {
+		expect(nullableUrlSchema.safeParse(undefined)).toMatchObject({
+			success: true,
+			data: undefined,
+		});
+	});
+
+	it("normalises null to null (explicit clear)", () => {
+		expect(nullableUrlSchema.safeParse(null)).toMatchObject({
+			success: true,
+			data: null,
+		});
+	});
+
+	it("normalises an empty string to null", () => {
+		expect(nullableUrlSchema.safeParse("")).toMatchObject({
+			success: true,
+			data: null,
+		});
+	});
+
+	it("normalises a whitespace-only string to null", () => {
+		expect(nullableUrlSchema.safeParse("   ")).toMatchObject({
+			success: true,
+			data: null,
+		});
+	});
+
+	it("normalises a bare domain with a path via lenientUrlSchema", () => {
+		const result = nullableUrlSchema.safeParse("example.com/x");
+		expect(result.success).toBe(true);
+		expect(result.success && result.data).toBe("https://example.com/x");
+	});
+
+	it("normalises a protocol-relative address via lenientUrlSchema", () => {
+		const result = nullableUrlSchema.safeParse("//cdn.example.com/x");
+		expect(result.success).toBe(true);
+		expect(result.success && result.data).toBe("https://cdn.example.com/x");
+	});
+
+	it("rejects a mailto: address with the friendly message", () => {
+		const result = nullableUrlSchema.safeParse("mailto:a@b");
+		expect(result.success).toBe(false);
+		expect(result.success || result.error.issues[0]?.message).toBe(
+			SCHEME_MESSAGE
+		);
+	});
+
+	it("rejects a javascript: address with the friendly message", () => {
+		const result = nullableUrlSchema.safeParse("javascript:alert(1)");
+		expect(result.success).toBe(false);
+		expect(result.success || result.error.issues[0]?.message).toBe(
+			SCHEME_MESSAGE
+		);
 	});
 });

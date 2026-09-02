@@ -212,7 +212,13 @@ const EvidenceSchema = BaseElementSchema.extend({
 	elementType: z.literal("EVIDENCE"),
 	url: z.string().nullable().optional(),
 	// URLs/URIs are stored as simple strings - no strict validation
-	// to allow DOIs, URNs, file paths, document references, etc.
+	// to allow DOIs, URNs, file paths, document references, etc. This is a
+	// deliberate split from base.ts's lenientUrlSchema/nullableUrlSchema,
+	// which normalise and validate as a *web address* (prepend https://,
+	// http(s)-only allowlist) — those are used by UI form entry points and
+	// the batch-update route, where "url" always means a web address. This
+	// import path means "identifier or reference of any kind" instead, so
+	// it stays a bare string.
 	urls: z.array(z.string()).default([]),
 });
 

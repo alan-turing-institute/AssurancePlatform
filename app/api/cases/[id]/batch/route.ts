@@ -48,7 +48,11 @@ export async function POST(
 		// Validate request body
 		const parseResult = batchUpdateRequestSchema.safeParse(body);
 		if (!parseResult.success) {
-			return apiError(validationError("Invalid request body"));
+			return apiError(
+				validationError(
+					parseResult.error.issues[0]?.message ?? "Invalid request body"
+				)
+			);
 		}
 
 		const { changes, expectedVersion } = parseResult.data;

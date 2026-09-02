@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nullableUrlSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
 
 /**
@@ -33,7 +34,7 @@ export const batchUpdateRequestSchema = z.object({
 						assumption: z.string().nullable().optional(),
 						justification: z.string().nullable().optional(),
 						context: z.array(z.string()).optional(),
-						url: z.string().nullable().optional(),
+						url: nullableUrlSchema,
 						level: z.number().nullable().optional(),
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
@@ -57,7 +58,7 @@ export const batchUpdateRequestSchema = z.object({
 						assumption: z.string().nullable().optional(),
 						justification: z.string().nullable().optional(),
 						context: z.array(z.string()).optional(),
-						url: z.string().nullable().optional(),
+						url: nullableUrlSchema,
 						level: z.number().nullable().optional(),
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
