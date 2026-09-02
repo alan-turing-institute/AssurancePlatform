@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { JSON_BODY_LIMITS, parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
+import { caseImageUploadSchema } from "@/lib/schemas/case-image";
 import {
 	getCaseImage,
 	uploadCaseImage,
@@ -37,6 +38,7 @@ export async function GET(
 /**
  * POST /api/cases/[id]/image
  * Uploads a new screenshot for a case with throttling.
+ * @response 413 - Payload too large
  */
 export async function POST(
 	request: NextRequest,
@@ -46,17 +48,9 @@ export async function POST(
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
-		let body: { image?: string };
-		try {
-			body = await request.json();
-		} catch {
-			return apiError(validationError("Invalid request body"));
-		}
-
-		const { image } = body;
-		if (!image) {
-			return apiError(validationError("Missing image data"));
-		}
+		const { image } = await parseJsonBody(request, caseImageUploadSchema, {
+			maxBytes: JSON_BODY_LIMITS.caseImage,
+		});
 
 		const result = await uploadCaseImage(userId, caseId, image);
 		if ("error" in result) {

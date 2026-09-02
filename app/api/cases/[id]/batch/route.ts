@@ -1,4 +1,4 @@
-import { parseJsonBody } from "@/lib/api-request";
+import { JSON_BODY_LIMITS, parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -42,7 +42,8 @@ export async function POST(
 
 		const { changes, expectedVersion } = await parseJsonBody(
 			request,
-			batchUpdateRequestSchema
+			batchUpdateRequestSchema,
+			{ maxBytes: JSON_BODY_LIMITS.batchUpdate }
 		);
 
 		// Apply the batch update
