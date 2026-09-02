@@ -18,6 +18,55 @@ services:
       timeout: 5s
       retries: 5
 
+  # Dedicated, throwaway Postgres for the integration test suite. Kept
+  # SEPARATE from the `postgres` service above (dev's database, which stays
+  # crash-safe/untouched — Chris's call, 2026-09-02). This container's data
+  # only ever holds per-test worker databases the suite creates and drops on
+  # every run (see src/__tests__/scripts/setup-test-db.ts), so it's tuned for
+  # throughput with zero regard for durability:
+  #
+  #   fsync=off tells Postgres to skip flushing WAL/data pages to disk at
+  #   all. This is what actually fixed the integration suite's runtime
+  #   (600.22s -> 22.01s measured) — the TRUNCATE CASCADE after every test
+  #   was paying for a DataFileImmediateSync on each of the 30 truncated
+  #   tables, every test. shared_buffers/max_wal_size are kept from the
+  #   stage-A tuning; they helped a little on their own but fsync=off is the
+  #   dominant effect.
+  #
+  #   DO NOT copy fsync=off to any service holding data you'd mind losing —
+  #   an unclean shutdown (crash, OOM-kill, `docker kill`) can leave the data
+  #   directory CORRUPTED, not just behind on durability, because Postgres
+  #   assumes fsync'd writes actually landed when deciding what's safe to
+  #   trust on crash recovery. That's an acceptable trade here because the
+  #   data is fully disposable and rebuilt every run; it is never acceptable
+  #   for `postgres` above or any other service with data worth keeping.
+  #
+  # tmpfs-backed (not the `postgres_data` named volume): the data is
+  # throwaway anyway, so there's no reason to pay for disk I/O — or leave
+  # stale worker databases on disk between runs — when RAM will do. `size`
+  # covers the migrated template plus INTEGRATION_TEST_WORKER_COUNT (4)
+  # cloned worker databases with headroom.
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: tea_postgres_test
+    command: postgres -c fsync=off -c shared_buffers=1GB -c max_wal_size=4GB
+    shm_size: 1gb
+    tmpfs:
+      - /var/lib/postgresql/data:size=2g
+    environment:
+      POSTGRES_DB: tea_test_admin
+      POSTGRES_USER: tea_user
+      POSTGRES_PASSWORD: tea_password
+    ports:
+      - '5433:5432'
+    networks:
+      - tea_dev_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tea_user -d tea_test_admin']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   tea_app:
     build:
       context: .

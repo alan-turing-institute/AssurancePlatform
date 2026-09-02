@@ -115,6 +115,23 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
 - **Presentational components:** tests optional. No snapshot tests anywhere —
   test behaviour, not implementation.
 - Commands: `pnpm test:unit` / `pnpm test:integration` / `pnpm test:e2e`.
+- **`pnpm test:integration` needs its own Postgres, separate from dev's.**
+  `docker-compose.local.yml` runs two Postgres containers: `postgres` (dev's
+  database, port 5432, crash-safe, untouched) and `postgres-test` (port 5433,
+  `fsync=off` — safe only because this container's data is fully disposable,
+  recreated by the suite on every run; see that file's comment before
+  copying `fsync=off` anywhere else). `fsync=off` is what actually fixes the
+  suite's runtime: the per-test `TRUNCATE ... CASCADE`
+  (`src/__tests__/setup.integration.tsx`) was paying an fsync per truncated
+  table, every test — 600s down to ~20s. `src/__tests__/scripts/
+  test-db-config.ts` and `vitest.workspace.ts` default to port 5433 locally;
+  CI overrides both via env vars (`build.yaml`) to keep using its own
+  single, already test-only service container on 5432 instead.
+- **`postgres-test` is not started by anything else** — run
+  `docker compose -f docker-compose.local.yml up -d postgres-test` before
+  `pnpm test:integration` (or the pre-commit hook that runs it). It's a
+  separate container from dev's `postgres`, so unlike before, having dev's
+  stack up already is not enough.
 
 ## Quality gates & conventions
 
@@ -138,7 +155,10 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
   **Never `docker-compose down -v`** — it wipes the local database volume. The
   image bakes source and dependencies in at build time (no source bind
   mount), so `--build` alone picks up new npm packages and source changes;
-  there is no separate volume to clear.
+  there is no separate volume to clear. (This warning is about the `postgres`
+  service's `postgres_data` volume — `postgres-test`, used by
+  `pnpm test:integration`, is tmpfs-backed and disposable by design; there is
+  nothing to lose there.)
 - Docs run in production mode inside Docker (Nextra 4 dev-mode crash); for hot
   reload run `pnpm dev` on the host against Docker's Postgres.
 - Seed test users: `chris`, `alice`, `bob`, `charlie` (password from the
