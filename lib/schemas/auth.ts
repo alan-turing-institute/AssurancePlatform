@@ -34,5 +34,3 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export const forgotPasswordSchema = z.strictObject({
 	email: z.string().min(1, "Email is required"),
 });
-
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

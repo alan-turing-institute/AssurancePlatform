@@ -183,6 +183,3 @@ export type UpdateUserProfileSchemaOutput = z.output<
 export const deleteAccountSchema = z.strictObject({
 	password: z.string().optional(),
 });
-
-export type DeleteAccountSchemaInput = z.input<typeof deleteAccountSchema>;
-export type DeleteAccountSchemaOutput = z.output<typeof deleteAccountSchema>;

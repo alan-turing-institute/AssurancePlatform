@@ -11,6 +11,3 @@ import { z } from "zod";
 export const caseImageUploadSchema = z.strictObject({
 	image: z.string().min(1),
 });
-
-export type CaseImageUploadInput = z.input<typeof caseImageUploadSchema>;
-export type CaseImageUploadOutput = z.output<typeof caseImageUploadSchema>;

@@ -1,7 +1,11 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { parseJsonBody, readJsonBody } from "../api-request";
+import {
+	DEFAULT_MAX_JSON_BODY_BYTES,
+	parseJsonBody,
+	readJsonBody,
+} from "../api-request";
 
 const URL = "http://localhost:3000/api/__test__/body-size";
 
@@ -116,6 +120,10 @@ describe("readJsonBody", () => {
 		const request = new NextRequest(URL, { method: "POST" });
 
 		await expect(readJsonBody(request)).resolves.toBeUndefined();
+	});
+
+	it("defaults to a 1 MiB cap when no maxBytes is given", () => {
+		expect(DEFAULT_MAX_JSON_BODY_BYTES).toBe(1024 * 1024);
 	});
 
 	it("throws a 400 validation error for malformed JSON", async () => {
