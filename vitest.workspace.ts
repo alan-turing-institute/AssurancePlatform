@@ -62,9 +62,15 @@ export default defineConfig({
 					env: {
 						// Fallback/admin connection only — each worker's setup file
 						// (setup.integration.tsx) overrides DATABASE_URL to point at its
-						// own throwaway `tea_test_w*` database before any test runs.
+						// own throwaway `tea_test_w*` database before any test runs. Host/
+						// port here just need to resolve to SOME Postgres server; the
+						// pathname is discarded per-worker. Defaults to the dedicated
+						// `postgres-test` container (docker-compose.local.yml, port 5433,
+						// fsync=off) — CI overrides via DATABASE_URL_INTEGRATION_BASE
+						// (build.yaml) to keep using its own single service container.
 						DATABASE_URL:
-							"postgresql://tea_user:tea_password@localhost:5432/tea_test",
+							process.env.DATABASE_URL_INTEGRATION_BASE ??
+							"postgresql://tea_user:tea_password@localhost:5433/tea_test",
 						SKIP_ELEMENT_VALIDATION: "false",
 					},
 				},

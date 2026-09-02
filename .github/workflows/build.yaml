@@ -222,6 +222,14 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://tea_user:tea_password@localhost:5432/tea_test
+      # These two override the LOCAL dev defaults baked into
+      # test-db-config.ts / vitest.workspace.ts, which point at the
+      # dedicated `postgres-test` container from docker-compose.local.yml
+      # (port 5433). CI's services.postgres above is already test-only —
+      # there's nothing to isolate it from — so it keeps using its single
+      # container on 5432, unchanged from before this override existed.
+      DATABASE_URL_INTEGRATION_BASE: postgresql://tea_user:tea_password@localhost:5432/tea_test
+      INTEGRATION_TEST_ADMIN_DATABASE_URL: postgresql://tea_user:tea_password@localhost:5432/tea_dev
       NEXTAUTH_SECRET: test-secret-for-ci-only
       NEXTAUTH_URL: http://localhost:3000
       SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
@@ -231,25 +239,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Tune Postgres service container (shared_buffers/max_wal_size)
+      - name: Tune Postgres service container (fsync/shared_buffers/max_wal_size)
         # The integration suite's dominant cost is the per-test TRUNCATE
-        # CASCADE in src/__tests__/setup.integration.tsx, slow on the image
-        # default shared_buffers=128MB (cache-starved: pg_stat_bgwriter
-        # buffers_backend:buffers_checkpoint ~13:1). docker-compose.local.yml
-        # fixes this locally via `command:`, which service containers don't
-        # support, so this does it with ALTER SYSTEM (writes
-        # postgresql.auto.conf inside the container) followed by a restart.
-        # A restart, not just a config reload, is required: shared_buffers is
-        # a PGC_POSTMASTER setting in Postgres and only takes effect when the
-        # postmaster restarts (max_wal_size would reload with a SIGHUP alone,
-        # but there's no reason to split the two). `docker restart` targets
-        # the container Docker already created for this job's `postgres`
-        # service (found by image — this job runs exactly one postgres:16
-        # container) — it is not a `docker compose` invocation, so there's no
-        # compose project-name collision.
+        # CASCADE in src/__tests__/setup.integration.tsx: each of the 30
+        # truncated tables pays a DataFileImmediateSync fsync, every test.
+        # Measured proof: fsync=off took a 600.22s run to 22.01s, same
+        # 989/989 pass count. shared_buffers/max_wal_size help a little on
+        # their own but are secondary to fsync=off.
+        #
+        # DO NOT copy fsync=off to anything except a throwaway test/CI
+        # database — an unclean shutdown can leave the data directory
+        # CORRUPTED, not just behind on durability. This service container
+        # only ever holds per-run worker databases the suite creates and
+        # drops itself (see setup-test-db.ts), so that's an acceptable
+        # trade here; it would not be for any service with data worth
+        # keeping (see docker-compose.local.yml's `postgres` — dev's
+        # database — which does NOT get this treatment).
+        #
+        # GitHub Actions service containers have no `command:` key, so none
+        # of these three can be set at container-create time the way
+        # docker-compose.local.yml's `postgres-test` does it. This does it
+        # with ALTER SYSTEM (writes postgresql.auto.conf inside the
+        # container) followed by a restart. A restart, not just a config
+        # reload, is required: shared_buffers is a PGC_POSTMASTER setting in
+        # Postgres and only takes effect when the postmaster restarts
+        # (fsync and max_wal_size would reload with a SIGHUP alone, but
+        # there's no reason to split them from shared_buffers into a second
+        # mechanism). `docker restart` targets the container Docker already
+        # created for this job's `postgres` service (found by image — this
+        # job runs exactly one postgres:16 container) — it is not a `docker
+        # compose` invocation, so there's no compose project-name collision.
         run: |
           set -euo pipefail
           PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test \
+            -c "ALTER SYSTEM SET fsync = off;" \
             -c "ALTER SYSTEM SET shared_buffers = '1GB';" \
             -c "ALTER SYSTEM SET max_wal_size = '4GB';"
           cid=$(docker ps --filter "ancestor=postgres:16" --format "{{.ID}}")
@@ -258,7 +281,7 @@ jobs:
             PGPASSWORD=tea_password pg_isready -h localhost -U tea_user -d tea_test && break
             sleep 1
           done
-          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "SHOW shared_buffers; SHOW max_wal_size;"
+          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "SHOW fsync; SHOW shared_buffers; SHOW max_wal_size;"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6

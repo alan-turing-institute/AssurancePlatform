@@ -14,9 +14,18 @@
  */
 export const INTEGRATION_TEST_WORKER_COUNT = 4;
 
-/** Admin connection — guaranteed to exist, used only to issue DDL (CREATE/DROP DATABASE). */
+/**
+ * Admin connection — guaranteed to exist, used only to issue database
+ * create/drop DDL. Defaults to the dedicated, throwaway `postgres-test`
+ * container in docker-compose.local.yml (port 5433, fsync=off — see that
+ * file's comment for why the integration suite gets its own Postgres rather
+ * than sharing the crash-safe dev one on 5432). CI overrides this via the
+ * `INTEGRATION_TEST_ADMIN_DATABASE_URL` env var (build.yaml) to keep
+ * pointing at its single, already test-only service container instead.
+ */
 export const INTEGRATION_TEST_ADMIN_DATABASE_URL =
-	"postgresql://tea_user:tea_password@localhost:5432/tea_dev";
+	process.env.INTEGRATION_TEST_ADMIN_DATABASE_URL ??
+	"postgresql://tea_user:tea_password@localhost:5433/tea_test_admin";
 
 /** Migrated template that every worker database is cloned from. */
 export const INTEGRATION_TEST_TEMPLATE_DATABASE = "tea_test_template";
