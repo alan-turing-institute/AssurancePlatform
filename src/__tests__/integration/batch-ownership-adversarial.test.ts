@@ -563,7 +563,7 @@ describe("batch ownership — adversarial (QA G3)", () => {
 				data: {
 					id: foreignEvidence.id,
 					type: "EVIDENCE",
-					name: "Attempted id collision",
+					name: "E1",
 					description: "Should never persist — unique constraint + rollback",
 					inSandbox: false,
 				},
