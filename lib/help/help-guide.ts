@@ -212,7 +212,7 @@ export const CANVAS_OPTION_GUIDE: HelpGuideEntry[] = [
 		id: "settings",
 		title: "Settings",
 		summary:
-			"Opens a panel for the canvas's display preferences, covering light or dark mode, layout direction, and colour preset.",
+			"Opens a panel for the canvas's display preferences, covering light, dark, or system mode, layout direction, and colour preset.",
 		guidance: "Use this to change how the canvas looks, not what it contains.",
 	},
 	{
