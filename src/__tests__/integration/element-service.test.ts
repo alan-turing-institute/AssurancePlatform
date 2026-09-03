@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+	registerPluginNamePatterns,
+	resetPluginNamePatternsForTests,
+} from "@/lib/element-names/prefix-registry";
 import prisma from "@/lib/prisma";
 import {
 	attachElement,
@@ -11,6 +15,7 @@ import {
 	restoreElement,
 	updateElement,
 } from "@/lib/services/element-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
@@ -20,6 +25,8 @@ import {
 
 const GOAL_NAME_PATTERN = /^G\d+$/;
 const STRATEGY_NAME_PATTERN = /^S\d+$/;
+const EVIDENCE_NAME_PATTERN = /^E\d+$/;
+const GSN_PATTERN = /^GSN\d+$/;
 const PARENT_DELETED_PATTERN = /parent element is deleted/;
 
 describe("element-service", () => {
@@ -777,6 +784,195 @@ describe("element-service", () => {
 				await moveElement(user.id, strategy.id, evidence.id),
 				"strategy cannot be a child of evidence"
 			);
+		});
+	});
+
+	/**
+	 * Review send-back (TEA — Element Name Prefix Validation): the batch
+	 * path's name-format enforcement was pinned
+	 * (case-batch-update-service.test.ts), but `enforceElementNameFormat`'s
+	 * two call sites here — `createElement` and `updateElement` — had zero
+	 * coverage of their own. These pin the single-element route's service
+	 * layer directly: rejection with the expected-format message, a
+	 * left-unchanged rename, the plugin override seam honoured only when
+	 * enabled, optionality (null/empty pass), and case-sensitivity.
+	 */
+	describe("name-format validation (TEA-syntax prefix)", () => {
+		it("createElement rejects a non-conforming name with the type's expected-format message", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			expectError(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					name: "Not A Conforming Name",
+				}),
+				"Goal names must look like G1 or G1.1"
+			);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id },
+			});
+			expect(elements).toHaveLength(0);
+		});
+
+		it("updateElement rejects a non-conforming rename, leaving the stored name unchanged", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					name: "P1",
+				})
+			);
+
+			expectError(
+				await updateElement(user.id, claim.id, { name: "Renamed Freely" }),
+				"Property Claim names must look like P1 or P1.1"
+			);
+
+			const unchanged = await prisma.assuranceElement.findUnique({
+				where: { id: claim.id },
+			});
+			expect(unchanged?.name).toBe("P1");
+		});
+
+		it("rejects a lowercase name even when the letters and digits otherwise match (case-sensitive)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			expectError(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					name: "g1",
+				}),
+				"Goal names must look like G1 or G1.1"
+			);
+		});
+
+		it("treats an explicit null name the same as omitting it — falls back to auto-generation", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			// `name: null` bypasses createElementSchema's optionalString
+			// transform (which collapses null to `undefined` before the
+			// service ever sees it) — cast to simulate a hand-built payload
+			// that skips schema validation, so this proves the SERVICE layer
+			// itself (not just the schema) treats null as "no name given".
+			const data = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "evidence",
+					name: null,
+				} as unknown as Parameters<typeof createElement>[1])
+			);
+			expect(data.name).toMatch(EVIDENCE_NAME_PATTERN);
+		});
+
+		it("treats an explicit empty-string name the same as omitting it — falls back to auto-generation", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const data = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "evidence",
+					name: "",
+				})
+			);
+			expect(data.name).toMatch(EVIDENCE_NAME_PATTERN);
+		});
+
+		it("updateElement leaves the stored name untouched when the input omits name entirely", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					name: "G1",
+				})
+			);
+
+			const data = expectSuccess(
+				await updateElement(user.id, goal.id, {
+					description: "Only the description changes",
+				})
+			);
+			expect(data.name).toBe("G1");
+		});
+
+		/**
+		 * The plugin override seam (lib/element-names/prefix-registry.ts):
+		 * an additional pattern is only honoured for a user with that plugin
+		 * enabled. No shipped plugin registers a pattern yet, so this
+		 * registers a throwaway one under the one real manifest entry
+		 * (`tea.health`) rather than inventing an unregistered plugin id —
+		 * `getEnabledPluginIdsForUser` only ever resolves ids the manifest
+		 * knows, so a made-up id could never appear "enabled" no matter what
+		 * `PluginState` said.
+		 */
+		describe("plugin override seam", () => {
+			afterEach(() => {
+				resetPluginNamePatternsForTests();
+			});
+
+			it("honours a plugin-registered pattern for a user with the plugin enabled (the default)", async () => {
+				registerPluginNamePatterns("tea.health", "GOAL", GSN_PATTERN);
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+
+				const data = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+						name: "GSN1",
+					})
+				);
+				expect(data.name).toBe("GSN1");
+			});
+
+			it("rejects the same plugin-format name once the plugin is disabled for that user", async () => {
+				registerPluginNamePatterns("tea.health", "GOAL", GSN_PATTERN);
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const disableResult = await setPluginEnabledForUser(
+					"tea.health",
+					user.id,
+					{ enabled: false }
+				);
+				expect("data" in disableResult).toBe(true);
+
+				expectError(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+						name: "GSN1",
+					}),
+					"Goal names must look like G1 or G1.1"
+				);
+			});
+
+			it("honours the plugin pattern through updateElement too, when enabled", async () => {
+				registerPluginNamePatterns("tea.health", "GOAL", GSN_PATTERN);
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+						name: "G1",
+					})
+				);
+
+				const data = expectSuccess(
+					await updateElement(user.id, goal.id, { name: "GSN2" })
+				);
+				expect(data.name).toBe("GSN2");
+			});
 		});
 	});
 });
