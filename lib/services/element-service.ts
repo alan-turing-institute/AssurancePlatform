@@ -1,3 +1,4 @@
+import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -883,6 +884,17 @@ export async function createElement(
 	}
 
 	const elementType = toPrismaType(input.elementType);
+	// `elementTypeSchema` (lib/schemas/element.ts) only checks `type`/
+	// `elementType` is a non-empty string, and `toPrismaType` casts anything
+	// it doesn't recognise straight through (upper-cased) — so an
+	// unrecognised type reaches here as a value that LOOKS like a
+	// PrismaElementType but isn't one the prefix registry knows. Reject it
+	// now, before it reaches `generateElementName` -> `toPrefix`, which
+	// throws for exactly this case (an uncaught throw here would surface as
+	// an unmapped 500, not a validation error).
+	if (!getCorePrefix(elementType)) {
+		return { error: `Unknown element type '${input.elementType}'` };
+	}
 	const parentId = resolveParentId(input);
 
 	const referenceError = await validateElementReferences(
@@ -1065,6 +1077,129 @@ async function validateParentChange(
 }
 
 /**
+ * Validates and applies a parentId change to `updateData` IN PLACE, for
+ * `updateElement`'s move-operation branch: existence/soft-delete/same-case
+ * checks, then the circular-reference guard, then (for a property claim)
+ * recalculating level. Only called when `newParentId !== undefined` —
+ * `updateElement` itself still owns that "is this change present at all"
+ * decision, since `undefined` (no parentId field in the input) means
+ * nothing here should run at all, not even the null/detach branch.
+ */
+async function applyParentChangeForUpdate(
+	elementId: string,
+	existing: { caseId: string; elementType: PrismaElementType },
+	newParentId: string | null,
+	updateData: Record<string, unknown>
+): Promise<{ error: string } | undefined> {
+	if (newParentId === null) {
+		// Detaching — allowed unconditionally.
+		updateData.parentId = null;
+		return;
+	}
+
+	// Validate new parent exists, is not deleted, and belongs to the same case
+	const newParent = await prisma.assuranceElement.findUnique({
+		where: { id: newParentId },
+		select: { caseId: true, deletedAt: true },
+	});
+	if (
+		!newParent ||
+		newParent.deletedAt ||
+		newParent.caseId !== existing.caseId
+	) {
+		return { error: "Element not found" };
+	}
+
+	const validationError = await validateParentChange(elementId, newParentId);
+	if (validationError) {
+		return { error: validationError };
+	}
+
+	updateData.parentId = newParentId;
+
+	// Recalculate level if it's a property claim
+	if (existing.elementType === "PROPERTY_CLAIM") {
+		updateData.level = await calculateNewLevel(newParentId);
+	}
+
+	return;
+}
+
+/**
+ * Runs every field-level validation guard `updateElement` needs before it
+ * touches the update itself, in the exact order it previously ran them
+ * inline: assertionStatus, moduleReferenceId, citedElementId,
+ * defeatsElementId, then name format. Extracted (mirroring
+ * `validateElementReferences`'s role for `createElement`) to keep
+ * `updateElement` under the cognitive-complexity budget; order is preserved
+ * byte-for-byte because nothing here changes which check fires first when
+ * more than one would fail.
+ */
+async function validateUpdateElementFields(
+	elementId: string,
+	existing: { caseId: string; elementType: PrismaElementType },
+	input: UpdateElementInput,
+	userId: string
+): Promise<{ error: string } | undefined> {
+	// ADR 0004 D3 write rule: assertionStatus is author-declared only —
+	// see guardAssertionStatusWrite's docstring for why case-level EDIT
+	// access alone isn't a sufficient gate.
+	const assertionStatusError = await enforceAssertionStatusRules(
+		input.assertionStatus,
+		userId
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
+	}
+
+	// moduleReferenceId is MODULE/AWAY_GOAL-only and must reference an
+	// existing case. No requiredness check on update — mirrors the batch
+	// update path (case-batch-update-service.ts), see
+	// enforceModuleReferenceIdRules's docstring.
+	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+		existing.elementType,
+		input.moduleReferenceId,
+		{ requireOnCreate: false }
+	);
+	if (moduleReferenceIdError) {
+		return { error: moduleReferenceIdError };
+	}
+
+	// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
+	// existing element, and cannot reference the element itself.
+	const citedElementIdError = await enforceCitedElementIdRules(
+		existing.elementType,
+		input.citedElementId,
+		elementId
+	);
+	if (citedElementIdError) {
+		return { error: citedElementIdError };
+	}
+
+	// Dialogical reasoning (defeaters): defeatsElementId must stay inside
+	// the element's own case (existing.caseId), unlike citedElementId
+	// above — see enforceDefeatsElementIdRules's docstring.
+	const defeatsElementIdError = await enforceDefeatsElementIdRules(
+		existing.caseId,
+		input.defeatsElementId,
+		elementId
+	);
+	if (defeatsElementIdError) {
+		return { error: defeatsElementIdError };
+	}
+
+	// Name-format validation (TEA-syntax prefix). `enforceElementNameFormat`
+	// is a no-op when `input.name` is `undefined` — the "not changing it"
+	// case (and, per `optionalString`'s transform, also what an explicit
+	// clear collapses to), so there's nothing new to validate.
+	return await enforceElementNameFormat(
+		existing.elementType,
+		input.name,
+		userId
+	);
+}
+
+/**
  * Updates an existing element
  */
 export async function updateElement(
@@ -1093,104 +1228,32 @@ export async function updateElement(
 			return { error: "Element not found" };
 		}
 
-		// ADR 0004 D3 write rule: assertionStatus is author-declared only —
-		// see guardAssertionStatusWrite's docstring for why case-level EDIT
-		// access alone isn't a sufficient gate.
-		const assertionStatusError = await enforceAssertionStatusRules(
-			input.assertionStatus,
+		const fieldError = await validateUpdateElementFields(
+			elementId,
+			existing,
+			input,
 			userId
 		);
-		if (assertionStatusError) {
-			return { error: assertionStatusError };
-		}
-
-		// moduleReferenceId is MODULE/AWAY_GOAL-only and must reference an
-		// existing case. No requiredness check on update — mirrors the batch
-		// update path (case-batch-update-service.ts), see
-		// enforceModuleReferenceIdRules's docstring.
-		const moduleReferenceIdError = await enforceModuleReferenceIdRules(
-			existing.elementType,
-			input.moduleReferenceId,
-			{ requireOnCreate: false }
-		);
-		if (moduleReferenceIdError) {
-			return { error: moduleReferenceIdError };
-		}
-
-		// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
-		// existing element, and cannot reference the element itself.
-		const citedElementIdError = await enforceCitedElementIdRules(
-			existing.elementType,
-			input.citedElementId,
-			elementId
-		);
-		if (citedElementIdError) {
-			return { error: citedElementIdError };
-		}
-
-		// Dialogical reasoning (defeaters): defeatsElementId must stay inside
-		// the element's own case (existing.caseId), unlike citedElementId
-		// above — see enforceDefeatsElementIdRules's docstring.
-		const defeatsElementIdError = await enforceDefeatsElementIdRules(
-			existing.caseId,
-			input.defeatsElementId,
-			elementId
-		);
-		if (defeatsElementIdError) {
-			return { error: defeatsElementIdError };
-		}
-
-		// Name-format validation (TEA-syntax prefix). `enforceElementNameFormat`
-		// is a no-op when `input.name` is `undefined` — the "not changing it"
-		// case (and, per `optionalString`'s transform, also what an explicit
-		// clear collapses to), so there's nothing new to validate.
-		const nameFormatError = await enforceElementNameFormat(
-			existing.elementType,
-			input.name,
-			userId
-		);
-		if (nameFormatError) {
-			return nameFormatError;
+		if (fieldError) {
+			return fieldError;
 		}
 
 		// Build update data from input fields
 		const updateData = buildUpdateData(input);
 
-		// Handle parent change (for move operations)
+		// Handle parent change (for move operations) — `undefined` means the
+		// input didn't touch parentId at all, so nothing runs.
 		const newParentId = resolveParentId(input);
-		if (newParentId !== undefined && newParentId !== null) {
-			// Validate new parent exists, is not deleted, and belongs to the same case
-			const newParent = await prisma.assuranceElement.findUnique({
-				where: { id: newParentId },
-				select: { caseId: true, deletedAt: true },
-			});
-
-			if (
-				!newParent ||
-				newParent.deletedAt ||
-				newParent.caseId !== existing.caseId
-			) {
-				return { error: "Element not found" };
-			}
-
-			// Validate parent change doesn't create circular reference
-			const validationError = await validateParentChange(
+		if (newParentId !== undefined) {
+			const parentChangeError = await applyParentChangeForUpdate(
 				elementId,
-				newParentId
+				existing,
+				newParentId,
+				updateData
 			);
-			if (validationError) {
-				return { error: validationError };
+			if (parentChangeError) {
+				return parentChangeError;
 			}
-
-			updateData.parentId = newParentId;
-
-			// Recalculate level if it's a property claim
-			if (existing.elementType === "PROPERTY_CLAIM" && newParentId) {
-				updateData.level = await calculateNewLevel(newParentId);
-			}
-		} else if (newParentId === null) {
-			// Allow setting parent to null (detaching)
-			updateData.parentId = null;
 		}
 
 		const element = await prisma.assuranceElement.update({
