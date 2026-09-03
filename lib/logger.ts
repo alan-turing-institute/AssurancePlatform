@@ -50,12 +50,57 @@ function hasNodeStdoutWrite(): boolean {
 }
 
 /**
+ * `JSON.stringify` replacer: renders any `BigInt` that reached this point as
+ * a string (values are also converted earlier in `serialiseValue`, but this
+ * is the last line of defence for anything that bypassed it — e.g. a BigInt
+ * nested inside a non-plain-object class instance) and breaks reference
+ * cycles with a `"[Circular]"` marker. `serialiseFields` already breaks
+ * cycles among plain objects/arrays before an entry is built; this replacer
+ * additionally covers class instances and Maps/Sets, which `serialiseValue`
+ * deliberately passes through unchanged.
+ */
+function jsonReplacer(): (key: string, value: unknown) => unknown {
+	const seen = new WeakSet<object>();
+	return (_key: string, value: unknown): unknown => {
+		if (typeof value === "bigint") {
+			return value.toString();
+		}
+		if (typeof value === "object" && value !== null) {
+			if (seen.has(value)) {
+				return "[Circular]";
+			}
+			seen.add(value);
+		}
+		return value;
+	};
+}
+
+/**
+ * Never throws: an entry that still can't be stringified (the replacer
+ * above should prevent this, but a getter that throws or similar is always
+ * possible) falls back to a minimal line carrying `msg` and a
+ * `serialisationError` field instead of dropping the entry entirely.
+ */
+function stringifyEntry(entry: LogEntry): string {
+	try {
+		return JSON.stringify(entry, jsonReplacer());
+	} catch {
+		return JSON.stringify({
+			ts: entry.ts,
+			level: entry.level,
+			msg: entry.msg,
+			serialisationError: "Failed to serialise log entry",
+		});
+	}
+}
+
+/**
  * Default sink: JSON on `process.stdout` when it exists (Node), otherwise
  * `console[level]` (Next.js edge runtime / browser). Checked at call time,
  * not import time, so the same module serves every runtime.
  */
 function defaultSink(entry: LogEntry): void {
-	const line = JSON.stringify(entry);
+	const line = stringifyEntry(entry);
 	if (hasNodeStdoutWrite()) {
 		process.stdout.write(`${line}\n`);
 		return;
@@ -107,8 +152,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return proto === Object.prototype || proto === null;
 }
 
-/** Serialises `Error` instances anywhere in a value to `{name, message, stack}`. */
+/**
+ * Serialises `Error` instances anywhere in a value to `{name, message,
+ * stack}`, and `BigInt`s to strings (`JSON.stringify` throws on a raw
+ * `BigInt`, and there's no upside to waiting for the sink to find that out).
+ */
 function serialiseValue(value: unknown, seen: WeakSet<object>): unknown {
+	if (typeof value === "bigint") {
+		return value.toString();
+	}
 	if (value instanceof Error) {
 		return { name: value.name, message: value.message, stack: value.stack };
 	}

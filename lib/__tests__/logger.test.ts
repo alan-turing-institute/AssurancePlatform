@@ -124,6 +124,54 @@ describe("logger", () => {
 		expect(() => logger.info("x")).not.toThrow();
 	});
 
+	it("does not throw and still emits when a field holds a circular reference", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		resetLogSink();
+
+		// A class instance, not a plain object — `serialiseValue` deliberately
+		// passes these through unchanged, so this exercises the JSON.stringify
+		// replacer's own cycle-breaking, not the earlier plain-object guard
+		// already covered by the "nested inside a plain-object field" test.
+		class Node {
+			self?: Node;
+		}
+		const node = new Node();
+		node.self = node;
+
+		const writeSpy = vi
+			.spyOn(process.stdout, "write")
+			.mockImplementation(() => true);
+		try {
+			expect(() => logger.info("circular", { node })).not.toThrow();
+			expect(writeSpy).toHaveBeenCalledTimes(1);
+			const line = writeSpy.mock.calls[0]?.[0] as string;
+			const parsed = JSON.parse(line);
+			expect(parsed.msg).toBe("circular");
+			expect(parsed.node.self).toBe("[Circular]");
+		} finally {
+			writeSpy.mockRestore();
+		}
+	});
+
+	it("does not throw and still emits when a field holds a BigInt", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		resetLogSink();
+
+		const writeSpy = vi
+			.spyOn(process.stdout, "write")
+			.mockImplementation(() => true);
+		try {
+			expect(() => logger.info("bigint", { big: BigInt(10) })).not.toThrow();
+			expect(writeSpy).toHaveBeenCalledTimes(1);
+			const line = writeSpy.mock.calls[0]?.[0] as string;
+			const parsed = JSON.parse(line);
+			expect(parsed.msg).toBe("bigint");
+			expect(parsed.big).toBe("10");
+		} finally {
+			writeSpy.mockRestore();
+		}
+	});
+
 	it("falls back to console[level] when process.stdout.write is unavailable", () => {
 		vi.stubEnv("LOG_LEVEL", "debug");
 		resetLogSink();
