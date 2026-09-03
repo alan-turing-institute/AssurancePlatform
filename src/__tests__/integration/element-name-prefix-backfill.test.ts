@@ -200,6 +200,85 @@ describe("migration: element_name_prefix_backfill", () => {
 		});
 	});
 
+	it("continues the counter from a dotted conforming name's LEADING integer, not its full number", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const base = new Date("2026-01-01T00:00:00Z");
+
+		// The only conforming claim in this case is sub-numbered — leading
+		// integer 1, not 2 — so the stray placeholder must continue from 1
+		// (-> P2), never from a naive read of the "2" in "P1.2".
+		const dottedClaim = await insertElement({
+			caseId: testCase.id,
+			createdById: user.id,
+			elementType: "PROPERTY_CLAIM",
+			name: "P1.2",
+			createdAt: base,
+		});
+		const placeholder = await insertElement({
+			caseId: testCase.id,
+			createdById: user.id,
+			elementType: "PROPERTY_CLAIM",
+			name: "Property claim",
+			createdAt: new Date(base.getTime() + HOUR),
+		});
+
+		await runBackfill();
+
+		const afterBackfill = await prisma.assuranceElement.findMany({
+			where: { caseId: testCase.id },
+			select: { id: true, name: true },
+		});
+		const byId = new Map(afterBackfill.map((e) => [e.id, e.name]));
+
+		expect(byId.get(dottedClaim.id)).toBe("P1.2");
+		expect(byId.get(placeholder.id)).toBe("P2");
+
+		const backfillRow = await prisma.elementNameBackfill.findFirst({
+			where: { elementId: placeholder.id },
+		});
+		expect(backfillRow).toMatchObject({
+			oldName: "Property claim",
+			newName: "P2",
+		});
+	});
+
+	it("leaves a non-conforming name untouched inside a trashed case, and logs no backfill row for it", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const base = new Date("2026-01-01T00:00:00Z");
+
+		const placeholder = await insertElement({
+			caseId: testCase.id,
+			createdById: user.id,
+			elementType: "PROPERTY_CLAIM",
+			name: "Property claim",
+			createdAt: base,
+		});
+
+		// Trashing a case (case-trash-service.ts's deleteCase) sets deletedAt
+		// only on assurance_cases — it never touches its elements' own
+		// deletedAt. Mirrors that exact shape rather than soft-deleting the
+		// element itself, which a different (already-covered) branch handles.
+		await prisma.assuranceCase.update({
+			where: { id: testCase.id },
+			data: { deletedAt: new Date(), deletedById: user.id },
+		});
+
+		await runBackfill();
+
+		const afterBackfill = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: placeholder.id },
+			select: { name: true },
+		});
+		expect(afterBackfill.name).toBe("Property claim");
+
+		const backfillRows = await prisma.elementNameBackfill.count({
+			where: { elementId: placeholder.id },
+		});
+		expect(backfillRows).toBe(0);
+	});
+
 	it("is idempotent — re-running renames nothing and logs no further rows", async () => {
 		const user = await createTestUser();
 		const testCase = await createTestCase(user.id);

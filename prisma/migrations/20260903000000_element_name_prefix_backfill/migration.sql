@@ -5,9 +5,13 @@
 -- (lib/schemas/element-validation.ts's validateElementName) starts
 -- enforcing it, so the check never rejects the platform's own data.
 --
--- Scope: every element with deleted_at IS NULL and a non-null name whose
--- name does not already match its type's pattern. Null names are left
--- null (names are optional); conforming names are left untouched.
+-- Scope: every element with deleted_at IS NULL, belonging to a case that
+-- ALSO has deleted_at IS NULL (trashing a case, case-trash-service.ts,
+-- only sets deleted_at on assurance_cases — its elements are untouched, so
+-- both checks are needed to exclude a trashed case's elements), with a
+-- non-null name that does not already match its type's pattern. Null
+-- names are left null (names are optional); conforming names are left
+-- untouched.
 --
 -- Rename rule (Chris's ruling, same day): rename ONLY the non-conforming
 -- elements. Each gets <prefix><n>, where n continues from the highest
@@ -76,6 +80,13 @@ candidates AS (
         END AS leading_int
     FROM "assurance_elements" e
     JOIN prefixes p ON p.element_type = e.element_type::TEXT
+    -- Trashing a case (case-trash-service.ts) only sets deleted_at on
+    -- assurance_cases — its elements keep deleted_at = NULL, so
+    -- e.deleted_at IS NULL alone would still pick up every element sitting
+    -- in a trashed case. This join excludes them; the production blast-
+    -- radius count (296 live cases, 148 non-conforming) was run with the
+    -- same join, so this keeps the migration's scope matching that count.
+    JOIN "assurance_cases" c ON c.id = e.case_id AND c.deleted_at IS NULL
     WHERE e.deleted_at IS NULL
       AND e.name IS NOT NULL
 ),
