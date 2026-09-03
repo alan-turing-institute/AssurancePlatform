@@ -15,6 +15,9 @@ import {
 	BlobServiceClient,
 	StorageSharedKeyCredential,
 } from "@azure/storage-blob";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ service: "blob-storage-service" });
 
 const CONTAINER_NAME = "media";
 const LOCAL_UPLOAD_DIR = "public/uploads";
@@ -87,10 +90,10 @@ export function uploadToLocalStorage(
 
 		// Return a URL relative to the public directory
 		const url = `/uploads/${blobPath}`;
-		console.log(`[Dev] File saved locally: ${url}`);
+		log.info("Dev file saved locally", { url });
 		return { success: true, url };
 	} catch (error) {
-		console.error("Failed to save file locally:", error);
+		log.error("Failed to save file locally", { error });
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Local upload failed",
@@ -118,8 +121,8 @@ export async function uploadToBlob(
 	// Fall back to local storage when Azure isn't configured
 	if (!blobServiceClient) {
 		if (process.env.NODE_ENV === "development") {
-			console.log(
-				"[Dev] Azure Blob Storage not configured, using local file storage"
+			log.info(
+				"Dev Azure Blob Storage not configured, using local file storage"
 			);
 			const localResult = uploadToLocalStorage(buffer, blobPath);
 			if (!localResult.success) {
@@ -127,7 +130,7 @@ export async function uploadToBlob(
 			}
 			return { data: { url: localResult.url } };
 		}
-		console.error("Azure Blob Storage credentials not configured");
+		log.error("Azure Blob Storage credentials not configured");
 		return { error: "Storage not configured" };
 	}
 
@@ -143,7 +146,7 @@ export async function uploadToBlob(
 		const imageUrl = `https://${accountName}.blob.core.windows.net/${CONTAINER_NAME}/${blobPath}`;
 		return { data: { url: imageUrl } };
 	} catch (error) {
-		console.error("Failed to upload to Azure Blob Storage:", error);
+		log.error("Failed to upload to Azure Blob Storage", { error });
 		return {
 			error: error instanceof Error ? error.message : "Upload failed",
 		};
@@ -167,10 +170,10 @@ export async function deleteBlob(blobPath: string): Promise<boolean> {
 				const { unlink } = await import("node:fs/promises");
 				const fullPath = join(process.cwd(), LOCAL_UPLOAD_DIR, blobPath);
 				await unlink(fullPath);
-				console.log(`[Dev] File deleted locally: ${blobPath}`);
+				log.info("Dev file deleted locally", { blobPath });
 				return true;
 			} catch (error) {
-				console.error("Failed to delete local file:", error);
+				log.error("Failed to delete local file", { error });
 				return false;
 			}
 		}
@@ -184,7 +187,7 @@ export async function deleteBlob(blobPath: string): Promise<boolean> {
 		await blockBlobClient.delete();
 		return true;
 	} catch (error) {
-		console.error("Failed to delete blob:", error);
+		log.error("Failed to delete blob", { error });
 		return false;
 	}
 }

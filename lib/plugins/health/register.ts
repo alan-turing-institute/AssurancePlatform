@@ -26,6 +26,7 @@
  * appear — the same observable behaviour as the plugin being disabled).
  */
 
+import { logger } from "@/lib/logger";
 import { elementBadgeSlot, elementPanelSlot } from "@/lib/plugins/slots";
 import { HealthBadge } from "./health-badge";
 import { HealthPanel } from "./health-panel";
@@ -45,13 +46,9 @@ export function registerHealthPlugin(): void {
 			Component: HealthPanel,
 		});
 	} catch (error) {
-		// No structured logger exists in this codebase yet (CLAUDE.md names
-		// one; none of the merged health-plugin server-core files use it
-		// either) — console.error matches the prevailing actual pattern, not a
-		// deviation introduced here.
-		console.error(
-			"[tea.health] UI slot registration failed — badge/panel will not render:",
-			error
+		logger.error(
+			"[tea.health] UI slot registration failed — badge/panel will not render",
+			{ error }
 		);
 	}
 }

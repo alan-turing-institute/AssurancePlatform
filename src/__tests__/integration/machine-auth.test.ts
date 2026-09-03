@@ -25,6 +25,7 @@ import {
 	validateApiToken,
 } from "@/lib/services/integration-registry-service";
 import { RATE_LIMIT_CONFIGS } from "@/lib/services/rate-limit-service";
+import { captureLogs } from "../helpers/capture-logs";
 import {
 	expectError,
 	expectSameError,
@@ -548,9 +549,7 @@ describe("integration-registry-service — owner-deletion flow", () => {
 		const createSpy = vi
 			.spyOn(prisma.securityAuditLog, "create")
 			.mockRejectedValueOnce(new Error("simulated audit write failure"));
-		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {
-			// suppress expected [SECURITY] log noise for this test
-		});
+		const logs = captureLogs();
 
 		try {
 			const result = await deleteIntegrationRegistration(
@@ -565,16 +564,16 @@ describe("integration-registry-service — owner-deletion flow", () => {
 			});
 			expect(gone).toBeNull();
 
-			const failureLogCall = warnSpy.mock.calls.find((call) =>
-				String(call[0]).includes("audit_log_write_failed")
+			const failureEntry = logs.entries.find(
+				(entry) => entry.msg === "audit_log_write_failed"
 			);
-			expect(failureLogCall).toBeDefined();
-			expect(failureLogCall?.[1]).toMatchObject({
+			expect(failureEntry).toBeDefined();
+			expect(failureEntry).toMatchObject({
 				intendedEventType: "integration_deleted",
 			});
 		} finally {
 			createSpy.mockRestore();
-			warnSpy.mockRestore();
+			logs.restore();
 		}
 	});
 
