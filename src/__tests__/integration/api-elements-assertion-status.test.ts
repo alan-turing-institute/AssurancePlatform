@@ -52,7 +52,7 @@ describe("POST /api/cases/[id]/elements — assertionStatus (ADR 0004 D3)", () =
 				method: "POST",
 				body: JSON.stringify({
 					type: "goal",
-					name: "Root Goal",
+					name: "G1",
 					description: "Top-level goal",
 					assertionStatus: "NEEDS_SUPPORT",
 				}),
