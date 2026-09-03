@@ -83,7 +83,7 @@ describe("applyBatchUpdate", () => {
 				data: {
 					id: newId,
 					type: "GOAL",
-					name: "New Goal",
+					name: "G1",
 					description: "A goal created via batch",
 					inSandbox: false,
 					role: "TOP_LEVEL",
@@ -102,7 +102,7 @@ describe("applyBatchUpdate", () => {
 			where: { id: newId },
 		});
 		expect(created).not.toBeNull();
-		expect(created?.name).toBe("New Goal");
+		expect(created?.name).toBe("G1");
 	});
 
 	it("updates elements via a batch update", async () => {
@@ -122,7 +122,7 @@ describe("applyBatchUpdate", () => {
 			{
 				type: "update",
 				elementId: element.id,
-				data: { name: "Updated Name" },
+				data: { name: "G2" },
 			},
 		];
 
@@ -134,7 +134,7 @@ describe("applyBatchUpdate", () => {
 		const updated = await prisma.assuranceElement.findUnique({
 			where: { id: element.id },
 		});
-		expect(updated?.name).toBe("Updated Name");
+		expect(updated?.name).toBe("G2");
 	});
 
 	it("deletes elements via a batch update", async () => {
@@ -201,7 +201,7 @@ describe("applyBatchUpdate", () => {
 				data: {
 					id: newId,
 					type: "GOAL",
-					name: "Brand New Goal",
+					name: "G1",
 					description: "Created in mixed batch",
 					inSandbox: false,
 					role: "TOP_LEVEL",
@@ -210,7 +210,7 @@ describe("applyBatchUpdate", () => {
 			{
 				type: "update",
 				elementId: toUpdate.id,
-				data: { name: "Now Updated" },
+				data: { name: "G2" },
 			},
 			{
 				type: "delete",
@@ -229,12 +229,12 @@ describe("applyBatchUpdate", () => {
 		const created = await prisma.assuranceElement.findUnique({
 			where: { id: newId },
 		});
-		expect(created?.name).toBe("Brand New Goal");
+		expect(created?.name).toBe("G1");
 
 		const updated = await prisma.assuranceElement.findUnique({
 			where: { id: toUpdate.id },
 		});
-		expect(updated?.name).toBe("Now Updated");
+		expect(updated?.name).toBe("G2");
 
 		const deleted = await prisma.assuranceElement.findUnique({
 			where: { id: toDelete.id },
@@ -426,7 +426,7 @@ describe("applyBatchUpdate", () => {
 			{
 				type: "update",
 				elementId: element.id,
-				data: { name: "Changed Name" },
+				data: { name: "G2" },
 			},
 			// Delete a non-existent element — this will throw inside the transaction
 			{
@@ -473,7 +473,7 @@ describe("applyBatchUpdate", () => {
 					type: "update",
 					elementId: element.id,
 					data: {
-						name: "Batch Target Renamed",
+						name: "G2",
 						assertionStatus: "DEFEATED",
 					},
 				},
@@ -487,7 +487,7 @@ describe("applyBatchUpdate", () => {
 			const afterBatch = await prisma.assuranceElement.findUnique({
 				where: { id: element.id },
 			});
-			expect(afterBatch?.name).toBe("Batch Target Renamed");
+			expect(afterBatch?.name).toBe("G2");
 			expect(afterBatch?.assertionStatus).toBe("DEFEATED");
 		});
 
@@ -512,7 +512,7 @@ describe("applyBatchUpdate", () => {
 				{
 					type: "update",
 					elementId: element.id,
-					data: { name: "Renamed, Status Untouched" },
+					data: { name: "G2" },
 				},
 			];
 
@@ -524,7 +524,7 @@ describe("applyBatchUpdate", () => {
 			const afterBatch = await prisma.assuranceElement.findUnique({
 				where: { id: element.id },
 			});
-			expect(afterBatch?.name).toBe("Renamed, Status Untouched");
+			expect(afterBatch?.name).toBe("G2");
 			// The stored value survives the omission — omission must never
 			// be conflated with an explicit clear (null).
 			expect(afterBatch?.assertionStatus).toBe("ASSUMED");
@@ -713,7 +713,7 @@ describe("applyBatchUpdate", () => {
 				type: "update",
 				elementId: awayGoal.id,
 				data: {
-					name: "Updated Name",
+					name: "AG1",
 					citedElementId: smuggledCitedGoal.id,
 				},
 			},
@@ -725,7 +725,7 @@ describe("applyBatchUpdate", () => {
 			where: { id: awayGoal.id },
 		});
 		// Allowlisted change applied.
-		expect(updated?.name).toBe("Updated Name");
+		expect(updated?.name).toBe("AG1");
 		// Smuggled field had no effect — original citation is untouched.
 		expect(updated?.citedElementId).toBe(originalCitedGoal.id);
 	});
@@ -1639,7 +1639,7 @@ describe("applyBatchUpdate", () => {
 				{
 					type: "update",
 					elementId: evidence.id,
-					data: { name: "Renamed Evidence" },
+					data: { name: "E1" },
 				},
 				{
 					type: "link_evidence",
@@ -1656,7 +1656,7 @@ describe("applyBatchUpdate", () => {
 			const afterEvidence = await prisma.assuranceElement.findUnique({
 				where: { id: evidence.id },
 			});
-			expect(afterEvidence?.name).toBe("Renamed Evidence");
+			expect(afterEvidence?.name).toBe("E1");
 			// Never entered level resolution or the cascade — stays null and
 			// unparented, evidence-link table carries the association.
 			expect(afterEvidence?.level).toBeNull();
@@ -1810,14 +1810,14 @@ describe("applyBatchUpdate", () => {
 				{ length: 5 },
 				(_, i) => `el-create-count-${Date.now()}-${i}`
 			);
-			const changes: ElementChange[] = ids.map((id) => ({
+			const changes: ElementChange[] = ids.map((id, i) => ({
 				type: "create",
 				elementId: id,
 				parentId: parent.id,
 				data: {
 					id,
 					type: "GOAL",
-					name: `Created ${id}`,
+					name: `G${i + 1}`,
 					description: "batched create",
 					inSandbox: false,
 					role: "SUPPORTING",
@@ -2028,7 +2028,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: childId,
 						type: "PROPERTY_CLAIM",
-						name: "Child Claim",
+						name: "P1",
 						description: "Parented to an element already in the database",
 						inSandbox: false,
 					},
@@ -2040,7 +2040,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: grandchildId,
 						type: "PROPERTY_CLAIM",
-						name: "Grandchild Claim",
+						name: "P1.1",
 						description:
 							"Parented to another element created earlier in this same batch",
 						inSandbox: false,
@@ -2347,7 +2347,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: parentId,
 						type: "GOAL",
-						name: "Batch Parent",
+						name: "G1",
 						description: "Created earlier in this same batch",
 						inSandbox: false,
 					},
@@ -2359,7 +2359,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: childId,
 						type: "STRATEGY",
-						name: "Batch Child",
+						name: "S1",
 						description: "Parented to a sibling create in this same batch",
 						inSandbox: false,
 					},
@@ -2423,7 +2423,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: newId,
 						type: "PROPERTY_CLAIM",
-						name: "Claim Under Strategy",
+						name: "P1",
 						description: "Should skip the strategy and use the grandparent",
 						inSandbox: false,
 					},
@@ -2521,7 +2521,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: element.id,
 						type: "GOAL",
-						name: "Recreated",
+						name: "G1",
 						description: "Legitimate delete+recreate within the owning case",
 						inSandbox: false,
 					},
@@ -2537,7 +2537,7 @@ describe("applyBatchUpdate", () => {
 			const recreated = await prisma.assuranceElement.findUnique({
 				where: { id: element.id },
 			});
-			expect(recreated?.name).toBe("Recreated");
+			expect(recreated?.name).toBe("G1");
 			expect(recreated?.caseId).toBe(testCase.id);
 		});
 	});
@@ -2646,7 +2646,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: targetId,
 						type: "PROPERTY_CLAIM",
-						name: "Defeated Claim",
+						name: "P1",
 						description: "Created in the same batch as its defeater",
 						inSandbox: false,
 					},
@@ -2658,7 +2658,7 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: defeaterId,
 						type: "PROPERTY_CLAIM",
-						name: "Defeater Claim",
+						name: "P2",
 						description: "References a sibling create as its defeats target",
 						inSandbox: false,
 						isDefeater: true,
@@ -2676,6 +2676,191 @@ describe("applyBatchUpdate", () => {
 				where: { id: defeaterId },
 			});
 			expect(defeater?.defeatsElementId).toBe(targetId);
+		});
+	});
+
+	/**
+	 * TEA — Element name prefix validation (G, P, S, E) with plugin override
+	 * seam, send-back: the batch/JSON-editor path wrote element names via raw
+	 * Prisma calls (buildCreateData/buildUpdateData), bypassing the
+	 * name-format check createElement/updateElement enforce — a user could
+	 * rename an element to anything through the JSON editor. validateElementNames
+	 * closes that gap; these pin it rejects the whole batch atomically (one
+	 * bad name among several changes) and that conforming names still work.
+	 */
+	describe("element-name prefix validation (TEA-syntax)", () => {
+		it("rejects a batch containing one non-conforming create name, writing nothing", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const goodId = `element-name-good-${Date.now()}`;
+			const badId = `element-name-bad-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: goodId,
+					parentId: null,
+					data: {
+						id: goodId,
+						type: "GOAL",
+						name: "G1",
+						description: "Conforms — should never be persisted either",
+						inSandbox: false,
+						role: "TOP_LEVEL",
+					},
+				},
+				{
+					type: "create",
+					elementId: badId,
+					parentId: goodId,
+					data: {
+						id: badId,
+						type: "STRATEGY",
+						name: "Not A Conforming Name",
+						description: "Fails the prefix check",
+						inSandbox: false,
+					},
+				},
+			];
+
+			const result = await applyBatchUpdate(user.id, testCase.id, changes);
+			expectError(
+				result,
+				new RegExp(
+					`Strategy names must look like S1 or S1\\.1 \\(element ${badId}\\)`
+				)
+			);
+
+			const goodElement = await prisma.assuranceElement.findUnique({
+				where: { id: goodId },
+			});
+			const badElement = await prisma.assuranceElement.findUnique({
+				where: { id: badId },
+			});
+			// Whole batch rejected atomically — the conforming create is not
+			// persisted either, just like validateElementOwnership/
+			// validateCreateParents' existing all-or-nothing behaviour.
+			expect(goodElement).toBeNull();
+			expect(badElement).toBeNull();
+		});
+
+		it("rejects a batch containing one non-conforming update name, leaving the existing element untouched", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { name: "Renamed Freely" },
+				},
+			];
+
+			expectError(
+				await applyBatchUpdate(user.id, testCase.id, changes),
+				new RegExp(
+					`Property Claim names must look like P1 or P1\\.1 \\(element ${element.id}\\)`
+				)
+			);
+
+			const unchanged = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(unchanged?.name).toBe("P1");
+		});
+
+		it("accepts a batch of creates and an update whose names all conform", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const existingClaim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const goalId = `element-name-conforming-goal-${Date.now()}`;
+			const changes: ElementChange[] = [
+				{
+					type: "create",
+					elementId: goalId,
+					parentId: null,
+					data: {
+						id: goalId,
+						type: "GOAL",
+						name: "G1",
+						description: "Conforms to the GOAL prefix",
+						inSandbox: false,
+						role: "TOP_LEVEL",
+					},
+				},
+				{
+					type: "update",
+					elementId: existingClaim.id,
+					data: { name: "P1.1" },
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.created).toBe(1);
+			expect(data.summary.updated).toBe(1);
+
+			const created = await prisma.assuranceElement.findUnique({
+				where: { id: goalId },
+			});
+			const updated = await prisma.assuranceElement.findUnique({
+				where: { id: existingClaim.id },
+			});
+			expect(created?.name).toBe("G1");
+			expect(updated?.name).toBe("P1.1");
+		});
+
+		it("passes a name through unchecked when the create/update doesn't touch it (null/absent stay optional)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const element = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const changes: ElementChange[] = [
+				{
+					type: "update",
+					elementId: element.id,
+					data: { description: "Only the description changes" },
+				},
+			];
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, changes)
+			);
+			expect(data.summary.updated).toBe(1);
+
+			const updated = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(updated?.name).toBe("G1");
+			expect(updated?.description).toBe("Only the description changes");
 		});
 	});
 });
