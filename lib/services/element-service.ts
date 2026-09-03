@@ -7,7 +7,9 @@ import type {
 import {
 	fieldAppliesTo,
 	fieldRequiredFor,
+	validateElementName,
 } from "@/lib/schemas/element-validation";
+import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { transformToResponse } from "@/lib/transforms/element-response";
 import {
 	getDeletedDescendantIds,
@@ -828,6 +830,34 @@ async function validateElementReferences(
 }
 
 /**
+ * TEA-syntax name-format guard (design note "TEA — Element Name Prefix
+ * Validation"), shared by `createElement` and `updateElement` — the two
+ * choke points every element mutation flows through. A no-op when `name` is
+ * falsy (null/undefined/empty): names stay optional, and the rule only
+ * applies when one is actually given. Resolves the acting user's enabled
+ * plugin set itself so both call sites stay a single `if` check.
+ */
+async function enforceElementNameFormat(
+	elementType: string,
+	name: string | null | undefined,
+	userId: string
+): Promise<{ error: string } | undefined> {
+	if (!name) {
+		return;
+	}
+	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
+	const nameValidation = validateElementName(
+		elementType,
+		name,
+		enabledPluginIds
+	);
+	if (!nameValidation.valid) {
+		return { error: nameValidation.error };
+	}
+	return;
+}
+
+/**
  * Creates a new element in a case
  */
 export async function createElement(
@@ -869,6 +899,15 @@ export async function createElement(
 		elementType === "PROPERTY_CLAIM" && parentId
 			? await calculatePropertyClaimLevel(parentId)
 			: { level: undefined, parentInfo: null };
+
+	const nameFormatError = await enforceElementNameFormat(
+		elementType,
+		input.name,
+		userId
+	);
+	if (nameFormatError) {
+		return nameFormatError;
+	}
 
 	const elementName =
 		input.name ||
@@ -1099,6 +1138,19 @@ export async function updateElement(
 		);
 		if (defeatsElementIdError) {
 			return { error: defeatsElementIdError };
+		}
+
+		// Name-format validation (TEA-syntax prefix). `enforceElementNameFormat`
+		// is a no-op when `input.name` is `undefined` — the "not changing it"
+		// case (and, per `optionalString`'s transform, also what an explicit
+		// clear collapses to), so there's nothing new to validate.
+		const nameFormatError = await enforceElementNameFormat(
+			existing.elementType,
+			input.name,
+			userId
+		);
+		if (nameFormatError) {
+			return nameFormatError;
 		}
 
 		// Build update data from input fields

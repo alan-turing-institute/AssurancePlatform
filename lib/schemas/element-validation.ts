@@ -6,6 +6,10 @@
  */
 
 import { z } from "zod";
+import {
+	describeExpectedFormat,
+	isValidElementName,
+} from "@/lib/element-names/prefix-registry";
 import { AssertionStatusSchema } from "./case-export";
 
 // ============================================
@@ -389,4 +393,38 @@ export function getValidFieldsForType(elementType: string): string[] {
 	}
 
 	return [...baseFields, ...typeSpecificFields];
+}
+
+// ============================================
+// NAME FORMAT VALIDATION (TEA-syntax prefixes)
+// ============================================
+
+export type ElementNameValidationResult =
+	| { valid: true }
+	| { valid: false; error: string };
+
+/**
+ * Validates an element's `name` against its type's TEA-syntax prefix format
+ * (`lib/element-names/prefix-registry.ts` — `<prefix><n>(.<n>)*`, e.g. `P1`,
+ * `P1.1`). Names are optional: `null`, `undefined`, and empty string all
+ * pass, since the rule only applies when a name is actually given (Chris's
+ * ruling, design note "TEA — Element Name Prefix Validation", Decision 2).
+ *
+ * `enabledPluginIds` is resolved by the caller (the service layer, via
+ * `getEnabledPluginIdsForUser` in `lib/services/plugin-enablement-service.ts`)
+ * and passed in — this function stays pure, with no Prisma access, matching
+ * every other rule in this file.
+ */
+export function validateElementName(
+	elementType: string,
+	name: string | null | undefined,
+	enabledPluginIds: readonly string[] = []
+): ElementNameValidationResult {
+	if (!name) {
+		return { valid: true };
+	}
+	if (isValidElementName(elementType, name, enabledPluginIds)) {
+		return { valid: true };
+	}
+	return { valid: false, error: describeExpectedFormat(elementType) };
 }

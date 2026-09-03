@@ -151,6 +151,14 @@ const ERROR_MAPPINGS: Array<{
 	// self-reference target) is a validation failure (400), not a 500 —
 	// same shape as citedElementId/moduleReferenceId above.
 	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
+	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
+	// element-name prefix validation): a name that doesn't match its type's
+	// registered prefix format is a validation failure (400), not a 500.
+	// Anchored to `describeExpectedFormat`'s exact message shape ("<Type>
+	// names must look like ...") rather than a generic word, so an unrelated
+	// service error mentioning "names" for a different reason isn't
+	// misclassified.
+	{ pattern: / names must look like /, factory: () => validationError("") },
 	// Lifecycle/state-guard errors from the integration registry service —
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state
