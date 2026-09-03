@@ -105,4 +105,37 @@ describe("HelpModal", () => {
 		expect(onCloseSpy).toHaveBeenCalledTimes(1);
 		expect(startNextStepSpy).toHaveBeenCalledWith("demo-case");
 	});
+
+	it("restarts the case-canvas tour (not the demo tour) when the case isn't a demo, and closes the sheet", async () => {
+		const user = userEvent.setup();
+		// resetStore() in beforeEach already sets assuranceCase to null, so
+		// isDemo is falsy/absent here — the non-demo path.
+		render(<HelpModal />);
+
+		await user.click(screen.getByRole("button", { name: "Restart the tour" }));
+
+		expect(onCloseSpy).toHaveBeenCalledTimes(1);
+		expect(startNextStepSpy).toHaveBeenCalledWith("case-canvas");
+	});
+
+	it("narrows to an entry whose match is only in its body text, case-insensitively", async () => {
+		const user = userEvent.setup();
+		render(<HelpModal />);
+
+		const search = screen.getByLabelText("Search help");
+		// "proposition" appears only in the Property claim entry's guidance
+		// text, never in any title — this exercises body-text search rather
+		// than title search. Mixed case exercises case-insensitivity.
+		await user.type(search, "PropOsition");
+
+		expect(
+			screen.getByRole("button", { name: "Property claim" })
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Goal" })
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: "Focus" })
+		).not.toBeInTheDocument();
+	});
 });
