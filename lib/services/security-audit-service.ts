@@ -1,5 +1,6 @@
 import { logSecurityEvent } from "@/lib/audit/security-log";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/src/generated/prisma";
 
 export interface RecordSecurityEventParams {
 	event: string;
@@ -45,8 +46,8 @@ export async function recordSecurityEvent(
 				eventType: event,
 				ipAddress: ipAddress ?? null,
 				userAgent: userAgent ?? null,
-				// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-				metadata: (metadata ?? null) as any,
+				metadata: (metadata ??
+					Prisma.JsonNull) as unknown as Prisma.InputJsonValue,
 			},
 		});
 	} catch (error) {

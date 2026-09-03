@@ -1,8 +1,11 @@
 import { randomBytes } from "node:crypto";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 import type { PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ service: "case-invite-service" });
 
 // ============================================
 // Types
@@ -70,7 +73,7 @@ export async function createCaseInvite(params: {
 
 		return { data: { invite_token: token } };
 	} catch (error) {
-		console.error("Failed to create case invite:", error);
+		log.error("Failed to create case invite", { error });
 		return { error: "Failed to create invite" };
 	}
 }
@@ -217,7 +220,7 @@ export async function acceptInvite(
 
 		return { data: { caseId: result.caseId } };
 	} catch (error) {
-		console.error("Failed to accept invite:", error);
+		log.error("Failed to accept invite", { error });
 
 		await recordSecurityEvent({
 			event: "invite_acceptance_failed",
