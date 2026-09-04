@@ -101,7 +101,7 @@ export default function NodeActionGroup({
 					<div className="relative inline-flex rounded-full p-1 hover:bg-foreground/10">
 						<MessageCircle aria-hidden="true" size={16} />
 						{commentCount > 0 && (
-							<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-[9px] text-info-foreground">
+							<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-info-foreground text-micro">
 								{commentCount}
 							</span>
 						)}
