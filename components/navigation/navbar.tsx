@@ -74,12 +74,17 @@ export const Navbar = ({ children, teams }: NavbarProps) => {
 				</div>
 
 				<main className="bg-background text-foreground">
-					<div>
-						{children}
-						<FeedbackBanner />
-					</div>
+					{/* Bottom padding reserves room for the fixed FeedbackBanner below
+					 * so it doesn't sit over the last of the scrollable content. Applied
+					 * unconditionally (not just while the banner is visible) to avoid
+					 * lifting its dismissed/mounted state up into this layout. */}
+					<div className="pb-28 md:pb-14">{children}</div>
 				</main>
 			</div>
+			{/* Rendered as a sibling of the main content, not nested inside <main>,
+			 * so its `fixed` positioning can't be broken by a transform or
+			 * overflow-hidden that main picks up later. */}
+			<FeedbackBanner />
 		</div>
 	);
 };

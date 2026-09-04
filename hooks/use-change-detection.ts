@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChangeSummary {
 	addedElements: number;
@@ -132,15 +132,30 @@ export function useChangeDetection({
 }: UseChangeDetectionOptions): UseChangeDetectionReturn {
 	const [state, setState] = useState<ChangeDetectionState>(initialState);
 
+	// Tracks the most recently *requested* fetch so a response that resolves
+	// after a newer request has already been issued (overlapping fetches
+	// firing out of order) doesn't clobber the newer state with stale data.
+	// caseId alone can't serve as this token here — refreshKey can trigger
+	// several overlapping fetches for the *same* caseId — so this is a
+	// monotonically increasing counter instead, mirroring the ref-guard
+	// pattern in use-case-information.ts's latestRequestedCaseIdRef.
+	const latestRequestIdRef = useRef(0);
+
 	const fetchChanges = useCallback(async () => {
 		if (!caseId) {
 			return;
 		}
 
+		const requestId = latestRequestIdRef.current + 1;
+		latestRequestIdRef.current = requestId;
+
 		setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
 		try {
 			const result = await fetchChangeDetection(caseId, includeDetails);
+			if (latestRequestIdRef.current !== requestId) {
+				return; // A newer request has since superseded this one.
+			}
 			setState({
 				hasChanges: result.hasChanges,
 				publishedAt: result.publishedAt,
@@ -150,6 +165,9 @@ export function useChangeDetection({
 				error: null,
 			});
 		} catch (err) {
+			if (latestRequestIdRef.current !== requestId) {
+				return;
+			}
 			const message =
 				err instanceof Error ? err.message : "Failed to detect changes";
 			setState((prev) => ({ ...prev, isLoading: false, error: message }));
