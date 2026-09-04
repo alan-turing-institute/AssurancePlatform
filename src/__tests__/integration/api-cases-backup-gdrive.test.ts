@@ -253,7 +253,11 @@ describe("POST /api/cases/backup/gdrive", () => {
 		const { POST } = await import("@/app/api/cases/backup/gdrive/route");
 		const response = await POST(buildRequest({ caseId: testCase.id }));
 
+		// 403 alone doesn't distinguish this from NO_TOKEN, which also maps to
+		// 403 — assert the envelope's code to pin FORBIDDEN specifically.
 		expect(response.status).toBe(403);
+		const body = await response.json();
+		expect(body.code).toBe("FORBIDDEN");
 	});
 
 	it("maps a Drive API_ERROR upload failure to 500", async () => {

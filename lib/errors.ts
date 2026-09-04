@@ -108,17 +108,21 @@ export function dbUnavailable(
 
 /**
  * Messages `pg-pool` throws as a plain `Error` (no `.code`, no `.cause` in
- * the common case) when `connectionTimeoutMillis` elapses:
- * - "timeout exceeded when trying to connect" — every pool slot was already
- *   checked out and the wait for one to free up timed out (the queued-wait
- *   path, `pg-pool/index.js`'s `_pendingQueue` timeout — this is the shape
+ * the common case) when `connectionTimeoutMillis` elapses — verified against
+ * `pg-pool/index.js` (v3.14.0) as the two exact, complete messages below,
+ * not prefixes or fragments of a longer string:
+ * - "timeout exceeded when trying to connect" (`index.js:224`) — every pool
+ *   slot was already checked out and the wait for one to free up timed out
+ *   (the queued-wait path, `_pendingQueue`'s timeout — this is the shape
  *   `api-status-pool-starvation.test.ts` reproduces).
- * - "Connection terminated due to connection timeout" — a brand-new
- *   connection (pool below `max`) didn't finish establishing within the
- *   timeout. Different code path, same configured value, same "the database
- *   isn't responding fast enough" signal.
- * Matched by substring, not exact equality, since the second message is
- * pg-pool's own `new Error(..., { cause })` wrapping and could gain a suffix.
+ * - "Connection terminated due to connection timeout" (`index.js:276`) — a
+ *   brand-new connection (pool below `max`) didn't finish establishing
+ *   within the timeout. Different code path, same configured value, same
+ *   "the database isn't responding fast enough" signal.
+ * Matched by exact equality (after trimming), not substring: an unrelated
+ * error whose message merely *contains* one of these strings — e.g. an
+ * upstream API's own error text quoting a timeout — must not be
+ * misclassified as this application's pool exhaustion.
  */
 const POOL_ACQUIRE_TIMEOUT_MESSAGES = [
 	"timeout exceeded when trying to connect",
@@ -126,9 +130,8 @@ const POOL_ACQUIRE_TIMEOUT_MESSAGES = [
 ];
 
 function isPoolAcquireTimeoutError(error: Error): boolean {
-	return POOL_ACQUIRE_TIMEOUT_MESSAGES.some((message) =>
-		error.message.includes(message)
-	);
+	const message = error.message.trim();
+	return POOL_ACQUIRE_TIMEOUT_MESSAGES.includes(message);
 }
 
 /**

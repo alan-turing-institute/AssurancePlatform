@@ -224,6 +224,21 @@ describe("handleError", () => {
 
 		expect(entries[0]?.timeoutMs).toBe(1);
 	});
+
+	it("stays INTERNAL/500 for an unrelated error whose message merely contains the pool-timeout string", () => {
+		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
+			/* suppress */
+		});
+		const original = new Error(
+			"Upstream vendor API said: timeout exceeded when trying to connect to their sandbox"
+		);
+
+		const result = handleError(original);
+
+		expect(result.code).toBe("INTERNAL");
+		expect(result.statusCode).toBe(500);
+		consoleSpy.mockRestore();
+	});
 });
 
 describe("toActionResult", () => {
