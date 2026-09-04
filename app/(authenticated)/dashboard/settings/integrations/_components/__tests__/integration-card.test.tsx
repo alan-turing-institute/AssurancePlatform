@@ -205,6 +205,22 @@ describe("IntegrationCard", () => {
 			expect(deleteButton).toHaveAccessibleDescription("");
 		});
 
+		it("announces no reason for a REVOKED integration mid-delete — disabled by the in-flight request, not by needing a revoke first", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					deleting={true}
+					integration={makeIntegration({ status: "REVOKED" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETING_LABEL_REGEX,
+			});
+			expect(deleteButton).toHaveAttribute("aria-disabled", "true");
+			expect(deleteButton).toHaveAccessibleDescription("");
+		});
+
 		it("keeps the destructive confirm button disabled when the typed text doesn't exactly match the integration's name", async () => {
 			const onDelete = vi.fn();
 			const user = userEvent.setup();

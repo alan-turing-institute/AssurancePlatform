@@ -245,7 +245,11 @@ export function IntegrationCard({
 					)}
 					<DisabledButtonHint
 						disabled={deleting || !integrationRevoked}
-						disabledReason="Revoke first — delete is permanent"
+						disabledReason={
+							integrationRevoked
+								? undefined
+								: "Revoke first — delete is permanent"
+						}
 						onClick={() => setConfirmDeleteOpen(true)}
 						size="sm"
 						type="button"
@@ -264,7 +268,11 @@ export function IntegrationCard({
 					</h4>
 					<DisabledButtonHint
 						disabled={!integrationActive || isIssuing}
-						disabledReason="Only an ACTIVE integration can issue a token"
+						disabledReason={
+							integrationActive
+								? undefined
+								: "Only an ACTIVE integration can issue a token"
+						}
 						onClick={handleIssueToken}
 						size="sm"
 						type="button"
