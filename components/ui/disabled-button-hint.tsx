@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 
-export interface DisabledButtonHintProps extends ButtonProps {
+interface DisabledButtonHintProps extends ButtonProps {
 	/**
 	 * Why the button is inert. Rendered as `sr-only` text linked via
 	 * `aria-describedby`, so screen-reader users get the reason a sighted
