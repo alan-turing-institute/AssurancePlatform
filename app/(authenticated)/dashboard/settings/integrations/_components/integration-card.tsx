@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DisabledButtonHint } from "@/components/ui/disabled-button-hint";
 import { useIntegrationCaseGrants } from "@/hooks/use-integration-case-grants";
 import {
 	formatFullDate,
@@ -242,21 +243,21 @@ export function IntegrationCard({
 							Revoke
 						</Button>
 					)}
-					<Button
+					<DisabledButtonHint
 						disabled={deleting || !integrationRevoked}
-						onClick={() => setConfirmDeleteOpen(true)}
-						size="sm"
-						title={
+						disabledReason={
 							integrationRevoked
 								? undefined
 								: "Revoke first — delete is permanent"
 						}
+						onClick={() => setConfirmDeleteOpen(true)}
+						size="sm"
 						type="button"
 						variant="destructive"
 					>
 						<Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
 						{deleting ? "Deleting…" : "Delete"}
-					</Button>
+					</DisabledButtonHint>
 				</div>
 			</div>
 
@@ -265,21 +266,21 @@ export function IntegrationCard({
 					<h4 className="font-medium text-foreground text-xs uppercase tracking-wide">
 						Tokens
 					</h4>
-					<Button
+					<DisabledButtonHint
 						disabled={!integrationActive || isIssuing}
-						onClick={handleIssueToken}
-						size="sm"
-						title={
+						disabledReason={
 							integrationActive
 								? undefined
 								: "Only an ACTIVE integration can issue a token"
 						}
+						onClick={handleIssueToken}
+						size="sm"
 						type="button"
 						variant="outline"
 					>
 						<KeyRound aria-hidden="true" className="h-3.5 w-3.5" />
 						{isIssuing ? "Issuing…" : "Issue new token"}
-					</Button>
+					</DisabledButtonHint>
 				</div>
 
 				{activeTokens.length === 0 ? (

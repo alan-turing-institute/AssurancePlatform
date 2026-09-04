@@ -48,6 +48,8 @@ import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
 
+const MORE_OPTIONS_LABEL = "More options";
+
 interface NodeOptionsMenuProps {
 	/** The ReactFlow node object */
 	node: Node;
@@ -393,9 +395,10 @@ export default function NodeOptionsMenu({
 	return (
 		<>
 			<DropdownMenu>
-				<ActionTooltip label="More options">
+				<ActionTooltip label={MORE_OPTIONS_LABEL}>
 					<DropdownMenuTrigger asChild>
 						<button
+							aria-label={MORE_OPTIONS_LABEL}
 							onClick={(e) => e.stopPropagation()}
 							onMouseDown={(e) => e.stopPropagation()}
 							type="button"

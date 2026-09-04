@@ -23,6 +23,7 @@ const DELETE_CONFIRM_REGEX = /delete integration/i;
 const DELETE_TOOLTIP_TEXT = "Revoke first — delete is permanent";
 const TYPE_NAME_LABEL_REGEX = /type.*to confirm/i;
 const ISSUE_TOKEN_BUTTON_REGEX = /issue new token/i;
+const ISSUING_LABEL_REGEX = /^issuing…$/i;
 const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
 const DONE_BUTTON_REGEX = /done.*stored it/i;
@@ -171,8 +172,8 @@ describe("IntegrationCard", () => {
 			const deleteButton = screen.getByRole("button", {
 				name: DELETE_TRIGGER_REGEX,
 			});
-			expect(deleteButton).toBeDisabled();
-			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+			expect(deleteButton).toHaveAttribute("aria-disabled", "true");
+			expect(deleteButton).toHaveAccessibleDescription(DELETE_TOOLTIP_TEXT);
 		});
 
 		it("disables Delete with an explanatory tooltip for a SUSPENDED integration", () => {
@@ -186,8 +187,8 @@ describe("IntegrationCard", () => {
 			const deleteButton = screen.getByRole("button", {
 				name: DELETE_TRIGGER_REGEX,
 			});
-			expect(deleteButton).toBeDisabled();
-			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+			expect(deleteButton).toHaveAttribute("aria-disabled", "true");
+			expect(deleteButton).toHaveAccessibleDescription(DELETE_TOOLTIP_TEXT);
 		});
 
 		it("enables Delete with no tooltip for a REVOKED integration", () => {
@@ -201,8 +202,24 @@ describe("IntegrationCard", () => {
 			const deleteButton = screen.getByRole("button", {
 				name: DELETE_TRIGGER_REGEX,
 			});
-			expect(deleteButton).toBeEnabled();
-			expect(deleteButton).not.toHaveAttribute("title");
+			expect(deleteButton).not.toHaveAttribute("aria-disabled");
+			expect(deleteButton).toHaveAccessibleDescription("");
+		});
+
+		it("announces no reason for a REVOKED integration mid-delete — disabled by the in-flight request, not by needing a revoke first", () => {
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					deleting={true}
+					integration={makeIntegration({ status: "REVOKED" })}
+				/>
+			);
+
+			const deleteButton = screen.getByRole("button", {
+				name: DELETING_LABEL_REGEX,
+			});
+			expect(deleteButton).toHaveAttribute("aria-disabled", "true");
+			expect(deleteButton).toHaveAccessibleDescription("");
 		});
 
 		it("keeps the destructive confirm button disabled when the typed text doesn't exactly match the integration's name", async () => {
@@ -598,7 +615,24 @@ describe("IntegrationCard", () => {
 
 			expect(
 				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
-			).toBeDisabled();
+			).toHaveAttribute("aria-disabled", "true");
+		});
+
+		it("announces no reason for an ACTIVE integration mid-issue — disabled by the in-flight request, not by needing to be ACTIVE", () => {
+			const integration = makeIntegration({ status: "ACTIVE" });
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={integration}
+					pendingTokenKey={integration.id}
+				/>
+			);
+
+			const issueButton = screen.getByRole("button", {
+				name: ISSUING_LABEL_REGEX,
+			});
+			expect(issueButton).toHaveAttribute("aria-disabled", "true");
+			expect(issueButton).toHaveAccessibleDescription("");
 		});
 
 		it("shows a token-shown-once modal after issuing succeeds", async () => {

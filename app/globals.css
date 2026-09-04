@@ -21,6 +21,15 @@
 	padding-bottom: calc(var(--spacing) * 2.5 + env(safe-area-inset-bottom));
 }
 
+/* Below the smallest step on Tailwind's default scale (text-xs, 0.75rem) —
+   for count badges and similar chrome too small for body text, where
+   text-xs would not fit. Named, not an arbitrary value, so it shows up in
+   token-drift scans as intentional. */
+@utility text-micro {
+	font-size: 0.5625rem;
+	line-height: 1;
+}
+
 /* ========================================================================
    Catppuccin Latte (light) / Mocha (dark) — OKLCH colour tokens
    ======================================================================== */

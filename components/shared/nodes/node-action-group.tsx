@@ -61,14 +61,19 @@ export default function NodeActionGroup({
 		setCommentsSheetOpen(true);
 	};
 
+	const editLabel = readOnly ? "View details" : "Edit element";
+	const commentLabel =
+		commentCount > 0 ? `View comments (${commentCount})` : "View comments";
+
 	return (
 		<div className="flex items-center gap-0.5">
 			{/* Add Button with Popover (not shown for evidence or when read-only) */}
 			{showAdd && nodeType !== "evidence" && !readOnly && addPopover}
 
 			{/* Edit Button */}
-			<ActionTooltip label={readOnly ? "View details" : "Edit element"}>
+			<ActionTooltip label={editLabel}>
 				<button
+					aria-label={editLabel}
 					onClick={handleEditClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
@@ -86,12 +91,9 @@ export default function NodeActionGroup({
 			{!readOnly && <NodeOptionsMenu node={node} nodeType={nodeType} />}
 
 			{/* Comment Button */}
-			<ActionTooltip
-				label={
-					commentCount > 0 ? `View comments (${commentCount})` : "View comments"
-				}
-			>
+			<ActionTooltip label={commentLabel}>
 				<button
+					aria-label={commentLabel}
 					onClick={handleCommentClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
@@ -99,7 +101,7 @@ export default function NodeActionGroup({
 					<div className="relative inline-flex rounded-full p-1 hover:bg-foreground/10">
 						<MessageCircle aria-hidden="true" size={16} />
 						{commentCount > 0 && (
-							<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-[9px] text-info-foreground">
+							<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-info-foreground text-micro">
 								{commentCount}
 							</span>
 						)}

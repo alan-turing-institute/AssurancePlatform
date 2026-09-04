@@ -20,10 +20,12 @@ const NODE: Node = {
 
 // NodeAddPopover's `open` is externally controlled — every real caller
 // (goal-node.tsx, strategy-node.tsx, property-node.tsx) owns the boolean in
-// its own local state and flips it from the trigger's onClick, rather than
-// letting Radix manage open state itself. This harness reproduces that
-// wiring instead of driving `open` as a prop directly, since that's the
-// shape the bug actually manifests under.
+// its own local state and passes it through `open`/`onOpenChange`. Opening
+// itself is driven by `PopoverTrigger`'s own composed toggle (merged onto
+// the trigger's own onClick via Radix's `asChild`), not by a manual state
+// flip in the trigger's onClick — no caller does that any more. This harness
+// reproduces the `open`/`onOpenChange` wiring instead of driving `open` as a
+// prop directly, since that's the shape the bug actually manifests under.
 function DismissHarness() {
 	const [open, setOpen] = useState(true);
 	return (
@@ -44,9 +46,10 @@ function DismissHarness() {
 	);
 }
 
-// Starts closed, so the trigger's onClick (not the `open` prop) is what
-// drives the popover open — the same wiring `DismissHarness` above uses,
-// just starting from the closed state so opening-via-trigger and
+// Starts closed, so `PopoverTrigger`'s own composed toggle (not the `open`
+// prop, and not a manual state flip in the trigger's onClick) is what drives
+// the popover open — the same wiring `DismissHarness` above uses, just
+// starting from the closed state so opening-via-trigger and
 // selecting-an-option-closes-it can both be exercised.
 function ControlledHarness() {
 	const [open, setOpen] = useState(false);
@@ -57,7 +60,7 @@ function ControlledHarness() {
 			onOpenChange={setOpen}
 			open={open}
 		>
-			<button onClick={() => setOpen(true)} type="button">
+			<button onClick={(e) => e.stopPropagation()} type="button">
 				Add child element
 			</button>
 		</NodeAddPopover>
@@ -120,36 +123,26 @@ describe("NodeAddPopover — controlled open/onOpenChange still works under moda
 	});
 });
 
-// Focus restoration (review follow-up, PR #885 G3): NOT the same regression
-// vector here as the other modal popovers. Radix's modal PopoverContent only
-// restores focus via `context.triggerRef.current?.focus()` — and
-// `context.triggerRef` is populated exclusively by `<PopoverTrigger>`.
-// NodeAddPopover wires its `children` through `<PopoverAnchor>` instead (the
-// component is externally controlled — every real caller, e.g. goal-node.tsx,
-// opens it from its own `onClick`, not Radix's), which is purely a popper
-// positioning primitive and never touches `triggerRef`. So
-// `triggerRef.current` stays `null` for the lifetime of this component, the
-// optional-chained `.focus()` call is a no-op, and — because
-// `onCloseAutoFocus` also calls `event.preventDefault()` unconditionally —
-// FocusScope's own "focus the previously-focused element" fallback never
-// runs either. Net effect: dismissing this popover restores focus to
-// nothing; the browser's default (the focused node was removed) takes over.
+// Focus restoration (review follow-up, PR #885 G3, fixed): NodeAddPopover
+// now wires its `children` through `<PopoverTrigger asChild>` instead of
+// `<PopoverAnchor>`. Radix's modal PopoverContent restores focus via
+// `context.triggerRef.current?.focus()`, and `context.triggerRef` is
+// populated exclusively by `<PopoverTrigger>` — `<PopoverAnchor>` is purely a
+// popper positioning primitive and never touched it, which is why focus
+// used to go nowhere on dismiss.
 //
-// Verified this is a real behavioural fact, not a jsdom limitation: an
-// identical harness against QuickEditPopover (components/docs/curriculum/
-// enhanced/dialogs/quick-edit-popover.tsx — a real `<PopoverTrigger>`) DOES
-// land focus back on its trigger button under jsdom. Asserting "focus
-// returns to the trigger" against NodeAddPopover would therefore be
-// asserting something the component doesn't do — a test that's always
-// falsely red, not a true regression guard. Per the brief: documenting why
-// here rather than shipping either a false-failing test or a vacuous one
-// that asserts nothing meaningful. The alternative locked in below is the
-// one thing that IS true and worth guarding: the trigger stays mounted,
-// unbroken and re-clickable after a dismiss cycle (no stale-ref crash, no
-// focus trap on a removed node). Wiring `<PopoverTrigger>` properly (so
-// focus restoration starts working) is production code and out of scope for
-// this test-only commit — worth a follow-up issue.
-describe("NodeAddPopover — trigger survives a dismiss cycle (focus restoration does not apply — see comment above)", () => {
+// What the test below actually proves under jsdom: pre-fix,
+// `document.activeElement` ends up on `<body>` after Escape (nothing left to
+// hold focus); post-fix it's back on the trigger — so the assertion
+// discriminates the regression. That is not the same claim as "Radix's
+// triggerRef restore is exercised here" — jsdom's focus handling doesn't
+// reproduce the browser's own focus-trap/tab-order semantics closely enough
+// to stand as proof of the mechanism itself. The real source of truth is
+// browser behaviour: focus moves into the popover content on open and
+// returns to the trigger on Escape, an outside click, or selecting an
+// option. That is what would need checking in a real browser to confirm
+// the mechanism itself, not just this regression indicator.
+describe("NodeAddPopover — trigger survives a dismiss cycle and regains focus", () => {
 	it("leaves the trigger mounted and reusable after dismissing via Escape", async () => {
 		const user = userEvent.setup();
 		render(<ControlledHarness />);
@@ -170,6 +163,24 @@ describe("NodeAddPopover — trigger survives a dismiss cycle (focus restoration
 		await user.click(trigger);
 		await waitFor(() => {
 			expect(screen.getByText("Add Element")).toBeInTheDocument();
+		});
+	});
+
+	it("returns keyboard focus to the trigger after dismissing with Escape", async () => {
+		const user = userEvent.setup();
+		render(<ControlledHarness />);
+
+		const trigger = screen.getByRole("button", { name: "Add child element" });
+		await user.click(trigger);
+		await screen.findByText("Add Element");
+
+		fireEvent.keyDown(document, { key: "Escape" });
+
+		await waitFor(() => {
+			expect(screen.queryByText("Add Element")).not.toBeInTheDocument();
+		});
+		await waitFor(() => {
+			expect(document.activeElement).toBe(trigger);
 		});
 	});
 });

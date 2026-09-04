@@ -3,6 +3,7 @@
 import { AlertCircle, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DisabledButtonHint } from "@/components/ui/disabled-button-hint";
 import type {
 	CaseGrantPermission,
 	IntegrationCaseGrant,
@@ -143,21 +144,17 @@ export function CaseAccessSection({
 						onGrant={handleGrant}
 					/>
 				) : (
-					<Button
+					<DisabledButtonHint
 						disabled={!integrationActive}
+						disabledReason="Only an ACTIVE integration can be granted access to a case"
 						onClick={openForm}
 						size="sm"
-						title={
-							integrationActive
-								? undefined
-								: "Only an ACTIVE integration can be granted access to a case"
-						}
 						type="button"
 						variant="outline"
 					>
 						<Plus aria-hidden="true" className="h-3.5 w-3.5" />
 						Grant access to a case…
-					</Button>
+					</DisabledButtonHint>
 				))}
 		</div>
 	);
