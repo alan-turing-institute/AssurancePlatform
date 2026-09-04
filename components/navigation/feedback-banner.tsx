@@ -48,7 +48,7 @@ export default function FeedbackBanner() {
 	};
 
 	return (
-		<div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-x-6 bg-primary px-6 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] sm:px-3.5 sm:before:flex-1">
+		<div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-x-6 bg-primary px-6 pt-2.5 pb-safe sm:px-3.5 sm:before:flex-1">
 			<div className="w-full text-primary-foreground text-sm leading-6">
 				<Link
 					className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0"

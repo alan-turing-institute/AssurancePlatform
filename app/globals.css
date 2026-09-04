@@ -14,6 +14,13 @@
 	}
 }
 
+/* Bottom padding for elements fixed to the viewport bottom (e.g. the
+   feedback banner): the usual `pb-2.5` plus the iOS home-indicator safe
+   area, so content isn't flush against it on notched devices. */
+@utility pb-safe {
+	padding-bottom: calc(var(--spacing) * 2.5 + env(safe-area-inset-bottom));
+}
+
 /* ========================================================================
    Catppuccin Latte (light) / Mocha (dark) — OKLCH colour tokens
    ======================================================================== */
