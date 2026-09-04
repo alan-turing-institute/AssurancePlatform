@@ -1,4 +1,3 @@
-import { logSecurityEvent } from "@/lib/audit/security-log";
 import {
 	generateApiTokenSecret,
 	hashApiTokenSecret,
@@ -14,6 +13,7 @@ import {
 	RATE_LIMIT_CONFIGS,
 	recordAttempt,
 } from "@/lib/services/rate-limit-service";
+import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 import {
 	type ApiToken,
 	type Integration,
@@ -131,55 +131,25 @@ interface AuditLogInput {
 }
 
 /**
- * Records a security-relevant machine-auth event: `logSecurityEvent` for
- * dev-console visibility (existing pattern) plus a persisted
- * `SecurityAuditLog` row (the pattern's call shape has no DB write yet —
- * this service adds one, scoped to its own events, all Prisma access
- * staying inside this service per house rule).
- *
- * Contract: this function NEVER throws. The calling operation has already
- * committed by the time this runs, so a failure here must never be allowed
- * to surface as the operation's own failure (a caller told "Failed to
- * delete integration" after the delete actually committed would retry and
- * hit a confusing not-found). If the `SecurityAuditLog` write itself fails,
- * that failure is logged as its own `audit_log_write_failed` event —
- * carrying the event that was meant to be recorded — and swallowed here,
- * not propagated to the caller's `try/catch`.
+ * Records a security-relevant machine-auth event via the shared
+ * `recordSecurityEvent` (`lib/services/security-audit-service.ts`) — kept as
+ * a thin wrapper so this file's many call sites don't each have to pass
+ * `severity: "medium"` (this module's events are all medium; the one
+ * exception, `audit_log_write_failed`, is `recordSecurityEvent`'s own
+ * concern, not this module's). Was originally the module that inlined the
+ * `logSecurityEvent` + `prisma.securityAuditLog.create` pattern directly;
+ * that pattern now lives in `security-audit-service.ts` so every caller
+ * shares it (`TEA — Persist security audit events`).
  */
 async function writeAuditLog(input: AuditLogInput): Promise<void> {
-	logSecurityEvent({
+	await recordSecurityEvent({
 		event: input.eventType,
 		severity: "medium",
-		metadata: {
-			...input.metadata,
-			userId: input.userId,
-			ipAddress: input.ipAddress,
-		},
+		userId: input.userId,
+		ipAddress: input.ipAddress,
+		userAgent: input.userAgent,
+		metadata: input.metadata,
 	});
-	try {
-		await prisma.securityAuditLog.create({
-			data: {
-				userId: input.userId ?? null,
-				eventType: input.eventType,
-				ipAddress: input.ipAddress ?? null,
-				userAgent: input.userAgent ?? null,
-				// biome-ignore lint/suspicious/noExplicitAny: Prisma JSON type requires any
-				metadata: (input.metadata ?? null) as any,
-			},
-		});
-	} catch (error) {
-		logSecurityEvent({
-			event: "audit_log_write_failed",
-			severity: "high",
-			metadata: {
-				intendedEventType: input.eventType,
-				intendedMetadata: input.metadata,
-				userId: input.userId,
-				ipAddress: input.ipAddress,
-				error: error instanceof Error ? error.message : String(error),
-			},
-		});
-	}
 }
 
 /**

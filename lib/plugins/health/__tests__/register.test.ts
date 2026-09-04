@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { elementBadgeSlot, elementPanelSlot } from "@/lib/plugins/slots";
+import { captureLogs } from "@/src/__tests__/helpers/capture-logs";
 import { HealthBadge } from "../health-badge";
 import { HealthPanel } from "../health-panel";
 import { registerHealthPlugin } from "../register";
@@ -48,23 +49,29 @@ describe("registerHealthPlugin — bootstrap safety (review forward-note v4)", (
 	it("catches a throwing registration instead of propagating — degrades to unregistered", () => {
 		elementBadgeSlot.resetForTests();
 		elementPanelSlot.resetForTests();
-		const consoleErrorSpy = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => undefined);
+		const logs = captureLogs();
 		vi.spyOn(elementBadgeSlot, "register").mockImplementation(() => {
 			throw new Error("simulated registration failure");
 		});
 
-		expect(() => registerHealthPlugin()).not.toThrow();
+		try {
+			expect(() => registerHealthPlugin()).not.toThrow();
 
-		expect(consoleErrorSpy).toHaveBeenCalledWith(
-			expect.stringContaining("[tea.health]"),
-			expect.any(Error)
-		);
-		// The badge registration threw before it could be recorded, and the
-		// panel registration never ran (the try/catch wraps both calls) —
-		// both slots end up exactly as unregistered as a disabled plugin.
-		expect(elementBadgeSlot.list()).toEqual([]);
-		expect(elementPanelSlot.list()).toEqual([]);
+			const errorEntry = logs.entries.find(
+				(entry) => entry.level === "error" && entry.msg.includes("[tea.health]")
+			);
+			expect(errorEntry).toBeDefined();
+			expect(errorEntry?.error).toMatchObject({
+				name: "Error",
+				message: "simulated registration failure",
+			});
+			// The badge registration threw before it could be recorded, and the
+			// panel registration never ran (the try/catch wraps both calls) —
+			// both slots end up exactly as unregistered as a disabled plugin.
+			expect(elementBadgeSlot.list()).toEqual([]);
+			expect(elementPanelSlot.list()).toEqual([]);
+		} finally {
+			logs.restore();
+		}
 	});
 });

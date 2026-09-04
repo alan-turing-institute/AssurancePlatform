@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { access, mkdir, rm, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { logger } from "@/lib/logger";
 import {
 	deleteBlob,
 	getExtensionFromMimeType,
@@ -8,6 +9,8 @@ import {
 	isAzureStorageConfigured,
 	uploadToBlob,
 } from "./blob-storage-service";
+
+const log = logger.child({ service: "file-storage-service" });
 
 /**
  * File Storage Service
@@ -84,11 +87,11 @@ async function saveFileLocally(
 		await writeFile(filePath, buffer);
 
 		const relativePath = `/uploads/${subDirectory}/${uniqueFilename}`;
-		console.log(`[Dev] File saved locally: ${relativePath}`);
+		log.info("Dev file saved locally", { relativePath });
 
 		return { data: { path: relativePath } };
 	} catch (error) {
-		console.error("Error saving file locally:", error);
+		log.error("Error saving file locally", { error });
 		return { error: "Failed to save file" };
 	}
 }
@@ -136,7 +139,7 @@ export async function saveFile(
 	}
 
 	// Production without Azure configured and local storage not enabled
-	console.error(
+	log.error(
 		"Storage not configured. Set USE_LOCAL_STORAGE=true for local filesystem storage, or configure Azure Blob Storage."
 	);
 	return { error: "Storage not configured" };
@@ -164,7 +167,7 @@ export async function deleteFile(filePath: string): Promise<boolean> {
 			const blobPath = pathParts.slice(2).join("/");
 			return deleteBlob(blobPath);
 		} catch (error) {
-			console.error("Failed to parse blob URL:", error);
+			log.error("Failed to parse blob URL", { error });
 			return false;
 		}
 	}
@@ -174,15 +177,15 @@ export async function deleteFile(filePath: string): Promise<boolean> {
 		try {
 			const fullPath = join(process.cwd(), "public", filePath.slice(1));
 			await unlink(fullPath);
-			console.log(`[Dev] File deleted locally: ${filePath}`);
+			log.info("Dev file deleted locally", { filePath });
 			return true;
 		} catch (error) {
-			console.error("Error deleting local file:", error);
+			log.error("Error deleting local file", { error });
 			return false;
 		}
 	}
 
-	console.warn("Unknown file path format:", filePath);
+	log.warn("Unknown file path format", { filePath });
 	return false;
 }
 
@@ -200,7 +203,7 @@ export async function deleteDirectory(subDirectory: string): Promise<boolean> {
 		await rm(dirPath, { recursive: true, force: true });
 		return true;
 	} catch (error) {
-		console.error("Error deleting directory:", error);
+		log.error("Error deleting directory", { error });
 		return false;
 	}
 }
