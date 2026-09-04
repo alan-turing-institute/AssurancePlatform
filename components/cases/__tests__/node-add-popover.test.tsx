@@ -20,10 +20,12 @@ const NODE: Node = {
 
 // NodeAddPopover's `open` is externally controlled — every real caller
 // (goal-node.tsx, strategy-node.tsx, property-node.tsx) owns the boolean in
-// its own local state and flips it from the trigger's onClick, rather than
-// letting Radix manage open state itself. This harness reproduces that
-// wiring instead of driving `open` as a prop directly, since that's the
-// shape the bug actually manifests under.
+// its own local state and passes it through `open`/`onOpenChange`. Opening
+// itself is driven by `PopoverTrigger`'s own composed toggle (merged onto
+// the trigger's own onClick via Radix's `asChild`), not by a manual state
+// flip in the trigger's onClick — no caller does that any more. This harness
+// reproduces the `open`/`onOpenChange` wiring instead of driving `open` as a
+// prop directly, since that's the shape the bug actually manifests under.
 function DismissHarness() {
 	const [open, setOpen] = useState(true);
 	return (
@@ -44,9 +46,10 @@ function DismissHarness() {
 	);
 }
 
-// Starts closed, so the trigger's onClick (not the `open` prop) is what
-// drives the popover open — the same wiring `DismissHarness` above uses,
-// just starting from the closed state so opening-via-trigger and
+// Starts closed, so `PopoverTrigger`'s own composed toggle (not the `open`
+// prop, and not a manual state flip in the trigger's onClick) is what drives
+// the popover open — the same wiring `DismissHarness` above uses, just
+// starting from the closed state so opening-via-trigger and
 // selecting-an-option-closes-it can both be exercised.
 function ControlledHarness() {
 	const [open, setOpen] = useState(false);
@@ -57,7 +60,7 @@ function ControlledHarness() {
 			onOpenChange={setOpen}
 			open={open}
 		>
-			<button onClick={() => setOpen(true)} type="button">
+			<button onClick={(e) => e.stopPropagation()} type="button">
 				Add child element
 			</button>
 		</NodeAddPopover>
