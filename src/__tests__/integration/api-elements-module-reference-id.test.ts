@@ -244,4 +244,42 @@ describe("PUT /api/elements/[id] — moduleReferenceId", () => {
 		});
 		expect(inDb?.moduleReferenceId).toBeNull();
 	});
+
+	it("rejects a nonexistent moduleReferenceId target case through the route handler", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		const awayGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			name: "Reference",
+			moduleReferenceId: awayCase.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/elements/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/elements/${awayGoal.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					moduleReferenceId: "00000000-0000-0000-0000-000000000000",
+				}),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: awayGoal.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+
+		// The element's original moduleReferenceId is untouched — the rejected
+		// update didn't partially apply.
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(awayCase.id);
+	});
 });
