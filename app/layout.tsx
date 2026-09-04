@@ -45,8 +45,10 @@ export default async function RootLayout({
 						enableSystem
 					>
 						<ThemePresetProvider>
-							<TourProvider>{children}</TourProvider>
-							<ModalProvider />
+							<TourProvider>
+								{children}
+								<ModalProvider />
+							</TourProvider>
 							<Toaster />
 						</ThemePresetProvider>
 					</ThemeProvider>

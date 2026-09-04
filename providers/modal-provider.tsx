@@ -91,7 +91,15 @@ export const ModalProvider = (): ReactNode => (
 		<PermissionsModal />
 		<StatusModalWrapper />
 		<EmailModal />
-		<HelpModal />
+		<ErrorBoundary
+			fallback={
+				<p className="p-4 text-destructive text-sm">
+					Something went wrong. Please refresh.
+				</p>
+			}
+		>
+			<HelpModal />
+		</ErrorBoundary>
 		<CreateTeamDialog />
 		<InviteMemberDialog />
 		<ErrorBoundary
