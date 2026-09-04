@@ -10,6 +10,8 @@ import NodeAddPopover from "./node-add-popover";
 import NodeEditDialog from "./node-edit-dialog";
 import ToggleButton from "./toggle-button";
 
+const ADD_CHILD_LABEL = "Add child element";
+
 function StrategyNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
@@ -25,13 +27,10 @@ function StrategyNode({ data, ...props }: NodeProps) {
 			onOpenChange={setAddPopoverOpen}
 			open={addPopoverOpen}
 		>
-			<ActionTooltip label="Add child element">
+			<ActionTooltip label={ADD_CHILD_LABEL}>
 				<button
-					aria-label="Add child element"
-					onClick={(e) => {
-						e.stopPropagation();
-						setAddPopoverOpen(true);
-					}}
+					aria-label={ADD_CHILD_LABEL}
+					onClick={(e) => e.stopPropagation()}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
 				>

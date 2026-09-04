@@ -126,10 +126,19 @@ describe("NodeAddPopover — controlled open/onOpenChange still works under moda
 // `context.triggerRef.current?.focus()`, and `context.triggerRef` is
 // populated exclusively by `<PopoverTrigger>` — `<PopoverAnchor>` is purely a
 // popper positioning primitive and never touched it, which is why focus
-// used to go nowhere on dismiss. Verified against an identical harness for
-// QuickEditPopover (components/docs/curriculum/enhanced/dialogs/
-// quick-edit-popover.tsx — already a real `<PopoverTrigger>`) that this is a
-// real behavioural fact under jsdom, not a jsdom limitation.
+// used to go nowhere on dismiss.
+//
+// What the test below actually proves under jsdom: pre-fix,
+// `document.activeElement` ends up on `<body>` after Escape (nothing left to
+// hold focus); post-fix it's back on the trigger — so the assertion
+// discriminates the regression. That is not the same claim as "Radix's
+// triggerRef restore is exercised here" — jsdom's focus handling doesn't
+// reproduce the browser's own focus-trap/tab-order semantics closely enough
+// to stand as proof of the mechanism itself. The real source of truth is
+// browser behaviour: focus moves into the popover content on open and
+// returns to the trigger on Escape, an outside click, or selecting an
+// option. That is what would need checking in a real browser to confirm
+// the mechanism itself, not just this regression indicator.
 describe("NodeAddPopover — trigger survives a dismiss cycle and regains focus", () => {
 	it("leaves the trigger mounted and reusable after dismissing via Escape", async () => {
 		const user = userEvent.setup();

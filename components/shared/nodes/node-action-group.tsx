@@ -61,15 +61,19 @@ export default function NodeActionGroup({
 		setCommentsSheetOpen(true);
 	};
 
+	const editLabel = readOnly ? "View details" : "Edit element";
+	const commentLabel =
+		commentCount > 0 ? `View comments (${commentCount})` : "View comments";
+
 	return (
 		<div className="flex items-center gap-0.5">
 			{/* Add Button with Popover (not shown for evidence or when read-only) */}
 			{showAdd && nodeType !== "evidence" && !readOnly && addPopover}
 
 			{/* Edit Button */}
-			<ActionTooltip label={readOnly ? "View details" : "Edit element"}>
+			<ActionTooltip label={editLabel}>
 				<button
-					aria-label={readOnly ? "View details" : "Edit element"}
+					aria-label={editLabel}
 					onClick={handleEditClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
@@ -87,17 +91,9 @@ export default function NodeActionGroup({
 			{!readOnly && <NodeOptionsMenu node={node} nodeType={nodeType} />}
 
 			{/* Comment Button */}
-			<ActionTooltip
-				label={
-					commentCount > 0 ? `View comments (${commentCount})` : "View comments"
-				}
-			>
+			<ActionTooltip label={commentLabel}>
 				<button
-					aria-label={
-						commentCount > 0
-							? `View comments (${commentCount})`
-							: "View comments"
-					}
+					aria-label={commentLabel}
 					onClick={handleCommentClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
