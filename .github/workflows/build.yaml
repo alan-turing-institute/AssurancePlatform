@@ -543,7 +543,11 @@ jobs:
     # practice.
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Matches the test and lint jobs. The audit itself takes seconds; the
+    # budget is for the npm registry, which this job hits twice (pnpm
+    # setup, then `npx fallow`) with no cache, and which can be slow
+    # enough to exceed a 10-minute cap on its own.
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
