@@ -16,10 +16,18 @@ set -euo pipefail
 DEFAULT_URL="postgresql://tea_user:tea_password@localhost:5433/tea_test_admin"
 DB_URL="${INTEGRATION_TEST_ADMIN_DATABASE_URL:-$DEFAULT_URL}"
 
-read -r PG_HOST PG_PORT <<< "$(node -e '
+# Command substitution swallows node's exit status, so a malformed URL would
+# otherwise fall through with PG_HOST/PG_PORT empty and print the generic
+# "not running" skip message below. Capture the parse separately and check
+# it first, so a bad INTEGRATION_TEST_ADMIN_DATABASE_URL gets its own message.
+if ! PARSED_HOST_PORT="$(node -e '
 const u = new URL(process.argv[1]);
 console.log(u.hostname, u.port || "5432");
-' "$DB_URL")"
+' "$DB_URL" 2>/dev/null)"; then
+  echo "⚠ Skipping integration tests — INTEGRATION_TEST_ADMIN_DATABASE_URL is not a valid URL: $DB_URL"
+  exit 0
+fi
+read -r PG_HOST PG_PORT <<< "$PARSED_HOST_PORT"
 
 if ! pg_isready -h "$PG_HOST" -p "$PG_PORT" -q 2>/dev/null; then
   echo "⚠ Skipping integration tests — PostgreSQL not running on $PG_HOST:$PG_PORT"
