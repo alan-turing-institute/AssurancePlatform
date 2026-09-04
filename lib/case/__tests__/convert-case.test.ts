@@ -13,6 +13,9 @@ import {
 	createNodesRecursively,
 } from "../convert-case";
 
+const UUID_V4_EDGE_ID_REGEX =
+	/^e[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 describe("convert-case utilities", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -437,6 +440,29 @@ describe("convert-case utilities", () => {
 			const uniqueIds = new Set(edgeIds);
 
 			expect(uniqueIds.size).toBe(edgeIds.length);
+		});
+
+		it("should create unique edge IDs when crypto.randomUUID is unavailable (insecure context)", () => {
+			vi.stubGlobal("crypto", {
+				getRandomValues: (arr: Uint8Array) => {
+					for (let i = 0; i < arr.length; i++) {
+						arr[i] = Math.floor(Math.random() * 256);
+					}
+					return arr;
+				},
+			});
+
+			try {
+				const edges = createEdgesFromNodes(mockNodes);
+				const edgeIds = edges.map((edge) => edge.id);
+
+				expect(new Set(edgeIds).size).toBe(edgeIds.length);
+				for (const id of edgeIds) {
+					expect(id).toMatch(UUID_V4_EDGE_ID_REGEX);
+				}
+			} finally {
+				vi.unstubAllGlobals();
+			}
 		});
 
 		it("should not create edges for root nodes", () => {

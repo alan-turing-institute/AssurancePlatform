@@ -1,4 +1,5 @@
 import type { Edge, Node } from "reactflow";
+import { generateUuid } from "@/lib/generate-uuid";
 import type {
 	EvidenceResponse,
 	GoalResponse,
@@ -246,7 +247,7 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 			}
 
 			// Create an edge from the parent node to the current node
-			const edgeId = `e${crypto.randomUUID()}`;
+			const edgeId = `e${generateUuid()}`;
 			const edge: Edge = {
 				id: edgeId,
 				source: node.data.parentId as string,

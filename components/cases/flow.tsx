@@ -18,6 +18,7 @@ import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
@@ -121,7 +122,11 @@ function Flow() {
 			} else {
 				setLoading(false);
 			}
-		} catch (_error) {
+		} catch (error) {
+			logger.error("Failed to convert assurance case to diagram", {
+				error,
+				caseId: assuranceCase?.id,
+			});
 			toast({
 				variant: "destructive",
 				title: "Diagram error",
