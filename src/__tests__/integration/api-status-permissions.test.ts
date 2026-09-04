@@ -46,9 +46,12 @@ async function callPatchStatus(caseId: string) {
  * coverage (repo convention: every secured endpoint gets the full matrix,
  * see CLAUDE.md "Testing"). All cases below carry complete case information
  * (`createTestCaseInformation`'s defaults) so every attempt clears the
- * completeness gate in `route.ts` and the response reflects the access
- * check in `transitionStatus` -> `publishAssuranceCase`, which requires
- * EDIT or higher (`publish-service.ts`).
+ * completeness gate in `route.ts`. The VIEW/COMMENT-refused cells prove the
+ * EDIT-or-higher check in `transitionStatus` -> `publishAssuranceCase`
+ * (`publish-service.ts`); the no-permission and non-existent-case cells are
+ * refused earlier, by the VIEW check inside `requireCaseInformationComplete`
+ * -> `getCaseInformation`, which runs before `transitionStatus` for any
+ * PUBLISHED target.
  */
 describe("PATCH /api/cases/[id]/status — permission matrix", () => {
 	it("owner can transition the case", async () => {

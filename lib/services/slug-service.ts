@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/services/slug";
 
-export { slugify } from "@/lib/services/slug";
-
 // Derived from `prisma.$transaction`'s own callback parameter, the same
 // pattern `case-batch-update-service.ts` uses — `Prisma.TransactionClient`
 // (the generated client's own type) does not structurally match this
