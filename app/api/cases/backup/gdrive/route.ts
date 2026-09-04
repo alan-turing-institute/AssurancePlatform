@@ -6,27 +6,14 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type { ErrorCode } from "@/lib/errors";
 import { AppError, forbidden } from "@/lib/errors";
 import { backupToDriveSchema } from "@/lib/schemas/google-drive";
 import { exportCase } from "@/lib/services/case-export-service";
 import {
-	type GoogleDriveErrorCode,
+	DRIVE_ERROR_MAP,
 	hasGoogleToken,
 	uploadBackupToDrive,
 } from "@/lib/services/google-drive-service";
-
-/**
- * Maps Google Drive error codes to application error codes.
- */
-const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
-	NO_TOKEN: "FORBIDDEN",
-	TOKEN_EXPIRED: "UNAUTHORISED",
-	REFRESH_FAILED: "UNAUTHORISED",
-	NOT_FOUND: "NOT_FOUND",
-	FORBIDDEN: "FORBIDDEN",
-	API_ERROR: "INTERNAL",
-};
 
 /**
  * POST /api/cases/backup/gdrive

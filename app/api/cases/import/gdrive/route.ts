@@ -6,28 +6,15 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import type { ErrorCode } from "@/lib/errors";
 import { AppError, forbidden, validationError } from "@/lib/errors";
 import { importFromDriveSchema } from "@/lib/schemas/google-drive";
 import { importCase } from "@/lib/services/case-import-service";
 import {
+	DRIVE_ERROR_MAP,
 	downloadFileFromDrive,
-	type GoogleDriveErrorCode,
 	hasGoogleToken,
 	listBackupFiles,
 } from "@/lib/services/google-drive-service";
-
-/**
- * Maps Google Drive error codes to application error codes.
- */
-const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
-	NO_TOKEN: "FORBIDDEN",
-	TOKEN_EXPIRED: "UNAUTHORISED",
-	REFRESH_FAILED: "UNAUTHORISED",
-	NOT_FOUND: "NOT_FOUND",
-	FORBIDDEN: "FORBIDDEN",
-	API_ERROR: "INTERNAL",
-};
 
 /**
  * POST /api/cases/import/gdrive
@@ -112,12 +99,15 @@ export async function GET() {
 			return apiSuccess({ connected: false, files: [] });
 		}
 
-		try {
-			const files = await listBackupFiles(userId);
-			return apiSuccess({ connected: true, files });
-		} catch {
-			return apiSuccess({ connected: true, files: [] });
-		}
+		// `listBackupFiles` never throws — it swallows Drive/folder failures
+		// and returns [] itself (see its docstring), so a try/catch here could
+		// never fire. Removed rather than converted to a ServiceResult: an
+		// empty-list-on-failure contract is what this GET wants (a Drive
+		// hiccup shouldn't turn "list my backups" into a hard error), and
+		// changing that contract would be a bigger change than this route
+		// asked for.
+		const files = await listBackupFiles(userId);
+		return apiSuccess({ connected: true, files });
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

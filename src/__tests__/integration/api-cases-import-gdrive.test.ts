@@ -122,6 +122,20 @@ describe("POST /api/cases/import/gdrive", () => {
 		expect(response.status).toBe(400);
 	});
 
+	it("maps a Drive 404 on the metadata fetch to NOT_FOUND (404)", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id);
+		await mockAuth(user.id, user.username, user.email);
+		mockFilesGet.mockRejectedValueOnce(
+			Object.assign(new Error("File not found"), { status: 404 })
+		);
+
+		const { POST } = await import("@/app/api/cases/import/gdrive/route");
+		const response = await POST(buildRequest({ fileId: "missing-file-id" }));
+
+		expect(response.status).toBe(404);
+	});
+
 	it("maps a Drive API_ERROR download failure to 500", async () => {
 		const user = await createTestUser();
 		await setGoogleTokens(user.id);

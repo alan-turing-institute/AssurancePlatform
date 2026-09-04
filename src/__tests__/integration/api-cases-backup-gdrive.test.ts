@@ -227,6 +227,35 @@ describe("POST /api/cases/backup/gdrive", () => {
 		});
 	});
 
+	// TOKEN_EXPIRED and REFRESH_FAILED have no route-level test: this route
+	// (and the import route) calls `hasGoogleToken()` first and returns its
+	// own 403 "not connected" before ever reaching `uploadBackupToDrive`, and
+	// `hasGoogleToken()` fails on exactly the same condition that would
+	// produce either code — so a route request can never observe them in
+	// normal operation. They're proven at the service level instead, calling
+	// `uploadBackupToDrive` directly:
+	// `google-drive-service.test.ts` > "createDriveClient — TOKEN_EXPIRED / REFRESH_FAILED".
+
+	it("maps a Drive 403 on folder lookup to FORBIDDEN (403)", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id);
+		const testCase = await createTestCaseWithGoal(user.id);
+		await mockAuth(user.id, user.username, user.email);
+		mockFilesList.mockRejectedValueOnce(
+			Object.assign(
+				new Error("The user does not have sufficient permissions"),
+				{
+					status: 403,
+				}
+			)
+		);
+
+		const { POST } = await import("@/app/api/cases/backup/gdrive/route");
+		const response = await POST(buildRequest({ caseId: testCase.id }));
+
+		expect(response.status).toBe(403);
+	});
+
 	it("maps a Drive API_ERROR upload failure to 500", async () => {
 		const user = await createTestUser();
 		await setGoogleTokens(user.id);

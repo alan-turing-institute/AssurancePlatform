@@ -304,6 +304,55 @@ describe("createDriveClient (via uploadBackupToDrive)", () => {
 	});
 });
 
+// TOKEN_EXPIRED and REFRESH_FAILED are produced inside
+// createDriveClient/getUserGoogleTokens, downstream of the exact check
+// `hasGoogleToken()` performs. Every route (`app/api/cases/backup/gdrive`,
+// `app/api/cases/import/gdrive`) calls `hasGoogleToken()` first and returns
+// its own 403 "not connected" before ever calling uploadBackupToDrive/
+// downloadFileFromDrive — so a route request can't observe either code in
+// normal operation; hasGoogleToken() would already have failed on the same
+// underlying condition. Tested here, calling the service directly, rather
+// than at the route (see `api-cases-backup-gdrive.test.ts`'s comment).
+describe("createDriveClient — TOKEN_EXPIRED / REFRESH_FAILED (via uploadBackupToDrive)", () => {
+	it("returns TOKEN_EXPIRED when the token is expired and no refresh token is stored", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, {
+			googleTokenExpiresAt: new Date(Date.now() - 60 * 1000),
+			googleRefreshToken: null,
+		});
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "Case", "{}");
+
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			throw new Error("expected failure");
+		}
+		expect(result.driveError.code).toBe("TOKEN_EXPIRED");
+	});
+
+	it("returns REFRESH_FAILED when refreshing an expired token throws", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, {
+			googleTokenExpiresAt: new Date(Date.now() - 60 * 1000),
+		});
+		mockRefreshAccessToken.mockRejectedValueOnce(new Error("refresh failed"));
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "Case", "{}");
+
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			throw new Error("expected failure");
+		}
+		expect(result.driveError.code).toBe("REFRESH_FAILED");
+	});
+});
+
 describe("getOrCreateBackupFolder (via uploadBackupToDrive)", () => {
 	it("reuses an existing 'TEA Platform Backups' folder without creating one", async () => {
 		const user = await createTestUser();
@@ -613,13 +662,13 @@ describe("listBackupFiles", () => {
 });
 
 describe("DRIVE_ERROR_MAP", () => {
-	// TOKEN_EXPIRED, REFRESH_FAILED, FORBIDDEN and NOT_FOUND are declared on
-	// GoogleDriveErrorCode and mapped here, but nothing in this service ever
-	// constructs a GoogleDriveError with those codes (only NO_TOKEN and
-	// API_ERROR are ever produced — confirmed by reading every
-	// `createDriveError` call site). This test pins the map's own data
-	// rather than a route response, since the unreachable codes can't be
-	// exercised through a live request. See the QA report's follow-ups.
+	// All six codes are now produced somewhere in this service: TOKEN_EXPIRED
+	// (expired token, no refresh token) and REFRESH_FAILED (refresh attempted
+	// and failed) from `getUserGoogleTokens`/`createDriveClient`; FORBIDDEN
+	// and NOT_FOUND from a 403/404 thrown by the Drive SDK, classified by
+	// `classifyGoogleApiError`. Route-level tests proving each maps to the
+	// right status live in `api-cases-backup-gdrive.test.ts` and
+	// `api-cases-import-gdrive.test.ts`. This test pins the map's own data.
 	it("maps every GoogleDriveErrorCode to the documented ErrorCode", async () => {
 		const { DRIVE_ERROR_MAP } = await import(
 			"@/lib/services/google-drive-service"
