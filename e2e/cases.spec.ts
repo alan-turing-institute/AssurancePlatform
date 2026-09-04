@@ -1,8 +1,25 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, STATUS_BUTTON_PATTERN } from "./helpers/constants";
 import { DashboardPage } from "./pages/dashboard-page";
 
 const ASSERTION_STATUS_COMBOBOX_PATTERN = /assertion status/i;
+
+// The G1 goal node's Edit button, scoped to that ReactFlow node. React Flow
+// gives every node's own wrapper `role="button"` (for keyboard selection)
+// with no aria-label of its own, so the browser folds every descendant's
+// accessible name — including "Edit element" — into that wrapper's computed
+// name. An unscoped `getByRole("button", { name: "Edit element" })` then
+// matches the wrapper too, since Playwright's name match is substring by
+// default; the wrapper sorts before the real button in DOM order, so
+// `.first()` picks the wrapper, and clicking it just selects the node
+// instead of opening the edit dialog. Scoping to the G1 node plus an exact
+// name avoids both that collision and any reliance on DOM order.
+function g1EditButton(page: Page) {
+	return page
+		.locator(".react-flow__node", { hasText: "G1" })
+		.getByRole("button", { name: "Edit element", exact: true });
+}
 
 test.describe("Case management", () => {
 	test("dashboard shows seeded cases", async ({ page }) => {
@@ -120,9 +137,7 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		const editButton = page
-			.getByRole("button", { name: "Edit element" })
-			.first();
+		const editButton = g1EditButton(page);
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 
@@ -173,9 +188,7 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		const editButton = page
-			.getByRole("button", { name: "Edit element" })
-			.first();
+		const editButton = g1EditButton(page);
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 
@@ -221,9 +234,7 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		const editButton = page
-			.getByRole("button", { name: "Edit element" })
-			.first();
+		const editButton = g1EditButton(page);
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 
