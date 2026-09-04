@@ -1,5 +1,6 @@
 import type { Edge, Node } from "reactflow";
 import { generateUuid } from "@/lib/generate-uuid";
+import { logger } from "@/lib/logger";
 import type {
 	EvidenceResponse,
 	GoalResponse,
@@ -38,34 +39,46 @@ export interface AssuranceCaseWithGoals {
  *
  */
 export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
-	let caseNodes: Node[] = [],
-		caseEdges: Edge[] = [];
+	try {
+		let caseNodes: Node[] = [],
+			caseEdges: Edge[] = [];
 
-	// Handle null/undefined assurance case or goals
-	if (!(assuranceCase?.goals && Array.isArray(assuranceCase.goals))) {
+		// Handle null/undefined assurance case or goals
+		if (!(assuranceCase?.goals && Array.isArray(assuranceCase.goals))) {
+			return { caseNodes, caseEdges };
+		}
+
+		// Create nodes for each child array item
+		const goals = assuranceCase.goals;
+
+		// Propagate isDemo flag from case to each goal (and recursively to descendants)
+		const isDemo = !!(assuranceCase as Record<string, unknown>).isDemo;
+
+		// Create nodes recursively for goals and their children
+		caseNodes = createNodesRecursively(
+			goals as unknown as ConvertibleItem[],
+			"goal",
+			null,
+			undefined,
+			undefined,
+			isDemo
+		);
+
+		// Create edges for every node
+		caseEdges = createEdgesFromNodes(caseNodes);
+
 		return { caseNodes, caseEdges };
+	} catch (error) {
+		// The real cause of a conversion failure (e.g. edge-id generation)
+		// otherwise only surfaces as flow.tsx's generic "Failed to render
+		// diagram" toast — log it here, at the point it's thrown, then rethrow
+		// unchanged so callers' error handling is untouched.
+		logger.error("Case conversion failed", {
+			caseId: (assuranceCase as Record<string, unknown> | undefined)?.id,
+			error,
+		});
+		throw error;
 	}
-
-	// Create nodes for each child array item
-	const goals = assuranceCase.goals;
-
-	// Propagate isDemo flag from case to each goal (and recursively to descendants)
-	const isDemo = !!(assuranceCase as Record<string, unknown>).isDemo;
-
-	// Create nodes recursively for goals and their children
-	caseNodes = createNodesRecursively(
-		goals as unknown as ConvertibleItem[],
-		"goal",
-		null,
-		undefined,
-		undefined,
-		isDemo
-	);
-
-	// Create edges for every node
-	caseEdges = createEdgesFromNodes(caseNodes);
-
-	return { caseNodes, caseEdges };
 };
 
 // Helper function to create a single node

@@ -1,5 +1,7 @@
 import type { Node } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { generateUuid } from "@/lib/generate-uuid";
+import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import type {
 	EvidenceResponse,
 	GoalResponse,
@@ -12,6 +14,17 @@ import {
 	createEdgesFromNodes,
 	createNodesRecursively,
 } from "../convert-case";
+
+// Wraps the real implementation by default (see the factory below), so every
+// other test in this file still gets real UUIDs — only the error-logging
+// test below overrides it, once, with `mockImplementationOnce`.
+vi.mock("@/lib/generate-uuid", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/generate-uuid")>();
+	return {
+		...actual,
+		generateUuid: vi.fn(actual.generateUuid),
+	};
+});
 
 const UUID_V4_EDGE_ID_REGEX =
 	/^e[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -821,6 +834,51 @@ describe("convert-case utilities", () => {
 			// Should handle deep nesting without stack overflow
 			expect(result.caseNodes.length).toBeGreaterThan(1);
 			expect(result.caseEdges.length).toBeGreaterThan(0);
+		});
+
+		it("logs the thrown error with caseId via the structured logger, then rethrows unchanged", () => {
+			const conversionError = new Error("generateUuid unavailable");
+			vi.mocked(generateUuid).mockImplementationOnce(() => {
+				throw conversionError;
+			});
+			vi.stubEnv("LOG_LEVEL", "error");
+			const entries: LogEntry[] = [];
+			setLogSink((entry) => entries.push(entry));
+
+			try {
+				const brokenCase = {
+					id: "case-42",
+					goals: [
+						{
+							id: "goal-1",
+							type: "goal",
+							name: "Goal 1",
+							propertyClaims: [
+								{ id: "claim-1", type: "property_claim", name: "Claim 1" },
+							],
+						},
+					],
+				} as unknown as AssuranceCaseWithGoals;
+
+				// The thrown error still propagates to the caller (flow.tsx's catch).
+				expect(() => convertAssuranceCase(brokenCase)).toThrow(
+					"generateUuid unavailable"
+				);
+
+				expect(entries).toHaveLength(1);
+				expect(entries[0]).toMatchObject({
+					level: "error",
+					msg: "Case conversion failed",
+					caseId: "case-42",
+				});
+				expect(entries[0]?.error).toMatchObject({
+					name: "Error",
+					message: "generateUuid unavailable",
+				});
+			} finally {
+				vi.unstubAllEnvs();
+				resetLogSink();
+			}
 		});
 	});
 });
