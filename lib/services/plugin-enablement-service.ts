@@ -1,6 +1,7 @@
 import {
 	getManifestEntry,
 	isPluginAvailableForDeployment,
+	listManifestPluginIds,
 } from "@/lib/plugins/manifest";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -152,6 +153,25 @@ export async function isPluginEnabledForUser(
 ): Promise<boolean> {
 	const result = await assertPluginEnabledForUser(pluginId, userId);
 	return "data" in result;
+}
+
+/**
+ * Every official plugin id currently enabled for `userId` — deployment
+ * availability plus the full ORGANISATION -> TEAM -> USER scope chain, one
+ * check per manifest entry. Convenience for callers that need the whole
+ * enabled set rather than a yes/no on a single plugin id: the element-name-
+ * prefix validation seam (`lib/element-names/prefix-registry.ts`) accepts a
+ * plugin's extra name patterns only when its id is in this set, and passes
+ * the result straight through — it never queries plugin state itself.
+ */
+export async function getEnabledPluginIdsForUser(
+	userId: string
+): Promise<string[]> {
+	const pluginIds = listManifestPluginIds();
+	const enabledFlags = await Promise.all(
+		pluginIds.map((pluginId) => isPluginEnabledForUser(pluginId, userId))
+	);
+	return pluginIds.filter((_, index) => enabledFlags[index]);
 }
 
 /**

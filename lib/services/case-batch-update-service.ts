@@ -11,11 +11,13 @@ import type {
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
+import { validateElementName } from "@/lib/schemas/element-validation";
 import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
 	isSystemUserPrincipal,
 } from "@/lib/services/element-service";
+import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
@@ -69,6 +71,85 @@ async function validateAssertionStatusChanges(
 			return error;
 		}
 	}
+	return null;
+}
+
+/**
+ * TEA-syntax element-name prefix validation (design note "TEA — Element
+ * Name Prefix Validation", Chris's ruling: enforce on create AND rename).
+ * Applies the same `validateElementName` check the single-element route
+ * enforces (element-service.ts's `createElement`/`updateElement`) to every
+ * create/update this batch carries a name for — a batch containing even one
+ * non-conforming name is rejected in full, before anything is written,
+ * matching this file's other pre-transaction validators
+ * (`validateCreateParents`, `validateElementOwnership`). Names stay
+ * optional: a create/update that doesn't touch `name` (or sets it to
+ * null/empty) is never checked.
+ *
+ * The offending element's id is named in the error message, never the case
+ * — same convention as `validateElementOwnership`'s error shape.
+ */
+async function validateElementNames(
+	userId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const namedCreates = creates.filter((c) => c.data.name);
+	const namedUpdates = updates.filter((c) => c.data.name);
+
+	if (namedCreates.length === 0 && namedUpdates.length === 0) {
+		return null;
+	}
+
+	// An update's data only ever carries the fields that changed — its
+	// elementType isn't part of the diff payload at all — so a named
+	// update's target type has to be read back from the database. One
+	// batched fetch for every such update, instead of one findUnique per
+	// update that sets a name.
+	const updateTypeRows =
+		namedUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: namedUpdates.map((c) => c.elementId) } },
+					select: { id: true, elementType: true },
+				})
+			: [];
+	const updateTypeById = new Map(
+		updateTypeRows.map((r) => [r.id, r.elementType])
+	);
+
+	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
+
+	for (const change of namedCreates) {
+		const elementType = mapElementType(change.data.type);
+		const validation = validateElementName(
+			elementType,
+			change.data.name,
+			enabledPluginIds
+		);
+		if (!validation.valid) {
+			return `${validation.error} (element ${change.elementId})`;
+		}
+	}
+
+	for (const change of namedUpdates) {
+		const elementType = updateTypeById.get(change.elementId);
+		// Absent from the lookup means this id doesn't exist, or belongs to a
+		// different case — validateElementOwnership (which runs before this)
+		// already rejects both, so this is unreachable in practice; skipping
+		// keeps this validator side-effect-free rather than throwing.
+		if (!elementType) {
+			continue;
+		}
+		const validation = validateElementName(
+			elementType,
+			change.data.name,
+			enabledPluginIds
+		);
+		if (!validation.valid) {
+			return `${validation.error} (element ${change.elementId})`;
+		}
+	}
+
 	return null;
 }
 
@@ -1081,6 +1162,15 @@ export async function applyBatchUpdate(
 	const updateParentError = await validateUpdateParents(updates);
 	if (updateParentError) {
 		return { error: updateParentError };
+	}
+
+	// TEA-syntax element-name prefix validation — same rule, same choke
+	// point shape as the single-element route (element-service.ts's
+	// createElement/updateElement), applied here so a rename or create
+	// through the JSON editor can't bypass it.
+	const nameFormatError = await validateElementNames(userId, creates, updates);
+	if (nameFormatError) {
+		return { error: nameFormatError };
 	}
 
 	try {

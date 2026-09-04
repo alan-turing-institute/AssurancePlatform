@@ -161,7 +161,7 @@ describe("defeatsElementId — cases barret's suite didn't cover", () => {
 		// Update an unrelated field only — defeatsElementId is not in the input.
 		const data = expectSuccess(
 			await updateElement(owner.id, element.id, {
-				name: "Renamed, defeatsElementId untouched",
+				name: "P2",
 			})
 		);
 		expect(data.defeatsElementId).toBe(target.id);
@@ -435,7 +435,7 @@ describe("id-reuse-class bypass check (style of batch-ownership-adversarial.test
 			// @ts-expect-error — id is not part of CreateElementInput; this is
 			// exactly the adversarial payload shape to probe for.
 			id: victim.id,
-			name: "Attempted collision",
+			name: "S1",
 		});
 
 		expectSuccess(result);

@@ -8,6 +8,7 @@
  *   - Collection plural: "goals", "strategies", "propertyclaims", "evidence"
  */
 
+import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import type { ElementType as PrismaElementType } from "@/src/generated/prisma";
 
 // Re-export from element-validation for backward compatibility
@@ -60,17 +61,22 @@ export function toDisplayType(prismaType: string): string {
 /**
  * Prisma UPPERCASE → prefix for auto-generated names.
  *
- * "GOAL" → "G", "STRATEGY" → "S", "PROPERTY_CLAIM" → "P", "EVIDENCE" → "E"
+ * "GOAL" → "G", "STRATEGY" → "S", "PROPERTY_CLAIM" → "P", "EVIDENCE" → "E",
+ * and so on for all ten element types — reads from the single-source
+ * prefix table (`lib/element-names/prefix-registry.ts`) rather than keeping
+ * its own copy. Throws for a type that table doesn't know, rather than the
+ * old silent "X" fallback: every value of the Prisma `ElementType` enum has
+ * a registered prefix, so reaching this branch means a genuinely unknown
+ * type reached element-naming code, which is a bug worth surfacing.
  */
 export function toPrefix(prismaType: string): string {
-	const prefixes: Record<string, string> = {
-		GOAL: "G",
-		STRATEGY: "S",
-		PROPERTY_CLAIM: "P",
-		EVIDENCE: "E",
-		CONTEXT: "C",
-	};
-	return prefixes[prismaType] ?? "X";
+	const prefix = getCorePrefix(prismaType);
+	if (!prefix) {
+		throw new Error(
+			`toPrefix: no prefix registered for element type '${prismaType}'`
+		);
+	}
+	return prefix;
 }
 
 /**

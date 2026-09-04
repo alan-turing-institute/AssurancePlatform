@@ -264,6 +264,22 @@ Table assurance_elements {
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
 
+Table element_name_backfill {
+  id String [pk]
+  elementId String [not null]
+  oldName String [not null]
+  newName String [not null]
+  migratedAt DateTime [default: `now()`, not null]
+
+  Note: 'Audit trail for the one-off element-name-prefix backfill migration
+(`prisma/migrations/*_element_name_prefix_backfill`): every element whose
+stored name didn\'t conform to its type\'s TEA-syntax prefix format got a
+row here recording old_name -> new_name before the rename, so a support
+query (or a down-migration) can restore it. No FK to AssuranceElement
+deliberately — this is an audit trail, not a live relation, and should
+survive even if the source element is later hard-purged.'
+}
+
 Table evidence_links {
   id String [pk]
   evidenceId String [not null, note: 'The evidence element']

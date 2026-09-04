@@ -129,6 +129,13 @@ const ERROR_MAPPINGS: Array<{
 	// (integration management API, work item 7): an unknown scope is a
 	// validation failure (400), not an unmapped 500.
 	{ pattern: /^Unknown scope/, factory: () => validationError("") },
+	// `element-service.ts`'s `createElement`: an unrecognised `type`/
+	// `elementType` (schema-level, `lib/schemas/element.ts`'s
+	// `elementTypeSchema`, only checks it's a non-empty string — a bad value
+	// reaches the service) is a validation failure (400), not a 500. Without
+	// this guard the bad type used to reach `generateElementName` -> `toPrefix`,
+	// which throws for anything the prefix registry doesn't know.
+	{ pattern: /^Unknown element type/, factory: () => validationError("") },
 	// `element-service.ts`'s `rejectDeclaredAsCited` (ADR 0004 D3): AS_CITED
 	// is machine-derived from the cited element's own status, never author-
 	// declared — a rejected write is a validation failure (400), not a 500.
@@ -151,6 +158,22 @@ const ERROR_MAPPINGS: Array<{
 	// self-reference target) is a validation failure (400), not a 500 —
 	// same shape as citedElementId/moduleReferenceId above.
 	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
+	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
+	// element-name prefix validation): a name that doesn't match its type's
+	// registered prefix format is a validation failure (400), not a 500.
+	// `describeExpectedFormat` (prefix-registry.ts) produces one of two exact
+	// shapes depending on whether the type is one of the ten known core
+	// types — "<Type> names must look like ..." normally, or the generic
+	// "Names must follow this element type's registered format" fallback for
+	// a type it doesn't recognise — both matched here rather than a single
+	// pattern, so an unrecognised element type's name error doesn't fall
+	// through to an unmapped 500 the way the type itself once did. Neither
+	// alternative is a generic word, so an unrelated service error
+	// mentioning "names" for a different reason isn't misclassified.
+	{
+		pattern: / names must look like | element type's registered format/,
+		factory: () => validationError(""),
+	},
 	// Lifecycle/state-guard errors from the integration registry service —
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state

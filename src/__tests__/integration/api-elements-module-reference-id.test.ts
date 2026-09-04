@@ -55,7 +55,7 @@ describe("POST /api/cases/[id]/elements — moduleReferenceId", () => {
 				method: "POST",
 				body: JSON.stringify({
 					type: "away_goal",
-					name: "Reference",
+					name: "AG1",
 					description: "Cites another case",
 					moduleReferenceId: awayCase.id,
 				}),

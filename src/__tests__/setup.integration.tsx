@@ -52,6 +52,7 @@ afterEach(async () => {
         case_team_permissions,
         case_permissions,
         plugin_data,
+        element_name_backfill,
         assurance_elements,
         assurance_cases,
         pattern_permissions,

@@ -513,6 +513,24 @@ enum ModuleEmbedType {
   REFERENCE
 }
 
+/// Audit trail for the one-off element-name-prefix backfill migration
+/// (`prisma/migrations/*_element_name_prefix_backfill`): every element whose
+/// stored name didn't conform to its type's TEA-syntax prefix format got a
+/// row here recording old_name -> new_name before the rename, so a support
+/// query (or a down-migration) can restore it. No FK to AssuranceElement
+/// deliberately — this is an audit trail, not a live relation, and should
+/// survive even if the source element is later hard-purged.
+model ElementNameBackfill {
+  id         String   @id @default(uuid())
+  elementId  String   @map("element_id")
+  oldName    String   @map("old_name")
+  newName    String   @map("new_name")
+  migratedAt DateTime @default(now()) @map("migrated_at")
+
+  @@index([elementId])
+  @@map("element_name_backfill")
+}
+
 /// Links evidence elements to claims (many-to-many). One piece of evidence can support multiple claims.
 model EvidenceLink {
   id         String           @id @default(uuid())

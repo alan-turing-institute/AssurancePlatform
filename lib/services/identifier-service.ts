@@ -1,4 +1,5 @@
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
+import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
@@ -7,13 +8,21 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 // Constants & types
 // ---------------------------------------------------------------------------
 
-const TYPE_PREFIXES: Record<string, string> = {
-	GOAL: "G",
-	STRATEGY: "S",
-	PROPERTY_CLAIM: "P",
-	EVIDENCE: "E",
-	CONTEXT: "C",
-};
+/**
+ * Looks up an element type's prefix in the single-source registry
+ * (`lib/element-names/prefix-registry.ts`), throwing rather than falling
+ * back to "X" — every value of the Prisma `ElementType` enum has a
+ * registered prefix, so an unknown type here is a bug, not expected input.
+ */
+function corePrefixOrThrow(elementType: string): string {
+	const prefix = getCorePrefix(elementType);
+	if (!prefix) {
+		throw new Error(
+			`identifier-service: no prefix registered for element type '${elementType}'`
+		);
+	}
+	return prefix;
+}
 
 interface ElementWithChildren {
 	children: ElementWithChildren[];
@@ -161,7 +170,7 @@ function collectEffectivePropertyClaimChildren(
  */
 function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
 	const { node, parentName, parentType, roots, globalCounters } = options;
-	const prefix = TYPE_PREFIXES.PROPERTY_CLAIM;
+	const prefix = corePrefixOrThrow("PROPERTY_CLAIM");
 
 	if (parentType === "PROPERTY_CLAIM" && parentName) {
 		// Sub-property claim: use parent's name as base
@@ -223,7 +232,7 @@ function generateHierarchicalNames(
 				globalCounters,
 			});
 		} else {
-			const prefix = TYPE_PREFIXES[node.elementType] || "X";
+			const prefix = corePrefixOrThrow(node.elementType);
 			const count = (globalCounters[node.elementType] || 0) + 1;
 			globalCounters[node.elementType] = count;
 			newName = `${prefix}${count}`;

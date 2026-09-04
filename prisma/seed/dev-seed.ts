@@ -272,7 +272,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: simpleGoal.id,
-					name: "C1",
+					name: "P1",
 					description: "All inputs are validated",
 					createdById: chris.id,
 				},
@@ -284,7 +284,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: simpleGoal.id,
-					name: "C2",
+					name: "P2",
 					description: "Error handling is comprehensive",
 					createdById: chris.id,
 				},
@@ -385,7 +385,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy1.id,
-					name: "C1",
+					name: "P1",
 					description: "Model achieves >95% accuracy on test set",
 					createdById: chris.id,
 				},
@@ -397,7 +397,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy1.id,
-					name: "C2",
+					name: "P2",
 					description: "Model performance is consistent across validation sets",
 					createdById: chris.id,
 				},
@@ -409,7 +409,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy2.id,
-					name: "C3",
+					name: "P3",
 					description: "No significant bias across protected characteristics",
 					createdById: chris.id,
 				},
@@ -421,7 +421,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy2.id,
-					name: "C4",
+					name: "P4",
 					description: "Bias testing follows industry best practices",
 					createdById: chris.id,
 				},
@@ -527,7 +527,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: aliceGoal.id,
-					name: "C1",
+					name: "P1",
 					description: "All team members can access shared resources",
 					createdById: alice.id,
 				},
@@ -589,7 +589,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: bobGoal.id,
-					name: "C1",
+					name: "P1",
 					description: "External users can view shared cases",
 					createdById: bob.id,
 				},
@@ -626,7 +626,7 @@ async function main() {
 			// 3e. DARTER Demo Case (chris) - Draft, keystone demo target.
 			// Deterministic name/description so the demo documentation and the
 			// DARTER integration registration (below, after this transaction
-			// commits) can point at this case and its C1 claim by name. C1 is
+			// commits) can point at this case and its P1 claim by name. P1 is
 			// deliberately left WITHOUT a static EvidenceLink — it's the
 			// keystone claim whose badge flips live when the DARTER pipeline
 			// posts its first evidence-format-v0.1 item through the health
@@ -689,7 +689,7 @@ async function main() {
 				},
 			});
 
-			// C1 is the keystone evidence target for the DARTER integration —
+			// P1 is the keystone evidence target for the DARTER integration —
 			// intentionally created with NO EvidenceLink below.
 			const demoClaim1 = await tx.assuranceElement.create({
 				data: {
@@ -697,7 +697,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy1.id,
-					name: "C1",
+					name: "P1",
 					description:
 						"Defect detection recall remains above the operational threshold in production monitoring",
 					createdById: chris.id,
@@ -710,7 +710,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy1.id,
-					name: "C2",
+					name: "P2",
 					description: "False-positive rate remains within acceptable bounds",
 					createdById: chris.id,
 				},
@@ -722,7 +722,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy2.id,
-					name: "C3",
+					name: "P3",
 					description:
 						"Low-confidence detections are escalated to human review",
 					createdById: chris.id,
@@ -735,7 +735,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy2.id,
-					name: "C4",
+					name: "P4",
 					description: "Operators can override automated detections",
 					createdById: chris.id,
 				},
@@ -786,7 +786,7 @@ async function main() {
 			});
 
 			console.log(
-				"Created: DARTER Demo — Automated Inspection Assurance (Draft, chris, C1 reserved for live health-plugin evidence)"
+				"Created: DARTER Demo — Automated Inspection Assurance (Draft, chris, P1 reserved for live health-plugin evidence)"
 			);
 
 			// ============================================
@@ -922,7 +922,7 @@ async function main() {
 	console.log("    - Alice's Case (alice, Draft, team shared)");
 	console.log("    - Bob's Case (bob, Draft, shared with charlie)");
 	console.log(
-		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim C1 id=${demoClaim1Id} is the live evidence target)`
+		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim P1 id=${demoClaim1Id} is the live evidence target)`
 	);
 	console.log("  - 2 comments on Medium Case");
 	console.log(
