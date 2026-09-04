@@ -1,122 +1,177 @@
 "use client";
 
+import Link from "next/link";
+import { useNextStep } from "nextstepjs";
+import { useMemo, useState } from "react";
 import {
-	BookOpenText,
-	Database,
-	FolderOpenDot,
-	Goal,
-	Route,
-} from "lucide-react";
-import React from "react";
-import { Modal } from "@/components/ui/modal";
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import { useHelpModal } from "@/hooks/modal-hooks";
-import { cn } from "@/lib/utils";
+import {
+	CANVAS_OPTION_GUIDE,
+	ELEMENT_GUIDE,
+	type HelpGuideEntry,
+} from "@/lib/help/help-guide";
+import useStore from "@/store/store";
+
+/** Case-insensitive match against an entry's title and body text. */
+function matchesQuery(entry: HelpGuideEntry, query: string): boolean {
+	if (!query) {
+		return true;
+	}
+	const haystack =
+		`${entry.title} ${entry.summary} ${entry.guidance}`.toLowerCase();
+	return haystack.includes(query);
+}
+
+interface HelpGuideSectionProps {
+	entries: HelpGuideEntry[];
+	title: string;
+}
+
+function HelpGuideSection({ entries, title }: HelpGuideSectionProps) {
+	if (entries.length === 0) {
+		return null;
+	}
+
+	return (
+		<div>
+			<h3 className="mb-2 font-semibold text-foreground text-sm uppercase tracking-wide">
+				{title}
+			</h3>
+			<Accordion collapsible type="single">
+				{entries.map((entry) => (
+					<AccordionItem key={entry.id} value={entry.id}>
+						<AccordionTrigger>{entry.title}</AccordionTrigger>
+						<AccordionContent className="flex flex-col gap-2 text-sm">
+							<p>{entry.summary}</p>
+							<p>{entry.guidance}</p>
+							{entry.naming && (
+								<p className="text-muted-foreground">
+									How it is named: {entry.naming}
+								</p>
+							)}
+							{entry.docsHref && (
+								<a
+									className="text-primary underline"
+									href={entry.docsHref}
+									rel="noopener noreferrer"
+									target="_blank"
+								>
+									Read more in the docs
+									<span className="sr-only"> (opens in new tab)</span>
+								</a>
+							)}
+						</AccordionContent>
+					</AccordionItem>
+				))}
+			</Accordion>
+		</div>
+	);
+}
 
 /**
- * Help modal — the element-legend content formerly shown by the toolbar's
- * "Resources" button. Mechanically relocated behind a new "?" Help button
- * when the ⓘ button was repurposed as "Case Information" (ADR 0003
- * implementation shape §2); content is unchanged. A genuine redesign of
- * this modal is tracked separately (not this issue's scope).
+ * Help sheet — a searchable guide to the canvas's element types and toolbar
+ * options, opened by the toolbar's "?" button (`components/cases/
+ * action-buttons.tsx`, `data-testid="toolbar-help"`) via the same
+ * `useHelpModal` hook as before. Replaces the centred dialog that carried
+ * the same content under the name "Element Legend".
  */
 export const HelpModal = () => {
 	const helpModal = useHelpModal();
+	const { assuranceCase } = useStore();
+	const { startNextStep } = useNextStep();
+	const [query, setQuery] = useState("");
 
-	const components: {
-		title: string;
-		icon: React.ReactElement;
-		href: string;
-		description: string;
-	}[] = [
-		{
-			title: "Top-Level Goal Claim",
-			icon: <Goal />,
-			href: "/docs/curriculum/quick-reference/02-element-types#goal-claims",
-			description:
-				"A statement asserting a desirable property or characteristic of the system or technology under consideration.",
-		},
-		{
-			title: "Property Claim",
-			icon: <FolderOpenDot />,
-			href: "/docs/curriculum/quick-reference/02-element-types#property-claims",
-			description:
-				"A statement that helps specify the top-level goal claim and defines a measurable requirement for the project or system under consideration",
-		},
-		{
-			title: "Strategy",
-			icon: <Route />,
-			href: "/docs/curriculum/quick-reference/02-element-types#strategies",
-			description:
-				"A course of action or approach that can help break the task of assuring a top-level goal claim into a set of related property claims.",
-		},
-		{
-			title: "Evidence",
-			icon: <Database />,
-			href: "/docs/curriculum/quick-reference/02-element-types#evidence",
-			description:
-				"An artefact that justifies a linked property claim's validity and grounds an assurance case.",
-		},
-		{
-			title: "Context",
-			icon: <BookOpenText />,
-			href: "/docs/curriculum/quick-reference/02-element-types#context",
-			description:
-				"Additional information that clarifies the scope or boundary conditions of a top-level goal claim.",
-		},
-	];
+	const normalisedQuery = query.trim().toLowerCase();
+
+	const filteredElements = useMemo(
+		() => ELEMENT_GUIDE.filter((entry) => matchesQuery(entry, normalisedQuery)),
+		[normalisedQuery]
+	);
+	const filteredCanvasOptions = useMemo(
+		() =>
+			CANVAS_OPTION_GUIDE.filter((entry) =>
+				matchesQuery(entry, normalisedQuery)
+			),
+		[normalisedQuery]
+	);
+	const hasResults =
+		filteredElements.length > 0 || filteredCanvasOptions.length > 0;
+
+	const handleOpenChange = (open: boolean) => {
+		if (!open) {
+			helpModal.onClose();
+		}
+	};
+
+	const handleRestartTour = () => {
+		helpModal.onClose();
+		startNextStep(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
+	};
 
 	return (
-		<Modal
-			classNames="min-w-[800px]"
-			description="Here is some useful information about each element, select each to find out more."
-			isOpen={helpModal.isOpen}
-			onClose={helpModal.onClose}
-			title="Element Legend"
-		>
-			<ul className="grid gap-3 py-2 md:grid-cols-2">
-				{components.map((component) => (
-					<ListItem
-						className="group"
-						href={component.href}
-						key={component.title}
-						target="_blank"
-					>
-						<div className="flex items-center justify-start gap-3 pb-2 font-bold text-foreground group-hover:text-primary-foreground">
-							{component.icon}
-							{component.title}
-						</div>
-						{component.description}
-					</ListItem>
-				))}
-			</ul>
-		</Modal>
+		<Sheet onOpenChange={handleOpenChange} open={helpModal.isOpen}>
+			<SheetContent
+				className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-xl"
+				data-testid="help-sheet"
+			>
+				<SheetHeader>
+					<SheetTitle>Help</SheetTitle>
+					<SheetDescription>
+						A guide to the canvas's elements and toolbar options.
+					</SheetDescription>
+				</SheetHeader>
+
+				<div>
+					<label className="sr-only" htmlFor="help-search">
+						Search help
+					</label>
+					<Input
+						id="help-search"
+						onChange={(event) => setQuery(event.target.value)}
+						placeholder="Search elements and options"
+						type="search"
+						value={query}
+					/>
+				</div>
+
+				<div className="flex-1 space-y-6 overflow-y-auto">
+					{hasResults ? (
+						<>
+							<HelpGuideSection entries={filteredElements} title="Elements" />
+							<HelpGuideSection
+								entries={filteredCanvasOptions}
+								title="Canvas options"
+							/>
+						</>
+					) : (
+						<p className="text-muted-foreground text-sm">No matches.</p>
+					)}
+				</div>
+
+				<SheetFooter className="flex-row items-center justify-between gap-2 sm:justify-between">
+					<Button onClick={handleRestartTour} type="button" variant="outline">
+						Restart the tour
+					</Button>
+					<Button asChild variant="ghost">
+						<Link href="/docs">Full documentation</Link>
+					</Button>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet>
 	);
 };
-
-const ListItem = React.forwardRef<
-	React.ElementRef<"a">,
-	React.ComponentPropsWithoutRef<"a">
->(({ className, title, children, ...props }, ref) => (
-	<li>
-		<a
-			className={cn(
-				"group block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden hover:bg-primary hover:text-primary-foreground",
-				className
-			)}
-			ref={ref}
-			rel="noopener noreferrer"
-			{...props}
-		>
-			<div className="font-medium text-sm leading-none group-hover:text-primary-foreground">
-				{title}
-			</div>
-			<div className="text-muted-foreground text-sm leading-snug group-hover:text-primary-foreground">
-				{children}
-			</div>
-			{props.target === "_blank" && (
-				<span className="sr-only">(opens in new tab)</span>
-			)}
-		</a>
-	</li>
-));
-ListItem.displayName = "ListItem";
