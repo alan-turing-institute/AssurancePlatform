@@ -1,46 +1,19 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
-import ActionTooltip from "@/components/ui/action-tooltip";
 import { useNodeTopRightActions } from "@/hooks/use-node-top-right-actions";
-import NodeAddPopover from "./node-add-popover";
+import AddChildTrigger from "./add-child-trigger";
 import NodeEditDialog from "./node-edit-dialog";
 import ToggleButton from "./toggle-button";
 
-const ADD_CHILD_LABEL = "Add child element";
-
 function PropertyNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
-	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
 	const topRightActions = useNodeTopRightActions(data, "property");
-
-	const addPopover = (
-		<NodeAddPopover
-			node={node}
-			nodeType="property"
-			onOpenChange={setAddPopoverOpen}
-			open={addPopoverOpen}
-		>
-			<ActionTooltip label={ADD_CHILD_LABEL}>
-				<button
-					aria-label={ADD_CHILD_LABEL}
-					onClick={(e) => e.stopPropagation()}
-					onMouseDown={(e) => e.stopPropagation()}
-					type="button"
-				>
-					<div className="inline-flex rounded-full p-1 hover:bg-foreground/10">
-						<Plus aria-hidden="true" size={16} />
-					</div>
-				</button>
-			</ActionTooltip>
-		</NodeAddPopover>
-	);
 
 	const dataTour =
 		data.isDemo && data.name === "P1" ? "demo-claim-1" : undefined;
@@ -51,7 +24,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				assumption={data.assumption}
 				bottomLeftActions={
 					<NodeActionGroup
-						addPopover={addPopover}
+						addPopover={<AddChildTrigger node={node} nodeType="property" />}
 						commentCount={
 							Array.isArray(data.comments) ? data.comments.length : 0
 						}
