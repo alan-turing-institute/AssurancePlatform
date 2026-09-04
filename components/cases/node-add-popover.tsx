@@ -7,8 +7,8 @@ import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import { Button } from "@/components/ui/button";
 import {
 	Popover,
-	PopoverAnchor,
 	PopoverContent,
+	PopoverTrigger,
 } from "@/components/ui/popover";
 import NodeAddDialog from "./node-add-dialog";
 
@@ -137,7 +137,7 @@ export default function NodeAddPopover({
 			(`disableOutsidePointerEvents`), so the canvas never intercepts the
 			click in the first place. */}
 			<Popover modal onOpenChange={onOpenChange} open={open}>
-				<PopoverAnchor className="inline-flex">{children}</PopoverAnchor>
+				<PopoverTrigger asChild>{children}</PopoverTrigger>
 				<PopoverContent align="start" className="w-56 p-2" side="top">
 					<div className="flex flex-col gap-1">
 						<p className="mb-1 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
