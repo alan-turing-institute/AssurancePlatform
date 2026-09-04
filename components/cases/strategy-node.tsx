@@ -27,6 +27,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
 		>
 			<ActionTooltip label="Add child element">
 				<button
+					aria-label="Add child element"
 					onClick={(e) => {
 						e.stopPropagation();
 						setAddPopoverOpen(true);

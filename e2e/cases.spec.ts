@@ -120,7 +120,9 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		const editButton = page.locator("button:has(svg.lucide-pencil)").first();
+		const editButton = page
+			.getByRole("button", { name: "Edit element" })
+			.first();
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 
@@ -171,7 +173,9 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		const editButton = page.locator("button:has(svg.lucide-pencil)").first();
+		const editButton = page
+			.getByRole("button", { name: "Edit element" })
+			.first();
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 
@@ -217,7 +221,9 @@ test.describe("Case management", () => {
 		await dashboard.caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
-		const editButton = page.locator("button:has(svg.lucide-pencil)").first();
+		const editButton = page
+			.getByRole("button", { name: "Edit element" })
+			.first();
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 

@@ -396,6 +396,7 @@ export default function NodeOptionsMenu({
 				<ActionTooltip label="More options">
 					<DropdownMenuTrigger asChild>
 						<button
+							aria-label="More options"
 							onClick={(e) => e.stopPropagation()}
 							onMouseDown={(e) => e.stopPropagation()}
 							type="button"

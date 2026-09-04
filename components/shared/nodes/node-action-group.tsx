@@ -69,6 +69,7 @@ export default function NodeActionGroup({
 			{/* Edit Button */}
 			<ActionTooltip label={readOnly ? "View details" : "Edit element"}>
 				<button
+					aria-label={readOnly ? "View details" : "Edit element"}
 					onClick={handleEditClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"
@@ -92,6 +93,11 @@ export default function NodeActionGroup({
 				}
 			>
 				<button
+					aria-label={
+						commentCount > 0
+							? `View comments (${commentCount})`
+							: "View comments"
+					}
 					onClick={handleCommentClick}
 					onMouseDown={(e) => e.stopPropagation()}
 					type="button"

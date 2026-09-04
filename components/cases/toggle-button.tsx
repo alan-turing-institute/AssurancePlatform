@@ -145,6 +145,7 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 	return (
 		<ActionTooltip label="Show/Hide children">
 			<button
+				aria-label="Show/Hide children"
 				onClick={(e) => handleToggle2(e)}
 				onMouseDown={(e) => e.stopPropagation()}
 				type="button"
