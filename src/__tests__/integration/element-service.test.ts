@@ -263,6 +263,164 @@ describe("element-service", () => {
 				"Element not found"
 			);
 		});
+
+		describe("parent change", () => {
+			it("detaches the element when parentId is set to null", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const strategy = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: goal.id,
+					})
+				);
+
+				expectSuccess(
+					await updateElement(user.id, strategy.id, { parentId: null })
+				);
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: strategy.id },
+				});
+				expect(inDb?.parentId).toBeNull();
+			});
+
+			it("returns 'Element not found' when the new parent doesn't exist or is in a different case, leaving the parent unchanged", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const otherCase = await createTestCase(user.id);
+
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const strategy = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: goal.id,
+					})
+				);
+				const otherGoal = expectSuccess(
+					await createElement(user.id, {
+						caseId: otherCase.id,
+						elementType: "goal",
+					})
+				);
+
+				// Non-existent parent id
+				expectError(
+					await updateElement(user.id, strategy.id, {
+						parentId: "00000000-0000-0000-0000-000000000000",
+					}),
+					"Element not found"
+				);
+
+				// Parent id from a different case
+				expectError(
+					await updateElement(user.id, strategy.id, {
+						parentId: otherGoal.id,
+					}),
+					"Element not found"
+				);
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: strategy.id },
+				});
+				expect(inDb?.parentId).toBe(goal.id);
+			});
+
+			it("rejects moving an element under its own descendant", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const strategy = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: goal.id,
+					})
+				);
+				const claim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: strategy.id,
+					})
+				);
+
+				expectError(
+					await updateElement(user.id, strategy.id, { parentId: claim.id }),
+					"Cannot move element to one of its descendants"
+				);
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: strategy.id },
+				});
+				expect(inDb?.parentId).toBe(goal.id);
+			});
+
+			it("moves a PROPERTY_CLAIM to a new PROPERTY_CLAIM parent and recalculates its level", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const strategy = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: goal.id,
+					})
+				);
+				// Top-level claim (parent is a strategy-under-goal) — level 1
+				const movingClaim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: strategy.id,
+					})
+				);
+				// Another top-level claim, to become the new parent — level 1
+				const newParentClaim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: strategy.id,
+					})
+				);
+
+				expectSuccess(
+					await updateElement(user.id, movingClaim.id, {
+						parentId: newParentClaim.id,
+					})
+				);
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: movingClaim.id },
+				});
+				expect(inDb?.parentId).toBe(newParentClaim.id);
+				// calculateNewLevel: PROPERTY_CLAIM parent -> parent.level + 1
+				expect(inDb?.level).toBe(2);
+			});
+		});
 	});
 
 	describe("deleteElement", () => {
