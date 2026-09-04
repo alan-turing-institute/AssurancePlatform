@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import { resolveDbPoolTimeoutMs } from "@/lib/db-pool-config";
 import {
 	cleanElementDataForType,
 	validateElementData,
@@ -128,9 +129,17 @@ function createExtendedPrismaClient() {
 	// erroring at ~3000ms with it set. Any transient contention for
 	// connections — not just this route — was previously invisible until it
 	// resolved or the client itself gave up.
+	//
+	// The value is env-tunable via `DB_POOL_TIMEOUT_MS` (default 5000,
+	// `lib/db-pool-config.ts`), so a deployment with slower/further-away
+	// Postgres can widen it without a code change. `lib/errors.ts` reads the
+	// same resolved value when it logs a detected pool-acquisition timeout.
 	const pool =
 		globalForPrisma.pgPool ||
-		new Pool({ connectionString: databaseUrl, connectionTimeoutMillis: 5000 });
+		new Pool({
+			connectionString: databaseUrl,
+			connectionTimeoutMillis: resolveDbPoolTimeoutMs(),
+		});
 	if (process.env.NODE_ENV !== "production") {
 		globalForPrisma.pgPool = pool;
 	}

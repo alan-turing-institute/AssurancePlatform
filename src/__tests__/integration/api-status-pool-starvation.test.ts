@@ -87,7 +87,7 @@ describe("GET /api/cases/[id]/status — pool-starvation regression", () => {
 		});
 	});
 
-	it("pool exhaustion surfaces as 500/INTERNAL — the pool's own fast error — not 504", async () => {
+	it("pool exhaustion surfaces as 503/DB_UNAVAILABLE — distinct from a generic 500 — not 504", async () => {
 		const user = await createTestUser();
 		const testCase = await createTestCaseWithGoal(user.id);
 		await mockAuth(user.id, user.username, user.email);
@@ -98,22 +98,22 @@ describe("GET /api/cases/[id]/status — pool-starvation regression", () => {
 				params: Promise.resolve({ id: testCase.id }),
 			});
 
-			// This is DELIBERATE current behaviour, not a bug (vincent's review,
-			// nanaki's QA, 2026-08-20). Pool-acquisition contention throws pg's
-			// own plain `Error('timeout exceeded when trying to connect')` —
-			// `handleError` (`lib/errors.ts`) only special-cases `TimeoutError`
-			// (`lib/with-timeout.ts`, matched by `.name`), so this falls through
-			// to the generic 500/INTERNAL branch. The route's 504/GATEWAY_TIMEOUT
-			// path is a *different* backstop that only fires when `withTimeout`
-			// itself elapses (slow-but-not-erroring work) — pool exhaustion never
-			// reaches it because the pool errors out first, well inside the 15s
-			// budget. This is loud and fast (the fix's goal), but indistinguishable
-			// from any other internal error in production logs — tracked
-			// internally as a follow-up (a tagged pool-timeout ErrorCode /
-			// structured log, per vincent's review).
-			expect(response.status).toBe(500);
+			// Pool-acquisition contention throws pg's own plain
+			// `Error('timeout exceeded when trying to connect')`. `handleError`
+			// (`lib/errors.ts`) now recognises that message (and pg-pool's other
+			// connection-timeout message) before falling through to the generic
+			// INTERNAL branch, and maps it to the dedicated DB_UNAVAILABLE code
+			// (503) — distinguishable in the API envelope and in logs (a
+			// `db.pool.acquire_timeout` structured log line) from an unrelated
+			// bug, which a generic 500/INTERNAL was not. See "TEA — Pool-timeout
+			// errors indistinguishable from generic 500s". The route's
+			// 504/GATEWAY_TIMEOUT path remains a *different* backstop that only
+			// fires when `withTimeout` itself elapses (slow-but-not-erroring
+			// work) — pool exhaustion never reaches it because the pool errors
+			// out first, well inside the 15s budget.
+			expect(response.status).toBe(503);
 			const body = await response.json();
-			expect(body.code).toBe("INTERNAL");
+			expect(body.code).toBe("DB_UNAVAILABLE");
 		});
 	});
 });

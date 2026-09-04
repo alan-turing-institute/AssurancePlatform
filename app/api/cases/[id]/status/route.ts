@@ -24,8 +24,9 @@ import type { PublishStatus as PrismaPublishStatus } from "@/src/generated/prism
 //
 // The two timeouts therefore cover different failure shapes, on purpose:
 // pool-acquisition contention surfaces as the pool's own fast error (pg
-// rejects at ~5s, mapped to a generic 500/INTERNAL — see
-// `api-status-pool-starvation.test.ts`), while this 15s `withTimeout` is
+// rejects at ~5s), which `handleError`'s `isPoolAcquireTimeoutError` check
+// (`lib/errors.ts`) matches and maps to 503/DB_UNAVAILABLE — see
+// `api-status-pool-starvation.test.ts` — while this 15s `withTimeout` is
 // the backstop for slow-but-not-erroring work with no bounded wait of its
 // own (mapped to 504/GATEWAY_TIMEOUT). Pool exhaustion never reaches the
 // 504 path, because the pool errors out first.

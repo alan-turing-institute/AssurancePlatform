@@ -5,8 +5,10 @@
  * OAuth tokens. Used for backing up and importing assurance cases.
  */
 
+import { Readable } from "node:stream";
 import { google } from "googleapis";
 import type { ErrorCode } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 const FOLDER_NAME = "TEA Platform Backups";
@@ -49,7 +51,9 @@ export interface DownloadResult {
 
 /**
  * Maps Google Drive error codes to application error codes.
- * Moved here from the route layer so callers can use it without coupling to the route.
+ * The single definition — routes import this rather than keeping their own
+ * copy (previously duplicated in `app/api/cases/backup/gdrive/route.ts` and
+ * `app/api/cases/import/gdrive/route.ts`).
  */
 export const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
 	NO_TOKEN: "FORBIDDEN",
@@ -72,13 +76,80 @@ function createDriveError(
 }
 
 /**
- * Retrieves and potentially refreshes the user's Google tokens.
- * Returns null if no token or refresh fails.
+ * Extracts an HTTP status code from a thrown Drive API error, when the SDK
+ * (`googleapis`, via `gaxios`) attaches one — either directly on the error
+ * (`GaxiosError#status`) or on a nested `response.status`. Returns
+ * `undefined` for anything else (network errors, non-HTTP failures), so
+ * callers fall back to the generic `API_ERROR` code.
  */
-async function getUserGoogleTokens(userId: string): Promise<{
-	accessToken: string;
-	refreshToken: string | null;
-} | null> {
+function extractHttpStatus(error: unknown): number | undefined {
+	if (typeof error !== "object" || error === null) {
+		return undefined;
+	}
+	// Cast is explained: `error` is an SDK-thrown value of unknown shape, not
+	// a type this module defines — narrowing by reading fields defensively is
+	// the only option.
+	const record = error as Record<string, unknown>;
+	if (typeof record.status === "number") {
+		return record.status;
+	}
+	const response = record.response;
+	if (typeof response === "object" && response !== null) {
+		const responseStatus = (response as Record<string, unknown>).status;
+		if (typeof responseStatus === "number") {
+			return responseStatus;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Maps a thrown Drive API error to the truthful `GoogleDriveErrorCode`: a
+ * 403 is FORBIDDEN, a 404 is NOT_FOUND, everything else stays the generic
+ * API_ERROR every catch block here used unconditionally before this existed.
+ */
+function classifyGoogleApiError(error: unknown): GoogleDriveErrorCode {
+	const status = extractHttpStatus(error);
+	if (status === 403) {
+		return "FORBIDDEN";
+	}
+	if (status === 404) {
+		return "NOT_FOUND";
+	}
+	return "API_ERROR";
+}
+
+/** Builds a `GoogleDriveError` from a caught value, classifying its code. */
+function driveErrorFromCaught(
+	error: unknown,
+	fallbackMessage: string
+): GoogleDriveError {
+	return createDriveError(
+		classifyGoogleApiError(error),
+		error instanceof Error ? error.message : fallbackMessage
+	);
+}
+
+type TokenFetchResult =
+	| { accessToken: string; refreshToken: string | null }
+	| {
+			tokenError: Extract<
+				GoogleDriveErrorCode,
+				"NO_TOKEN" | "TOKEN_EXPIRED" | "REFRESH_FAILED"
+			>;
+	  };
+
+/**
+ * Retrieves and potentially refreshes the user's Google tokens.
+ *
+ * Distinguishes three failure shapes so callers can produce the truthful
+ * `GoogleDriveErrorCode` instead of collapsing every failure into one code:
+ * - no access token stored at all -> NO_TOKEN
+ * - token expired/expiring soon, and no refresh token to try -> TOKEN_EXPIRED
+ * - token expired/expiring soon, refresh attempted and failed (threw, or
+ *   returned a response with no access_token) -> REFRESH_FAILED
+ */
+async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -89,7 +160,7 @@ async function getUserGoogleTokens(userId: string): Promise<{
 	});
 
 	if (!user?.googleAccessToken) {
-		return null;
+		return { tokenError: "NO_TOKEN" };
 	}
 
 	// Check if token is expired or will expire soon (5 min buffer)
@@ -100,7 +171,7 @@ async function getUserGoogleTokens(userId: string): Promise<{
 	if (expiresAt && expiresAt.getTime() - bufferMs < now.getTime()) {
 		// Token expired or expiring soon - attempt refresh
 		if (!user.googleRefreshToken) {
-			return null;
+			return { tokenError: "TOKEN_EXPIRED" };
 		}
 
 		try {
@@ -134,8 +205,11 @@ async function getUserGoogleTokens(userId: string): Promise<{
 				refreshToken: user.googleRefreshToken,
 			};
 		} catch (error) {
-			console.error("Failed to refresh Google token:", error);
-			return null;
+			logger.warn("Failed to refresh Google token", {
+				userId,
+				error: error instanceof Error ? error.message : String(error),
+			});
+			return { tokenError: "REFRESH_FAILED" };
 		}
 	}
 
@@ -144,6 +218,21 @@ async function getUserGoogleTokens(userId: string): Promise<{
 		refreshToken: user.googleRefreshToken,
 	};
 }
+
+const TOKEN_ERROR_MESSAGES: Record<
+	Extract<
+		GoogleDriveErrorCode,
+		"NO_TOKEN" | "TOKEN_EXPIRED" | "REFRESH_FAILED"
+	>,
+	string
+> = {
+	NO_TOKEN:
+		"No Google token found. Please sign in with Google to connect your account.",
+	TOKEN_EXPIRED:
+		"Google token has expired and no refresh token is available. Please sign in with Google again.",
+	REFRESH_FAILED:
+		"Failed to refresh the Google token. Please sign in with Google again.",
+};
 
 /**
  * Creates an authenticated Google Drive client for the specified user.
@@ -156,11 +245,11 @@ async function createDriveClient(
 > {
 	const tokens = await getUserGoogleTokens(userId);
 
-	if (!tokens) {
+	if ("tokenError" in tokens) {
 		return {
 			driveError: createDriveError(
-				"NO_TOKEN",
-				"No Google token found. Please sign in with Google to connect your account."
+				tokens.tokenError,
+				TOKEN_ERROR_MESSAGES[tokens.tokenError]
 			),
 		};
 	}
@@ -210,11 +299,9 @@ async function getOrCreateBackupFolder(
 		return { folderId: folder.data.id as string };
 	} catch (error) {
 		return {
-			driveError: createDriveError(
-				"API_ERROR",
-				error instanceof Error
-					? error.message
-					: "Failed to find or create backup folder"
+			driveError: driveErrorFromCaught(
+				error,
+				"Failed to find or create backup folder"
 			),
 		};
 	}
@@ -271,7 +358,6 @@ export async function uploadBackupToDrive(
 		};
 
 		// Use a readable stream for the media body
-		const { Readable } = require("node:stream");
 		const stream = Readable.from([jsonContent]);
 
 		const file = await drive.files.create({
@@ -291,11 +377,9 @@ export async function uploadBackupToDrive(
 			},
 		};
 	} catch (error) {
-		const driveError = createDriveError(
-			"API_ERROR",
-			error instanceof Error
-				? error.message
-				: "Failed to upload to Google Drive"
+		const driveError = driveErrorFromCaught(
+			error,
+			"Failed to upload to Google Drive"
 		);
 		return { error: driveError.message, driveError };
 	}
@@ -353,11 +437,9 @@ export async function downloadFileFromDrive(
 			},
 		};
 	} catch (error) {
-		const driveError = createDriveError(
-			"API_ERROR",
-			error instanceof Error
-				? error.message
-				: "Failed to download from Google Drive"
+		const driveError = driveErrorFromCaught(
+			error,
+			"Failed to download from Google Drive"
 		);
 		return { error: driveError.message, driveError };
 	}
@@ -417,5 +499,5 @@ export async function listBackupFiles(
  */
 export async function hasGoogleToken(userId: string): Promise<boolean> {
 	const tokens = await getUserGoogleTokens(userId);
-	return tokens !== null;
+	return !("tokenError" in tokens);
 }
