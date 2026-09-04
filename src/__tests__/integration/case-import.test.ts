@@ -632,13 +632,17 @@ describe("validateImportData", () => {
 	});
 
 	/**
-	 * The P2003 catch in createElements is anchored to the exact
-	 * `assurance_elements_cited_element_id_fkey` constraint name specifically
-	 * so it does NOT swallow a P2003 on a DIFFERENT foreign key on the same
-	 * createMany insert. moduleReferenceId is a convenient other FK to exploit
-	 * here: it isn't part of the resolve-before-insert machinery at all, so a
-	 * value that never existed reaches the insert unresolved and must fail
-	 * the whole import loudly, same as before this fix.
+	 * moduleReferenceId is a foreign key on the same createMany insert as
+	 * citedElementId, but isn't part of the resolve-before-insert machinery:
+	 * a value that never existed reaches the insert unresolved and produces a
+	 * P2003 on a different constraint. This proves the whole import still
+	 * fails and rolls back in that case. It does NOT exercise
+	 * `isCitedElementIdForeignKeyError`'s constraint-name discrimination:
+	 * createElements' retry only re-resolves citedElementId, so a
+	 * moduleReferenceId P2003 fails again on retry and propagates the same
+	 * way whether the guard is anchored to the exact constraint name or
+	 * matches any P2003 — that discrimination is pinned directly in
+	 * `lib/services/__tests__/case-import-service.test.ts`.
 	 */
 	it("still fails the whole import on a P2003 from an unrelated foreign key (moduleReferenceId)", async () => {
 		const nonExistentCaseId = crypto.randomUUID();

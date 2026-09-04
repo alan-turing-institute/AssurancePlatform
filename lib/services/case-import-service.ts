@@ -303,7 +303,7 @@ const CITED_ELEMENT_ID_FK_CONSTRAINT =
  * "Foreign key constraint violated on the constraint: `<name>`"), not on
  * `error.meta`'s shape, which is adapter-internal and not a stable contract.
  */
-function isCitedElementIdForeignKeyError(error: unknown): boolean {
+export function isCitedElementIdForeignKeyError(error: unknown): boolean {
 	return (
 		error instanceof Prisma.PrismaClientKnownRequestError &&
 		error.code === "P2003" &&
