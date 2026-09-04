@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { serviceErrorToAppError } from "../api-response";
 import {
 	AppError,
+	dbUnavailable,
 	forbidden,
 	gatewayTimeout,
 	handleError,
@@ -10,7 +11,16 @@ import {
 	unauthorised,
 	validationError,
 } from "../errors";
+import { type LogEntry, resetLogSink, setLogSink } from "../logger";
 import { TimeoutError } from "../with-timeout";
+
+function captureLogs(): LogEntry[] {
+	const entries: LogEntry[] = [];
+	setLogSink((entry) => {
+		entries.push(entry);
+	});
+	return entries;
+}
 
 describe("AppError", () => {
 	it("stores code, message, and fieldErrors", () => {
@@ -51,6 +61,9 @@ describe("AppError", () => {
 		expect(
 			new AppError({ code: "GATEWAY_TIMEOUT", message: "" }).statusCode
 		).toBe(504);
+		expect(
+			new AppError({ code: "DB_UNAVAILABLE", message: "" }).statusCode
+		).toBe(503);
 	});
 
 	it("preserves cause", () => {
@@ -108,9 +121,25 @@ describe("factory functions", () => {
 		const err = gatewayTimeout("Status check timed out");
 		expect(err.message).toBe("Status check timed out");
 	});
+
+	it("dbUnavailable() creates a 503 error", () => {
+		const err = dbUnavailable();
+		expect(err.code).toBe("DB_UNAVAILABLE");
+		expect(err.statusCode).toBe(503);
+	});
+
+	it("dbUnavailable() accepts a custom message", () => {
+		const err = dbUnavailable("Pool exhausted");
+		expect(err.message).toBe("Pool exhausted");
+	});
 });
 
 describe("handleError", () => {
+	afterEach(() => {
+		resetLogSink();
+		vi.unstubAllEnvs();
+	});
+
 	it("passes through AppError instances", () => {
 		const original = forbidden();
 		const result = handleError(original);
@@ -153,6 +182,47 @@ describe("handleError", () => {
 		expect(result).toBeInstanceOf(AppError);
 		expect(result.code).toBe("INTERNAL");
 		consoleSpy.mockRestore();
+	});
+
+	it("maps pg-pool's queued-wait timeout message to DB_UNAVAILABLE (503), not INTERNAL", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = captureLogs();
+		const original = new Error("timeout exceeded when trying to connect");
+
+		const result = handleError(original);
+
+		expect(result).toBeInstanceOf(AppError);
+		expect(result.code).toBe("DB_UNAVAILABLE");
+		expect(result.statusCode).toBe(503);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			level: "error",
+			event: "db.pool.acquire_timeout",
+		});
+		expect(typeof entries[0]?.timeoutMs).toBe("number");
+	});
+
+	it("maps pg-pool's new-connection timeout message to DB_UNAVAILABLE too", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		captureLogs();
+		const original = new Error(
+			"Connection terminated due to connection timeout"
+		);
+
+		const result = handleError(original);
+
+		expect(result.code).toBe("DB_UNAVAILABLE");
+		expect(result.statusCode).toBe(503);
+	});
+
+	it("honours a tiny DB_POOL_TIMEOUT_MS in the logged timeoutMs field", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		vi.stubEnv("DB_POOL_TIMEOUT_MS", "1");
+		const entries = captureLogs();
+
+		handleError(new Error("timeout exceeded when trying to connect"));
+
+		expect(entries[0]?.timeoutMs).toBe(1);
 	});
 });
 

@@ -1,3 +1,6 @@
+import { resolveDbPoolTimeoutMs } from "@/lib/db-pool-config";
+import { logger } from "@/lib/logger";
+
 /**
  * Classifies errors for consistent handling across API routes, server actions, and services.
  */
@@ -10,6 +13,7 @@ export type ErrorCode =
 	| "RATE_LIMITED"
 	| "PAYLOAD_TOO_LARGE"
 	| "GATEWAY_TIMEOUT"
+	| "DB_UNAVAILABLE"
 	| "INTERNAL";
 
 /**
@@ -29,6 +33,7 @@ const STATUS_MAP: Record<ErrorCode, number> = {
 	RATE_LIMITED: 429,
 	PAYLOAD_TOO_LARGE: 413,
 	GATEWAY_TIMEOUT: 504,
+	DB_UNAVAILABLE: 503,
 	INTERNAL: 500,
 };
 
@@ -91,9 +96,40 @@ export function payloadTooLarge(message = "Request body too large"): AppError {
 	return new AppError({ code: "PAYLOAD_TOO_LARGE", message });
 }
 
+export function dbUnavailable(
+	message = "The database is temporarily unavailable. Please try again."
+): AppError {
+	return new AppError({ code: "DB_UNAVAILABLE", message });
+}
+
 // ---------------------------------------------------------------------------
 // Conversion helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Messages `pg-pool` throws as a plain `Error` (no `.code`, no `.cause` in
+ * the common case) when `connectionTimeoutMillis` elapses:
+ * - "timeout exceeded when trying to connect" — every pool slot was already
+ *   checked out and the wait for one to free up timed out (the queued-wait
+ *   path, `pg-pool/index.js`'s `_pendingQueue` timeout — this is the shape
+ *   `api-status-pool-starvation.test.ts` reproduces).
+ * - "Connection terminated due to connection timeout" — a brand-new
+ *   connection (pool below `max`) didn't finish establishing within the
+ *   timeout. Different code path, same configured value, same "the database
+ *   isn't responding fast enough" signal.
+ * Matched by substring, not exact equality, since the second message is
+ * pg-pool's own `new Error(..., { cause })` wrapping and could gain a suffix.
+ */
+const POOL_ACQUIRE_TIMEOUT_MESSAGES = [
+	"timeout exceeded when trying to connect",
+	"Connection terminated due to connection timeout",
+];
+
+function isPoolAcquireTimeoutError(error: Error): boolean {
+	return POOL_ACQUIRE_TIMEOUT_MESSAGES.some((message) =>
+		error.message.includes(message)
+	);
+}
 
 /**
  * Wraps an unknown caught value into an `AppError`.
@@ -113,6 +149,20 @@ export function handleError(error: unknown): AppError {
 		return gatewayTimeout(
 			"The request took too long to complete. Please try again."
 		);
+	}
+
+	// A pg-pool connection-acquisition timeout is a distinct, expected
+	// failure shape (the pool is saturated or Postgres is slow to accept new
+	// connections) — not an unexpected bug. Without this check it fell
+	// through to the generic INTERNAL/500 branch below, indistinguishable in
+	// production logs from any other unhandled error (see "TEA —
+	// Pool-timeout errors indistinguishable from generic 500s").
+	if (error instanceof Error && isPoolAcquireTimeoutError(error)) {
+		logger.error("Database connection pool acquisition timed out", {
+			event: "db.pool.acquire_timeout",
+			timeoutMs: resolveDbPoolTimeoutMs(),
+		});
+		return dbUnavailable();
 	}
 
 	const message =

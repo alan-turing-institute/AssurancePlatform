@@ -198,6 +198,11 @@ postgresql://tea:secret@localhost:5432/tea
 
 The application connects using the `DATABASE_URL` environment variable. The Prisma client is configured in `lib/prisma.ts`.
 
+The connection pool waits up to `DB_POOL_TIMEOUT_MS` (default 5000ms) for a
+free connection before failing fast with a 503 rather than hanging
+indefinitely. Raise it if the database is remote or under heavy load and
+requests are failing with `DB_UNAVAILABLE` under normal traffic.
+
 ### Direct Database Access
 
 #### Prisma Studio (GUI)

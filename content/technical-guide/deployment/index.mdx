@@ -63,6 +63,7 @@ The TEA Platform is configured through environment variables. Here's a reference
 | `POSTGRES_USER` | Database user | `tea` |
 | `POSTGRES_PASSWORD` | Database password | (required) |
 | `POSTGRES_DB` | Database name | `tea` |
+| `DB_POOL_TIMEOUT_MS` | How long (ms) a request waits for a free Postgres connection before failing with a 503, instead of hanging — see [Database Management](./database-management) | `5000` |
 
 ## Security Considerations
 
