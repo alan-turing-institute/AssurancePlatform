@@ -74,7 +74,7 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 		// diagram" toast — log it here, at the point it's thrown, then rethrow
 		// unchanged so callers' error handling is untouched.
 		logger.error("Case conversion failed", {
-			caseId: (assuranceCase as Record<string, unknown> | undefined)?.id,
+			caseId: assuranceCase?.id,
 			error,
 		});
 		throw error;
