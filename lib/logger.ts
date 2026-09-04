@@ -13,6 +13,15 @@
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
+/**
+ * `ts`/`level`/`msg` are always the emitter's own values — nothing a caller
+ * passes via `bindings` or per-call `fields` can change them. `component` is
+ * reserved too, but its one legitimate source is `bindings` (set at
+ * `createLogger`/`child()` creation); a per-call `fields.component` can't
+ * override it. In every case, a caller-supplied value that collides with a
+ * reserved key is kept, not dropped — under `caller_<key>` — so `emit` never
+ * silently discards data. See `namespaceReservedKeys`.
+ */
 export type LogEntry = {
 	ts: string;
 	level: LogLevel;
@@ -192,6 +201,33 @@ function serialiseFields(
 	return result;
 }
 
+const RESERVED_LOGGER_KEYS = ["ts", "level", "msg", "component"] as const;
+type ReservedLoggerKey = (typeof RESERVED_LOGGER_KEYS)[number];
+
+/**
+ * Renames any of `keys` that are present in `fields` to `caller_<key>`, so
+ * the entry's own reserved values can be written afterwards without a
+ * caller value silently overwriting them — and without silently dropping
+ * the caller's original value either. Returns `fields` unchanged (same
+ * reference) when none of `keys` are present.
+ */
+function namespaceReservedKeys(
+	fields: Record<string, unknown>,
+	keys: readonly ReservedLoggerKey[]
+): Record<string, unknown> {
+	let result = fields;
+	for (const key of keys) {
+		if (key in result) {
+			if (result === fields) {
+				result = { ...fields };
+			}
+			result[`caller_${key}`] = result[key];
+			delete result[key];
+		}
+	}
+	return result;
+}
+
 function emit(
 	level: LogLevel,
 	bindings: Record<string, unknown>,
@@ -202,12 +238,24 @@ function emit(
 		if (LEVEL_ORDER[level] < currentThreshold()) {
 			return;
 		}
+		// `component` is bindings' one legitimate reserved key (from `child()`),
+		// so only ts/level/msg are namespaced here — a real bound component must
+		// survive into the entry. Per-call fields have no legitimate reserved
+		// key at all, so all four are namespaced there.
+		const safeBindings = namespaceReservedKeys(serialiseFields(bindings), [
+			"ts",
+			"level",
+			"msg",
+		]);
+		const safeFields = fields
+			? namespaceReservedKeys(serialiseFields(fields), RESERVED_LOGGER_KEYS)
+			: {};
 		const entry: LogEntry = {
+			...safeBindings,
+			...safeFields,
 			ts: new Date().toISOString(),
 			level,
 			msg: message,
-			...serialiseFields(bindings),
-			...(fields ? serialiseFields(fields) : {}),
 		};
 		(sink ?? defaultSink)(entry);
 	} catch {

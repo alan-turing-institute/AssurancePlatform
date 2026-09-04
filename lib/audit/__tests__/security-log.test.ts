@@ -75,4 +75,22 @@ describe("logSecurityEvent", () => {
 			level: "error",
 		});
 	});
+
+	it("keeps its own severity when metadata.severity collides, under caller_severity", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = capture();
+
+		logSecurityEvent({
+			event: "privilege_escalation_attempt",
+			severity: "critical",
+			metadata: { severity: "low" },
+		});
+
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			severity: "critical",
+			caller_severity: "low",
+			level: "error",
+		});
+	});
 });

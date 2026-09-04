@@ -172,6 +172,46 @@ describe("logger", () => {
 		}
 	});
 
+	it.each([
+		"ts",
+		"level",
+		"msg",
+	] as const)("keeps the entry's own %s when a field collides, under caller_%s", (key) => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = capture();
+
+		logger.info("hello", { [key]: "spoofed" });
+
+		expect(entries[0]?.[key]).not.toBe("spoofed");
+		expect(entries[0]?.[`caller_${key}`]).toBe("spoofed");
+	});
+
+	it.each([
+		"ts",
+		"level",
+		"msg",
+	] as const)("keeps the entry's own %s when a binding collides, under caller_%s", (key) => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = capture();
+
+		const child = logger.child({ [key]: "spoofed" });
+		child.info("hello");
+
+		expect(entries[0]?.[key]).not.toBe("spoofed");
+		expect(entries[0]?.[`caller_${key}`]).toBe("spoofed");
+	});
+
+	it("keeps a bound component when a per-call field collides, under caller_component", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = capture();
+
+		const child = logger.child({ component: "security" });
+		child.info("hello", { component: "spoofed" });
+
+		expect(entries[0]?.component).toBe("security");
+		expect(entries[0]?.caller_component).toBe("spoofed");
+	});
+
 	it("falls back to console[level] when process.stdout.write is unavailable", () => {
 		vi.stubEnv("LOG_LEVEL", "debug");
 		resetLogSink();
