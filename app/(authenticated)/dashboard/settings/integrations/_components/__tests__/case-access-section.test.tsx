@@ -109,9 +109,8 @@ describe("CaseAccessSection", () => {
 			);
 
 			const trigger = screen.getByRole("button", { name: GRANT_TRIGGER_REGEX });
-			expect(trigger).toBeDisabled();
-			expect(trigger).toHaveAttribute(
-				"title",
+			expect(trigger).toHaveAttribute("aria-disabled", "true");
+			expect(trigger).toHaveAccessibleDescription(
 				"Only an ACTIVE integration can be granted access to a case"
 			);
 		});
@@ -184,7 +183,7 @@ describe("CaseAccessSection", () => {
 			);
 			expect(
 				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
-			).toBeDisabled();
+			).toHaveAttribute("aria-disabled", "true");
 			expect(onGrant).not.toHaveBeenCalled();
 		});
 	});

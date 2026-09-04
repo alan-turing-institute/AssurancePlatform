@@ -171,8 +171,8 @@ describe("IntegrationCard", () => {
 			const deleteButton = screen.getByRole("button", {
 				name: DELETE_TRIGGER_REGEX,
 			});
-			expect(deleteButton).toBeDisabled();
-			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+			expect(deleteButton).toHaveAttribute("aria-disabled", "true");
+			expect(deleteButton).toHaveAccessibleDescription(DELETE_TOOLTIP_TEXT);
 		});
 
 		it("disables Delete with an explanatory tooltip for a SUSPENDED integration", () => {
@@ -186,8 +186,8 @@ describe("IntegrationCard", () => {
 			const deleteButton = screen.getByRole("button", {
 				name: DELETE_TRIGGER_REGEX,
 			});
-			expect(deleteButton).toBeDisabled();
-			expect(deleteButton).toHaveAttribute("title", DELETE_TOOLTIP_TEXT);
+			expect(deleteButton).toHaveAttribute("aria-disabled", "true");
+			expect(deleteButton).toHaveAccessibleDescription(DELETE_TOOLTIP_TEXT);
 		});
 
 		it("enables Delete with no tooltip for a REVOKED integration", () => {
@@ -201,8 +201,8 @@ describe("IntegrationCard", () => {
 			const deleteButton = screen.getByRole("button", {
 				name: DELETE_TRIGGER_REGEX,
 			});
-			expect(deleteButton).toBeEnabled();
-			expect(deleteButton).not.toHaveAttribute("title");
+			expect(deleteButton).not.toHaveAttribute("aria-disabled");
+			expect(deleteButton).toHaveAccessibleDescription("");
 		});
 
 		it("keeps the destructive confirm button disabled when the typed text doesn't exactly match the integration's name", async () => {
@@ -598,7 +598,7 @@ describe("IntegrationCard", () => {
 
 			expect(
 				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
-			).toBeDisabled();
+			).toHaveAttribute("aria-disabled", "true");
 		});
 
 		it("shows a token-shown-once modal after issuing succeeds", async () => {
