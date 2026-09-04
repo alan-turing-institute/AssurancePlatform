@@ -162,7 +162,7 @@ test.describe("Case management", () => {
 	}) => {
 		// Stability regression: rapid open/close cycling of the Select must
 		// not leave the dialog's outside-dismiss guard (see
-		// `useAssertionSelectDismissGuard` in node-edit-dialog.tsx) stuck
+		// `useSelectDismissGuard` in hooks/use-select-dismiss-guard.ts) stuck
 		// open, since that would make the dialog ignore every subsequent
 		// outside click.
 		const dashboard = new DashboardPage(page);
