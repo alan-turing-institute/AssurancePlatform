@@ -169,60 +169,105 @@ async function claimWarning7(candidateId: string, now: Date): Promise<boolean> {
 }
 
 /**
- * Carries out `decideAction`'s verdict for one candidate and reports which
- * result bucket it landed in. Split out of `runRetentionSweep` purely to
- * keep that function's cognitive complexity down — the two functions
- * together are the sweep's per-user logic.
+ * Reverses a claim made moments ago by THIS call (vincent, review round 2,
+ * should-fix): if the send that followed the claim throws, the warning was
+ * never actually delivered, so the stamp must not stand — otherwise the
+ * user is "warned on record" but never warned, and (worse, on the 7-day
+ * stage) one step closer to a deletion nothing ever told them about.
+ * Guarded on the field still holding the exact timestamp this call wrote,
+ * so it can only ever undo its own claim, never a different run's.
  */
-async function applyRetentionAction(
+async function resetWarning30(
+	candidateId: string,
+	claimedAt: Date
+): Promise<void> {
+	await prisma.user.updateMany({
+		where: { id: candidateId, retentionWarning30SentAt: claimedAt },
+		data: { retentionWarning30SentAt: null },
+	});
+}
+
+async function resetWarning7(
+	candidateId: string,
+	claimedAt: Date
+): Promise<void> {
+	await prisma.user.updateMany({
+		where: { id: candidateId, retentionWarning7SentAt: claimedAt },
+		data: { retentionWarning7SentAt: null },
+	});
+}
+
+async function handleDelete(
+	candidateId: string,
+	dryRun: boolean
+): Promise<RetentionOutcome> {
+	if (dryRun) {
+		// Mirror the real path's pre-checks (QA round 1, D2) so dry-run and
+		// real counts agree on exactly the accounts that would be skipped.
+		const deletable = await checkDeletable(candidateId);
+		return deletable.deletable ? "deleted" : "skipped";
+	}
+	const result = await deleteAccountForRetention(candidateId);
+	if ("error" in result) {
+		logger.error("Retention sweep: failed to delete user", {
+			userId: candidateId,
+			error: result.error,
+		});
+		return "skipped";
+	}
+	return "deleted";
+}
+
+/**
+ * Claims, sends, and stamps the 7-day reminder — or, if the send throws
+ * after the claim succeeded, undoes the claim and logs distinctly
+ * (vincent, review round 2, should-fix) so the next sweep retries instead
+ * of leaving the user "warned on record" but never actually warned.
+ */
+async function handleWarn7(
 	candidate: RetentionCandidate,
 	now: Date,
 	dryRun: boolean
 ): Promise<RetentionOutcome> {
-	const action = decideAction(candidate, now);
-
-	if (action.type === "delete") {
-		if (dryRun) {
-			// Mirror the real path's pre-checks (QA round 1, D2) so dry-run and
-			// real counts agree on exactly the accounts that would be skipped.
-			const deletable = await checkDeletable(candidate.id);
-			return deletable.deletable ? "deleted" : "skipped";
-		}
-		const result = await deleteAccountForRetention(candidate.id);
-		if ("error" in result) {
-			logger.error("Retention sweep: failed to delete user", {
-				userId: candidate.id,
-				error: result.error,
-			});
-			return "skipped";
-		}
-		return "deleted";
+	if (dryRun) {
+		return "warned7";
 	}
-
-	if (action.type === "warn7") {
-		if (dryRun) {
-			return "warned7";
-		}
-		const won = await claimWarning7(candidate.id, now);
-		if (!won) {
-			return "skipped";
-		}
+	const won = await claimWarning7(candidate.id, now);
+	if (!won) {
+		return "skipped";
+	}
+	try {
 		await sendRetentionFinalReminderEmail({
 			to: candidate.email,
 			username: candidate.username,
 			deletionDate: addDays(now, RETENTION_DELETE_MIN_GAP_DAYS),
 		});
-		return "warned7";
+	} catch (error) {
+		await resetWarning7(candidate.id, now);
+		logger.error("retention.warning_send_failed", {
+			userId: candidate.id,
+			stage: "warn7",
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return "skipped";
 	}
+	return "warned7";
+}
 
-	if (action.type === "warn30") {
-		if (dryRun) {
-			return "warned30";
-		}
-		const won = await claimWarning30(candidate.id, now);
-		if (!won) {
-			return "skipped";
-		}
+/** Same shape as `handleWarn7`, for the 30-day warning. */
+async function handleWarn30(
+	candidate: RetentionCandidate,
+	now: Date,
+	dryRun: boolean
+): Promise<RetentionOutcome> {
+	if (dryRun) {
+		return "warned30";
+	}
+	const won = await claimWarning30(candidate.id, now);
+	if (!won) {
+		return "skipped";
+	}
+	try {
 		await sendRetentionWarningEmail({
 			to: candidate.email,
 			username: candidate.username,
@@ -231,10 +276,41 @@ async function applyRetentionAction(
 				RETENTION_WARNING_7_MIN_GAP_DAYS + RETENTION_DELETE_MIN_GAP_DAYS
 			),
 		});
-		return "warned30";
+	} catch (error) {
+		await resetWarning30(candidate.id, now);
+		logger.error("retention.warning_send_failed", {
+			userId: candidate.id,
+			stage: "warn30",
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return "skipped";
 	}
+	return "warned30";
+}
 
-	return "skipped";
+/**
+ * Carries out `decideAction`'s verdict for one candidate and reports which
+ * result bucket it landed in. Split out of `runRetentionSweep` (and split
+ * further into `handleDelete`/`handleWarn7`/`handleWarn30`) purely to keep
+ * cognitive complexity down — together they are the sweep's per-user logic.
+ */
+async function applyRetentionAction(
+	candidate: RetentionCandidate,
+	now: Date,
+	dryRun: boolean
+): Promise<RetentionOutcome> {
+	const action = decideAction(candidate, now);
+
+	switch (action.type) {
+		case "delete":
+			return await handleDelete(candidate.id, dryRun);
+		case "warn7":
+			return await handleWarn7(candidate, now, dryRun);
+		case "warn30":
+			return await handleWarn30(candidate, now, dryRun);
+		default:
+			return "skipped";
+	}
 }
 
 // ============================================

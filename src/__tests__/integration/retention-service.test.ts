@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { sendRetentionWarningEmail } from "@/lib/services/email-service";
 import { runRetentionSweep } from "@/lib/services/retention-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
@@ -8,6 +9,17 @@ import {
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
+
+// Wrapped (not stubbed): defaults to the REAL implementation, overridden
+// per-test to simulate a send failure after the atomic claim.
+vi.mock("@/lib/services/email-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/services/email-service")>();
+	return {
+		...actual,
+		sendRetentionWarningEmail: vi.fn(actual.sendRetentionWarningEmail),
+	};
+});
 
 const CRON_SECRET = "test-cron-secret";
 
@@ -386,5 +398,47 @@ describe("runRetentionSweep — double-send guard", () => {
 		const firstData = expectSuccess(first);
 		const secondData = expectSuccess(second);
 		expect(firstData.warned7 + secondData.warned7).toBe(1);
+	});
+});
+
+/**
+ * Vincent, review round 2 (should-fix): stamp-then-send meant a send
+ * failure after the atomic claim was never retried — the user ends up
+ * "warned on record" but never actually warned. The stamp must be undone
+ * on a send failure so the next sweep retries.
+ */
+describe("runRetentionSweep — resets the stamp when the send fails after the claim", () => {
+	afterEach(() => {
+		vi.mocked(sendRetentionWarningEmail).mockRestore();
+	});
+
+	it("resets retentionWarning30SentAt to null and counts skipped when the email throws, then succeeds on the next sweep", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn30ThresholdActivity(now), -1);
+		const user = await createTestUser({ lastLoginAt });
+
+		vi.mocked(sendRetentionWarningEmail).mockImplementationOnce(() => {
+			throw new Error("simulated send failure");
+		});
+
+		const first = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(first.warned30).toBe(0);
+		expect(first.skipped).toBe(1);
+
+		const afterFailure = await prisma.user.findUnique({
+			where: { id: user.id },
+		});
+		expect(afterFailure?.retentionWarning30SentAt).toBeNull();
+
+		// Mock restored (afterEach on the PREVIOUS test would not have run
+		// yet for this assertion, but mockImplementationOnce already reverted
+		// to the wrapped real implementation) — the next sweep sends for real.
+		const second = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(second.warned30).toBe(1);
+
+		const afterRetry = await prisma.user.findUnique({
+			where: { id: user.id },
+		});
+		expect(afterRetry?.retentionWarning30SentAt).not.toBeNull();
 	});
 });
