@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma";
-import { sendRetentionWarningEmail } from "@/lib/services/email-service";
+import {
+	sendRetentionFinalReminderEmail,
+	sendRetentionWarningEmail,
+} from "@/lib/services/email-service";
 import { runRetentionSweep } from "@/lib/services/retention-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
@@ -18,6 +22,9 @@ vi.mock("@/lib/services/email-service", async (importOriginal) => {
 	return {
 		...actual,
 		sendRetentionWarningEmail: vi.fn(actual.sendRetentionWarningEmail),
+		sendRetentionFinalReminderEmail: vi.fn(
+			actual.sendRetentionFinalReminderEmail
+		),
 	};
 });
 
@@ -440,5 +447,91 @@ describe("runRetentionSweep — resets the stamp when the send fails after the c
 			where: { id: user.id },
 		});
 		expect(afterRetry?.retentionWarning30SentAt).not.toBeNull();
+	});
+
+	/**
+	 * QA round 3, item b: same shape as the 30-day test above, for the
+	 * 7-day stage — the fix batch only covered the 30-day side.
+	 */
+	it("resets retentionWarning7SentAt to null and counts skipped when the email throws, then succeeds on the next sweep", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn7ThresholdActivity(now), -1);
+		const user = await createTestUser({
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -23),
+		});
+
+		vi.mocked(sendRetentionFinalReminderEmail).mockImplementationOnce(() => {
+			throw new Error("simulated send failure");
+		});
+		const errorSpy = vi.spyOn(logger, "error");
+
+		const first = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(first.warned7).toBe(0);
+		expect(first.skipped).toBe(1);
+
+		expect(errorSpy).toHaveBeenCalledWith(
+			"retention.warning_send_failed",
+			expect.objectContaining({ userId: user.id, stage: "warn7" })
+		);
+
+		const afterFailure = await prisma.user.findUnique({
+			where: { id: user.id },
+		});
+		expect(afterFailure?.retentionWarning7SentAt).toBeNull();
+
+		const second = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(second.warned7).toBe(1);
+
+		const afterRetry = await prisma.user.findUnique({
+			where: { id: user.id },
+		});
+		expect(afterRetry?.retentionWarning7SentAt).not.toBeNull();
+
+		errorSpy.mockRestore();
+	});
+});
+
+/**
+ * QA round 3, item b: two sweeps race for the same candidate and the
+ * winner's send throws. By construction this cannot corrupt a claim the
+ * OTHER run made — `claimWarning30`'s atomic `updateMany` guarantees only
+ * one process ever wins the null-to-timestamp transition, so the loser
+ * returns "skipped" before ever attempting a send, and never reaches the
+ * reset call at all. Only the actual winner can call `resetWarning30`, and
+ * it is guarded on the exact timestamp that winner itself wrote.
+ */
+describe("runRetentionSweep — concurrent sweeps where the winner's send throws", () => {
+	afterEach(() => {
+		vi.mocked(sendRetentionWarningEmail).mockRestore();
+	});
+
+	it("calls send exactly once, ends with the field null, and recovers on the next sweep", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn30ThresholdActivity(now), -1);
+		const user = await createTestUser({ lastLoginAt });
+
+		// Always throws — only the winner of the atomic claim ever reaches
+		// this mock; the loser returns "skipped" without calling it.
+		vi.mocked(sendRetentionWarningEmail).mockImplementation(() => {
+			throw new Error("simulated send failure (race)");
+		});
+
+		const [first, second] = await Promise.all([
+			runRetentionSweep(CRON_SECRET),
+			runRetentionSweep(CRON_SECRET),
+		]);
+
+		const firstData = expectSuccess(first);
+		const secondData = expectSuccess(second);
+		expect(firstData.warned30 + secondData.warned30).toBe(0);
+		expect(sendRetentionWarningEmail).toHaveBeenCalledTimes(1);
+
+		const afterRace = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(afterRace?.retentionWarning30SentAt).toBeNull();
+
+		vi.mocked(sendRetentionWarningEmail).mockRestore();
+		const third = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(third.warned30).toBe(1);
 	});
 });

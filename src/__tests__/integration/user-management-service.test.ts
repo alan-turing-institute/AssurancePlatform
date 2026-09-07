@@ -282,6 +282,56 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 		expect(teamStillExists).toBeNull();
 	});
 
+	/**
+	 * QA round 3, item a(iv): a case can carry more than one ADMIN-holding
+	 * team at once — one qualifying (a member besides the deleted owner),
+	 * one not (team of one). Only one needs to qualify for the case to be
+	 * kept, and each team is still handled on its own merits by the
+	 * team-handling step (the team-of-one is deleted, the team-of-two is
+	 * transferred), independent of the keep/trash decision they jointly fed.
+	 */
+	it("keeps a case with two ADMIN-holding teams, one of each kind — the qualifying one keeps it, the team-of-one is still deleted", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherMember = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Two teams, one qualifies",
+		});
+
+		const teamOfOne = await createTestTeam(owner.id, { name: "Team of one" });
+		await createTestTeamPermission(
+			testCase.id,
+			teamOfOne.id,
+			owner.id,
+			"ADMIN"
+		);
+
+		const teamOfTwo = await createTestTeam(owner.id, { name: "Team of two" });
+		await addTeamMember(teamOfTwo.id, otherMember.id);
+		await createTestTeamPermission(
+			testCase.id,
+			teamOfTwo.id,
+			owner.id,
+			"ADMIN"
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).toBeNull();
+
+		const teamOfOneAfter = await prisma.team.findUnique({
+			where: { id: teamOfOne.id },
+		});
+		expect(teamOfOneAfter).toBeNull();
+
+		const teamOfTwoAfter = await prisma.team.findUniqueOrThrow({
+			where: { id: teamOfTwo.id },
+		});
+		expect(teamOfTwoAfter.createdById).toBe(otherMember.id);
+	});
+
 	it("trashes a case when the only other access is VIEW/EDIT/COMMENT, not ADMIN", async () => {
 		const owner = await createTestUser({ authProvider: "GITHUB" });
 		const editor = await createTestUser();
@@ -391,5 +441,64 @@ describe("deleteAccount — grantedById reassignment (QA round 1, D1)", () => {
 			where: { id: permission.id },
 		});
 		expect(updatedPermission.grantedById).not.toBe(owner.id);
+	});
+});
+
+/**
+ * QA round 3, item c: `runAccountDeletionTransaction`'s round trips scale
+ * with how much history the deleted user has (owned cases, teams, comments,
+ * elements, permissions granted) — vincent's review round 2 should-fix
+ * widened the interactive transaction's timeout to 30s (maxWait 10s) for
+ * exactly this reason. Asserts the outcomes are all correct at scale, not
+ * wall-clock — a slow CI runner proves nothing about correctness, and a
+ * flaky timing assertion is worse than no assertion.
+ */
+describe("deleteAccount — bulk deletion within the transaction budget (QA round 3, item c)", () => {
+	it("deletes a user owning 40 cases and 15 teams (mixed transfer/delete) and resolves every case and team correctly", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherMember = await createTestUser();
+
+		const CASE_COUNT = 40;
+		for (let i = 0; i < CASE_COUNT; i++) {
+			await createTestCase(owner.id, { name: `Bulk case ${i}` });
+		}
+
+		const TEAM_COUNT = 15;
+		const teamIds: string[] = [];
+		for (let i = 0; i < TEAM_COUNT; i++) {
+			const team = await createTestTeam(owner.id, { name: `Bulk team ${i}` });
+			teamIds.push(team.id);
+			// Half get a second member (transfer), half stay team-of-one (delete).
+			if (i % 2 === 0) {
+				await addTeamMember(team.id, otherMember.id);
+			}
+		}
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
+
+		const casesAfter = await prisma.assuranceCase.findMany({
+			where: { name: { startsWith: "Bulk case " } },
+		});
+		expect(casesAfter).toHaveLength(CASE_COUNT);
+		for (const c of casesAfter) {
+			// None of the 40 had another admin, so all trash rather than keep.
+			expect(c.deletedAt).not.toBeNull();
+			expect(c.createdById).not.toBe(owner.id);
+		}
+
+		const teamsAfter = await prisma.team.findMany({
+			where: { id: { in: teamIds } },
+		});
+		// Half (even i) had a second member and transferred; half (odd i)
+		// were team-of-one and were deleted outright.
+		expect(teamsAfter).toHaveLength(Math.ceil(TEAM_COUNT / 2));
+		for (const t of teamsAfter) {
+			expect(t.createdById).toBe(otherMember.id);
+		}
 	});
 });
