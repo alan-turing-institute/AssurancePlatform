@@ -14,6 +14,25 @@ dotenv.config(); // Explicitly load environment variables
 export const LINK_COOKIE_NAME = "tea_link_user_id";
 
 /**
+ * Fields written on every successful login, regardless of provider.
+ * Resetting the two retention-warning timestamps here (not just recording
+ * `lastLoginAt`) is what makes "logging in resets the clock" true — a user
+ * who returns after a warning starts a fresh two-year cycle instead of
+ * being deleted on a clock that kept running while they were away.
+ */
+function loginResetFields(): {
+	lastLoginAt: Date;
+	retentionWarning30SentAt: null;
+	retentionWarning7SentAt: null;
+} {
+	return {
+		lastLoginAt: new Date(),
+		retentionWarning30SentAt: null,
+		retentionWarning7SentAt: null,
+	};
+}
+
+/**
  * Builds the token data object for Google OAuth updates.
  * Extracted to reduce cognitive complexity in the main function.
  */
@@ -33,7 +52,7 @@ function buildGoogleTokenData(
  * Authenticates a user using Prisma.
  * Verifies password against stored hash and upgrades to argon2id if needed.
  */
-async function authenticateWithPrisma(
+export async function authenticateWithPrisma(
 	username: string,
 	password: string
 ): Promise<{
@@ -75,17 +94,19 @@ async function authenticateWithPrisma(
 		return null;
 	}
 
-	// Upgrade password hash to argon2id if using legacy algorithm
-	if (needsUpgrade) {
-		const newHash = await hashPassword(password);
-		await prisma.user.update({
-			where: { id: user.id },
-			data: {
-				passwordHash: newHash,
+	// Upgrade password hash to argon2id if using legacy algorithm, and
+	// record the login (resets the retention-warning clock) either way.
+	const upgradeFields = needsUpgrade
+		? {
+				passwordHash: await hashPassword(password),
 				passwordAlgorithm: "argon2id",
-			},
-		});
-	}
+			}
+		: {};
+
+	await prisma.user.update({
+		where: { id: user.id },
+		data: { ...loginResetFields(), ...upgradeFields },
+	});
 
 	return {
 		id: user.id,
@@ -149,6 +170,7 @@ async function authenticateGitHubWithPrisma(
 				// Don't change authProvider when linking - user keeps their original provider
 				...(accessToken && { githubAccessToken: accessToken }),
 				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...loginResetFields(),
 			},
 		});
 
@@ -174,6 +196,7 @@ async function authenticateGitHubWithPrisma(
 				// Store access token for GitHub API calls (e.g., importing cases from repos)
 				...(accessToken && { githubAccessToken: accessToken }),
 				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...loginResetFields(),
 			},
 		});
 	} else {
@@ -223,6 +246,7 @@ async function linkGoogleToUser(
 			googleId,
 			googleEmail: email,
 			...tokenData,
+			...loginResetFields(),
 		},
 	});
 
@@ -280,7 +304,12 @@ async function authenticateGoogleWithPrisma(
 	if (existingUser) {
 		await prisma.user.update({
 			where: { id: existingUser.id },
-			data: { googleId, googleEmail: email, ...tokenData },
+			data: {
+				googleId,
+				googleEmail: email,
+				...tokenData,
+				...loginResetFields(),
+			},
 		});
 		return { id: existingUser.id };
 	}
