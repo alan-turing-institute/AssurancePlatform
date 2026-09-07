@@ -10,6 +10,25 @@ interface RouteParams {
 }
 
 /**
+ * Returns the app's public origin for building redirects.
+ *
+ * On Azure App Service, `request.url` reflects the container's internal
+ * hostname and port, not the public hostname. NEXTAUTH_URL is the app's
+ * established source of truth for its public origin (see the `redirect`
+ * callback in lib/auth/config.ts, email-service.ts, and the case-permissions
+ * invite route) — this joins that convention rather than trusting the request.
+ */
+function publicBaseUrl(): string {
+	const baseUrl = process.env.NEXTAUTH_URL;
+	if (!baseUrl) {
+		throw new Error(
+			"NEXTAUTH_URL must be configured for authentication redirects"
+		);
+	}
+	return baseUrl;
+}
+
+/**
  * GET /api/auth/link/[provider]
  *
  * Initiates the OAuth linking flow for an existing authenticated user.
@@ -17,14 +36,14 @@ interface RouteParams {
  * NextAuth OAuth endpoint. The signIn callback in auth-options.ts will
  * check for this cookie and merge the OAuth credentials into the existing account.
  */
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, { params }: RouteParams) {
 	const { provider } = await params;
 
 	// Validate that user is signed in
 	const validated = await validateSession();
 	if (!validated) {
 		return NextResponse.redirect(
-			new URL("/login?error=SessionRequired", request.url)
+			new URL("/login?error=SessionRequired", publicBaseUrl())
 		);
 	}
 
@@ -52,7 +71,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 	const callbackUrl = "/dashboard/settings";
 	const signInUrl = new URL(
 		`/api/auth/signin/${provider.toLowerCase()}`,
-		request.url
+		publicBaseUrl()
 	);
 	signInUrl.searchParams.set("callbackUrl", callbackUrl);
 
