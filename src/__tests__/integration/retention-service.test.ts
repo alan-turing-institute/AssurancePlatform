@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { runRetentionSweep } from "@/lib/services/retention-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
-import { createTestUser } from "../utils/prisma-factories";
+import {
+	createTestIntegrationWithSystemUser,
+	createTestUser,
+} from "../utils/prisma-factories";
 
 const CRON_SECRET = "test-cron-secret";
 
@@ -246,5 +249,77 @@ describe("runRetentionSweep — dry run", () => {
 
 		const inDb = await prisma.user.findUnique({ where: { id: user.id } });
 		expect(inDb).not.toBeNull();
+	});
+});
+
+/**
+ * QA round 1, D2: the dry-run `delete` branch used to report "deleted"
+ * unconditionally, without running the same pre-checks
+ * (`checkDeletable`) the real path does — so dry-run and real counts
+ * disagreed on exactly the accounts the rollout dry-run check exists to
+ * catch (an owned integration blocks real deletion via `ON DELETE
+ * RESTRICT`).
+ */
+describe("runRetentionSweep — dry-run matches the real path (QA round 1, D2)", () => {
+	it("reports skipped, not deleted, in DRY-RUN for a user who owns an integration", async () => {
+		const now = new Date();
+		const lastLoginAt = addYears(now, -5);
+		const user = await createTestUser({
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -30),
+			retentionWarning7SentAt: addDays(now, -7),
+		});
+		await createTestIntegrationWithSystemUser(user.id);
+
+		const dryRunResult = expectSuccess(
+			await runRetentionSweep(CRON_SECRET, { dryRun: true })
+		);
+		expect(dryRunResult.deleted).toBe(0);
+		expect(dryRunResult.skipped).toBe(1);
+	});
+
+	it("agrees with the REAL run: both skip, neither deletes, for the same integration-owning user", async () => {
+		const now = new Date();
+		const lastLoginAt = addYears(now, -5);
+		const user = await createTestUser({
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -30),
+			retentionWarning7SentAt: addDays(now, -7),
+		});
+		await createTestIntegrationWithSystemUser(user.id);
+
+		const dryRunResult = expectSuccess(
+			await runRetentionSweep(CRON_SECRET, { dryRun: true })
+		);
+		const realResult = expectSuccess(await runRetentionSweep(CRON_SECRET));
+
+		expect(dryRunResult.deleted).toBe(realResult.deleted);
+		expect(dryRunResult.skipped).toBe(realResult.skipped);
+
+		const inDb = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(inDb).not.toBeNull();
+	});
+});
+
+/**
+ * QA round 1 gap: overlapping sweeps could double-send a warning email
+ * because the "already sent?" check and the "stamp it sent" write were two
+ * separate operations. `claimWarning30`/`claimWarning7` close the gap with
+ * an atomic `updateMany` guarded on the field still being `null`.
+ */
+describe("runRetentionSweep — double-send guard", () => {
+	it("sends the 30-day warning exactly once when two sweeps race for the same user", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn30ThresholdActivity(now), -1);
+		await createTestUser({ lastLoginAt });
+
+		const [first, second] = await Promise.all([
+			runRetentionSweep(CRON_SECRET),
+			runRetentionSweep(CRON_SECRET),
+		]);
+
+		const firstData = expectSuccess(first);
+		const secondData = expectSuccess(second);
+		expect(firstData.warned30 + secondData.warned30).toBe(1);
 	});
 });

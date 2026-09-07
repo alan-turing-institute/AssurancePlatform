@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { authenticateWithPrisma } from "@/lib/auth/config";
+import {
+	authenticateGoogleWithPrisma,
+	authenticateWithPrisma,
+} from "@/lib/auth/config";
 import { hashPassword } from "@/lib/auth/password-service";
 import prisma from "@/lib/prisma";
 import { createTestUser } from "../utils/prisma-factories";
@@ -48,5 +51,32 @@ describe("authenticateWithPrisma — login clears retention warnings", () => {
 		const unchanged = await prisma.user.findUnique({ where: { id: user.id } });
 		expect(unchanged?.lastLoginAt?.getTime()).toBe(originalLastLogin.getTime());
 		expect(unchanged?.retentionWarning30SentAt).not.toBeNull();
+	});
+});
+
+describe("authenticateGoogleWithPrisma — OAuth login clears retention warnings", () => {
+	it("records lastLoginAt and clears both retention-warning timestamps when an existing user signs in with Google", async () => {
+		const user = await createTestUser({
+			lastLoginAt: new Date("2020-01-01T00:00:00Z"),
+			retentionWarning30SentAt: new Date("2026-01-01T00:00:00Z"),
+			retentionWarning7SentAt: new Date("2026-01-20T00:00:00Z"),
+		});
+
+		const result = await authenticateGoogleWithPrisma({
+			sub: "google-sub-123",
+			email: user.email,
+			name: "Test User",
+		});
+
+		expect(result).not.toBeNull();
+		expect(result?.id).toBe(user.id);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.lastLoginAt?.getTime()).toBeGreaterThan(
+			new Date("2020-01-01T00:00:00Z").getTime()
+		);
+		expect(updated?.retentionWarning30SentAt).toBeNull();
+		expect(updated?.retentionWarning7SentAt).toBeNull();
+		expect(updated?.googleId).toBe("google-sub-123");
 	});
 });
