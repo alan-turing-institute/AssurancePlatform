@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { timingSafeCompare } from "@/lib/auth/timing-safe";
 import { prisma } from "@/lib/prisma";
+import { requireCronSecret } from "@/lib/services/cron-auth";
 import {
 	type HealthState,
 	isHealthStateStale,
@@ -183,15 +183,9 @@ async function sweepCaseClaims(
 export async function sweepHealthStaleness(
 	authToken: string | null
 ): ServiceResult<HealthStalenessSweepResult> {
-	const cronSecret = process.env.CRON_SECRET;
-
-	if (!cronSecret) {
-		console.error("CRON_SECRET environment variable not set");
-		return { error: "Server configuration error" };
-	}
-
-	if (!(authToken && timingSafeCompare(authToken, cronSecret))) {
-		return { error: "Unauthorised" };
+	const auth = requireCronSecret(authToken);
+	if (!auth.authorised) {
+		return { error: auth.error };
 	}
 
 	try {
