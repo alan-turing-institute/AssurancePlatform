@@ -64,4 +64,4 @@ jobs:
         run: npx tsx prisma/seed/dev-seed.ts | tee seed.log
 
       - name: Verify expected seed content ran
-        run: grep -q "claim C1 id=" seed.log || { echo "::error::seed log missing the demo-case line — wrong seed script/tree ran"; exit 1; }
+        run: grep -q "claim P1 id=" seed.log || { echo "::error::seed log missing the demo-case line — wrong seed script/tree ran"; exit 1; }
