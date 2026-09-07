@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import { logger } from "@/lib/logger";
 
 dotenv.config(); // Explicitly load environment variables
 
@@ -103,10 +104,22 @@ export async function authenticateWithPrisma(
 			}
 		: {};
 
-	await prisma.user.update({
-		where: { id: user.id },
-		data: { ...loginResetFields(), ...upgradeFields },
-	});
+	// Best-effort (vincent, review round 1): this write did not exist at all
+	// before the retention feature, so a valid login must not start failing
+	// because of it. A failure here means lastLoginAt/the retention-warning
+	// reset (and an opportunistic password-hash upgrade, if any) are missed
+	// for this login — logged, not thrown.
+	try {
+		await prisma.user.update({
+			where: { id: user.id },
+			data: { ...loginResetFields(), ...upgradeFields },
+		});
+	} catch (error) {
+		logger.error("Failed to record login / reset retention warnings", {
+			userId: user.id,
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
 
 	return {
 		id: user.id,
@@ -263,7 +276,7 @@ async function linkGoogleToUser(
  * @param expiresAt - Token expiry timestamp
  * @param linkToUserId - If provided, links Google to this existing user instead of creating/finding by email
  */
-async function authenticateGoogleWithPrisma(
+export async function authenticateGoogleWithPrisma(
 	profile: {
 		sub?: string;
 		email?: string | null;
