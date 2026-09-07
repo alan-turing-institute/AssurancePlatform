@@ -344,7 +344,7 @@ function formatRetentionDate(date: Date): string {
 
 /**
  * Send the 30-day inactive-account deletion warning.
- * Draft copy — Chris to approve the final wording (TEA data-retention issue).
+ * Copy approved by Chris, 2026-09-07 (verbatim; only the HTML wrapper is ours).
  */
 export async function sendRetentionWarningEmail(
 	params: RetentionWarningEmailParams
@@ -353,7 +353,7 @@ export async function sendRetentionWarningEmail(
 	const loginUrl = `${APP_URL}/login`;
 	const formattedDate = formatRetentionDate(deletionDate);
 
-	const subject = `Your ${APP_NAME} account will be deleted on ${formattedDate}`;
+	const subject = `Your ${APP_NAME} account is scheduled for deletion`;
 
 	const htmlContent = `
 <!DOCTYPE html>
@@ -373,19 +373,21 @@ export async function sendRetentionWarningEmail(
 
     <p>Hello ${username},</p>
 
-    <p>We have not seen you log in to ${APP_NAME} for two years, so under our data retention policy your account is scheduled for deletion on <strong>${formattedDate}</strong>.</p>
+    <p>You have not logged in to the ${APP_NAME} for two years. Under our data retention policy, your account is scheduled for deletion on ${formattedDate}.</p>
 
-    <p>To keep your account, simply log in before that date:</p>
+    <p>To keep your account, log in before that date: <a href="${loginUrl}">${loginUrl}</a>. Logging in cancels the deletion.</p>
 
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${loginUrl}" style="background: #1a1f2e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-        Log in to keep your account
-      </a>
-    </div>
+    <p>If you do nothing, this is what happens on ${formattedDate}:</p>
 
-    <p>If you would rather keep a copy of your work, log in and export your cases before the deletion date. Deletion removes your profile and login details permanently; any cases you created are transferred to a system account so shared work is not lost, and your name is removed from your comments.</p>
+    <ul>
+      <li>Your profile and login details are deleted permanently.</li>
+      <li>Each case you created is handled in one of two ways. If another person has Admin access to the case, the case is kept and they become responsible for it. If nobody else has Admin access, the case is deleted, and anyone you shared it with loses access.</li>
+      <li>Your name is removed from any comments you left on cases that are kept.</li>
+    </ul>
 
-    <p style="color: #666; font-size: 14px;">You will get one more reminder 7 days before deletion. If you do nothing, your account and data will be permanently deleted on ${formattedDate}.</p>
+    <p>If you want a copy of your work, log in and export your cases before ${formattedDate}.</p>
+
+    <p>You will receive one final reminder seven days before the deletion date.</p>
   </div>
 
   <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
@@ -396,18 +398,21 @@ export async function sendRetentionWarningEmail(
 `;
 
 	const plainTextContent = `
-Your account is scheduled for deletion
-
 Hello ${username},
 
-We have not seen you log in to ${APP_NAME} for two years, so under our data retention policy your account is scheduled for deletion on ${formattedDate}.
+You have not logged in to the ${APP_NAME} for two years. Under our data retention policy, your account is scheduled for deletion on ${formattedDate}.
 
-To keep your account, simply log in before that date:
-${loginUrl}
+To keep your account, log in before that date: ${loginUrl}. Logging in cancels the deletion.
 
-If you would rather keep a copy of your work, log in and export your cases before the deletion date. Deletion removes your profile and login details permanently; any cases you created are transferred to a system account so shared work is not lost, and your name is removed from your comments.
+If you do nothing, this is what happens on ${formattedDate}:
 
-You will get one more reminder 7 days before deletion. If you do nothing, your account and data will be permanently deleted on ${formattedDate}.
+- Your profile and login details are deleted permanently.
+- Each case you created is handled in one of two ways. If another person has Admin access to the case, the case is kept and they become responsible for it. If nobody else has Admin access, the case is deleted, and anyone you shared it with loses access.
+- Your name is removed from any comments you left on cases that are kept.
+
+If you want a copy of your work, log in and export your cases before ${formattedDate}.
+
+You will receive one final reminder seven days before the deletion date.
 
 ---
 ${APP_NAME}
@@ -418,7 +423,7 @@ ${APP_NAME}
 
 /**
  * Send the final 7-day inactive-account deletion reminder.
- * Draft copy — Chris to approve the final wording (TEA data-retention issue).
+ * Copy approved by Chris, 2026-09-07 (verbatim; only the HTML wrapper is ours).
  */
 export async function sendRetentionFinalReminderEmail(
 	params: RetentionWarningEmailParams
@@ -427,7 +432,7 @@ export async function sendRetentionFinalReminderEmail(
 	const loginUrl = `${APP_URL}/login`;
 	const formattedDate = formatRetentionDate(deletionDate);
 
-	const subject = `Final reminder: your ${APP_NAME} account will be deleted on ${formattedDate}`;
+	const subject = `Final reminder: your ${APP_NAME} account will be deleted in 7 days`;
 
 	const htmlContent = `
 <!DOCTYPE html>
@@ -443,21 +448,17 @@ export async function sendRetentionFinalReminderEmail(
   </div>
 
   <div style="background: #ffffff; padding: 30px; border: 1px solid #e1e1e1; border-top: none; border-radius: 0 0 10px 10px;">
-    <h2 style="color: #1a1f2e; margin-top: 0;">This is your final reminder</h2>
+    <h2 style="color: #1a1f2e; margin-top: 0;">Final reminder</h2>
 
     <p>Hello ${username},</p>
 
-    <p>This is a follow-up to our earlier warning: your ${APP_NAME} account has still not been used, and it will be permanently deleted in <strong>7 days</strong>, on <strong>${formattedDate}</strong>.</p>
+    <p>This is a follow-up to our earlier warning. Your ${APP_NAME} account has still not been used, and it will be permanently deleted on ${formattedDate}, seven days from now.</p>
 
-    <p>To keep your account, log in before that date:</p>
+    <p>To keep your account, log in before that date: <a href="${loginUrl}">${loginUrl}</a>. Logging in cancels the deletion.</p>
 
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${loginUrl}" style="background: #1a1f2e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-        Log in to keep your account
-      </a>
-    </div>
+    <p>If you do nothing, your profile and login details will be deleted and cannot be recovered. Cases you created will be kept only where another person has Admin access to them; otherwise they will be deleted and anyone you shared them with will lose access. Your name will be removed from any comments on cases that are kept.</p>
 
-    <p>If you want to keep a copy of your work, log in and export your cases now — after ${formattedDate} your profile and login details will be permanently deleted and cannot be recovered. Any cases you created will be transferred to a system account so shared work is not lost, and your name will be removed from your comments.</p>
+    <p>If you want a copy of your work, log in and export your cases now.</p>
   </div>
 
   <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
@@ -468,16 +469,15 @@ export async function sendRetentionFinalReminderEmail(
 `;
 
 	const plainTextContent = `
-This is your final reminder
-
 Hello ${username},
 
-This is a follow-up to our earlier warning: your ${APP_NAME} account has still not been used, and it will be permanently deleted in 7 days, on ${formattedDate}.
+This is a follow-up to our earlier warning. Your ${APP_NAME} account has still not been used, and it will be permanently deleted on ${formattedDate}, seven days from now.
 
-To keep your account, log in before that date:
-${loginUrl}
+To keep your account, log in before that date: ${loginUrl}. Logging in cancels the deletion.
 
-If you want to keep a copy of your work, log in and export your cases now — after ${formattedDate} your profile and login details will be permanently deleted and cannot be recovered. Any cases you created will be transferred to a system account so shared work is not lost, and your name will be removed from your comments.
+If you do nothing, your profile and login details will be deleted and cannot be recovered. Cases you created will be kept only where another person has Admin access to them; otherwise they will be deleted and anyone you shared them with will lose access. Your name will be removed from any comments on cases that are kept.
+
+If you want a copy of your work, log in and export your cases now.
 
 ---
 ${APP_NAME}
