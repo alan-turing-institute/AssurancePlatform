@@ -383,66 +383,133 @@ export async function deleteAccount(
 			}
 		}
 
-		// Perform deletion in transaction
-		await prisma.$transaction(async (tx) => {
-			const systemUserId = await getOrCreateSystemUser(tx);
-
-			// Transfer owned cases to system user
-			await tx.assuranceCase.updateMany({
-				where: { createdById: userId },
-				data: { createdById: systemUserId },
-			});
-
-			// Handle teams created by user
-			const ownedTeams = await tx.team.findMany({
-				where: { createdById: userId },
-				include: {
-					members: {
-						where: { userId: { not: userId } },
-						orderBy: { joinedAt: "asc" },
-						take: 1,
-					},
-				},
-			});
-
-			for (const team of ownedTeams) {
-				if (team.members.length > 0) {
-					// Transfer ownership to first remaining member
-					await tx.team.update({
-						where: { id: team.id },
-						data: { createdById: team.members[0]?.userId },
-					});
-				} else {
-					// No other members - delete the team
-					await tx.team.delete({ where: { id: team.id } });
-				}
-			}
-
-			// Anonymise comments (transfer to system user)
-			await tx.comment.updateMany({
-				where: { authorId: userId },
-				data: { authorId: systemUserId },
-			});
-
-			// Also handle release comments if they exist
-			await tx.releaseComment.updateMany({
-				where: { authorId: userId },
-				data: { authorId: systemUserId },
-			});
-
-			// Transfer created elements to system user (for audit trail)
-			await tx.assuranceElement.updateMany({
-				where: { createdById: userId },
-				data: { createdById: systemUserId },
-			});
-
-			// Delete the user (cascades: RefreshToken, TeamMember, CasePermission)
-			await tx.user.delete({ where: { id: userId } });
-		});
+		await runAccountDeletionTransaction(userId);
 
 		return { data: true };
 	} catch (error) {
 		console.error("Error deleting account:", error);
+		return { error: "Failed to delete account" };
+	}
+}
+
+/**
+ * The cascade shared by every account-deletion path: transfers owned cases,
+ * teams, comments and elements to the system user (audit trail — this is
+ * anonymisation, not deletion, of that content), then hard-deletes the
+ * user row (cascades: RefreshToken, TeamMember, CasePermission). Callers
+ * are responsible for their own pre-flight checks (password, owned
+ * integrations) before calling this.
+ */
+async function runAccountDeletionTransaction(userId: string): Promise<void> {
+	await prisma.$transaction(async (tx) => {
+		const systemUserId = await getOrCreateSystemUser(tx);
+
+		// Transfer owned cases to system user
+		await tx.assuranceCase.updateMany({
+			where: { createdById: userId },
+			data: { createdById: systemUserId },
+		});
+
+		// Handle teams created by user
+		const ownedTeams = await tx.team.findMany({
+			where: { createdById: userId },
+			include: {
+				members: {
+					where: { userId: { not: userId } },
+					orderBy: { joinedAt: "asc" },
+					take: 1,
+				},
+			},
+		});
+
+		for (const team of ownedTeams) {
+			if (team.members.length > 0) {
+				// Transfer ownership to first remaining member
+				await tx.team.update({
+					where: { id: team.id },
+					data: { createdById: team.members[0]?.userId },
+				});
+			} else {
+				// No other members - delete the team
+				await tx.team.delete({ where: { id: team.id } });
+			}
+		}
+
+		// Anonymise comments (transfer to system user)
+		await tx.comment.updateMany({
+			where: { authorId: userId },
+			data: { authorId: systemUserId },
+		});
+
+		// Also handle release comments if they exist
+		await tx.releaseComment.updateMany({
+			where: { authorId: userId },
+			data: { authorId: systemUserId },
+		});
+
+		// Transfer created elements to system user (for audit trail)
+		await tx.assuranceElement.updateMany({
+			where: { createdById: userId },
+			data: { createdById: systemUserId },
+		});
+
+		// Delete the user (cascades: RefreshToken, TeamMember, CasePermission)
+		await tx.user.delete({ where: { id: userId } });
+	});
+}
+
+/**
+ * Deletes an account on the platform's own initiative (data retention),
+ * not the user's — the password-free counterpart to `deleteAccount` used
+ * by the retention sweep (`lib/services/retention-service.ts`). Shares
+ * `deleteAccount`'s cascade and confirmation email, and additionally logs
+ * a security event so the deletion has an audit trail distinct from a
+ * self-service one.
+ *
+ * Like `deleteAccount`, a user who owns integrations cannot be deleted
+ * (the FK from `Integration.ownerId` is `ON DELETE RESTRICT` — ADR 0002 v2
+ * §2.4). The retention sweep treats that as a per-user skip, not a reason
+ * to abort the run.
+ */
+export async function deleteAccountForRetention(userId: string): ServiceResult {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { id: true, email: true, username: true },
+		});
+
+		if (!user) {
+			return { error: "User not found" };
+		}
+
+		const ownedIntegrationCount = await countIntegrationsOwnedBy(userId);
+		if ("error" in ownedIntegrationCount) {
+			return ownedIntegrationCount;
+		}
+		if (ownedIntegrationCount.data > 0) {
+			const count = ownedIntegrationCount.data;
+			return {
+				error: `Remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
+			};
+		}
+
+		await runAccountDeletionTransaction(userId);
+
+		const { sendAccountDeletedEmail } = await import(
+			"@/lib/services/email-service"
+		);
+		await sendAccountDeletedEmail({ to: user.email, username: user.username });
+
+		const { logSecurityEvent } = await import("@/lib/audit/security-log");
+		logSecurityEvent({
+			event: "account_deleted",
+			severity: "medium",
+			metadata: { userId, reason: "retention" },
+		});
+
+		return { data: true };
+	} catch (error) {
+		console.error("Error deleting account for retention:", error);
 		return { error: "Failed to delete account" };
 	}
 }

@@ -33,6 +33,13 @@ interface AccountDeletedEmailParams {
 	username: string;
 }
 
+interface RetentionWarningEmailParams {
+	/** The date deletion will actually happen if the account stays inactive — see the callers in retention-service.ts for how this is computed. */
+	deletionDate: Date;
+	to: string;
+	username: string;
+}
+
 /**
  * Get the Azure Communication Services email client.
  * Returns null if not configured (for development/testing).
@@ -319,6 +326,158 @@ What this means:
 If you did not request this deletion, please contact our support team immediately.
 
 We're sorry to see you go. If you ever want to return, you're always welcome to create a new account.
+
+---
+${APP_NAME}
+`;
+
+	return await sendEmail(to, subject, htmlContent, plainTextContent);
+}
+
+function formatRetentionDate(date: Date): string {
+	return date.toLocaleDateString("en-GB", {
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+}
+
+/**
+ * Send the 30-day inactive-account deletion warning.
+ * Draft copy — Chris to approve the final wording (TEA data-retention issue).
+ */
+export async function sendRetentionWarningEmail(
+	params: RetentionWarningEmailParams
+): Promise<EmailResult> {
+	const { to, username, deletionDate } = params;
+	const loginUrl = `${APP_URL}/login`;
+	const formattedDate = formatRetentionDate(deletionDate);
+
+	const subject = `Your ${APP_NAME} account will be deleted on ${formattedDate}`;
+
+	const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+  <div style="background: #1a1f2e; padding: 24px 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <img src="${TEA_LOGO_BASE64}" alt="${APP_NAME}" style="max-width: 280px; height: auto;">
+  </div>
+
+  <div style="background: #ffffff; padding: 30px; border: 1px solid #e1e1e1; border-top: none; border-radius: 0 0 10px 10px;">
+    <h2 style="color: #1a1f2e; margin-top: 0;">Your account is scheduled for deletion</h2>
+
+    <p>Hello ${username},</p>
+
+    <p>We have not seen you log in to ${APP_NAME} for two years, so under our data retention policy your account is scheduled for deletion on <strong>${formattedDate}</strong>.</p>
+
+    <p>To keep your account, simply log in before that date:</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${loginUrl}" style="background: #1a1f2e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Log in to keep your account
+      </a>
+    </div>
+
+    <p>If you would rather keep a copy of your work, log in and export your cases before the deletion date. Deletion removes your profile and login details permanently; any cases you created are transferred to a system account so shared work is not lost, and your name is removed from your comments.</p>
+
+    <p style="color: #666; font-size: 14px;">You will get one more reminder 7 days before deletion. If you do nothing, your account and data will be permanently deleted on ${formattedDate}.</p>
+  </div>
+
+  <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+    <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+  </div>
+</body>
+</html>
+`;
+
+	const plainTextContent = `
+Your account is scheduled for deletion
+
+Hello ${username},
+
+We have not seen you log in to ${APP_NAME} for two years, so under our data retention policy your account is scheduled for deletion on ${formattedDate}.
+
+To keep your account, simply log in before that date:
+${loginUrl}
+
+If you would rather keep a copy of your work, log in and export your cases before the deletion date. Deletion removes your profile and login details permanently; any cases you created are transferred to a system account so shared work is not lost, and your name is removed from your comments.
+
+You will get one more reminder 7 days before deletion. If you do nothing, your account and data will be permanently deleted on ${formattedDate}.
+
+---
+${APP_NAME}
+`;
+
+	return await sendEmail(to, subject, htmlContent, plainTextContent);
+}
+
+/**
+ * Send the final 7-day inactive-account deletion reminder.
+ * Draft copy — Chris to approve the final wording (TEA data-retention issue).
+ */
+export async function sendRetentionFinalReminderEmail(
+	params: RetentionWarningEmailParams
+): Promise<EmailResult> {
+	const { to, username, deletionDate } = params;
+	const loginUrl = `${APP_URL}/login`;
+	const formattedDate = formatRetentionDate(deletionDate);
+
+	const subject = `Final reminder: your ${APP_NAME} account will be deleted on ${formattedDate}`;
+
+	const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+  <div style="background: #1a1f2e; padding: 24px 30px; border-radius: 10px 10px 0 0; text-align: center;">
+    <img src="${TEA_LOGO_BASE64}" alt="${APP_NAME}" style="max-width: 280px; height: auto;">
+  </div>
+
+  <div style="background: #ffffff; padding: 30px; border: 1px solid #e1e1e1; border-top: none; border-radius: 0 0 10px 10px;">
+    <h2 style="color: #1a1f2e; margin-top: 0;">This is your final reminder</h2>
+
+    <p>Hello ${username},</p>
+
+    <p>This is a follow-up to our earlier warning: your ${APP_NAME} account has still not been used, and it will be permanently deleted in <strong>7 days</strong>, on <strong>${formattedDate}</strong>.</p>
+
+    <p>To keep your account, log in before that date:</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${loginUrl}" style="background: #1a1f2e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+        Log in to keep your account
+      </a>
+    </div>
+
+    <p>If you want to keep a copy of your work, log in and export your cases now — after ${formattedDate} your profile and login details will be permanently deleted and cannot be recovered. Any cases you created will be transferred to a system account so shared work is not lost, and your name will be removed from your comments.</p>
+  </div>
+
+  <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+    <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+  </div>
+</body>
+</html>
+`;
+
+	const plainTextContent = `
+This is your final reminder
+
+Hello ${username},
+
+This is a follow-up to our earlier warning: your ${APP_NAME} account has still not been used, and it will be permanently deleted in 7 days, on ${formattedDate}.
+
+To keep your account, log in before that date:
+${loginUrl}
+
+If you want to keep a copy of your work, log in and export your cases now — after ${formattedDate} your profile and login details will be permanently deleted and cannot be recovered. Any cases you created will be transferred to a system account so shared work is not lost, and your name will be removed from your comments.
 
 ---
 ${APP_NAME}
