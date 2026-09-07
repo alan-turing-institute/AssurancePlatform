@@ -1,0 +1,28 @@
+name: Data retention sweep
+
+on:
+  schedule:
+    # Run daily at 3:17 AM UTC (off-minute from the other cron jobs)
+    - cron: "17 3 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call retention-sweep endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/cron/retention-sweep" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Retention sweep failed with status $http_code"
+            exit 1
+          fi
