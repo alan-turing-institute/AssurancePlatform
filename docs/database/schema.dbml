@@ -36,6 +36,8 @@ Table users {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   lastLoginAt DateTime [note: 'Most recent login timestamp for audit purposes']
+  retentionWarning30SentAt DateTime [note: 'When the 30-day inactive-account deletion warning was sent']
+  retentionWarning7SentAt DateTime [note: 'When the 7-day final deletion reminder was sent']
   teamMemberships team_members [not null]
   createdTeams teams [not null]
   createdCases assurance_cases [not null]

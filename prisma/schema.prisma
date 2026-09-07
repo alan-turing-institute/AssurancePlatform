@@ -72,6 +72,10 @@ model User {
   updatedAt            DateTime     @updatedAt @map("updated_at")
   lastLoginAt          DateTime?    @map("last_login_at") /// Most recent login timestamp for audit purposes
 
+  // Data retention (inactive-account deletion) — cleared on every login
+  retentionWarning30SentAt DateTime? @map("retention_warning_30_sent_at") /// When the 30-day inactive-account deletion warning was sent
+  retentionWarning7SentAt  DateTime? @map("retention_warning_7_sent_at") /// When the 7-day final deletion reminder was sent
+
   // Relations
   teamMemberships      TeamMember[]
   createdTeams         Team[]             @relation("TeamCreator")
