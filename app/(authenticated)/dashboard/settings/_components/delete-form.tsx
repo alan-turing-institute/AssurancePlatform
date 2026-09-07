@@ -79,8 +79,10 @@ export const DeleteForm = ({ user }: DeleteFormProps) => {
 				</h2>
 				<p className="mt-1 text-muted-foreground text-sm leading-6">
 					No longer want to use our service? You can delete your account here.
-					This action is not reversible. All information related to this account
-					will be deleted permanently.
+					This cannot be undone. Your profile and login details will be deleted.
+					Cases you created are kept only where another person or team has Admin
+					access; otherwise they are deleted and collaborators lose access. Your
+					name is removed from your comments.
 				</p>
 			</div>
 

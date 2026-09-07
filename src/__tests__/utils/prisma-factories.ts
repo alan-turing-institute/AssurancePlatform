@@ -39,6 +39,10 @@ type UserOverrides = Partial<{
 	firstName: string;
 	lastName: string;
 	emailVerified: boolean;
+	createdAt: Date;
+	lastLoginAt: Date | null;
+	retentionWarning30SentAt: Date | null;
+	retentionWarning7SentAt: Date | null;
 }>;
 
 export function createTestUser(overrides: UserOverrides = {}): Promise<User> {
@@ -53,6 +57,10 @@ export function createTestUser(overrides: UserOverrides = {}): Promise<User> {
 			firstName: overrides.firstName,
 			lastName: overrides.lastName,
 			emailVerified: overrides.emailVerified ?? false,
+			createdAt: overrides.createdAt,
+			lastLoginAt: overrides.lastLoginAt,
+			retentionWarning30SentAt: overrides.retentionWarning30SentAt,
+			retentionWarning7SentAt: overrides.retentionWarning7SentAt,
 		},
 	});
 }
