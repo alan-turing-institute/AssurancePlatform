@@ -60,5 +60,8 @@
   "audit": {
     "deadCodeBaseline": ".fallow-baseline.dead-code.json",
     "dupesBaseline": ".fallow-baseline.dupes.json"
+  },
+  "rules": {
+    "coverage-gaps": "warn"
   }
 }
