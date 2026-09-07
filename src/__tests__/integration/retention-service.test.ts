@@ -3,7 +3,9 @@ import prisma from "@/lib/prisma";
 import { runRetentionSweep } from "@/lib/services/retention-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
+	createTestCase,
 	createTestIntegrationWithSystemUser,
+	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -32,6 +34,11 @@ function addYears(date: Date, years: number): Date {
 /** The lastActivity time at which the 30-day warning threshold falls exactly now. */
 function warn30ThresholdActivity(now: Date): Date {
 	return addDays(addYears(now, -2), 30);
+}
+
+/** The lastActivity time at which the 7-day reminder threshold falls exactly now. */
+function warn7ThresholdActivity(now: Date): Date {
+	return addDays(addYears(now, -2), 7);
 }
 
 describe("runRetentionSweep — auth", () => {
@@ -299,6 +306,46 @@ describe("runRetentionSweep — dry-run matches the real path (QA round 1, D2)",
 		const inDb = await prisma.user.findUnique({ where: { id: user.id } });
 		expect(inDb).not.toBeNull();
 	});
+
+	it("agrees on an integration owner (skipped) AND a D1-shaped user (deleted) in the SAME batch (QA round 2, item b)", async () => {
+		const now = new Date();
+		const lastLoginAt = addYears(now, -5);
+
+		const integrationOwner = await createTestUser({
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -30),
+			retentionWarning7SentAt: addDays(now, -7),
+		});
+		await createTestIntegrationWithSystemUser(integrationOwner.id);
+
+		const d1User = await createTestUser({
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -30),
+			retentionWarning7SentAt: addDays(now, -7),
+		});
+		const viewer = await createTestUser();
+		const sharedCase = await createTestCase(d1User.id, {
+			name: "D1-shaped user's shared case",
+		});
+		await createTestPermission(sharedCase.id, viewer.id, d1User.id, "VIEW");
+
+		const dryRunResult = expectSuccess(
+			await runRetentionSweep(CRON_SECRET, { dryRun: true })
+		);
+		expect(dryRunResult.skipped).toBe(1);
+		expect(dryRunResult.deleted).toBe(1);
+
+		const realResult = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(realResult.skipped).toBe(dryRunResult.skipped);
+		expect(realResult.deleted).toBe(dryRunResult.deleted);
+
+		expect(
+			await prisma.user.findUnique({ where: { id: integrationOwner.id } })
+		).not.toBeNull();
+		expect(
+			await prisma.user.findUnique({ where: { id: d1User.id } })
+		).toBeNull();
+	});
 });
 
 /**
@@ -321,5 +368,23 @@ describe("runRetentionSweep — double-send guard", () => {
 		const firstData = expectSuccess(first);
 		const secondData = expectSuccess(second);
 		expect(firstData.warned30 + secondData.warned30).toBe(1);
+	});
+
+	it("sends the 7-day reminder exactly once when two sweeps race for the same user (QA round 2, item d)", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn7ThresholdActivity(now), -1);
+		await createTestUser({
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -23),
+		});
+
+		const [first, second] = await Promise.all([
+			runRetentionSweep(CRON_SECRET),
+			runRetentionSweep(CRON_SECRET),
+		]);
+
+		const firstData = expectSuccess(first);
+		const secondData = expectSuccess(second);
+		expect(firstData.warned7 + secondData.warned7).toBe(1);
 	});
 });

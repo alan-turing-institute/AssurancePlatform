@@ -334,4 +334,25 @@ describe("deleteAccount — grantedById reassignment (QA round 1, D1)", () => {
 		});
 		expect(updatedPermission.grantedById).not.toBe(admin.id);
 	});
+
+	it("deleteAccountForRetention succeeds when the user granted a permission on their OWN case (QA round 2, item a)", async () => {
+		const owner = await createTestUser();
+		const viewer = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Shared by owner (retention)",
+		});
+		const permission = await createTestPermission(
+			testCase.id,
+			viewer.id,
+			owner.id,
+			"VIEW"
+		);
+
+		expectSuccess(await deleteAccountForRetention(owner.id));
+
+		const updatedPermission = await prisma.casePermission.findUniqueOrThrow({
+			where: { id: permission.id },
+		});
+		expect(updatedPermission.grantedById).not.toBe(owner.id);
+	});
 });
