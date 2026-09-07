@@ -312,24 +312,56 @@ async function getOrCreateSystemUser(
 }
 
 /**
- * Deletes a user account.
- * Transfers owned cases and anonymises comments before deletion.
- * Requires password confirmation for local auth users.
+ * Whether `userId`'s account can be deleted at all, independent of *how*
+ * it is being deleted (self-service with a password, or the retention
+ * sweep without one). Extracted (QA round 1, D2) so the retention sweep's
+ * dry-run branch can report exactly the same skip a real run would hit,
+ * instead of the dry-run and real counts disagreeing on accounts an
+ * integration blocks.
  *
  * Integrations are NOT silently cascade-deleted: `Integration.ownerId` is an
  * unconditional `ON DELETE RESTRICT` (ADR 0002 v2 §2.4 — a revoked
  * integration keeps its accountability trail, so its owner reference must
- * never silently vanish). Without the pre-check below, `tx.user.delete`
- * would throw a raw Postgres P2003 that the catch-all below flattens into
- * an unhelpful "Failed to delete account". Checking
- * `countIntegrationsOwnedBy` first turns that into a clean, typed,
- * actionable error instead — "Remove your N integration(s) before deleting
- * your account". Reassignment has no path in 1.0 (vincent minor, review
- * round 2 — this used to promise "reassign or remove"; only removal is
- * actually offered), so the message promises only that. `countIntegrationsOwnedBy`
- * is a `COUNT(*)`, not the full `getIntegrationsOwnedBy` row fetch this
- * pre-check used to do (vincent minor, work item 7) — `getIntegrationsOwnedBy`
- * itself is unchanged and still used elsewhere.
+ * never silently vanish). Without this check, `tx.user.delete` would throw
+ * a raw Postgres P2003 that the caller's catch-all flattens into an
+ * unhelpful "Failed to delete account". Checking `countIntegrationsOwnedBy`
+ * first turns that into a clean, typed, actionable error instead —
+ * "Remove your N integration(s) before deleting your account".
+ */
+export async function checkDeletable(
+	userId: string
+): Promise<{ deletable: true } | { deletable: false; error: string }> {
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { id: true },
+	});
+
+	if (!user) {
+		return { deletable: false, error: "User not found" };
+	}
+
+	const ownedIntegrationCount = await countIntegrationsOwnedBy(userId);
+	if ("error" in ownedIntegrationCount) {
+		return { deletable: false, error: ownedIntegrationCount.error };
+	}
+	if (ownedIntegrationCount.data > 0) {
+		const count = ownedIntegrationCount.data;
+		return {
+			deletable: false,
+			error: `Remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
+		};
+	}
+
+	return { deletable: true };
+}
+
+/**
+ * Deletes a user account. Transfers owned cases and anonymises comments
+ * before deletion (see `runAccountDeletionTransaction` for the case-by-case
+ * keep/trash rule). Requires password confirmation for local auth users.
+ * Reassignment has no path in 1.0 (vincent minor, review round 2 — this
+ * used to promise "reassign or remove"; only removal is actually offered),
+ * so `checkDeletable`'s message promises only that.
  */
 export async function deleteAccount(
 	userId: string,
@@ -351,15 +383,9 @@ export async function deleteAccount(
 			return { error: "User not found" };
 		}
 
-		const ownedIntegrationCount = await countIntegrationsOwnedBy(userId);
-		if ("error" in ownedIntegrationCount) {
-			return ownedIntegrationCount;
-		}
-		if (ownedIntegrationCount.data > 0) {
-			const count = ownedIntegrationCount.data;
-			return {
-				error: `Remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
-			};
+		const deletable = await checkDeletable(userId);
+		if (!deletable.deletable) {
+			return { error: deletable.error };
 		}
 
 		// Verify password for local auth users
@@ -393,22 +419,115 @@ export async function deleteAccount(
 }
 
 /**
- * The cascade shared by every account-deletion path: transfers owned cases,
- * teams, comments and elements to the system user (audit trail — this is
- * anonymisation, not deletion, of that content), then hard-deletes the
- * user row (cascades: RefreshToken, TeamMember, CasePermission). Callers
- * are responsible for their own pre-flight checks (password, owned
- * integrations) before calling this.
+ * Splits `userId`'s created cases into those to keep (authorship
+ * reassigned to the system account, as before) and those to trash, per
+ * Chris's ruling (2026-09-07): a case is kept only if at least one OTHER
+ * principal already holds ADMIN on it — another user's direct
+ * `CasePermission` at ADMIN, or a team's `CaseTeamPermission` at ADMIN
+ * (Chris: "fair assumption, I'm okay with this"). Otherwise nobody but the
+ * deleted user could ever administer it, so it is trashed rather than
+ * silently orphaned under the system account.
+ */
+async function partitionCasesToKeepOrTrash(
+	tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+	userId: string,
+	caseIds: string[]
+): Promise<{ toKeep: string[]; toTrash: string[] }> {
+	if (caseIds.length === 0) {
+		return { toKeep: [], toTrash: [] };
+	}
+
+	const [adminUserPermissions, adminTeamPermissions] = await Promise.all([
+		tx.casePermission.findMany({
+			where: {
+				caseId: { in: caseIds },
+				permission: "ADMIN",
+				userId: { not: userId },
+			},
+			select: { caseId: true },
+		}),
+		tx.caseTeamPermission.findMany({
+			where: { caseId: { in: caseIds }, permission: "ADMIN" },
+			select: { caseId: true },
+		}),
+	]);
+
+	const casesWithOtherAdmin = new Set([
+		...adminUserPermissions.map((p) => p.caseId),
+		...adminTeamPermissions.map((p) => p.caseId),
+	]);
+
+	const toKeep: string[] = [];
+	const toTrash: string[] = [];
+	for (const caseId of caseIds) {
+		(casesWithOtherAdmin.has(caseId) ? toKeep : toTrash).push(caseId);
+	}
+	return { toKeep, toTrash };
+}
+
+/**
+ * The cascade shared by every account-deletion path.
+ *
+ * Cases the user created: kept (authorship reassigned to the system
+ * account, as before) if another principal already holds ADMIN on them,
+ * otherwise soft-deleted into the trash — `deletedAt`/`deletedById`, same
+ * as `case-trash-service.ts`'s `softDeleteCase`, so the existing
+ * `purge-trash` cron removes them permanently after the usual retention
+ * window. This is a full disappearance for every collaborator, verified
+ * against `listUserCases`/`listSharedCases` and `fetchCaseFromPrisma`/
+ * `canAccessCase`, which all filter `deletedAt: null` unconditionally for
+ * every viewer, not just the owner — a trashed case is invisible to
+ * collaborators exactly like it is to the deleted user, so soft-delete
+ * satisfies "disappears from the accounts of any collaborators" without
+ * needing a hard delete.
+ *
+ * Comments and elements are anonymised (transferred to the system account)
+ * exactly as before, on kept AND trashed cases alike — trashing a case
+ * does not touch its children, only `deletedAt` on the case row, so their
+ * `createdById`/`authorId` FKs still need a home until the purge cron
+ * removes the whole case tree.
+ *
+ * `CasePermission.grantedById` is reassigned too (QA round 1, D1): it is a
+ * real `ON DELETE RESTRICT` FK with no cascade, so any user who ever
+ * shared ANY case — including one they don't own — could not previously
+ * delete their own account (P2003, silently flattened to "Failed to
+ * delete account" one level up). Covers permissions granted on the user's
+ * own cases and on other people's.
+ *
+ * Callers are responsible for their own pre-flight checks
+ * (`checkDeletable`, password) before calling this.
  */
 async function runAccountDeletionTransaction(userId: string): Promise<void> {
 	await prisma.$transaction(async (tx) => {
 		const systemUserId = await getOrCreateSystemUser(tx);
 
-		// Transfer owned cases to system user
-		await tx.assuranceCase.updateMany({
+		const ownedCases = await tx.assuranceCase.findMany({
 			where: { createdById: userId },
-			data: { createdById: systemUserId },
+			select: { id: true },
 		});
+		const { toKeep, toTrash } = await partitionCasesToKeepOrTrash(
+			tx,
+			userId,
+			ownedCases.map((c) => c.id)
+		);
+
+		if (toKeep.length > 0) {
+			await tx.assuranceCase.updateMany({
+				where: { id: { in: toKeep } },
+				data: { createdById: systemUserId },
+			});
+		}
+
+		if (toTrash.length > 0) {
+			await tx.assuranceCase.updateMany({
+				where: { id: { in: toTrash } },
+				data: {
+					createdById: systemUserId,
+					deletedAt: new Date(),
+					deletedById: systemUserId,
+				},
+			});
+		}
 
 		// Handle teams created by user
 		const ownedTeams = await tx.team.findMany({
@@ -453,7 +572,15 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 			data: { createdById: systemUserId },
 		});
 
-		// Delete the user (cascades: RefreshToken, TeamMember, CasePermission)
+		// Reassign permissions this user granted — on their own cases and on
+		// others' — to the system user. Real ON DELETE RESTRICT FK, no cascade.
+		await tx.casePermission.updateMany({
+			where: { grantedById: userId },
+			data: { grantedById: systemUserId },
+		});
+
+		// Delete the user (cascades: RefreshToken, TeamMember, CasePermission
+		// held BY this user, GitHubRepository)
 		await tx.user.delete({ where: { id: userId } });
 	});
 }
@@ -465,11 +592,6 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
  * `deleteAccount`'s cascade and confirmation email, and additionally logs
  * a security event so the deletion has an audit trail distinct from a
  * self-service one.
- *
- * Like `deleteAccount`, a user who owns integrations cannot be deleted
- * (the FK from `Integration.ownerId` is `ON DELETE RESTRICT` — ADR 0002 v2
- * §2.4). The retention sweep treats that as a per-user skip, not a reason
- * to abort the run.
  */
 export async function deleteAccountForRetention(userId: string): ServiceResult {
 	try {
@@ -482,15 +604,9 @@ export async function deleteAccountForRetention(userId: string): ServiceResult {
 			return { error: "User not found" };
 		}
 
-		const ownedIntegrationCount = await countIntegrationsOwnedBy(userId);
-		if ("error" in ownedIntegrationCount) {
-			return ownedIntegrationCount;
-		}
-		if (ownedIntegrationCount.data > 0) {
-			const count = ownedIntegrationCount.data;
-			return {
-				error: `Remove your ${count} integration${count === 1 ? "" : "s"} before deleting your account`,
-			};
+		const deletable = await checkDeletable(userId);
+		if (!deletable.deletable) {
+			return { error: deletable.error };
 		}
 
 		await runAccountDeletionTransaction(userId);
