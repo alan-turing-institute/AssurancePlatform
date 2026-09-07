@@ -2,17 +2,30 @@ name: Data retention sweep
 
 on:
   schedule:
-    # Run daily at 3:17 AM UTC (off-minute from the other cron jobs)
+    # Run daily at 3:17 AM UTC (off-minute from the other cron jobs). Always
+    # a real run — dry_run only applies to a manual workflow_dispatch.
     - cron: "17 3 * * *"
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview counts only — send no emails, write no state, delete nobody"
+        type: boolean
+        default: true
 
 jobs:
   sweep:
     runs-on: ubuntu-latest
     steps:
       - name: Call retention-sweep endpoint
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
         run: |
-          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/cron/retention-sweep" \
+          url="${{ secrets.APP_URL }}/api/cron/retention-sweep"
+          if [ "$DRY_RUN" = "true" ]; then
+            url="${url}?dryRun=1"
+          fi
+
+          response=$(curl -s -w "\n%{http_code}" -X POST "$url" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
 
