@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/user-management-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
+	addTeamMember,
 	createTestCase,
 	createTestIntegrationWithSystemUser,
 	createTestPermission,
@@ -229,10 +230,38 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 		expect(updatedCase.createdById).not.toBe(owner.id);
 	});
 
-	it("keeps a case when a team holds ADMIN via CaseTeamPermission, with no other individual admin", async () => {
+	it("keeps a case when a team holds ADMIN via CaseTeamPermission AND has a member besides the deleted owner", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherMember = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Team-admin case (team of two)",
+		});
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, otherMember.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "ADMIN");
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).toBeNull();
+	});
+
+	/**
+	 * Vincent, review round 2 (blocker): a team-ADMIN grant only counts as
+	 * "another admin" if the team has a member other than the deleted user.
+	 * A "team of one" IS the deleted user — `createTestTeam` creates exactly
+	 * that (the creator as its only member) — and `runAccountDeletionTransaction`
+	 * deletes precisely this shape of team, cascading its CaseTeamPermission
+	 * away. Without the fix, this case would be marked "kept" but end up
+	 * owned by the system account with no permission for anyone: orphaned,
+	 * never trashed, never purged.
+	 */
+	it("trashes a case when the only ADMIN-holding team has no member besides the deleted owner (team of one)", async () => {
 		const owner = await createTestUser({ authProvider: "GITHUB" });
 		const testCase = await createTestCase(owner.id, {
-			name: "Team-admin case",
+			name: "Team-admin case (team of one)",
 		});
 		const team = await createTestTeam(owner.id);
 		await createTestTeamPermission(testCase.id, team.id, owner.id, "ADMIN");
@@ -242,7 +271,15 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
 			where: { id: testCase.id },
 		});
-		expect(updatedCase.deletedAt).toBeNull();
+		expect(updatedCase.deletedAt).not.toBeNull();
+
+		// The team-of-one is deleted by the team-handling step, which cascades
+		// its CaseTeamPermission away — this is the exact sequence the
+		// blocker warned about, so assert the permission is really gone too.
+		const teamStillExists = await prisma.team.findUnique({
+			where: { id: team.id },
+		});
+		expect(teamStillExists).toBeNull();
 	});
 
 	it("trashes a case when the only other access is VIEW/EDIT/COMMENT, not ADMIN", async () => {

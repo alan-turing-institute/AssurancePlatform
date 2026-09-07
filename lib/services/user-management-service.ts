@@ -274,6 +274,20 @@ const SYSTEM_USER_EMAIL = "system@tea-platform.internal";
 const SYSTEM_USER_USERNAME = "system";
 
 /**
+ * Options for the account-deletion transaction. No existing shared
+ * interactive-transaction constant in this repo (checked: `case-import-
+ * service.ts` deliberately keeps Prisma's default 5s timeout because its
+ * transaction does a fixed, small number of round trips regardless of
+ * payload size). This transaction's round trips scale with how much
+ * history the user has (owned cases, teams, comments, elements,
+ * permissions granted), so a user with a lot of it can plausibly exceed
+ * the 5s default (vincent, review round 2, should-fix) — widened here,
+ * not globally.
+ */
+const DELETION_TRANSACTION_TIMEOUT_MS = 30_000;
+const DELETION_TRANSACTION_MAX_WAIT_MS = 10_000;
+
+/**
  * Gets or creates the generic fallback system user for ownership transfer
  * (used when a human account is deleted).
  *
@@ -446,8 +460,19 @@ async function partitionCasesToKeepOrTrash(
 			},
 			select: { caseId: true },
 		}),
+		// A team-ADMIN grant only counts as "another admin" if the team has a
+		// member other than the user being deleted (vincent, review round 2,
+		// blocker): a team of one is the deleted user themselves, and
+		// `runAccountDeletionTransaction`'s team-handling step deletes exactly
+		// that kind of team, cascading its CaseTeamPermission away — a case
+		// "kept" on a team-of-one grant would end up owned by the system
+		// account with no permissions for anyone, orphaned and never trashed.
 		tx.caseTeamPermission.findMany({
-			where: { caseId: { in: caseIds }, permission: "ADMIN" },
+			where: {
+				caseId: { in: caseIds },
+				permission: "ADMIN",
+				team: { members: { some: { userId: { not: userId } } } },
+			},
 			select: { caseId: true },
 		}),
 	]);
@@ -498,91 +523,109 @@ async function partitionCasesToKeepOrTrash(
  * (`checkDeletable`, password) before calling this.
  */
 async function runAccountDeletionTransaction(userId: string): Promise<void> {
-	await prisma.$transaction(async (tx) => {
-		const systemUserId = await getOrCreateSystemUser(tx);
+	await prisma.$transaction(
+		async (tx) => {
+			const systemUserId = await getOrCreateSystemUser(tx);
 
-		const ownedCases = await tx.assuranceCase.findMany({
-			where: { createdById: userId },
-			select: { id: true },
-		});
-		const { toKeep, toTrash } = await partitionCasesToKeepOrTrash(
-			tx,
-			userId,
-			ownedCases.map((c) => c.id)
-		);
+			const ownedCases = await tx.assuranceCase.findMany({
+				where: { createdById: userId },
+				select: { id: true },
+			});
+			const { toKeep, toTrash } = await partitionCasesToKeepOrTrash(
+				tx,
+				userId,
+				ownedCases.map((c) => c.id)
+			);
 
-		if (toKeep.length > 0) {
-			await tx.assuranceCase.updateMany({
-				where: { id: { in: toKeep } },
+			if (toKeep.length > 0) {
+				await tx.assuranceCase.updateMany({
+					where: { id: { in: toKeep } },
+					data: { createdById: systemUserId },
+				});
+			}
+
+			if (toTrash.length > 0) {
+				await tx.assuranceCase.updateMany({
+					where: { id: { in: toTrash } },
+					data: {
+						createdById: systemUserId,
+						deletedAt: new Date(),
+						deletedById: systemUserId,
+					},
+				});
+			}
+
+			// Handle teams created by user
+			const ownedTeams = await tx.team.findMany({
+				where: { createdById: userId },
+				include: {
+					members: {
+						where: { userId: { not: userId } },
+						orderBy: { joinedAt: "asc" },
+						take: 1,
+					},
+				},
+			});
+
+			// Split into transfers (each to a different new owner, so one
+			// updateMany can't set them all) and member-less teams (all get the
+			// same treatment, so one deleteMany replaces N round trips).
+			const teamTransfers: { newOwnerId: string; teamId: string }[] = [];
+			const teamIdsToDelete: string[] = [];
+			for (const team of ownedTeams) {
+				const newOwnerId = team.members[0]?.userId;
+				if (newOwnerId) {
+					teamTransfers.push({ teamId: team.id, newOwnerId });
+				} else {
+					teamIdsToDelete.push(team.id);
+				}
+			}
+
+			for (const { teamId, newOwnerId } of teamTransfers) {
+				await tx.team.update({
+					where: { id: teamId },
+					data: { createdById: newOwnerId },
+				});
+			}
+
+			if (teamIdsToDelete.length > 0) {
+				await tx.team.deleteMany({ where: { id: { in: teamIdsToDelete } } });
+			}
+
+			// Anonymise comments (transfer to system user)
+			await tx.comment.updateMany({
+				where: { authorId: userId },
+				data: { authorId: systemUserId },
+			});
+
+			// Also handle release comments if they exist
+			await tx.releaseComment.updateMany({
+				where: { authorId: userId },
+				data: { authorId: systemUserId },
+			});
+
+			// Transfer created elements to system user (for audit trail)
+			await tx.assuranceElement.updateMany({
+				where: { createdById: userId },
 				data: { createdById: systemUserId },
 			});
-		}
 
-		if (toTrash.length > 0) {
-			await tx.assuranceCase.updateMany({
-				where: { id: { in: toTrash } },
-				data: {
-					createdById: systemUserId,
-					deletedAt: new Date(),
-					deletedById: systemUserId,
-				},
+			// Reassign permissions this user granted — on their own cases and on
+			// others' — to the system user. Real ON DELETE RESTRICT FK, no cascade.
+			await tx.casePermission.updateMany({
+				where: { grantedById: userId },
+				data: { grantedById: systemUserId },
 			});
+
+			// Delete the user (cascades: RefreshToken, TeamMember, CasePermission
+			// held BY this user, GitHubRepository)
+			await tx.user.delete({ where: { id: userId } });
+		},
+		{
+			timeout: DELETION_TRANSACTION_TIMEOUT_MS,
+			maxWait: DELETION_TRANSACTION_MAX_WAIT_MS,
 		}
-
-		// Handle teams created by user
-		const ownedTeams = await tx.team.findMany({
-			where: { createdById: userId },
-			include: {
-				members: {
-					where: { userId: { not: userId } },
-					orderBy: { joinedAt: "asc" },
-					take: 1,
-				},
-			},
-		});
-
-		for (const team of ownedTeams) {
-			if (team.members.length > 0) {
-				// Transfer ownership to first remaining member
-				await tx.team.update({
-					where: { id: team.id },
-					data: { createdById: team.members[0]?.userId },
-				});
-			} else {
-				// No other members - delete the team
-				await tx.team.delete({ where: { id: team.id } });
-			}
-		}
-
-		// Anonymise comments (transfer to system user)
-		await tx.comment.updateMany({
-			where: { authorId: userId },
-			data: { authorId: systemUserId },
-		});
-
-		// Also handle release comments if they exist
-		await tx.releaseComment.updateMany({
-			where: { authorId: userId },
-			data: { authorId: systemUserId },
-		});
-
-		// Transfer created elements to system user (for audit trail)
-		await tx.assuranceElement.updateMany({
-			where: { createdById: userId },
-			data: { createdById: systemUserId },
-		});
-
-		// Reassign permissions this user granted — on their own cases and on
-		// others' — to the system user. Real ON DELETE RESTRICT FK, no cascade.
-		await tx.casePermission.updateMany({
-			where: { grantedById: userId },
-			data: { grantedById: systemUserId },
-		});
-
-		// Delete the user (cascades: RefreshToken, TeamMember, CasePermission
-		// held BY this user, GitHubRepository)
-		await tx.user.delete({ where: { id: userId } });
-	});
+	);
 }
 
 /**
