@@ -33,6 +33,9 @@ const PUBLIC_ORIGIN = "https://public.example";
 // The request's own host is the container's internal hostname, standing in
 // for what Azure App Service actually puts on `request.url`.
 const CONTAINER_REQUEST_URL = "http://container:3000/api/auth/link/google";
+// Matches a `/` immediately followed by one or more further `/`s, as long as
+// the character before it isn't `:` (so `https://` itself doesn't match).
+const DOUBLED_SLASH_REGEX = /([^:]\/)\/+/;
 
 const VALID_SESSION: ValidatedSession = {
 	userId: "user-1",
@@ -106,6 +109,83 @@ describe("GET /api/auth/link/[provider]", () => {
 
 		await expect(GET(linkRequest(), routeParams("google"))).rejects.toThrow(
 			"NEXTAUTH_URL must be configured for authentication redirects"
+		);
+	});
+
+	it("redirects to the public origin for github, and lower-cases a mixed-case provider in the path", async () => {
+		vi.mocked(validateSession).mockResolvedValue(VALID_SESSION);
+
+		const githubResponse = await GET(linkRequest(), routeParams("github"));
+		const githubLocation = githubResponse.headers.get("location");
+		expect(githubLocation).toBe(
+			`${PUBLIC_ORIGIN}/api/auth/signin/github?callbackUrl=%2Fdashboard%2Fsettings`
+		);
+		expect(new URL(githubLocation as string).host).not.toBe("container:3000");
+
+		const mixedCaseResponse = await GET(linkRequest(), routeParams("Google"));
+		const mixedCaseLocation = mixedCaseResponse.headers.get("location");
+		expect(mixedCaseLocation).toBe(
+			`${PUBLIC_ORIGIN}/api/auth/signin/google?callbackUrl=%2Fdashboard%2Fsettings`
+		);
+	});
+
+	it("does not set the link cookie when the provider is invalid", async () => {
+		vi.mocked(validateSession).mockResolvedValue(VALID_SESSION);
+
+		const response = await GET(linkRequest(), routeParams("facebook"));
+
+		expect(response.status).toBe(400);
+		expect(mockCookieStore.set).not.toHaveBeenCalled();
+	});
+
+	it("sets the link cookie with the full expected shape before redirecting", async () => {
+		vi.mocked(validateSession).mockResolvedValue(VALID_SESSION);
+
+		const response = await GET(linkRequest(), routeParams("google"));
+
+		expect(mockCookieStore.set).toHaveBeenCalledWith(
+			LINK_COOKIE_NAME,
+			VALID_SESSION.userId,
+			expect.objectContaining({
+				httpOnly: true,
+				sameSite: "lax",
+				maxAge: 300,
+				path: "/",
+			})
+		);
+		// Ordering: the mock records the call synchronously before GET returns,
+		// and the redirect Location is already the final signIn URL, so the
+		// cookie call happened strictly before the redirect was constructed.
+		expect(response.headers.get("location")).toContain(
+			"/api/auth/signin/google"
+		);
+	});
+
+	it("throws on the valid-session branch too, after the cookie is already set", async () => {
+		// publicBaseUrl() is only evaluated when building signInUrl, which is
+		// AFTER the link cookie is already set — so this branch throws having
+		// already set the cookie, unlike the no-session case above, which
+		// throws before the cookie code is ever reached.
+		vi.stubEnv("NEXTAUTH_URL", "");
+		vi.mocked(validateSession).mockResolvedValue(VALID_SESSION);
+
+		await expect(GET(linkRequest(), routeParams("google"))).rejects.toThrow(
+			"NEXTAUTH_URL must be configured for authentication redirects"
+		);
+		expect(mockCookieStore.set).toHaveBeenCalledTimes(1);
+	});
+
+	it("produces a well-formed single-slash URL when NEXTAUTH_URL has a trailing slash", async () => {
+		vi.stubEnv("NEXTAUTH_URL", `${PUBLIC_ORIGIN}/`);
+		vi.mocked(validateSession).mockResolvedValue(VALID_SESSION);
+
+		const response = await GET(linkRequest(), routeParams("google"));
+		const location = response.headers.get("location") as string;
+
+		expect(location).not.toBeNull();
+		expect(location).not.toMatch(DOUBLED_SLASH_REGEX);
+		expect(location).toBe(
+			`${PUBLIC_ORIGIN}/api/auth/signin/google?callbackUrl=%2Fdashboard%2Fsettings`
 		);
 	});
 });
