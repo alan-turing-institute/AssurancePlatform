@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
-import { deleteAccount } from "@/lib/services/user-management-service";
+import {
+	deleteAccount,
+	deleteAccountForRetention,
+} from "@/lib/services/user-management-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
@@ -151,5 +154,52 @@ describe("deleteAccount — owned-integrations block (ADR 0002 v2 §2.4)", () =>
 		await createTestIntegrationWithSystemUser(otherOwner.id);
 
 		expectSuccess(await deleteAccount(owner.id));
+	});
+});
+
+/**
+ * `deleteAccountForRetention` is the password-free counterpart used by the
+ * retention sweep (`lib/services/retention-service.ts`) — it shares
+ * `deleteAccount`'s cascade without requiring a password.
+ */
+describe("deleteAccountForRetention", () => {
+	it("deletes the user and reassigns their owned case, without a password", async () => {
+		const owner = await createTestUser();
+		const ownedCase = await createTestCase(owner.id, {
+			name: "Retention case",
+		});
+
+		expectSuccess(await deleteAccountForRetention(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: ownedCase.id },
+		});
+		expect(updatedCase.createdById).not.toBe(owner.id);
+	});
+
+	it("refuses with the same typed error as deleteAccount when the user owns an integration", async () => {
+		const owner = await createTestUser();
+		await createTestIntegrationWithSystemUser(owner.id);
+
+		const result = await deleteAccountForRetention(owner.id);
+
+		expectError(result, SINGLE_INTEGRATION_BLOCK_PATTERN);
+
+		const stillThere = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(stillThere).not.toBeNull();
+	});
+
+	it("returns an error for a non-existent user", async () => {
+		expectError(
+			await deleteAccountForRetention("00000000-0000-0000-0000-000000000000"),
+			"User not found"
+		);
 	});
 });

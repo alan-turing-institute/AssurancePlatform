@@ -1,0 +1,52 @@
+import { describe, expect, it } from "vitest";
+import { authenticateWithPrisma } from "@/lib/auth/config";
+import { hashPassword } from "@/lib/auth/password-service";
+import prisma from "@/lib/prisma";
+import { createTestUser } from "../utils/prisma-factories";
+
+const TEST_PASSWORD = "correct horse battery staple";
+
+describe("authenticateWithPrisma — login clears retention warnings", () => {
+	it("records lastLoginAt and clears both retention-warning timestamps on a successful login", async () => {
+		const passwordHash = await hashPassword(TEST_PASSWORD);
+		const user = await createTestUser({
+			passwordHash,
+			passwordAlgorithm: "argon2id",
+			lastLoginAt: new Date("2020-01-01T00:00:00Z"),
+			retentionWarning30SentAt: new Date("2026-01-01T00:00:00Z"),
+			retentionWarning7SentAt: new Date("2026-01-20T00:00:00Z"),
+		});
+
+		const result = await authenticateWithPrisma(user.username, TEST_PASSWORD);
+		expect(result).not.toBeNull();
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.lastLoginAt).not.toBeNull();
+		expect(updated?.lastLoginAt?.getTime()).toBeGreaterThan(
+			new Date("2020-01-01T00:00:00Z").getTime()
+		);
+		expect(updated?.retentionWarning30SentAt).toBeNull();
+		expect(updated?.retentionWarning7SentAt).toBeNull();
+	});
+
+	it("does not touch lastLoginAt or the retention-warning timestamps on a failed login", async () => {
+		const passwordHash = await hashPassword(TEST_PASSWORD);
+		const originalLastLogin = new Date("2020-01-01T00:00:00Z");
+		const user = await createTestUser({
+			passwordHash,
+			passwordAlgorithm: "argon2id",
+			lastLoginAt: originalLastLogin,
+			retentionWarning30SentAt: new Date("2026-01-01T00:00:00Z"),
+		});
+
+		const result = await authenticateWithPrisma(
+			user.username,
+			"wrong-password"
+		);
+		expect(result).toBeNull();
+
+		const unchanged = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(unchanged?.lastLoginAt?.getTime()).toBe(originalLastLogin.getTime());
+		expect(unchanged?.retentionWarning30SentAt).not.toBeNull();
+	});
+});
