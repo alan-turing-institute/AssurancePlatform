@@ -1,6 +1,6 @@
 {
   "name": "tea-platform-frontend",
-  "version": "0.5.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
