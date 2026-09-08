@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -6,7 +7,7 @@ import {
 	apiSuccess,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import { registerUserSchema } from "@/lib/schemas/user";
 import {
 	checkAndRecordRateLimit,
@@ -20,23 +21,14 @@ import { registerUser } from "@/lib/services/user-service";
  */
 export async function POST(request: Request) {
 	try {
-		const parsed = registerUserSchema.safeParse(
-			await request.json().catch(() => null)
+		const { username, email, password } = await parseJsonBody(
+			request,
+			registerUserSchema
 		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-
-		const { username, email, password } = parsed.data;
 
 		// Extract IP address and user agent for rate limiting
 		const headersList = await headers();
-		const forwarded = headersList.get("x-forwarded-for");
-		const ipAddress = forwarded
-			? (forwarded.split(",")[0]?.trim() ?? "unknown")
-			: (headersList.get("x-real-ip") ?? "unknown");
+		const ipAddress = extractClientIp(headersList);
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		// Check rate limit before processing

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -104,6 +105,7 @@ export async function GET(
  * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
  * @response 404 - Claim not found (covers non-existent, wrong element type, and no-access — same message, no enumeration oracle)
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/principal
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Machine
  */
@@ -115,18 +117,11 @@ export async function POST(
 		const principal = await requireApiToken(request, "health:evidence:write");
 		const { id: claimId } = await params;
 
-		const parsed = healthEvidenceItemSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, healthEvidenceItemSchema);
 
 		// Route-layer equality check (evidence-format-v0.1): path and body are
 		// parsed separately, so this isn't expressible in the zod schema alone.
-		if (parsed.data.claimId !== claimId) {
+		if (data.claimId !== claimId) {
 			return apiError(
 				validationError("claimId must match the evidence path id")
 			);
@@ -134,14 +129,14 @@ export async function POST(
 
 		const appendResult = await appendHealthEvidence(principal.systemUserId, {
 			claimId,
-			metricName: parsed.data.metricName,
-			value: parsed.data.value,
-			threshold: parsed.data.threshold,
-			verdict: parsed.data.verdict,
-			oddDimensions: parsed.data.oddDimensions,
-			sourceSystem: parsed.data.sourceSystem,
-			provenance: parsed.data.provenance,
-			evaluatedAt: parsed.data.evaluatedAt,
+			metricName: data.metricName,
+			value: data.value,
+			threshold: data.threshold,
+			verdict: data.verdict,
+			oddDimensions: data.oddDimensions,
+			sourceSystem: data.sourceSystem,
+			provenance: data.provenance,
+			evaluatedAt: data.evaluatedAt,
 		});
 		if ("error" in appendResult) {
 			return apiError(serviceErrorToAppError(appendResult.error));

@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
 	getFullPublishStatus,
 	getPublishStatus,
-	markCaseAsReady,
 	publishAssuranceCase,
 	transitionStatus,
-	unmarkCaseAsReady,
 	unpublishAssuranceCase,
 	updatePublishedCase,
 } from "@/lib/services/publish-service";
+import { Prisma } from "@/src/generated/prisma";
 import {
 	expectError,
 	expectSameError,
@@ -17,122 +17,16 @@ import {
 } from "../utils/assertion-helpers";
 import {
 	createTestCase,
-	createTestCaseStudy,
+	createTestCaseInformation,
 	createTestCaseWithGoal,
+	createTestElement,
 	createTestPermission,
+	createTestPluginData,
 	createTestUser,
 } from "../utils/prisma-factories";
 
 // Top-level regex constants required by lint/performance/useTopLevelRegex
-const CANNOT_MARK_AS_READY = /Cannot mark as ready/;
-const STATUS_READY_TO_PUBLISH = /READY_TO_PUBLISH/;
-const STATUS_PUBLISHED = /PUBLISHED/;
-const CANNOT_UNMARK = /Cannot unmark/;
-const STATUS_DRAFT = /DRAFT/;
 const INVALID_STATUS_TRANSITION = /Invalid status transition/;
-
-// ============================================
-// markCaseAsReady
-// ============================================
-
-describe("markCaseAsReady", () => {
-	it("transitions a DRAFT case to READY_TO_PUBLISH", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id, {
-			publishStatus: "DRAFT",
-		});
-
-		const data = expectSuccess(await markCaseAsReady(owner.id, testCase.id));
-		expect(data.markedReadyAt).toBeInstanceOf(Date);
-
-		const updated = await prisma.assuranceCase.findUnique({
-			where: { id: testCase.id },
-			select: { publishStatus: true, markedReadyAt: true },
-		});
-		expect(updated?.publishStatus).toBe("READY_TO_PUBLISH");
-		expect(updated?.markedReadyAt).not.toBeNull();
-	});
-
-	it("returns error when case is already READY_TO_PUBLISH", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id, {
-			publishStatus: "READY_TO_PUBLISH",
-		});
-
-		const result = await markCaseAsReady(owner.id, testCase.id);
-		expectError(result, CANNOT_MARK_AS_READY);
-		expectError(result, STATUS_READY_TO_PUBLISH);
-	});
-
-	it("returns error when case is already PUBLISHED", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id, {
-			publishStatus: "PUBLISHED",
-			published: true,
-		});
-
-		const result = await markCaseAsReady(owner.id, testCase.id);
-		expectError(result, CANNOT_MARK_AS_READY);
-		expectError(result, STATUS_PUBLISHED);
-	});
-
-	it("returns error when caller lacks EDIT permission", async () => {
-		const owner = await createTestUser();
-		const viewer = await createTestUser();
-		const testCase = await createTestCase(owner.id);
-		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
-
-		expectError(
-			await markCaseAsReady(viewer.id, testCase.id),
-			"Permission denied"
-		);
-	});
-});
-
-// ============================================
-// unmarkCaseAsReady
-// ============================================
-
-describe("unmarkCaseAsReady", () => {
-	it("transitions a READY_TO_PUBLISH case back to DRAFT", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id, {
-			publishStatus: "READY_TO_PUBLISH",
-		});
-
-		const data = expectSuccess(await unmarkCaseAsReady(owner.id, testCase.id));
-		expect(data.success).toBe(true);
-
-		const updated = await prisma.assuranceCase.findUnique({
-			where: { id: testCase.id },
-			select: { publishStatus: true, markedReadyAt: true },
-		});
-		expect(updated?.publishStatus).toBe("DRAFT");
-		expect(updated?.markedReadyAt).toBeNull();
-	});
-
-	it("returns error when case is in DRAFT status (not READY_TO_PUBLISH)", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id, {
-			publishStatus: "DRAFT",
-		});
-
-		const result = await unmarkCaseAsReady(owner.id, testCase.id);
-		expectError(result, CANNOT_UNMARK);
-		expectError(result, STATUS_DRAFT);
-	});
-
-	it("returns error when case is PUBLISHED (not READY_TO_PUBLISH)", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id, {
-			publishStatus: "PUBLISHED",
-			published: true,
-		});
-
-		const result = await unmarkCaseAsReady(owner.id, testCase.id);
-		expectError(result, CANNOT_UNMARK);
-	});
-});
 
 // ============================================
 // publishAssuranceCase
@@ -241,53 +135,16 @@ describe("unpublishAssuranceCase", () => {
 		);
 	});
 
-	it("returns error when case is linked to case studies and force is false", async () => {
+	it("deletes every published version on unpublish", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
 
-		// Publish the case
-		const publishData = expectSuccess(
-			await publishAssuranceCase(owner.id, testCase.id)
-		);
-
-		// Create a case study and link to the published version
-		const caseStudy = await createTestCaseStudy(owner.id, {
-			published: true,
-		});
-		await prisma.caseStudyPublishedCase.create({
-			data: {
-				caseStudyId: caseStudy.id,
-				publishedAssuranceCaseId: publishData.publishedId,
-			},
-		});
-
-		expectError(
-			await unpublishAssuranceCase(owner.id, testCase.id, false),
-			"Cannot unpublish: linked to case studies"
-		);
-	});
-
-	it("deletes case study links and unpublishes when force is true", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCaseWithGoal(owner.id);
-
-		// Publish the case
-		const publishData = expectSuccess(
-			await publishAssuranceCase(owner.id, testCase.id)
-		);
-
-		const caseStudy = await createTestCaseStudy(owner.id, {
-			published: true,
-		});
-		await prisma.caseStudyPublishedCase.create({
-			data: {
-				caseStudyId: caseStudy.id,
-				publishedAssuranceCaseId: publishData.publishedId,
-			},
-		});
+		// Publish, then republish so more than one historical row exists.
+		await publishAssuranceCase(owner.id, testCase.id);
+		await updatePublishedCase(owner.id, testCase.id);
 
 		const data = expectSuccess(
-			await unpublishAssuranceCase(owner.id, testCase.id, true)
+			await unpublishAssuranceCase(owner.id, testCase.id)
 		);
 		expect(data.success).toBe(true);
 
@@ -340,6 +197,15 @@ describe("updatePublishedCase", () => {
 		});
 		expect(newVersion).not.toBeNull();
 		expect(newVersion?.description).toBe("Updated description");
+
+		// The superseded row is retired and the replacement takes over as the
+		// sole current row — the exact two-row invariant the partial unique
+		// index on (slug) WHERE is_current exists to protect (ADR 0003 §6).
+		const oldVersion = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: publishData.publishedId },
+		});
+		expect(oldVersion?.isCurrent).toBe(false);
+		expect(newVersion?.isCurrent).toBe(true);
 	});
 
 	it("returns error when case is not published", async () => {
@@ -381,7 +247,6 @@ describe("getPublishStatus", () => {
 		const data = expectSuccess(await getPublishStatus(owner.id, testCase.id));
 		expect(data.isPublished).toBe(false);
 		expect(data.publishedAt).toBeNull();
-		expect(data.linkedCaseStudyCount).toBe(0);
 	});
 
 	it("returns error when caller has no access", async () => {
@@ -422,7 +287,6 @@ describe("getFullPublishStatus", () => {
 		expect(result.data?.isPublished).toBe(false);
 		expect(result.data?.publishedAt).toBeNull();
 		expect(result.data?.markedReadyAt).toBeNull();
-		expect(result.data?.linkedCaseStudyCount).toBe(0);
 		expect(typeof result.data?.hasChanges).toBe("boolean");
 	});
 
@@ -434,17 +298,6 @@ describe("getFullPublishStatus", () => {
 		const result = await getFullPublishStatus(stranger.id, testCase.id);
 
 		expect(result.error).toBeDefined();
-	});
-
-	it("reflects READY_TO_PUBLISH status and markedReadyAt", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id);
-		await markCaseAsReady(owner.id, testCase.id);
-
-		const result = await getFullPublishStatus(owner.id, testCase.id);
-
-		expect(result.data?.publishStatus).toBe("READY_TO_PUBLISH");
-		expect(result.data?.markedReadyAt).not.toBeNull();
 	});
 });
 
@@ -493,39 +346,28 @@ describe("anti-enumeration: consistent error responses", () => {
 // ============================================
 
 describe("transitionStatus", () => {
-	it("transitions DRAFT to READY_TO_PUBLISH", async () => {
+	it("transitions DRAFT to PUBLISHED directly (the 'Ready to Publish' intermediate step is retired, ADR 0003 §2)", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
-
-		const data = expectSuccess(
-			await transitionStatus(owner.id, testCase.id, "READY_TO_PUBLISH")
-		);
-		expect(data.newStatus).toBe("READY_TO_PUBLISH");
-
-		const updated = await prisma.assuranceCase.findUnique({
-			where: { id: testCase.id },
-			select: { publishStatus: true },
-		});
-		expect(updated?.publishStatus).toBe("READY_TO_PUBLISH");
-	});
-
-	it("transitions READY_TO_PUBLISH to PUBLISHED", async () => {
-		const owner = await createTestUser();
-		const testCase = await createTestCaseWithGoal(owner.id);
-		await markCaseAsReady(owner.id, testCase.id);
 
 		const data = expectSuccess(
 			await transitionStatus(owner.id, testCase.id, "PUBLISHED")
 		);
 		expect(data.newStatus).toBe("PUBLISHED");
 		expect(data.publishedId).toBeDefined();
+
+		const updated = await prisma.assuranceCase.findUnique({
+			where: { id: testCase.id },
+			select: { publishStatus: true },
+		});
+		expect(updated?.publishStatus).toBe("PUBLISHED");
 	});
 
-	it("returns error for an invalid transition (DRAFT to PUBLISHED directly)", async () => {
+	it("returns error for an invalid transition (DRAFT to DRAFT is a no-op, not a defined transition)", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
 
-		const result = await transitionStatus(owner.id, testCase.id, "PUBLISHED");
+		const result = await transitionStatus(owner.id, testCase.id, "DRAFT");
 		expectError(result, INVALID_STATUS_TRANSITION);
 	});
 
@@ -534,8 +376,406 @@ describe("transitionStatus", () => {
 		const stranger = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
 
-		expectError(
-			await transitionStatus(stranger.id, testCase.id, "READY_TO_PUBLISH")
+		expectError(await transitionStatus(stranger.id, testCase.id, "PUBLISHED"));
+	});
+});
+
+// ============================================
+// Snapshot pluginData capture (ADR 0002 v2 §3)
+// ============================================
+
+describe("publishAssuranceCase — snapshot pluginData capture", () => {
+	it("embeds captured plugin data in the snapshot content when present", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await createTestPluginData(testCase.id, {
+			pluginId: "tea.health",
+			elementId: claim.id,
+			data: { score: 1, lastEvaluatedAt: null, validityWindowSeconds: 86_400 },
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
 		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [
+				{
+					elementId: claim.id,
+					data: {
+						score: 1,
+						lastEvaluatedAt: null,
+						validityWindowSeconds: 86_400,
+					},
+				},
+			],
+		});
+	});
+
+	it("omits the pluginData section entirely when the case holds no plugin data", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toBeUndefined();
+	});
+
+	it("captures plugin data even when the plugin is disabled for the publishing user (capture follows data present, not viewer toggles)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await createTestPluginData(testCase.id, {
+			pluginId: "tea.health",
+			elementId: claim.id,
+			data: { score: 0.5, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+		});
+		expectSuccess(
+			await setPluginEnabledForUser("tea.health", owner.id, { enabled: false })
+		);
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [
+				{
+					elementId: claim.id,
+					data: {
+						score: 0.5,
+						lastEvaluatedAt: null,
+						validityWindowSeconds: 60,
+					},
+				},
+			],
+		});
+	});
+
+	it("captures every plugin namespace present, not just tea.health — core stays plugin-agnostic", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		await createTestPluginData(testCase.id, {
+			pluginId: "tea.some-other-plugin",
+			data: { anything: "goes" },
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.some-other-plugin": [
+				{ elementId: null, data: { anything: "goes" } },
+			],
+		});
+	});
+});
+
+describe("updatePublishedCase — snapshot pluginData capture", () => {
+	it("re-captures current plugin data on each new published version", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await publishAssuranceCase(owner.id, testCase.id);
+
+		const dataRow = await createTestPluginData(testCase.id, {
+			pluginId: "tea.health",
+			elementId: claim.id,
+			data: { score: 0, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+		});
+
+		const updated = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: updated.publishedId },
+		});
+		const content = published?.content as {
+			pluginData?: Record<string, unknown>;
+		};
+		expect(content.pluginData).toStrictEqual({
+			"tea.health": [{ elementId: claim.id, data: dataRow.data }],
+		});
+	});
+});
+
+// ============================================
+// Slugs (ADR 0003 §6)
+// ============================================
+
+describe("publishAssuranceCase — slug generation", () => {
+	it("generates a name-derived slug on first publish", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "My Great Case");
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		expect(published?.slug).toBe("my-great-case");
+		expect(published?.type).toBe("ASSURANCE_CASE");
+	});
+
+	it("appends a numeric suffix when two cases share a name", async () => {
+		const owner = await createTestUser();
+		const first = await createTestCaseWithGoal(owner.id, "Duplicate Name");
+		const second = await createTestCaseWithGoal(owner.id, "Duplicate Name");
+
+		const firstData = expectSuccess(
+			await publishAssuranceCase(owner.id, first.id)
+		);
+		const secondData = expectSuccess(
+			await publishAssuranceCase(owner.id, second.id)
+		);
+
+		const [firstPublished, secondPublished] = await Promise.all([
+			prisma.publishedAssuranceCase.findUnique({
+				where: { id: firstData.publishedId },
+			}),
+			prisma.publishedAssuranceCase.findUnique({
+				where: { id: secondData.publishedId },
+			}),
+		]);
+
+		expect(firstPublished?.slug).toBe("duplicate-name");
+		expect(secondPublished?.slug).toBe("duplicate-name-2");
+	});
+
+	it("reuses a freed slug after the case holding it is unpublished, rather than continuing the suffix sequence", async () => {
+		const owner = await createTestUser();
+		const caseA = await createTestCaseWithGoal(owner.id, "Foo");
+		const caseB = await createTestCaseWithGoal(owner.id, "Foo");
+		const caseC = await createTestCaseWithGoal(owner.id, "Foo");
+
+		// A claims "foo", B collides onto "foo-2"
+		const publishedA = expectSuccess(
+			await publishAssuranceCase(owner.id, caseA.id)
+		);
+		const publishedB = expectSuccess(
+			await publishAssuranceCase(owner.id, caseB.id)
+		);
+		const [versionA, versionB] = await Promise.all([
+			prisma.publishedAssuranceCase.findUnique({
+				where: { id: publishedA.publishedId },
+			}),
+			prisma.publishedAssuranceCase.findUnique({
+				where: { id: publishedB.publishedId },
+			}),
+		]);
+		expect(versionA?.slug).toBe("foo");
+		expect(versionB?.slug).toBe("foo-2");
+
+		// Unpublishing A frees "foo" — its row (and the slug it held) is gone
+		expectSuccess(await unpublishAssuranceCase(owner.id, caseA.id));
+
+		// C should reclaim the freed "foo", not continue on to "foo-3"
+		const publishedC = expectSuccess(
+			await publishAssuranceCase(owner.id, caseC.id)
+		);
+		const versionC = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: publishedC.publishedId },
+		});
+		expect(versionC?.slug).toBe("foo");
+	});
+
+	it("stays stable across a rename and republish (never regenerated)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Original Name");
+
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const firstVersion = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: published.publishedId },
+		});
+		expect(firstVersion?.slug).toBe("original-name");
+
+		await prisma.assuranceCase.update({
+			where: { id: testCase.id },
+			data: { name: "Renamed Case" },
+		});
+
+		const republished = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const secondVersion = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: republished.publishedId },
+		});
+		expect(secondVersion?.title).toBe("Renamed Case");
+		expect(secondVersion?.slug).toBe("original-name");
+	});
+});
+
+// ============================================
+// Database constraint hardening (ADR 0003 §6)
+// ============================================
+
+describe("published_assurance_cases_slug_is_current_key — partial unique index", () => {
+	it("rejects a raw insert of a second CURRENT row reusing another case's current slug", async () => {
+		const owner = await createTestUser();
+		const caseA = await createTestCaseWithGoal(owner.id, "Solo Slug");
+		const caseB = await createTestCase(owner.id);
+
+		await publishAssuranceCase(owner.id, caseA.id);
+
+		// Bypass the service entirely — the service's own transaction
+		// discipline (retire the old current row before inserting the new one,
+		// see `swapCurrentPublishedVersion` in publish-service.ts) never
+		// produces two CURRENT rows sharing a slug. This proves the partial
+		// unique index on (slug) WHERE is_current is itself the backstop, not
+		// merely a property of well-behaved callers.
+		let caught: unknown;
+		try {
+			await prisma.publishedAssuranceCase.create({
+				data: {
+					title: "Colliding Case",
+					slug: "solo-slug",
+					isCurrent: true,
+					content: {},
+					assuranceCaseId: caseB.id,
+					createdAt: new Date(),
+				},
+			});
+		} catch (error) {
+			caught = error;
+		}
+
+		expect(caught).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
+		expect((caught as Prisma.PrismaClientKnownRequestError).code).toBe("P2002");
+	});
+});
+
+// ============================================
+// Case information snapshot freeze (ADR 0003 §3)
+// ============================================
+
+describe("publishAssuranceCase — case information snapshot capture", () => {
+	it("omits the caseInformation section when the case has none", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			caseInformation?: Record<string, unknown>;
+		};
+		expect(content.caseInformation).toBeUndefined();
+	});
+
+	it("freezes case information present at publish time", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "Published-time description",
+			authors: "Published-time authors",
+			sector: "Finance",
+			featureImageUrl: "https://example.com/original.png",
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			caseInformation?: Record<string, unknown>;
+		};
+		expect(content.caseInformation).toStrictEqual({
+			description: "Published-time description",
+			authors: "Published-time authors",
+			sector: "Finance",
+			featureImageUrl: "https://example.com/original.png",
+		});
+	});
+
+	it("leaves the published snapshot unchanged when case information is edited after publish", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "Original description",
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		await prisma.caseInformation.update({
+			where: { caseId: testCase.id },
+			data: { description: "Edited after publish" },
+		});
+
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			caseInformation?: { description?: string };
+		};
+		expect(content.caseInformation?.description).toBe("Original description");
+	});
+
+	it("captures fresh case information on republish (updatePublishedCase)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "Before republish",
+		});
+		await publishAssuranceCase(owner.id, testCase.id);
+
+		await prisma.caseInformation.update({
+			where: { caseId: testCase.id },
+			data: { description: "After republish" },
+		});
+
+		const updated = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: updated.publishedId },
+		});
+		const content = published?.content as {
+			caseInformation?: { description?: string };
+		};
+		expect(content.caseInformation?.description).toBe("After republish");
 	});
 });

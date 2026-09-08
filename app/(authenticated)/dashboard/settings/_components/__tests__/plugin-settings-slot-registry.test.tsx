@@ -14,7 +14,7 @@ afterEach(() => {
 	settingsSectionSlot.resetForTests();
 });
 
-describe("PluginSettingsSlot — registry wiring ([[TEA — UI extension slots]])", () => {
+describe("PluginSettingsSlot — registry wiring", () => {
 	it("still renders nothing for a pluginId with no registration (registry empty by default in 1.0)", () => {
 		const { container } = renderWithoutProviders(
 			<PluginSettingsSlot pluginId="tea.health" />

@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { registerIntegrationSchema } from "@/lib/schemas/integration";
 import {
 	listIntegrationsForOwner,
@@ -60,6 +60,7 @@ export async function GET() {
  * @response 400 - Validation error (including an unknown scope)
  * @response 401 - Unauthorised
  * @response 409 - An integration with this name already exists
+ * @response 413 - Payload too large
  * @auth SessionAuth
  * @tag Integrations
  */
@@ -67,20 +68,13 @@ export async function POST(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		const parsed = registerIntegrationSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, registerIntegrationSchema);
 
 		const result = await registerIntegration(
 			{
-				name: parsed.data.name,
-				description: parsed.data.description,
-				scopes: parsed.data.scopes,
+				name: data.name,
+				description: data.description,
+				scopes: data.scopes,
 			},
 			userId
 		);

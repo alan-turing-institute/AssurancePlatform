@@ -6,10 +6,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
 	AssuranceCaseFactory,
 	BatchFactory,
-	CaseStudyFactory,
 	CommentFactory,
 	createAssuranceCase,
-	createCaseStudy,
 	createComment,
 	createEvidence,
 	createGoal,
@@ -184,22 +182,6 @@ describe("Test Factories", () => {
 		});
 	});
 
-	describe("CaseStudyFactory", () => {
-		it("creates a published case study with assurance cases", () => {
-			const { caseStudy, assuranceCases } =
-				CaseStudyFactory.createPublishedWithCases(3);
-
-			expect(caseStudy.published).toBe(true);
-			expect(caseStudy.publishedDate).toBeTruthy();
-			expect(assuranceCases).toHaveLength(3);
-			expect(caseStudy.assuranceCases).toHaveLength(3);
-
-			for (const ac of assuranceCases) {
-				expect(ac.published).toBe(true);
-			}
-		});
-	});
-
 	describe("TemplateFactory", () => {
 		it("creates a safety template", () => {
 			const template = TemplateFactory.createSafetyTemplate();
@@ -222,7 +204,6 @@ describe("Test Factories", () => {
 			expect(scenario.users.length).toBeGreaterThan(0);
 			expect(scenario.teams).toHaveLength(2);
 			expect(scenario.assuranceCases).toHaveLength(3);
-			expect(scenario.caseStudies).toHaveLength(1);
 			expect(scenario.permissions.length).toBeGreaterThan(0);
 		});
 
@@ -270,7 +251,6 @@ describe("Test Factories", () => {
 			const claim = createPropertyClaim({ name: "Quick Claim" });
 			const evidence = createEvidence({ name: "Quick Evidence" });
 			const comment = createComment({ content: "Quick Comment" });
-			const caseStudy = createCaseStudy({ title: "Quick Study" });
 
 			expect(user.username).toBe("quick");
 			expect(team.name).toBe("Quick Team");
@@ -280,7 +260,6 @@ describe("Test Factories", () => {
 			expect(claim.name).toBe("Quick Claim");
 			expect(evidence.name).toBe("Quick Evidence");
 			expect(comment.content).toBe("Quick Comment");
-			expect(caseStudy.title).toBe("Quick Study");
 		});
 	});
 });

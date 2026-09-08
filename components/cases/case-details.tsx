@@ -1,15 +1,17 @@
 "use client";
 
-import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import useStore from "@/store/store";
 import CaseSheet from "../ui/case-sheet";
 import CaseEditForm from "./case-edit-form";
+import { CaseInformationSection } from "./case-information-section";
 
 interface CaseDetailsProps {
 	isOpen: boolean;
-	setOpen: Dispatch<SetStateAction<boolean>>;
+	setOpen: (open: boolean) => void;
 }
 
 const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
@@ -19,6 +21,9 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 	const [alertOpen, setAlertOpen] = useState(false);
 
 	const { assuranceCase } = useStore();
+	const canEditCase =
+		assuranceCase?.permissions === "manage" ||
+		assuranceCase?.permissions === "edit";
 
 	useEffect(() => {
 		setIsMounted(true);
@@ -68,11 +73,19 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 			onClose={handleClose}
 			title={`${assuranceCase?.permissions === "manage" ? "Update" : ""} Assurance Case`}
 		>
-			<div className="my-6">
+			<div className="my-6 space-y-6">
 				<CaseEditForm
 					onClose={handleClose}
 					setUnresolvedChanges={setUnresolvedChanges}
 				/>
+				<Separator />
+				<div>
+					<h3 className="mb-4 font-semibold text-lg">Case Information</h3>
+					<CaseInformationSection
+						canEdit={canEditCase}
+						caseId={assuranceCase?.id?.toString()}
+					/>
+				</div>
 				<AlertModal
 					cancelButtonText={"No, keep editing"}
 					confirmButtonText={"Yes, discard changes!"}

@@ -1,32 +1,64 @@
 # syntax=docker/dockerfile:1
+#
+# Local development image for docker-compose.local.yml.
+#
+# Multi-stage on purpose: `pnpm build` (and its Nextra + Next.js compile,
+# measured at ~12.7GB peak RSS on a clean build) now runs during `docker
+# build`, which is a separate BuildKit process NOT subject to the compose
+# service's `mem_limit`. Only the running server is memory-capped at runtime.
+# This replaces the previous design, which ran `pnpm run build` inside the
+# running container's `command:` — sharing its cgroup with `mem_limit` and
+# getting OOM-killed (exit 137) at 6g.
+#
+# Rebuild after every source change:
+#   docker compose -f docker-compose.local.yml up -d --build
+# Docker's layer cache keys the rebuild to file content (the `COPY . .` layer
+# below): unchanged source -> cached, near-instant `--build`; changed source
+# -> that layer and everything after it (prisma generate, pnpm build) reruns.
+# There is no BUILD_ID-existence check to silently go stale.
 
-FROM node:20-alpine
+FROM node:20-alpine AS deps
 
-# Install dependencies needed for compatibility and native modules (argon2)
 RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Copy package files and patches (pnpm needs patches during install)
 COPY package.json pnpm-lock.yaml ./
 COPY patches/ ./patches/
 
-# Install dependencies with pnpm store cache for faster rebuilds
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack enable pnpm && pnpm i --frozen-lockfile
 
-# Copy source code
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma clients (DATABASE_URL not needed for generate, but config requires it)
-RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
-    npx prisma generate --schema=prisma/schema.prisma
+# Dummy DATABASE_URL: only needed to satisfy Prisma config validation and
+# Next.js static analysis at build time, not a real connection. The real URL
+# is supplied at container runtime via env_file/environment (see compose).
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Note: Documentation is now built as part of Next.js (Nextra integration)
-# No separate tea-docs build step needed
+RUN npx prisma generate --schema=prisma/schema.prisma
+RUN corepack enable pnpm && pnpm build
 
-# Expose port
+FROM node:20-alpine AS runner
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Full builder tree (source, devDependencies, prisma CLI, tsx, full .next
+# output), not the trimmed `.next/standalone` bundle: the dev seed script
+# (prisma/seed/dev-seed.ts) needs tsx + the project's own service modules,
+# which standalone's dependency tracing does not include.
+COPY --from=builder /app ./
+
 EXPOSE 3000
 
-# Start development server
-CMD ["sh", "-c", "corepack enable pnpm && pnpm dev"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && npx next start"]

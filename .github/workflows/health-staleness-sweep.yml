@@ -1,0 +1,32 @@
+name: Sweep health staleness
+
+on:
+  schedule:
+    # Every 15 minutes. Frequency is a deployment tuning knob, not a
+    # correctness requirement — staleness is ALSO recomputed live on every
+    # read regardless of this sweep (health-scoring-service.ts's
+    # isHealthStateStale); this sweep only exists to push the state to
+    # canvases that are already open and idle.
+    - cron: "*/15 * * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call health staleness sweep endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.APP_URL }}/api/cron/health-staleness-sweep" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response: $body"
+          echo "HTTP Status: $http_code"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Sweep failed with status $http_code"
+            exit 1
+          fi

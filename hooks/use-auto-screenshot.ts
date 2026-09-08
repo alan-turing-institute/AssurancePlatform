@@ -1,5 +1,21 @@
 import html2canvas from "html2canvas";
 import { useCallback, useEffect, useRef } from "react";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "use-auto-screenshot" });
+
+/**
+ * `canvas.toDataURL()` never returns a literal empty string — even a 0x0
+ * canvas encodes to the placeholder `"data:,"` — so this is the guard
+ * against ever writing a degenerate result as an `<img src>`, not evidence
+ * that one has been observed in practice.
+ */
+function isUsableDataUrl(dataUrl: string): boolean {
+	return (
+		dataUrl.startsWith("data:image/") &&
+		dataUrl.length > "data:image/png;base64,".length
+	);
+}
 
 interface UseAutoScreenshotOptions {
 	/** Whether the user has edit permission */
@@ -48,13 +64,21 @@ export function useAutoScreenshot({
 			const canvas = await html2canvas(target as HTMLElement);
 			const base64Image = canvas.toDataURL("image/png");
 
+			if (!isUsableDataUrl(base64Image)) {
+				log.warn("Skipped upload of a degenerate screenshot capture", {
+					caseId,
+					dataUrlLength: base64Image.length,
+				});
+				return;
+			}
+
 			await fetch(`/api/cases/${caseId}/image`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ image: base64Image }),
 			});
-		} catch (_error) {
-			// Silently fail - screenshot capture is non-critical
+		} catch (error) {
+			log.error("Screenshot capture failed", { caseId, error });
 		} finally {
 			isCapturingRef.current = false;
 			hasChangedRef.current = false;
@@ -101,13 +125,27 @@ export function useAutoScreenshot({
 				// Use sendBeacon for reliable delivery during page unload
 				const target = document.querySelector(selector);
 				if (target) {
-					html2canvas(target as HTMLElement).then((canvas) => {
-						const base64Image = canvas.toDataURL("image/png");
-						navigator.sendBeacon(
-							`/api/cases/${caseId}/image`,
-							JSON.stringify({ image: base64Image })
-						);
-					});
+					html2canvas(target as HTMLElement)
+						.then((canvas) => {
+							const base64Image = canvas.toDataURL("image/png");
+							if (!isUsableDataUrl(base64Image)) {
+								log.warn(
+									"Skipped beacon upload of a degenerate screenshot capture",
+									{ caseId, dataUrlLength: base64Image.length }
+								);
+								return;
+							}
+							navigator.sendBeacon(
+								`/api/cases/${caseId}/image`,
+								JSON.stringify({ image: base64Image })
+							);
+						})
+						.catch((error) => {
+							log.error("Screenshot capture failed on unload", {
+								caseId,
+								error,
+							});
+						});
 				}
 			}
 		};

@@ -114,7 +114,7 @@ export function IntegrationRegisterDialog({
 								<FormItem>
 									<FormLabel>Name</FormLabel>
 									<FormControl>
-										<Input placeholder="darter-evidence-pipeline" {...field} />
+										<Input placeholder="example-integration" {...field} />
 									</FormControl>
 									<FormMessage />
 								</FormItem>

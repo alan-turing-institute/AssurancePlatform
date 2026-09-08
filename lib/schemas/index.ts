@@ -4,13 +4,16 @@
 export * from "./assurance-case";
 export * from "./auth";
 export * from "./base";
-export * from "./case-study";
+export * from "./case-image";
+export * from "./case-information";
 export * from "./comment";
 export * from "./element";
 export * from "./google-drive";
 export * from "./integration";
 export * from "./permission";
 export * from "./plugin";
+export * from "./publish";
+export * from "./publishable-item";
 export * from "./status";
 // Domain schemas for API routes
 export * from "./team";

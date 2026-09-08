@@ -31,6 +31,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
 import {
 	AvailableTeamsList,
 	TeamPermissionRow,
@@ -74,12 +75,34 @@ export function CaseSharingDialog() {
 		form,
 	});
 
+	// Guards against the Permission Level Select (below) closing this dialog
+	// when a click meant to dismiss the open Select falls through to the
+	// dialog's own overlay — see use-select-dismiss-guard.ts for the
+	// mechanism.
+	const {
+		onSelectOpenChange,
+		shouldGuardFocusDismiss,
+		shouldGuardPointerDismiss,
+	} = useSelectDismissGuard();
+
 	return (
 		<Dialog
 			onOpenChange={() => sharingModal.onClose()}
 			open={sharingModal.isOpen}
 		>
-			<DialogContent className="max-w-lg">
+			<DialogContent
+				className="max-w-lg"
+				onInteractOutside={(event) => {
+					if (shouldGuardFocusDismiss()) {
+						event.preventDefault();
+					}
+				}}
+				onPointerDownOutside={(event) => {
+					if (shouldGuardPointerDismiss()) {
+						event.preventDefault();
+					}
+				}}
+			>
 				<DialogHeader>
 					<DialogTitle>Share Case</DialogTitle>
 					<DialogDescription>
@@ -164,6 +187,7 @@ export function CaseSharingDialog() {
 													<FormLabel>Permission Level</FormLabel>
 													<Select
 														defaultValue={field.value}
+														onOpenChange={onSelectOpenChange}
 														onValueChange={field.onChange}
 													>
 														<FormControl>

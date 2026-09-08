@@ -5,7 +5,10 @@
     "docs/**",
     "public/**",
     ".next/**",
-    "coverage/**"
+    "coverage/**",
+    "coverage-integration/**",
+    "coverage-merged/**",
+    "coverage-merge-input/**"
   ],
   "entry": [
     "components/docs/curriculum/index.ts",
@@ -35,6 +38,7 @@
     "e2e/**"
   ],
   "ignoreDependencies": [
+    "tailwindcss",
     "sharp",
     "@tailwindcss/typography",
     "tailwindcss-animate",
@@ -44,5 +48,20 @@
     "axe-core",
     "conventional-changelog-conventionalcommits"
   ],
-  "ignoreDependencyOverrides": [{ "package": "@isaacs/brace-expansion" }]
+  "ignoreDependencyOverrides": [{ "package": "@isaacs/brace-expansion" }],
+  "ignoreUnresolvedImports": [
+    "@/src/generated/prisma",
+    "@/src/generated/prisma/**",
+    "../src/generated/prisma",
+    "../src/generated/prisma/**",
+    "../../src/generated/prisma",
+    "../../src/generated/prisma/**"
+  ],
+  "audit": {
+    "deadCodeBaseline": ".fallow-baseline.dead-code.json",
+    "dupesBaseline": ".fallow-baseline.dupes.json"
+  },
+  "rules": {
+    "coverage-gaps": "warn"
+  }
 }

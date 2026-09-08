@@ -1,0 +1,3 @@
+`z.object($_)` as $o where {
+	register_diagnostic(span=$o, message="Bare z.object() in lib/schemas — use z.strictObject() for request bodies; for a parser of stored/imported JSON, keep z.object() and add a biome-ignore comment with the reason.")
+}

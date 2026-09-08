@@ -17,7 +17,7 @@ import { toast } from "@/lib/toast";
 // (not re-exporting the local import above) so biome's `noExportedImports`
 // doesn't fire. The fetch itself is delegated to `use-plugin-enablement.ts`
 // — the shared fetch mechanism both this pane and the build-time UI slots
-// read through (`[[TEA — UI extension slots]]`); this hook keeps its own
+// read through (tracked internally as "TEA — UI extension slots"); this hook keeps its own
 // public API unchanged.
 export type {
 	PluginPinnedAt,

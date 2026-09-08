@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateMemberRoleSchema } from "@/lib/schemas/team";
 import {
 	removeMember,
@@ -24,17 +24,13 @@ export async function PATCH(
 		const currentUserId = await requireAuth();
 		const { id: teamId, userId: targetUserId } = await params;
 
-		const body: unknown = await request.json();
-		const parsed = updateMemberRoleSchema.safeParse(body);
-		if (!parsed.success) {
-			return apiError(validationError("Invalid team role"));
-		}
+		const data = await parseJsonBody(request, updateMemberRoleSchema);
 
 		const result = await updateMemberRole(
 			currentUserId,
 			teamId,
 			targetUserId,
-			parsed.data
+			data
 		);
 
 		if ("error" in result) {

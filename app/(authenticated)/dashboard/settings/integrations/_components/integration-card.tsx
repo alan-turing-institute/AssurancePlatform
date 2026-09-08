@@ -5,6 +5,8 @@ import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DisabledButtonHint } from "@/components/ui/disabled-button-hint";
+import { useIntegrationCaseGrants } from "@/hooks/use-integration-case-grants";
 import {
 	formatFullDate,
 	formatRelativeToNow,
@@ -12,9 +14,13 @@ import {
 } from "@/lib/date";
 import type {
 	IntegrationListItem,
+	IntegrationTokenSummary,
 	IssuedTokenResult,
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
+import { CaseAccessSection } from "./case-access-section";
+import { IntegrationDeleteDialog } from "./integration-delete-dialog";
+import { IntegrationRevokedTokens } from "./integration-revoked-tokens";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
 import { IntegrationTokenRow } from "./integration-token-row";
@@ -22,6 +28,41 @@ import {
 	IntegrationTokenSecretModal,
 	type TokenReveal,
 } from "./integration-token-secret-modal";
+
+/** Shared newest-first sort for both token lists — active tokens sort by
+ * `createdAt` (the auto-tuck UX, issue TEA — Token list UX: a revoked token
+ * never needs a manual archive step because revoking already removes it from
+ * the active list); revoked tokens (within the collapsed section) sort by
+ * `revokedAt`, most-recently-revoked first. The null fallback only matters
+ * for `revokedAt` in principle — every entry passed for that field has a
+ * non-null value by construction (partitioned below), so it never fires in
+ * practice. */
+function sortTokensByDateDesc(
+	tokens: IntegrationTokenSummary[],
+	field: "createdAt" | "revokedAt"
+): IntegrationTokenSummary[] {
+	return [...tokens].sort((a, b) => {
+		const aValue = a[field];
+		const bValue = b[field];
+		const aTime = aValue ? new Date(aValue).getTime() : 0;
+		const bTime = bValue ? new Date(bValue).getTime() : 0;
+		return bTime - aTime;
+	});
+}
+
+/** Splits an integration's tokens into active/revoked in one pass rather than
+ * filtering the array twice. */
+function partitionTokensByRevoked(tokens: IntegrationTokenSummary[]): {
+	active: IntegrationTokenSummary[];
+	revoked: IntegrationTokenSummary[];
+} {
+	const active: IntegrationTokenSummary[] = [];
+	const revoked: IntegrationTokenSummary[] = [];
+	for (const token of tokens) {
+		(token.revokedAt ? revoked : active).push(token);
+	}
+	return { active, revoked };
+}
 
 export interface IntegrationCardProps {
 	/** True while THIS integration's registration delete request is in flight. */
@@ -45,9 +86,21 @@ export interface IntegrationCardProps {
 
 /**
  * One integration's management card: identity + status + scopes (functional
- * scope item 1), lifecycle actions (item 3), and its tokens with issue/
- * rotate/revoke (item 4). Presentational — every mutation is a callback prop
- * so this component (and its tests) never touch `useIntegrations` directly.
+ * scope item 1), lifecycle actions (item 3), its tokens with issue/rotate/
+ * revoke (item 4), and its case-access grants (the settings-page half of
+ * "TEA — Integration case-access grants need a product surface"). Mostly
+ * presentational — every LIST-level mutation (suspend/revoke/delete/tokens)
+ * is still a callback prop from `IntegrationsSection`/`useIntegrations`, so
+ * this component's own tests never touch that hook directly. The one
+ * exception is case-access grants: unlike tokens, they are NOT embedded in
+ * `IntegrationListItem` (a deliberate separate-resource choice on the API
+ * side), so this component calls
+ * `useIntegrationCaseGrants(integration.id, integration.status)` itself —
+ * one hook call per card instance, not a hook-in-a-loop — and
+ * threads its state down into the presentational `CaseAccessSection`. The
+ * integration's own `status` is passed alongside its id so the hook's 409
+ * copy stays correct even if the card revokes/suspends the integration
+ * while this card's grant form is open.
  */
 export function IntegrationCard({
 	deleting,
@@ -69,8 +122,27 @@ export function IntegrationCard({
 		string | null
 	>(null);
 
+	const {
+		grants: caseGrants,
+		loading: caseGrantsLoading,
+		loadError: caseGrantsLoadError,
+		granting: grantingCaseAccess,
+		grantError,
+		clearGrantError,
+		grantAccess,
+		removingCaseId,
+		removeAccess,
+		refetch: refetchCaseGrants,
+	} = useIntegrationCaseGrants(integration.id, integration.status);
+
 	const isIssuing = pendingTokenKey === integration.id;
 	const integrationActive = integration.status === "ACTIVE";
+	const integrationRevoked = integration.status === "REVOKED";
+
+	const { active: activeTokensRaw, revoked: revokedTokensRaw } =
+		partitionTokensByRevoked(integration.tokens);
+	const activeTokens = sortTokensByDateDesc(activeTokensRaw, "createdAt");
+	const revokedTokens = sortTokensByDateDesc(revokedTokensRaw, "revokedAt");
 
 	async function handleIssueToken() {
 		const result = await onIssueToken(integration.id);
@@ -171,8 +243,13 @@ export function IntegrationCard({
 							Revoke
 						</Button>
 					)}
-					<Button
-						disabled={deleting}
+					<DisabledButtonHint
+						disabled={deleting || !integrationRevoked}
+						disabledReason={
+							integrationRevoked
+								? undefined
+								: "Revoke first — delete is permanent"
+						}
 						onClick={() => setConfirmDeleteOpen(true)}
 						size="sm"
 						type="button"
@@ -180,7 +257,7 @@ export function IntegrationCard({
 					>
 						<Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
 						{deleting ? "Deleting…" : "Delete"}
-					</Button>
+					</DisabledButtonHint>
 				</div>
 			</div>
 
@@ -189,28 +266,32 @@ export function IntegrationCard({
 					<h4 className="font-medium text-foreground text-xs uppercase tracking-wide">
 						Tokens
 					</h4>
-					<Button
+					<DisabledButtonHint
 						disabled={!integrationActive || isIssuing}
-						onClick={handleIssueToken}
-						size="sm"
-						title={
+						disabledReason={
 							integrationActive
 								? undefined
 								: "Only an ACTIVE integration can issue a token"
 						}
+						onClick={handleIssueToken}
+						size="sm"
 						type="button"
 						variant="outline"
 					>
 						<KeyRound aria-hidden="true" className="h-3.5 w-3.5" />
 						{isIssuing ? "Issuing…" : "Issue new token"}
-					</Button>
+					</DisabledButtonHint>
 				</div>
 
-				{integration.tokens.length === 0 ? (
-					<p className="text-muted-foreground text-xs">No tokens issued yet.</p>
+				{activeTokens.length === 0 ? (
+					<p className="text-muted-foreground text-xs">
+						{revokedTokens.length > 0
+							? "No active tokens."
+							: "No tokens issued yet."}
+					</p>
 				) : (
 					<div className="space-y-2">
-						{integration.tokens.map((token) => (
+						{activeTokens.map((token) => (
 							<IntegrationTokenRow
 								canRotate={integrationActive}
 								key={token.id}
@@ -222,7 +303,31 @@ export function IntegrationCard({
 						))}
 					</div>
 				)}
+
+				<IntegrationRevokedTokens tokens={revokedTokens} />
 			</div>
+
+			<CaseAccessSection
+				grantError={grantError}
+				granting={grantingCaseAccess}
+				grants={caseGrants}
+				integrationActive={integrationActive}
+				// Keyed to activity, not `integration.id`: crossing the
+				// ACTIVE/non-ACTIVE boundary (revoke or suspend from this same
+				// card) remounts the section, which discards its own `addOpen`
+				// state — the stale-form path this closes off — for free, with
+				// no effect and no manual reset. Re-activating (SUSPENDED →
+				// ACTIVE via Reactivate) remounts the same way, which is fine:
+				// the form was never open across a state it can't act in anyway.
+				key={integrationActive ? "active" : "inactive"}
+				loadError={caseGrantsLoadError}
+				loading={caseGrantsLoading}
+				onClearGrantError={clearGrantError}
+				onGrant={grantAccess}
+				onRemove={removeAccess}
+				onRetry={refetchCaseGrants}
+				removingCaseId={removingCaseId}
+			/>
 
 			<IntegrationTokenSecretModal
 				onClose={() => setTokenReveal(null)}
@@ -242,17 +347,15 @@ export function IntegrationCard({
 				}}
 			/>
 
-			<AlertModal
-				cancelButtonText="Cancel"
-				confirmButtonText="Delete integration"
-				isOpen={confirmDeleteOpen}
-				loading={deleting}
-				message={`Deleting "${integration.name}" permanently removes its registration and every one of its tokens. This cannot be undone.`}
-				onClose={() => setConfirmDeleteOpen(false)}
+			<IntegrationDeleteDialog
+				deleting={deleting}
+				integrationName={integration.name}
 				onConfirm={() => {
 					setConfirmDeleteOpen(false);
 					onDelete(integration.id);
 				}}
+				onOpenChange={setConfirmDeleteOpen}
+				open={confirmDeleteOpen}
 			/>
 
 			<AlertModal

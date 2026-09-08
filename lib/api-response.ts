@@ -129,16 +129,74 @@ const ERROR_MAPPINGS: Array<{
 	// (integration management API, work item 7): an unknown scope is a
 	// validation failure (400), not an unmapped 500.
 	{ pattern: /^Unknown scope/, factory: () => validationError("") },
+	// `element-service.ts`'s `createElement`: an unrecognised `type`/
+	// `elementType` (schema-level, `lib/schemas/element.ts`'s
+	// `elementTypeSchema`, only checks it's a non-empty string — a bad value
+	// reaches the service) is a validation failure (400), not a 500. Without
+	// this guard the bad type used to reach `generateElementName` -> `toPrefix`,
+	// which throws for anything the prefix registry doesn't know.
+	{ pattern: /^Unknown element type/, factory: () => validationError("") },
+	// `element-service.ts`'s `rejectDeclaredAsCited` (ADR 0004 D3): AS_CITED
+	// is machine-derived from the cited element's own status, never author-
+	// declared — a rejected write is a validation failure (400), not a 500.
+	{
+		pattern: /^assertionStatus cannot be set to AS_CITED/,
+		factory: () => validationError(""),
+	},
+	// `element-service.ts`'s `rejectCitedElementIdIfNotApplicable` /
+	// `validateCitedElementId` (ADR 0004 D5): a bad `citedElementId` (wrong
+	// element type, nonexistent target, self-citation) is a validation
+	// failure (400), not a 500.
+	{ pattern: /^citedElementId /, factory: () => validationError("") },
+	// `element-service.ts`'s `rejectModuleReferenceIdIfNotApplicable` /
+	// `rejectMissingModuleReferenceId` / `validateModuleReferenceId`: a bad
+	// `moduleReferenceId` (wrong element type, missing on a required type,
+	// nonexistent target case) is a validation failure (400), not a 500.
+	{ pattern: /^moduleReferenceId /, factory: () => validationError("") },
+	// `element-service.ts`'s `validateDefeatsElementId`: a bad
+	// `defeatsElementId` (cross-case, nonexistent, soft-deleted, or
+	// self-reference target) is a validation failure (400), not a 500 —
+	// same shape as citedElementId/moduleReferenceId above.
+	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
+	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
+	// element-name prefix validation): a name that doesn't match its type's
+	// registered prefix format is a validation failure (400), not a 500.
+	// `describeExpectedFormat` (prefix-registry.ts) produces one of two exact
+	// shapes depending on whether the type is one of the ten known core
+	// types — "<Type> names must look like ..." normally, or the generic
+	// "Names must follow this element type's registered format" fallback for
+	// a type it doesn't recognise — both matched here rather than a single
+	// pattern, so an unrecognised element type's name error doesn't fall
+	// through to an unmapped 500 the way the type itself once did. Neither
+	// alternative is a generic word, so an unrelated service error
+	// mentioning "names" for a different reason isn't misclassified.
+	{
+		pattern: / names must look like | element type's registered format/,
+		factory: () => validationError(""),
+	},
 	// Lifecycle/state-guard errors from the integration registry service —
 	// the integration or token exists and is owned by the caller, but its
 	// current status makes the requested action a no-op or a terminal-state
 	// violation (e.g. reactivating a REVOKED integration, or issuing/
-	// rotating a token against one that isn't ACTIVE). None of these contain
-	// "already" or "not found", so without this entry they'd fall through to
-	// INTERNAL (500) the first time an HTTP route ever surfaced them.
+	// rotating a token against one that isn't ACTIVE, or granting case access
+	// through one that isn't ACTIVE). None of these contain "already" or
+	// "not found", so without this entry they'd fall through to INTERNAL
+	// (500) the first time an HTTP route ever surfaced them.
+	//
+	// `grantIntegrationCaseAccess` reports its non-ACTIVE guard as two
+	// DISTINCT status-specific messages ("...for a suspended integration" /
+	// "...for a revoked integration"), not one uniform "non-active" string
+	// (QA, 2026-07-14 — a client that keys its own copy off a held prop can
+	// go stale cross-tab; the uniform message gave it nothing to recover
+	// with). The service's own gate still fails closed on `!== "ACTIVE"`
+	// rather than allowlisting just these two statuses, so the original
+	// uniform "...for a non-active integration" string remains a live
+	// (if unreachable while `IntegrationStatus` stays a 3-value enum)
+	// fallback — kept here too, or that fallback would 500 as INTERNAL
+	// instead of 409. All three collapse to the same 409 CONFLICT here.
 	{
 		pattern:
-			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot rotate a revoked token$/,
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked|non-active) integration$|^Cannot rotate a revoked token$/,
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations

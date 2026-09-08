@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type {
+	AssertionStatus,
 	CaseExportNested,
 	ElementRole,
 	ElementType,
@@ -133,12 +134,16 @@ export async function exportCase(
 						moduleReferenceId: true,
 						moduleEmbedType: true,
 						modulePublicSummary: true,
+						// Element-level citation (ADR 0004 D5)
+						citedElementId: true,
 						// Pattern metadata
 						fromPattern: true,
 						modifiedFromPattern: true,
 						// Dialogical reasoning
 						isDefeater: true,
 						defeatsElementId: true,
+						// Per-assertion status (ADR 0004 D3)
+						assertionStatus: true,
 						// Include evidence linked TO this element (claims get their evidence)
 						evidenceLinksTo: {
 							where: {
@@ -164,12 +169,16 @@ export async function exportCase(
 										moduleReferenceId: true,
 										moduleEmbedType: true,
 										modulePublicSummary: true,
+										// Element-level citation (ADR 0004 D5)
+										citedElementId: true,
 										// Pattern metadata
 										fromPattern: true,
 										modifiedFromPattern: true,
 										// Dialogical reasoning
 										isDefeater: true,
 										defeatsElementId: true,
+										// Per-assertion status (ADR 0004 D3)
+										assertionStatus: true,
 									},
 								},
 							},
@@ -220,12 +229,16 @@ export async function exportCase(
 			moduleReferenceId: el.moduleReferenceId,
 			moduleEmbedType: el.moduleEmbedType as ModuleEmbedType | null,
 			modulePublicSummary: el.modulePublicSummary,
+			// Element-level citation (ADR 0004 D5)
+			citedElementId: el.citedElementId,
 			// Pattern metadata
 			fromPattern: el.fromPattern,
 			modifiedFromPattern: el.modifiedFromPattern,
 			// Dialogical reasoning
 			isDefeater: el.isDefeater,
 			defeatsElementId: el.defeatsElementId,
+			// Per-assertion status (ADR 0004 D3)
+			assertionStatus: el.assertionStatus as AssertionStatus | null,
 			// Comments (if requested)
 			comments: includeComments ? commentsMap.get(el.id) : undefined,
 			evidenceLinksTo: el.evidenceLinksTo.map((link) => ({
@@ -248,12 +261,17 @@ export async function exportCase(
 					moduleEmbedType: link.evidence
 						.moduleEmbedType as ModuleEmbedType | null,
 					modulePublicSummary: link.evidence.modulePublicSummary,
+					// Element-level citation (ADR 0004 D5)
+					citedElementId: link.evidence.citedElementId,
 					// Pattern metadata
 					fromPattern: link.evidence.fromPattern,
 					modifiedFromPattern: link.evidence.modifiedFromPattern,
 					// Dialogical reasoning
 					isDefeater: link.evidence.isDefeater,
 					defeatsElementId: link.evidence.defeatsElementId,
+					// Per-assertion status (ADR 0004 D3)
+					assertionStatus: link.evidence
+						.assertionStatus as AssertionStatus | null,
 					// Comments for evidence (if requested)
 					comments: includeComments
 						? commentsMap.get(link.evidence.id)

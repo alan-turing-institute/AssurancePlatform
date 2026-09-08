@@ -43,6 +43,9 @@ describe("IntegrationRegisterDialog", () => {
 		);
 
 		expect(screen.getByLabelText(NAME_LABEL_REGEX)).toBeInTheDocument();
+		expect(
+			screen.getByPlaceholderText("example-integration")
+		).toBeInTheDocument();
 		expect(screen.getByLabelText(DESCRIPTION_LABEL_REGEX)).toBeInTheDocument();
 		expect(screen.getAllByRole("checkbox")).toHaveLength(3);
 		expect(screen.getByText("case:read")).toBeInTheDocument();

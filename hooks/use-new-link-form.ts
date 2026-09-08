@@ -76,9 +76,8 @@ export function useNewLinkForm({
 	const handleContextAdd = async (description: string) => {
 		const newContextItem = {
 			description,
-			goalId: assuranceCase?.goals?.[0]?.id || 0,
+			parentId: assuranceCase?.goals?.[0]?.id ?? null,
 			assuranceCaseId: assuranceCase?.id,
-			type: "context",
 		};
 
 		const result = await createAssuranceCaseNode(
@@ -127,16 +126,13 @@ export function useNewLinkForm({
 
 	/** Builds the strategy creation payload based on the parent node type */
 	const createStrategyPayload = (description: string) => {
-		if (node.type === "property") {
-			return {
-				description,
-				propertyClaimId: node.data.id as string,
-				assuranceCaseId: assuranceCase?.id,
-			};
-		}
+		const parentId =
+			node.type === "property"
+				? (node.data.id as string)
+				: (assuranceCase?.goals?.[0]?.id ?? null);
 		return {
 			description,
-			goalId: assuranceCase?.goals?.[0]?.id,
+			parentId,
 			assuranceCaseId: assuranceCase?.id,
 		};
 	};
@@ -213,20 +209,18 @@ export function useNewLinkForm({
 	const createPropertyClaimItem = (description: string) => {
 		const baseItem = {
 			description,
-			claimType: "Property Claim",
-			propertyClaims: [],
-			evidence: [],
-			type: "property_claim",
 			assuranceCaseId: assuranceCase?.id,
 		};
 
 		switch (node.type) {
 			case "strategy":
-				return { ...baseItem, strategyId: node.data.id };
 			case "property":
-				return { ...baseItem, propertyClaimId: node.data.id };
+				return { ...baseItem, parentId: node.data.id as string };
 			default:
-				return { ...baseItem, goalId: assuranceCase?.goals?.[0]?.id || 0 };
+				return {
+					...baseItem,
+					parentId: assuranceCase?.goals?.[0]?.id ?? null,
+				};
 		}
 	};
 
@@ -422,8 +416,7 @@ export function useNewLinkForm({
 		description,
 		urls,
 		URL: urls[0] || "",
-		propertyClaimId: [node.data.id],
-		type: "evidence",
+		parentId: node.data.id as string,
 		assuranceCaseId: assuranceCase?.id,
 	});
 

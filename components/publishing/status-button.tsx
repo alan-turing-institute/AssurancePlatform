@@ -31,11 +31,6 @@ const statusConfig: Record<
 			"bg-muted-foreground/10 text-muted-foreground ring-muted-foreground/20 hover:bg-muted-foreground/20",
 		tooltip: "Click to manage publish status",
 	},
-	READY_TO_PUBLISH: {
-		label: "Ready to Publish",
-		className: "bg-warning/10 text-warning ring-warning/20 hover:bg-warning/20",
-		tooltip: "Ready to link to case studies - click to manage",
-	},
 	PUBLISHED: {
 		label: "Published",
 		className: "bg-success/10 text-success ring-success/20 hover:bg-success/20",
@@ -49,7 +44,6 @@ const statusConfig: Record<
  *
  * Status colours:
  * - Draft: Grey
- * - Ready to Publish: Amber
  * - Published: Green (with amber dot if hasChanges)
  */
 export function StatusButton({

@@ -3,8 +3,8 @@ import type {
 	ApiToken,
 	AssuranceCase,
 	AssuranceElement,
+	CaseInformation,
 	CasePermission,
-	CaseStudy,
 	CaseTeamPermission,
 	Comment,
 	Integration,
@@ -39,6 +39,10 @@ type UserOverrides = Partial<{
 	firstName: string;
 	lastName: string;
 	emailVerified: boolean;
+	createdAt: Date;
+	lastLoginAt: Date | null;
+	retentionWarning30SentAt: Date | null;
+	retentionWarning7SentAt: Date | null;
 }>;
 
 export function createTestUser(overrides: UserOverrides = {}): Promise<User> {
@@ -53,6 +57,10 @@ export function createTestUser(overrides: UserOverrides = {}): Promise<User> {
 			firstName: overrides.firstName,
 			lastName: overrides.lastName,
 			emailVerified: overrides.emailVerified ?? false,
+			createdAt: overrides.createdAt,
+			lastLoginAt: overrides.lastLoginAt,
+			retentionWarning30SentAt: overrides.retentionWarning30SentAt,
+			retentionWarning7SentAt: overrides.retentionWarning7SentAt,
 		},
 	});
 }
@@ -113,7 +121,7 @@ type CaseOverrides = Partial<{
 	name: string;
 	description: string;
 	mode: "STANDARD" | "ADVANCED";
-	publishStatus: "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED";
+	publishStatus: "DRAFT" | "PUBLISHED";
 	published: boolean;
 	isDemo: boolean;
 }>;
@@ -158,6 +166,23 @@ type ElementOverrides = Partial<{
 	role: "TOP_LEVEL" | "SUPPORTING";
 	url: string;
 	inSandbox: boolean;
+	// ADR 0004 D3
+	assertionStatus:
+		| "ASSERTED"
+		| "NEEDS_SUPPORT"
+		| "ASSUMED"
+		| "AXIOMATIC"
+		| "DEFEATED"
+		| "AS_CITED";
+	// MODULE/AWAY_GOAL — required by AwayGoalSchema/ModuleSchema when
+	// elementType is MODULE or AWAY_GOAL (lib/schemas/element-validation.ts).
+	moduleReferenceId: string;
+	// ADR 0004 D5 — AWAY_GOAL only
+	citedElementId: string | null;
+	citationDangling: boolean;
+	// Dialogical reasoning (defeaters) — applies to every element type
+	isDefeater: boolean;
+	defeatsElementId: string | null;
 }>;
 
 export function createTestElement(
@@ -177,6 +202,12 @@ export function createTestElement(
 			role: overrides.role,
 			url: overrides.url,
 			inSandbox: overrides.inSandbox ?? false,
+			assertionStatus: overrides.assertionStatus,
+			moduleReferenceId: overrides.moduleReferenceId,
+			citedElementId: overrides.citedElementId,
+			citationDangling: overrides.citationDangling ?? false,
+			isDefeater: overrides.isDefeater ?? false,
+			defeatsElementId: overrides.defeatsElementId,
 		},
 	});
 }
@@ -528,37 +559,29 @@ export function createNestedCaseWithChainJSON(): Record<string, unknown> {
 }
 
 // ============================================
-// CASE STUDY
+// CASE INFORMATION (ADR 0003 §1)
 // ============================================
 
-type CaseStudyOverrides = Partial<{
-	title: string;
+type CaseInformationOverrides = Partial<{
 	description: string;
 	authors: string;
-	category: string;
 	sector: string;
-	published: boolean;
+	featureImageUrl: string;
 }>;
 
-export function createTestCaseStudy(
-	ownerId: string,
-	overrides: CaseStudyOverrides = {}
-): Promise<CaseStudy> {
+export function createTestCaseInformation(
+	caseId: string,
+	overrides: CaseInformationOverrides = {}
+): Promise<CaseInformation> {
 	const n = nextId();
-	const now = new Date();
-	const published = overrides.published ?? false;
-	return prisma.caseStudy.create({
+	return prisma.caseInformation.create({
 		data: {
-			title: overrides.title ?? `Test Case Study ${n}`,
-			description: overrides.description ?? null,
-			authors: overrides.authors ?? null,
-			category: overrides.category ?? null,
-			sector: overrides.sector ?? null,
-			published,
-			publishedDate: published ? now : null,
-			ownerId,
-			createdOn: now,
-			lastModifiedOn: now,
+			caseId,
+			description: overrides.description ?? `Test case information ${n}`,
+			authors: overrides.authors ?? "Ada Lovelace",
+			sector: overrides.sector ?? "Healthcare",
+			featureImageUrl:
+				overrides.featureImageUrl ?? `https://example.com/image-${n}.png`,
 		},
 	});
 }

@@ -1,6 +1,28 @@
 import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
+import { Prisma } from "@/src/generated/prisma";
+
+// Derived from `prisma.$transaction`'s own callback parameter — same pattern
+// as `publish-service.ts` / `slug-service.ts` (kept local rather than
+// imported: `Prisma.TransactionClient` does not structurally match this
+// project's `.$extends()`-wrapped client from `lib/prisma.ts`).
+type TransactionCallback = Parameters<typeof prisma.$transaction>[0];
+type TransactionClient = TransactionCallback extends (
+	tx: infer T
+) => Promise<unknown>
+	? T
+	: never;
+
+/**
+ * Prisma-compatible client that can run queries: either the global `prisma`
+ * singleton (for calls made before/outside the import's transaction) or the
+ * transaction-scoped `tx` client (for calls made from inside it). Used by
+ * `resolveExternalCitedElementIds`, which is called both ways — once before
+ * `prisma.$transaction` opens (keeps the transaction short) and once more,
+ * against `tx`, from inside `createElements`' resolve-window race backstop.
+ */
+type PrismaLikeClient = typeof prisma | TransactionClient;
 
 export type ImportResult =
 	| {
@@ -151,10 +173,11 @@ function buildIdMap(elements: ElementV2[]): Map<string, string> {
  * Creates the case and grants ADMIN permission to the user.
  */
 async function createCaseWithPermission(
+	tx: TransactionClient,
 	caseData: CaseExportV2["case"],
 	userId: string
 ): Promise<string> {
-	const newCase = await prisma.assuranceCase.create({
+	const newCase = await tx.assuranceCase.create({
 		data: {
 			name: caseData.name,
 			description: caseData.description,
@@ -169,46 +192,305 @@ async function createCaseWithPermission(
 }
 
 /**
+ * Batch-resolves citedElementId values (ADR 0004 D5, review fix item 1 —
+ * P2003 trace) that are NOT already covered by this import's idMap. An id
+ * present in idMap is import-internal and always resolves (see
+ * resolveImportedCitedElementId below); everything else names an element in
+ * a DIFFERENT case (the one referenced by moduleReferenceId), so it has to
+ * be checked against the target DB before the insert — the createMany FK
+ * (assurance_elements_cited_element_id_fkey) rejects unresolvable rows and
+ * previously took the whole import's transaction down with it.
+ *
+ * One findMany for the whole batch (not one query per element), run BEFORE
+ * the transaction opens — keeps the transaction short per CLAUDE.md and
+ * avoids doing this lookup once per createElements call.
+ *
+ * Also reused (a second time, with a fresh query) by createElements' resolve-
+ * window race backstop: if an id resolved here is deleted before the insert
+ * actually runs, re-calling this same function after that P2003 correctly
+ * comes back without it — see createElements' docstring.
+ *
+ * Takes a `client` (global `prisma` for the pre-transaction call in
+ * `importCase`, or the transaction-scoped `tx` for the in-transaction retry
+ * inside `createElements`) rather than being duplicated per call site.
+ */
+async function resolveExternalCitedElementIds(
+	client: PrismaLikeClient,
+	elements: ElementV2[],
+	idMap: Map<string, string>
+): Promise<Set<string>> {
+	const externalIds = new Set<string>();
+	for (const el of elements) {
+		if (el.citedElementId && !idMap.has(el.citedElementId)) {
+			externalIds.add(el.citedElementId);
+		}
+	}
+
+	if (externalIds.size === 0) {
+		return externalIds;
+	}
+
+	const found = await client.assuranceElement.findMany({
+		where: { id: { in: [...externalIds] } },
+		select: { id: true },
+	});
+
+	return new Set(found.map((el) => el.id));
+}
+
+/**
+ * Resolves a citedElementId (ADR 0004 D5) for the createMany row.
+ *
+ * citedElementId names an element in the case referenced by moduleReferenceId
+ * — i.e. normally a DIFFERENT case from the one being imported here, so it is
+ * almost never present in this import's own idMap. Lead ruling (dispatch
+ * brief, cid 2026-07-19): try the idMap first (covers the edge case where a
+ * test fixture or self-contained export happens to include the cited element
+ * in the same payload — then the remap keeps the reference internally
+ * consistent with the new ids); otherwise PRESERVE THE ORIGINAL ID VERBATIM
+ * if — and only if — resolveExternalCitedElementIds proved it actually
+ * exists in the target DB.
+ *
+ * Review fix item 1: a preserved id that resolves NOWHERE in the target DB
+ * (the away-case wasn't part of this import and doesn't exist there under
+ * that id) used to hit the createMany FK and roll back the entire import.
+ * That is now a flagged, non-fatal outcome: citedElementId is dropped to
+ * null and citationDangling is set, matching the existing detach/delete
+ * dangling-citation contract in element-service.ts.
+ */
+function resolveImportedCitedElementId(
+	citedElementId: string | null | undefined,
+	idMap: Map<string, string>,
+	resolvedExternalIds: Set<string>
+): { citedElementId: string | null; citationDangling: boolean } {
+	if (!citedElementId) {
+		return { citedElementId: null, citationDangling: false };
+	}
+
+	const remapped = idMap.get(citedElementId);
+	if (remapped) {
+		return { citedElementId: remapped, citationDangling: false };
+	}
+
+	if (resolvedExternalIds.has(citedElementId)) {
+		return { citedElementId, citationDangling: false };
+	}
+
+	// Unresolvable anywhere in the target DB — flag, don't fail the import.
+	return { citedElementId: null, citationDangling: true };
+}
+
+/**
+ * Foreign key constraint name for `citedElementId` (see the ADR 0004 D5
+ * migration, `assurance_elements_cited_element_id_fkey`). Anchoring the P2003
+ * catch below to this exact constraint name — rather than treating any
+ * P2003 from this insert as recoverable — matters because the same
+ * `createMany` call also carries `caseId`, `parentId`, `defeatsElementId`,
+ * and `moduleReferenceId` foreign keys: a P2003 on any of THOSE means real
+ * corrupt/inconsistent import data and must still fail the whole import
+ * loudly, not be silently downgraded.
+ */
+const CITED_ELEMENT_ID_FK_CONSTRAINT =
+	"assurance_elements_cited_element_id_fkey";
+
+/**
+ * True when `error` is the specific FK violation this module knows how to
+ * recover from: a `citedElementId` that pointed at a real row when
+ * `resolveExternalCitedElementIds` checked it, but was deleted before this
+ * `createMany` actually ran (the resolve-window race — see `createElements`'
+ * docstring). Matches on the Postgres constraint name Prisma echoes into the
+ * error message (verified against a live P2003: `error.message` contains
+ * "Foreign key constraint violated on the constraint: `<name>`"), not on
+ * `error.meta`'s shape, which is adapter-internal and not a stable contract.
+ */
+export function isCitedElementIdForeignKeyError(error: unknown): boolean {
+	return (
+		error instanceof Prisma.PrismaClientKnownRequestError &&
+		error.code === "P2003" &&
+		error.message.includes(CITED_ELEMENT_ID_FK_CONSTRAINT)
+	);
+}
+
+/**
+ * Builds the createMany row for one element, resolving its citedElementId
+ * against the given (already-resolved) external-id set. Extracted from
+ * createElements so the resolve-window race backstop there can rebuild rows
+ * a second time, against a freshly re-resolved set, without duplicating the
+ * per-row field mapping.
+ */
+function buildElementRow(
+	el: ElementV2,
+	idMap: Map<string, string>,
+	resolvedExternalCitedElementIds: Set<string>,
+	caseId: string,
+	userId: string
+) {
+	const newId = idMap.get(el.id);
+	if (!newId) {
+		return null;
+	}
+
+	// Element-level citation (ADR 0004 D5) — see
+	// resolveImportedCitedElementId's docstring for the
+	// remap-else-preserve-verbatim-else-flag-dangling decision.
+	const { citedElementId, citationDangling } = resolveImportedCitedElementId(
+		el.citedElementId,
+		idMap,
+		resolvedExternalCitedElementIds
+	);
+
+	return {
+		id: newId,
+		caseId,
+		elementType: el.elementType,
+		role: el.role,
+		parentId: el.parentId ? (idMap.get(el.parentId) ?? null) : null,
+		name: el.name,
+		description: el.description,
+		assumption: el.assumption,
+		justification: el.justification,
+		context: el.context ?? [],
+		url: el.url,
+		level: el.level,
+		inSandbox: el.inSandbox,
+		fromPattern: el.fromPattern ?? false,
+		modifiedFromPattern: el.modifiedFromPattern ?? false,
+		// Per-assertion status (ADR 0004 D3) — lead ruling: import
+		// PRESERVES a declared status rather than dropping it. This is a
+		// direct createMany write (not through createElement/updateElement),
+		// so it intentionally bypasses guardAssertionStatusWrite/
+		// rejectDeclaredAsCited: import is a bulk data-load operation, not
+		// an author declaring a NEW status, and the source data already
+		// passed through export's own AS_CITED derivation.
+		assertionStatus: el.assertionStatus,
+		citedElementId,
+		citationDangling,
+		// Module reference (MODULE/AWAY_GOAL) — names a CASE, not an element
+		// in this import's own payload, so (unlike citedElementId) there is
+		// nothing in idMap to remap it through; preserved verbatim. A value
+		// that doesn't resolve in the target DB fails this createMany loudly
+		// via the module_reference_id foreign key — deliberately NOT given
+		// the citedElementId FK's soft-degrade treatment below, since it was
+		// never flagged as needing one (see nested-to-flat.ts for the same
+		// note at the point this value is first carried through).
+		moduleReferenceId: el.moduleReferenceId,
+		createdById: userId,
+	};
+}
+
+function buildElementRows(
+	sortedElements: ElementV2[],
+	idMap: Map<string, string>,
+	resolvedExternalCitedElementIds: Set<string>,
+	caseId: string,
+	userId: string
+) {
+	return sortedElements
+		.map((el) =>
+			buildElementRow(
+				el,
+				idMap,
+				resolvedExternalCitedElementIds,
+				caseId,
+				userId
+			)
+		)
+		.filter((d) => d !== null);
+}
+
+/**
  * Creates all elements in the correct order (parents before children).
+ *
+ * Resolve-window race backstop: `resolveExternalCitedElementIds` (called by
+ * `importCase` before this function runs) confirms each external
+ * citedElementId exists, but that check and this insert are not atomic —
+ * the cited element can be deleted in between. Before this fix, that raced
+ * insert would throw a raw P2003 on `assurance_elements_cited_element_id_fkey`
+ * and roll back the ENTIRE import (case, unrelated elements, everything),
+ * for a single citation that should just degrade to dangling like the
+ * already-unresolvable case review fix item 1 handles. The catch below is
+ * the backstop: on exactly that FK error, re-resolve the external
+ * citedElementIds against the DB (this time the raced-away id correctly
+ * comes back unresolved), rebuild the rows, and retry the insert once. A
+ * P2003 on any OTHER foreign key (caseId, parentId, defeatsElementId,
+ * moduleReferenceId) — or a second failure on retry — is not this module's
+ * to recover from and propagates, failing the import as before.
+ *
+ * SAVEPOINT/ROLLBACK TO SAVEPOINT around the first attempt (verified against
+ * a real Postgres, see case-import-service.test.ts and the issue writeup):
+ * now that this whole import runs inside one real `prisma.$transaction`,
+ * Postgres aborts the transaction on ANY error — including the P2003 this
+ * catch recovers from — and every statement after an aborted-but-uncaught-
+ * at-the-database-level error fails with `25P02 current transaction is
+ * aborted` until the transaction ends. Catching the P2003 in JS is not
+ * enough to make the connection usable again. A `SAVEPOINT` taken
+ * immediately before the first `createMany` gives the retry somewhere to
+ * roll back to — `ROLLBACK TO SAVEPOINT` undoes exactly (and only) the
+ * failed insert, clears the aborted state, and lets the retry's `createMany`
+ * run on the same transaction. This also removes the createMany-chunking
+ * caveat noted at the fix's original review (2026-07-20): the retry
+ * re-inserts the entire element row set, which was previously safe only
+ * because `createMany` happened to be a single non-transactional INSERT — if
+ * a future change chunked it into several statements, a partial success
+ * before the failing chunk would have already committed under the old
+ * auto-commit-per-statement code. Under this savepoint, nothing commits
+ * until the OUTER transaction commits, so `ROLLBACK TO SAVEPOINT` undoes
+ * every chunk executed since the savepoint was taken, not just the one that
+ * failed — chunking `createMany` in future would remain safe to retry
+ * whole-batch without re-introducing this caveat.
  */
 async function createElements(
+	tx: TransactionClient,
 	caseId: string,
 	elements: ElementV2[],
 	idMap: Map<string, string>,
+	resolvedExternalCitedElementIds: Set<string>,
 	userId: string
 ): Promise<number> {
 	// Sort elements topologically so parents are created before children
 	const sortedElements = topologicalSort(elements);
 
-	const data = sortedElements
-		.map((el) => {
-			const newId = idMap.get(el.id);
-			if (!newId) {
-				return null;
-			}
+	const data = buildElementRows(
+		sortedElements,
+		idMap,
+		resolvedExternalCitedElementIds,
+		caseId,
+		userId
+	);
 
-			return {
-				id: newId,
-				caseId,
-				elementType: el.elementType,
-				role: el.role,
-				parentId: el.parentId ? (idMap.get(el.parentId) ?? null) : null,
-				name: el.name,
-				description: el.description,
-				assumption: el.assumption,
-				justification: el.justification,
-				context: el.context ?? [],
-				url: el.url,
-				level: el.level,
-				inSandbox: el.inSandbox,
-				fromPattern: el.fromPattern ?? false,
-				modifiedFromPattern: el.modifiedFromPattern ?? false,
-				createdById: userId,
-			};
-		})
-		.filter((d) => d !== null);
+	// Savepoint name is generated internally (crypto.randomUUID, never
+	// user input) so interpolating it into raw SQL carries no injection
+	// risk; Prisma has no parameterised SAVEPOINT API.
+	const savepoint = `import_elements_${crypto.randomUUID().replaceAll("-", "_")}`;
+	await tx.$executeRawUnsafe(`SAVEPOINT "${savepoint}"`);
 
-	await prisma.assuranceElement.createMany({ data });
+	try {
+		await tx.assuranceElement.createMany({ data });
+		// Success path: deliberately not RELEASE-ing the savepoint here.
+		// Postgres releases it automatically when the enclosing
+		// transaction commits; an explicit RELEASE could race with a
+		// later ROLLBACK TO SAVEPOINT issued by another helper further
+		// down the import chain. Do not "fix" this by adding one.
+	} catch (error) {
+		if (!isCitedElementIdForeignKeyError(error)) {
+			throw error;
+		}
+
+		// Undo the failed insert and clear the transaction's aborted state
+		// before issuing any further statement on this connection.
+		await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT "${savepoint}"`);
+
+		const reResolvedExternalCitedElementIds =
+			await resolveExternalCitedElementIds(tx, elements, idMap);
+		const retryData = buildElementRows(
+			sortedElements,
+			idMap,
+			reResolvedExternalCitedElementIds,
+			caseId,
+			userId
+		);
+		await tx.assuranceElement.createMany({ data: retryData });
+	}
 
 	return data.length;
 }
@@ -218,6 +500,7 @@ async function createElements(
  * Note: EvidenceLink only has evidenceId and claimId - no caseId.
  */
 async function createEvidenceLinks(
+	tx: TransactionClient,
 	links: CaseExportV2["evidenceLinks"],
 	idMap: Map<string, string>
 ): Promise<number> {
@@ -232,7 +515,7 @@ async function createEvidenceLinks(
 		})
 		.filter((d) => d !== null);
 
-	await prisma.evidenceLink.createMany({ data });
+	await tx.evidenceLink.createMany({ data });
 
 	return data.length;
 }
@@ -241,6 +524,7 @@ async function createEvidenceLinks(
  * Creates comments for all elements that have them.
  */
 async function createComments(
+	tx: TransactionClient,
 	elements: ElementV2[],
 	idMap: Map<string, string>,
 	userId: string
@@ -284,7 +568,7 @@ async function createComments(
 	}
 
 	if (data.length > 0) {
-		await prisma.comment.createMany({ data });
+		await tx.comment.createMany({ data });
 	}
 
 	return data.length;
@@ -316,27 +600,52 @@ export async function importCase(
 		// Build ID mapping
 		const idMap = buildIdMap(v2Data.elements);
 
-		// Use a transaction to ensure atomicity
-		const result = await prisma.$transaction(async () => {
+		// Review fix item 1: batch-resolve external citedElementIds against the
+		// target DB BEFORE opening the transaction — keeps the transaction
+		// short and means the createMany insert never has to guess.
+		const resolvedExternalCitedElementIds =
+			await resolveExternalCitedElementIds(prisma, v2Data.elements, idMap);
+
+		// Use a transaction to ensure atomicity. The callback takes the
+		// transaction-scoped `tx` client and threads it through every helper
+		// below — the whole import is one atomic Postgres transaction, so a
+		// mid-import failure rolls back everything written so far instead of
+		// leaving a partial case (each helper previously called the global
+		// `prisma` singleton, which auto-commits per statement regardless of
+		// this wrapper).
+		// No explicit timeout/maxWait: the default 5s interactive-transaction
+		// timeout is fine here because the in-transaction round-trips are
+		// O(1) — a fixed ~4-6 calls (createCaseWithPermission, createElements,
+		// createEvidenceLinks, createComments, plus one retry on the
+		// savepoint path) — regardless of import payload size, not O(elements).
+		const result = await prisma.$transaction(async (tx) => {
 			// Create case
-			const caseId = await createCaseWithPermission(v2Data.case, userId);
+			const caseId = await createCaseWithPermission(tx, v2Data.case, userId);
 
 			// Create elements
 			const elementCount = await createElements(
+				tx,
 				caseId,
 				v2Data.elements,
 				idMap,
+				resolvedExternalCitedElementIds,
 				userId
 			);
 
 			// Create evidence links
 			const evidenceLinkCount = await createEvidenceLinks(
+				tx,
 				v2Data.evidenceLinks,
 				idMap
 			);
 
 			// Create comments for elements that have them
-			const commentCount = await createComments(v2Data.elements, idMap, userId);
+			const commentCount = await createComments(
+				tx,
+				v2Data.elements,
+				idMap,
+				userId
+			);
 
 			return {
 				caseId,

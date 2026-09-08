@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,12 +6,10 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
-import { updateUserProfileSchema } from "@/lib/schemas/user";
-
-interface DeleteAccountRequest {
-	password?: string;
-}
+import {
+	deleteAccountSchema,
+	updateUserProfileSchema,
+} from "@/lib/schemas/user";
 
 /**
  * GET /api/users/me
@@ -41,21 +40,14 @@ export async function PATCH(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		const parsed = updateUserProfileSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, updateUserProfileSchema);
 
 		// Call service to update profile
 		const { updateUserProfile } = await import(
 			"@/lib/services/user-management-service"
 		);
 
-		const result = await updateUserProfile(userId, parsed.data);
+		const result = await updateUserProfile(userId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
@@ -83,14 +75,13 @@ export async function DELETE(request: Request) {
 	try {
 		const userId = await requireAuth();
 
-		// Parse request body (password for confirmation)
-		let password: string | undefined;
-		try {
-			const body = (await request.json()) as DeleteAccountRequest;
-			password = body.password;
-		} catch {
-			// Body may be empty for OAuth users
-		}
+		// Body carries a password for confirmation, but may be empty for
+		// OAuth users, who have none to send — treated the same as {}
+		// (emptyBodyAs), the same way POST /api/cases/[id]/publish treats an
+		// absent body as "use defaults".
+		const { password } = await parseJsonBody(request, deleteAccountSchema, {
+			emptyBodyAs: {},
+		});
 
 		// Call service to delete account
 		const { deleteAccount } = await import(

@@ -2,7 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { type UseFormReturn, useFieldArray, useForm } from "react-hook-form";
 import type { Node } from "reactflow";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
@@ -24,15 +31,33 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useElementPanelSlot } from "@/hooks/use-element-panel-slot";
-import { updateAssuranceCaseNode } from "@/lib/case";
+import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
+import {
+	ASSERTION_STATUS_LABELS,
+	AUTHOR_ASSERTION_STATUS_VALUES,
+	type AuthorAssertionStatusValue,
+	isAuthorAssertionStatusValue,
+} from "@/lib/assertion-status";
+import {
+	getNodeMutationErrorMessage,
+	updateAssuranceCaseNode,
+} from "@/lib/case";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 
 type FormValues = NodeEditFormInput;
@@ -40,6 +65,20 @@ type FormValues = NodeEditFormInput;
 // Helper to check if element type supports attributes
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
 	["goal", "strategy", "property"].includes(nodeType);
+
+/**
+ * Resolves a node's current `assertionStatus` to one of the five
+ * author-declarable values for the Select's initial value. Falls back to
+ * "ASSERTED" for `null`/`undefined` (unset means ASSERTED) and for
+ * `AS_CITED` (derived-only — never offered as a choice here, so a node that
+ * currently carries it shows the default rather than an invalid selection).
+ */
+export function getInitialAssertionStatus(
+	nodeData: Record<string, unknown>
+): AuthorAssertionStatusValue {
+	const value = nodeData?.assertionStatus;
+	return isAuthorAssertionStatusValue(value) ? value : "ASSERTED";
+}
 
 /**
  * Converts node data URLs to field array format.
@@ -71,6 +110,9 @@ function buildUpdatePayload(
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
 		updateItem.context = values.context || [];
+		// Per-assertion status (ADR 0004 D3) — always one of the five
+		// author-declarable values; the Select never offers AS_CITED.
+		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
 	}
 
 	if (nodeType === "evidence") {
@@ -122,6 +164,64 @@ function TextFieldSection({
 							{...field}
 						/>
 					</FormControl>
+					<FormMessage />
+				</FormItem>
+			)}
+		/>
+	);
+}
+
+interface AssertionStatusSectionProps {
+	form: UseFormReturn<FormValues>;
+	onSelectOpenChange: (open: boolean) => void;
+	readOnly: boolean;
+}
+
+/**
+ * The assertion-status setter (ADR 0004 D3). Offers exactly the five
+ * author-declarable values — `AS_CITED` is derived-only (computed by the
+ * server from a cited element's own status) and must never appear as a
+ * choice here, so `AUTHOR_ASSERTION_STATUS_VALUES` (not the full six-value
+ * enum) drives this list.
+ */
+function AssertionStatusSection({
+	form,
+	onSelectOpenChange,
+	readOnly,
+}: AssertionStatusSectionProps) {
+	return (
+		<FormField
+			control={form.control}
+			name="assertionStatus"
+			render={({ field }) => (
+				<FormItem>
+					<FormLabel className="flex items-center gap-2">
+						Assertion status
+						{readOnly && (
+							<span className="text-muted-foreground" title="Read Only">
+								<Lock className="h-3 w-3" />
+							</span>
+						)}
+					</FormLabel>
+					<Select
+						disabled={readOnly}
+						onOpenChange={onSelectOpenChange}
+						onValueChange={field.onChange}
+						value={field.value}
+					>
+						<FormControl>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+						</FormControl>
+						<SelectContent>
+							{AUTHOR_ASSERTION_STATUS_VALUES.map((value) => (
+								<SelectItem key={value} value={value}>
+									{ASSERTION_STATUS_LABELS[value]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					<FormMessage />
 				</FormItem>
 			)}
@@ -247,10 +347,12 @@ function UrlsSection({
 										{...inputField}
 									/>
 								</FormControl>
-								{!readOnly && fields.length > 1 && (
+								{!readOnly && (
 									<Button
+										aria-label="Remove URL"
 										onClick={() => onRemove(index)}
 										size="icon"
+										title="Remove URL"
 										type="button"
 										variant="outline"
 									>
@@ -285,7 +387,6 @@ interface NodeEditDialogProps {
 	nodeType: DiagramNodeType;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
-	readOnly?: boolean;
 }
 
 export default function NodeEditDialog({
@@ -293,7 +394,6 @@ export default function NodeEditDialog({
 	nodeType,
 	open,
 	onOpenChange,
-	readOnly = false,
 }: NodeEditDialogProps) {
 	const [loading, setLoading] = useState(false);
 	const [newContextValue, setNewContextValue] = useState("");
@@ -301,6 +401,13 @@ export default function NodeEditDialog({
 	const [idCounter, setIdCounter] = useState(0);
 	const { assuranceCase } = useStore();
 	const panelSlot = useElementPanelSlot();
+	// Fail-closed, positive rule: editable only when the case permission is
+	// explicitly "edit" or "manage". Any other value — "view", "comment",
+	// or unset/unknown while the case is still loading — renders read-only.
+	const readOnly = !(
+		assuranceCase?.permissions === "edit" ||
+		assuranceCase?.permissions === "manage"
+	);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
@@ -310,6 +417,9 @@ export default function NodeEditDialog({
 			justification: (node.data?.justification as string) ?? "",
 			context: (node.data?.context as string[]) ?? [],
 			urls: getInitialUrls(node.data as Record<string, unknown>),
+			assertionStatus: getInitialAssertionStatus(
+				node.data as Record<string, unknown>
+			),
 		},
 	});
 
@@ -317,6 +427,11 @@ export default function NodeEditDialog({
 		control: form.control,
 		name: "urls",
 	});
+
+	// Subscribing to `isDirty` here (rather than only inside the effect below)
+	// makes react-hook-form's formState Proxy track it, so the effect sees
+	// up-to-date values as the user types.
+	const { isDirty } = form.formState;
 
 	// Context management
 	const contextValues = form.watch("context") || [];
@@ -355,6 +470,12 @@ export default function NodeEditDialog({
 		);
 	};
 
+	// The id of the node whose data is currently loaded into the form. Used
+	// (not `node` object identity — host node components rebuild that object
+	// inline on every render, e.g. `goal-node.tsx`) to tell a genuine element
+	// change apart from an unrelated re-render of the currently-open node.
+	const loadedNodeIdRef = useRef(node.data?.id);
+
 	const resetFormToNode = useCallback(
 		(n: Node) => {
 			const contextData = (n.data?.context as string[]) ?? [];
@@ -364,9 +485,13 @@ export default function NodeEditDialog({
 				justification: (n.data?.justification as string) ?? "",
 				context: contextData,
 				urls: getInitialUrls(n.data as Record<string, unknown>),
+				assertionStatus: getInitialAssertionStatus(
+					n.data as Record<string, unknown>
+				),
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
+			loadedNodeIdRef.current = n.data?.id;
 		},
 		[form, componentId]
 	);
@@ -378,16 +503,61 @@ export default function NodeEditDialog({
 		onOpenChange(nextOpen);
 	};
 
-	// Re-reset when node changes while dialog is already open
+	const {
+		onSelectOpenChange,
+		shouldGuardFocusDismiss,
+		shouldGuardPointerDismiss,
+	} = useSelectDismissGuard();
+
+	// Tracks whether the dialog was open on the previous render, so a
+	// closed→open transition (reopen) can be told apart from staying open
+	// across re-renders.
+	const wasOpenRef = useRef(open);
+
+	// Re-reset when the dialog is reopened, or a genuine element change
+	// arrives while it stays open (a different `node.data.id`) — both always
+	// reload, even over an unsaved draft, since that draft either belongs to
+	// a stale close/reopen cycle or to a *different* element entirely. Only a
+	// same-element re-render while the dialog stays open and the user is
+	// actively editing is guarded by `isDirty`, so an in-flight change is
+	// never silently discarded by unrelated identity churn.
 	useEffect(() => {
-		if (open) {
-			resetFormToNode(node);
+		const justOpened = open && !wasOpenRef.current;
+		wasOpenRef.current = open;
+
+		if (!open) {
+			return;
 		}
-	}, [node, open, resetFormToNode]);
+		const currentNodeId = node.data?.id;
+		// Currently unreachable in production: each dialog instance mounts
+		// 1:1 with a single node id (`${nodeType}-${item.id}` in
+		// convert-case.ts), so `node.data.id` never changes under a live
+		// dialog. Kept as defensive correctness in case that mounting
+		// invariant ever changes.
+		const isGenuineElementChange = currentNodeId !== loadedNodeIdRef.current;
+		if (!(justOpened || isGenuineElementChange) && isDirty) {
+			return;
+		}
+		resetFormToNode(node);
+	}, [node, open, resetFormToNode, isDirty]);
 
 	const handleClose = () => handleOpenChange(false);
 
+	// Trade-off (accepted): `buildUpdatePayload` sends a full snapshot of the
+	// form's attribute fields, not a diff. Now that a dirty draft can survive
+	// longer (reopen no longer discards it — see the effect above), the
+	// window in which a field the user never touched could have been changed
+	// concurrently elsewhere and then get overwritten by this stale snapshot
+	// on save is correspondingly longer too. Accepted because the
+	// alternative — silently discarding the user's in-flight edit, which is
+	// the bug this fix addresses — is worse.
 	const handleSubmit = async (values: FormValues) => {
+		// A single-line `readOnly` input still submits its form implicitly on
+		// Enter per the HTML spec (unlike `disabled`, which suppresses that).
+		// Guard here so that keystroke can never reach the update request.
+		if (readOnly) {
+			return;
+		}
 		// Auto-add any unsaved draft context text
 		if (newContextValue.trim()) {
 			values.context = [...(values.context || []), newContextValue.trim()];
@@ -404,7 +574,7 @@ export default function NodeEditDialog({
 			updateItem
 		);
 
-		if (updated) {
+		if (updated === true) {
 			recordUpdate(node.data.id as number, node.type || "unknown", beforeData, {
 				...beforeData,
 				...updateItem,
@@ -413,6 +583,14 @@ export default function NodeEditDialog({
 			handleClose();
 			return;
 		}
+		toast({
+			variant: "destructive",
+			title: `Failed to update ${nodeTypeLabel.toLowerCase()}`,
+			description: getNodeMutationErrorMessage(
+				updated,
+				"Something went wrong trying to update this element."
+			),
+		});
 		setLoading(false);
 	};
 
@@ -449,6 +627,11 @@ export default function NodeEditDialog({
 							label="Justification"
 							name="justification"
 							placeholder="Type your justification here (optional)."
+							readOnly={readOnly}
+						/>
+						<AssertionStatusSection
+							form={form}
+							onSelectOpenChange={onSelectOpenChange}
 							readOnly={readOnly}
 						/>
 						<ContextSection
@@ -505,7 +688,28 @@ export default function NodeEditDialog({
 
 	return (
 		<Dialog onOpenChange={handleOpenChange} open={open}>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+			<DialogContent
+				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+				// `onPointerDownOutside` is the path this fix targets: it's
+				// the click-through case where a click inside the dialog
+				// falls through to the Dialog's own overlay while the
+				// Select is open. `onInteractOutside` is guarded too, for
+				// consistency, but Radix's own DialogContentModal already
+				// calls event.preventDefault() on every focus-outside event
+				// for a modal DialogContent (react-dialog dist
+				// index.mjs, ~L157-160), so that branch never actually runs
+				// against a live dismissal — it's defensive only.
+				onInteractOutside={(event) => {
+					if (shouldGuardFocusDismiss()) {
+						event.preventDefault();
+					}
+				}}
+				onPointerDownOutside={(event) => {
+					if (shouldGuardPointerDismiss()) {
+						event.preventDefault();
+					}
+				}}
+			>
 				<DialogHeader>
 					<DialogTitle>
 						{readOnly ? "Viewing" : "Editing"} {nodeName}

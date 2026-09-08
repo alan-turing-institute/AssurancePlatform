@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SCOPES } from "@/lib/auth/scopes";
-import { optionalString, requiredString } from "@/lib/schemas/base";
+import { optionalString, requiredString, uuidSchema } from "@/lib/schemas/base";
 
 /**
  * Zod schemas for the integration management API (ADR 0002 v2 §2.4, work
@@ -47,7 +47,7 @@ export const integrationScopesSchema = z
  * name a different owner (vincent's session-derived-identity trust
  * statement, 2026-07-03).
  */
-export const registerIntegrationSchema = z.object({
+export const registerIntegrationSchema = z.strictObject({
 	name: requiredString("Name", 1, 100),
 	description: optionalString(1000),
 	scopes: integrationScopesSchema,
@@ -81,7 +81,7 @@ export type RegisterIntegrationFormInput = z.input<
 // type outside the route's own `.safeParse` call. Add one back when an edit UI
 // lands and a caller needs the parsed shape by name.
 export const updateIntegrationSchema = z
-	.object({
+	.strictObject({
 		description: optionalString(1000),
 		scopes: integrationScopesSchema.optional(),
 	})
@@ -106,13 +106,52 @@ export const updateIntegrationSchema = z
 // No `z.infer` alias here — nothing currently consumes an issueTokenSchema
 // type outside the route's own `.safeParse` call. Add one back when an
 // expiry-picker UI lands and a caller needs the parsed shape by name.
-export const issueTokenSchema = z.object({
+export const issueTokenSchema = z.strictObject({
 	expiresAt: z.coerce
 		.date()
 		.refine((date) => date.getTime() > Date.now(), {
 			message: "expiresAt must be in the future",
 		})
 		.optional(),
+});
+
+// ============================================
+// POST /api/integrations/[id]/case-grants
+// ============================================
+
+/**
+ * Permission levels grantable to an integration's system user —
+ * VIEW/COMMENT/EDIT only, deliberately narrower than the full
+ * `permissionLevelSchema` (which also allows ADMIN for human case-sharing).
+ * Least privilege: no machine-facing surface in this codebase does anything
+ * with case-ADMIN today (team/collaborator management, deletion) that a
+ * machine principal has any business doing unattended, so there is nothing
+ * for machine-ADMIN to be USED for right now — granting it would be inert
+ * capability sitting on a system user, which is a standing risk with no
+ * offsetting benefit. A request naming ADMIN is rejected here with a 400
+ * validation error, never silently downgraded to EDIT — if machine-ADMIN is
+ * ever wanted, that should arrive as its own deliberate, reviewed change,
+ * not as a value this schema quietly lets through.
+ */
+const grantableCasePermissionSchema = z.enum(["VIEW", "COMMENT", "EDIT"], {
+	message: "Invalid permission level",
+});
+
+/**
+ * Body schema for granting an integration's system user access to a case.
+ * `permission` is restricted to `grantableCasePermissionSchema`
+ * (VIEW/COMMENT/EDIT — see its doc comment for why ADMIN is excluded); there
+ * is no `userId` field — the grant always targets the integration's OWN
+ * system user, derived server-side in `grantIntegrationCaseAccess`, never a
+ * caller-supplied one.
+ */
+// No `z.infer` alias here — nothing currently consumes a GrantCaseAccessBody
+// type outside the route's own `.safeParse` call (file convention — see
+// `updateIntegrationSchema`/`issueTokenSchema` above). Add one back when a
+// caller needs the parsed shape by name.
+export const grantCaseAccessSchema = z.strictObject({
+	caseId: uuidSchema,
+	permission: grantableCasePermissionSchema,
 });
 
 // ============================================
@@ -188,4 +227,30 @@ export interface RotatedTokenResult {
 	overlapUntil: string;
 	secret: string;
 	token: IssuedTokenSummary;
+}
+
+/**
+ * Case-grant permission levels a machine principal may hold — mirrors
+ * `grantableCasePermissionSchema` above (VIEW/COMMENT/EDIT only, never
+ * ADMIN). Kept as its own wire-shape type rather than reusing a
+ * `z.infer<typeof grantableCasePermissionSchema>` alias, for the same reason
+ * `IntegrationStatus` above doesn't import the Prisma enum: this crosses the
+ * wire as a JSON string, and components/hooks must never import from
+ * `lib/services/` or reach for a Prisma-derived type.
+ */
+export type CaseGrantPermission = "COMMENT" | "EDIT" | "VIEW";
+
+/**
+ * One case an integration's system user currently has access to, as
+ * returned by `GET /api/integrations/[id]/case-grants` and (on success) by
+ * `POST .../case-grants`'s `grant` field — mirrors
+ * `IntegrationCaseGrant`/`IntegrationCaseGrantResult` in
+ * `lib/services/integration-registry-service.ts`, JSON-shaped (`grantedAt`
+ * a string, never a `Date`).
+ */
+export interface IntegrationCaseGrant {
+	caseId: string;
+	caseName: string;
+	grantedAt: string;
+	permission: CaseGrantPermission;
 }

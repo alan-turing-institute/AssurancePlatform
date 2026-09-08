@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import { resolveDbPoolTimeoutMs } from "@/lib/db-pool-config";
 import {
 	cleanElementDataForType,
 	validateElementData,
@@ -110,9 +111,35 @@ function createExtendedPrismaClient() {
 		throw new Error("DATABASE_URL environment variable is required");
 	}
 
-	// Create a PostgreSQL connection pool
+	// Create a PostgreSQL connection pool.
+	//
+	// `connectionTimeoutMillis` is NOT optional here. `@prisma/adapter-pg`
+	// hands connection pooling entirely to this bare `pg.Pool` — Prisma's own
+	// engine-level pool (and its `pool_timeout` / P2024 error) never comes
+	// into play with a driver adapter. `pg-pool` only pushes a waiting
+	// acquisition onto its pending queue with a timeout when
+	// `connectionTimeoutMillis` is set (see `pg-pool/index.js`); left
+	// `undefined`, a request that arrives while every pool slot is checked
+	// out waits *forever* for a connection — no error, no rejection, ever.
+	// That is the exact shape of "TEA — Status endpoint can hang
+	// indefinitely" (silent hang, no server-side error, only relieved once
+	// another connection happens to free up): confirmed by a standalone
+	// repro (issue evidence) that saturating this same `pg.Pool` config
+	// leaves an extra query unsettled for 8s+ with this option unset, vs.
+	// erroring at ~3000ms with it set. Any transient contention for
+	// connections — not just this route — was previously invisible until it
+	// resolved or the client itself gave up.
+	//
+	// The value is env-tunable via `DB_POOL_TIMEOUT_MS` (default 5000,
+	// `lib/db-pool-config.ts`), so a deployment with slower/further-away
+	// Postgres can widen it without a code change. `lib/errors.ts` reads the
+	// same resolved value when it logs a detected pool-acquisition timeout.
 	const pool =
-		globalForPrisma.pgPool || new Pool({ connectionString: databaseUrl });
+		globalForPrisma.pgPool ||
+		new Pool({
+			connectionString: databaseUrl,
+			connectionTimeoutMillis: resolveDbPoolTimeoutMs(),
+		});
 	if (process.env.NODE_ENV !== "production") {
 		globalForPrisma.pgPool = pool;
 	}

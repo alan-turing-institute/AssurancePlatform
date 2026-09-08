@@ -234,23 +234,48 @@ describe("HealthBadge — score→band via plugin settings", () => {
 });
 
 describe("HealthBadge — staleness", () => {
-	it("shows the quiet stale treatment when lastEvaluatedAt is outside the validity window", async () => {
+	// ADR 0002 v2 §3: health ⊥ freshness — "green-but-stale is preserved".
+	// Staleness must ANNOTATE the band colour, never replace it, so a stale
+	// claim's last-known health stays readable at a glance.
+	it.each([
+		{ score: 1, band: "pass" as const, bandClass: "bg-success" },
+		{ score: 0.5, band: "degraded" as const, bandClass: "bg-warning" },
+		{ score: 0, band: "fail" as const, bandClass: "bg-destructive" },
+	])("keeps the $band band colour ($bandClass) when stale, and adds a non-colour stale marker", async ({
+		score,
+		bandClass,
+	}) => {
 		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
+			score,
 			lastEvaluatedAt: hoursAgo(72), // 3 days ago, window is 24h
 			validityWindowSeconds: DAY_SECONDS,
 		});
 		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
 
+		const dot = await screen.findByTestId("health-badge-dot");
+		await waitFor(() => expect(dot).toHaveClass(bandClass));
+		// The stale marker is a shape/ring cue, not a colour swap — the
+		// band colour class above must survive alongside it.
+		expect(dot).toHaveClass("ring-2");
+		expect(dot).not.toHaveClass("bg-muted-foreground");
+	});
+
+	it("names both the band and the staleness in the label (aria-label and tooltip)", async () => {
+		mockHealthResponse(CLAIM_CONTEXT.elementId, {
+			score: 1,
+			lastEvaluatedAt: hoursAgo(72),
+			validityWindowSeconds: DAY_SECONDS,
+		});
+		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		const dot = await screen.findByTestId("health-badge-dot");
 		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-				"bg-muted-foreground"
+			expect(dot).toHaveAttribute(
+				"aria-label",
+				expect.stringContaining("passing")
 			)
 		);
-		expect(screen.getByTestId("health-badge-dot")).toHaveAttribute(
-			"aria-label",
-			expect.stringContaining("Health: stale")
-		);
+		expect(dot).toHaveAttribute("aria-label", expect.stringContaining("stale"));
 	});
 
 	it("does not show stale for a score within the validity window", async () => {
@@ -264,6 +289,7 @@ describe("HealthBadge — staleness", () => {
 		await waitFor(() =>
 			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-success")
 		);
+		expect(screen.getByTestId("health-badge-dot")).not.toHaveClass("ring-2");
 	});
 });
 

@@ -1,8 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { logSecurityEvent } from "@/lib/audit/security-log";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 import type { PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ service: "case-invite-service" });
 
 // ============================================
 // Types
@@ -70,7 +73,7 @@ export async function createCaseInvite(params: {
 
 		return { data: { invite_token: token } };
 	} catch (error) {
-		console.error("Failed to create case invite:", error);
+		log.error("Failed to create case invite", { error });
 		return { error: "Failed to create invite" };
 	}
 }
@@ -97,15 +100,13 @@ export async function acceptInvite(
 		});
 
 		if (user === null) {
-			logSecurityEvent({
+			await recordSecurityEvent({
 				event: "invite_acceptance_user_not_found",
 				severity: "medium",
-				metadata: {
-					userId,
-					inviteToken: `${inviteToken.substring(0, 8)}...`,
-					ipAddress,
-					userAgent,
-				},
+				userId,
+				ipAddress,
+				userAgent,
+				metadata: { inviteToken: `${inviteToken.substring(0, 8)}...` },
 			});
 			return { error: "User not found" };
 		}
@@ -190,17 +191,17 @@ export async function acceptInvite(
 				email_mismatch: "invite_acceptance_email_mismatch",
 			} as const;
 
-			logSecurityEvent({
+			await recordSecurityEvent({
 				event: eventTypeMap[errorKey],
 				severity: "medium",
+				userId,
+				ipAddress,
+				userAgent,
 				metadata: {
-					userId,
 					inviteToken: `${inviteToken.substring(0, 8)}...`,
 					...("inviteId" in result && { inviteId: result.inviteId }),
 					...("inviteEmail" in result && { inviteEmail: result.inviteEmail }),
 					userEmail: user.email,
-					ipAddress,
-					userAgent,
 				},
 			});
 
@@ -208,25 +209,28 @@ export async function acceptInvite(
 		}
 
 		// Log successful acceptance
-		logSecurityEvent({
+		await recordSecurityEvent({
 			event: "invite_acceptance_completed",
 			severity: "low",
-			metadata: { userId, caseId: result.caseId, ipAddress, userAgent },
+			userId,
+			ipAddress,
+			userAgent,
+			metadata: { caseId: result.caseId },
 		});
 
 		return { data: { caseId: result.caseId } };
 	} catch (error) {
-		console.error("Failed to accept invite:", error);
+		log.error("Failed to accept invite", { error });
 
-		logSecurityEvent({
+		await recordSecurityEvent({
 			event: "invite_acceptance_failed",
 			severity: "high",
+			userId,
+			ipAddress,
+			userAgent,
 			metadata: {
-				userId,
 				error: error instanceof Error ? error.message : "Unknown error",
 				inviteToken: `${inviteToken.substring(0, 8)}...`,
-				ipAddress,
-				userAgent,
 			},
 		});
 

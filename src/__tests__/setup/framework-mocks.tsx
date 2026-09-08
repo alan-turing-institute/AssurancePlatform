@@ -95,7 +95,7 @@ vi.mock("@/hooks/modal-hooks", () => ({
 	useExportModal: mockModalHook,
 	useImportModal: mockModalHook,
 	usePermissionsModal: mockModalHook,
-	useResourcesModal: mockModalHook,
+	useHelpModal: mockModalHook,
 }));
 
 // Mock the entire ModalProvider to prevent modal rendering in tests

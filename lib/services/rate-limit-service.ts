@@ -1,5 +1,5 @@
-import { logSecurityEvent } from "@/lib/audit/security-log";
 import { prisma } from "@/lib/prisma";
+import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 
 // ============================================
 // TYPES
@@ -238,10 +238,13 @@ export async function checkAndRecordRateLimit(
 		// Record the blocked attempt
 		await recordAttempt(config, identifiers, true);
 
-		// Log security event
-		logSecurityEvent({
+		// Record the security event (logs + persists)
+		await recordSecurityEvent({
 			event: `${config.endpoint}_rate_limited`,
 			severity: "medium",
+			userId: securityContext?.userId,
+			ipAddress: securityContext?.ipAddress ?? identifiers.ipAddress,
+			userAgent: securityContext?.userAgent,
 			metadata: {
 				reason: result.reason,
 				identifiers: {

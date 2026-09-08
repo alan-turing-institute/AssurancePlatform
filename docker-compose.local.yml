@@ -18,6 +18,55 @@ services:
       timeout: 5s
       retries: 5
 
+  # Dedicated, throwaway Postgres for the integration test suite. Kept
+  # SEPARATE from the `postgres` service above (dev's database, which stays
+  # crash-safe/untouched — Chris's call, 2026-09-02). This container's data
+  # only ever holds per-test worker databases the suite creates and drops on
+  # every run (see src/__tests__/scripts/setup-test-db.ts), so it's tuned for
+  # throughput with zero regard for durability:
+  #
+  #   fsync=off tells Postgres to skip flushing WAL/data pages to disk at
+  #   all. This is what actually fixed the integration suite's runtime
+  #   (600.22s -> 22.01s measured) — the TRUNCATE CASCADE after every test
+  #   was paying for a DataFileImmediateSync on each of the 30 truncated
+  #   tables, every test. shared_buffers/max_wal_size are kept from the
+  #   stage-A tuning; they helped a little on their own but fsync=off is the
+  #   dominant effect.
+  #
+  #   DO NOT copy fsync=off to any service holding data you'd mind losing —
+  #   an unclean shutdown (crash, OOM-kill, `docker kill`) can leave the data
+  #   directory CORRUPTED, not just behind on durability, because Postgres
+  #   assumes fsync'd writes actually landed when deciding what's safe to
+  #   trust on crash recovery. That's an acceptable trade here because the
+  #   data is fully disposable and rebuilt every run; it is never acceptable
+  #   for `postgres` above or any other service with data worth keeping.
+  #
+  # tmpfs-backed (not the `postgres_data` named volume): the data is
+  # throwaway anyway, so there's no reason to pay for disk I/O — or leave
+  # stale worker databases on disk between runs — when RAM will do. `size`
+  # covers the migrated template plus INTEGRATION_TEST_WORKER_COUNT (4)
+  # cloned worker databases with headroom.
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: tea_postgres_test
+    command: postgres -c fsync=off -c shared_buffers=1GB -c max_wal_size=4GB
+    shm_size: 1gb
+    tmpfs:
+      - /var/lib/postgresql/data:size=2g
+    environment:
+      POSTGRES_DB: tea_test_admin
+      POSTGRES_USER: tea_user
+      POSTGRES_PASSWORD: tea_password
+    ports:
+      - '5433:5432'
+    networks:
+      - tea_dev_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tea_user -d tea_test_admin']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   tea_app:
     build:
       context: .
@@ -33,21 +82,32 @@ services:
     environment:
       # Override DATABASE_URL to use Docker network hostname
       - DATABASE_URL=postgresql://tea_user:tea_password@postgres:5432/tea_dev
-      # Increase Node.js memory limit for Next.js dev server
-      - NODE_OPTIONS=--max-old-space-size=4096
-    volumes:
-      - .:/app
-      - app_next:/app/.next
-      - node_modules_dev:/app/node_modules
+      # V8 heap cap for the running Next.js server. Kept well under mem_limit
+      # (below) so V8's own GC pressure valve kicks in before the kernel
+      # OOM-killer does - a heap cap close to or above the cgroup limit lets
+      # V8 grow toward it and get killed (exit 137) instead of collecting.
+      - NODE_OPTIONS=--max-old-space-size=1536
     networks:
       - tea_dev_network
-    # Memory limit (requires docker-compose v2)
-    mem_limit: 6g
-    memswap_limit: 6g
-    # Run in production mode to avoid Nextra dev compilation crashes
-    # For hot reload, run `pnpm dev` on localhost instead
+    # Runtime memory limit only. The Next.js/Nextra production build (measured
+    # ~12.7GB peak RSS) now runs during `docker build` (Dockerfile.dev), which
+    # is not subject to this limit. Measured peak RSS for migrate + seed +
+    # `next start` + several requests, with NODE_OPTIONS capped at 1536m
+    # above: ~472MiB (cgroup memory.peak = 495042560 bytes), so 2g leaves
+    # comfortable headroom on both the heap cap and the container limit;
+    # raise either if the app itself needs more.
+    mem_limit: 2g
+    memswap_limit: 2g
+    # Run in production mode to avoid Nextra dev compilation crashes.
+    # For hot reload, run `pnpm dev` on the host against this stack's Postgres.
+    #
+    # No bind mount of source: this image bakes the checked-out source in at
+    # `docker build` time (see Dockerfile.dev). After any source change,
+    # recreate with `docker compose -f docker-compose.local.yml up -d --build`
+    # to get a fresh build - Docker's layer cache makes this a fast no-op when
+    # nothing changed and a real rebuild when something did.
     command:
-      sh -c "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build && pnpm start; else npm run build && npm start; fi"
+      sh -c "npx prisma migrate deploy && npx tsx prisma/seed/dev-seed.ts && npx next start"
 
 networks:
   tea_dev_network:
@@ -55,7 +115,3 @@ networks:
 
 volumes:
   postgres_data:
-  app_next:
-  # Named volume for container's node_modules (Linux binaries, separate from host's macOS binaries)
-  # Clear when dependencies change: docker volume rm assuranceplatform_node_modules_dev
-  node_modules_dev:

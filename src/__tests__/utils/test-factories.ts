@@ -5,7 +5,6 @@
 
 import type {
 	AssuranceCaseResponse,
-	CaseStudyResponse,
 	EvidenceResponse,
 	GoalResponse,
 	MemberResponse,
@@ -505,44 +504,6 @@ export const CommentFactory = {
 	},
 };
 
-// CaseStudy Factory
-export const CaseStudyFactory = {
-	create(overrides: Partial<CaseStudyResponse> = {}): CaseStudyResponse {
-		const id = overrides.id ?? getNextId();
-
-		return {
-			id,
-			title: overrides.title ?? `Case Study ${id}`,
-			description: overrides.description ?? `Description for case study ${id}`,
-			sector: overrides.sector ?? "Technology",
-			type: overrides.type ?? "research",
-			published: overrides.published ?? false,
-			publishedDate: overrides.publishedDate,
-			createdOn: overrides.createdOn ?? new Date().toISOString(),
-			authors: overrides.authors ?? "Research Team",
-			assuranceCases: overrides.assuranceCases ?? [],
-			...overrides, // Include any other override properties
-		};
-	},
-
-	createPublishedWithCases(caseCount = 3): {
-		caseStudy: CaseStudyResponse;
-		assuranceCases: AssuranceCaseResponse[];
-	} {
-		const assuranceCases = Array.from({ length: caseCount }, () =>
-			AssuranceCaseFactory.createPublished()
-		);
-
-		const caseStudy = this.create({
-			published: true,
-			publishedDate: new Date().toISOString(),
-			assuranceCases,
-		});
-
-		return { caseStudy, assuranceCases };
-	},
-};
-
 // Template Factory
 export const TemplateFactory = {
 	create(overrides: Partial<CaseTemplate> = {}): CaseTemplate {
@@ -607,7 +568,6 @@ export const BatchFactory = {
 		users: User[];
 		teams: Team[];
 		assuranceCases: AssuranceCaseResponse[];
-		caseStudies: CaseStudyResponse[];
 		permissions: CasePermission[];
 	} {
 		// Create users with different roles
@@ -634,15 +594,10 @@ export const BatchFactory = {
 
 		const assuranceCases = [case1, case2, case3];
 
-		// Create case studies
-		const { caseStudy } = CaseStudyFactory.createPublishedWithCases(2);
-		const caseStudies = [caseStudy];
-
 		return {
 			users: [...users, ...team1.users, ...team2.users],
 			teams,
 			assuranceCases,
-			caseStudies,
 			permissions,
 		};
 	},
@@ -721,5 +676,3 @@ export const createEvidence = (overrides?: Partial<EvidenceResponse>) =>
 	EvidenceFactory.create(overrides);
 export const createComment = (overrides?: Partial<CommentResponse>) =>
 	CommentFactory.create(overrides);
-export const createCaseStudy = (overrides?: Partial<CaseStudyResponse>) =>
-	CaseStudyFactory.create(overrides);

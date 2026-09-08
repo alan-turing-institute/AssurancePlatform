@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,8 +6,7 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
-import { KNOWN_TOUR_IDS, tourCompletionSchema } from "@/lib/schemas/tour";
+import { tourCompletionSchema } from "@/lib/schemas/tour";
 import {
 	getCompletedTours,
 	markTourCompleted,
@@ -38,18 +38,9 @@ export async function PATCH(req: Request) {
 	try {
 		const userId = await requireAuth();
 
-		const body = await req.json();
-		const parsed = tourCompletionSchema.safeParse(body);
+		const { tourId } = await parseJsonBody(req, tourCompletionSchema);
 
-		if (!parsed.success) {
-			return apiError(
-				validationError(
-					`Invalid tour ID. Expected one of: ${KNOWN_TOUR_IDS.join(", ")}`
-				)
-			);
-		}
-
-		const result = await markTourCompleted(userId, parsed.data.tourId);
+		const result = await markTourCompleted(userId, tourId);
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}

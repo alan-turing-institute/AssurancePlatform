@@ -13,6 +13,7 @@ export {
 } from "./animations";
 
 // Components
+export { getAssertionStatusIndicator } from "./assertion-status-badge";
 export { default as AttributeSection } from "./attribute-section";
 export { default as BaseNode } from "./base-node";
 export { default as NodeActionGroup } from "./node-action-group";

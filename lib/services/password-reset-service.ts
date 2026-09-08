@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
-import { logSecurityEvent } from "@/lib/audit/security-log";
 import { hashPassword } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
+import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 import { validatePassword } from "@/lib/validation/validators";
 
 // Configuration
@@ -104,15 +104,12 @@ export async function requestPasswordReset(
 	// Check rate limit first
 	const rateLimitCheck = await checkRateLimit(normalizedEmail, ipAddress);
 	if (!rateLimitCheck.allowed) {
-		logSecurityEvent({
+		await recordSecurityEvent({
 			event: "password_reset_rate_limited",
 			severity: "medium",
-			metadata: {
-				email: normalizedEmail,
-				ipAddress,
-				userAgent: userAgent ?? null,
-				reason: rateLimitCheck.reason,
-			},
+			ipAddress,
+			userAgent,
+			metadata: { email: normalizedEmail, reason: rateLimitCheck.reason },
 		});
 		return {
 			error: rateLimitCheck.reason ?? "Rate limit exceeded",
@@ -131,13 +128,13 @@ export async function requestPasswordReset(
 
 	// If user doesn't exist or uses OAuth, pretend success to prevent enumeration
 	if (!user || user.authProvider !== "LOCAL") {
-		logSecurityEvent({
+		await recordSecurityEvent({
 			event: "password_reset_requested_invalid_user",
 			severity: "low",
+			ipAddress,
+			userAgent,
 			metadata: {
 				email: normalizedEmail,
-				ipAddress,
-				userAgent: userAgent ?? null,
 				reason: user ? "oauth_user" : "user_not_found",
 			},
 		});
@@ -169,29 +166,25 @@ export async function requestPasswordReset(
 	});
 
 	if ("error" in emailResult) {
-		logSecurityEvent({
+		await recordSecurityEvent({
 			event: "password_reset_email_failed",
 			severity: "high",
-			metadata: {
-				userId: user.id,
-				ipAddress,
-				userAgent: userAgent ?? null,
-				error: emailResult.error,
-			},
+			userId: user.id,
+			ipAddress,
+			userAgent,
+			metadata: { error: emailResult.error },
 		});
 		// Still return success to prevent enumeration
 		return { data: null };
 	}
 
-	logSecurityEvent({
+	await recordSecurityEvent({
 		event: "password_reset_requested",
 		severity: "low",
-		metadata: {
-			userId: user.id,
-			ipAddress,
-			userAgent: userAgent ?? null,
-			emailSent: true,
-		},
+		userId: user.id,
+		ipAddress,
+		userAgent,
+		metadata: { emailSent: true },
 	});
 
 	return { data: null };
@@ -234,14 +227,12 @@ export async function resetPassword(
 	// Validate the token first
 	const validation = await validateResetToken(token);
 	if ("error" in validation) {
-		logSecurityEvent({
+		await recordSecurityEvent({
 			event: "password_reset_invalid_token",
 			severity: "medium",
-			metadata: {
-				ipAddress,
-				userAgent: userAgent ?? null,
-				tokenLength: token?.length,
-			},
+			ipAddress,
+			userAgent,
+			metadata: { tokenLength: token?.length },
 		});
 		return { error: validation.error };
 	}
@@ -279,10 +270,12 @@ export async function resetPassword(
 		},
 	});
 
-	logSecurityEvent({
+	await recordSecurityEvent({
 		event: "password_reset_completed",
 		severity: "low",
-		metadata: { userId, ipAddress, userAgent: userAgent ?? null },
+		userId,
+		ipAddress,
+		userAgent,
 	});
 
 	return { data: null };

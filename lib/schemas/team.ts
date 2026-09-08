@@ -4,7 +4,7 @@ import { optionalString, requiredString } from "./base";
 /**
  * Create team input
  */
-export const createTeamSchema = z.object({
+export const createTeamSchema = z.strictObject({
 	name: requiredString("Team name", 1, 100),
 	description: optionalString(500),
 });
@@ -15,7 +15,7 @@ export type CreateTeamSchemaOutput = z.output<typeof createTeamSchema>;
 /**
  * Base object for update team — usable with zodResolver (no .refine())
  */
-export const updateTeamBaseSchema = z.object({
+export const updateTeamBaseSchema = z.strictObject({
 	name: requiredString("Team name", 1, 100).optional(),
 	description: optionalString(500),
 });
@@ -36,7 +36,7 @@ export type UpdateTeamSchemaOutput = z.output<typeof updateTeamSchema>;
 /**
  * Update team member role input
  */
-export const updateMemberRoleSchema = z.object({
+export const updateMemberRoleSchema = z.strictObject({
 	role: z.enum(["ADMIN", "MEMBER"], {
 		message: "Invalid team role",
 	}),
@@ -49,7 +49,7 @@ export type UpdateMemberRoleSchemaInput = z.input<
 /**
  * Add team member input
  */
-export const addTeamMemberSchema = z.object({
+export const addTeamMemberSchema = z.strictObject({
 	email: z
 		.string()
 		.min(1, "Email is required")

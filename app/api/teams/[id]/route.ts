@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateTeamSchema } from "@/lib/schemas/team";
 import { deleteTeam, getTeam, updateTeam } from "@/lib/services/team-service";
 
@@ -45,16 +45,9 @@ export async function PATCH(
 		const userId = await requireAuth();
 		const { id: teamId } = await params;
 
-		const parsed = updateTeamSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, updateTeamSchema);
 
-		const result = await updateTeam(userId, teamId, parsed.data);
+		const result = await updateTeam(userId, teamId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

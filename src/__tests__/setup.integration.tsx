@@ -9,7 +9,11 @@ import { workerDatabaseName } from "./scripts/test-db-config";
 // load before test files in each vitest fork — so this override always lands
 // first. `VITEST_POOL_ID` is vitest's 1-indexed fork id; it's stable for the
 // lifetime of the worker process, so every test file the worker picks up
-// shares the same worker-scoped database.
+// shares the same worker-scoped database. `workerDatabaseName` also scopes
+// the name to this invocation (`INTEGRATION_TEST_INVOCATION_ID`, read from
+// the environment globalSetup set it in — inherited by this fork at spawn
+// time), so two overlapping `vitest run` invocations never land on the same
+// database name.
 const workerId = process.env.VITEST_POOL_ID ?? "1";
 const baseDatabaseUrl = process.env.DATABASE_URL;
 if (!baseDatabaseUrl) {
@@ -34,10 +38,7 @@ afterEach(async () => {
 		// Truncate all application tables in one statement with CASCADE
 		await client.query(`
       TRUNCATE TABLE
-        case_study_images,
-        case_study_published_cases,
         published_assurance_cases,
-        case_studies,
         release_images,
         release_comments,
         release_snapshots,
@@ -51,6 +52,7 @@ afterEach(async () => {
         case_team_permissions,
         case_permissions,
         plugin_data,
+        element_name_backfill,
         assurance_elements,
         assurance_cases,
         pattern_permissions,

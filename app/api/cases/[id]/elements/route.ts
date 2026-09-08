@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,63 +6,8 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { createElementSchema } from "@/lib/schemas/element";
-import type { CreateElementInput } from "@/lib/services/element-service";
 import { createElement } from "@/lib/services/element-service";
-
-/**
- * Resolves `parentId` from the request body.
- *
- * The UI sends legacy relationship fields (`goalId`, `strategyId`,
- * `propertyClaimId`) instead of a unified `parentId`. This normalises
- * them before the payload reaches the service layer.
- */
-function resolveParentIdFromBody(
-	body: Record<string, unknown>
-): string | undefined {
-	if (body.parentId != null) {
-		return String(body.parentId);
-	}
-	if (body.goalId != null) {
-		return String(body.goalId);
-	}
-	if (body.strategyId != null) {
-		return String(body.strategyId);
-	}
-
-	const claimId = body.propertyClaimId;
-	if (claimId != null) {
-		return String(Array.isArray(claimId) ? claimId[0] : claimId);
-	}
-
-	return;
-}
-
-/**
- * Builds element creation input from validated body.
- */
-function buildCreateInput(
-	caseId: string,
-	body: Record<string, unknown>,
-	rawBody: Record<string, unknown>
-): CreateElementInput {
-	const url = (body.url || body.URL) as string | undefined;
-	return {
-		caseId,
-		elementType: (body.type || body.elementType) as string,
-		name: body.name as string | undefined,
-		description: body.description as string | undefined,
-		shortDescription: body.shortDescription as string | undefined,
-		longDescription: body.longDescription as string | undefined,
-		parentId: resolveParentIdFromBody(rawBody),
-		url,
-		URL: url,
-		urls: body.urls as string[] | undefined,
-		assumption: body.assumption as string | undefined,
-		justification: body.justification as string | undefined,
-	};
-}
 
 /**
  * Create a new element in a case
@@ -75,6 +21,7 @@ function buildCreateInput(
  * @response 400 - Validation error
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
+ * @response 413 - Payload too large
  * @auth bearer
  * @tag Elements
  */
@@ -86,23 +33,15 @@ export async function POST(
 		const session = await requireAuthSession();
 		const { id: caseId } = await params;
 
-		const rawBody = (await request.json().catch(() => null)) as Record<
-			string,
-			unknown
-		> | null;
-		const parsed = createElementSchema.safeParse(rawBody);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, createElementSchema);
 
-		const input = buildCreateInput(
+		// element-service.ts's createElement resolves url/URL itself
+		// (url || URL) — do not collapse them here.
+		const result = await createElement(session.userId, {
+			...data,
 			caseId,
-			parsed.data as unknown as Record<string, unknown>,
-			rawBody ?? {}
-		);
-		const result = await createElement(session.userId, input);
+			elementType: data.type ?? data.elementType ?? "",
+		});
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

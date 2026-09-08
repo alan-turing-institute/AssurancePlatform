@@ -1,0 +1,247 @@
+import { canAccessCase } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import {
+	CASE_INFORMATION_FIELD_LABELS,
+	getMissingCaseInformationFields,
+	type RequiredCaseInformationField,
+} from "@/lib/schemas/case-information";
+import type { CaseInformation } from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
+
+/**
+ * Failure shape for `requireCaseInformationComplete` — a plain `error`
+ * string (the `ServiceResult` convention, mapped via `serviceErrorToAppError`
+ * at the route layer for a genuine service failure such as permission
+ * denial), optionally carrying `fieldErrors` when the failure is specifically
+ * "case information exists but is incomplete" — the one branch that needs
+ * field-level messages rather than a single mapped error code.
+ */
+export interface CaseInformationGateFailure {
+	error: string;
+	fieldErrors?: Record<string, string>;
+}
+
+/**
+ * Case information CRUD (ADR 0003 §1) — the canonical, curatorial record on
+ * an assurance case (description, authors, sector, feature image), editable
+ * at any time under the case's normal edit permissions. This service owns
+ * only the record itself; the publish-time freeze into a snapshot lives in
+ * `captureCaseInformationForSnapshot` below and is consumed by
+ * `publish-service.ts`, not by callers of the CRUD functions.
+ */
+
+export interface CaseInformationInput {
+	authors?: string;
+	description?: string;
+	// `null` explicitly clears the stored value; `undefined` (the key
+	// omitted) leaves it untouched — see `lib/schemas/case-information.ts`.
+	featureImageUrl?: string | null;
+	sector?: string;
+}
+
+/**
+ * Reads the case information record for a case. Requires VIEW.
+ *
+ * Returns `{ data: null }` — not an error — when no record exists yet: a
+ * case with no curated information is a normal, common state, not a
+ * not-found condition. Returns the same "Permission denied" error for a
+ * non-existent case as for an inaccessible one (repo convention — prevents
+ * resource-enumeration via this surface).
+ */
+export async function getCaseInformation(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseInformation | null> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const record = await prisma.caseInformation.findUnique({
+			where: { caseId },
+		});
+		return { data: record };
+	} catch (error) {
+		console.error("Failed to get case information:", error);
+		return { error: "Failed to fetch case information" };
+	}
+}
+
+/**
+ * Creates or updates the case information record for a case. Requires EDIT.
+ * A single upsert, not separate create/update entry points: the record is a
+ * 1:1 "save whatever fields are provided" resource (ADR §1 — "editable any
+ * time"), so there is no meaningful distinction between "first save" and
+ * "later save" for a caller to get right or wrong. Fields left `undefined`
+ * are only defaulted to `null` on first creation; on an existing record they
+ * are left untouched (only the keys actually provided are written).
+ */
+export async function upsertCaseInformation(
+	userId: string,
+	caseId: string,
+	data: CaseInformationInput
+): ServiceResult<CaseInformation> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const record = await prisma.caseInformation.upsert({
+			where: { caseId },
+			create: {
+				caseId,
+				description: data.description ?? null,
+				authors: data.authors ?? null,
+				sector: data.sector ?? null,
+				featureImageUrl: data.featureImageUrl ?? null,
+			},
+			update: {
+				...(data.description !== undefined && {
+					description: data.description,
+				}),
+				...(data.authors !== undefined && { authors: data.authors }),
+				...(data.sector !== undefined && { sector: data.sector }),
+				...(data.featureImageUrl !== undefined && {
+					featureImageUrl: data.featureImageUrl,
+				}),
+			},
+		});
+		return { data: record };
+	} catch (error) {
+		console.error("Failed to upsert case information:", error);
+		return { error: "Failed to save case information" };
+	}
+}
+
+/**
+ * Deletes the case information record for a case, if any. Requires EDIT.
+ * A no-op success (not an error) when no record exists — deleting an
+ * already-absent record is not a failure condition.
+ */
+export async function deleteCaseInformation(
+	userId: string,
+	caseId: string
+): ServiceResult<true> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		await prisma.caseInformation.deleteMany({ where: { caseId } });
+		return { data: true };
+	} catch (error) {
+		console.error("Failed to delete case information:", error);
+		return { error: "Failed to delete case information" };
+	}
+}
+
+export interface CaseInformationCompleteness {
+	complete: boolean;
+	missingFields: RequiredCaseInformationField[];
+}
+
+/**
+ * Checks a case's case-information record against the publish-readiness
+ * gate (ADR 0003 §4). Requires VIEW — the same read gate as
+ * `getCaseInformation`, which this wraps; callers that intend to publish
+ * (e.g. `POST /api/cases/[id]/publish`) additionally require EDIT before
+ * ever reaching a mutating call, so this alone does not authorise a
+ * publish.
+ *
+ * Server-side defence in depth: the publish flow's UI already runs this
+ * same check (via `getMissingCaseInformationFields`) before it ever shows a
+ * confirm step, so a genuine miss here means the record changed between the
+ * client's check and the request landing, not a client bug.
+ */
+export async function checkCaseInformationCompleteness(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseInformationCompleteness> {
+	const result = await getCaseInformation(userId, caseId);
+	if ("error" in result) {
+		return result;
+	}
+
+	const missingFields = getMissingCaseInformationFields(result.data);
+	return { data: { complete: missingFields.length === 0, missingFields } };
+}
+
+/**
+ * The publish-readiness gate itself (ADR 0003 §4), shared by every route
+ * that can move a case to PUBLISHED — first publish
+ * (`POST /api/cases/[id]/publish`) and republish
+ * (`PATCH /api/cases/[id]/status`, `targetStatus: "PUBLISHED"` against an
+ * already-published case). Wraps `checkCaseInformationCompleteness` and adds
+ * the field-error formatting each of those routes used to duplicate inline.
+ *
+ * Callers should treat `{ data: true }` as "proceed" and, on failure, prefer
+ * `fieldErrors` (via `validationError`) when present — its absence means the
+ * failure came from `checkCaseInformationCompleteness` itself (e.g.
+ * permission denial), which the caller should map with
+ * `serviceErrorToAppError` as usual.
+ */
+export async function requireCaseInformationComplete(
+	userId: string,
+	caseId: string
+): Promise<{ data: true } | CaseInformationGateFailure> {
+	const completeness = await checkCaseInformationCompleteness(userId, caseId);
+	if ("error" in completeness) {
+		return completeness;
+	}
+
+	if (!completeness.data.complete) {
+		const fieldErrors = Object.fromEntries(
+			completeness.data.missingFields.map((field) => [
+				field,
+				`${CASE_INFORMATION_FIELD_LABELS[field]} is required before publishing`,
+			])
+		);
+		return {
+			error:
+				"Case information is incomplete — add the missing fields before publishing",
+			fieldErrors,
+		};
+	}
+
+	return { data: true };
+}
+
+/** Case-information fields frozen verbatim into a publish snapshot. */
+export interface CaseInformationSnapshot {
+	authors: string | null;
+	description: string | null;
+	featureImageUrl: string | null;
+	sector: string | null;
+}
+
+/**
+ * Reads the case information row verbatim for embedding in a publish
+ * snapshot (ADR 0003 §3 — "the snapshot freezes metadata as well as
+ * content"). Mirrors `capturePluginDataForSnapshot`'s deliberate bypass of
+ * the per-call permission guard: the caller (`publish-service.ts`) has
+ * already verified case-level EDIT access before calling this, so there is
+ * no additional permission check to perform here.
+ *
+ * Returns `undefined` — never a record of all-nulls — when no case
+ * information exists yet, so a snapshot never gains a
+ * `caseInformation: { authors: null, ... }` section for a case that was
+ * never curated. Same "present data, not undefined key" discipline as
+ * `capturePluginDataForSnapshot`.
+ */
+export async function captureCaseInformationForSnapshot(
+	caseId: string
+): Promise<CaseInformationSnapshot | undefined> {
+	const record = await prisma.caseInformation.findUnique({
+		where: { caseId },
+		select: {
+			description: true,
+			authors: true,
+			sector: true,
+			featureImageUrl: true,
+		},
+	});
+	return record ?? undefined;
+}

@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import { logger } from "@/lib/logger";
 
 dotenv.config(); // Explicitly load environment variables
 
@@ -12,6 +13,25 @@ dotenv.config(); // Explicitly load environment variables
  * Exported for use in the link API route.
  */
 export const LINK_COOKIE_NAME = "tea_link_user_id";
+
+/**
+ * Fields written on every successful login, regardless of provider.
+ * Resetting the two retention-warning timestamps here (not just recording
+ * `lastLoginAt`) is what makes "logging in resets the clock" true — a user
+ * who returns after a warning starts a fresh two-year cycle instead of
+ * being deleted on a clock that kept running while they were away.
+ */
+function loginResetFields(): {
+	lastLoginAt: Date;
+	retentionWarning30SentAt: null;
+	retentionWarning7SentAt: null;
+} {
+	return {
+		lastLoginAt: new Date(),
+		retentionWarning30SentAt: null,
+		retentionWarning7SentAt: null,
+	};
+}
 
 /**
  * Builds the token data object for Google OAuth updates.
@@ -33,7 +53,7 @@ function buildGoogleTokenData(
  * Authenticates a user using Prisma.
  * Verifies password against stored hash and upgrades to argon2id if needed.
  */
-async function authenticateWithPrisma(
+export async function authenticateWithPrisma(
 	username: string,
 	password: string
 ): Promise<{
@@ -75,15 +95,29 @@ async function authenticateWithPrisma(
 		return null;
 	}
 
-	// Upgrade password hash to argon2id if using legacy algorithm
-	if (needsUpgrade) {
-		const newHash = await hashPassword(password);
+	// Upgrade password hash to argon2id if using legacy algorithm, and
+	// record the login (resets the retention-warning clock) either way.
+	const upgradeFields = needsUpgrade
+		? {
+				passwordHash: await hashPassword(password),
+				passwordAlgorithm: "argon2id",
+			}
+		: {};
+
+	// Best-effort (vincent, review round 1): this write did not exist at all
+	// before the retention feature, so a valid login must not start failing
+	// because of it. A failure here means lastLoginAt/the retention-warning
+	// reset (and an opportunistic password-hash upgrade, if any) are missed
+	// for this login — logged, not thrown.
+	try {
 		await prisma.user.update({
 			where: { id: user.id },
-			data: {
-				passwordHash: newHash,
-				passwordAlgorithm: "argon2id",
-			},
+			data: { ...loginResetFields(), ...upgradeFields },
+		});
+	} catch (error) {
+		logger.error("Failed to record login / reset retention warnings", {
+			userId: user.id,
+			error: error instanceof Error ? error.message : String(error),
 		});
 	}
 
@@ -149,6 +183,7 @@ async function authenticateGitHubWithPrisma(
 				// Don't change authProvider when linking - user keeps their original provider
 				...(accessToken && { githubAccessToken: accessToken }),
 				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...loginResetFields(),
 			},
 		});
 
@@ -174,6 +209,7 @@ async function authenticateGitHubWithPrisma(
 				// Store access token for GitHub API calls (e.g., importing cases from repos)
 				...(accessToken && { githubAccessToken: accessToken }),
 				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...loginResetFields(),
 			},
 		});
 	} else {
@@ -223,6 +259,7 @@ async function linkGoogleToUser(
 			googleId,
 			googleEmail: email,
 			...tokenData,
+			...loginResetFields(),
 		},
 	});
 
@@ -239,7 +276,7 @@ async function linkGoogleToUser(
  * @param expiresAt - Token expiry timestamp
  * @param linkToUserId - If provided, links Google to this existing user instead of creating/finding by email
  */
-async function authenticateGoogleWithPrisma(
+export async function authenticateGoogleWithPrisma(
 	profile: {
 		sub?: string;
 		email?: string | null;
@@ -280,7 +317,12 @@ async function authenticateGoogleWithPrisma(
 	if (existingUser) {
 		await prisma.user.update({
 			where: { id: existingUser.id },
-			data: { googleId, googleEmail: email, ...tokenData },
+			data: {
+				googleId,
+				googleEmail: email,
+				...tokenData,
+				...loginResetFields(),
+			},
 		});
 		return { id: existingUser.id };
 	}

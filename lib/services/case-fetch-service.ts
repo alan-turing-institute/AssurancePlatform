@@ -94,6 +94,10 @@ function buildGoalStructure(
 		assumption: goal.assumption ?? "",
 		justification: goal.justification ?? "",
 		inSandbox: goal.inSandbox,
+		// Per-assertion status (ADR 0004 D3); omitted (not forced to
+		// "ASSERTED") when unset, matching element-response.ts's convention —
+		// the badge/setter treat undefined the same as the default.
+		assertionStatus: goal.assertionStatus ?? undefined,
 	};
 }
 
@@ -124,6 +128,8 @@ function buildStrategyStructure(
 		justification: strategy.justification ?? "",
 		context: strategy.context || [],
 		inSandbox: strategy.inSandbox,
+		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
+		assertionStatus: strategy.assertionStatus ?? undefined,
 	};
 }
 
@@ -185,6 +191,8 @@ function buildPropertyClaimStructure(
 		justification: claim.justification ?? "",
 		context: claim.context || [],
 		inSandbox: claim.inSandbox,
+		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
+		assertionStatus: claim.assertionStatus ?? undefined,
 	};
 }
 
@@ -234,9 +242,6 @@ export async function fetchCaseFromPrisma(
 	}
 
 	// Fetch the case data (exclude soft-deleted cases)
-	// Note: We exclude publishedVersions query because it uses the legacy Django
-	// table with bigint foreign keys that don't match new UUID case IDs.
-	// For case study integration, use the Release model instead.
 	const caseData = await prisma.assuranceCase.findUnique({
 		where: { id: caseId, deletedAt: null },
 		include: CASE_INCLUDE,
@@ -257,11 +262,6 @@ export async function fetchCaseFromPrisma(
 		permissionResult.isOwner
 	);
 
-	// Case study integration - disabled for now as publishedVersions uses legacy
-	// bigint foreign keys. TODO: Implement using Release model.
-	const hasPublicCaseStudy = false;
-	const linkedCaseStudyCount = 0;
-
 	return {
 		data: {
 			id: caseData.id,
@@ -274,17 +274,12 @@ export async function fetchCaseFromPrisma(
 			permissions,
 			type: "assurance_case",
 			comments: [],
-			// Publish status fields
+			// Publish status fields (DRAFT / PUBLISHED — the "Ready to Publish"
+			// intermediate step was retired, ADR 0003 §2)
 			published: caseData.publishStatus === "PUBLISHED",
-			publishStatus: caseData.publishStatus as
-				| "DRAFT"
-				| "READY_TO_PUBLISH"
-				| "PUBLISHED",
+			publishStatus: caseData.publishStatus as "DRAFT" | "PUBLISHED",
 			publishedAt: caseData.publishedAt?.toISOString() ?? null,
 			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
-			// Case study integration
-			hasPublicCaseStudy,
-			linkedCaseStudyCount,
 			// Demo/tutorial flag
 			isDemo: caseData.isDemo,
 			// Layout preference

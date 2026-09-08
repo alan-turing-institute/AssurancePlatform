@@ -11,6 +11,7 @@ export {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
 	getAssuranceCaseNode,
+	getNodeMutationErrorMessage,
 	moveCaseElement,
 	updateAssuranceCaseNode,
 	updateElementComment,

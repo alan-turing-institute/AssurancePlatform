@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { type Dispatch, type SetStateAction, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useReactFlow, useUpdateNodeInternals } from "reactflow";
 import SearchNodes from "@/components/cases/search-nodes";
 import { useChangeDetection } from "@/hooks/use-change-detection";
@@ -16,7 +16,7 @@ import { Button } from "../ui/button";
 import ActiveUsersList from "./active-users-list";
 
 interface HeaderProps {
-	setOpen: Dispatch<SetStateAction<boolean>>;
+	setOpen: (open: boolean) => void;
 }
 
 const Header = ({ setOpen }: HeaderProps) => {
@@ -29,29 +29,17 @@ const Header = ({ setOpen }: HeaderProps) => {
 	const [newCaseName, setNewCaseName] = useState<string>(
 		assuranceCase?.name || ""
 	);
-	const [statusLoading, setStatusLoading] = useState(false);
 	const _inputRef = useRef<HTMLInputElement>(null);
 
 	const { setCenter } = useReactFlow();
 
-	// Get the display status based on case study public status
-	// Show "Published" only when linked to a PUBLIC case study
+	// Show "Published" when the case's own publishStatus is PUBLISHED. (The
+	// "Ready to Publish" intermediate display was retired alongside the
+	// status itself, ADR 0003 §2 — there is no longer a distinct "published
+	// but not yet public" state to show.)
 	const getDisplayStatus = (): PublishStatusType => {
-		if (!assuranceCase) {
-			return "DRAFT";
-		}
-
-		// Check if any linked case study is actually public
-		if (assuranceCase.hasPublicCaseStudy) {
+		if (assuranceCase?.publishStatus === "PUBLISHED") {
 			return "PUBLISHED";
-		}
-
-		// If marked ready or "published" but no public case study, show as ready
-		if (
-			assuranceCase.publishStatus === "PUBLISHED" ||
-			assuranceCase.publishStatus === "READY_TO_PUBLISH"
-		) {
-			return "READY_TO_PUBLISH";
 		}
 
 		return "DRAFT";
@@ -59,10 +47,15 @@ const Header = ({ setOpen }: HeaderProps) => {
 
 	const currentStatus: PublishStatusType = getDisplayStatus();
 
-	// Use change detection for published cases
+	// Use change detection for published cases. `refreshKey: assuranceCase`
+	// re-fetches whenever the case content changes (structural edits replace
+	// this object; comment mutations live in separate store slices and never
+	// touch it) — without it this only fetched once on mount and the canvas
+	// badge's amber "changes pending" dot stayed stale until a page reload.
 	const { hasChanges } = useChangeDetection({
 		caseId: assuranceCase?.id ?? null,
 		enabled: currentStatus === "PUBLISHED",
+		refreshKey: assuranceCase,
 	});
 
 	const _handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,32 +139,25 @@ const Header = ({ setOpen }: HeaderProps) => {
 		assuranceCase?.permissions === "manage" ||
 		assuranceCase?.permissions === "edit";
 
-	const handleStatusButtonClick = async () => {
+	// Opens the status/publish dialog immediately using state already known
+	// (from `assuranceCase` and this header's own `useChangeDetection` call
+	// above) rather than gating the open on a fetch. `GET /api/cases/[id]/
+	// status` runs a full export + change-detection synchronously when a
+	// published snapshot exists (`getFullPublishStatus`), which can take
+	// several seconds — awaiting it before opening was the bug this issue's
+	// hard requirement fixes. `StatusModalWrapper` loads any state that's
+	// still asynchronous (divergence) after the dialog is already visible.
+	const handleStatusButtonClick = () => {
 		if (!(assuranceCase?.id && canEditCase)) {
 			return;
 		}
 
-		setStatusLoading(true);
-
-		try {
-			// Fetch the full status info from the API
-			const response = await fetch(`/api/cases/${assuranceCase.id}/status`);
-			const data = await response.json();
-
-			if (response.ok) {
-				statusModal.onOpen({
-					caseId: assuranceCase.id,
-					status: data.publishStatus ?? currentStatus,
-					hasChanges: data.hasChanges ?? hasChanges,
-					publishedAt: data.publishedAt ?? assuranceCase.publishedAt,
-					linkedCaseStudyCount: data.linkedCaseStudyCount ?? 0,
-				});
-			}
-		} catch {
-			// Silently fail - user can try clicking again
-		} finally {
-			setStatusLoading(false);
-		}
+		statusModal.onOpen({
+			caseId: assuranceCase.id,
+			status: currentStatus,
+			hasChanges,
+			publishedAt: assuranceCase.publishedAt,
+		});
 	};
 
 	const publishedAt = assuranceCase?.publishedAt;
@@ -193,6 +179,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 					</Button>
 					<button
 						className="border-none bg-transparent p-0 font-semibold text-sidebar-foreground hover:cursor-pointer"
+						data-testid="case-title-button"
 						data-tour="case-header"
 						onClick={() => setOpen(true)}
 						type="button"
@@ -209,7 +196,6 @@ const Header = ({ setOpen }: HeaderProps) => {
 						<StatusButton
 							disabled={!canEditCase}
 							hasChanges={hasChanges}
-							loading={statusLoading}
 							onClick={handleStatusButtonClick}
 							publishedAt={publishedAt}
 							status={currentStatus}

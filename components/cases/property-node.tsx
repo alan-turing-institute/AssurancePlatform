@@ -1,52 +1,19 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
-import ActionTooltip from "@/components/ui/action-tooltip";
-import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
-import useStore from "@/store/store";
-import NodeAddPopover from "./node-add-popover";
+import { useNodeTopRightActions } from "@/hooks/use-node-top-right-actions";
+import AddChildTrigger from "./add-child-trigger";
 import NodeEditDialog from "./node-edit-dialog";
 import ToggleButton from "./toggle-button";
 
 function PropertyNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
-	const [addPopoverOpen, setAddPopoverOpen] = useState(false);
-	const { assuranceCase } = useStore();
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
-	const badgeSlot = useElementBadgeSlot({
-		caseId: assuranceCase?.id?.toString() ?? "",
-		elementId: String(data.id),
-		elementType: "property",
-	});
-
-	const addPopover = (
-		<NodeAddPopover
-			node={node}
-			nodeType="property"
-			onOpenChange={setAddPopoverOpen}
-			open={addPopoverOpen}
-		>
-			<ActionTooltip label="Add child element">
-				<button
-					onClick={(e) => {
-						e.stopPropagation();
-						setAddPopoverOpen(true);
-					}}
-					onMouseDown={(e) => e.stopPropagation()}
-					type="button"
-				>
-					<div className="inline-flex rounded-full p-1 hover:bg-foreground/10">
-						<Plus aria-hidden="true" size={16} />
-					</div>
-				</button>
-			</ActionTooltip>
-		</NodeAddPopover>
-	);
+	const topRightActions = useNodeTopRightActions(data, "property");
 
 	const dataTour =
 		data.isDemo && data.name === "P1" ? "demo-claim-1" : undefined;
@@ -57,7 +24,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				assumption={data.assumption}
 				bottomLeftActions={
 					<NodeActionGroup
-						addPopover={addPopover}
+						addPopover={<AddChildTrigger node={node} nodeType="property" />}
 						commentCount={
 							Array.isArray(data.comments) ? data.comments.length : 0
 						}
@@ -74,7 +41,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="property"
 				selected={props.selected}
-				topRightActions={badgeSlot}
+				topRightActions={topRightActions}
 			/>
 
 			{/* Edit Dialog */}

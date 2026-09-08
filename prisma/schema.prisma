@@ -72,6 +72,10 @@ model User {
   updatedAt            DateTime     @updatedAt @map("updated_at")
   lastLoginAt          DateTime?    @map("last_login_at") /// Most recent login timestamp for audit purposes
 
+  // Data retention (inactive-account deletion) — cleared on every login
+  retentionWarning30SentAt DateTime? @map("retention_warning_30_sent_at") /// When the 30-day inactive-account deletion warning was sent
+  retentionWarning7SentAt  DateTime? @map("retention_warning_7_sent_at") /// When the 7-day final deletion reminder was sent
+
   // Relations
   teamMemberships      TeamMember[]
   createdTeams         Team[]             @relation("TeamCreator")
@@ -84,7 +88,6 @@ model User {
   resolvedComments     Comment[]          @relation("CommentResolver")
   releaseComments      ReleaseComment[]
   githubRepositories   GitHubRepository[]
-  caseStudies          CaseStudy[]
   markedReadyCases     AssuranceCase[]    @relation("CaseMarkedReady")
   deletedCases         AssuranceCase[]    @relation("CaseDeleter")
   ownedIntegrations    Integration[]      @relation("IntegrationOwner")
@@ -105,9 +108,17 @@ enum CaseMode {
   ADVANCED
 }
 
+/// DRAFT and PUBLISHED are the only two states now that the "Ready to
+/// Publish" intermediate step is retired (ADR 0003 §2). READY_TO_PUBLISH
+/// existed here until migration 20260716000000, which maps every existing
+/// row to DRAFT before dropping the enum value.
+///
+/// Extension seam (ADR 0003 §4): a future SUBMITTED/approval state slots in
+/// alongside these two when deployments grow multi-team usage. This is a
+/// documented placeholder only — no workflow, UI, or notification plumbing
+/// ships until that state is actually built.
 enum PublishStatus {
   DRAFT
-  READY_TO_PUBLISH
   PUBLISHED
 }
 
@@ -269,6 +280,7 @@ model AssuranceCase {
   invites         CaseInvite[]
   comments        Comment[]
   caseImage       CaseImage?
+  caseInformation CaseInformation?
   caseTypes       CaseTypeAssignment[]
   pluginData      PluginData[]
 
@@ -276,7 +288,7 @@ model AssuranceCase {
   sourceReleases    Release[] @relation("SourceCase")
   publishedReleases Release[] @relation("PublishedCase")
 
-  // Published versions (legacy model for case study integration)
+  // Published versions (frozen publish snapshots — ADR 0003 §3)
   publishedVersions PublishedAssuranceCase[]
 
   // Module references (cases that embed this one)
@@ -404,6 +416,34 @@ model AssuranceElement {
   // Level (calculated, for property claims)
   level               Int?             /// Hierarchy depth level for property claims
 
+  // Per-assertion status (ADR 0004 D3): author-declared argumentation
+  // semantics mirroring SACM §11.8. Nullable — null means unset and is
+  // interpreted/exported as the SACM default (ASSERTED). Write rule
+  // (author-declared, machine-derivable/proposable, never machine-
+  // overwritten) is enforced in lib/services/element-service.ts, not here.
+  assertionStatus     AssertionStatus? @map("assertion_status")
+
+  // Element-level citation (ADR 0004 D5): lets an AWAY_GOAL name the specific
+  // element it cites within the referenced case (moduleReferenceId names the
+  // case; citedElementId names the element within it). Applicability
+  // (AWAY_GOAL only) is enforced in lib/schemas/element-validation.ts and
+  // lib/services/element-service.ts, not here. No onDelete override — Prisma
+  // infers SetNull for this optional self-relation (matching defeatsElementId
+  // above), which is a defence-in-depth safety net for the rare hard-delete
+  // path (case purge); the primary soft-delete/detach integrity rule
+  // (nullify + flag) is enforced explicitly in element-service.ts since it
+  // also has to set citationDangling, which a bare DB-level action can't do.
+  citedElementId      String?          @map("cited_element_id")
+  // True when citedElementId was nullified because the cited element was
+  // deleted or detached from its case (dangling-citation indicator). Cleared
+  // whenever the author explicitly sets/clears citedElementId again.
+  // Deliberately excluded from the case export/import exchange format
+  // (ADR 0004 D2 precedent: derived, deployment-relative state, not
+  // author-authored content) — recomputed at import time by the
+  // citedElementId resolution step in case-import-service.ts, not carried
+  // through the export/import payload itself.
+  citationDangling    Boolean          @default(false) @map("citation_dangling")
+
   // Timestamps
   createdAt           DateTime         @default(now()) @map("created_at")
   updatedAt           DateTime         @updatedAt @map("updated_at")
@@ -422,6 +462,8 @@ model AssuranceElement {
   defeatsElement      AssuranceElement? @relation("Defeater", fields: [defeatsElementId], references: [id])
   defeatedBy          AssuranceElement[] @relation("Defeater")
   moduleReference     AssuranceCase?   @relation("ModuleReference", fields: [moduleReferenceId], references: [id])
+  citedElement        AssuranceElement? @relation("Citation", fields: [citedElementId], references: [id])
+  citedBy             AssuranceElement[] @relation("Citation")
 
   // Evidence many-to-many
   evidenceLinksFrom   EvidenceLink[]   @relation("EvidenceSource")
@@ -436,6 +478,7 @@ model AssuranceElement {
   @@index([caseId, elementType])
   @@index([caseId, deletedAt], map: "assurance_elements_case_deleted_idx")
   @@index([parentId])
+  @@index([citedElementId], map: "assurance_elements_cited_element_id_idx")
   @@map("assurance_elements")
 }
 
@@ -452,6 +495,18 @@ enum ElementType {
   CONTRACT
 }
 
+/// Per-assertion status (ADR 0004 D3), mirroring SACM §11.8. AS_CITED is
+/// machine-derivable (transitively computed from the cited claim's own
+/// status) — the other five are author-declared only.
+enum AssertionStatus {
+  ASSERTED
+  NEEDS_SUPPORT
+  ASSUMED
+  AXIOMATIC
+  DEFEATED
+  AS_CITED
+}
+
 enum ElementRole {
   TOP_LEVEL
   SUPPORTING
@@ -460,6 +515,24 @@ enum ElementRole {
 enum ModuleEmbedType {
   COPY
   REFERENCE
+}
+
+/// Audit trail for the one-off element-name-prefix backfill migration
+/// (`prisma/migrations/*_element_name_prefix_backfill`): every element whose
+/// stored name didn't conform to its type's TEA-syntax prefix format got a
+/// row here recording old_name -> new_name before the rename, so a support
+/// query (or a down-migration) can restore it. No FK to AssuranceElement
+/// deliberately — this is an audit trail, not a live relation, and should
+/// survive even if the source element is later hard-purged.
+model ElementNameBackfill {
+  id         String   @id @default(uuid())
+  elementId  String   @map("element_id")
+  oldName    String   @map("old_name")
+  newName    String   @map("new_name")
+  migratedAt DateTime @default(now()) @map("migrated_at")
+
+  @@index([elementId])
+  @@map("element_name_backfill")
 }
 
 /// Links evidence elements to claims (many-to-many). One piece of evidence can support multiple claims.
@@ -781,6 +854,43 @@ model CaseImage {
   @@map("case_images")
 }
 
+/// The canonical case-information record (ADR 0003 §1): description,
+/// authors, sector, and a feature image, editable at any time under the
+/// case's normal edit permissions. Deliberately broader than "publication
+/// metadata" — other services and plugins may read it; publishing (see
+/// `PublishedAssuranceCase`) is its first consumer, not its only one.
+/// One-to-one and optional: a case with no curated information yet has no
+/// row here, not a row of nulls.
+///
+/// `description` is distinct from `AssuranceCase.description`: the case's
+/// own field describes the argument's purpose and scope for people working
+/// on it; this one is the public-facing narrative shown on Discover once
+/// published, mirroring what the retired case-study form collected.
+model CaseInformation {
+  id              String   @id @default(uuid())
+  caseId          String   @unique @map("case_id")
+
+  description     String?
+  authors         String?  @db.VarChar(255)
+  /// The sector's stable numeric ID from `lib/sectors.ts` (e.g. "15"),
+  /// stored as a string so this column can also tolerate free text saved
+  /// before the ID migration (`20260820000000_sector_stable_ids`) that
+  /// couldn't be mapped to a canonical sector — resolve for display with
+  /// `getSectorDisplayName`, never render this raw value. Storing the ID
+  /// rather than the display name means relabelling a sector in
+  /// `lib/sectors.ts` can never orphan a case that already selected it.
+  sector          String?  @db.VarChar(100)
+  featureImageUrl String?  @map("feature_image_url") @db.VarChar(2000)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  case            AssuranceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("case_information")
+}
+
 /// Classification type for assurance cases: DOMAIN (healthcare), TECHNIQUE (ML safety), STANDARD (ISO 26262).
 model CaseType {
   id          String               @id @default(uuid())
@@ -837,81 +947,48 @@ model GitHubRepository {
   @@map("github_repositories")
 }
 
-// ============================================
-// CASE STUDIES
-// ============================================
-
-/// Public community document showcasing published assurance cases with narrative context.
-// Distinct from AssuranceCase (the structured argument). Links to PublishedAssuranceCase snapshots.
-// When creating, READY_TO_PUBLISH cases are automatically published and linked.
-model CaseStudy {
-  id             Int       @id @default(autoincrement()) @map("id")
-  title          String    @db.VarChar(255) /// Case study title
-  description    String?   /// Full description/narrative
-  authors        String?   @db.VarChar(255) /// Author names
-  category       String?   @db.VarChar(100) /// Category (e.g., "Healthcare", "Automotive")
-  publishedDate  DateTime? @map("published_date") @db.Timestamptz(6) /// When first published
-  lastModifiedOn DateTime  @map("last_modified_on") @db.Timestamptz(6)
-  createdOn      DateTime  @map("created_on") @db.Timestamptz(6)
-  sector         String?   @db.VarChar(100) /// Industry sector
-  contact        String?   @db.VarChar(254) /// Contact email
-  image          String?   @db.VarChar(200) /// Legacy image path
-  published      Boolean   /// Whether the case study is publicly visible
-  ownerId        String?   @map("owner_id") /// Creator/owner of the case study
-  type           String?   @db.VarChar(100) /// Case study type classification
-
-  // Relations
-  owner          User?                    @relation(fields: [ownerId], references: [id])
-  publishedCases CaseStudyPublishedCase[]
-  featureImage   CaseStudyImage?
-
-  @@index([ownerId], map: "case_studies_owner_id_idx")
-  @@map("case_studies")
+/// A publishable item's concrete type (ADR 0003 §5). Only ASSURANCE_CASE
+/// ships in 1.0 — ARGUMENT_PATTERN is a discriminator placeholder so the
+/// fast-follow issue that publishes reusable pattern templates needs no
+/// schema rework on `PublishedAssuranceCase`.
+enum PublishableItemType {
+  ASSURANCE_CASE
+  ARGUMENT_PATTERN
 }
 
-/// Junction table linking case studies to published assurance case snapshots.
-// Auto-publishes READY_TO_PUBLISH cases, creates links, migrates when published case is updated.
-model CaseStudyPublishedCase {
-  id                      BigInt                @id @default(autoincrement())
-  caseStudyId             Int                   @map("casestudy_id") /// The case study
-  publishedAssuranceCaseId String               @map("publishedassurancecase_id") @db.Uuid /// The published case
-
-  // Relations
-  caseStudy               CaseStudy             @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  publishedAssuranceCase  PublishedAssuranceCase @relation(fields: [publishedAssuranceCaseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([caseStudyId, publishedAssuranceCaseId], map: "case_study_published_cases_unique")
-  @@index([caseStudyId], map: "case_study_published_cases_case_study_id_idx")
-  @@index([publishedAssuranceCaseId], map: "case_study_published_cases_published_case_id_idx")
-  @@map("case_study_published_cases")
-}
-
-/// Feature image for a case study. One image per case study.
-model CaseStudyImage {
-  id          BigInt    @id @default(autoincrement())
-  image       String    @db.VarChar(500) /// Image URL or path
-  uploadedAt  DateTime  @map("uploaded_at") @db.Timestamptz(6)
-  caseStudyId Int       @unique @map("case_study_id")
-
-  // Relations
-  caseStudy   CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("case_study_images")
-}
-
-/// Snapshot of an assurance case for case study integration. Content stored as JSON.
-// Multiple versions per case (history). Distinct from Release model (for community releases).
+/// Frozen, point-in-time snapshot of an assurance case (ADR 0003 §3): the
+/// public/Discover-facing published record. Content stored as JSON;
+/// multiple versions per case (history) via repeated publish/republish —
+/// republishing INSERTS a new row rather than updating the old one, so a
+/// case's full publish history stays queryable. Distinct from the `Release`
+/// model (community releases, a separate, currently-unused mechanism).
+///
+/// `description` here is the free-text note optionally supplied by the
+/// caller at publish time (e.g. "Initial release") — NOT the case's curated
+/// `CaseInformation.description`. The latter, along with `authors`, `sector`,
+/// and `featureImageUrl`, is frozen verbatim into `content.caseInformation`
+/// at publish time (see `publish-service.ts`), composed the same way as
+/// `content.pluginData` (ADR 0002 v2 §3) — undefined, not an empty object,
+/// when the case holds no case information at all.
 model PublishedAssuranceCase {
-  id              String   @id @default(uuid()) @db.Uuid
-  title           String   @db.VarChar(255) /// Title at time of publishing
-  content         Json     /// Full case content as JSON snapshot
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  assuranceCaseId String   @map("assurance_case_id") /// Source case this was published from
-  description     String?  @db.VarChar(1000) /// Description at time of publishing
+  id              String              @id @default(uuid()) @db.Uuid
+  type            PublishableItemType @default(ASSURANCE_CASE) /// Discriminator (ADR 0003 §5) — only ASSURANCE_CASE is implemented; ready for a future pattern type with no rework.
+  slug            String              @db.VarChar(255) /// Stable, name-derived, deployment-unique public address (ADR 0003 §6). Generated once at first publish (see `slug-service.ts`) and carried forward verbatim — UNCHANGED — onto every later republish row of the same source case, never regenerated on rename. Collisions append a numeric suffix. NOT `@unique` here: every historical version of the same case shares one slug by design (that is what "stable" means), so true uniqueness is scoped to the CURRENT version only — see `isCurrent` and the hand-written partial index below (same DSL limitation as `PluginData`'s case-level partial index; Prisma cannot express a partial unique constraint).
+  isCurrent       Boolean             @default(true) @map("is_current") /// True for exactly one row per `assuranceCaseId` at a time — the version Discover and the public API serve. Republishing flips the previous current row to `false` in the same transaction that inserts the new current row (`updatePublishedCase`). That "exactly one" invariant is enforced at the service layer, not the DB — the partial unique index below only stops two DIFFERENT cases' current rows from colliding on the same slug.
+  title           String              @db.VarChar(255) /// Title at time of publishing
+  content         Json                /// Full case content as JSON snapshot
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  assuranceCaseId String              @map("assurance_case_id") /// Source case this was published from
+  description     String?             @db.VarChar(1000) /// Description at time of publishing
 
   // Relations
-  assuranceCase   AssuranceCase            @relation(fields: [assuranceCaseId], references: [id])
-  caseStudyLinks  CaseStudyPublishedCase[]
+  assuranceCase   AssuranceCase @relation(fields: [assuranceCaseId], references: [id])
+
+  // @@unique/@@index below cover most access patterns, but the slug's TRUE
+  // uniqueness constraint (current version only) is a hand-written partial
+  // index in this feature's migration SQL — Prisma's schema DSL cannot
+  // express `WHERE is_current`. Keep both in sync if this model changes.
+  @@index([slug, isCurrent], map: "published_assurance_cases_slug_current_idx")
 
   @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
   @@map("published_assurance_cases")
@@ -987,7 +1064,7 @@ enum PluginScopeType {
 /// service layer when the registry service lands.
 model Integration {
   id           String            @id @default(uuid())
-  name         String            @unique /// e.g. "darter-evidence-pipeline"
+  name         String            @unique /// e.g. "example-integration"
   description  String?
   ownerId      String            @map("owner_id") /// The human accountable for this integration
   systemUserId String            @unique @map("system_user_id") /// The machine principal (User with isSystemUser)

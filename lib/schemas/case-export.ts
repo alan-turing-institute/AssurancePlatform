@@ -43,9 +43,30 @@ export const ModuleEmbedTypeSchema = z
 		"How a module is embedded - COPY creates independent copy, REFERENCE links to original"
 	);
 
+/**
+ * Per-assertion status (ADR 0004 D3), mirroring SACM §11.8. Author-declared
+ * except AS_CITED, which is machine-derivable (transitively computed from
+ * the cited claim's own status) rather than author-set. Unset (null) means
+ * ASSERTED — SACM's own default — and the export layer always resolves the
+ * field to a concrete value rather than omitting it.
+ */
+export const AssertionStatusSchema = z
+	.enum([
+		"ASSERTED",
+		"NEEDS_SUPPORT",
+		"ASSUMED",
+		"AXIOMATIC",
+		"DEFEATED",
+		"AS_CITED",
+	])
+	.describe(
+		"Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+	);
+
 export type ElementType = z.infer<typeof ElementTypeSchema>;
 export type ElementRole = z.infer<typeof ElementRoleSchema>;
 export type ModuleEmbedType = z.infer<typeof ModuleEmbedTypeSchema>;
+export type AssertionStatus = z.infer<typeof AssertionStatusSchema>;
 
 // ============================================
 // V2 SCHEMAS (New Prisma Format)
@@ -54,6 +75,7 @@ export type ModuleEmbedType = z.infer<typeof ModuleEmbedTypeSchema>;
 /**
  * V2 Element schema - flat structure with parentId references
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const ElementV2Schema = z
 	.object({
 		id: z.string().uuid().describe("Unique identifier for the element"),
@@ -87,6 +109,33 @@ export const ElementV2Schema = z
 			.nullable()
 			.optional()
 			.describe("Hierarchy level for property claims"),
+		assertionStatus: AssertionStatusSchema.nullable()
+			.optional()
+			.describe(
+				"Per-assertion status (ADR 0004 D3); null/unset means ASSERTED"
+			),
+		// Element-level citation (ADR 0004 D5) — AWAY_GOAL only. Names the
+		// specific element cited within the case named by moduleReferenceId.
+		citedElementId: z
+			.string()
+			.uuid()
+			.nullable()
+			.optional()
+			.describe("ID of the element cited by an AWAY_GOAL (ADR 0004 D5)"),
+		// Module reference — MODULE (required) and AWAY_GOAL (required) name
+		// the case they reference/cite into. Nullable/optional here (like
+		// citedElementId above) for import leniency with pre-existing exports
+		// that never carried the field — requiredness for MODULE/AWAY_GOAL is
+		// enforced by the DB foreign key and element-service.ts on the
+		// author-facing mutation routes, not by this exchange-format schema.
+		moduleReferenceId: z
+			.string()
+			.uuid()
+			.nullable()
+			.optional()
+			.describe(
+				"ID of the case referenced by a MODULE, or cited by an AWAY_GOAL"
+			),
 		inSandbox: z
 			.boolean()
 			.default(false)
@@ -103,6 +152,7 @@ export const ElementV2Schema = z
 			.describe("Whether the element has been modified from its pattern"),
 		comments: z
 			.array(
+				// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 				z.object({
 					author: z.string().describe("Username of comment author"),
 					content: z.string().describe("Comment text content"),
@@ -121,6 +171,7 @@ export type ElementV2 = z.infer<typeof ElementV2Schema>;
 /**
  * V2 Evidence Link schema - many-to-many relationship
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const EvidenceLinkV2Schema = z
 	.object({
 		evidenceId: z.string().uuid().describe("ID of the evidence element"),
@@ -136,10 +187,12 @@ export type EvidenceLinkV2 = z.infer<typeof EvidenceLinkV2Schema>;
 /**
  * V2 Export format - the canonical export schema
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportV2Schema = z
 	.object({
 		version: z.literal("2.0").describe("Schema version identifier"),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
+		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 		case: z
 			.object({
 				name: z
@@ -186,12 +239,22 @@ export interface ExportComment {
  * - moduleReferenceId: MODULE (required), AWAY_GOAL (required)
  * - moduleEmbedType: MODULE only (required)
  * - modulePublicSummary: MODULE only
+ * - citedElementId: AWAY_GOAL only (ADR 0004 D5)
  * - isDefeater, defeatsElementId: any type (dialogical reasoning)
  * - comments: optional, included when includeComments export option is true
+ * - assertionStatus: any type (ADR 0004 D3). Typed optional here (so
+ *   existing TreeNode-typed fixtures/consumers elsewhere in the codebase
+ *   don't all need updating), but exports THIS repo produces always set it —
+ *   buildCleanNode (lib/transforms/build-tree.ts) resolves a null/unset
+ *   stored value to "ASSERTED" (SACM's own default) rather than omitting
+ *   the field, unlike the type-specific fields above.
  */
 export interface TreeNode {
+	assertionStatus?: AssertionStatus;
 	assumption?: string | null;
 	children: TreeNode[];
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
 	// Comments (optional - included when export option enabled)
 	comments?: ExportComment[];
 	context?: string[];
@@ -218,6 +281,7 @@ export interface TreeNode {
 }
 
 // Comment schema for export/import
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const ExportCommentSchema = z
 	.object({
 		author: z.string().describe("Username of the comment author"),
@@ -228,6 +292,7 @@ export const ExportCommentSchema = z
 
 // biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing
 export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
+	// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 	z.object({
 		id: z.string().uuid(),
 		type: ElementTypeSchema,
@@ -246,12 +311,19 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		moduleReferenceId: z.string().uuid().optional(),
 		moduleEmbedType: ModuleEmbedTypeSchema.optional(),
 		modulePublicSummary: z.string().nullable().optional(),
+		// Element-level citation (ADR 0004 D5) — AWAY_GOAL only; nullable/
+		// optional here for import leniency with pre-D5 exports.
+		citedElementId: z.string().uuid().nullable().optional(),
 		// Pattern metadata (optional - only included when true)
 		fromPattern: z.boolean().default(false).optional(),
 		modifiedFromPattern: z.boolean().default(false).optional(),
 		// Dialogical reasoning
 		isDefeater: z.boolean().optional(),
 		defeatsElementId: z.string().uuid().optional(),
+		// Per-assertion status (ADR 0004 D3) — optional/nullable here purely
+		// for import leniency with pre-D3 exports that never had the field;
+		// exports WE produce always set it (see buildCleanNode in build-tree.ts).
+		assertionStatus: AssertionStatusSchema.nullable().optional(),
 		// Comments (optional - included when export option enabled)
 		comments: z.array(ExportCommentSchema).optional(),
 	})
@@ -263,10 +335,12 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
  * Uses version "1.0" as this is the first officially versioned export format
  * (the legacy Django format had no version field).
  */
+// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportNestedSchema = z
 	.object({
 		version: z.literal("1.0").describe("Schema version identifier"),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
+		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 		case: z
 			.object({
 				name: z

@@ -15,7 +15,7 @@ export type TourId = (typeof KNOWN_TOUR_IDS)[number];
 /**
  * Schema for marking a tour as completed.
  */
-export const tourCompletionSchema = z.object({
+export const tourCompletionSchema = z.strictObject({
 	tourId: z.enum(KNOWN_TOUR_IDS, {
 		message: `Invalid tour ID. Expected one of: ${KNOWN_TOUR_IDS.join(", ")}`,
 	}),

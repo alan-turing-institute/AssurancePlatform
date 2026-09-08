@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,9 +6,7 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import { updateElementSchema } from "@/lib/schemas/element";
-import type { UpdateElementInput } from "@/lib/services/element-service";
 import {
 	deleteElement,
 	getElement,
@@ -39,26 +38,6 @@ export async function GET(
 }
 
 /**
- * Builds update input from validated body.
- */
-function buildUpdateInput(body: Record<string, unknown>): UpdateElementInput {
-	const url = (body.url || body.URL) as string | undefined;
-	return {
-		name: body.name as string | undefined,
-		description: body.description as string | undefined,
-		shortDescription: body.shortDescription as string | undefined,
-		longDescription: body.longDescription as string | undefined,
-		parentId: body.parentId as string | undefined,
-		url,
-		URL: url,
-		assumption: body.assumption as string | undefined,
-		justification: body.justification as string | undefined,
-		context: body.context as string[] | undefined,
-		inSandbox: body.inSandbox as boolean | undefined,
-	};
-}
-
-/**
  * PUT /api/elements/[id]
  * Updates an existing element
  */
@@ -70,19 +49,11 @@ export async function PUT(
 		const session = await requireAuthSession();
 		const { id: elementId } = await params;
 
-		const parsed = updateElementSchema.safeParse(
-			await request.json().catch(() => null)
-		);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
+		const data = await parseJsonBody(request, updateElementSchema);
 
-		const input = buildUpdateInput(
-			parsed.data as unknown as Record<string, unknown>
-		);
-		const result = await updateElement(session.userId, elementId, input);
+		// element-service.ts's updateElement resolves url/URL itself
+		// (url || URL) — do not collapse them here.
+		const result = await updateElement(session.userId, elementId, data);
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

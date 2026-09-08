@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
-import { deleteAccount } from "@/lib/services/user-management-service";
+import {
+	deleteAccount,
+	deleteAccountForRetention,
+} from "@/lib/services/user-management-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
+	addTeamMember,
 	createTestCase,
 	createTestIntegrationWithSystemUser,
+	createTestPermission,
+	createTestTeam,
+	createTestTeamPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -151,5 +158,347 @@ describe("deleteAccount — owned-integrations block (ADR 0002 v2 §2.4)", () =>
 		await createTestIntegrationWithSystemUser(otherOwner.id);
 
 		expectSuccess(await deleteAccount(owner.id));
+	});
+});
+
+/**
+ * `deleteAccountForRetention` is the password-free counterpart used by the
+ * retention sweep (`lib/services/retention-service.ts`) — it shares
+ * `deleteAccount`'s cascade without requiring a password.
+ */
+describe("deleteAccountForRetention", () => {
+	it("deletes the user and reassigns their owned case, without a password", async () => {
+		const owner = await createTestUser();
+		const ownedCase = await createTestCase(owner.id, {
+			name: "Retention case",
+		});
+
+		expectSuccess(await deleteAccountForRetention(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: ownedCase.id },
+		});
+		expect(updatedCase.createdById).not.toBe(owner.id);
+	});
+
+	it("refuses with the same typed error as deleteAccount when the user owns an integration", async () => {
+		const owner = await createTestUser();
+		await createTestIntegrationWithSystemUser(owner.id);
+
+		const result = await deleteAccountForRetention(owner.id);
+
+		expectError(result, SINGLE_INTEGRATION_BLOCK_PATTERN);
+
+		const stillThere = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(stillThere).not.toBeNull();
+	});
+
+	it("returns an error for a non-existent user", async () => {
+		expectError(
+			await deleteAccountForRetention("00000000-0000-0000-0000-000000000000"),
+			"User not found"
+		);
+	});
+});
+
+/**
+ * Chris's ruling (2026-09-07): a case the deleted user created is KEPT
+ * (authorship reassigned to the system account, as before) only if another
+ * principal already holds ADMIN on it — otherwise it is trashed so it
+ * disappears for every collaborator too.
+ */
+describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () => {
+	it("keeps a case (does not trash it) when another user holds ADMIN via CasePermission", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const admin = await createTestUser();
+		const testCase = await createTestCase(owner.id, { name: "Co-admin case" });
+		await createTestPermission(testCase.id, admin.id, owner.id, "ADMIN");
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).toBeNull();
+		expect(updatedCase.createdById).not.toBe(owner.id);
+	});
+
+	it("keeps a case when a team holds ADMIN via CaseTeamPermission AND has a member besides the deleted owner", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherMember = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Team-admin case (team of two)",
+		});
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, otherMember.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "ADMIN");
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).toBeNull();
+	});
+
+	/**
+	 * Vincent, review round 2 (blocker): a team-ADMIN grant only counts as
+	 * "another admin" if the team has a member other than the deleted user.
+	 * A "team of one" IS the deleted user — `createTestTeam` creates exactly
+	 * that (the creator as its only member) — and `runAccountDeletionTransaction`
+	 * deletes precisely this shape of team, cascading its CaseTeamPermission
+	 * away. Without the fix, this case would be marked "kept" but end up
+	 * owned by the system account with no permission for anyone: orphaned,
+	 * never trashed, never purged.
+	 */
+	it("trashes a case when the only ADMIN-holding team has no member besides the deleted owner (team of one)", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const testCase = await createTestCase(owner.id, {
+			name: "Team-admin case (team of one)",
+		});
+		const team = await createTestTeam(owner.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "ADMIN");
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).not.toBeNull();
+
+		// The team-of-one is deleted by the team-handling step, which cascades
+		// its CaseTeamPermission away — this is the exact sequence the
+		// blocker warned about, so assert the permission is really gone too.
+		const teamStillExists = await prisma.team.findUnique({
+			where: { id: team.id },
+		});
+		expect(teamStillExists).toBeNull();
+	});
+
+	/**
+	 * QA round 3, item a(iv): a case can carry more than one ADMIN-holding
+	 * team at once — one qualifying (a member besides the deleted owner),
+	 * one not (team of one). Only one needs to qualify for the case to be
+	 * kept, and each team is still handled on its own merits by the
+	 * team-handling step (the team-of-one is deleted, the team-of-two is
+	 * transferred), independent of the keep/trash decision they jointly fed.
+	 */
+	it("keeps a case with two ADMIN-holding teams, one of each kind — the qualifying one keeps it, the team-of-one is still deleted", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherMember = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Two teams, one qualifies",
+		});
+
+		const teamOfOne = await createTestTeam(owner.id, { name: "Team of one" });
+		await createTestTeamPermission(
+			testCase.id,
+			teamOfOne.id,
+			owner.id,
+			"ADMIN"
+		);
+
+		const teamOfTwo = await createTestTeam(owner.id, { name: "Team of two" });
+		await addTeamMember(teamOfTwo.id, otherMember.id);
+		await createTestTeamPermission(
+			testCase.id,
+			teamOfTwo.id,
+			owner.id,
+			"ADMIN"
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).toBeNull();
+
+		const teamOfOneAfter = await prisma.team.findUnique({
+			where: { id: teamOfOne.id },
+		});
+		expect(teamOfOneAfter).toBeNull();
+
+		const teamOfTwoAfter = await prisma.team.findUniqueOrThrow({
+			where: { id: teamOfTwo.id },
+		});
+		expect(teamOfTwoAfter.createdById).toBe(otherMember.id);
+	});
+
+	it("trashes a case when the only other access is VIEW/EDIT/COMMENT, not ADMIN", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const editor = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Collaborator-only case",
+		});
+		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).not.toBeNull();
+		// Trashed cases are hidden from EVERY viewer, not just the deleted
+		// owner — listUserCases/listSharedCases and fetchCaseFromPrisma all
+		// filter deletedAt: null unconditionally (verified by reading those
+		// services), so the editor loses access exactly like a hard delete
+		// would show them, without needing one.
+		const { listSharedCases } = await import(
+			"@/lib/services/case-fetch-service"
+		);
+		const shared = expectSuccess(await listSharedCases(editor.id));
+		expect(shared.find((c) => c.id === testCase.id)).toBeUndefined();
+	});
+
+	it("trashes a case with no collaborators at all", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const testCase = await createTestCase(owner.id, { name: "Solo case" });
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updatedCase.deletedAt).not.toBeNull();
+	});
+});
+
+/**
+ * QA round 1, D1: `CasePermission.grantedById` is a real `ON DELETE
+ * RESTRICT` FK with no cascade — deleting a user who had ever granted a
+ * permission (on their own case OR someone else's) used to throw P2003,
+ * flattened to "Failed to delete account".
+ */
+describe("deleteAccount — grantedById reassignment (QA round 1, D1)", () => {
+	it("succeeds when the user granted a permission on their OWN case", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const viewer = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Shared by owner",
+		});
+		const permission = await createTestPermission(
+			testCase.id,
+			viewer.id,
+			owner.id,
+			"VIEW"
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const updatedPermission = await prisma.casePermission.findUniqueOrThrow({
+			where: { id: permission.id },
+		});
+		expect(updatedPermission.grantedById).not.toBe(owner.id);
+	});
+
+	it("succeeds when the user granted a permission on SOMEONE ELSE'S case (an admin who invited others)", async () => {
+		const caseOwner = await createTestUser();
+		const admin = await createTestUser({ authProvider: "GITHUB" });
+		const viewer = await createTestUser();
+		const testCase = await createTestCase(caseOwner.id, {
+			name: "Owned by someone else",
+		});
+		await createTestPermission(testCase.id, admin.id, caseOwner.id, "ADMIN");
+		const grantedPermission = await createTestPermission(
+			testCase.id,
+			viewer.id,
+			admin.id,
+			"VIEW"
+		);
+
+		expectSuccess(await deleteAccount(admin.id));
+
+		const updatedPermission = await prisma.casePermission.findUniqueOrThrow({
+			where: { id: grantedPermission.id },
+		});
+		expect(updatedPermission.grantedById).not.toBe(admin.id);
+	});
+
+	it("deleteAccountForRetention succeeds when the user granted a permission on their OWN case (QA round 2, item a)", async () => {
+		const owner = await createTestUser();
+		const viewer = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			name: "Shared by owner (retention)",
+		});
+		const permission = await createTestPermission(
+			testCase.id,
+			viewer.id,
+			owner.id,
+			"VIEW"
+		);
+
+		expectSuccess(await deleteAccountForRetention(owner.id));
+
+		const updatedPermission = await prisma.casePermission.findUniqueOrThrow({
+			where: { id: permission.id },
+		});
+		expect(updatedPermission.grantedById).not.toBe(owner.id);
+	});
+});
+
+/**
+ * QA round 3, item c: `runAccountDeletionTransaction`'s round trips scale
+ * with how much history the deleted user has (owned cases, teams, comments,
+ * elements, permissions granted) — vincent's review round 2 should-fix
+ * widened the interactive transaction's timeout to 30s (maxWait 10s) for
+ * exactly this reason. Asserts the outcomes are all correct at scale, not
+ * wall-clock — a slow CI runner proves nothing about correctness, and a
+ * flaky timing assertion is worse than no assertion.
+ */
+describe("deleteAccount — bulk deletion within the transaction budget (QA round 3, item c)", () => {
+	it("deletes a user owning 40 cases and 15 teams (mixed transfer/delete) and resolves every case and team correctly", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const otherMember = await createTestUser();
+
+		const CASE_COUNT = 40;
+		for (let i = 0; i < CASE_COUNT; i++) {
+			await createTestCase(owner.id, { name: `Bulk case ${i}` });
+		}
+
+		const TEAM_COUNT = 15;
+		const teamIds: string[] = [];
+		for (let i = 0; i < TEAM_COUNT; i++) {
+			const team = await createTestTeam(owner.id, { name: `Bulk team ${i}` });
+			teamIds.push(team.id);
+			// Half get a second member (transfer), half stay team-of-one (delete).
+			if (i % 2 === 0) {
+				await addTeamMember(team.id, otherMember.id);
+			}
+		}
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
+
+		const casesAfter = await prisma.assuranceCase.findMany({
+			where: { name: { startsWith: "Bulk case " } },
+		});
+		expect(casesAfter).toHaveLength(CASE_COUNT);
+		for (const c of casesAfter) {
+			// None of the 40 had another admin, so all trash rather than keep.
+			expect(c.deletedAt).not.toBeNull();
+			expect(c.createdById).not.toBe(owner.id);
+		}
+
+		const teamsAfter = await prisma.team.findMany({
+			where: { id: { in: teamIds } },
+		});
+		// Half (even i) had a second member and transferred; half (odd i)
+		// were team-of-one and were deleted outright.
+		expect(teamsAfter).toHaveLength(Math.ceil(TEAM_COUNT / 2));
+		for (const t of teamsAfter) {
+			expect(t.createdById).toBe(otherMember.id);
+		}
 	});
 });

@@ -59,11 +59,14 @@ repos:
         exclude: '\.next/'
         pass_filenames: false
 
-  # Integration tests (requires Docker PostgreSQL on port 5432)
+  # Integration tests (requires the dedicated postgres-test container from
+  # docker-compose.local.yml, port 5433 by default; see
+  # scripts/run-integration-tests.sh for the INTEGRATION_TEST_ADMIN_DATABASE_URL
+  # override)
   - repo: local
     hooks:
       - id: integration-tests
-        name: integration tests (requires Docker PostgreSQL)
+        name: integration tests (requires Docker PostgreSQL test container)
         entry: ./scripts/run-integration-tests.sh
         language: script
         files: '\.(ts|tsx)$'

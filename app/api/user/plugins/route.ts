@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import {
 	getManifestEntry,
 	listManifestPluginIds,
@@ -89,15 +89,10 @@ export async function PATCH(req: Request) {
 	try {
 		const userId = await requireAuth();
 
-		const body = await req.json();
-		const parsed = pluginToggleSchema.safeParse(body);
-		if (!parsed.success) {
-			return apiError(
-				validationError(parsed.error.issues[0]?.message ?? "Invalid input")
-			);
-		}
-
-		const { pluginId, enabled, settings } = parsed.data;
+		const { pluginId, enabled, settings } = await parseJsonBody(
+			req,
+			pluginToggleSchema
+		);
 
 		const result = await setPluginEnabledForUser(pluginId, userId, {
 			enabled,

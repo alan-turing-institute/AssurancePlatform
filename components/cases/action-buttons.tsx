@@ -4,6 +4,7 @@ import {
 	Code2,
 	Download,
 	Group,
+	HelpCircle,
 	Info,
 	Loader2,
 	Notebook,
@@ -14,7 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useExportModal, useResourcesModal } from "@/hooks/modal-hooks";
+import { useExportModal, useHelpModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
@@ -40,7 +41,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const [loading, setLoading] = useState(false);
 	const [isLayouting, setIsLayouting] = useState(false);
 
-	const { assuranceCase, layoutDirection } = useStore();
+	const { assuranceCase, layoutDirection, setCaseDetailsOpen } = useStore();
 	const router = useRouter();
 
 	const { onLayout } = actions;
@@ -53,7 +54,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 
 	const caseSharingModal = useCaseSharingModal();
 	const exportModal = useExportModal();
-	const resourcesModal = useResourcesModal();
+	const helpModal = useHelpModal();
 
 	const onDelete = async () => {
 		if (!assuranceCase) {
@@ -145,17 +146,30 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 								</Button>
 							</ActionTooltip>
 						)}
-					<ActionTooltip label="Resources">
+					<ActionTooltip label="Case Information">
 						<Button
 							className="rounded-full p-3"
-							data-testid="toolbar-resources"
-							data-tour="toolbar-resources"
-							onClick={() => resourcesModal.onOpen()}
+							data-testid="toolbar-case-information"
+							data-tour="toolbar-case-information"
+							onClick={() => setCaseDetailsOpen(true)}
 							size="icon"
 							type="button"
 						>
 							<Info className="h-5 w-5" />
-							<span className="sr-only">Resources</span>
+							<span className="sr-only">Case Information</span>
+						</Button>
+					</ActionTooltip>
+					<ActionTooltip label="Help">
+						<Button
+							className="rounded-full p-3"
+							data-testid="toolbar-help"
+							data-tour="toolbar-help"
+							onClick={() => helpModal.onOpen()}
+							size="icon"
+							type="button"
+						>
+							<HelpCircle className="h-5 w-5" />
+							<span className="sr-only">Help</span>
 						</Button>
 					</ActionTooltip>
 				</div>

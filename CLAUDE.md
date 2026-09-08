@@ -19,10 +19,10 @@ before writing similar code:
 
 | Layer | Rule | Exemplar |
 |---|---|---|
-| Route / action | Auth + validate + delegate. No business logic, no Prisma. | `app/api/case-studies/route.ts` |
-| Schema | All input validation is **zod**, in `lib/schemas/` (shared primitives in `lib/schemas/base.ts`, re-exported via `lib/schemas/index.ts`). | `lib/schemas/case-study.ts` |
-| Service | Owns all business logic, **all Prisma access**, and **all permission checks**. Returns `ServiceResult` (`types/service.ts`), never throws for expected failures. | `lib/services/case-study-service.ts` |
-| Responses | Uniform envelopes via `apiSuccess` / `apiError` (`lib/api-response.ts`) and typed errors (`lib/errors.ts`). | `app/api/case-studies/route.ts` |
+| Route / action | Auth + validate + delegate. No business logic, no Prisma. | `app/api/cases/[id]/information/route.ts` |
+| Schema | All input validation is **zod**, in `lib/schemas/` (shared primitives in `lib/schemas/base.ts`, re-exported via `lib/schemas/index.ts`). | `lib/schemas/case-information.ts` |
+| Service | Owns all business logic, **all Prisma access**, and **all permission checks**. Returns `ServiceResult` (`types/service.ts`), never throws for expected failures. | `lib/services/case-information-service.ts` |
+| Responses | Uniform envelopes via `apiSuccess` / `apiError` (`lib/api-response.ts`) and typed errors (`lib/errors.ts`). | `app/api/cases/[id]/information/route.ts` |
 
 Hard rules:
 
@@ -40,6 +40,12 @@ Hard rules:
 - **API routes:** `requireAuth()` → `userId` (throws `unauthorised()`).
   **Server actions:** `validateSession()` → `{userId, username, email}`.
 - **Never trust a client-supplied user ID** — always derive identity from the session.
+- **Client IP for rate limiting / audit logging:** use `extractClientIp` from
+  `lib/auth/extract-client-ip.ts` — the one sanctioned way to read a client
+  IP. Never read `x-forwarded-for`'s first hop or `x-real-ip` directly; both
+  are attacker-controllable in our deployment. If a CDN or Front Door is
+  ever added in front of App Service, the helper's trusted-hop policy must
+  be revisited.
 - Permission checks live in the **service layer** via `canAccessCase` / helpers
   in `lib/permissions.ts`, not in routes.
 - Return the **same error for not-found and no-permission** — prevents
@@ -109,6 +115,23 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
 - **Presentational components:** tests optional. No snapshot tests anywhere —
   test behaviour, not implementation.
 - Commands: `pnpm test:unit` / `pnpm test:integration` / `pnpm test:e2e`.
+- **`pnpm test:integration` needs its own Postgres, separate from dev's.**
+  `docker-compose.local.yml` runs two Postgres containers: `postgres` (dev's
+  database, port 5432, crash-safe, untouched) and `postgres-test` (port 5433,
+  `fsync=off` — safe only because this container's data is fully disposable,
+  recreated by the suite on every run; see that file's comment before
+  copying `fsync=off` anywhere else). `fsync=off` is what actually fixes the
+  suite's runtime: the per-test `TRUNCATE ... CASCADE`
+  (`src/__tests__/setup.integration.tsx`) was paying an fsync per truncated
+  table, every test — 600s down to ~20s. `src/__tests__/scripts/
+  test-db-config.ts` and `vitest.workspace.ts` default to port 5433 locally;
+  CI overrides both via env vars (`build.yaml`) to keep using its own
+  single, already test-only service container on 5432 instead.
+- **`postgres-test` is not started by anything else** — run
+  `docker compose -f docker-compose.local.yml up -d postgres-test` before
+  `pnpm test:integration` (or the pre-commit hook that runs it). It's a
+  separate container from dev's `postgres`, so unlike before, having dev's
+  stack up already is not enough.
 
 ## Quality gates & conventions
 
@@ -129,8 +152,13 @@ Risk-tiered, integration-heavy ("testing trophy", not pyramid):
 ## Local development
 
 - Docker dev stack: `docker-compose -f docker-compose.local.yml up -d --build`.
-  **Never `docker-compose down -v`** — it wipes the local database volume. To
-  pick up new npm packages, remove only `assuranceplatform_node_modules_dev`.
+  **Never `docker-compose down -v`** — it wipes the local database volume. The
+  image bakes source and dependencies in at build time (no source bind
+  mount), so `--build` alone picks up new npm packages and source changes;
+  there is no separate volume to clear. (This warning is about the `postgres`
+  service's `postgres_data` volume — `postgres-test`, used by
+  `pnpm test:integration`, is tmpfs-backed and disposable by design; there is
+  nothing to lose there.)
 - Docs run in production mode inside Docker (Nextra 4 dev-mode crash); for hot
   reload run `pnpm dev` on the host against Docker's Postgres.
 - Seed test users: `chris`, `alice`, `bob`, `charlie` (password from the

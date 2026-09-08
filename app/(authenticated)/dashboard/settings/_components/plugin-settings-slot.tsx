@@ -4,7 +4,7 @@ import { settingsSectionSlot } from "@/lib/plugins/slots";
  * The `settings-section` extension point (ADR 0002 v2 §2.3) — the region
  * within a plugin's row where an enabled plugin contributes its own settings
  * UI (e.g. the health plugin's scoring thresholds), wired through the
- * build-time slot registry (`[[TEA — UI extension slots]]`).
+ * build-time slot registry (tracked internally as "TEA — UI extension slots").
  *
  * No official plugin registers into this slot yet, so this renders nothing
  * in every 1.0 deployment — matching §2.3's rule that "slots render nothing

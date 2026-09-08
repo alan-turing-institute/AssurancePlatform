@@ -5,7 +5,7 @@ import { requiredString } from "./base";
  * Schema for creating a new assurance case
  */
 export const createAssuranceCaseSchema = z
-	.object({
+	.strictObject({
 		name: requiredString("Case name", 1, 255),
 		description: requiredString("Description", 1, 5000),
 		colourProfile: z
@@ -27,7 +27,7 @@ export type CreateAssuranceCaseData = z.output<
  * All fields are optional — only provided fields are updated.
  */
 export const updateAssuranceCaseSchema = z
-	.object({
+	.strictObject({
 		name: z.string().min(1).max(255).optional(),
 		description: z.string().min(1).max(5000).optional(),
 		colourProfile: z.string().optional(),

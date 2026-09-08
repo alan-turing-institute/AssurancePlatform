@@ -1,64 +1,47 @@
-name: Fallow Report
+name: Fallow Audit (retired)
 
-# Structural-quality report (dead code, duplication, cycles, complexity) on
-# changed files. Report-only: posts a PR comment, never fails the build.
-# Config: .fallowrc.json. Flip to blocking once tuned (tracked in the vault).
+# RETIRED 2026-08-25 — superseded by the `structural-quality` job in
+# build.yaml (job name "Structural Quality (blocking)", the required check).
+#
+# This workflow used to run the fallow structural-quality audit against a
+# unit-only coverage pass it generated itself. That undercounted coverage
+# for any function exercised exclusively by the integration suite (this
+# repo's testing-trophy convention for services/routes — see CLAUDE.md),
+# which scored those functions 0% and produced false CRAP-inflation
+# findings (PR #908: 5 false findings on functions covered by 11 dedicated
+# integration tests).
+#
+# The audit now runs inside build.yaml, fed by coverage merged from BOTH the
+# unit suite (`pnpm test:coverage:check`) and the integration suite
+# (`vitest --project integration --coverage`, instrumented in the existing
+# "Run integration tests" step rather than run twice). See build.yaml's
+# `structural-quality` job for the full audit invocation (kept verbatim in
+# semantics from this file's history — same fallow flags, same PR-comment
+# posting, same fail-closed exit-code handling) and its header comment for
+# how the merged-coverage input is produced.
+#
+# `on: workflow_dispatch: {}` below exists ONLY to keep this file
+# schema-valid — verified 2026-08-25 that actionlint (and GitHub Actions'
+# own schema) reject a workflow with an empty or missing `on:` section
+# ("on section should not be empty" / "on section is missing"), so a truly
+# trigger-less file is not an option. This file is kept (not deleted; a
+# repo hook blocks deletions under .github/) only so this retirement note
+# is visible in the file history at its old path.
+#
+# workflow_dispatch means this CAN technically still be run manually from
+# the Actions UI — that is harmless: the job below is named "Retired — see
+# build.yaml's Structural Quality (blocking) job", not "Structural Quality
+# (blocking)", so a manual run neither satisfies nor collides with the
+# required check. Do not add `pull_request`/`push` triggers here — that
+# would resurrect the second, coverage-blind audit this change removed.
 
 on:
-  pull_request:
-    paths:
-      - "**/*.ts"
-      - "**/*.tsx"
-      - "**/*.js"
-      - "**/*.jsx"
-      - "package.json"
-      - ".fallowrc.json"
-
-permissions:
-  contents: read
-  pull-requests: write
+  workflow_dispatch: {}
 
 jobs:
-  fallow:
-    name: Structural Quality (report-only)
+  retired:
+    name: Retired — see build.yaml's Structural Quality (blocking) job
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-
-      - name: Run fallow on changed files
-        run: |
-          npx -y fallow \
-            --changed-since "origin/${{ github.base_ref }}" \
-            --format pr-comment-github \
-            --output-file fallow-comment.md \
-            --quiet || true
-          if [ ! -s fallow-comment.md ]; then
-            echo "_fallow: no structural-quality findings in changed files._" > fallow-comment.md
-          fi
-
-      - name: Post or update PR comment
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          MARKER="<!-- fallow-id: fallow-results -->"
-          if grep -q "$MARKER" fallow-comment.md; then
-            cp fallow-comment.md comment.md
-          else
-            printf '%s\n\n' "$MARKER" | cat - fallow-comment.md > comment.md
-          fi
-          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
-            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
-          if [ -n "$COMMENT_ID" ]; then
-            gh api --method PATCH "repos/${{ github.repository }}/issues/comments/$COMMENT_ID" -F body=@comment.md > /dev/null
-          else
-            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -F body=@comment.md > /dev/null
-          fi
+      - name: No-op
+        run: echo "fallow.yml is retired; the audit runs in build.yaml's structural-quality job."

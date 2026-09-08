@@ -11,7 +11,11 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: process.env.CI ? 2 : undefined,
-	reporter: process.env.CI ? "github" : "html",
+	// The "github" reporter only annotates the PR — it never writes a
+	// playwright-report/ folder, so CI's "Upload Playwright report" step had
+	// nothing to upload, pass or fail (0 artifacts on a failed run, 2026-07-17).
+	// Keep github annotations and also emit the html report CI uploads.
+	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
 	use: {
 		baseURL: "http://localhost:3000",
 		trace: "on-first-retry",

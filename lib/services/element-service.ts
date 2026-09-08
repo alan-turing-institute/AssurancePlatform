@@ -1,15 +1,24 @@
+import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { prisma } from "@/lib/prisma";
 import type {
 	CreateElementSchemaOutput,
 	UpdateElementSchemaOutput,
 } from "@/lib/schemas/element";
+import {
+	fieldAppliesTo,
+	fieldRequiredFor,
+	validateElementName,
+} from "@/lib/schemas/element-validation";
+import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { transformToResponse } from "@/lib/transforms/element-response";
 import {
 	getDeletedDescendantIds,
 	getDescendantIds,
+	type TxClient,
 } from "@/lib/utils/tree-traversal";
 import type {
+	AssertionStatus,
 	PermissionLevel,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
@@ -32,17 +41,30 @@ export type CreateElementInput = CreateElementSchemaOutput & {
 export type UpdateElementInput = UpdateElementSchemaOutput;
 
 export interface ElementResponse {
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string;
 	assuranceCaseId: string;
+	// Dangling-citation indicator: true when citedElementId was nullified
+	// because the cited element was deleted/detached (see deleteElement /
+	// detachElement below). Omitted (not false) when there is nothing to flag.
+	citationDangling?: boolean;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
 	comments?: unknown[];
 	context?: string[];
 	createdDate: string;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	defeatsElementId?: string | null;
 	description: string;
 	goalId?: string | null;
 	id: string;
 	inSandbox: boolean;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	isDefeater?: boolean;
 	justification?: string;
 	level?: number;
+	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
+	moduleReferenceId?: string | null;
 	name: string;
 	propertyClaimId?: string | string[] | null;
 	strategyId?: string | null;
@@ -61,6 +83,344 @@ async function validateCaseAccess(
 ): Promise<boolean> {
 	const { canAccessCase } = await import("@/lib/permissions");
 	return canAccessCase({ userId, caseId }, requiredLevel);
+}
+
+/**
+ * ADR 0004 D3 write rule: `assertionStatus` is author-declared and must
+ * never be machine-overwritten. Case-level permission (`validateCaseAccess`)
+ * is necessary but not sufficient — an integration's system user can hold a
+ * genuine EDIT grant on a case (`grantIntegrationCaseAccess`) and would
+ * otherwise pass that check identically to a human author. This is the
+ * dedicated, defense-in-depth check that keeps the standard element
+ * mutation path (`createElement`/`updateElement`) as the ONLY route that can
+ * set the field, regardless of what future machine/plugin routes end up
+ * calling into this service. Returns an error string (matching this
+ * service's `ServiceResult` convention) when the acting user is a system
+ * user; `undefined` when the write may proceed.
+ */
+async function guardAssertionStatusWrite(
+	userId: string,
+	knownIsSystemUser?: boolean
+): Promise<string | undefined> {
+	const isSystemUser =
+		knownIsSystemUser ?? (await isSystemUserPrincipal(userId));
+	if (isSystemUser) {
+		return "Permission denied: assertionStatus can only be set by a case author, not a machine or integration principal";
+	}
+	return;
+}
+
+/**
+ * Whether the acting user is a system/machine (integration) principal.
+ * Exported so batch-style callers that validate many changes for the same
+ * userId (e.g. case-batch-update-service.ts) can resolve this once per
+ * batch and pass it into `enforceAssertionStatusRules` via
+ * `knownIsSystemUser`, instead of re-querying it once per changed element.
+ */
+export async function isSystemUserPrincipal(userId: string): Promise<boolean> {
+	const actor = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { isSystemUser: true },
+	});
+	return Boolean(actor?.isSystemUser);
+}
+
+/**
+ * ADR 0004 D5: `citedElementId` is applicable to AWAY_GOAL only. On create,
+ * the elementType is always known and the Prisma extension's
+ * `cleanElementDataForType` (lib/prisma.ts) would silently strip an
+ * inapplicable value anyway — but a silent drop is a worse UX than an
+ * explicit rejection, so this is checked here too for a consistent error on
+ * both routes. On update, `buildUpdateData` never puts `elementType` in the
+ * Prisma payload, so the extension's cleaning step is a no-op there — this
+ * check is the ONLY enforcement point on the update path.
+ */
+function rejectCitedElementIdIfNotApplicable(
+	elementType: string,
+	citedElementId: string | null | undefined
+): string | undefined {
+	if (citedElementId === undefined) {
+		return;
+	}
+	if (!fieldAppliesTo("citedElementId", elementType)) {
+		return "citedElementId is only applicable to AWAY_GOAL elements";
+	}
+	return;
+}
+
+/**
+ * ADR 0004 D3: AS_CITED is transitively DERIVED by the exporter from the
+ * cited element's own status (see build-tree.ts) — it is never author-
+ * declared. This is a value constraint (applies to every acting principal,
+ * including a genuine human author), so it is checked independently of
+ * `guardAssertionStatusWrite`, which is a principal constraint. No live
+ * exploit today (the D5 auto-derivation work hasn't landed), but the write
+ * rule must hold before these routes open to authors.
+ */
+function rejectDeclaredAsCited(
+	status: AssertionStatus | null | undefined
+): string | undefined {
+	if (status === "AS_CITED") {
+		return "assertionStatus cannot be set to AS_CITED: it is derived automatically from the cited element's status, not author-declared";
+	}
+	return;
+}
+
+/**
+ * ADR 0004 D5: `citedElementId` must reference an existing, non-deleted
+ * element, and an element cannot cite itself. `ownElementId` is only
+ * available (and only checked) on update — a not-yet-created element has no
+ * id to collide with.
+ */
+async function validateCitedElementId(
+	citedElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (!citedElementId) {
+		return;
+	}
+	if (ownElementId && citedElementId === ownElementId) {
+		return "citedElementId cannot reference the element itself";
+	}
+	const target = await prisma.assuranceElement.findFirst({
+		where: { id: citedElementId, deletedAt: null },
+		select: { id: true },
+	});
+	if (!target) {
+		return "citedElementId must reference an existing element";
+	}
+	return;
+}
+
+/**
+ * ADR 0004 D5: runs both citedElementId guards (applicability, then
+ * existence/self-citation) in the order createElement and updateElement both
+ * need — extracted so the checks live in exactly one place instead of being
+ * duplicated verbatim at each call site. `ownElementId` is only meaningful
+ * on update (see validateCitedElementId above).
+ */
+async function enforceCitedElementIdRules(
+	elementType: string,
+	citedElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (citedElementId === undefined) {
+		return;
+	}
+	const applicabilityError = rejectCitedElementIdIfNotApplicable(
+		elementType,
+		citedElementId
+	);
+	if (applicabilityError) {
+		return applicabilityError;
+	}
+	return await validateCitedElementId(citedElementId, ownElementId);
+}
+
+/**
+ * Dialogical reasoning (defeaters): `defeatsElementId` applies to every
+ * element type (unlike `citedElementId`, which is AWAY_GOAL-only and
+ * deliberately cross-case per ADR 0004 D5) and, unlike citations, must stay
+ * inside the case it is written from — this is a same-case FK, not a
+ * cross-case reference. Parity with the batch endpoint's ownership check
+ * (`validateElementOwnership` in case-batch-update-service.ts): target must
+ * exist, be non-deleted, and belong to `caseId`; on update it additionally
+ * cannot be the element itself. The existence and case-membership checks are
+ * combined into a single query (`caseId` in the `where`) so a foreign-case
+ * id and a nonexistent id are indistinguishable in the response — matching
+ * `validateCitedElementId`'s anti-enumeration shape, just scoped to the case
+ * instead of scoped to nothing.
+ */
+async function validateDefeatsElementId(
+	caseId: string,
+	defeatsElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (!defeatsElementId) {
+		return;
+	}
+	if (ownElementId && defeatsElementId === ownElementId) {
+		return "defeatsElementId cannot reference the element itself";
+	}
+	const target = await prisma.assuranceElement.findFirst({
+		where: { id: defeatsElementId, deletedAt: null, caseId },
+		select: { id: true },
+	});
+	if (!target) {
+		return "defeatsElementId must reference an existing element in this case";
+	}
+	return;
+}
+
+/**
+ * Runs the defeatsElementId guard in the order createElement and
+ * updateElement both need. Only one check today (no applicability
+ * restriction — `fieldAppliesTo("defeatsElementId", ...)` is true for every
+ * element type — so this is a thin wrapper today, kept for symmetry with
+ * `enforceCitedElementIdRules`/`enforceModuleReferenceIdRules` and as the
+ * single extension point if a future applicability rule is added.
+ */
+async function enforceDefeatsElementIdRules(
+	caseId: string,
+	defeatsElementId: string | null | undefined,
+	ownElementId?: string
+): Promise<string | undefined> {
+	if (defeatsElementId === undefined) {
+		return;
+	}
+	return await validateDefeatsElementId(caseId, defeatsElementId, ownElementId);
+}
+
+/**
+ * `parentId` must reference an existing, non-deleted element in the SAME
+ * case (`caseId`). This is the create-path counterpart to `updateElement`'s
+ * existing new-parent check (~line 960 below) — that check already scopes a
+ * parent CHANGE to the same case; this closes the equivalent gap on
+ * CREATE, where `parentId` was previously written straight into the
+ * `AssuranceElement.create` call (and, for EVIDENCE, into `EvidenceLink`)
+ * with no case-membership check at all. Found during the element-service.ts
+ * unscoped-reference audit (TEA — Element-service reference integrity).
+ * Same anti-enumeration shape as `validateDefeatsElementId`: existence and
+ * case-membership are one query, so a foreign-case id and a nonexistent id
+ * both come back "not found".
+ */
+async function validateParentIdInCase(
+	caseId: string,
+	parentId: string
+): Promise<string | undefined> {
+	const parent = await prisma.assuranceElement.findFirst({
+		where: { id: parentId, deletedAt: null, caseId },
+		select: { id: true },
+	});
+	if (!parent) {
+		return "Parent element not found";
+	}
+	return;
+}
+
+/**
+ * `moduleReferenceId` is applicable to MODULE and AWAY_GOAL only
+ * (FIELD_APPLICABILITY, lib/schemas/element-validation.ts). Checked whenever
+ * the field is explicitly present in the input, mirroring
+ * `rejectCitedElementIdIfNotApplicable` above — a silent drop is a worse UX
+ * than an explicit rejection, and the single-element route has no
+ * discriminated-union schema (unlike the batch path's AwayGoalSchema/
+ * ModuleSchema) to lean on for this.
+ */
+function rejectModuleReferenceIdIfNotApplicable(
+	elementType: string,
+	moduleReferenceId: string | null | undefined
+): string | undefined {
+	if (moduleReferenceId === undefined) {
+		return;
+	}
+	if (!fieldAppliesTo("moduleReferenceId", elementType)) {
+		return "moduleReferenceId is only applicable to MODULE and AWAY_GOAL elements";
+	}
+	return;
+}
+
+/**
+ * `moduleReferenceId` is required for MODULE and AWAY_GOAL on create
+ * (REQUIRED_FIELDS, lib/schemas/element-validation.ts — the same rule the
+ * batch path enforces via AwayGoalSchema/ModuleSchema's non-optional
+ * `z.string().uuid()`). Create-only: the batch UPDATE path
+ * (case-batch-update-service.ts) allows changing/clearing the field without
+ * a requiredness guard, so `updateElement` below does not call this.
+ */
+function rejectMissingModuleReferenceId(
+	elementType: string,
+	moduleReferenceId: string | null | undefined
+): string | undefined {
+	if (!fieldRequiredFor("moduleReferenceId", elementType)) {
+		return;
+	}
+	if (!moduleReferenceId) {
+		return "moduleReferenceId is required for MODULE and AWAY_GOAL elements";
+	}
+	return;
+}
+
+/**
+ * `moduleReferenceId` must reference an existing, non-trashed case.
+ * Mirrors `validateCitedElementId`'s existence check (ADR 0004 D5) — the
+ * batch path relies on the DB foreign key to reject a bad reference (which
+ * would surface as an opaque 500), so this route holds itself to the
+ * stricter, already-established precedent instead.
+ */
+async function validateModuleReferenceId(
+	moduleReferenceId: string | null | undefined
+): Promise<string | undefined> {
+	if (!moduleReferenceId) {
+		return;
+	}
+	const target = await prisma.assuranceCase.findFirst({
+		where: { id: moduleReferenceId, deletedAt: null },
+		select: { id: true },
+	});
+	if (!target) {
+		return "moduleReferenceId must reference an existing case";
+	}
+	return;
+}
+
+/**
+ * Runs the moduleReferenceId guards (applicability, then — create only —
+ * requiredness, then existence) in the order createElement and updateElement
+ * both need. Mirrors `enforceCitedElementIdRules`'s extraction rationale.
+ */
+async function enforceModuleReferenceIdRules(
+	elementType: string,
+	moduleReferenceId: string | null | undefined,
+	options: { requireOnCreate: boolean }
+): Promise<string | undefined> {
+	const applicabilityError = rejectModuleReferenceIdIfNotApplicable(
+		elementType,
+		moduleReferenceId
+	);
+	if (applicabilityError) {
+		return applicabilityError;
+	}
+	if (options.requireOnCreate) {
+		const requiredError = rejectMissingModuleReferenceId(
+			elementType,
+			moduleReferenceId
+		);
+		if (requiredError) {
+			return requiredError;
+		}
+	}
+	return await validateModuleReferenceId(moduleReferenceId);
+}
+
+/**
+ * ADR 0004 D3: runs both assertionStatus write guards (value constraint via
+ * `rejectDeclaredAsCited`, then principal constraint via
+ * `guardAssertionStatusWrite`) in the order createElement and updateElement
+ * both need — extracted so the checks live in exactly one place instead of
+ * being duplicated verbatim at each call site (mirrors
+ * `enforceCitedElementIdRules` above, and keeps both mutation paths under
+ * the cognitive-complexity budget). Exported so other write surfaces that
+ * must obey the same D3 rule (currently: case-batch-update-service.ts) can
+ * reuse it rather than re-implementing the principal/value checks.
+ *
+ * `knownIsSystemUser` lets a batch caller resolve the principal check once
+ * for the whole batch (constant per userId) instead of once per element —
+ * see `isSystemUserPrincipal`.
+ */
+export async function enforceAssertionStatusRules(
+	assertionStatus: AssertionStatus | null | undefined,
+	userId: string,
+	knownIsSystemUser?: boolean
+): Promise<string | undefined> {
+	if (assertionStatus === undefined) {
+		return;
+	}
+	const citedError = rejectDeclaredAsCited(assertionStatus);
+	if (citedError) {
+		return citedError;
+	}
+	return await guardAssertionStatusWrite(userId, knownIsSystemUser);
 }
 
 /**
@@ -231,10 +591,49 @@ async function generateElementName(
 }
 
 /**
+ * Minimal {level, elementType} shape needed to decide a PROPERTY_CLAIM
+ * child's level from a parent or grandparent row. Shared between the
+ * single-element create path here and the batch/JSON-editor path
+ * (case-batch-update-service.ts) so both compute levels the same way.
+ */
+export interface LevelRuleParentInfo {
+	elementType: string;
+	level: number | null;
+}
+
+/**
+ * Single source of truth for the property-claim level rule: a PROPERTY_CLAIM
+ * parent yields parent.level+1 (defaulting an unset parent level to 1); a
+ * STRATEGY parent whose OWN parent is a PROPERTY_CLAIM is transparent —
+ * strategies don't carry a level themselves, so the child's level is derived
+ * from that grandparent instead (grandparent.level+1); anything else
+ * (including an unresolvable parent) yields 1. Takes pre-fetched info only —
+ * no DB calls, so both the single-element and batch paths can call it after
+ * their own (very different) fetch strategies.
+ */
+export function calculateLevelFromParentChain(
+	parentInfo: LevelRuleParentInfo | null | undefined,
+	grandparentInfo: LevelRuleParentInfo | null | undefined
+): number {
+	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
+		return (parentInfo.level ?? 1) + 1;
+	}
+	if (
+		parentInfo?.elementType === "STRATEGY" &&
+		grandparentInfo?.elementType === "PROPERTY_CLAIM"
+	) {
+		return (grandparentInfo.level ?? 1) + 1;
+	}
+	return 1;
+}
+
+/**
  * Calculates level for property claims and retrieves parent info.
  *
  * Strategies are transparent: if the parent is a strategy whose parent is a
  * property claim, the level is derived from that ancestor claim (one hop up).
+ * The rule itself lives in `calculateLevelFromParentChain`; this function
+ * only owns the fetching (parent, then grandparent if needed).
  */
 async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	level: number;
@@ -252,23 +651,23 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 		parentId?: string | null;
 	};
 
-	if (parentInfo?.elementType === "PROPERTY_CLAIM") {
-		return { level: (parentInfo.level || 1) + 1, parentInfo };
-	}
-
-	// Transparent strategy: look one hop further to find ancestor property claim
+	let grandparentInfo: LevelRuleParentInfo | undefined;
 	if (parentInfo?.elementType === "STRATEGY" && parentInfo.parentId) {
 		const grandparent = await prisma.assuranceElement.findFirst({
 			where: { id: parentInfo.parentId, deletedAt: null },
 			select: { level: true, elementType: true, name: true },
 		});
-
-		if (grandparent?.elementType === "PROPERTY_CLAIM") {
-			return { level: (grandparent.level || 1) + 1, parentInfo };
-		}
+		grandparentInfo = grandparent ?? undefined;
 	}
 
-	return { level: 1, parentInfo };
+	const level = calculateLevelFromParentChain(
+		parentInfo
+			? { elementType: parentInfo.elementType, level: parentInfo.level ?? null }
+			: undefined,
+		grandparentInfo
+	);
+
+	return { level, parentInfo };
 }
 
 /**
@@ -340,6 +739,20 @@ async function createElementInDatabase(
 			justification: input.justification,
 			context: input.context ?? [],
 			level,
+			assertionStatus: input.assertionStatus,
+			// Element-level citation (ADR 0004 D5) — applicability, existence,
+			// and self-citation are validated in createElement before this
+			// function is called.
+			citedElementId: input.citedElementId,
+			// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
+			// and existence are validated in createElement before this function
+			// is called.
+			moduleReferenceId: input.moduleReferenceId,
+			// Dialogical reasoning (defeaters) — same-case existence and
+			// self-reference are validated in createElement before this
+			// function is called.
+			isDefeater: input.isDefeater ?? false,
+			defeatsElementId: input.defeatsElementId,
 			createdById: userId,
 		},
 		include: {
@@ -364,6 +777,88 @@ async function createElementInDatabase(
 }
 
 /**
+ * Runs every create-path reference/uniqueness guard createElement needs, in
+ * the exact order it previously ran them inline: parentId case-membership,
+ * single-goal uniqueness, moduleReferenceId, citedElementId, then
+ * defeatsElementId. Extracted (rather than left as five sequential
+ * `if`-blocks in createElement) to keep createElement under the
+ * cognitive-complexity budget; order is preserved byte-for-byte because nothing
+ * here changes which check fires first when more than one would fail.
+ */
+async function validateElementReferences(
+	caseId: string,
+	elementType: PrismaElementType,
+	parentId: string | null | undefined,
+	input: CreateElementInput
+): Promise<{ error: string } | undefined> {
+	if (parentId) {
+		const parentError = await validateParentIdInCase(caseId, parentId);
+		if (parentError) {
+			return { error: parentError };
+		}
+	}
+
+	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
+		return { error: "A case can only have one goal claim" };
+	}
+
+	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+		elementType,
+		input.moduleReferenceId,
+		{ requireOnCreate: true }
+	);
+	if (moduleReferenceIdError) {
+		return { error: moduleReferenceIdError };
+	}
+
+	const citedElementIdError = await enforceCitedElementIdRules(
+		elementType,
+		input.citedElementId
+	);
+	if (citedElementIdError) {
+		return { error: citedElementIdError };
+	}
+
+	const defeatsElementIdError = await enforceDefeatsElementIdRules(
+		caseId,
+		input.defeatsElementId
+	);
+	if (defeatsElementIdError) {
+		return { error: defeatsElementIdError };
+	}
+
+	return;
+}
+
+/**
+ * TEA-syntax name-format guard (design note "TEA — Element Name Prefix
+ * Validation"), shared by `createElement` and `updateElement` — the two
+ * choke points every element mutation flows through. A no-op when `name` is
+ * falsy (null/undefined/empty): names stay optional, and the rule only
+ * applies when one is actually given. Resolves the acting user's enabled
+ * plugin set itself so both call sites stay a single `if` check.
+ */
+async function enforceElementNameFormat(
+	elementType: string,
+	name: string | null | undefined,
+	userId: string
+): Promise<{ error: string } | undefined> {
+	if (!name) {
+		return;
+	}
+	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
+	const nameValidation = validateElementName(
+		elementType,
+		name,
+		enabledPluginIds
+	);
+	if (!nameValidation.valid) {
+		return { error: nameValidation.error };
+	}
+	return;
+}
+
+/**
  * Creates a new element in a case
  */
 export async function createElement(
@@ -380,17 +875,51 @@ export async function createElement(
 		return { error: "Permission denied" };
 	}
 
+	const assertionStatusError = await enforceAssertionStatusRules(
+		input.assertionStatus,
+		userId
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
+	}
+
 	const elementType = toPrismaType(input.elementType);
+	// `elementTypeSchema` (lib/schemas/element.ts) only checks `type`/
+	// `elementType` is a non-empty string, and `toPrismaType` casts anything
+	// it doesn't recognise straight through (upper-cased) — so an
+	// unrecognised type reaches here as a value that LOOKS like a
+	// PrismaElementType but isn't one the prefix registry knows. Reject it
+	// now, before it reaches `generateElementName` -> `toPrefix`, which
+	// throws for exactly this case (an uncaught throw here would surface as
+	// an unmapped 500, not a validation error).
+	if (!getCorePrefix(elementType)) {
+		return { error: `Unknown element type '${input.elementType}'` };
+	}
 	const parentId = resolveParentId(input);
 
-	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
-		return { error: "A case can only have one goal claim" };
+	const referenceError = await validateElementReferences(
+		caseId,
+		elementType,
+		parentId,
+		input
+	);
+	if (referenceError) {
+		return referenceError;
 	}
 
 	const { level, parentInfo } =
 		elementType === "PROPERTY_CLAIM" && parentId
 			? await calculatePropertyClaimLevel(parentId)
 			: { level: undefined, parentInfo: null };
+
+	const nameFormatError = await enforceElementNameFormat(
+		elementType,
+		input.name,
+		userId
+	);
+	if (nameFormatError) {
+		return nameFormatError;
+	}
 
 	const elementName =
 		input.name ||
@@ -488,6 +1017,25 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.inSandbox !== undefined) {
 		updateData.inSandbox = input.inSandbox;
 	}
+	if (input.assertionStatus !== undefined) {
+		updateData.assertionStatus = input.assertionStatus;
+	}
+	if (input.citedElementId !== undefined) {
+		updateData.citedElementId = input.citedElementId;
+		// The author explicitly set (or cleared) the citation — whatever
+		// dangling flag was left over from a previous deletion/detachment no
+		// longer describes the current state, declared or not.
+		updateData.citationDangling = false;
+	}
+	if (input.moduleReferenceId !== undefined) {
+		updateData.moduleReferenceId = input.moduleReferenceId;
+	}
+	if (input.isDefeater !== undefined) {
+		updateData.isDefeater = input.isDefeater;
+	}
+	if (input.defeatsElementId !== undefined) {
+		updateData.defeatsElementId = input.defeatsElementId;
+	}
 
 	return updateData;
 }
@@ -529,6 +1077,129 @@ async function validateParentChange(
 }
 
 /**
+ * Validates and applies a parentId change to `updateData` IN PLACE, for
+ * `updateElement`'s move-operation branch: existence/soft-delete/same-case
+ * checks, then the circular-reference guard, then (for a property claim)
+ * recalculating level. Only called when `newParentId !== undefined` —
+ * `updateElement` itself still owns that "is this change present at all"
+ * decision, since `undefined` (no parentId field in the input) means
+ * nothing here should run at all, not even the null/detach branch.
+ */
+async function applyParentChangeForUpdate(
+	elementId: string,
+	existing: { caseId: string; elementType: PrismaElementType },
+	newParentId: string | null,
+	updateData: Record<string, unknown>
+): Promise<{ error: string } | undefined> {
+	if (newParentId === null) {
+		// Detaching — allowed unconditionally.
+		updateData.parentId = null;
+		return;
+	}
+
+	// Validate new parent exists, is not deleted, and belongs to the same case
+	const newParent = await prisma.assuranceElement.findUnique({
+		where: { id: newParentId },
+		select: { caseId: true, deletedAt: true },
+	});
+	if (
+		!newParent ||
+		newParent.deletedAt ||
+		newParent.caseId !== existing.caseId
+	) {
+		return { error: "Element not found" };
+	}
+
+	const validationError = await validateParentChange(elementId, newParentId);
+	if (validationError) {
+		return { error: validationError };
+	}
+
+	updateData.parentId = newParentId;
+
+	// Recalculate level if it's a property claim
+	if (existing.elementType === "PROPERTY_CLAIM") {
+		updateData.level = await calculateNewLevel(newParentId);
+	}
+
+	return;
+}
+
+/**
+ * Runs every field-level validation guard `updateElement` needs before it
+ * touches the update itself, in the exact order it previously ran them
+ * inline: assertionStatus, moduleReferenceId, citedElementId,
+ * defeatsElementId, then name format. Extracted (mirroring
+ * `validateElementReferences`'s role for `createElement`) to keep
+ * `updateElement` under the cognitive-complexity budget; order is preserved
+ * byte-for-byte because nothing here changes which check fires first when
+ * more than one would fail.
+ */
+async function validateUpdateElementFields(
+	elementId: string,
+	existing: { caseId: string; elementType: PrismaElementType },
+	input: UpdateElementInput,
+	userId: string
+): Promise<{ error: string } | undefined> {
+	// ADR 0004 D3 write rule: assertionStatus is author-declared only —
+	// see guardAssertionStatusWrite's docstring for why case-level EDIT
+	// access alone isn't a sufficient gate.
+	const assertionStatusError = await enforceAssertionStatusRules(
+		input.assertionStatus,
+		userId
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
+	}
+
+	// moduleReferenceId is MODULE/AWAY_GOAL-only and must reference an
+	// existing case. No requiredness check on update — mirrors the batch
+	// update path (case-batch-update-service.ts), see
+	// enforceModuleReferenceIdRules's docstring.
+	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
+		existing.elementType,
+		input.moduleReferenceId,
+		{ requireOnCreate: false }
+	);
+	if (moduleReferenceIdError) {
+		return { error: moduleReferenceIdError };
+	}
+
+	// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
+	// existing element, and cannot reference the element itself.
+	const citedElementIdError = await enforceCitedElementIdRules(
+		existing.elementType,
+		input.citedElementId,
+		elementId
+	);
+	if (citedElementIdError) {
+		return { error: citedElementIdError };
+	}
+
+	// Dialogical reasoning (defeaters): defeatsElementId must stay inside
+	// the element's own case (existing.caseId), unlike citedElementId
+	// above — see enforceDefeatsElementIdRules's docstring.
+	const defeatsElementIdError = await enforceDefeatsElementIdRules(
+		existing.caseId,
+		input.defeatsElementId,
+		elementId
+	);
+	if (defeatsElementIdError) {
+		return { error: defeatsElementIdError };
+	}
+
+	// Name-format validation (TEA-syntax prefix). `enforceElementNameFormat`
+	// is a no-op when `input.name` is `undefined` — the "not changing it"
+	// case (and, per `optionalString`'s transform, also what an explicit
+	// clear collapses to), so there's nothing new to validate.
+	return await enforceElementNameFormat(
+		existing.elementType,
+		input.name,
+		userId
+	);
+}
+
+/**
  * Updates an existing element
  */
 export async function updateElement(
@@ -557,44 +1228,32 @@ export async function updateElement(
 			return { error: "Element not found" };
 		}
 
+		const fieldError = await validateUpdateElementFields(
+			elementId,
+			existing,
+			input,
+			userId
+		);
+		if (fieldError) {
+			return fieldError;
+		}
+
 		// Build update data from input fields
 		const updateData = buildUpdateData(input);
 
-		// Handle parent change (for move operations)
+		// Handle parent change (for move operations) — `undefined` means the
+		// input didn't touch parentId at all, so nothing runs.
 		const newParentId = resolveParentId(input);
-		if (newParentId !== undefined && newParentId !== null) {
-			// Validate new parent exists, is not deleted, and belongs to the same case
-			const newParent = await prisma.assuranceElement.findUnique({
-				where: { id: newParentId },
-				select: { caseId: true, deletedAt: true },
-			});
-
-			if (
-				!newParent ||
-				newParent.deletedAt ||
-				newParent.caseId !== existing.caseId
-			) {
-				return { error: "Element not found" };
-			}
-
-			// Validate parent change doesn't create circular reference
-			const validationError = await validateParentChange(
+		if (newParentId !== undefined) {
+			const parentChangeError = await applyParentChangeForUpdate(
 				elementId,
-				newParentId
+				existing,
+				newParentId,
+				updateData
 			);
-			if (validationError) {
-				return { error: validationError };
+			if (parentChangeError) {
+				return parentChangeError;
 			}
-
-			updateData.parentId = newParentId;
-
-			// Recalculate level if it's a property claim
-			if (existing.elementType === "PROPERTY_CLAIM" && newParentId) {
-				updateData.level = await calculateNewLevel(newParentId);
-			}
-		} else if (newParentId === null) {
-			// Allow setting parent to null (detaching)
-			updateData.parentId = null;
 		}
 
 		const element = await prisma.assuranceElement.update({
@@ -612,6 +1271,29 @@ export async function updateElement(
 		console.error("Failed to update element:", error);
 		return { error: "Failed to update element" };
 	}
+}
+
+/**
+ * ADR 0004 D5 integrity rule (ruled by cid + Chris, 2026-07-19): when a cited
+ * element is deleted or detached from its case, citing elements are NOT left
+ * pointing at a dangling id — `citedElementId` is nullified and
+ * `citationDangling` is set so the citing element's own response can surface
+ * a "this citation broke" indicator (consistent with the rest of the
+ * codebase's soft-delete conventions: nothing is silently lost, but nothing
+ * blocks the deletion/detach either). Takes the Prisma client or an open
+ * transaction so callers can run it atomically with the delete/detach itself.
+ */
+async function nullifyDanglingCitations(
+	tx: TxClient,
+	citedElementIds: string[]
+): Promise<void> {
+	if (citedElementIds.length === 0) {
+		return;
+	}
+	await tx.assuranceElement.updateMany({
+		where: { citedElementId: { in: citedElementIds } },
+		data: { citedElementId: null, citationDangling: true },
+	});
 }
 
 /**
@@ -642,7 +1324,8 @@ export async function deleteElement(
 			return { error: "Element not found" };
 		}
 
-		// Gather descendants and soft-delete atomically
+		// Gather descendants, soft-delete, and nullify+flag any dangling
+		// citations (ADR 0004 D5) atomically
 		await prisma.$transaction(async (tx) => {
 			const descendantIds = await getDescendantIds(elementId, tx);
 			const allIds = [elementId, ...descendantIds];
@@ -650,6 +1333,11 @@ export async function deleteElement(
 				where: { id: { in: allIds } },
 				data: { deletedAt: new Date(), deletedById: userId },
 			});
+			// Citations are cross-case by design (an AWAY_GOAL cites an element
+			// in a DIFFERENT case), so this deliberately isn't scoped to
+			// `existing.caseId` — every deleted id (the element and its
+			// descendants) may be cited from anywhere.
+			await nullifyDanglingCitations(tx, allIds);
 		});
 
 		return { data: true };
@@ -687,13 +1375,23 @@ export async function detachElement(
 			return { error: "Element not found" };
 		}
 
-		// Move to sandbox by clearing parent and setting inSandbox
-		await prisma.assuranceElement.update({
-			where: { id: elementId },
-			data: {
-				parentId: null,
-				inSandbox: true,
-			},
+		// Move to sandbox, clear parent, and nullify+flag any dangling
+		// citations (ADR 0004 D5) atomically — a detached element is no
+		// longer part of the case's argument tree, so a citation pointing at
+		// it is just as broken as one pointing at a deleted element. A detach
+		// moves the WHOLE subtree out of the tree (children stay parented to
+		// the detached element — see attachElement's cascade below), so the
+		// sweep covers descendants too, the same way deleteElement's does.
+		await prisma.$transaction(async (tx) => {
+			await tx.assuranceElement.update({
+				where: { id: elementId },
+				data: {
+					parentId: null,
+					inSandbox: true,
+				},
+			});
+			const descendantIds = await getDescendantIds(elementId, tx);
+			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
 		});
 
 		return { data: true };
@@ -706,6 +1404,15 @@ export async function detachElement(
 /**
  * Attaches an element (moves from sandbox to parent)
  * Also cascades to all descendants, removing them from sandbox
+ *
+ * ADR 0004 D5 scope call: attaching (or restoring, in restoreElement below)
+ * does NOT re-heal citations that were nullified and flagged
+ * (`citationDangling`) when this element or a descendant was previously
+ * detached/deleted. Re-attachment is not the same fact as "the citation is
+ * valid again" — the citing AWAY_GOAL's citedElementId was already cleared,
+ * and silently re-populating it here would restore a reference the author
+ * never re-declared. Pinned by the "restore does not re-heal citedElementId"
+ * test in element-citation-integrity.test.ts.
  */
 export async function attachElement(
 	userId: string,

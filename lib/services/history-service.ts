@@ -34,7 +34,8 @@ export async function applyUndo(command: HistoryCommand): Promise<void> {
 						assumption: command.before.assumption,
 						justification: command.before.justification,
 						context: command.before.context,
-						in_sandbox: command.before.inSandbox,
+						inSandbox: command.before.inSandbox,
+						assertionStatus: command.before.assertionStatus,
 					}),
 				});
 			}
@@ -109,7 +110,8 @@ export async function applyRedo(command: HistoryCommand): Promise<void> {
 						assumption: command.after.assumption,
 						justification: command.after.justification,
 						context: command.after.context,
-						in_sandbox: command.after.inSandbox,
+						inSandbox: command.after.inSandbox,
+						assertionStatus: command.after.assertionStatus,
 					}),
 				});
 			}
@@ -211,6 +213,9 @@ export function createSnapshot(data: Record<string, unknown>): ElementSnapshot {
 		justification: data.justification as string | undefined,
 		context: data.context as string[] | undefined,
 		inSandbox: data.inSandbox as boolean | undefined,
+		// Per-assertion status (ADR 0004 D3) — undo/redo must round-trip this
+		// like any other author-editable field.
+		assertionStatus: data.assertionStatus as string | undefined,
 	};
 }
 

@@ -52,23 +52,48 @@ interface CasePermissionResult {
 	permission: PermissionLevel | null;
 }
 
+interface CasePermissionOptions {
+	/**
+	 * When true, skips the trash-invisibility gate: a soft-deleted case is
+	 * treated as visible and the full permission logic below still runs.
+	 * The permission check itself is never bypassed — only the "trashed
+	 * cases don't exist" gate is opted out of. Used by `softDeleteCase`,
+	 * which needs to distinguish "already in trash" from "not found".
+	 */
+	includeTrashed?: boolean;
+}
+
 /**
  * Gets a user's effective permission level on a case using Prisma.
  * Combines direct user permissions and team-based permissions.
+ *
+ * Soft-deleted (trashed) cases are treated as not-found by default: the
+ * same response shape is returned for "no such case" and "case is in
+ * trash", per the resource-enumeration rule. Pass
+ * `{ includeTrashed: true }` to opt a caller into seeing trashed cases —
+ * the permission logic below still applies in full; only the
+ * trash-invisibility gate is skipped.
  */
 async function getCasePermissionFromPrisma(
 	userId: string,
-	caseId: string
+	caseId: string,
+	options?: CasePermissionOptions
 ): Promise<CasePermissionResult> {
 	const { prisma } = await import("@/lib/prisma");
 
 	// First, check if user is the case creator (implicit owner)
 	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
-		select: { createdById: true },
+		select: { createdById: true, deletedAt: true },
 	});
 
 	if (!assuranceCase) {
+		return { hasAccess: false, permission: null, isOwner: false };
+	}
+
+	if (assuranceCase.deletedAt && !options?.includeTrashed) {
+		// Same shape as "not found" — prevents distinguishing a trashed case
+		// from a nonexistent one via the permission response.
 		return { hasAccess: false, permission: null, isOwner: false };
 	}
 
@@ -119,25 +144,39 @@ async function getCasePermissionFromPrisma(
 
 /**
  * Gets a user's effective permission level on a case.
+ *
+ * By default, a soft-deleted (trashed) case is invisible: the result is
+ * identical to a nonexistent case. Pass `{ includeTrashed: true }` to see
+ * a trashed case's permissions — the permission logic still applies in
+ * full, only the trash-invisibility gate is skipped.
  */
-export async function getCasePermission({
-	userId,
-	caseId,
-}: {
-	userId: string;
-	caseId: string;
-}): Promise<CasePermissionResult> {
-	return await getCasePermissionFromPrisma(userId, caseId);
+export async function getCasePermission(
+	{
+		userId,
+		caseId,
+	}: {
+		userId: string;
+		caseId: string;
+	},
+	options?: CasePermissionOptions
+): Promise<CasePermissionResult> {
+	return await getCasePermissionFromPrisma(userId, caseId, options);
 }
 
 /**
  * Checks if a user can perform a specific action on a case.
+ *
+ * By default, a soft-deleted (trashed) case is treated as inaccessible to
+ * everyone, including its creator and any grantee. Pass
+ * `{ includeTrashed: true }` to opt in to seeing trashed cases — the
+ * permission check itself still runs in full.
  */
 export async function canAccessCase(
 	{ userId, caseId }: { userId: string; caseId: string },
-	requiredPermission: PermissionLevel = "VIEW"
+	requiredPermission: PermissionLevel = "VIEW",
+	options?: CasePermissionOptions
 ): Promise<boolean> {
-	const result = await getCasePermission({ userId, caseId });
+	const result = await getCasePermission({ userId, caseId }, options);
 	if (!(result.hasAccess && result.permission)) {
 		return false;
 	}

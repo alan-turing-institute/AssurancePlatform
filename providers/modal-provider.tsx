@@ -39,13 +39,8 @@ const PermissionsModal = dynamic(
 		),
 	{ ssr: false }
 );
-const PublishModal = dynamic(
-	() => import("@/components/modals/publish-modal").then((m) => m.PublishModal),
-	{ ssr: false }
-);
-const ResourcesModal = dynamic(
-	() =>
-		import("@/components/modals/resources-modal").then((m) => m.ResourcesModal),
+const HelpModal = dynamic(
+	() => import("@/components/modals/help-modal").then((m) => m.HelpModal),
 	{ ssr: false }
 );
 const ShareModal = dynamic(
@@ -94,10 +89,17 @@ export const ModalProvider = (): ReactNode => (
 		<MigrationModal />
 		<ShareModal />
 		<PermissionsModal />
-		<PublishModal />
 		<StatusModalWrapper />
 		<EmailModal />
-		<ResourcesModal />
+		<ErrorBoundary
+			fallback={
+				<p className="p-4 text-destructive text-sm">
+					Something went wrong. Please refresh.
+				</p>
+			}
+		>
+			<HelpModal />
+		</ErrorBoundary>
 		<CreateTeamDialog />
 		<InviteMemberDialog />
 		<ErrorBoundary

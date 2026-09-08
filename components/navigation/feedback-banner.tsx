@@ -1,17 +1,54 @@
+"use client";
+
 import { XMarkIcon } from "@heroicons/react/20/solid";
 import { MessageSquareMore } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const DISMISSED_STORAGE_KEY = "tea.feedback-banner.dismissed";
+
+function readDismissed(): boolean {
+	try {
+		return localStorage.getItem(DISMISSED_STORAGE_KEY) === "true";
+	} catch {
+		// Storage can throw (private browsing, disabled storage, quota) — treat
+		// as not dismissed rather than breaking the banner.
+		return false;
+	}
+}
+
+function persistDismissed(): void {
+	try {
+		localStorage.setItem(DISMISSED_STORAGE_KEY, "true");
+	} catch {
+		// Best-effort only — the banner still dismisses for this session even
+		// if it can't be remembered for the next one.
+	}
+}
 
 export default function FeedbackBanner() {
-	const [showBanner, setShowBanner] = useState<boolean>(true);
+	// Render nothing until mounted so the server-rendered markup (which can't
+	// read localStorage) matches the client's first render, then swap in the
+	// real dismissed state — avoids a hydration mismatch.
+	const [mounted, setMounted] = useState(false);
+	const [dismissed, setDismissed] = useState(false);
 
-	if (!showBanner) {
+	useEffect(() => {
+		setDismissed(readDismissed());
+		setMounted(true);
+	}, []);
+
+	if (!mounted || dismissed) {
 		return null;
 	}
 
+	const handleDismiss = () => {
+		setDismissed(true);
+		persistDismissed();
+	};
+
 	return (
-		<div className="flex items-center gap-x-6 bg-primary px-6 py-2.5 sm:px-3.5 sm:before:flex-1">
+		<div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-x-6 bg-primary px-6 pt-2.5 pb-safe sm:px-3.5 sm:before:flex-1">
 			<div className="w-full text-primary-foreground text-sm leading-6">
 				<Link
 					className="flex w-full flex-col items-center justify-center gap-2 py-3 md:flex-row md:py-0"
@@ -37,13 +74,13 @@ export default function FeedbackBanner() {
 			<div className="flex flex-1 justify-end">
 				<button
 					className="-m-3 p-3 focus-visible:-outline-offset-4"
+					onClick={handleDismiss}
 					type="button"
 				>
 					<span className="sr-only">Dismiss</span>
 					<XMarkIcon
 						aria-hidden="true"
-						className="hidden h-5 w-5 text-primary-foreground md:block"
-						onClick={() => setShowBanner(false)}
+						className="h-5 w-5 text-primary-foreground"
 					/>
 				</button>
 			</div>

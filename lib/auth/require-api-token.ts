@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import type { Scope } from "@/lib/auth/scopes";
 import { AppError, unauthorised } from "@/lib/errors";
 import {
@@ -28,15 +29,6 @@ function extractBearerToken(request: NextRequest): string | null {
 	return token.length > 0 ? token : null;
 }
 
-/** Best-effort client IP for throttling — matches the pattern used elsewhere (e.g. forgot-password). */
-function extractIpAddress(request: NextRequest): string {
-	const forwarded = request.headers.get("x-forwarded-for");
-	if (forwarded) {
-		return forwarded.split(",")[0]?.trim() ?? "unknown";
-	}
-	return request.headers.get("x-real-ip") ?? "unknown";
-}
-
 /**
  * Validates the bearer token on `request` and returns the acting
  * integration's identity. Pass `scope` to additionally require that scope
@@ -58,7 +50,7 @@ export async function requireApiToken(
 	scope?: Scope
 ): Promise<ApiTokenPrincipal> {
 	const token = extractBearerToken(request);
-	const ipAddress = extractIpAddress(request);
+	const ipAddress = extractClientIp(request.headers);
 
 	const result = await validateApiToken({ token, scope, ipAddress });
 	if ("error" in result) {

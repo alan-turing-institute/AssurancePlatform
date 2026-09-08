@@ -1,3 +1,4 @@
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -5,7 +6,6 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
 import {
 	resolveCommentSchema,
 	updateCommentSchema,
@@ -48,13 +48,9 @@ export async function PUT(
 	try {
 		const session = await requireAuthSession();
 		const { id: commentId } = await params;
-		const body = await request.json();
-		const parsed = updateCommentSchema.safeParse(body);
-		if (!parsed.success) {
-			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
-		}
+		const data = await parseJsonBody(request, updateCommentSchema);
 
-		const result = await updateComment(commentId, parsed.data.content, session);
+		const result = await updateComment(commentId, data.content, session);
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
@@ -75,17 +71,9 @@ export async function PATCH(
 	try {
 		const session = await requireAuthSession();
 		const { id: commentId } = await params;
-		const body = await request.json();
-		const parsed = resolveCommentSchema.safeParse(body);
-		if (!parsed.success) {
-			throw validationError(parsed.error.issues[0]?.message ?? "Invalid input");
-		}
+		const data = await parseJsonBody(request, resolveCommentSchema);
 
-		const result = await resolveComment(
-			commentId,
-			parsed.data.resolved,
-			session
-		);
+		const result = await resolveComment(commentId, data.resolved, session);
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}

@@ -11,12 +11,147 @@ import type {
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
 import { prisma } from "@/lib/prisma";
-import { getDescendantIds } from "@/lib/utils/tree-traversal";
+import { validateElementName } from "@/lib/schemas/element-validation";
+import {
+	calculateLevelFromParentChain,
+	enforceAssertionStatusRules,
+	isSystemUserPrincipal,
+} from "@/lib/services/element-service";
+import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
+import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
+
+/**
+ * ADR 0004 D3 write rule (author-declared, machine-proposable, never
+ * machine-overwritten; AS_CITED is derived-only): validates every create
+ * and update change that carries an assertionStatus value, reusing
+ * element-service.ts's enforceAssertionStatusRules rather than
+ * re-implementing the principal (guardAssertionStatusWrite) and value
+ * (rejectDeclaredAsCited) checks — keeps the rule single-sourced across the
+ * single-element route and this batch/JSON-editor path.
+ */
+async function validateAssertionStatusChanges(
+	userId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const touchesAssertionStatus =
+		creates.some((c) => c.data.assertionStatus !== undefined) ||
+		updates.some((c) => c.data.assertionStatus !== undefined);
+
+	// enforceAssertionStatusRules's principal check (guardAssertionStatusWrite)
+	// depends only on the acting user, which is constant across the whole
+	// batch — resolve it once instead of once per create/update that sets
+	// assertionStatus.
+	const isSystemUser = touchesAssertionStatus
+		? await isSystemUserPrincipal(userId)
+		: false;
+
+	for (const change of creates) {
+		const error = await enforceAssertionStatusRules(
+			change.data.assertionStatus,
+			userId,
+			isSystemUser
+		);
+		if (error) {
+			return error;
+		}
+	}
+	for (const change of updates) {
+		const error = await enforceAssertionStatusRules(
+			change.data.assertionStatus,
+			userId,
+			isSystemUser
+		);
+		if (error) {
+			return error;
+		}
+	}
+	return null;
+}
+
+/**
+ * TEA-syntax element-name prefix validation (design note "TEA — Element
+ * Name Prefix Validation", Chris's ruling: enforce on create AND rename).
+ * Applies the same `validateElementName` check the single-element route
+ * enforces (element-service.ts's `createElement`/`updateElement`) to every
+ * create/update this batch carries a name for — a batch containing even one
+ * non-conforming name is rejected in full, before anything is written,
+ * matching this file's other pre-transaction validators
+ * (`validateCreateParents`, `validateElementOwnership`). Names stay
+ * optional: a create/update that doesn't touch `name` (or sets it to
+ * null/empty) is never checked.
+ *
+ * The offending element's id is named in the error message, never the case
+ * — same convention as `validateElementOwnership`'s error shape.
+ */
+async function validateElementNames(
+	userId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const namedCreates = creates.filter((c) => c.data.name);
+	const namedUpdates = updates.filter((c) => c.data.name);
+
+	if (namedCreates.length === 0 && namedUpdates.length === 0) {
+		return null;
+	}
+
+	// An update's data only ever carries the fields that changed — its
+	// elementType isn't part of the diff payload at all — so a named
+	// update's target type has to be read back from the database. One
+	// batched fetch for every such update, instead of one findUnique per
+	// update that sets a name.
+	const updateTypeRows =
+		namedUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: namedUpdates.map((c) => c.elementId) } },
+					select: { id: true, elementType: true },
+				})
+			: [];
+	const updateTypeById = new Map(
+		updateTypeRows.map((r) => [r.id, r.elementType])
+	);
+
+	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
+
+	for (const change of namedCreates) {
+		const elementType = mapElementType(change.data.type);
+		const validation = validateElementName(
+			elementType,
+			change.data.name,
+			enabledPluginIds
+		);
+		if (!validation.valid) {
+			return `${validation.error} (element ${change.elementId})`;
+		}
+	}
+
+	for (const change of namedUpdates) {
+		const elementType = updateTypeById.get(change.elementId);
+		// Absent from the lookup means this id doesn't exist, or belongs to a
+		// different case — validateElementOwnership (which runs before this)
+		// already rejects both, so this is unreachable in practice; skipping
+		// keeps this validator side-effect-free rather than throwing.
+		if (!elementType) {
+			continue;
+		}
+		const validation = validateElementName(
+			elementType,
+			change.data.name,
+			enabledPluginIds
+		);
+		if (!validation.valid) {
+			return `${validation.error} (element ${change.elementId})`;
+		}
+	}
+
+	return null;
+}
 
 /**
  * Result of a batch update operation
@@ -70,6 +205,119 @@ async function validateEditAccess(
 }
 
 /**
+ * Guards against cross-case writes through the batch endpoint (IDOR):
+ * `validateEditAccess` only checks the caller has EDIT permission on the
+ * target case, it never confirms the element ids in `changes` actually
+ * belong to that case. Without this, a user with edit access to case A could
+ * update, delete, re-parent, or evidence-link/unlink elements that live in
+ * case B.
+ *
+ * Two different kinds of reference are collected, and only one of them is
+ * ever exempted by an in-batch create:
+ *
+ * - MUST-EXIST-REGARDLESS ids — a delete's own `elementId`, an update's own
+ *   `elementId`. These name a row the batch claims ALREADY exists and is
+ *   being mutated in place; nothing a batch also creates can satisfy that.
+ *   Checked unconditionally, even if the SAME id also appears as a create's
+ *   `elementId` in this batch — otherwise a batch containing both
+ *   `{type:"delete", elementId:X}` and `{type:"create", elementId:X, ...}`
+ *   for a foreign X would pass ownership (X "will exist" by the time the
+ *   create runs), and since `applyDeletes` runs before `applyCreates` and
+ *   deletes by bare PK with no case filter, the victim's row would be
+ *   hard-deleted and silently recreated under the attacker's case.
+ * - MAY-BE-SATISFIED-BY-A-SIBLING-CREATE ids — parent references
+ *   (`parentId` on a create/update) and FK-style references to another
+ *   element (`defeatsElementId` on a create/update, both sides of a
+ *   link/unlink evidence change). These are legitimately allowed to point
+ *   at an id this SAME batch is creating (e.g. a new claim citing another
+ *   new claim as its defeater), so — and only so — they're exempted when the
+ *   referenced id is also this batch's own create `elementId`.
+ *
+ * One batched `findMany` then rejects the WHOLE batch if any checked
+ * reference is missing or belongs to a different case, so a batch is atomic
+ * in its acceptance as well as its application.
+ *
+ * Soft-deleted elements (`deletedAt` set) are NOT excluded from the lookup:
+ * every other query in this file (`fetchLevelInfo`, `validateCreateParents`)
+ * already ignores `deletedAt`, and `applyDeletes` hard-deletes rows, so
+ * treating a soft-deleted row as still "belonging to its case" here matches
+ * how the rest of this file already behaves — it does not open a new hole,
+ * and excluding them would just add an inconsistent extra rule for this one
+ * validator.
+ *
+ * The error message names the offending id(s) but never the case they
+ * actually belong to, so a caller probing for other cases' element ids
+ * learns only "not in this case", not which case it's really in.
+ */
+async function validateElementOwnership(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[],
+	links: LinkEvidenceChange[],
+	unlinks: UnlinkEvidenceChange[]
+): Promise<string | null> {
+	const createdIds = new Set(creates.map((c) => c.elementId));
+
+	const referencedIds = new Set<string>();
+	// A delete's/update's OWN target: must already exist, full stop — never
+	// exempted just because the same id also appears as a create in this
+	// batch (see the delete+recreate id-reuse note above).
+	const addAlways = (id: string | null | undefined) => {
+		if (id) {
+			referencedIds.add(id);
+		}
+	};
+	// A reference that's legitimately satisfiable by a sibling create in
+	// this same batch (parentId, defeatsElementId, evidence link/unlink
+	// ids) — exempted only when the id IS one of this batch's own creates.
+	const addUnlessSiblingCreate = (id: string | null | undefined) => {
+		if (id && !createdIds.has(id)) {
+			referencedIds.add(id);
+		}
+	};
+
+	for (const change of updates) {
+		addAlways(change.elementId);
+		addUnlessSiblingCreate(change.data.parentId);
+		addUnlessSiblingCreate(change.data.defeatsElementId);
+	}
+	for (const change of deletes) {
+		addAlways(change.elementId);
+	}
+	for (const change of creates) {
+		addUnlessSiblingCreate(change.parentId);
+		addUnlessSiblingCreate(change.data.defeatsElementId);
+	}
+	for (const change of links) {
+		addUnlessSiblingCreate(change.evidenceId);
+		addUnlessSiblingCreate(change.claimId);
+	}
+	for (const change of unlinks) {
+		addUnlessSiblingCreate(change.evidenceId);
+		addUnlessSiblingCreate(change.claimId);
+	}
+
+	if (referencedIds.size === 0) {
+		return null;
+	}
+
+	const ids = Array.from(referencedIds);
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: ids } },
+		select: { id: true, caseId: true },
+	});
+	const rowById = new Map(rows.map((r) => [r.id, r]));
+
+	const offendingIds = ids.filter((id) => rowById.get(id)?.caseId !== caseId);
+	if (offendingIds.length > 0) {
+		return `Element${offendingIds.length > 1 ? "s" : ""} ${offendingIds.join(", ")} not found in this case`;
+	}
+
+	return null;
+}
+
+/**
  * Checks if the case has been modified since expectedVersion
  */
 async function checkForConflict(
@@ -87,21 +335,6 @@ async function checkForConflict(
 
 	const currentVersion = caseData.updatedAt.toISOString();
 	return currentVersion !== expectedVersion;
-}
-
-/**
- * Validates parent change doesn't create a circular reference
- */
-async function validateNoCircularReference(
-	elementId: string,
-	newParentId: string
-): Promise<boolean> {
-	if (elementId === newParentId) {
-		return false;
-	}
-
-	const descendants = await getDescendantIds(elementId);
-	return !descendants.includes(newParentId);
 }
 
 /**
@@ -124,15 +357,28 @@ async function validateCreateParents(
 	creates: CreateChange[],
 	deletes: DeleteChange[]
 ): Promise<string | null> {
+	// One batched lookup for every parentId referenced by a create, instead
+	// of one findUnique per create.
+	const parentIdsToCheck = Array.from(
+		new Set(
+			creates.map((c) => c.parentId).filter((id): id is string => Boolean(id))
+		)
+	);
+	const existingParents =
+		parentIdsToCheck.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: parentIdsToCheck } },
+					select: { id: true },
+				})
+			: [];
+	const existingParentIds = new Set(existingParents.map((p) => p.id));
+
 	for (const change of creates) {
 		if (!change.parentId) {
 			continue;
 		}
 
-		const parentExists = await prisma.assuranceElement.findUnique({
-			where: { id: change.parentId },
-			select: { id: true },
-		});
+		const parentExists = existingParentIds.has(change.parentId);
 		const parentBeingCreated = creates.some(
 			(c) => c.elementId === change.parentId
 		);
@@ -152,22 +398,33 @@ async function validateCreateParents(
 }
 
 /**
- * Validates that all parent moves don't create circular references
+ * Validates that all parent moves don't create circular references.
+ *
+ * Descendants for every relevant update are fetched with a single shared
+ * breadth-first sweep (`getDescendantIdsForRoots`) rather than one
+ * `getDescendantIds` walk per update — same self-reference/circular checks,
+ * same order, same error text, just one batch of queries instead of N.
  */
 async function validateUpdateParents(
 	updates: UpdateChange[]
 ): Promise<string | null> {
-	for (const change of updates) {
-		const newParentId = change.data.parentId;
-		if (newParentId === undefined || newParentId === null) {
-			continue;
-		}
+	const relevant = updates.filter(
+		(c) => c.data.parentId !== undefined && c.data.parentId !== null
+	);
+	if (relevant.length === 0) {
+		return null;
+	}
 
-		const isValid = await validateNoCircularReference(
-			change.elementId,
-			newParentId
-		);
-		if (!isValid) {
+	const descendantsByElement = await getDescendantIdsForRoots(
+		relevant.map((c) => c.elementId)
+	);
+
+	for (const change of relevant) {
+		const newParentId = change.data.parentId as string;
+		if (change.elementId === newParentId) {
+			return `Circular reference detected when moving element ${change.elementId}`;
+		}
+		if (descendantsByElement.get(change.elementId)?.has(newParentId)) {
 			return `Circular reference detected when moving element ${change.elementId}`;
 		}
 	}
@@ -176,25 +433,64 @@ async function validateUpdateParents(
 }
 
 /**
- * Calculates the level for a property claim based on its parent
+ * Minimal shape needed to decide a child's level from its parent row —
+ * `parentId` is included so a STRATEGY parent's own parent (the transparent
+ * grandparent hop — see `calculateLevelFromParentChain`) can be looked up
+ * from the same batched-fetch shape.
  */
-async function calculateLevel(
+interface LevelInfo {
+	elementType: PrismaElementType;
+	level: number | null;
+	parentId: string | null;
+}
+
+/**
+ * Batched replacement for calling `tx.assuranceElement.findUnique` once per
+ * id: fetches {level, elementType, parentId} for every id in one
+ * `findMany`. Used by `applyCreates`/`applyUpdates`/the cascade so level
+ * lookups for a whole batch cost one query instead of one per element.
+ */
+async function fetchLevelInfo(
 	tx: TransactionClient,
-	parentId: string | null
-): Promise<number | null> {
-	if (!parentId) {
-		return null;
+	ids: string[]
+): Promise<Map<string, LevelInfo>> {
+	if (ids.length === 0) {
+		return new Map();
 	}
-
-	const parent = await tx.assuranceElement.findUnique({
-		where: { id: parentId },
-		select: { level: true, elementType: true },
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: ids } },
+		select: { id: true, level: true, elementType: true, parentId: true },
 	});
+	return new Map(
+		rows.map((r) => [
+			r.id,
+			{ level: r.level, elementType: r.elementType, parentId: r.parentId },
+		])
+	);
+}
 
-	if (parent?.elementType === "PROPERTY_CLAIM") {
-		return (parent.level ?? 1) + 1;
-	}
-	return 1;
+/**
+ * For every STRATEGY entry in `parentInfoById`, batch-fetches its OWN parent
+ * (the grandparent, from the child's point of view) — the extra hop
+ * `calculateLevelFromParentChain` needs to apply the transparent-strategy
+ * rule. Keyed by grandparent id, same shape as `fetchLevelInfo` so it can be
+ * looked up alongside `parentInfoById`/`ownTypeById` interchangeably.
+ */
+function fetchGrandparentInfoForStrategies(
+	tx: TransactionClient,
+	parentInfoById: Map<string, LevelInfo>
+): Promise<Map<string, LevelInfo>> {
+	const grandparentIds = Array.from(
+		new Set(
+			Array.from(parentInfoById.values())
+				.filter(
+					(info): info is LevelInfo & { parentId: string } =>
+						info.elementType === "STRATEGY" && Boolean(info.parentId)
+				)
+				.map((info) => info.parentId)
+		)
+	);
+	return fetchLevelInfo(tx, grandparentIds);
 }
 
 /**
@@ -221,6 +517,7 @@ function buildCreateData(
 		inSandbox: data.inSandbox,
 		parentId: effectiveParentId,
 		role: data.role as ElementRole | null | undefined,
+		assertionStatus: data.assertionStatus,
 		assumption: data.assumption,
 		justification: data.justification,
 		context: data.context ?? [],
@@ -262,6 +559,58 @@ async function applyCreates(
 ): Promise<void> {
 	const createMap = new Map(creates.map((c) => [c.elementId, c]));
 	const created = new Set<string>();
+	// Levels of elements created earlier in this same call, keyed by
+	// elementId — populated as createOne runs (parent-before-child order is
+	// required by the self-referencing FK, so creates stay per-row writes).
+	const levelById = new Map<string, number | null>();
+
+	// Parents referenced by property-claim creates that are NOT themselves
+	// part of this batch: their level is fixed pre-transaction state, so
+	// fetch it once for all of them instead of once per create. A second pass
+	// fetches the grandparent of any of those parents that is a STRATEGY —
+	// the transparent-strategy hop `calculateLevelFromParentChain` needs.
+	const externalParentIds = Array.from(
+		new Set(
+			creates
+				.filter((c) => c.data.type === "PROPERTY_CLAIM" && c.parentId)
+				.map((c) => c.parentId as string)
+				.filter((id) => !createMap.has(id))
+		)
+	);
+	const externalParentInfo = await fetchLevelInfo(tx, externalParentIds);
+	const externalGrandparentInfo = await fetchGrandparentInfoForStrategies(
+		tx,
+		externalParentInfo
+	);
+	const externalInfo = new Map([
+		...externalParentInfo,
+		...externalGrandparentInfo,
+	]);
+
+	// Resolves {elementType, level, parentId} for any id referenced by this
+	// batch's creates, whether it's being created in this same call (in which
+	// case its level was just computed by an earlier, parent-first `createOne`
+	// call) or already exists (the pre-transaction snapshot above).
+	const resolveInfo = (id: string): LevelInfo | undefined => {
+		const withinBatch = createMap.get(id);
+		if (withinBatch) {
+			return {
+				elementType: mapElementType(withinBatch.data.type),
+				level: levelById.get(id) ?? null,
+				parentId: withinBatch.parentId ?? null,
+			};
+		}
+		return externalInfo.get(id);
+	};
+
+	const resolveParentLevel = (parentId: string): number => {
+		const parentInfo = resolveInfo(parentId);
+		const grandparentInfo =
+			parentInfo?.elementType === "STRATEGY" && parentInfo.parentId
+				? resolveInfo(parentInfo.parentId)
+				: undefined;
+		return calculateLevelFromParentChain(parentInfo, grandparentInfo);
+	};
 
 	const createOne = async (change: CreateChange): Promise<void> => {
 		if (created.has(change.elementId)) {
@@ -279,7 +628,7 @@ async function applyCreates(
 		// Calculate level for property claims
 		let level: number | null = null;
 		if (change.data.type === "PROPERTY_CLAIM" && change.parentId) {
-			level = await calculateLevel(tx, change.parentId);
+			level = resolveParentLevel(change.parentId);
 		}
 
 		const createData = buildCreateData(
@@ -291,6 +640,7 @@ async function applyCreates(
 		);
 		await tx.assuranceElement.create({ data: createData });
 		created.add(change.elementId);
+		levelById.set(change.elementId, level);
 	};
 
 	for (const change of creates) {
@@ -310,6 +660,7 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 		"inSandbox",
 		"parentId",
 		"role",
+		"assertionStatus",
 		"assumption",
 		"justification",
 		"context",
@@ -334,24 +685,348 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 }
 
 /**
+ * Computes each moved property claim's FINAL level from the post-batch
+ * parent arrangement — independent of the order updates appear in the
+ * `changes` array. `moveMap` is elementId -> new parentId for every update
+ * in this batch that sets a parentId. If a moved element's new parent is
+ * ALSO moved within the same batch, that parent's level is resolved first
+ * via memoised recursion over `moveMap` itself, so a child-move listed
+ * before its parent-move (or the reverse) always lands on the parent's
+ * POST-batch level rather than a stale pre-batch snapshot.
+ *
+ * Cycles created purely by this batch's own moves — e.g. two elements each
+ * moved under the other, where neither is currently a descendant of the
+ * other in the database, so `validateUpdateParents`'s pre-batch descendant
+ * check can't see it — are caught here (via the `visiting` set) and
+ * reported with the same "Circular reference detected" message the
+ * pre-batch check uses, so callers see one consistent error shape either
+ * way.
+ */
+function resolveFinalLevelsForBatch(
+	moveMap: Map<string, string>,
+	ownTypeById: Map<string, LevelInfo>,
+	externalInfoById: Map<string, LevelInfo>
+): Map<string, number> {
+	const finalLevels = new Map<string, number>();
+	const visiting = new Set<string>();
+
+	// Static (pre-batch) info for any id this batch references, whether it's
+	// one of the moved elements themselves or one of their (non-moved) new
+	// parents/grandparents.
+	const getInfo = (id: string): LevelInfo | undefined =>
+		ownTypeById.get(id) ?? externalInfoById.get(id);
+
+	// Resolves {elementType, level, parentId} for `id` as it will stand AFTER
+	// this batch: if `id` is itself being moved and is a PROPERTY_CLAIM, its
+	// level comes from `resolve` (below); otherwise it's the static snapshot.
+	// Only ever recurses into `resolve` for ids already known to be
+	// PROPERTY_CLAIM, so `finalLevels` never gets a spurious entry for a
+	// STRATEGY (which would wrongly cause its own update to write a level).
+	const resolvedInfo = (id: string): LevelInfo | undefined => {
+		const info = getInfo(id);
+		if (!info) {
+			return undefined;
+		}
+		const isMovedClaim =
+			moveMap.has(id) && info.elementType === "PROPERTY_CLAIM";
+		return isMovedClaim ? { ...info, level: resolve(id) } : info;
+	};
+
+	const resolve = (elementId: string): number => {
+		const memoised = finalLevels.get(elementId);
+		if (memoised !== undefined) {
+			return memoised;
+		}
+		if (visiting.has(elementId)) {
+			throw new Error(
+				`Circular reference detected when moving element ${elementId}`
+			);
+		}
+		visiting.add(elementId);
+
+		const newParentId = moveMap.get(elementId);
+		let level = 1;
+		if (newParentId) {
+			const parentInfo = resolvedInfo(newParentId);
+			const grandparentInfo =
+				parentInfo?.elementType === "STRATEGY" && parentInfo.parentId
+					? resolvedInfo(parentInfo.parentId)
+					: undefined;
+			level = calculateLevelFromParentChain(parentInfo, grandparentInfo);
+		}
+
+		visiting.delete(elementId);
+		finalLevels.set(elementId, level);
+		return level;
+	};
+
+	for (const [elementId] of moveMap) {
+		if (ownTypeById.get(elementId)?.elementType === "PROPERTY_CLAIM") {
+			resolve(elementId);
+		}
+	}
+
+	return finalLevels;
+}
+
+/** Minimal descendant row shape `cascadeFromRoot` needs to walk a subtree. */
+interface DescendantRow {
+	elementType: PrismaElementType;
+	id: string;
+	parentId: string | null;
+}
+
+/**
+ * Walks one moved property claim's PRE-batch subtree (parent-child edges
+ * don't change when the claim itself moves — only its own parentId does)
+ * and recomputes the level of every descendant that ISN'T itself explicitly
+ * moved in this batch, propagating `rootLevel` down layer by layer.
+ *
+ * Stops descending (and skips writing) at any descendant that IS a
+ * `moveMap` key: that element's own level comes from
+ * `resolveFinalLevelsForBatch` instead, and — if it's a property claim —
+ * it is itself one of the roots this function is called for, so its
+ * subtree is recomputed from ITS new position via its own separate call.
+ */
+/**
+ * One pending descendant row in `cascadeFromRoot`'s frontier walk.
+ * `parentInfo`/`grandparentInfo` are the {elementType, level} of the row's
+ * OWN actual parent and grandparent (not a rolling "nearest property claim"
+ * anchor) — same shape `calculateLevelFromParentChain` takes everywhere
+ * else, so a STRATEGY row in the middle of a subtree is transparent here
+ * too: its level is computed but never used to gate its children (its
+ * elementType, not its level, is what the shared rule looks at).
+ */
+interface CascadeFrontierEntry {
+	grandparentInfo: LevelInfo | undefined;
+	parentInfo: LevelInfo;
+	row: DescendantRow;
+}
+
+/**
+ * Processes a single descendant row for `cascadeFromRoot`: computes its
+ * level via the shared `calculateLevelFromParentChain` rule, records a level
+ * update when it's a property claim, and returns the next frontier entries
+ * for its children — or an empty array if this row is an explicit mover in
+ * `moveMap` (stop descending, per `cascadeFromRoot`'s contract).
+ */
+function cascadeFrontierStep(
+	entry: CascadeFrontierEntry,
+	childrenByParent: Map<string, DescendantRow[]>,
+	moveMap: Map<string, string>,
+	levelUpdates: Map<string, number>
+): CascadeFrontierEntry[] {
+	const { row, parentInfo, grandparentInfo } = entry;
+	const isPropertyClaim = row.elementType === "PROPERTY_CLAIM";
+	const level = calculateLevelFromParentChain(parentInfo, grandparentInfo);
+
+	if (moveMap.has(row.id)) {
+		return [];
+	}
+	if (isPropertyClaim) {
+		levelUpdates.set(row.id, level);
+	}
+
+	const ownInfo: LevelInfo = {
+		elementType: row.elementType,
+		level,
+		parentId: row.parentId,
+	};
+	return (childrenByParent.get(row.id) ?? []).map((child) => ({
+		row: child,
+		parentInfo: ownInfo,
+		grandparentInfo: parentInfo,
+	}));
+}
+
+function cascadeFromRoot(
+	rootId: string,
+	rootLevel: number,
+	childrenByParent: Map<string, DescendantRow[]>,
+	moveMap: Map<string, string>,
+	levelUpdates: Map<string, number>
+): void {
+	const rootInfo: LevelInfo = {
+		elementType: "PROPERTY_CLAIM" as PrismaElementType,
+		level: rootLevel,
+		parentId: null,
+	};
+	let frontier: CascadeFrontierEntry[] = (
+		childrenByParent.get(rootId) ?? []
+	).map((row) => ({
+		row,
+		parentInfo: rootInfo,
+		grandparentInfo: undefined,
+	}));
+
+	while (frontier.length > 0) {
+		const next: CascadeFrontierEntry[] = [];
+		for (const entry of frontier) {
+			next.push(
+				...cascadeFrontierStep(entry, childrenByParent, moveMap, levelUpdates)
+			);
+		}
+		frontier = next;
+	}
+}
+
+/**
+ * Recomputes levels for descendants of moved property claims that are NOT
+ * themselves listed in `changes` — required so a moved claim's existing
+ * subtree reflects its new depth regardless of update order, not just the
+ * claim that was directly moved. Reuses `getDescendantIdsForRoots`
+ * (tree-traversal.ts) for the shared BFS rather than a bespoke walker; runs
+ * zero extra queries when no property claim is moved in this batch.
+ */
+async function resolveDescendantCascadeLevels(
+	tx: TransactionClient,
+	moveMap: Map<string, string>,
+	ownTypeById: Map<string, LevelInfo>,
+	finalLevels: Map<string, number>
+): Promise<Map<string, number>> {
+	const rootIds = Array.from(moveMap.keys()).filter(
+		(id) => ownTypeById.get(id)?.elementType === "PROPERTY_CLAIM"
+	);
+	if (rootIds.length === 0) {
+		return new Map();
+	}
+
+	const descendantsByRoot = await getDescendantIdsForRoots(rootIds, tx);
+	const allDescendantIds = Array.from(
+		new Set(Array.from(descendantsByRoot.values()).flatMap((ids) => [...ids]))
+	);
+	if (allDescendantIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: allDescendantIds } },
+		select: { id: true, parentId: true, elementType: true },
+	});
+	const childrenByParent = new Map<string, DescendantRow[]>();
+	for (const row of rows) {
+		if (!row.parentId) {
+			continue;
+		}
+		const bucket = childrenByParent.get(row.parentId);
+		if (bucket) {
+			bucket.push(row);
+		} else {
+			childrenByParent.set(row.parentId, [row]);
+		}
+	}
+
+	const levelUpdates = new Map<string, number>();
+	for (const rootId of rootIds) {
+		const rootLevel = finalLevels.get(rootId);
+		if (rootLevel !== undefined) {
+			cascadeFromRoot(
+				rootId,
+				rootLevel,
+				childrenByParent,
+				moveMap,
+				levelUpdates
+			);
+		}
+	}
+	return levelUpdates;
+}
+
+/**
+ * Writes recomputed levels for descendants that weren't themselves listed
+ * in `changes` (see `resolveDescendantCascadeLevels`) — grouped into one
+ * `updateMany` per distinct level value instead of one `update` per
+ * descendant.
+ */
+async function applyCascadeLevelUpdates(
+	tx: TransactionClient,
+	cascadeLevels: Map<string, number>
+): Promise<void> {
+	if (cascadeLevels.size === 0) {
+		return;
+	}
+	const idsByLevel = new Map<number, string[]>();
+	for (const [id, level] of cascadeLevels) {
+		const bucket = idsByLevel.get(level);
+		if (bucket) {
+			bucket.push(id);
+		} else {
+			idsByLevel.set(level, [id]);
+		}
+	}
+	for (const [level, ids] of idsByLevel) {
+		await tx.assuranceElement.updateMany({
+			where: { id: { in: ids } },
+			data: { level },
+		});
+	}
+}
+
+/**
  * Applies update operations
  */
 async function applyUpdates(
 	tx: TransactionClient,
 	updates: UpdateChange[]
 ): Promise<void> {
+	const relevantForLevel = updates.filter(
+		(c) => c.data.parentId !== undefined && c.data.parentId !== null
+	);
+
+	// Each update's own elementType (never touched by buildUpdateData, so
+	// it's immutable for the lifetime of this call) — one batched fetch
+	// instead of one findUnique per update that moves an element.
+	const ownTypeById = await fetchLevelInfo(
+		tx,
+		relevantForLevel.map((c) => c.elementId)
+	);
+
+	// New-parent {elementType, level} as of the start of this call, for
+	// parents NOT themselves moved in this batch. Parents that ARE moved in
+	// this batch resolve through `resolveFinalLevelsForBatch`'s own
+	// recursion instead, so this snapshot never goes stale for them.
+	const parentInfoById = await fetchLevelInfo(
+		tx,
+		Array.from(new Set(relevantForLevel.map((c) => c.data.parentId as string)))
+	);
+	// Grandparent {elementType, level} for any new parent that is a STRATEGY —
+	// the transparent-strategy hop (see calculateLevelFromParentChain).
+	//
+	// KNOWN LIMITATION (flagged in review, tracked as a follow-up, not fixed
+	// here): this snapshot is taken once, before any of this batch's own
+	// moves are applied. If the SAME batch both moves a STRATEGY to a new
+	// PROPERTY_CLAIM parent AND reparents some other element to be a child
+	// of that STRATEGY, the child's level is computed from the STRATEGY's
+	// OLD (pre-batch) grandparent, not its post-batch one — a narrower gap
+	// than the delete/create-reuse and defeatsElementId issues fixed
+	// alongside this comment, and still an improvement over the pre-existing
+	// behaviour (which ignored the transparent-strategy hop here entirely).
+	const grandparentInfoById = await fetchGrandparentInfoForStrategies(
+		tx,
+		parentInfoById
+	);
+	const externalInfoById = new Map([...parentInfoById, ...grandparentInfoById]);
+	const moveMap = new Map(
+		relevantForLevel.map((c) => [c.elementId, c.data.parentId as string])
+	);
+
+	const finalLevels = resolveFinalLevelsForBatch(
+		moveMap,
+		ownTypeById,
+		externalInfoById
+	);
+	const cascadeLevels = await resolveDescendantCascadeLevels(
+		tx,
+		moveMap,
+		ownTypeById,
+		finalLevels
+	);
+
 	for (const change of updates) {
 		const updateData = buildUpdateData(change.data);
 
-		// Recalculate level if moving a property claim
-		if (change.data.parentId !== undefined && change.data.parentId !== null) {
-			const element = await tx.assuranceElement.findUnique({
-				where: { id: change.elementId },
-				select: { elementType: true },
-			});
-			if (element?.elementType === "PROPERTY_CLAIM") {
-				updateData.level = await calculateLevel(tx, change.data.parentId);
-			}
+		if (finalLevels.has(change.elementId)) {
+			updateData.level = finalLevels.get(change.elementId);
 		}
 
 		await tx.assuranceElement.update({
@@ -359,50 +1034,53 @@ async function applyUpdates(
 			data: updateData,
 		});
 	}
+
+	await applyCascadeLevelUpdates(tx, cascadeLevels);
 }
 
 /**
- * Removes evidence links (unlinks evidence from claims)
+ * Removes evidence links (unlinks evidence from claims). Batched into a
+ * single deleteMany with an OR of every (evidenceId, claimId) pair instead
+ * of one deleteMany per unlink change.
  */
 async function applyUnlinkEvidence(
 	tx: TransactionClient,
 	unlinks: UnlinkEvidenceChange[]
 ): Promise<void> {
-	for (const change of unlinks) {
-		await tx.evidenceLink.deleteMany({
-			where: {
+	if (unlinks.length === 0) {
+		return;
+	}
+	await tx.evidenceLink.deleteMany({
+		where: {
+			OR: unlinks.map((change) => ({
 				evidenceId: change.evidenceId,
 				claimId: change.claimId,
-			},
-		});
-	}
+			})),
+		},
+	});
 }
 
 /**
- * Creates evidence links (links evidence to claims)
+ * Creates evidence links (links evidence to claims). `evidenceLink` has a
+ * `@@unique([evidenceId, claimId])` constraint, so a single `createMany`
+ * with `skipDuplicates` gets the same "create only if not already linked"
+ * behaviour as the old per-item findFirst-then-create, in one query instead
+ * of up to two per link.
  */
 async function applyLinkEvidence(
 	tx: TransactionClient,
 	links: LinkEvidenceChange[]
 ): Promise<void> {
-	for (const change of links) {
-		// Check if link already exists to avoid duplicates
-		const existing = await tx.evidenceLink.findFirst({
-			where: {
-				evidenceId: change.evidenceId,
-				claimId: change.claimId,
-			},
-		});
-
-		if (!existing) {
-			await tx.evidenceLink.create({
-				data: {
-					evidenceId: change.evidenceId,
-					claimId: change.claimId,
-				},
-			});
-		}
+	if (links.length === 0) {
+		return;
 	}
+	await tx.evidenceLink.createMany({
+		data: links.map((change) => ({
+			evidenceId: change.evidenceId,
+			claimId: change.claimId,
+		})),
+		skipDuplicates: true,
+	});
 }
 
 /**
@@ -448,6 +1126,33 @@ export async function applyBatchUpdate(
 		(c): c is LinkEvidenceChange => c.type === "link_evidence"
 	);
 
+	// IDOR guard: confirms every existing element this batch references
+	// (update/delete targets, parent references, evidence links) actually
+	// belongs to `caseId` — case-level EDIT access alone doesn't prove that.
+	const ownershipError = await validateElementOwnership(
+		caseId,
+		creates,
+		updates,
+		deletes,
+		links,
+		unlinks
+	);
+	if (ownershipError) {
+		return { error: ownershipError };
+	}
+
+	// ADR 0004 D3 write rule: assertionStatus is author-declared only — see
+	// enforceAssertionStatusRules's docstring (element-service.ts) for why
+	// case-level EDIT access alone isn't a sufficient gate.
+	const assertionStatusError = await validateAssertionStatusChanges(
+		userId,
+		creates,
+		updates
+	);
+	if (assertionStatusError) {
+		return { error: assertionStatusError };
+	}
+
 	// Validate parent references
 	const createParentError = await validateCreateParents(creates, deletes);
 	if (createParentError) {
@@ -457,6 +1162,15 @@ export async function applyBatchUpdate(
 	const updateParentError = await validateUpdateParents(updates);
 	if (updateParentError) {
 		return { error: updateParentError };
+	}
+
+	// TEA-syntax element-name prefix validation — same rule, same choke
+	// point shape as the single-element route (element-service.ts's
+	// createElement/updateElement), applied here so a rename or create
+	// through the JSON editor can't bypass it.
+	const nameFormatError = await validateElementNames(userId, creates, updates);
+	if (nameFormatError) {
+		return { error: nameFormatError };
 	}
 
 	try {

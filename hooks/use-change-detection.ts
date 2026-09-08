@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChangeSummary {
 	addedElements: number;
@@ -24,6 +24,17 @@ interface UseChangeDetectionOptions {
 	includeDetails?: boolean;
 	/** Poll interval in milliseconds (0 to disable polling) */
 	pollInterval?: number;
+	/**
+	 * Opaque value that, when it changes by reference, triggers a refetch
+	 * without waiting for `enabled`/`caseId` to change. Pass something that
+	 * only changes when case *content* changes — e.g. the `assuranceCase`
+	 * object from the canvas store, which is replaced (never mutated) on
+	 * every structural edit (create/update/delete/move of an element) but is
+	 * untouched by comment mutations, which live in separate store slices.
+	 * This is what makes the divergence indicator reactive to edits landing
+	 * while it's already mounted, instead of only refreshing on next mount.
+	 */
+	refreshKey?: unknown;
 }
 
 interface UseChangeDetectionReturn {
@@ -117,18 +128,34 @@ export function useChangeDetection({
 	includeDetails = false,
 	enabled = true,
 	pollInterval = 0,
+	refreshKey,
 }: UseChangeDetectionOptions): UseChangeDetectionReturn {
 	const [state, setState] = useState<ChangeDetectionState>(initialState);
+
+	// Tracks the most recently *requested* fetch so a response that resolves
+	// after a newer request has already been issued (overlapping fetches
+	// firing out of order) doesn't clobber the newer state with stale data.
+	// caseId alone can't serve as this token here — refreshKey can trigger
+	// several overlapping fetches for the *same* caseId — so this is a
+	// monotonically increasing counter instead, mirroring the ref-guard
+	// pattern in use-case-information.ts's latestRequestedCaseIdRef.
+	const latestRequestIdRef = useRef(0);
 
 	const fetchChanges = useCallback(async () => {
 		if (!caseId) {
 			return;
 		}
 
+		const requestId = latestRequestIdRef.current + 1;
+		latestRequestIdRef.current = requestId;
+
 		setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
 		try {
 			const result = await fetchChangeDetection(caseId, includeDetails);
+			if (latestRequestIdRef.current !== requestId) {
+				return; // A newer request has since superseded this one.
+			}
 			setState({
 				hasChanges: result.hasChanges,
 				publishedAt: result.publishedAt,
@@ -138,6 +165,9 @@ export function useChangeDetection({
 				error: null,
 			});
 		} catch (err) {
+			if (latestRequestIdRef.current !== requestId) {
+				return;
+			}
 			const message =
 				err instanceof Error ? err.message : "Failed to detect changes";
 			setState((prev) => ({ ...prev, isLoading: false, error: message }));
@@ -145,14 +175,18 @@ export function useChangeDetection({
 		}
 	}, [caseId, includeDetails]);
 
-	// Initial fetch and when dependencies change
+	// Initial fetch, when dependencies change, and whenever `refreshKey`
+	// changes reference while enabled — the structural-edit invalidation
+	// path (see the option's doc comment above). `refreshKey` isn't read in
+	// the effect body, only used to force a re-run on change.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey is an intentional opaque invalidation signal, not a value read inside the effect
 	useEffect(() => {
 		if (enabled && caseId) {
 			fetchChanges();
 		} else {
 			setState(initialState);
 		}
-	}, [enabled, caseId, fetchChanges]);
+	}, [enabled, caseId, fetchChanges, refreshKey]);
 
 	// Optional polling
 	useEffect(() => {

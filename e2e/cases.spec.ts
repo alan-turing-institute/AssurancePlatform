@@ -1,6 +1,25 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, STATUS_BUTTON_PATTERN } from "./helpers/constants";
 import { DashboardPage } from "./pages/dashboard-page";
+
+const ASSERTION_STATUS_COMBOBOX_PATTERN = /assertion status/i;
+
+// The G1 goal node's Edit button, scoped to that ReactFlow node. React Flow
+// gives every node's own wrapper `role="button"` (for keyboard selection)
+// with no aria-label of its own, so the browser folds every descendant's
+// accessible name — including "Edit element" — into that wrapper's computed
+// name. An unscoped `getByRole("button", { name: "Edit element" })` then
+// matches the wrapper too, since Playwright's name match is substring by
+// default; the wrapper sorts before the real button in DOM order, so
+// `.first()` picks the wrapper, and clicking it just selects the node
+// instead of opening the edit dialog. Scoping to the G1 node plus an exact
+// name avoids both that collision and any reliance on DOM order.
+function g1EditButton(page: Page) {
+	return page
+		.locator(".react-flow__node", { hasText: "G1" })
+		.getByRole("button", { name: "Edit element", exact: true });
+}
 
 test.describe("Case management", () => {
 	test("dashboard shows seeded cases", async ({ page }) => {
@@ -85,5 +104,161 @@ test.describe("Case management", () => {
 		// triggers an async RSC re-fetch that may not complete in CI)
 		await dashboard.goto();
 		await expect(page.getByText("Delete Me Case")).not.toBeVisible();
+	});
+
+	test("clicking the case title opens the case information sheet", async ({
+		page,
+	}) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		await page.getByTestId("case-title-button").click();
+
+		await expect(
+			page.getByRole("heading", { name: "Case Information" })
+		).toBeVisible();
+	});
+
+	test("dismissing the assertion status dropdown by clicking the edit dialog body leaves the dialog open", async ({
+		page,
+	}) => {
+		// Regression test: opening the "Assertion status" Select inside the
+		// element edit dialog and then clicking elsewhere in the dialog body
+		// (without picking an option) used to close the whole dialog too —
+		// jsdom can't reproduce this, because it relies on real pointer-events
+		// hit-testing falling through the dialog's own (now pointer-events:
+		// none) content to its overlay once a nested Radix Select is open.
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = g1EditButton(page);
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		// A plain text locator, not `getByRole("dialog")`: while the Select
+		// below is open, Radix's `hideOthers` marks the whole dialog
+		// `aria-hidden="true"` (everything outside the Select's own popper is
+		// hidden from assistive tech while it's open), which would make any
+		// role-based query against the dialog time out for the rest of this
+		// test even though the dialog is still visibly on screen.
+		const dialogTitle = page.getByText("Editing G1", { exact: true });
+		await expect(dialogTitle).toBeVisible();
+
+		const assertionStatusTrigger = page.getByRole("combobox", {
+			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
+		});
+		await assertionStatusTrigger.click();
+		await expect(page.getByRole("listbox")).toBeVisible();
+
+		// Click on the dialog body — the dialog's own title, well clear of
+		// the open dropdown's own popper — without choosing an option from
+		// the open dropdown. `force: true` because, pre-fix, Radix sets
+		// `pointer-events: none` on the dialog's own content while the
+		// Select is open — Playwright's default click would otherwise wait
+		// forever for a target that (correctly, per the bug) never becomes
+		// clickable; a real user's click still lands there and falls through
+		// to the dialog's own overlay underneath.
+		await dialogTitle.click({ force: true });
+
+		await expect(page.getByRole("listbox")).not.toBeVisible();
+		await expect(dialogTitle).toBeVisible();
+
+		// The dialog's own close paths must still work.
+		await page.getByRole("button", { name: "Cancel" }).click();
+		await expect(dialogTitle).not.toBeVisible();
+	});
+
+	test("rapid open/close of the assertion status dropdown does not leave the dialog stuck open or stuck unable to close", async ({
+		page,
+	}) => {
+		// Stability regression: rapid open/close cycling of the Select must
+		// not leave the dialog's outside-dismiss guard (see
+		// `useSelectDismissGuard` in hooks/use-select-dismiss-guard.ts) stuck
+		// open, since that would make the dialog ignore every subsequent
+		// outside click.
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = g1EditButton(page);
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		const dialogTitle = page.getByText("Editing G1", { exact: true });
+		await expect(dialogTitle).toBeVisible();
+
+		const assertionStatusTrigger = page.getByRole("combobox", {
+			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
+		});
+
+		// Five cycles is enough to expose ordering/state-leak bugs between
+		// rapid open/close toggles; the exact count is arbitrary.
+		for (let i = 0; i < 5; i++) {
+			await assertionStatusTrigger.click();
+			await expect(page.getByRole("listbox")).toBeVisible();
+			await page.keyboard.press("Escape");
+			await expect(page.getByRole("listbox")).not.toBeVisible();
+		}
+
+		// Click the dialog body (not the Select, which is now closed) —
+		// this must be a genuine outside-of-Select click and must not
+		// dismiss the dialog.
+		await dialogTitle.click({ force: true });
+		await expect(dialogTitle).toBeVisible();
+
+		// The dialog must still be dismissable by a subsequent overlay
+		// click — this is the assertion that catches a stuck-open guard.
+		await page.mouse.click(5, 5);
+		await expect(dialogTitle).not.toBeVisible();
+	});
+
+	test("Escape-closing the assertion status dropdown, then immediately clicking outside the dialog, still closes the dialog", async ({
+		page,
+	}) => {
+		// Regression: the dismiss guard reads whether the Select was open at
+		// the start of the outside click's own pointerdown event, not a
+		// time window since the Select last closed — so a click that lands
+		// immediately after an Escape-close is not mistaken for the pointer
+		// event that closed the Select.
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = g1EditButton(page);
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		const dialogTitle = page.getByText("Editing G1", { exact: true });
+		await expect(dialogTitle).toBeVisible();
+
+		const assertionStatusTrigger = page.getByRole("combobox", {
+			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
+		});
+
+		// Five cycles is enough to expose ordering/state-leak bugs between
+		// rapid open/close toggles; the exact count is arbitrary.
+		for (let i = 0; i < 5; i++) {
+			await assertionStatusTrigger.click();
+			await expect(page.getByRole("listbox")).toBeVisible();
+			await page.keyboard.press("Escape");
+			await expect(page.getByRole("listbox")).not.toBeVisible();
+		}
+
+		await expect(dialogTitle).toBeVisible();
+
+		// No artificial pause: this click must be indistinguishable from a
+		// genuine outside click landing right after the last Escape-close.
+		await page.mouse.click(5, 5);
+		await expect(dialogTitle).not.toBeVisible();
 	});
 });

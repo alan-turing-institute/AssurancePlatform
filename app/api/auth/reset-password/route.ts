@@ -1,10 +1,12 @@
 import { headers } from "next/headers";
+import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
 	apiSuccess,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import { validationError } from "@/lib/errors";
 import { resetPasswordSchema } from "@/lib/schemas/auth";
 import {
@@ -46,27 +48,16 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
 	try {
-		const body = await request.json().catch(() => null);
-		const parsed = resetPasswordSchema.safeParse(body);
-
-		if (!parsed.success) {
-			const firstError = parsed.error.issues[0];
-			return apiError(
-				validationError(firstError?.message ?? "Invalid request")
-			);
-		}
+		const data = await parseJsonBody(request, resetPasswordSchema);
 
 		// Get client IP and user agent for audit logging
 		const headersList = await headers();
-		const forwarded = headersList.get("x-forwarded-for");
-		const ipAddress = forwarded
-			? (forwarded.split(",")[0]?.trim() ?? "unknown")
-			: (headersList.get("x-real-ip") ?? "unknown");
+		const ipAddress = extractClientIp(headersList);
 		const userAgent = headersList.get("user-agent") ?? undefined;
 
 		const result = await resetPassword(
-			parsed.data.token,
-			parsed.data.password,
+			data.token,
+			data.password,
 			ipAddress,
 			userAgent
 		);

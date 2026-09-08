@@ -14,6 +14,8 @@ import ActionTooltip from "@/components/ui/action-tooltip";
 import { toggleHiddenForChildren } from "@/lib/case";
 import useStore from "@/store/store";
 
+const TOGGLE_LABEL = "Show/Hide children";
+
 interface ToggleButtonProps {
 	node: Node;
 }
@@ -143,8 +145,9 @@ const ToggleButton = ({ node }: ToggleButtonProps) => {
 	}
 
 	return (
-		<ActionTooltip label="Show/Hide children">
+		<ActionTooltip label={TOGGLE_LABEL}>
 			<button
+				aria-label={TOGGLE_LABEL}
 				onClick={(e) => handleToggle2(e)}
 				onMouseDown={(e) => e.stopPropagation()}
 				type="button"

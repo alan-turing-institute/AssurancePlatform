@@ -77,19 +77,43 @@ export const config = {
 		 *   bearer-token request here 307-redirects to /login instead of
 		 *   reaching the route handler.)
 		 * - api/health (health checks)
+		 * - api/public (published-content read endpoints — no auth by
+		 *   design, e.g. GET /api/public/discover/[slug]. Every route under
+		 *   this prefix is
+		 *   audited to serve only already-published content via read-only
+		 *   GET handlers with no session-derived data — see the route
+		 *   audit in the fix-public-api-auth issue. Without this exemption
+		 *   anonymous requests 307-redirect to /login instead of reaching
+		 *   the route handler, contradicting the routes' own "no auth
+		 *   required" doc comments.)
 		 * - _next/static (static files)
 		 * - _next/image (image optimization files)
 		 * - favicon.ico (favicon file)
 		 * - public folder
+		 * - uploads (locally-stored user uploads — served via the
+		 *   `/uploads/[...path]` route handler at runtime, or straight off
+		 *   `public/` for anything present at build time; these are the same
+		 *   URLs Azure Blob Storage returns in production, which are public
+		 *   by URL, so this exemption keeps both storage backends behaving
+		 *   the same way. Without it, uploads whose extension isn't in the
+		 *   `.*\.ext$` list below — `.gif`, `.webp` — were 307-redirected to
+		 *   `/login` even for files that existed at build time (the file
+		 *   extension list happened to cover `.png`/`.jpg`/`.jpeg` but not
+		 *   every `ALLOWED_MIME_TYPES` extension); a bare `uploads` prefix
+		 *   here covers all of them without relying on an extension list.
+		 *   This exemption is extension-independent by construction: anything
+		 *   a future writer places under `public/uploads` becomes publicly
+		 *   readable, regardless of what it is.)
 		 *
-		 * Each of the four `api/*` prefixes above is boundary-anchored
+		 * Each of the five `api/*` prefixes above is boundary-anchored
 		 * (`(?:/|$)`) rather than a bare string prefix — otherwise a
 		 * hypothetical future route like `/api/machinery` or
-		 * `/api/healthcheck` would be silently exempted from session auth
-		 * too. Verified against the full route inventory (fix round,
-		 * 2026-07-03): no existing route under any of the four prefixes
-		 * relies on the looser match, so all four were anchored together.
+		 * `/api/healthcheck` (or `/api/publicfoo`) would be silently
+		 * exempted from session auth too. Verified against the full route
+		 * inventory (fix round, 2026-07-03; extended 2026-07-14): no
+		 * existing route under any of the five prefixes relies on the
+		 * looser match, so all five are anchored the same way.
 		 */
-		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
+		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|uploads(?:/|$)|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
 	],
 };

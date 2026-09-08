@@ -71,7 +71,7 @@ const pluginSettingsSchema = z
  * The acting user is never part of this schema — the route derives it from
  * the session (`requireAuth()`), never from the request body.
  */
-export const pluginToggleSchema = z.object({
+export const pluginToggleSchema = z.strictObject({
 	pluginId: z
 		.string()
 		.min(1, "pluginId is required")

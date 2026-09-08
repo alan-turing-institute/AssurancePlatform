@@ -6,6 +6,11 @@
  */
 
 import { z } from "zod";
+import {
+	describeExpectedFormat,
+	isValidElementName,
+} from "@/lib/element-names/prefix-registry";
+import { AssertionStatusSchema } from "./case-export";
 
 // ============================================
 // ELEMENT TYPE DEFINITIONS
@@ -55,6 +60,9 @@ export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
 	moduleReferenceId: new Set(["MODULE", "AWAY_GOAL"]),
 	moduleEmbedType: new Set(["MODULE"]),
 	modulePublicSummary: new Set(["MODULE"]),
+	// Element-level citation (ADR 0004 D5) — names the specific element an
+	// AWAY_GOAL cites within the case named by moduleReferenceId.
+	citedElementId: new Set(["AWAY_GOAL"]),
 };
 
 /**
@@ -142,6 +150,7 @@ const ModuleEmbedTypeSchema = z
 /**
  * Base fields common to all element types.
  */
+// biome-ignore lint/plugin: import leniency, ADR-level decision — this validates data already persisted or being imported (Prisma middleware / element-service.ts), not a live request body; unknown keys from older records must be dropped silently, not rejected.
 const BaseElementSchema = z
 	.object({
 		name: z
@@ -173,6 +182,8 @@ const BaseElementSchema = z
 			.nullable()
 			.optional()
 			.describe("ID of the element this defeats"),
+		// Per-assertion status (ADR 0004 D3) - available to all types
+		assertionStatus: AssertionStatusSchema.nullable().optional(),
 	})
 	.describe("Base fields common to all element types");
 
@@ -206,7 +217,13 @@ const EvidenceSchema = BaseElementSchema.extend({
 	elementType: z.literal("EVIDENCE"),
 	url: z.string().nullable().optional(),
 	// URLs/URIs are stored as simple strings - no strict validation
-	// to allow DOIs, URNs, file paths, document references, etc.
+	// to allow DOIs, URNs, file paths, document references, etc. This is a
+	// deliberate split from base.ts's lenientUrlSchema/nullableUrlSchema,
+	// which normalise and validate as a *web address* (prepend https://,
+	// http(s)-only allowlist) — those are used by UI form entry points and
+	// the batch-update route, where "url" always means a web address. This
+	// import path means "identifier or reference of any kind" instead, so
+	// it stays a bare string.
 	urls: z.array(z.string()).default([]),
 });
 
@@ -231,6 +248,11 @@ const AwayGoalSchema = BaseElementSchema.extend({
 	elementType: z.literal("AWAY_GOAL"),
 	assumption: z.string().nullable().optional(),
 	moduleReferenceId: z.string().uuid(),
+	// Element-level citation (ADR 0004 D5) — the specific element within the
+	// referenced case (moduleReferenceId) that this AWAY_GOAL cites.
+	// Existence and self-citation are validated at the service layer
+	// (element-service.ts), not here — this schema only checks shape.
+	citedElementId: z.string().uuid().nullable().optional(),
 });
 
 const ContractSchema = BaseElementSchema.extend({
@@ -310,6 +332,7 @@ export function cleanElementDataForType(
 		"moduleReferenceId",
 		"moduleEmbedType",
 		"modulePublicSummary",
+		"citedElementId",
 	];
 
 	for (const [key, value] of Object.entries(data)) {
@@ -352,6 +375,10 @@ export function getValidFieldsForType(elementType: string): string[] {
 		"modifiedFromPattern",
 		"isDefeater",
 		"defeatsElementId",
+		// Per-assertion status (ADR 0004 D3) — applies to every element type,
+		// same as isDefeater/defeatsElementId above, so it belongs with the
+		// base fields rather than FIELD_APPLICABILITY.
+		"assertionStatus",
 		"createdAt",
 		"updatedAt",
 		"createdById",
@@ -366,4 +393,38 @@ export function getValidFieldsForType(elementType: string): string[] {
 	}
 
 	return [...baseFields, ...typeSpecificFields];
+}
+
+// ============================================
+// NAME FORMAT VALIDATION (TEA-syntax prefixes)
+// ============================================
+
+export type ElementNameValidationResult =
+	| { valid: true }
+	| { valid: false; error: string };
+
+/**
+ * Validates an element's `name` against its type's TEA-syntax prefix format
+ * (`lib/element-names/prefix-registry.ts` — `<prefix><n>(.<n>)*`, e.g. `P1`,
+ * `P1.1`). Names are optional: `null`, `undefined`, and empty string all
+ * pass, since the rule only applies when a name is actually given (Chris's
+ * ruling, design note "TEA — Element Name Prefix Validation", Decision 2).
+ *
+ * `enabledPluginIds` is resolved by the caller (the service layer, via
+ * `getEnabledPluginIdsForUser` in `lib/services/plugin-enablement-service.ts`)
+ * and passed in — this function stays pure, with no Prisma access, matching
+ * every other rule in this file.
+ */
+export function validateElementName(
+	elementType: string,
+	name: string | null | undefined,
+	enabledPluginIds: readonly string[] = []
+): ElementNameValidationResult {
+	if (!name) {
+		return { valid: true };
+	}
+	if (isValidElementName(elementType, name, enabledPluginIds)) {
+		return { valid: true };
+	}
+	return { valid: false, error: describeExpectedFormat(elementType) };
 }

@@ -1,6 +1,6 @@
-import { timingSafeCompare } from "@/lib/auth/timing-safe";
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { requireCronSecret } from "@/lib/services/cron-auth";
 import type { ServiceResult } from "@/types/service";
 
 // ============================================
@@ -115,8 +115,13 @@ export async function softDeleteCase(
 ): ServiceResult {
 	const { canAccessCase } = await import("@/lib/permissions");
 
-	// Check permission - only ADMIN can delete
-	const hasAccess = await canAccessCase({ userId, caseId }, "ADMIN");
+	// Check permission - only ADMIN can delete. `includeTrashed: true` so an
+	// already-trashed case still reaches the ADMIN check below, instead of
+	// being hidden by the default trash-invisibility gate: that lets this
+	// function report its own distinct "Case is already in trash" error.
+	const hasAccess = await canAccessCase({ userId, caseId }, "ADMIN", {
+		includeTrashed: true,
+	});
 	if (!hasAccess) {
 		return { error: "Permission denied" };
 	}
@@ -222,15 +227,9 @@ export async function purgeCase(userId: string, caseId: string): ServiceResult {
 export async function purgeExpiredCases(
 	authToken: string | null
 ): ServiceResult<PurgeResult> {
-	const cronSecret = process.env.CRON_SECRET;
-
-	if (!cronSecret) {
-		console.error("CRON_SECRET environment variable not set");
-		return { error: "Server configuration error" };
-	}
-
-	if (!(authToken && timingSafeCompare(authToken, cronSecret))) {
-		return { error: "Unauthorised" };
+	const auth = requireCronSecret(authToken);
+	if (!auth.authorised) {
+		return { error: auth.error };
 	}
 
 	try {

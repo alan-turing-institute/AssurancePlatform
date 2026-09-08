@@ -79,14 +79,16 @@ export function deriveHealthBand(
 
 /**
  * Health ⊥ freshness (ADR 0002 v2 §3): a claim can be green-but-stale.
- * `lastEvaluatedAt: null` (no evidence ever recorded) counts as stale —
- * defensive only, since `readHealthState` never returns a `HealthState` at
- * all until at least one evidence item has been scored, so this branch is
- * currently unreachable in practice, not a designed state.
+ * `lastEvaluatedAt: null` (no evidence ever recorded) is NEVER stale — this
+ * mirrors `health-scoring-service.ts`'s server-side `isHealthStateStale`
+ * exactly, so the two staleness helpers agree if this branch ever becomes
+ * reachable from here. It isn't today: `readHealthState` never returns a
+ * `HealthState` at all until at least one evidence item has been scored, so
+ * this remains defensive-only, not a designed state.
  */
 export function isHealthStale(health: HealthState): boolean {
 	if (!health.lastEvaluatedAt) {
-		return true;
+		return false;
 	}
 	const evaluatedAtMs = new Date(health.lastEvaluatedAt).getTime();
 	return Date.now() - evaluatedAtMs > health.validityWindowSeconds * 1000;

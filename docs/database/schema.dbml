@@ -36,6 +36,8 @@ Table users {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   lastLoginAt DateTime [note: 'Most recent login timestamp for audit purposes']
+  retentionWarning30SentAt DateTime [note: 'When the 30-day inactive-account deletion warning was sent']
+  retentionWarning7SentAt DateTime [note: 'When the 7-day final deletion reminder was sent']
   teamMemberships team_members [not null]
   createdTeams teams [not null]
   createdCases assurance_cases [not null]
@@ -47,7 +49,6 @@ Table users {
   resolvedComments comments [not null]
   releaseComments release_comments [not null]
   githubRepositories github_repositories [not null]
-  caseStudies case_studies [not null]
   markedReadyCases assurance_cases [not null]
   deletedCases assurance_cases [not null]
   ownedIntegrations integrations [not null]
@@ -153,6 +154,7 @@ Table assurance_cases {
   invites case_invites [not null]
   comments comments [not null]
   caseImage case_images
+  caseInformation case_information
   caseTypes case_type_assignments [not null]
   pluginData plugin_data [not null]
   sourceReleases releases [not null]
@@ -236,6 +238,9 @@ Table assurance_elements {
   isDefeater Boolean [not null, default: false, note: 'True if element is a counter-argument']
   defeatsElementId String [note: 'Element this defeater challenges']
   level Int [note: 'Hierarchy depth level for property claims']
+  assertionStatus AssertionStatus
+  citedElementId String
+  citationDangling Boolean [not null, default: false]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   createdById String [not null]
@@ -249,6 +254,8 @@ Table assurance_elements {
   defeatsElement assurance_elements
   defeatedBy assurance_elements [not null]
   moduleReference assurance_cases
+  citedElement assurance_elements
+  citedBy assurance_elements [not null]
   evidenceLinksFrom evidence_links [not null]
   evidenceLinksTo evidence_links [not null]
   comments comments [not null]
@@ -257,6 +264,22 @@ Table assurance_elements {
   pluginHealthEvidence plugin_health_evidence [not null]
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
+}
+
+Table element_name_backfill {
+  id String [pk]
+  elementId String [not null]
+  oldName String [not null]
+  newName String [not null]
+  migratedAt DateTime [default: `now()`, not null]
+
+  Note: 'Audit trail for the one-off element-name-prefix backfill migration
+(`prisma/migrations/*_element_name_prefix_backfill`): every element whose
+stored name didn\'t conform to its type\'s TEA-syntax prefix format got a
+row here recording old_name -> new_name before the rename, so a support
+query (or a down-migration) can restore it. No FK to AssuranceElement
+deliberately — this is an audit trail, not a live relation, and should
+survive even if the source element is later hard-purged.'
 }
 
 Table evidence_links {
@@ -455,6 +478,37 @@ Table case_images {
   Note: 'Cover/thumbnail image for an assurance case. One image per case.'
 }
 
+Table case_information {
+  id String [pk]
+  caseId String [unique, not null]
+  description String
+  authors String
+  sector String [note: 'The sector\'s stable numeric ID from `lib/sectors.ts` (e.g. "15"),
+stored as a string so this column can also tolerate free text saved
+before the ID migration (`20260820000000_sector_stable_ids`) that
+couldn\'t be mapped to a canonical sector — resolve for display with
+`getSectorDisplayName`, never render this raw value. Storing the ID
+rather than the display name means relabelling a sector in
+`lib/sectors.ts` can never orphan a case that already selected it.']
+  featureImageUrl String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  case assurance_cases [not null]
+
+  Note: 'The canonical case-information record (ADR 0003 §1): description,
+authors, sector, and a feature image, editable at any time under the
+case\'s normal edit permissions. Deliberately broader than "publication
+metadata" — other services and plugins may read it; publishing (see
+`PublishedAssuranceCase`) is its first consumer, not its only one.
+One-to-one and optional: a case with no curated information yet has no
+row here, not a row of nulls.
+
+`description` is distinct from `AssuranceCase.description`: the case\'s
+own field describes the argument\'s purpose and scope for people working
+on it; this one is the public-facing narrative shown on Discover once
+published, mirroring what the retired case-study form collected.'
+}
+
 Table case_types {
   id String [pk]
   name String [unique, not null, note: 'Display name of the type']
@@ -498,63 +552,32 @@ Table github_repositories {
   Note: 'GitHub repository linked to a user account. Used for evidence gathering and repository integration.'
 }
 
-Table case_studies {
-  id Int [pk, increment]
-  title String [not null, note: 'Case study title']
-  description String [note: 'Full description/narrative']
-  authors String [note: 'Author names']
-  category String [note: 'Category (e.g., "Healthcare", "Automotive")']
-  publishedDate DateTime [note: 'When first published']
-  lastModifiedOn DateTime [not null]
-  createdOn DateTime [not null]
-  sector String [note: 'Industry sector']
-  contact String [note: 'Contact email']
-  image String [note: 'Legacy image path']
-  published Boolean [not null, note: 'Whether the case study is publicly visible']
-  ownerId String [note: 'Creator/owner of the case study']
-  type String [note: 'Case study type classification']
-  owner users
-  publishedCases case_study_published_cases [not null]
-  featureImage case_study_images
-
-  Note: 'Public community document showcasing published assurance cases with narrative context.'
-}
-
-Table case_study_published_cases {
-  id BigInt [pk, increment]
-  caseStudyId Int [not null, note: 'The case study']
-  publishedAssuranceCaseId String [not null, note: 'The published case']
-  caseStudy case_studies [not null]
-  publishedAssuranceCase published_assurance_cases [not null]
-
-  indexes {
-    (caseStudyId, publishedAssuranceCaseId) [unique]
-  }
-
-  Note: 'Junction table linking case studies to published assurance case snapshots.'
-}
-
-Table case_study_images {
-  id BigInt [pk, increment]
-  image String [not null, note: 'Image URL or path']
-  uploadedAt DateTime [not null]
-  caseStudyId Int [unique, not null]
-  caseStudy case_studies [not null]
-
-  Note: 'Feature image for a case study. One image per case study.'
-}
-
 Table published_assurance_cases {
   id String [pk]
+  type PublishableItemType [not null, default: 'ASSURANCE_CASE', note: 'Discriminator (ADR 0003 §5) — only ASSURANCE_CASE is implemented; ready for a future pattern type with no rework.']
+  slug String [not null, note: 'Stable, name-derived, deployment-unique public address (ADR 0003 §6). Generated once at first publish (see `slug-service.ts`) and carried forward verbatim — UNCHANGED — onto every later republish row of the same source case, never regenerated on rename. Collisions append a numeric suffix. NOT `@unique` here: every historical version of the same case shares one slug by design (that is what "stable" means), so true uniqueness is scoped to the CURRENT version only — see `isCurrent` and the hand-written partial index below (same DSL limitation as `PluginData`\'s case-level partial index; Prisma cannot express a partial unique constraint).']
+  isCurrent Boolean [not null, default: true, note: 'True for exactly one row per `assuranceCaseId` at a time — the version Discover and the public API serve. Republishing flips the previous current row to `false` in the same transaction that inserts the new current row (`updatePublishedCase`). That "exactly one" invariant is enforced at the service layer, not the DB — the partial unique index below only stops two DIFFERENT cases\' current rows from colliding on the same slug.']
   title String [not null, note: 'Title at time of publishing']
   content Json [not null, note: 'Full case content as JSON snapshot']
   createdAt DateTime [default: `now()`, not null]
   assuranceCaseId String [not null, note: 'Source case this was published from']
   description String [note: 'Description at time of publishing']
   assuranceCase assurance_cases [not null]
-  caseStudyLinks case_study_published_cases [not null]
 
-  Note: 'Snapshot of an assurance case for case study integration. Content stored as JSON.'
+  Note: 'Frozen, point-in-time snapshot of an assurance case (ADR 0003 §3): the
+public/Discover-facing published record. Content stored as JSON;
+multiple versions per case (history) via repeated publish/republish —
+republishing INSERTS a new row rather than updating the old one, so a
+case\'s full publish history stays queryable. Distinct from the `Release`
+model (community releases, a separate, currently-unused mechanism).
+
+`description` here is the free-text note optionally supplied by the
+caller at publish time (e.g. "Initial release") — NOT the case\'s curated
+`CaseInformation.description`. The latter, along with `authors`, `sector`,
+and `featureImageUrl`, is frozen verbatim into `content.caseInformation`
+at publish time (see `publish-service.ts`), composed the same way as
+`content.pluginData` (ADR 0002 v2 §3) — undefined, not an empty object,
+when the case holds no case information at all.'
 }
 
 Table plugin_data {
@@ -601,7 +624,7 @@ ORGANISATION tier\'s referent does not exist yet (deliberate).'
 
 Table integrations {
   id String [pk]
-  name String [unique, not null, note: 'e.g. "darter-evidence-pipeline"']
+  name String [unique, not null, note: 'e.g. "example-integration"']
   description String
   ownerId String [not null, note: 'The human accountable for this integration']
   systemUserId String [unique, not null, note: 'The machine principal (User with isSystemUser)']
@@ -678,7 +701,6 @@ Enum CaseMode {
 
 Enum PublishStatus {
   DRAFT
-  READY_TO_PUBLISH
   PUBLISHED
 }
 
@@ -706,6 +728,15 @@ Enum ElementType {
   MODULE
   AWAY_GOAL
   CONTRACT
+}
+
+Enum AssertionStatus {
+  ASSERTED
+  NEEDS_SUPPORT
+  ASSUMED
+  AXIOMATIC
+  DEFEATED
+  AS_CITED
 }
 
 Enum ElementRole {
@@ -740,6 +771,11 @@ Enum CaseTypeCategory {
   DOMAIN
   TECHNIQUE
   STANDARD
+}
+
+Enum PublishableItemType {
+  ASSURANCE_CASE
+  ARGUMENT_PATTERN
 }
 
 Enum PluginScopeType {
@@ -798,6 +834,8 @@ Ref: assurance_elements.defeatsElementId - assurance_elements.id [delete: Cascad
 
 Ref: assurance_elements.moduleReferenceId > assurance_cases.id [delete: Cascade]
 
+Ref: assurance_elements.citedElementId - assurance_elements.id [delete: Cascade]
+
 Ref: evidence_links.evidenceId > assurance_elements.id [delete: Cascade]
 
 Ref: evidence_links.claimId > assurance_elements.id [delete: Cascade]
@@ -840,19 +878,13 @@ Ref: comments.parentCommentId - comments.id
 
 Ref: case_images.caseId - assurance_cases.id [delete: Cascade]
 
+Ref: case_information.caseId - assurance_cases.id [delete: Cascade]
+
 Ref: case_type_assignments.caseId > assurance_cases.id [delete: Cascade]
 
 Ref: case_type_assignments.caseTypeId > case_types.id [delete: Cascade]
 
 Ref: github_repositories.userId > users.id [delete: Cascade]
-
-Ref: case_studies.ownerId > users.id
-
-Ref: case_study_published_cases.caseStudyId > case_studies.id [delete: No Action]
-
-Ref: case_study_published_cases.publishedAssuranceCaseId > published_assurance_cases.id [delete: No Action]
-
-Ref: case_study_images.caseStudyId - case_studies.id [delete: No Action]
 
 Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id
 

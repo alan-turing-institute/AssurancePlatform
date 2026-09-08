@@ -26,7 +26,23 @@ const BAND_LABELS: Record<HealthBand, string> = {
 	fail: "Health: failing",
 };
 
-const STALE_DOT_CLASS = "bg-muted-foreground";
+/** The band word alone, for composing into the stale label below. */
+const BAND_WORDS: Record<HealthBand, string> = {
+	pass: "passing",
+	degraded: "degraded",
+	fail: "failing",
+};
+
+/**
+ * Stale marker (ADR 0002 v2 §3 — "green-but-stale is preserved"): health and
+ * freshness are orthogonal, so staleness must never REPLACE the band colour,
+ * only annotate it. A ring keeps the dot's fill on its band colour and adds
+ * a second, concentric shape around it — a geometry cue, not a colour one,
+ * so it reads even without colour vision. `ring-offset-background` keeps the
+ * gap between dot and ring visible against either theme.
+ */
+const STALE_RING_CLASSES =
+	"ring-2 ring-muted-foreground/70 ring-offset-1 ring-offset-background";
 
 /**
  * The `element-badge` slot's health state dot (ADR 0002 v2 §3 — "the state
@@ -56,9 +72,13 @@ export function HealthBadge({
 
 	const stale = isHealthStale(health);
 	const band = deriveHealthBand(health.score, bandScores);
-	const dotClassName = stale ? STALE_DOT_CLASS : BAND_DOT_CLASSES[band];
+	const dotClassName = cn(
+		"inline-block size-2 rounded-full",
+		BAND_DOT_CLASSES[band],
+		stale && STALE_RING_CLASSES
+	);
 	const label = stale
-		? `Health: stale (last evaluated ${formatRelativeToNow(health.lastEvaluatedAt)})`
+		? `Health: ${BAND_WORDS[band]} — stale (last evaluated ${formatRelativeToNow(health.lastEvaluatedAt)})`
 		: BAND_LABELS[band];
 
 	return (
@@ -67,7 +87,7 @@ export function HealthBadge({
 				<TooltipTrigger asChild>
 					<output
 						aria-label={label}
-						className={cn("inline-block size-2 rounded-full", dotClassName)}
+						className={dotClassName}
 						data-testid="health-badge-dot"
 					/>
 				</TooltipTrigger>

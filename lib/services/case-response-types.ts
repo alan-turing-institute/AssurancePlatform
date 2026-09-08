@@ -2,15 +2,30 @@
  * Response types for case-related API data.
  *
  * These types define the shapes returned by the service layer (case-fetch-service)
- * and consumed by the frontend. IDs are strings (UUIDs from Prisma), except
- * CaseStudyResponse.id which is number (autoincrement Int).
+ * and consumed by the frontend. IDs are strings (UUIDs from Prisma).
  */
 
 import type { CommentResponse } from "./comment-service";
 
-export type PublishStatusType = "DRAFT" | "READY_TO_PUBLISH" | "PUBLISHED";
+// The "Ready to Publish" intermediate step was retired (ADR 0003 §2) — DRAFT
+// and PUBLISHED are the only two states now.
+export type PublishStatusType = "DRAFT" | "PUBLISHED";
+
+// Per-assertion status (ADR 0004 D3), mirroring the Prisma `AssertionStatus`
+// enum and `AssertionStatusSchema` (lib/schemas/case-export.ts). Kept as a
+// plain string union here rather than imported from generated Prisma types,
+// matching this file's convention (see PublishStatusType above) of
+// UI-facing response types staying independent of the Prisma client.
+export type AssertionStatusResponseType =
+	| "ASSERTED"
+	| "NEEDS_SUPPORT"
+	| "ASSUMED"
+	| "AXIOMATIC"
+	| "DEFEATED"
+	| "AS_CITED";
 
 export interface GoalResponse {
+	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	assuranceCaseId: string;
 	comments?: CommentResponse[];
@@ -32,6 +47,7 @@ export interface GoalResponse {
 }
 
 export interface StrategyResponse {
+	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	comments?: CommentResponse[];
 	context?: string[];
@@ -51,6 +67,7 @@ export interface StrategyResponse {
 }
 
 export interface PropertyClaimResponse {
+	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	claimType: string;
 	comments?: CommentResponse[];
@@ -116,16 +133,12 @@ export interface AssuranceCaseResponse {
 	goals?: GoalResponse[];
 	/** Whether the case has changes since last publish */
 	hasChanges?: boolean;
-	/** Whether any linked case study is public */
-	hasPublicCaseStudy?: boolean;
 	id: string;
 	images?: CaseImageResponse[];
 	/** True for auto-generated tutorial cases */
 	isDemo?: boolean;
 	/** ELK layout direction preference: TB (top-bottom) or LR (left-right) */
 	layoutDirection?: "TB" | "LR";
-	/** Number of linked case studies */
-	linkedCaseStudyCount?: number;
 	/** When the case was marked as ready to publish */
 	markedReadyAt?: string | null;
 	name: string;
@@ -140,26 +153,6 @@ export interface AssuranceCaseResponse {
 	type: string;
 	updatedOn?: string;
 	viewMembers?: MemberResponse[];
-}
-
-/**
- * Case study response type — note id is number (autoincrement Int), not string.
- */
-export interface CaseStudyResponse {
-	assuranceCases?: AssuranceCaseResponse[];
-	authors: string;
-	contact?: string;
-	createdOn: string;
-	description: string;
-	featuredImage?: string;
-	id: number;
-	image?: string;
-	lastModifiedOn?: string;
-	published: boolean;
-	publishedDate?: string;
-	sector: string;
-	title: string;
-	type?: string;
 }
 
 export interface UserResponse {

@@ -190,4 +190,126 @@ describe("exportCase", () => {
 		// Comments should be undefined when not requested
 		expect(rootNode.comments).toBeUndefined();
 	});
+
+	describe("assertionStatus (ADR 0004 D3)", () => {
+		it("exports an unset (null) assertionStatus as the SACM default ASSERTED, never omitted", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const goal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				role: "TOP_LEVEL",
+			});
+			expect(goal.assertionStatus).toBeNull();
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			expect(data.tree.assertionStatus).toBe("ASSERTED");
+		});
+
+		it("round-trips a declared assertionStatus through export", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				role: "TOP_LEVEL",
+				assertionStatus: "NEEDS_SUPPORT",
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			expect(data.tree.assertionStatus).toBe("NEEDS_SUPPORT");
+		});
+
+		it("resolves assertionStatus per-node — evidence linked to an unset claim still carries its own declared status", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const goal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				role: "TOP_LEVEL",
+			});
+			const evidence = await createTestElement(testCase.id, owner.id, {
+				elementType: "EVIDENCE",
+				name: "Evidence",
+				description: "Supporting evidence",
+				assertionStatus: "AS_CITED",
+			});
+			await prisma.evidenceLink.create({
+				data: { evidenceId: evidence.id, claimId: goal.id },
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			expect(data.tree.assertionStatus).toBe("ASSERTED");
+			const evidenceNode = data.tree.children.find(
+				(c: { type: string }) => c.type === "EVIDENCE"
+			);
+			expect(evidenceNode?.assertionStatus).toBe("AS_CITED");
+		});
+	});
+
+	describe("citedElementId (ADR 0004 D5)", () => {
+		it("carries citedElementId on an AWAY_GOAL node", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const awayCase = await createTestCase(owner.id);
+			const citedGoal = await createTestElement(awayCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Away Goal",
+			});
+			const rootGoal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				role: "TOP_LEVEL",
+			});
+			await createTestElement(testCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				name: "Reference",
+				parentId: rootGoal.id,
+				moduleReferenceId: awayCase.id,
+				citedElementId: citedGoal.id,
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			const awayGoalNode = data.tree.children.find(
+				(c: { type: string }) => c.type === "AWAY_GOAL"
+			);
+			expect(awayGoalNode?.citedElementId).toBe(citedGoal.id);
+		});
+
+		it("omits citedElementId when unset", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const awayCase = await createTestCase(owner.id);
+			const rootGoal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "Root Goal",
+				role: "TOP_LEVEL",
+			});
+			await createTestElement(testCase.id, owner.id, {
+				elementType: "AWAY_GOAL",
+				name: "Reference",
+				parentId: rootGoal.id,
+				moduleReferenceId: awayCase.id,
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			const awayGoalNode = data.tree.children.find(
+				(c: { type: string }) => c.type === "AWAY_GOAL"
+			);
+			expect(awayGoalNode?.citedElementId).toBeUndefined();
+		});
+	});
 });

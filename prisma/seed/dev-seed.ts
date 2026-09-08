@@ -14,12 +14,24 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 import { Pool } from "pg";
 import { prisma as appPrisma } from "../../lib/prisma";
+import { sectors } from "../../lib/sectors";
+import { upsertCaseInformation } from "../../lib/services/case-information-service";
 import {
 	DARTER_INTEGRATION_NAME,
 	ensureDarterCaseGrant,
 	ensureDarterIntegration,
 } from "../../lib/services/darter-integration-service";
+import { publishAssuranceCase } from "../../lib/services/publish-service";
 import { PrismaClient } from "../../src/generated/prisma";
+
+const HEALTH_AND_SOCIAL_CARE_SECTOR_ID = sectors.find(
+	(sector) => sector.Name === "Health & Social Care"
+)?.ID;
+if (!HEALTH_AND_SOCIAL_CARE_SECTOR_ID) {
+	throw new Error(
+		"Seed data assumes a 'Health & Social Care' sector exists in lib/sectors.ts"
+	);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -260,7 +272,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: simpleGoal.id,
-					name: "C1",
+					name: "P1",
 					description: "All inputs are validated",
 					createdById: chris.id,
 				},
@@ -272,7 +284,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: simpleGoal.id,
-					name: "C2",
+					name: "P2",
 					description: "Error handling is comprehensive",
 					createdById: chris.id,
 				},
@@ -312,16 +324,14 @@ async function main() {
 
 			console.log("Created: Simple Case (Draft, chris)");
 
-			// 3b. Medium Case (chris) - Published, shared with alice
+			// 3b. Medium Case (chris) - published after the transaction commits
+			// (see step 5 below) via the real publish service, shared with alice
 			const mediumCase = await tx.assuranceCase.create({
 				data: {
 					name: "Medium Case",
 					description: "A more complex assurance case with strategies",
 					createdById: chris.id,
 					mode: "ADVANCED",
-					publishStatus: "PUBLISHED",
-					published: true,
-					publishedAt: new Date(),
 				},
 			});
 
@@ -375,7 +385,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy1.id,
-					name: "C1",
+					name: "P1",
 					description: "Model achieves >95% accuracy on test set",
 					createdById: chris.id,
 				},
@@ -387,7 +397,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy1.id,
-					name: "C2",
+					name: "P2",
 					description: "Model performance is consistent across validation sets",
 					createdById: chris.id,
 				},
@@ -399,7 +409,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy2.id,
-					name: "C3",
+					name: "P3",
 					description: "No significant bias across protected characteristics",
 					createdById: chris.id,
 				},
@@ -411,7 +421,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: strategy2.id,
-					name: "C4",
+					name: "P4",
 					description: "Bias testing follows industry best practices",
 					createdById: chris.id,
 				},
@@ -517,7 +527,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: aliceGoal.id,
-					name: "C1",
+					name: "P1",
 					description: "All team members can access shared resources",
 					createdById: alice.id,
 				},
@@ -579,7 +589,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: bobGoal.id,
-					name: "C1",
+					name: "P1",
 					description: "External users can view shared cases",
 					createdById: bob.id,
 				},
@@ -616,7 +626,7 @@ async function main() {
 			// 3e. DARTER Demo Case (chris) - Draft, keystone demo target.
 			// Deterministic name/description so the demo documentation and the
 			// DARTER integration registration (below, after this transaction
-			// commits) can point at this case and its C1 claim by name. C1 is
+			// commits) can point at this case and its P1 claim by name. P1 is
 			// deliberately left WITHOUT a static EvidenceLink — it's the
 			// keystone claim whose badge flips live when the DARTER pipeline
 			// posts its first evidence-format-v0.1 item through the health
@@ -679,7 +689,7 @@ async function main() {
 				},
 			});
 
-			// C1 is the keystone evidence target for the DARTER integration —
+			// P1 is the keystone evidence target for the DARTER integration —
 			// intentionally created with NO EvidenceLink below.
 			const demoClaim1 = await tx.assuranceElement.create({
 				data: {
@@ -687,7 +697,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy1.id,
-					name: "C1",
+					name: "P1",
 					description:
 						"Defect detection recall remains above the operational threshold in production monitoring",
 					createdById: chris.id,
@@ -700,7 +710,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy1.id,
-					name: "C2",
+					name: "P2",
 					description: "False-positive rate remains within acceptable bounds",
 					createdById: chris.id,
 				},
@@ -712,7 +722,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy2.id,
-					name: "C3",
+					name: "P3",
 					description:
 						"Low-confidence detections are escalated to human review",
 					createdById: chris.id,
@@ -725,7 +735,7 @@ async function main() {
 					elementType: "PROPERTY_CLAIM",
 					role: "SUPPORTING",
 					parentId: demoStrategy2.id,
-					name: "C4",
+					name: "P4",
 					description: "Operators can override automated detections",
 					createdById: chris.id,
 				},
@@ -776,7 +786,7 @@ async function main() {
 			});
 
 			console.log(
-				"Created: DARTER Demo — Automated Inspection Assurance (Draft, chris, C1 reserved for live health-plugin evidence)"
+				"Created: DARTER Demo — Automated Inspection Assurance (Draft, chris, P1 reserved for live health-plugin evidence)"
 			);
 
 			// ============================================
@@ -809,15 +819,67 @@ async function main() {
 				chrisId: chris.id,
 				demoCaseId: demoCase.id,
 				demoClaim1Id: demoClaim1.id,
+				mediumCaseId: mediumCase.id,
 			};
 		},
 		{ timeout: 30_000 }
 	); // end $transaction
 
-	const { chrisId, demoCaseId, demoClaim1Id } = seeded;
+	const { chrisId, demoCaseId, demoClaim1Id, mediumCaseId } = seeded;
 
 	// ============================================
-	// 5. REGISTER THE DARTER INTEGRATION (keystone demo)
+	// 5. CURATE + PUBLISH MEDIUM CASE (via the real services)
+	// ============================================
+	// Runs OUTSIDE the transaction above, through the app's own `prisma`
+	// client, for the same reason as the DARTER registration below: both
+	// steps need to read back Medium Case (and, for publishing, its
+	// elements), which only exist once this script's own transaction has
+	// committed and is visible to that separate connection.
+	//
+	// Case information (ADR 0003 §1) is curated first so Discover has
+	// something to render beyond a bare title — publishing freezes it into
+	// the snapshot's `content.caseInformation`, exercised by
+	// `discover-service.ts`.
+	console.log("\nCurating case information for Medium Case...");
+	const caseInformationResult = await upsertCaseInformation(
+		chrisId,
+		mediumCaseId,
+		{
+			description:
+				"A worked example assurance case covering ML trustworthiness, used to exercise sharing, comments and publishing in local development.",
+			authors: "Chris Burr",
+			// Stored by stable ID, not display name (fixes the "Healthcare" vs
+			// canonical "Health & Social Care" drift this seed used to carry —
+			// see the sector-stable-id migration).
+			sector: String(HEALTH_AND_SOCIAL_CARE_SECTOR_ID),
+		}
+	);
+	if ("error" in caseInformationResult) {
+		throw new Error(
+			`Failed to curate case information for Medium Case: ${caseInformationResult.error}`
+		);
+	}
+	console.log("Curated case information for Medium Case.");
+
+	// Calling `publishAssuranceCase` — not hand-setting the
+	// `published`/`publishStatus`/`publishedAt` columns — is deliberate: ADR
+	// 0003 defines "published" as the flag AND a `PublishedAssuranceCase`
+	// snapshot row (slug + isCurrent) created together, and this is the one
+	// path the real app uses to produce that pair. Hand-setting only the flag
+	// (the pre-#870 shape of this seed) leaves a case flagged PUBLISHED with
+	// no snapshot row — a state the current schema's own publish flow can
+	// never produce.
+	console.log("\nPublishing Medium Case...");
+	const publishResult = await publishAssuranceCase(chrisId, mediumCaseId);
+	if ("error" in publishResult) {
+		throw new Error(`Failed to publish Medium Case: ${publishResult.error}`);
+	}
+	console.log(
+		`Published Medium Case (slug id ${publishResult.data.publishedId}).`
+	);
+
+	// ============================================
+	// 6. REGISTER THE DARTER INTEGRATION (keystone demo)
 	// ============================================
 	// Runs OUTSIDE the transaction above and through the app's own `prisma`
 	// client (`@/lib/prisma`, a separate connection/pool from this script's
@@ -860,7 +922,7 @@ async function main() {
 	console.log("    - Alice's Case (alice, Draft, team shared)");
 	console.log("    - Bob's Case (bob, Draft, shared with charlie)");
 	console.log(
-		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim C1 id=${demoClaim1Id} is the live evidence target)`
+		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim P1 id=${demoClaim1Id} is the live evidence target)`
 	);
 	console.log("  - 2 comments on Medium Case");
 	console.log(
