@@ -1,6 +1,19 @@
 import sanitizeHtml from "sanitize-html";
 
 /**
+ * Escapes a user-controlled string for safe interpolation into HTML.
+ * Covers the five characters that matter for HTML/attribute contexts.
+ */
+export function escapeHtml(value: string): string {
+	return value
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
+}
+
+/**
  * Safely sanitizes HTML content by removing dangerous elements and attributes.
  * Strips XSS vectors (script tags, event handlers, etc.) while preserving
  * safe HTML formatting.

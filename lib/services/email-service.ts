@@ -1,4 +1,5 @@
 import { EmailClient } from "@azure/communication-email";
+import { escapeHtml } from "../sanitize-html";
 
 // Configuration
 const ACS_CONNECTION_STRING = process.env.ACS_CONNECTION_STRING;
@@ -8,19 +9,6 @@ const ACS_SENDER_ADDRESS =
 const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
 const APP_NAME = "TEA Platform";
 const TEA_LOGO_URL = `${APP_URL}/images/logos/tea-logo-full-dark.png`;
-
-/**
- * Escape a user-controlled string for safe interpolation into HTML.
- * Covers the five characters that matter for HTML/attribute contexts.
- */
-export function escapeHtml(value: string): string {
-	return value
-		.replaceAll("&", "&amp;")
-		.replaceAll("<", "&lt;")
-		.replaceAll(">", "&gt;")
-		.replaceAll('"', "&quot;")
-		.replaceAll("'", "&#39;");
-}
 
 /**
  * Shared header markup used by every email template: the TEA logo on the
