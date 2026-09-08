@@ -1,7 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { extractTextFromHtml, sanitizeDescription } from "../sanitize-html";
+import {
+	escapeHtml,
+	extractTextFromHtml,
+	sanitizeDescription,
+} from "../sanitize-html";
 
 describe("sanitize-html", () => {
+	describe("escapeHtml", () => {
+		it("escapes ampersand", () => {
+			expect(escapeHtml("Tom & Jerry")).toBe("Tom &amp; Jerry");
+		});
+
+		it("escapes less-than", () => {
+			expect(escapeHtml("a < b")).toBe("a &lt; b");
+		});
+
+		it("escapes greater-than", () => {
+			expect(escapeHtml("a > b")).toBe("a &gt; b");
+		});
+
+		it("escapes double quotes", () => {
+			expect(escapeHtml('say "hi"')).toBe("say &quot;hi&quot;");
+		});
+
+		it("escapes single quotes", () => {
+			expect(escapeHtml("it's")).toBe("it&#39;s");
+		});
+	});
+
 	describe("sanitizeDescription", () => {
 		it("should remove empty paragraph breaks", () => {
 			const input = "<p>Valid content</p><p><br></p><p>More content</p>";
