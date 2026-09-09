@@ -1,6 +1,5 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { DrivePicker } from "@/components/google/drive-picker";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -50,12 +49,19 @@ export function GoogleIcon({ className }: { className?: string }) {
  * Renders the Google Drive connection prompt when not connected.
  */
 function GoogleConnectPrompt() {
+	// Uses the same account-link flow as Settings → Connected accounts
+	// (`/api/auth/link/google`) rather than next-auth's `signIn`, which signs
+	// the user in without re-granting Drive access.
+	const handleConnect = () => {
+		window.location.href = "/api/auth/link/google";
+	};
+
 	return (
 		<div className="space-y-4 text-center">
 			<p className="text-muted-foreground text-sm">
 				Connect your Google account to import cases from Google Drive.
 			</p>
-			<Button onClick={() => signIn("google")} variant="outline">
+			<Button onClick={handleConnect} variant="outline">
 				<GoogleIcon className="mr-2 h-4 w-4" />
 				Sign in with Google
 			</Button>

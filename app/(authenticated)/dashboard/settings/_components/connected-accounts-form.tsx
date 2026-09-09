@@ -51,6 +51,41 @@ function GoogleIcon({ className }: { className?: string }) {
 	);
 }
 
+export interface ProviderStatus {
+	description?: string;
+	dotClass: string;
+	label: string;
+}
+
+/**
+ * Pure derivation of a provider card's status dot colour, label, and
+ * optional description line, from its connection state. Exported for direct
+ * unit testing — one case per state (connected, needs re-authorisation,
+ * not connected).
+ */
+export function providerStatus({
+	connected,
+	needsReauthorisation,
+	details,
+}: {
+	connected: boolean;
+	details?: string;
+	needsReauthorisation?: boolean;
+}): ProviderStatus {
+	if (needsReauthorisation) {
+		return {
+			dotClass: "bg-warning",
+			label: "Connected — needs re-authorisation",
+			description:
+				"Google reported that access was revoked. Reconnect to restore Drive backup.",
+		};
+	}
+	if (connected) {
+		return { dotClass: "bg-success", label: details ?? "Connected" };
+	}
+	return { dotClass: "bg-muted-foreground", label: "Not connected" };
+}
+
 /**
  * Provider card component for displaying connection status
  */
@@ -58,6 +93,7 @@ function ProviderCard({
 	name,
 	icon,
 	connected,
+	needsReauthorisation,
 	details,
 	canUnlink,
 	unlinkReason,
@@ -68,6 +104,7 @@ function ProviderCard({
 	name: string;
 	icon: React.ReactNode;
 	connected: boolean;
+	needsReauthorisation?: boolean;
 	details?: string;
 	canUnlink: boolean;
 	unlinkReason?: string;
@@ -75,6 +112,8 @@ function ProviderCard({
 	onDisconnect: () => void;
 	loading: boolean;
 }) {
+	const status = providerStatus({ connected, needsReauthorisation, details });
+
 	return (
 		<div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
 			<div className="flex items-center gap-3">
@@ -85,21 +124,21 @@ function ProviderCard({
 					<div className="flex items-center gap-2">
 						<span className="font-medium">{name}</span>
 						<span
-							className={`inline-flex h-2 w-2 rounded-full ${
-								connected ? "bg-success" : "bg-muted-foreground"
-							}`}
+							className={`inline-flex h-2 w-2 rounded-full ${status.dotClass}`}
 						/>
 					</div>
-					{connected && details ? (
-						<p className="text-muted-foreground text-sm">{details}</p>
-					) : (
-						<p className="text-muted-foreground text-sm">
-							{connected ? "Connected" : "Not connected"}
-						</p>
+					<p className="text-muted-foreground text-sm">{status.label}</p>
+					{status.description && (
+						<p className="mt-1 text-warning text-xs">{status.description}</p>
 					)}
 				</div>
 			</div>
-			<div>
+			<div className="flex items-center gap-2">
+				{needsReauthorisation && (
+					<Button onClick={onConnect} size="sm" variant="outline">
+						Reconnect
+					</Button>
+				)}
 				{connected ? (
 					<TooltipProvider>
 						<Tooltip>
@@ -227,6 +266,7 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 						icon={<GoogleIcon className="h-5 w-5" />}
 						loading={loading === "google"}
 						name="Google"
+						needsReauthorisation={data.google.needsReauthorisation}
 						onConnect={() => handleConnect("google")}
 						onDisconnect={() => handleDisconnectClick("google")}
 						unlinkReason="You cannot disconnect Google because it is your only way to sign in. Connect another provider first."
