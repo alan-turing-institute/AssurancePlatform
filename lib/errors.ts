@@ -1,6 +1,8 @@
 import { resolveDbPoolTimeoutMs } from "@/lib/db-pool-config";
 import { logger } from "@/lib/logger";
 
+const log = logger.child({ component: "errors" });
+
 /**
  * Classifies errors for consistent handling across API routes, server actions, and services.
  */
@@ -148,7 +150,7 @@ export function handleError(error: unknown): AppError {
 	// class import here, and matching by `.name` avoids a circular import
 	// between `lib/errors.ts` and `lib/with-timeout.ts`.
 	if (error instanceof Error && error.name === "TimeoutError") {
-		console.error("[handleError] request timed out:", error.message);
+		log.error("Request timed out", { op: "handleError", error: error.message });
 		return gatewayTimeout(
 			"The request took too long to complete. Please try again."
 		);
@@ -161,7 +163,7 @@ export function handleError(error: unknown): AppError {
 	// production logs from any other unhandled error (see "TEA —
 	// Pool-timeout errors indistinguishable from generic 500s").
 	if (error instanceof Error && isPoolAcquireTimeoutError(error)) {
-		logger.error("Database connection pool acquisition timed out", {
+		log.error("Database connection pool acquisition timed out", {
 			event: "db.pool.acquire_timeout",
 			timeoutMs: resolveDbPoolTimeoutMs(),
 		});
@@ -171,7 +173,7 @@ export function handleError(error: unknown): AppError {
 	const message =
 		error instanceof Error ? error.message : "An unexpected error occurred";
 
-	console.error("[handleError]", error);
+	log.error("handleError", { error });
 
 	return new AppError({
 		code: "INTERNAL",

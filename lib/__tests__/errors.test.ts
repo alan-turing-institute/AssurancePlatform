@@ -148,40 +148,28 @@ describe("handleError", () => {
 	});
 
 	it("wraps a plain Error as INTERNAL", () => {
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-			/* suppress */
-		});
 		const original = new Error("something broke");
 		const result = handleError(original);
 
 		expect(result).toBeInstanceOf(AppError);
 		expect(result.code).toBe("INTERNAL");
 		expect(result.cause).toBe(original);
-		consoleSpy.mockRestore();
 	});
 
 	it("maps TimeoutError to GATEWAY_TIMEOUT (504), not INTERNAL", () => {
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-			/* suppress */
-		});
 		const original = new TimeoutError(15_000);
 		const result = handleError(original);
 
 		expect(result).toBeInstanceOf(AppError);
 		expect(result.code).toBe("GATEWAY_TIMEOUT");
 		expect(result.statusCode).toBe(504);
-		consoleSpy.mockRestore();
 	});
 
 	it("wraps non-Error values as INTERNAL", () => {
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-			/* suppress */
-		});
 		const result = handleError("string error");
 
 		expect(result).toBeInstanceOf(AppError);
 		expect(result.code).toBe("INTERNAL");
-		consoleSpy.mockRestore();
 	});
 
 	it("maps pg-pool's queued-wait timeout message to DB_UNAVAILABLE (503), not INTERNAL", () => {
@@ -226,9 +214,6 @@ describe("handleError", () => {
 	});
 
 	it("stays INTERNAL/500 for an unrelated error whose message merely contains the pool-timeout string", () => {
-		const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-			/* suppress */
-		});
 		const original = new Error(
 			"Upstream vendor API said: timeout exceeded when trying to connect to their sandbox"
 		);
@@ -237,7 +222,6 @@ describe("handleError", () => {
 
 		expect(result.code).toBe("INTERNAL");
 		expect(result.statusCode).toBe(500);
-		consoleSpy.mockRestore();
 	});
 });
 

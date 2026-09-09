@@ -14,6 +14,9 @@ import {
 	waitForRender,
 } from "@/lib/case/document-export";
 import type { LayoutDirection } from "@/lib/case/layout-helper";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "image-export" });
 
 export type ImageFormat = "svg" | "png";
 export type ImageScale = 1 | 2 | 3;
@@ -202,7 +205,7 @@ async function captureAndDownload(
 			saveAs(blob, filename);
 		}
 	} catch (error) {
-		console.error("Export failed:", error);
+		log.error("Export failed", { error });
 		throw error;
 	} finally {
 		// Always restore original styles
