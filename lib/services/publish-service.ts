@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
@@ -14,6 +15,8 @@ import type {
 } from "@/lib/services/publish-service.types";
 import { generateUniqueSlug } from "@/lib/services/slug-service";
 import type { Prisma } from "@/src/generated/prisma";
+
+const log = logger.child({ component: "publish-service" });
 
 // Derived from `prisma.$transaction`'s own callback parameter — same pattern
 // as `slug-service.ts` (kept local rather than imported: `Prisma.
@@ -258,7 +261,7 @@ export async function publishAssuranceCase(
 			data: { publishedId: publishedCase.id, publishedAt: now },
 		};
 	} catch (error) {
-		console.error("Failed to publish case:", error);
+		log.error("Failed to publish case", { error });
 		return { error: "Failed to publish case" };
 	}
 }
@@ -331,7 +334,7 @@ export async function unpublishAssuranceCase(
 
 		return { data: { success: true as const } };
 	} catch (error) {
-		console.error("Failed to unpublish case:", error);
+		log.error("Failed to unpublish case", { error });
 		return { error: "Failed to unpublish case" };
 	}
 }
@@ -421,10 +424,9 @@ export async function getFullPublishStatus(
 		latestPublished = publishedVersions[0] ?? null;
 	} catch (error) {
 		// Log but don't fail - legacy table may have issues
-		console.warn(
-			"Failed to fetch published versions (legacy table issue):",
-			error
-		);
+		log.warn("Failed to fetch published versions (legacy table issue)", {
+			error,
+		});
 	}
 
 	// Detect changes using content-based comparison
@@ -435,7 +437,7 @@ export async function getFullPublishStatus(
 			hasChanges =
 				"data" in changeResult ? changeResult.data.hasChanges : false;
 		} catch (error) {
-			console.warn("Failed to detect changes:", error);
+			log.warn("Failed to detect changes", { error });
 		}
 	}
 
@@ -542,7 +544,7 @@ export async function updatePublishedCase(
 			data: { publishedId: newPublished.id, publishedAt: now },
 		};
 	} catch (error) {
-		console.error("Failed to update published case:", error);
+		log.error("Failed to update published case", { error });
 		return { error: "Failed to update published case" };
 	}
 }
