@@ -55,7 +55,7 @@ export default function CookieConsent({
 				}, 700);
 			}
 		} catch (_e) {
-			// console.log("Error: ", e);
+			// Silently ignore cookie-consent read failures.
 		}
 	}, [demo]);
 

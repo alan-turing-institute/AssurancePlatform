@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "use-change-detection" });
 
 interface ChangeSummary {
 	addedElements: number;
@@ -171,7 +174,7 @@ export function useChangeDetection({
 			const message =
 				err instanceof Error ? err.message : "Failed to detect changes";
 			setState((prev) => ({ ...prev, isLoading: false, error: message }));
-			console.error("[useChangeDetection] Error:", message);
+			log.error("Change detection failed", { error: err, message });
 		}
 	}, [caseId, includeDetails]);
 

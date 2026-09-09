@@ -15,8 +15,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { formatShortDate } from "@/lib/date";
+import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+
+const log = logger.child({ component: "trash-list" });
 
 export interface TrashedCase {
 	createdAt: string;
@@ -79,7 +82,7 @@ export function TrashList({ cases }: TrashListProps) {
 			});
 			router.refresh();
 		} catch (error) {
-			console.error("Error restoring case:", error);
+			log.error("Error restoring case", { error });
 			toast({
 				title: "Error",
 				description:
@@ -115,7 +118,7 @@ export function TrashList({ cases }: TrashListProps) {
 			});
 			router.refresh();
 		} catch (error) {
-			console.error("Error purging case:", error);
+			log.error("Error purging case", { error });
 			toast({
 				title: "Error",
 				description:
