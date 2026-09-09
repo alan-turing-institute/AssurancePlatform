@@ -5,6 +5,9 @@
  */
 
 import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "connected-accounts-service" });
 
 // ============================================
 // Types
@@ -163,7 +166,7 @@ export async function getConnectedAccounts(
 			},
 		};
 	} catch (error) {
-		console.error("[getConnectedAccounts]", { userId, error });
+		log.error("getConnectedAccounts", { userId, error });
 		return { error: "Failed to fetch connected accounts" };
 	}
 }
@@ -239,7 +242,7 @@ export async function unlinkProvider(
 
 		return { data: null };
 	} catch (error) {
-		console.error("[unlinkProvider]", { userId, provider, error });
+		log.error("unlinkProvider", { userId, provider, error });
 		return { error: "Failed to unlink provider" };
 	}
 }

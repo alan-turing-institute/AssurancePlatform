@@ -1,5 +1,6 @@
 import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type {
 	CreateElementSchemaOutput,
@@ -23,6 +24,8 @@ import type {
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "element-service" });
 
 /**
  * Create element input — extends the Zod schema output with API-layer fields
@@ -947,7 +950,7 @@ export async function createElement(
 			intendedParentId
 		);
 	} catch (error) {
-		console.error("Failed to create element:", error);
+		log.error("Failed to create element", { error });
 		return { error: "Failed to create element" };
 	}
 }
@@ -981,7 +984,7 @@ export async function getElement(
 
 		return { data: transformToResponse(element) };
 	} catch (error) {
-		console.error("Failed to get element:", error);
+		log.error("Failed to get element", { error });
 		return { error: "Failed to get element" };
 	}
 }
@@ -1268,7 +1271,7 @@ export async function updateElement(
 
 		return { data: transformToResponse(element) };
 	} catch (error) {
-		console.error("Failed to update element:", error);
+		log.error("Failed to update element", { error });
 		return { error: "Failed to update element" };
 	}
 }
@@ -1342,7 +1345,7 @@ export async function deleteElement(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to delete element:", error);
+		log.error("Failed to delete element", { error });
 		return { error: "Failed to delete element" };
 	}
 }
@@ -1396,7 +1399,7 @@ export async function detachElement(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to detach element:", error);
+		log.error("Failed to detach element", { error });
 		return { error: "Failed to detach element" };
 	}
 }
@@ -1495,7 +1498,7 @@ export async function attachElement(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to attach element:", error);
+		log.error("Failed to attach element", { error });
 		return { error: "Failed to attach element" };
 	}
 }
@@ -1615,7 +1618,7 @@ export async function moveElement(
 
 		return { data: true };
 	} catch (error) {
-		console.error("[moveElement]", { elementId, newParentId, userId, error });
+		log.error("moveElement", { elementId, newParentId, userId, error });
 		return { error: "Failed to move element" };
 	}
 }
@@ -1650,7 +1653,7 @@ export async function getSandboxElements(
 
 		return { data: elements.map(transformToResponse) };
 	} catch (error) {
-		console.error("Failed to get sandbox elements:", error);
+		log.error("Failed to get sandbox elements", { error });
 		return { error: "Failed to get sandbox elements" };
 	}
 }
@@ -1706,7 +1709,7 @@ export async function restoreElement(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to restore element:", error);
+		log.error("Failed to restore element", { error });
 		return { error: "Failed to restore element" };
 	}
 }
