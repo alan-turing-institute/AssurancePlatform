@@ -4,8 +4,8 @@ import {
 	authenticateWithPrisma,
 } from "@/lib/auth/config";
 import { hashPassword } from "@/lib/auth/password-service";
-import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma";
+import { captureLogs } from "../helpers/capture-logs";
 import { createTestUser } from "../utils/prisma-factories";
 
 const TEST_PASSWORD = "correct horse battery staple";
@@ -61,7 +61,7 @@ describe("authenticateWithPrisma — login clears retention warnings", () => {
 			passwordAlgorithm: "argon2id",
 		});
 
-		const errorSpy = vi.spyOn(logger, "error");
+		const logs = captureLogs();
 		const passwordService = await import("@/lib/auth/password-service");
 		const originalVerify = passwordService.verifyPassword;
 		const verifySpy = vi
@@ -74,20 +74,28 @@ describe("authenticateWithPrisma — login clears retention warnings", () => {
 				return verifyResult;
 			});
 
-		const result = await authenticateWithPrisma(user.username, TEST_PASSWORD);
+		try {
+			const result = await authenticateWithPrisma(user.username, TEST_PASSWORD);
 
-		expect(result).not.toBeNull();
-		expect(result?.id).toBe(user.id);
-		expect(errorSpy).toHaveBeenCalledWith(
-			"Failed to record login / reset retention warnings",
-			expect.objectContaining({ userId: user.id })
-		);
+			expect(result).not.toBeNull();
+			expect(result?.id).toBe(user.id);
 
-		const gone = await prisma.user.findUnique({ where: { id: user.id } });
-		expect(gone).toBeNull();
+			const failureEntry = logs.entries.find(
+				(entry) =>
+					entry.msg === "Failed to record login / reset retention warnings"
+			);
+			expect(failureEntry).toMatchObject({
+				level: "error",
+				component: "auth-config",
+				userId: user.id,
+			});
 
-		verifySpy.mockRestore();
-		errorSpy.mockRestore();
+			const gone = await prisma.user.findUnique({ where: { id: user.id } });
+			expect(gone).toBeNull();
+		} finally {
+			verifySpy.mockRestore();
+			logs.restore();
+		}
 	});
 });
 
