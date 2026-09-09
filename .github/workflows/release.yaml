@@ -65,3 +65,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: npx semantic-release
+
+      - name: Merge main back into staging
+        # After a release, main carries the release commit (version bump + changelog)
+        # that staging lacks, which makes every promotion PR "behind main". Merge it
+        # back so the next promotion needs no manual "Update branch". [skip ci] so the
+        # push triggers no staging build or reseed; the version bump deploys with the
+        # next real staging change. Never --force; a merge conflict fails this step
+        # (git's default behaviour) and is resolved by hand.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main staging
+          if git merge-base --is-ancestor origin/main origin/staging; then
+            echo "staging already contains main; nothing to merge"
+            exit 0
+          fi
+          git checkout -B staging origin/staging
+          git merge --no-ff origin/main -m "chore: merge main into staging after release [skip ci]"
+          git push origin staging
