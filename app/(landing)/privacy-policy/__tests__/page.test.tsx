@@ -7,7 +7,11 @@ import PrivacyPolicyPage from "../page";
 const DRIVE_FILE_SENTENCE_REGEX =
 	/we ask for the.*permission\. This lets the Platform see, create and change/;
 const GOOGLE_API_POLICY_REGEX = /Google API Services User Data Policy/;
-const CHRIS_PLACEHOLDER_REGEX = /\[Chris: confirm the Institute/;
+const DATA_CONTROLLER_REGEX =
+	/is the data controller for the personal data described here/;
+const LEGITIMATE_INTERESTS_REGEX = /legitimate interests/;
+const UK_SOUTH_REGEX = /UK South/;
+const CHRIS_PLACEHOLDER_REGEX = /\[Chris:/;
 const KEPT_UNDER_ADMIN_REGEX = /kept under that Admin/;
 const NO_OTHER_ADMIN_DELETED_REGEX = /no other Admin are deleted/;
 const NAME_REMOVED_FROM_COMMENTS_REGEX = /name is removed from comments/;
@@ -80,9 +84,13 @@ describe("PrivacyPolicyPage", () => {
 		it("should link to the Cookie Notice", () => {
 			render(<PrivacyPolicyPage />);
 
-			const cookieLink = screen.getByRole("link", { name: "Cookie Notice" });
-			expect(cookieLink).toBeInTheDocument();
-			expect(cookieLink).toHaveAttribute("href", "/cookie-policy");
+			const cookieLinks = screen.getAllByRole("link", {
+				name: "Cookie Notice",
+			});
+			expect(cookieLinks.length).toBeGreaterThan(0);
+			for (const cookieLink of cookieLinks) {
+				expect(cookieLink).toHaveAttribute("href", "/cookie-policy");
+			}
 		});
 
 		it("should open external Google links in a new tab", () => {
@@ -95,10 +103,38 @@ describe("PrivacyPolicyPage", () => {
 			expect(googlePolicyLink).toHaveAttribute("rel", "noopener noreferrer");
 		});
 
-		it("should render the unresolved Chris placeholders as visible text", () => {
+		it("should name the Institute as data controller and link its privacy notice", () => {
 			render(<PrivacyPolicyPage />);
 
-			expect(screen.getByText(CHRIS_PLACEHOLDER_REGEX)).toBeInTheDocument();
+			expect(screen.getByText(DATA_CONTROLLER_REGEX)).toBeInTheDocument();
+			const noticeLink = screen.getByRole("link", { name: "privacy notice" });
+			expect(noticeLink).toHaveAttribute(
+				"href",
+				"https://www.turing.ac.uk/turing-policy-statement-legal/privacy-policy"
+			);
+			expect(noticeLink).toHaveAttribute("target", "_blank");
+			expect(noticeLink).toHaveAttribute("rel", "noopener noreferrer");
+		});
+
+		it("should state the lawful basis for processing", () => {
+			render(<PrivacyPolicyPage />);
+
+			expect(
+				screen.getByRole("heading", { name: "Our lawful basis" })
+			).toBeInTheDocument();
+			expect(screen.getByText(LEGITIMATE_INTERESTS_REGEX)).toBeInTheDocument();
+		});
+
+		it("should state the hosting region", () => {
+			render(<PrivacyPolicyPage />);
+
+			expect(screen.getByText(UK_SOUTH_REGEX)).toBeInTheDocument();
+		});
+
+		it("should not render any unresolved Chris placeholders", () => {
+			const { container } = render(<PrivacyPolicyPage />);
+
+			expect(container.textContent).not.toMatch(CHRIS_PLACEHOLDER_REGEX);
 		});
 
 		it("should list all six categories of data collected", () => {
