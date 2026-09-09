@@ -8,6 +8,12 @@ const DRIVE_FILE_SENTENCE_REGEX =
 	/we ask for the.*permission\. This lets the Platform see, create and change/;
 const GOOGLE_API_POLICY_REGEX = /Google API Services User Data Policy/;
 const CHRIS_PLACEHOLDER_REGEX = /\[Chris: confirm the Institute/;
+const KEPT_UNDER_ADMIN_REGEX = /kept under that Admin/;
+const NO_OTHER_ADMIN_DELETED_REGEX = /no other Admin are deleted/;
+const NAME_REMOVED_FROM_COMMENTS_REGEX = /name is removed from comments/;
+const TWO_YEARS_REGEX = /two years/;
+const THIRTY_DAYS_REGEX = /30 days/;
+const SEVEN_DAYS_REGEX = /7 days/;
 
 describe("PrivacyPolicyPage", () => {
 	beforeEach(() => {
@@ -94,6 +100,43 @@ describe("PrivacyPolicyPage", () => {
 
 			expect(screen.getByText(CHRIS_PLACEHOLDER_REGEX)).toBeInTheDocument();
 		});
+
+		it("should list all six categories of data collected", () => {
+			render(<PrivacyPolicyPage />);
+
+			const bulletLeaders = [
+				"Account details.",
+				"Sign-in identifiers.",
+				"Google Drive access tokens.",
+				"Your content.",
+				"Activity and security records.",
+				"Emails we send you.",
+			];
+
+			for (const leader of bulletLeaders) {
+				expect(screen.getByText(leader)).toBeInTheDocument();
+			}
+		});
+
+		it("should explain what happens to cases and comments on deletion", () => {
+			render(<PrivacyPolicyPage />);
+
+			expect(screen.getByText(KEPT_UNDER_ADMIN_REGEX)).toBeInTheDocument();
+			expect(
+				screen.getByText(NO_OTHER_ADMIN_DELETED_REGEX)
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(NAME_REMOVED_FROM_COMMENTS_REGEX)
+			).toBeInTheDocument();
+		});
+
+		it("should state the retention timelines", () => {
+			render(<PrivacyPolicyPage />);
+
+			expect(screen.getByText(TWO_YEARS_REGEX)).toBeInTheDocument();
+			expect(screen.getByText(THIRTY_DAYS_REGEX)).toBeInTheDocument();
+			expect(screen.getByText(SEVEN_DAYS_REGEX)).toBeInTheDocument();
+		});
 	});
 
 	describe("Accessibility", () => {
@@ -101,6 +144,18 @@ describe("PrivacyPolicyPage", () => {
 			const { container } = render(<PrivacyPolicyPage />);
 			const results = await axe(container);
 			expect(results.violations).toHaveLength(0);
+		});
+
+		it("should have proper heading hierarchy", () => {
+			render(<PrivacyPolicyPage />);
+
+			// Should have exactly one h1
+			const h1Elements = screen.getAllByRole("heading", { level: 1 });
+			expect(h1Elements).toHaveLength(1);
+
+			// Should have multiple h2 elements
+			const h2Elements = screen.getAllByRole("heading", { level: 2 });
+			expect(h2Elements.length).toBeGreaterThan(0);
 		});
 	});
 });
