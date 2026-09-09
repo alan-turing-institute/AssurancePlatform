@@ -15,6 +15,7 @@ export const PUBLIC_ROUTES = [
 	"/docs",
 	"/auth-error",
 	"/cookie-policy",
+	"/privacy-policy",
 	"/feedback",
 	"/forgot-password",
 	"/reset-password",
