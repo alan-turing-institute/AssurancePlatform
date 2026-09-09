@@ -43,6 +43,7 @@ describe("getConnectedAccounts", () => {
 		}
 		expect(result.data.google.connected).toBe(true);
 		expect(result.data.google.hasDriveAccess).toBe(true);
+		expect(result.data.google.needsReauthorisation).toBe(false);
 	});
 
 	it("reports hasDriveAccess false when Google is connected without a refresh token", async () => {
@@ -56,6 +57,21 @@ describe("getConnectedAccounts", () => {
 		}
 		expect(result.data.google.connected).toBe(true);
 		expect(result.data.google.hasDriveAccess).toBe(false);
+		// Identity linked, Drive tokens gone — this is the "needs
+		// re-authorisation" state, not "not connected".
+		expect(result.data.google.needsReauthorisation).toBe(true);
+	});
+
+	it("reports needsReauthorisation false when Google was never connected", async () => {
+		const user = await createTestUser();
+
+		const result = await getConnectedAccounts(user.id);
+		expect("data" in result).toBe(true);
+		if (!("data" in result)) {
+			throw new Error("expected success");
+		}
+		expect(result.data.google.connected).toBe(false);
+		expect(result.data.google.needsReauthorisation).toBe(false);
 	});
 });
 

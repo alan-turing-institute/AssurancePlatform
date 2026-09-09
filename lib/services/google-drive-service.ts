@@ -19,6 +19,7 @@ export type GoogleDriveErrorCode =
 	| "NO_TOKEN"
 	| "TOKEN_EXPIRED"
 	| "REFRESH_FAILED"
+	| "TOKEN_REVOKED"
 	| "NOT_FOUND"
 	| "FORBIDDEN"
 	| "API_ERROR";
@@ -59,6 +60,7 @@ export const DRIVE_ERROR_MAP: Record<GoogleDriveErrorCode, ErrorCode> = {
 	NO_TOKEN: "FORBIDDEN",
 	TOKEN_EXPIRED: "UNAUTHORISED",
 	REFRESH_FAILED: "UNAUTHORISED",
+	TOKEN_REVOKED: "UNAUTHORISED",
 	NOT_FOUND: "NOT_FOUND",
 	FORBIDDEN: "FORBIDDEN",
 	API_ERROR: "INTERNAL",
@@ -135,19 +137,50 @@ type TokenFetchResult =
 	| {
 			tokenError: Extract<
 				GoogleDriveErrorCode,
-				"NO_TOKEN" | "TOKEN_EXPIRED" | "REFRESH_FAILED"
+				"NO_TOKEN" | "TOKEN_EXPIRED" | "REFRESH_FAILED" | "TOKEN_REVOKED"
 			>;
 	  };
 
 /**
+ * True when a caught refresh error is Google reporting the grant has been
+ * revoked (`invalid_grant`), rather than a transient failure. The
+ * `googleapis` client throws a `GaxiosError` whose Google-returned error
+ * body lands at `error.response.data.error`; some paths only surface it in
+ * the message text (e.g. "invalid_grant: Token has been expired or
+ * revoked."), so both are checked.
+ */
+function isGoogleRevocationError(error: unknown): boolean {
+	if (typeof error !== "object" || error === null) {
+		return false;
+	}
+	const record = error as Record<string, unknown>;
+	const response = record.response;
+	if (typeof response === "object" && response !== null) {
+		const data = (response as Record<string, unknown>).data;
+		if (
+			typeof data === "object" &&
+			data !== null &&
+			(data as Record<string, unknown>).error === "invalid_grant"
+		) {
+			return true;
+		}
+	}
+	const message = error instanceof Error ? error.message : String(error);
+	return message.includes("invalid_grant");
+}
+
+/**
  * Retrieves and potentially refreshes the user's Google tokens.
  *
- * Distinguishes three failure shapes so callers can produce the truthful
+ * Distinguishes four failure shapes so callers can produce the truthful
  * `GoogleDriveErrorCode` instead of collapsing every failure into one code:
  * - no access token stored at all -> NO_TOKEN
  * - token expired/expiring soon, and no refresh token to try -> TOKEN_EXPIRED
- * - token expired/expiring soon, refresh attempted and failed (threw, or
- *   returned a response with no access_token) -> REFRESH_FAILED
+ * - token expired/expiring soon, refresh attempted and Google reports the
+ *   grant revoked (`invalid_grant`) -> TOKEN_REVOKED (stored tokens cleared)
+ * - token expired/expiring soon, refresh attempted and failed for any other
+ *   reason (threw, or returned a response with no access_token) ->
+ *   REFRESH_FAILED (stored tokens left untouched — may be transient)
  */
 async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 	const user = await prisma.user.findUnique({
@@ -205,6 +238,21 @@ async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 				refreshToken: user.googleRefreshToken,
 			};
 		} catch (error) {
+			if (isGoogleRevocationError(error)) {
+				await prisma.user.update({
+					where: { id: userId },
+					data: {
+						googleAccessToken: null,
+						googleRefreshToken: null,
+						googleTokenExpiresAt: null,
+					},
+				});
+				logger.warn("Google access revoked; cleared stored Drive tokens", {
+					userId,
+				});
+				return { tokenError: "TOKEN_REVOKED" };
+			}
+
 			logger.warn("Failed to refresh Google token", {
 				userId,
 				error: error instanceof Error ? error.message : String(error),
@@ -222,7 +270,7 @@ async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 const TOKEN_ERROR_MESSAGES: Record<
 	Extract<
 		GoogleDriveErrorCode,
-		"NO_TOKEN" | "TOKEN_EXPIRED" | "REFRESH_FAILED"
+		"NO_TOKEN" | "TOKEN_EXPIRED" | "REFRESH_FAILED" | "TOKEN_REVOKED"
 	>,
 	string
 > = {
@@ -232,6 +280,8 @@ const TOKEN_ERROR_MESSAGES: Record<
 		"Google token has expired and no refresh token is available. Please sign in with Google again.",
 	REFRESH_FAILED:
 		"Failed to refresh the Google token. Please sign in with Google again.",
+	TOKEN_REVOKED:
+		"Google access was revoked. Reconnect Google Drive in Settings.",
 };
 
 /**
@@ -500,4 +550,23 @@ export async function listBackupFiles(
 export async function hasGoogleToken(userId: string): Promise<boolean> {
 	const tokens = await getUserGoogleTokens(userId);
 	return !("tokenError" in tokens);
+}
+
+/**
+ * True when the user has a linked Google identity but no working Drive
+ * refresh token — access was revoked (see `TOKEN_REVOKED` above) or Drive
+ * access was never granted with offline access. Distinguishes "needs to
+ * reconnect Drive" from "never connected Google at all", both of which
+ * `hasGoogleToken` reports as `false`.
+ *
+ * @param userId - The user's ID
+ */
+export async function needsGoogleReauthorisation(
+	userId: string
+): Promise<boolean> {
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { googleId: true, googleRefreshToken: true },
+	});
+	return !!user?.googleId && !user?.googleRefreshToken;
 }

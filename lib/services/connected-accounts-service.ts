@@ -32,6 +32,12 @@ export interface ConnectedAccountsData {
 		tokenExpiry?: Date | null;
 		/** Whether user has granted Drive access (has refresh token) */
 		hasDriveAccess: boolean;
+		/**
+		 * Identity linked (`googleId` set) but Drive access has been lost — the
+		 * refresh token is gone, most often because Google reported the grant
+		 * revoked. Distinguishes "reconnect Drive" from "never connected".
+		 */
+		needsReauthorisation: boolean;
 	};
 	/** Whether the user has a password set (can use email/password login) */
 	hasPassword: boolean;
@@ -145,6 +151,7 @@ export async function getConnectedAccounts(
 					email: user.googleEmail ?? undefined,
 					tokenExpiry: user.googleTokenExpiresAt,
 					hasDriveAccess: !!user.googleRefreshToken,
+					needsReauthorisation: hasGoogle && !user.googleRefreshToken,
 				},
 				canUnlinkGitHub,
 				canUnlinkGoogle,

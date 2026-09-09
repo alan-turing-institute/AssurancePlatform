@@ -58,6 +58,7 @@ function ProviderCard({
 	name,
 	icon,
 	connected,
+	needsReauthorisation,
 	details,
 	canUnlink,
 	unlinkReason,
@@ -68,6 +69,7 @@ function ProviderCard({
 	name: string;
 	icon: React.ReactNode;
 	connected: boolean;
+	needsReauthorisation?: boolean;
 	details?: string;
 	canUnlink: boolean;
 	unlinkReason?: string;
@@ -75,6 +77,19 @@ function ProviderCard({
 	onDisconnect: () => void;
 	loading: boolean;
 }) {
+	let statusText: string;
+	let statusDotClass: string;
+	if (needsReauthorisation) {
+		statusText = "Connected — needs re-authorisation";
+		statusDotClass = "bg-warning";
+	} else if (connected) {
+		statusText = details ?? "Connected";
+		statusDotClass = "bg-success";
+	} else {
+		statusText = "Not connected";
+		statusDotClass = "bg-muted-foreground";
+	}
+
 	return (
 		<div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
 			<div className="flex items-center gap-3">
@@ -85,21 +100,24 @@ function ProviderCard({
 					<div className="flex items-center gap-2">
 						<span className="font-medium">{name}</span>
 						<span
-							className={`inline-flex h-2 w-2 rounded-full ${
-								connected ? "bg-success" : "bg-muted-foreground"
-							}`}
+							className={`inline-flex h-2 w-2 rounded-full ${statusDotClass}`}
 						/>
 					</div>
-					{connected && details ? (
-						<p className="text-muted-foreground text-sm">{details}</p>
-					) : (
-						<p className="text-muted-foreground text-sm">
-							{connected ? "Connected" : "Not connected"}
+					<p className="text-muted-foreground text-sm">{statusText}</p>
+					{needsReauthorisation && (
+						<p className="mt-1 text-warning text-xs">
+							Google reported that access was revoked. Reconnect to restore
+							Drive backup.
 						</p>
 					)}
 				</div>
 			</div>
-			<div>
+			<div className="flex items-center gap-2">
+				{needsReauthorisation && (
+					<Button onClick={onConnect} size="sm" variant="outline">
+						Reconnect
+					</Button>
+				)}
 				{connected ? (
 					<TooltipProvider>
 						<Tooltip>
@@ -227,6 +245,7 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 						icon={<GoogleIcon className="h-5 w-5" />}
 						loading={loading === "google"}
 						name="Google"
+						needsReauthorisation={data.google.needsReauthorisation}
 						onConnect={() => handleConnect("google")}
 						onDisconnect={() => handleDisconnectClick("google")}
 						unlinkReason="You cannot disconnect Google because it is your only way to sign in. Connect another provider first."

@@ -1,7 +1,6 @@
 "use client";
 
 import { Cloud, Loader2 } from "lucide-react";
-import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import type { toast as ToastFn } from "@/lib/toast";
@@ -52,6 +51,7 @@ export function GoogleBackupSection({
 	className,
 }: GoogleBackupSectionProps) {
 	const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+	const [needsReauthorisation, setNeedsReauthorisation] = useState(false);
 	const [backupLoading, setBackupLoading] = useState(false);
 
 	// Check Google connection status when modal opens
@@ -59,10 +59,20 @@ export function GoogleBackupSection({
 		if (exportModal.isOpen && googleConnected === null) {
 			import("@/actions/integrations")
 				.then(({ checkGoogleDriveAccess }) => checkGoogleDriveAccess())
-				.then((result) => setGoogleConnected(result.connected))
+				.then((result) => {
+					setGoogleConnected(result.connected);
+					setNeedsReauthorisation(result.needsReauthorisation);
+				})
 				.catch(() => setGoogleConnected(false));
 		}
 	}, [exportModal.isOpen, googleConnected]);
+
+	// Starts the same account-link flow Settings → Connected accounts uses
+	// (`/api/auth/link/google`) rather than next-auth's `signIn`, which signs
+	// the user in without re-granting Drive access.
+	const handleReconnect = () => {
+		window.location.href = "/api/auth/link/google";
+	};
 
 	const handleBackupToDrive = async () => {
 		if (!assuranceCase?.id) {
@@ -118,11 +128,15 @@ export function GoogleBackupSection({
 			{googleConnected === false && (
 				<div className="space-y-2">
 					<p className="text-muted-foreground text-sm">
-						Connect your Google account to backup cases to Google Drive.
+						{needsReauthorisation
+							? "Google reported that access was revoked. Reconnect to restore Drive backup."
+							: "Connect your Google account to backup cases to Google Drive."}
 					</p>
-					<Button onClick={() => signIn("google")} variant="outline">
+					<Button onClick={handleReconnect} variant="outline">
 						<GoogleIcon className="mr-2 h-4 w-4" />
-						Sign in with Google
+						{needsReauthorisation
+							? "Reconnect Google Drive"
+							: "Sign in with Google"}
 					</Button>
 				</div>
 			)}

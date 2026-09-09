@@ -196,6 +196,55 @@ describe("hasGoogleToken / getUserGoogleTokens (via hasGoogleToken)", () => {
 		);
 	});
 
+	it("clears the stored tokens and reports TOKEN_REVOKED when Google's refresh error carries invalid_grant in the response body", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, {
+			googleTokenExpiresAt: new Date(Date.now() - 60 * 1000),
+		});
+		const revokedError = Object.assign(new Error("invalid_grant"), {
+			response: { data: { error: "invalid_grant" } },
+		});
+		mockRefreshAccessToken.mockRejectedValueOnce(revokedError);
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "Case", "{}");
+
+		expect("error" in result).toBe(true);
+		if (!("error" in result)) {
+			throw new Error("expected failure");
+		}
+		expect(result.driveError.code).toBe("TOKEN_REVOKED");
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.googleAccessToken).toBeNull();
+		expect(updated?.googleRefreshToken).toBeNull();
+		expect(updated?.googleTokenExpiresAt).toBeNull();
+		// googleId/googleEmail survive so Google sign-in still works.
+		expect(updated?.googleId).toBe("google-test-id");
+		expect(updated?.googleEmail).toBe("googleuser@example.com");
+	});
+
+	it("clears the stored tokens and reports TOKEN_REVOKED when only the error message text carries invalid_grant", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, {
+			googleTokenExpiresAt: new Date(Date.now() - 60 * 1000),
+		});
+		mockRefreshAccessToken.mockRejectedValueOnce(
+			new Error("invalid_grant: Token has been expired or revoked.")
+		);
+
+		const { hasGoogleToken } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		expect(await hasGoogleToken(user.id)).toBe(false);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.googleAccessToken).toBeNull();
+		expect(updated?.googleRefreshToken).toBeNull();
+	});
+
 	it("returns false and leaves the user row unchanged when the refresh response carries no access_token", async () => {
 		const user = await createTestUser();
 		const originalExpiry = new Date(Date.now() - 60 * 1000);
@@ -662,9 +711,10 @@ describe("listBackupFiles", () => {
 });
 
 describe("DRIVE_ERROR_MAP", () => {
-	// All six codes are now produced somewhere in this service: TOKEN_EXPIRED
-	// (expired token, no refresh token) and REFRESH_FAILED (refresh attempted
-	// and failed) from `getUserGoogleTokens`/`createDriveClient`; FORBIDDEN
+	// All seven codes are now produced somewhere in this service: TOKEN_EXPIRED
+	// (expired token, no refresh token), REFRESH_FAILED (refresh attempted
+	// and failed) and TOKEN_REVOKED (refresh attempted, Google reports
+	// invalid_grant) from `getUserGoogleTokens`/`createDriveClient`; FORBIDDEN
 	// and NOT_FOUND from a 403/404 thrown by the Drive SDK, classified by
 	// `classifyGoogleApiError`. Route-level tests proving each maps to the
 	// right status live in `api-cases-backup-gdrive.test.ts` and
@@ -677,9 +727,41 @@ describe("DRIVE_ERROR_MAP", () => {
 			NO_TOKEN: "FORBIDDEN",
 			TOKEN_EXPIRED: "UNAUTHORISED",
 			REFRESH_FAILED: "UNAUTHORISED",
+			TOKEN_REVOKED: "UNAUTHORISED",
 			NOT_FOUND: "NOT_FOUND",
 			FORBIDDEN: "FORBIDDEN",
 			API_ERROR: "INTERNAL",
 		});
+	});
+});
+
+describe("needsGoogleReauthorisation", () => {
+	it("returns false when the user has never linked Google", async () => {
+		const user = await createTestUser();
+
+		const { needsGoogleReauthorisation } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		expect(await needsGoogleReauthorisation(user.id)).toBe(false);
+	});
+
+	it("returns false when Google is linked and the refresh token is present", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id);
+
+		const { needsGoogleReauthorisation } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		expect(await needsGoogleReauthorisation(user.id)).toBe(false);
+	});
+
+	it("returns true when Google is linked but the refresh token is gone", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, { googleRefreshToken: null });
+
+		const { needsGoogleReauthorisation } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		expect(await needsGoogleReauthorisation(user.id)).toBe(true);
 	});
 });

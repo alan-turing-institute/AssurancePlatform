@@ -11,20 +11,32 @@ interface DriveFile {
 
 /**
  * Checks whether the current user has connected their Google Drive account.
+ *
+ * `needsReauthorisation` distinguishes "linked Google, but Drive access was
+ * lost (e.g. revoked)" from "never connected Google at all" — both report
+ * `connected: false`, but only the former should offer a "Reconnect" action
+ * instead of a first-time "Sign in" one.
  */
 export async function checkGoogleDriveAccess(): Promise<{
 	connected: boolean;
+	needsReauthorisation: boolean;
 }> {
 	const session = await validateSession();
 	if (!session) {
-		return { connected: false };
+		return { connected: false, needsReauthorisation: false };
 	}
 
-	const { hasGoogleToken } = await import(
+	const { hasGoogleToken, needsGoogleReauthorisation } = await import(
 		"@/lib/services/google-drive-service"
 	);
 	const connected = await hasGoogleToken(session.userId);
-	return { connected };
+	// `hasGoogleToken` may itself have just cleared a revoked refresh token
+	// (see google-drive-service.ts's TOKEN_REVOKED handling), so this read
+	// happens after it to pick up that write in the same request.
+	const needsReauthorisation = connected
+		? false
+		: await needsGoogleReauthorisation(session.userId);
+	return { connected, needsReauthorisation };
 }
 
 /**
