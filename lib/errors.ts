@@ -150,7 +150,7 @@ export function handleError(error: unknown): AppError {
 	// class import here, and matching by `.name` avoids a circular import
 	// between `lib/errors.ts` and `lib/with-timeout.ts`.
 	if (error instanceof Error && error.name === "TimeoutError") {
-		log.error("Request timed out", { op: "handleError", error: error.message });
+		log.error("Request timed out", { error });
 		return gatewayTimeout(
 			"The request took too long to complete. Please try again."
 		);

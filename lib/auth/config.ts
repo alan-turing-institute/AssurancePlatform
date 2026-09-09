@@ -5,7 +5,7 @@ import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { logger } from "@/lib/logger";
 
-const log = logger.child({ component: "config" });
+const log = logger.child({ component: "auth-config" });
 
 dotenv.config(); // Explicitly load environment variables
 
