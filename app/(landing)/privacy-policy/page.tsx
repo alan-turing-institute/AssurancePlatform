@@ -16,12 +16,20 @@ const PrivacyPolicyPage = () => {
 					This notice explains what personal data the Trustworthy and Ethical
 					Assurance (TEA) Platform (&quot;we&quot;, &quot;us&quot;) collects,
 					why, how long we keep it, and how you can remove it. The Platform is
-					provided by The Alan Turing Institute{" "}
-					<strong>
-						[Chris: confirm the Institute is the data controller and whether to
-						link the Institute&apos;s own privacy notice]
-					</strong>
-					. Contact: tea@turing.ac.uk.
+					provided by The Alan Turing Institute, which is the data controller
+					for the personal data described here. This notice summarises what the
+					Platform does with your data; the Institute&apos;s full{" "}
+					<a
+						className="text-primary underline"
+						href="https://www.turing.ac.uk/turing-policy-statement-legal/privacy-policy"
+						rel="noopener noreferrer"
+						target="_blank"
+					>
+						privacy notice
+					</a>{" "}
+					has the legal and contact details, including how to contact the
+					Institute&apos;s Data Protection Officer. Contact for the Platform:
+					tea@turing.ac.uk.
 				</p>
 
 				<div className="mt-16 max-w-3xl">
@@ -86,6 +94,24 @@ const PrivacyPolicyPage = () => {
 						third parties except the providers that host and deliver the service
 						(Microsoft Azure for hosting, storage and email; GitHub and Google
 						when you choose to sign in or connect with them).
+					</p>
+				</div>
+
+				<div className="mt-16 max-w-3xl">
+					<h2 className="text-pretty font-semibold text-3xl text-foreground tracking-tight">
+						Our lawful basis
+					</h2>
+					<p className="mt-6">
+						We process your account details and your contributions to the
+						Platform because it is necessary for the legitimate interests of The
+						Alan Turing Institute: to provide and run the Platform, to conduct
+						research and further the work of the Institute, and to evaluate and
+						improve the service. The Platform uses only essential cookies, which
+						do not require your consent (see the{" "}
+						<Link className="text-primary underline" href="/cookie-policy">
+							Cookie Notice
+						</Link>
+						). We do not run a mailing list or newsletter from the Platform.
 					</p>
 				</div>
 
@@ -175,11 +201,10 @@ const PrivacyPolicyPage = () => {
 						Where it is stored
 					</h2>
 					<p className="mt-6">
-						The Platform runs on Microsoft Azure{" "}
-						<strong>
-							[Chris: region — UK South? — confirm before stating]
-						</strong>
-						.
+						The Platform runs on Microsoft Azure in the United Kingdom: the
+						application, database and file storage are in the UK South region,
+						and account emails are sent through Azure Communication Services
+						with its data location set to the UK.
 					</p>
 				</div>
 
