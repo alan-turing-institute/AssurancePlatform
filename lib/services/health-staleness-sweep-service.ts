@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { requireCronSecret } from "@/lib/services/cron-auth";
 import {
@@ -9,6 +10,8 @@ import { upsertCaseLevelPluginData } from "@/lib/services/plugin-data-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import type { Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "health-staleness-sweep-service" });
 
 /**
  * The health plugin's staleness sweeper (ADR 0002 v2 §3: "the existing
@@ -212,7 +215,7 @@ export async function sweepHealthStaleness(
 				// must not abort the sweep for every other case still queued —
 				// each case gets its own shot, in whatever order the Map iterates.
 				failedCaseCount++;
-				console.error(`Failed to sweep case ${caseId} staleness:`, error);
+				log.error("Failed to sweep case staleness", { caseId, error });
 			}
 		}
 
@@ -224,7 +227,7 @@ export async function sweepHealthStaleness(
 
 		return { data: { casesNotified, staleClaimsNotified } };
 	} catch (error) {
-		console.error("Failed to sweep health staleness:", error);
+		log.error("Failed to sweep health staleness", { error });
 		return { error: "Failed to sweep health staleness" };
 	}
 }
