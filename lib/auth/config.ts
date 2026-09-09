@@ -5,6 +5,8 @@ import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { logger } from "@/lib/logger";
 
+const log = logger.child({ component: "auth-config" });
+
 dotenv.config(); // Explicitly load environment variables
 
 /**
@@ -115,7 +117,7 @@ export async function authenticateWithPrisma(
 			data: { ...loginResetFields(), ...upgradeFields },
 		});
 	} catch (error) {
-		logger.error("Failed to record login / reset retention warnings", {
+		log.error("Failed to record login / reset retention warnings", {
 			userId: user.id,
 			error: error instanceof Error ? error.message : String(error),
 		});
@@ -154,7 +156,7 @@ async function authenticateGitHubWithPrisma(
 	const email = profile?.email;
 
 	if (!email) {
-		console.error("GitHub OAuth: No email provided");
+		log.error("GitHub OAuth: No email provided");
 		return null;
 	}
 
@@ -293,7 +295,7 @@ export async function authenticateGoogleWithPrisma(
 	const email = profile?.email;
 
 	if (!email) {
-		console.error("Google OAuth: No email provided");
+		log.error("Google OAuth: No email provided");
 		return null;
 	}
 

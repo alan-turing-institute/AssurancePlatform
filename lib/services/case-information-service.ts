@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -7,6 +8,8 @@ import {
 } from "@/lib/schemas/case-information";
 import type { CaseInformation } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "case-information-service" });
 
 /**
  * Failure shape for `requireCaseInformationComplete` — a plain `error`
@@ -63,7 +66,7 @@ export async function getCaseInformation(
 		});
 		return { data: record };
 	} catch (error) {
-		console.error("Failed to get case information:", error);
+		log.error("Failed to get case information", { error });
 		return { error: "Failed to fetch case information" };
 	}
 }
@@ -110,7 +113,7 @@ export async function upsertCaseInformation(
 		});
 		return { data: record };
 	} catch (error) {
-		console.error("Failed to upsert case information:", error);
+		log.error("Failed to upsert case information", { error });
 		return { error: "Failed to save case information" };
 	}
 }
@@ -133,7 +136,7 @@ export async function deleteCaseInformation(
 		await prisma.caseInformation.deleteMany({ where: { caseId } });
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to delete case information:", error);
+		log.error("Failed to delete case information", { error });
 		return { error: "Failed to delete case information" };
 	}
 }

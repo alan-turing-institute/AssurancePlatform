@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
+import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { EVIDENCE_FORMAT_VERSION } from "@/lib/schemas/health-evidence";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import type { PluginHealthEvidence } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "health-evidence-service" });
 
 /**
  * The health plugin's append-only evidence log (ADR 0001 §2, relocated by
@@ -273,7 +276,7 @@ export async function appendHealthEvidence(
 
 		return { data: { evidence: record, caseId } };
 	} catch (error) {
-		console.error("Failed to append health evidence:", error);
+		log.error("Failed to append health evidence", { error });
 		return { error: "Failed to append health evidence" };
 	}
 }
@@ -295,7 +298,7 @@ export async function listHealthEvidence(
 		});
 		return { data: records };
 	} catch (error) {
-		console.error("Failed to list health evidence:", error);
+		log.error("Failed to list health evidence", { error });
 		return { error: "Failed to list health evidence" };
 	}
 }

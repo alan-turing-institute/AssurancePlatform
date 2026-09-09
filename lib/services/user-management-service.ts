@@ -3,6 +3,7 @@ import {
 	type PasswordAlgorithm,
 	verifyPassword,
 } from "@/lib/auth/password-service";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
 import {
@@ -11,6 +12,8 @@ import {
 	validateUsername,
 } from "@/lib/validation/validators";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "user-management-service" });
 
 // ============================================
 // Types
@@ -186,7 +189,7 @@ export async function updateUserProfile(
 			data: toProfileData(user),
 		};
 	} catch (error) {
-		console.error("Error updating user profile:", error);
+		log.error("Error updating user profile", { error });
 		return { error: "Failed to update profile" };
 	}
 }
@@ -261,7 +264,7 @@ export async function changePassword(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Error changing password:", error);
+		log.error("Error changing password", { error });
 		return { error: "Failed to change password" };
 	}
 }
@@ -427,7 +430,7 @@ export async function deleteAccount(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Error deleting account:", error);
+		log.error("Error deleting account", { error });
 		return { error: "Failed to delete account" };
 	}
 }
@@ -668,7 +671,7 @@ export async function deleteAccountForRetention(userId: string): ServiceResult {
 
 		return { data: true };
 	} catch (error) {
-		console.error("Error deleting account for retention:", error);
+		log.error("Error deleting account for retention", { error });
 		return { error: "Failed to delete account" };
 	}
 }

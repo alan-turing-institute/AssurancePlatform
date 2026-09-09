@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { ConnectedAccountsData } from "@/lib/services/connected-accounts-service";
 import {
@@ -6,6 +7,8 @@ import {
 	validateUsername,
 } from "@/lib/validation/validators";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "user-service" });
 
 // ============================================
 // INPUT INTERFACES
@@ -114,7 +117,7 @@ export async function registerUser(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to register user:", error);
+		log.error("Failed to register user", { error });
 		return { error: "Failed to create account. Please try again." };
 	}
 }
@@ -148,7 +151,7 @@ export async function dismissMigrationNotice(
 
 		return { data: null };
 	} catch (error) {
-		console.error("[dismissMigrationNotice]", { userId, error });
+		log.error("dismissMigrationNotice", { userId, error });
 		return { error: "Failed to dismiss migration notice" };
 	}
 }
@@ -183,7 +186,7 @@ export async function getUserById(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to get user:", error);
+		log.error("Failed to get user", { error });
 		return { error: "Failed to get user" };
 	}
 }
@@ -251,7 +254,7 @@ export async function getUserProfile(
 			},
 		};
 	} catch (error) {
-		console.error("[getUserProfile]", { userId, error });
+		log.error("getUserProfile", { userId, error });
 		return { error: "Failed to fetch user profile" };
 	}
 }
@@ -325,7 +328,7 @@ export async function getCurrentUser(
 			},
 		};
 	} catch (error) {
-		console.error("[getCurrentUser]", { userId, error });
+		log.error("getCurrentUser", { userId, error });
 		return { error: "Failed to fetch user" };
 	}
 }

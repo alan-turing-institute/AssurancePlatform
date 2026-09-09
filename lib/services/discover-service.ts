@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import {
 	type PublishedSnapshotMeta,
@@ -6,6 +7,8 @@ import {
 import { getSectorDisplayName } from "@/lib/sectors";
 import type { PublishableItemType } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "discover-service" });
 
 /**
  * Discover data access (ADR 0003 §4/§6) — reads exclusively from the frozen
@@ -101,7 +104,7 @@ export async function getPublishedItems(): ServiceResult<
 		});
 		return { data: records.map(toSummary) };
 	} catch (error) {
-		console.error("Failed to list published items:", error);
+		log.error("Failed to list published items", { error });
 		return { error: "Failed to fetch published items" };
 	}
 }
@@ -127,7 +130,7 @@ export async function getPublishedItemBySlug(
 
 		return { data: { ...toSummary(record), content: record.content } };
 	} catch (error) {
-		console.error("Failed to fetch published item by slug:", error);
+		log.error("Failed to fetch published item by slug", { error });
 		return { error: "Failed to fetch published item" };
 	}
 }

@@ -5,6 +5,10 @@
  * that guide users through core features of the TEA Platform.
  */
 
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "tour-service" });
+
 const KNOWN_TOUR_IDS = ["dashboard", "case-canvas", "demo-case"] as const;
 
 type KnownTourId = (typeof KNOWN_TOUR_IDS)[number];
@@ -35,7 +39,7 @@ export async function getCompletedTours(
 
 		return { data: user?.completedTours ?? [] };
 	} catch (error) {
-		console.error("[getCompletedTours]", { userId, error });
+		log.error("getCompletedTours", { userId, error });
 		return { error: "Failed to fetch completed tours" };
 	}
 }
@@ -84,7 +88,7 @@ export async function markTourCompleted(
 
 		return { data: updated.completedTours };
 	} catch (error) {
-		console.error("[markTourCompleted]", { userId, tourId, error });
+		log.error("markTourCompleted", { userId, tourId, error });
 		return { error: "Failed to mark tour as completed" };
 	}
 }

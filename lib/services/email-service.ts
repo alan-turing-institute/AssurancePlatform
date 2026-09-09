@@ -1,5 +1,8 @@
 import { EmailClient } from "@azure/communication-email";
+import { logger } from "@/lib/logger";
 import { escapeHtml } from "../sanitize-html";
+
+const log = logger.child({ component: "email-service" });
 
 // Configuration
 const ACS_CONNECTION_STRING = process.env.ACS_CONNECTION_STRING;
@@ -56,7 +59,7 @@ interface RetentionWarningEmailParams {
  */
 function getEmailClient(): EmailClient | null {
 	if (!ACS_CONNECTION_STRING) {
-		console.warn(
+		log.warn(
 			"ACS_CONNECTION_STRING not configured - emails will be logged only"
 		);
 		return null;
@@ -79,11 +82,11 @@ async function sendEmail(
 
 	if (!client) {
 		// Development fallback - log the email
-		console.log("=== EMAIL (Development Mode) ===");
-		console.log(`To: ${to}`);
-		console.log(`Subject: ${subject}`);
-		console.log(`Content: ${plainTextContent}`);
-		console.log("================================");
+		log.info("Email (development mode)", {
+			to,
+			subject,
+			content: plainTextContent,
+		});
 		return { data: { messageId: `dev-${Date.now()}` } };
 	}
 
@@ -111,7 +114,7 @@ async function sendEmail(
 			error: result.error?.message || "Email sending failed",
 		};
 	} catch (error) {
-		console.error("Email sending error:", error);
+		log.error("Email sending error", { error });
 		return {
 			error: error instanceof Error ? error.message : "Unknown email error",
 		};

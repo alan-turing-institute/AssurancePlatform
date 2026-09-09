@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import {
 	isLastTeamAdmin,
 	validateTeamAdmin,
@@ -6,6 +7,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import type { TeamRole } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "team-member-service" });
 
 // ============================================
 // INPUT INTERFACES
@@ -111,7 +114,7 @@ export async function getTeamMembers(
 
 		return { data: members.map(transformMemberToResponse) };
 	} catch (error) {
-		console.error("Failed to get team members:", error);
+		log.error("Failed to get team members", { error });
 		return { error: "Failed to get team members" };
 	}
 }
@@ -190,7 +193,7 @@ export async function addTeamMember(
 
 		return { data: { member: transformMemberToResponse(member) } };
 	} catch (error) {
-		console.error("Failed to add team member:", error);
+		log.error("Failed to add team member", { error });
 		return { error: "Failed to add team member" };
 	}
 }
@@ -253,7 +256,7 @@ export async function updateMemberRole(
 
 		return { data: transformMemberToResponse(member) };
 	} catch (error) {
-		console.error("Failed to update member role:", error);
+		log.error("Failed to update member role", { error });
 		return { error: "Failed to update member role" };
 	}
 }
@@ -299,7 +302,7 @@ export async function removeMember(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to remove member:", error);
+		log.error("Failed to remove member", { error });
 		return { error: "Failed to remove member" };
 	}
 }
@@ -339,7 +342,7 @@ export async function leaveTeam(userId: string, teamId: string): ServiceResult {
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to leave team:", error);
+		log.error("Failed to leave team", { error });
 		return { error: "Failed to leave team" };
 	}
 }

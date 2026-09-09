@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import {
 	getManifestEntry,
 	isPluginAvailableForDeployment,
@@ -10,6 +11,8 @@ import type {
 	Prisma,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "plugin-enablement-service" });
 
 /**
  * Resolves effective plugin enablement per ADR 0002 v2 §2.2: a plugin is ON
@@ -120,7 +123,7 @@ export async function resolveEffectivePluginState(
 			data: { enabled: true, availableAtDeployment: true, disabledAt: null },
 		};
 	} catch (error) {
-		console.error("Failed to resolve plugin state:", error);
+		log.error("Failed to resolve plugin state", { error });
 		return { error: "Failed to resolve plugin state" };
 	}
 }
@@ -205,7 +208,7 @@ export async function getUserPluginSettings(
 		});
 		return { data: row?.settings ?? null };
 	} catch (error) {
-		console.error("Failed to read plugin settings:", error);
+		log.error("Failed to read plugin settings", { error });
 		return { error: "Failed to read plugin settings" };
 	}
 }
@@ -254,7 +257,7 @@ export async function setPluginEnabledForUser(
 		});
 		return { data: state };
 	} catch (error) {
-		console.error("Failed to set plugin enablement:", error);
+		log.error("Failed to set plugin enablement", { error });
 		return { error: "Failed to update plugin state" };
 	}
 }

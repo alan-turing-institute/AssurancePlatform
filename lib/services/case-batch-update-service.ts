@@ -10,6 +10,7 @@ import type {
 	ElementChange,
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { validateElementName } from "@/lib/schemas/element-validation";
 import {
@@ -24,6 +25,8 @@ import type {
 	Prisma,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
+
+const log = logger.child({ component: "case-batch-update-service" });
 
 /**
  * ADR 0004 D3 write rule (author-declared, machine-proposable, never
@@ -1199,7 +1202,7 @@ export async function applyBatchUpdate(
 			},
 		};
 	} catch (error) {
-		console.error("Batch update failed:", error);
+		log.error("Batch update failed", { error });
 		return {
 			error:
 				error instanceof Error ? error.message : "Failed to apply batch update",

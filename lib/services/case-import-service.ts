@@ -1,7 +1,10 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { Prisma } from "@/src/generated/prisma";
+
+const log = logger.child({ component: "case-import-service" });
 
 // Derived from `prisma.$transaction`'s own callback parameter — same pattern
 // as `publish-service.ts` / `slug-service.ts` (kept local rather than
@@ -663,7 +666,7 @@ export async function importCase(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to import case:", error);
+		log.error("Failed to import case", { error });
 		return { error: "Failed to import case" };
 	}
 }
