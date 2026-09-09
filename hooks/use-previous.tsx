@@ -12,8 +12,6 @@ import { useEffect, useRef } from "react";
  * @example
  * function MyComponent({ prop }) {
  *   const prevProp = usePrevious(prop);
- *   console.log('Current prop:', prop);
- *   console.log('Previous prop:', prevProp);
  *   return <div>{prop}</div>;
  * }
  */

@@ -10,6 +10,7 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
+import { logger } from "@/lib/logger";
 import {
 	type CommentFormInput,
 	commentFormSchema,
@@ -18,6 +19,8 @@ import type { CommentResponse } from "@/lib/services/comment-service";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+
+const log = logger.child({ component: "comments-form" });
 
 interface CommentsFormProps {
 	node: {
@@ -66,7 +69,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
 			});
 
 			if (!response.ok) {
-				console.error("Failed to create comment:", response.status);
+				log.error("Failed to create comment", { status: response.status });
 				return;
 			}
 
@@ -103,7 +106,7 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
 			// Clear form input
 			form.setValue("comment", "");
 		} catch (error) {
-			console.error("Error creating comment:", error);
+			log.error("Error creating comment", { error });
 		} finally {
 			setLoading(false);
 		}

@@ -43,8 +43,7 @@
 //           setAssuranceCase(json);
 //           setIsLoading(false);
 //         })
-//         .catch((err) => {
-//           console.error(err);
+//         .catch((_err) => {
 //           // TODO show error to user
 //         });
 

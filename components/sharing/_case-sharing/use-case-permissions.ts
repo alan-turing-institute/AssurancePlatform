@@ -1,6 +1,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { logger } from "@/lib/logger";
 import type { ShareByEmailSchemaInput } from "@/lib/schemas/permission";
 import { toastError } from "@/lib/toast";
 import type {
@@ -8,6 +9,8 @@ import type {
 	TeamPermission,
 	UserPermission,
 } from "./permission-components";
+
+const log = logger.child({ component: "use-case-permissions" });
 
 export { shareByEmailSchema as shareFormSchema } from "@/lib/schemas/permission";
 export type ShareFormValues = ShareByEmailSchemaInput;
@@ -86,7 +89,7 @@ export function useCasePermissions({
 				});
 			}
 		} catch (err) {
-			console.error("Failed to fetch permissions:", err);
+			log.error("Failed to fetch permissions", { error: err });
 			setError("Failed to load permissions");
 			toastError("Failed to load permissions");
 		} finally {
@@ -102,7 +105,7 @@ export function useCasePermissions({
 				setUserTeams(data);
 			}
 		} catch (err) {
-			console.error("Failed to fetch teams:", err);
+			log.error("Failed to fetch teams", { error: err });
 			setError("Failed to load teams");
 			toastError("Failed to load teams");
 		}
@@ -154,7 +157,7 @@ export function useCasePermissions({
 			}
 		} catch (err) {
 			setError("An error occurred while sharing");
-			console.error(err);
+			log.error("Failed to share case by email", { error: err });
 		}
 	};
 
@@ -179,7 +182,7 @@ export function useCasePermissions({
 				router.refresh();
 			}
 		} catch (err) {
-			console.error("Failed to share with team:", err);
+			log.error("Failed to share with team", { error: err });
 			toastError("Failed to share with team");
 		}
 	};
@@ -208,7 +211,7 @@ export function useCasePermissions({
 				router.refresh();
 			}
 		} catch (err) {
-			console.error("Failed to update permission:", err);
+			log.error("Failed to update permission", { error: err });
 			toastError("Failed to update permission");
 		}
 	};
@@ -232,7 +235,7 @@ export function useCasePermissions({
 				router.refresh();
 			}
 		} catch (err) {
-			console.error("Failed to revoke permission:", err);
+			log.error("Failed to revoke permission", { error: err });
 			toastError("Failed to revoke permission");
 		}
 	};
