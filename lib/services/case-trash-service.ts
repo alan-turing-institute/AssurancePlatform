@@ -1,7 +1,10 @@
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { requireCronSecret } from "@/lib/services/cron-auth";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "case-trash-service" });
 
 // ============================================
 // OUTPUT INTERFACES
@@ -100,7 +103,7 @@ export async function listTrashedCases(
 
 		return { data: { cases } };
 	} catch (error) {
-		console.error("Failed to list trashed cases:", error);
+		log.error("Failed to list trashed cases", { error });
 		return { error: "Failed to fetch trash" };
 	}
 }
@@ -152,7 +155,7 @@ export async function softDeleteCase(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to soft-delete case:", error);
+		log.error("Failed to soft-delete case", { error });
 		return { error: "Failed to delete case" };
 	}
 }
@@ -186,7 +189,7 @@ export async function restoreCase(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to restore case:", error);
+		log.error("Failed to restore case", { error });
 		return { error: "Failed to restore case" };
 	}
 }
@@ -215,7 +218,7 @@ export async function purgeCase(userId: string, caseId: string): ServiceResult {
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to purge case:", error);
+		log.error("Failed to purge case", { error });
 		return { error: "Failed to purge case" };
 	}
 }
@@ -245,7 +248,7 @@ export async function purgeExpiredCases(
 			},
 		});
 
-		console.log(`Purged ${result.count} expired cases from trash`);
+		log.info("Purged expired cases from trash", { count: result.count });
 
 		return {
 			data: {
@@ -254,7 +257,7 @@ export async function purgeExpiredCases(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to purge expired cases:", error);
+		log.error("Failed to purge expired cases", { error });
 		return { error: "Failed to purge trash" };
 	}
 }

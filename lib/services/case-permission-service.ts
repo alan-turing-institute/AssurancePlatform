@@ -1,7 +1,10 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { createCaseInvite } from "@/lib/services/case-invite-service";
 import type { PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "case-permission-service" });
 
 // ============================================
 // INPUT INTERFACES
@@ -210,7 +213,7 @@ export async function listCasePermissions(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to list case permissions:", error);
+		log.error("Failed to list case permissions", { error });
 		return { error: "Failed to list permissions" };
 	}
 }
@@ -338,7 +341,7 @@ export async function shareByEmail(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to share case:", error);
+		log.error("Failed to share case", { error });
 		return { error: "Failed to share case" };
 	}
 }
@@ -415,7 +418,7 @@ export async function shareWithTeam(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to share case with team:", error);
+		log.error("Failed to share case with team", { error });
 		return { error: "Failed to share case with team" };
 	}
 }
@@ -491,7 +494,7 @@ export async function updateUserPermission(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to update permission:", error);
+		log.error("Failed to update permission", { error });
 		return { error: "Failed to update permission" };
 	}
 }
@@ -555,7 +558,7 @@ export async function updateTeamPermission(
 			},
 		};
 	} catch (error) {
-		console.error("Failed to update team permission:", error);
+		log.error("Failed to update team permission", { error });
 		return { error: "Failed to update team permission" };
 	}
 }
@@ -591,7 +594,7 @@ export async function revokeUserPermission(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to revoke permission:", error);
+		log.error("Failed to revoke permission", { error });
 		return { error: "Failed to revoke permission" };
 	}
 }
@@ -627,7 +630,7 @@ export async function revokeTeamPermission(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to revoke team permission:", error);
+		log.error("Failed to revoke team permission", { error });
 		return { error: "Failed to revoke team permission" };
 	}
 }

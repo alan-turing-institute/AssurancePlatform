@@ -5,6 +5,10 @@
  * Screenshots are uploaded to Azure Blob Storage (or local fallback in development).
  */
 
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "case-image-service" });
+
 // Throttle duration in milliseconds (30 minutes)
 const SCREENSHOT_THROTTLE_MS = 30 * 60 * 1000;
 
@@ -67,7 +71,7 @@ export async function getCaseImage(
 			},
 		};
 	} catch (error) {
-		console.error("[getCaseImage]", { userId, caseId, error });
+		log.error("getCaseImage", { userId, caseId, error });
 		return { error: "Failed to fetch case image" };
 	}
 }
@@ -157,7 +161,7 @@ export async function uploadCaseImage(
 			},
 		};
 	} catch (error) {
-		console.error("[uploadCaseImage]", { userId, caseId, error });
+		log.error("uploadCaseImage", { userId, caseId, error });
 		return { error: "Failed to upload case image" };
 	}
 }

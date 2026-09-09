@@ -1,4 +1,5 @@
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
+import { logger } from "@/lib/logger";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
@@ -10,6 +11,8 @@ import type {
 } from "@/lib/services/case-response-types";
 import type { Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "case-fetch-service" });
 
 // ---------------------------------------------------------------------------
 // Types (derived from Prisma query shape)
@@ -355,7 +358,7 @@ export async function listUserCases(
 			})),
 		};
 	} catch (error) {
-		console.error("[listUserCases]", { userId, error });
+		log.error("listUserCases", { userId, error });
 		return { error: "Failed to fetch cases" };
 	}
 }
@@ -420,7 +423,7 @@ export async function listSharedCases(
 			})),
 		};
 	} catch (error) {
-		console.error("[listSharedCases]", { userId, error });
+		log.error("listSharedCases", { userId, error });
 		return { error: "Failed to fetch shared cases" };
 	}
 }
@@ -459,7 +462,7 @@ export async function createCase(
 
 		return { data: { id: newCase.id } };
 	} catch (error) {
-		console.error("[createCase]", { userId, error });
+		log.error("createCase", { userId, error });
 		return { error: "Failed to create case" };
 	}
 }
