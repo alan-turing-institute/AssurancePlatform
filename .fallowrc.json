@@ -59,6 +59,7 @@
   ],
   "audit": {
     "deadCodeBaseline": ".fallow-baseline.dead-code.json",
+    "healthBaseline": ".fallow-baseline.health.json",
     "dupesBaseline": ".fallow-baseline.dupes.json"
   },
   "rules": {
