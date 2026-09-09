@@ -174,7 +174,7 @@ export function useChangeDetection({
 			const message =
 				err instanceof Error ? err.message : "Failed to detect changes";
 			setState((prev) => ({ ...prev, isLoading: false, error: message }));
-			log.error("Change detection failed", { message });
+			log.error("Change detection failed", { error: err, message });
 		}
 	}, [caseId, includeDetails]);
 
