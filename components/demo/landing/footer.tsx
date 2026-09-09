@@ -7,6 +7,7 @@ const navigation = {
 		{ name: "Platform", href: "/dashboard" },
 		{ name: "Discover", href: "/discover" },
 		{ name: "Documentation", href: "/docs" },
+		{ name: "Privacy Policy", href: "/privacy-policy" },
 		{ name: "Cookie Policy", href: "/cookie-policy" },
 	],
 	social: [
