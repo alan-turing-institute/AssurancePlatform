@@ -51,6 +51,41 @@ function GoogleIcon({ className }: { className?: string }) {
 	);
 }
 
+export interface ProviderStatus {
+	description?: string;
+	dotClass: string;
+	label: string;
+}
+
+/**
+ * Pure derivation of a provider card's status dot colour, label, and
+ * optional description line, from its connection state. Exported for direct
+ * unit testing — one case per state (connected, needs re-authorisation,
+ * not connected).
+ */
+export function providerStatus({
+	connected,
+	needsReauthorisation,
+	details,
+}: {
+	connected: boolean;
+	details?: string;
+	needsReauthorisation?: boolean;
+}): ProviderStatus {
+	if (needsReauthorisation) {
+		return {
+			dotClass: "bg-warning",
+			label: "Connected — needs re-authorisation",
+			description:
+				"Google reported that access was revoked. Reconnect to restore Drive backup.",
+		};
+	}
+	if (connected) {
+		return { dotClass: "bg-success", label: details ?? "Connected" };
+	}
+	return { dotClass: "bg-muted-foreground", label: "Not connected" };
+}
+
 /**
  * Provider card component for displaying connection status
  */
@@ -77,18 +112,7 @@ function ProviderCard({
 	onDisconnect: () => void;
 	loading: boolean;
 }) {
-	let statusText: string;
-	let statusDotClass: string;
-	if (needsReauthorisation) {
-		statusText = "Connected — needs re-authorisation";
-		statusDotClass = "bg-warning";
-	} else if (connected) {
-		statusText = details ?? "Connected";
-		statusDotClass = "bg-success";
-	} else {
-		statusText = "Not connected";
-		statusDotClass = "bg-muted-foreground";
-	}
+	const status = providerStatus({ connected, needsReauthorisation, details });
 
 	return (
 		<div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
@@ -100,15 +124,12 @@ function ProviderCard({
 					<div className="flex items-center gap-2">
 						<span className="font-medium">{name}</span>
 						<span
-							className={`inline-flex h-2 w-2 rounded-full ${statusDotClass}`}
+							className={`inline-flex h-2 w-2 rounded-full ${status.dotClass}`}
 						/>
 					</div>
-					<p className="text-muted-foreground text-sm">{statusText}</p>
-					{needsReauthorisation && (
-						<p className="mt-1 text-warning text-xs">
-							Google reported that access was revoked. Reconnect to restore
-							Drive backup.
-						</p>
+					<p className="text-muted-foreground text-sm">{status.label}</p>
+					{status.description && (
+						<p className="mt-1 text-warning text-xs">{status.description}</p>
 					)}
 				</div>
 			</div>

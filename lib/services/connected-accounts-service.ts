@@ -4,6 +4,8 @@
  * Handles OAuth provider connection status and unlinking for user accounts.
  */
 
+import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
+
 // ============================================
 // Types
 // ============================================
@@ -151,7 +153,10 @@ export async function getConnectedAccounts(
 					email: user.googleEmail ?? undefined,
 					tokenExpiry: user.googleTokenExpiresAt,
 					hasDriveAccess: !!user.googleRefreshToken,
-					needsReauthorisation: hasGoogle && !user.googleRefreshToken,
+					needsReauthorisation: googleNeedsReauthorisation({
+						googleId: user.googleId,
+						googleRefreshToken: user.googleRefreshToken,
+					}),
 				},
 				canUnlinkGitHub,
 				canUnlinkGoogle,

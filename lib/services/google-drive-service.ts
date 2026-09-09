@@ -7,6 +7,7 @@
 
 import { Readable } from "node:stream";
 import { google } from "googleapis";
+import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
 import type { ErrorCode } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -170,6 +171,90 @@ function isGoogleRevocationError(error: unknown): boolean {
 }
 
 /**
+ * Clears a user's Drive tokens after Google reports the grant revoked
+ * (`invalid_grant`), keeping `googleId`/`googleEmail` so Google sign-in
+ * still works, logs the event, and returns the `TOKEN_REVOKED` result for
+ * `getUserGoogleTokens`'s catch block to hand back.
+ */
+async function clearRevokedGoogleTokens(
+	userId: string,
+	error: unknown
+): Promise<TokenFetchResult> {
+	await prisma.user.update({
+		where: { id: userId },
+		data: {
+			googleAccessToken: null,
+			googleRefreshToken: null,
+			googleTokenExpiresAt: null,
+		},
+	});
+	logger.warn("Google access revoked; cleared stored Drive tokens", {
+		userId,
+		error: error instanceof Error ? error.message : String(error),
+	});
+	return { tokenError: "TOKEN_REVOKED" };
+}
+
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+/** True once `expiresAt` is within 5 minutes of now, or already past. A null
+ * `expiresAt` (no expiry recorded) is treated as not expiring. */
+function isTokenExpiringSoon(expiresAt: Date | null): boolean {
+	if (!expiresAt) {
+		return false;
+	}
+	return expiresAt.getTime() - TOKEN_EXPIRY_BUFFER_MS < Date.now();
+}
+
+/**
+ * Attempts to refresh an expiring/expired Google access token, updating the
+ * stored token/expiry on success. On failure, distinguishes a revoked grant
+ * (`invalid_grant` -> TOKEN_REVOKED, stored tokens cleared) from any other
+ * refresh failure (REFRESH_FAILED, stored tokens left untouched — may be
+ * transient).
+ */
+async function refreshGoogleAccessToken(
+	userId: string,
+	refreshToken: string
+): Promise<TokenFetchResult> {
+	try {
+		const oauth2Client = new google.auth.OAuth2(
+			process.env.GOOGLE_CLIENT_ID,
+			process.env.GOOGLE_CLIENT_SECRET
+		);
+		oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+		const { credentials } = await oauth2Client.refreshAccessToken();
+
+		if (!credentials.access_token) {
+			throw new Error("No access token in refresh response");
+		}
+
+		await prisma.user.update({
+			where: { id: userId },
+			data: {
+				googleAccessToken: credentials.access_token,
+				googleTokenExpiresAt: credentials.expiry_date
+					? new Date(credentials.expiry_date)
+					: null,
+			},
+		});
+
+		return { accessToken: credentials.access_token, refreshToken };
+	} catch (error) {
+		if (isGoogleRevocationError(error)) {
+			return await clearRevokedGoogleTokens(userId, error);
+		}
+
+		logger.warn("Failed to refresh Google token", {
+			userId,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return { tokenError: "REFRESH_FAILED" };
+	}
+}
+
+/**
  * Retrieves and potentially refreshes the user's Google tokens.
  *
  * Distinguishes four failure shapes so callers can produce the truthful
@@ -196,75 +281,18 @@ async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 		return { tokenError: "NO_TOKEN" };
 	}
 
-	// Check if token is expired or will expire soon (5 min buffer)
-	const now = new Date();
-	const expiresAt = user.googleTokenExpiresAt;
-	const bufferMs = 5 * 60 * 1000;
-
-	if (expiresAt && expiresAt.getTime() - bufferMs < now.getTime()) {
-		// Token expired or expiring soon - attempt refresh
-		if (!user.googleRefreshToken) {
-			return { tokenError: "TOKEN_EXPIRED" };
-		}
-
-		try {
-			const oauth2Client = new google.auth.OAuth2(
-				process.env.GOOGLE_CLIENT_ID,
-				process.env.GOOGLE_CLIENT_SECRET
-			);
-			oauth2Client.setCredentials({
-				refresh_token: user.googleRefreshToken,
-			});
-
-			const { credentials } = await oauth2Client.refreshAccessToken();
-
-			if (!credentials.access_token) {
-				throw new Error("No access token in refresh response");
-			}
-
-			// Update stored tokens
-			await prisma.user.update({
-				where: { id: userId },
-				data: {
-					googleAccessToken: credentials.access_token,
-					googleTokenExpiresAt: credentials.expiry_date
-						? new Date(credentials.expiry_date)
-						: null,
-				},
-			});
-
-			return {
-				accessToken: credentials.access_token,
-				refreshToken: user.googleRefreshToken,
-			};
-		} catch (error) {
-			if (isGoogleRevocationError(error)) {
-				await prisma.user.update({
-					where: { id: userId },
-					data: {
-						googleAccessToken: null,
-						googleRefreshToken: null,
-						googleTokenExpiresAt: null,
-					},
-				});
-				logger.warn("Google access revoked; cleared stored Drive tokens", {
-					userId,
-				});
-				return { tokenError: "TOKEN_REVOKED" };
-			}
-
-			logger.warn("Failed to refresh Google token", {
-				userId,
-				error: error instanceof Error ? error.message : String(error),
-			});
-			return { tokenError: "REFRESH_FAILED" };
-		}
+	if (!isTokenExpiringSoon(user.googleTokenExpiresAt)) {
+		return {
+			accessToken: user.googleAccessToken,
+			refreshToken: user.googleRefreshToken,
+		};
 	}
 
-	return {
-		accessToken: user.googleAccessToken,
-		refreshToken: user.googleRefreshToken,
-	};
+	if (!user.googleRefreshToken) {
+		return { tokenError: "TOKEN_EXPIRED" };
+	}
+
+	return refreshGoogleAccessToken(userId, user.googleRefreshToken);
 }
 
 const TOKEN_ERROR_MESSAGES: Record<
@@ -568,5 +596,8 @@ export async function needsGoogleReauthorisation(
 		where: { id: userId },
 		select: { googleId: true, googleRefreshToken: true },
 	});
-	return !!user?.googleId && !user?.googleRefreshToken;
+	return googleNeedsReauthorisation({
+		googleId: user?.googleId ?? null,
+		googleRefreshToken: user?.googleRefreshToken ?? null,
+	});
 }
