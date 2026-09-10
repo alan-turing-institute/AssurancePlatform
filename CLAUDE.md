@@ -94,7 +94,10 @@ deploy`; nothing else may touch the schema. Therefore:
 ## Observability
 
 - No raw `console.*` in app code. Use the structured logger (logs to stdout so
-  containerised/self-hosted deployments work unchanged).
+  containerised/self-hosted deployments work unchanged). Biome's
+  `suspicious/noConsole` rule enforces this as a lint error; `lib/logger.ts`,
+  test files, `scripts/`, `prisma/seed/`, and `e2e/` are exempt because
+  console output is their actual interface, not a logging gap.
 - Telemetry is OpenTelemetry-based; Azure App Insights is an optional exporter
   activated by env var only. Never wire a vendor SDK outside that seam —
   forkability is a requirement.
