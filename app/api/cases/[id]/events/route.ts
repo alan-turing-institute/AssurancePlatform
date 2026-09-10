@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAuthSession } from "@/lib/api-response";
+import { logger } from "@/lib/logger";
 import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
+
+const log = logger.child({ component: "sse-route" });
 
 /**
  * Validates case access for the user.
@@ -90,7 +93,7 @@ export async function GET(
 		cancel() {
 			// This is called when the client disconnects
 			sseConnectionManager.removeConnection(caseId, connectionId);
-			console.log(`[SSE] Client disconnected: ${connectionId}`);
+			log.info("Client disconnected", { connectionId });
 		},
 	});
 
