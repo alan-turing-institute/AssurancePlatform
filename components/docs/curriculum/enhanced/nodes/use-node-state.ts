@@ -29,6 +29,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Edge, Node } from "reactflow";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "use-node-state" });
 
 /**
  * Configuration options for the node state hook
@@ -112,7 +115,7 @@ const loadFromStorage = (key: string | null): NodeStatesMap => {
 		const saved = localStorage.getItem(key);
 		return saved ? JSON.parse(saved) : {};
 	} catch (error) {
-		console.error("Failed to load node state from localStorage:", error);
+		log.error("Failed to load node state from localStorage", { error });
 		return {};
 	}
 };
@@ -130,7 +133,7 @@ const saveToStorage = (key: string | null, state: NodeStatesMap): void => {
 	try {
 		localStorage.setItem(key, JSON.stringify(state));
 	} catch (error) {
-		console.error("Failed to save node state to localStorage:", error);
+		log.error("Failed to save node state to localStorage", { error });
 	}
 };
 

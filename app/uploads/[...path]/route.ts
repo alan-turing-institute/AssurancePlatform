@@ -4,7 +4,10 @@ import { extname, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getMimeTypeFromExtension } from "@/lib/services/blob-storage-service";
+
+const log = logger.child({ component: "uploads" });
 
 /**
  * Serves locally-stored uploads (self-hosted / `USE_LOCAL_STORAGE=true`
@@ -137,11 +140,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 	// stream so the connection aborts/truncates instead of hanging or
 	// crashing the process.
 	nodeStream.on("error", (err) => {
-		// No structured logger exists in this codebase yet (CLAUDE.md names
-		// one; other server code paths without one use console.error too) —
-		// this is the same prevailing pattern, not a deviation introduced
-		// here.
-		console.error("[uploads] stream error after response started:", err);
+		log.error("Stream error after response started", { error: err });
 		nodeStream.destroy();
 	});
 

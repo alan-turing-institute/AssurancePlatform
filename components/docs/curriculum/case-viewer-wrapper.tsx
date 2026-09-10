@@ -2,7 +2,10 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import type { Node } from "reactflow";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { logger } from "@/lib/logger";
 import type { CaseExportNested, ReactFlowNodeData } from "@/types/curriculum";
+
+const log = logger.child({ component: "case-viewer-wrapper" });
 
 // Lazy load EnhancedInteractiveCaseViewer to avoid 730+ module import at startup
 const EnhancedInteractiveCaseViewer = lazy(
@@ -85,7 +88,7 @@ const CaseViewerWrapper = ({
 			} catch (err) {
 				const errorMessage =
 					err instanceof Error ? err.message : "Unknown error occurred";
-				console.error(`Error loading case file '${caseFile}':`, err);
+				log.error("Error loading case file", { caseFile, error: err });
 				setState({ data: null, error: errorMessage, loading: false });
 			}
 		};

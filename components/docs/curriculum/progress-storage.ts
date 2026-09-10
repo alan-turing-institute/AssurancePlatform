@@ -1,5 +1,6 @@
 "use client";
 
+import { logger } from "@/lib/logger";
 import type { ProgressData, Task } from "@/types/curriculum";
 
 /**
@@ -7,6 +8,8 @@ import type { ProgressData, Task } from "@/types/curriculum";
  *
  * Handles saving and loading progress for modules across pages and sessions
  */
+
+const log = logger.child({ component: "progress-storage" });
 
 const STORAGE_PREFIX = "tea-module-progress";
 
@@ -49,13 +52,13 @@ export const loadProgress = (
 
 		// Validate data structure
 		if (!(data.tasks && data.moduleId && data.courseId)) {
-			console.warn("Invalid progress data structure, resetting");
+			log.warn("Invalid progress data structure, resetting");
 			return null;
 		}
 
 		return data;
 	} catch (error) {
-		console.error("Error loading progress:", error);
+		log.error("Error loading progress", { error });
 		return null;
 	}
 };
@@ -90,7 +93,7 @@ export const saveProgress = (
 		localStorage.setItem(key, JSON.stringify(data));
 		return true;
 	} catch (error) {
-		console.error("Error saving progress:", error);
+		log.error("Error saving progress", { error });
 		return false;
 	}
 };
@@ -108,7 +111,7 @@ export const clearProgress = (courseId: string, moduleId: string): boolean => {
 		localStorage.removeItem(key);
 		return true;
 	} catch (error) {
-		console.error("Error clearing progress:", error);
+		log.error("Error clearing progress", { error });
 		return false;
 	}
 };
@@ -137,7 +140,7 @@ export const getAllProgress = (): Record<string, StoredProgressData> => {
 
 		return allProgress;
 	} catch (error) {
-		console.error("Error getting all progress:", error);
+		log.error("Error getting all progress", { error });
 		return {};
 	}
 };

@@ -1,5 +1,9 @@
 "use client";
 
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "global-error" });
+
 export default function GlobalError({
 	error,
 	reset,
@@ -7,7 +11,7 @@ export default function GlobalError({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	console.error("Global error:", error);
+	log.error("Global error", { error });
 
 	return (
 		<html lang="en">
