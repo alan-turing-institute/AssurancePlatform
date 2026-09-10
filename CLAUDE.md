@@ -186,7 +186,6 @@ and do not "fix" it incidentally — it is tracked work.
   viewer is lazy-loaded via dynamic `import()`) — static analysers miss both;
   check MDX and dynamic imports before declaring anything in
   `components/docs/curriculum/` dead.
-- Scattered `console.*` calls — being replaced by the structured logger.
 
 ## Open decisions
 

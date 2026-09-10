@@ -59,8 +59,6 @@ import { logger } from "@/lib/logger";
 import type { CaseExportNested, ReactFlowNodeData } from "@/types/curriculum";
 import "reactflow/dist/style.css";
 
-const log = logger.child({ component: "enhanced-interactive-case-viewer" });
-
 import { AnimationProvider } from "./enhanced/animations";
 import CreateNodePopover from "./enhanced/dialogs/create-node-popover";
 import { edgeTypes } from "./enhanced/edges";
@@ -68,6 +66,8 @@ import { NodeStateManager, nodeTypes } from "./enhanced/nodes";
 import { isValidConnection } from "./enhanced/nodes/node-types";
 import type { NodeDataUpdate } from "./enhanced/utils/theme-config";
 import { ThemeContext } from "./enhanced/utils/theme-config";
+
+const log = logger.child({ component: "enhanced-interactive-case-viewer" });
 
 // ========================================================================
 // Helper Functions for Node Operations
