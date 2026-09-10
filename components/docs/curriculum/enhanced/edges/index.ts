@@ -7,6 +7,9 @@
  */
 
 import type { Edge } from "reactflow";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "edge-presets" });
 
 // AnimatedEdge and variants
 export {
@@ -301,7 +304,7 @@ export const edgeStylePresets: Record<string, EdgeStylePreset> = {
 export function applyEdgePreset(edge: Edge, presetName: string): Edge {
 	const preset = edgeStylePresets[presetName];
 	if (!preset) {
-		console.warn(`Edge preset "${presetName}" not found`);
+		log.warn("Edge preset not found", { presetName });
 		return edge;
 	}
 

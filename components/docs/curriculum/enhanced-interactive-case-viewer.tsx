@@ -55,8 +55,11 @@ import {
 	transformCaseToReactFlow,
 } from "@/lib/docs/case-data-transformer";
 import { getLayoutedElements } from "@/lib/docs/elk-layout";
+import { logger } from "@/lib/logger";
 import type { CaseExportNested, ReactFlowNodeData } from "@/types/curriculum";
 import "reactflow/dist/style.css";
+
+const log = logger.child({ component: "enhanced-interactive-case-viewer" });
 
 import { AnimationProvider } from "./enhanced/animations";
 import CreateNodePopover from "./enhanced/dialogs/create-node-popover";
@@ -516,9 +519,10 @@ const EnhancedInteractiveCaseViewerInner = ({
 					)
 				);
 			} else {
-				console.warn(
-					`Invalid connection: ${sourceNode.type} cannot connect to ${targetNode.type}`
-				);
+				log.warn("Invalid connection", {
+					sourceType: sourceNode.type,
+					targetType: targetNode.type,
+				});
 			}
 		},
 		[nodes, setEdges, enableEnhancedEdges]
@@ -667,7 +671,7 @@ const EnhancedInteractiveCaseViewerInner = ({
 
 	useEffect(() => {
 		if (!caseData) {
-			console.warn("No caseData provided to EnhancedInteractiveCaseViewer");
+			log.warn("No caseData provided to EnhancedInteractiveCaseViewer");
 			return;
 		}
 
