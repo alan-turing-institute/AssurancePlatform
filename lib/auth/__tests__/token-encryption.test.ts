@@ -1,6 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { captureLogs } from "@/src/__tests__/helpers/capture-logs";
 import {
 	decryptToken,
+	encryptForStorage,
+	encryptIfPlaintext,
 	encryptToken,
 	isEncrypted,
 	TokenEncryptionUnavailableError,
@@ -102,6 +105,67 @@ describe("token-encryption", () => {
 		it("returns false for legacy plaintext", () => {
 			expect(isEncrypted("gho_plaintexttoken")).toBe(false);
 			expect(isEncrypted("")).toBe(false);
+		});
+	});
+
+	describe("encryptForStorage", () => {
+		it("returns the encrypted envelope when a key is configured", () => {
+			const result = encryptForStorage("plain-value", "githubAccessToken");
+			expect(result).toBeDefined();
+			expect(decryptToken(result as string)).toBe("plain-value");
+		});
+
+		it("in production, swallows a missing key: returns undefined and logs via the token-encryption component", () => {
+			Reflect.deleteProperty(process.env, "TOKEN_ENCRYPTION_KEY");
+			vi.stubEnv("NODE_ENV", "production");
+			const logs = captureLogs();
+			try {
+				const result = encryptForStorage("plain-value", "googleRefreshToken");
+				expect(result).toBeUndefined();
+
+				const errorLog = logs.entries.find(
+					(entry) =>
+						entry.level === "error" && entry.component === "token-encryption"
+				);
+				expect(errorLog).toMatchObject({ field: "googleRefreshToken" });
+			} finally {
+				logs.restore();
+				vi.unstubAllEnvs();
+			}
+		});
+
+		it("outside production, rethrows when no key is configured (loud, not silent)", () => {
+			Reflect.deleteProperty(process.env, "TOKEN_ENCRYPTION_KEY");
+			vi.stubEnv("NODE_ENV", "test");
+			try {
+				expect(() =>
+					encryptForStorage("plain-value", "githubAccessToken")
+				).toThrow(TokenEncryptionUnavailableError);
+			} finally {
+				vi.unstubAllEnvs();
+			}
+		});
+	});
+
+	describe("encryptIfPlaintext", () => {
+		it("encrypts a plaintext value into the envelope shape", () => {
+			const result = encryptIfPlaintext("plain-value");
+			expect(result).toBeDefined();
+			expect(isEncrypted(result as string)).toBe(true);
+			expect(decryptToken(result as string)).toBe("plain-value");
+		});
+
+		it("leaves an already-encrypted value unchanged (returns undefined — nothing to do)", () => {
+			const encrypted = encryptToken("plain-value");
+			expect(encryptIfPlaintext(encrypted)).toBeUndefined();
+		});
+
+		it("returns undefined for null", () => {
+			expect(encryptIfPlaintext(null)).toBeUndefined();
+		});
+
+		it("returns undefined for an empty string", () => {
+			expect(encryptIfPlaintext("")).toBeUndefined();
 		});
 	});
 });
