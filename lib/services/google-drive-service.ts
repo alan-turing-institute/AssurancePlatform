@@ -46,6 +46,33 @@ function encryptForStorage(token: string, field: string): string | undefined {
 	}
 }
 
+/**
+ * Decrypts a stored token, treating any failure (tampered ciphertext, an
+ * unknown envelope version, the wrong key, or no key configured) as if the
+ * token were absent rather than throwing out of the service — the caller
+ * should end up at "reconnect your account", not a 500. Logs via the
+ * `token-encryption` component, never the value.
+ */
+function tryDecrypt(
+	value: string,
+	field: string,
+	userId: string
+): string | undefined {
+	try {
+		return decryptToken(value);
+	} catch (error) {
+		tokenEncryptionLog.error(
+			"Failed to decrypt stored token; treating as absent",
+			{
+				userId,
+				field,
+				error: error instanceof Error ? error.message : String(error),
+			}
+		);
+		return undefined;
+	}
+}
+
 export type GoogleDriveErrorCode =
 	| "NO_TOKEN"
 	| "TOKEN_EXPIRED"
@@ -295,17 +322,18 @@ async function refreshGoogleAccessToken(
  *
  * Distinguishes four failure shapes so callers can produce the truthful
  * `GoogleDriveErrorCode` instead of collapsing every failure into one code:
- * - no access token stored at all -> NO_TOKEN
- * - token expired/expiring soon, and no refresh token to try -> TOKEN_EXPIRED
+ * - no access token stored at all, or the stored access token can't be
+ *   decrypted (tampered, unknown envelope version, wrong/missing key) ->
+ *   NO_TOKEN
+ * - token expired/expiring soon, and no refresh token to try (including a
+ *   refresh token that failed to decrypt) -> TOKEN_EXPIRED
  * - token expired/expiring soon, refresh attempted and Google reports the
  *   grant revoked (`invalid_grant`) -> TOKEN_REVOKED (stored tokens cleared)
  * - token expired/expiring soon, refresh attempted and failed for any other
  *   reason (threw, or returned a response with no access_token) ->
  *   REFRESH_FAILED (stored tokens left untouched — may be transient)
  */
-export async function getUserGoogleTokens(
-	userId: string
-): Promise<TokenFetchResult> {
+async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -319,15 +347,23 @@ export async function getUserGoogleTokens(
 		return { tokenError: "NO_TOKEN" };
 	}
 
-	const decryptedAccessToken = decryptToken(user.googleAccessToken);
+	const decryptedAccessToken = tryDecrypt(
+		user.googleAccessToken,
+		"googleAccessToken",
+		userId
+	);
+	if (decryptedAccessToken === undefined) {
+		return { tokenError: "NO_TOKEN" };
+	}
+
 	const decryptedRefreshToken = user.googleRefreshToken
-		? decryptToken(user.googleRefreshToken)
-		: null;
+		? tryDecrypt(user.googleRefreshToken, "googleRefreshToken", userId)
+		: undefined;
 
 	if (!isTokenExpiringSoon(user.googleTokenExpiresAt)) {
 		return {
 			accessToken: decryptedAccessToken,
-			refreshToken: decryptedRefreshToken,
+			refreshToken: decryptedRefreshToken ?? null,
 		};
 	}
 
