@@ -8,11 +8,7 @@
 import { Readable } from "node:stream";
 import { google } from "googleapis";
 import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
-import {
-	decryptToken,
-	encryptToken,
-	TokenEncryptionUnavailableError,
-} from "@/lib/auth/token-encryption";
+import { decryptToken, encryptForStorage } from "@/lib/auth/token-encryption";
 import type { ErrorCode } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -21,30 +17,6 @@ const FOLDER_NAME = "TEA Platform Backups";
 const MIME_TYPE_JSON = "application/json";
 const MIME_TYPE_FOLDER = "application/vnd.google-apps.folder";
 const tokenEncryptionLog = logger.child({ component: "token-encryption" });
-
-/**
- * Encrypts an OAuth token before it is written to storage. In production, a
- * missing/misconfigured encryption key must not break the Drive flow: the
- * token is dropped (the caller omits it from the write) and the failure is
- * logged. Outside production, the error propagates.
- */
-function encryptForStorage(token: string, field: string): string | undefined {
-	try {
-		return encryptToken(token);
-	} catch (error) {
-		if (
-			error instanceof TokenEncryptionUnavailableError &&
-			process.env.NODE_ENV === "production"
-		) {
-			tokenEncryptionLog.error(
-				"Token encryption unavailable; not persisting token",
-				{ field, error: error.message }
-			);
-			return undefined;
-		}
-		throw error;
-	}
-}
 
 /**
  * Decrypts a stored token, treating any failure (tampered ciphertext, an

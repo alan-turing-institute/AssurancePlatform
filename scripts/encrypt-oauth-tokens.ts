@@ -12,7 +12,7 @@
  * Run with: npx tsx scripts/encrypt-oauth-tokens.ts [--apply]
  */
 
-import { encryptToken, isEncrypted } from "../lib/auth/token-encryption";
+import { encryptIfPlaintext } from "../lib/auth/token-encryption";
 import { prisma } from "../lib/prisma";
 
 const BATCH_SIZE = 100;
@@ -46,19 +46,6 @@ interface EncryptedFields {
 	githubAccessToken?: string;
 	googleAccessToken?: string;
 	googleRefreshToken?: string;
-}
-
-/**
- * Encrypts `value` if it's non-null plaintext (not already in the encrypted
- * envelope shape). Returns `undefined` when there's nothing to change, so
- * callers can distinguish "no update needed" from "value updated" without a
- * sentinel.
- */
-function encryptIfPlaintext(value: string | null): string | undefined {
-	if (!value || isEncrypted(value)) {
-		return undefined;
-	}
-	return encryptToken(value);
 }
 
 /**
@@ -113,42 +100,45 @@ async function processUser(
 	}
 }
 
+/** Fetches the next page of users with at least one non-null token field. */
+function fetchNextBatch(cursor?: string): Promise<UserTokens[]> {
+	return prisma.user.findMany({
+		where: {
+			OR: [
+				{ githubAccessToken: { not: null } },
+				{ googleAccessToken: { not: null } },
+				{ googleRefreshToken: { not: null } },
+			],
+		},
+		select: {
+			id: true,
+			githubAccessToken: true,
+			googleAccessToken: true,
+			googleRefreshToken: true,
+		},
+		orderBy: { id: "asc" },
+		take: BATCH_SIZE,
+		...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+	});
+}
+
 async function sweep(apply: boolean): Promise<Counts> {
 	const counts = freshCounts();
 	let cursor: string | undefined;
+	// A batch shorter than BATCH_SIZE is the last page — this also covers
+	// the empty-batch case (0 is always < BATCH_SIZE), so there is no
+	// separate "batch is empty" check to make.
+	let hasMoreUsers = true;
 
-	for (;;) {
-		const users = await prisma.user.findMany({
-			where: {
-				OR: [
-					{ githubAccessToken: { not: null } },
-					{ googleAccessToken: { not: null } },
-					{ googleRefreshToken: { not: null } },
-				],
-			},
-			select: {
-				id: true,
-				githubAccessToken: true,
-				googleAccessToken: true,
-				googleRefreshToken: true,
-			},
-			orderBy: { id: "asc" },
-			take: BATCH_SIZE,
-			...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-		});
-
-		if (users.length === 0) {
-			break;
-		}
+	while (hasMoreUsers) {
+		const users = await fetchNextBatch(cursor);
 
 		for (const user of users) {
 			await processUser(user, apply, counts);
 		}
 
 		cursor = users.at(-1)?.id;
-		if (users.length < BATCH_SIZE) {
-			break;
-		}
+		hasMoreUsers = users.length === BATCH_SIZE;
 	}
 
 	return counts;

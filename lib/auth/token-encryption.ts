@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { logger } from "@/lib/logger";
 
 /**
  * AES-256-GCM encryption for OAuth tokens at rest (`users.github_access_token`,
@@ -25,6 +26,7 @@ const AUTH_TAG_BYTES = 16;
 const KEY_BYTES = 32;
 const ALGORITHM = "aes-256-gcm";
 const ENVELOPE_REGEX = /^(v\d+):([^:]+):([^:]+)$/;
+const tokenEncryptionLog = logger.child({ component: "token-encryption" });
 
 /**
  * Thrown when no usable encryption key is configured for the requested (or
@@ -111,12 +113,13 @@ export function decryptToken(stored: string): string {
 		return stored;
 	}
 
-	const [, version, ivPart, payloadPart] = match as unknown as [
-		string,
-		string,
-		string,
-		string,
-	];
+	const version = match[1];
+	const ivPart = match[2];
+	const payloadPart = match[3];
+	if (!(version && ivPart && payloadPart)) {
+		throw new Error("Malformed token envelope.");
+	}
+
 	const key = keyForVersion(version);
 
 	const iv = Buffer.from(ivPart, "base64url");
@@ -136,4 +139,48 @@ export function decryptToken(stored: string): string {
 	]);
 
 	return plaintext.toString("utf8");
+}
+
+/**
+ * Encrypts an OAuth token before it is written to storage. In production, a
+ * missing/misconfigured encryption key must not break sign-in: the token is
+ * dropped (the caller omits it from the write) and the failure is logged.
+ * Outside production, the error propagates — a misconfigured dev/test
+ * environment should fail loudly rather than write plaintext. Shared by
+ * every write site (`lib/auth/config.ts`, `lib/services/google-drive-service.ts`)
+ * so the production-skip-and-log behaviour lives in exactly one place.
+ */
+export function encryptForStorage(
+	token: string,
+	field: string
+): string | undefined {
+	try {
+		return encryptToken(token);
+	} catch (error) {
+		if (
+			error instanceof TokenEncryptionUnavailableError &&
+			process.env.NODE_ENV === "production"
+		) {
+			tokenEncryptionLog.error(
+				"Token encryption unavailable; not persisting token",
+				{ field, error: error.message }
+			);
+			return undefined;
+		}
+		throw error;
+	}
+}
+
+/**
+ * Encrypts `value` unless it's already in the encrypted-envelope shape
+ * (`isEncrypted`), in which case it's left untouched. Returns `undefined`
+ * for `null`/empty input, or when nothing needs to change, so callers (the
+ * legacy-token sweep script) can distinguish "no update needed" from "value
+ * updated" without a sentinel.
+ */
+export function encryptIfPlaintext(value: string | null): string | undefined {
+	if (!value || isEncrypted(value)) {
+		return undefined;
+	}
+	return encryptToken(value);
 }
