@@ -552,6 +552,96 @@ describe("NodeEditDialog — evidence URL removal", () => {
 	});
 });
 
+describe("NodeEditDialog — context entry editing", () => {
+	const GOAL_WITH_CONTEXT: Node = {
+		id: "4",
+		type: "goal",
+		position: { x: 0, y: 0 },
+		data: {
+			id: 4,
+			name: "G2",
+			description: "System is acceptably safe",
+			context: ["Operating in the UK", "Single-driver vehicles only"],
+		},
+	};
+
+	it("edits an existing context entry's text and saves the updated array", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.put("/api/elements/4", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+
+		render(
+			<NodeEditDialog
+				node={GOAL_WITH_CONTEXT}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const firstEntry = await screen.findByLabelText("Context entry 1");
+		await user.clear(firstEntry);
+		await user.type(firstEntry, "Operating in the UK and Ireland");
+
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(capturedBody).toEqual(
+			expect.objectContaining({
+				context: [
+					"Operating in the UK and Ireland",
+					"Single-driver vehicles only",
+				],
+			})
+		);
+	});
+
+	it("drops a context entry cleared to empty on save", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.put("/api/elements/4", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+
+		render(
+			<NodeEditDialog
+				node={GOAL_WITH_CONTEXT}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const firstEntry = await screen.findByLabelText("Context entry 1");
+		await user.clear(firstEntry);
+
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(capturedBody).toEqual(
+			expect.objectContaining({
+				context: ["Single-driver vehicles only"],
+			})
+		);
+	});
+});
+
 describe("NodeEditDialog — read-only mode by case permission", () => {
 	const EVIDENCE_NODE: Node = {
 		id: "3",

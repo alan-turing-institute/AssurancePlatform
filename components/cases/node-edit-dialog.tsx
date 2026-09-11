@@ -109,7 +109,9 @@ function buildUpdatePayload(
 	if (supportsAttributes(nodeType)) {
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
-		updateItem.context = values.context || [];
+		updateItem.context = (values.context || [])
+			.map((c) => c.trim())
+			.filter((c) => c.length > 0);
 		// Per-assertion status (ADR 0004 D3) — always one of the five
 		// author-declarable values; the Select never offers AS_CITED.
 		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
@@ -231,6 +233,7 @@ function AssertionStatusSection({
 
 interface ContextSectionProps {
 	contextItems: Array<{ id: string; value: string }>;
+	form: UseFormReturn<FormValues>;
 	newContextValue: string;
 	onAddContext: () => void;
 	onNewContextChange: (value: string) => void;
@@ -238,8 +241,17 @@ interface ContextSectionProps {
 	readOnly: boolean;
 }
 
+// `context` is a `string[]` on the shared zod schema (`nodeEditFormSchema`),
+// and react-hook-form's `useFieldArray` only accepts array fields whose
+// elements are objects (its `FieldArrayPath` type excludes primitive
+// arrays), so each entry is bound individually via `FormField` at the
+// indexed path `context.${idx}` instead — a plain `Path`, which primitive
+// array elements are valid targets for. Add/remove bookkeeping (stable keys
+// via `contextItems`) stays as before; only the read-only `<span>` becomes
+// an editable `Input`.
 function ContextSection({
 	contextItems,
+	form,
 	readOnly,
 	newContextValue,
 	onNewContextChange,
@@ -259,22 +271,40 @@ function ContextSection({
 			{contextItems.length > 0 && (
 				<div className="space-y-2">
 					{contextItems.map((item, idx) => (
-						<div
-							className="flex items-start gap-2 rounded border bg-muted/50 p-2"
+						<FormField
+							control={form.control}
 							key={item.id}
-						>
-							<span className="flex-1 text-sm">{item.value}</span>
-							{!readOnly && (
-								<button
-									className="rounded p-1 text-destructive hover:bg-destructive/10"
-									onClick={() => onRemoveContext(idx)}
-									title="Remove context"
-									type="button"
-								>
-									<Trash2 className="h-4 w-4" />
-								</button>
+							name={`context.${idx}`}
+							render={({ field }) => (
+								<FormItem>
+									<div className="flex items-start gap-2">
+										<FormControl>
+											<Input
+												aria-label={`Context entry ${idx + 1}`}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") {
+														e.preventDefault();
+													}
+												}}
+												readOnly={readOnly}
+												{...field}
+											/>
+										</FormControl>
+										{!readOnly && (
+											<button
+												className="rounded p-1 text-destructive hover:bg-destructive/10"
+												onClick={() => onRemoveContext(idx)}
+												title="Remove context"
+												type="button"
+											>
+												<Trash2 className="h-4 w-4" />
+											</button>
+										)}
+									</div>
+									<FormMessage />
+								</FormItem>
 							)}
-						</div>
+						/>
 					))}
 				</div>
 			)}
@@ -636,6 +666,7 @@ export default function NodeEditDialog({
 						/>
 						<ContextSection
 							contextItems={contextItems}
+							form={form}
 							newContextValue={newContextValue}
 							onAddContext={addContext}
 							onNewContextChange={setNewContextValue}
