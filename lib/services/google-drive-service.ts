@@ -8,6 +8,7 @@
 import { Readable } from "node:stream";
 import { google } from "googleapis";
 import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
+import { decryptToken, encryptForStorage } from "@/lib/auth/token-encryption";
 import type { ErrorCode } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +16,34 @@ import { prisma } from "@/lib/prisma";
 const FOLDER_NAME = "TEA Platform Backups";
 const MIME_TYPE_JSON = "application/json";
 const MIME_TYPE_FOLDER = "application/vnd.google-apps.folder";
+const tokenEncryptionLog = logger.child({ component: "token-encryption" });
+
+/**
+ * Decrypts a stored token, treating any failure (tampered ciphertext, an
+ * unknown envelope version, the wrong key, or no key configured) as if the
+ * token were absent rather than throwing out of the service — the caller
+ * should end up at "reconnect your account", not a 500. Logs via the
+ * `token-encryption` component, never the value.
+ */
+function tryDecrypt(
+	value: string,
+	field: string,
+	userId: string
+): string | undefined {
+	try {
+		return decryptToken(value);
+	} catch (error) {
+		tokenEncryptionLog.error(
+			"Failed to decrypt stored token; treating as absent",
+			{
+				userId,
+				field,
+				error: error instanceof Error ? error.message : String(error),
+			}
+		);
+		return undefined;
+	}
+}
 
 export type GoogleDriveErrorCode =
 	| "NO_TOKEN"
@@ -230,10 +259,16 @@ async function refreshGoogleAccessToken(
 			throw new Error("No access token in refresh response");
 		}
 
+		const encryptedAccessToken = encryptForStorage(
+			credentials.access_token,
+			"googleAccessToken"
+		);
 		await prisma.user.update({
 			where: { id: userId },
 			data: {
-				googleAccessToken: credentials.access_token,
+				...(encryptedAccessToken !== undefined && {
+					googleAccessToken: encryptedAccessToken,
+				}),
 				googleTokenExpiresAt: credentials.expiry_date
 					? new Date(credentials.expiry_date)
 					: null,
@@ -259,8 +294,11 @@ async function refreshGoogleAccessToken(
  *
  * Distinguishes four failure shapes so callers can produce the truthful
  * `GoogleDriveErrorCode` instead of collapsing every failure into one code:
- * - no access token stored at all -> NO_TOKEN
- * - token expired/expiring soon, and no refresh token to try -> TOKEN_EXPIRED
+ * - no access token stored at all, or the stored access token can't be
+ *   decrypted (tampered, unknown envelope version, wrong/missing key) ->
+ *   NO_TOKEN
+ * - token expired/expiring soon, and no refresh token to try (including a
+ *   refresh token that failed to decrypt) -> TOKEN_EXPIRED
  * - token expired/expiring soon, refresh attempted and Google reports the
  *   grant revoked (`invalid_grant`) -> TOKEN_REVOKED (stored tokens cleared)
  * - token expired/expiring soon, refresh attempted and failed for any other
@@ -281,18 +319,31 @@ async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 		return { tokenError: "NO_TOKEN" };
 	}
 
+	const decryptedAccessToken = tryDecrypt(
+		user.googleAccessToken,
+		"googleAccessToken",
+		userId
+	);
+	if (decryptedAccessToken === undefined) {
+		return { tokenError: "NO_TOKEN" };
+	}
+
+	const decryptedRefreshToken = user.googleRefreshToken
+		? tryDecrypt(user.googleRefreshToken, "googleRefreshToken", userId)
+		: undefined;
+
 	if (!isTokenExpiringSoon(user.googleTokenExpiresAt)) {
 		return {
-			accessToken: user.googleAccessToken,
-			refreshToken: user.googleRefreshToken,
+			accessToken: decryptedAccessToken,
+			refreshToken: decryptedRefreshToken ?? null,
 		};
 	}
 
-	if (!user.googleRefreshToken) {
+	if (!decryptedRefreshToken) {
 		return { tokenError: "TOKEN_EXPIRED" };
 	}
 
-	return refreshGoogleAccessToken(userId, user.googleRefreshToken);
+	return refreshGoogleAccessToken(userId, decryptedRefreshToken);
 }
 
 const TOKEN_ERROR_MESSAGES: Record<

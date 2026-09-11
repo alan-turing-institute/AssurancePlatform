@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import { encryptForStorage } from "@/lib/auth/token-encryption";
 import { logger } from "@/lib/logger";
 
 const log = logger.child({ component: "auth-config" });
@@ -36,6 +37,26 @@ function loginResetFields(): {
 }
 
 /**
+ * Builds the token data object for GitHub OAuth writes. Extracted (mirrors
+ * `buildGoogleTokenData` below) to reduce cognitive complexity in
+ * `authenticateGitHubWithPrisma` — computed once and reused across its three
+ * branches, so the encryption call (and its production key-absent handling)
+ * happens exactly once per sign-in even though only one branch executes.
+ */
+function buildGitHubTokenData(
+	accessToken: string | undefined,
+	tokenExpiresAt: Date | null
+) {
+	const encryptedAccessToken = accessToken
+		? encryptForStorage(accessToken, "githubAccessToken")
+		: undefined;
+	return {
+		...(encryptedAccessToken && { githubAccessToken: encryptedAccessToken }),
+		...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+	};
+}
+
+/**
  * Builds the token data object for Google OAuth updates.
  * Extracted to reduce cognitive complexity in the main function.
  */
@@ -44,9 +65,17 @@ function buildGoogleTokenData(
 	refreshToken?: string,
 	tokenExpiresAt?: Date | null
 ) {
+	const encryptedAccessToken = accessToken
+		? encryptForStorage(accessToken, "googleAccessToken")
+		: undefined;
+	const encryptedRefreshToken = refreshToken
+		? encryptForStorage(refreshToken, "googleRefreshToken")
+		: undefined;
 	return {
-		...(accessToken && { googleAccessToken: accessToken }),
-		...(refreshToken && { googleRefreshToken: refreshToken }),
+		...(encryptedAccessToken && { googleAccessToken: encryptedAccessToken }),
+		...(encryptedRefreshToken && {
+			googleRefreshToken: encryptedRefreshToken,
+		}),
 		...(tokenExpiresAt && { googleTokenExpiresAt: tokenExpiresAt }),
 	};
 }
@@ -162,6 +191,11 @@ async function authenticateGitHubWithPrisma(
 
 	// Calculate token expiry (GitHub tokens typically don't expire, but we store it if provided)
 	const tokenExpiresAt = expiresAt ? new Date(expiresAt * 1000) : null;
+	// Built once and reused across every branch below — the function executes
+	// exactly one of them per call, but keeping the encryption (and its
+	// production key-absent handling) in one place avoids repeating the
+	// fresh-IV call three times for the same plaintext.
+	const githubTokenData = buildGitHubTokenData(accessToken, tokenExpiresAt);
 
 	// Check if this GitHub account is already linked to another user
 	const githubLinkedUser = await prisma.user.findUnique({
@@ -183,8 +217,7 @@ async function authenticateGitHubWithPrisma(
 				githubId,
 				githubUsername,
 				// Don't change authProvider when linking - user keeps their original provider
-				...(accessToken && { githubAccessToken: accessToken }),
-				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...githubTokenData,
 				...loginResetFields(),
 			},
 		});
@@ -209,8 +242,7 @@ async function authenticateGitHubWithPrisma(
 				githubUsername,
 				authProvider: "GITHUB",
 				// Store access token for GitHub API calls (e.g., importing cases from repos)
-				...(accessToken && { githubAccessToken: accessToken }),
-				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...githubTokenData,
 				...loginResetFields(),
 			},
 		});
@@ -222,8 +254,7 @@ async function authenticateGitHubWithPrisma(
 				githubId,
 				githubUsername,
 				authProvider: "GITHUB",
-				githubAccessToken: accessToken,
-				githubTokenExpiresAt: tokenExpiresAt,
+				...githubTokenData,
 			},
 		});
 		userId = newUser.id;
@@ -329,7 +360,8 @@ export async function authenticateGoogleWithPrisma(
 		return { id: existingUser.id };
 	}
 
-	// Create new user for Google login
+	// Create new user for Google login. Reuses `tokenData` (already
+	// encrypted, computed above) rather than the raw tokens directly.
 	const username = email.split("@")[0] || email;
 	const newUser = await prisma.user.create({
 		data: {
@@ -338,9 +370,7 @@ export async function authenticateGoogleWithPrisma(
 			googleId,
 			googleEmail: email,
 			authProvider: "GOOGLE",
-			googleAccessToken: accessToken,
-			googleRefreshToken: refreshToken,
-			googleTokenExpiresAt: tokenExpiresAt,
+			...tokenData,
 		},
 	});
 

@@ -19,12 +19,12 @@ Table users {
   authProvider AuthProvider [not null, default: 'LOCAL']
   githubId String [unique]
   githubUsername String
-  githubAccessToken String [note: 'Encrypted GitHub OAuth access token for API calls']
+  githubAccessToken String [note: 'GitHub OAuth access token for API calls, encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)']
   githubTokenExpiresAt DateTime [note: 'Expiry timestamp for the GitHub token']
   googleId String [unique, note: 'Google account ID for OAuth']
   googleEmail String [note: 'Google email address']
-  googleAccessToken String [note: 'Google OAuth access token for Drive API calls']
-  googleRefreshToken String [note: 'Google OAuth refresh token (tokens expire after 1 hour)']
+  googleAccessToken String [note: 'Google OAuth access token for Drive API calls, encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)']
+  googleRefreshToken String [note: 'Google OAuth refresh token (tokens expire after 1 hour), encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)']
   googleTokenExpiresAt DateTime [note: 'Expiry timestamp for the Google access token']
   emailVerified Boolean [not null, default: false, note: 'Whether email has been verified (for email-based signup)']
   passwordResetToken String

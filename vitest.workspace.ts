@@ -72,6 +72,16 @@ export default defineConfig({
 							process.env.DATABASE_URL_INTEGRATION_BASE ??
 							"postgresql://tea_user:tea_password@localhost:5433/tea_test",
 						SKIP_ELEMENT_VALIDATION: "false",
+						// Fixed, non-secret 32-byte test key so integration tests that
+						// exercise lib/auth/token-encryption.ts's write paths (e.g.
+						// google-drive-service.test.ts's token-refresh tests) don't
+						// depend on a real TOKEN_ENCRYPTION_KEY being configured in this
+						// environment. Individual tests that need to exercise the
+						// key-absent path delete this from process.env themselves and
+						// restore it afterwards.
+						TOKEN_ENCRYPTION_KEY:
+							process.env.TOKEN_ENCRYPTION_KEY ??
+							Buffer.alloc(32, 1).toString("base64"),
 					},
 				},
 			},
