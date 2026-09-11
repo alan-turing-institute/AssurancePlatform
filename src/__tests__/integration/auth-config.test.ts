@@ -15,10 +15,24 @@ function testKey(fill: number): string {
 	return Buffer.alloc(32, fill).toString("base64");
 }
 
-/** Flips the last character of an envelope string, breaking its auth tag. */
+/**
+ * Corrupts an envelope by flipping a bit in its first payload byte — always
+ * a real ciphertext/tag byte. Flipping a character of the base64 STRING
+ * instead (e.g. its last character) is only *sometimes* a real corruption:
+ * when the payload's byte length isn't a multiple of 3, the last character
+ * encodes some bits that base64 decoding discards, so certain flips there
+ * silently round-trip to the same bytes.
+ */
 function tamper(encrypted: string): string {
-	const last = encrypted.at(-1);
-	return `${encrypted.slice(0, -1)}${last === "A" ? "B" : "A"}`;
+	const [version, iv, payload] = encrypted.split(":") as [
+		string,
+		string,
+		string,
+	];
+	const bytes = Buffer.from(payload, "base64url");
+	const firstByte = bytes[0] ?? 0;
+	bytes[0] = (firstByte + 1) % 256;
+	return `${version}:${iv}:${bytes.toString("base64url")}`;
 }
 
 const TEST_PASSWORD = "correct horse battery staple";

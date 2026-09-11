@@ -102,6 +102,26 @@ function mockFolderCreation(newFolderId = "new-folder-id") {
 	mockFilesCreate.mockResolvedValueOnce({ data: { id: newFolderId } });
 }
 
+/**
+ * Corrupts an envelope by flipping a bit in its first payload byte — always
+ * a real ciphertext/tag byte. Flipping a character of the base64 STRING
+ * instead (e.g. its last character) is only *sometimes* a real corruption:
+ * when the payload's byte length isn't a multiple of 3, the last character
+ * encodes some bits that base64 decoding discards, so certain flips there
+ * silently round-trip to the same bytes.
+ */
+function tamper(encrypted: string): string {
+	const [version, iv, payload] = encrypted.split(":") as [
+		string,
+		string,
+		string,
+	];
+	const bytes = Buffer.from(payload, "base64url");
+	const firstByte = bytes[0] ?? 0;
+	bytes[0] = (firstByte + 1) % 256;
+	return `${version}:${iv}:${bytes.toString("base64url")}`;
+}
+
 describe("hasGoogleToken / getUserGoogleTokens (via hasGoogleToken)", () => {
 	it("returns true for a valid, unexpired token", async () => {
 		const user = await createTestUser();
@@ -841,9 +861,7 @@ describe("OAuth token encryption (getUserGoogleTokens, via uploadBackupToDrive)"
 	it("treats a tampered stored access token as absent (NO_TOKEN), logging via the token-encryption component, rather than throwing", async () => {
 		const user = await createTestUser();
 		const encrypted = encryptToken("plain-access-token");
-		const last = encrypted.at(-1);
-		const tampered = `${encrypted.slice(0, -1)}${last === "A" ? "B" : "A"}`;
-		await setGoogleTokens(user.id, { googleAccessToken: tampered });
+		await setGoogleTokens(user.id, { googleAccessToken: tamper(encrypted) });
 
 		const logs = captureLogs();
 		try {
