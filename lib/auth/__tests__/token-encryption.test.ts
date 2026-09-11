@@ -66,6 +66,14 @@ describe("token-encryption", () => {
 			expect(() => decryptToken(`v99:${iv}:${payload}`)).toThrow();
 		});
 
+		it("throws when the payload is too short to contain an auth tag (<=16 bytes)", () => {
+			const iv = Buffer.alloc(12, 1).toString("base64url");
+			const shortPayload = Buffer.alloc(16, 2).toString("base64url");
+			expect(() => decryptToken(`v1:${iv}:${shortPayload}`)).toThrow(
+				"Malformed token envelope: ciphertext too short."
+			);
+		});
+
 		it("returns legacy plaintext unchanged", () => {
 			expect(decryptToken("plain-legacy-token")).toBe("plain-legacy-token");
 		});
