@@ -25,6 +25,8 @@ overrides:
   '@react-pdf/render': 4.5.1
   '@react-pdf/layout': 4.6.1
   '@react-pdf/textkit': 6.3.0
+  nextra>zod: 4.3.6
+  nextra-theme-docs>zod: 4.3.6
 
 patchedDependencies:
   nextstepjs:
@@ -8360,6 +8362,9 @@ packages:
     resolution: {integrity: sha512-9qv4rlDiopXg4E69k+vMHjNN63YFMe9sZMrdlvKnCjlCRWeCBswPPMPUfx+ipsAWq1LXHe70RcbaHdJJpS6hyQ==}
     engines: {node: '>= 10'}
 
+  zod@4.3.6:
+    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
+
   zod@4.6.2:
     resolution: {integrity: sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ==}
 
@@ -15317,7 +15322,7 @@ snapshots:
       react-compiler-runtime: 19.1.0-rc.3(react@19.3.0)
       react-dom: 19.3.0(react@19.3.0)
       scroll-into-view-if-needed: 3.1.0
-      zod: 4.6.2
+      zod: 4.3.6
       zustand: 5.0.15(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
     transitivePeerDependencies:
       - '@types/react'
@@ -15367,7 +15372,7 @@ snapshots:
       unist-util-visit: 5.1.0
       unist-util-visit-children: 3.0.0
       yaml: 2.9.0
-      zod: 4.6.2
+      zod: 4.3.6
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -17478,6 +17483,8 @@ snapshots:
       archiver-utils: 3.0.4
       compress-commons: 4.1.2
       readable-stream: 3.6.2
+
+  zod@4.3.6: {}
 
   zod@4.6.2: {}
 
