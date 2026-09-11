@@ -6,6 +6,7 @@
  */
 
 import { Octokit } from "@octokit/rest";
+import { decryptToken } from "@/lib/auth/token-encryption";
 import type { ErrorCode } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 
@@ -40,10 +41,14 @@ export interface GitHubServiceError {
 }
 
 /**
- * Retrieves the user's GitHub access token from the database.
- * Returns null if the user doesn't have a GitHub token stored.
+ * Retrieves the user's GitHub access token from the database, decrypted.
+ * Returns null if the user doesn't have a GitHub token stored. Exported for
+ * unit testing; other modules should still go through `fetchFileFromGitHub`
+ * / `hasGitHubToken`.
  */
-async function getUserGitHubToken(userId: string): Promise<string | null> {
+export async function getUserGitHubToken(
+	userId: string
+): Promise<string | null> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -61,7 +66,7 @@ async function getUserGitHubToken(userId: string): Promise<string | null> {
 		return null;
 	}
 
-	return user.githubAccessToken;
+	return decryptToken(user.githubAccessToken);
 }
 
 /**

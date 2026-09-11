@@ -47,6 +47,7 @@ The TEA Platform is configured through environment variables. Here's a reference
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/tea` |
 | `NEXTAUTH_SECRET` | Secret for session encryption | Generate with `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | Public URL of the application | `https://tea.example.com` |
+| `TOKEN_ENCRYPTION_KEY` | Base64-encoded 32-byte key used to encrypt stored GitHub/Google OAuth tokens at rest (AES-256-GCM) | Generate with `openssl rand -base64 32` |
 
 ### Optional Variables
 

@@ -8,6 +8,11 @@
 import { Readable } from "node:stream";
 import { google } from "googleapis";
 import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
+import {
+	decryptToken,
+	encryptToken,
+	TokenEncryptionUnavailableError,
+} from "@/lib/auth/token-encryption";
 import type { ErrorCode } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +20,31 @@ import { prisma } from "@/lib/prisma";
 const FOLDER_NAME = "TEA Platform Backups";
 const MIME_TYPE_JSON = "application/json";
 const MIME_TYPE_FOLDER = "application/vnd.google-apps.folder";
+const tokenEncryptionLog = logger.child({ component: "token-encryption" });
+
+/**
+ * Encrypts an OAuth token before it is written to storage. In production, a
+ * missing/misconfigured encryption key must not break the Drive flow: the
+ * token is dropped (the caller omits it from the write) and the failure is
+ * logged. Outside production, the error propagates.
+ */
+function encryptForStorage(token: string, field: string): string | undefined {
+	try {
+		return encryptToken(token);
+	} catch (error) {
+		if (
+			error instanceof TokenEncryptionUnavailableError &&
+			process.env.NODE_ENV === "production"
+		) {
+			tokenEncryptionLog.error(
+				"Token encryption unavailable; not persisting token",
+				{ field, error: error.message }
+			);
+			return undefined;
+		}
+		throw error;
+	}
+}
 
 export type GoogleDriveErrorCode =
 	| "NO_TOKEN"
@@ -230,10 +260,16 @@ async function refreshGoogleAccessToken(
 			throw new Error("No access token in refresh response");
 		}
 
+		const encryptedAccessToken = encryptForStorage(
+			credentials.access_token,
+			"googleAccessToken"
+		);
 		await prisma.user.update({
 			where: { id: userId },
 			data: {
-				googleAccessToken: credentials.access_token,
+				...(encryptedAccessToken !== undefined && {
+					googleAccessToken: encryptedAccessToken,
+				}),
 				googleTokenExpiresAt: credentials.expiry_date
 					? new Date(credentials.expiry_date)
 					: null,
@@ -267,7 +303,9 @@ async function refreshGoogleAccessToken(
  *   reason (threw, or returned a response with no access_token) ->
  *   REFRESH_FAILED (stored tokens left untouched — may be transient)
  */
-async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
+export async function getUserGoogleTokens(
+	userId: string
+): Promise<TokenFetchResult> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -281,18 +319,23 @@ async function getUserGoogleTokens(userId: string): Promise<TokenFetchResult> {
 		return { tokenError: "NO_TOKEN" };
 	}
 
+	const decryptedAccessToken = decryptToken(user.googleAccessToken);
+	const decryptedRefreshToken = user.googleRefreshToken
+		? decryptToken(user.googleRefreshToken)
+		: null;
+
 	if (!isTokenExpiringSoon(user.googleTokenExpiresAt)) {
 		return {
-			accessToken: user.googleAccessToken,
-			refreshToken: user.googleRefreshToken,
+			accessToken: decryptedAccessToken,
+			refreshToken: decryptedRefreshToken,
 		};
 	}
 
-	if (!user.googleRefreshToken) {
+	if (!decryptedRefreshToken) {
 		return { tokenError: "TOKEN_EXPIRED" };
 	}
 
-	return refreshGoogleAccessToken(userId, user.googleRefreshToken);
+	return refreshGoogleAccessToken(userId, decryptedRefreshToken);
 }
 
 const TOKEN_ERROR_MESSAGES: Record<

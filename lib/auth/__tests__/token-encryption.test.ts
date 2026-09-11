@@ -1,0 +1,107 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	decryptToken,
+	encryptToken,
+	isEncrypted,
+	TokenEncryptionUnavailableError,
+} from "../token-encryption";
+
+const TEST_KEY = Buffer.alloc(32, 7).toString("base64");
+const OTHER_KEY = Buffer.alloc(32, 9).toString("base64");
+
+describe("token-encryption", () => {
+	const originalKey = process.env.TOKEN_ENCRYPTION_KEY;
+
+	beforeEach(() => {
+		process.env.TOKEN_ENCRYPTION_KEY = TEST_KEY;
+	});
+
+	afterEach(() => {
+		if (originalKey === undefined) {
+			Reflect.deleteProperty(process.env, "TOKEN_ENCRYPTION_KEY");
+		} else {
+			process.env.TOKEN_ENCRYPTION_KEY = originalKey;
+		}
+	});
+
+	describe("encryptToken / decryptToken", () => {
+		it("round-trips a value through encrypt and decrypt", () => {
+			const plain = "gho_exampletoken1234567890";
+			expect(decryptToken(encryptToken(plain))).toBe(plain);
+		});
+
+		it("produces different ciphertext for the same input on each call (fresh IV)", () => {
+			const plain = "same-value-twice";
+			const first = encryptToken(plain);
+			const second = encryptToken(plain);
+			expect(first).not.toBe(second);
+			expect(decryptToken(first)).toBe(plain);
+			expect(decryptToken(second)).toBe(plain);
+		});
+
+		it("fails to decrypt with the wrong key", () => {
+			const encrypted = encryptToken("secret-value");
+			process.env.TOKEN_ENCRYPTION_KEY = OTHER_KEY;
+			expect(() => decryptToken(encrypted)).toThrow();
+		});
+
+		it("fails to decrypt tampered ciphertext", () => {
+			const encrypted = encryptToken("secret-value");
+			const [version, iv, payload] = encrypted.split(":") as [
+				string,
+				string,
+				string,
+			];
+			const tamperedChar = payload.at(0) === "A" ? "B" : "A";
+			const tampered = `${version}:${iv}:${tamperedChar}${payload.slice(1)}`;
+			expect(() => decryptToken(tampered)).toThrow();
+		});
+
+		it("throws on an unknown envelope version prefix", () => {
+			const encrypted = encryptToken("secret-value");
+			const [, iv, payload] = encrypted.split(":") as [string, string, string];
+			expect(() => decryptToken(`v99:${iv}:${payload}`)).toThrow();
+		});
+
+		it("returns legacy plaintext unchanged", () => {
+			expect(decryptToken("plain-legacy-token")).toBe("plain-legacy-token");
+		});
+
+		it("throws TokenEncryptionUnavailableError when no key is configured", () => {
+			Reflect.deleteProperty(process.env, "TOKEN_ENCRYPTION_KEY");
+			expect(() => encryptToken("secret-value")).toThrow(
+				TokenEncryptionUnavailableError
+			);
+		});
+
+		it("rejects a malformed (non-base64) key without echoing it", () => {
+			const badKey = "not-valid-base64-and-wrong-length!!!";
+			process.env.TOKEN_ENCRYPTION_KEY = badKey;
+			try {
+				encryptToken("secret-value");
+				throw new Error("expected encryptToken to throw");
+			} catch (error) {
+				expect(error).toBeInstanceOf(TokenEncryptionUnavailableError);
+				expect((error as Error).message).not.toContain(badKey);
+			}
+		});
+
+		it("rejects a key of the wrong length", () => {
+			process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(16, 1).toString("base64");
+			expect(() => encryptToken("secret-value")).toThrow(
+				TokenEncryptionUnavailableError
+			);
+		});
+	});
+
+	describe("isEncrypted", () => {
+		it("returns true for an encrypted envelope", () => {
+			expect(isEncrypted(encryptToken("secret-value"))).toBe(true);
+		});
+
+		it("returns false for legacy plaintext", () => {
+			expect(isEncrypted("gho_plaintexttoken")).toBe(false);
+			expect(isEncrypted("")).toBe(false);
+		});
+	});
+});
