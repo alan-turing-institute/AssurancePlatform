@@ -51,6 +51,8 @@ const NODE: Node = {
 	},
 };
 
+const CONTEXT_ENTRY_LABEL_PATTERN = /^Context entry \d+$/;
+
 function FakePanel({ elementId }: ElementSlotContext) {
 	return <div data-testid="fake-panel-content">{`panel for ${elementId}`}</div>;
 }
@@ -565,15 +567,134 @@ describe("NodeEditDialog — context entry editing", () => {
 		},
 	};
 
-	it("edits an existing context entry's text and saves the updated array", async () => {
+	it.each([
+		"goal",
+		"strategy",
+		"property",
+	] as const)("edits an existing context entry's text and saves the updated array (%s)", async (nodeType) => {
 		const user = userEvent.setup();
 		const onOpenChange = vi.fn();
 		mockPluginsResponse(true);
+
+		const nodeTypeLabel = nodeType.charAt(0).toUpperCase() + nodeType.slice(1);
+		const node: Node = {
+			id: "4",
+			type: nodeType,
+			position: { x: 0, y: 0 },
+			data: {
+				id: 4,
+				name: "N1",
+				description: "System is acceptably safe",
+				context: ["Operating in the UK", "Single-driver vehicles only"],
+			},
+		};
 
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
 			http.put("/api/elements/4", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+
+		render(
+			<NodeEditDialog
+				node={node}
+				nodeType={nodeType}
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const firstEntry = await screen.findByLabelText("Context entry 1");
+		await user.clear(firstEntry);
+		await user.type(firstEntry, "Operating in the UK and Ireland");
+
+		await user.click(
+			screen.getByRole("button", { name: `Update ${nodeTypeLabel}` })
+		);
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(capturedBody).toEqual(
+			expect.objectContaining({
+				context: [
+					"Operating in the UK and Ireland",
+					"Single-driver vehicles only",
+				],
+			})
+		);
+	});
+
+	it("edits one entry and deletes a different one, keeping the remaining entries in order", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+
+		const node: Node = {
+			id: "5",
+			type: "goal",
+			position: { x: 0, y: 0 },
+			data: {
+				id: 5,
+				name: "G3",
+				description: "System is acceptably safe",
+				context: ["Entry one", "Entry two", "Entry three"],
+			},
+		};
+
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.put("/api/elements/5", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+
+		render(
+			<NodeEditDialog
+				node={node}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const secondEntry = await screen.findByLabelText("Context entry 2");
+		await user.clear(secondEntry);
+		await user.type(secondEntry, "Entry two edited");
+
+		const [firstRemoveButton] = screen.getAllByTitle("Remove context");
+		if (!firstRemoveButton) {
+			throw new Error("Expected a remove-context button for the first entry");
+		}
+		await user.click(firstRemoveButton);
+
+		const remaining = screen.getAllByLabelText(CONTEXT_ENTRY_LABEL_PATTERN);
+		expect(remaining).toHaveLength(2);
+		expect(remaining[0]).toHaveValue("Entry two edited");
+		expect(remaining[1]).toHaveValue("Entry three");
+
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(capturedBody).toEqual(
+			expect.objectContaining({
+				context: ["Entry two edited", "Entry three"],
+			})
+		);
+	});
+
+	it("does not submit when Enter is pressed inside a context entry", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		mockPluginsResponse(true);
+
+		let updateRequestCount = 0;
+		server.use(
+			http.put("/api/elements/4", () => {
+				updateRequestCount++;
 				return HttpResponse.json({}, { status: 200 });
 			})
 		);
@@ -589,20 +710,14 @@ describe("NodeEditDialog — context entry editing", () => {
 		);
 
 		const firstEntry = await screen.findByLabelText("Context entry 1");
-		await user.clear(firstEntry);
-		await user.type(firstEntry, "Operating in the UK and Ireland");
+		firstEntry.focus();
+		await user.keyboard("{Enter}");
 
-		await user.click(screen.getByRole("button", { name: "Update Goal" }));
-
-		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-		expect(capturedBody).toEqual(
-			expect.objectContaining({
-				context: [
-					"Operating in the UK and Ireland",
-					"Single-driver vehicles only",
-				],
-			})
-		);
+		// Give any (incorrect) implicit-submit request a chance to land
+		// before asserting its absence.
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(updateRequestCount).toBe(0);
+		expect(onOpenChange).not.toHaveBeenCalledWith(false);
 	});
 
 	it("drops a context entry cleared to empty on save", async () => {
