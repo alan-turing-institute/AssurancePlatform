@@ -412,6 +412,13 @@ model AssuranceElement {
   // Dialogical reasoning (defeaters)
   isDefeater          Boolean          @default(false) @map("is_defeater") /// True if element is a counter-argument
   defeatsElementId    String?          @map("defeats_element_id") /// Element this defeater challenges
+  // True when defeatsElementId was blanked because the imported target
+  // wasn't part of the same import (or the flag was set with no target at
+  // all) — dangling-defeat indicator, set only by case-import-service.ts's
+  // resolveImportedDefeatsElementId (mirrors citationDangling below; import
+  // is the only write path that can produce this, since defeatsElementId is
+  // always same-case and normal author edits go through element-service.ts).
+  defeatsDangling     Boolean          @default(false) @map("defeats_dangling")
 
   // Level (calculated, for property claims)
   level               Int?             /// Hierarchy depth level for property claims
