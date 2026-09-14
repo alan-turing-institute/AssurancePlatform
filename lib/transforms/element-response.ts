@@ -55,6 +55,7 @@ function applyOptionalFields(
 		moduleReferenceId?: string | null;
 		isDefeater?: boolean;
 		defeatsElementId?: string | null;
+		defeatsDangling?: boolean;
 	}
 ): void {
 	// Handle URLs: prefer urls array, fall back to legacy url field
@@ -95,6 +96,9 @@ function applyOptionalFields(
 	if (element.defeatsElementId) {
 		response.defeatsElementId = element.defeatsElementId;
 	}
+	if (element.defeatsDangling) {
+		response.defeatsDangling = true;
+	}
 }
 
 /**
@@ -126,6 +130,10 @@ export function transformToResponse(element: {
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	isDefeater?: boolean;
 	defeatsElementId?: string | null;
+	// Dangling-defeat indicator (see resolveImportedDefeatsElementId,
+	// case-import-service.ts) — true when defeatsElementId was blanked
+	// because the imported target wasn't part of the same import.
+	defeatsDangling?: boolean;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;

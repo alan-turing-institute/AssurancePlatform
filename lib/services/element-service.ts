@@ -56,6 +56,11 @@ export interface ElementResponse {
 	comments?: unknown[];
 	context?: string[];
 	createdDate: string;
+	// Dangling-defeat indicator: true when defeatsElementId was blanked
+	// because the imported target wasn't part of the same import (see
+	// resolveImportedDefeatsElementId, case-import-service.ts). Omitted (not
+	// false) when there is nothing to flag — mirrors citationDangling above.
+	defeatsDangling?: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	defeatsElementId?: string | null;
 	description: string;
