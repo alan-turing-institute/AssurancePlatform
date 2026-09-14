@@ -113,6 +113,12 @@ function nodeToElement(
 		// review fix item 1 / the resolve-window race fix), since it was never
 		// flagged as needing one.
 		moduleReferenceId: node.moduleReferenceId,
+		// Dialogical reasoning — preserve through the nested->flat step;
+		// case-import-service.ts's createElements remaps defeatsElementId
+		// through the import's idMap (same-case reference), blanking it and
+		// flagging defeatsDangling when the target isn't part of this import.
+		isDefeater: node.isDefeater,
+		defeatsElementId: node.defeatsElementId,
 	};
 
 	// Preserve comments if present

@@ -136,6 +136,19 @@ export const ElementV2Schema = z
 			.describe(
 				"ID of the case referenced by a MODULE, or cited by an AWAY_GOAL"
 			),
+		// Dialogical reasoning — any type. isDefeater/defeatsElementId mirror
+		// the nested schema's TreeNodeSchema fields below.
+		isDefeater: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe("Whether the element is a counter-argument (defeater)"),
+		defeatsElementId: z
+			.string()
+			.uuid()
+			.nullable()
+			.optional()
+			.describe("ID of the element this defeater challenges"),
 		inSandbox: z
 			.boolean()
 			.default(false)

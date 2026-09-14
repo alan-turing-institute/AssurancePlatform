@@ -284,14 +284,48 @@ function resolveImportedCitedElementId(
 }
 
 /**
+ * Resolves a `defeatsElementId` (dialogical reasoning) for the createMany
+ * row. Unlike `citedElementId`, a defeater's target always names an element
+ * within the SAME import payload — dialogical reasoning has no cross-case
+ * concept the way AWAY_GOAL's element-level citation does — so the only
+ * lookup needed is this import's own `idMap`; there is no target-DB
+ * resolution pass to run before the insert.
+ *
+ * Chris's ruling (2026-09-14): a `defeatsElementId` that doesn't resolve in
+ * `idMap` — because the target wasn't part of this import, or the field was
+ * set with no target at all — is imported anyway with the reference blanked
+ * and `defeatsDangling` flagged, never rejected. Mirrors
+ * `resolveImportedCitedElementId`'s non-fatal degrade-instead-of-fail
+ * contract exactly.
+ */
+function resolveImportedDefeatsElementId(
+	defeatsElementId: string | null | undefined,
+	idMap: Map<string, string>
+): { defeatsElementId: string | null; defeatsDangling: boolean } {
+	if (!defeatsElementId) {
+		return { defeatsElementId: null, defeatsDangling: false };
+	}
+
+	const remapped = idMap.get(defeatsElementId);
+	if (remapped) {
+		return { defeatsElementId: remapped, defeatsDangling: false };
+	}
+
+	// Unresolvable within this import — flag, don't fail the import.
+	return { defeatsElementId: null, defeatsDangling: true };
+}
+
+/**
  * Foreign key constraint name for `citedElementId` (see the ADR 0004 D5
  * migration, `assurance_elements_cited_element_id_fkey`). Anchoring the P2003
  * catch below to this exact constraint name — rather than treating any
  * P2003 from this insert as recoverable — matters because the same
- * `createMany` call also carries `caseId`, `parentId`, `defeatsElementId`,
- * and `moduleReferenceId` foreign keys: a P2003 on any of THOSE means real
- * corrupt/inconsistent import data and must still fail the whole import
- * loudly, not be silently downgraded.
+ * `createMany` call also carries `caseId`, `parentId`, `defeatsElementId`
+ * (populated by `resolveImportedDefeatsElementId`'s idMap-remap-or-null-and-
+ * flag below — same-case reference only, so this FK should never actually
+ * fire from our own resolved rows), and `moduleReferenceId` foreign keys: a
+ * P2003 on any of THOSE means real corrupt/inconsistent import data and must
+ * still fail the whole import loudly, not be silently downgraded.
  */
 const CITED_ELEMENT_ID_FK_CONSTRAINT =
 	"assurance_elements_cited_element_id_fkey";
@@ -316,7 +350,8 @@ export function isCitedElementIdForeignKeyError(error: unknown): boolean {
 
 /**
  * Builds the createMany row for one element, resolving its citedElementId
- * against the given (already-resolved) external-id set. Extracted from
+ * against the given (already-resolved) external-id set and its
+ * defeatsElementId against the import's own idMap. Extracted from
  * createElements so the resolve-window race backstop there can rebuild rows
  * a second time, against a freshly re-resolved set, without duplicating the
  * per-row field mapping.
@@ -340,6 +375,14 @@ function buildElementRow(
 		el.citedElementId,
 		idMap,
 		resolvedExternalCitedElementIds
+	);
+
+	// Dialogical reasoning (defeaters) — see
+	// resolveImportedDefeatsElementId's docstring for the
+	// remap-else-flag-dangling decision (Chris's ruling, 2026-09-14).
+	const { defeatsElementId, defeatsDangling } = resolveImportedDefeatsElementId(
+		el.defeatsElementId,
+		idMap
 	);
 
 	return {
@@ -377,6 +420,12 @@ function buildElementRow(
 		// never flagged as needing one (see nested-to-flat.ts for the same
 		// note at the point this value is first carried through).
 		moduleReferenceId: el.moduleReferenceId,
+		// Dialogical reasoning (defeaters) — see
+		// resolveImportedDefeatsElementId's docstring above for the
+		// remap-else-flag-dangling decision.
+		isDefeater: el.isDefeater ?? false,
+		defeatsElementId,
+		defeatsDangling,
 		createdById: userId,
 	};
 }
