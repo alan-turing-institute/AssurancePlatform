@@ -1,10 +1,9 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
-import Link from "next/link";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import CitedCaseLink from "./cited-case-link";
 import NodeEditDialog from "./node-edit-dialog";
 
 /**
@@ -45,19 +44,12 @@ function ModuleNode({ data, ...props }: NodeProps) {
 						References
 					</span>
 					<p className="text-sm">{moduleCaseName ?? "Unknown case"}</p>
-					{moduleCaseAccessible && moduleReferenceId && (
-						<Link
-							className="flex items-center gap-1.5 text-info text-sm hover:text-info/80 hover:underline"
-							href={`/case/${moduleReferenceId}`}
-							onClick={(e) => e.stopPropagation()}
-							onMouseDown={(e) => e.stopPropagation()}
-						>
-							<ExternalLink
-								aria-hidden="true"
-								className="h-3.5 w-3.5 shrink-0"
-							/>
-							<span>View referenced case</span>
-						</Link>
+					{moduleReferenceId && (
+						<CitedCaseLink
+							caseId={moduleReferenceId}
+							isAccessible={moduleCaseAccessible}
+							label="View referenced case"
+						/>
 					)}
 				</div>
 			</BaseNode>

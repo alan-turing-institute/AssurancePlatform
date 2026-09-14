@@ -8,10 +8,6 @@
 
 import type { ComponentType } from "react";
 import type { NodeProps } from "reactflow";
-import {
-	type NodeResolutionFlags,
-	resolveReactFlowNodeType,
-} from "@/lib/case/node-type-resolver";
 import AwayGoalNode from "./away-goal-node";
 import EvidenceNode from "./evidence-node";
 import GoalNode from "./goal-node";
@@ -19,30 +15,17 @@ import ModuleNode from "./module-node";
 import PropertyNode from "./property-node";
 import StrategyNode from "./strategy-node";
 
-const RENDERERS: Record<string, ComponentType<NodeProps>> = {
+/**
+ * The full React Flow `nodeTypes` map, for `<ReactFlow nodeTypes={...}>`.
+ * Keyed by exactly the strings `lib/case/node-type-resolver.ts`'s
+ * `resolveReactFlowNodeType` returns, so `convert-case.ts` and this map
+ * read from the one shared lookup and can't drift apart.
+ */
+export const nodeTypes: Record<string, ComponentType<NodeProps>> = {
 	goal: GoalNode,
 	strategy: StrategyNode,
 	property: PropertyNode,
 	evidence: EvidenceNode,
 	awayGoal: AwayGoalNode,
 	module: ModuleNode,
-};
-
-/** Resolves the React Flow node component for an element type. */
-export function resolveNodeRenderer(
-	elementType: string,
-	flags: NodeResolutionFlags = {}
-): ComponentType<NodeProps> {
-	return (
-		RENDERERS[resolveReactFlowNodeType(elementType, flags)] ?? PropertyNode
-	);
-}
-
-/**
- * The full React Flow `nodeTypes` map, for `<ReactFlow nodeTypes={...}>` —
- * built from the same registry `resolveNodeRenderer` reads, so the two can
- * never drift.
- */
-export const nodeTypes: Record<string, ComponentType<NodeProps>> = {
-	...RENDERERS,
 };

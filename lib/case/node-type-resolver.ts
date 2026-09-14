@@ -14,7 +14,7 @@ export interface NodeResolutionFlags {
 }
 
 /** The React Flow node types this module knows how to resolve to. */
-export const REACT_FLOW_NODE_KINDS = [
+const REACT_FLOW_NODE_KINDS = [
 	"goal",
 	"strategy",
 	"property",
