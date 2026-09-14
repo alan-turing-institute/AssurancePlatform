@@ -882,3 +882,212 @@ describe("convert-case utilities", () => {
 		});
 	});
 });
+
+describe("ADR 0005 — defeaters and the challenges edge", () => {
+	function nodeWithData(
+		id: string,
+		type: string,
+		data: Record<string, unknown>
+	): Node {
+		return { id, type, position: { x: 0, y: 0 }, data };
+	}
+
+	describe("createEdgesFromNodes", () => {
+		it("draws a challenges edge, replacing the support edge, when the defeater's target is its real parent", () => {
+			const nodes: Node[] = [
+				nodeWithData("property-G2", "property", {
+					id: "g2",
+					parentId: null,
+				}),
+				nodeWithData("property-D1", "property", {
+					id: "d1",
+					parentId: "property-G2",
+					isDefeater: true,
+					defeatsElementId: "g2",
+					attachedTo: "property-G2",
+				}),
+			];
+
+			const edges = createEdgesFromNodes(nodes);
+
+			const supportEdges = edges.filter(
+				(e) => e.source === "property-G2" && e.target === "property-D1"
+			);
+			const challengeEdges = edges.filter((e) => e.type === "challenges");
+
+			expect(supportEdges).toHaveLength(0);
+			expect(challengeEdges).toHaveLength(1);
+			expect(challengeEdges[0]).toMatchObject({
+				source: "property-D1",
+				target: "property-G2",
+				sourceHandle: "side-source",
+				targetHandle: "side-target",
+			});
+		});
+
+		it("draws both the support edge and the challenges edge when the target is not the defeater's real parent", () => {
+			const nodes: Node[] = [
+				nodeWithData("property-P1", "property", {
+					id: "p1",
+					parentId: null,
+				}),
+				nodeWithData("property-G2", "property", {
+					id: "g2",
+					parentId: null,
+				}),
+				nodeWithData("property-D1", "property", {
+					id: "d1",
+					// Real tree parent is P1, but the defeater challenges G2 —
+					// a different element (e.g. imported data, or a defeater
+					// moved after creation).
+					parentId: "property-P1",
+					isDefeater: true,
+					defeatsElementId: "g2",
+					attachedTo: "property-G2",
+				}),
+			];
+
+			const edges = createEdgesFromNodes(nodes);
+
+			const supportEdges = edges.filter(
+				(e) => e.source === "property-P1" && e.target === "property-D1"
+			);
+			const challengeEdges = edges.filter((e) => e.type === "challenges");
+
+			expect(supportEdges).toHaveLength(1);
+			expect(challengeEdges).toHaveLength(1);
+			expect(challengeEdges[0]).toMatchObject({
+				source: "property-D1",
+				target: "property-G2",
+			});
+		});
+
+		it("falls back to an ordinary support edge and draws no challenges edge when the target is missing", () => {
+			const nodes: Node[] = [
+				nodeWithData("property-P1", "property", {
+					id: "p1",
+					parentId: null,
+				}),
+				nodeWithData("property-D1", "property", {
+					id: "d1",
+					parentId: "property-P1",
+					isDefeater: true,
+					defeatsElementId: "does-not-exist",
+					// No `attachedTo` — conversion left it unset because the
+					// target didn't resolve (ADR 0005 D2's fallback).
+				}),
+			];
+
+			const edges = createEdgesFromNodes(nodes);
+
+			const supportEdges = edges.filter(
+				(e) => e.source === "property-P1" && e.target === "property-D1"
+			);
+			const challengeEdges = edges.filter((e) => e.type === "challenges");
+
+			expect(supportEdges).toHaveLength(1);
+			expect(challengeEdges).toHaveLength(0);
+		});
+	});
+
+	describe("convertAssuranceCase — routing a defeater to its target's cell", () => {
+		it("sets data.attachedTo on a defeater whose target is present in the tree", () => {
+			const assuranceCase: AssuranceCaseWithGoals = {
+				id: "case-1",
+				goals: [
+					{
+						id: "g1",
+						type: "goal",
+						name: "G1",
+						description: "",
+						assuranceCaseId: "case-1",
+						keywords: "",
+						propertyClaims: [
+							{
+								id: "p1",
+								type: "property_claim",
+								name: "P1",
+								description: "",
+								goalId: "g1",
+								strategyId: null,
+								propertyClaimId: null,
+								level: 1,
+								claimType: "Project claim",
+								propertyClaims: [
+									{
+										id: "d1",
+										type: "property_claim",
+										name: "P1.1",
+										description: "",
+										goalId: null,
+										strategyId: null,
+										propertyClaimId: "p1",
+										level: 2,
+										claimType: "Project claim",
+										propertyClaims: [],
+										evidence: [],
+										isDefeater: true,
+										defeatsElementId: "p1",
+									} as unknown as PropertyClaimResponse,
+								],
+								evidence: [],
+							} as unknown as PropertyClaimResponse,
+						],
+						strategies: [],
+					} as unknown as GoalResponse,
+				],
+			};
+
+			const { caseNodes } = convertAssuranceCase(assuranceCase);
+
+			const defeaterNode = caseNodes.find((n) => n.data.id === "d1");
+			const targetNode = caseNodes.find((n) => n.data.id === "p1");
+
+			expect(defeaterNode).toBeDefined();
+			expect(targetNode).toBeDefined();
+			expect(defeaterNode?.data.attachedTo).toBe(targetNode?.id);
+			expect(defeaterNode?.data.attachSide).toBe("right");
+		});
+
+		it("leaves data.attachedTo unset when the defeater's target does not resolve", () => {
+			const assuranceCase: AssuranceCaseWithGoals = {
+				id: "case-1",
+				goals: [
+					{
+						id: "g1",
+						type: "goal",
+						name: "G1",
+						description: "",
+						assuranceCaseId: "case-1",
+						keywords: "",
+						propertyClaims: [
+							{
+								id: "d1",
+								type: "property_claim",
+								name: "P1",
+								description: "",
+								goalId: "g1",
+								strategyId: null,
+								propertyClaimId: null,
+								level: 1,
+								claimType: "Project claim",
+								propertyClaims: [],
+								evidence: [],
+								isDefeater: true,
+								defeatsElementId: "does-not-exist",
+							} as unknown as PropertyClaimResponse,
+						],
+						strategies: [],
+					} as unknown as GoalResponse,
+				],
+			};
+
+			const { caseNodes } = convertAssuranceCase(assuranceCase);
+			const defeaterNode = caseNodes.find((n) => n.data.id === "d1");
+
+			expect(defeaterNode).toBeDefined();
+			expect(defeaterNode?.data.attachedTo).toBeUndefined();
+			expect(defeaterNode?.data.isDefeater).toBe(true);
+		});
+	});
+});
