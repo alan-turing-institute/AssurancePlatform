@@ -1005,4 +1005,58 @@ describe("validateImportData", () => {
 		expect(importedDefeater?.defeatsElementId).toBeNull();
 		expect(importedDefeater?.defeatsDangling).toBe(false);
 	});
+
+	/**
+	 * QA round 1 (nanaki): the edit path rejects a defeater whose
+	 * defeatsElementId names itself (validateDefeatsElementId,
+	 * element-service.ts — "defeatsElementId cannot reference the element
+	 * itself"), but import degrades non-fatally rather than rejecting, per
+	 * Chris's ruling. A self-referencing defeater in an import payload gets
+	 * the same treatment as an unresolvable one: blanked and flagged.
+	 */
+	it("imports a defeater whose defeatsElementId references itself, blanking the reference and flagging defeatsDangling", async () => {
+		const selfReferencingId = "84000000-0000-4000-8000-000000000002";
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Self-Referencing Defeat Case",
+				description: "Defeater's defeatsElementId names itself",
+			},
+			tree: {
+				id: "84000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: selfReferencingId,
+						type: "PROPERTY_CLAIM",
+						name: "Self-Defeating Claim",
+						description: "Its defeatsElementId names its own id",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: selfReferencingId,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		// The import SUCCEEDED — not rejected — and both elements landed.
+		expect(imported.elementCount).toBe(2);
+
+		const importedDefeater = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+		});
+		expect(importedDefeater?.isDefeater).toBe(true);
+		expect(importedDefeater?.defeatsElementId).toBeNull();
+		expect(importedDefeater?.defeatsDangling).toBe(true);
+	});
 });

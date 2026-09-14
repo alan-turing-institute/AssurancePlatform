@@ -297,13 +297,25 @@ function resolveImportedCitedElementId(
  * and `defeatsDangling` flagged, never rejected. Mirrors
  * `resolveImportedCitedElementId`'s non-fatal degrade-instead-of-fail
  * contract exactly.
+ *
+ * Self-reference (`defeatsElementId === ownId`, both in the import's
+ * ORIGINAL id space, before remapping): the edit path rejects this outright
+ * (`validateDefeatsElementId` — "defeatsElementId cannot reference the
+ * element itself"), but import is non-fatal by design (Chris's ruling,
+ * 2026-09-14 / QA round 1), so a self-referencing defeater is treated the
+ * same as an unresolvable one — blanked and flagged, not rejected.
  */
 function resolveImportedDefeatsElementId(
 	defeatsElementId: string | null | undefined,
+	ownId: string,
 	idMap: Map<string, string>
 ): { defeatsElementId: string | null; defeatsDangling: boolean } {
 	if (!defeatsElementId) {
 		return { defeatsElementId: null, defeatsDangling: false };
+	}
+
+	if (defeatsElementId === ownId) {
+		return { defeatsElementId: null, defeatsDangling: true };
 	}
 
 	const remapped = idMap.get(defeatsElementId);
@@ -382,6 +394,7 @@ function buildElementRow(
 	// remap-else-flag-dangling decision (Chris's ruling, 2026-09-14).
 	const { defeatsElementId, defeatsDangling } = resolveImportedDefeatsElementId(
 		el.defeatsElementId,
+		el.id,
 		idMap
 	);
 
