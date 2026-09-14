@@ -183,6 +183,7 @@ type ElementOverrides = Partial<{
 	// Dialogical reasoning (defeaters) — applies to every element type
 	isDefeater: boolean;
 	defeatsElementId: string | null;
+	defeatsDangling: boolean;
 }>;
 
 export function createTestElement(
@@ -208,6 +209,7 @@ export function createTestElement(
 			citationDangling: overrides.citationDangling ?? false,
 			isDefeater: overrides.isDefeater ?? false,
 			defeatsElementId: overrides.defeatsElementId,
+			defeatsDangling: overrides.defeatsDangling ?? false,
 		},
 	});
 }

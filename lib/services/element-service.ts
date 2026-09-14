@@ -1043,6 +1043,11 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	}
 	if (input.defeatsElementId !== undefined) {
 		updateData.defeatsElementId = input.defeatsElementId;
+		// The author explicitly set (or cleared) the defeat target — whatever
+		// dangling flag was left over from a previous import no longer
+		// describes the current state, declared or not (mirrors
+		// citationDangling's reset above).
+		updateData.defeatsDangling = false;
 	}
 
 	return updateData;
