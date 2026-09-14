@@ -751,4 +751,224 @@ describe("validateImportData", () => {
 		);
 		expect(reexportedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
 	});
+
+	/**
+	 * TEA — Case import drops defeaters (isDefeater and defeatsElementId) in
+	 * both formats. Before this fix, nodeToElement (nested-to-flat.ts) never
+	 * carried either field into the flat row, so a re-imported defeater
+	 * landed as an ordinary element even though the exporter (build-tree.ts)
+	 * had written both fields correctly. Unlike citedElementId/
+	 * moduleReferenceId, a defeater's target always names an element in the
+	 * SAME import payload, so a genuine defeater/target pair round-trips
+	 * with defeatsElementId REMAPPED (not preserved verbatim) through the
+	 * import's idMap.
+	 */
+	it("preserves isDefeater and defeatsElementId (remapped to the new ids) through export -> import -> export (round-trip fidelity)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const rootGoal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			role: "TOP_LEVEL",
+		});
+		await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "Defeater Claim",
+			parentId: rootGoal.id,
+			isDefeater: true,
+			defeatsElementId: rootGoal.id,
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const firstExport = expectSuccess(await exportCase(owner.id, testCase.id));
+		const exportedDefeater = firstExport.tree.children.find(
+			(c: { type: string }) => c.type === "PROPERTY_CLAIM"
+		);
+		expect(exportedDefeater?.isDefeater).toBe(true);
+		expect(exportedDefeater?.defeatsElementId).toBe(rootGoal.id);
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, firstExport));
+
+		const importedRootGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
+		const importedDefeater = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+		});
+
+		expect(importedDefeater?.isDefeater).toBe(true);
+		// Remapped to the NEW goal id, not preserved verbatim (the original
+		// id belongs to a different case entirely once re-imported).
+		expect(importedDefeater?.defeatsElementId).toBe(importedRootGoal?.id);
+		expect(importedDefeater?.defeatsElementId).not.toBe(rootGoal.id);
+		expect(importedDefeater?.defeatsDangling).toBe(false);
+
+		const secondExport = expectSuccess(
+			await exportCase(importer.id, imported.caseId)
+		);
+		const reexportedDefeater = secondExport.tree.children.find(
+			(c: { type: string }) => c.type === "PROPERTY_CLAIM"
+		);
+		expect(reexportedDefeater?.isDefeater).toBe(true);
+		expect(reexportedDefeater?.defeatsElementId).toBe(importedRootGoal?.id);
+	});
+
+	/**
+	 * Same fidelity check as above, but via a hand-built flat (v2) import
+	 * payload rather than an export -> import round-trip — proves
+	 * ElementV2Schema and buildElementRow carry the fields directly, not
+	 * only via the nested->flat transform.
+	 */
+	it("imports a flat (v2) case, remapping a defeater's defeatsElementId through idMap", async () => {
+		const targetId = "81000000-0000-4000-8000-000000000001";
+		const defeaterId = "81000000-0000-4000-8000-000000000002";
+		const json = {
+			version: "2.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Flat Defeater Case",
+				description: "Defeater and target both in this import",
+			},
+			elements: [
+				{
+					id: targetId,
+					elementType: "GOAL",
+					role: "TOP_LEVEL",
+					parentId: null,
+					name: "Root Goal",
+					description: "Top-level goal",
+					inSandbox: false,
+				},
+				{
+					id: defeaterId,
+					elementType: "PROPERTY_CLAIM",
+					role: null,
+					parentId: targetId,
+					name: "Defeater Claim",
+					description: "Challenges the root goal",
+					inSandbox: false,
+					isDefeater: true,
+					defeatsElementId: targetId,
+				},
+			],
+			evidenceLinks: [],
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		const importedTarget = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
+		const importedDefeater = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+		});
+
+		expect(importedDefeater?.isDefeater).toBe(true);
+		expect(importedDefeater?.defeatsElementId).toBe(importedTarget?.id);
+		expect(importedDefeater?.defeatsElementId).not.toBe(targetId);
+		expect(importedDefeater?.defeatsDangling).toBe(false);
+	});
+
+	/**
+	 * Chris's ruling (2026-09-14): a defeatsElementId that doesn't resolve
+	 * within the same import is imported anyway — reference blanked, flagged
+	 * — never rejected. Mirrors the existing citedElementId dangling test
+	 * above, for the same non-fatal-degrade contract.
+	 */
+	it("imports successfully when a defeater's target isn't part of the same import, blanking defeatsElementId and flagging defeatsDangling", async () => {
+		const absentTargetId = crypto.randomUUID();
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Dangling Defeat Case",
+				description: "Defeater targets an id absent from this import",
+			},
+			tree: {
+				id: "82000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "82000000-0000-4000-8000-000000000002",
+						type: "PROPERTY_CLAIM",
+						name: "Defeater Claim",
+						description: "Challenges an element outside this import",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: absentTargetId,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		// The import SUCCEEDED — not rejected — and both elements landed.
+		expect(imported.elementCount).toBe(2);
+
+		const importedDefeater = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+		});
+		expect(importedDefeater?.isDefeater).toBe(true);
+		expect(importedDefeater?.defeatsElementId).toBeNull();
+		expect(importedDefeater?.defeatsDangling).toBe(true);
+	});
+
+	/**
+	 * A defeater flag with no stated target at all is a distinct case from
+	 * an unresolvable target: nothing was lost on import, so there is
+	 * nothing to flag.
+	 */
+	it("imports a defeater flagged isDefeater with no defeatsElementId, leaving the reference null without flagging defeatsDangling", async () => {
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Flag Only Defeat Case",
+				description: "isDefeater set, no target given",
+			},
+			tree: {
+				id: "83000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "83000000-0000-4000-8000-000000000002",
+						type: "PROPERTY_CLAIM",
+						name: "Defeater Claim",
+						description: "Flagged as a defeater with no stated target",
+						inSandbox: false,
+						isDefeater: true,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		const importedDefeater = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+		});
+		expect(importedDefeater?.isDefeater).toBe(true);
+		expect(importedDefeater?.defeatsElementId).toBeNull();
+		expect(importedDefeater?.defeatsDangling).toBe(false);
+	});
 });
