@@ -763,7 +763,7 @@ describe("validateImportData", () => {
 	 * with defeatsElementId REMAPPED (not preserved verbatim) through the
 	 * import's idMap.
 	 */
-	it("preserves isDefeater and defeatsElementId (remapped to the new ids) through export -> import -> export (round-trip fidelity)", async () => {
+	it("preserves isDefeater and defeatsElementId (remapped to the new ids) through export -> import (round-trip fidelity)", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		const rootGoal = await createTestElement(testCase.id, owner.id, {
@@ -805,6 +805,40 @@ describe("validateImportData", () => {
 		expect(importedDefeater?.defeatsElementId).toBe(importedRootGoal?.id);
 		expect(importedDefeater?.defeatsElementId).not.toBe(rootGoal.id);
 		expect(importedDefeater?.defeatsDangling).toBe(false);
+	});
+
+	/**
+	 * Continues the fidelity check above one step further: a defeater
+	 * imported once must survive a SECOND export unchanged, proving the
+	 * remapped defeatsElementId isn't an artefact of the first import's
+	 * in-memory idMap. Split into its own test (rather than folded into the
+	 * one above) to keep each test's own branch count down.
+	 */
+	it("re-exports a preserved defeater with the same remapped defeatsElementId (second round-trip)", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const rootGoal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Root Goal",
+			role: "TOP_LEVEL",
+		});
+		await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "Defeater Claim",
+			parentId: rootGoal.id,
+			isDefeater: true,
+			defeatsElementId: rootGoal.id,
+		});
+
+		const { exportCase } = await import("@/lib/services/case-export-service");
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const firstExport = expectSuccess(await exportCase(owner.id, testCase.id));
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, firstExport));
+		const importedRootGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
 
 		const secondExport = expectSuccess(
 			await exportCase(importer.id, imported.caseId)
