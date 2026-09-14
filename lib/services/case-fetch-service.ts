@@ -637,6 +637,53 @@ export async function listSharedCases(
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Away goal / module creation picker (ADR 0005 D7)
+// ---------------------------------------------------------------------------
+
+export interface CaseGoalSummary {
+	description: string;
+	id: string;
+	name: string;
+}
+
+/**
+ * Lists the GOAL elements of a case, for the "Add away goal" picker's
+ * second step (ADR 0005 D7). Requires at least VIEW access on the cited
+ * case — citing a goal is a read, so the same bar as opening the case.
+ * Same not-found-vs-forbidden error as `fetchCaseFromPrisma` to avoid case
+ * enumeration.
+ */
+export async function listCaseGoalElements(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseGoalSummary[]> {
+	const permissionResult = await getCasePermission({ userId, caseId });
+	if (!permissionResult.hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const goals = await prisma.assuranceElement.findMany({
+			where: { caseId, elementType: "GOAL", deletedAt: null },
+			select: { id: true, name: true, description: true },
+		});
+
+		return {
+			data: goals
+				.map((g) => ({
+					id: g.id,
+					name: g.name ?? "",
+					description: g.description ?? "",
+				}))
+				.sort((a, b) => compareIdentifiers(a.name, b.name)),
+		};
+	} catch (error) {
+		log.error("listCaseGoalElements", { userId, caseId, error });
+		return { error: "Failed to fetch goals" };
+	}
+}
+
 /**
  * Creates a new assurance case owned by the given user.
  */
