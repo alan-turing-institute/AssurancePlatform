@@ -8,9 +8,23 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { CheckCircle, FileText, GitBranch, Target } from "lucide-react";
+import {
+	ArrowUpRight,
+	CheckCircle,
+	FileText,
+	GitBranch,
+	Package,
+	Target,
+} from "lucide-react";
 
-export type DiagramNodeType = "goal" | "strategy" | "property" | "evidence";
+export type DiagramNodeType =
+	| "goal"
+	| "strategy"
+	| "property"
+	| "evidence"
+	// Side-attached node kinds (ADR 0005 D3)
+	| "awayGoal"
+	| "module";
 
 export interface NodeColourScheme {
 	/** Dark mode background (e.g., bg-green-950) */
@@ -126,6 +140,46 @@ export const nodeTypeConfigs: Record<DiagramNodeType, DiagramNodeTypeConfig> = {
 			icon: "text-node-evidence",
 			iconHover: "text-node-evidence/80",
 			ring: "ring-node-evidence/50",
+			textLight: "text-foreground",
+			textDark: "text-foreground",
+		},
+		showTargetHandle: true,
+		showSourceHandle: false,
+	},
+	// ADR 0005 D3: away goal and module are ordinary tree nodes, read-only in
+	// 1.0 beyond creation — a card naming what they cite, no add-child menu.
+	awayGoal: {
+		id: "awayGoal",
+		label: "Away Goal",
+		description: "A goal cited from another case",
+		icon: ArrowUpRight,
+		colours: {
+			bgLight: "bg-card",
+			bgDark: "bg-card",
+			border: "border-node-away-goal/30",
+			borderHover: "border-node-away-goal/50",
+			icon: "text-node-away-goal",
+			iconHover: "text-node-away-goal/80",
+			ring: "ring-node-away-goal/50",
+			textLight: "text-foreground",
+			textDark: "text-foreground",
+		},
+		showTargetHandle: true,
+		showSourceHandle: false,
+	},
+	module: {
+		id: "module",
+		label: "Module",
+		description: "A reference to another whole case",
+		icon: Package,
+		colours: {
+			bgLight: "bg-card",
+			bgDark: "bg-card",
+			border: "border-node-module/30",
+			borderHover: "border-node-module/50",
+			icon: "text-node-module",
+			iconHover: "text-node-module/80",
+			ring: "ring-node-module/50",
 			textLight: "text-foreground",
 			textDark: "text-foreground",
 		},

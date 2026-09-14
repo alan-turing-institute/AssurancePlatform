@@ -117,6 +117,9 @@
 	--node-strategy: var(--chart-2);
 	--node-property: var(--chart-3);
 	--node-evidence: var(--chart-4);
+	/* Side-attached node kinds (ADR 0005 D3) */
+	--node-away-goal: var(--chart-5);
+	--node-module: var(--info);
 }
 
 .dark {
@@ -190,6 +193,9 @@
 	--node-strategy: var(--chart-2);
 	--node-property: var(--chart-3);
 	--node-evidence: var(--chart-4);
+	/* Side-attached node kinds (ADR 0005 D3) */
+	--node-away-goal: var(--chart-5);
+	--node-module: var(--info);
 }
 
 /* ========================================================================
@@ -257,6 +263,8 @@
 	--color-node-strategy: var(--node-strategy);
 	--color-node-property: var(--node-property);
 	--color-node-evidence: var(--node-evidence);
+	--color-node-away-goal: var(--node-away-goal);
+	--color-node-module: var(--node-module);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);

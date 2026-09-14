@@ -160,6 +160,17 @@ export default function BaseNode({
 	const sourcePosition =
 		layoutDirection === "LR" ? Position.Right : Position.Bottom;
 
+	// Side handles (ADR 0005 D4) for the `challenges` edge: a target handle
+	// on the side facing the row the node's cell sits in (right for a
+	// top-down tree, since side attachments sit to the right — Chris's
+	// ruling; bottom for a left-right tree, mirrored), and a source handle
+	// on the opposite side, so the edge between a defeater and the element
+	// it attacks is always straight and runs along the row.
+	const sideTargetPosition =
+		layoutDirection === "LR" ? Position.Bottom : Position.Right;
+	const sideSourcePosition =
+		layoutDirection === "LR" ? Position.Top : Position.Left;
+
 	const config = getNodeConfig(nodeType);
 	const Icon = config.icon;
 	const collapseVariants = withReducedMotion(contentCollapseVariants);
@@ -204,6 +215,12 @@ export default function BaseNode({
 			{config.showTargetHandle && (
 				<Handle id="target" position={targetPosition} type="target" />
 			)}
+
+			{/* Side handles (ADR 0005 D4): the `challenges` edge always
+			connects here, regardless of node kind — any card can be a
+			defeater or a defeat target. */}
+			<Handle id="side-target" position={sideTargetPosition} type="target" />
+			<Handle id="side-source" position={sideSourcePosition} type="source" />
 
 			<LazyMotion features={domAnimation} strict>
 				{/* Header: Icon + Name + Top-right Actions */}

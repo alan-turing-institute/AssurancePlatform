@@ -10,10 +10,8 @@ import ReactFlow, {
 
 import "reactflow/dist/style.css";
 import { Loader2, Unplug, X } from "lucide-react";
-import EvidenceNode from "@/components/cases/evidence-node";
-import GoalNode from "@/components/cases/goal-node";
-import PropertyNode from "@/components/cases/property-node";
-import StrategyNode from "@/components/cases/strategy-node";
+import ChallengesEdge from "@/components/cases/challenges-edge";
+import { nodeTypes } from "@/components/cases/node-type-resolver";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
@@ -24,13 +22,11 @@ import { Button } from "../ui/button";
 import ActionButtons from "./action-buttons";
 import CommentsSheet from "./comments-sheet";
 
-// Define nodeTypes at module level to ensure stable reference
-// This prevents React Flow warning about recreated nodeTypes objects
-const nodeTypes = {
-	goal: GoalNode,
-	property: PropertyNode,
-	strategy: StrategyNode,
-	evidence: EvidenceNode,
+// nodeTypes (components/cases/node-type-resolver.ts, ADR 0005 D5) and
+// edgeTypes are defined at module level to ensure stable references — this
+// prevents React Flow warning about recreated type-map objects.
+const edgeTypes = {
+	challenges: ChallengesEdge,
 };
 
 function Flow() {
@@ -190,6 +186,7 @@ function Flow() {
 					<ReactFlow
 						className="min-h-screen"
 						edges={edges}
+						edgeTypes={edgeTypes}
 						fitView
 						id="ReactFlow"
 						nodes={nodes}

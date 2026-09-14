@@ -8,6 +8,7 @@
  */
 
 import ELK from "elkjs/lib/elk.bundled.js";
+import type { ElkExtendedEdge, ElkNode } from "elkjs/lib/elk-api";
 import type { Edge, Node } from "reactflow";
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
 
@@ -218,7 +219,7 @@ function buildCellElkNode(
 	cell: Cell,
 	cellDirection: ElkDirection,
 	nodeSpacing: string
-) {
+): ElkNode {
 	const [target, ...attachments] = cell.members;
 	return {
 		id: cell.id,
@@ -257,9 +258,9 @@ function buildElkChildren(
 	cellIdByNodeId: Map<string, string>,
 	cellDirection: ElkDirection,
 	nodeSpacing: string
-): unknown[] {
+): ElkNode[] {
 	const emittedCellIds = new Set<string>();
-	const elkChildren: unknown[] = [];
+	const elkChildren: ElkNode[] = [];
 	for (const node of sortedVisibleNodes) {
 		const cell = cellsByTargetId.get(node.id);
 		if (cell) {
@@ -297,8 +298,8 @@ function buildElkChildren(
 function buildElkEdges(
 	validEdges: Edge[],
 	cellIdByNodeId: Map<string, string>
-): { id: string; sources: string[]; targets: string[] }[] {
-	const elkEdges: { id: string; sources: string[]; targets: string[] }[] = [];
+): ElkExtendedEdge[] {
+	const elkEdges: ElkExtendedEdge[] = [];
 	for (const edge of validEdges) {
 		const source = cellIdByNodeId.get(edge.source) ?? edge.source;
 		const target = cellIdByNodeId.get(edge.target) ?? edge.target;
@@ -318,12 +319,7 @@ function buildElkEdges(
  * unchanged.
  */
 function flattenPositions(
-	elkChildren: Array<{
-		children?: Array<{ id: string; x?: number; y?: number }>;
-		id: string;
-		x?: number;
-		y?: number;
-	}>
+	elkChildren: ElkNode[]
 ): Map<string, { x: number; y: number }> {
 	const positionMap = new Map<string, { x: number; y: number }>();
 	for (const child of elkChildren) {

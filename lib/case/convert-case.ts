@@ -1,9 +1,12 @@
 import type { Edge, Node } from "reactflow";
+import { resolveReactFlowNodeType } from "@/lib/case/node-type-resolver";
 import { generateUuid } from "@/lib/generate-uuid";
 import { logger } from "@/lib/logger";
 import type {
+	AwayGoalResponse,
 	EvidenceResponse,
 	GoalResponse,
+	ModuleResponse,
 	PropertyClaimResponse,
 	StrategyResponse,
 } from "@/lib/services/case-response-types";
@@ -11,11 +14,15 @@ import type {
 // Define the structure of items that can be converted to nodes
 // Dynamic property bag: generic tree conversion spreads all fields into React Flow node data
 export interface ConvertibleItem {
+	awayGoals?: AwayGoalResponse[];
 	context?: ConvertibleItem[];
+	defeatsElementId?: string | null;
 	description?: string;
 	evidence?: EvidenceResponse[];
 	hidden?: boolean;
 	id: string;
+	isDefeater?: boolean;
+	modules?: ModuleResponse[];
 	name: string;
 	propertyClaims?: PropertyClaimResponse[];
 	strategies?: StrategyResponse[];
@@ -63,6 +70,11 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 			undefined,
 			isDemo
 		);
+
+		// ADR 0005 D2: route each defeater to its target's cell (side
+		// attachment) when the target is present; otherwise it keeps its
+		// ordinary tree position.
+		caseNodes = applyDefeaterAttachments(caseNodes);
 
 		// Create edges for every node
 		caseEdges = createEdgesFromNodes(caseNodes);
@@ -177,6 +189,36 @@ const processChildNodes = (
 		childNodes.push(...evidenceNodes);
 	}
 
+	// ADR 0005 D3: AWAY_GOAL and MODULE are admitted wherever PROPERTY_CLAIM
+	// is — ordinary tree nodes, via the same recursive machinery.
+	if (
+		item.awayGoals &&
+		Array.isArray(item.awayGoals) &&
+		item.awayGoals.length > 0
+	) {
+		const awayGoalNodes = createNodesRecursively(
+			item.awayGoals as unknown as ConvertibleItem[],
+			resolveReactFlowNodeType("away_goal"),
+			node,
+			processedItems,
+			effectiveDepth - 1,
+			isDemo
+		);
+		childNodes.push(...awayGoalNodes);
+	}
+
+	if (item.modules && Array.isArray(item.modules) && item.modules.length > 0) {
+		const moduleNodes = createNodesRecursively(
+			item.modules as unknown as ConvertibleItem[],
+			resolveReactFlowNodeType("module"),
+			node,
+			processedItems,
+			effectiveDepth - 1,
+			isDemo
+		);
+		childNodes.push(...moduleNodes);
+	}
+
 	return childNodes;
 };
 
@@ -231,11 +273,92 @@ export const createNodesRecursively = (
 };
 
 /**
+ * Routes each defeater to its target's cell (ADR 0005 D2, D1): a node whose
+ * `data.isDefeater` is true and whose `data.defeatsElementId` resolves to
+ * another node PRESENT in this tree gets `data.attachedTo` set to that
+ * node's id (and `data.attachSide` set, "right" per Chris's ruling) — the
+ * side-attachment signal `layout-helper.ts`'s cells and `createEdgesFromNodes`
+ * below both read. A defeater whose target is null, unresolved, or itself
+ * (a self-reference) is left alone: it keeps its ordinary tree position and
+ * the defeater marking, and draws no attack edge — the D2 fallback.
+ */
+const applyDefeaterAttachments = (nodes: Node[]): Node[] => {
+	const nodeIdByElementId = new Map<string, string>();
+	for (const node of nodes) {
+		const elementId = node.data?.id;
+		if (typeof elementId === "string") {
+			nodeIdByElementId.set(elementId, node.id);
+		}
+	}
+
+	return nodes.map((node) => {
+		if (!node.data?.isDefeater) {
+			return node;
+		}
+		const defeatsElementId = node.data?.defeatsElementId as
+			| string
+			| null
+			| undefined;
+		if (!defeatsElementId) {
+			return node;
+		}
+		const targetNodeId = nodeIdByElementId.get(defeatsElementId);
+		if (!targetNodeId || targetNodeId === node.id) {
+			return node;
+		}
+		return {
+			...node,
+			data: {
+				...node.data,
+				attachedTo: targetNodeId,
+				attachSide: "right",
+			},
+		};
+	});
+};
+
+/** Builds the ordinary parent -> child support edge for one node. */
+function buildSupportEdge(node: Node): Edge {
+	return {
+		id: `e${generateUuid()}`,
+		source: node.data.parentId as string,
+		target: node.id,
+		type: "smoothstep", // Smooth orthogonal edges to match ELK layout
+		animated: false,
+		sourceHandle: "c",
+		hidden: false,
+	};
+}
+
+/**
+ * Builds the `challenges` edge for a defeater (ADR 0005 D4): from the
+ * defeater's inner side handle to the target's outer side handle, arrow
+ * pointing AT the target — GSN makes the challenger the source, the reverse
+ * of InContextOf.
+ */
+function buildChallengesEdge(node: Node, targetNodeId: string): Edge {
+	return {
+		id: `e${generateUuid()}`,
+		source: node.id,
+		target: targetNodeId,
+		type: "challenges",
+		animated: false,
+		sourceHandle: "side-source",
+		targetHandle: "side-target",
+		hidden: false,
+	};
+}
+
+/**
  * Creates edges from a list of nodes to represent relationships between parent and child nodes.
  *
  * This function generates edges (links) between nodes in a graph where each node may have a parent-child relationship.
- * The edges are created by linking the `parentId` of a node to the node's `id`. Special handling is applied to nodes
- * of type 'context', which results in animated edges.
+ * The edges are created by linking the `parentId` of a node to the node's `id`.
+ *
+ * ADR 0005 D4: a defeater whose target (`data.attachedTo`, set by
+ * `applyDefeaterAttachments` above) is present also gets a `challenges`
+ * edge. Where the target is also the defeater's real tree parent, the
+ * challenges edge REPLACES the support edge; otherwise both are drawn.
  *
  * @param {any[]} nodes - An array of nodes, where each node can optionally have a `parentId` in its data to signify a parent-child relationship.
  * @returns {any[]} An array of edges, where each edge links a parent node to a child node.
@@ -248,30 +371,25 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 	const nodeIds = new Set(nodes.map((node) => node.id));
 
 	for (const node of nodes) {
-		// Get the ID of the current node
-		const currentNodeId = node.id;
+		const attachedTo = node.data.attachedTo as string | undefined;
+		const isChallenge = !!(
+			node.data.isDefeater &&
+			attachedTo &&
+			nodeIds.has(attachedTo)
+		);
+		const replacesSupport = isChallenge && attachedTo === node.data.parentId;
 
 		// Check if the node has a parentId (indicating it is a child node)
-		if (node.data.parentId) {
-			// Validate that the parent node exists
-			if (!nodeIds.has(node.data.parentId)) {
-				// Skip creating edge if parent doesn't exist
-				continue;
-			}
+		if (
+			node.data.parentId &&
+			nodeIds.has(node.data.parentId) &&
+			!replacesSupport
+		) {
+			edges.push(buildSupportEdge(node));
+		}
 
-			// Create an edge from the parent node to the current node
-			const edgeId = `e${generateUuid()}`;
-			const edge: Edge = {
-				id: edgeId,
-				source: node.data.parentId as string,
-				target: currentNodeId,
-				type: "smoothstep", // Smooth orthogonal edges to match ELK layout
-				animated: false,
-				sourceHandle: "c",
-				hidden: false,
-			};
-
-			edges.push(edge);
+		if (isChallenge && attachedTo) {
+			edges.push(buildChallengesEdge(node, attachedTo));
 		}
 	}
 
