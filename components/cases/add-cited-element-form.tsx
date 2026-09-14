@@ -144,7 +144,12 @@ export default function AddCitedElementForm({
 			parentId: node.data.id as string,
 			assuranceCaseId: assuranceCase.id,
 			moduleReferenceId: selectedCaseId,
-			...(kind === "away-goal" ? { citedElementId: selectedGoalId } : {}),
+			...(kind === "away-goal"
+				? { citedElementId: selectedGoalId }
+				: // Required for MODULE at the Prisma validation layer. "COPY"
+					// (a snapshot, not a live link) is the safer default absent
+					// any UI for choosing embed type in 1.0.
+					{ moduleEmbedType: "COPY" as const }),
 		};
 
 		const result = await createAssuranceCaseNode(entity, payload, "");

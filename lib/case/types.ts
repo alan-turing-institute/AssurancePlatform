@@ -92,6 +92,8 @@ export interface CreateNodePayload {
 	defeatsElementId?: string | null;
 	description: string;
 	isDefeater?: boolean;
+	// Required for MODULE — how it's embedded (ADR 0005 D7).
+	moduleEmbedType?: "COPY" | "REFERENCE";
 	// Module reference — MODULE and AWAY_GOAL (ADR 0005 D7).
 	moduleReferenceId?: string | null;
 	name?: string;

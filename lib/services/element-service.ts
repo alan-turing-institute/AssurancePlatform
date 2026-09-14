@@ -751,6 +751,10 @@ async function createElementInDatabase(
 			// and existence are validated in createElement before this function
 			// is called.
 			moduleReferenceId: input.moduleReferenceId,
+			// Required for MODULE at the Prisma validation layer
+			// (element-validation.ts's REQUIRED_FIELDS); harmless for every
+			// other type, which doesn't declare the field applicable.
+			moduleEmbedType: input.moduleEmbedType,
 			// Dialogical reasoning (defeaters) — same-case existence and
 			// self-reference are validated in createElement before this
 			// function is called.
