@@ -1,8 +1,17 @@
 "use client";
 
-import { json } from "@codemirror/lang-json";
+import { json, jsonLanguage } from "@codemirror/lang-json";
 import { linter } from "@codemirror/lint";
+import { EditorView, hoverTooltip } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
+import {
+	handleRefresh,
+	jsonCompletion,
+	jsonSchemaHover,
+	jsonSchemaLinter,
+	stateExtensions as jsonSchemaStateExtensions,
+	type stateExtensions,
+} from "codemirror-json-schema";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { exportCase } from "@/actions/export-case";
@@ -22,12 +31,40 @@ import {
 	type TreeDiffResult,
 } from "@/lib/case/tree-diff";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+// The generated build artefact (ADR 0004 D1) — imported by path, not content:
+// a parallel change regenerates this file from CaseExportNestedSchema via
+// zod's z.toJSONSchema(). codemirror-json-schema drives inline hints only;
+// Apply always re-validates with the Zod schema above, unchanged.
+import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.0.json";
 import { createSnapshot } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 import type { HistoryCommand, HistoryEntry } from "@/types/history";
 import { JsonEditorToolbar } from "./json-editor-toolbar";
+
+// TS widens JSON module imports to generic `string`/`object` types, so the
+// literal doesn't structurally satisfy codemirror-json-schema's JSONSchema7
+// param without re-asserting it as the type its own API expects.
+type CaseExportJsonSchema = NonNullable<Parameters<typeof stateExtensions>[0]>;
+const caseExportJsonSchema =
+	rawCaseExportJsonSchema as unknown as CaseExportJsonSchema;
+
+// Schema-aware editing extensions (inline errors, autocomplete, hover docs),
+// plus overscroll containment on CodeMirror's own scroller so a horizontal
+// swipe never reaches the browser's back-navigation gesture. These don't
+// depend on component state, so they're built once at module scope; Apply's
+// validity gate is untouched — it stays on the Zod hook below.
+const schemaAwareExtensions = [
+	linter(jsonSchemaLinter(), { needsRefresh: handleRefresh }),
+	jsonLanguage.data.of({ autocomplete: jsonCompletion() }),
+	hoverTooltip(jsonSchemaHover()),
+	...jsonSchemaStateExtensions(caseExportJsonSchema),
+	EditorView.theme({
+		".cm-scroller": { overscrollBehaviorX: "contain" },
+	}),
+];
 
 interface JsonViewPanelProps {
 	isOpen: boolean;
@@ -325,6 +362,11 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const [isApplying, setIsApplying] = useState(false);
 	const [hasConflict, setHasConflict] = useState(false);
 
+	// Layout state
+	const [isFullScreen, setIsFullScreen] = useState(false);
+	const [wrapEnabled, setWrapEnabled] = useState(false);
+	const fullScreenButtonRef = useRef<HTMLButtonElement>(null);
+
 	// Track if panel was just opened
 	const justOpenedRef = useRef(false);
 
@@ -346,6 +388,31 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const lintExtension = useMemo(
 		() => linter(() => validation.diagnostics),
 		[validation.diagnostics]
+	);
+
+	// Whether the buffer can be pretty-printed (Format needs parseable JSON)
+	const canFormat = useMemo(() => {
+		if (!draftContent.trim()) {
+			return false;
+		}
+		try {
+			JSON.parse(draftContent);
+			return true;
+		} catch {
+			return false;
+		}
+	}, [draftContent]);
+
+	// Combined CodeMirror extensions: JSON mode, our Zod-driven lint (gates
+	// Apply, unchanged), schema-aware hints (inline only), and line wrap.
+	const editorExtensions = useMemo(
+		() => [
+			json(),
+			lintExtension,
+			...schemaAwareExtensions,
+			...(wrapEnabled ? [EditorView.lineWrapping] : []),
+		],
+		[lintExtension, wrapEnabled]
 	);
 
 	const fetchJson = useCallback(async () => {
@@ -410,6 +477,44 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		}
 	}, [isOpen, isDirty, assuranceCase?.updatedOn]);
 
+	const exitFullScreen = useCallback(() => {
+		setIsFullScreen(false);
+		fullScreenButtonRef.current?.focus();
+	}, []);
+
+	// Esc exits full-screen rather than closing the panel. Radix's Sheet
+	// registers its own Escape-to-close as a native document-level capture
+	// listener — it reaches the DOM before React's synthetic event system
+	// gets a chance to run anything of ours (a React onKeyDownCapture handler
+	// cannot stopPropagation() ahead of it; that only looked like it worked
+	// under jsdom, whose listener ordering differs from a real browser).
+	// Radix's own onEscapeKeyDown is the actual extension point: preventing
+	// its default here stops Radix's own close from running at all.
+	const handleEscapeKeyDown = useCallback(
+		(event: KeyboardEvent) => {
+			if (!isFullScreen) {
+				return;
+			}
+			event.preventDefault();
+			exitFullScreen();
+		},
+		[isFullScreen, exitFullScreen]
+	);
+
+	// Full screen doesn't persist across a close/reopen — reset it here,
+	// directly in the event that closes the panel, rather than in an effect
+	// that watches `isOpen` and adjusts state in response.
+	const handleSheetOpenChange = useCallback(
+		(open: boolean) => {
+			if (open) {
+				return;
+			}
+			setIsFullScreen(false);
+			onClose();
+		},
+		[onClose]
+	);
+
 	const handleCopy = useCallback(async () => {
 		try {
 			await navigator.clipboard.writeText(draftContent);
@@ -432,6 +537,23 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const handleRefresh = useCallback(() => {
 		fetchJson();
 	}, [fetchJson]);
+
+	const handleToggleFullScreen = useCallback(() => {
+		setIsFullScreen((prev) => !prev);
+	}, []);
+
+	const handleToggleWrap = useCallback(() => {
+		setWrapEnabled((prev) => !prev);
+	}, []);
+
+	const handleFormat = useCallback(() => {
+		try {
+			const parsed = JSON.parse(draftContent);
+			setDraftContent(formatJson(parsed));
+		} catch {
+			// canFormat gates the button; this guards a race with fast typing.
+		}
+	}, [draftContent]);
 
 	const handleApply = useCallback(async () => {
 		const caseId = assuranceCase?.id;
@@ -505,9 +627,22 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const editorTheme = resolvedTheme === "dark" ? "dark" : "light";
 
 	return (
-		<Sheet onOpenChange={(open) => !open && onClose()} open={isOpen}>
+		<Sheet onOpenChange={handleSheetOpenChange} open={isOpen}>
 			<SheetContent
-				className="flex w-full flex-col sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
+				className={cn(
+					"flex w-full flex-col transition-[max-width] duration-200 motion-reduce:transition-none",
+					// The sheet primitive's own base sets `sm:max-w-sm` (side="left"
+					// in sheetVariants); twMerge only dedupes classes that share
+					// the exact same prefix, so a bare "max-w-none" here would
+					// leave "sm:max-w-sm" in the merged list to win the cascade at
+					// >=640px. Every breakpoint tier in play (the primitive's own
+					// sm:, and this component's own sm:/md:/lg: below) needs its
+					// own max-w-none to actually be neutralised.
+					isFullScreen
+						? "max-w-none sm:max-w-none md:max-w-none lg:max-w-none"
+						: "sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
+				)}
+				onEscapeKeyDown={handleEscapeKeyDown}
 				side="left"
 			>
 				<SheetHeader>
@@ -525,10 +660,20 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 						copyDisabled={loading || !draftContent}
 						diffResult={diffResult}
 						errorCount={validation.errors.length}
+						formatVersion={server.data?.version ?? null}
 						hasConflict={hasConflict}
 						isApplying={isApplying}
 						isDirty={isDirty}
 						isValid={validation.isValid}
+						layout={{
+							formatDisabled: loading || !canFormat,
+							fullScreenButtonRef,
+							isFullScreen,
+							onFormat: handleFormat,
+							onToggleFullScreen: handleToggleFullScreen,
+							onToggleWrap: handleToggleWrap,
+							wrapEnabled,
+						}}
 						onApply={handleApply}
 						onCopy={handleCopy}
 						onDiscard={handleDiscard}
@@ -536,6 +681,9 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 					/>
 				</div>
 
+				{/* overscroll-behavior-x: contain lives on the .cm-scroller theme
+				rule above — that's CodeMirror's actual scrolling element, not
+				this wrapper. */}
 				<div className="mt-4 flex-1 overflow-auto rounded-md border bg-muted/30">
 					{loading ? (
 						<JsonLoadingSkeleton />
@@ -546,7 +694,7 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 								foldGutter: true,
 								highlightActiveLine: true,
 							}}
-							extensions={[json(), lintExtension]}
+							extensions={editorExtensions}
 							height="100%"
 							onChange={handleContentChange}
 							theme={editorTheme}

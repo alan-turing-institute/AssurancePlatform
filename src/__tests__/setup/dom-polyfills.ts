@@ -178,3 +178,37 @@ Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
 	}),
 	writable: true,
 });
+
+// Range.getClientRects / getBoundingClientRect (for real CodeMirror mounts)
+//
+// jsdom does no layout, so it has no text-range geometry at all. CodeMirror's
+// text-metrics fallback (measureTextSize in @codemirror/view, used when it
+// can't measure from real rendered lines) calls Range.getClientRects()
+// unconditionally with no guard for a missing implementation — without this,
+// it throws mid-measurement and leaks its temporary measurement element
+// ("abc def ghi jkl mno pqr stu", `.cm-line` with `position: absolute`) into
+// the DOM, because the exception skips its own cleanup step. Zero-size rects
+// are enough for CodeMirror's own fallback-to-defaults path to take over.
+const EMPTY_DOM_RECT: DOMRect = {
+	x: 0,
+	y: 0,
+	width: 0,
+	height: 0,
+	top: 0,
+	right: 0,
+	bottom: 0,
+	left: 0,
+	toJSON() {
+		return this;
+	},
+};
+
+if (!Range.prototype.getClientRects) {
+	Range.prototype.getClientRects = function getClientRects() {
+		return [EMPTY_DOM_RECT] as unknown as DOMRectList;
+	};
+}
+
+if (!Range.prototype.getBoundingClientRect) {
+	Range.prototype.getBoundingClientRect = () => EMPTY_DOM_RECT;
+}

@@ -2,16 +2,22 @@
 
 import {
 	AlertTriangle,
+	AlignLeft,
 	Check,
 	CheckCircle2,
 	Copy,
 	Loader2,
+	Maximize2,
+	Minimize2,
 	RotateCcw,
 	Save,
+	WrapText,
 	XCircle,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
 	Tooltip,
 	TooltipContent,
@@ -19,6 +25,27 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { TreeDiffResult } from "@/lib/case/tree-diff";
+
+/**
+ * Wrap, format, and full-screen controls — grouped into one prop so the
+ * toolbar's own prop list doesn't grow by one entry per layout control.
+ */
+export interface LayoutControlsProps {
+	/** Whether Format is disabled (e.g. the buffer isn't valid JSON) */
+	formatDisabled: boolean;
+	/** Ref for the full-screen toggle button, so focus can return to it on exit */
+	fullScreenButtonRef?: Ref<HTMLButtonElement>;
+	/** Whether the editor currently fills the viewport */
+	isFullScreen: boolean;
+	/** Handler for pretty-printing the current buffer */
+	onFormat: () => void;
+	/** Toggles full-screen mode */
+	onToggleFullScreen: () => void;
+	/** Toggles line wrapping */
+	onToggleWrap: () => void;
+	/** Whether line wrapping is enabled */
+	wrapEnabled: boolean;
+}
 
 interface JsonEditorToolbarProps {
 	/** Whether content has been copied */
@@ -29,6 +56,8 @@ interface JsonEditorToolbarProps {
 	diffResult: TreeDiffResult | null;
 	/** Number of validation errors */
 	errorCount: number;
+	/** Format version from the export envelope (e.g. "1.0"), null while loading */
+	formatVersion: string | null;
 	/** Whether there's a conflict with server state */
 	hasConflict: boolean;
 	/** Whether an apply operation is in progress */
@@ -37,6 +66,8 @@ interface JsonEditorToolbarProps {
 	isDirty: boolean;
 	/** Whether the JSON is currently valid */
 	isValid: boolean;
+	/** Wrap, format, and full-screen controls */
+	layout: LayoutControlsProps;
 	/** Handler for applying changes */
 	onApply: () => void;
 	/** Handler for copying JSON */
@@ -275,6 +306,79 @@ function ActionButtons({
 }
 
 /**
+ * Layout controls: wrap toggle, format, and full-screen toggle.
+ */
+function LayoutControls({
+	formatDisabled,
+	fullScreenButtonRef,
+	isFullScreen,
+	onFormat,
+	onToggleFullScreen,
+	onToggleWrap,
+	wrapEnabled,
+}: LayoutControlsProps) {
+	return (
+		<>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						aria-label="Format JSON"
+						disabled={formatDisabled}
+						onClick={onFormat}
+						size="sm"
+						variant="outline"
+					>
+						<AlignLeft className="h-4 w-4" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>
+					<p>Pretty-print the current buffer</p>
+				</TooltipContent>
+			</Tooltip>
+
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						aria-label={wrapEnabled ? "Disable line wrap" : "Enable line wrap"}
+						aria-pressed={wrapEnabled}
+						onClick={onToggleWrap}
+						size="sm"
+						variant={wrapEnabled ? "secondary" : "outline"}
+					>
+						<WrapText className="h-4 w-4" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>
+					<p>{wrapEnabled ? "Disable line wrap" : "Enable line wrap"}</p>
+				</TooltipContent>
+			</Tooltip>
+
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button
+						aria-label={isFullScreen ? "Exit full screen" : "Enter full screen"}
+						aria-pressed={isFullScreen}
+						onClick={onToggleFullScreen}
+						ref={fullScreenButtonRef}
+						size="sm"
+						variant={isFullScreen ? "secondary" : "outline"}
+					>
+						{isFullScreen ? (
+							<Minimize2 className="h-4 w-4" />
+						) : (
+							<Maximize2 className="h-4 w-4" />
+						)}
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>
+					<p>{isFullScreen ? "Exit full screen" : "Enter full screen"}</p>
+				</TooltipContent>
+			</Tooltip>
+		</>
+	);
+}
+
+/**
  * Toolbar for the JSON editor with Apply/Discard buttons and status display.
  */
 export function JsonEditorToolbar({
@@ -290,6 +394,8 @@ export function JsonEditorToolbar({
 	onCopy,
 	copied,
 	copyDisabled,
+	formatVersion,
+	layout,
 }: JsonEditorToolbarProps) {
 	const canApply = isDirty && isValid && !isApplying && !hasConflict;
 	const hasChanges = Boolean(
@@ -324,9 +430,16 @@ export function JsonEditorToolbar({
 						icon={status.icon}
 						text={status.text}
 					/>
+					{formatVersion && (
+						<Badge className="font-normal" variant="outline">
+							v{formatVersion}
+						</Badge>
+					)}
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
+					<LayoutControls {...layout} />
+					<Separator className="mx-1 h-6" orientation="vertical" />
 					<ActionButtons
 						applyTooltip={applyTooltip}
 						canApply={canApply}
