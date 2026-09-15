@@ -106,6 +106,9 @@ interface UseCaseImportParams {
 }
 
 export interface UseCaseImportReturn {
+	/** Navigates to the case a warnings-carrying import produced, once the
+	 * user has seen the warnings banner and chosen to continue. */
+	continueToCase: () => void;
 	error: string;
 	githubConnected: boolean | null;
 	googleConnected: boolean | null;
@@ -113,6 +116,10 @@ export interface UseCaseImportReturn {
 	importFromGitHub: (url: string) => Promise<void>;
 	importFromGoogleDrive: (fileId: string) => Promise<void>;
 	loading: boolean;
+	/** Set once a successful import also carried warnings — the modal stays
+	 * open (rather than navigating straight away) so the warnings are
+	 * actually seen; non-null means "ready to continue to this case". */
+	pendingCaseId: string | number | null;
 	selectedDriveFile: DriveFile | null;
 	setError: (error: string) => void;
 	setSelectedDriveFile: (file: DriveFile | null) => void;
@@ -131,6 +138,9 @@ export function useCaseImport({
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string>("");
 	const [warnings, setWarnings] = useState<string[]>([]);
+	const [pendingCaseId, setPendingCaseId] = useState<string | number | null>(
+		null
+	);
 	const [githubConnected, setGithubConnected] = useState<boolean | null>(null);
 	const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
 	const [selectedDriveFile, setSelectedDriveFile] = useState<DriveFile | null>(
@@ -138,6 +148,45 @@ export function useCaseImport({
 	);
 
 	const router = useRouter();
+
+	/**
+	 * Shared by all three import strategies below: decides whether to
+	 * navigate straight to the new case or keep the modal open first.
+	 * Closing and navigating in the same tick as setting `warnings` (the
+	 * old behaviour) meant the "Import warnings" banner never rendered —
+	 * `setWarnings` and `onClose`/`router.push` landed in the same commit,
+	 * so the component never painted the intermediate state (QA finding,
+	 * 2026-09-15). A warnings-carrying success now waits for
+	 * `continueToCase` instead.
+	 */
+	const applyImportResult = useCallback(
+		(data: ImportResponse) => {
+			const hasWarnings = !!(data.warnings && data.warnings.length > 0);
+			if (hasWarnings) {
+				setWarnings(data.warnings ?? []);
+			}
+			if (!data.id) {
+				return;
+			}
+			if (hasWarnings) {
+				setPendingCaseId(data.id);
+				return;
+			}
+			onClose();
+			router.push(`/case/${data.id}`);
+		},
+		[onClose, router]
+	);
+
+	const continueToCase = useCallback(() => {
+		if (pendingCaseId === null) {
+			return;
+		}
+		onClose();
+		router.push(`/case/${pendingCaseId}`);
+		setPendingCaseId(null);
+		setWarnings([]);
+	}, [pendingCaseId, onClose, router]);
 
 	// Check GitHub connection status when modal opens.
 	useEffect(() => {
@@ -167,6 +216,7 @@ export function useCaseImport({
 			setLoading(true);
 			setError("");
 			setWarnings([]);
+			setPendingCaseId(null);
 
 			try {
 				const response = await fetch("/api/cases/import", {
@@ -183,21 +233,14 @@ export function useCaseImport({
 					return;
 				}
 
-				if (data.warnings && data.warnings.length > 0) {
-					setWarnings(data.warnings);
-				}
-
-				if (data.id) {
-					onClose();
-					router.push(`/case/${data.id}`);
-				}
+				applyImportResult(data);
 			} catch {
 				setError("An error occurred, please try again later");
 			} finally {
 				setLoading(false);
 			}
 		},
-		[onClose, router]
+		[applyImportResult]
 	);
 
 	/**
@@ -208,6 +251,7 @@ export function useCaseImport({
 			setLoading(true);
 			setError("");
 			setWarnings([]);
+			setPendingCaseId(null);
 
 			try {
 				const response = await fetch("/api/cases/import/github", {
@@ -224,21 +268,14 @@ export function useCaseImport({
 					return;
 				}
 
-				if (data.warnings && data.warnings.length > 0) {
-					setWarnings(data.warnings);
-				}
-
-				if (data.id) {
-					onClose();
-					router.push(`/case/${data.id}`);
-				}
+				applyImportResult(data);
 			} catch {
 				setError("An error occurred, please try again later");
 			} finally {
 				setLoading(false);
 			}
 		},
-		[onClose, router]
+		[applyImportResult]
 	);
 
 	/**
@@ -249,6 +286,7 @@ export function useCaseImport({
 			setLoading(true);
 			setError("");
 			setWarnings([]);
+			setPendingCaseId(null);
 
 			try {
 				const response = await fetch("/api/cases/import/gdrive", {
@@ -265,27 +303,22 @@ export function useCaseImport({
 					return;
 				}
 
-				if (data.warnings && data.warnings.length > 0) {
-					setWarnings(data.warnings);
-				}
-
-				if (data.id) {
-					onClose();
-					router.push(`/case/${data.id}`);
-				}
+				applyImportResult(data);
 			} catch {
 				setError("An error occurred, please try again later");
 			} finally {
 				setLoading(false);
 			}
 		},
-		[onClose, router]
+		[applyImportResult]
 	);
 
 	return {
 		loading,
 		error,
 		warnings,
+		pendingCaseId,
+		continueToCase,
 		setError,
 		githubConnected,
 		googleConnected,
