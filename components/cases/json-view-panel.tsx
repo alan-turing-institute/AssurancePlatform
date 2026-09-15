@@ -13,7 +13,6 @@ import {
 	type stateExtensions,
 } from "codemirror-json-schema";
 import { useTheme } from "next-themes";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { exportCase } from "@/actions/export-case";
 import {
@@ -478,24 +477,28 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		}
 	}, [isOpen, isDirty, assuranceCase?.updatedOn]);
 
-	// Esc exits full-screen rather than closing the panel. Handled as a React
-	// capture-phase handler on the Sheet content itself (not a document-level
-	// listener), so it only ever sees events that target something inside
-	// this panel — an overlay opened elsewhere on the page, or a future
-	// overlay opened from inside the editor, isn't swallowed by it. React
-	// dispatches capture handlers before the target's own native listeners,
-	// so this still runs ahead of the Sheet's own Escape-to-close handling.
-	const handleEditorKeyDownCapture = useCallback(
-		(event: ReactKeyboardEvent<HTMLDivElement>) => {
-			if (!isFullScreen || event.key !== "Escape") {
+	const exitFullScreen = useCallback(() => {
+		setIsFullScreen(false);
+		fullScreenButtonRef.current?.focus();
+	}, []);
+
+	// Esc exits full-screen rather than closing the panel. Radix's Sheet
+	// registers its own Escape-to-close as a native document-level capture
+	// listener — it reaches the DOM before React's synthetic event system
+	// gets a chance to run anything of ours (a React onKeyDownCapture handler
+	// cannot stopPropagation() ahead of it; that only looked like it worked
+	// under jsdom, whose listener ordering differs from a real browser).
+	// Radix's own onEscapeKeyDown is the actual extension point: preventing
+	// its default here stops Radix's own close from running at all.
+	const handleEscapeKeyDown = useCallback(
+		(event: KeyboardEvent) => {
+			if (!isFullScreen) {
 				return;
 			}
 			event.preventDefault();
-			event.stopPropagation();
-			setIsFullScreen(false);
-			fullScreenButtonRef.current?.focus();
+			exitFullScreen();
 		},
-		[isFullScreen]
+		[isFullScreen, exitFullScreen]
 	);
 
 	// Full screen doesn't persist across a close/reopen — reset it here,
@@ -628,9 +631,18 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 			<SheetContent
 				className={cn(
 					"flex w-full flex-col transition-[max-width] duration-200 motion-reduce:transition-none",
-					isFullScreen ? "max-w-none" : "sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
+					// The sheet primitive's own base sets `sm:max-w-sm` (side="left"
+					// in sheetVariants); twMerge only dedupes classes that share
+					// the exact same prefix, so a bare "max-w-none" here would
+					// leave "sm:max-w-sm" in the merged list to win the cascade at
+					// >=640px. Every breakpoint tier in play (the primitive's own
+					// sm:, and this component's own sm:/md:/lg: below) needs its
+					// own max-w-none to actually be neutralised.
+					isFullScreen
+						? "max-w-none sm:max-w-none md:max-w-none lg:max-w-none"
+						: "sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
 				)}
-				onKeyDownCapture={handleEditorKeyDownCapture}
+				onEscapeKeyDown={handleEscapeKeyDown}
 				side="left"
 			>
 				<SheetHeader>
