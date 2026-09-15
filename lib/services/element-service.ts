@@ -1169,6 +1169,7 @@ async function validateUpdateElementFields(
 	elementId: string,
 	existing: {
 		caseId: string;
+		citedElementId: string | null;
 		elementType: PrismaElementType;
 		moduleReferenceId: string | null;
 	},
@@ -1209,9 +1210,28 @@ async function validateUpdateElementFields(
 		input.moduleReferenceId !== undefined
 			? input.moduleReferenceId
 			: existing.moduleReferenceId;
+
+	// Security fix (review round 2): a request that changes moduleReferenceId
+	// WITHOUT also touching citedElementId would otherwise leave the
+	// existing citedElementId pointing into the old case unvalidated —
+	// enforceCitedElementIdRules short-circuits on citedElementId ===
+	// undefined, so nothing re-checked it against the new case. Re-validate
+	// the EXISTING citedElementId against the new moduleReferenceId in that
+	// case, with the same rule and the same not-found-shaped error as an
+	// explicit citedElementId in the request.
+	let citedElementIdToValidate = input.citedElementId;
+	if (citedElementIdToValidate === undefined) {
+		const moduleReferenceIdChanged =
+			input.moduleReferenceId !== undefined &&
+			input.moduleReferenceId !== existing.moduleReferenceId;
+		if (moduleReferenceIdChanged && existing.citedElementId) {
+			citedElementIdToValidate = existing.citedElementId;
+		}
+	}
+
 	const citedElementIdError = await enforceCitedElementIdRules(
 		existing.elementType,
-		input.citedElementId,
+		citedElementIdToValidate,
 		effectiveModuleReferenceId,
 		elementId
 	);
@@ -1260,6 +1280,7 @@ export async function updateElement(
 				level: true,
 				deletedAt: true,
 				moduleReferenceId: true,
+				citedElementId: true,
 			},
 		});
 

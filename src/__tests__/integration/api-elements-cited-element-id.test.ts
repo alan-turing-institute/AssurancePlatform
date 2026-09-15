@@ -436,4 +436,95 @@ describe("PUT /api/elements/[id] — citedElementId (ADR 0004 D5)", () => {
 		expect(inDb?.moduleReferenceId).toBe(originalAwayCase.id);
 		expect(inDb?.citedElementId).toBeNull();
 	});
+
+	it("rejects moduleReferenceId-only changing away from the case the EXISTING citedElementId belongs to (review round 2)", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const caseA = await createTestCase(owner.id);
+		const caseB = await createTestCase(owner.id);
+		const goalInA = await createTestElement(caseA.id, owner.id, {
+			elementType: "GOAL",
+			name: "Goal In A",
+		});
+		// Already cites a goal in caseA — the request below only changes
+		// moduleReferenceId to caseB, never touching citedElementId at all.
+		const awayGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			moduleReferenceId: caseA.id,
+			citedElementId: goalInA.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/elements/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/elements/${awayGoal.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ moduleReferenceId: caseB.id }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: awayGoal.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+
+		// Rejected outright — neither field was written.
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(caseA.id);
+		expect(inDb?.citedElementId).toBe(goalInA.id);
+	});
+
+	it("accepts moduleReferenceId changing to a new case when citedElementId is repointed in the same request", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const caseA = await createTestCase(owner.id);
+		const caseB = await createTestCase(owner.id);
+		const goalInA = await createTestElement(caseA.id, owner.id, {
+			elementType: "GOAL",
+			name: "Goal In A",
+		});
+		const goalInB = await createTestElement(caseB.id, owner.id, {
+			elementType: "GOAL",
+			name: "Goal In B",
+		});
+		const awayGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			moduleReferenceId: caseA.id,
+			citedElementId: goalInA.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/elements/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/elements/${awayGoal.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					moduleReferenceId: caseB.id,
+					citedElementId: goalInB.id,
+				}),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: awayGoal.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.moduleReferenceId).toBe(caseB.id);
+		expect(body.citedElementId).toBe(goalInB.id);
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(caseB.id);
+		expect(inDb?.citedElementId).toBe(goalInB.id);
+	});
 });
