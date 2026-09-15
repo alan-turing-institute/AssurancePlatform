@@ -33,6 +33,23 @@ export type QualityLevel = "high" | "medium" | "low";
 // ============================================
 
 /**
+ * Comment, tree node, and top-level export envelope for the nested export
+ * format (v1.0) — re-exported from lib/schemas/case-export.ts.
+ *
+ * ADR 0004 D1: the Zod schema module is the single definition of the case
+ * model; these were previously hand-copied interfaces here that had
+ * drifted from it (e.g. this file's TreeNode carried a `title` field the
+ * Zod schema and every real export never had).
+ */
+export type {
+	CaseExportNested,
+	ExportComment,
+	TreeNode,
+} from "@/lib/schemas/case-export";
+
+import type { CaseExportNested } from "@/lib/schemas/case-export";
+
+/**
  * Element types, roles, and module embed types — re-exported from Prisma as single source of truth.
  */
 export type {
@@ -40,77 +57,6 @@ export type {
 	ElementType,
 	ModuleEmbedType,
 } from "@/src/generated/prisma";
-
-import type {
-	ElementRole,
-	ElementType,
-	ModuleEmbedType,
-} from "@/src/generated/prisma";
-
-/**
- * Comment attached to an element in the export.
- */
-export interface ExportComment {
-	author: string;
-	content: string;
-	createdAt: string;
-}
-
-/**
- * Recursive tree node structure for the nested export format.
- * Each node can contain children of various types.
- *
- * The `name` field contains the identifier (G1, P1.1, etc.) stored in DB.
- * The optional `title` field can contain a human-readable display name.
- */
-export interface TreeNode {
-	assumption?: string | null;
-	children: TreeNode[];
-	// Comments (optional)
-	comments?: ExportComment[];
-	context?: string[];
-	defeatsElementId?: string;
-	description: string;
-	// Pattern metadata
-	fromPattern?: boolean;
-	id: string;
-	inSandbox: boolean;
-	// Dialogical reasoning
-	isDefeater?: boolean;
-	justification?: string | null;
-	level?: number | null;
-	modifiedFromPattern?: boolean;
-	moduleEmbedType?: ModuleEmbedType;
-	modulePublicSummary?: string | null;
-	// Module fields
-	moduleReferenceId?: string;
-	name: string | null;
-	// Type-specific fields (only present when applicable)
-	role?: ElementRole | null;
-	// Optional display title (for future use)
-	title?: string | null;
-	type: ElementType;
-	url?: string | null;
-}
-
-/**
- * Case metadata in the nested export format.
- */
-export interface CaseMetadata {
-	description: string;
-	name: string;
-}
-
-/**
- * New nested export format (v1.0).
- * This is the primary format exported by the TEA Platform.
- */
-export interface CaseExportNested {
-	case: CaseMetadata;
-	exportedAt: string;
-	tree: TreeNode;
-	version: "1.0";
-}
 
 // ============================================
 // Progress Tracking Types
