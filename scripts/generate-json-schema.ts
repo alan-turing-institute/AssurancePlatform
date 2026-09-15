@@ -57,17 +57,49 @@ const SCHEMA_TITLE = "TEA Platform Assurance Case Export Schema v1.0";
 const RECURSIVE_DEF_PLACEHOLDER_PATTERN = /__schema\d+/g;
 const RECURSIVE_DEF_NAME = "TreeNode";
 
+/**
+ * Renames the sole recursive definition zod's draft-07 generator names
+ * `__schema<n>` to `newName`, everywhere it appears ($defs key and every
+ * $ref to it). This assumes exactly one recursive definition is reachable
+ * from the schema being generated — true today (TreeNodeSchema is the only
+ * z.lazy in CaseExportNestedSchema's graph) but not guaranteed by the Zod
+ * source going forward, and a blanket `replaceAll` would rename two
+ * distinct recursive schemas into one shared name, silently corrupting the
+ * output (two different node shapes would resolve through a single $ref).
+ * Counts the *distinct* placeholder ids before rewriting and throws,
+ * naming the assumption, if the count is not exactly one — a second z.lazy
+ * needs a real id -> name map here, not this shortcut.
+ */
+export function renameRecursiveDef(
+	generated: Record<string, unknown>,
+	newName: string
+): Record<string, unknown> {
+	const serialized = JSON.stringify(generated);
+	const placeholderIds = new Set(
+		serialized.match(RECURSIVE_DEF_PLACEHOLDER_PATTERN) ?? []
+	);
+
+	if (placeholderIds.size !== 1) {
+		throw new Error(
+			"generate-json-schema: expected exactly one recursive definition " +
+				"reachable from CaseExportNestedSchema (the assumption the " +
+				`__schema<n> -> ${newName} rename depends on), found ` +
+				`${placeholderIds.size}: ${[...placeholderIds].sort().join(", ") || "none"}. ` +
+				"Replace the blanket rename with an explicit id -> name map."
+		);
+	}
+
+	return JSON.parse(
+		serialized.replaceAll(RECURSIVE_DEF_PLACEHOLDER_PATTERN, newName)
+	);
+}
+
 export function generateJsonSchema(): Record<string, unknown> {
 	const generated = z.toJSONSchema(CaseExportNestedSchema, {
 		target: "draft-7",
 	});
 
-	const withStableDefName = JSON.parse(
-		JSON.stringify(generated).replaceAll(
-			RECURSIVE_DEF_PLACEHOLDER_PATTERN,
-			RECURSIVE_DEF_NAME
-		)
-	);
+	const withStableDefName = renameRecursiveDef(generated, RECURSIVE_DEF_NAME);
 
 	// $id/title are document-identity metadata, not derivable from a Zod
 	// schema (Zod has no concept of "this document's canonical URI") — set
@@ -87,7 +119,7 @@ function main(): void {
 	// `JSON.stringify` and the repo's Biome formatting rules disagree on how
 	// to wrap short primitive arrays (e.g. `"required": [...]`) — format
 	// through Biome itself so the committed file always passes `pnpm lint`
-	// and never fights the drift test's byte-for-byte expectations.
+	// and keeps `pnpm schema:generate`'s output identical to what's committed.
 	spawnSync(BIOME_BIN, ["format", "--write", OUTPUT_PATH], {
 		cwd: REPO_ROOT,
 	});
