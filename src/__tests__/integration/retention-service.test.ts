@@ -548,8 +548,12 @@ describe("runRetentionSweep — concurrent sweeps where the winner's send throws
 		const firstPromise = runRetentionSweep(CRON_SECRET);
 		await claimed;
 
+		const afterClaim = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(afterClaim?.retentionWarning30SentAt).not.toBeNull();
+
 		const secondData = expectSuccess(await runRetentionSweep(CRON_SECRET));
 		expect(secondData.warned30).toBe(0);
+		expect(secondData.skipped).toBe(1);
 		expect(sendRetentionWarningEmail).toHaveBeenCalledTimes(1);
 
 		releaseSend();
