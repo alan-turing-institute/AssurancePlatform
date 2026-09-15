@@ -17,6 +17,7 @@ import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
@@ -69,14 +70,27 @@ function Flow() {
 	const onLayout = async (
 		direction: "LR" | "TB" | "RL" | "BT" = layoutDirection
 	) => {
-		const layouted = await getLayoutedElements(nodes, edges, { direction });
+		// getLayoutedElements itself never rejects (it falls back to the
+		// pre-layout positions on an ELK failure), but this catch is a second
+		// line of defence: on any other failure, leave the canvas exactly as
+		// it was rather than half-applying a broken result.
+		try {
+			const layouted = await getLayoutedElements(nodes, edges, { direction });
 
-		setNodes(layouted.nodes);
-		setEdges(layouted.edges);
+			setNodes(layouted.nodes);
+			setEdges(layouted.edges);
 
-		window.requestAnimationFrame(() => {
-			fitView();
-		});
+			window.requestAnimationFrame(() => {
+				fitView();
+			});
+		} catch (error) {
+			logger.error("onLayout failed; canvas positions unchanged", { error });
+			toast({
+				variant: "destructive",
+				title: "Layout error",
+				description: "Could not re-run the layout. Positions are unchanged.",
+			});
+		}
 	};
 
 	// Sync layout direction from persisted case data (only on case load, not on user toggle)

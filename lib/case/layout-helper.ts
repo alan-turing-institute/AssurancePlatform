@@ -11,6 +11,7 @@ import ELK from "elkjs/lib/elk.bundled.js";
 import type { ElkExtendedEdge, ElkNode } from "elkjs/lib/elk-api";
 import type { Edge, Node } from "reactflow";
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
+import { logger } from "@/lib/logger";
 
 const elk = new ELK();
 
@@ -134,9 +135,12 @@ interface LayoutedElements {
 }
 
 /**
- * A cell (ADR 0005 D1): a target node plus everything side-attached to it.
- * `members[0]` is always the target; the rest are its side attachments,
- * sorted by identifier.
+ * A cell (ADR 0005 D1, D8): a root target node plus everything side-
+ * attached to it, flattened across any nesting depth — a defeater
+ * attacking another defeater joins its ultimate target's cell rather than
+ * forming a second, orphaned one. `members[0]` is always the root target;
+ * the rest are its attachments (direct or nested), breadth-first by depth
+ * from the root, identifier-sorted among siblings at the same depth.
  */
 interface Cell {
 	id: string;
@@ -154,53 +158,157 @@ function getAttachedToId(node: Node): string | undefined {
 }
 
 /**
- * Groups side-attached nodes under their target into cells (ADR 0005 D1).
- * A node with `data.attachedTo` pointing at another VISIBLE node becomes a
- * member of that node's cell; an `attachedTo` that doesn't resolve (target
- * hidden or absent) is ignored here — the node is laid out as an ordinary
- * tree node, matching D2's "falls back to its tree position" rule (enforced
- * upstream, at conversion time, by clearing the field in that case).
+ * A node -> its own immediate `attachedTo` id, for every visible node whose
+ * `attachedTo` resolves to another VISIBLE node (not itself) — the same
+ * validity check D2's fallback relies on: an `attachedTo` that doesn't
+ * resolve (target hidden or absent) is dropped here, so that node is laid
+ * out as an ordinary tree node.
+ */
+function buildImmediateAttachments(
+	sortedVisibleNodes: Node[],
+	visibleIds: Set<string>
+): Map<string, string> {
+	const immediateAttachedTo = new Map<string, string>();
+	for (const node of sortedVisibleNodes) {
+		const targetId = getAttachedToId(node);
+		if (targetId && targetId !== node.id && visibleIds.has(targetId)) {
+			immediateAttachedTo.set(node.id, targetId);
+		}
+	}
+	return immediateAttachedTo;
+}
+
+/**
+ * Resolves the ROOT a (possibly nested) attachment chain ultimately
+ * belongs to (ADR 0005 D8 — "nested defeaters", GSN §1:6's counter-counter-
+ * argument): CSn1 attached to CG1 attached to G2 all resolve to G2, so the
+ * whole chain lays out as one cell instead of leaving the inner link
+ * referencing a cell that's never emitted (the ELK "Referenced shape does
+ * not exist" crash this replaces). Returns `undefined` for a node that
+ * isn't attached to anything, and for a node whose chain loops back on
+ * itself (a cycle) — both fall back to being laid out as an ordinary tree
+ * node, matching D2's existing fallback.
+ */
+function resolveAttachmentRootId(
+	nodeId: string,
+	immediateAttachedTo: Map<string, string>
+): string | undefined {
+	if (!immediateAttachedTo.has(nodeId)) {
+		return undefined;
+	}
+	const seen = new Set<string>([nodeId]);
+	let current = nodeId;
+	while (immediateAttachedTo.has(current)) {
+		const next = immediateAttachedTo.get(current);
+		if (!next || seen.has(next)) {
+			return undefined;
+		}
+		seen.add(next);
+		current = next;
+	}
+	return current;
+}
+
+/**
+ * Orders a cell's non-root members breadth-first by depth from the root,
+ * using each member's own immediate attachment parent — which may be the
+ * root itself, or another member further down the chain — rather than
+ * always the root. A nested attachment (CSn1 on CG1 on G2) therefore sits
+ * one column further along the row than its own parent CG1, not stacked
+ * beside it. Siblings (same immediate parent) are identifier-sorted.
+ */
+function orderAttachmentMembers(
+	rootId: string,
+	memberNodes: Node[],
+	immediateAttachedTo: Map<string, string>
+): Node[] {
+	const byParentId = new Map<string, Node[]>();
+	for (const node of memberNodes) {
+		const parentId = immediateAttachedTo.get(node.id) ?? rootId;
+		const siblings = byParentId.get(parentId) ?? [];
+		siblings.push(node);
+		byParentId.set(parentId, siblings);
+	}
+	for (const siblings of byParentId.values()) {
+		siblings.sort((a, b) =>
+			compareIdentifiers(
+				(a.data?.name as string) || "",
+				(b.data?.name as string) || ""
+			)
+		);
+	}
+
+	const ordered: Node[] = [];
+	const visited = new Set<string>([rootId]);
+	let frontier = [rootId];
+	while (frontier.length > 0) {
+		const next: string[] = [];
+		for (const parentId of frontier) {
+			for (const child of byParentId.get(parentId) ?? []) {
+				if (visited.has(child.id)) {
+					continue;
+				}
+				visited.add(child.id);
+				ordered.push(child);
+				next.push(child.id);
+			}
+		}
+		frontier = next;
+	}
+	return ordered;
+}
+
+/**
+ * Groups side-attached nodes under their ROOT target into cells (ADR 0005
+ * D1, D8) — flattening any nesting depth (see `resolveAttachmentRootId`).
+ * An `attachedTo` that doesn't resolve, or that loops back on itself, is
+ * ignored here — the node is laid out as an ordinary tree node, matching
+ * D2's "falls back to its tree position" rule.
  *
- * Returns both the cells keyed by target id, and a lookup from every member
- * node id (target or attachment) to its cell id — used to re-point tree
- * edges at the cell for ELK's purposes.
+ * Returns both the cells keyed by root id, and a lookup from every member
+ * node id (root or attachment, at any depth) to its cell id — used to
+ * re-point tree edges at the cell for ELK's purposes.
  */
 function buildCells(sortedVisibleNodes: Node[]): {
 	cellsByTargetId: Map<string, Cell>;
 	cellIdByNodeId: Map<string, string>;
 } {
 	const visibleIds = new Set(sortedVisibleNodes.map((n) => n.id));
-	const attachmentsByTargetId = new Map<string, Node[]>();
+	const immediateAttachedTo = buildImmediateAttachments(
+		sortedVisibleNodes,
+		visibleIds
+	);
+	const nodeById = new Map(sortedVisibleNodes.map((n) => [n.id, n]));
 
+	const memberNodesByRootId = new Map<string, Node[]>();
 	for (const node of sortedVisibleNodes) {
-		const targetId = getAttachedToId(node);
-		if (!targetId || targetId === node.id || !visibleIds.has(targetId)) {
+		const rootId = resolveAttachmentRootId(node.id, immediateAttachedTo);
+		if (!rootId || rootId === node.id) {
 			continue;
 		}
-		const attachments = attachmentsByTargetId.get(targetId) ?? [];
-		attachments.push(node);
-		attachmentsByTargetId.set(targetId, attachments);
+		const members = memberNodesByRootId.get(rootId) ?? [];
+		members.push(node);
+		memberNodesByRootId.set(rootId, members);
 	}
 
 	const cellsByTargetId = new Map<string, Cell>();
 	const cellIdByNodeId = new Map<string, string>();
 
-	for (const node of sortedVisibleNodes) {
-		const attachments = attachmentsByTargetId.get(node.id);
-		if (!attachments || attachments.length === 0) {
+	for (const [rootId, memberNodes] of memberNodesByRootId) {
+		const root = nodeById.get(rootId);
+		if (!root) {
 			continue;
 		}
-		const sortedAttachments = [...attachments].sort((a, b) =>
-			compareIdentifiers(
-				(a.data?.name as string) || "",
-				(b.data?.name as string) || ""
-			)
+		const orderedMembers = orderAttachmentMembers(
+			rootId,
+			memberNodes,
+			immediateAttachedTo
 		);
 		const cell: Cell = {
-			id: `cell-${node.id}`,
-			members: [node, ...sortedAttachments],
+			id: `cell-${rootId}`,
+			members: [root, ...orderedMembers],
 		};
-		cellsByTargetId.set(node.id, cell);
+		cellsByTargetId.set(rootId, cell);
 		for (const member of cell.members) {
 			cellIdByNodeId.set(member.id, cell.id);
 		}
@@ -360,16 +468,19 @@ function sortNodesForLayout(
 
 /**
  * Builds the ELK compound (group) node for one cell: members laid out in a
- * row perpendicular to the tree direction, zero padding, with the target as
- * `layoutOptions.elk.direction`'s first member and each attachment linked to
- * it by an internal star edge (ADR 0005 D1 — the verified passing variant).
+ * row perpendicular to the tree direction, zero padding (ADR 0005 D1 — the
+ * verified passing variant). Internal edges mirror each non-root member's
+ * REAL immediate attachment (`data.attachedTo`) rather than a flat star
+ * from the root (ADR 0005 D8): for a nested chain — a defeater attacking
+ * another defeater — this places the inner link one column further along
+ * than its own parent, instead of stacked beside it.
  */
 function buildCellElkNode(
 	cell: Cell,
 	cellDirection: ElkDirection,
 	nodeSpacing: string
 ): ElkNode {
-	const [target, ...attachments] = cell.members;
+	const [root] = cell.members;
 	return {
 		id: cell.id,
 		layoutOptions: {
@@ -388,11 +499,16 @@ function buildCellElkNode(
 				height: dimensions.height,
 			};
 		}),
-		edges: attachments.map((member) => ({
-			id: `${target?.id}-${member.id}`,
-			sources: [target?.id ?? ""],
-			targets: [member.id],
-		})),
+		edges: cell.members
+			.filter((member) => member.id !== root?.id)
+			.map((member) => {
+				const parentId = getAttachedToId(member) ?? root?.id ?? "";
+				return {
+					id: `${parentId}-${member.id}`,
+					sources: [parentId],
+					targets: [member.id],
+				};
+			}),
 	};
 }
 
@@ -507,40 +623,82 @@ function flattenPositions(
 	return positionMap;
 }
 
-/**
- * Bottom edge (absolute y) of every cell in the laid-out graph, keyed by
- * cell id — used to bend a cell's outgoing support edges below the WHOLE
- * cell rather than at the target's own midpoint (ADR 0005 D8): with two
- * stacked defeaters, the old midpoint-below-the-target bend passed through
- * the second card. Only compound (cell) ELK nodes have `.children`; plain
- * nodes are skipped.
- */
-function computeCellBottoms(elkChildren: ElkNode[]): Map<string, number> {
-	const bottomByCellId = new Map<string, number>();
-	for (const child of elkChildren) {
-		if (child.children && child.children.length > 0) {
-			bottomByCellId.set(child.id, (child.y ?? 0) + (child.height ?? 0));
-		}
-	}
-	return bottomByCellId;
+interface CellBounds {
+	height: number;
+	width: number;
+	x: number;
+	y: number;
 }
 
 /**
- * Sets `data.centerY` (ADR 0005 D8) on every edge whose source is a cell
- * member and whose target sits OUTSIDE that same cell — a real "children of
- * the cell" edge, not an in-cell edge like `challenges` (whose source and
- * target both resolve to the same cell and carry no useful centreY of their
- * own). The `support` edge type (`components/cases/support-edge.tsx`) reads
- * this to bend its horizontal run below the whole cell instead of the
- * default midpoint between source and target. Edges left untouched here
- * (centerY stays undefined) fall back to `getSmoothStepPath`'s own default
- * — the same bend `smoothstep` always used — so this is additive, not a
- * behaviour change for ordinary edges outside a cell.
+ * Absolute bounding box of every cell in the laid-out graph, keyed by cell
+ * id — used to bend a cell's outgoing support edges below (or, in a
+ * left-right tree, beside) the WHOLE cell rather than at the target's own
+ * midpoint (ADR 0005 D8): with two stacked defeaters, the old midpoint
+ * bend passed through the second card. Only compound (cell) ELK nodes have
+ * `.children`; plain nodes are skipped.
  */
-function applyCellCenterY(
+function computeCellBounds(elkChildren: ElkNode[]): Map<string, CellBounds> {
+	const boundsByCellId = new Map<string, CellBounds>();
+	for (const child of elkChildren) {
+		if (child.children && child.children.length > 0) {
+			boundsByCellId.set(child.id, {
+				x: child.x ?? 0,
+				y: child.y ?? 0,
+				width: child.width ?? 0,
+				height: child.height ?? 0,
+			});
+		}
+	}
+	return boundsByCellId;
+}
+
+/**
+ * The bend coordinate for a cell's outgoing children edges, in whichever
+ * axis the OUTER tree actually progresses along (ADR 0005 D8): `centerY`
+ * for a top-down/bottom-up tree (DOWN/UP — children sit below), `centerX`
+ * for a left-right tree (RIGHT/LEFT — a live per-case toggle,
+ * `case-settings-popover.tsx`; children sit beside the cell). Always the
+ * cell's FAR edge in the direction children lie, plus half the layer gap —
+ * never the near edge, which would bend back into the cell itself.
+ */
+function cellBendCoordinate(
+	bounds: CellBounds,
+	elkDirection: ElkDirection,
+	gap: number
+): { centerX?: number; centerY?: number } {
+	switch (elkDirection) {
+		case "DOWN":
+			return { centerY: bounds.y + bounds.height + gap / 2 };
+		case "UP":
+			return { centerY: bounds.y - gap / 2 };
+		case "RIGHT":
+			return { centerX: bounds.x + bounds.width + gap / 2 };
+		case "LEFT":
+			return { centerX: bounds.x - gap / 2 };
+		default:
+			return {};
+	}
+}
+
+/**
+ * Sets `data.centerX`/`data.centerY` (ADR 0005 D8) on every edge whose
+ * source is a cell member and whose target sits OUTSIDE that same cell — a
+ * real "children of the cell" edge, not an in-cell edge like `challenges`
+ * (whose source and target both resolve to the same cell and carry no
+ * useful bend of their own). The `support` edge type
+ * (`components/cases/support-edge.tsx`) reads whichever is set to bend its
+ * run below/beside the whole cell instead of the default midpoint between
+ * source and target. Edges left untouched here (both stay undefined) fall
+ * back to `getSmoothStepPath`'s own default — the same bend `smoothstep`
+ * always used — so this is additive, not a behaviour change for ordinary
+ * edges outside a cell.
+ */
+function applyCellBend(
 	edges: Edge[],
 	cellIdByNodeId: Map<string, string>,
-	cellBottomByCellId: Map<string, number>,
+	cellBoundsByCellId: Map<string, CellBounds>,
+	elkDirection: ElkDirection,
 	gap: number
 ): Edge[] {
 	return edges.map((edge) => {
@@ -551,59 +709,35 @@ function applyCellCenterY(
 		if (cellIdByNodeId.get(edge.target) === sourceCellId) {
 			return edge;
 		}
-		const bottom = cellBottomByCellId.get(sourceCellId);
-		if (bottom === undefined) {
+		const bounds = cellBoundsByCellId.get(sourceCellId);
+		if (!bounds) {
 			return edge;
 		}
 		return {
 			...edge,
-			data: { ...edge.data, centerY: bottom + gap / 2 },
+			data: {
+				...edge.data,
+				...cellBendCoordinate(bounds, elkDirection, gap),
+			},
 		};
 	});
 }
 
 /**
- * Generates a layout for the given nodes and edges using ELK's layered algorithm.
- *
- * This function processes the visible nodes and edges in a graph, applies a hierarchical
- * layout with orthogonal edge routing, and returns the nodes with updated positions.
- * Hidden nodes and edges are ignored during layout computation but retained in the output.
- *
- * @param {Node[]} nodes - An array of node objects representing the graph nodes.
- * @param {Edge[]} edges - An array of edge objects representing the graph edges.
- * @param {LayoutOptions} options - Layout options for the graph.
- * @param {string} options.direction - The layout direction: 'TB', 'LR', 'RL', or 'BT'.
- * @returns {Promise<LayoutedElements>} An object containing the nodes with updated positions and the original edges.
+ * Runs the actual ELK layout for a non-empty, already-filtered graph — the
+ * part of `getLayoutedElements` that can throw (ELK rejects on a malformed
+ * graph, e.g. an edge referencing a shape that was never emitted). Split
+ * out so `getLayoutedElements` can wrap exactly this in a try/catch.
  */
-export async function getLayoutedElements(
+async function layoutVisibleGraph(
 	nodes: Node[],
 	edges: Edge[],
-	options: LayoutOptions
+	visibleNodes: Node[],
+	validEdges: Edge[],
+	elkDirection: ElkDirection,
+	nodeSpacing: string,
+	layerSpacing: string
 ): Promise<LayoutedElements> {
-	const direction = options.direction || "TB";
-	const elkDirection = DIRECTION_MAP[direction] || "DOWN";
-	const nodeSpacing = String(options.nodeSpacing ?? 40);
-	const layerSpacing = String(options.layerSpacing ?? 60);
-
-	// Filter out hidden nodes and edges for the layout computation
-	const visibleNodes = nodes.filter(
-		(node) => !(node as Node & { hidden?: boolean }).hidden
-	);
-	const visibleEdges = edges.filter(
-		(edge) => !(edge as Edge & { hidden?: boolean }).hidden
-	);
-
-	// Filter edges whose source or target is hidden (prevents ELK "Referenced shape does not exist" error)
-	const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
-	const validEdges = visibleEdges.filter(
-		(edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-	);
-
-	// If no visible nodes, return early
-	if (visibleNodes.length === 0) {
-		return { nodes, edges };
-	}
-
 	// ADR 0005 D1: group side-attached nodes under their target into cells.
 	// buildCells still takes an identifier-sorted list, not raw
 	// `visibleNodes`: when a node is simultaneously a cell target AND
@@ -696,13 +830,14 @@ export async function getLayoutedElements(
 		return node;
 	});
 
-	// ADR 0005 D8: bend a cell's outgoing children edges below the whole
-	// cell, not the target's own midpoint.
-	const cellBottomByCellId = computeCellBottoms(layoutedGraph.children || []);
-	const layoutedEdges = applyCellCenterY(
+	// ADR 0005 D8: bend a cell's outgoing children edges below (DOWN/UP) or
+	// beside (RIGHT/LEFT) the whole cell, not the target's own midpoint.
+	const cellBoundsByCellId = computeCellBounds(layoutedGraph.children || []);
+	const layoutedEdges = applyCellBend(
 		edges,
 		cellIdByNodeId,
-		cellBottomByCellId,
+		cellBoundsByCellId,
+		elkDirection,
 		Number(layerSpacing)
 	);
 
@@ -710,4 +845,77 @@ export async function getLayoutedElements(
 		nodes: layoutedNodes,
 		edges: layoutedEdges,
 	};
+}
+
+/**
+ * Generates a layout for the given nodes and edges using ELK's layered algorithm.
+ *
+ * This function processes the visible nodes and edges in a graph, applies a hierarchical
+ * layout with orthogonal edge routing, and returns the nodes with updated positions.
+ * Hidden nodes and edges are ignored during layout computation but retained in the output.
+ *
+ * Never rejects: a layout failure (ELK throwing on a malformed graph) is
+ * logged and falls back to the pre-layout positions — see
+ * `layoutVisibleGraph` — rather than leaving a caller's promise unresolved
+ * and the canvas stuck (vincent, round 2).
+ *
+ * @param {Node[]} nodes - An array of node objects representing the graph nodes.
+ * @param {Edge[]} edges - An array of edge objects representing the graph edges.
+ * @param {LayoutOptions} options - Layout options for the graph.
+ * @param {string} options.direction - The layout direction: 'TB', 'LR', 'RL', or 'BT'.
+ * @returns {Promise<LayoutedElements>} An object containing the nodes with updated positions and the original edges.
+ */
+export async function getLayoutedElements(
+	nodes: Node[],
+	edges: Edge[],
+	options: LayoutOptions
+): Promise<LayoutedElements> {
+	const direction = options.direction || "TB";
+	const elkDirection = DIRECTION_MAP[direction] || "DOWN";
+	const nodeSpacing = String(options.nodeSpacing ?? 40);
+	const layerSpacing = String(options.layerSpacing ?? 60);
+
+	// Filter out hidden nodes and edges for the layout computation
+	const visibleNodes = nodes.filter(
+		(node) => !(node as Node & { hidden?: boolean }).hidden
+	);
+	const visibleEdges = edges.filter(
+		(edge) => !(edge as Edge & { hidden?: boolean }).hidden
+	);
+
+	// Filter edges whose source or target is hidden (prevents ELK "Referenced shape does not exist" error)
+	const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+	const validEdges = visibleEdges.filter(
+		(edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+	);
+
+	// If no visible nodes, return early
+	if (visibleNodes.length === 0) {
+		return { nodes, edges };
+	}
+
+	try {
+		return await layoutVisibleGraph(
+			nodes,
+			edges,
+			visibleNodes,
+			validEdges,
+			elkDirection,
+			nodeSpacing,
+			layerSpacing
+		);
+	} catch (error) {
+		// Falling back to the pre-layout positions keeps the canvas usable
+		// instead of freezing on whatever was mid-render when the promise
+		// rejected. A nested-defeater chain used to crash ELK here before
+		// the cell-flattening fix above; kept as a safety net for any other
+		// malformed input, not just that one case.
+		logger.error("Case layout failed; falling back to pre-layout positions", {
+			error,
+			direction,
+			nodeCount: nodes.length,
+			edgeCount: edges.length,
+		});
+		return { nodes, edges };
+	}
 }
