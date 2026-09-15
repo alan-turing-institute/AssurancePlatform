@@ -73,4 +73,24 @@ describe("element-compatibility", () => {
 			expect(parents).toContain("property_claim");
 		});
 	});
+
+	describe("away_goal / module (ADR 0005 D3 — same parents as property_claim)", () => {
+		it("allows away_goal and module under goal, strategy, and property_claim", () => {
+			for (const parent of ["goal", "strategy", "property_claim"]) {
+				expect(canBeChildOf("away_goal", parent)).toBe(true);
+				expect(canBeChildOf("module", parent)).toBe(true);
+			}
+		});
+
+		it("is terminal — nothing may be placed under an away_goal or a module", () => {
+			expect(canBeChildOf("property_claim", "away_goal")).toBe(false);
+			expect(canBeChildOf("property_claim", "module")).toBe(false);
+			expect(getCompatibleChildTypes("away_goal")).toEqual([]);
+			expect(getCompatibleChildTypes("module")).toEqual([]);
+		});
+
+		it("normalises React Flow's awayGoal node type to the canonical away_goal", () => {
+			expect(canBeChildOf("awayGoal", "goal")).toBe(true);
+		});
+	});
 });

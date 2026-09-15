@@ -177,6 +177,8 @@ type ElementOverrides = Partial<{
 	// MODULE/AWAY_GOAL — required by AwayGoalSchema/ModuleSchema when
 	// elementType is MODULE or AWAY_GOAL (lib/schemas/element-validation.ts).
 	moduleReferenceId: string;
+	// MODULE only — also required (element-validation.ts's REQUIRED_FIELDS).
+	moduleEmbedType: "COPY" | "REFERENCE";
 	// ADR 0004 D5 — AWAY_GOAL only
 	citedElementId: string | null;
 	citationDangling: boolean;
@@ -205,6 +207,7 @@ export function createTestElement(
 			inSandbox: overrides.inSandbox ?? false,
 			assertionStatus: overrides.assertionStatus,
 			moduleReferenceId: overrides.moduleReferenceId,
+			moduleEmbedType: overrides.moduleEmbedType,
 			citedElementId: overrides.citedElementId,
 			citationDangling: overrides.citationDangling ?? false,
 			isDefeater: overrides.isDefeater ?? false,

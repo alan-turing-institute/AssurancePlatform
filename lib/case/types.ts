@@ -86,7 +86,16 @@ export interface CommentPayload {
 // rejected outright once request schemas went strict.
 export interface CreateNodePayload {
 	assuranceCaseId?: string;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only.
+	citedElementId?: string | null;
+	// Dialogical reasoning (defeaters, ADR 0005 D7).
+	defeatsElementId?: string | null;
 	description: string;
+	isDefeater?: boolean;
+	// Required for MODULE — how it's embedded (ADR 0005 D7).
+	moduleEmbedType?: "COPY" | "REFERENCE";
+	// Module reference — MODULE and AWAY_GOAL (ADR 0005 D7).
+	moduleReferenceId?: string | null;
 	name?: string;
 	parentId: string | null;
 	URL?: string;

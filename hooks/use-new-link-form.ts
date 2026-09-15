@@ -401,6 +401,59 @@ export function useNewLinkForm({
 		setLoading(false);
 	};
 
+	/**
+	 * Builds the defeater creation payload (ADR 0005 D7): a PROPERTY_CLAIM
+	 * child of the element the "Add defeater" menu was opened on, flagged
+	 * `isDefeater` with `defeatsElementId` pointing at that same element.
+	 */
+	const createDefeaterPayload = (description: string) => ({
+		description,
+		assuranceCaseId: assuranceCase?.id,
+		parentId: node.data.id as string,
+		isDefeater: true,
+		defeatsElementId: node.data.id as string,
+	});
+
+	/**
+	 * Handles creation of a defeater (ADR 0005 D7). A defeater is an ordinary
+	 * property claim in the tree — shares the claim result-routing helpers
+	 * above — with the two extra fields the write path already accepts.
+	 */
+	const handleDefeaterAdd = async (description: string) => {
+		const result = await createAssuranceCaseNode(
+			"propertyclaims",
+			createDefeaterPayload(description),
+			""
+		);
+
+		if (result.error) {
+			toast({
+				variant: "destructive",
+				title: "Error",
+				description: "Failed to create defeater",
+			});
+			setLoading(false);
+			return;
+		}
+
+		if (result.data && assuranceCase) {
+			(result.data as { hidden?: boolean }).hidden = findSiblingHiddenState(
+				assuranceCase,
+				node.data.id
+			);
+			recordCreate(
+				result.data.id as string | number,
+				"property_claim",
+				result.data as Record<string, unknown>
+			);
+		}
+
+		processClaimResult(result, node.type ?? "");
+
+		reset();
+		setLoading(false);
+	};
+
 	/** Shows a destructive toast and resets loading state on evidence errors */
 	const handleEvidenceError = (message: string) => {
 		toast({
@@ -561,6 +614,9 @@ export function useNewLinkForm({
 				break;
 			case "strategy":
 				handleStrategyAdd(description);
+				break;
+			case "defeater":
+				handleDefeaterAdd(description);
 				break;
 			case "evidence": {
 				const urlValues = values.urls

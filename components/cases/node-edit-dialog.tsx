@@ -81,6 +81,22 @@ export function getInitialAssertionStatus(
 }
 
 /**
+ * The name of the element a defeater challenges (ADR 0005 D2), for the
+ * edit dialog's read-only "Challenges" line. `null` when the target isn't
+ * (or is no longer) present on the canvas.
+ */
+function findChallengedElementName(
+	defeatsElementId: string | null | undefined,
+	allNodes: Node[]
+): string | null {
+	if (!defeatsElementId) {
+		return null;
+	}
+	const challengedNode = allNodes.find((n) => n.data?.id === defeatsElementId);
+	return (challengedNode?.data?.name as string | undefined) || null;
+}
+
+/**
  * Converts node data URLs to field array format.
  */
 function getInitialUrls(
@@ -429,8 +445,15 @@ export default function NodeEditDialog({
 	const [newContextValue, setNewContextValue] = useState("");
 	const componentId = useId();
 	const [idCounter, setIdCounter] = useState(0);
-	const { assuranceCase } = useStore();
+	const { assuranceCase, nodes: allNodes } = useStore();
 	const panelSlot = useElementPanelSlot();
+	// Dialogical reasoning (defeaters, ADR 0005 D2): a read-only "Challenges"
+	// line naming the target — changing the target is out of scope for 1.0.
+	const isDefeater = !!node.data?.isDefeater;
+	const challengedName = findChallengedElementName(
+		node.data?.defeatsElementId as string | null | undefined,
+		allNodes
+	);
 	// Fail-closed, positive rule: editable only when the case permission is
 	// explicitly "edit" or "manage". Any other value — "view", "comment",
 	// or unset/unknown while the case is still loading — renders read-only.
@@ -635,6 +658,14 @@ export default function NodeEditDialog({
 	const detailsForm = (
 		<Form {...form}>
 			<form className="space-y-4" onSubmit={form.handleSubmit(handleSubmit)}>
+				{isDefeater && (
+					<div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm">
+						<span className="font-medium text-muted-foreground">
+							Challenges:{" "}
+						</span>
+						<span>{challengedName ?? "an element outside this case"}</span>
+					</div>
+				)}
 				<TextFieldSection
 					form={form}
 					label="Description"

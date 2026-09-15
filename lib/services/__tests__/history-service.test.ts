@@ -875,6 +875,18 @@ describe("generateOperationDescription", () => {
 				generateOperationDescription("move", "property_claim", "My Claim")
 			).toBe('Moved claim "My Claim"');
 		});
+
+		it("formats away_goal as 'away goal' (ADR 0005 D3)", () => {
+			expect(generateOperationDescription("move", "away_goal", "AG1")).toBe(
+				'Moved away goal "AG1"'
+			);
+		});
+
+		it("formats module as 'module', unchanged (ADR 0005 D3)", () => {
+			expect(generateOperationDescription("move", "module", "M1")).toBe(
+				'Moved module "M1"'
+			);
+		});
 	});
 
 	describe('"detach" type', () => {

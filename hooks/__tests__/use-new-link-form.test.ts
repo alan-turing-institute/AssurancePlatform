@@ -245,3 +245,74 @@ describe("useNewLinkForm — rewritten payload builders (parentId resolution)", 
 		expect(body?.parentId).toBe("goal-1");
 	});
 });
+
+// defeatsElementId is zod-validated as a UUID (lib/schemas/element.ts) —
+// unlike the shared NODE/STRATEGY_NODE/GOAL_NODE fixtures above (whose
+// data.id values are plain test strings, fine for parentId but not for a
+// UUID-constrained field), these fixtures use UUID-shaped ids so
+// handleDefeaterAdd's real payload passes the real schema the mocked route
+// validates against.
+const CLAIM_NODE_UUID: Node = {
+	id: "1",
+	type: "property",
+	position: { x: 0, y: 0 },
+	data: { id: "11111111-1111-4111-8111-111111111111" },
+};
+const STRATEGY_NODE_UUID: Node = {
+	id: "2",
+	type: "strategy",
+	position: { x: 0, y: 0 },
+	data: { id: "22222222-2222-4222-8222-222222222222" },
+};
+const GOAL_NODE_UUID: Node = {
+	id: "3",
+	type: "goal",
+	position: { x: 0, y: 0 },
+	data: { id: "33333333-3333-4333-8333-333333333333" },
+};
+
+describe("useNewLinkForm — handleDefeaterAdd (ADR 0005 D7)", () => {
+	it("sends isDefeater: true and defeatsElementId = the element the menu was opened on, as both parentId and defeatsElementId", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: CLAIM_NODE_UUID, linkType: "defeater" });
+
+		await submitDescription(result, "This challenges the claim");
+
+		const body = getReceivedBody();
+		expect(body).toBeDefined();
+		expect(body?.isDefeater).toBe(true);
+		expect(body?.defeatsElementId).toBe(CLAIM_NODE_UUID.data.id);
+		expect(body?.parentId).toBe(CLAIM_NODE_UUID.data.id);
+		expect(body?.type).toBe("property_claim");
+	});
+
+	it("works from a goal, a strategy, or a property claim — the menu can open on any of the three", async () => {
+		for (const node of [GOAL_NODE_UUID, STRATEGY_NODE_UUID, CLAIM_NODE_UUID]) {
+			const { getReceivedBody } = mockElementsRoute();
+			const { result } = setup({ node, linkType: "defeater" });
+
+			await submitDescription(result, "A counter-claim");
+
+			const body = getReceivedBody();
+			expect(body?.defeatsElementId).toBe(node.data.id);
+		}
+	});
+
+	it("shows a destructive toast and does not throw when creation fails", async () => {
+		server.use(
+			http.post("/api/cases/:caseId/elements", () =>
+				HttpResponse.json({ error: "Failed" }, { status: 400 })
+			)
+		);
+		const { result } = setup({ node: CLAIM_NODE_UUID, linkType: "defeater" });
+
+		await submitDescription(result, "This challenges the claim");
+
+		expect(toast).toHaveBeenCalledWith(
+			expect.objectContaining({
+				variant: "destructive",
+				description: "Failed to create defeater",
+			})
+		);
+	});
+});

@@ -1,6 +1,13 @@
 "use client";
 
-import { FileText, GitBranch, Scale } from "lucide-react";
+import {
+	ArrowUpRight,
+	FileText,
+	GitBranch,
+	Package,
+	Scale,
+	ShieldAlert,
+} from "lucide-react";
 import { useState } from "react";
 import type { Node } from "reactflow";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
@@ -31,6 +38,41 @@ interface AddOption {
 	type: string;
 }
 
+const STRATEGY_OPTION: AddOption = {
+	type: "strategy",
+	label: "Add Strategy",
+	icon: <GitBranch className="h-4 w-4" />,
+};
+const CLAIM_OPTION: AddOption = {
+	type: "claim",
+	label: "Add Property Claim",
+	icon: <Scale className="h-4 w-4" />,
+};
+const EVIDENCE_OPTION: AddOption = {
+	type: "evidence",
+	label: "Add Evidence",
+	icon: <FileText className="h-4 w-4" />,
+};
+// Dialogical reasoning (defeaters, ADR 0005 D7): available on a goal's,
+// property claim's or strategy's add-child menu.
+const DEFEATER_OPTION: AddOption = {
+	type: "defeater",
+	label: "Add Defeater",
+	icon: <ShieldAlert className="h-4 w-4" />,
+};
+// Away goal / module (ADR 0005 D7): available wherever "Add Property
+// Claim" appears.
+const AWAY_GOAL_OPTION: AddOption = {
+	type: "away-goal",
+	label: "Add Away Goal",
+	icon: <ArrowUpRight className="h-4 w-4" />,
+};
+const MODULE_OPTION: AddOption = {
+	type: "module",
+	label: "Add Module",
+	icon: <Package className="h-4 w-4" />,
+};
+
 /**
  * Get the available add options based on node type
  */
@@ -38,42 +80,22 @@ function getAddOptions(nodeType: DiagramNodeType): AddOption[] {
 	switch (nodeType) {
 		case "goal":
 			return [
-				{
-					type: "strategy",
-					label: "Add Strategy",
-					icon: <GitBranch className="h-4 w-4" />,
-				},
-				{
-					type: "claim",
-					label: "Add Property Claim",
-					icon: <Scale className="h-4 w-4" />,
-				},
+				STRATEGY_OPTION,
+				CLAIM_OPTION,
+				DEFEATER_OPTION,
+				AWAY_GOAL_OPTION,
+				MODULE_OPTION,
 			];
 		case "strategy":
-			return [
-				{
-					type: "claim",
-					label: "Add Property Claim",
-					icon: <Scale className="h-4 w-4" />,
-				},
-			];
+			return [CLAIM_OPTION, DEFEATER_OPTION, AWAY_GOAL_OPTION, MODULE_OPTION];
 		case "property":
 			return [
-				{
-					type: "strategy",
-					label: "Add Strategy",
-					icon: <GitBranch className="h-4 w-4" />,
-				},
-				{
-					type: "claim",
-					label: "Add Property Claim",
-					icon: <Scale className="h-4 w-4" />,
-				},
-				{
-					type: "evidence",
-					label: "Add Evidence",
-					icon: <FileText className="h-4 w-4" />,
-				},
+				STRATEGY_OPTION,
+				CLAIM_OPTION,
+				EVIDENCE_OPTION,
+				DEFEATER_OPTION,
+				AWAY_GOAL_OPTION,
+				MODULE_OPTION,
 			];
 		default:
 			return [];

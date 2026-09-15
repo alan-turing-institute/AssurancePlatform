@@ -116,6 +116,9 @@ export function fromCollectionName(plural: string): string {
 		strategies: "strategy",
 		propertyclaims: "property_claim",
 		evidence: "evidence",
+		// ADR 0005 D7: away goal / module creation
+		awaygoals: "away_goal",
+		modules: "module",
 	};
 	return map[plural] ?? plural;
 }
