@@ -12,6 +12,7 @@ import "reactflow/dist/style.css";
 import { Loader2, Unplug, X } from "lucide-react";
 import ChallengesEdge from "@/components/cases/challenges-edge";
 import { nodeTypes } from "@/components/cases/node-type-resolver";
+import SupportEdge from "@/components/cases/support-edge";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
@@ -27,6 +28,7 @@ import CommentsSheet from "./comments-sheet";
 // prevents React Flow warning about recreated type-map objects.
 const edgeTypes = {
 	challenges: ChallengesEdge,
+	support: SupportEdge,
 };
 
 function Flow() {

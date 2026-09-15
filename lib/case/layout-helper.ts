@@ -210,6 +210,155 @@ function buildCells(sortedVisibleNodes: Node[]): {
 }
 
 /**
+ * Kind-ordering rank for a cell's (or any parent's) children, before
+ * identifier (ADR 0005 D1's "cross-kind order", D8): strategies and
+ * property claims first, then evidence, then away goals and modules. An
+ * unranked type (goal — always a root here — or a future node kind) ties
+ * at rank 0 rather than breaking the sort.
+ */
+const KIND_RANK: Record<string, number> = {
+	strategy: 0,
+	property: 0,
+	evidence: 1,
+	awayGoal: 2,
+	module: 2,
+};
+
+function kindRank(node: Node): number {
+	return KIND_RANK[node.type ?? ""] ?? 0;
+}
+
+/**
+ * The index of `nodeId` within its own cell's `members` array (target = 0,
+ * then attachments in identifier order) — 0 for a node that isn't a cell
+ * member at all, so ordinary siblings compare as if all equally "first".
+ * Keeps a cell's own children (index 0) ahead of each side element's
+ * children (index 1, 2, …), in cell order — ADR 0005 D1's ordering rule.
+ */
+function cellMemberIndexOf(
+	nodeId: string,
+	cellIdByNodeId: Map<string, string>,
+	cellById: Map<string, Cell>
+): number {
+	const cellId = cellIdByNodeId.get(nodeId);
+	if (!cellId) {
+		return 0;
+	}
+	const cell = cellById.get(cellId);
+	if (!cell) {
+		return 0;
+	}
+	const index = cell.members.findIndex((member) => member.id === nodeId);
+	return index === -1 ? 0 : index;
+}
+
+/**
+ * Builds a node -> immediate-parent-id map from the graph's own edges,
+ * skipping any edge whose endpoints resolve to the SAME cell (e.g. the
+ * `challenges` edge, or the probe fixtures' equivalent) — that edge carries
+ * no tree information, since cell membership already places both ends.
+ * Matches `buildElkEdges`'s identical same-cell rule below.
+ */
+function buildParentIdByNodeId(
+	edges: Edge[],
+	cellIdByNodeId: Map<string, string>
+): Map<string, string> {
+	const parentIdByNodeId = new Map<string, string>();
+	for (const edge of edges) {
+		const sourceCellId = cellIdByNodeId.get(edge.source);
+		if (sourceCellId && sourceCellId === cellIdByNodeId.get(edge.target)) {
+			continue;
+		}
+		parentIdByNodeId.set(edge.target, edge.source);
+	}
+	return parentIdByNodeId;
+}
+
+/**
+ * Orders visible nodes so ELK's `forceNodeModelOrder` produces the row
+ * order ADR 0005 D1/D8 require: a cell's own children first (kind before
+ * identifier — strategies/property claims, then evidence, then away
+ * goals/modules), then each side element's children in cell order, each
+ * group kind-then-identifier sorted the same way. Plain (non-cell) siblings
+ * get the same kind-before-identifier treatment, which is what stops
+ * "AG1" < "E4" < "S1" string comparison from scattering an ordinary row.
+ *
+ * Implemented as a root-to-leaf path comparison, built from the graph's own
+ * edges (`buildParentIdByNodeId`) rather than a flat sort key or
+ * `data.parentId`: the "cell order, then kind, then identifier" rule only
+ * makes sense between actual siblings, found by walking both nodes' paths
+ * to the ancestor where they diverge — and the probe fixtures below (like
+ * production data with a defeater whose support edge is replaced by its
+ * `challenges` edge) express the tree purely through edges.
+ */
+function sortNodesForLayout(
+	visibleNodes: Node[],
+	validEdges: Edge[],
+	cellIdByNodeId: Map<string, string>,
+	cellById: Map<string, Cell>
+): Node[] {
+	const nodeById = new Map(visibleNodes.map((node) => [node.id, node]));
+	const parentIdByNodeId = buildParentIdByNodeId(validEdges, cellIdByNodeId);
+	const pathCache = new Map<string, Node[]>();
+
+	function getPath(nodeId: string): Node[] {
+		const cached = pathCache.get(nodeId);
+		if (cached) {
+			return cached;
+		}
+		const node = nodeById.get(nodeId);
+		if (!node) {
+			return [];
+		}
+		const parentId = parentIdByNodeId.get(nodeId);
+		const parentPath =
+			parentId && nodeById.has(parentId) ? getPath(parentId) : [];
+		const path = [...parentPath, node];
+		pathCache.set(nodeId, path);
+		return path;
+	}
+
+	function compareSiblings(a: Node, b: Node): number {
+		const memberDiff =
+			cellMemberIndexOf(a.id, cellIdByNodeId, cellById) -
+			cellMemberIndexOf(b.id, cellIdByNodeId, cellById);
+		if (memberDiff !== 0) {
+			return memberDiff;
+		}
+		const kindDiff = kindRank(a) - kindRank(b);
+		if (kindDiff !== 0) {
+			return kindDiff;
+		}
+		return compareIdentifiers(
+			(a.data?.name as string) || "",
+			(b.data?.name as string) || ""
+		);
+	}
+
+	function compareTreeOrder(a: Node, b: Node): number {
+		if (a.id === b.id) {
+			return 0;
+		}
+		const pathA = getPath(a.id);
+		const pathB = getPath(b.id);
+		const length = Math.min(pathA.length, pathB.length);
+		for (let i = 0; i < length; i++) {
+			const nodeA = pathA[i];
+			const nodeB = pathB[i];
+			if (nodeA && nodeB && nodeA.id !== nodeB.id) {
+				return compareSiblings(nodeA, nodeB);
+			}
+		}
+		// One path is a prefix of the other (an ancestor/descendant pair,
+		// which shouldn't occur among nodes ELK places in the same layer) —
+		// order the shorter (ancestor) first, for a well-defined total order.
+		return pathA.length - pathB.length;
+	}
+
+	return [...visibleNodes].sort(compareTreeOrder);
+}
+
+/**
  * Builds the ELK compound (group) node for one cell: members laid out in a
  * row perpendicular to the tree direction, zero padding, with the target as
  * `layoutOptions.elk.direction`'s first member and each attachment linked to
@@ -263,7 +412,13 @@ function buildElkChildren(
 	const elkChildren: ElkNode[] = [];
 	for (const node of sortedVisibleNodes) {
 		const cell = cellsByTargetId.get(node.id);
-		if (cell) {
+		// A node can be both a cell's target AND another cell's attachment
+		// (e.g. a defeater with its own further attachment) — `cellIdByNodeId`
+		// is the resolved truth for which cell it actually belongs to, so it
+		// must agree with `cell.id` before this node is treated as the
+		// emission point for `cell`; otherwise it's just a member of whatever
+		// cell `cellIdByNodeId` says, handled by the branch below.
+		if (cell && cellIdByNodeId.get(node.id) === cell.id) {
 			if (emittedCellIds.has(cell.id)) {
 				continue;
 			}
@@ -353,6 +508,61 @@ function flattenPositions(
 }
 
 /**
+ * Bottom edge (absolute y) of every cell in the laid-out graph, keyed by
+ * cell id — used to bend a cell's outgoing support edges below the WHOLE
+ * cell rather than at the target's own midpoint (ADR 0005 D8): with two
+ * stacked defeaters, the old midpoint-below-the-target bend passed through
+ * the second card. Only compound (cell) ELK nodes have `.children`; plain
+ * nodes are skipped.
+ */
+function computeCellBottoms(elkChildren: ElkNode[]): Map<string, number> {
+	const bottomByCellId = new Map<string, number>();
+	for (const child of elkChildren) {
+		if (child.children && child.children.length > 0) {
+			bottomByCellId.set(child.id, (child.y ?? 0) + (child.height ?? 0));
+		}
+	}
+	return bottomByCellId;
+}
+
+/**
+ * Sets `data.centerY` (ADR 0005 D8) on every edge whose source is a cell
+ * member and whose target sits OUTSIDE that same cell — a real "children of
+ * the cell" edge, not an in-cell edge like `challenges` (whose source and
+ * target both resolve to the same cell and carry no useful centreY of their
+ * own). The `support` edge type (`components/cases/support-edge.tsx`) reads
+ * this to bend its horizontal run below the whole cell instead of the
+ * default midpoint between source and target. Edges left untouched here
+ * (centerY stays undefined) fall back to `getSmoothStepPath`'s own default
+ * — the same bend `smoothstep` always used — so this is additive, not a
+ * behaviour change for ordinary edges outside a cell.
+ */
+function applyCellCenterY(
+	edges: Edge[],
+	cellIdByNodeId: Map<string, string>,
+	cellBottomByCellId: Map<string, number>,
+	gap: number
+): Edge[] {
+	return edges.map((edge) => {
+		const sourceCellId = cellIdByNodeId.get(edge.source);
+		if (!sourceCellId) {
+			return edge;
+		}
+		if (cellIdByNodeId.get(edge.target) === sourceCellId) {
+			return edge;
+		}
+		const bottom = cellBottomByCellId.get(sourceCellId);
+		if (bottom === undefined) {
+			return edge;
+		}
+		return {
+			...edge,
+			data: { ...edge.data, centerY: bottom + gap / 2 },
+		};
+	});
+}
+
+/**
  * Generates a layout for the given nodes and edges using ELK's layered algorithm.
  *
  * This function processes the visible nodes and edges in a graph, applies a hierarchical
@@ -394,16 +604,36 @@ export async function getLayoutedElements(
 		return { nodes, edges };
 	}
 
-	// Sort visible nodes by identifier to ensure consistent left-to-right ordering
-	// (e.g., S1 appears left of S2, P1 appears left of P2)
-	const sortedVisibleNodes = [...visibleNodes].sort((a, b) => {
-		const aName = (a.data?.name as string) || "";
-		const bName = (b.data?.name as string) || "";
-		return compareIdentifiers(aName, bName);
-	});
-
 	// ADR 0005 D1: group side-attached nodes under their target into cells.
-	const { cellsByTargetId, cellIdByNodeId } = buildCells(sortedVisibleNodes);
+	// buildCells still takes an identifier-sorted list, not raw
+	// `visibleNodes`: when a node is simultaneously a cell target AND
+	// another cell's attachment (the probe's CG1, itself the target of
+	// CSn1's attachment while also attached to G2), the LAST target
+	// processed wins that node's cell membership in `cellIdByNodeId` — this
+	// input order is what decides it, so it must stay identifier order
+	// (matching the pre-existing, tested behaviour) rather than the
+	// kind/cell-aware order computed below, which depends on this
+	// function's own output and would make the tie-break circular.
+	const identifierSortedNodes = [...visibleNodes].sort((a, b) =>
+		compareIdentifiers(
+			(a.data?.name as string) || "",
+			(b.data?.name as string) || ""
+		)
+	);
+	const { cellsByTargetId, cellIdByNodeId } = buildCells(identifierSortedNodes);
+	const cellById = new Map(
+		[...cellsByTargetId.values()].map((cell) => [cell.id, cell])
+	);
+
+	// ADR 0005 D1/D8: a cell's own children first, then each side element's
+	// children in cell order, kind before identifier throughout — see
+	// sortNodesForLayout's own comment for why this isn't a flat sort key.
+	const sortedVisibleNodes = sortNodesForLayout(
+		visibleNodes,
+		validEdges,
+		cellIdByNodeId,
+		cellById
+	);
 	const cellDirection = CELL_DIRECTION_MAP[elkDirection] || "RIGHT";
 
 	const elkChildren = buildElkChildren(
@@ -466,8 +696,18 @@ export async function getLayoutedElements(
 		return node;
 	});
 
+	// ADR 0005 D8: bend a cell's outgoing children edges below the whole
+	// cell, not the target's own midpoint.
+	const cellBottomByCellId = computeCellBottoms(layoutedGraph.children || []);
+	const layoutedEdges = applyCellCenterY(
+		edges,
+		cellIdByNodeId,
+		cellBottomByCellId,
+		Number(layerSpacing)
+	);
+
 	return {
 		nodes: layoutedNodes,
-		edges,
+		edges: layoutedEdges,
 	};
 }
