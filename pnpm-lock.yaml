@@ -275,6 +275,12 @@ importers:
       '@biomejs/biome':
         specifier: 2.4.6
         version: 2.4.6
+      '@codemirror/autocomplete':
+        specifier: ^6.20.3
+        version: 6.20.3
+      '@codemirror/state':
+        specifier: ^6.7.4
+        version: 6.7.4
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0

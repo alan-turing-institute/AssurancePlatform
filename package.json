@@ -106,6 +106,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.6",
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/state": "^6.7.4",
     "@playwright/test": "^1.63.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
