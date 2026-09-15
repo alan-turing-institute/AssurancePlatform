@@ -83,6 +83,14 @@ test.describe("JSON editor — full screen and horizontal scroll", () => {
 		await page.keyboard.press("ControlOrMeta+a");
 		await page.keyboard.type(LONG_LINE);
 
+		// Typing leaves the cursor (and CodeMirror's auto-scroll-into-view)
+		// at the end of the line, i.e. already scrolled to its maximum — a
+		// wheel-scroll further right would have nowhere to go and the
+		// assertion below would fail every time. Home returns the cursor
+		// (and the scroller) to the start of the line first.
+		await page.keyboard.press("Home");
+		await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBe(0);
+
 		const scrollLeftBefore = await scroller.evaluate((el) => el.scrollLeft);
 		await scroller.hover();
 		await page.mouse.wheel(300, 0);
