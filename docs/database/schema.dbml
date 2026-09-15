@@ -237,6 +237,7 @@ Table assurance_elements {
   inSandbox Boolean [not null, default: false, note: 'True if element is in draft/sandbox mode']
   isDefeater Boolean [not null, default: false, note: 'True if element is a counter-argument']
   defeatsElementId String [note: 'Element this defeater challenges']
+  defeatsDangling Boolean [not null, default: false]
   level Int [note: 'Hierarchy depth level for property claims']
   assertionStatus AssertionStatus
   citedElementId String

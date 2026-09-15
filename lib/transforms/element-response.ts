@@ -33,12 +33,37 @@ function addParentReference(
 }
 
 /**
+ * Applies the dialogical-reasoning (defeater) response fields. Split out of
+ * applyOptionalFields — same reason that function itself was split out of
+ * transformToResponse: adding defeatsDangling alongside isDefeater/
+ * defeatsElementId pushed applyOptionalFields over the cognitive-complexity
+ * budget.
+ */
+function applyDialogicalReasoningFields(
+	response: ElementResponse,
+	element: {
+		isDefeater?: boolean;
+		defeatsElementId?: string | null;
+		defeatsDangling?: boolean;
+	}
+): void {
+	if (element.isDefeater) {
+		response.isDefeater = true;
+	}
+	if (element.defeatsElementId) {
+		response.defeatsElementId = element.defeatsElementId;
+	}
+	if (element.defeatsDangling) {
+		response.defeatsDangling = true;
+	}
+}
+
+/**
  * Applies the optional single-value response fields (URLs, prose fields,
- * assertion status, and the citation/module-reference/dialogical-reasoning
- * metadata) that are only present on the response when the underlying
- * element data is present. Extracted out of transformToResponse — verbatim,
- * same conditions, same assignments — to keep that function under the
- * cognitive-complexity budget.
+ * assertion status, and the citation/module-reference metadata) that are
+ * only present on the response when the underlying element data is present.
+ * Extracted out of transformToResponse — verbatim, same conditions, same
+ * assignments — to keep that function under the cognitive-complexity budget.
  */
 function applyOptionalFields(
 	response: ElementResponse,
@@ -55,6 +80,7 @@ function applyOptionalFields(
 		moduleReferenceId?: string | null;
 		isDefeater?: boolean;
 		defeatsElementId?: string | null;
+		defeatsDangling?: boolean;
 	}
 ): void {
 	// Handle URLs: prefer urls array, fall back to legacy url field
@@ -89,12 +115,7 @@ function applyOptionalFields(
 	if (element.moduleReferenceId) {
 		response.moduleReferenceId = element.moduleReferenceId;
 	}
-	if (element.isDefeater) {
-		response.isDefeater = true;
-	}
-	if (element.defeatsElementId) {
-		response.defeatsElementId = element.defeatsElementId;
-	}
+	applyDialogicalReasoningFields(response, element);
 }
 
 /**
@@ -126,6 +147,10 @@ export function transformToResponse(element: {
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	isDefeater?: boolean;
 	defeatsElementId?: string | null;
+	// Dangling-defeat indicator (see resolveImportedDefeatsElementId,
+	// case-import-service.ts) — true when defeatsElementId was blanked
+	// because the imported target wasn't part of the same import.
+	defeatsDangling?: boolean;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;

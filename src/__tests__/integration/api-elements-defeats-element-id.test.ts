@@ -190,4 +190,99 @@ describe("PUT /api/elements/[id] — defeatsElementId", () => {
 		});
 		expect(inDb?.defeatsElementId).toBeNull();
 	});
+
+	/**
+	 * Mirrors api-elements-cited-element-id.test.ts's "clears citationDangling
+	 * when the author sets a fresh citedElementId": buildUpdateData
+	 * (element-service.ts) must reset defeatsDangling whenever the author
+	 * explicitly touches defeatsElementId, the same way it already resets
+	 * citationDangling — otherwise an element imported as dangling (ADR 0004
+	 * D5-style import fidelity fix) keeps reporting defeatsDangling: true
+	 * after the author repoints the reference.
+	 */
+	it("clears defeatsDangling when the author sets a fresh defeatsElementId", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const target = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		const element = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			isDefeater: true,
+			defeatsDangling: true,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/elements/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/elements/${element.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ defeatsElementId: target.id }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: element.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.defeatsDangling).toBeUndefined();
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: element.id },
+		});
+		expect(inDb?.defeatsDangling).toBe(false);
+	});
+});
+
+/**
+ * QA round 1 (nanaki, missing test): nothing exercised
+ * lib/transforms/element-response.ts's defeatsDangling surfacing. Mirrors
+ * api-elements-cited-element-id.test.ts's citationDangling assertion style
+ * (`toBe(true)` / `toBeUndefined()`), but through GET rather than PUT, since
+ * the point here is transformToResponse's omit-when-falsy behaviour on a
+ * plain read, not a state transition.
+ */
+describe("GET /api/elements/[id] — defeatsDangling response surfacing", () => {
+	it("carries defeatsDangling: true in the response body for a dangling defeater", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const element = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			isDefeater: true,
+			defeatsDangling: true,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/elements/[id]/route");
+		const response = await GET(
+			new NextRequest(`http://localhost:3000/api/elements/${element.id}`),
+			{ params: Promise.resolve({ id: element.id }) }
+		);
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.defeatsDangling).toBe(true);
+	});
+
+	it("omits defeatsDangling from the response body for a non-dangling element", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const element = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/elements/[id]/route");
+		const response = await GET(
+			new NextRequest(`http://localhost:3000/api/elements/${element.id}`),
+			{ params: Promise.resolve({ id: element.id }) }
+		);
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.defeatsDangling).toBeUndefined();
+	});
 });
