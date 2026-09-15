@@ -322,7 +322,22 @@ async function main() {
 				],
 			});
 
-			console.log("Created: Simple Case (Draft, chris)");
+			// Share with alice (VIEW) — the other direction of the cross-user
+			// permission stories (TEA — Seed a shared case from alice to
+			// chris): chris already shares Medium Case with alice at EDIT
+			// (below), so this pairs it with a VIEW-only share too.
+			await tx.casePermission.create({
+				data: {
+					caseId: simpleCase.id,
+					userId: alice.id,
+					permission: "VIEW",
+					grantedById: chris.id,
+				},
+			});
+
+			console.log(
+				"Created: Simple Case (Draft, chris, shared with alice VIEW)"
+			);
 
 			// 3b. Medium Case (chris) - published after the transaction commits
 			// (see step 5 below) via the real publish service, shared with alice
@@ -559,7 +574,94 @@ async function main() {
 				},
 			});
 
-			console.log(`Created: Alice's Case (Draft, alice, team shared)`);
+			// Also share directly with chris (VIEW) — cross-user permission
+			// stories (TEA — Seed a shared case from alice to chris) need "a
+			// case chris can see but not edit". Staging reseeds on every
+			// deploy and nobody but alice's seed password can create this
+			// share, so it has to be permanent seed data.
+			await tx.casePermission.create({
+				data: {
+					caseId: aliceCase.id,
+					userId: chris.id,
+					permission: "VIEW",
+					grantedById: alice.id,
+				},
+			});
+
+			console.log(
+				"Created: Alice's Case (Draft, alice, team shared, shared with chris VIEW)"
+			);
+
+			// 3c-bis. Alice's Second Case — Draft, shared with chris at EDIT.
+			// A second alice-owned case is needed because one case can only
+			// carry one permission level per user: this pairs with Alice's
+			// Case (VIEW, above) to give chris both a VIEW-only and an
+			// EDIT-able case from alice.
+			const aliceCase2 = await tx.assuranceCase.create({
+				data: {
+					name: "Alice's Second Case",
+					description:
+						"A second case owned by Alice, shared with Chris at EDIT",
+					createdById: alice.id,
+					mode: "STANDARD",
+					publishStatus: "DRAFT",
+				},
+			});
+
+			const aliceCase2Goal = await tx.assuranceElement.create({
+				data: {
+					caseId: aliceCase2.id,
+					elementType: "GOAL",
+					role: "TOP_LEVEL",
+					name: "G1",
+					description: "Cross-team review is effective",
+					createdById: alice.id,
+				},
+			});
+
+			const aliceCase2Claim = await tx.assuranceElement.create({
+				data: {
+					caseId: aliceCase2.id,
+					elementType: "PROPERTY_CLAIM",
+					role: "SUPPORTING",
+					parentId: aliceCase2Goal.id,
+					name: "P1",
+					description: "Reviewers outside the owning team can edit",
+					createdById: alice.id,
+				},
+			});
+
+			const aliceCase2Evidence = await tx.assuranceElement.create({
+				data: {
+					caseId: aliceCase2.id,
+					elementType: "EVIDENCE",
+					role: "SUPPORTING",
+					name: "E1",
+					description: "Cross-team edit audit log",
+					url: "https://example.com/reports/cross-team-edit.pdf",
+					createdById: alice.id,
+				},
+			});
+
+			await tx.evidenceLink.create({
+				data: {
+					evidenceId: aliceCase2Evidence.id,
+					claimId: aliceCase2Claim.id,
+				},
+			});
+
+			await tx.casePermission.create({
+				data: {
+					caseId: aliceCase2.id,
+					userId: chris.id,
+					permission: "EDIT",
+					grantedById: alice.id,
+				},
+			});
+
+			console.log(
+				"Created: Alice's Second Case (Draft, alice, shared with chris EDIT)"
+			);
 
 			// 3d. Bob's Case - Draft, shared with charlie (external)
 			const bobCase = await tx.assuranceCase.create({
@@ -916,10 +1018,15 @@ async function main() {
 	console.log("\nCreated:");
 	console.log("  - 4 users: chris, alice, bob, charlie");
 	console.log("  - 1 team: Test Team (alice=ADMIN, bob=MEMBER)");
-	console.log("  - 5 assurance cases:");
-	console.log("    - Simple Case (chris, Draft)");
-	console.log("    - Medium Case (chris, Published, shared with alice)");
-	console.log("    - Alice's Case (alice, Draft, team shared)");
+	console.log("  - 6 assurance cases:");
+	console.log("    - Simple Case (chris, Draft, shared with alice VIEW)");
+	console.log("    - Medium Case (chris, Published, shared with alice EDIT)");
+	console.log(
+		"    - Alice's Case (alice, Draft, team shared, shared with chris VIEW)"
+	);
+	console.log(
+		"    - Alice's Second Case (alice, Draft, shared with chris EDIT)"
+	);
 	console.log("    - Bob's Case (bob, Draft, shared with charlie)");
 	console.log(
 		`    - DARTER Demo — Automated Inspection Assurance (chris, Draft, id=${demoCaseId}, claim P1 id=${demoClaim1Id} is the live evidence target)`
