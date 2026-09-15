@@ -18,6 +18,7 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
+import { Badge } from "@/components/ui/badge";
 import {
 	Tooltip,
 	TooltipContent,
@@ -60,6 +61,8 @@ export interface BaseNodeProps {
 	expandTour?: string;
 	/** Whether to start in expanded state */
 	initialExpanded?: boolean;
+	/** Dialogical reasoning (defeaters, ADR 0005 D2) — shows a "Defeater" chip and a distinct destructive-token border, regardless of node kind. */
+	isDefeater?: boolean;
 	/** Justification text */
 	justification?: string;
 	/** The display name/ID of the node (e.g., "G1", "S1", "P1") */
@@ -144,6 +147,7 @@ export default function BaseNode({
 	assumption,
 	justification,
 	initialExpanded = false,
+	isDefeater = false,
 	topRightActions,
 	bottomLeftActions,
 	children,
@@ -206,6 +210,7 @@ export default function BaseNode({
 	const containerClasses = buildNodeContainerClasses({
 		nodeType,
 		isSelected: selected,
+		isDefeater,
 		className,
 	});
 
@@ -231,6 +236,15 @@ export default function BaseNode({
 							className={buildNodeIconClasses(nodeType)}
 						/>
 						<span className={buildNodeTitleClasses()}>{name}</span>
+						{isDefeater && (
+							<Badge
+								aria-label="This element is a defeater"
+								className="rounded-full border-none bg-destructive/10 px-2 py-0.5 font-medium text-[10px] text-destructive ring-1 ring-destructive/20 ring-inset"
+								variant="outline"
+							>
+								Defeater
+							</Badge>
+						)}
 					</div>
 					{topRightActions && (
 						<div className="flex items-center">{topRightActions}</div>

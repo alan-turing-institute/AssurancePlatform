@@ -18,6 +18,8 @@ import { DashboardPage } from "./pages/dashboard-page";
 
 const G1_ADD_CHILD_LABEL = "Add child element";
 const CITED_CASE_NAME_PATTERN = /^Cited Case/;
+const CHALLENGES_EDGE_PATH_SELECTOR =
+	".react-flow__edge path[stroke-dasharray]";
 
 function g1Node(page: Page) {
 	return page.locator(".react-flow__node", { hasText: "G1" });
@@ -38,6 +40,20 @@ async function createCaseViaModal(page: Page, name: string): Promise<void> {
 	await page.waitForURL(CASE_URL_PATTERN);
 }
 
+/**
+ * Adds a defeater on G1 via the canvas and returns a locator scoped to the
+ * new defeater's own card — scoped by its (unique) description text rather
+ * than its auto-generated identifier, which this test can't predict.
+ */
+async function addDefeaterOnG1(page: Page, description: string) {
+	await openAddChildMenu(page);
+	await page.getByRole("button", { name: "Add Defeater" }).click();
+	await page.getByPlaceholder("Type your description here.").fill(description);
+	await page.getByRole("button", { name: "Add", exact: true }).click();
+
+	return page.locator(".react-flow__node", { hasText: description });
+}
+
 test.describe("Side-attached elements (ADR 0005)", () => {
 	test("renders an away goal and a defeater added from the canvas, with the challenges edge", async ({
 		page,
@@ -51,29 +67,28 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		// Add away goal, citing the case created above.
 		await openAddChildMenu(page);
 		await page.getByRole("button", { name: "Add Away Goal" }).click();
-		await page.getByLabel("Case").click();
+		const awayGoalDialog = page.getByRole("dialog");
+		await awayGoalDialog.getByLabel("Case", { exact: true }).click();
 		await page.getByRole("option", { name: CITED_CASE_NAME_PATTERN }).click();
-		await page.getByLabel("Goal").click();
+		await awayGoalDialog.getByLabel("Goal", { exact: true }).click();
 		await page.getByRole("option", { name: "G1" }).click();
-		await page.getByRole("button", { name: "Add Away Goal" }).click();
+		await awayGoalDialog.getByRole("button", { name: "Add Away Goal" }).click();
 
 		await expect(page.getByText("Cites")).toBeVisible();
 
 		// Add a defeater challenging G1.
-		await openAddChildMenu(page);
-		await page.getByRole("button", { name: "Add Defeater" }).click();
-		await page
-			.getByPlaceholder("Type your description here.")
-			.fill("This challenges G1's assertion.");
-		await page.getByRole("button", { name: "Add", exact: true }).click();
-
-		await expect(page.getByText("Defeater").first()).toBeVisible();
-
-		// The challenges edge: dashed, destructive-token stroke.
-		const challengesEdgePath = page.locator(
-			".react-flow__edge path[stroke-dasharray]"
+		const defeaterCard = await addDefeaterOnG1(
+			page,
+			"This challenges G1's assertion."
 		);
-		await expect(challengesEdgePath.first()).toBeVisible();
+		await expect(
+			defeaterCard.getByText("Defeater", { exact: true })
+		).toBeVisible();
+
+		// The challenges edge: dashed, destructive-token stroke — exactly one,
+		// for the one defeater added. `toBeVisible` on a zero-height
+		// horizontal <path> is unreliable; count is the stable assertion.
+		await expect(page.locator(CHALLENGES_EDGE_PATH_SELECTOR)).toHaveCount(1);
 	});
 
 	test("adding a defeater from the canvas shows the chip and dashed edge", async ({
@@ -81,20 +96,17 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 	}) => {
 		await createCaseViaModal(page, `Defeater Case ${Date.now()}`);
 
-		await openAddChildMenu(page);
-		await page.getByRole("button", { name: "Add Defeater" }).click();
-		await page
-			.getByPlaceholder("Type your description here.")
-			.fill("A counter-claim against G1.");
-		await page.getByRole("button", { name: "Add", exact: true }).click();
+		const defeaterCard = await addDefeaterOnG1(
+			page,
+			"A counter-claim against G1."
+		);
 
 		// The new defeater card carries the "Defeater" chip.
-		await expect(page.getByText("Defeater").first()).toBeVisible();
+		await expect(
+			defeaterCard.getByText("Defeater", { exact: true })
+		).toBeVisible();
 
 		// A dashed edge (the `challenges` edge, ADR 0005 D4) is drawn.
-		const challengesEdgePath = page.locator(
-			".react-flow__edge path[stroke-dasharray]"
-		);
-		await expect(challengesEdgePath.first()).toBeVisible();
+		await expect(page.locator(CHALLENGES_EDGE_PATH_SELECTOR)).toHaveCount(1);
 	});
 });

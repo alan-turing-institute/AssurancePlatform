@@ -10,6 +10,8 @@ import { type DiagramNodeType, getNodeColours } from "./node-config";
 
 interface NodeContainerOptions {
 	className?: string;
+	/** Dialogical reasoning (defeaters, ADR 0005 D2) — a distinct destructive-token border, overriding the node kind's own colour. */
+	isDefeater?: boolean;
 	isSelected?: boolean;
 	nodeType: DiagramNodeType;
 }
@@ -22,6 +24,7 @@ interface NodeContainerOptions {
 export function buildNodeContainerClasses({
 	nodeType,
 	isSelected = false,
+	isDefeater = false,
 	className = "",
 }: NodeContainerOptions): string {
 	const colours = getNodeColours(nodeType);
@@ -36,11 +39,16 @@ export function buildNodeContainerClasses({
 		"transition-all",
 		"duration-300",
 		"border-2",
-		colours.border,
+		// A defeater's border is destructive-token, regardless of its card
+		// kind's own colour — the card decoration ADR 0005 D2 asks for.
+		isDefeater ? "border-destructive/60" : colours.border,
 	];
 
 	if (isSelected) {
-		baseClasses.push("ring-2", colours.ring);
+		baseClasses.push(
+			"ring-2",
+			isDefeater ? "ring-destructive/50" : colours.ring
+		);
 	}
 
 	return cn(...baseClasses, className);
