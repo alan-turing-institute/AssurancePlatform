@@ -51,7 +51,8 @@
         "id": {
           "type": "string",
           "format": "uuid",
-          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "description": "Unique identifier for the element"
         },
         "type": {
           "type": "string",
@@ -70,13 +71,16 @@
           "description": "The type of element in an assurance case"
         },
         "name": {
+          "description": "Display name (e.g., G1, S1, P1, E1)",
           "type": ["string", "null"]
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "The element's content/description"
         },
         "inSandbox": {
           "default": false,
+          "description": "Whether this element is in the sandbox (draft state)",
           "type": "boolean"
         },
         "children": {
@@ -87,7 +91,8 @@
                 "$ref": "#/definitions/TreeNode"
               }
             ]
-          }
+          },
+          "description": "Child elements"
         },
         "role": {
           "anyOf": [
@@ -154,17 +159,21 @@
           ]
         },
         "fromPattern": {
+          "description": "Whether this element was created from a pattern template",
           "default": false,
           "type": "boolean"
         },
         "modifiedFromPattern": {
+          "description": "Whether this element has been modified since being created from a pattern",
           "default": false,
           "type": "boolean"
         },
         "isDefeater": {
+          "description": "Whether this element is a defeater (dialogical reasoning)",
           "type": "boolean"
         },
         "defeatsElementId": {
+          "description": "ID of the element this defeater targets",
           "type": "string",
           "format": "uuid",
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
@@ -189,6 +198,7 @@
           ]
         },
         "comments": {
+          "description": "Comments attached to this element. Can be added to any element type.",
           "type": "array",
           "items": {
             "type": "object",
