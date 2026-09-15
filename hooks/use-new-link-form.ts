@@ -427,10 +427,16 @@ export function useNewLinkForm({
 		);
 
 		if (result.error) {
+			// Surface the server's own validation message verbatim — a generic
+			// "cannot create …" line hid the real reason (walkthrough finding 7).
+			const errorMessage =
+				typeof result.error === "string"
+					? result.error
+					: "Failed to create defeater";
 			toast({
 				variant: "destructive",
 				title: "Error",
-				description: "Failed to create defeater",
+				description: errorMessage,
 			});
 			setLoading(false);
 			return;
