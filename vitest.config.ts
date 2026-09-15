@@ -30,6 +30,11 @@ export default defineConfig({
 			".claude/**",
 			"e2e/**",
 			"src/__tests__/integration/**",
+			// A production build (e.g. from a browser-based QA pass) copies the
+			// whole source tree, test files included, into .next/standalone —
+			// already excluded from coverage below, but not from discovery, so
+			// a build left on disk gets every test collected a second time.
+			".next/**",
 		],
 		testTimeout: 15_000,
 		hookTimeout: 10_000,

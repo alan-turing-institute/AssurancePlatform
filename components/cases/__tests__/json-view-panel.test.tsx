@@ -1,8 +1,16 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { exportCase } from "@/actions/export-case";
 import useStore from "@/store/store";
 import JsonViewPanel from "../json-view-panel";
+
+// The repo-wide Radix Dialog mock (src/__tests__/setup/component-mocks.tsx)
+// closes on ANY Escape unconditionally — it doesn't implement Radix's real
+// onEscapeKeyDown/defaultPrevented contract. The full-screen Esc fix (round
+// 2) relies on exactly that contract, so this file needs the real
+// primitive to prove the wiring is correct, not a simplified stand-in.
+vi.unmock("@radix-ui/react-dialog");
 
 const ROOT_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -71,10 +79,14 @@ describe("JsonViewPanel — full-screen toggle", () => {
 		});
 		expect(exitButton).toHaveAttribute("aria-pressed", "true");
 
-		// Escape targeting an element inside the panel — matches the fix
-		// (react-doctor/vincent round 1): the handler is scoped to the Sheet
-		// content via onKeyDownCapture, not a document-level listener, so it
-		// only sees events whose target is inside this panel.
+		// Round 2 fix: full screen exits via Radix's own onEscapeKeyDown
+		// (SheetContent forwards it to DialogPrimitive.Content), not a
+		// competing listener of ours — Radix calls our callback as part of
+		// its own handling and checks event.defaultPrevented before closing,
+		// so there's no listener-ordering race to get wrong. The real Radix
+		// Dialog is unmocked above so this exercises that actual contract.
+		// jsdom's Radix + native-event plumbing still isn't a real browser,
+		// though — e2e/json-editor.spec.ts is what proves this in one.
 		await user.keyboard("{Escape}");
 
 		await waitFor(() => {
@@ -139,6 +151,70 @@ describe("JsonViewPanel — wrap toggle (real CodeMirror effect)", () => {
 		});
 	});
 });
+
+describe("JsonViewPanel — full-screen width", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	it("leaves no narrower max-width utility active, at any breakpoint prefix, while full screen", async () => {
+		const user = userEvent.setup();
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const enterButton = await screen.findByRole("button", {
+			name: "Enter full screen",
+		});
+		await user.click(enterButton);
+
+		const dialog = screen.getByRole("dialog");
+		// The sheet primitive's own default (sm:max-w-sm, sheetVariants
+		// side="left") and this component's own non-full-screen breakpoints
+		// (sm:max-w-xl, md:max-w-2xl, lg:max-w-3xl) must all be neutralised —
+		// a bare "max-w-none" only beats the unprefixed case; twMerge
+		// doesn't dedupe classes that don't share the same prefix.
+		expect(dialog.className).not.toMatch(MAX_W_SM_PATTERN);
+		expect(dialog.className).not.toMatch(MAX_W_XL_PATTERN);
+		expect(dialog.className).not.toMatch(MAX_W_3XL_PATTERN);
+	});
+});
+
+describe("JsonViewPanel — schema-aware linting (mounted)", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	it("shows a schema-error mark for a violation only the schema-aware linter would catch", async () => {
+		// Deliberately not "type": "GOALZ" (an invalid ElementType enum):
+		// that's ALSO rejected by the pre-existing Zod-driven lintExtension
+		// (hooks/use-json-validation.ts), via the exact same
+		// .cm-lintRange-error class, so it wouldn't actually go red if
+		// schemaAwareExtensions were dropped from the panel — the one thing
+		// this test exists to catch. An unknown property at the envelope
+		// root is schema-only: CaseExportNestedSchema silently strips
+		// properties it doesn't model rather than rejecting them (see the
+		// comment on that schema explaining why), but the JSON Schema's own
+		// additionalProperties: false does not.
+		const dataWithBogusField = { ...sampleExport(), bogusField: true };
+		vi.mocked(exportCase).mockResolvedValueOnce({
+			data: dataWithBogusField,
+		});
+
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		// codemirror-json-schema's linter debounces its first pass longer
+		// than RTL's default waitFor timeout, so it's raised explicitly here.
+		await waitFor(
+			() => {
+				expect(document.querySelector(".cm-lintRange-error")).not.toBeNull();
+			},
+			{ timeout: 3000 }
+		);
+	});
+});
+
+const MAX_W_SM_PATTERN = /(^|\s)(sm:|md:|lg:)?max-w-sm(\s|$)/;
+const MAX_W_XL_PATTERN = /(^|\s)(sm:|md:|lg:)?max-w-xl(\s|$)/;
+const MAX_W_3XL_PATTERN = /(^|\s)(sm:|md:|lg:)?max-w-3xl(\s|$)/;
 
 describe("JsonViewPanel — Format button (real content effect)", () => {
 	beforeEach(() => {
