@@ -13,6 +13,7 @@ import {
 	type stateExtensions,
 } from "codemirror-json-schema";
 import { useTheme } from "next-themes";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { exportCase } from "@/actions/export-case";
 import {
@@ -477,31 +478,25 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		}
 	}, [isOpen, isDirty, assuranceCase?.updatedOn]);
 
-	// Esc exits full-screen rather than closing the panel. Registered on the
-	// capture phase (with stopPropagation) so it always runs before the
-	// Sheet's own Escape-to-close handler, regardless of mount order. Depends
-	// only on the component's own `isFullScreen` state (not the `isOpen`
-	// prop) — full screen is already reset on close via handleOpenChange
-	// below, so listening is never needed while closed.
-	useEffect(() => {
-		if (!isFullScreen) {
-			return;
-		}
-
-		const handleFullScreenEscape = (event: KeyboardEvent) => {
-			if (event.key !== "Escape") {
+	// Esc exits full-screen rather than closing the panel. Handled as a React
+	// capture-phase handler on the Sheet content itself (not a document-level
+	// listener), so it only ever sees events that target something inside
+	// this panel — an overlay opened elsewhere on the page, or a future
+	// overlay opened from inside the editor, isn't swallowed by it. React
+	// dispatches capture handlers before the target's own native listeners,
+	// so this still runs ahead of the Sheet's own Escape-to-close handling.
+	const handleEditorKeyDownCapture = useCallback(
+		(event: ReactKeyboardEvent<HTMLDivElement>) => {
+			if (!isFullScreen || event.key !== "Escape") {
 				return;
 			}
 			event.preventDefault();
 			event.stopPropagation();
 			setIsFullScreen(false);
 			fullScreenButtonRef.current?.focus();
-		};
-
-		document.addEventListener("keydown", handleFullScreenEscape, true);
-		return () =>
-			document.removeEventListener("keydown", handleFullScreenEscape, true);
-	}, [isFullScreen]);
+		},
+		[isFullScreen]
+	);
 
 	// Full screen doesn't persist across a close/reopen — reset it here,
 	// directly in the event that closes the panel, rather than in an effect
@@ -635,6 +630,7 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 					"flex w-full flex-col transition-[max-width] duration-200 motion-reduce:transition-none",
 					isFullScreen ? "max-w-none" : "sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
 				)}
+				onKeyDownCapture={handleEditorKeyDownCapture}
 				side="left"
 			>
 				<SheetHeader>
@@ -673,7 +669,10 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 					/>
 				</div>
 
-				<div className="mt-4 flex-1 overflow-auto overscroll-x-contain rounded-md border bg-muted/30">
+				{/* overscroll-behavior-x: contain lives on the .cm-scroller theme
+				rule above — that's CodeMirror's actual scrolling element, not
+				this wrapper. */}
+				<div className="mt-4 flex-1 overflow-auto rounded-md border bg-muted/30">
 					{loading ? (
 						<JsonLoadingSkeleton />
 					) : (
