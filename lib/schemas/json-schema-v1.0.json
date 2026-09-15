@@ -2,258 +2,235 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://tea-platform.org/schemas/case-export-v1.0.json",
   "title": "TEA Platform Assurance Case Export Schema v1.0",
-  "description": "Schema for TEA Platform assurance case exports in nested tree format. This is the authoritative specification for version 1.0 exports.",
   "type": "object",
-  "required": ["version", "exportedAt", "case", "tree"],
-  "additionalProperties": false,
   "properties": {
     "version": {
+      "type": "string",
       "const": "1.0",
-      "description": "Schema version identifier. Version 1.0 is the first officially versioned export format."
+      "description": "Schema version identifier"
     },
     "exportedAt": {
       "type": "string",
       "format": "date-time",
-      "description": "ISO 8601 timestamp of when the export was created"
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+      "description": "ISO 8601 timestamp of export"
     },
     "case": {
       "type": "object",
-      "description": "Case metadata",
-      "required": ["name", "description"],
-      "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string",
           "minLength": 1,
-          "description": "The case name"
+          "description": "Name of the assurance case"
         },
         "description": {
           "type": "string",
-          "description": "A description of the assurance case, such as its purpose and scope."
+          "description": "Description of the assurance case"
         }
-      }
+      },
+      "required": ["name", "description"],
+      "additionalProperties": false,
+      "description": "Case metadata"
     },
     "tree": {
-      "$ref": "#/definitions/TreeNode",
-      "description": "The root node of the assurance case tree (typically a GOAL element)"
+      "description": "Root element of the case tree",
+      "allOf": [
+        {
+          "$ref": "#/definitions/TreeNode"
+        }
+      ]
     }
   },
+  "required": ["version", "exportedAt", "case", "tree"],
+  "additionalProperties": false,
+  "description": "Assurance case export in nested tree format (v1.0)",
   "definitions": {
-    "ElementType": {
-      "type": "string",
-      "enum": [
-        "GOAL",
-        "STRATEGY",
-        "PROPERTY_CLAIM",
-        "EVIDENCE",
-        "MODULE",
-        "CONTRACT"
-      ],
-      "description": "The type of assurance case element. Note: Context, Justification, and Assumption are now attributes, not standalone element types."
-    },
-    "ElementRole": {
-      "type": "string",
-      "enum": ["TOP_LEVEL", "SUPPORTING"],
-      "description": "The role of a GOAL element"
-    },
-    "ModuleEmbedType": {
-      "type": "string",
-      "enum": ["COPY", "REFERENCE"],
-      "description": "How a MODULE element embeds its referenced case"
-    },
-    "Comment": {
-      "type": "object",
-      "description": "A comment attached to an element",
-      "required": ["author", "content", "createdAt"],
-      "additionalProperties": false,
-      "properties": {
-        "author": {
-          "type": "string",
-          "description": "Username or identifier of the comment author"
-        },
-        "content": {
-          "type": "string",
-          "description": "The comment text"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "ISO 8601 timestamp of when the comment was created"
-        }
-      }
-    },
     "TreeNode": {
       "type": "object",
-      "description": "A node in the assurance case tree. Field availability depends on element type.",
-      "required": ["id", "type", "description", "inSandbox", "children"],
       "properties": {
         "id": {
           "type": "string",
           "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
           "description": "Unique identifier for the element"
         },
         "type": {
-          "$ref": "#/definitions/ElementType",
-          "description": "The element type determines which additional fields are valid"
+          "type": "string",
+          "enum": [
+            "GOAL",
+            "CONTEXT",
+            "STRATEGY",
+            "PROPERTY_CLAIM",
+            "EVIDENCE",
+            "JUSTIFICATION",
+            "ASSUMPTION",
+            "MODULE",
+            "AWAY_GOAL",
+            "CONTRACT"
+          ],
+          "description": "The type of element in an assurance case"
         },
         "name": {
-          "type": ["string", "null"],
-          "description": "Display name (e.g., G1, S1, P1, E1)"
+          "description": "Display name (e.g., G1, S1, P1, E1)",
+          "type": ["string", "null"]
         },
         "description": {
           "type": "string",
           "description": "The element's content/description"
         },
         "inSandbox": {
-          "type": "boolean",
-          "description": "Whether this element is in the sandbox (draft state)"
+          "default": false,
+          "description": "Whether this element is in the sandbox (draft state)",
+          "type": "boolean"
         },
         "children": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/TreeNode"
+            "allOf": [
+              {
+                "$ref": "#/definitions/TreeNode"
+              }
+            ]
           },
           "description": "Child elements"
         },
-        "comments": {
+        "role": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["TOP_LEVEL", "SUPPORTING"],
+              "description": "The role of an element - TOP_LEVEL for root goals, SUPPORTING for child elements"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assumption": {
+          "type": ["string", "null"]
+        },
+        "justification": {
+          "type": ["string", "null"]
+        },
+        "context": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Comment"
-          },
-          "description": "Comments attached to this element. Can be added to any element type."
+            "type": "string"
+          }
         },
-        "fromPattern": {
-          "type": "boolean",
-          "description": "Whether this element was created from a pattern template"
+        "url": {
+          "type": ["string", "null"]
         },
-        "modifiedFromPattern": {
-          "type": "boolean",
-          "description": "Whether this element has been modified since being created from a pattern"
+        "level": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
-        "isDefeater": {
-          "type": "boolean",
-          "description": "Whether this element is a defeater (dialogical reasoning)"
-        },
-        "defeatsElementId": {
+        "moduleReferenceId": {
           "type": "string",
           "format": "uuid",
-          "description": "ID of the element this defeater targets"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": { "type": { "const": "GOAL" } }
-          },
-          "then": {
-            "properties": {
-              "role": {
-                "$ref": "#/definitions/ElementRole",
-                "description": "Role of the goal (TOP_LEVEL or SUPPORTING)"
-              },
-              "context": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Context statements that define conditions under which the goal is valid"
-              },
-              "justification": {
-                "type": ["string", "null"],
-                "description": "Justification explaining why this goal is appropriate"
-              },
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "Assumption that must hold for this goal to be valid"
-              }
-            }
-          }
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         },
-        {
-          "if": {
-            "properties": { "type": { "const": "STRATEGY" } }
-          },
-          "then": {
-            "properties": {
-              "context": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Context statements that define conditions under which the strategy applies"
-              },
-              "justification": {
-                "type": ["string", "null"],
-                "description": "Justification explaining why this decomposition strategy was chosen"
-              },
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "Assumption that must hold for this strategy to be valid"
-              }
-            }
-          }
+        "moduleEmbedType": {
+          "type": "string",
+          "enum": ["COPY", "REFERENCE"],
+          "description": "How a module is embedded - COPY creates independent copy, REFERENCE links to original"
         },
-        {
-          "if": {
-            "properties": { "type": { "const": "PROPERTY_CLAIM" } }
-          },
-          "then": {
-            "properties": {
-              "level": {
-                "type": ["integer", "null"],
-                "minimum": 1,
-                "description": "Hierarchy level of the property claim (1 = direct child of goal/strategy)"
-              },
-              "context": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Context statements that define conditions under which the claim is valid"
-              },
-              "justification": {
-                "type": ["string", "null"],
-                "description": "Justification explaining why this claim is relevant"
-              },
-              "assumption": {
-                "type": ["string", "null"],
-                "description": "Assumption that must hold for this claim to be valid"
-              }
-            }
-          }
+        "modulePublicSummary": {
+          "type": ["string", "null"]
         },
-        {
-          "if": {
-            "properties": { "type": { "const": "EVIDENCE" } }
-          },
-          "then": {
+        "citedElementId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fromPattern": {
+          "description": "Whether this element was created from a pattern template",
+          "default": false,
+          "type": "boolean"
+        },
+        "modifiedFromPattern": {
+          "description": "Whether this element has been modified since being created from a pattern",
+          "default": false,
+          "type": "boolean"
+        },
+        "isDefeater": {
+          "description": "Whether this element is a defeater (dialogical reasoning)",
+          "type": "boolean"
+        },
+        "defeatsElementId": {
+          "description": "ID of the element this defeater targets",
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "assertionStatus": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "ASSERTED",
+                "NEEDS_SUPPORT",
+                "ASSUMED",
+                "AXIOMATIC",
+                "DEFEATED",
+                "AS_CITED"
+              ],
+              "description": "Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "comments": {
+          "description": "Comments attached to this element. Can be added to any element type.",
+          "type": "array",
+          "items": {
+            "type": "object",
             "properties": {
-              "url": {
-                "type": ["string", "null"],
-                "description": "URL linking to the evidence source"
+              "author": {
+                "type": "string",
+                "description": "Username of the comment author"
+              },
+              "content": {
+                "type": "string",
+                "description": "Comment text content"
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO 8601 timestamp of comment creation"
               }
             },
-            "description": "Evidence elements cannot have context, justification, or assumption attributes"
-          }
-        },
-        {
-          "if": {
-            "properties": { "type": { "const": "MODULE" } }
-          },
-          "then": {
-            "required": ["moduleReferenceId", "moduleEmbedType"],
-            "properties": {
-              "moduleReferenceId": {
-                "type": "string",
-                "format": "uuid",
-                "description": "ID of the case being referenced/embedded"
-              },
-              "moduleEmbedType": {
-                "$ref": "#/definitions/ModuleEmbedType",
-                "description": "How the module embeds its referenced case"
-              },
-              "modulePublicSummary": {
-                "type": ["string", "null"],
-                "description": "Public summary of the module's content"
-              }
-            }
+            "required": ["author", "content", "createdAt"],
+            "additionalProperties": false,
+            "description": "A comment attached to an element"
           }
         }
-      ]
+      },
+      "required": [
+        "id",
+        "type",
+        "name",
+        "description",
+        "inSandbox",
+        "children"
+      ],
+      "additionalProperties": false
     }
   }
 }

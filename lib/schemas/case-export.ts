@@ -307,12 +307,15 @@ export const ExportCommentSchema = z
 export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 	// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 	z.object({
-		id: z.string().uuid(),
+		id: z.string().uuid().describe("Unique identifier for the element"),
 		type: ElementTypeSchema,
-		name: z.string().nullable(),
-		description: z.string(),
-		inSandbox: z.boolean().default(false),
-		children: z.array(TreeNodeSchema),
+		name: z.string().nullable().describe("Display name (e.g., G1, S1, P1, E1)"),
+		description: z.string().describe("The element's content/description"),
+		inSandbox: z
+			.boolean()
+			.default(false)
+			.describe("Whether this element is in the sandbox (draft state)"),
+		children: z.array(TreeNodeSchema).describe("Child elements"),
 		// Type-specific fields (optional - only included when applicable)
 		role: ElementRoleSchema.nullable().optional(),
 		assumption: z.string().nullable().optional(),
@@ -328,17 +331,39 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		// optional here for import leniency with pre-D5 exports.
 		citedElementId: z.string().uuid().nullable().optional(),
 		// Pattern metadata (optional - only included when true)
-		fromPattern: z.boolean().default(false).optional(),
-		modifiedFromPattern: z.boolean().default(false).optional(),
+		fromPattern: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe("Whether this element was created from a pattern template"),
+		modifiedFromPattern: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe(
+				"Whether this element has been modified since being created from a pattern"
+			),
 		// Dialogical reasoning
-		isDefeater: z.boolean().optional(),
-		defeatsElementId: z.string().uuid().optional(),
+		isDefeater: z
+			.boolean()
+			.optional()
+			.describe("Whether this element is a defeater (dialogical reasoning)"),
+		defeatsElementId: z
+			.string()
+			.uuid()
+			.optional()
+			.describe("ID of the element this defeater targets"),
 		// Per-assertion status (ADR 0004 D3) — optional/nullable here purely
 		// for import leniency with pre-D3 exports that never had the field;
 		// exports WE produce always set it (see buildCleanNode in build-tree.ts).
 		assertionStatus: AssertionStatusSchema.nullable().optional(),
 		// Comments (optional - included when export option enabled)
-		comments: z.array(ExportCommentSchema).optional(),
+		comments: z
+			.array(ExportCommentSchema)
+			.optional()
+			.describe(
+				"Comments attached to this element. Can be added to any element type."
+			),
 	})
 );
 
@@ -347,6 +372,12 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
  * Evidence appears inline under claims, may be duplicated if multi-linked.
  * Uses version "1.0" as this is the first officially versioned export format
  * (the legacy Django format had no version field).
+ *
+ * ADR 0004 D1: `version` is the format-migration key for the whole case
+ * export contract, not just a label. A change to the model this schema
+ * describes bumps the literal (e.g. "1.0" -> "2.0", mirrored in
+ * CaseExportV2Schema above) and ships an explicit migration; the shape
+ * behind a given version string never changes silently underneath it.
  */
 // biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportNestedSchema = z
