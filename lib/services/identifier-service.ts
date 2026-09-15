@@ -1,5 +1,5 @@
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
-import { getCorePrefix } from "@/lib/element-names/prefix-registry";
+import { getElementPrefix } from "@/lib/element-names/prefix-registry";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
@@ -9,13 +9,18 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 // ---------------------------------------------------------------------------
 
 /**
- * Looks up an element type's prefix in the single-source registry
+ * Looks up an element's prefix in the single-source registry
  * (`lib/element-names/prefix-registry.ts`), throwing rather than falling
  * back to "X" — every value of the Prisma `ElementType` enum has a
  * registered prefix, so an unknown type here is a bug, not expected input.
+ * `isDefeater` (Chris's ruling, 2026-09-15 — D8 of ADR 0005) composes the
+ * GSN-style "C" + prefix form for a defeater instead of the plain prefix.
  */
-function corePrefixOrThrow(elementType: string): string {
-	const prefix = getCorePrefix(elementType);
+function elementPrefixOrThrow(
+	elementType: string,
+	isDefeater: boolean
+): string {
+	const prefix = getElementPrefix(elementType, isDefeater);
 	if (!prefix) {
 		throw new Error(
 			`identifier-service: no prefix registered for element type '${elementType}'`
@@ -29,6 +34,7 @@ interface ElementWithChildren {
 	createdAt: Date;
 	elementType: string;
 	id: string;
+	isDefeater: boolean;
 	name: string | null;
 	parentId: string | null;
 }
@@ -55,6 +61,7 @@ function buildElementTree(
 		parentId: string | null;
 		createdAt: Date;
 		name: string | null;
+		isDefeater: boolean;
 	}>
 ): ElementWithChildren[] {
 	const elementMap = new Map<string, ElementWithChildren>();
@@ -125,24 +132,30 @@ function findParentNode(
 }
 
 /**
- * Get the 1-based index of a node among its siblings of the same type.
+ * Get the 1-based index of a node among its siblings of the same type AND
+ * the same `isDefeater` class — a defeater sibling never perturbs the plain
+ * sequence, and vice versa (naming class = (elementType, isDefeater),
+ * Chris's ruling, 2026-09-15 — D8 of ADR 0005).
  */
 function getSiblingIndex(
 	parent: ElementWithChildren,
 	nodeId: string,
-	elementType: string
+	elementType: string,
+	isDefeater: boolean
 ): number {
 	const siblingsOfType = parent.children.filter(
-		(c) => c.elementType === elementType
+		(c) => c.elementType === elementType && c.isDefeater === isDefeater
 	);
 	const index = siblingsOfType.findIndex((c) => c.id === nodeId);
 	return index + 1;
 }
 
 /**
- * Collect all effective property claim children of an ancestor claim,
+ * Collect all effective PLAIN property claim children of an ancestor claim,
  * including direct children and children of strategies under the ancestor.
- * Used for transparent strategy numbering during reset.
+ * Used for transparent strategy numbering during reset. Defeater children
+ * are excluded — they count within their own sequence instead (see
+ * `generatePropertyClaimName`'s defeater branch).
  */
 function collectEffectivePropertyClaimChildren(
 	ancestor: ElementWithChildren
@@ -150,12 +163,15 @@ function collectEffectivePropertyClaimChildren(
 	const effective: ElementWithChildren[] = [];
 
 	for (const child of ancestor.children) {
-		if (child.elementType === "PROPERTY_CLAIM") {
+		if (child.elementType === "PROPERTY_CLAIM" && !child.isDefeater) {
 			effective.push(child);
 		} else if (child.elementType === "STRATEGY") {
 			// Transparent: collect property claims under this strategy as effective children
 			for (const grandchild of child.children) {
-				if (grandchild.elementType === "PROPERTY_CLAIM") {
+				if (
+					grandchild.elementType === "PROPERTY_CLAIM" &&
+					!grandchild.isDefeater
+				) {
 					effective.push(grandchild);
 				}
 			}
@@ -166,11 +182,45 @@ function collectEffectivePropertyClaimChildren(
 }
 
 /**
- * Generate name for a property claim element.
+ * Generate name for a property claim element (Chris's ruling, 2026-09-15 —
+ * D8 of ADR 0005, "TEA — Defeater identifiers follow GSN"). A defeater
+ * property claim (§1:6.3.8 counter-claim) is named in its own sequence,
+ * independent of the plain P-sequence:
+ * - Nested under ANOTHER defeater property claim (a counter to a counter):
+ *   hierarchical off the parent defeater's own name (CP1.1), counted
+ *   within the defeater siblings only.
+ * - Every other defeater property claim (its parent is the element it
+ *   attacks, not itself a defeater — the "add defeater" menu creates the
+ *   defeater as a child of its target): flat, case-wide (CP1, CP2...),
+ *   via the shared `globalCounters` map, keyed like every other type.
+ * A PLAIN property claim's numbering is unchanged from the pre-D8 rule,
+ * except every count now explicitly excludes defeater siblings.
  */
 function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
 	const { node, parentName, parentType, roots, globalCounters } = options;
-	const prefix = corePrefixOrThrow("PROPERTY_CLAIM");
+	const prefix = elementPrefixOrThrow("PROPERTY_CLAIM", node.isDefeater);
+	const classKey = `PROPERTY_CLAIM:${node.isDefeater}`;
+
+	if (node.isDefeater) {
+		const directParent = findParentNode(roots, node.parentId);
+		if (
+			parentType === "PROPERTY_CLAIM" &&
+			directParent?.isDefeater &&
+			parentName
+		) {
+			const siblingIndex = getSiblingIndex(
+				directParent,
+				node.id,
+				"PROPERTY_CLAIM",
+				true
+			);
+			return `${parentName}.${siblingIndex}`;
+		}
+
+		const count = (globalCounters[classKey] || 0) + 1;
+		globalCounters[classKey] = count;
+		return `${prefix}${count}`;
+	}
 
 	if (parentType === "PROPERTY_CLAIM" && parentName) {
 		// Sub-property claim: use parent's name as base
@@ -190,14 +240,14 @@ function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
 
 		// Direct property claim parent — use standard sibling index
 		const siblingIndex = directParent
-			? getSiblingIndex(directParent, node.id, "PROPERTY_CLAIM")
+			? getSiblingIndex(directParent, node.id, "PROPERTY_CLAIM", false)
 			: 1;
 		return `${parentName}.${siblingIndex}`;
 	}
 
 	// Top-level property claim: use global counter
-	const count = (globalCounters.PROPERTY_CLAIM || 0) + 1;
-	globalCounters.PROPERTY_CLAIM = count;
+	const count = (globalCounters[classKey] || 0) + 1;
+	globalCounters[classKey] = count;
 	return `${prefix}${count}`;
 }
 
@@ -209,6 +259,10 @@ function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
  * - Goals, Strategies, Evidence, Context: Global sequential (G1, G2, S1, S2, E1, E2, C1, C2)
  * - Top-level Property Claims (under goal/strategy): Global sequential (P1, P2, P3)
  * - Sub-Property Claims (under another property claim): Hierarchical (P1.1, P1.2, P1.1.1)
+ * - Defeaters (Chris's ruling, 2026-09-15 — D8 of ADR 0005): every rule
+ *   above applies again, independently, within the "C" + prefix sequence
+ *   for that (elementType, isDefeater) class — see
+ *   `generatePropertyClaimName` for property claims specifically.
  */
 function generateHierarchicalNames(
 	roots: ElementWithChildren[]
@@ -232,9 +286,10 @@ function generateHierarchicalNames(
 				globalCounters,
 			});
 		} else {
-			const prefix = corePrefixOrThrow(node.elementType);
-			const count = (globalCounters[node.elementType] || 0) + 1;
-			globalCounters[node.elementType] = count;
+			const prefix = elementPrefixOrThrow(node.elementType, node.isDefeater);
+			const classKey = `${node.elementType}:${node.isDefeater}`;
+			const count = (globalCounters[classKey] || 0) + 1;
+			globalCounters[classKey] = count;
 			newName = `${prefix}${count}`;
 		}
 
@@ -286,6 +341,7 @@ export async function resetIdentifiers(
 			parentId: true,
 			createdAt: true,
 			name: true,
+			isDefeater: true,
 		},
 	});
 

@@ -1,7 +1,10 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
+import { validateElementName } from "@/lib/schemas/element-validation";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
+import { resetIdentifiers } from "@/lib/services/identifier-service";
+import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { Prisma } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-import-service" });
@@ -640,6 +643,85 @@ async function createComments(
 }
 
 /**
+ * Whether ANY imported defeater element's name is a LEGACY plain-form TEA-
+ * syntax identifier for its type (Chris's ruling, 2026-09-15 — D8 of ADR
+ * 0005): an export made before that ruling can carry a defeater still named
+ * in the plain form (e.g. a property-claim defeater named "P1.1" rather
+ * than "CP1"). Deliberately narrow in TWO ways: it only looks at defeaters,
+ * never at plain elements, and within defeaters it only flags a name that
+ * validates as a PLAIN identifier for the type (fails the defeater form,
+ * passes the plain form) — an arbitrary free-text name (fails both forms,
+ * e.g. test/demo fixtures like "Defeater Claim") is left untouched, exactly
+ * as import already leaves every other non-conforming name untouched
+ * (import does not otherwise validate name format for any element type —
+ * see `buildElementRow`, which writes `el.name` verbatim).
+ */
+async function hasNonConformingDefeaterNames(
+	userId: string,
+	elements: ElementV2[]
+): Promise<boolean> {
+	const defeaters = elements.filter((el) => el.isDefeater && el.name);
+	if (defeaters.length === 0) {
+		return false;
+	}
+	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
+	return defeaters.some((el) => {
+		const asDefeaterName = validateElementName(
+			el.elementType,
+			el.name,
+			enabledPluginIds,
+			true
+		);
+		if (asDefeaterName.valid) {
+			return false;
+		}
+		const asPlainName = validateElementName(
+			el.elementType,
+			el.name,
+			enabledPluginIds,
+			false
+		);
+		return asPlainName.valid;
+	});
+}
+
+/**
+ * Import decision (Chris's ruling on the naming-class issue, 2026-09-15,
+ * recorded on "TEA — Defeater identifiers follow GSN"): rather than reject
+ * an older export whose defeaters are named in the pre-D8 plain form,
+ * renumber the WHOLE just-imported case via the existing renumber action
+ * (`resetIdentifiers`) — the same mechanism `update-ids` exposes in the UI.
+ * This is a decision, not a discovered fact: it renames every element in
+ * the imported case to keep the naming CONSISTENT end-to-end, not just the
+ * offending defeaters, at the cost of also renaming already-correct plain
+ * names in that one import. A fresh export made after this ruling ships
+ * has conforming defeater names already, so this never fires for it and
+ * every other name is preserved exactly as exported (the existing, deliberate
+ * import behaviour — see `buildElementRow`). Runs OUTSIDE the import's own
+ * transaction (already committed) — `resetIdentifiers` opens its own.
+ * Failure is logged and surfaced as a warning, not a failed import: the
+ * case and its data are already committed correctly, just not renumbered.
+ */
+async function renumberIfDefeaterNamesNonConforming(
+	userId: string,
+	caseId: string,
+	elements: ElementV2[]
+): Promise<string | null> {
+	if (!(await hasNonConformingDefeaterNames(userId, elements))) {
+		return null;
+	}
+	const result = await resetIdentifiers(caseId, userId);
+	if ("error" in result) {
+		log.error("Failed to renumber imported case with legacy defeater names", {
+			caseId,
+			error: result.error,
+		});
+		return 'This case was imported from an older export with pre-GSN defeater names (e.g. P1.1 instead of CP1) and could not be renumbered automatically — use "Reset identifiers" from the case menu.';
+	}
+	return "This case was imported from an older export with pre-GSN defeater names (e.g. P1.1 instead of CP1) — every identifier in the case has been renumbered to the current CP1/CG1/CE1 scheme.";
+}
+
+/**
  * Imports a case from JSON data.
  *
  * Accepts nested (v1.0) and flat (v2.0) formats.
@@ -721,10 +803,20 @@ export async function importCase(
 			};
 		});
 
+		// Renumber-on-mismatch (Chris's ruling, 2026-09-15 — D8 of ADR 0005):
+		// runs after the transaction commits, since it opens its own.
+		const renumberWarning = await renumberIfDefeaterNamesNonConforming(
+			userId,
+			result.caseId,
+			v2Data.elements
+		);
+
 		return {
 			data: {
 				...result,
-				warnings: processed.warnings,
+				warnings: renumberWarning
+					? [...processed.warnings, renumberWarning]
+					: processed.warnings,
 			},
 		};
 	} catch (error) {

@@ -91,6 +91,13 @@ async function validateAssertionStatusChanges(
  *
  * The offending element's id is named in the error message, never the case
  * — same convention as `validateElementOwnership`'s error shape.
+ *
+ * `isDefeater` (Chris's ruling, 2026-09-15 — D8 of ADR 0005) selects the
+ * accepted prefix form: a create's own `data.isDefeater` (defaulting to
+ * false, matching `buildCreateData`'s default), or — for an update — the
+ * EFFECTIVE value: the update's own `data.isDefeater` if it's changing the
+ * flag too, otherwise the element's existing one, read back alongside its
+ * elementType in the same batched fetch.
  */
 async function validateElementNames(
 	userId: string,
@@ -105,19 +112,22 @@ async function validateElementNames(
 	}
 
 	// An update's data only ever carries the fields that changed — its
-	// elementType isn't part of the diff payload at all — so a named
-	// update's target type has to be read back from the database. One
-	// batched fetch for every such update, instead of one findUnique per
-	// update that sets a name.
+	// elementType and isDefeater flag aren't part of the diff payload unless
+	// they're what changed — so a named update's effective type/flag have to
+	// be read back from the database. One batched fetch for every such
+	// update, instead of one findUnique per update that sets a name.
 	const updateTypeRows =
 		namedUpdates.length > 0
 			? await prisma.assuranceElement.findMany({
 					where: { id: { in: namedUpdates.map((c) => c.elementId) } },
-					select: { id: true, elementType: true },
+					select: { id: true, elementType: true, isDefeater: true },
 				})
 			: [];
-	const updateTypeById = new Map(
-		updateTypeRows.map((r) => [r.id, r.elementType])
+	const updateInfoById = new Map(
+		updateTypeRows.map((r) => [
+			r.id,
+			{ elementType: r.elementType, isDefeater: r.isDefeater },
+		])
 	);
 
 	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
@@ -127,7 +137,8 @@ async function validateElementNames(
 		const validation = validateElementName(
 			elementType,
 			change.data.name,
-			enabledPluginIds
+			enabledPluginIds,
+			change.data.isDefeater ?? false
 		);
 		if (!validation.valid) {
 			return `${validation.error} (element ${change.elementId})`;
@@ -135,18 +146,23 @@ async function validateElementNames(
 	}
 
 	for (const change of namedUpdates) {
-		const elementType = updateTypeById.get(change.elementId);
+		const existingInfo = updateInfoById.get(change.elementId);
 		// Absent from the lookup means this id doesn't exist, or belongs to a
 		// different case — validateElementOwnership (which runs before this)
 		// already rejects both, so this is unreachable in practice; skipping
 		// keeps this validator side-effect-free rather than throwing.
-		if (!elementType) {
+		if (!existingInfo) {
 			continue;
 		}
+		const effectiveIsDefeater =
+			change.data.isDefeater !== undefined
+				? change.data.isDefeater
+				: existingInfo.isDefeater;
 		const validation = validateElementName(
-			elementType,
+			existingInfo.elementType,
 			change.data.name,
-			enabledPluginIds
+			enabledPluginIds,
+			effectiveIsDefeater
 		);
 		if (!validation.valid) {
 			return `${validation.error} (element ${change.elementId})`;
