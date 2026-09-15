@@ -182,6 +182,34 @@ function buildModuleStructure(
 	};
 }
 
+/**
+ * Builds the awayGoals and modules arrays for one parent's children (ADR
+ * 0005 D3): AWAY_GOAL and MODULE are admitted wherever PROPERTY_CLAIM is.
+ * Extracted (review round 1 — fallow duplication finding) from
+ * `buildGoalStructure`, `buildStrategyStructure`, and
+ * `buildPropertyClaimStructure`, which otherwise repeated this exact
+ * filter-sort-map pair, once each, identically but for the goalId/
+ * strategyId args each passes through to the two element structures.
+ */
+function buildCitedChildren(
+	children: CaseElement[],
+	goalId: string | null,
+	strategyId: string | null,
+	citation: CitationContext
+): { awayGoals: AwayGoalResponse[]; modules: ModuleResponse[] } {
+	const awayGoals = children
+		.filter((el) => el.elementType === "AWAY_GOAL")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((el) => buildAwayGoalStructure(el, goalId, strategyId, citation));
+
+	const modules = children
+		.filter((el) => el.elementType === "MODULE")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((el) => buildModuleStructure(el, goalId, strategyId, citation));
+
+	return { awayGoals, modules };
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -231,15 +259,12 @@ function buildGoalStructure(
 
 	// ADR 0005 D3: AWAY_GOAL and MODULE are admitted wherever PROPERTY_CLAIM
 	// is admitted — a goal's direct children, alongside strategies/claims.
-	const awayGoals = children
-		.filter((el) => el.elementType === "AWAY_GOAL")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildAwayGoalStructure(el, goal.id, null, citation));
-
-	const modules = children
-		.filter((el) => el.elementType === "MODULE")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildModuleStructure(el, goal.id, null, citation));
+	const { awayGoals, modules } = buildCitedChildren(
+		children,
+		goal.id,
+		null,
+		citation
+	);
 
 	return {
 		id: goal.id,
@@ -291,15 +316,12 @@ function buildStrategyStructure(
 		);
 
 	// ADR 0005 D3: AWAY_GOAL and MODULE admitted wherever PROPERTY_CLAIM is.
-	const awayGoals = children
-		.filter((el) => el.elementType === "AWAY_GOAL")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildAwayGoalStructure(el, null, strategy.id, citation));
-
-	const modules = children
-		.filter((el) => el.elementType === "MODULE")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildModuleStructure(el, null, strategy.id, citation));
+	const { awayGoals, modules } = buildCitedChildren(
+		children,
+		null,
+		strategy.id,
+		citation
+	);
 
 	return {
 		id: strategy.id,
@@ -367,15 +389,12 @@ function buildPropertyClaimStructure(
 		);
 
 	// ADR 0005 D3: AWAY_GOAL and MODULE admitted wherever PROPERTY_CLAIM is.
-	const awayGoals = children
-		.filter((el) => el.elementType === "AWAY_GOAL")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildAwayGoalStructure(el, null, null, citation));
-
-	const modules = children
-		.filter((el) => el.elementType === "MODULE")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildModuleStructure(el, null, null, citation));
+	const { awayGoals, modules } = buildCitedChildren(
+		children,
+		null,
+		null,
+		citation
+	);
 
 	return {
 		id: claim.id,

@@ -195,6 +195,12 @@ function formatElementType(elementType: string): string {
 	if (elementType === "property_claim") {
 		return "claim";
 	}
+	// ADR 0005 D3: humanise "away_goal" — every other branch here already
+	// matches the mid-sentence lowercase convention ("Created claim …"),
+	// which "module" already satisfies unchanged.
+	if (elementType === "away_goal") {
+		return "away goal";
+	}
 	return elementType.toLowerCase();
 }
 
