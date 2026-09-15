@@ -28,8 +28,18 @@ const SUPPORT_EDGE_PATH_SELECTOR =
 const NAME_LABEL_PATTERN = /^Name/i;
 const AG_ID_PATTERN = /^AG\d+$/;
 
+/**
+ * The G1 card, anchored on its own identifier text rather than a bare
+ * `hasText: "G1"` substring match — unanchored, that also matched S1's
+ * card whenever its description happened to mention "G1" (nanaki, round
+ * 2). `getByText("G1", { exact: true })` only matches an element whose
+ * own full text is exactly "G1" — the header's identifier span — never a
+ * sentence that merely contains the substring.
+ */
 function g1Node(page: Page) {
-	return page.locator(".react-flow__node", { hasText: "G1" });
+	return page
+		.locator(".react-flow__node")
+		.filter({ has: page.getByText("G1", { exact: true }) });
 }
 
 async function openAddChildMenu(page: Page) {
@@ -150,11 +160,14 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 
 		await expect(page.getByText("Cites")).toBeVisible();
 		// The card shows the server-assigned identifier (AG<n>), never a
-		// user-typed name.
+		// user-typed name. The identifier appears twice on an expanded card
+		// (header + footer) — `.first()` (nanaki, round 2): either occurrence
+		// proves the same thing.
 		await expect(
 			page
 				.locator(".react-flow__node", { hasText: "Cites" })
 				.getByText(AG_ID_PATTERN)
+				.first()
 		).toBeVisible();
 
 		// Add a defeater challenging G1.
