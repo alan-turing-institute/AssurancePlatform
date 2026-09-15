@@ -821,6 +821,69 @@ describe("element-service", () => {
 			expect(inDb?.level).toBe(2);
 		});
 
+		/**
+		 * Round-2 regression (vincent, ruled by cid, 2026-09-15): the flat
+		 * top-level count introduced by round 1's fix only excluded a claim
+		 * whose DIRECT parent was a plain property claim. A
+		 * strategy-transparent claim's literal parent is the STRATEGY, not
+		 * the ancestor claim, so it was wrongly counted into the flat
+		 * tally — the next top-level claim came out P3 instead of P2.
+		 */
+		it("a strategy-transparent claim (P1.1) is excluded from the flat top-level count — the next sibling of P1 is P2, not P3", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const s1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+
+			const s2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: p1.id,
+				})
+			);
+			const p1_1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s2.id,
+				})
+			);
+			expect(p1_1.name).toBe("P1.1");
+
+			// A sibling of P1 under S1 — the next TOP-LEVEL number, P2, not
+			// P3 (P1.1's literal parent is S2, a STRATEGY, not a property
+			// claim, so it must not be counted into the flat tally).
+			const p2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expect(p2.name).toBe("P2");
+		});
+
 		it("allows moving a strategy to a property claim parent", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
@@ -1591,6 +1654,77 @@ describe("element-service", () => {
 					})
 				);
 				expect(updated.name).toBe("P1");
+			});
+
+			/**
+			 * Round-2 regression (vincent, ruled by cid, 2026-09-15):
+			 * `regenerateNameForIsDefeaterChange` reuses
+			 * `generateElementName`'s same flat count, so it inherited the
+			 * same bug — a strategy-transparent claim must not be counted
+			 * into the regenerated flat number either.
+			 */
+			it("flip regeneration excludes a strategy-transparent claim from the flat count too", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const s1 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: goal.id,
+					})
+				);
+				const p1 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: s1.id,
+					})
+				);
+				const s2 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: p1.id,
+					})
+				);
+				const p1_1 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: s2.id,
+					})
+				);
+				expect(p1.name).toBe("P1");
+				expect(p1_1.name).toBe("P1.1");
+
+				// A defeater attacking S1, created separately — flipping it
+				// to plain must regenerate against the flat sequence, which
+				// (correctly) has only P1 in it: P1.1 dot-continues and
+				// must not be counted.
+				const defeaterClaim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: s1.id,
+						isDefeater: true,
+						defeatsElementId: s1.id,
+					})
+				);
+				expect(defeaterClaim.name).toBe("CP1");
+
+				const flipped = expectSuccess(
+					await updateElement(user.id, defeaterClaim.id, {
+						isDefeater: false,
+					})
+				);
+				expect(flipped.name).toBe("P2");
 			});
 		});
 	});

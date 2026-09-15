@@ -110,6 +110,75 @@ describe("identifier-service", () => {
 
 			expect(contextElements[0]?.name).toBe("C1");
 		});
+
+		/**
+		 * Round-2 regression (vincent, ruled by cid, 2026-09-15): confirms
+		 * the renumber action already agreed with the correct rule even
+		 * when `createElement`'s flat count didn't yet — the shape that
+		 * exposed the create-path bug.
+		 */
+		it("agrees with createElement's corrected flat count for a strategy-transparent claim", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const s1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			const s2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: p1.id,
+				})
+			);
+			const p1_1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s2.id,
+				})
+			);
+			const p2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+			expect(p1_1.name).toBe("P1.1");
+			expect(p2.name).toBe("P2");
+
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id, deletedAt: null },
+				select: { id: true, name: true },
+			});
+			const byId = new Map(elements.map((e) => [e.id, e.name]));
+
+			expect(byId.get(p1.id)).toBe("P1");
+			expect(byId.get(p1_1.id)).toBe("P1.1");
+			expect(byId.get(p2.id)).toBe("P2");
+		});
 	});
 
 	/**
