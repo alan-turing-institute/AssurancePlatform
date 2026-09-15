@@ -187,6 +187,17 @@ function rejectDeclaredAsCited(
  * `validateDefeatsElementId`'s same-case scoping below, except citation is
  * cross-case by design, so the case checked is the *cited* one, not the
  * element's own).
+ *
+ * A citation requires a case (security fix, review round 3): the case-
+ * membership check above used `moduleReferenceId && target.caseId !==
+ * moduleReferenceId`, so a null/undefined `moduleReferenceId` short-
+ * circuited the `&&` and skipped the check entirely — `updateElementSchema`
+ * allows `moduleReferenceId: null` (clearing it), so `PUT { moduleReferenceId:
+ * null, citedElementId: <any element in any case> }` was accepted outright,
+ * the same leak as round 1 through a different route. `citedElementId` with
+ * no effective `moduleReferenceId` is now rejected unconditionally, and the
+ * case-membership comparison below always runs rather than being gated on
+ * `moduleReferenceId` being truthy.
  */
 async function validateCitedElementId(
 	citedElementId: string | null | undefined,
@@ -199,11 +210,14 @@ async function validateCitedElementId(
 	if (ownElementId && citedElementId === ownElementId) {
 		return "citedElementId cannot reference the element itself";
 	}
+	if (!moduleReferenceId) {
+		return "citedElementId must reference an existing element";
+	}
 	const target = await prisma.assuranceElement.findFirst({
 		where: { id: citedElementId, deletedAt: null },
 		select: { id: true, caseId: true },
 	});
-	if (!target || (moduleReferenceId && target.caseId !== moduleReferenceId)) {
+	if (!target || target.caseId !== moduleReferenceId) {
 		return "citedElementId must reference an existing element";
 	}
 	return;
