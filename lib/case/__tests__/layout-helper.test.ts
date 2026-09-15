@@ -270,11 +270,12 @@ describe("layout-helper utilities", () => {
 
 		/**
 		 * The nine-node probe from ADR 0005 D1: G1 → S1 → {G2, G3}, G2 → E1;
-		 * C1 beside G1, A1 beside S1, CG1 challenging G2 with CSn1 beneath CG1.
-		 * Side attachments are expressed as `data.attachedTo` pointing at the
-		 * target node's id; the `challenges` edge (CG1 -> G2) is included to
-		 * confirm it doesn't confuse ELK's row placement (it must be dropped
-		 * for ELK's purposes since both endpoints resolve to the same cell).
+		 * C1 beside G1, A1 beside S1, CG1 challenging G2 with CSn1 beneath CG1
+		 * in the tree (CG1 → CSn1). Side attachments are expressed as
+		 * `data.attachedTo` pointing at the target node's id; the `challenges`
+		 * edge (CG1 -> G2) is included to confirm it doesn't confuse ELK's row
+		 * placement (it must be dropped for ELK's purposes since both
+		 * endpoints resolve to the same cell).
 		 */
 		function buildNineNodeProbe() {
 			const nodes = [
@@ -299,59 +300,197 @@ describe("layout-helper utilities", () => {
 			return { nodes, edges };
 		}
 
-		it("places every side attachment in its target's row, to the right, and each subtree beneath its own root", async () => {
+		async function layoutNineNodeProbe(direction: "LR" | "TB") {
 			const { getLayoutedElements } = await import("../layout-helper");
 			const { nodes, edges } = buildNineNodeProbe();
-
-			const result = await getLayoutedElements(nodes, edges, {
-				direction: "TB",
-			});
-			const pos = new Map(
+			const result = await getLayoutedElements(nodes, edges, { direction });
+			return new Map(
 				result.nodes.map((n) => [n.id, n.position as { x: number; y: number }])
 			);
+		}
 
-			const g1 = pos.get("G1");
-			const c1 = pos.get("C1");
-			const s1 = pos.get("S1");
-			const a1 = pos.get("A1");
-			const g2 = pos.get("G2");
-			const cg1 = pos.get("CG1");
-			const g3 = pos.get("G3");
-			const e1 = pos.get("E1");
-			const csn1 = pos.get("CSn1");
-
-			expect(g1).toBeDefined();
-			expect(c1).toBeDefined();
-			expect(s1).toBeDefined();
-			expect(a1).toBeDefined();
-			expect(g2).toBeDefined();
-			expect(cg1).toBeDefined();
-			expect(g3).toBeDefined();
-			expect(e1).toBeDefined();
-			expect(csn1).toBeDefined();
-
-			// Every side attachment: same row (y) as its target, to the right (x).
-			expect(c1?.y).toBe(g1?.y);
-			expect(c1?.x).toBeGreaterThan(g1?.x ?? 0);
-			expect(a1?.y).toBe(s1?.y);
-			expect(a1?.x).toBeGreaterThan(s1?.x ?? 0);
-			expect(cg1?.y).toBe(g2?.y);
-			expect(cg1?.x).toBeGreaterThan(g2?.x ?? 0);
-
-			// Rows follow the tree: G1 < S1 < {G2, G3} < {E1, CSn1}.
-			expect(s1?.y ?? 0).toBeGreaterThan(g1?.y ?? 0);
-			expect(g2?.y ?? 0).toBeGreaterThan(s1?.y ?? 0);
-			expect(g3?.y ?? 0).toBeGreaterThan(s1?.y ?? 0);
-			expect(e1?.y ?? 0).toBeGreaterThan(g2?.y ?? 0);
-
-			// CSn1 sits beneath its own root (CG1, the counter-goal it argues
-			// for), not beneath the challenged claim G2.
-			expect(csn1?.y ?? 0).toBeGreaterThan(cg1?.y ?? 0);
-
-			// No overlaps: every node gets a distinct position.
+		function expectNoOverlaps(pos: Map<string, { x: number; y: number }>) {
 			const positions = Array.from(pos.values());
 			const distinct = new Set(positions.map((p) => `${p.x},${p.y}`));
+			// biome-ignore lint/suspicious/noMisplacedAssertion: called from within it() blocks below
 			expect(distinct.size).toBe(positions.length);
+		}
+
+		describe("direction TB (top-down tree, side attachments to the right)", () => {
+			it("places every side attachment in its target's row, to the right", async () => {
+				const pos = await layoutNineNodeProbe("TB");
+				const g1 = pos.get("G1");
+				const c1 = pos.get("C1");
+				const s1 = pos.get("S1");
+				const a1 = pos.get("A1");
+				const g2 = pos.get("G2");
+				const cg1 = pos.get("CG1");
+
+				expect(c1?.y).toBe(g1?.y);
+				expect(c1?.x).toBeGreaterThan(g1?.x ?? 0);
+				expect(a1?.y).toBe(s1?.y);
+				expect(a1?.x).toBeGreaterThan(s1?.x ?? 0);
+				expect(cg1?.y).toBe(g2?.y);
+				expect(cg1?.x).toBeGreaterThan(g2?.x ?? 0);
+			});
+
+			it("keeps the tree's row order: G1 < S1 < {G2, G3} < {E1, CSn1}", async () => {
+				const pos = await layoutNineNodeProbe("TB");
+				const g1 = pos.get("G1");
+				const s1 = pos.get("S1");
+				const g2 = pos.get("G2");
+				const g3 = pos.get("G3");
+				const e1 = pos.get("E1");
+
+				expect(s1?.y ?? 0).toBeGreaterThan(g1?.y ?? 0);
+				expect(g2?.y ?? 0).toBeGreaterThan(s1?.y ?? 0);
+				expect(g3?.y ?? 0).toBeGreaterThan(s1?.y ?? 0);
+				expect(e1?.y ?? 0).toBeGreaterThan(g2?.y ?? 0);
+			});
+
+			it("sits CSn1 in the row beneath the cell its parent CG1 belongs to", async () => {
+				const pos = await layoutNineNodeProbe("TB");
+				const cg1 = pos.get("CG1");
+				const csn1 = pos.get("CSn1");
+
+				// CSn1 (child of CG1, a side attachment of G2's cell) sits one
+				// row below the cell — same guarantee as an ordinary tree
+				// child. This does NOT claim CSn1 aligns under CG1's specific
+				// x position rather than G2's: ELK places every child of the
+				// cell in that shared row via its own crossing-minimisation,
+				// and empirically (verified against this repo's elkjs) a
+				// child's x is not tied to which member it structurally hangs
+				// from — only real ELK edges (here, all routed to the cell
+				// itself) constrain layout.
+				expect(csn1?.y ?? 0).toBeGreaterThan(cg1?.y ?? 0);
+			});
+
+			it("has no overlapping positions", async () => {
+				const pos = await layoutNineNodeProbe("TB");
+				expectNoOverlaps(pos);
+			});
+		});
+
+		describe("direction LR (left-right tree, side attachments below — mirrored)", () => {
+			it("lays cells out DOWN: every side attachment shares its target's column, below it", async () => {
+				const pos = await layoutNineNodeProbe("LR");
+				const g1 = pos.get("G1");
+				const c1 = pos.get("C1");
+				const s1 = pos.get("S1");
+				const a1 = pos.get("A1");
+				const g2 = pos.get("G2");
+				const cg1 = pos.get("CG1");
+
+				expect(c1?.x).toBe(g1?.x);
+				expect(c1?.y).toBeGreaterThan(g1?.y ?? 0);
+				expect(a1?.x).toBe(s1?.x);
+				expect(a1?.y).toBeGreaterThan(s1?.y ?? 0);
+				expect(cg1?.x).toBe(g2?.x);
+				expect(cg1?.y).toBeGreaterThan(g2?.y ?? 0);
+			});
+
+			it("keeps the tree's column order: G1 < S1 < {G2, G3} < {E1, CSn1}", async () => {
+				const pos = await layoutNineNodeProbe("LR");
+				const g1 = pos.get("G1");
+				const s1 = pos.get("S1");
+				const g2 = pos.get("G2");
+				const g3 = pos.get("G3");
+				const e1 = pos.get("E1");
+
+				expect(s1?.x ?? 0).toBeGreaterThan(g1?.x ?? 0);
+				expect(g2?.x ?? 0).toBeGreaterThan(s1?.x ?? 0);
+				expect(g3?.x ?? 0).toBeGreaterThan(s1?.x ?? 0);
+				expect(e1?.x ?? 0).toBeGreaterThan(g2?.x ?? 0);
+			});
+
+			it("sits a cell's subtree to the right of the cell itself", async () => {
+				const pos = await layoutNineNodeProbe("LR");
+				const g2 = pos.get("G2");
+				const e1 = pos.get("E1");
+				const csn1 = pos.get("CSn1");
+
+				// Same caveat as the TB case above: both E1 (G2's child) and
+				// CSn1 (CG1's child) land to the right of the whole cell —
+				// this does not claim which specific member's row each aligns
+				// with.
+				expect(e1?.x ?? 0).toBeGreaterThan(g2?.x ?? 0);
+				expect(csn1?.x ?? 0).toBeGreaterThan(g2?.x ?? 0);
+			});
+
+			it("has no overlapping positions", async () => {
+				const pos = await layoutNineNodeProbe("LR");
+				expectNoOverlaps(pos);
+			});
+		});
+
+		describe("two side attachments on one target", () => {
+			it("stacks both defeaters in a column beside the target, preserving the target's tree row", async () => {
+				const { getLayoutedElements } = await import("../layout-helper");
+				const nodes = [
+					cellNode("G1", "G1"),
+					cellNode("P1", "P1"),
+					cellNode("D1", "D1", "P1"),
+					cellNode("D2", "D2", "P1"),
+				];
+				const edges = [cellEdge("e1", "G1", "P1")];
+
+				const result = await getLayoutedElements(nodes, edges, {
+					direction: "TB",
+				});
+				const pos = new Map(
+					result.nodes.map((n) => [
+						n.id,
+						n.position as { x: number; y: number },
+					])
+				);
+				const g1 = pos.get("G1");
+				const p1 = pos.get("P1");
+				const d1 = pos.get("D1");
+				const d2 = pos.get("D2");
+
+				// Both side attachments: to the right of the target, in a
+				// single column (same x).
+				expect(d1?.x).toBeGreaterThan(p1?.x ?? 0);
+				expect(d2?.x).toBeGreaterThan(p1?.x ?? 0);
+				expect(d1?.x).toBe(d2?.x);
+
+				// Stacked, not overlapping.
+				expect(d1?.y).not.toBe(d2?.y);
+
+				// The target's own tree row is unaffected by how many
+				// attachments it carries — still exactly one row below G1.
+				expect(p1?.y ?? 0).toBeGreaterThan(g1?.y ?? 0);
+
+				expectNoOverlaps(pos);
+			});
+
+			it("sorts attachments by identifier regardless of input order", async () => {
+				const { getLayoutedElements } = await import("../layout-helper");
+				// D2 listed before D1 — buildCells must still sort attachments
+				// by identifier (compareIdentifiers), not preserve input order.
+				const nodes = [
+					cellNode("P1", "P1"),
+					cellNode("D2", "D2", "P1"),
+					cellNode("D1", "D1", "P1"),
+				];
+				const edges: never[] = [];
+
+				const result = await getLayoutedElements(nodes, edges, {
+					direction: "TB",
+				});
+				const pos = new Map(
+					result.nodes.map((n) => [
+						n.id,
+						n.position as { x: number; y: number },
+					])
+				);
+				const d1 = pos.get("D1");
+				const d2 = pos.get("D2");
+
+				// Sorted: D1 (lower y — first in the cell's internal layered
+				// direction) above D2, regardless of the input order above.
+				expect(d1?.y ?? 0).toBeLessThan(d2?.y ?? 0);
+			});
 		});
 
 		it("side attachment falls back to its tree position when the target is hidden", async () => {
