@@ -280,6 +280,53 @@ describe("identifier-service", () => {
 			});
 			expect(inDb?.name).toBe("CG1");
 		});
+
+		/**
+		 * Fix round 1 (vincent finding 1, ruled by cid, 2026-09-15): the
+		 * renumber action must agree with `createElement` — an ordinary
+		 * child of a defeater takes the next flat plain number (P<next>),
+		 * never a dot-continuation of the defeater's C-prefixed name.
+		 */
+		it("renumbers an ordinary child of a defeater to the next flat plain number, not a dot-continuation", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			const plainChild = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: defeater.id,
+				})
+			);
+			expect(plainChild.name).toBe("P1");
+
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id, deletedAt: null },
+				select: { id: true, name: true },
+			});
+			const byId = new Map(elements.map((e) => [e.id, e.name]));
+
+			expect(byId.get(defeater.id)).toBe("CP1");
+			expect(byId.get(plainChild.id)).toBe("P1");
+		});
 	});
 
 	describe("resetIdentifiers permissions", () => {
