@@ -317,13 +317,20 @@ const applyDefeaterAttachments = (nodes: Node[]): Node[] => {
 	});
 };
 
-/** Builds the ordinary parent -> child support edge for one node. */
+/**
+ * Builds the ordinary parent -> child support edge for one node. `support`
+ * (ADR 0005 D8, `components/cases/support-edge.tsx`) is a smoothstep edge
+ * that also reads `data.centerY` — set post-layout by `layout-helper.ts`
+ * for a cell's outgoing children edges, so the bend clears the whole cell
+ * rather than the target's own midpoint. Edges outside a cell get no
+ * `centerY` and render identically to the old plain `smoothstep`.
+ */
 function buildSupportEdge(node: Node): Edge {
 	return {
 		id: `e${generateUuid()}`,
 		source: node.data.parentId as string,
 		target: node.id,
-		type: "smoothstep", // Smooth orthogonal edges to match ELK layout
+		type: "support",
 		animated: false,
 		sourceHandle: "c",
 		hidden: false,

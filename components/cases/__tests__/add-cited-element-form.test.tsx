@@ -21,6 +21,9 @@ import {
 	listCitableGoals,
 } from "@/actions/cited-element-picker";
 import { createAssuranceCaseNode } from "@/lib/case";
+import { toast } from "@/lib/toast";
+
+const NAME_LABEL_PATTERN = /^Name/i;
 
 const NODE: Node = {
 	id: "goal-1",
@@ -57,6 +60,20 @@ describe("AddCitedElementForm (ADR 0005 D7)", () => {
 		vi.mocked(createAssuranceCaseNode).mockResolvedValue({
 			data: { id: "new-1", name: "AG1", description: "", type: "away_goal" },
 		});
+	});
+
+	it("has no name input — identifiers are always assigned by the server (Chris's ruling, 2026-09-15)", async () => {
+		renderWithReactFlow(
+			<AddCitedElementForm kind="away-goal" node={NODE} onClose={vi.fn()} />
+		);
+
+		await waitFor(() =>
+			expect(
+				screen.getAllByRole("combobox")[0]
+			).not.toHaveAccessibleDescription("Loading cases…")
+		);
+
+		expect(screen.queryByLabelText(NAME_LABEL_PATTERN)).not.toBeInTheDocument();
 	});
 
 	it("shows the Goal step only for an away goal, not for a module", async () => {
@@ -132,7 +149,7 @@ describe("AddCitedElementForm (ADR 0005 D7)", () => {
 		expect(onClose).toHaveBeenCalled();
 	});
 
-	it("shows an error toast and does not close when creation fails", async () => {
+	it("shows the server's error message verbatim and does not close when creation fails", async () => {
 		vi.mocked(createAssuranceCaseNode).mockResolvedValue({ error: "boom" });
 		const user = userEvent.setup();
 		const onClose = vi.fn();
@@ -148,5 +165,10 @@ describe("AddCitedElementForm (ADR 0005 D7)", () => {
 
 		await waitFor(() => expect(createAssuranceCaseNode).toHaveBeenCalled());
 		expect(onClose).not.toHaveBeenCalled();
+		// Verbatim server message, not a generic "cannot create …" line
+		// (walkthrough finding 7).
+		expect(toast).toHaveBeenCalledWith(
+			expect.objectContaining({ variant: "destructive", description: "boom" })
+		);
 	});
 });

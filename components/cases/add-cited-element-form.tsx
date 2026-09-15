@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { Node } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -44,11 +43,14 @@ const LABEL_BY_KIND: Record<CitedElementKind, string> = {
 /**
  * The "Add away goal" / "Add module" two-step picker (ADR 0005 D7): first a
  * case the user can access (own or shared), then — for an away goal only —
- * a goal within it. Description prefills from the cited goal for an away
- * goal; both name and description stay editable. Fetching and selection
- * state live in `useCitedElementPicker`; the discriminated create payload
- * lives in `buildCitedElementPayload` — both extracted (review round 1) so
- * this component stays a thin presentational shell.
+ * a goal within it. Description prefills from the cited goal and stays
+ * editable. There is no name field: identifiers (AG1, M1, …) are always
+ * assigned by the server, never user-writable (Chris's ruling, 2026-09-15,
+ * walkthrough finding 7) — the created card shows the assigned identifier.
+ * Fetching and selection state live in `useCitedElementPicker`; the
+ * discriminated create payload lives in `buildCitedElementPayload` — both
+ * extracted (review round 1) so this component stays a thin presentational
+ * shell.
  *
  * Creation relies on the existing SSE-driven case refetch (`element:created`,
  * `use-case-events.ts`) rather than local optimistic tree splicing — the
@@ -65,7 +67,6 @@ export default function AddCitedElementForm({
 	const { assuranceCase } = useStore();
 	const picker = useCitedElementPicker(kind);
 
-	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 
@@ -97,17 +98,22 @@ export default function AddCitedElementForm({
 			assuranceCaseId: assuranceCase.id,
 			moduleReferenceId: picker.selectedCaseId,
 			citedElementId: picker.selectedGoalId,
-			name,
 			description,
 		});
 
 		const result = await createAssuranceCaseNode(entity, payload, "");
 
 		if (result.error) {
+			// Surface the server's own validation message verbatim — a generic
+			// "cannot create …" line hid the real reason (walkthrough finding 7).
+			const errorMessage =
+				typeof result.error === "string"
+					? result.error
+					: `Failed to create ${label.toLowerCase()}`;
 			toast({
 				variant: "destructive",
 				title: "Error",
-				description: `Failed to create ${label.toLowerCase()}`,
+				description: errorMessage,
 			});
 			setSubmitting(false);
 			return;
@@ -176,16 +182,6 @@ export default function AddCitedElementForm({
 					</Select>
 				</div>
 			)}
-
-			<div className="space-y-2">
-				<Label htmlFor="cited-name">Name (optional)</Label>
-				<Input
-					id="cited-name"
-					onChange={(e) => setName(e.target.value)}
-					placeholder="Leave blank to auto-generate"
-					value={name}
-				/>
-			</div>
 
 			<div className="space-y-2">
 				<Label htmlFor="cited-description">Description</Label>

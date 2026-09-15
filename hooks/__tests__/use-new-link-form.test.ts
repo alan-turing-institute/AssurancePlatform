@@ -308,10 +308,12 @@ describe("useNewLinkForm — handleDefeaterAdd (ADR 0005 D7)", () => {
 
 		await submitDescription(result, "This challenges the claim");
 
+		// The server's own message reaches the toast verbatim, not a generic
+		// "Failed to create defeater" line (walkthrough finding 7).
 		expect(toast).toHaveBeenCalledWith(
 			expect.objectContaining({
 				variant: "destructive",
-				description: "Failed to create defeater",
+				description: "Failed",
 			})
 		);
 	});

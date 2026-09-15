@@ -3,6 +3,17 @@
 import { type EdgeProps, getStraightPath } from "reactflow";
 
 /**
+ * React Flow's default `.react-flow__handle-{left,right}` styling (its own
+ * stylesheet, not ours) sits the handle dot 4px outside the node's own
+ * border. `getStraightPath` draws to the handle's centre, so the visible
+ * line — and the marker anchored to its end — reads as stopping a few
+ * pixels short of the card itself (walkthrough finding 1, 2026-09-15).
+ * Extending the endpoint by that same 4px, along the source -> target
+ * direction, closes the gap without changing the marker's own geometry.
+ */
+const HANDLE_OUTWARD_OFFSET_PX = 4;
+
+/**
  * The `challenges` edge (ADR 0005 D4): dashed line, open arrowhead pointing
  * AT the attacked element, destructive theme token — no hard-coded colour.
  * Straight and horizontal because `BaseNode`'s side handles put the
@@ -20,7 +31,21 @@ export default function ChallengesEdge({
 	targetX,
 	targetY,
 }: EdgeProps) {
-	const [edgePath] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+	// Shorten only by the handle's own outward offset — see
+	// HANDLE_OUTWARD_OFFSET_PX above — so the arrow ends at the target's
+	// card, not its handle centre.
+	const dx = targetX - sourceX;
+	const dy = targetY - sourceY;
+	const length = Math.hypot(dx, dy) || 1;
+	const endX = targetX + (dx / length) * HANDLE_OUTWARD_OFFSET_PX;
+	const endY = targetY + (dy / length) * HANDLE_OUTWARD_OFFSET_PX;
+
+	const [edgePath] = getStraightPath({
+		sourceX,
+		sourceY,
+		targetX: endX,
+		targetY: endY,
+	});
 	const markerId = `challenges-arrow-${id}`;
 
 	return (

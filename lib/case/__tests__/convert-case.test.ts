@@ -545,7 +545,9 @@ describe("convert-case utilities", () => {
 				expect(edge).toHaveProperty("source");
 				expect(edge).toHaveProperty("target");
 				expect(edge).toHaveProperty("type");
-				expect(edge.type).toBe("smoothstep");
+				// ADR 0005 D8: "support" (a smoothstep variant that also reads
+				// data.centerY — see components/cases/support-edge.tsx).
+				expect(edge.type).toBe("support");
 			}
 		});
 	});
