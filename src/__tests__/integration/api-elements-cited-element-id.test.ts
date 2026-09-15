@@ -126,6 +126,51 @@ describe("POST /api/cases/[id]/elements — citedElementId (ADR 0004 D5)", () =>
 		});
 		expect(elements).toHaveLength(0);
 	});
+
+	it("rejects a citedElementId belonging to a different case than moduleReferenceId (review round 1 — security fix)", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		// A private element that belongs to neither homeCase nor awayCase —
+		// the attack this guards against: citing ANY element system-wide by
+		// id, regardless of the case moduleReferenceId claims to cite from.
+		const unrelatedCase = await createTestCase(owner.id);
+		const privateElement = await createTestElement(unrelatedCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Private Goal",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/elements/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${homeCase.id}/elements`,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					type: "away_goal",
+					name: "AG1",
+					description: "Attempts a cross-case citation",
+					moduleReferenceId: awayCase.id,
+					citedElementId: privateElement.id,
+				}),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: homeCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		// Same message as a nonexistent target — anti-enumeration: the
+		// response must not reveal that privateElement.id exists.
+		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+
+		const elements = await prisma.assuranceElement.findMany({
+			where: { caseId: homeCase.id, elementType: "AWAY_GOAL" },
+		});
+		expect(elements).toHaveLength(0);
+	});
 });
 
 describe("PUT /api/elements/[id] — citedElementId (ADR 0004 D5)", () => {
@@ -306,5 +351,89 @@ describe("PUT /api/elements/[id] — citedElementId (ADR 0004 D5)", () => {
 			where: { id: awayGoal.id },
 		});
 		expect(inDb?.citationDangling).toBe(false);
+	});
+
+	it("rejects a citedElementId belonging to a different case than moduleReferenceId (review round 1 — security fix)", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const awayCase = await createTestCase(owner.id);
+		const unrelatedCase = await createTestCase(owner.id);
+		const privateElement = await createTestElement(unrelatedCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Private Goal",
+		});
+		const awayGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			moduleReferenceId: awayCase.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/elements/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/elements/${awayGoal.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ citedElementId: privateElement.id }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: awayGoal.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.citedElementId).toBeNull();
+	});
+
+	it("rejects a cross-case citedElementId even when moduleReferenceId is changed in the same request", async () => {
+		const owner = await createTestUser();
+		const homeCase = await createTestCase(owner.id);
+		const originalAwayCase = await createTestCase(owner.id);
+		const newAwayCase = await createTestCase(owner.id);
+		// Belongs to originalAwayCase, not newAwayCase — the request below
+		// tries to repoint moduleReferenceId at newAwayCase while keeping a
+		// citedElementId that only makes sense under the old one.
+		const staleCitedGoal = await createTestElement(
+			originalAwayCase.id,
+			owner.id,
+			{ elementType: "GOAL", name: "Stale Cited Goal" }
+		);
+		const awayGoal = await createTestElement(homeCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			moduleReferenceId: originalAwayCase.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/elements/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/elements/${awayGoal.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					moduleReferenceId: newAwayCase.id,
+					citedElementId: staleCitedGoal.id,
+				}),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: awayGoal.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(originalAwayCase.id);
+		expect(inDb?.citedElementId).toBeNull();
 	});
 });

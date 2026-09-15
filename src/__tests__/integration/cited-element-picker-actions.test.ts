@@ -142,6 +142,29 @@ describe("listCitableGoals (actions/cited-element-picker.ts)", () => {
 		}
 	});
 
+	it("never returns goals from a different case (the picker cannot itself produce a cross-case citation)", async () => {
+		const owner = await createTestUser();
+		const caseA = await createTestCase(owner.id);
+		const caseB = await createTestCase(owner.id);
+		const goalInA = await createTestElement(caseA.id, owner.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		await createTestElement(caseB.id, owner.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		await mockAuth(owner.id, owner.username, owner.email ?? undefined);
+
+		const { listCitableGoals } = await import("@/actions/cited-element-picker");
+		const result = await listCitableGoals(caseA.id);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.map((g) => g.id)).toEqual([goalInA.id]);
+		}
+	});
+
 	it("returns the goals of a case shared with the user (VIEW)", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();

@@ -171,12 +171,26 @@ function rejectDeclaredAsCited(
 
 /**
  * ADR 0004 D5: `citedElementId` must reference an existing, non-deleted
- * element, and an element cannot cite itself. `ownElementId` is only
- * available (and only checked) on update — a not-yet-created element has no
- * id to collide with.
+ * element that belongs to the case `moduleReferenceId` names, and an
+ * element cannot cite itself. `ownElementId` is only available (and only
+ * checked) on update — a not-yet-created element has no id to collide with.
+ *
+ * The case-membership check (security fix, review round 1): without it, an
+ * AWAY_GOAL's `citedElementId` was only checked for existence and
+ * self-reference — a direct API/server-action call could cite ANY element
+ * system-wide, regardless of the case `moduleReferenceId` claims to cite
+ * from, and `buildCitationContext` (`case-fetch-service.ts`) would then
+ * resolve and display that element's name to every viewer of this case,
+ * leaking the existence and name of private elements. Returns the same
+ * "must reference an existing element" message as the not-found case —
+ * matching this file's anti-enumeration convention (mirrors
+ * `validateDefeatsElementId`'s same-case scoping below, except citation is
+ * cross-case by design, so the case checked is the *cited* one, not the
+ * element's own).
  */
 async function validateCitedElementId(
 	citedElementId: string | null | undefined,
+	moduleReferenceId: string | null | undefined,
 	ownElementId?: string
 ): Promise<string | undefined> {
 	if (!citedElementId) {
@@ -187,9 +201,9 @@ async function validateCitedElementId(
 	}
 	const target = await prisma.assuranceElement.findFirst({
 		where: { id: citedElementId, deletedAt: null },
-		select: { id: true },
+		select: { id: true, caseId: true },
 	});
-	if (!target) {
+	if (!target || (moduleReferenceId && target.caseId !== moduleReferenceId)) {
 		return "citedElementId must reference an existing element";
 	}
 	return;
@@ -197,14 +211,18 @@ async function validateCitedElementId(
 
 /**
  * ADR 0004 D5: runs both citedElementId guards (applicability, then
- * existence/self-citation) in the order createElement and updateElement both
- * need — extracted so the checks live in exactly one place instead of being
- * duplicated verbatim at each call site. `ownElementId` is only meaningful
- * on update (see validateCitedElementId above).
+ * existence/self-citation/case-membership) in the order createElement and
+ * updateElement both need — extracted so the checks live in exactly one
+ * place instead of being duplicated verbatim at each call site.
+ * `moduleReferenceId` is the EFFECTIVE value (input override, falling back
+ * to the existing element's value on update) — see
+ * `validateUpdateElementFields`'s call site. `ownElementId` is only
+ * meaningful on update (see validateCitedElementId above).
  */
 async function enforceCitedElementIdRules(
 	elementType: string,
 	citedElementId: string | null | undefined,
+	moduleReferenceId: string | null | undefined,
 	ownElementId?: string
 ): Promise<string | undefined> {
 	if (citedElementId === undefined) {
@@ -217,7 +235,11 @@ async function enforceCitedElementIdRules(
 	if (applicabilityError) {
 		return applicabilityError;
 	}
-	return await validateCitedElementId(citedElementId, ownElementId);
+	return await validateCitedElementId(
+		citedElementId,
+		moduleReferenceId,
+		ownElementId
+	);
 }
 
 /**
@@ -820,7 +842,8 @@ async function validateElementReferences(
 
 	const citedElementIdError = await enforceCitedElementIdRules(
 		elementType,
-		input.citedElementId
+		input.citedElementId,
+		input.moduleReferenceId
 	);
 	if (citedElementIdError) {
 		return { error: citedElementIdError };
@@ -1144,7 +1167,11 @@ async function applyParentChangeForUpdate(
  */
 async function validateUpdateElementFields(
 	elementId: string,
-	existing: { caseId: string; elementType: PrismaElementType },
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		moduleReferenceId: string | null;
+	},
 	input: UpdateElementInput,
 	userId: string
 ): Promise<{ error: string } | undefined> {
@@ -1173,10 +1200,19 @@ async function validateUpdateElementFields(
 	}
 
 	// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
-	// existing element, and cannot reference the element itself.
+	// existing element in the case moduleReferenceId names, and cannot
+	// reference the element itself. `moduleReferenceId` is the EFFECTIVE
+	// value: this update's own value if it's changing moduleReferenceId too,
+	// otherwise the element's existing one — citedElementId can be updated
+	// on its own without moduleReferenceId appearing in the same request.
+	const effectiveModuleReferenceId =
+		input.moduleReferenceId !== undefined
+			? input.moduleReferenceId
+			: existing.moduleReferenceId;
 	const citedElementIdError = await enforceCitedElementIdRules(
 		existing.elementType,
 		input.citedElementId,
+		effectiveModuleReferenceId,
 		elementId
 	);
 	if (citedElementIdError) {
@@ -1218,7 +1254,13 @@ export async function updateElement(
 		// Get existing element to check permissions (include deleted to give proper error message)
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, elementType: true, level: true, deletedAt: true },
+			select: {
+				caseId: true,
+				elementType: true,
+				level: true,
+				deletedAt: true,
+				moduleReferenceId: true,
+			},
 		});
 
 		if (!existing) {
