@@ -577,18 +577,24 @@ async function generateDefeaterPropertyClaimName(
 }
 
 /**
- * Names a PLAIN (non-defeater) property claim. Unchanged from the pre-D8
- * behaviour except that every count is scoped to `isDefeater: false`, so a
- * defeater sibling never perturbs the plain sequence.
+ * Names a PLAIN (non-defeater) property claim.
  *
- * - Plain property claims with a plain property-claim parent: hierarchical
+ * - Plain property claims with a PLAIN property-claim parent: hierarchical
  *   (P1.1, P1.1.1).
  * - Plain property claims under a strategy: transparent numbering — if the
- *   strategy's parent is a property claim, numbered as a child of that
- *   ancestor claim; if the strategy's parent is a goal, falls through to
- *   top-level numbering.
- * - Plain top-level property claims (under strategy/goal, not under
- *   another property claim): case-wide sequential (P1, P2, P3...).
+ *   strategy's parent is a PLAIN property claim, numbered as a child of
+ *   that ancestor claim; if the strategy's parent is a goal, or a
+ *   defeater property claim, falls through to flat top-level numbering.
+ * - Every other plain property claim — top-level (under strategy/goal),
+ *   OR an ordinary child of a DEFEATER property claim (Chris's ruling, fix
+ *   round 1, 2026-09-15): an ordinary child of a defeater is an ordinary
+ *   element and takes the next flat plain number — it cannot dot-continue
+ *   a C-prefixed name; only defeater-under-defeater dot-continues (see
+ *   `generateDefeaterPropertyClaimName`). Counted via a relation filter
+ *   rather than `level` — a plain child of a defeater gets `level =
+ *   parent.level + 1` from `calculateLevelFromParentChain` (unrelated to
+ *   naming), so `level` no longer reliably marks "top of the flat
+ *   sequence" once a defeater can sit in the parent chain.
  */
 async function generatePlainPropertyClaimName(
 	caseId: string,
@@ -596,7 +602,11 @@ async function generatePlainPropertyClaimName(
 	parentInfo: ParentInfoForNaming,
 	prefix: string
 ): Promise<string> {
-	if (parentInfo?.elementType === "PROPERTY_CLAIM" && parentInfo.name) {
+	if (
+		parentInfo?.elementType === "PROPERTY_CLAIM" &&
+		!parentInfo.isDefeater &&
+		parentInfo.name
+	) {
 		const siblingCount = await prisma.assuranceElement.count({
 			where: {
 				parentId,
@@ -618,10 +628,19 @@ async function generatePlainPropertyClaimName(
 		if (grandparent?.parentId) {
 			const ancestor = await prisma.assuranceElement.findFirst({
 				where: { id: grandparent.parentId, deletedAt: null },
-				select: { elementType: true, name: true, level: true },
+				select: {
+					elementType: true,
+					name: true,
+					level: true,
+					isDefeater: true,
+				},
 			});
 
-			if (ancestor?.elementType === "PROPERTY_CLAIM" && ancestor.name) {
+			if (
+				ancestor?.elementType === "PROPERTY_CLAIM" &&
+				!ancestor.isDefeater &&
+				ancestor.name
+			) {
 				const strategyChildren = await prisma.assuranceElement.findMany({
 					where: {
 						parentId: grandparent.parentId,
@@ -646,30 +665,19 @@ async function generatePlainPropertyClaimName(
 				return `${ancestor.name}.${siblingCount + 1}`;
 			}
 		}
-		// Strategy is under a goal — fall through to top-level numbering
+		// Strategy is under a goal, or under a defeater property claim —
+		// fall through to flat top-level numbering.
 	}
 
-	if (parentId && parentInfo?.elementType !== "PROPERTY_CLAIM") {
-		const caseWideCount = await prisma.assuranceElement.count({
-			where: {
-				caseId,
-				elementType: "PROPERTY_CLAIM",
-				level: 1,
-				isDefeater: false,
-				deletedAt: null,
-			},
-		});
-		return `${prefix}${caseWideCount + 1}`;
-	}
-
-	// Unreachable in practice (a PROPERTY_CLAIM always has a parentId — see
-	// element-compatibility.ts) — kept as a safe fallback rather than a throw.
+	// Flat, case-wide plain property claim: covers top-level claims under a
+	// strategy/goal AND an ordinary child of a defeater property claim.
 	const caseWideCount = await prisma.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: "PROPERTY_CLAIM",
 			isDefeater: false,
 			deletedAt: null,
+			NOT: { parent: { elementType: "PROPERTY_CLAIM", isDefeater: false } },
 		},
 	});
 	return `${prefix}${caseWideCount + 1}`;
@@ -816,6 +824,39 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	);
 
 	return { level, parentInfo };
+}
+
+/**
+ * Regenerates an element's name for a NEW `isDefeater` value (Chris's
+ * ruling, fix round 1, 2026-09-15 — "identifiers are always set by the
+ * app"): when `isDefeater` changes and the request doesn't also supply a
+ * name, the old-class name would otherwise be left in place unchanged
+ * (`enforceElementNameFormat` no-ops on a missing name) — a name the
+ * validator now rejects for the new class. References are by UUID, so
+ * renaming here is safe; the caller writes the returned name into
+ * `updateData.name`. Reuses `generateElementName`'s own class rules
+ * (`PROPERTY_CLAIM` fetches fresh parent info for the hierarchical/flat
+ * decision; every other type doesn't need it). Exported for
+ * case-batch-update-service.ts's own isDefeater-flip handling — the two
+ * mutation paths share this rule rather than each re-implementing it.
+ */
+export async function regenerateNameForIsDefeaterChange(
+	elementType: PrismaElementType,
+	caseId: string,
+	parentId: string | null,
+	isDefeater: boolean
+): Promise<string> {
+	const { parentInfo } =
+		elementType === "PROPERTY_CLAIM" && parentId
+			? await calculatePropertyClaimLevel(parentId)
+			: { parentInfo: null };
+	return generateElementName(
+		elementType,
+		caseId,
+		parentId,
+		parentInfo,
+		isDefeater
+	);
 }
 
 /**
@@ -1408,6 +1449,40 @@ async function validateUpdateElementFields(
 }
 
 /**
+ * Regenerates and writes the new-class name into `updateData` IN PLACE when
+ * `isDefeater` is genuinely changing (differs from the existing value) and
+ * the request doesn't also supply an explicit name (Chris's ruling, fix
+ * round 1, 2026-09-15 — "identifiers are always set by the app"). A no-op
+ * otherwise: `isDefeater` unchanged, not present in the input, or a name
+ * was explicitly given (already validated against the new class by
+ * `validateUpdateElementFields`, so nothing more to do here).
+ */
+async function applyRegeneratedNameOnDefeaterFlip(
+	input: UpdateElementInput,
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+	},
+	effectiveParentId: string | null,
+	updateData: Record<string, unknown>
+): Promise<void> {
+	if (
+		input.isDefeater === undefined ||
+		input.isDefeater === existing.isDefeater ||
+		input.name !== undefined
+	) {
+		return;
+	}
+	updateData.name = await regenerateNameForIsDefeaterChange(
+		existing.elementType,
+		existing.caseId,
+		effectiveParentId,
+		input.isDefeater
+	);
+}
+
+/**
  * Updates an existing element
  */
 export async function updateElement(
@@ -1427,6 +1502,7 @@ export async function updateElement(
 				moduleReferenceId: true,
 				citedElementId: true,
 				isDefeater: true,
+				parentId: true,
 			},
 		});
 
@@ -1471,6 +1547,19 @@ export async function updateElement(
 				return parentChangeError;
 			}
 		}
+
+		// Regenerate the name on an isDefeater flip with no explicit rename
+		// (Chris's ruling, fix round 1) — uses the EFFECTIVE parent (this
+		// request's own move, if any, else the element's existing parent),
+		// so a simultaneous move + flip regenerates against the right class.
+		const effectiveParentId =
+			newParentId !== undefined ? newParentId : existing.parentId;
+		await applyRegeneratedNameOnDefeaterFlip(
+			input,
+			existing,
+			effectiveParentId,
+			updateData
+		);
 
 		const element = await prisma.assuranceElement.update({
 			where: { id: elementId },

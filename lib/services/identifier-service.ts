@@ -196,59 +196,118 @@ function collectEffectivePropertyClaimChildren(
  * A PLAIN property claim's numbering is unchanged from the pre-D8 rule,
  * except every count now explicitly excludes defeater siblings.
  */
-function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
+/**
+ * Advances and returns the next flat, case-wide name for a
+ * `(elementType, isDefeater)` class's global counter.
+ */
+function nextFlatName(
+	prefix: string,
+	classKey: string,
+	globalCounters: Record<string, number>
+): string {
+	const count = (globalCounters[classKey] || 0) + 1;
+	globalCounters[classKey] = count;
+	return `${prefix}${count}`;
+}
+
+/**
+ * Names a DEFEATER property claim during reset: hierarchical (dot-
+ * continuing the parent defeater's own name) ONLY when nested under
+ * ANOTHER defeater property claim (a counter to a counter, GSN §1:6.3.8);
+ * every other defeater property claim is flat, case-wide.
+ */
+function generateDefeaterPropertyClaimName(
+	options: PropertyClaimNameOptions,
+	prefix: string,
+	classKey: string
+): string {
 	const { node, parentName, parentType, roots, globalCounters } = options;
-	const prefix = elementPrefixOrThrow("PROPERTY_CLAIM", node.isDefeater);
-	const classKey = `PROPERTY_CLAIM:${node.isDefeater}`;
-
-	if (node.isDefeater) {
-		const directParent = findParentNode(roots, node.parentId);
-		if (
-			parentType === "PROPERTY_CLAIM" &&
-			directParent?.isDefeater &&
-			parentName
-		) {
-			const siblingIndex = getSiblingIndex(
-				directParent,
-				node.id,
-				"PROPERTY_CLAIM",
-				true
-			);
-			return `${parentName}.${siblingIndex}`;
-		}
-
-		const count = (globalCounters[classKey] || 0) + 1;
-		globalCounters[classKey] = count;
-		return `${prefix}${count}`;
+	const directParent = findParentNode(roots, node.parentId);
+	if (
+		parentType === "PROPERTY_CLAIM" &&
+		directParent?.isDefeater &&
+		parentName
+	) {
+		const siblingIndex = getSiblingIndex(
+			directParent,
+			node.id,
+			"PROPERTY_CLAIM",
+			true
+		);
+		return `${parentName}.${siblingIndex}`;
 	}
+	return nextFlatName(prefix, classKey, globalCounters);
+}
+
+/**
+ * Names a PLAIN (non-defeater) property claim during reset: hierarchical
+ * (dot-continuing the parent's name, directly or transparently through a
+ * strategy) ONLY when the relevant ancestor is ITSELF a plain property
+ * claim (Chris's ruling, fix round 1, 2026-09-15): an ordinary child of a
+ * defeater takes the next flat plain number, it cannot dot-continue a
+ * C-prefix — the same rule applies one hop further up, through a
+ * transparent strategy.
+ */
+function generatePlainPropertyClaimName(
+	options: PropertyClaimNameOptions,
+	prefix: string,
+	classKey: string
+): string {
+	const { node, parentName, parentType, roots, globalCounters } = options;
 
 	if (parentType === "PROPERTY_CLAIM" && parentName) {
-		// Sub-property claim: use parent's name as base
 		const directParent = findParentNode(roots, node.parentId);
 
-		// If the direct parent is a strategy (transparent numbering),
-		// find the ancestor property claim and count among its effective children
 		if (directParent?.elementType === "STRATEGY") {
 			const ancestorClaim = findParentNode(roots, directParent.parentId);
-			if (ancestorClaim) {
+			if (
+				ancestorClaim?.elementType === "PROPERTY_CLAIM" &&
+				!ancestorClaim.isDefeater
+			) {
 				const effectiveChildren =
 					collectEffectivePropertyClaimChildren(ancestorClaim);
 				const index = effectiveChildren.findIndex((c) => c.id === node.id);
 				return `${parentName}.${index + 1}`;
 			}
+			// Ancestor isn't a plain property claim (a goal, or a defeater
+			// claim) — fall through to flat, case-wide numbering below.
+		} else if (
+			directParent?.elementType === "PROPERTY_CLAIM" &&
+			!directParent.isDefeater
+		) {
+			// Direct PLAIN property-claim parent — dot-continue.
+			const siblingIndex = getSiblingIndex(
+				directParent,
+				node.id,
+				"PROPERTY_CLAIM",
+				false
+			);
+			return `${parentName}.${siblingIndex}`;
 		}
-
-		// Direct property claim parent — use standard sibling index
-		const siblingIndex = directParent
-			? getSiblingIndex(directParent, node.id, "PROPERTY_CLAIM", false)
-			: 1;
-		return `${parentName}.${siblingIndex}`;
+		// Direct parent is a defeater property claim (or something else
+		// entirely) — fall through to flat, case-wide numbering below.
 	}
 
-	// Top-level property claim: use global counter
-	const count = (globalCounters[classKey] || 0) + 1;
-	globalCounters[classKey] = count;
-	return `${prefix}${count}`;
+	// Flat, case-wide plain property claim: top-level (under strategy/goal)
+	// OR an ordinary child of a defeater property claim (not itself
+	// hierarchical — see the ruling above).
+	return nextFlatName(prefix, classKey, globalCounters);
+}
+
+/**
+ * Generate name for a property claim element during reset (Chris's
+ * ruling, 2026-09-15 — D8 of ADR 0005 and fix round 1): dispatches to the
+ * defeater or plain naming class based on `node.isDefeater` — see
+ * `generateDefeaterPropertyClaimName` / `generatePlainPropertyClaimName`.
+ */
+function generatePropertyClaimName(options: PropertyClaimNameOptions): string {
+	const { node } = options;
+	const prefix = elementPrefixOrThrow("PROPERTY_CLAIM", node.isDefeater);
+	const classKey = `PROPERTY_CLAIM:${node.isDefeater}`;
+
+	return node.isDefeater
+		? generateDefeaterPropertyClaimName(options, prefix, classKey)
+		: generatePlainPropertyClaimName(options, prefix, classKey);
 }
 
 /**

@@ -17,6 +17,7 @@ import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
 	isSystemUserPrincipal,
+	regenerateNameForIsDefeaterChange,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
@@ -704,6 +705,77 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 }
 
 /**
+ * Regenerates names for updates that flip `isDefeater` without an explicit
+ * rename (Chris's ruling, fix round 1, 2026-09-15 — "identifiers are
+ * always set by the app"; mirrors element-service.ts's `updateElement`
+ * path via the shared `regenerateNameForIsDefeaterChange`). Returns
+ * elementId -> new name for only the updates where the flip is a REAL
+ * change (differs from the stored value) and no name was supplied — the
+ * write loop below applies each onto that update's `updateData.name`.
+ *
+ * KNOWN LIMITATION (not fixed here — narrow, and pre-existing for every
+ * other `generateElementName` caller): `regenerateNameForIsDefeaterChange`
+ * counts existing elements via the GLOBAL `prisma` client, not the `tx`
+ * this batch runs in, so a count here can miss another create/update this
+ * SAME batch makes before this function runs. A flip-without-rename
+ * change landing in the same batch as a create/rename that shifts the
+ * relevant count is rare enough not to warrant threading `tx` through
+ * generateElementName's whole call graph for this fix round.
+ */
+async function regenerateNamesForDefeaterFlips(
+	updates: UpdateChange[]
+): Promise<Map<string, string>> {
+	const flips = updates.filter(
+		(c) => c.data.isDefeater !== undefined && c.data.name === undefined
+	);
+	if (flips.length === 0) {
+		return new Map();
+	}
+
+	const existingRows = await prisma.assuranceElement.findMany({
+		where: { id: { in: flips.map((c) => c.elementId) } },
+		select: {
+			id: true,
+			elementType: true,
+			isDefeater: true,
+			caseId: true,
+			parentId: true,
+		},
+	});
+	const existingById = new Map(existingRows.map((r) => [r.id, r]));
+
+	const regenerated = new Map<string, string>();
+	for (const change of flips) {
+		const existing = existingById.get(change.elementId);
+		const nextIsDefeater = change.data.isDefeater;
+		// Absent from the lookup, or not an ACTUAL flip, means nothing to
+		// regenerate — absent means this id doesn't exist / belongs to a
+		// different case, which validateElementOwnership (runs before this)
+		// already rejects, so unreachable in practice; skipping keeps this
+		// side-effect-free rather than throwing.
+		if (
+			!existing ||
+			nextIsDefeater === undefined ||
+			existing.isDefeater === nextIsDefeater
+		) {
+			continue;
+		}
+		const effectiveParentId =
+			change.data.parentId !== undefined
+				? change.data.parentId
+				: existing.parentId;
+		const name = await regenerateNameForIsDefeaterChange(
+			existing.elementType,
+			existing.caseId,
+			effectiveParentId,
+			nextIsDefeater
+		);
+		regenerated.set(change.elementId, name);
+	}
+	return regenerated;
+}
+
+/**
  * Computes each moved property claim's FINAL level from the post-batch
  * parent arrangement — independent of the order updates appear in the
  * `changes` array. `moveMap` is elementId -> new parentId for every update
@@ -1041,11 +1113,20 @@ async function applyUpdates(
 		finalLevels
 	);
 
+	// isDefeater-flip name regeneration (Chris's ruling, fix round 1) — see
+	// regenerateNamesForDefeaterFlips's own docstring for the known
+	// same-batch-count limitation.
+	const regeneratedNames = await regenerateNamesForDefeaterFlips(updates);
+
 	for (const change of updates) {
 		const updateData = buildUpdateData(change.data);
 
 		if (finalLevels.has(change.elementId)) {
 			updateData.level = finalLevels.get(change.elementId);
+		}
+
+		if (regeneratedNames.has(change.elementId)) {
+			updateData.name = regeneratedNames.get(change.elementId);
 		}
 
 		await tx.assuranceElement.update({
