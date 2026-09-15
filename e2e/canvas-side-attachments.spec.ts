@@ -20,6 +20,13 @@ const G1_ADD_CHILD_LABEL = "Add child element";
 const CITED_CASE_NAME_PATTERN = /^Cited Case/;
 const CHALLENGES_EDGE_PATH_SELECTOR =
 	".react-flow__edge path[stroke-dasharray]";
+// `.react-flow__edge-path` (not just any `<path>`) excludes React Flow's
+// own invisible wider "interaction" hit-area path, which shares the same
+// `d` but no `react-flow__edge-path` class.
+const SUPPORT_EDGE_PATH_SELECTOR =
+	".react-flow__edge path.react-flow__edge-path:not([stroke-dasharray])";
+const NAME_LABEL_PATTERN = /^Name/i;
+const AG_ID_PATTERN = /^AG\d+$/;
 
 function g1Node(page: Page) {
 	return page.locator(".react-flow__node", { hasText: "G1" });
@@ -27,6 +34,66 @@ function g1Node(page: Page) {
 
 async function openAddChildMenu(page: Page) {
 	await g1Node(page).getByRole("button", { name: G1_ADD_CHILD_LABEL }).click();
+}
+
+async function addStrategyOnG1(page: Page, description: string) {
+	await openAddChildMenu(page);
+	await page.getByRole("button", { name: "Add Strategy" }).click();
+	await page.getByPlaceholder("Type your description here.").fill(description);
+	await page.getByRole("button", { name: "Add", exact: true }).click();
+
+	return page.locator(".react-flow__node", { hasText: description });
+}
+
+/** Adds evidence from a card's own add-child menu (property claims only). */
+async function addEvidenceOn(
+	page: Page,
+	cardLocator: ReturnType<typeof g1Node>,
+	description: string
+) {
+	await cardLocator.getByRole("button", { name: G1_ADD_CHILD_LABEL }).click();
+	await page.getByRole("button", { name: "Add Evidence" }).click();
+	await page.getByPlaceholder("Type your description here.").fill(description);
+	await page.getByRole("button", { name: "Add", exact: true }).click();
+
+	return page.locator(".react-flow__node", { hasText: description });
+}
+
+/**
+ * Samples an SVG `<path>`'s Y-coordinate in actual screen pixels at evenly
+ * spaced points along its length — via `getPointAtLength` +
+ * `getScreenCTM().matrixTransform`, the standard way to convert a path's
+ * own local (flow-space) coordinates into the same viewport-pixel space
+ * `boundingBox()` returns for the node cards. Reading the `d` attribute's
+ * raw numbers directly would compare flow-space to pixel-space — wrong
+ * whenever the canvas is panned or zoomed.
+ */
+async function sampleEdgePathScreenYs(
+	page: Page,
+	selector: string,
+	pathIndex: number,
+	steps = 30
+): Promise<number[]> {
+	return await page.evaluate(
+		([sel, index, stepCount]) => {
+			const paths = document.querySelectorAll(sel as string);
+			const pathEl = paths[index as number] as SVGPathElement;
+			const ctm = pathEl.getScreenCTM();
+			if (!ctm) {
+				return [];
+			}
+			const length = pathEl.getTotalLength();
+			const ys: number[] = [];
+			for (let i = 0; i <= (stepCount as number); i++) {
+				const point = pathEl.getPointAtLength(
+					(length * i) / (stepCount as number)
+				);
+				ys.push(point.matrixTransform(ctm).y);
+			}
+			return ys;
+		},
+		[selector, pathIndex, steps] as const
+	);
 }
 
 async function createCaseViaModal(page: Page, name: string): Promise<void> {
@@ -72,9 +139,23 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		await page.getByRole("option", { name: CITED_CASE_NAME_PATTERN }).click();
 		await awayGoalDialog.getByLabel("Goal", { exact: true }).click();
 		await page.getByRole("option", { name: "G1" }).click();
+
+		// Identifiers are always assigned by the server — no name field
+		// (Chris's ruling, 2026-09-15, walkthrough finding 7).
+		await expect(
+			awayGoalDialog.getByLabel(NAME_LABEL_PATTERN)
+		).not.toBeVisible();
+
 		await awayGoalDialog.getByRole("button", { name: "Add Away Goal" }).click();
 
 		await expect(page.getByText("Cites")).toBeVisible();
+		// The card shows the server-assigned identifier (AG<n>), never a
+		// user-typed name.
+		await expect(
+			page
+				.locator(".react-flow__node", { hasText: "Cites" })
+				.getByText(AG_ID_PATTERN)
+		).toBeVisible();
 
 		// Add a defeater challenging G1.
 		const defeaterCard = await addDefeaterOnG1(
@@ -108,5 +189,66 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 
 		// A dashed edge (the `challenges` edge, ADR 0005 D4) is drawn.
 		await expect(page.locator(CHALLENGES_EDGE_PATH_SELECTOR)).toHaveCount(1);
+	});
+
+	test("two defeaters with evidence: the connector to G1's children bends below the whole cell, not through the second defeater's card", async ({
+		page,
+	}) => {
+		await createCaseViaModal(page, `Two Defeaters Case ${Date.now()}`);
+
+		await addStrategyOnG1(page, "S1 — a strategy under G1.");
+		await addDefeaterOnG1(page, "First defeater on G1.");
+		const secondDefeater = await addDefeaterOnG1(
+			page,
+			"Second defeater on G1."
+		);
+		await addEvidenceOn(
+			page,
+			secondDefeater,
+			"Evidence under the second defeater."
+		);
+
+		// Two defeaters -> two dashed challenges edges.
+		await expect(page.locator(CHALLENGES_EDGE_PATH_SELECTOR)).toHaveCount(2);
+
+		const g1Box = await g1Node(page).boundingBox();
+		const firstDefeater = page.locator(".react-flow__node", {
+			hasText: "First defeater on G1.",
+		});
+		const firstDefeaterBox = await firstDefeater.boundingBox();
+		const secondDefeaterBox = await secondDefeater.boundingBox();
+		expect(g1Box).toBeTruthy();
+		expect(firstDefeaterBox).toBeTruthy();
+		expect(secondDefeaterBox).toBeTruthy();
+
+		const cellBottomPx = Math.max(
+			(g1Box?.y ?? 0) + (g1Box?.height ?? 0),
+			(firstDefeaterBox?.y ?? 0) + (firstDefeaterBox?.height ?? 0),
+			(secondDefeaterBox?.y ?? 0) + (secondDefeaterBox?.height ?? 0)
+		);
+		// "Just below G1" — the start of the region a naive midpoint bend
+		// (the pre-fix behaviour) could land inside the second defeater's
+		// card.
+		const g1BottomPx = (g1Box?.y ?? 0) + (g1Box?.height ?? 0);
+
+		const supportPaths = page.locator(SUPPORT_EDGE_PATH_SELECTOR);
+		const count = await supportPaths.count();
+		expect(count).toBeGreaterThan(0);
+		for (let i = 0; i < count; i++) {
+			const screenYs = await sampleEdgePathScreenYs(
+				page,
+				SUPPORT_EDGE_PATH_SELECTOR,
+				i
+			);
+			expect(screenYs.length).toBeGreaterThan(0);
+			// No sampled point sits stranded between G1's own bottom and the
+			// whole cell's true bottom — the bend happens at or below the
+			// second defeater's card, not at G1's own naive midpoint
+			// (walkthrough finding 4).
+			const strandedInsideCell = screenYs.some(
+				(y) => y > g1BottomPx + 5 && y < cellBottomPx - 5
+			);
+			expect(strandedInsideCell).toBe(false);
+		}
 	});
 });

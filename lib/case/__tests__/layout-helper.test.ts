@@ -287,7 +287,12 @@ describe("layout-helper utilities", () => {
 				cellNode("C1", "C1", "G1"),
 				cellNode("A1", "A1", "S1"),
 				cellNode("CG1", "CG1", "G2"),
-				cellNode("CSn1", "CSn1", "CG1"),
+				// CSn1 is an ORDINARY child of CG1 (the e5 edge below), not a
+				// further side attachment — matching production shape (evidence
+				// under a defeater has no attachedTo of its own, only a support
+				// edge from the defeater) and the story text: "CSn1 beneath CG1
+				// in the tree".
+				cellNode("CSn1", "CSn1"),
 			];
 			const edges = [
 				cellEdge("e1", "G1", "S1"),
@@ -507,6 +512,189 @@ describe("layout-helper utilities", () => {
 			await expect(
 				getLayoutedElements(withHiddenTarget, edges, { direction: "TB" })
 			).resolves.not.toThrow();
+		});
+	});
+
+	describe("cross-kind ordering and centreY (ADR 0005 D1/D8, walkthrough findings 4/5/9)", () => {
+		function typedNode(
+			id: string,
+			type: string,
+			name: string,
+			attachedTo?: string
+		) {
+			return {
+				id,
+				type,
+				position: { x: 0, y: 0 },
+				data: { name, ...(attachedTo ? { attachedTo } : {}) },
+				hidden: false,
+			};
+		}
+		function plainEdge(id: string, source: string, target: string) {
+			return { id, source, target, hidden: false };
+		}
+
+		it("orders a cell's own children before each side element's, in cell order — a defeater's evidence sits right of the target's children", async () => {
+			const { getLayoutedElements } = await import("../layout-helper");
+			// G1 -> S1, S2 (ordinary strategies); two defeaters P1, P2 attached
+			// to G1; P2 -> E4 (evidence under the second defeater) — the exact
+			// shape of walkthrough findings 4 and 5.
+			const nodes = [
+				typedNode("G1", "goal", "G1"),
+				typedNode("S1", "strategy", "S1"),
+				typedNode("S2", "strategy", "S2"),
+				typedNode("P1", "property", "P1", "G1"),
+				typedNode("P2", "property", "P2", "G1"),
+				typedNode("E4", "evidence", "E4"),
+			];
+			const edges = [
+				plainEdge("e1", "G1", "S1"),
+				plainEdge("e2", "G1", "S2"),
+				plainEdge("e3", "P2", "E4"),
+			];
+
+			const result = await getLayoutedElements(nodes, edges, {
+				direction: "TB",
+			});
+			const pos = new Map(result.nodes.map((n) => [n.id, n.position]));
+
+			// The target's (G1's) own children, S1 and S2, sit left of E4 —
+			// the second defeater's evidence — not scattered by identifier
+			// string comparison ("E4" < "S1").
+			expect(pos.get("S1")?.x ?? 0).toBeLessThan(pos.get("E4")?.x ?? 0);
+			expect(pos.get("S2")?.x ?? 0).toBeLessThan(pos.get("E4")?.x ?? 0);
+			// Identifier order preserved within the target's own children.
+			expect(pos.get("S1")?.x ?? 0).toBeLessThan(pos.get("S2")?.x ?? 0);
+		});
+
+		it("orders a cell's own children by kind before identifier: strategies/claims, then evidence, then away goals and modules", async () => {
+			const { getLayoutedElements } = await import("../layout-helper");
+			// G1 -> S1 (strategy), E1 (evidence), AG1 (away goal), M1 (module) —
+			// identifier order alone would read AG1 < E1 < M1 < S1, scattering
+			// the row (walkthrough finding 9); kind must win first.
+			const nodes = [
+				typedNode("G1", "goal", "G1"),
+				typedNode("S1", "strategy", "S1"),
+				typedNode("E1", "evidence", "E1"),
+				typedNode("AG1", "awayGoal", "AG1"),
+				typedNode("M1", "module", "M1"),
+			];
+			const edges = [
+				plainEdge("e1", "G1", "S1"),
+				plainEdge("e2", "G1", "E1"),
+				plainEdge("e3", "G1", "AG1"),
+				plainEdge("e4", "G1", "M1"),
+			];
+
+			const result = await getLayoutedElements(nodes, edges, {
+				direction: "TB",
+			});
+			const pos = new Map(result.nodes.map((n) => [n.id, n.position]));
+
+			const s1 = pos.get("S1")?.x ?? 0;
+			const e1 = pos.get("E1")?.x ?? 0;
+			const ag1 = pos.get("AG1")?.x ?? 0;
+			const m1 = pos.get("M1")?.x ?? 0;
+
+			// Strategy before evidence, evidence before both away goal and
+			// module — kind rank, not string comparison.
+			expect(s1).toBeLessThan(e1);
+			expect(e1).toBeLessThan(ag1);
+			expect(e1).toBeLessThan(m1);
+		});
+
+		it("combines cell order and kind order: a mixed-kind row with a defeater's evidence sorts target-kinds, then side-element-kinds", async () => {
+			const { getLayoutedElements } = await import("../layout-helper");
+			// G1 -> S1, S2 (strategies), AG1 (away goal), M1 (module); two
+			// defeaters P1, P2 attached to G1; P2 -> E4 (evidence). Expected
+			// row order: S1, S2 (target, kind 0), AG1, M1 (target, kind 2),
+			// then E4 (side element P2's own child) — reproduces walkthrough
+			// finding 9 (AG1, E4, S1, S2, M1 on staging) fixed.
+			const nodes = [
+				typedNode("G1", "goal", "G1"),
+				typedNode("S1", "strategy", "S1"),
+				typedNode("S2", "strategy", "S2"),
+				typedNode("AG1", "awayGoal", "AG1"),
+				typedNode("M1", "module", "M1"),
+				typedNode("P1", "property", "P1", "G1"),
+				typedNode("P2", "property", "P2", "G1"),
+				typedNode("E4", "evidence", "E4"),
+			];
+			const edges = [
+				plainEdge("e1", "G1", "S1"),
+				plainEdge("e2", "G1", "S2"),
+				plainEdge("e3", "G1", "AG1"),
+				plainEdge("e4", "G1", "M1"),
+				plainEdge("e5", "P2", "E4"),
+			];
+
+			const result = await getLayoutedElements(nodes, edges, {
+				direction: "TB",
+			});
+			const pos = new Map(result.nodes.map((n) => [n.id, n.position]));
+			const xOf = (id: string) => pos.get(id)?.x ?? 0;
+
+			expect(xOf("S1")).toBeLessThan(xOf("S2"));
+			expect(xOf("S2")).toBeLessThan(xOf("AG1"));
+			expect(xOf("AG1")).toBeLessThan(xOf("M1"));
+			expect(xOf("M1")).toBeLessThan(xOf("E4"));
+		});
+
+		it("sets a below-the-whole-cell centreY (not the target's own midpoint) on a support edge leaving a cell", async () => {
+			const { getLayoutedElements } = await import("../layout-helper");
+			// G1 (goal, height 120) with two defeaters P1, P2 (property,
+			// height 100) attached — the two-stacked-defeaters shape where the
+			// old midpoint-below-G1 bend passed through P2's card (walkthrough
+			// finding 4). S1 is G1's ordinary child.
+			const nodes = [
+				typedNode("G1", "goal", "G1"),
+				typedNode("P1", "property", "P1", "G1"),
+				typedNode("P2", "property", "P2", "G1"),
+				typedNode("S1", "strategy", "S1"),
+			];
+			const edges = [plainEdge("e1", "G1", "S1")];
+
+			const result = await getLayoutedElements(nodes, edges, {
+				direction: "TB",
+			});
+			const pos = new Map(result.nodes.map((n) => [n.id, n.position]));
+			const HEIGHTS: Record<string, number> = {
+				goal: 120,
+				property: 100,
+			};
+			const bottomOf = (id: string, type: string) =>
+				(pos.get(id)?.y ?? 0) + (HEIGHTS[type] ?? 0);
+			const cellBottom = Math.max(
+				bottomOf("G1", "goal"),
+				bottomOf("P1", "property"),
+				bottomOf("P2", "property")
+			);
+
+			const supportEdge = result.edges.find(
+				(e) => e.source === "G1" && e.target === "S1"
+			);
+			expect(supportEdge?.data?.centerY).toBeDefined();
+			// Below the WHOLE cell (both defeater cards), not just G1's own
+			// midpoint — the whole point of D8's fix.
+			expect(supportEdge?.data?.centerY as number).toBeGreaterThan(cellBottom);
+		});
+
+		it("leaves centerY undefined on edges outside any cell", async () => {
+			const { getLayoutedElements } = await import("../layout-helper");
+			const nodes = [
+				typedNode("G1", "goal", "G1"),
+				typedNode("S1", "strategy", "S1"),
+			];
+			const edges = [plainEdge("e1", "G1", "S1")];
+
+			const result = await getLayoutedElements(nodes, edges, {
+				direction: "TB",
+			});
+
+			const supportEdge = result.edges.find(
+				(e) => e.source === "G1" && e.target === "S1"
+			);
+			expect(supportEdge?.data?.centerY).toBeUndefined();
 		});
 	});
 });
