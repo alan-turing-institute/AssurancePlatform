@@ -210,6 +210,27 @@ function buildCitedChildren(
 	return { awayGoals, modules };
 }
 
+/**
+ * Builds a parent's STRATEGY children (sorted, structured). Extracted
+ * (review round 1 — fallow duplication finding) from `buildGoalStructure`
+ * and `buildPropertyClaimStructure`, which otherwise repeated this exact
+ * filter-sort-map pair, differing only in which id (goal's or none, for a
+ * nested claim) each passes through as the strategy's `goalId`.
+ */
+function buildNestedStrategies(
+	children: CaseElement[],
+	goalId: string | null,
+	allElements: CaseElement[],
+	citation: CitationContext
+): StrategyResponse[] {
+	return children
+		.filter((el) => el.elementType === "STRATEGY")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((strategy) =>
+			buildStrategyStructure(strategy, allElements, goalId, citation)
+		);
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -243,12 +264,12 @@ function buildGoalStructure(
 ): GoalResponse {
 	const children = allElements.filter((el) => el.parentId === goal.id);
 
-	const strategies = children
-		.filter((el) => el.elementType === "STRATEGY")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((strategy) =>
-			buildStrategyStructure(strategy, allElements, goal.id, citation)
-		);
+	const strategies = buildNestedStrategies(
+		children,
+		goal.id,
+		allElements,
+		citation
+	);
 
 	const propertyClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
@@ -381,12 +402,12 @@ function buildPropertyClaimStructure(
 			buildPropertyClaimStructure(nested, allElements, null, null, citation)
 		);
 
-	const nestedStrategies = children
-		.filter((el) => el.elementType === "STRATEGY")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((strategy) =>
-			buildStrategyStructure(strategy, allElements, null, citation)
-		);
+	const nestedStrategies = buildNestedStrategies(
+		children,
+		null,
+		allElements,
+		citation
+	);
 
 	// ADR 0005 D3: AWAY_GOAL and MODULE admitted wherever PROPERTY_CLAIM is.
 	const { awayGoals, modules } = buildCitedChildren(

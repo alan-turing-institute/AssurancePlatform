@@ -312,11 +312,29 @@ function buildElkEdges(
 }
 
 /**
+ * Flattens one cell's (compound ELK node's) members from positions relative
+ * to the cell's own origin to absolute coordinates, writing each into
+ * `positionMap` (ADR 0005 D1).
+ */
+function flattenCellMembers(
+	cell: ElkNode,
+	positionMap: Map<string, { x: number; y: number }>
+): void {
+	const baseX = cell.x ?? 0;
+	const baseY = cell.y ?? 0;
+	for (const member of cell.children ?? []) {
+		if (member.x !== undefined && member.y !== undefined) {
+			positionMap.set(member.id, { x: baseX + member.x, y: baseY + member.y });
+		}
+	}
+}
+
+/**
  * Flattens ELK's output into a single id -> absolute position map. A cell is
  * a compound ELK node: its own x/y is the cell's origin, and its members'
- * positions are relative to it — flattened to absolute coordinates here
- * (ADR 0005 D1) — before a plain node's x/y, already absolute, is applied
- * unchanged.
+ * positions are relative to it — flattened to absolute coordinates by
+ * `flattenCellMembers` above — before a plain node's x/y, already absolute,
+ * is applied unchanged.
  */
 function flattenPositions(
 	elkChildren: ElkNode[]
@@ -324,16 +342,7 @@ function flattenPositions(
 	const positionMap = new Map<string, { x: number; y: number }>();
 	for (const child of elkChildren) {
 		if (child.children && child.children.length > 0) {
-			const baseX = child.x ?? 0;
-			const baseY = child.y ?? 0;
-			for (const member of child.children) {
-				if (member.x !== undefined && member.y !== undefined) {
-					positionMap.set(member.id, {
-						x: baseX + member.x,
-						y: baseY + member.y,
-					});
-				}
-			}
+			flattenCellMembers(child, positionMap);
 			continue;
 		}
 		if (child.x !== undefined && child.y !== undefined) {
