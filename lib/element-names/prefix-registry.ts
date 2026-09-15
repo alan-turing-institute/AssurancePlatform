@@ -59,6 +59,34 @@ function isCoreElementType(type: string): type is CoreElementType {
 	return Object.hasOwn(CORE_PREFIXES, type);
 }
 
+/**
+ * Defeater identifier marker (Chris's ruling, 2026-09-15, from the GSN
+ * standard's own examples — CG1, CSn1, CCG1): a defeater's identifier is
+ * "C" followed by its element type's own prefix, e.g. CP1 for a property-
+ * claim defeater, CG1 for a goal, CE1 for evidence.
+ */
+const DEFEATER_PREFIX_MARKER = "C";
+
+/**
+ * Composes a type's ruled prefix with the defeater marker, or returns the
+ * plain prefix when `isDefeater` is false. `undefined` when `type` isn't one
+ * of the ten known types — the single source both `isValidElementName` and
+ * `describeExpectedFormat` compose through, so the C-form is derived in
+ * exactly one place. Naming class = (elementType, isDefeater): a defeater
+ * gets its own prefix, and therefore its own numbering sequence, independent
+ * of the plain sequence for the same type.
+ */
+export function getElementPrefix(
+	type: string,
+	isDefeater = false
+): string | undefined {
+	const base = getCorePrefix(type);
+	if (!base) {
+		return;
+	}
+	return isDefeater ? `${DEFEATER_PREFIX_MARKER}${base}` : base;
+}
+
 /** Escapes regex metacharacters — defensive only; no current prefix contains one. */
 function escapeRegExp(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -142,14 +170,22 @@ export function registerPluginNamePatterns(
  * every caller that doesn't pass its id — disabling a plugin stops its
  * patterns validating NEW names without touching names already stored in
  * that format (back-compat, per the design note).
+ *
+ * `isDefeater` selects which core prefix is accepted — the plain prefix
+ * when false, the C-prefixed defeater form when true — never both: a plain
+ * element named in the defeater's form (e.g. a non-defeater PROPERTY_CLAIM
+ * named "CP1") is rejected, and a defeater named in the plain form (e.g.
+ * "P1") is rejected too. Plugin-registered patterns are unaffected by this
+ * flag — no shipped plugin registers a defeater-specific pattern.
  */
 export function getAcceptedPatterns(
 	type: string,
-	enabledPluginIds: readonly string[] = []
+	enabledPluginIds: readonly string[] = [],
+	isDefeater = false
 ): RegExp[] {
 	const patterns: RegExp[] = [];
 
-	const corePrefix = getCorePrefix(type);
+	const corePrefix = getElementPrefix(type, isDefeater);
 	if (corePrefix) {
 		patterns.push(buildFullFormatPattern(corePrefix));
 	}
@@ -166,14 +202,15 @@ export function getAcceptedPatterns(
 	return patterns;
 }
 
-/** Does `name` match at least one pattern accepted for `type`, given `enabledPluginIds`? */
+/** Does `name` match at least one pattern accepted for `type`, given `enabledPluginIds` and `isDefeater`? */
 export function isValidElementName(
 	type: string,
 	name: string,
-	enabledPluginIds: readonly string[] = []
+	enabledPluginIds: readonly string[] = [],
+	isDefeater = false
 ): boolean {
-	return getAcceptedPatterns(type, enabledPluginIds).some((pattern) =>
-		pattern.test(name)
+	return getAcceptedPatterns(type, enabledPluginIds, isDefeater).some(
+		(pattern) => pattern.test(name)
 	);
 }
 
@@ -181,10 +218,15 @@ export function isValidElementName(
  * Human-readable description of the expected name format for `type`, for use
  * directly in a validation error message (e.g. "Property Claim names must
  * look like P1 or P1.1"). Falls back to a generic message for a type this
- * registry doesn't know a core prefix for.
+ * registry doesn't know a core prefix for. Same message shape whether or not
+ * `isDefeater` is set — only the prefix in the example changes (e.g.
+ * "Property Claim names must look like CP1 or CP1.1" for a defeater).
  */
-export function describeExpectedFormat(type: string): string {
-	const prefix = getCorePrefix(type);
+export function describeExpectedFormat(
+	type: string,
+	isDefeater = false
+): string {
+	const prefix = getElementPrefix(type, isDefeater);
 	if (!(prefix && isCoreElementType(type))) {
 		return "Names must follow this element type's registered format";
 	}

@@ -3,6 +3,7 @@ import {
 	describeExpectedFormat,
 	getAcceptedPatterns,
 	getCorePrefix,
+	getElementPrefix,
 	isValidElementName,
 	registerPluginNamePatterns,
 	resetPluginNamePatternsForTests,
@@ -169,6 +170,79 @@ describe("prefix-registry", () => {
 		it("falls back to a generic message for an unknown type", () => {
 			expect(describeExpectedFormat("NOT_A_REAL_TYPE")).toMatch(
 				REGISTERED_FORMAT_MESSAGE
+			);
+		});
+	});
+
+	/**
+	 * Defeater identifiers (Chris's ruling, 2026-09-15, from the GSN
+	 * standard's own examples — CG1, CSn1, CCG1 — recorded on "TEA — Defeater
+	 * identifiers follow GSN (CP1, CG1, CE1)" and ADR 0005 D8): naming class
+	 * = (elementType, isDefeater). A defeater's prefix is "C" + the type's
+	 * own prefix, and the C-form is accepted ONLY when isDefeater is true —
+	 * never both ways at once.
+	 */
+	describe("getElementPrefix — defeater composition", () => {
+		it("composes the plain prefix when isDefeater is false or omitted", () => {
+			expect(getElementPrefix("PROPERTY_CLAIM")).toBe("P");
+			expect(getElementPrefix("PROPERTY_CLAIM", false)).toBe("P");
+			expect(getElementPrefix("GOAL", false)).toBe("G");
+		});
+
+		it("composes C + the type's own prefix when isDefeater is true", () => {
+			expect(getElementPrefix("PROPERTY_CLAIM", true)).toBe("CP");
+			expect(getElementPrefix("GOAL", true)).toBe("CG");
+			expect(getElementPrefix("EVIDENCE", true)).toBe("CE");
+			expect(getElementPrefix("STRATEGY", true)).toBe("CS");
+		});
+
+		it("returns undefined for a type it doesn't know, defeater or not", () => {
+			expect(getElementPrefix("NOT_A_REAL_TYPE")).toBeUndefined();
+			expect(getElementPrefix("NOT_A_REAL_TYPE", true)).toBeUndefined();
+		});
+	});
+
+	describe("isValidElementName — defeater naming class", () => {
+		it("accepts a defeater named in the GSN C-prefixed form", () => {
+			expect(isValidElementName("PROPERTY_CLAIM", "CP1", [], true)).toBe(true);
+			expect(isValidElementName("GOAL", "CG1", [], true)).toBe(true);
+			expect(isValidElementName("EVIDENCE", "CE1", [], true)).toBe(true);
+		});
+
+		it("rejects a PLAIN element named in the defeater's C-prefixed form", () => {
+			expect(isValidElementName("PROPERTY_CLAIM", "CP1", [], false)).toBe(
+				false
+			);
+		});
+
+		it("rejects a DEFEATER named in the plain form", () => {
+			expect(isValidElementName("PROPERTY_CLAIM", "P1", [], true)).toBe(false);
+		});
+
+		it("accepts dotted sub-numbering on a defeater to any depth", () => {
+			expect(isValidElementName("PROPERTY_CLAIM", "CP1.2.3", [], true)).toBe(
+				true
+			);
+		});
+
+		it("each (type, isDefeater) class has its own independent sequence — both forms coexist as separate patterns for the same type", () => {
+			expect(isValidElementName("PROPERTY_CLAIM", "P1", [], false)).toBe(true);
+			expect(isValidElementName("PROPERTY_CLAIM", "CP1", [], true)).toBe(true);
+			// Cross-checking the two forms against the WRONG flag still fails.
+			expect(isValidElementName("PROPERTY_CLAIM", "P1", [], true)).toBe(false);
+			expect(isValidElementName("PROPERTY_CLAIM", "CP1", [], false)).toBe(
+				false
+			);
+		});
+	});
+
+	describe("describeExpectedFormat — defeater naming class", () => {
+		it("same message shape as the plain form, with the composed C-prefix", () => {
+			expect(describeExpectedFormat("PROPERTY_CLAIM", true)).toBe(
+				"Property Claim names must look like CP1 or CP1.1"
+			);
+			expect(describeExpectedFormat("PROPERTY_CLAIM", false)).toBe(
+				"Property Claim names must look like P1 or P1.1"
 			);
 		});
 	});

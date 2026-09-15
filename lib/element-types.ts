@@ -8,7 +8,7 @@
  *   - Collection plural: "goals", "strategies", "propertyclaims", "evidence"
  */
 
-import { getCorePrefix } from "@/lib/element-names/prefix-registry";
+import { getElementPrefix } from "@/lib/element-names/prefix-registry";
 import type { ElementType as PrismaElementType } from "@/src/generated/prisma";
 
 // Re-export from element-validation for backward compatibility
@@ -68,9 +68,13 @@ export function toDisplayType(prismaType: string): string {
  * old silent "X" fallback: every value of the Prisma `ElementType` enum has
  * a registered prefix, so reaching this branch means a genuinely unknown
  * type reached element-naming code, which is a bug worth surfacing.
+ *
+ * `isDefeater` (Chris's ruling, 2026-09-15 — D8 of ADR 0005) composes the
+ * GSN-style "C" + prefix form for a defeater (e.g. "CP" for a property-claim
+ * defeater) instead of the plain prefix — see `getElementPrefix`.
  */
-export function toPrefix(prismaType: string): string {
-	const prefix = getCorePrefix(prismaType);
+export function toPrefix(prismaType: string, isDefeater = false): string {
+	const prefix = getElementPrefix(prismaType, isDefeater);
 	if (!prefix) {
 		throw new Error(
 			`toPrefix: no prefix registered for element type '${prismaType}'`

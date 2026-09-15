@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
+	addTeamMember,
 	createTestCase,
 	createTestElement,
 	createTestPermission,
+	createTestTeam,
+	createTestTeamPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -42,7 +45,7 @@ describe("listCitableCases (actions/cited-element-picker.ts)", () => {
 		}
 	});
 
-	it("includes a case shared with the user (VIEW)", async () => {
+	it("includes a case shared with the user (VIEW) EXACTLY ONCE", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
 		const sharedCase = await createTestCase(owner.id);
@@ -54,11 +57,12 @@ describe("listCitableCases (actions/cited-element-picker.ts)", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.map((c) => c.id)).toContain(sharedCase.id);
+			const matches = result.data.filter((c) => c.id === sharedCase.id);
+			expect(matches).toHaveLength(1);
 		}
 	});
 
-	it("includes a case shared with the user (EDIT)", async () => {
+	it("includes a case shared with the user (EDIT) EXACTLY ONCE", async () => {
 		const owner = await createTestUser();
 		const editor = await createTestUser();
 		const sharedCase = await createTestCase(owner.id);
@@ -70,7 +74,44 @@ describe("listCitableCases (actions/cited-element-picker.ts)", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.map((c) => c.id)).toContain(sharedCase.id);
+			const matches = result.data.filter((c) => c.id === sharedCase.id);
+			expect(matches).toHaveLength(1);
+		}
+	});
+
+	it("includes a case shared with the user's team EXACTLY ONCE (regression: was listed twice — TEA — Away-goal case picker lists a directly-shared case twice)", async () => {
+		const owner = await createTestUser();
+		const member = await createTestUser();
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id, "MEMBER", owner.id);
+		const teamCase = await createTestCase(owner.id);
+		await createTestTeamPermission(teamCase.id, team.id, owner.id, "VIEW");
+		await mockAuth(member.id, member.username, member.email ?? undefined);
+
+		const { listCitableCases } = await import("@/actions/cited-element-picker");
+		const result = await listCitableCases();
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			const matches = result.data.filter((c) => c.id === teamCase.id);
+			expect(matches).toHaveLength(1);
+		}
+	});
+
+	it("a directly-shared case does not also appear via listSharedCases (regression: TEA — Away-goal case picker lists a directly-shared case twice)", async () => {
+		const owner = await createTestUser();
+		const viewer = await createTestUser();
+		const sharedCase = await createTestCase(owner.id);
+		await createTestPermission(sharedCase.id, viewer.id, owner.id, "VIEW");
+		await mockAuth(viewer.id, viewer.username, viewer.email ?? undefined);
+
+		const { listCitableCases } = await import("@/actions/cited-element-picker");
+		const result = await listCitableCases();
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			const ids = result.data.map((c) => c.id);
+			expect(ids.filter((id) => id === sharedCase.id)).toHaveLength(1);
 		}
 	});
 

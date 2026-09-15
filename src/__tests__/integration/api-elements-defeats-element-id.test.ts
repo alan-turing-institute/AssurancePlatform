@@ -52,7 +52,10 @@ describe("POST /api/cases/[id]/elements — defeatsElementId", () => {
 				method: "POST",
 				body: JSON.stringify({
 					type: "property_claim",
-					name: "P2",
+					// Defeater naming class (Chris's ruling, 2026-09-15 — D8 of
+					// ADR 0005): a defeater property claim is named CP<n>, never
+					// P<n>.
+					name: "CP1",
 					description: "Defeats the original claim",
 					isDefeater: true,
 					defeatsElementId: target.id,
@@ -71,7 +74,7 @@ describe("POST /api/cases/[id]/elements — defeatsElementId", () => {
 
 		// Separate refetch — proves DB persistence, not just an echoed response.
 		const inDb = await prisma.assuranceElement.findFirst({
-			where: { caseId: testCase.id, name: "P2" },
+			where: { caseId: testCase.id, name: "CP1" },
 		});
 		expect(inDb?.defeatsElementId).toBe(target.id);
 		expect(inDb?.isDefeater).toBe(true);

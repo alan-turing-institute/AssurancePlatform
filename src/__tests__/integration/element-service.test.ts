@@ -821,6 +821,69 @@ describe("element-service", () => {
 			expect(inDb?.level).toBe(2);
 		});
 
+		/**
+		 * Round-2 regression (vincent, ruled by cid, 2026-09-15): the flat
+		 * top-level count introduced by round 1's fix only excluded a claim
+		 * whose DIRECT parent was a plain property claim. A
+		 * strategy-transparent claim's literal parent is the STRATEGY, not
+		 * the ancestor claim, so it was wrongly counted into the flat
+		 * tally — the next top-level claim came out P3 instead of P2.
+		 */
+		it("a strategy-transparent claim (P1.1) is excluded from the flat top-level count — the next sibling of P1 is P2, not P3", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const s1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+
+			const s2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: p1.id,
+				})
+			);
+			const p1_1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s2.id,
+				})
+			);
+			expect(p1_1.name).toBe("P1.1");
+
+			// A sibling of P1 under S1 — the next TOP-LEVEL number, P2, not
+			// P3 (P1.1's literal parent is S2, a STRATEGY, not a property
+			// claim, so it must not be counted into the flat tally).
+			const p2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: s1.id,
+				})
+			);
+			expect(p2.name).toBe("P2");
+		});
+
 		it("allows moving a strategy to a property claim parent", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
@@ -1130,6 +1193,538 @@ describe("element-service", () => {
 					await updateElement(user.id, goal.id, { name: "GSN2" })
 				);
 				expect(data.name).toBe("GSN2");
+			});
+		});
+	});
+
+	/**
+	 * Defeater identifiers (Chris's ruling, 2026-09-15, from the GSN
+	 * standard's own examples — CG1, CSn1, CCG1 — "TEA — Defeater
+	 * identifiers follow GSN (CP1, CG1, CE1)", ADR 0005 D8): naming class =
+	 * (elementType, isDefeater). Each class counts independently, and
+	 * `createElement`'s auto-generated names follow the same rule as its
+	 * name-format validator.
+	 */
+	describe("defeater identifiers (naming class)", () => {
+		it("auto-names a defeater property claim CP1, independent of an existing P1", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(defeater.name).toBe("CP1");
+
+			// P1 keeps its number — the defeater did not take the next P-number.
+			const p1InDb = await prisma.assuranceElement.findUnique({
+				where: { id: p1.id },
+			});
+			expect(p1InDb?.name).toBe("P1");
+		});
+
+		it("auto-names a defeater goal CG1", async () => {
+			// A fresh case with no plain GOAL yet: `caseHasGoal`'s single-goal
+			// rule (unrelated to this issue — it counts any GOAL row,
+			// defeater or not) would otherwise block a second GOAL element
+			// regardless of isDefeater, so this proves the CG1 naming path in
+			// isolation rather than attacking an existing goal.
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const defeaterGoal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					isDefeater: true,
+				})
+			);
+			expect(defeaterGoal.name).toBe("CG1");
+		});
+
+		it("auto-names a defeater evidence CE1", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			const defeaterEvidence = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "evidence",
+					parentId: claim.id,
+					isDefeater: true,
+					defeatsElementId: claim.id,
+				})
+			);
+			expect(defeaterEvidence.name).toBe("CE1");
+		});
+
+		it("gives each defeater sequence its own independent counter (CP1, CP2)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+
+			const defeater1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(defeater1.name).toBe("CP1");
+
+			const defeater2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: p1.id,
+					isDefeater: true,
+					defeatsElementId: p1.id,
+				})
+			);
+			expect(defeater2.name).toBe("CP2");
+		});
+
+		it("nests a counter-to-a-counter hierarchically under its parent defeater (CP1.1)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(defeater.name).toBe("CP1");
+
+			// A counter to CP1 itself — created as CP1's own child, isDefeater again.
+			const counterCounter = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: defeater.id,
+					isDefeater: true,
+					defeatsElementId: defeater.id,
+				})
+			);
+			expect(counterCounter.name).toBe("CP1.1");
+
+			// An ordinary (non-defeater) supporting sub-claim under CP1 is an
+			// ordinary element — it takes the next FLAT plain number, it
+			// cannot dot-continue a C-prefix (fix round 1, Chris's ruling,
+			// 2026-09-15: only defeater-under-defeater dot-continues).
+			const plainChild = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: defeater.id,
+				})
+			);
+			expect(plainChild.name).toBe("P1");
+		});
+
+		it("rejects a plain element explicitly named in the defeater's C-form", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			expectError(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					name: "CP1",
+				}),
+				"Property Claim names must look like P1 or P1.1"
+			);
+		});
+
+		it("rejects a defeater explicitly named in the plain form", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			expectError(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+					name: "P1",
+				}),
+				"Property Claim names must look like CP1 or CP1.1"
+			);
+		});
+
+		/**
+		 * Fix round 1 (vincent finding 1, ruled by cid, 2026-09-15): an
+		 * ordinary (non-defeater) child of a defeater property claim was
+		 * inheriting the defeater's own text and becoming CP1.1 while its
+		 * own isDefeater was false — a name the validator rejects for that
+		 * class, so a later update resending the stored name failed.
+		 * RULING: an ordinary child of a defeater takes the next identifier
+		 * in its OWN plain sequence (P<next>, flat) — only
+		 * defeater-under-defeater dot-continues.
+		 */
+		describe("an ordinary child of a defeater (fix round 1)", () => {
+			it("creates a plain claim under a defeater as the next flat P-number, not a dot-continuation", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const defeater = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+						isDefeater: true,
+						defeatsElementId: goal.id,
+					})
+				);
+				expect(defeater.name).toBe("CP1");
+
+				const plainChild = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: defeater.id,
+					})
+				);
+				expect(plainChild.name).toBe("P1");
+			});
+
+			it("round-trips: updating only the description and resending the stored name succeeds", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const defeater = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+						isDefeater: true,
+						defeatsElementId: goal.id,
+					})
+				);
+				const plainChild = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: defeater.id,
+					})
+				);
+				expect(plainChild.name).toBe("P1");
+
+				// The stored name is resent unchanged, exactly as a "just
+				// edit the description" round trip does — must not be
+				// rejected against the wrong class.
+				const updated = expectSuccess(
+					await updateElement(user.id, plainChild.id, {
+						name: plainChild.name,
+						description: "Now with a description",
+					})
+				);
+				expect(updated.name).toBe("P1");
+				expect(updated.description).toBe("Now with a description");
+			});
+		});
+
+		/**
+		 * Fix round 2 (vincent finding 2, ruled by cid, 2026-09-15 — "identifiers
+		 * are always set by the app"): flipping isDefeater without a rename
+		 * used to write the new flag and leave the OLD-class name in place.
+		 * RULING: when isDefeater changes and no name is supplied,
+		 * regenerate the name for the new class server-side and return it;
+		 * when a name IS supplied with a flip, validate it against the new
+		 * class as before.
+		 */
+		describe("isDefeater flips regenerate the name (fix round 2)", () => {
+			it("flip-only: a plain claim flipped to isDefeater becomes CP<n>", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const claim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+					})
+				);
+				expect(claim.name).toBe("P1");
+
+				const flipped = expectSuccess(
+					await updateElement(user.id, claim.id, { isDefeater: true })
+				);
+				expect(flipped.name).toBe("CP1");
+				expect(flipped.isDefeater).toBe(true);
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: claim.id },
+				});
+				expect(inDb?.name).toBe("CP1");
+			});
+
+			it("flip-only: a defeater flipped to plain becomes P<n>", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const defeater = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+						isDefeater: true,
+						defeatsElementId: goal.id,
+					})
+				);
+				expect(defeater.name).toBe("CP1");
+
+				const flipped = expectSuccess(
+					await updateElement(user.id, defeater.id, { isDefeater: false })
+				);
+				expect(flipped.name).toBe("P1");
+				// transformToResponse only sets isDefeater when true — omitted
+				// (not false) otherwise, same convention as citationDangling/
+				// defeatsDangling. Check the stored row instead.
+				expect(flipped.isDefeater).toBeUndefined();
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: defeater.id },
+				});
+				expect(inDb?.isDefeater).toBe(false);
+				expect(inDb?.name).toBe("P1");
+			});
+
+			it("flip + a valid name for the new class is accepted", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const claim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+					})
+				);
+
+				const flipped = expectSuccess(
+					await updateElement(user.id, claim.id, {
+						isDefeater: true,
+						name: "CP1",
+					})
+				);
+				expect(flipped.name).toBe("CP1");
+			});
+
+			it("flip + the OLD class's name is rejected, leaving the element unchanged", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const claim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+					})
+				);
+				expect(claim.name).toBe("P1");
+
+				expectError(
+					await updateElement(user.id, claim.id, {
+						isDefeater: true,
+						name: "P1",
+					}),
+					"Property Claim names must look like CP1 or CP1.1"
+				);
+
+				const inDb = await prisma.assuranceElement.findUnique({
+					where: { id: claim.id },
+				});
+				expect(inDb?.name).toBe("P1");
+				expect(inDb?.isDefeater).toBe(false);
+			});
+
+			it("a no-op flip (same value re-sent) does not regenerate the name", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const claim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: goal.id,
+					})
+				);
+
+				const updated = expectSuccess(
+					await updateElement(user.id, claim.id, {
+						isDefeater: false,
+						description: "Unrelated change",
+					})
+				);
+				expect(updated.name).toBe("P1");
+			});
+
+			/**
+			 * Round-2 regression (vincent, ruled by cid, 2026-09-15):
+			 * `regenerateNameForIsDefeaterChange` reuses
+			 * `generateElementName`'s same flat count, so it inherited the
+			 * same bug — a strategy-transparent claim must not be counted
+			 * into the regenerated flat number either.
+			 */
+			it("flip regeneration excludes a strategy-transparent claim from the flat count too", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+
+				const goal = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+					})
+				);
+				const s1 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: goal.id,
+					})
+				);
+				const p1 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: s1.id,
+					})
+				);
+				const s2 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "strategy",
+						parentId: p1.id,
+					})
+				);
+				const p1_1 = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: s2.id,
+					})
+				);
+				expect(p1.name).toBe("P1");
+				expect(p1_1.name).toBe("P1.1");
+
+				// A defeater attacking S1, created separately — flipping it
+				// to plain must regenerate against the flat sequence, which
+				// (correctly) has only P1 in it: P1.1 dot-continues and
+				// must not be counted.
+				const defeaterClaim = expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId: s1.id,
+						isDefeater: true,
+						defeatsElementId: s1.id,
+					})
+				);
+				expect(defeaterClaim.name).toBe("CP1");
+
+				const flipped = expectSuccess(
+					await updateElement(user.id, defeaterClaim.id, {
+						isDefeater: false,
+					})
+				);
+				expect(flipped.name).toBe("P2");
 			});
 		});
 	});

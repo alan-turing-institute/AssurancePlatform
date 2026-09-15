@@ -1059,4 +1059,171 @@ describe("validateImportData", () => {
 		expect(importedDefeater?.defeatsElementId).toBeNull();
 		expect(importedDefeater?.defeatsDangling).toBe(true);
 	});
+
+	/**
+	 * Import decision (Chris's ruling on the naming-class issue, 2026-09-15
+	 * — "TEA — Defeater identifiers follow GSN (CP1, CG1, CE1)"): an older
+	 * export whose defeater is still named in the pre-D8 plain form (e.g.
+	 * "P1.1") is not rejected — the whole imported case is renumbered via
+	 * the same renumber action `update-ids` exposes, so the defeater ends up
+	 * with a conforming CP-form name.
+	 */
+	describe("legacy defeater names (pre-D8 plain-form) auto-renumber on import", () => {
+		it("renumbers a defeater named in the legacy plain form (P1) to the CP-form", async () => {
+			const targetId = "85000000-0000-4000-8000-000000000001";
+			const defeaterId = "85000000-0000-4000-8000-000000000002";
+			const json = {
+				version: "2.0",
+				exportedAt: new Date().toISOString(),
+				case: {
+					name: "Legacy Defeater Name Case",
+					description: "Defeater named P1, from before the CP1 ruling",
+				},
+				elements: [
+					{
+						id: targetId,
+						elementType: "GOAL",
+						role: "TOP_LEVEL",
+						parentId: null,
+						name: "G1",
+						description: "Top-level goal",
+						inSandbox: false,
+					},
+					{
+						id: defeaterId,
+						elementType: "PROPERTY_CLAIM",
+						role: null,
+						parentId: targetId,
+						// Legacy pre-D8 name: a plain P-form on an isDefeater element.
+						name: "P1",
+						description: "Challenges the root goal, named the old way",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: targetId,
+					},
+				],
+				evidenceLinks: [],
+			};
+
+			const { importCase } = await import("@/lib/services/case-import-service");
+			const importer = await createTestUser();
+			const imported = expectSuccess(await importCase(importer.id, json));
+
+			expect(imported.warnings.some((w) => w.includes("renumbered"))).toBe(
+				true
+			);
+
+			const importedDefeater = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+			});
+			expect(importedDefeater?.isDefeater).toBe(true);
+			expect(importedDefeater?.name).toBe("CP1");
+		});
+
+		it("leaves names untouched when every defeater already conforms (a fresh, post-ruling export)", async () => {
+			const targetId = "86000000-0000-4000-8000-000000000001";
+			const defeaterId = "86000000-0000-4000-8000-000000000002";
+			const json = {
+				version: "2.0",
+				exportedAt: new Date().toISOString(),
+				case: {
+					name: "Conforming Defeater Name Case",
+					description: "Defeater already named CP1",
+				},
+				elements: [
+					{
+						id: targetId,
+						elementType: "GOAL",
+						role: "TOP_LEVEL",
+						parentId: null,
+						name: "G1",
+						description: "Top-level goal",
+						inSandbox: false,
+					},
+					{
+						id: defeaterId,
+						elementType: "PROPERTY_CLAIM",
+						role: null,
+						parentId: targetId,
+						name: "CP1",
+						description: "Already named per the current ruling",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: targetId,
+					},
+				],
+				evidenceLinks: [],
+			};
+
+			const { importCase } = await import("@/lib/services/case-import-service");
+			const importer = await createTestUser();
+			const imported = expectSuccess(await importCase(importer.id, json));
+
+			expect(imported.warnings.some((w) => w.includes("renumbered"))).toBe(
+				false
+			);
+
+			const importedDefeater = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+			});
+			expect(importedDefeater?.name).toBe("CP1");
+			const importedGoal = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "GOAL" },
+			});
+			expect(importedGoal?.name).toBe("G1");
+		});
+
+		it("leaves an arbitrary free-text defeater name untouched (not a legacy plain-form identifier, so left as-is like every other name)", async () => {
+			const targetId = "87000000-0000-4000-8000-000000000001";
+			const defeaterId = "87000000-0000-4000-8000-000000000002";
+			const json = {
+				version: "2.0",
+				exportedAt: new Date().toISOString(),
+				case: {
+					name: "Free-Text Defeater Name Case",
+					description: "Defeater named with free text, not TEA syntax at all",
+				},
+				elements: [
+					{
+						id: targetId,
+						elementType: "GOAL",
+						role: "TOP_LEVEL",
+						parentId: null,
+						name: "Root Goal",
+						description: "Top-level goal",
+						inSandbox: false,
+					},
+					{
+						id: defeaterId,
+						elementType: "PROPERTY_CLAIM",
+						role: null,
+						parentId: targetId,
+						name: "Defeater Claim",
+						description: "Free text, matches neither the plain nor C form",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: targetId,
+					},
+				],
+				evidenceLinks: [],
+			};
+
+			const { importCase } = await import("@/lib/services/case-import-service");
+			const importer = await createTestUser();
+			const imported = expectSuccess(await importCase(importer.id, json));
+
+			expect(imported.warnings.some((w) => w.includes("renumbered"))).toBe(
+				false
+			);
+
+			const importedDefeater = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "PROPERTY_CLAIM" },
+			});
+			expect(importedDefeater?.name).toBe("Defeater Claim");
+			const importedGoal = await prisma.assuranceElement.findFirst({
+				where: { caseId: imported.caseId, elementType: "GOAL" },
+			});
+			expect(importedGoal?.name).toBe("Root Goal");
+		});
+	});
 });
