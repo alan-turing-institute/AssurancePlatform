@@ -334,6 +334,12 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
  * Evidence appears inline under claims, may be duplicated if multi-linked.
  * Uses version "1.0" as this is the first officially versioned export format
  * (the legacy Django format had no version field).
+ *
+ * ADR 0004 D1: `version` is the format-migration key for the whole case
+ * export contract, not just a label. A change to the model this schema
+ * describes bumps the literal (e.g. "1.0" -> "2.0", mirrored in
+ * CaseExportV2Schema above) and ships an explicit migration; the shape
+ * behind a given version string never changes silently underneath it.
  */
 // biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportNestedSchema = z
