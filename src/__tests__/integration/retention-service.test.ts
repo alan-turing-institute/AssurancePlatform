@@ -494,12 +494,22 @@ describe("runRetentionSweep — resets the stamp when the send fails after the c
 
 /**
  * QA round 3, item b: two sweeps race for the same candidate and the
- * winner's send throws. By construction this cannot corrupt a claim the
- * OTHER run made — `claimWarning30`'s atomic `updateMany` guarantees only
- * one process ever wins the null-to-timestamp transition, so the loser
- * returns "skipped" before ever attempting a send, and never reaches the
- * reset call at all. Only the actual winner can call `resetWarning30`, and
- * it is guarded on the exact timestamp that winner itself wrote.
+ * winner's send throws. `claimWarning30`'s atomic `updateMany` guarantees
+ * only one process can hold the claim at once, so a second sweep whose own
+ * claim attempt lands while the first still holds it loses cleanly and
+ * never calls send at all — that is the interleaving under test here,
+ * forced deterministically rather than left to `Promise.all` timing.
+ * (Investigation, 2026-09-15: on fast local Postgres the winner's
+ * claim-throw-reset cycle reliably finishes before the second sweep even
+ * attempts its own claim, so the "loser" legitimately re-wins the
+ * now-reset claim and also calls send. That is not corruption —
+ * `resetWarning30` is guarded to its own claimed timestamp, so it can only
+ * ever undo its own claim — it is a second genuine retry, which is
+ * correct behaviour per `resetWarning30`'s comment, but made
+ * `toHaveBeenCalledTimes(1)` flaky rather than simply wrong.) This test's
+ * job is to prove the atomic part: the loser of a true race never reaches
+ * send. Recovery via a later, genuinely-separate retry is covered by the
+ * third sweep below.
  */
 describe("runRetentionSweep — concurrent sweeps where the winner's send throws", () => {
 	afterEach(() => {
@@ -511,20 +521,44 @@ describe("runRetentionSweep — concurrent sweeps where the winner's send throws
 		const lastLoginAt = addDays(warn30ThresholdActivity(now), -1);
 		const user = await createTestUser({ lastLoginAt });
 
-		// Always throws — only the winner of the atomic claim ever reaches
-		// this mock; the loser returns "skipped" without calling it.
-		vi.mocked(sendRetentionWarningEmail).mockImplementation(() => {
+		// Deterministic race: the winner's send call signals that the claim
+		// has landed, then blocks. Only once we know the claim is held do we
+		// run the second sweep to completion — it sees the field non-null,
+		// loses the atomic claim, and returns "skipped" without ever calling
+		// send. Only then do we let the winner's send throw, which resets
+		// its claim so a later, separate sweep can retry.
+		let signalClaimed = () => {
+			/* replaced synchronously below */
+		};
+		const claimed = new Promise<void>((resolve) => {
+			signalClaimed = resolve;
+		});
+		let releaseSend = () => {
+			/* replaced synchronously below */
+		};
+		const sendGate = new Promise<void>((resolve) => {
+			releaseSend = resolve;
+		});
+		vi.mocked(sendRetentionWarningEmail).mockImplementation(async () => {
+			signalClaimed();
+			await sendGate;
 			throw new Error("simulated send failure (race)");
 		});
 
-		const [first, second] = await Promise.all([
-			runRetentionSweep(CRON_SECRET),
-			runRetentionSweep(CRON_SECRET),
-		]);
+		const firstPromise = runRetentionSweep(CRON_SECRET);
+		await claimed;
 
-		const firstData = expectSuccess(first);
-		const secondData = expectSuccess(second);
-		expect(firstData.warned30 + secondData.warned30).toBe(0);
+		const afterClaim = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(afterClaim?.retentionWarning30SentAt).not.toBeNull();
+
+		const secondData = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(secondData.warned30).toBe(0);
+		expect(secondData.skipped).toBe(1);
+		expect(sendRetentionWarningEmail).toHaveBeenCalledTimes(1);
+
+		releaseSend();
+		const firstData = expectSuccess(await firstPromise);
+		expect(firstData.warned30).toBe(0);
 		expect(sendRetentionWarningEmail).toHaveBeenCalledTimes(1);
 
 		const afterRace = await prisma.user.findUnique({ where: { id: user.id } });
