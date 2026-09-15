@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import useStore from "@/store/store";
@@ -71,7 +71,11 @@ describe("JsonViewPanel — full-screen toggle", () => {
 		});
 		expect(exitButton).toHaveAttribute("aria-pressed", "true");
 
-		fireEvent.keyDown(document, { key: "Escape" });
+		// Escape targeting an element inside the panel — matches the fix
+		// (react-doctor/vincent round 1): the handler is scoped to the Sheet
+		// content via onKeyDownCapture, not a document-level listener, so it
+		// only sees events whose target is inside this panel.
+		await user.keyboard("{Escape}");
 
 		await waitFor(() => {
 			expect(
@@ -87,13 +91,111 @@ describe("JsonViewPanel — full-screen toggle", () => {
 	});
 
 	it("Esc closes the panel as before when not in full screen", async () => {
+		const user = userEvent.setup();
 		const onClose = vi.fn();
 		render(<JsonViewPanel isOpen={true} onClose={onClose} />);
 
-		await screen.findByRole("button", { name: "Enter full screen" });
+		const enterButton = await screen.findByRole("button", {
+			name: "Enter full screen",
+		});
+		enterButton.focus();
 
-		fireEvent.keyDown(document, { key: "Escape" });
+		await user.keyboard("{Escape}");
 
 		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 	});
 });
+
+describe("JsonViewPanel — wrap toggle (real CodeMirror effect)", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	it("adds and removes CodeMirror's own cm-lineWrapping class, not just the button state", async () => {
+		const user = userEvent.setup();
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const wrapButton = await screen.findByRole("button", {
+			name: "Enable line wrap",
+		});
+		const content = document.querySelector(".cm-content");
+		expect(content).not.toBeNull();
+		expect(content).not.toHaveClass("cm-lineWrapping");
+
+		await user.click(wrapButton);
+
+		await waitFor(() => {
+			expect(document.querySelector(".cm-content")).toHaveClass(
+				"cm-lineWrapping"
+			);
+		});
+
+		await user.click(screen.getByRole("button", { name: "Disable line wrap" }));
+
+		await waitFor(() => {
+			expect(document.querySelector(".cm-content")).not.toHaveClass(
+				"cm-lineWrapping"
+			);
+		});
+	});
+});
+
+describe("JsonViewPanel — Format button (real content effect)", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	it("re-indents a minified buffer to 2-space JSON", async () => {
+		const user = userEvent.setup();
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const content = await waitFor(() => {
+			const el = document.querySelector(".cm-content");
+			expect(el).not.toBeNull();
+			expect(el?.textContent).toContain("Root goal");
+			return el as HTMLElement;
+		});
+
+		await user.click(content);
+		await user.keyboard("{Control>}a{/Control}");
+		const minified = JSON.stringify(sampleExport());
+		// Paste, not keyboard() — the JSON text is full of `{`/`}`, which
+		// user-event's keyboard() parses as its own key-description syntax.
+		await user.paste(minified);
+
+		await waitFor(() => {
+			expect(docText(content)).toBe(minified);
+		});
+		// Confirms the buffer really is on one line before Format runs.
+		expect(docLines(content)).toHaveLength(1);
+
+		const formatButton = screen.getByRole("button", { name: "Format JSON" });
+		expect(formatButton).toBeEnabled();
+		await user.click(formatButton);
+
+		await waitFor(() => {
+			expect(docLines(content).length).toBeGreaterThan(1);
+		});
+		expect(docText(content)).toBe(JSON.stringify(sampleExport(), null, 2));
+	});
+});
+
+/**
+ * jsdom doesn't implement `Range.getClientRects()`, so CodeMirror's
+ * fallback text-metrics measurement (a temporary `.cm-line` dummy it
+ * appends to measure char width — see `measureTextSize` in
+ * `@codemirror/view`) throws before it can remove that dummy, leaking an
+ * absolutely-positioned "abc def ghi jkl mno pqr stu" line into the DOM.
+ * This filters it out so assertions read the real document only.
+ */
+function docLines(content: HTMLElement): HTMLElement[] {
+	return Array.from(content.querySelectorAll<HTMLElement>(".cm-line")).filter(
+		(line) => line.style.position !== "absolute"
+	);
+}
+
+function docText(content: HTMLElement): string {
+	return docLines(content)
+		.map((line) => line.textContent ?? "")
+		.join("\n");
+}
