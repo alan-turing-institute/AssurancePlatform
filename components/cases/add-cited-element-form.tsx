@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { Node } from "reactflow";
-import {
-	type CitableCaseSummary,
-	type CitableGoalSummary,
-	listCitableCases,
-	listCitableGoals,
-} from "@/actions/cited-element-picker";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,12 +14,17 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCitedElementPicker } from "@/hooks/use-cited-element-picker";
 import { createAssuranceCaseNode } from "@/lib/case";
+import {
+	buildCitedElementPayload,
+	type CitedElementKind,
+} from "@/lib/case/build-cited-element-payload";
 import { recordCreate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 
-export type CitedElementKind = "away-goal" | "module";
+export type { CitedElementKind } from "@/lib/case/build-cited-element-payload";
 
 export interface AddCitedElementFormProps {
 	kind: CitedElementKind;
@@ -33,11 +32,23 @@ export interface AddCitedElementFormProps {
 	onClose: () => void;
 }
 
+const ENTITY_BY_KIND: Record<CitedElementKind, string> = {
+	"away-goal": "awaygoals",
+	module: "modules",
+};
+const LABEL_BY_KIND: Record<CitedElementKind, string> = {
+	"away-goal": "Away Goal",
+	module: "Module",
+};
+
 /**
  * The "Add away goal" / "Add module" two-step picker (ADR 0005 D7): first a
  * case the user can access (own or shared), then — for an away goal only —
  * a goal within it. Description prefills from the cited goal for an away
- * goal; both name and description stay editable.
+ * goal; both name and description stay editable. Fetching and selection
+ * state live in `useCitedElementPicker`; the discriminated create payload
+ * lives in `buildCitedElementPayload` — both extracted (review round 1) so
+ * this component stays a thin presentational shell.
  *
  * Creation relies on the existing SSE-driven case refetch (`element:created`,
  * `use-case-events.ts`) rather than local optimistic tree splicing — the
@@ -52,85 +63,27 @@ export default function AddCitedElementForm({
 	onClose,
 }: AddCitedElementFormProps) {
 	const { assuranceCase } = useStore();
-
-	const [cases, setCases] = useState<CitableCaseSummary[]>([]);
-	const [casesLoading, setCasesLoading] = useState(true);
-	const [selectedCaseId, setSelectedCaseId] = useState("");
-
-	const [goals, setGoals] = useState<CitableGoalSummary[]>([]);
-	const [goalsLoading, setGoalsLoading] = useState(false);
-	const [selectedGoalId, setSelectedGoalId] = useState("");
+	const picker = useCitedElementPicker(kind);
 
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 
-	const label = kind === "away-goal" ? "away goal" : "module";
-	const entity = kind === "away-goal" ? "awaygoals" : "modules";
+	const label = LABEL_BY_KIND[kind];
+	const entity = ENTITY_BY_KIND[kind];
 
+	// Prefill the description from the selected goal — editable afterwards.
 	useEffect(() => {
-		let cancelled = false;
-		listCitableCases().then((result) => {
-			if (cancelled) {
-				return;
-			}
-			setCasesLoading(false);
-			if (result.success) {
-				setCases(result.data);
-			} else {
-				toast({
-					variant: "destructive",
-					title: "Error",
-					description: "Failed to load cases",
-				});
-			}
-		});
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
-	useEffect(() => {
-		setSelectedGoalId("");
-		setGoals([]);
-		if (kind !== "away-goal" || !selectedCaseId) {
-			return;
+		if (picker.selectedGoalDescription !== null) {
+			setDescription(picker.selectedGoalDescription);
 		}
-		let cancelled = false;
-		setGoalsLoading(true);
-		listCitableGoals(selectedCaseId).then((result) => {
-			if (cancelled) {
-				return;
-			}
-			setGoalsLoading(false);
-			if (result.success) {
-				setGoals(result.data);
-			} else {
-				toast({
-					variant: "destructive",
-					title: "Error",
-					description: "Failed to load goals",
-				});
-			}
-		});
-		return () => {
-			cancelled = true;
-		};
-	}, [kind, selectedCaseId]);
-
-	const handleGoalChange = (goalId: string) => {
-		setSelectedGoalId(goalId);
-		const goal = goals.find((g) => g.id === goalId);
-		if (goal) {
-			setDescription(goal.description);
-		}
-	};
+	}, [picker.selectedGoalDescription]);
 
 	const canSubmit =
-		!(casesLoading || submitting) &&
+		!(picker.casesLoading || submitting) &&
 		(kind === "away-goal"
-			? !!(selectedCaseId && selectedGoalId)
-			: !!selectedCaseId);
+			? !!(picker.selectedCaseId && picker.selectedGoalId)
+			: !!picker.selectedCaseId);
 
 	const handleSubmit = async () => {
 		if (!(canSubmit && assuranceCase)) {
@@ -138,19 +91,15 @@ export default function AddCitedElementForm({
 		}
 		setSubmitting(true);
 
-		const payload = {
-			description,
-			name: name.trim() || undefined,
+		const payload = buildCitedElementPayload({
+			kind,
 			parentId: node.data.id as string,
 			assuranceCaseId: assuranceCase.id,
-			moduleReferenceId: selectedCaseId,
-			...(kind === "away-goal"
-				? { citedElementId: selectedGoalId }
-				: // Required for MODULE at the Prisma validation layer. "COPY"
-					// (a snapshot, not a live link) is the safer default absent
-					// any UI for choosing embed type in 1.0.
-					{ moduleEmbedType: "COPY" as const }),
-		};
+			moduleReferenceId: picker.selectedCaseId,
+			citedElementId: picker.selectedGoalId,
+			name,
+			description,
+		});
 
 		const result = await createAssuranceCaseNode(entity, payload, "");
 
@@ -158,7 +107,7 @@ export default function AddCitedElementForm({
 			toast({
 				variant: "destructive",
 				title: "Error",
-				description: `Failed to create ${label}`,
+				description: `Failed to create ${label.toLowerCase()}`,
 			});
 			setSubmitting(false);
 			return;
@@ -181,17 +130,19 @@ export default function AddCitedElementForm({
 			<div className="space-y-2">
 				<Label htmlFor="cited-case">Case</Label>
 				<Select
-					disabled={casesLoading}
-					onValueChange={setSelectedCaseId}
-					value={selectedCaseId}
+					disabled={picker.casesLoading}
+					onValueChange={picker.selectCase}
+					value={picker.selectedCaseId}
 				>
 					<SelectTrigger id="cited-case">
 						<SelectValue
-							placeholder={casesLoading ? "Loading cases…" : "Select a case"}
+							placeholder={
+								picker.casesLoading ? "Loading cases…" : "Select a case"
+							}
 						/>
 					</SelectTrigger>
 					<SelectContent>
-						{cases.map((c) => (
+						{picker.cases.map((c) => (
 							<SelectItem key={c.id} value={c.id}>
 								{c.name}
 							</SelectItem>
@@ -204,17 +155,19 @@ export default function AddCitedElementForm({
 				<div className="space-y-2">
 					<Label htmlFor="cited-goal">Goal</Label>
 					<Select
-						disabled={!selectedCaseId || goalsLoading}
-						onValueChange={handleGoalChange}
-						value={selectedGoalId}
+						disabled={!picker.selectedCaseId || picker.goalsLoading}
+						onValueChange={picker.selectGoal}
+						value={picker.selectedGoalId}
 					>
 						<SelectTrigger id="cited-goal">
 							<SelectValue
-								placeholder={goalsLoading ? "Loading goals…" : "Select a goal"}
+								placeholder={
+									picker.goalsLoading ? "Loading goals…" : "Select a goal"
+								}
 							/>
 						</SelectTrigger>
 						<SelectContent>
-							{goals.map((g) => (
+							{picker.goals.map((g) => (
 								<SelectItem key={g.id} value={g.id}>
 									{g.name || g.id}
 								</SelectItem>
@@ -251,9 +204,7 @@ export default function AddCitedElementForm({
 					onClick={handleSubmit}
 					type="button"
 				>
-					{submitting
-						? "Adding…"
-						: `Add ${label === "away goal" ? "Away Goal" : "Module"}`}
+					{submitting ? "Adding…" : `Add ${label}`}
 				</Button>
 				<Button onClick={onClose} type="button" variant="outline">
 					Cancel

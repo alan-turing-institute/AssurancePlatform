@@ -432,6 +432,7 @@ export function useNewLinkForm({
 				title: "Error",
 				description: "Failed to create defeater",
 			});
+			setLoading(false);
 			return;
 		}
 

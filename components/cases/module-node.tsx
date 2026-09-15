@@ -35,6 +35,9 @@ function ModuleNode({ data, ...props }: NodeProps) {
 					/>
 				}
 				description={data.description}
+				// The referenced case is the card's whole point — unlike a
+				// description preview, it shouldn't be hidden behind a click.
+				initialExpanded
 				name={data.name}
 				nodeType="module"
 				selected={props.selected}

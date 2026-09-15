@@ -46,6 +46,9 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 					/>
 				}
 				description={data.description}
+				// The cited case/goal is the card's whole point — unlike a
+				// description preview, it shouldn't be hidden behind a click.
+				initialExpanded
 				name={data.name}
 				nodeType="awayGoal"
 				selected={props.selected}
