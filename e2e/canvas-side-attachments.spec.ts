@@ -17,7 +17,6 @@ import { DashboardPage } from "./pages/dashboard-page";
  */
 
 const G1_ADD_CHILD_LABEL = "Add child element";
-const CITED_CASE_NAME_PATTERN = /^Cited Case/;
 const CHALLENGES_EDGE_PATH_SELECTOR =
 	".react-flow__edge path[stroke-dasharray]";
 // `.react-flow__edge-path` (not just any `<path>`) excludes React Flow's
@@ -69,8 +68,13 @@ async function addEvidenceOn(
 	return page.locator(".react-flow__node", { hasText: description });
 }
 
+interface ScreenPoint {
+	x: number;
+	y: number;
+}
+
 /**
- * Samples an SVG `<path>`'s Y-coordinate in actual screen pixels at evenly
+ * Samples an SVG `<path>`'s position in actual screen pixels at evenly
  * spaced points along its length — via `getPointAtLength` +
  * `getScreenCTM().matrixTransform`, the standard way to convert a path's
  * own local (flow-space) coordinates into the same viewport-pixel space
@@ -78,12 +82,12 @@ async function addEvidenceOn(
  * raw numbers directly would compare flow-space to pixel-space — wrong
  * whenever the canvas is panned or zoomed.
  */
-async function sampleEdgePathScreenYs(
+async function sampleEdgePathScreenPoints(
 	page: Page,
 	selector: string,
 	pathIndex: number,
-	steps = 30
-): Promise<number[]> {
+	steps = 60
+): Promise<ScreenPoint[]> {
 	return await page.evaluate(
 		([sel, index, stepCount]) => {
 			const paths = document.querySelectorAll(sel as string);
@@ -93,17 +97,55 @@ async function sampleEdgePathScreenYs(
 				return [];
 			}
 			const length = pathEl.getTotalLength();
-			const ys: number[] = [];
+			const points: { x: number; y: number }[] = [];
 			for (let i = 0; i <= (stepCount as number); i++) {
 				const point = pathEl.getPointAtLength(
 					(length * i) / (stepCount as number)
 				);
-				ys.push(point.matrixTransform(ctm).y);
+				const screenPoint = point.matrixTransform(ctm);
+				points.push({ x: screenPoint.x, y: screenPoint.y });
 			}
-			return ys;
+			return points;
 		},
 		[selector, pathIndex, steps] as const
 	);
+}
+
+/** Whether `point` falls within `box` (both edges inclusive). */
+function isInsideBox(
+	point: ScreenPoint,
+	box: { height: number; width: number; x: number; y: number }
+): boolean {
+	return (
+		point.x >= box.x &&
+		point.x <= box.x + box.width &&
+		point.y >= box.y &&
+		point.y <= box.y + box.height
+	);
+}
+
+/**
+ * The y shared by the largest cluster of sampled points (rounded to the
+ * nearest pixel) — the horizontal run of a smoothstep bend contributes far
+ * more samples at a near-constant y than either short vertical leaving/
+ * entering stub does, so this picks out the bend's own y without needing
+ * to know which sample index it falls at.
+ */
+function modeY(points: ScreenPoint[]): number {
+	const counts = new Map<number, number>();
+	for (const point of points) {
+		const bucket = Math.round(point.y);
+		counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+	}
+	let bestY = 0;
+	let bestCount = -1;
+	for (const [y, count] of counts) {
+		if (count > bestCount) {
+			bestCount = count;
+			bestY = y;
+		}
+	}
+	return bestY;
 }
 
 async function createCaseViaModal(page: Page, name: string): Promise<void> {
@@ -136,8 +178,12 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		page,
 	}) => {
 		// A second case to cite from the away goal — a fresh case always
-		// seeds one top-level goal named G1.
-		await createCaseViaModal(page, `Cited Case ${Date.now()}`);
+		// seeds one top-level goal named G1. Matched on its own exact,
+		// timestamped name below — a shared "^Cited Case" prefix pattern
+		// collides with earlier fixtures left on a long-lived DB (nanaki,
+		// round 3).
+		const citedCaseName = `Cited Case ${Date.now()}`;
+		await createCaseViaModal(page, citedCaseName);
 
 		await createCaseViaModal(page, `Side Attachments Case ${Date.now()}`);
 
@@ -146,7 +192,9 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		await page.getByRole("button", { name: "Add Away Goal" }).click();
 		const awayGoalDialog = page.getByRole("dialog");
 		await awayGoalDialog.getByLabel("Case", { exact: true }).click();
-		await page.getByRole("option", { name: CITED_CASE_NAME_PATTERN }).click();
+		await page
+			.getByRole("option", { name: citedCaseName, exact: true })
+			.click();
 		await awayGoalDialog.getByLabel("Goal", { exact: true }).click();
 		await page.getByRole("option", { name: "G1" }).click();
 
@@ -239,29 +287,35 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			(firstDefeaterBox?.y ?? 0) + (firstDefeaterBox?.height ?? 0),
 			(secondDefeaterBox?.y ?? 0) + (secondDefeaterBox?.height ?? 0)
 		);
-		// "Just below G1" — the start of the region a naive midpoint bend
-		// (the pre-fix behaviour) could land inside the second defeater's
-		// card.
-		const g1BottomPx = (g1Box?.y ?? 0) + (g1Box?.height ?? 0);
 
 		const supportPaths = page.locator(SUPPORT_EDGE_PATH_SELECTOR);
 		const count = await supportPaths.count();
 		expect(count).toBeGreaterThan(0);
 		for (let i = 0; i < count; i++) {
-			const screenYs = await sampleEdgePathScreenYs(
+			const points = await sampleEdgePathScreenPoints(
 				page,
 				SUPPORT_EDGE_PATH_SELECTOR,
 				i
 			);
-			expect(screenYs.length).toBeGreaterThan(0);
-			// No sampled point sits stranded between G1's own bottom and the
-			// whole cell's true bottom — the bend happens at or below the
-			// second defeater's card, not at G1's own naive midpoint
-			// (walkthrough finding 4).
-			const strandedInsideCell = screenYs.some(
-				(y) => y > g1BottomPx + 5 && y < cellBottomPx - 5
+			expect(points.length).toBeGreaterThan(0);
+
+			// The connector never passes THROUGH either defeater's card — a
+			// point-in-rectangle check (x AND y). A y-only band check also
+			// flags the short vertical segment leaving G1's own bottom (at
+			// G1's x, nowhere near either card) as a false positive on an
+			// otherwise-correct layout (nanaki, round 3).
+			const passesThroughACard = points.some(
+				(point) =>
+					(!!firstDefeaterBox && isInsideBox(point, firstDefeaterBox)) ||
+					(!!secondDefeaterBox && isInsideBox(point, secondDefeaterBox))
 			);
-			expect(strandedInsideCell).toBe(false);
+			expect(passesThroughACard).toBe(false);
+
+			// And the bend itself (the horizontal run) sits below the whole
+			// cell, not at G1's own naive midpoint (walkthrough finding 4) —
+			// "doesn't pass through a card" alone wouldn't catch a bend that
+			// happened to route around them at the wrong height.
+			expect(modeY(points)).toBeGreaterThan(cellBottomPx);
 		}
 	});
 });
