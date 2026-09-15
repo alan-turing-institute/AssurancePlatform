@@ -1,6 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	mockPush,
+	resetNavigationMocks,
+} from "@/src/__tests__/mocks/next-navigation-mocks";
 import { server } from "@/src/__tests__/mocks/server";
 import { extractErrorMessage, useCaseImport } from "../use-case-import";
 
@@ -63,5 +67,103 @@ describe("useCaseImport (import dialog)", () => {
 				"Validation failed: tree.children[0].children[0].children[0].defeatsElementId: Invalid uuid"
 			)
 		);
+	});
+});
+
+/**
+ * A successful import that ALSO carries warnings (e.g. a legacy defeater
+ * name renumbered on the way in) used to close the modal and navigate in
+ * the same tick `warnings` was set — the "Import warnings" banner never
+ * had a chance to render before the modal (and its DOM) were gone (QA
+ * finding, 2026-09-15). Navigation must now wait for `continueToCase`.
+ */
+describe("useCaseImport — warnings hold navigation open (QA finding, 2026-09-15)", () => {
+	beforeEach(() => {
+		resetNavigationMocks();
+	});
+
+	it("does not navigate or close when a successful import also carries warnings", async () => {
+		const onClose = vi.fn();
+		server.use(
+			http.post("/api/cases/import", () =>
+				HttpResponse.json(
+					{
+						id: "case-1",
+						name: "Imported Case",
+						warnings: ["A legacy defeater name was renumbered on import."],
+					},
+					{ status: 200 }
+				)
+			)
+		);
+
+		const { result } = renderHook(() =>
+			useCaseImport({ isOpen: true, onClose })
+		);
+
+		await act(async () => {
+			await result.current.importCase({ some: "json" });
+		});
+
+		await waitFor(() =>
+			expect(result.current.warnings).toEqual([
+				"A legacy defeater name was renumbered on import.",
+			])
+		);
+		expect(result.current.pendingCaseId).toBe("case-1");
+		expect(onClose).not.toHaveBeenCalled();
+		expect(mockPush).not.toHaveBeenCalled();
+	});
+
+	it("navigates and closes only once continueToCase is called", async () => {
+		const onClose = vi.fn();
+		server.use(
+			http.post("/api/cases/import", () =>
+				HttpResponse.json(
+					{ id: "case-1", name: "Imported Case", warnings: ["A warning."] },
+					{ status: 200 }
+				)
+			)
+		);
+
+		const { result } = renderHook(() =>
+			useCaseImport({ isOpen: true, onClose })
+		);
+
+		await act(async () => {
+			await result.current.importCase({ some: "json" });
+		});
+		await waitFor(() => expect(result.current.pendingCaseId).toBe("case-1"));
+
+		act(() => {
+			result.current.continueToCase();
+		});
+
+		expect(onClose).toHaveBeenCalled();
+		expect(mockPush).toHaveBeenCalledWith("/case/case-1");
+	});
+
+	it("navigates immediately when a successful import carries no warnings", async () => {
+		const onClose = vi.fn();
+		server.use(
+			http.post("/api/cases/import", () =>
+				HttpResponse.json(
+					{ id: "case-2", name: "Imported Case" },
+					{ status: 200 }
+				)
+			)
+		);
+
+		const { result } = renderHook(() =>
+			useCaseImport({ isOpen: true, onClose })
+		);
+
+		await act(async () => {
+			await result.current.importCase({ some: "json" });
+		});
+
+		await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/case/case-2"));
+		expect(onClose).toHaveBeenCalled();
+		expect(result.current.pendingCaseId).toBeNull();
 	});
 });
