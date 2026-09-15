@@ -43,12 +43,19 @@ export async function listCitableCases(): Promise<
 		return { success: false, error: shared.error };
 	}
 
-	const cases = [...owned.data, ...shared.data].map((c) => ({
-		id: c.id,
-		name: c.name,
-	}));
+	// `listUserCases` already returns own OR directly-shared cases, and
+	// `listSharedCases` returns direct-or-team shares (excluding own) — so a
+	// directly-shared case comes back from BOTH calls. De-duplicate by case
+	// id, first occurrence wins (owned.data first), so each case appears
+	// exactly once regardless of which call(s) produced it.
+	const byId = new Map<string, CitableCaseSummary>();
+	for (const c of [...owned.data, ...shared.data]) {
+		if (!byId.has(c.id)) {
+			byId.set(c.id, { id: c.id, name: c.name });
+		}
+	}
 
-	return { success: true, data: cases };
+	return { success: true, data: Array.from(byId.values()) };
 }
 
 /**
