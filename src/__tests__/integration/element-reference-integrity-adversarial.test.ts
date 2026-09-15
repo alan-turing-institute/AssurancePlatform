@@ -159,9 +159,11 @@ describe("defeatsElementId — cases barret's suite didn't cover", () => {
 		});
 
 		// Update an unrelated field only — defeatsElementId is not in the input.
+		// Defeater naming class (Chris's ruling, 2026-09-15 — D8 of ADR 0005):
+		// this element is isDefeater, so its rename must use the CP<n> form.
 		const data = expectSuccess(
 			await updateElement(owner.id, element.id, {
-				name: "P2",
+				name: "CP1",
 			})
 		);
 		expect(data.defeatsElementId).toBe(target.id);

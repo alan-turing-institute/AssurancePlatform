@@ -112,6 +112,176 @@ describe("identifier-service", () => {
 		});
 	});
 
+	/**
+	 * Defeater identifiers (Chris's ruling, 2026-09-15 — D8 of ADR 0005,
+	 * "TEA — Defeater identifiers follow GSN (CP1, CG1, CE1)"): the renumber
+	 * action numbers each (elementType, isDefeater) class in its own
+	 * independent, tree-order sequence.
+	 */
+	describe("resetIdentifiers with defeaters", () => {
+		it("keeps the C-sequence independent of the plain sequence on renumber", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+			expect(defeater.name).toBe("CP1");
+
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id, deletedAt: null },
+				select: { id: true, name: true },
+			});
+			const byId = new Map(elements.map((e) => [e.id, e.name]));
+
+			// Renumbering keeps P1 a P-number and CP1 a C-number — adding a
+			// defeater never renumbers the plain sequence, and vice versa.
+			expect(byId.get(p1.id)).toBe("P1");
+			expect(byId.get(defeater.id)).toBe("CP1");
+		});
+
+		it("renumbers multiple defeaters as their own flat sequence (CP1, CP2), independent of tree depth", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			const defeaterOfGoal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			const defeaterOfClaim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: p1.id,
+					isDefeater: true,
+					defeatsElementId: p1.id,
+				})
+			);
+
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id, deletedAt: null },
+				select: { id: true, name: true },
+			});
+			const byId = new Map(elements.map((e) => [e.id, e.name]));
+			const defeaterNames = [
+				byId.get(defeaterOfGoal.id),
+				byId.get(defeaterOfClaim.id),
+			].sort();
+
+			expect(defeaterNames).toEqual(["CP1", "CP2"]);
+		});
+
+		it("keeps a counter-to-a-counter hierarchical (CP1.1) on renumber", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			const counterCounter = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: defeater.id,
+					isDefeater: true,
+					defeatsElementId: defeater.id,
+				})
+			);
+
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id, deletedAt: null },
+				select: { id: true, name: true },
+			});
+			const byId = new Map(elements.map((e) => [e.id, e.name]));
+
+			expect(byId.get(defeater.id)).toBe("CP1");
+			expect(byId.get(counterCounter.id)).toBe("CP1.1");
+		});
+
+		it("assigns the CG1 prefix to a defeater goal during reset", async () => {
+			// A fresh case with only a defeater GOAL (no plain goal) —
+			// `caseHasGoal`'s single-goal rule counts any GOAL row, defeater
+			// or not, and blocking a second GOAL is a separate, pre-existing
+			// business rule this issue does not change.
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const defeaterGoal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					isDefeater: true,
+				})
+			);
+
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const inDb = await prisma.assuranceElement.findUnique({
+				where: { id: defeaterGoal.id },
+			});
+			expect(inDb?.name).toBe("CG1");
+		});
+	});
+
 	describe("resetIdentifiers permissions", () => {
 		it("rejects reset from a VIEW-only user", async () => {
 			const owner = await createTestUser();

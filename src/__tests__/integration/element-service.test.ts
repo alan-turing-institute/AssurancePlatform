@@ -1133,4 +1133,219 @@ describe("element-service", () => {
 			});
 		});
 	});
+
+	/**
+	 * Defeater identifiers (Chris's ruling, 2026-09-15, from the GSN
+	 * standard's own examples — CG1, CSn1, CCG1 — "TEA — Defeater
+	 * identifiers follow GSN (CP1, CG1, CE1)", ADR 0005 D8): naming class =
+	 * (elementType, isDefeater). Each class counts independently, and
+	 * `createElement`'s auto-generated names follow the same rule as its
+	 * name-format validator.
+	 */
+	describe("defeater identifiers (naming class)", () => {
+		it("auto-names a defeater property claim CP1, independent of an existing P1", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			expect(p1.name).toBe("P1");
+
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(defeater.name).toBe("CP1");
+
+			// P1 keeps its number — the defeater did not take the next P-number.
+			const p1InDb = await prisma.assuranceElement.findUnique({
+				where: { id: p1.id },
+			});
+			expect(p1InDb?.name).toBe("P1");
+		});
+
+		it("auto-names a defeater goal CG1", async () => {
+			// A fresh case with no plain GOAL yet: `caseHasGoal`'s single-goal
+			// rule (unrelated to this issue — it counts any GOAL row,
+			// defeater or not) would otherwise block a second GOAL element
+			// regardless of isDefeater, so this proves the CG1 naming path in
+			// isolation rather than attacking an existing goal.
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const defeaterGoal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					isDefeater: true,
+				})
+			);
+			expect(defeaterGoal.name).toBe("CG1");
+		});
+
+		it("auto-names a defeater evidence CE1", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			const defeaterEvidence = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "evidence",
+					parentId: claim.id,
+					isDefeater: true,
+					defeatsElementId: claim.id,
+				})
+			);
+			expect(defeaterEvidence.name).toBe("CE1");
+		});
+
+		it("gives each defeater sequence its own independent counter (CP1, CP2)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const p1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+
+			const defeater1 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(defeater1.name).toBe("CP1");
+
+			const defeater2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: p1.id,
+					isDefeater: true,
+					defeatsElementId: p1.id,
+				})
+			);
+			expect(defeater2.name).toBe("CP2");
+		});
+
+		it("nests a counter-to-a-counter hierarchically under its parent defeater (CP1.1)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const defeater = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(defeater.name).toBe("CP1");
+
+			// A counter to CP1 itself — created as CP1's own child, isDefeater again.
+			const counterCounter = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: defeater.id,
+					isDefeater: true,
+					defeatsElementId: defeater.id,
+				})
+			);
+			expect(counterCounter.name).toBe("CP1.1");
+
+			// An ordinary (non-defeater) supporting sub-claim under CP1 is
+			// still hierarchical, inheriting CP1's own name.
+			const plainChild = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: defeater.id,
+				})
+			);
+			expect(plainChild.name).toBe("CP1.1");
+		});
+
+		it("rejects a plain element explicitly named in the defeater's C-form", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			expectError(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					name: "CP1",
+				}),
+				"Property Claim names must look like P1 or P1.1"
+			);
+		});
+
+		it("rejects a defeater explicitly named in the plain form", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			expectError(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+					name: "P1",
+				}),
+				"Property Claim names must look like CP1 or CP1.1"
+			);
+		});
+	});
 });
