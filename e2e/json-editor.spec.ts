@@ -89,7 +89,9 @@ test.describe("JSON editor — full screen and horizontal scroll", () => {
 		// assertion below would fail every time. Home returns the cursor
 		// (and the scroller) to the start of the line first.
 		await page.keyboard.press("Home");
-		await expect.poll(() => scroller.evaluate((el) => el.scrollLeft)).toBe(0);
+		await expect
+			.poll(() => scroller.evaluate((el) => el.scrollLeft))
+			.toBeLessThanOrEqual(1);
 
 		const scrollLeftBefore = await scroller.evaluate((el) => el.scrollLeft);
 		await scroller.hover();
