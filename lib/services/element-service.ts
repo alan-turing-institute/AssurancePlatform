@@ -671,13 +671,35 @@ async function generatePlainPropertyClaimName(
 
 	// Flat, case-wide plain property claim: covers top-level claims under a
 	// strategy/goal AND an ordinary child of a defeater property claim.
+	// Excludes anything that dot-continues instead — not just a DIRECT
+	// plain-property-claim parent (the first branch above) but also the
+	// STRATEGY-TRANSPARENT case (round-2 regression, vincent, 2026-09-15):
+	// a claim whose literal parent is a STRATEGY, but that strategy's OWN
+	// parent is a plain property claim, dot-continues too (the
+	// strategy-transparent branch above) — its direct parent isn't a
+	// PROPERTY_CLAIM at all, so a direct-parent-only filter missed it and
+	// counted it into the flat tally (e.g. "P3" where "P2" was correct,
+	// once a strategy-transparent claim already existed). Mirrors the
+	// branch decision one hop further, via a nested self-relation filter,
+	// instead of `level` — see the round-1 note on why `level` can't be
+	// used here once a defeater can sit in the parent chain.
 	const caseWideCount = await prisma.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: "PROPERTY_CLAIM",
 			isDefeater: false,
 			deletedAt: null,
-			NOT: { parent: { elementType: "PROPERTY_CLAIM", isDefeater: false } },
+			NOT: {
+				OR: [
+					{ parent: { elementType: "PROPERTY_CLAIM", isDefeater: false } },
+					{
+						parent: {
+							elementType: "STRATEGY",
+							parent: { elementType: "PROPERTY_CLAIM", isDefeater: false },
+						},
+					},
+				],
+			},
 		},
 	});
 	return `${prefix}${caseWideCount + 1}`;
