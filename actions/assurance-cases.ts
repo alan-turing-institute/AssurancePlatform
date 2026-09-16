@@ -80,11 +80,3 @@ export const createAssuranceCase = async (
 
 	return { success: true, data: result.data };
 };
-
-export const fetchPublishedAssuranceCases = async (): Promise<
-	AssuranceCase[]
-> => {
-	// Note: Published cases feature not yet implemented in Prisma schema
-	// This function is retained for backwards compatibility but returns empty array
-	return await Promise.resolve([]);
-};
