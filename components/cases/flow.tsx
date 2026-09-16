@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
 	Background,
 	Controls,
@@ -16,6 +16,7 @@ import SupportEdge from "@/components/cases/support-edge";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
+import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
@@ -191,6 +192,16 @@ function Flow() {
 
 	const reactFlowWrapper = useRef(null);
 
+	// Selected-node edge highlight (issue: highlight a selected node's
+	// edges so overlapping connectors on a cell's shared rail — ADR 0005
+	// D8 — can be traced). Purely a display-layer derivation: `edges` in
+	// the store is never touched, so layout (ELK, expensive) never re-runs
+	// on selection, and deselecting naturally reverts to the plain array.
+	const displayEdges = useMemo(
+		() => getHighlightedEdges(edges, nodes),
+		[edges, nodes]
+	);
+
 	return (
 		<div className="min-h-screen">
 			{loading ? (
@@ -201,7 +212,7 @@ function Flow() {
 				<div data-tour="canvas" id="ChartFlow" ref={reactFlowWrapper}>
 					<ReactFlow
 						className="min-h-screen"
-						edges={edges}
+						edges={displayEdges}
 						edgeTypes={edgeTypes}
 						fitView
 						id="ReactFlow"

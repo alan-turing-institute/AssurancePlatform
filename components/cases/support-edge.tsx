@@ -1,6 +1,11 @@
 "use client";
 
-import { BaseEdge, type EdgeProps, getSmoothStepPath } from "reactflow";
+import { type EdgeProps, getSmoothStepPath } from "reactflow";
+import {
+	HIGHLIGHTED_EDGE_PATH_CLASS,
+	HIGHLIGHTED_EDGE_STYLE,
+} from "@/components/cases/edge-highlight-style";
+import { cn } from "@/lib/utils";
 
 /**
  * The `support` edge (ADR 0005 D8): a smoothstep edge whose run bends at
@@ -18,6 +23,19 @@ import { BaseEdge, type EdgeProps, getSmoothStepPath } from "reactflow";
  * `getSmoothStepPath` falls back to its own default midpoint — the same
  * bend the built-in `smoothstep` type always used — so this edge type is a
  * drop-in replacement, not a visual change for ordinary edges.
+ *
+ * `data.highlighted` (`lib/case/edge-highlight.ts`) is set when this edge's
+ * source or target is the currently selected node — merges
+ * `HIGHLIGHTED_EDGE_STYLE` over any edge-supplied `style`, and adds
+ * `HIGHLIGHTED_EDGE_PATH_CLASS` (the moving dash, suppressed under
+ * `prefers-reduced-motion`), so the connector reads as traceable among the
+ * other edges sharing a cell's rail.
+ *
+ * Renders the path manually rather than via React Flow's `BaseEdge` —
+ * `BaseEdge` doesn't accept a `className`, which the highlighted state
+ * needs on the path itself (see `edge-highlight-style.ts`). This mirrors
+ * `BaseEdge`'s own output (including its `interactionWidth = 20` default)
+ * exactly, so the unhighlighted render is unchanged.
  */
 export default function SupportEdge({
 	id,
@@ -30,9 +48,13 @@ export default function SupportEdge({
 	style,
 	markerEnd,
 	markerStart,
-	interactionWidth,
+	interactionWidth = 20,
 	data,
-}: EdgeProps<{ centerX?: number; centerY?: number }>) {
+}: EdgeProps<{
+	centerX?: number;
+	centerY?: number;
+	highlighted?: boolean;
+}>) {
 	const [edgePath] = getSmoothStepPath({
 		sourceX,
 		sourceY,
@@ -44,14 +66,34 @@ export default function SupportEdge({
 		centerY: data?.centerY,
 	});
 
+	const highlighted = !!data?.highlighted;
+	const pathStyle = highlighted
+		? { ...style, ...HIGHLIGHTED_EDGE_STYLE }
+		: style;
+
 	return (
-		<BaseEdge
-			id={id}
-			interactionWidth={interactionWidth}
-			markerEnd={markerEnd}
-			markerStart={markerStart}
-			path={edgePath}
-			style={style}
-		/>
+		<>
+			<path
+				className={cn(
+					"react-flow__edge-path",
+					highlighted && HIGHLIGHTED_EDGE_PATH_CLASS
+				)}
+				d={edgePath}
+				fill="none"
+				id={id}
+				markerEnd={markerEnd}
+				markerStart={markerStart}
+				style={pathStyle}
+			/>
+			{interactionWidth && (
+				<path
+					className="react-flow__edge-interaction"
+					d={edgePath}
+					fill="none"
+					strokeOpacity={0}
+					strokeWidth={interactionWidth}
+				/>
+			)}
+		</>
 	);
 }
