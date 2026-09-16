@@ -142,6 +142,7 @@ function buildAwayGoalStructure(
 		goalId,
 		strategyId,
 		moduleReferenceId: element.moduleReferenceId,
+		moduleReferenceDangling: element.moduleReferenceDangling,
 		citedElementId: element.citedElementId,
 		citationDangling: element.citationDangling,
 		citedCaseName,
@@ -173,6 +174,7 @@ function buildModuleStructure(
 		goalId,
 		strategyId,
 		moduleReferenceId: element.moduleReferenceId,
+		moduleReferenceDangling: element.moduleReferenceDangling,
 		moduleCaseName,
 		moduleCaseAccessible: element.moduleReferenceId
 			? citation.accessibleCaseIds.has(element.moduleReferenceId)

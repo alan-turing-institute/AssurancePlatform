@@ -399,6 +399,16 @@ model AssuranceElement {
 
   // Module-specific
   moduleReferenceId   String?          @map("module_reference_id") /// For MODULE type: the referenced case ID
+  // True when moduleReferenceId was nullified because the imported target
+  // case doesn't exist in this environment (dangling-module-reference
+  // indicator; Chris's ruling 2026-09-16 — degrade like citations rather
+  // than fail the import loudly). Set only by case-import-service.ts's
+  // resolveImportedModuleReferenceId (mirrors defeatsDangling/
+  // citationDangling below — import is the only write path that can produce
+  // this). The cascade is deliberate: when this is true, citedElementId is
+  // also cleared and citationDangling set, since an away goal's
+  // citedElementId cannot be valid without its case.
+  moduleReferenceDangling Boolean      @default(false) @map("module_reference_dangling")
   moduleEmbedType     ModuleEmbedType? @map("module_embed_type") /// COPY (snapshot) or REFERENCE (live link)
   modulePublicSummary String?          @map("module_public_summary") /// Public summary when module is not viewable
 

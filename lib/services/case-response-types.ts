@@ -48,6 +48,8 @@ export interface AwayGoalResponse {
 	hidden?: boolean;
 	id: string;
 	inSandbox?: boolean;
+	/** True when moduleReferenceId was cleared because the cited case doesn't exist in this environment (Chris's ruling, 2026-09-16) */
+	moduleReferenceDangling?: boolean;
 	moduleReferenceId: string | null;
 	name: string;
 	/** Set by frontend tree processing, not present in API response */
@@ -72,6 +74,8 @@ export interface ModuleResponse {
 	inSandbox?: boolean;
 	moduleCaseAccessible?: boolean;
 	moduleCaseName?: string | null;
+	/** True when moduleReferenceId was cleared because the referenced case doesn't exist in this environment (Chris's ruling, 2026-09-16) */
+	moduleReferenceDangling?: boolean;
 	moduleReferenceId: string | null;
 	name: string;
 	/** Set by frontend tree processing, not present in API response */

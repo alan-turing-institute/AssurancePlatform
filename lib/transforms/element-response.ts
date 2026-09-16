@@ -78,6 +78,7 @@ function applyOptionalFields(
 		citedElementId?: string | null;
 		citationDangling?: boolean;
 		moduleReferenceId?: string | null;
+		moduleReferenceDangling?: boolean;
 		isDefeater?: boolean;
 		defeatsElementId?: string | null;
 		defeatsDangling?: boolean;
@@ -115,6 +116,9 @@ function applyOptionalFields(
 	if (element.moduleReferenceId) {
 		response.moduleReferenceId = element.moduleReferenceId;
 	}
+	if (element.moduleReferenceDangling) {
+		response.moduleReferenceDangling = true;
+	}
 	applyDialogicalReasoningFields(response, element);
 }
 
@@ -144,6 +148,10 @@ export function transformToResponse(element: {
 	citationDangling?: boolean;
 	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
 	moduleReferenceId?: string | null;
+	// Dangling-module-reference indicator (see resolveImportedModuleReferenceId,
+	// case-import-service.ts) — true when moduleReferenceId was nullified
+	// because the imported target case doesn't exist in this environment.
+	moduleReferenceDangling?: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	isDefeater?: boolean;
 	defeatsElementId?: string | null;

@@ -9,7 +9,10 @@ import NodeEditDialog from "./node-edit-dialog";
 /**
  * Module card (ADR 0005 D3): a reference to a whole other case. Shows the
  * referenced case's name (resolved server-side by `case-fetch-service.ts`)
- * and links to it when the viewer can access it. Read-only beyond the
+ * and links to it when the viewer can access it. When the referenced case
+ * isn't available in this environment (`moduleReferenceDangling` — Chris's
+ * ruling, 2026-09-16), the card says so instead of "Unknown case", and shows
+ * no link (`moduleReferenceId` is null in that state). Read-only beyond the
  * description: no add-child menu (modules are leaves in 1.0 core).
  */
 function ModuleNode({ data, ...props }: NodeProps) {
@@ -19,6 +22,7 @@ function ModuleNode({ data, ...props }: NodeProps) {
 	const moduleCaseName = (data.moduleCaseName as string | null) ?? null;
 	const moduleCaseAccessible = !!data.moduleCaseAccessible;
 	const moduleReferenceId = data.moduleReferenceId as string | undefined;
+	const moduleReferenceDangling = !!data.moduleReferenceDangling;
 
 	return (
 		<>
@@ -46,7 +50,11 @@ function ModuleNode({ data, ...props }: NodeProps) {
 					<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
 						References
 					</span>
-					<p className="text-sm">{moduleCaseName ?? "Unknown case"}</p>
+					<p className="text-sm">
+						{moduleReferenceDangling
+							? "Cited case not available"
+							: (moduleCaseName ?? "Unknown case")}
+					</p>
 					{moduleReferenceId && (
 						<CitedCaseLink
 							caseId={moduleReferenceId}

@@ -71,6 +71,12 @@ export interface ElementResponse {
 	isDefeater?: boolean;
 	justification?: string;
 	level?: number;
+	// Dangling-module-reference indicator: true when moduleReferenceId was
+	// nullified because the imported target case doesn't exist in this
+	// environment (see resolveImportedModuleReferenceId, case-import-
+	// service.ts). Omitted (not false) when there is nothing to flag —
+	// mirrors citationDangling/defeatsDangling above.
+	moduleReferenceDangling?: boolean;
 	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
 	moduleReferenceId?: string | null;
 	name: string;
@@ -203,8 +209,17 @@ function rejectDeclaredAsCited(
  * no effective `moduleReferenceId` is now rejected unconditionally, and the
  * case-membership comparison below always runs rather than being gated on
  * `moduleReferenceId` being truthy.
+ *
+ * Exported (TEA — citation integrity follow-up, 2026-09-16): this is the ONE
+ * rule "an away goal's citedElementId belongs to the case its
+ * moduleReferenceId names" — case-batch-update-service.ts's
+ * validateModuleReferenceChanges (moduleReferenceId changing alone must not
+ * orphan an existing citedElementId, JSON-editor path) and case-import-
+ * service.ts's resolveImportedCitedElementId (same rule, non-rejecting
+ * degrade instead of reject) both call this directly instead of
+ * re-implementing the query.
  */
-async function validateCitedElementId(
+export async function validateCitedElementId(
 	citedElementId: string | null | undefined,
 	moduleReferenceId: string | null | undefined,
 	ownElementId?: string

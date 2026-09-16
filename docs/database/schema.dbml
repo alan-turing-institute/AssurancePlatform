@@ -230,6 +230,7 @@ Table assurance_elements {
   url String [note: 'Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]']
   urls String[] [not null, note: 'Multiple evidence URLs. Must be valid http/https URLs']
   moduleReferenceId String [note: 'For MODULE type: the referenced case ID']
+  moduleReferenceDangling Boolean [not null, default: false]
   moduleEmbedType ModuleEmbedType [note: 'COPY (snapshot) or REFERENCE (live link)']
   modulePublicSummary String [note: 'Public summary when module is not viewable']
   fromPattern Boolean [not null, default: false, note: 'True if element came from a pattern template']
