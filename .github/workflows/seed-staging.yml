@@ -60,6 +60,11 @@ jobs:
       - name: Run seed script
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          # The login tests (auth.setup.ts, auth.spec.ts, sharing.spec.ts)
+          # sign in with this value, so it must match what was seeded; keep
+          # it policy-conforming (≥8, uppercase, digit, special —
+          # lib/schemas/user.ts passwordSchema) so the seeded accounts
+          # behave like real ones.
           SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
         run: npx tsx prisma/seed/dev-seed.ts | tee seed.log
 
