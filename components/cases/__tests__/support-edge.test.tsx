@@ -120,13 +120,20 @@ describe("SupportEdge — selected-node highlight", () => {
 
 		expect(path?.style.stroke).toBe("var(--color-primary)");
 		expect(path?.style.strokeWidth).toBe("4");
-		expect(path?.style.animation).toContain("case-edge-highlight-dash");
 	});
 
-	it("applies no inline highlight style when data.highlighted is false or absent", () => {
+	it("carries the highlighted-path class (the moving dash — CSS, not inline, so prefers-reduced-motion can suppress it) when highlighted", () => {
+		const path = renderWithData({ highlighted: true });
+
+		expect(path?.classList.contains("case-edge__path--highlighted")).toBe(true);
+	});
+
+	it("applies no highlight style or class when data.highlighted is false or absent", () => {
 		const path = renderWithData({ highlighted: false });
 
 		expect(path?.style.stroke).toBe("");
-		expect(path?.style.animation).toBe("");
+		expect(path?.classList.contains("case-edge__path--highlighted")).toBe(
+			false
+		);
 	});
 });

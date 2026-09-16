@@ -1,11 +1,25 @@
 import type { CSSProperties } from "react";
 
 /**
+ * Class applied to a `support`/`challenges` edge's own connector `<path>`
+ * (not the `challenges` edge's arrowhead marker, a separate `<path>` in the
+ * same `<g>`) when `data.highlighted` is set. Carries the moving-dash
+ * animation — see `app/globals.css`'s `.case-edge__path--highlighted` rule
+ * and its `prefers-reduced-motion: reduce` override — so a user who has
+ * asked for reduced motion still gets the stroke change but not the motion.
+ * Deliberately a class, not inline `style.animation`: an inline style
+ * always wins over an external stylesheet rule with equal specificity, so
+ * the media-query override could never suppress it if the animation lived
+ * in `HIGHLIGHTED_EDGE_STYLE` below (vincent review, bf4139b5).
+ */
+export const HIGHLIGHTED_EDGE_PATH_CLASS = "case-edge__path--highlighted";
+
+/**
  * Inline style applied to a `support`/`challenges` edge's own connector
  * `<path>` when `data.highlighted` is set (`lib/case/edge-highlight.ts`) —
- * a stronger, primary-token stroke plus a moving dash, so the edge reads as
- * traceable even where it shares a drawn rail with other edges (ADR 0005
- * D8's cell bend).
+ * a stronger, primary-token stroke, so the edge reads as traceable even
+ * where it shares a drawn rail with other edges (ADR 0005 D8's cell bend).
+ * The motion itself is `HIGHLIGHTED_EDGE_PATH_CLASS` above, not here.
  *
  * Deliberately NOT React Flow's own `animated: true` edge flag: that adds
  * `.react-flow__edge.animated path` from React Flow's stylesheet, which
@@ -21,5 +35,4 @@ export const HIGHLIGHTED_EDGE_STYLE: CSSProperties = {
 	stroke: "var(--color-primary)",
 	strokeWidth: 4,
 	strokeDasharray: "8 4",
-	animation: "case-edge-highlight-dash 0.6s linear infinite",
 };

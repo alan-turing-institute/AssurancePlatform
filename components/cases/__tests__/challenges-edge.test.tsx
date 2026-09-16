@@ -48,14 +48,18 @@ describe("ChallengesEdge — selected-node highlight", () => {
 		expect(path?.style.stroke).toBe("");
 	});
 
-	it("applies the highlighted stroke style to the connector path when highlighted", () => {
+	it("applies the highlighted stroke style and the highlighted-path class to the connector path when highlighted", () => {
 		const container = renderEdge(true);
 		const path = container.querySelector<SVGPathElement>("path#e1");
 
 		expect(path?.style.stroke).toBe("var(--color-primary)");
 		expect(path?.style.strokeWidth).toBe("4");
 		expect(path?.style.strokeDasharray).toBe("8 4");
-		expect(path?.style.animation).toContain("case-edge-highlight-dash");
+		// The moving dash is CSS (`.case-edge__path--highlighted` in
+		// app/globals.css), not inline `style.animation` — an inline style
+		// always beats an external rule of equal specificity, which would
+		// stop `prefers-reduced-motion` from ever suppressing it.
+		expect(path?.classList.contains("case-edge__path--highlighted")).toBe(true);
 	});
 
 	it("leaves the arrowhead marker's own path untouched when highlighted", () => {

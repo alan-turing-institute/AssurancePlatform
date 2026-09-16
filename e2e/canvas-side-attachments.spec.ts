@@ -361,15 +361,14 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			page.locator(`.react-flow__edge-support:not(.${EDGE_HIGHLIGHT_CLASS})`)
 		).toHaveCount(1);
 
-		// Deselecting (clicking empty canvas) clears every highlight. `force`
-		// because the fixed top navigation bar overlaps the pane's own
-		// (0,0)-relative coordinate space without actually being on top of
-		// the canvas at this point — Playwright's actionability check can't
-		// tell those apart, but React Flow's own pane click handler still
-		// fires correctly.
+		// Deselecting (clicking empty canvas) clears every highlight. Below
+		// the fixed top navigation bar (`components/header.tsx`, ~55px,
+		// `fixed top-0 left-0 z-50 w-full`) — that bar genuinely covers the
+		// canvas at y=20, so clicking there is correctly flagged as occluded
+		// rather than something to force past.
 		await page
 			.locator(".react-flow__pane")
-			.click({ position: { x: 20, y: 20 }, force: true });
+			.click({ position: { x: 20, y: 200 } });
 		await expect(
 			page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`)
 		).toHaveCount(0);

@@ -1,7 +1,11 @@
 "use client";
 
 import { type EdgeProps, getStraightPath } from "reactflow";
-import { HIGHLIGHTED_EDGE_STYLE } from "@/components/cases/edge-highlight-style";
+import {
+	HIGHLIGHTED_EDGE_PATH_CLASS,
+	HIGHLIGHTED_EDGE_STYLE,
+} from "@/components/cases/edge-highlight-style";
+import { cn } from "@/lib/utils";
 
 /**
  * React Flow's default `.react-flow__handle-{left,right}` styling (its own
@@ -30,8 +34,10 @@ const HANDLE_OUTWARD_OFFSET_PX = 4;
  * (not the arrowhead — the `<marker>` above is untouched) gets
  * `HIGHLIGHTED_EDGE_STYLE` applied via `style`, which overrides this
  * edge's own `strokeWidth`/`strokeDasharray` attributes — CSS inline style
- * wins over SVG presentation attributes — so the highlighted state reads
- * as distinct from the edge's ordinary static dashed line.
+ * wins over SVG presentation attributes — plus `HIGHLIGHTED_EDGE_PATH_CLASS`
+ * for the moving dash (suppressed under `prefers-reduced-motion`), so the
+ * highlighted state reads as distinct from the edge's ordinary static
+ * dashed line.
  */
 export default function ChallengesEdge({
 	id,
@@ -57,6 +63,7 @@ export default function ChallengesEdge({
 		targetY: endY,
 	});
 	const markerId = `challenges-arrow-${id}`;
+	const highlighted = !!data?.highlighted;
 
 	return (
 		<>
@@ -80,13 +87,16 @@ export default function ChallengesEdge({
 				</marker>
 			</defs>
 			<path
-				className="fill-none stroke-destructive"
+				className={cn(
+					"fill-none stroke-destructive",
+					highlighted && HIGHLIGHTED_EDGE_PATH_CLASS
+				)}
 				d={edgePath}
 				id={id}
 				markerEnd={`url(#${markerId})`}
 				strokeDasharray="6 4"
 				strokeWidth={2}
-				style={data?.highlighted ? HIGHLIGHTED_EDGE_STYLE : undefined}
+				style={highlighted ? HIGHLIGHTED_EDGE_STYLE : undefined}
 			/>
 		</>
 	);
