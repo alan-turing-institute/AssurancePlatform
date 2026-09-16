@@ -373,13 +373,33 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	// Validation
 	const validation = useJsonValidation(draftContent);
 
-	// Compute diff when validation passes
+	// Compute diff when validation passes. `!validation.isValidating` matters
+	// as much as `isValid` here: after Apply is rejected (e.g. a 400 from a
+	// business-rule check), `isValid` stays true — the buffer was and still
+	// is well-formed — while the debounced revalidation of the user's
+	// correction is still in flight. Without the `isValidating` guard, this
+	// memo would keep returning the diff computed from the REJECTED content
+	// (same `validation.parsedData` reference) until that debounce settles,
+	// so a fast Apply click would resend the very body the server just
+	// rejected. See the "JSON editor resubmits the rejected batch" issue.
 	const diffResult: TreeDiffResult | null = useMemo(() => {
-		if (!(validation.isValid && validation.parsedData && server.data)) {
+		if (
+			!(
+				validation.isValid &&
+				!validation.isValidating &&
+				validation.parsedData &&
+				server.data
+			)
+		) {
 			return null;
 		}
 		return computeTreeDiff(server.data, validation.parsedData);
-	}, [validation.isValid, validation.parsedData, server.data]);
+	}, [
+		validation.isValid,
+		validation.isValidating,
+		validation.parsedData,
+		server.data,
+	]);
 
 	// Is the content different from server?
 	const isDirty = draftContent !== server.content;
@@ -664,7 +684,13 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 						hasConflict={hasConflict}
 						isApplying={isApplying}
 						isDirty={isDirty}
-						isValid={validation.isValid}
+						// A pending revalidation must not let Apply run against the
+						// last COMPLETED pass's parsedData — see the diffResult memo
+						// above for why. isValidating true here already means
+						// diffResult is null, so canApply below is false regardless,
+						// but the toolbar's own "isValid" text/tooltip logic reads
+						// isValid directly too — this keeps that in sync.
+						isValid={validation.isValid && !validation.isValidating}
 						layout={{
 							formatDisabled: loading || !canFormat,
 							fullScreenButtonRef,

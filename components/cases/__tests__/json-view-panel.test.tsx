@@ -256,6 +256,126 @@ describe("JsonViewPanel — Format button (real content effect)", () => {
 	});
 });
 
+const APPLY_PATTERN = /^Apply$/;
+
+/**
+ * Body of a fetch call the mock captured — `sendBatchUpdate` always sends
+ * `Content-Type: application/json` with a JSON string body, never `FormData`
+ * or a `Blob`, so a plain string cast is safe here without re-implementing
+ * `RequestInit`'s full union.
+ */
+function requestBody(call: unknown[]): {
+	changes: unknown[];
+	expectedVersion: string;
+} {
+	const init = call[1] as RequestInit;
+	return JSON.parse(init.body as string);
+}
+
+describe("JsonViewPanel — Apply after a rejection", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("a second Apply, after the document is corrected, sends the corrected diff and does not resend the rejected body", async () => {
+		const user = userEvent.setup();
+
+		// First Apply is rejected the way `rejectDeclaredAsCited` rejects a
+		// hand-set AS_CITED (element-service.ts) — a plain 400, no
+		// conflictDetected, matching the staging reproduction.
+		const fetchMock = vi.fn(() =>
+			Promise.resolve({
+				ok: false,
+				json: () =>
+					Promise.resolve({
+						error:
+							"assertionStatus cannot be set to AS_CITED: it is derived automatically",
+					}),
+			} as Response)
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const content = await waitFor(() => {
+			const el = document.querySelector(".cm-content");
+			expect(el).not.toBeNull();
+			expect(el?.textContent).toContain("Root goal");
+			return el as HTMLElement;
+		});
+
+		const rejectedDoc = sampleExport();
+		rejectedDoc.tree = {
+			...rejectedDoc.tree,
+			assertionStatus: "AS_CITED",
+		} as typeof rejectedDoc.tree;
+
+		await user.click(content);
+		await user.keyboard("{Control>}a{/Control}");
+		await user.paste(JSON.stringify(rejectedDoc, null, 2));
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
+		});
+		await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+		const firstBody = requestBody(fetchMock.mock.calls[0]);
+		expect(firstBody.changes).toEqual([
+			{
+				type: "update",
+				elementId: ROOT_ID,
+				data: {
+					assertionStatus: "AS_CITED",
+					fromPattern: false,
+					modifiedFromPattern: false,
+				},
+			},
+		]);
+
+		// Correct the document: revert assertionStatus AND make an unrelated
+		// edit, exactly as the staging reproduction did. Apply is clicked
+		// only once it re-enables — the earlier bug re-enabled it on the
+		// stale `isValid` from the FIRST pass, well before the debounced
+		// revalidation of this new content had run, which is what let a
+		// fast click resend the rejected body.
+		const correctedDoc = sampleExport();
+		correctedDoc.tree = {
+			...correctedDoc.tree,
+			name: "G1-corrected",
+		} as typeof correctedDoc.tree;
+
+		await user.click(content);
+		await user.keyboard("{Control>}a{/Control}");
+		await user.paste(JSON.stringify(correctedDoc, null, 2));
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
+		});
+		await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		const secondBody = requestBody(fetchMock.mock.calls[1]);
+
+		expect(secondBody.changes).toEqual([
+			{
+				type: "update",
+				elementId: ROOT_ID,
+				data: {
+					name: "G1-corrected",
+					fromPattern: false,
+					modifiedFromPattern: false,
+				},
+			},
+		]);
+		expect(secondBody).not.toEqual(firstBody);
+	});
+});
+
 /**
  * jsdom doesn't implement `Range.getClientRects()`, so CodeMirror's
  * fallback text-metrics measurement (a temporary `.cm-line` dummy it
