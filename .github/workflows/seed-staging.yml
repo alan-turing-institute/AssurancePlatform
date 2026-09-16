@@ -60,6 +60,10 @@ jobs:
       - name: Run seed script
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          # Must satisfy the registration password policy (lib/schemas/user.ts
+          # passwordSchema: ≥8 chars, an uppercase letter, a digit, a special
+          # character) — a value that fails this fails the e2e register test
+          # on every branch, not just this workflow.
           SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
         run: npx tsx prisma/seed/dev-seed.ts | tee seed.log
 

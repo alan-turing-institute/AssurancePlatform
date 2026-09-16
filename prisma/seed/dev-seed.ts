@@ -78,7 +78,10 @@ function loadCredentials(): Credentials {
 		// File doesn't exist - check for environment variable (CI/staging)
 	}
 
-	// Fall back to SEED_USER_PASSWORD environment variable (CI/staging)
+	// Fall back to SEED_USER_PASSWORD environment variable (CI/staging).
+	// Must satisfy passwordSchema (lib/schemas/user.ts): ≥8 chars, an
+	// uppercase letter, a digit, a special character — otherwise the e2e
+	// register test (e2e/auth.spec.ts) fails on every branch.
 	const envPassword = process.env.SEED_USER_PASSWORD;
 	if (envPassword) {
 		console.log("Using SEED_USER_PASSWORD from environment");
