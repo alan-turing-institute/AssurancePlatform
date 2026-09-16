@@ -79,9 +79,11 @@ function loadCredentials(): Credentials {
 	}
 
 	// Fall back to SEED_USER_PASSWORD environment variable (CI/staging).
-	// This script does not validate the value. Keep it policy-conforming
-	// (≥8 chars, uppercase, digit, special — lib/schemas/user.ts passwordSchema)
-	// so tests that register or change a password with it aren't broken by it.
+	// The login tests (auth.setup.ts, auth.spec.ts, sharing.spec.ts) sign in
+	// with this value, so it must match what was seeded; keep it
+	// policy-conforming (≥8, uppercase, digit, special —
+	// lib/schemas/user.ts passwordSchema) so the seeded accounts behave
+	// like real ones.
 	const envPassword = process.env.SEED_USER_PASSWORD;
 	if (envPassword) {
 		console.log("Using SEED_USER_PASSWORD from environment");
