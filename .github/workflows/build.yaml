@@ -518,6 +518,17 @@ jobs:
       - name: Run E2E tests
         run: pnpm exec playwright test
 
+      - name: Strip sensitive data from failure artifacts
+        # Playwright's failure snapshot (error-context.md) and trace.zip both
+        # record the values typed into form fields, including passwords, and
+        # this workflow uploads test-results/ on every run (see the two
+        # upload steps below) — a public repo, downloadable for 14 days. This
+        # is how SEED_USER_PASSWORD leaked in run 34991925500 (2026-09-15).
+        if: ${{ !cancelled() }}
+        run: |
+          find test-results -name 'error-context.md' -delete
+          find test-results -name 'trace.zip' -delete
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
