@@ -526,8 +526,13 @@ jobs:
         # is how SEED_USER_PASSWORD leaked in run 34991925500 (2026-09-15).
         if: ${{ !cancelled() }}
         run: |
-          find test-results -name 'error-context.md' -delete
-          find test-results -name 'trace.zip' -delete
+          # test-results/ only exists if a test wrote an artifact to it (Playwright
+          # deletes it at the start of the run and doesn't recreate it eagerly), so
+          # an all-pass run can leave it absent — guard, or this step goes red under
+          # bash -eo pipefail and blocks the uploads below.
+          if [ -d test-results ]; then
+            find test-results \( -name 'error-context.md' -o -name 'trace.zip' \) -delete
+          fi
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
