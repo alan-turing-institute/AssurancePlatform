@@ -54,6 +54,20 @@ async function replaceEditorContent(
 	await page.keyboard.insertText(text);
 }
 
+/**
+ * Narrows an indexed array read (`noUncheckedIndexedAccess`, tsconfig.json)
+ * to its non-undefined element. The preceding `expect(...).toHaveLength(n)`
+ * already proves the index exists — this is a type-level narrowing, not a
+ * real runtime possibility, so a thrown error (never expected to fire) is
+ * enough.
+ */
+function must<T>(value: T | undefined, label: string): T {
+	if (value === undefined) {
+		throw new Error(`expected ${label} to be defined`);
+	}
+	return value;
+}
+
 test.describe("JSON editor — full screen and horizontal scroll", () => {
 	test("full screen toggles via the toolbar button, and Esc leaves full screen without closing the editor", async ({
 		page,
@@ -207,7 +221,7 @@ test.describe("JSON editor — Apply after a rejection", () => {
 		await expect(page.getByText("Failed to apply changes")).toBeVisible();
 
 		expect(requests).toHaveLength(1);
-		const firstBody = requests[0];
+		const firstBody = must(requests[0], "the first Apply's request body");
 		expect(
 			firstBody.changes.some(
 				(c) =>
@@ -235,7 +249,7 @@ test.describe("JSON editor — Apply after a rejection", () => {
 		await expect(page.getByText("Changes applied")).toBeVisible();
 
 		expect(requests).toHaveLength(2);
-		const secondBody = requests[1];
+		const secondBody = must(requests[1], "the second Apply's request body");
 		expect(secondBody).not.toEqual(firstBody);
 		expect(
 			secondBody.changes.some(

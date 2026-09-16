@@ -70,4 +70,52 @@ describe("useJsonValidation", () => {
 		);
 		expect(result.current.isValid).toBe(false);
 	});
+
+	// The bug this guards: json-view-panel.tsx's Apply diff is only safe to
+	// compute once `isValidating` is false — see the "JSON editor resubmits
+	// the rejected batch" issue. A non-zero debounceMs is needed here (unlike
+	// the tests above) so there's an actual pending window to observe before
+	// it settles.
+	it("marks a pending revalidation on every edit, then clears it once the debounce settles", async () => {
+		const { result, rerender } = renderHook(
+			({ content }) => useJsonValidation(content, { debounceMs: 50 }),
+			{ initialProps: { content: buildExport("2026-09-14T10:00:00.000Z") } }
+		);
+
+		await waitFor(() => expect(result.current.isValidating).toBe(false));
+		expect(result.current.parsedData?.exportedAt).toBe(
+			"2026-09-14T10:00:00.000Z"
+		);
+
+		// An edit immediately marks the previous pass stale — before the
+		// debounced validate() has had any chance to run for it.
+		rerender({ content: buildExport("2026-09-14T11:00:00.000Z") });
+		expect(result.current.isValidating).toBe(true);
+
+		await waitFor(() => expect(result.current.isValidating).toBe(false));
+		expect(result.current.parsedData?.exportedAt).toBe(
+			"2026-09-14T11:00:00.000Z"
+		);
+	});
+
+	it("reverting to the last-validated content within the debounce window clears isValidating without waiting for a new pass", async () => {
+		const { result, rerender } = renderHook(
+			({ content }) => useJsonValidation(content, { debounceMs: 50 }),
+			{ initialProps: { content: buildExport("2026-09-14T10:00:00.000Z") } }
+		);
+
+		await waitFor(() => expect(result.current.isValidating).toBe(false));
+
+		rerender({ content: buildExport("2026-09-14T11:00:00.000Z") });
+		expect(result.current.isValidating).toBe(true);
+
+		// Reverting to exactly the content the last validate() pass already
+		// covers is recognised immediately — the buffer matches a result the
+		// hook already has, so there is nothing to wait for.
+		rerender({ content: buildExport("2026-09-14T10:00:00.000Z") });
+		expect(result.current.isValidating).toBe(false);
+		expect(result.current.parsedData?.exportedAt).toBe(
+			"2026-09-14T10:00:00.000Z"
+		);
+	});
 });

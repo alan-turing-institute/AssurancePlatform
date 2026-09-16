@@ -324,7 +324,11 @@ describe("JsonViewPanel — Apply after a rejection", () => {
 		await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
 
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-		const firstBody = requestBody(fetchMock.mock.calls[0]);
+		const firstCall = fetchMock.mock.calls[0];
+		if (!firstCall) {
+			throw new Error("fetch was not called for the first Apply");
+		}
+		const firstBody = requestBody(firstCall);
 		expect(firstBody.changes).toEqual([
 			{
 				type: "update",
@@ -359,7 +363,11 @@ describe("JsonViewPanel — Apply after a rejection", () => {
 		await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
 
 		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-		const secondBody = requestBody(fetchMock.mock.calls[1]);
+		const secondCall = fetchMock.mock.calls[1];
+		if (!secondCall) {
+			throw new Error("fetch was not called for the second Apply");
+		}
+		const secondBody = requestBody(secondCall);
 
 		expect(secondBody.changes).toEqual([
 			{
