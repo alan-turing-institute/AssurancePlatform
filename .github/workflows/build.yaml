@@ -524,14 +524,23 @@ jobs:
         # this workflow uploads test-results/ on every run (see the two
         # upload steps below) — a public repo, downloadable for 14 days. This
         # is how SEED_USER_PASSWORD leaked in run 34991925500 (2026-09-15).
+        # The HTML reporter also copies every path-backed attachment (both
+        # files included) into playwright-report/data/<sha1>.<ext> before this
+        # step runs, so that tree needs stripping too, not just test-results/.
         if: ${{ !cancelled() }}
         run: |
-          # test-results/ only exists if a test wrote an artifact to it (Playwright
-          # deletes it at the start of the run and doesn't recreate it eagerly), so
-          # an all-pass run can leave it absent — guard, or this step goes red under
-          # bash -eo pipefail and blocks the uploads below.
+          # Both dirs only exist if a test produced an attachment (Playwright
+          # deletes test-results/ at the start of the run and doesn't recreate
+          # it eagerly; playwright-report/data/ is created on first write), so
+          # an all-pass run can leave either absent — guard, or this step goes
+          # red under bash -eo pipefail and blocks the uploads below. Deleting
+          # these leaves dead attachment links in the HTML report on failure;
+          # that's an acceptable trade for not publishing the secret.
           if [ -d test-results ]; then
             find test-results \( -name 'error-context.md' -o -name 'trace.zip' \) -delete
+          fi
+          if [ -d playwright-report/data ]; then
+            find playwright-report/data \( -name '*.md' -o -name '*.zip' \) -delete
           fi
 
       - name: Upload Playwright report
