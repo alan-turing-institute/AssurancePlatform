@@ -214,6 +214,15 @@ async function createCaseWithPermission(
  * must belong to the case its moduleReferenceId names), not just prove the
  * id exists somewhere.
  *
+ * `deletedAt: null` (vincent's review of 281faccf, 2026-09-16 — BLOCKER):
+ * without it, a citedElementId naming a soft-deleted element in the right
+ * case resolved as a valid citation here — citationDangling stayed false —
+ * even though buildCitationContext (case-fetch-service.ts) filters
+ * deletedAt: null when resolving the name to show on the card, so the away
+ * goal rendered with a case name, no element name, and no dangling flag.
+ * Matches validateCitedElementId's own `deletedAt: null` filter (the edit-
+ * path rule this import path mirrors).
+ *
  * One findMany for the whole batch (not one query per element), run BEFORE
  * the transaction opens — keeps the transaction short per CLAUDE.md and
  * avoids doing this lookup once per createElements call.
@@ -244,7 +253,7 @@ async function resolveExternalCitedElementIds(
 	}
 
 	const found = await client.assuranceElement.findMany({
-		where: { id: { in: [...externalIds] } },
+		where: { id: { in: [...externalIds] }, deletedAt: null },
 		select: { id: true, caseId: true },
 	});
 
@@ -715,6 +724,7 @@ async function createElements(
 	const savepoint = `import_elements_${crypto.randomUUID().replaceAll("-", "_")}`;
 	await tx.$executeRawUnsafe(`SAVEPOINT "${savepoint}"`);
 
+	let finalCount = data.length;
 	let finalWarnings = warnings;
 	try {
 		await tx.assuranceElement.createMany({ data });
@@ -742,11 +752,17 @@ async function createElements(
 			caseId,
 			userId
 		);
+		// Read the retry's OWN row/warning counts (vincent's nit, 2026-09-16)
+		// rather than the pre-retry `data`/`warnings` — equal in practice
+		// (the retry only ever nulls one already-degraded citation, never
+		// adds or drops a row), but reading the retry's own result reads as
+		// correct rather than merely coincidentally equal.
+		finalCount = retry.rows.length;
 		finalWarnings = retry.warnings;
 		await tx.assuranceElement.createMany({ data: retry.rows });
 	}
 
-	return { count: data.length, warnings: finalWarnings };
+	return { count: finalCount, warnings: finalWarnings };
 }
 
 /**

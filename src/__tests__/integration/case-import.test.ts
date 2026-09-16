@@ -906,6 +906,86 @@ describe("validateImportData", () => {
 	});
 
 	/**
+	 * Vincent's review of 281faccf (2026-09-16, BLOCKER): resolveExternalCited-
+	 * ElementIds queried `where: { id: { in: [...] } }` with no
+	 * `deletedAt: null`, unlike the edit-path rule (validateCitedElementId,
+	 * element-service.ts) it mirrors. A citedElementId naming a SOFT-DELETED
+	 * element in the CORRECT case therefore resolved as a valid citation here
+	 * (citationDangling: false) even though buildCitationContext
+	 * (case-fetch-service.ts) filters deletedAt: null when resolving the name
+	 * to show on the card — the away goal would have rendered with a case
+	 * name, no element name, and no dangling flag to explain why. Fixed by
+	 * adding the same `deletedAt: null` filter; this pins it treated the same
+	 * as a citedElementId that doesn't exist at all.
+	 */
+	it("blanks and flags a citedElementId that names a SOFT-DELETED element in the correct case", async () => {
+		const owner = await createTestUser();
+		const awayCase = await createTestCase(owner.id);
+		const deletedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Deleted Away Goal",
+		});
+		await prisma.assuranceElement.update({
+			where: { id: deletedGoal.id },
+			data: { deletedAt: new Date() },
+		});
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Soft-Deleted Citation Case",
+				description:
+					"citedElementId names an element soft-deleted in the target DB",
+			},
+			tree: {
+				id: "65000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "65000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "AG1",
+						description: "Cites an element that is soft-deleted in this DB",
+						inSandbox: false,
+						moduleReferenceId: awayCase.id,
+						citedElementId: deletedGoal.id,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		expect(imported.elementCount).toBe(2);
+
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		// moduleReferenceId itself resolved fine (awayCase exists) — only the
+		// citation is blanked, not the module reference.
+		expect(importedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
+		expect(importedAwayGoal?.moduleReferenceDangling).toBe(false);
+		expect(importedAwayGoal?.citedElementId).toBeNull();
+		expect(importedAwayGoal?.citationDangling).toBe(true);
+
+		expect(
+			imported.warnings.some((w) =>
+				w.includes(
+					"AG1: cited element not found; the reference has been cleared"
+				)
+			)
+		).toBe(true);
+	});
+
+	/**
 	 * The defeater-axis warning string, pinned directly — the citation and
 	 * moduleReference warning strings are pinned inline on the tests above.
 	 */
