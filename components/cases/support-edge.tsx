@@ -1,6 +1,7 @@
 "use client";
 
 import { BaseEdge, type EdgeProps, getSmoothStepPath } from "reactflow";
+import { HIGHLIGHTED_EDGE_STYLE } from "@/components/cases/edge-highlight-style";
 
 /**
  * The `support` edge (ADR 0005 D8): a smoothstep edge whose run bends at
@@ -18,6 +19,11 @@ import { BaseEdge, type EdgeProps, getSmoothStepPath } from "reactflow";
  * `getSmoothStepPath` falls back to its own default midpoint — the same
  * bend the built-in `smoothstep` type always used — so this edge type is a
  * drop-in replacement, not a visual change for ordinary edges.
+ *
+ * `data.highlighted` (`lib/case/edge-highlight.ts`) is set when this edge's
+ * source or target is the currently selected node — merges
+ * `HIGHLIGHTED_EDGE_STYLE` over any edge-supplied `style` so the connector
+ * reads as traceable among the other edges sharing a cell's rail.
  */
 export default function SupportEdge({
 	id,
@@ -32,7 +38,11 @@ export default function SupportEdge({
 	markerStart,
 	interactionWidth,
 	data,
-}: EdgeProps<{ centerX?: number; centerY?: number }>) {
+}: EdgeProps<{
+	centerX?: number;
+	centerY?: number;
+	highlighted?: boolean;
+}>) {
 	const [edgePath] = getSmoothStepPath({
 		sourceX,
 		sourceY,
@@ -44,6 +54,10 @@ export default function SupportEdge({
 		centerY: data?.centerY,
 	});
 
+	const pathStyle = data?.highlighted
+		? { ...style, ...HIGHLIGHTED_EDGE_STYLE }
+		: style;
+
 	return (
 		<BaseEdge
 			id={id}
@@ -51,7 +65,7 @@ export default function SupportEdge({
 			markerEnd={markerEnd}
 			markerStart={markerStart}
 			path={edgePath}
-			style={style}
+			style={pathStyle}
 		/>
 	);
 }

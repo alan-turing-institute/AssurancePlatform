@@ -82,3 +82,51 @@ describe("SupportEdge (ADR 0005 D8)", () => {
 		expect(withCenterY).not.toBe(withoutCenterY);
 	});
 });
+
+/**
+ * Selected-node edge highlight (issue: highlight a selected node's edges).
+ * `flow.tsx`'s `getHighlightedEdges` (`lib/case/edge-highlight.ts`) sets
+ * `data.highlighted` on every edge touching the selected node — this is
+ * SupportEdge's own side of reading that flag.
+ */
+describe("SupportEdge — selected-node highlight", () => {
+	function renderWithData(data: { centerY?: number; highlighted?: boolean }) {
+		const props = {
+			id: "e1",
+			sourceX: 100,
+			sourceY: 40,
+			sourcePosition: Position.Bottom,
+			targetX: 100,
+			targetY: 400,
+			targetPosition: Position.Top,
+			source: "a",
+			target: "b",
+			data,
+		} as unknown as Parameters<typeof SupportEdge>[0];
+
+		const { container } = render(
+			// biome-ignore lint/a11y/noSvgWithoutTitle: test fixture, not UI
+			<svg>
+				<SupportEdge {...props} />
+			</svg>
+		);
+		return container.querySelector<SVGPathElement>(
+			"path.react-flow__edge-path"
+		);
+	}
+
+	it("applies the highlighted stroke style when data.highlighted is true", () => {
+		const path = renderWithData({ highlighted: true });
+
+		expect(path?.style.stroke).toBe("var(--color-primary)");
+		expect(path?.style.strokeWidth).toBe("4");
+		expect(path?.style.animation).toContain("case-edge-highlight-dash");
+	});
+
+	it("applies no inline highlight style when data.highlighted is false or absent", () => {
+		const path = renderWithData({ highlighted: false });
+
+		expect(path?.style.stroke).toBe("");
+		expect(path?.style.animation).toBe("");
+	});
+});

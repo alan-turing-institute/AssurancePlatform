@@ -549,6 +549,19 @@
 	}
 }
 
+/* Selected-node edge highlight (issue: highlight a selected node's edges so
+   overlapping connectors on a cell's shared rail, ADR 0005 D8, can be
+   traced). Referenced via inline `style.animation` from
+   `components/cases/edge-highlight-style.ts`, not a class here — BaseEdge
+   (support-edge.tsx) only forwards `style`, and the challenges edge
+   (challenges-edge.tsx) needs the animation on its own connector path only,
+   not the arrowhead marker nested in the same `<g>`. */
+@keyframes case-edge-highlight-dash {
+	to {
+		stroke-dashoffset: -24;
+	}
+}
+
 /* ========================================================================
    Controls - Theme-aware
    ======================================================================== */

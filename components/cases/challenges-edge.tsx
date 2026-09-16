@@ -1,6 +1,7 @@
 "use client";
 
 import { type EdgeProps, getStraightPath } from "reactflow";
+import { HIGHLIGHTED_EDGE_STYLE } from "@/components/cases/edge-highlight-style";
 
 /**
  * React Flow's default `.react-flow__handle-{left,right}` styling (its own
@@ -23,6 +24,14 @@ const HANDLE_OUTWARD_OFFSET_PX = 4;
  * The marker is defined per-edge-instance with an id derived from the
  * edge's own id, so multiple `challenges` edges on one canvas never collide
  * on a shared `<marker>` id.
+ *
+ * `data.highlighted` (`lib/case/edge-highlight.ts`) is set when this edge's
+ * source or target is the currently selected node. The connector path
+ * (not the arrowhead — the `<marker>` above is untouched) gets
+ * `HIGHLIGHTED_EDGE_STYLE` applied via `style`, which overrides this
+ * edge's own `strokeWidth`/`strokeDasharray` attributes — CSS inline style
+ * wins over SVG presentation attributes — so the highlighted state reads
+ * as distinct from the edge's ordinary static dashed line.
  */
 export default function ChallengesEdge({
 	id,
@@ -30,7 +39,8 @@ export default function ChallengesEdge({
 	sourceY,
 	targetX,
 	targetY,
-}: EdgeProps) {
+	data,
+}: EdgeProps<{ highlighted?: boolean }>) {
 	// Shorten only by the handle's own outward offset — see
 	// HANDLE_OUTWARD_OFFSET_PX above — so the arrow ends at the target's
 	// card, not its handle centre.
@@ -76,6 +86,7 @@ export default function ChallengesEdge({
 				markerEnd={`url(#${markerId})`}
 				strokeDasharray="6 4"
 				strokeWidth={2}
+				style={data?.highlighted ? HIGHLIGHTED_EDGE_STYLE : undefined}
 			/>
 		</>
 	);

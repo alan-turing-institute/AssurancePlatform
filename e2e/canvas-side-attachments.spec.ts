@@ -26,6 +26,11 @@ const SUPPORT_EDGE_PATH_SELECTOR =
 	".react-flow__edge path.react-flow__edge-path:not([stroke-dasharray])";
 const NAME_LABEL_PATTERN = /^Name/i;
 const AG_ID_PATTERN = /^AG\d+$/;
+// Set by `lib/case/edge-highlight.ts` (`CASE_EDGE_HIGHLIGHT_CLASS`) on a
+// selected node's connected edges — lands on React Flow's own
+// `.react-flow__edge` wrapper, so it's queryable without knowing the
+// edge's generated id.
+const EDGE_HIGHLIGHT_CLASS = "case-edge--highlighted";
 
 /**
  * The G1 card, anchored on its own identifier text rather than a bare
@@ -317,5 +322,51 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			// happened to route around them at the wrong height.
 			expect(modeY(points)).toBeGreaterThan(cellBottomPx);
 		}
+	});
+
+	test("selecting a defeater highlights its own edges (the challenges edge and its evidence's support edge), not G1's", async ({
+		page,
+	}) => {
+		await createCaseViaModal(page, `Edge Highlight Case ${Date.now()}`);
+
+		await addStrategyOnG1(page, "S1 — a strategy under G1.");
+		const defeaterCard = await addDefeaterOnG1(
+			page,
+			"A defeater challenging G1."
+		);
+		await addEvidenceOn(page, defeaterCard, "Evidence under the defeater.");
+
+		// Baseline: nothing highlighted before any node is selected.
+		await expect(
+			page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`)
+		).toHaveCount(0);
+
+		await defeaterCard.click();
+
+		// The defeater's own two edges — the challenges edge to G1 and the
+		// support edge to its evidence child — both carry the highlight
+		// class.
+		await expect(
+			page.locator(`.react-flow__edge-challenges.${EDGE_HIGHLIGHT_CLASS}`)
+		).toHaveCount(1);
+		await expect(
+			page.locator(`.react-flow__edge-support.${EDGE_HIGHLIGHT_CLASS}`)
+		).toHaveCount(1);
+
+		// G1's own edge to S1 shares the same `support` edge TYPE as the
+		// defeater-to-evidence edge — this is the assertion that actually
+		// distinguishes "G1's edges" from "the selected node's edges"
+		// (walkthrough finding 4, the overlap this issue exists to fix).
+		await expect(
+			page.locator(`.react-flow__edge-support:not(.${EDGE_HIGHLIGHT_CLASS})`)
+		).toHaveCount(1);
+
+		// Deselecting (clicking empty canvas) clears every highlight.
+		await page
+			.locator(".react-flow__pane")
+			.click({ position: { x: 20, y: 20 } });
+		await expect(
+			page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`)
+		).toHaveCount(0);
 	});
 });
