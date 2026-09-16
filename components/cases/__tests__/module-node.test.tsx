@@ -107,4 +107,26 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 
 		expect(screen.getByText("Unknown case")).toBeInTheDocument();
 	});
+
+	it("shows 'Cited case not available' and no link when moduleReferenceDangling is set (Chris's ruling, 2026-09-16)", () => {
+		renderWithReactFlow(
+			<ModuleNode
+				{...nodeProps({
+					id: "el-1",
+					name: "M1",
+					description: "A module",
+					moduleCaseName: null,
+					moduleCaseAccessible: false,
+					moduleReferenceId: null,
+					moduleReferenceDangling: true,
+				})}
+			/>
+		);
+
+		expect(screen.getByText("Cited case not available")).toBeInTheDocument();
+		expect(screen.queryByText("Unknown case")).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("link", { name: VIEW_REFERENCED_CASE_LINK_PATTERN })
+		).not.toBeInTheDocument();
+	});
 });

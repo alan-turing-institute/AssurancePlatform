@@ -731,6 +731,98 @@ describe("applyBatchUpdate", () => {
 	});
 
 	/**
+	 * TEA — Citation integrity is unchecked on the batch-update and import
+	 * write paths (2026-09-16): this batch path can't write citedElementId
+	 * (see the smuggling test above), so changing moduleReferenceId ALONE
+	 * used to leave an existing citedElementId pointing at the OLD case,
+	 * unvalidated. Mirrors api-elements-cited-element-id.test.ts's "rejects
+	 * moduleReferenceId-only changing away from the case the EXISTING
+	 * citedElementId belongs to (review round 2)" for the single-element
+	 * route — same rule, same error shape, batch path.
+	 */
+	it("rejects a batch update that changes moduleReferenceId away from the case an existing citedElementId belongs to", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const caseA = await createTestCase(user.id);
+		const caseB = await createTestCase(user.id);
+		const goalInA = await createTestElement(caseA.id, user.id, {
+			elementType: "GOAL",
+			name: "Goal In A",
+		});
+		const awayGoal = await createTestElement(testCase.id, user.id, {
+			elementType: "AWAY_GOAL",
+			name: "AG1",
+			moduleReferenceId: caseA.id,
+			citedElementId: goalInA.id,
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "update",
+				elementId: awayGoal.id,
+				data: { moduleReferenceId: caseB.id },
+			},
+		];
+
+		expectError(
+			await applyBatchUpdate(user.id, testCase.id, changes),
+			"citedElementId must reference an existing element"
+		);
+
+		// Rejected outright — nothing was written.
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(caseA.id);
+		expect(inDb?.citedElementId).toBe(goalInA.id);
+	});
+
+	/**
+	 * Same-case sanity check for the guard above: a moduleReferenceId change
+	 * that still points at the case the existing citedElementId belongs to
+	 * (a no-op re-send, or a change TO the same case) is not rejected.
+	 */
+	it("accepts a batch update that changes moduleReferenceId to the SAME case an existing citedElementId already belongs to", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const caseA = await createTestCase(user.id);
+		const goalInA = await createTestElement(caseA.id, user.id, {
+			elementType: "GOAL",
+			name: "Goal In A",
+		});
+		const awayGoal = await createTestElement(testCase.id, user.id, {
+			elementType: "AWAY_GOAL",
+			name: "AG1",
+			moduleReferenceId: caseA.id,
+			citedElementId: goalInA.id,
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "update",
+				elementId: awayGoal.id,
+				data: { moduleReferenceId: caseA.id },
+			},
+		];
+
+		expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(caseA.id);
+		expect(inDb?.citedElementId).toBe(goalInA.id);
+	});
+
+	/**
 	 * perf/n-plus-one-batching (2026-08-25): validateUpdateParents now runs a
 	 * single shared multi-root BFS (getDescendantIdsForRoots) for every
 	 * update in a batch that moves an element, instead of one

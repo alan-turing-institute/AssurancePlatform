@@ -632,26 +632,26 @@ describe("validateImportData", () => {
 	});
 
 	/**
-	 * moduleReferenceId is a foreign key on the same createMany insert as
-	 * citedElementId, but isn't part of the resolve-before-insert machinery:
-	 * a value that never existed reaches the insert unresolved and produces a
-	 * P2003 on a different constraint. This proves the whole import still
-	 * fails and rolls back in that case. It does NOT exercise
-	 * `isCitedElementIdForeignKeyError`'s constraint-name discrimination:
-	 * createElements' retry only re-resolves citedElementId, so a
-	 * moduleReferenceId P2003 fails again on retry and propagates the same
-	 * way whether the guard is anchored to the exact constraint name or
-	 * matches any P2003 — that discrimination is pinned directly in
-	 * `lib/services/__tests__/case-import-service.test.ts`.
+	 * TEA — Import fails outright when an away goal or module cites a case
+	 * absent from the target environment (Chris's ruling, 2026-09-16:
+	 * degrade and flag, mirroring the existing citedElementId/defeatsElementId
+	 * dangling contracts exactly). Before this fix, a moduleReferenceId naming
+	 * a case absent from the target DB hit the createMany FK
+	 * (assurance_elements_module_reference_id_fkey) and rolled back the WHOLE
+	 * import — nanaki found this importing Chris's own staging export into a
+	 * fresh database (any export containing an away goal or module was
+	 * unimportable elsewhere). Now: moduleReferenceId is dropped to null,
+	 * moduleReferenceDangling is set, and the import succeeds — for BOTH the
+	 * nested (v1.0, this test) and flat (v2.0, next test) formats.
 	 */
-	it("still fails the whole import on a P2003 from an unrelated foreign key (moduleReferenceId)", async () => {
+	it("imports successfully when an AWAY_GOAL's moduleReferenceId names a case absent from the target DB (nested format), flagging moduleReferenceDangling instead of failing the whole import", async () => {
 		const nonExistentCaseId = crypto.randomUUID();
 
 		const json = {
 			version: "1.0",
 			exportedAt: new Date().toISOString(),
 			case: {
-				name: "Bad Module Reference Case",
+				name: "Absent Module Reference Case",
 				description: "AWAY_GOAL references a case that doesn't exist",
 			},
 			tree: {
@@ -665,7 +665,7 @@ describe("validateImportData", () => {
 					{
 						id: "60000000-0000-4000-8000-000000000002",
 						type: "AWAY_GOAL",
-						name: "Reference",
+						name: "AG1",
 						description: "References a nonexistent case",
 						inSandbox: false,
 						moduleReferenceId: nonExistentCaseId,
@@ -678,22 +678,359 @@ describe("validateImportData", () => {
 		const { importCase } = await import("@/lib/services/case-import-service");
 
 		const importer = await createTestUser();
-		expectError(await importCase(importer.id, json));
+		const imported = expectSuccess(await importCase(importer.id, json));
 
-		// Nothing from this failed import landed — proves the P2003 catch
-		// didn't mask (and thus didn't half-succeed) an unrelated FK failure.
-		const elements = await prisma.assuranceElement.findMany({
-			where: { name: "Root Goal" },
-		});
-		expect(elements).toHaveLength(0);
+		// The import SUCCEEDED — not rolled back — and both elements landed.
+		expect(imported.elementCount).toBe(2);
 
-		// The case row itself must also be gone — createCaseWithPermission
-		// runs inside the same transaction as createElements, so the whole
-		// import (case included) rolls back on the unrelated FK failure.
-		const cases = await prisma.assuranceCase.findMany({
-			where: { name: "Bad Module Reference Case" },
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
 		});
-		expect(cases).toHaveLength(0);
+		expect(importedAwayGoal?.moduleReferenceId).toBeNull();
+		expect(importedAwayGoal?.moduleReferenceDangling).toBe(true);
+
+		expect(
+			imported.warnings.some((w) =>
+				w.includes(
+					"AG1: cited case not available in this environment; the reference has been cleared"
+				)
+			)
+		).toBe(true);
+
+		// The unrelated goal is intact — proves this isn't a partial/silent
+		// drop of the rest of the import.
+		const importedGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "GOAL" },
+		});
+		expect(importedGoal).not.toBeNull();
+		expect(importedGoal?.name).toBe("Root Goal");
+	});
+
+	it("imports successfully when a MODULE's moduleReferenceId names a case absent from the target DB (flat/v2 format), flagging moduleReferenceDangling instead of failing the whole import", async () => {
+		const nonExistentCaseId = crypto.randomUUID();
+		const rootId = "61000000-0000-4000-8000-000000000001";
+		const moduleId = "61000000-0000-4000-8000-000000000002";
+
+		const json = {
+			version: "2.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Flat Absent Module Reference Case",
+				description: "MODULE references a case that doesn't exist",
+			},
+			elements: [
+				{
+					id: rootId,
+					elementType: "GOAL",
+					role: "TOP_LEVEL",
+					parentId: null,
+					name: "Root Goal",
+					description: "Top-level goal",
+					inSandbox: false,
+				},
+				{
+					id: moduleId,
+					elementType: "MODULE",
+					role: null,
+					parentId: rootId,
+					name: "M1",
+					description: "References a nonexistent case",
+					inSandbox: false,
+					moduleReferenceId: nonExistentCaseId,
+				},
+			],
+			evidenceLinks: [],
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		expect(imported.elementCount).toBe(2);
+
+		const importedModule = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "MODULE" },
+		});
+		expect(importedModule?.moduleReferenceId).toBeNull();
+		expect(importedModule?.moduleReferenceDangling).toBe(true);
+
+		expect(
+			imported.warnings.some((w) =>
+				w.includes(
+					"M1: cited case not available in this environment; the reference has been cleared"
+				)
+			)
+		).toBe(true);
+	});
+
+	/**
+	 * Cascade (Chris's ruling, 2026-09-16): an away goal's citedElementId
+	 * cannot be valid without its case, so when moduleReferenceId itself
+	 * degrades, citedElementId is cleared too — even though the cited
+	 * element, in isolation, resolves fine in the target DB. Only ONE
+	 * citation-axis warning fires ("cited case not available"), not also
+	 * "cited element not found" — the citation loss is a direct consequence
+	 * of the same absent case, not a second independent finding.
+	 */
+	it("cascades: an absent moduleReferenceId also clears a resolvable citedElementId and flags citationDangling", async () => {
+		const owner = await createTestUser();
+		const awayCase = await createTestCase(owner.id);
+		const citedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Away Goal",
+		});
+		const nonExistentCaseId = crypto.randomUUID();
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Cascade Case",
+				description: "AWAY_GOAL's case is absent but its cited element exists",
+			},
+			tree: {
+				id: "62000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "62000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "AG1",
+						description: "Case absent; cited element otherwise valid",
+						inSandbox: false,
+						moduleReferenceId: nonExistentCaseId,
+						citedElementId: citedGoal.id,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		expect(importedAwayGoal?.moduleReferenceId).toBeNull();
+		expect(importedAwayGoal?.moduleReferenceDangling).toBe(true);
+		expect(importedAwayGoal?.citedElementId).toBeNull();
+		expect(importedAwayGoal?.citationDangling).toBe(true);
+
+		const citationWarnings = imported.warnings.filter((w) =>
+			w.startsWith("AG1:")
+		);
+		expect(citationWarnings).toEqual([
+			"AG1: cited case not available in this environment; the reference has been cleared",
+		]);
+	});
+
+	/**
+	 * ADR 0004 D5 (citation integrity follow-up, 2026-09-16): the shared rule
+	 * "an away goal's citedElementId belongs to the case its moduleReferenceId
+	 * names" — already enforced on the element edit path and the batch-update
+	 * path (case-batch-update-service.test.ts) — applies to import too. Unlike
+	 * those two paths, import never rejects: a cross-case pair is blanked and
+	 * flagged, not fatal, since import is a bulk data-load, not an author
+	 * declaration.
+	 */
+	it("blanks and flags a citedElementId that resolves in the target DB but in a DIFFERENT case than moduleReferenceId names", async () => {
+		const owner = await createTestUser();
+		const caseA = await createTestCase(owner.id);
+		const caseB = await createTestCase(owner.id);
+		const goalInB = await createTestElement(caseB.id, owner.id, {
+			elementType: "GOAL",
+			name: "Goal In B",
+		});
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Cross-Case Citation Case",
+				description:
+					"citedElementId belongs to a DIFFERENT case than moduleReferenceId names",
+			},
+			tree: {
+				id: "63000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "63000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "AG1",
+						description:
+							"moduleReferenceId names caseA; citedElementId lives in caseB",
+						inSandbox: false,
+						moduleReferenceId: caseA.id,
+						citedElementId: goalInB.id,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		expect(imported.elementCount).toBe(2);
+
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		// moduleReferenceId itself resolved fine (caseA exists) — only the
+		// citation is blanked, not the module reference.
+		expect(importedAwayGoal?.moduleReferenceId).toBe(caseA.id);
+		expect(importedAwayGoal?.moduleReferenceDangling).toBe(false);
+		expect(importedAwayGoal?.citedElementId).toBeNull();
+		expect(importedAwayGoal?.citationDangling).toBe(true);
+
+		expect(
+			imported.warnings.some((w) =>
+				w.includes(
+					"AG1: cited element not found; the reference has been cleared"
+				)
+			)
+		).toBe(true);
+	});
+
+	/**
+	 * Vincent's review of 281faccf (2026-09-16, BLOCKER): resolveExternalCited-
+	 * ElementIds queried `where: { id: { in: [...] } }` with no
+	 * `deletedAt: null`, unlike the edit-path rule (validateCitedElementId,
+	 * element-service.ts) it mirrors. A citedElementId naming a SOFT-DELETED
+	 * element in the CORRECT case therefore resolved as a valid citation here
+	 * (citationDangling: false) even though buildCitationContext
+	 * (case-fetch-service.ts) filters deletedAt: null when resolving the name
+	 * to show on the card — the away goal would have rendered with a case
+	 * name, no element name, and no dangling flag to explain why. Fixed by
+	 * adding the same `deletedAt: null` filter; this pins it treated the same
+	 * as a citedElementId that doesn't exist at all.
+	 */
+	it("blanks and flags a citedElementId that names a SOFT-DELETED element in the correct case", async () => {
+		const owner = await createTestUser();
+		const awayCase = await createTestCase(owner.id);
+		const deletedGoal = await createTestElement(awayCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Deleted Away Goal",
+		});
+		await prisma.assuranceElement.update({
+			where: { id: deletedGoal.id },
+			data: { deletedAt: new Date() },
+		});
+
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Soft-Deleted Citation Case",
+				description:
+					"citedElementId names an element soft-deleted in the target DB",
+			},
+			tree: {
+				id: "65000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "65000000-0000-4000-8000-000000000002",
+						type: "AWAY_GOAL",
+						name: "AG1",
+						description: "Cites an element that is soft-deleted in this DB",
+						inSandbox: false,
+						moduleReferenceId: awayCase.id,
+						citedElementId: deletedGoal.id,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		expect(imported.elementCount).toBe(2);
+
+		const importedAwayGoal = await prisma.assuranceElement.findFirst({
+			where: { caseId: imported.caseId, elementType: "AWAY_GOAL" },
+		});
+		// moduleReferenceId itself resolved fine (awayCase exists) — only the
+		// citation is blanked, not the module reference.
+		expect(importedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
+		expect(importedAwayGoal?.moduleReferenceDangling).toBe(false);
+		expect(importedAwayGoal?.citedElementId).toBeNull();
+		expect(importedAwayGoal?.citationDangling).toBe(true);
+
+		expect(
+			imported.warnings.some((w) =>
+				w.includes(
+					"AG1: cited element not found; the reference has been cleared"
+				)
+			)
+		).toBe(true);
+	});
+
+	/**
+	 * The defeater-axis warning string, pinned directly — the citation and
+	 * moduleReference warning strings are pinned inline on the tests above.
+	 */
+	it("pushes the defeater-axis warning when a defeater's target isn't part of the same import", async () => {
+		const absentTargetId = crypto.randomUUID();
+		const json = {
+			version: "1.0",
+			exportedAt: new Date().toISOString(),
+			case: {
+				name: "Defeater Warning Case",
+				description: "Defeater targets an id absent from this import",
+			},
+			tree: {
+				id: "64000000-0000-4000-8000-000000000001",
+				type: "GOAL",
+				name: "Root Goal",
+				description: "Top-level goal",
+				inSandbox: false,
+				role: "TOP_LEVEL",
+				children: [
+					{
+						id: "64000000-0000-4000-8000-000000000002",
+						type: "PROPERTY_CLAIM",
+						name: "CP1",
+						description: "Challenges an element outside this import",
+						inSandbox: false,
+						isDefeater: true,
+						defeatsElementId: absentTargetId,
+						children: [],
+					},
+				],
+			},
+		};
+
+		const { importCase } = await import("@/lib/services/case-import-service");
+		const importer = await createTestUser();
+		const imported = expectSuccess(await importCase(importer.id, json));
+
+		expect(
+			imported.warnings.some((w) =>
+				w.includes(
+					"CP1: challenge target not found in this file; the reference has been cleared"
+				)
+			)
+		).toBe(true);
 	});
 
 	/**

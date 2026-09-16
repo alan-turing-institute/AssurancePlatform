@@ -207,6 +207,22 @@ async function createCaseWithPermission(
  * (assurance_elements_cited_element_id_fkey) rejects unresolvable rows and
  * previously took the whole import's transaction down with it.
  *
+ * Returns id -> caseId (not just a Set of resolved ids) — citation integrity
+ * follow-up, 2026-09-16: resolveImportedCitedElementId needs the resolved
+ * element's OWN case to enforce the same case-membership rule element-
+ * service.ts's validateCitedElementId does (an away goal's citedElementId
+ * must belong to the case its moduleReferenceId names), not just prove the
+ * id exists somewhere.
+ *
+ * `deletedAt: null` (vincent's review of 281faccf, 2026-09-16 — BLOCKER):
+ * without it, a citedElementId naming a soft-deleted element in the right
+ * case resolved as a valid citation here — citationDangling stayed false —
+ * even though buildCitationContext (case-fetch-service.ts) filters
+ * deletedAt: null when resolving the name to show on the card, so the away
+ * goal rendered with a case name, no element name, and no dangling flag.
+ * Matches validateCitedElementId's own `deletedAt: null` filter (the edit-
+ * path rule this import path mirrors).
+ *
  * One findMany for the whole batch (not one query per element), run BEFORE
  * the transaction opens — keeps the transaction short per CLAUDE.md and
  * avoids doing this lookup once per createElements call.
@@ -224,7 +240,7 @@ async function resolveExternalCitedElementIds(
 	client: PrismaLikeClient,
 	elements: ElementV2[],
 	idMap: Map<string, string>
-): Promise<Set<string>> {
+): Promise<Map<string, string>> {
 	const externalIds = new Set<string>();
 	for (const el of elements) {
 		if (el.citedElementId && !idMap.has(el.citedElementId)) {
@@ -233,15 +249,50 @@ async function resolveExternalCitedElementIds(
 	}
 
 	if (externalIds.size === 0) {
-		return externalIds;
+		return new Map();
 	}
 
 	const found = await client.assuranceElement.findMany({
-		where: { id: { in: [...externalIds] } },
+		where: { id: { in: [...externalIds] }, deletedAt: null },
+		select: { id: true, caseId: true },
+	});
+
+	return new Map(found.map((el) => [el.id, el.caseId]));
+}
+
+/**
+ * Batch-resolves moduleReferenceId values (ADR 0004 D5 / D3 — "TEA — Import
+ * fails outright when an away goal or module cites a case absent from the
+ * target environment", Chris's ruling 2026-09-16: degrade and flag, mirroring
+ * citedElementId exactly) against the target DB's cases, run BEFORE the
+ * transaction opens (same reason as resolveExternalCitedElementIds above).
+ * moduleReferenceId names a CASE, never an id in this import's own idMap
+ * (idMap only maps ELEMENT ids) — every non-null value is checked. A
+ * moduleReferenceId that doesn't resolve here would otherwise hit the
+ * createMany FK (assurance_elements_module_reference_id_fkey) and roll back
+ * the whole import, the exact failure this ruling replaces.
+ */
+async function resolveExternalModuleReferenceIds(
+	client: PrismaLikeClient,
+	elements: ElementV2[]
+): Promise<Set<string>> {
+	const caseIds = new Set<string>();
+	for (const el of elements) {
+		if (el.moduleReferenceId) {
+			caseIds.add(el.moduleReferenceId);
+		}
+	}
+
+	if (caseIds.size === 0) {
+		return caseIds;
+	}
+
+	const found = await client.assuranceCase.findMany({
+		where: { id: { in: [...caseIds] }, deletedAt: null },
 		select: { id: true },
 	});
 
-	return new Set(found.map((el) => el.id));
+	return new Set(found.map((c) => c.id));
 }
 
 /**
@@ -263,27 +314,80 @@ async function resolveExternalCitedElementIds(
  * That is now a flagged, non-fatal outcome: citedElementId is dropped to
  * null and citationDangling is set, matching the existing detach/delete
  * dangling-citation contract in element-service.ts.
+ *
+ * Case-membership check (citation integrity follow-up, 2026-09-16): the same
+ * rule element-service.ts's validateCitedElementId enforces on the edit
+ * path — an away goal's citedElementId must belong to the case its
+ * moduleReferenceId names — applied here as blank-and-flag instead of
+ * reject, since import is non-fatal by design. `effectiveModuleReferenceId`
+ * is the ALREADY-RESOLVED value (see resolveImportedModuleReferenceId):
+ * when it's null — no case, whether the source data never named one or
+ * moduleReferenceId itself didn't resolve in this environment — a
+ * citedElementId cannot be valid, mirroring validateCitedElementId's
+ * unconditional rejection when moduleReferenceId is falsy (ADR 0004 D5
+ * round-3 security fix). `newCaseId` is this import's own freshly-created
+ * case: when citedElementId remaps through idMap (the cited element is
+ * ALSO part of this import), its post-import case IS newCaseId, so that's
+ * what effectiveModuleReferenceId must match for the remapped case too.
  */
 function resolveImportedCitedElementId(
 	citedElementId: string | null | undefined,
 	idMap: Map<string, string>,
-	resolvedExternalIds: Set<string>
+	resolvedExternalCitedElementIds: Map<string, string>,
+	effectiveModuleReferenceId: string | null,
+	newCaseId: string
 ): { citedElementId: string | null; citationDangling: boolean } {
 	if (!citedElementId) {
 		return { citedElementId: null, citationDangling: false };
 	}
 
+	if (!effectiveModuleReferenceId) {
+		// No case to belong to — flag, don't fail the import.
+		return { citedElementId: null, citationDangling: true };
+	}
+
 	const remapped = idMap.get(citedElementId);
-	if (remapped) {
-		return { citedElementId: remapped, citationDangling: false };
+	const citedElementCaseId = remapped
+		? newCaseId
+		: resolvedExternalCitedElementIds.get(citedElementId);
+
+	if (citedElementCaseId === effectiveModuleReferenceId) {
+		return {
+			citedElementId: remapped ?? citedElementId,
+			citationDangling: false,
+		};
 	}
 
-	if (resolvedExternalIds.has(citedElementId)) {
-		return { citedElementId, citationDangling: false };
-	}
-
-	// Unresolvable anywhere in the target DB — flag, don't fail the import.
+	// Unresolvable anywhere in the target DB, or resolved but in the WRONG
+	// case — flag, don't fail the import.
 	return { citedElementId: null, citationDangling: true };
+}
+
+/**
+ * Resolves a moduleReferenceId (ADR 0004 D5 / D3, Chris's ruling 2026-09-16)
+ * for the createMany row — MODULE and AWAY_GOAL both name a case they
+ * reference/cite, and unlike citedElementId there is no import-internal
+ * idMap to remap through (idMap only maps ELEMENT ids; the case this import
+ * itself creates is a NEW id no export could have predicted). A value that
+ * doesn't resolve in the target DB is dropped to null and
+ * moduleReferenceDangling is set, instead of hitting the createMany FK
+ * (assurance_elements_module_reference_id_fkey) and failing the whole
+ * import — mirrors resolveImportedCitedElementId's degrade contract exactly.
+ */
+function resolveImportedModuleReferenceId(
+	moduleReferenceId: string | null | undefined,
+	resolvedCaseIds: Set<string>
+): { moduleReferenceId: string | null; moduleReferenceDangling: boolean } {
+	if (!moduleReferenceId) {
+		return { moduleReferenceId: null, moduleReferenceDangling: false };
+	}
+
+	if (resolvedCaseIds.has(moduleReferenceId)) {
+		return { moduleReferenceId, moduleReferenceDangling: false };
+	}
+
+	// Unresolvable in the target environment — flag, don't fail the import.
+	return { moduleReferenceId: null, moduleReferenceDangling: true };
 }
 
 /**
@@ -338,9 +442,18 @@ function resolveImportedDefeatsElementId(
  * `createMany` call also carries `caseId`, `parentId`, `defeatsElementId`
  * (populated by `resolveImportedDefeatsElementId`'s idMap-remap-or-null-and-
  * flag below — same-case reference only, so this FK should never actually
- * fire from our own resolved rows), and `moduleReferenceId` foreign keys: a
- * P2003 on any of THOSE means real corrupt/inconsistent import data and must
- * still fail the whole import loudly, not be silently downgraded.
+ * fire from our own resolved rows) foreign keys: a P2003 on any of THOSE
+ * means real corrupt/inconsistent import data and must still fail the whole
+ * import loudly, not be silently downgraded. `moduleReferenceId` is no
+ * longer in that list (citation integrity follow-up, 2026-09-16): it is now
+ * pre-resolved by `resolveExternalModuleReferenceIds`/
+ * `resolveImportedModuleReferenceId` the same way `citedElementId` is, so an
+ * ordinary "case absent from this environment" import never reaches the
+ * insert with an unresolved value. A P2003 on it now would mean the same
+ * resolve-window race this catch already exists for (narrower: this module
+ * doesn't backstop-retry that specific race, only citedElementId's) — still
+ * correctly falls through to `throw error` below and fails the import, which
+ * is the same fail-loud outcome a genuine data-corruption P2003 needs.
  */
 const CITED_ELEMENT_ID_FK_CONSTRAINT =
 	"assurance_elements_cited_element_id_fkey";
@@ -364,17 +477,67 @@ export function isCitedElementIdForeignKeyError(error: unknown): boolean {
 }
 
 /**
- * Builds the createMany row for one element, resolving its citedElementId
- * against the given (already-resolved) external-id set and its
- * defeatsElementId against the import's own idMap. Extracted from
- * createElements so the resolve-window race backstop there can rebuild rows
- * a second time, against a freshly re-resolved set, without duplicating the
- * per-row field mapping.
+ * Import warnings (TEA — citation integrity + import degrade follow-up,
+ * 2026-09-16, Chris agreed): one warning per reference this import cleared,
+ * naming the CLEARING element by its identifier (`el.name` — TEA-syntax
+ * identifiers like AG1/CP1 are always app-assigned, per D8). Without this,
+ * `resolveImportedDefeatsElementId`/`resolveImportedCitedElementId`/
+ * `resolveImportedModuleReferenceId` set their dangling flags silently — the
+ * import-modal's "Continue to case" hold-open (#963) only triggers on a
+ * non-empty `warnings` array, so a user importing a stale/cross-environment
+ * export learned of a lost reference only from a missing edge on the canvas
+ * (staging re-run 2026-09-16, finding 7). Deliberately independent per axis:
+ * a defeater warning and a citation-axis warning can both fire for the same
+ * element (unrelated fields), but the citation axis fires AT MOST ONE of its
+ * two messages — when moduleReferenceDangling is set, the citation is a
+ * DIRECT CONSEQUENCE of the absent case, not a second independent finding,
+ * so only the module-reference message is pushed.
+ */
+function collectDegradeWarnings(
+	el: ElementV2,
+	citationDangling: boolean,
+	moduleReferenceDangling: boolean,
+	defeatsDangling: boolean
+): string[] {
+	const name = el.name ?? "element";
+	const warnings: string[] = [];
+	if (defeatsDangling) {
+		warnings.push(
+			`${name}: challenge target not found in this file; the reference has been cleared`
+		);
+	}
+	if (moduleReferenceDangling) {
+		warnings.push(
+			`${name}: cited case not available in this environment; the reference has been cleared`
+		);
+	} else if (citationDangling) {
+		warnings.push(
+			`${name}: cited element not found; the reference has been cleared`
+		);
+	}
+	return warnings;
+}
+
+/**
+ * Builds the createMany row (plus any degrade warnings) for one element,
+ * resolving its moduleReferenceId against the given (already-resolved) case
+ * set, its citedElementId against that EFFECTIVE moduleReferenceId and the
+ * (already-resolved) external cited-element map, and its defeatsElementId
+ * against the import's own idMap. Extracted from createElements so the
+ * resolve-window race backstop there can rebuild rows a second time, against
+ * a freshly re-resolved set, without duplicating the per-row field mapping.
+ *
+ * Resolution order matters: moduleReferenceId resolves FIRST because
+ * resolveImportedCitedElementId needs the EFFECTIVE (post-degrade) value —
+ * an away goal's citedElementId cannot be valid without its case, so a
+ * dangling moduleReferenceId cascades into a dangling citation too (Chris's
+ * ruling, 2026-09-16).
  */
 function buildElementRow(
 	el: ElementV2,
 	idMap: Map<string, string>,
-	resolvedExternalCitedElementIds: Set<string>,
+	resolvedExternalCitedElementIds: Map<string, string>,
+	resolvedModuleReferenceCaseIds: Set<string>,
 	caseId: string,
 	userId: string
 ) {
@@ -383,13 +546,26 @@ function buildElementRow(
 		return null;
 	}
 
+	// Module reference (MODULE/AWAY_GOAL) — see
+	// resolveImportedModuleReferenceId's docstring for the
+	// preserve-verbatim-else-flag-dangling decision (Chris's ruling,
+	// 2026-09-16).
+	const { moduleReferenceId, moduleReferenceDangling } =
+		resolveImportedModuleReferenceId(
+			el.moduleReferenceId,
+			resolvedModuleReferenceCaseIds
+		);
+
 	// Element-level citation (ADR 0004 D5) — see
 	// resolveImportedCitedElementId's docstring for the
-	// remap-else-preserve-verbatim-else-flag-dangling decision.
+	// remap-else-preserve-verbatim-else-flag-dangling decision, and for why
+	// this uses the EFFECTIVE (already-degraded) moduleReferenceId above.
 	const { citedElementId, citationDangling } = resolveImportedCitedElementId(
 		el.citedElementId,
 		idMap,
-		resolvedExternalCitedElementIds
+		resolvedExternalCitedElementIds,
+		moduleReferenceId,
+		caseId
 	);
 
 	// Dialogical reasoning (defeaters) — see
@@ -401,7 +577,14 @@ function buildElementRow(
 		idMap
 	);
 
-	return {
+	const warnings = collectDegradeWarnings(
+		el,
+		citationDangling,
+		moduleReferenceDangling,
+		defeatsDangling
+	);
+
+	const row = {
 		id: newId,
 		caseId,
 		elementType: el.elementType,
@@ -427,15 +610,8 @@ function buildElementRow(
 		assertionStatus: el.assertionStatus,
 		citedElementId,
 		citationDangling,
-		// Module reference (MODULE/AWAY_GOAL) — names a CASE, not an element
-		// in this import's own payload, so (unlike citedElementId) there is
-		// nothing in idMap to remap it through; preserved verbatim. A value
-		// that doesn't resolve in the target DB fails this createMany loudly
-		// via the module_reference_id foreign key — deliberately NOT given
-		// the citedElementId FK's soft-degrade treatment below, since it was
-		// never flagged as needing one (see nested-to-flat.ts for the same
-		// note at the point this value is first carried through).
-		moduleReferenceId: el.moduleReferenceId,
+		moduleReferenceId,
+		moduleReferenceDangling,
 		// Dialogical reasoning (defeaters) — see
 		// resolveImportedDefeatsElementId's docstring above for the
 		// remap-else-flag-dangling decision.
@@ -444,26 +620,38 @@ function buildElementRow(
 		defeatsDangling,
 		createdById: userId,
 	};
+
+	return { row, warnings };
 }
+
+type ElementRow = NonNullable<ReturnType<typeof buildElementRow>>["row"];
 
 function buildElementRows(
 	sortedElements: ElementV2[],
 	idMap: Map<string, string>,
-	resolvedExternalCitedElementIds: Set<string>,
+	resolvedExternalCitedElementIds: Map<string, string>,
+	resolvedModuleReferenceCaseIds: Set<string>,
 	caseId: string,
 	userId: string
-) {
-	return sortedElements
-		.map((el) =>
-			buildElementRow(
-				el,
-				idMap,
-				resolvedExternalCitedElementIds,
-				caseId,
-				userId
-			)
-		)
-		.filter((d) => d !== null);
+): { rows: ElementRow[]; warnings: string[] } {
+	const rows: ElementRow[] = [];
+	const warnings: string[] = [];
+	for (const el of sortedElements) {
+		const built = buildElementRow(
+			el,
+			idMap,
+			resolvedExternalCitedElementIds,
+			resolvedModuleReferenceCaseIds,
+			caseId,
+			userId
+		);
+		if (!built) {
+			continue;
+		}
+		rows.push(built.row);
+		warnings.push(...built.warnings);
+	}
+	return { rows, warnings };
 }
 
 /**
@@ -480,9 +668,11 @@ function buildElementRows(
  * the backstop: on exactly that FK error, re-resolve the external
  * citedElementIds against the DB (this time the raced-away id correctly
  * comes back unresolved), rebuild the rows, and retry the insert once. A
- * P2003 on any OTHER foreign key (caseId, parentId, defeatsElementId,
- * moduleReferenceId) — or a second failure on retry — is not this module's
- * to recover from and propagates, failing the import as before.
+ * P2003 on any OTHER foreign key (caseId, parentId, defeatsElementId, or the
+ * narrower resolve-window race on moduleReferenceId this module does not
+ * backstop — see the CITED_ELEMENT_ID_FK_CONSTRAINT docstring above) — or a
+ * second failure on retry — is not this module's to recover from and
+ * propagates, failing the import as before.
  *
  * SAVEPOINT/ROLLBACK TO SAVEPOINT around the first attempt (verified against
  * a real Postgres, see case-import-service.test.ts and the issue writeup):
@@ -512,16 +702,18 @@ async function createElements(
 	caseId: string,
 	elements: ElementV2[],
 	idMap: Map<string, string>,
-	resolvedExternalCitedElementIds: Set<string>,
+	resolvedExternalCitedElementIds: Map<string, string>,
+	resolvedModuleReferenceCaseIds: Set<string>,
 	userId: string
-): Promise<number> {
+): Promise<{ count: number; warnings: string[] }> {
 	// Sort elements topologically so parents are created before children
 	const sortedElements = topologicalSort(elements);
 
-	const data = buildElementRows(
+	const { rows: data, warnings } = buildElementRows(
 		sortedElements,
 		idMap,
 		resolvedExternalCitedElementIds,
+		resolvedModuleReferenceCaseIds,
 		caseId,
 		userId
 	);
@@ -532,6 +724,8 @@ async function createElements(
 	const savepoint = `import_elements_${crypto.randomUUID().replaceAll("-", "_")}`;
 	await tx.$executeRawUnsafe(`SAVEPOINT "${savepoint}"`);
 
+	let finalCount = data.length;
+	let finalWarnings = warnings;
 	try {
 		await tx.assuranceElement.createMany({ data });
 		// Success path: deliberately not RELEASE-ing the savepoint here.
@@ -550,17 +744,25 @@ async function createElements(
 
 		const reResolvedExternalCitedElementIds =
 			await resolveExternalCitedElementIds(tx, elements, idMap);
-		const retryData = buildElementRows(
+		const retry = buildElementRows(
 			sortedElements,
 			idMap,
 			reResolvedExternalCitedElementIds,
+			resolvedModuleReferenceCaseIds,
 			caseId,
 			userId
 		);
-		await tx.assuranceElement.createMany({ data: retryData });
+		// Read the retry's OWN row/warning counts (vincent's nit, 2026-09-16)
+		// rather than the pre-retry `data`/`warnings` — equal in practice
+		// (the retry only ever nulls one already-degraded citation, never
+		// adds or drops a row), but reading the retry's own result reads as
+		// correct rather than merely coincidentally equal.
+		finalCount = retry.rows.length;
+		finalWarnings = retry.warnings;
+		await tx.assuranceElement.createMany({ data: retry.rows });
 	}
 
-	return data.length;
+	return { count: finalCount, warnings: finalWarnings };
 }
 
 /**
@@ -753,6 +955,13 @@ export async function importCase(
 		const resolvedExternalCitedElementIds =
 			await resolveExternalCitedElementIds(prisma, v2Data.elements, idMap);
 
+		// TEA — Import fails outright when an away goal or module cites a case
+		// absent from the target environment (Chris's ruling, 2026-09-16):
+		// batch-resolve external moduleReferenceIds the same way, and BEFORE
+		// the transaction opens for the same reason.
+		const resolvedModuleReferenceCaseIds =
+			await resolveExternalModuleReferenceIds(prisma, v2Data.elements);
+
 		// Use a transaction to ensure atomicity. The callback takes the
 		// transaction-scoped `tx` client and threads it through every helper
 		// below — the whole import is one atomic Postgres transaction, so a
@@ -770,14 +979,16 @@ export async function importCase(
 			const caseId = await createCaseWithPermission(tx, v2Data.case, userId);
 
 			// Create elements
-			const elementCount = await createElements(
-				tx,
-				caseId,
-				v2Data.elements,
-				idMap,
-				resolvedExternalCitedElementIds,
-				userId
-			);
+			const { count: elementCount, warnings: elementWarnings } =
+				await createElements(
+					tx,
+					caseId,
+					v2Data.elements,
+					idMap,
+					resolvedExternalCitedElementIds,
+					resolvedModuleReferenceCaseIds,
+					userId
+				);
 
 			// Create evidence links
 			const evidenceLinkCount = await createEvidenceLinks(
@@ -800,6 +1011,7 @@ export async function importCase(
 				elementCount,
 				evidenceLinkCount,
 				commentCount,
+				elementWarnings,
 			};
 		});
 
@@ -811,12 +1023,13 @@ export async function importCase(
 			v2Data.elements
 		);
 
+		const { elementWarnings, ...resultData } = result;
 		return {
 			data: {
-				...result,
+				...resultData,
 				warnings: renumberWarning
-					? [...processed.warnings, renumberWarning]
-					: processed.warnings,
+					? [...processed.warnings, ...elementWarnings, renumberWarning]
+					: [...processed.warnings, ...elementWarnings],
 			},
 		};
 	} catch (error) {

@@ -18,6 +18,7 @@ import {
 	enforceAssertionStatusRules,
 	isSystemUserPrincipal,
 	regenerateNameForIsDefeaterChange,
+	validateCitedElementId,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
@@ -75,6 +76,57 @@ async function validateAssertionStatusChanges(
 			return error;
 		}
 	}
+	return null;
+}
+
+/**
+ * ADR 0004 D5 (batch/JSON-editor parity, follow-up from vincent's review of
+ * the canvas slice, 2026-09-16): `buildUpdateData` writes `moduleReferenceId`
+ * with no citation check of its own — this batch path cannot write
+ * `citedElementId` directly (it isn't part of `UpdateElementData`), so a
+ * change that touches only `moduleReferenceId` could otherwise leave an
+ * existing `citedElementId` pointing at the OLD case, unvalidated. Mirrors
+ * element-service.ts's `updateElement` round-2 security fix exactly, scoped
+ * to the batch shape: only updates that actually change `moduleReferenceId`
+ * are checked, against the EXISTING `citedElementId` (one batched fetch, not
+ * one query per update), reusing `validateCitedElementId` — the same
+ * function, same anti-enumeration error message — as the single-element
+ * route, and rejecting the whole batch on a violation rather than degrading
+ * (batch is an explicit author edit, not import).
+ */
+async function validateModuleReferenceChanges(
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const moduleRefUpdates = updates.filter(
+		(c) => c.data.moduleReferenceId !== undefined
+	);
+	if (moduleRefUpdates.length === 0) {
+		return null;
+	}
+
+	const existingRows = await prisma.assuranceElement.findMany({
+		where: { id: { in: moduleRefUpdates.map((c) => c.elementId) } },
+		select: { id: true, citedElementId: true },
+	});
+	const citedElementIdById = new Map(
+		existingRows.map((r) => [r.id, r.citedElementId])
+	);
+
+	for (const change of moduleRefUpdates) {
+		const citedElementId = citedElementIdById.get(change.elementId);
+		if (!citedElementId) {
+			continue;
+		}
+		const error = await validateCitedElementId(
+			citedElementId,
+			change.data.moduleReferenceId,
+			change.elementId
+		);
+		if (error) {
+			return error;
+		}
+	}
+
 	return null;
 }
 
@@ -1251,6 +1303,14 @@ export async function applyBatchUpdate(
 	);
 	if (assertionStatusError) {
 		return { error: assertionStatusError };
+	}
+
+	// ADR 0004 D5 (citation integrity follow-up, 2026-09-16): a moduleReferenceId
+	// change must not orphan an existing citedElementId against the OLD case —
+	// see validateModuleReferenceChanges's docstring.
+	const moduleReferenceError = await validateModuleReferenceChanges(updates);
+	if (moduleReferenceError) {
+		return { error: moduleReferenceError };
 	}
 
 	// Validate parent references

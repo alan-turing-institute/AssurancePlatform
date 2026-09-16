@@ -119,4 +119,31 @@ describe("AwayGoalNode (ADR 0005 D3)", () => {
 		expect(screen.getByText("Cited element not resolved")).toBeInTheDocument();
 		expect(screen.queryByText("Cited Case — G3")).not.toBeInTheDocument();
 	});
+
+	it("shows 'Cited case not available' and no link when moduleReferenceDangling is set, even though citedElementId is also null (Chris's ruling, 2026-09-16)", () => {
+		renderWithReactFlow(
+			<AwayGoalNode
+				{...nodeProps({
+					id: "el-1",
+					name: "AG1",
+					description: "An away goal",
+					citedCaseName: null,
+					citedElementName: null,
+					citedCaseAccessible: false,
+					moduleReferenceId: null,
+					citedElementId: null,
+					citationDangling: true,
+					moduleReferenceDangling: true,
+				})}
+			/>
+		);
+
+		expect(screen.getByText("Cited case not available")).toBeInTheDocument();
+		expect(
+			screen.queryByText("Cited element not resolved")
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("link", { name: VIEW_CITED_CASE_LINK_PATTERN })
+		).not.toBeInTheDocument();
+	});
 });
