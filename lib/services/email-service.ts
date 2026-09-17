@@ -29,6 +29,81 @@ function renderEmailHeader(): string {
 // Types
 type EmailResult = { data: { messageId: string } } | { error: string };
 
+// Matches a candidate URL in free text, plus any trailing punctuation
+// (e.g. the "." that directly follows a link at the end of a sentence) so
+// that punctuation can be split off before parsing and reattached after —
+// `new URL()` would otherwise fold it into the path/query and reproduce it
+// oddly on the way back out.
+const URL_WITH_TRAILING_PUNCTUATION_PATTERN = /https?:\/\/\S+/g;
+const TRAILING_PUNCTUATION_PATTERN = /[.,;:!?)\]}]+$/;
+const SENSITIVE_QUERY_KEY_PATTERN = /(token|code|key|secret|otp|signature)$/i;
+const TOKEN_LIKE_PATH_SEGMENT_PATTERN = /^[A-Za-z0-9_-]{16,}$/;
+
+/** `…` plus the last 4 characters of `value`, whatever its length or charset. */
+function redactValue(value: string): string {
+	return `…${value.slice(-4)}`;
+}
+
+/**
+ * Redacts sensitive values inside one URL, without touching the scheme or
+ * host:
+ * - a query parameter whose key ends in token/code/key/secret/otp/signature
+ *   (case-insensitive) has its whole value replaced — regardless of length
+ *   or charset, so a 6-digit code and a base64 token are covered exactly
+ *   like a 64-hex token;
+ * - the final path segment is redacted only when it is itself at least 16
+ *   `[A-Za-z0-9_-]` characters (e.g. `/verify/<token>`), so an ordinary
+ *   path like `/reset-password` is left alone.
+ * A URL that fails to parse is returned unchanged rather than guessed at.
+ *
+ * Rebuilds the query/path strings by hand rather than reassigning
+ * `parsed.search`/`parsed.pathname` and calling `.toString()`: this is a log
+ * line for a human, not a link to be clicked, and `URL`'s own serialiser
+ * percent-encodes the "…" marker into `%E2%80%A6`, which defeats the point
+ * of a readable redaction. `URL` is still what does the parsing — origin,
+ * path segments, query keys/values — only the redacted output is written
+ * out literally.
+ */
+function redactUrl(rawUrl: string): string {
+	const trailingMatch = rawUrl.match(TRAILING_PUNCTUATION_PATTERN);
+	const trailing = trailingMatch?.[0] ?? "";
+	const urlPart = trailing ? rawUrl.slice(0, -trailing.length) : rawUrl;
+
+	let parsed: URL;
+	try {
+		parsed = new URL(urlPart);
+	} catch {
+		return rawUrl;
+	}
+
+	const query = [...parsed.searchParams.entries()]
+		.map(([key, value]) =>
+			SENSITIVE_QUERY_KEY_PATTERN.test(key) && value
+				? `${key}=${redactValue(value)}`
+				: `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+		)
+		.join("&");
+
+	const segments = parsed.pathname.split("/");
+	const lastIndex = segments.length - 1;
+	const lastSegment = segments[lastIndex];
+	if (lastSegment && TOKEN_LIKE_PATH_SEGMENT_PATTERN.test(lastSegment)) {
+		segments[lastIndex] = redactValue(lastSegment);
+	}
+	const path = segments.join("/");
+
+	return `${parsed.origin}${path}${query ? `?${query}` : ""}${trailing}`;
+}
+
+/**
+ * Redacts sensitive values inside every URL found in `content` (see
+ * `redactUrl`); text outside a URL — including a token-length word that
+ * merely sits in the body copy — is left untouched.
+ */
+export function redactTokensInUrls(content: string): string {
+	return content.replace(URL_WITH_TRAILING_PUNCTUATION_PATTERN, redactUrl);
+}
+
 interface PasswordResetEmailParams {
 	expiresInMinutes?: number;
 	resetToken: string;
@@ -59,9 +134,16 @@ interface RetentionWarningEmailParams {
  */
 function getEmailClient(): EmailClient | null {
 	if (!ACS_CONNECTION_STRING) {
-		log.warn(
-			"ACS_CONNECTION_STRING not configured - emails will be logged only"
-		);
+		// In production this is a misconfiguration, not a dev preview: the
+		// email is not "logged only" (sendEmail now fails closed), and
+		// sendEmail logs its own "Email provider not configured" error right
+		// after this returns — a second, differently-worded warning here
+		// would just be noise on top of the log line that actually matters.
+		if (process.env.NODE_ENV !== "production") {
+			log.warn(
+				"ACS_CONNECTION_STRING not configured - emails will be logged only"
+			);
+		}
 		return null;
 	}
 
@@ -70,7 +152,14 @@ function getEmailClient(): EmailClient | null {
 
 /**
  * Send an email using Azure Communication Services.
- * Falls back to console logging in development when ACS is not configured.
+ *
+ * When no client is configured (`ACS_CONNECTION_STRING` unset):
+ * - In production, this is a misconfiguration, not a dev preview — fail
+ *   closed with an error result and log only `to`/`subject`, never the body.
+ * - Otherwise (the dev preview), log `to`/`subject` and a redacted form of
+ *   the plain-text body: any token-like value inside a URL is replaced by
+ *   its last 4 characters, so a reset/verification link is still readable
+ *   without the raw token landing in the log stream.
  */
 async function sendEmail(
 	to: string,
@@ -81,11 +170,16 @@ async function sendEmail(
 	const client = getEmailClient();
 
 	if (!client) {
-		// Development fallback - log the email
+		if (process.env.NODE_ENV === "production") {
+			log.error("Email provider not configured", { to, subject });
+			return { error: "Email provider not configured" };
+		}
+
+		// Development fallback - log a redacted preview, never the raw body
 		log.info("Email (development mode)", {
 			to,
 			subject,
-			content: plainTextContent,
+			content: redactTokensInUrls(plainTextContent),
 		});
 		return { data: { messageId: `dev-${Date.now()}` } };
 	}

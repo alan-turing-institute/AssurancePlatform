@@ -381,11 +381,14 @@ export async function deleteAccount(
 	password?: string
 ): ServiceResult {
 	try {
-		// Get user info
+		// Get user info (email/username captured now — the row won't exist
+		// once the deletion transaction below commits)
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: {
 				id: true,
+				email: true,
+				username: true,
 				passwordHash: true,
 				passwordAlgorithm: true,
 				authProvider: true,
@@ -424,10 +427,40 @@ export async function deleteAccount(
 
 		await runAccountDeletionTransaction(userId);
 
+		await sendAccountDeletedEmailBestEffort(userId, user.email, user.username);
+
 		return { data: true };
 	} catch (error) {
 		log.error("Error deleting account", { error });
 		return { error: "Failed to delete account" };
+	}
+}
+
+/**
+ * Sends the account-deleted confirmation, shared by `deleteAccount` (this
+ * file, self-service) and `deleteAccountForRetention` (below, the sweep).
+ * Best-effort: the account row is already gone by the time this runs, so a
+ * failed send is logged and swallowed here rather than surfaced — it must
+ * never turn an already-successful deletion into an error result.
+ */
+async function sendAccountDeletedEmailBestEffort(
+	userId: string,
+	email: string,
+	username: string
+): Promise<void> {
+	try {
+		const { sendAccountDeletedEmail } = await import(
+			"@/lib/services/email-service"
+		);
+		const result = await sendAccountDeletedEmail({ to: email, username });
+		if ("error" in result) {
+			log.error("Failed to send account-deleted email", {
+				userId,
+				error: result.error,
+			});
+		}
+	} catch (error) {
+		log.error("Failed to send account-deleted email", { userId, error });
 	}
 }
 
@@ -653,10 +686,7 @@ export async function deleteAccountForRetention(userId: string): ServiceResult {
 
 		await runAccountDeletionTransaction(userId);
 
-		const { sendAccountDeletedEmail } = await import(
-			"@/lib/services/email-service"
-		);
-		await sendAccountDeletedEmail({ to: user.email, username: user.username });
+		await sendAccountDeletedEmailBestEffort(userId, user.email, user.username);
 
 		const { logSecurityEvent } = await import("@/lib/audit/security-log");
 		logSecurityEvent({
