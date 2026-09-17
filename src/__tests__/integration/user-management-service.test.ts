@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { sendAccountDeletedEmail } from "@/lib/services/email-service";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
 import {
 	deleteAccount,
@@ -205,6 +206,53 @@ describe("deleteAccountForRetention", () => {
 			await deleteAccountForRetention("00000000-0000-0000-0000-000000000000"),
 			"User not found"
 		);
+	});
+});
+
+/**
+ * Self-service deletion never sent the account-deleted confirmation before
+ * this fix — only the retention sweep's `deleteAccountForRetention` did.
+ * Wraps the real `sendAccountDeletedEmail` (rather than stubbing it outright)
+ * so the "still succeeds when the send rejects" case can override it once
+ * and fall back to the real implementation for every other test.
+ */
+vi.mock("@/lib/services/email-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/services/email-service")>();
+	return {
+		...actual,
+		sendAccountDeletedEmail: vi.fn(actual.sendAccountDeletedEmail),
+	};
+});
+
+describe("deleteAccount — account-deleted confirmation email", () => {
+	afterEach(() => {
+		vi.mocked(sendAccountDeletedEmail).mockRestore();
+	});
+
+	it("sends the account-deleted confirmation to the user's own address on self-service deletion", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		expect(sendAccountDeletedEmail).toHaveBeenCalledWith({
+			to: owner.email,
+			username: owner.username,
+		});
+	});
+
+	it("still succeeds, and still deletes, when the confirmation send rejects", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		vi.mocked(sendAccountDeletedEmail).mockImplementationOnce(() => {
+			throw new Error("simulated send failure");
+		});
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
 	});
 });
 
