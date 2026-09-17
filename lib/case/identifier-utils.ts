@@ -13,10 +13,15 @@ interface ParsedIdentifier {
 }
 
 /**
- * Regex pattern for parsing identifiers like "S2", "P1.3", "G1"
- * Matches: single uppercase letter followed by digits, optionally with dot-separated sub-numbers
+ * Regex pattern for parsing identifiers like "S2", "P1.3", "G1", "AG10",
+ * "CP2", "CCt1" — one or more letters (the element's own prefix, plus the
+ * "C" defeater marker prepended for a defeater's own prefix; see
+ * `lib/element-names/prefix-registry.ts`'s `CORE_PREFIXES` and
+ * `DEFEATER_PREFIX_MARKER`) followed by digits, optionally with dot-
+ * separated sub-numbers. Case-sensitive — "Ct" (Contract) and "CCt" (a
+ * Contract defeater) are distinct prefixes from "CT".
  */
-const IDENTIFIER_PATTERN = /^([A-Z])(\d+(?:\.\d+)*)$/;
+const IDENTIFIER_PATTERN = /^([A-Za-z]+)(\d+(?:\.\d+)*)$/;
 
 /**
  * Parses an identifier like "S2", "P1.3", "G1" into sortable components.
