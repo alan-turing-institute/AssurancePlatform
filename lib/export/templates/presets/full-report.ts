@@ -31,7 +31,7 @@ import {
 /**
  * Full Report configuration
  */
-export const FULL_REPORT_CONFIG: TemplateConfig = {
+const FULL_REPORT_CONFIG: TemplateConfig = {
 	name: "Full Report",
 	description:
 		"Comprehensive report with all case elements, comments, and diagram",

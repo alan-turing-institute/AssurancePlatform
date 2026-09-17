@@ -8,9 +8,6 @@ import type {
 	StrategyResponse,
 } from "@/lib/services/case-response-types";
 
-// Regular expressions
-const NUMERIC_ID_PATTERN = /^\d+$/;
-
 // Helper function to add property claim to a specific claim
 const addPropertyClaimToSpecificClaim = (
 	propertyClaim: PropertyClaimResponse,
@@ -446,98 +443,4 @@ export const updatePropertyClaimNestedMove = (
 	);
 
 	return updatedArray;
-};
-
-// Helper function to check and add property claim to list
-const addPropertyClaimToList = (
-	item: PropertyClaimResponse,
-	currentClaimName: string,
-	claims: PropertyClaimResponse[]
-): void => {
-	// Skip null/undefined items
-	if (!item || typeof item !== "object") {
-		return;
-	}
-
-	// Check if currentClaimName is actually an ID (numeric string)
-	const isIdComparison = NUMERIC_ID_PATTERN.test(currentClaimName);
-
-	if (item.type === "property_claim") {
-		if (isIdComparison) {
-			// Compare by ID if currentClaimName is a numeric string
-			if (item.id?.toString() !== currentClaimName) {
-				claims.push(item);
-			}
-		} else if (item.name !== currentClaimName) {
-			// Compare by name otherwise
-			claims.push(item);
-		}
-	}
-};
-
-// Helper function to process strategies with property claims
-const processStrategiesPropertyClaims = (
-	strategies: StrategyResponse[],
-	currentClaimName: string,
-	claims: PropertyClaimResponse[]
-): void => {
-	for (const strategy of strategies) {
-		if (strategy.propertyClaims && strategy.propertyClaims.length > 0) {
-			listPropertyClaims(
-				strategy.propertyClaims,
-				currentClaimName,
-				claims,
-				true
-			);
-		}
-	}
-};
-
-/**
- * Recursively lists all property claims except the specified current claim.
- */
-export const listPropertyClaims = (
-	array: PropertyClaimResponse[],
-	currentClaimName: string,
-	claims: PropertyClaimResponse[] = [],
-	isNested = false
-): PropertyClaimResponse[] => {
-	// Handle null/undefined array
-	if (!(array && Array.isArray(array))) {
-		return claims;
-	}
-
-	// Iterate through the property claims array
-	for (const item of array) {
-		// Skip null/undefined items
-		if (!item) {
-			continue;
-		}
-
-		// Only add to list if this is a nested call (not top-level)
-		if (isNested) {
-			addPropertyClaimToList(item, currentClaimName, claims);
-		}
-
-		// If this item has nested property claims, recursively search within them
-		if (item.propertyClaims && item.propertyClaims.length > 0) {
-			listPropertyClaims(
-				item.propertyClaims,
-				currentClaimName,
-				claims,
-				true // Mark as nested
-			);
-		}
-
-		// If this property claim has strategies, recursively search within them
-		if (item.strategies && item.strategies.length > 0) {
-			processStrategiesPropertyClaims(
-				item.strategies,
-				currentClaimName,
-				claims
-			);
-		}
-	}
-
-	return claims;
 };

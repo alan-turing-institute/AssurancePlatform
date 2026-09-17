@@ -23,7 +23,7 @@ const hexColourSchema = z
 /**
  * Branding configuration schema
  */
-export const BrandingConfigSchema = z
+const BrandingConfigSchema = z
 	.object({
 		primaryColour: hexColourSchema
 			.default("#1e40af")

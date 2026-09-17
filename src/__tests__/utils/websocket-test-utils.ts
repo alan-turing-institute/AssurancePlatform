@@ -33,8 +33,6 @@ export const MessageType = {
 	PRESENCE_UPDATE: "presence_update",
 } as const;
 
-export type MessageType = (typeof MessageType)[keyof typeof MessageType];
-
 /**
  * Mock WebSocket server configuration options
  */
@@ -290,217 +288,6 @@ export class MockWebSocketServer {
 }
 
 /**
- * Message queue for testing message ordering and buffering
- */
-export class MessageQueue<T = unknown> {
-	private queue: WebSocketMessage<T>[] = [];
-	private processing = false;
-	private readonly processor?: (message: WebSocketMessage<T>) => Promise<void>;
-
-	constructor(processor?: (message: WebSocketMessage<T>) => Promise<void>) {
-		this.processor = processor;
-	}
-
-	/**
-	 * Add a message to the queue
-	 */
-	enqueue(message: WebSocketMessage<T>): void {
-		this.queue.push(message);
-		this.processQueue();
-	}
-
-	/**
-	 * Process messages in the queue
-	 */
-	private async processQueue(): Promise<void> {
-		if (this.processing || !this.processor) {
-			return;
-		}
-
-		this.processing = true;
-
-		while (this.queue.length > 0) {
-			const message = this.queue.shift();
-			if (!message) {
-				continue;
-			}
-			// Sequential processing is required for message ordering
-			await this.processor(message);
-		}
-
-		this.processing = false;
-	}
-
-	/**
-	 * Get current queue size
-	 */
-	size(): number {
-		return this.queue.length;
-	}
-
-	/**
-	 * Clear the queue
-	 */
-	clear(): void {
-		this.queue = [];
-	}
-
-	/**
-	 * Get all messages in queue
-	 */
-	getMessages(): WebSocketMessage<T>[] {
-		return [...this.queue];
-	}
-}
-
-/**
- * Collaboration testing utilities
- */
-export class CollaborationTestUtils {
-	private readonly presenceMap: Map<string, UserPresence> = new Map();
-	private readonly cursorPositions: Map<string, { x: number; y: number }> =
-		new Map();
-
-	/**
-	 * Simulate user joining the session
-	 */
-	simulateUserJoin(
-		user: Omit<UserPresence, "lastActivity" | "status">
-	): UserPresence {
-		const presence: UserPresence = {
-			...user,
-			lastActivity: new Date(),
-			status: "active",
-		};
-
-		this.presenceMap.set(user.id, presence);
-		return presence;
-	}
-
-	/**
-	 * Simulate user leaving the session
-	 */
-	simulateUserLeave(userId: string): void {
-		this.presenceMap.delete(userId);
-		this.cursorPositions.delete(userId);
-	}
-
-	/**
-	 * Simulate cursor movement
-	 */
-	simulateCursorMove(
-		userId: string,
-		x: number,
-		y: number,
-		elementId?: string
-	): void {
-		const presence = this.presenceMap.get(userId);
-		if (presence) {
-			presence.cursor = { x, y, elementId };
-			presence.lastActivity = new Date();
-		}
-		this.cursorPositions.set(userId, { x, y });
-	}
-
-	/**
-	 * Get all active users
-	 */
-	getActiveUsers(): UserPresence[] {
-		return Array.from(this.presenceMap.values()).filter(
-			(user) => user.status === "active"
-		);
-	}
-
-	/**
-	 * Simulate user idle state
-	 */
-	simulateUserIdle(userId: string): void {
-		const presence = this.presenceMap.get(userId);
-		if (presence) {
-			presence.status = "idle";
-		}
-	}
-
-	/**
-	 * Clear all presence data
-	 */
-	clearPresence(): void {
-		this.presenceMap.clear();
-		this.cursorPositions.clear();
-	}
-}
-
-/**
- * Optimistic update testing utilities
- */
-export class OptimisticUpdateTestUtils<T = unknown> {
-	private readonly pendingUpdates: Map<string, T> = new Map();
-	private confirmedState: T;
-	private rollbackState: T;
-
-	constructor(initialState: T) {
-		this.confirmedState = initialState;
-		this.rollbackState = initialState;
-	}
-
-	/**
-	 * Apply an optimistic update
-	 */
-	applyOptimisticUpdate(updateId: string, update: Partial<T>): T {
-		const newState = { ...this.confirmedState, ...update };
-		this.pendingUpdates.set(updateId, newState);
-		return newState;
-	}
-
-	/**
-	 * Confirm an optimistic update
-	 */
-	confirmUpdate(updateId: string, serverState: T): T {
-		this.pendingUpdates.delete(updateId);
-		this.confirmedState = serverState;
-		this.rollbackState = serverState;
-		return this.confirmedState;
-	}
-
-	/**
-	 * Rollback an optimistic update
-	 */
-	rollbackUpdate(updateId: string): T {
-		this.pendingUpdates.delete(updateId);
-		return this.rollbackState;
-	}
-
-	/**
-	 * Get current state including pending updates
-	 */
-	getCurrentState(): T {
-		if (this.pendingUpdates.size === 0) {
-			return this.confirmedState;
-		}
-
-		// Return the most recent pending update
-		const updates = Array.from(this.pendingUpdates.values());
-		return updates.at(-1) as T;
-	}
-
-	/**
-	 * Check if there are pending updates
-	 */
-	hasPendingUpdates(): boolean {
-		return this.pendingUpdates.size > 0;
-	}
-
-	/**
-	 * Clear all updates
-	 */
-	reset(state: T): void {
-		this.pendingUpdates.clear();
-		this.confirmedState = state;
-		this.rollbackState = state;
-	}
-}
-
-/**
  * WebSocket connection state assertions
  * These functions return assertions that should be called within test functions
  */
@@ -573,16 +360,6 @@ export const assertConnectionState = {
 		return JSON.stringify(sentTypes) === JSON.stringify(expectedTypes);
 	},
 };
-
-/**
- * Create a mock WebSocket event
- */
-export function createWebSocketEvent<T extends Event>(
-	type: string,
-	options?: EventInit
-): T {
-	return new Event(type, options) as T;
-}
 
 /**
  * Wait for WebSocket connection to open
@@ -791,7 +568,7 @@ export class ConcurrentUserSimulator {
 /**
  * Network condition simulation utilities
  */
-export class NetworkConditionSimulator {
+class NetworkConditionSimulator {
 	private readonly connections: Map<string, MockWebSocket> = new Map();
 
 	constructor(connections: Map<string, MockWebSocket>) {

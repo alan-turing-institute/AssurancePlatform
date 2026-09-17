@@ -41,7 +41,7 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 /**
  * Searches for a target node within an assurance case using a depth-first search algorithm.
  */
-export function searchWithDeepFirst(
+function searchWithDeepFirst(
 	targetNode: CaseNode,
 	assuranceCase: CaseNode
 ): [CaseNode | null, Record<string, CaseNode>] {
@@ -353,7 +353,7 @@ const searchInChildElements = (
 /**
  * Finds an element within an assurance case by its unique ID.
  */
-export function findElementById(
+function findElementById(
 	assuranceCase: AssuranceCaseResponse,
 	id: string
 ): NestedArrayItem | AssuranceCaseResponse | null {
@@ -411,7 +411,7 @@ const processChildrenForHiddenStatus = (
 /**
  * Retrieves the hidden status of all child elements of a specified element.
  */
-export function getChildrenHiddenStatus(
+function getChildrenHiddenStatus(
 	element: NestedArrayItem | AssuranceCaseResponse
 ): boolean[] {
 	const hiddenStatus: boolean[] = [];

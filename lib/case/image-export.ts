@@ -39,7 +39,7 @@ export type FilteredImageExportOptions = ImageExportOptions & {
 /**
  * Generate a filename for the exported image.
  */
-export function generateFilename(
+function generateFilename(
 	caseName: string,
 	format: ImageFormat,
 	scale?: ImageScale

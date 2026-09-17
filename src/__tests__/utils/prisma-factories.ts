@@ -21,11 +21,6 @@ function nextId(): number {
 	return ++counter;
 }
 
-/** Reset the counter — call in beforeEach if needed for deterministic IDs */
-export function resetCounter(): void {
-	counter = 0;
-}
-
 // ============================================
 // USER
 // ============================================

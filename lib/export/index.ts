@@ -47,15 +47,7 @@
  */
 
 // Exporters
-export {
-	AbstractExporter,
-	type Exporter,
-	ExporterRegistry,
-	exporterRegistry,
-	MarkdownExporter,
-	PDFExporter,
-	WordExporter,
-} from "./exporters";
+export { exporterRegistry } from "./exporters";
 
 // Register exporters with the global registry
 import {
@@ -70,100 +62,9 @@ exporterRegistry.register(new PDFExporter());
 exporterRegistry.register(new WordExporter());
 
 // Schemas
-export {
-	type BrandingConfig,
-	BrandingConfigSchema,
-	type CommentsSectionConfig,
-	CommentsSectionConfigSchema,
-	type CommentsSectionOptions,
-	CommentsSectionOptionsSchema,
-	DEFAULT_BRANDING,
-	DEFAULT_SECTIONS_EVIDENCE_LIST,
-	DEFAULT_SECTIONS_FULL,
-	DEFAULT_SECTIONS_SUMMARY,
-	type DiagramSectionConfig,
-	DiagramSectionConfigSchema,
-	type DiagramSectionOptions,
-	DiagramSectionOptionsSchema,
-	type ElementFilter,
-	ElementFilterSchema,
-	type EvidenceSectionConfig,
-	EvidenceSectionConfigSchema,
-	type EvidenceSectionOptions,
-	EvidenceSectionOptionsSchema,
-	resolveBranding,
-	type SectionConfig,
-	SectionConfigSchema,
-	type SectionsConfig,
-	SectionsConfigSchema,
-	type TemplateConfig,
-	TemplateConfigSchema,
-	type TemplatePreset,
-	TemplatePresetSchema,
-	validateTemplateConfig,
-} from "./schemas";
+export type { BrandingConfig, TemplatePreset } from "./schemas";
 
 // Templates
-export {
-	BaseTemplate,
-	collectAllComments,
-	collectElementsByType,
-	countElementsByType,
-	createTemplateFromPreset,
-	EVIDENCE_LIST_CONFIG,
-	EvidenceListTemplate,
-	FULL_REPORT_CONFIG,
-	FullReportTemplate,
-	getAvailablePresets,
-	getTotalElementCount,
-	getTreeDepth,
-	type RenderedElement,
-	renderElementAsBlocks,
-	renderHierarchicalTree,
-	renderTreeAsBlocks,
-	SUMMARY_CONFIG,
-	SummaryTemplate,
-	shouldIncludeElement,
-	type TreeRenderOptions,
-} from "./templates";
+export { createTemplateFromPreset } from "./templates";
 // Core types
-export {
-	type ContentBlock,
-	type DiagramImage,
-	type DividerBlock,
-	type DocumentMetadata,
-	ELEMENT_TYPE_LABELS,
-	type ElementBlock,
-	type ExportFormat,
-	type ExportOptions,
-	type ExportResult,
-	type HeadingBlock,
-	type ImageBlock,
-	type LabelledDiagramImage,
-	type ListBlock,
-	type MetadataBlock,
-	type ParagraphBlock,
-	type RenderedDocument,
-	type RenderedSection,
-	type ResolvedBranding,
-	type SectionType,
-	type TableBlock,
-	type TemplateInput,
-} from "./types";
-
-// Utilities
-export {
-	calculateTreeDepth,
-	escapeMarkdown,
-	flattenText,
-	flattenTree,
-	formatDate,
-	formatDateTime,
-	getDateString,
-	getElementTitle,
-	getElementTypeLabel,
-	getISODateString,
-	sanitiseForFilename,
-	stripHtml,
-	truncateText,
-} from "./utils";
+export type { DiagramImage, ExportFormat } from "./types";
