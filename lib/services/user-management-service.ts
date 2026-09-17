@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth/password-service";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import type { ChangePasswordInput } from "@/lib/schemas/auth";
 import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
 import {
 	validateEmail,
@@ -24,11 +25,6 @@ export interface UpdateProfileInput {
 	firstName?: string;
 	lastName?: string;
 	username?: string;
-}
-
-export interface ChangePasswordInput {
-	currentPassword: string;
-	newPassword: string;
 }
 
 // ============================================

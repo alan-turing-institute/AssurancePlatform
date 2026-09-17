@@ -29,7 +29,7 @@ const IDENTIFIER_PATTERN = /^([A-Z])(\d+(?:\.\d+)*)$/;
  * parseIdentifier("P1.3") // { prefix: "P", parts: [1, 3] }
  * parseIdentifier("invalid") // null
  */
-export function parseIdentifier(name: string | null): ParsedIdentifier | null {
+function parseIdentifier(name: string | null): ParsedIdentifier | null {
 	if (!name) {
 		return null;
 	}

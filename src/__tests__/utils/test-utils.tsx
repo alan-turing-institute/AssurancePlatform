@@ -4,21 +4,8 @@ import { SessionProvider } from "next-auth/react";
 import type React from "react";
 import type { ReactElement } from "react";
 import { ReactFlowProvider } from "reactflow";
-import { vi } from "vitest";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
-
-// Mock session data
-const mockSession = {
-	user: {
-		id: "1",
-		name: "Test User",
-		email: "test@example.com",
-		image: null,
-	},
-	key: "mock-jwt-token",
-	expires: "2025-12-31",
-} as Session & { key: string };
 
 // Provider wrapper for tests
 interface ProvidersProps {
@@ -61,13 +48,6 @@ const customRender = (ui: ReactElement, options: CustomRenderOptions = {}) => {
 	});
 };
 
-// Custom render with authenticated session
-const renderWithAuth = (ui: ReactElement, options: CustomRenderOptions = {}) =>
-	customRender(ui, {
-		...options,
-		session: mockSession,
-	});
-
 // Custom render without any providers (for testing components in isolation)
 const renderWithoutProviders = (ui: ReactElement, options?: RenderOptions) =>
 	render(ui, options);
@@ -87,34 +67,6 @@ const renderWithReactFlow = (
 		),
 		...renderOptions,
 	});
-};
-
-// Custom render with ReactFlow and authenticated session
-const renderWithReactFlowAndAuth = (
-	ui: ReactElement,
-	options: CustomRenderOptions = {}
-) =>
-	renderWithReactFlow(ui, {
-		...options,
-		session: mockSession,
-	});
-
-// Helper to create mock form event
-export const createMockFormEvent = (value: string) => ({
-	target: { value },
-	preventDefault: vi.fn(),
-	stopPropagation: vi.fn(),
-});
-
-// Helper to create mock file for file upload tests
-export const createMockFile = (
-	name = "test.png",
-	type = "image/png",
-	size = 1024
-) => {
-	const file = new File([""], name, { type });
-	Object.defineProperty(file, "size", { value: size });
-	return file;
 };
 
 // Helper to wait for async operations
@@ -143,11 +95,4 @@ export * from "@testing-library/react";
 export { default as userEvent } from "@testing-library/user-event";
 
 // Export custom render functions
-export {
-	customRender as render,
-	renderWithAuth,
-	renderWithoutProviders,
-	renderWithReactFlow,
-	renderWithReactFlowAndAuth,
-	mockSession,
-};
+export { customRender as render, renderWithoutProviders, renderWithReactFlow };

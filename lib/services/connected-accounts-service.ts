@@ -6,14 +6,9 @@
 
 import { googleNeedsReauthorisation } from "@/lib/auth/google-account-status";
 import { logger } from "@/lib/logger";
+import type { Provider } from "@/lib/schemas/connected-accounts";
 
 const log = logger.child({ component: "connected-accounts-service" });
-
-// ============================================
-// Types
-// ============================================
-
-export type Provider = "github" | "google";
 
 /**
  * Data about a user's connected authentication providers.

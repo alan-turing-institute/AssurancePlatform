@@ -6,7 +6,6 @@
 import { fromCollectionName } from "@/lib/element-types";
 import type {
 	ApiNodeResponse,
-	CommentPayload,
 	CreateNodePayload,
 	ReactFlowNode,
 } from "./types";
@@ -146,39 +145,6 @@ export const updateAssuranceCaseNode = async (
 };
 
 /**
- * Gets an assurance case node by ID.
- * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
- */
-export const getAssuranceCaseNode = async (
-	_type: string,
-	id: number | string,
-	_token: string | null
-): Promise<ApiNodeResponse | { error: string } | false> => {
-	try {
-		// Use internal API route which handles Django/Prisma switching
-		const url = `/api/elements/${id}`;
-
-		const requestOptions: RequestInit = {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-			},
-		};
-		const response = await fetch(url, requestOptions);
-
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			return { error: errorData.error || "Failed to fetch node" };
-		}
-
-		const result = await response.json();
-		return result;
-	} catch (_error) {
-		return false;
-	}
-};
-
-/**
  * Detaches an element from its parent in the assurance case.
  * Note: Authentication is handled via NextAuth session cookies, not the token parameter.
  */
@@ -252,83 +218,6 @@ export const attachCaseElement = async (
 		}
 
 		return { attached: true };
-	} catch (error) {
-		return { error };
-	}
-};
-
-/**
- * Adds a comment to an element.
- */
-export const addElementComment = async (
-	_entity: string,
-	id: number | string,
-	newComment: CommentPayload,
-	_token: string | null
-): Promise<Comment | { error: string | unknown }> => {
-	try {
-		// Use internal API route - auth handled via NextAuth session cookies
-		const url = `/api/elements/${id}/comments`;
-
-		const requestOptions: RequestInit = {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(newComment),
-		};
-		const response = await fetch(url, requestOptions);
-
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			return { error: errorData.error || "Failed to add comment" };
-		}
-
-		const result = await response.json();
-
-		return result;
-	} catch (error) {
-		return { error };
-	}
-};
-
-interface UpdateCommentOptions {
-	entity: string;
-	id: number;
-	newComment: CommentPayload;
-	newCommentId: number | string;
-	token: string | null;
-}
-
-/**
- * Updates a comment on an element.
- */
-export const updateElementComment = async (
-	options: UpdateCommentOptions
-): Promise<Comment | { error: string | unknown }> => {
-	const { newComment, newCommentId } = options;
-
-	try {
-		// Use internal API route - auth handled via NextAuth session cookies
-		const url = `/api/comments/${newCommentId}`;
-
-		const requestOptions: RequestInit = {
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ content: newComment.content }),
-		};
-		const response = await fetch(url, requestOptions);
-
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			return { error: errorData.error || "Failed to update comment" };
-		}
-
-		const result = await response.json();
-
-		return result;
 	} catch (error) {
 		return { error };
 	}
