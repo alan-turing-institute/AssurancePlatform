@@ -8,7 +8,9 @@ import { logger } from "@/lib/logger";
 
 const log = logger.child({ component: "auth-config" });
 
-dotenv.config(); // Explicitly load environment variables
+// quiet: true silences dotenv's promotional "tip" lines on stdout (third-
+// party product ads in a Turing-published tool's logs) — dotenv >=17.
+dotenv.config({ quiet: true }); // Explicitly load environment variables
 
 /**
  * Cookie name used for account linking flow.
