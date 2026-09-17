@@ -46,7 +46,8 @@
     "postcss",
     "@prisma/client-runtime-utils",
     "axe-core",
-    "conventional-changelog-conventionalcommits"
+    "conventional-changelog-conventionalcommits",
+    "@radix-ui/react-menu"
   ],
   "ignoreExports": [
     { "file": "actions/connected-accounts.ts", "exports": ["unlinkProvider"] },
