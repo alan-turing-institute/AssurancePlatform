@@ -3,6 +3,7 @@ import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
 	CASE_INFORMATION_FIELD_LABELS,
+	type CaseInformationInput,
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
@@ -32,15 +33,6 @@ export interface CaseInformationGateFailure {
  * `captureCaseInformationForSnapshot` below and is consumed by
  * `publish-service.ts`, not by callers of the CRUD functions.
  */
-
-export interface CaseInformationInput {
-	authors?: string;
-	description?: string;
-	// `null` explicitly clears the stored value; `undefined` (the key
-	// omitted) leaves it untouched — see `lib/schemas/case-information.ts`.
-	featureImageUrl?: string | null;
-	sector?: string;
-}
 
 /**
  * Reads the case information record for a case. Requires VIEW.

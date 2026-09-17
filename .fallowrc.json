@@ -48,6 +48,28 @@
     "axe-core",
     "conventional-changelog-conventionalcommits"
   ],
+  "ignoreExports": [
+    { "file": "actions/connected-accounts.ts", "exports": ["unlinkProvider"] },
+    {
+      "file": "lib/services/connected-accounts-service.ts",
+      "exports": ["unlinkProvider"]
+    },
+    {
+      "file": "lib/services/team-member-service.ts",
+      "exports": ["addTeamMember"]
+    },
+    {
+      "file": "src/__tests__/utils/prisma-factories.ts",
+      "exports": ["addTeamMember"]
+    },
+    { "file": "src/__tests__/utils/mock-data.ts", "exports": ["mockTeam"] },
+    {
+      "file": "src/__tests__/utils/team-mock-data.ts",
+      "exports": ["mockTeam"]
+    },
+    { "file": "hooks/use-json-validation.ts", "exports": ["ValidationError"] },
+    { "file": "lib/schemas/case-export.ts", "exports": ["ValidationError"] }
+  ],
   "ignoreDependencyOverrides": [{ "package": "@isaacs/brace-expansion" }],
   "ignoreUnresolvedImports": [
     "@/src/generated/prisma",
