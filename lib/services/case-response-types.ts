@@ -226,7 +226,6 @@ export interface AssuranceCaseResponse {
 	reviewMembers?: MemberResponse[];
 	title?: string;
 	type: string;
-	updatedOn?: string;
 	viewMembers?: MemberResponse[];
 }
 

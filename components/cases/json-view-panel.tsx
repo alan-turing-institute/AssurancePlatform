@@ -77,7 +77,7 @@ type BatchUpdateResult =
 				summary: { created: number; updated: number; deleted: number };
 			};
 	  }
-	| { error: string; conflictDetected?: boolean };
+	| { error: string; code?: string };
 
 /**
  * Formats JSON with 2-space indentation for readability.
@@ -105,7 +105,7 @@ async function sendBatchUpdate(
 	if (!response.ok) {
 		return {
 			error: result.error || "An error occurred",
-			conflictDetected: result.conflictDetected,
+			code: result.code,
 		};
 	}
 
@@ -132,7 +132,7 @@ function handleBatchResult(
 	}
 ): boolean {
 	if ("error" in result) {
-		const isConflict = "conflictDetected" in result && result.conflictDetected;
+		const isConflict = result.code === "CONFLICT";
 		if (isConflict) {
 			callbacks.onConflict();
 		}
@@ -367,9 +367,6 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	const [wrapEnabled, setWrapEnabled] = useState(false);
 	const fullScreenButtonRef = useRef<HTMLButtonElement>(null);
 
-	// Track if panel was just opened
-	const justOpenedRef = useRef(false);
-
 	// Validation
 	const validation = useJsonValidation(draftContent);
 
@@ -479,23 +476,9 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	// Fetch JSON when panel opens
 	useEffect(() => {
 		if (isOpen) {
-			justOpenedRef.current = true;
 			fetchJson();
 		}
 	}, [isOpen, fetchJson]);
-
-	// Handle external case updates (SSE events)
-	useEffect(() => {
-		if (!isOpen || justOpenedRef.current) {
-			justOpenedRef.current = false;
-			return;
-		}
-
-		// If case is updated externally and we have dirty changes, show conflict
-		if (isDirty && assuranceCase?.updatedOn) {
-			setHasConflict(true);
-		}
-	}, [isOpen, isDirty, assuranceCase?.updatedOn]);
 
 	const exitFullScreen = useCallback(() => {
 		setIsFullScreen(false);
@@ -535,17 +518,19 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		[onClose]
 	);
 
-	const handleCopy = useCallback(async () => {
+	const handleCopy = useCallback(async (): Promise<boolean> => {
 		try {
 			await navigator.clipboard.writeText(draftContent);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
+			return true;
 		} catch {
 			toast({
 				variant: "destructive",
 				title: "Copy failed",
 				description: "Could not copy to clipboard",
 			});
+			return false;
 		}
 	}, [draftContent]);
 
@@ -554,9 +539,29 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 		setHasConflict(false);
 	}, [server.content]);
 
-	const handleRefresh = useCallback(() => {
-		fetchJson();
-	}, [fetchJson]);
+	// Refresh never applies the draft silently: if there are unsaved edits,
+	// it copies them to the clipboard first (the existing copy mechanism) so
+	// the user has a way to recover them, then reloads server content. If
+	// that copy fails, refresh does NOT proceed — the conflict notice and
+	// the draft both stay up, so the user can select and copy the text by
+	// hand and press Refresh again, rather than losing the draft with no
+	// copy of it anywhere. `fetchJson` replaces `draftContent` with the
+	// server copy and clears `hasConflict` itself on success, so a
+	// completed refresh always leaves the editor clean; a failed fetch
+	// (network error) leaves the conflict notice up so the user can retry.
+	const handleRefresh = useCallback(async () => {
+		if (isDirty) {
+			const draftWasCopied = await handleCopy();
+			if (!draftWasCopied) {
+				return;
+			}
+			toast({
+				title: "Draft copied",
+				description: "Your draft was copied to the clipboard",
+			});
+		}
+		await fetchJson();
+	}, [isDirty, handleCopy, fetchJson]);
 
 	const handleToggleFullScreen = useCallback(() => {
 		setIsFullScreen((prev) => !prev);
