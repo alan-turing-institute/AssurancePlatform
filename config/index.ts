@@ -94,10 +94,19 @@ export const departments = [
 	"Projects",
 ] as const;
 
+/**
+ * The settings strip (`SettingsNav`). Hrefs corrected from `/settings/*` to
+ * `/dashboard/settings/*` (TEA — Plugin management surface D1 — every link
+ * in this strip 404'd before this fix). Notifications and Billing are
+ * removed rather than corrected: no page exists for either under
+ * `app/(authenticated)/dashboard/settings/`, so a working href would still
+ * 404 (design amendment 2026-09-22) — re-add when a page exists. The
+ * `current` field is dropped: `SettingsNav` derives the active item from
+ * `usePathname()`, not from this list.
+ */
 export const settingsNavigation = [
-	{ name: "Account", href: "/settings", current: true },
-	{ name: "Notifications", href: "/settings/notifications", current: false },
-	{ name: "Billing", href: "/settings/billing", current: false },
-	{ name: "Teams", href: "/settings/teams", current: false },
-	{ name: "Integrations", href: "/settings/integrations", current: false },
+	{ name: "Account", href: "/dashboard/settings" },
+	{ name: "Teams", href: "/dashboard/settings/teams" },
+	{ name: "Integrations", href: "/dashboard/settings/integrations" },
+	{ name: "Plugins", href: "/dashboard/settings/plugins" },
 ];

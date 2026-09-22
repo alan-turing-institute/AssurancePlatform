@@ -13,10 +13,21 @@ const HEALTH_PLUGIN = {
 	pluginId: "tea.health",
 	name: "Claim/Evidence Health",
 	version: "0.1.0",
+	description:
+		"Shows whether the evidence behind each property claim is still holding.",
+	docsPath: "/docs/technical-guide/architecture/plugin-ecosystem",
+	surfaces: ["element-badge", "element-panel", "settings-section"],
 	available: true,
 	enabled: true,
 	pinnedAt: null,
 	settings: null,
+};
+
+const CONSEQUENCES_URL = "/api/user/plugins/tea.health/consequences";
+const EMPTY_CONSEQUENCES = {
+	evidenceRecordCount: 0,
+	caseCount: 0,
+	activeIntegrations: [],
 };
 
 afterEach(() => {
@@ -24,7 +35,7 @@ afterEach(() => {
 });
 
 describe("PluginsSection", () => {
-	it("shows a loading state before the list resolves, then renders the plugin", async () => {
+	it("shows a loading state before the list resolves, then renders the plugin's card", async () => {
 		server.use(
 			http.get("/api/user/plugins", () =>
 				HttpResponse.json({ plugins: [HEALTH_PLUGIN] })
@@ -41,6 +52,7 @@ describe("PluginsSection", () => {
 		expect(
 			screen.queryByTestId("plugins-section-loading")
 		).not.toBeInTheDocument();
+		expect(screen.getByText(HEALTH_PLUGIN.description)).toBeInTheDocument();
 	});
 
 	it("shows an error message when the GET route fails", async () => {
@@ -78,7 +90,7 @@ describe("PluginsSection", () => {
 		);
 	});
 
-	it("toggles a plugin through PATCH and reflects the refetched state", async () => {
+	it("turns a plugin off through the confirmation dialog, sends the PATCH, and reflects the refetched state", async () => {
 		const user = userEvent.setup();
 		let currentlyEnabled = true;
 
@@ -88,6 +100,7 @@ describe("PluginsSection", () => {
 					plugins: [{ ...HEALTH_PLUGIN, enabled: currentlyEnabled }],
 				})
 			),
+			http.get(CONSEQUENCES_URL, () => HttpResponse.json(EMPTY_CONSEQUENCES)),
 			http.patch("/api/user/plugins", async ({ request }) => {
 				const body = (await request.json()) as {
 					enabled: boolean;
@@ -112,6 +125,15 @@ describe("PluginsSection", () => {
 		expect(toggle).toBeChecked();
 
 		await user.click(toggle);
+
+		const dialog = await screen.findByRole("alertdialog");
+		expect(dialog).toHaveTextContent(
+			"Turn off Claim/Evidence Health for your account?"
+		);
+		// Turning off must not have gone through yet — only confirming does.
+		expect(currentlyEnabled).toBe(true);
+
+		await user.click(screen.getByRole("button", { name: "Turn off" }));
 
 		await waitFor(() => expect(screen.getByRole("switch")).not.toBeChecked());
 		expect(currentlyEnabled).toBe(false);
