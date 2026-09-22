@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePluginConsequences } from "@/hooks/use-plugin-consequences";
+import { cn } from "@/lib/utils";
 import { buildPluginOffCopy } from "./plugin-off-copy";
 
 export interface PluginOffConfirmDialogProps {
@@ -55,11 +56,20 @@ function PluginOffConfirmDialogBody({
 			</AlertDialogHeader>
 
 			<div className="space-y-2 text-muted-foreground text-sm">
-				{loading ? (
-					<Skeleton className="h-4 w-3/4" />
-				) : (
-					copy.variableLines.map((line) => <p key={line}>{line}</p>)
-				)}
+				{/* Reserved to roughly two lines while loading so the footer
+				buttons don't jump once the real (0-2 line) content arrives —
+				before this, a single thin skeleton line grew by ~80px when the
+				consequence numbers landed. */}
+				<div className={cn("space-y-2", loading && "min-h-10")}>
+					{loading ? (
+						<>
+							<Skeleton className="h-4 w-full" />
+							<Skeleton className="h-4 w-2/3" />
+						</>
+					) : (
+						copy.variableLines.map((line) => <p key={line}>{line}</p>)
+					)}
+				</div>
 				<p>{copy.closingLine}</p>
 			</div>
 

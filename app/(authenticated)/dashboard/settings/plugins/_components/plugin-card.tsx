@@ -137,9 +137,11 @@ export function PluginCard({
 				>
 					{pending ? "Saving…" : statusMessage(plugin)}
 				</p>
-				<Button asChild className="h-auto p-0" variant="link">
-					<Link href={plugin.docsPath}>Learn more</Link>
-				</Button>
+				{plugin.docsPath && (
+					<Button asChild className="h-auto p-0" variant="link">
+						<Link href={plugin.docsPath}>Learn more</Link>
+					</Button>
+				)}
 			</div>
 
 			{checked &&

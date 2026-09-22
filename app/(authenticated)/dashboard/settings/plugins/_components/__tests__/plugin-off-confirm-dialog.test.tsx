@@ -51,7 +51,7 @@ describe("PluginOffConfirmDialog", () => {
 			"Health badges and the Evidence tab will disappear for you."
 		);
 		expect(dialog).toHaveTextContent(
-			"The 2 evidence records on 1 of your case stay stored and are never deleted."
+			"The 2 evidence records on 1 of your cases stay stored and are never deleted."
 		);
 		expect(dialog).toHaveTextContent(
 			"1 integration (DARTER pipeline) currently writes evidence to your cases; it will keep doing so, and you will see what was written when you turn the plugin back on."

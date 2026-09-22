@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 import { fetchPlugins } from "@/hooks/use-plugin-enablement";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { toast } from "@/lib/toast";
@@ -61,40 +62,26 @@ export interface UsePluginSettingsResult {
  * `/api/user/plugins` — the settings pane's only data source (house rule:
  * "data via the new route only"). Owns all UI state (loading / error /
  * which row is mid-toggle) so the pane components stay presentational.
+ * Built on the shared `useFetchOnMount` (`hooks/use-fetch-on-mount.ts`).
  *
- * A toggle re-fetches the full list on success rather than patching local
- * state from the PATCH response — the effective state can, in principle,
- * depend on scopes this hook has no local copy of (organisation/team rows),
- * so re-resolving through the same GET the pane renders from is the only
- * way to stay honest about "which level pinned it".
+ * A toggle re-fetches the full list on success (`reload`, from
+ * `useFetchOnMount`) rather than patching local state from the PATCH
+ * response — the effective state can, in principle, depend on scopes this
+ * hook has no local copy of (organisation/team rows), so re-resolving
+ * through the same GET the pane renders from is the only way to stay
+ * honest about "which level pinned it".
  */
 export function usePluginSettings(): UsePluginSettingsResult {
-	const [plugins, setPlugins] = useState<PluginSettingsListItem[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const { data, loading, error, reload } = useFetchOnMount(fetchPlugins);
 	const [togglingId, setTogglingId] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		try {
-			const data = await fetchPlugins();
-			setPlugins(data);
-			setError(null);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load plugins");
-		}
-	}, []);
-
-	useEffect(() => {
-		setLoading(true);
-		load().finally(() => setLoading(false));
-	}, [load]);
+	const plugins = data ?? [];
 
 	const togglePlugin = useCallback(
 		async (pluginId: string, enabled: boolean) => {
 			setTogglingId(pluginId);
 			try {
 				await requestPluginToggle(pluginId, enabled);
-				await load();
+				await reload();
 			} catch (err) {
 				toast({
 					variant: "destructive",
@@ -106,7 +93,7 @@ export function usePluginSettings(): UsePluginSettingsResult {
 				setTogglingId(null);
 			}
 		},
-		[load]
+		[reload]
 	);
 
 	return { plugins, loading, error, togglingId, togglePlugin };

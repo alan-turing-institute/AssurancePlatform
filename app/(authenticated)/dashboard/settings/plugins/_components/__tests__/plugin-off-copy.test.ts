@@ -47,7 +47,7 @@ describe("buildPluginOffCopy", () => {
 		]);
 	});
 
-	it("uses singular grammar for the evidence line at 1 record on 1 case", () => {
+	it("uses singular grammar for the evidence record noun, but keeps 'cases' plural (a partitive phrase, not a count) at 1 record on 1 case", () => {
 		const copy = buildPluginOffCopy({
 			consequences: {
 				evidenceRecordCount: 1,
@@ -59,7 +59,7 @@ describe("buildPluginOffCopy", () => {
 		});
 
 		expect(copy.variableLines).toEqual([
-			"The 1 evidence record on 1 of your case stays stored and is never deleted.",
+			"The 1 evidence record on 1 of your cases stays stored and is never deleted.",
 		]);
 	});
 
@@ -92,7 +92,7 @@ describe("buildPluginOffCopy", () => {
 		});
 
 		expect(copy.variableLines).toEqual([
-			"The 2 evidence records on 1 of your case stay stored and are never deleted.",
+			"The 2 evidence records on 1 of your cases stay stored and are never deleted.",
 			"2 integrations (DARTER pipeline, Sourcery) currently write evidence to your cases; they will keep doing so, and you will see what was written when you turn the plugin back on.",
 		]);
 	});

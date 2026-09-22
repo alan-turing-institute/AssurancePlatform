@@ -86,7 +86,7 @@ describe("PluginCard", () => {
 		expect(screen.queryByText("What it adds")).not.toBeInTheDocument();
 	});
 
-	it("links 'Learn more' to the plugin's docsPath", () => {
+	it("links 'Learn more' to the plugin's docsPath when set", () => {
 		renderWithoutProviders(
 			<PluginCard
 				onToggle={vi.fn()}
@@ -98,6 +98,19 @@ describe("PluginCard", () => {
 			"href",
 			"/docs/some-page"
 		);
+	});
+
+	it("renders no 'Learn more' link when the plugin has no docsPath", () => {
+		renderWithoutProviders(
+			<PluginCard
+				onToggle={vi.fn()}
+				plugin={makePlugin({ docsPath: undefined })}
+			/>
+		);
+
+		expect(
+			screen.queryByRole("link", { name: "Learn more" })
+		).not.toBeInTheDocument();
 	});
 
 	it("shows 'This plugin has no settings.' when nothing is registered into the settings-section slot", () => {
