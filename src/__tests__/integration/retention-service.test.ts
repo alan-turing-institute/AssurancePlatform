@@ -516,10 +516,20 @@ describe("runRetentionSweep — resets the stamp when sendEmail RETURNS an error
 		vi.mocked(sendRetentionWarningEmail).mockImplementationOnce(() =>
 			Promise.resolve({ error: "provider rejected" })
 		);
+		const errorSpy = vi.spyOn(logger, "error");
 
 		const result = expectSuccess(await runRetentionSweep(CRON_SECRET));
 		expect(result.warned30).toBe(1); // okUser still gets warned
 		expect(result.skipped).toBe(1); // failingUser is skipped, not warned
+
+		expect(errorSpy).toHaveBeenCalledWith(
+			"retention.warning_send_failed",
+			expect.objectContaining({
+				userId: failingUser.id,
+				stage: "warn30",
+				error: "provider rejected",
+			})
+		);
 
 		const failingInDb = await prisma.user.findUnique({
 			where: { id: failingUser.id },
@@ -530,6 +540,8 @@ describe("runRetentionSweep — resets the stamp when sendEmail RETURNS an error
 			where: { id: okUser.id },
 		});
 		expect(okInDb?.retentionWarning30SentAt).not.toBeNull();
+
+		errorSpy.mockRestore();
 	});
 
 	it("resets retentionWarning7SentAt to null, counts skipped, and still processes the next candidate", async () => {
