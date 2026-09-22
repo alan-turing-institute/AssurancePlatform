@@ -541,20 +541,24 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 
 	// Refresh never applies the draft silently: if there are unsaved edits,
 	// it copies them to the clipboard first (the existing copy mechanism) so
-	// the user has a way to recover them, then reloads server content.
-	// `fetchJson` replaces `draftContent` with the server copy and clears
-	// `hasConflict` itself on success, so a completed refresh always leaves
-	// the editor clean; a failed one (network error) leaves the conflict
-	// notice up so the user can retry.
+	// the user has a way to recover them, then reloads server content. If
+	// that copy fails, refresh does NOT proceed — the conflict notice and
+	// the draft both stay up, so the user can select and copy the text by
+	// hand and press Refresh again, rather than losing the draft with no
+	// copy of it anywhere. `fetchJson` replaces `draftContent` with the
+	// server copy and clears `hasConflict` itself on success, so a
+	// completed refresh always leaves the editor clean; a failed fetch
+	// (network error) leaves the conflict notice up so the user can retry.
 	const handleRefresh = useCallback(async () => {
 		if (isDirty) {
 			const draftWasCopied = await handleCopy();
-			if (draftWasCopied) {
-				toast({
-					title: "Draft copied",
-					description: "Your draft was copied to the clipboard",
-				});
+			if (!draftWasCopied) {
+				return;
 			}
+			toast({
+				title: "Draft copied",
+				description: "Your draft was copied to the clipboard",
+			});
 		}
 		await fetchJson();
 	}, [isDirty, handleCopy, fetchJson]);

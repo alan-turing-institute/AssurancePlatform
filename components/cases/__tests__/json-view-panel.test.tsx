@@ -384,6 +384,27 @@ describe("JsonViewPanel — Apply after a rejection", () => {
 	});
 });
 
+const CONFLICT_TEXT = "Conflict detected. The case changed on the server.";
+
+/** Edits the CodeMirror buffer to `docName` and clicks Apply once it re-enables. */
+async function editAndClickApply(
+	user: ReturnType<typeof userEvent.setup>,
+	content: HTMLElement,
+	docName: string
+): Promise<void> {
+	const doc = sampleExport();
+	doc.tree = { ...doc.tree, name: docName } as typeof doc.tree;
+
+	await user.click(content);
+	await user.keyboard("{Control>}a{/Control}");
+	await user.paste(JSON.stringify(doc, null, 2));
+
+	await waitFor(() => {
+		expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
+	});
+	await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
+}
+
 describe("JsonViewPanel — 409 conflict on Apply", () => {
 	beforeEach(() => {
 		resetStore();
@@ -419,25 +440,10 @@ describe("JsonViewPanel — 409 conflict on Apply", () => {
 			return el as HTMLElement;
 		});
 
-		const editedDoc = sampleExport();
-		editedDoc.tree = {
-			...editedDoc.tree,
-			name: "G1-edited",
-		} as typeof editedDoc.tree;
-
-		await user.click(content);
-		await user.keyboard("{Control>}a{/Control}");
-		await user.paste(JSON.stringify(editedDoc, null, 2));
+		await editAndClickApply(user, content, "G1-edited");
 
 		await waitFor(() => {
-			expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
-		});
-		await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
-
-		await waitFor(() => {
-			expect(
-				screen.getByText("Conflict detected — the case changed on the server")
-			).toBeInTheDocument();
+			expect(screen.getByText(CONFLICT_TEXT)).toBeInTheDocument();
 		});
 		expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
 
@@ -446,6 +452,58 @@ describe("JsonViewPanel — 409 conflict on Apply", () => {
 		expect(
 			screen.queryByRole("button", { name: APPLY_PATTERN })
 		).not.toBeInTheDocument();
+		expect(docText(content)).toContain("G1-edited");
+	});
+
+	it("keeps the conflict state and the draft when the clipboard copy fails on Refresh", async () => {
+		const user = userEvent.setup();
+
+		const fetchMock = vi.fn(() =>
+			Promise.resolve({
+				ok: false,
+				json: () =>
+					Promise.resolve({
+						error: "Case was modified by another user",
+						code: "CONFLICT",
+					}),
+			} as Response)
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		// Stubbed via vi.stubGlobal (not Object.defineProperty directly on
+		// `navigator`) so the describe's existing `vi.unstubAllGlobals()`
+		// afterEach restores the real navigator even if this test throws.
+		const writeText = vi.fn(() => Promise.reject(new Error("denied")));
+		vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const content = await waitFor(() => {
+			const el = document.querySelector(".cm-content");
+			expect(el).not.toBeNull();
+			expect(el?.textContent).toContain("Root goal");
+			return el as HTMLElement;
+		});
+
+		await editAndClickApply(user, content, "G1-edited");
+
+		await waitFor(() => {
+			expect(screen.getByText(CONFLICT_TEXT)).toBeInTheDocument();
+		});
+
+		// `exportCase` (what `fetchJson` calls) has run once so far, from the
+		// panel's initial load. If Refresh proceeded past the failed copy it
+		// would run a second time.
+		const exportCallsBeforeRefresh = vi.mocked(exportCase).mock.calls.length;
+
+		await user.click(screen.getByRole("button", { name: "Refresh" }));
+
+		await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+
+		expect(vi.mocked(exportCase).mock.calls.length).toBe(
+			exportCallsBeforeRefresh
+		);
+		expect(screen.getByText(CONFLICT_TEXT)).toBeInTheDocument();
 		expect(docText(content)).toContain("G1-edited");
 	});
 });
