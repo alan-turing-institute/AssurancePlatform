@@ -61,6 +61,23 @@ describe("GET /api/user/plugins", () => {
 		});
 	});
 
+	it("includes the manifest's card copy (description, docsPath, surfaces) for the Plugins page", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const { GET } = await import("@/app/api/user/plugins/route");
+		const response = await GET();
+		const body = await response.json();
+
+		expect(body.plugins[0].description.length).toBeGreaterThan(0);
+		expect(body.plugins[0].docsPath).toBe(
+			"/docs/technical-guide/architecture/plugin-ecosystem"
+		);
+		expect(body.plugins[0].surfaces).toEqual(
+			expect.arrayContaining(["plugin-tables", "settings-section"])
+		);
+	});
+
 	it("reports available: false and pinnedAt: DEPLOYMENT when withheld via TEA_PLUGINS_DISABLED", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);

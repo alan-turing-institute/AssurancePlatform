@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PluginSurface } from "@/lib/plugins/manifest";
 import { listManifestPluginIds } from "@/lib/plugins/manifest";
 import {
 	BOUNDED_JSON_MAX_DEPTH,
@@ -112,6 +113,10 @@ export type PluginPinnedAt =
 export interface PluginSettingsListItem {
 	/** Deployment concern (ADR §2.2) — withheld entirely means `false`. */
 	available: boolean;
+	/** Two or three plain sentences for the Plugins page card (D2). */
+	description: string;
+	/** Site-relative docs URL for the card's "Learn more" link (D2). */
+	docsPath: string;
 	/** Effective state for the session user across the full scope chain. */
 	enabled: boolean;
 	name: string;
@@ -127,5 +132,12 @@ export interface PluginSettingsListItem {
 	pluginId: string;
 	/** The user's own saved settings for this plugin, or `null` if never set. */
 	settings: unknown;
+	/**
+	 * The manifest's extension surfaces (D2) — what the page derives its
+	 * "what this adds" list from, in user words. That copy is built by the
+	 * consumer (the Plugins page); this route only passes the raw surface
+	 * list through.
+	 */
+	surfaces: readonly PluginSurface[];
 	version: string;
 }
