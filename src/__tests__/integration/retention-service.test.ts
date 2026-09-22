@@ -493,6 +493,88 @@ describe("runRetentionSweep — resets the stamp when the send fails after the c
 });
 
 /**
+ * barret, 2026-09-22: `sendEmail` reports an ordinary failure (no provider
+ * configured, provider rejected the message) by RETURNING `{ error }`, not
+ * by throwing. The two handlers only guarded against a throw, so a returned
+ * error left the "warning sent" stamp in place and the deletion clock kept
+ * advancing although nobody was emailed. Same shape as the throw tests
+ * above, but the mock resolves `{ error }` instead of throwing, and a second
+ * candidate in the same sweep proves the failure doesn't abort the run.
+ */
+describe("runRetentionSweep — resets the stamp when sendEmail RETURNS an error (not thrown)", () => {
+	afterEach(() => {
+		vi.mocked(sendRetentionWarningEmail).mockRestore();
+		vi.mocked(sendRetentionFinalReminderEmail).mockRestore();
+	});
+
+	it("resets retentionWarning30SentAt to null, counts skipped, and still processes the next candidate", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn30ThresholdActivity(now), -1);
+		const failingUser = await createTestUser({ lastLoginAt });
+		const okUser = await createTestUser({ lastLoginAt });
+
+		vi.mocked(sendRetentionWarningEmail).mockImplementationOnce(() =>
+			Promise.resolve({ error: "provider rejected" })
+		);
+
+		const result = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(result.warned30).toBe(1); // okUser still gets warned
+		expect(result.skipped).toBe(1); // failingUser is skipped, not warned
+
+		const failingInDb = await prisma.user.findUnique({
+			where: { id: failingUser.id },
+		});
+		expect(failingInDb?.retentionWarning30SentAt).toBeNull();
+
+		const okInDb = await prisma.user.findUnique({
+			where: { id: okUser.id },
+		});
+		expect(okInDb?.retentionWarning30SentAt).not.toBeNull();
+	});
+
+	it("resets retentionWarning7SentAt to null, counts skipped, and still processes the next candidate", async () => {
+		const now = new Date();
+		const lastLoginAt = addDays(warn7ThresholdActivity(now), -1);
+		const sharedOverrides = {
+			lastLoginAt,
+			retentionWarning30SentAt: addDays(now, -23),
+		};
+		const failingUser = await createTestUser(sharedOverrides);
+		const okUser = await createTestUser(sharedOverrides);
+
+		vi.mocked(sendRetentionFinalReminderEmail).mockImplementationOnce(() =>
+			Promise.resolve({ error: "provider rejected" })
+		);
+		const errorSpy = vi.spyOn(logger, "error");
+
+		const result = expectSuccess(await runRetentionSweep(CRON_SECRET));
+		expect(result.warned7).toBe(1); // okUser still gets warned
+		expect(result.skipped).toBe(1); // failingUser is skipped, not warned
+
+		expect(errorSpy).toHaveBeenCalledWith(
+			"retention.warning_send_failed",
+			expect.objectContaining({
+				userId: failingUser.id,
+				stage: "warn7",
+				error: "provider rejected",
+			})
+		);
+
+		const failingInDb = await prisma.user.findUnique({
+			where: { id: failingUser.id },
+		});
+		expect(failingInDb?.retentionWarning7SentAt).toBeNull();
+
+		const okInDb = await prisma.user.findUnique({
+			where: { id: okUser.id },
+		});
+		expect(okInDb?.retentionWarning7SentAt).not.toBeNull();
+
+		errorSpy.mockRestore();
+	});
+});
+
+/**
  * QA round 3, item b: two sweeps race for the same candidate and the
  * winner's send throws. `claimWarning30`'s atomic `updateMany` guarantees
  * only one process can hold the claim at once, so a second sweep whose own

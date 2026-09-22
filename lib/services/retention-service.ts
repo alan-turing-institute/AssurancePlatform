@@ -219,10 +219,35 @@ async function handleDelete(
 }
 
 /**
- * Claims, sends, and stamps the 7-day reminder — or, if the send throws
- * after the claim succeeded, undoes the claim and logs distinctly
- * (vincent, review round 2, should-fix) so the next sweep retries instead
- * of leaving the user "warned on record" but never actually warned.
+ * Undoes a warning claim and logs distinctly (vincent, review round 2,
+ * should-fix) so the next sweep retries instead of leaving the user "warned
+ * on record" but never actually warned. Shared by both the thrown-error path
+ * and the returned-`{ error }` path (barret, 2026-09-22): `sendEmail` reports
+ * an ordinary failure — no provider configured, provider rejected the
+ * message — by *returning* `{ error }` rather than throwing, and the two
+ * failure shapes must be handled identically.
+ */
+async function handleWarnFailure(
+	stage: "warn30" | "warn7",
+	candidateId: string,
+	claimedAt: Date,
+	error: string,
+	reset: (candidateId: string, claimedAt: Date) => Promise<void>
+): Promise<RetentionOutcome> {
+	await reset(candidateId, claimedAt);
+	logger.error("retention.warning_send_failed", {
+		userId: candidateId,
+		stage,
+		error,
+	});
+	return "skipped";
+}
+
+/**
+ * Claims, sends, and stamps the 7-day reminder — or, if the send throws or
+ * returns `{ error }` after the claim succeeded, undoes the claim via
+ * `handleWarnFailure` so the next sweep retries instead of leaving the user
+ * "warned on record" but never actually warned.
  */
 async function handleWarn7(
 	candidate: RetentionCandidate,
@@ -237,19 +262,28 @@ async function handleWarn7(
 		return "skipped";
 	}
 	try {
-		await sendRetentionFinalReminderEmail({
+		const result = await sendRetentionFinalReminderEmail({
 			to: candidate.email,
 			username: candidate.username,
 			deletionDate: addDays(now, RETENTION_DELETE_MIN_GAP_DAYS),
 		});
+		if ("error" in result) {
+			return await handleWarnFailure(
+				"warn7",
+				candidate.id,
+				now,
+				result.error,
+				resetWarning7
+			);
+		}
 	} catch (error) {
-		await resetWarning7(candidate.id, now);
-		logger.error("retention.warning_send_failed", {
-			userId: candidate.id,
-			stage: "warn7",
-			error: error instanceof Error ? error.message : String(error),
-		});
-		return "skipped";
+		return await handleWarnFailure(
+			"warn7",
+			candidate.id,
+			now,
+			error instanceof Error ? error.message : String(error),
+			resetWarning7
+		);
 	}
 	return "warned7";
 }
@@ -268,7 +302,7 @@ async function handleWarn30(
 		return "skipped";
 	}
 	try {
-		await sendRetentionWarningEmail({
+		const result = await sendRetentionWarningEmail({
 			to: candidate.email,
 			username: candidate.username,
 			deletionDate: addDays(
@@ -276,14 +310,23 @@ async function handleWarn30(
 				RETENTION_WARNING_7_MIN_GAP_DAYS + RETENTION_DELETE_MIN_GAP_DAYS
 			),
 		});
+		if ("error" in result) {
+			return await handleWarnFailure(
+				"warn30",
+				candidate.id,
+				now,
+				result.error,
+				resetWarning30
+			);
+		}
 	} catch (error) {
-		await resetWarning30(candidate.id, now);
-		logger.error("retention.warning_send_failed", {
-			userId: candidate.id,
-			stage: "warn30",
-			error: error instanceof Error ? error.message : String(error),
-		});
-		return "skipped";
+		return await handleWarnFailure(
+			"warn30",
+			candidate.id,
+			now,
+			error instanceof Error ? error.message : String(error),
+			resetWarning30
+		);
 	}
 	return "warned30";
 }
