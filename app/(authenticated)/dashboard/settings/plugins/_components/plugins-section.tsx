@@ -3,14 +3,18 @@
 import { AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePluginSettings } from "@/hooks/use-plugin-settings";
-import { PluginToggleRow } from "./plugin-toggle-row";
+import { PluginCard } from "./plugin-card";
 
 /**
- * The plugins settings pane (ADR 0002 v2 §2.2: "a settings section ... lists
- * available plugins with toggle + per-plugin settings, showing the
- * effective state and which level pinned it"). Fetches and toggles entirely
+ * The Plugins page's content (TEA — Plugin management surface D1/D2):
+ * heading, intro, and a card per plugin. Fetches and toggles entirely
  * through `usePluginSettings` (`/api/user/plugins`) — no other data source,
- * per the house rule for this pane.
+ * per the house rule for this pane. Moved here from the settings landing
+ * page's `_components/plugins-section.tsx` (which now only links out —
+ * see `PluginsLinkSection`) and extended from a name+version+switch row
+ * (`PluginToggleRow`, retired the same commit) to a full card
+ * (`PluginCard`): description, what it adds, a docs link, and the D3
+ * off-switch confirmation.
  */
 export function PluginsSection() {
 	const { plugins, loading, error, togglingId, togglePlugin } =
@@ -52,7 +56,7 @@ export function PluginsSection() {
 
 				{!(loading || error) &&
 					plugins.map((plugin) => (
-						<PluginToggleRow
+						<PluginCard
 							key={plugin.pluginId}
 							onToggle={togglePlugin}
 							pending={togglingId === plugin.pluginId}

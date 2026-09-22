@@ -5,6 +5,12 @@
  * plugin id absent here, and deployment availability (below) can only
  * withhold a manifest entry, never invent one out of thin air.
  *
+ * This is more than lifecycle metadata: `description` and `docsPath` are the
+ * copy the Plugins management page renders on each plugin's card (TEA —
+ * Plugin management surface, D2) — keeping it here means the card and the
+ * docs link can't drift from what the enablement/lifecycle code already
+ * knows about a plugin.
+ *
  * This list is deliberately closed and hand-edited — extend it only when a
  * new official plugin actually ships (1.1: `tea.techniques`, `tea.gsn-ui`),
  * never ad hoc at a call site.
@@ -23,6 +29,22 @@ export type PluginSurface =
 	| "events"; // namespaced SSE event types
 
 export interface PluginManifestEntry {
+	/**
+	 * Two or three plain sentences for the Plugins page card (TEA — Plugin
+	 * management surface D2). Written for the person deciding whether to turn
+	 * the plugin on or off, not for a developer.
+	 */
+	readonly description: string;
+	/**
+	 * Site-relative docs URL for the card's "Learn more" link, e.g.
+	 * `/docs/technical-guide/architecture/plugin-ecosystem`. Omitted (not an
+	 * empty string) until a real docs page exists for this plugin — D2
+	 * amendment, cid 2026-09-22: `tea.health`'s docs page is still `draft:
+	 * true` and reads "Coming Soon", so linking to it would tell a user a
+	 * live plugin doesn't exist yet. The Plugins page card omits "Learn more"
+	 * entirely when this is absent.
+	 */
+	readonly docsPath?: string;
 	/** Namespace, e.g. "tea.health" — matches `PluginData.pluginId` / `PluginState.pluginId`. */
 	readonly id: string;
 	readonly name: string;
@@ -53,6 +75,8 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 			"settings-section",
 			"events",
 		],
+		description:
+			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
 	},
 ];
 

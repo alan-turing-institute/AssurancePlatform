@@ -8,7 +8,8 @@ import { DeleteForm } from "./_components/delete-form";
 import { IntegrationsLinkSection } from "./_components/integrations-link-section";
 import { PasswordForm } from "./_components/password-form";
 import { PersonalInfoForm } from "./_components/personal-info-form";
-import { PluginsSection } from "./_components/plugins-section";
+import { PluginsLinkSection } from "./_components/plugins-link-section";
+import SettingsNav from "./_components/settings-nav";
 
 const SettingsPage = async () => {
 	const session = await validateSession();
@@ -24,11 +25,17 @@ const SettingsPage = async () => {
 	return (
 		<main>
 			<h1 className="sr-only">Account Settings</h1>
+
+			<header className="border-white/5 border-b">
+				{/* Secondary navigation */}
+				<SettingsNav />
+			</header>
+
 			<div className="min-h-screen divide-y divide-foreground/5">
 				<AppearanceForm />
 				<PersonalInfoForm data={currentUser} />
 				<ConnectedAccountsForm data={connectedAccounts} />
-				<PluginsSection />
+				<PluginsLinkSection />
 				<IntegrationsLinkSection />
 				<PasswordForm data={currentUser} />
 				<DeleteForm user={currentUser} />

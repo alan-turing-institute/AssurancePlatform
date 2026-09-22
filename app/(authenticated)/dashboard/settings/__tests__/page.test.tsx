@@ -30,8 +30,8 @@ vi.mock("../_components/personal-info-form", () => ({
 vi.mock("../_components/connected-accounts-form", () => ({
 	ConnectedAccountsForm: () => <div data-testid="connected-accounts-form" />,
 }));
-vi.mock("../_components/plugins-section", () => ({
-	PluginsSection: () => <div data-testid="plugins-section" />,
+vi.mock("../_components/plugins-link-section", () => ({
+	PluginsLinkSection: () => <div data-testid="plugins-link-section" />,
 }));
 vi.mock("../_components/password-form", () => ({
 	PasswordForm: () => <div data-testid="password-form" />,
@@ -42,15 +42,14 @@ vi.mock("../_components/delete-form", () => ({
 
 import SettingsPage from "../page";
 
-const INTEGRATIONS_LINK_NAME_REGEX = /integrations/i;
-
 describe("SettingsPage", () => {
 	it("renders a link to the Integrations settings page (regression: page existed but was unreachable)", async () => {
 		render(await SettingsPage());
 
-		const link = screen.getByRole("link", {
-			name: INTEGRATIONS_LINK_NAME_REGEX,
-		});
+		// Exact name, not a substring match: the settings-nav strip now also
+		// renders an "Integrations" link on this page (D1), so a loose
+		// `/integrations/i` match is ambiguous between the two.
+		const link = screen.getByRole("link", { name: "Manage integrations" });
 		expect(link).toHaveAttribute("href", "/dashboard/settings/integrations");
 	});
 
@@ -61,12 +60,19 @@ describe("SettingsPage", () => {
 			(el) => el.getAttribute("data-testid")
 		);
 
-		const pluginsIndex = testIds.indexOf("plugins-section");
+		const pluginsIndex = testIds.indexOf("plugins-link-section");
 		const integrationsIndex = testIds.indexOf("integrations-link-section");
 		const passwordIndex = testIds.indexOf("password-form");
 
 		expect(pluginsIndex).toBeGreaterThanOrEqual(0);
 		expect(integrationsIndex).toBeGreaterThan(pluginsIndex);
 		expect(passwordIndex).toBeGreaterThan(integrationsIndex);
+	});
+
+	it("renders the settings navigation strip, including a link to Plugins (regression: the landing page had no strip at all)", async () => {
+		render(await SettingsPage());
+
+		const link = screen.getByRole("link", { name: "Plugins" });
+		expect(link).toHaveAttribute("href", "/dashboard/settings/plugins");
 	});
 });
