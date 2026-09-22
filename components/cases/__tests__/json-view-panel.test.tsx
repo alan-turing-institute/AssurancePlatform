@@ -384,6 +384,72 @@ describe("JsonViewPanel — Apply after a rejection", () => {
 	});
 });
 
+describe("JsonViewPanel — 409 conflict on Apply", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("switches the toolbar to the conflict state and preserves the draft until Refresh", async () => {
+		const user = userEvent.setup();
+
+		// The server's real shape for a rejected batch (see api-response.ts's
+		// apiError()): { error, code }, never a conflictDetected field.
+		const fetchMock = vi.fn(() =>
+			Promise.resolve({
+				ok: false,
+				json: () =>
+					Promise.resolve({
+						error: "Case was modified by another user",
+						code: "CONFLICT",
+					}),
+			} as Response)
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const content = await waitFor(() => {
+			const el = document.querySelector(".cm-content");
+			expect(el).not.toBeNull();
+			expect(el?.textContent).toContain("Root goal");
+			return el as HTMLElement;
+		});
+
+		const editedDoc = sampleExport();
+		editedDoc.tree = {
+			...editedDoc.tree,
+			name: "G1-edited",
+		} as typeof editedDoc.tree;
+
+		await user.click(content);
+		await user.keyboard("{Control>}a{/Control}");
+		await user.paste(JSON.stringify(editedDoc, null, 2));
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
+		});
+		await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
+
+		await waitFor(() => {
+			expect(
+				screen.getByText("Conflict detected — the case changed on the server")
+			).toBeInTheDocument();
+		});
+		expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+
+		// Apply/Discard/Copy are replaced by Refresh — the draft is preserved,
+		// not silently discarded, until Refresh is actually clicked.
+		expect(
+			screen.queryByRole("button", { name: APPLY_PATTERN })
+		).not.toBeInTheDocument();
+		expect(docText(content)).toContain("G1-edited");
+	});
+});
+
 /**
  * jsdom doesn't implement `Range.getClientRects()`, so CodeMirror's
  * fallback text-metrics measurement (a temporary `.cm-line` dummy it

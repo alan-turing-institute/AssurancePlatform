@@ -135,7 +135,7 @@ function getStatusContent(
 	if (hasConflict) {
 		return {
 			icon: <AlertTriangle className="h-4 w-4 text-warning" />,
-			text: "Case modified externally",
+			text: "Conflict detected — the case changed on the server",
 			className: "text-warning",
 		};
 	}
