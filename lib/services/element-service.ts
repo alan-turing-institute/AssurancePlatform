@@ -27,6 +27,14 @@ import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "element-service" });
 
+/** Bump the parent case's updatedAt so version checks (JSON editor 409) see element-level writes. */
+async function touchCase(tx: TxClient, caseId: string): Promise<void> {
+	await tx.assuranceCase.update({
+		where: { id: caseId },
+		data: { updatedAt: new Date() },
+	});
+}
+
 /**
  * Create element input — extends the Zod schema output with API-layer fields
  * that are not part of the validation schema (caseId, elementType, description aliases).
@@ -916,10 +924,11 @@ async function caseHasGoal(caseId: string): Promise<boolean> {
  * Creates an evidence link between an evidence element and a claim.
  */
 async function createEvidenceLink(
+	tx: TxClient,
 	evidenceId: string,
 	claimId: string
 ): Promise<void> {
-	await prisma.evidenceLink.create({
+	await tx.evidenceLink.create({
 		data: {
 			evidenceId,
 			claimId,
@@ -949,51 +958,57 @@ async function createElementInDatabase(
 	userId: string,
 	intendedParentId: string | null
 ): Promise<{ data: ElementResponse } | { error: string }> {
-	const element = await prisma.assuranceElement.create({
-		data: {
-			caseId,
-			elementType: elementType as
-				| "GOAL"
-				| "STRATEGY"
-				| "PROPERTY_CLAIM"
-				| "EVIDENCE",
-			name: elementName,
-			description: resolveDescription(input),
-			parentId: effectiveParentId,
-			...resolveUrls(input),
-			assumption: input.assumption,
-			justification: input.justification,
-			context: input.context ?? [],
-			level,
-			assertionStatus: input.assertionStatus,
-			// Element-level citation (ADR 0004 D5) — applicability, existence,
-			// and self-citation are validated in createElement before this
-			// function is called.
-			citedElementId: input.citedElementId,
-			// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
-			// and existence are validated in createElement before this function
-			// is called.
-			moduleReferenceId: input.moduleReferenceId,
-			// Required for MODULE at the Prisma validation layer
-			// (element-validation.ts's REQUIRED_FIELDS); harmless for every
-			// other type, which doesn't declare the field applicable.
-			moduleEmbedType: input.moduleEmbedType,
-			// Dialogical reasoning (defeaters) — same-case existence and
-			// self-reference are validated in createElement before this
-			// function is called.
-			isDefeater: input.isDefeater ?? false,
-			defeatsElementId: input.defeatsElementId,
-			createdById: userId,
-		},
-		include: {
-			parent: { select: { id: true, elementType: true } },
-		},
-	});
+	const element = await prisma.$transaction(async (tx) => {
+		const created = await tx.assuranceElement.create({
+			data: {
+				caseId,
+				elementType: elementType as
+					| "GOAL"
+					| "STRATEGY"
+					| "PROPERTY_CLAIM"
+					| "EVIDENCE",
+				name: elementName,
+				description: resolveDescription(input),
+				parentId: effectiveParentId,
+				...resolveUrls(input),
+				assumption: input.assumption,
+				justification: input.justification,
+				context: input.context ?? [],
+				level,
+				assertionStatus: input.assertionStatus,
+				// Element-level citation (ADR 0004 D5) — applicability, existence,
+				// and self-citation are validated in createElement before this
+				// function is called.
+				citedElementId: input.citedElementId,
+				// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
+				// and existence are validated in createElement before this function
+				// is called.
+				moduleReferenceId: input.moduleReferenceId,
+				// Required for MODULE at the Prisma validation layer
+				// (element-validation.ts's REQUIRED_FIELDS); harmless for every
+				// other type, which doesn't declare the field applicable.
+				moduleEmbedType: input.moduleEmbedType,
+				// Dialogical reasoning (defeaters) — same-case existence and
+				// self-reference are validated in createElement before this
+				// function is called.
+				isDefeater: input.isDefeater ?? false,
+				defeatsElementId: input.defeatsElementId,
+				createdById: userId,
+			},
+			include: {
+				parent: { select: { id: true, elementType: true } },
+			},
+		});
 
-	// Create EvidenceLink for evidence elements with an intended parent claim
-	if (intendedParentId) {
-		await createEvidenceLink(element.id, intendedParentId);
-	}
+		// Create EvidenceLink for evidence elements with an intended parent claim
+		if (intendedParentId) {
+			await createEvidenceLink(tx, created.id, intendedParentId);
+		}
+
+		await touchCase(tx, caseId);
+
+		return created;
+	});
 
 	const response = transformToResponse(element);
 
@@ -1598,14 +1613,18 @@ export async function updateElement(
 			updateData
 		);
 
-		const element = await prisma.assuranceElement.update({
-			where: { id: elementId },
-			data: updateData,
-			include: {
-				parent: {
-					select: { id: true, elementType: true },
+		const element = await prisma.$transaction(async (tx) => {
+			const updated = await tx.assuranceElement.update({
+				where: { id: elementId },
+				data: updateData,
+				include: {
+					parent: {
+						select: { id: true, elementType: true },
+					},
 				},
-			},
+			});
+			await touchCase(tx, existing.caseId);
+			return updated;
 		});
 
 		return { data: transformToResponse(element) };
@@ -1680,6 +1699,7 @@ export async function deleteElement(
 			// `existing.caseId` — every deleted id (the element and its
 			// descendants) may be cited from anywhere.
 			await nullifyDanglingCitations(tx, allIds);
+			await touchCase(tx, existing.caseId);
 		});
 
 		return { data: true };
@@ -1734,6 +1754,7 @@ export async function detachElement(
 			});
 			const descendantIds = await getDescendantIds(elementId, tx);
 			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
+			await touchCase(tx, existing.caseId);
 		});
 
 		return { data: true };
@@ -1833,6 +1854,7 @@ export async function attachElement(
 					data: { inSandbox: false },
 				});
 			}
+			await touchCase(tx, existing.caseId);
 		});
 
 		return { data: true };
@@ -1953,6 +1975,7 @@ export async function moveElement(
 					data: updateData,
 				});
 			}
+			await touchCase(tx, element.caseId);
 		});
 
 		return { data: true };
@@ -2044,6 +2067,7 @@ export async function restoreElement(
 				where: { id: { in: allIds } },
 				data: { deletedAt: null, deletedById: null },
 			});
+			await touchCase(tx, element.caseId);
 		});
 
 		return { data: true };

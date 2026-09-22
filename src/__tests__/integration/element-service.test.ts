@@ -174,6 +174,26 @@ describe("element-service", () => {
 				"Permission denied"
 			);
 		});
+
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas creates)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const before = testCase.updatedAt;
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(before.getTime());
+		});
 	});
 
 	describe("getElement", () => {
@@ -261,6 +281,37 @@ describe("element-service", () => {
 					description: "Should fail",
 				}),
 				"Element not found"
+			);
+		});
+
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas edits)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const created = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(
+				await updateElement(user.id, created.id, {
+					description: "Updated description",
+				})
+			);
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
 			);
 		});
 
@@ -499,6 +550,33 @@ describe("element-service", () => {
 				"Element not found"
 			);
 		});
+
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas deletes)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const created = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(await deleteElement(user.id, created.id));
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
+			);
+		});
 	});
 
 	describe("detachElement", () => {
@@ -547,6 +625,41 @@ describe("element-service", () => {
 				"Element not found"
 			);
 		});
+
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas detaches)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(await detachElement(user.id, strategy.id));
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
+			);
+		});
 	});
 
 	describe("attachElement", () => {
@@ -593,6 +706,42 @@ describe("element-service", () => {
 			expectError(
 				await attachElement(user.id, goal.id, goal.id),
 				"Cannot set element as its own parent"
+			);
+		});
+
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas attaches)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			await detachElement(user.id, strategy.id);
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(await attachElement(user.id, strategy.id, goal.id));
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
 			);
 		});
 	});
@@ -658,6 +807,90 @@ describe("element-service", () => {
 			expectError(
 				await restoreElement(user.id, created.id),
 				"Element is not deleted"
+			);
+		});
+
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas restores)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const created = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			await deleteElement(user.id, created.id);
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(await restoreElement(user.id, created.id));
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
+			);
+		});
+	});
+
+	// No dedicated describe block for moveElement existed before this issue
+	// (it was previously exercised only inside "strategy under property claim
+	// (transparent numbering)" below) — added here as its own home for the
+	// case-touch assertion.
+	describe("moveElement", () => {
+		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas moves)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const strategy = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: strategy.id,
+				})
+			);
+			const s2 = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "strategy",
+					parentId: goal.id,
+				})
+			);
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			expectSuccess(await moveElement(user.id, s2.id, claim.id));
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
 			);
 		});
 	});

@@ -424,4 +424,33 @@ describe("identifier-service", () => {
 			);
 		});
 	});
+
+	describe("resetIdentifiers case touch", () => {
+		it("bumps the case's updatedAt (JSON editor conflict detection sees a bulk rename)", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+
+			await createElement(user.id, {
+				caseId: testCase.id,
+				elementType: "goal",
+			});
+
+			const before = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 5));
+			const result = await resetIdentifiers(testCase.id, user.id);
+			expect("data" in result).toBe(true);
+
+			const after = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+				select: { updatedAt: true },
+			});
+			expect(after.updatedAt.getTime()).toBeGreaterThan(
+				before.updatedAt.getTime()
+			);
+		});
+	});
 });

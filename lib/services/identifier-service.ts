@@ -449,16 +449,31 @@ export async function resetIdentifiers(
 	const tree = buildElementTree(connectedElements);
 	const nameMap = generateHierarchicalNames(tree);
 
-	// Update all elements with new names in a single atomic transaction
-	const updates = elements.map((element) => {
-		const newName = nameMap.get(element.id) || element.name || "X";
-		return prisma.assuranceElement.update({
-			where: { id: element.id },
-			data: { name: newName },
-		});
-	});
-
-	await prisma.$transaction(updates);
+	// Update all elements with new names, then bump the case's updatedAt so
+	// version checks (JSON editor 409) see this bulk rename — same rule as
+	// every other element-level write (see touchCase in element-service.ts).
+	// Callback form (rather than the array form): the case update is a
+	// different Prisma model from the element updates, so it can't share
+	// the array's inferred element type.
+	await prisma.$transaction(
+		async (tx) => {
+			for (const element of elements) {
+				const newName = nameMap.get(element.id) || element.name || "X";
+				await tx.assuranceElement.update({
+					where: { id: element.id },
+					data: { name: newName },
+				});
+			}
+			await tx.assuranceCase.update({
+				where: { id: caseId },
+				data: { updatedAt: new Date() },
+			});
+		},
+		// Callback form's per-element loop is O(elements), unlike the array
+		// form it replaced — widened past Prisma's 5s default the same way
+		// user-management-service.ts's deletion transaction is.
+		{ timeout: 30_000, maxWait: 10_000 }
+	);
 
 	// Emit SSE event for real-time updates
 	// Note: Don't pass userId to ensure the triggering user also receives the event
