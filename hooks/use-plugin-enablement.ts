@@ -1,20 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFetchOnMount } from "@/hooks/use-fetch-on-mount";
+import { parseErrorMessage, useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 
 interface PluginsResponseBody {
 	plugins: PluginSettingsListItem[];
-}
-
-interface ApiErrorBody {
-	error?: string;
-}
-
-async function parseErrorMessage(response: Response): Promise<string> {
-	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
-	return body?.error ?? "Something went wrong";
 }
 
 async function requestPlugins(): Promise<PluginSettingsListItem[]> {

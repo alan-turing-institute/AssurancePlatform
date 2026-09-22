@@ -2,6 +2,29 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+interface ApiErrorBody {
+	error?: string;
+}
+
+/**
+ * Parses `{ error: string }` from a failed response body — the shape every
+ * route in this app returns on failure (`apiError`, `lib/api-response.ts`).
+ * Falls back to a generic message when the body isn't JSON or carries no
+ * `error` field, so a network-level failure (no body at all) still
+ * surfaces something readable rather than throwing from inside a `catch`.
+ *
+ * Previously declared verbatim in each of `use-plugin-enablement.ts`,
+ * `use-plugin-settings.ts` and `use-plugin-consequences.ts` (fallow
+ * introduced-duplication `dup:e773faa3`) — moved here since all three are
+ * this module's only callers, and a request function built for
+ * `useFetchOnMount` needs exactly this to turn a failed `Response` into the
+ * `Error` the hook's `catch` expects.
+ */
+export async function parseErrorMessage(response: Response): Promise<string> {
+	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
+	return body?.error ?? "Something went wrong";
+}
+
 export interface UseFetchOnMountResult<T> {
 	data: T | null;
 	error: string | null;

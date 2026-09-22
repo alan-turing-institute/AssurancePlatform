@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useFetchOnMount } from "@/hooks/use-fetch-on-mount";
+import { parseErrorMessage, useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 import { fetchPlugins } from "@/hooks/use-plugin-enablement";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { toast } from "@/lib/toast";
@@ -24,15 +24,6 @@ export type {
 	PluginPinnedAt,
 	PluginSettingsListItem,
 } from "@/lib/schemas/plugin";
-
-interface ApiErrorBody {
-	error?: string;
-}
-
-async function parseErrorMessage(response: Response): Promise<string> {
-	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
-	return body?.error ?? "Something went wrong";
-}
 
 async function requestPluginToggle(
 	pluginId: string,

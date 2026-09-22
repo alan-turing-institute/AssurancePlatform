@@ -44,18 +44,27 @@ describe("PluginOffConfirmDialog", () => {
 		);
 
 		const dialog = await screen.findByRole("alertdialog");
+		// Title and intro line don't depend on the consequence fetch, so they're
+		// already there as soon as the dialog itself is.
 		expect(dialog).toHaveTextContent(
 			"Turn off Claim/Evidence Health for your account?"
 		);
 		expect(dialog).toHaveTextContent(
 			"Health badges and the Evidence tab will disappear for you."
 		);
-		expect(dialog).toHaveTextContent(
+		// The two variable lines only render once the mocked fetch above has
+		// resolved — `findByText` polls rather than asserting synchronously
+		// right after the dialog appears, which raced the fetch under load
+		// (vincent, review round 2026-09-22: passed alone, failed under the
+		// full-suite coverage run).
+		await screen.findByText(
 			"The 2 evidence records on 1 of your cases stay stored and are never deleted."
 		);
-		expect(dialog).toHaveTextContent(
-			"1 integration (DARTER pipeline) currently writes evidence to your cases; it will keep doing so, and you will see what was written when you turn the plugin back on."
-		);
+		expect(
+			screen.getByText(
+				"1 integration (DARTER pipeline) currently writes evidence to your cases; it will keep doing so, and you will see what was written when you turn the plugin back on."
+			)
+		).toBeInTheDocument();
 		expect(dialog).toHaveTextContent("Other collaborators are not affected.");
 	});
 
@@ -78,7 +87,10 @@ describe("PluginOffConfirmDialog", () => {
 		);
 
 		const dialog = await screen.findByRole("alertdialog");
-		expect(dialog).toHaveTextContent(
+		// Waits for the fetch to resolve (see the test above) before checking
+		// the integration line is absent — otherwise this assertion could pass
+		// for the wrong reason, mid-loading, before the real content renders.
+		await screen.findByText(
 			"The 5 evidence records on 2 of your cases stay stored and are never deleted."
 		);
 		expect(dialog).not.toHaveTextContent(CURRENTLY_WRITE_REGEX);

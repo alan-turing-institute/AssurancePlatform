@@ -56,11 +56,14 @@ function PluginOffConfirmDialogBody({
 			</AlertDialogHeader>
 
 			<div className="space-y-2 text-muted-foreground text-sm">
-				{/* Reserved to roughly two lines while loading so the footer
-				buttons don't jump once the real (0-2 line) content arrives —
-				before this, a single thin skeleton line grew by ~80px when the
-				consequence numbers landed. */}
-				<div className={cn("space-y-2", loading && "min-h-10")}>
+				{/* Reserved while loading so the footer buttons don't jump once
+				real content arrives. Sized from a direct measurement (nanaki,
+				review round 2026-09-22): with the plugin's usual two variable
+				lines present (evidence + an active integration, the common case
+				for this deployment's one plugin), the dialog's own bounding box
+				grew 246px to 314px against the previous min-h-10 (40px) reserve
+				— so the loaded region is ~108px (40 + 68), not 40px. */}
+				<div className={cn("space-y-2", loading && "min-h-[6.75rem]")}>
 					{loading ? (
 						<>
 							<Skeleton className="h-4 w-full" />

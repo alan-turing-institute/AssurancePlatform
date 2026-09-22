@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useFetchOnMount } from "@/hooks/use-fetch-on-mount";
+import { parseErrorMessage, useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 
 /**
  * The off-switch consequence read's shape — mirrors
@@ -14,15 +14,6 @@ export interface PluginOffConsequenceNumbers {
 	activeIntegrations: ReadonlyArray<{ id: string; name: string }>;
 	caseCount: number;
 	evidenceRecordCount: number;
-}
-
-interface ApiErrorBody {
-	error?: string;
-}
-
-async function parseErrorMessage(response: Response): Promise<string> {
-	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
-	return body?.error ?? "Something went wrong";
 }
 
 async function requestPluginConsequences(
