@@ -115,8 +115,12 @@ export interface PluginSettingsListItem {
 	available: boolean;
 	/** Two or three plain sentences for the Plugins page card (D2). */
 	description: string;
-	/** Site-relative docs URL for the card's "Learn more" link (D2). */
-	docsPath: string;
+	/**
+	 * Site-relative docs URL for the card's "Learn more" link (D2). Absent
+	 * when the plugin has no real docs page yet — the card omits the link
+	 * entirely rather than pointing at a "Coming Soon" placeholder.
+	 */
+	docsPath?: string;
 	/** Effective state for the session user across the full scope chain. */
 	enabled: boolean;
 	name: string;

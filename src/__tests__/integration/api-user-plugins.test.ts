@@ -61,7 +61,7 @@ describe("GET /api/user/plugins", () => {
 		});
 	});
 
-	it("includes the manifest's card copy (description, docsPath, surfaces) for the Plugins page", async () => {
+	it("includes the manifest's card copy (description, surfaces) for the Plugins page, and omits docsPath until a real docs page exists", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
@@ -70,9 +70,9 @@ describe("GET /api/user/plugins", () => {
 		const body = await response.json();
 
 		expect(body.plugins[0].description.length).toBeGreaterThan(0);
-		expect(body.plugins[0].docsPath).toBe(
-			"/docs/technical-guide/architecture/plugin-ecosystem"
-		);
+		// D2 amendment (2026-09-22): tea.health's docs page is still a "Coming
+		// Soon" draft, so docsPath is absent rather than linking to it.
+		expect(body.plugins[0].docsPath).toBeUndefined();
 		expect(body.plugins[0].surfaces).toEqual(
 			expect.arrayContaining(["plugin-tables", "settings-section"])
 		);

@@ -37,9 +37,14 @@ export interface PluginManifestEntry {
 	readonly description: string;
 	/**
 	 * Site-relative docs URL for the card's "Learn more" link, e.g.
-	 * `/docs/technical-guide/architecture/plugin-ecosystem`.
+	 * `/docs/technical-guide/architecture/plugin-ecosystem`. Omitted (not an
+	 * empty string) until a real docs page exists for this plugin — D2
+	 * amendment, cid 2026-09-22: `tea.health`'s docs page is still `draft:
+	 * true` and reads "Coming Soon", so linking to it would tell a user a
+	 * live plugin doesn't exist yet. The Plugins page card omits "Learn more"
+	 * entirely when this is absent.
 	 */
-	readonly docsPath: string;
+	readonly docsPath?: string;
 	/** Namespace, e.g. "tea.health" — matches `PluginData.pluginId` / `PluginState.pluginId`. */
 	readonly id: string;
 	readonly name: string;
@@ -72,7 +77,6 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		],
 		description:
 			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
-		docsPath: "/docs/technical-guide/architecture/plugin-ecosystem",
 	},
 ];
 

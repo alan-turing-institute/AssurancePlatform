@@ -8,11 +8,16 @@ import { PLUGIN_MANIFEST } from "@/lib/plugins/manifest";
  * contract — the fields the Plugins page card reads directly.
  */
 describe("PLUGIN_MANIFEST — card data contract", () => {
-	it("gives every entry a non-empty description and a docsPath under /docs/", () => {
+	it("gives every entry a non-empty description, and a docsPath under /docs/ when set", () => {
 		expect(PLUGIN_MANIFEST.length).toBeGreaterThan(0);
 		for (const entry of PLUGIN_MANIFEST) {
 			expect(entry.description.trim().length).toBeGreaterThan(0);
-			expect(entry.docsPath.startsWith("/docs/")).toBe(true);
+			// docsPath is optional (D2 amendment, 2026-09-22): omitted until a
+			// real docs page exists, rather than linking to a "Coming Soon"
+			// placeholder. When present it must still be a /docs/ route.
+			if (entry.docsPath !== undefined) {
+				expect(entry.docsPath.startsWith("/docs/")).toBe(true);
+			}
 		}
 	});
 });
