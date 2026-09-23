@@ -9,8 +9,14 @@ Where this file and the code disagree, check the code and fix whichever is wrong
 TEA helps multi-stakeholder teams build, share and publish graphical assurance cases: structured arguments and evidence about trustworthy and ethical technology.
 The application and its Nextra documentation share one Next.js App Router project.
 The stack is Next.js 16, React 19, TypeScript, PostgreSQL, Prisma 7, NextAuth 4, Tailwind 4, React Flow and Zustand.
-The Django backend was removed in 2025; everything is TypeScript.
+The Django backend was removed in December 2025; everything is TypeScript.
 Use `package.json` and `pnpm-lock.yaml` for exact dependency versions.
+
+| Environment | URL |
+|---|---|
+| Local | `http://localhost:3000` |
+| Staging | `https://staging-assuranceplatform.azurewebsites.net` |
+| Production | `https://assuranceplatform.azurewebsites.net` |
 
 - `app/`: pages, layouts and API routes; `actions/`: internal UI server actions.
 - `lib/schemas/`: Zod input schemas; `lib/services/`: business logic and database operations.
@@ -23,7 +29,7 @@ Use `package.json` and `pnpm-lock.yaml` for exact dependency versions.
 - `prisma/`: schema, reviewed migrations and the development seed; `src/generated/prisma/`: generated client, untracked, never edit by hand.
 - `content/`: MDX documentation and curriculum; `docs/`: the database DBML and accepted-limitations specs (design records live outside the repo).
 - `src/__tests__/integration/`: database and API tests; colocated `*.test.ts(x)`: unit and component tests; `e2e/`: Playwright journeys.
-- `lint-rules/`: GritQL plugins for Biome; `patches/`: pnpm patches applied at install.
+- `lint-rules/`: GritQL rules for Biome; `patches/`: pnpm patches applied at install.
 
 The `@/` import alias points to the repository root, not `src/`.
 
@@ -81,6 +87,7 @@ Database setup, seed and test infrastructure necessarily access the database dir
   Derive user identity from authentication, never from client-supplied user IDs.
 - Read a client IP only through `extractClientIp` in `lib/auth/extract-client-ip.ts`.
   Never read `x-forwarded-for` or `x-real-ip` directly; both are attacker-controllable in this deployment.
+  If a CDN or Front Door is ever placed in front of App Service, the helper's trusted-hop policy must be revisited.
 - Machine endpoints under `/api/machine/` use `requireApiToken` from `lib/auth/require-api-token.ts` with the scopes appropriate to the operation.
   Keep intentionally public routes and authentication-entry routes distinct from session-protected mutations.
 - Check case access in services using `canAccessCase` and the helpers in `lib/permissions.ts`.
@@ -147,7 +154,7 @@ Mock session authentication only at the boundary (`@/lib/auth/validate-session` 
 `pnpm test:integration` needs its own Postgres, separate from dev's.
 `docker-compose.local.yml` runs two: `postgres` (dev, port 5432, durable) and `postgres-test` (port 5433, `fsync=off`, tmpfs-backed, disposable).
 Start it with `docker compose -f docker-compose.local.yml up -d postgres-test`; nothing else starts it.
-The harness clones a migrated template into per-worker `tea_test_w*` databases, truncates application tables after each test and drops the worker databases at teardown.
+The harness clones a migrated template into per-worker `tea_test_p<pid>_w<n>` databases, truncates application tables after each test and drops the worker databases at teardown.
 It needs a role able to create and drop databases; `src/__tests__/scripts/test-db-config.ts` and `vitest.workspace.ts` hold the local defaults and CI overrides them.
 Do not run two integration suites against the same Postgres instance.
 
