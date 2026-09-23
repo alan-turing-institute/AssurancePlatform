@@ -1,9 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { LINK_COOKIE_NAME } from "@/lib/auth/config";
+import {
+	createLinkIntent,
+	LINK_INTENT_MAX_AGE_SECONDS,
+} from "@/lib/auth/link-intent";
 import { validateSession } from "@/lib/auth/validate-session";
-
-const LINK_COOKIE_MAX_AGE = 60 * 5; // 5 minutes - enough time for OAuth flow
 
 interface RouteParams {
 	params: Promise<{ provider: string }>;
@@ -32,9 +34,10 @@ function publicBaseUrl(): string {
  * GET /api/auth/link/[provider]
  *
  * Initiates the OAuth linking flow for an existing authenticated user.
- * Stores the current user ID in a secure cookie, then redirects to the
- * NextAuth OAuth endpoint. The signIn callback in auth-options.ts will
- * check for this cookie and merge the OAuth credentials into the existing account.
+ * Stores a signed, session-bound link intent in a secure cookie, then
+ * redirects to the NextAuth OAuth endpoint. The signIn callback in
+ * lib/auth/config.ts verifies that intent and merges the OAuth credentials
+ * into the existing account.
  */
 export async function GET(_request: Request, { params }: RouteParams) {
 	const { provider } = await params;
@@ -48,29 +51,38 @@ export async function GET(_request: Request, { params }: RouteParams) {
 	}
 
 	// Validate provider
+	const normalizedProvider = provider.toLowerCase();
 	const validProviders = ["github", "google"];
-	if (!validProviders.includes(provider.toLowerCase())) {
+	if (!validProviders.includes(normalizedProvider)) {
 		return NextResponse.json(
 			{ error: `Invalid provider: ${provider}` },
 			{ status: 400 }
 		);
 	}
 
-	// Store the current user ID in a secure cookie for the OAuth callback
+	// Store a signed, session-bound link intent in a secure cookie for the
+	// OAuth callback (lib/auth/link-intent.ts) — never the raw user id.
 	const cookieStore = await cookies();
-	cookieStore.set(LINK_COOKIE_NAME, validated.userId, {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "lax",
-		maxAge: LINK_COOKIE_MAX_AGE,
-		path: "/",
-	});
+	cookieStore.set(
+		LINK_COOKIE_NAME,
+		createLinkIntent({
+			userId: validated.userId,
+			provider: normalizedProvider,
+		}),
+		{
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			maxAge: LINK_INTENT_MAX_AGE_SECONDS,
+			path: "/",
+		}
+	);
 
 	// Redirect to NextAuth OAuth endpoint
 	// The callback will be handled by auth-options.ts which checks for the link cookie
 	const callbackUrl = "/dashboard/settings";
 	const signInUrl = new URL(
-		`/api/auth/signin/${provider.toLowerCase()}`,
+		`/api/auth/signin/${normalizedProvider}`,
 		publicBaseUrl()
 	);
 	signInUrl.searchParams.set("callbackUrl", callbackUrl);

@@ -3,6 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import { verifyLinkIntent } from "@/lib/auth/link-intent";
 import { encryptForStorage } from "@/lib/auth/token-encryption";
 import { logger } from "@/lib/logger";
 
@@ -14,10 +15,15 @@ dotenv.config({ quiet: true }); // Explicitly load environment variables
 
 /**
  * Cookie name used for account linking flow.
- * When set, the OAuth callback will link to the existing user instead of creating a new one.
- * Exported for use in the link API route.
+ * When set, the OAuth callback will verify it as a signed link intent
+ * (lib/auth/link-intent.ts) and link to the existing user instead of
+ * creating a new one. Exported for use in the link API route.
+ *
+ * The value changed from a raw user id (`tea_link_user_id`) to a signed
+ * intent token; the cookie name changed with it so a cookie issued by an
+ * old build fails verification instead of being read as an intent.
  */
-export const LINK_COOKIE_NAME = "tea_link_user_id";
+export const LINK_COOKIE_NAME = "tea_link_intent";
 
 /**
  * Fields written on every successful login, regardless of provider.
@@ -468,19 +474,70 @@ export const authOptions: NextAuthOptions = {
 		 * @returns {boolean} `true` to allow the sign-in.
 		 */
 		async signIn({ user, account, profile }) {
-			// Check for account linking cookie (set by /api/auth/link/[provider])
-			let linkToUserId: string | undefined;
+			// Check for an account-linking cookie (set by
+			// /api/auth/link/[provider]). Reading the cookie itself is wrapped in
+			// try/catch because `cookies()` can throw outside a real request
+			// context; that failure is treated the same as no cookie at all, so
+			// the standard sign-in/sign-up flow below still runs. Once a cookie
+			// value IS in hand, a failed verification below returns `false`
+			// directly rather than falling through to that standard flow — see
+			// the rationale on the linked issue: falling through on an
+			// expired-but-otherwise-legitimate intent would silently create a
+			// fresh account from the provider email instead of surfacing a
+			// rejected sign-in.
+			let cookieStore:
+				| Awaited<ReturnType<typeof import("next/headers").cookies>>
+				| undefined;
+			let linkCookieValue: string | undefined;
 			try {
 				const { cookies } = await import("next/headers");
-				const cookieStore = await cookies();
-				const linkCookie = cookieStore.get(LINK_COOKIE_NAME);
-				if (linkCookie?.value) {
-					linkToUserId = linkCookie.value;
-					// Clear the cookie after reading
-					cookieStore.delete(LINK_COOKIE_NAME);
-				}
+				cookieStore = await cookies();
+				linkCookieValue = cookieStore.get(LINK_COOKIE_NAME)?.value;
 			} catch {
 				// Cookie access may fail in some contexts, continue without linking
+			}
+
+			let linkToUserId: string | undefined;
+			if (linkCookieValue && cookieStore) {
+				// Delete first, in every branch below — a link intent is single-use.
+				cookieStore.delete(LINK_COOKIE_NAME);
+
+				const provider = account?.provider;
+				const intent = provider
+					? verifyLinkIntent(linkCookieValue, { provider })
+					: null;
+				if (!intent) {
+					log.warn("Rejected OAuth account-link attempt", {
+						reason: "link-intent-invalid",
+					});
+					return false;
+				}
+
+				const { getToken } = await import("next-auth/jwt");
+				// getToken()'s declared `req` type only names full Next.js request
+				// shapes (IncomingMessage-with-cookies, NextRequest, NextApiRequest),
+				// but its implementation (next-auth/jwt) only ever reads `req.cookies`
+				// (duck-typed: an object with `.getAll()`, a Map, or a plain record —
+				// all satisfied by next/headers' `cookies()`) and `req.headers` (only
+				// consulted for a Bearer-token fallback we don't use). The cast
+				// reflects that narrower runtime contract.
+				const sessionToken = await getToken({
+					req: { cookies: cookieStore, headers: {} } as unknown as Parameters<
+						typeof getToken
+					>[0]["req"],
+					secret: process.env.NEXTAUTH_SECRET,
+				});
+				const sessionUserId =
+					typeof sessionToken?.id === "string" ? sessionToken.id : undefined;
+
+				if (!sessionUserId || sessionUserId !== intent.userId) {
+					log.warn("Rejected OAuth account-link attempt", {
+						reason: "link-intent-session-mismatch",
+					});
+					return false;
+				}
+
+				linkToUserId = intent.userId;
 			}
 
 			if (account?.provider === "github") {
