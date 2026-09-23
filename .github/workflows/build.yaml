@@ -374,6 +374,9 @@ jobs:
       - name: Run migrations
         run: npx prisma migrate deploy --schema=prisma/schema.prisma
 
+      - name: Check migrations match schema
+        run: npx prisma migrate diff --from-config-datasource --to-schema=prisma/schema.prisma --exit-code
+
       - name: Seed database
         run: npx tsx prisma/seed/dev-seed.ts
 
