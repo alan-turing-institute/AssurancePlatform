@@ -18,7 +18,7 @@ interface RouteParams {
  * GET /api/public/discover/[slug]
  * Fetch a published item's frozen snapshot by slug (ADR 0003 §6) — public,
  * anonymous access; no session required (the `/api/public` prefix is
- * exempted from auth at the middleware matcher, `middleware.ts`). Powers the
+ * exempted from auth at the proxy matcher, `proxy.ts`). Powers the
  * Discover detail page's rendering and its JSON download, and supersedes
  * the numeric-id `/api/public/assurance-case/[id]` lookup for this surface.
  */

@@ -225,7 +225,7 @@ test.describe("ADR 0003 — publish journey", () => {
 		).toHaveAttribute("src", UPLOADED_IMAGE_PATTERN);
 
 		// `page.request` shares the signed-in browser context's cookies, but
-		// `/api/public/*` is exempted from session auth entirely (middleware.ts)
+		// `/api/public/*` is exempted from session auth entirely (proxy.ts)
 		// — this proves the snapshot resolves by slug, not that no session was
 		// present; full anonymous-access coverage lives in `discover.spec.ts`.
 		const snapshotResponse = await page.request.get(

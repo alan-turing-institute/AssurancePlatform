@@ -6,15 +6,15 @@ import { unauthorised } from "@/lib/errors";
 
 /**
  * Exercises the exported default middleware directly — `withAuth(...)` from
- * `middleware.ts` — rather than the matcher regex covered in
- * `middleware.test.ts`.
+ * `proxy.ts` — rather than the matcher regex covered in
+ * `proxy.test.ts`.
  *
  * `next-auth/middleware`'s `withAuth` is replaced with a small stand-in that
  * mirrors its real authorized/redirect contract (call the `authorized`
  * callback; on `true` attach `req.nextauth.token` and run the wrapped
  * middleware; on `false` redirect to `pages.signIn`), reading the token to
  * use straight off a test-only `x-test-token` request header. This keeps the
- * test focused on `middleware.ts`'s own logic — the new JSON-401 branch and
+ * test focused on `proxy.ts`'s own logic — the new JSON-401 branch and
  * the `authorized` callback's API pass-through — without depending on
  * `next-auth/jwt`'s real cookie decryption (which needs a genuine session
  * cookie and, under Vitest's jsdom environment, hits an unrelated
@@ -56,7 +56,7 @@ vi.mock("next-auth/middleware", () => ({
 }));
 
 async function callMiddleware(pathname: string, token?: { id: string }) {
-	const { default: middleware } = await import("./middleware");
+	const { default: middleware } = await import("./proxy");
 	const request = new NextRequest(new URL(pathname, "http://localhost:3000"), {
 		headers: token ? { "x-test-token": JSON.stringify(token) } : undefined,
 	});
@@ -80,12 +80,13 @@ describe("middleware — unauthenticated API requests", () => {
 		});
 	});
 
-	it("matches the body and status apiError(unauthorised()) produces — the pair middleware.ts's inline literal must not drift from", async () => {
-		// middleware.ts can't import lib/api-response.ts (it drags in
-		// lib/errors.ts -> lib/logger.ts, which is not edge-bundleable), so its
-		// 401 body is a hand-written literal. This test only runs under Node
-		// (Vitest), never bundled for the Edge Runtime, so it can import both
-		// sides and keep them in sync by assertion instead.
+	it("matches the body and status apiError(unauthorised()) produces — the pair proxy.ts's inline literal must not drift from", async () => {
+		// proxy.ts avoids importing lib/api-response.ts (it drags in
+		// lib/errors.ts -> lib/db-pool-config.ts -> lib/logger.ts) because the
+		// proxy runs on every matched request, not because the proxy runtime
+		// can't bundle it — Next 16's `proxy` runtime is always `nodejs`. Its
+		// 401 body is a hand-written literal, and this test imports both sides
+		// and keeps them in sync by assertion instead.
 		const response = await callMiddleware("/api/user/plugins");
 		const expected = apiError(unauthorised());
 

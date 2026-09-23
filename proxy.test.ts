@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * Regression tests for the route matcher in `middleware.ts`.
+ * Regression tests for the route matcher in `proxy.ts`.
  *
  * Next.js only runs the exported `withAuth()` middleware (session-auth
  * enforcement) for pathnames that match `config.matcher`. A pathname that
@@ -19,13 +19,13 @@ import { describe, expect, it } from "vitest";
  * finds a spurious match at an inner "/" and gives false negatives.
  *
  * This file does not spin up Next.js or an HTTP server — it imports the
- * plain `config` object exported from `middleware.ts` and exercises the
+ * plain `config` object exported from `proxy.ts` and exercises the
  * regex directly, which is why it lives at the repo root next to the file
  * it tests rather than under `src/__tests__/integration/`.
  */
 
 async function getMatcherRegex(): Promise<RegExp> {
-	const { config } = await import("./middleware");
+	const { config } = await import("./proxy");
 	const pattern = config.matcher[0];
 	return new RegExp(`^${pattern}$`);
 }

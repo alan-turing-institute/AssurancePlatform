@@ -1057,7 +1057,7 @@
         "count": 1
       }
     },
-    "middleware.ts": {
+    "proxy.ts": {
       "crap_critical": {
         "count": 1
       }
@@ -2858,7 +2858,7 @@
         "count": 1
       }
     },
-    "middleware.ts\u0000middleware": {
+    "proxy.ts\u0000proxy": {
       "crap_critical": {
         "count": 1
       }
