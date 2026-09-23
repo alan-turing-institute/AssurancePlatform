@@ -110,7 +110,8 @@ Keep transactions short and make network calls outside them.
 ## Logging
 
 No raw `console.*` in application code; Biome's `suspicious/noConsole` rule reports it as an error.
-Use the logger in `lib/logger.ts`: one JSON line per entry on stdout, no vendor SDK, usable from server, edge and browser code.
+Use the logger in `lib/logger.ts`: one JSON line per entry on stdout, no vendor SDK, usable from server and browser code.
+Do not import it, or anything that imports it (`lib/errors.ts`, `lib/api-response.ts`), from `middleware.ts`: the production build rejects `process.stdout` in the Edge Runtime bundle, and the unit tests never bundle the middleware, so only `pnpm build` shows the failure.
 Its sink (`setLogSink` / `resetLogSink`) is the seam a future OpenTelemetry bridge will use; nothing is wired to it yet, so do not import an OpenTelemetry or App Insights SDK.
 Test files, `scripts/`, `prisma/seed/` and `e2e/` are exempt from the console rule because console output is their interface.
 Keep secrets out of log entries.
