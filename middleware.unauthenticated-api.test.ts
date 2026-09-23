@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 import { describe, expect, it, vi } from "vitest";
+import { apiError } from "@/lib/api-response";
+import { unauthorised } from "@/lib/errors";
 
 /**
  * Exercises the exported default middleware directly — `withAuth(...)` from
@@ -76,6 +78,19 @@ describe("middleware — unauthenticated API requests", () => {
 			error: "Unauthorised",
 			code: "UNAUTHORISED",
 		});
+	});
+
+	it("matches the body and status apiError(unauthorised()) produces — the pair middleware.ts's inline literal must not drift from", async () => {
+		// middleware.ts can't import lib/api-response.ts (it drags in
+		// lib/errors.ts -> lib/logger.ts, which is not edge-bundleable), so its
+		// 401 body is a hand-written literal. This test only runs under Node
+		// (Vitest), never bundled for the Edge Runtime, so it can import both
+		// sides and keep them in sync by assertion instead.
+		const response = await callMiddleware("/api/user/plugins");
+		const expected = apiError(unauthorised());
+
+		expect(response?.status).toBe(expected.status);
+		await expect(response?.json()).resolves.toEqual(await expected.json());
 	});
 
 	it("still 307-redirects an unauthenticated page request to /login", async () => {

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
-import { unauthorised } from "./lib/errors";
 import { isAuthRoute, isPublicRoute } from "./lib/routes";
 
 export default withAuth(
@@ -13,15 +12,17 @@ export default withAuth(
 		// branch — not next-auth's own sign-in redirect — decides what an
 		// unauthenticated API caller gets back. Mirrors the JSON error shape
 		// `apiError(unauthorised())` (`lib/api-response.ts`) produces, built
-		// inline rather than imported: `lib/api-response.ts` pulls in
-		// `lib/auth/validate-session.ts` -> `lib/auth/config.ts`, which is not
-		// edge-safe (middleware runs on the Edge runtime), so only the
-		// edge-safe `unauthorised()` factory from `lib/errors.ts` is used here.
+		// inline rather than importing `unauthorised()` from `lib/errors.ts`:
+		// that file is NOT edge-bundleable — it imports `lib/logger.ts`, which
+		// calls `process.stdout.write` (guarded by a runtime check, but the
+		// Edge Runtime bundler flags the Node API statically regardless of the
+		// guard, and rejects the `next build`). `middleware.unauthenticated-
+		// api.test.ts` asserts this literal stays equal to what
+		// `apiError(unauthorised())` produces, so the two can't drift silently.
 		if (token?.id == null && pathname.startsWith("/api/")) {
-			const error = unauthorised();
 			return NextResponse.json(
-				{ error: error.message, code: error.code },
-				{ status: error.statusCode }
+				{ error: "Unauthorised", code: "UNAUTHORISED" },
+				{ status: 401 }
 			);
 		}
 
