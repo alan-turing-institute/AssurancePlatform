@@ -49,19 +49,23 @@ We use a three-branch flow: feature branches → `staging` → `main`.
 2. Open a pull request to merge into `staging`
 3. After CI passes, `staging` is merged into `main` for production release
 
-#### Pre-commit Hooks
+#### Git Hooks
 
-Pre-commit hooks run automatically on `git commit` to catch issues early. Install them once:
+`pnpm install` arms the hooks in `.githooks/` by setting `core.hooksPath`.
+The pre-push hook runs `pnpm lint` and `pnpm typecheck` before any push to `staging` or `main`; CI remains the authoritative gate.
+
+A `.pre-commit-config.yaml` is also provided for manual runs and for pre-commit.ci.
+It runs [Ultracite](https://biomejs.dev) (Biome wrapper) for linting and formatting, the TypeScript compiler for type checking, `detect-secrets` for secret detection, and the integration tests.
+Because `core.hooksPath` is set, `pre-commit install` refuses to install; run it on demand instead:
 
 ```bash
-pre-commit install
+uv tool run pre-commit run --all-files
 ```
-
-The hooks run [Ultracite](https://biomejs.dev) (Biome wrapper) for linting and formatting, the TypeScript compiler for type checking, and `detect-secrets` for secret detection.
 
 #### Issue Tracking
 
-We use [Beads](https://github.com/cosmicpudding/beads) for issue tracking. Run `bd ready` to find available work, or create a new issue with `bd create`. See [AGENTS.md](./AGENTS.md) for the full workflow.
+Work is tracked in [GitHub Issues](https://github.com/alan-turing-institute/AssurancePlatform/issues).
+Coding agents should read [AGENTS.md](./AGENTS.md) before working in the repository.
 
 ### Contributing to the Documentation
 
