@@ -7,6 +7,25 @@ export default withAuth(
 		const pathname = req.nextUrl.pathname;
 		const token = req.nextauth.token;
 
+		// Unauthenticated API request: the `authorized` callback below passes
+		// every non-exempt `/api/*` path through unconditionally, so this
+		// branch — not next-auth's own sign-in redirect — decides what an
+		// unauthenticated API caller gets back. Mirrors the JSON error shape
+		// `apiError(unauthorised())` (`lib/api-response.ts`) produces, built
+		// inline rather than importing `unauthorised()` from `lib/errors.ts`:
+		// that file is NOT edge-bundleable — it imports `lib/logger.ts`, which
+		// calls `process.stdout.write` (guarded by a runtime check, but the
+		// Edge Runtime bundler flags the Node API statically regardless of the
+		// guard, and rejects the `next build`). `middleware.unauthenticated-
+		// api.test.ts` asserts this literal stays equal to what
+		// `apiError(unauthorised())` produces, so the two can't drift silently.
+		if (token?.id == null && pathname.startsWith("/api/")) {
+			return NextResponse.json(
+				{ error: "Unauthorised", code: "UNAUTHORISED" },
+				{ status: 401 }
+			);
+		}
+
 		// Redirect authenticated users away from auth pages (login/register)
 		if (token?.id != null && isAuthRoute(pathname)) {
 			const rawRedirect =
@@ -52,6 +71,16 @@ export default withAuth(
 
 				// Allow public routes (defined in lib/routes.ts)
 				if (isPublicRoute(pathname)) {
+					return true;
+				}
+
+				// API routes: always pass through, session or not. Letting
+				// next-auth's default handling decide here would 307-redirect an
+				// unauthenticated API caller to /login instead of giving it a JSON
+				// 401 — so the actual auth check for `/api/*` happens in the
+				// wrapped middleware function above, which returns that JSON
+				// response itself instead of a redirect.
+				if (pathname.startsWith("/api/")) {
 					return true;
 				}
 
@@ -113,6 +142,15 @@ export const config = {
 		 * inventory (fix round, 2026-07-03; extended 2026-07-14): no
 		 * existing route under any of the five prefixes relies on the
 		 * looser match, so all five are anchored the same way.
+		 *
+		 * Every `/api/*` path this matcher does NOT exempt above still runs
+		 * through this middleware, but an unauthenticated request to one of
+		 * them no longer gets the page-style 307 redirect to /login: the
+		 * `authorized` callback below passes all `/api/*` paths through
+		 * unconditionally, and the wrapped middleware function returns a
+		 * JSON 401 (in the platform's standard error shape) for any of them
+		 * with no valid session, before any page-redirect logic runs. Page
+		 * paths are unaffected — they still redirect to /login as before.
 		 */
 		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|uploads(?:/|$)|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
 	],
