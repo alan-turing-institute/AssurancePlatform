@@ -111,7 +111,7 @@ Keep transactions short and make network calls outside them.
 
 No raw `console.*` in application code; Biome's `suspicious/noConsole` rule reports it as an error.
 Use the logger in `lib/logger.ts`: one JSON line per entry on stdout, no vendor SDK, usable from server and browser code.
-Do not import it, or anything that imports it (`lib/errors.ts`, `lib/api-response.ts`), from `proxy.ts`: the proxy runs on every matched request, and pulling the logger's chain in there (down to `lib/db-pool-config.ts`) puts that cost on the request-hot path. This is a design rule, not a build-time check — no test catches a violation, so review it by eye.
+Do not import it, or anything that imports it (`lib/errors.ts`, `lib/api-response.ts`), from `proxy.ts`: the proxy runs on every matched request, and pulling `lib/errors.ts`'s chain in there (`lib/db-pool-config.ts`, which itself imports the logger) puts that cost on the request-hot path. This is a design rule, not a build-time check — no test catches a violation, so review it by eye.
 Its sink (`setLogSink` / `resetLogSink`) is the seam a future OpenTelemetry bridge will use; nothing is wired to it yet, so do not import an OpenTelemetry or App Insights SDK.
 Test files, `scripts/`, `prisma/seed/` and `e2e/` are exempt from the console rule because console output is their interface.
 Keep secrets out of log entries.

@@ -16,7 +16,7 @@ export default withAuth(
 		// the proxy runs on every matched request (Next 16's `proxy` runtime
 		// is always `nodejs`, so this is no longer an Edge Runtime bundling
 		// restriction), and pulling in `lib/errors.ts` would drag
-		// `lib/logger.ts` -> `lib/db-pool-config.ts` into that hot path.
+		// `lib/db-pool-config.ts` -> `lib/logger.ts` into that hot path.
 		// `proxy.unauthenticated-api.test.ts` asserts this literal stays equal
 		// to what `apiError(unauthorised())` produces, so the two can't drift
 		// silently.

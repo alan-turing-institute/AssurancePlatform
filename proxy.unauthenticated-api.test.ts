@@ -82,7 +82,7 @@ describe("middleware — unauthenticated API requests", () => {
 
 	it("matches the body and status apiError(unauthorised()) produces — the pair proxy.ts's inline literal must not drift from", async () => {
 		// proxy.ts avoids importing lib/api-response.ts (it drags in
-		// lib/errors.ts -> lib/logger.ts -> lib/db-pool-config.ts) because the
+		// lib/errors.ts -> lib/db-pool-config.ts -> lib/logger.ts) because the
 		// proxy runs on every matched request, not because the proxy runtime
 		// can't bundle it — Next 16's `proxy` runtime is always `nodejs`. Its
 		// 401 body is a hand-written literal, and this test imports both sides
