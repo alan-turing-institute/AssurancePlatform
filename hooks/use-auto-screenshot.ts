@@ -1,4 +1,4 @@
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import { useCallback, useEffect, useRef } from "react";
 import { logger } from "@/lib/logger";
 
@@ -61,8 +61,10 @@ export function useAutoScreenshot({
 		isCapturingRef.current = true;
 
 		try {
-			const canvas = await html2canvas(target as HTMLElement);
-			const base64Image = canvas.toDataURL("image/png");
+			const base64Image = await toPng(target as HTMLElement, {
+				backgroundColor: "#ffffff",
+				pixelRatio: 1,
+			});
 
 			if (!isUsableDataUrl(base64Image)) {
 				log.warn("Skipped upload of a degenerate screenshot capture", {
@@ -125,9 +127,11 @@ export function useAutoScreenshot({
 				// Use sendBeacon for reliable delivery during page unload
 				const target = document.querySelector(selector);
 				if (target) {
-					html2canvas(target as HTMLElement)
-						.then((canvas) => {
-							const base64Image = canvas.toDataURL("image/png");
+					toPng(target as HTMLElement, {
+						backgroundColor: "#ffffff",
+						pixelRatio: 1,
+					})
+						.then((base64Image) => {
 							if (!isUsableDataUrl(base64Image)) {
 								log.warn(
 									"Skipped beacon upload of a degenerate screenshot capture",

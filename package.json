@@ -79,7 +79,6 @@
     "framer-motion": "^12.43.0",
     "googleapis": "^173.0.0",
     "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
     "jszip": "^3.10.2",
     "lucide-react": "^0.577.0",
     "next": "^16.1.6",

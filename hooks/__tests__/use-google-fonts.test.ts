@@ -79,6 +79,7 @@ describe("useGoogleFonts", () => {
 		expect(link.href).toContain("Quicksand");
 		expect(link.href).toContain("Ga%20Maamli");
 		expect(link.href).toContain("JetBrains%20Mono");
+		expect(link.crossOrigin).toBe("anonymous");
 		expect(link.getAttribute(LINK_ATTR)).toBe("ghibli");
 	});
 
