@@ -25,11 +25,6 @@ import { INTEGRATION_TEST_ADMIN_DATABASE_URL } from "../scripts/test-db-config";
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
 const REAL_MIGRATIONS_DIR = path.join(PROJECT_ROOT, "prisma/migrations");
 const RECONCILE_MIGRATION_NAME = "20260923000000_reconcile_schema_drift";
-// The migration immediately before the reconciliation migration — used to
-// reach the "before" state that still allows an orphaned deleted_by_id /
-// resolved_by_id to be inserted (both columns are unconstrained pre-fix).
-const LAST_MIGRATION_BEFORE_RECONCILE =
-	"20260916000000_add_module_reference_dangling";
 
 function allMigrationNames(): string[] {
 	return fs
@@ -192,15 +187,15 @@ describe("reconcile-schema-drift migration", () => {
 		await adminPool.end();
 
 		setUpTmpProject(tmpDir);
+		// Timestamp-prefixed migration names sort chronologically, so this
+		// selects everything before the reconciliation migration regardless of
+		// what gets added after it.
 		const migrationsBeforeReconcile = allMigrationNames().filter(
-			(name) => name !== RECONCILE_MIGRATION_NAME
+			(name) => name < RECONCILE_MIGRATION_NAME
 		);
 		copyMigrations(tmpDir, migrationsBeforeReconcile);
 		const dbUrl = scratchDatabaseUrl(dbName);
 		runMigrateDeploy(tmpDir, dbUrl);
-		expect(migrationsBeforeReconcile.at(-1)).toBe(
-			LAST_MIGRATION_BEFORE_RECONCILE
-		);
 
 		const scratchPool = new Pool({ connectionString: dbUrl });
 		try {

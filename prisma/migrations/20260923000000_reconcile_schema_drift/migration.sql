@@ -19,13 +19,14 @@
 -- 4. `published_assurance_cases.id` carries a database-level
 --    `DEFAULT gen_random_uuid()`, inherited from the Django-era table the
 --    initial migration recreated. schema.prisma declares `@default(uuid())`
---    with no `@db.default`, i.e. the Prisma client generates every id; the
---    only writer is `swapCurrentPublishedVersion` in
---    lib/services/publish-service.ts, which never omits `id` from `create`,
---    and nothing else inserts into this table (no raw SQL, no seed). The
---    database default is therefore redundant and is dropped here, rather
---    than added to the schema, to keep the schema the single description
---    of the database — the same policy every other table already follows.
+--    with no `@db.default`, i.e. the Prisma client supplies the id itself;
+--    the only writer, `swapCurrentPublishedVersion` in
+--    lib/services/publish-service.ts, relies on exactly that — its `create`
+--    call never depends on the database default — and nothing else inserts
+--    into this table (no raw SQL, no seed). The database default is
+--    therefore redundant and is dropped here, rather than added to the
+--    schema, to keep the schema the single description of the database —
+--    the same policy every other table already follows.
 --
 -- Users are hard-deleted (user-management-service.ts, ~line 654;
 -- integration-registry-service.ts, ~line 748), and columns 2 and 3 have
@@ -42,15 +43,17 @@ ALTER TABLE "pattern_elements" ADD COLUMN "context" TEXT[] DEFAULT ARRAY[]::TEXT
 ALTER TABLE "published_assurance_cases" ALTER COLUMN "id" DROP DEFAULT;
 
 -- Orphan clean-up before assurance_cases_deleted_by_id_fkey
-UPDATE "assurance_cases" SET "deleted_by_id" = NULL
-  WHERE "deleted_by_id" IS NOT NULL AND "deleted_by_id" NOT IN (SELECT "id" FROM "users");
+UPDATE "assurance_cases" c SET "deleted_by_id" = NULL
+  WHERE c."deleted_by_id" IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM "users" u WHERE u."id" = c."deleted_by_id");
 
 -- AddForeignKey
 ALTER TABLE "assurance_cases" ADD CONSTRAINT "assurance_cases_deleted_by_id_fkey" FOREIGN KEY ("deleted_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- Orphan clean-up before comments_resolved_by_id_fkey
-UPDATE "comments" SET "resolved_by_id" = NULL
-  WHERE "resolved_by_id" IS NOT NULL AND "resolved_by_id" NOT IN (SELECT "id" FROM "users");
+UPDATE "comments" c SET "resolved_by_id" = NULL
+  WHERE c."resolved_by_id" IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM "users" u WHERE u."id" = c."resolved_by_id");
 
 -- AddForeignKey
 ALTER TABLE "comments" ADD CONSTRAINT "comments_resolved_by_id_fkey" FOREIGN KEY ("resolved_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
