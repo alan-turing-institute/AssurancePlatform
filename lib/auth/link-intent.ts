@@ -118,7 +118,9 @@ export function verifyLinkIntent(
 		return null;
 	}
 
-	if (Math.floor(Date.now() / 1000) > payload.exp) {
+	// `exp` is exclusive (RFC 7519): the token is no longer valid AT its
+	// expiry second, not just after it.
+	if (Math.floor(Date.now() / 1000) >= payload.exp) {
 		return null;
 	}
 

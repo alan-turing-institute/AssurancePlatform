@@ -322,3 +322,51 @@ describe.each(PROVIDERS)("signIn account linking — $name", (fixture) => {
 		expect(await snapshotUser(user.id)).toEqual(before);
 	});
 });
+
+describe("signIn account linking — non-OAuth sign-in with a stray intent cookie", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.stubEnv("NEXTAUTH_SECRET", TEST_NEXTAUTH_SECRET);
+		vi.stubEnv("NEXTAUTH_URL", PUBLIC_ORIGIN);
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("signs in normally and deletes the cookie without verifying it, when a valid github intent is present but the sign-in is credentials", async () => {
+		const user = await createTestUser();
+		const before = await snapshotUser(user.id);
+		// An abandoned "link GitHub" attempt: the intent is valid and still
+		// unexpired, but this sign-in is a plain username/password one.
+		const intent = createLinkIntent({ userId: user.id, provider: "github" });
+		const jar = await jarWith({ linkIntent: intent, sessionUserId: user.id });
+		installJar(jar);
+
+		const logs = captureLogs();
+		let result: string | boolean;
+		try {
+			result = await signIn({
+				user: { id: user.id, name: user.username, email: user.email },
+				account: {
+					provider: "credentials",
+					type: "credentials",
+					providerAccountId: user.id,
+				},
+			});
+			expect(result).toBe(true);
+			expect(
+				logs.entries.some(
+					(entry) =>
+						entry.reason === "link-intent-invalid" ||
+						entry.reason === "link-intent-session-mismatch"
+				)
+			).toBe(false);
+		} finally {
+			logs.restore();
+		}
+
+		expect(jar.delete).toHaveBeenCalledWith(LINK_COOKIE_NAME);
+		expect(await snapshotUser(user.id)).toEqual(before);
+	});
+});

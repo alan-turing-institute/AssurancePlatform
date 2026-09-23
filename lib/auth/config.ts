@@ -386,6 +386,84 @@ export async function authenticateGoogleWithPrisma(
 }
 
 /**
+ * Outcome of checking a present `LINK_COOKIE_NAME` cookie against the
+ * account currently signing in:
+ * - `"skipped"` — not an OAuth sign-in (e.g. credentials), so the intent
+ *   doesn't apply here; the cookie is still deleted by the caller, but
+ *   nothing is verified and nothing is logged.
+ * - `"rejected"` — an OAuth sign-in, but the intent failed verification or
+ *   the caller's live session doesn't match it; the caller must fail the
+ *   sign-in outright (see `signIn`'s rationale comment).
+ * - `"linked"` — an OAuth sign-in with a valid, session-matching intent.
+ */
+type LinkIntentResolution =
+	| { kind: "linked"; userId: string }
+	| { kind: "rejected" }
+	| { kind: "skipped" };
+
+/**
+ * Verifies a present link-intent cookie against the account/session
+ * currently signing in. Extracted from `signIn` to keep that callback's
+ * cyclomatic/cognitive complexity down (fallow flagged it CRITICAL); the
+ * cookie is always deleted by the caller before this runs, regardless of
+ * what it returns — this function only decides whether to *trust* it.
+ */
+async function resolveLinkIntentUserId({
+	account,
+	cookieStore,
+	linkCookieValue,
+}: {
+	account: { provider?: string; type?: string } | null | undefined;
+	cookieStore: Awaited<ReturnType<typeof import("next/headers").cookies>>;
+	linkCookieValue: string;
+}): Promise<LinkIntentResolution> {
+	// Only OAuth callbacks (github/google) can carry a link intent; a
+	// credentials sign-in that merely happens to still hold a stray,
+	// unexpired cookie from an abandoned linking attempt must proceed
+	// normally, not be rejected for a provider it was never issued for.
+	if (account?.type !== "oauth") {
+		return { kind: "skipped" };
+	}
+
+	const provider = account.provider;
+	const intent = provider
+		? verifyLinkIntent(linkCookieValue, { provider })
+		: null;
+	if (!intent) {
+		log.warn("Rejected OAuth account-link attempt", {
+			reason: "link-intent-invalid",
+		});
+		return { kind: "rejected" };
+	}
+
+	const { getToken } = await import("next-auth/jwt");
+	// getToken()'s declared `req` type only names full Next.js request
+	// shapes (IncomingMessage-with-cookies, NextRequest, NextApiRequest),
+	// but its implementation (next-auth/jwt) only ever reads `req.cookies`
+	// (duck-typed: an object with `.getAll()`, a Map, or a plain record —
+	// all satisfied by next/headers' `cookies()`) and `req.headers` (only
+	// consulted for a Bearer-token fallback we don't use). The cast
+	// reflects that narrower runtime contract.
+	const sessionToken = await getToken({
+		req: { cookies: cookieStore, headers: {} } as unknown as Parameters<
+			typeof getToken
+		>[0]["req"],
+		secret: process.env.NEXTAUTH_SECRET,
+	});
+	const sessionUserId =
+		typeof sessionToken?.id === "string" ? sessionToken.id : undefined;
+
+	if (!sessionUserId || sessionUserId !== intent.userId) {
+		log.warn("Rejected OAuth account-link attempt", {
+			reason: "link-intent-session-mismatch",
+		});
+		return { kind: "rejected" };
+	}
+
+	return { kind: "linked", userId: intent.userId };
+}
+
+/**
  * Configuration options for NextAuth authentication.
  *
  * This object sets up authentication for a Next.js app using GitHub and Google as authentication providers.
@@ -479,12 +557,17 @@ export const authOptions: NextAuthOptions = {
 			// try/catch because `cookies()` can throw outside a real request
 			// context; that failure is treated the same as no cookie at all, so
 			// the standard sign-in/sign-up flow below still runs. Once a cookie
-			// value IS in hand, a failed verification below returns `false`
-			// directly rather than falling through to that standard flow — see
-			// the rationale on the linked issue: falling through on an
-			// expired-but-otherwise-legitimate intent would silently create a
-			// fresh account from the provider email instead of surfacing a
-			// rejected sign-in.
+			// value IS in hand, it is deleted unconditionally (single-use,
+			// regardless of provider) and `resolveLinkIntentUserId` decides
+			// whether it applies to this sign-in. A `"rejected"` outcome returns
+			// `false` directly rather than falling through to the standard
+			// flow — see the rationale on the linked issue: falling through on
+			// an expired-but-otherwise-legitimate intent would silently create
+			// a fresh account from the provider email instead of surfacing a
+			// rejected sign-in. A `"skipped"` outcome (e.g. a credentials
+			// sign-in that still carries a stray, unexpired intent from an
+			// abandoned OAuth-linking attempt) is not an error and must not
+			// block this sign-in.
 			let cookieStore:
 				| Awaited<ReturnType<typeof import("next/headers").cookies>>
 				| undefined;
@@ -499,45 +582,19 @@ export const authOptions: NextAuthOptions = {
 
 			let linkToUserId: string | undefined;
 			if (linkCookieValue && cookieStore) {
-				// Delete first, in every branch below — a link intent is single-use.
 				cookieStore.delete(LINK_COOKIE_NAME);
 
-				const provider = account?.provider;
-				const intent = provider
-					? verifyLinkIntent(linkCookieValue, { provider })
-					: null;
-				if (!intent) {
-					log.warn("Rejected OAuth account-link attempt", {
-						reason: "link-intent-invalid",
-					});
-					return false;
-				}
-
-				const { getToken } = await import("next-auth/jwt");
-				// getToken()'s declared `req` type only names full Next.js request
-				// shapes (IncomingMessage-with-cookies, NextRequest, NextApiRequest),
-				// but its implementation (next-auth/jwt) only ever reads `req.cookies`
-				// (duck-typed: an object with `.getAll()`, a Map, or a plain record —
-				// all satisfied by next/headers' `cookies()`) and `req.headers` (only
-				// consulted for a Bearer-token fallback we don't use). The cast
-				// reflects that narrower runtime contract.
-				const sessionToken = await getToken({
-					req: { cookies: cookieStore, headers: {} } as unknown as Parameters<
-						typeof getToken
-					>[0]["req"],
-					secret: process.env.NEXTAUTH_SECRET,
+				const resolution = await resolveLinkIntentUserId({
+					account,
+					cookieStore,
+					linkCookieValue,
 				});
-				const sessionUserId =
-					typeof sessionToken?.id === "string" ? sessionToken.id : undefined;
-
-				if (!sessionUserId || sessionUserId !== intent.userId) {
-					log.warn("Rejected OAuth account-link attempt", {
-						reason: "link-intent-session-mismatch",
-					});
+				if (resolution.kind === "rejected") {
 					return false;
 				}
-
-				linkToUserId = intent.userId;
+				if (resolution.kind === "linked") {
+					linkToUserId = resolution.userId;
+				}
 			}
 
 			if (account?.provider === "github") {

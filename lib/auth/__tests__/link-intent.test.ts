@@ -61,12 +61,23 @@ describe("createLinkIntent / verifyLinkIntent", () => {
 		vi.useRealTimers();
 	});
 
-	it("accepts a token right up to its expiry boundary", () => {
+	it("rejects a token exactly at its expiry second (exp is exclusive, RFC 7519)", () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
 		const token = createLinkIntent({ userId: "user-1", provider: "github" });
 
 		vi.setSystemTime(new Date("2026-01-01T00:05:00Z")); // exactly the 5-minute boundary
+
+		expect(verifyLinkIntent(token, { provider: "github" })).toBeNull();
+		vi.useRealTimers();
+	});
+
+	it("accepts a token one second before its expiry boundary", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+		const token = createLinkIntent({ userId: "user-1", provider: "github" });
+
+		vi.setSystemTime(new Date("2026-01-01T00:04:59Z")); // one second before the boundary
 
 		expect(verifyLinkIntent(token, { provider: "github" })).toEqual({
 			userId: "user-1",
