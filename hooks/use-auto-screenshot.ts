@@ -64,7 +64,6 @@ export function useAutoScreenshot({
 			const base64Image = await toPng(target as HTMLElement, {
 				backgroundColor: "#ffffff",
 				pixelRatio: 1,
-				skipFonts: true,
 			});
 
 			if (!isUsableDataUrl(base64Image)) {
@@ -131,7 +130,6 @@ export function useAutoScreenshot({
 					toPng(target as HTMLElement, {
 						backgroundColor: "#ffffff",
 						pixelRatio: 1,
-						skipFonts: true,
 					})
 						.then((base64Image) => {
 							if (!isUsableDataUrl(base64Image)) {
