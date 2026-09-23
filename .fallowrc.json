@@ -27,7 +27,7 @@
     "app/**/loading.tsx",
     "app/**/error.tsx",
     "app/**/not-found.tsx",
-    "middleware.ts",
+    "proxy.ts",
     "mdx-components.tsx",
     "next.config.mjs",
     "playwright.config.ts",

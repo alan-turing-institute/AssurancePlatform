@@ -3,7 +3,7 @@ import { withAuth } from "next-auth/middleware";
 import { isAuthRoute, isPublicRoute } from "./lib/routes";
 
 export default withAuth(
-	function middleware(req) {
+	function proxy(req) {
 		const pathname = req.nextUrl.pathname;
 		const token = req.nextauth.token;
 
@@ -13,12 +13,13 @@ export default withAuth(
 		// unauthenticated API caller gets back. Mirrors the JSON error shape
 		// `apiError(unauthorised())` (`lib/api-response.ts`) produces, built
 		// inline rather than importing `unauthorised()` from `lib/errors.ts`:
-		// that file is NOT edge-bundleable — it imports `lib/logger.ts`, which
-		// calls `process.stdout.write` (guarded by a runtime check, but the
-		// Edge Runtime bundler flags the Node API statically regardless of the
-		// guard, and rejects the `next build`). `middleware.unauthenticated-
-		// api.test.ts` asserts this literal stays equal to what
-		// `apiError(unauthorised())` produces, so the two can't drift silently.
+		// the proxy runs on every matched request (Next 16's `proxy` runtime
+		// is always `nodejs`, so this is no longer an Edge Runtime bundling
+		// restriction), and pulling in `lib/errors.ts` would drag
+		// `lib/logger.ts` -> `lib/db-pool-config.ts` into that hot path.
+		// `proxy.unauthenticated-api.test.ts` asserts this literal stays equal
+		// to what `apiError(unauthorised())` produces, so the two can't drift
+		// silently.
 		if (token?.id == null && pathname.startsWith("/api/")) {
 			return NextResponse.json(
 				{ error: "Unauthorised", code: "UNAUTHORISED" },

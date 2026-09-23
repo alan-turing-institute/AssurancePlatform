@@ -20,7 +20,7 @@ import {
  * `requireAuth()`/`requireAuthSession()` in the first place. The other
  * half of the fix — that Next.js's own middleware no longer intercepts
  * `/api/public/*` before the handler ever runs — is covered by the
- * matcher-regex tests in `middleware.test.ts` at the repo root.
+ * matcher-regex tests in `proxy.test.ts` at the repo root.
  *
  * The numeric-id `/api/public/assurance-case/[id]` and legacy
  * `/api/public/case-studies*` routes this file used to cover were retired

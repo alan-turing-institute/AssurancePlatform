@@ -4,7 +4,7 @@
  * `/api/machine/whoami` end to end through the actual running Next.js
  * server + middleware, and a request with no token gets the API error
  * envelope rather than the session-auth redirect that would otherwise
- * catch every other `/api/*` route (see `middleware.ts`'s `api/machine`
+ * catch every other `/api/*` route (see `proxy.ts`'s `api/machine`
  * matcher exemption, unit-tested at the regex level in
  * `src/__tests__/integration/machine-auth.test.ts`).
  *

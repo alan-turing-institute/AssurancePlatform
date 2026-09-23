@@ -8,17 +8,6 @@ const withNextra = nextra({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	output: process.env.NODE_ENV === "development" ? undefined : "standalone",
-	// Exclude content directory from file watching to reduce memory usage in dev
-	// Doc changes require a manual browser refresh
-	webpack: (config, { dev }) => {
-		if (dev) {
-			config.watchOptions = {
-				...config.watchOptions,
-				ignored: ["**/content/**", "**/node_modules/**"],
-			};
-		}
-		return config;
-	},
 	images: {
 		unoptimized: process.env.NODE_ENV === "development",
 		remotePatterns: [

@@ -1301,7 +1301,7 @@ function compileMatcher(pattern: string): RegExp {
 
 describe("middleware — /api/machine exemption (R1)", () => {
 	it("excludes every /api/machine/* path from the auth-redirect matcher", async () => {
-		const { config } = await import("@/middleware");
+		const { config } = await import("@/proxy");
 		const matcherRegex = compileMatcher(config.matcher[0] as string);
 
 		expect(matcherRegex.test("/api/machine/whoami")).toBe(false);
@@ -1311,7 +1311,7 @@ describe("middleware — /api/machine exemption (R1)", () => {
 	});
 
 	it("still matches ordinary protected app/API routes", async () => {
-		const { config } = await import("@/middleware");
+		const { config } = await import("@/proxy");
 		const matcherRegex = compileMatcher(config.matcher[0] as string);
 
 		expect(matcherRegex.test("/dashboard")).toBe(true);
