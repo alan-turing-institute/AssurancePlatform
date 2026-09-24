@@ -307,6 +307,18 @@ describe("resetPassword", () => {
 		);
 	});
 
+	it("rejects a malformed token (wrong length) with the same error as any other invalid token, without touching sessionVersion", async () => {
+		const user = await createTestUser({ authProvider: "LOCAL" });
+
+		const result = await resetPassword("short", STRONG_PASSWORD, TEST_IP);
+		expectError(result, INVALID_TOKEN_MESSAGE);
+
+		const after = await prisma.user.findUniqueOrThrow({
+			where: { id: user.id },
+		});
+		expect(after.sessionVersion).toBe(user.sessionVersion);
+	});
+
 	it("rejects a replayed token after a successful reset, with the same error as any other invalid token", async () => {
 		const { token } = await createUserWithValidToken();
 

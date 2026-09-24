@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { hashPassword } from "@/lib/auth/password-service";
 import prisma from "@/lib/prisma";
@@ -603,5 +604,38 @@ describe("changePassword — sessionVersion", () => {
 
 		const updated = await prisma.user.findUnique({ where: { id: user.id } });
 		expect(updated?.sessionVersion).toBe(user.sessionVersion);
+	});
+});
+
+// ============================================
+// changePassword — clears a pending password reset (AP-QA-006)
+// ============================================
+
+describe("changePassword — clears a pending password reset (AP-QA-006)", () => {
+	it("nulls the pending reset token hash and expiry on a successful change", async () => {
+		const currentPassword = "correct horse battery staple";
+		const newPassword = "StrongP@ss1";
+		const passwordHash = await hashPassword(currentPassword);
+		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
+
+		await prisma.user.update({
+			where: { id: user.id },
+			data: {
+				passwordResetTokenHash: createHash("sha256")
+					.update("a".repeat(64), "utf8")
+					.digest("hex"),
+				passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000),
+			},
+		});
+
+		expectSuccess(
+			await changePassword(user.id, { currentPassword, newPassword })
+		);
+
+		const updated = await prisma.user.findUniqueOrThrow({
+			where: { id: user.id },
+		});
+		expect(updated.passwordResetTokenHash).toBeNull();
+		expect(updated.passwordResetExpires).toBeNull();
 	});
 });
