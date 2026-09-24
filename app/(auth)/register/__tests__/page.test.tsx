@@ -22,6 +22,8 @@ vi.mock("next/navigation", () => ({
 
 import RegisterPage from "../page";
 
+const SIGN_UP_HEADING_REGEX = /sign up today!/i;
+
 describe("RegisterPage", () => {
 	it("renders the registration form when there is no session", async () => {
 		vi.mocked(validateSession).mockResolvedValue(null);
@@ -29,7 +31,7 @@ describe("RegisterPage", () => {
 		render(await RegisterPage());
 
 		expect(
-			screen.getByRole("heading", { name: /sign up today!/i })
+			screen.getByRole("heading", { name: SIGN_UP_HEADING_REGEX })
 		).toBeInTheDocument();
 		expect(redirect).not.toHaveBeenCalled();
 	});

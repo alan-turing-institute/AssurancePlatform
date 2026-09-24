@@ -38,7 +38,9 @@ describe("PasswordForm", () => {
 			update: vi.fn(),
 		} as unknown as ReturnType<typeof useSession>);
 		server.use(
-			http.put("/api/users/me/password", () => HttpResponse.json({ data: true }))
+			http.put("/api/users/me/password", () =>
+				HttpResponse.json({ data: true })
+			)
 		);
 
 		const user = userEvent.setup();

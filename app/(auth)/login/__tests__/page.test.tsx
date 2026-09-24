@@ -35,6 +35,8 @@ function searchParams(
 	return Promise.resolve(params);
 }
 
+const SIGN_IN_HEADING_REGEX = /sign in to your account/i;
+
 describe("SignInPage", () => {
 	it("renders the sign-in form when there is no session", async () => {
 		vi.mocked(validateSession).mockResolvedValue(null);
@@ -42,7 +44,7 @@ describe("SignInPage", () => {
 		render(await SignInPage({ searchParams: searchParams() }));
 
 		expect(
-			screen.getByRole("heading", { name: /sign in to your account/i })
+			screen.getByRole("heading", { name: SIGN_IN_HEADING_REGEX })
 		).toBeInTheDocument();
 		expect(redirect).not.toHaveBeenCalled();
 	});

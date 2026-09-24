@@ -15,9 +15,11 @@ function SignInContent() {
  * the check `proxy.ts` used to apply before this redirect moved here
  * (AP-QA-003) — anything else falls back to `/dashboard`.
  */
-function safeRedirectTarget(rawRedirect: string | string[] | undefined): string {
+function safeRedirectTarget(
+	rawRedirect: string | string[] | undefined
+): string {
 	const value = Array.isArray(rawRedirect) ? rawRedirect[0] : rawRedirect;
-	if (value && value.startsWith("/") && !value.startsWith("//")) {
+	if (value?.startsWith("/") && !value.startsWith("//")) {
 		return value;
 	}
 	return "/dashboard";
