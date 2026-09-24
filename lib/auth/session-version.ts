@@ -1,5 +1,3 @@
-import { prisma } from "@/lib/prisma";
-
 /**
  * Thrown by `callbacks.jwt` (lib/auth/config.ts) when a token's stamped
  * session version no longer matches the user's current one — a signal, not
@@ -20,10 +18,21 @@ export class SessionRevokedError extends Error {
 /**
  * Reads `userId`'s current session version — a primary-key lookup of one
  * integer column. Returns `null` if the user no longer exists.
+ *
+ * Dynamic import, not a top-level one: `lib/auth/config.ts` (this module's
+ * only caller) deliberately keeps Prisma out of its module-level imports —
+ * see its own dynamic imports in `authenticateWithPrisma` and friends — so
+ * that importing `authOptions` doesn't drag in a database connection for
+ * code paths that never authenticate. A static `import { prisma } from
+ * "@/lib/prisma"` here would undo that: `lib/prisma.ts` builds its client at
+ * module load time, which throws immediately wherever `DATABASE_URL` isn't
+ * set (e.g. every unit test that merely imports `lib/api-response.ts`,
+ * which imports `validate-session.ts`, which imports `config.ts`).
  */
 export async function getSessionVersion(
 	userId: string
 ): Promise<number | null> {
+	const { prisma } = await import("@/lib/prisma");
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: { sessionVersion: true },

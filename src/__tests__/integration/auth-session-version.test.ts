@@ -9,6 +9,7 @@ import {
 	resetPassword,
 } from "@/lib/services/password-reset-service";
 import { changePassword } from "@/lib/services/user-management-service";
+import { expectSuccess } from "../utils/assertion-helpers";
 import { createTestUser } from "../utils/prisma-factories";
 
 /**
@@ -61,11 +62,12 @@ describe("callbacks.jwt — session version (AP-QA-003)", () => {
 		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
 		const oldToken = await jwt(signInParams(user.id));
 
-		const changeResult = await changePassword(user.id, {
-			currentPassword: CURRENT_PASSWORD,
-			newPassword: NEW_PASSWORD,
-		});
-		expect(changeResult.error).toBeUndefined();
+		expectSuccess(
+			await changePassword(user.id, {
+				currentPassword: CURRENT_PASSWORD,
+				newPassword: NEW_PASSWORD,
+			})
+		);
 
 		await expect(jwt({ token: oldToken } as JwtParams)).rejects.toThrow(
 			SessionRevokedError
@@ -90,12 +92,9 @@ describe("callbacks.jwt — session version (AP-QA-003)", () => {
 		if (!passwordResetToken) {
 			throw new Error("Reset token was not created");
 		}
-		const resetResult = await resetPassword(
-			passwordResetToken,
-			NEW_PASSWORD,
-			TEST_IP
+		expectSuccess(
+			await resetPassword(passwordResetToken, NEW_PASSWORD, TEST_IP)
 		);
-		expect(resetResult.error).toBeUndefined();
 
 		await expect(jwt({ token: oldToken } as JwtParams)).rejects.toThrow(
 			SessionRevokedError
@@ -136,11 +135,12 @@ describe("callbacks.jwt — session version (AP-QA-003)", () => {
 			passwordHash,
 			authProvider: "LOCAL",
 		});
-		const otherChangeResult = await changePassword(otherUser.id, {
-			currentPassword: CURRENT_PASSWORD,
-			newPassword: NEW_PASSWORD,
-		});
-		expect(otherChangeResult.error).toBeUndefined();
+		expectSuccess(
+			await changePassword(otherUser.id, {
+				currentPassword: CURRENT_PASSWORD,
+				newPassword: NEW_PASSWORD,
+			})
+		);
 
 		await expect(jwt({ token: githubToken } as JwtParams)).resolves.toEqual(
 			githubToken

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
-import { isAuthRoute, isPublicRoute } from "./lib/routes";
+import { isPublicRoute } from "./lib/routes";
 
 export default withAuth(
 	function proxy(req) {
@@ -27,17 +27,14 @@ export default withAuth(
 			);
 		}
 
-		// Redirect authenticated users away from auth pages (login/register)
-		if (token?.id != null && isAuthRoute(pathname)) {
-			const rawRedirect =
-				req.nextUrl.searchParams.get("redirect") || "/dashboard";
-			// Prevent open redirect: only allow relative paths that don't start with //
-			const redirectTo =
-				rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
-					? rawRedirect
-					: "/dashboard";
-			return NextResponse.redirect(new URL(redirectTo, req.url));
-		}
+		// Authenticated users are redirected away from /login and /register by
+		// those pages themselves (server components calling validateSession()),
+		// not here — this middleware decodes the cookie with getToken and never
+		// runs callbacks.jwt, so it cannot tell a live token from one revoked by
+		// a password change or reset. Redirecting here on token presence alone
+		// reintroduced exactly that loop (AP-QA-003): the page saw no session
+		// and sent the browser to /login, and this middleware sent it straight
+		// back to /dashboard.
 
 		// Check redirect loop protection
 		const redirectCount = Number.parseInt(
