@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { hashPassword } from "@/lib/auth/password-service";
 import prisma from "@/lib/prisma";
 import { sendAccountDeletedEmail } from "@/lib/services/email-service";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
 import {
+	changePassword,
 	deleteAccount,
 	deleteAccountForRetention,
 } from "@/lib/services/user-management-service";
@@ -548,5 +550,58 @@ describe("deleteAccount — bulk deletion within the transaction budget (QA roun
 		for (const t of teamsAfter) {
 			expect(t.createdById).toBe(otherMember.id);
 		}
+	});
+});
+
+// ============================================
+// changePassword — sessionVersion (AP-QA-003)
+// ============================================
+
+describe("changePassword — sessionVersion", () => {
+	const CURRENT_PASSWORD = "correct horse battery staple";
+	const NEW_PASSWORD = "StrongP@ss1";
+
+	it("increments sessionVersion by exactly one on a successful change", async () => {
+		const passwordHash = await hashPassword(CURRENT_PASSWORD);
+		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
+
+		expectSuccess(
+			await changePassword(user.id, {
+				currentPassword: CURRENT_PASSWORD,
+				newPassword: NEW_PASSWORD,
+			})
+		);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.sessionVersion).toBe(user.sessionVersion + 1);
+	});
+
+	it("leaves sessionVersion unchanged when the current password is wrong", async () => {
+		const passwordHash = await hashPassword(CURRENT_PASSWORD);
+		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
+
+		expectError(
+			await changePassword(user.id, {
+				currentPassword: "wrong-password",
+				newPassword: NEW_PASSWORD,
+			})
+		);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.sessionVersion).toBe(user.sessionVersion);
+	});
+
+	it("leaves sessionVersion unchanged for a non-LOCAL account", async () => {
+		const user = await createTestUser({ authProvider: "GITHUB" });
+
+		expectError(
+			await changePassword(user.id, {
+				currentPassword: CURRENT_PASSWORD,
+				newPassword: NEW_PASSWORD,
+			})
+		);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.sessionVersion).toBe(user.sessionVersion);
 	});
 });
