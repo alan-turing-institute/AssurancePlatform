@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { logger } from "@/lib/logger";
 import {
 	deleteBlob,
-	getExtensionFromMimeType,
 	getMimeTypeFromExtension,
 	isAzureStorageConfigured,
 	uploadToBlob,
@@ -25,7 +24,7 @@ const log = logger.child({ service: "file-storage-service" });
  */
 
 const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = [
 	"image/jpeg",
 	"image/png",
@@ -34,6 +33,76 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 type SaveFileResult = { data: { path: string } } | { error: string };
+
+export interface DetectedImageFormat {
+	extension: string;
+	mimeType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+}
+
+/** PNG's fixed 8-byte signature (RFC 2083 §3.1). */
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/**
+ * One entry per allowed image format, each testing the buffer's leading
+ * magic bytes rather than trusting a declared MIME type — the check that
+ * catches a file whose extension/`Content-Type` lies about its content.
+ */
+const MAGIC_BYTE_CHECKS: Array<{
+	extension: string;
+	matches: (buffer: Buffer) => boolean;
+	mimeType: DetectedImageFormat["mimeType"];
+}> = [
+	{
+		mimeType: "image/jpeg",
+		extension: ".jpg",
+		matches: (buffer) =>
+			buffer.length >= 3 &&
+			buffer[0] === 0xff &&
+			buffer[1] === 0xd8 &&
+			buffer[2] === 0xff,
+	},
+	{
+		mimeType: "image/png",
+		extension: ".png",
+		matches: (buffer) =>
+			buffer.length >= PNG_SIGNATURE.length &&
+			PNG_SIGNATURE.every((byte, index) => buffer[index] === byte),
+	},
+	{
+		mimeType: "image/gif",
+		extension: ".gif",
+		matches: (buffer) => {
+			if (buffer.length < 6) {
+				return false;
+			}
+			const header = buffer.subarray(0, 6).toString("ascii");
+			return header === "GIF87a" || header === "GIF89a";
+		},
+	},
+	{
+		mimeType: "image/webp",
+		extension: ".webp",
+		matches: (buffer) =>
+			buffer.length >= 12 &&
+			buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+			buffer.subarray(8, 12).toString("ascii") === "WEBP",
+	},
+];
+
+/**
+ * Detects an image's real format from its leading bytes ("magic bytes"),
+ * independent of any declared MIME type or file extension. Returns `null`
+ * when nothing matches — including a near-miss such as a RIFF container
+ * that isn't WebP.
+ */
+export function detectImageFormat(buffer: Buffer): DetectedImageFormat | null {
+	for (const check of MAGIC_BYTE_CHECKS) {
+		if (check.matches(buffer)) {
+			return { mimeType: check.mimeType, extension: check.extension };
+		}
+	}
+	return null;
+}
 
 /**
  * Ensures the upload directory exists (for local storage)
@@ -47,11 +116,16 @@ async function ensureDirectory(dirPath: string): Promise<void> {
 }
 
 /**
- * Validates a file before saving
+ * Validates a file before saving: size and declared MIME type, then the
+ * buffer's actual content signature — both that it is one of the four
+ * allowed formats, and that it matches the declared `file.type` (a lying
+ * `Content-Type` no longer gets a free pass). The stored extension is
+ * derived from the detected format, not the declared one.
  */
 function validateFile(
-	file: File
-): { valid: true } | { valid: false; error: string } {
+	file: File,
+	buffer: Buffer
+): { valid: true; extension: string } | { valid: false; error: string } {
 	if (file.size > MAX_FILE_SIZE) {
 		return {
 			valid: false,
@@ -66,7 +140,16 @@ function validateFile(
 		};
 	}
 
-	return { valid: true };
+	const detected = detectImageFormat(buffer);
+	if (!detected || detected.mimeType !== file.type) {
+		return {
+			valid: false,
+			error:
+				"Invalid file type. The file's content does not match an allowed image format.",
+		};
+	}
+
+	return { valid: true, extension: detected.extension };
 }
 
 /**
@@ -107,14 +190,14 @@ export async function saveFile(
 	file: File,
 	subDirectory: string
 ): Promise<SaveFileResult> {
-	const validation = validateFile(file);
+	const arrayBuffer = await file.arrayBuffer();
+	const buffer = Buffer.from(arrayBuffer);
+
+	const validation = validateFile(file, buffer);
 	if (validation.valid === false) {
 		return { error: validation.error };
 	}
-
-	const extension = getExtensionFromMimeType(file.type);
-	const arrayBuffer = await file.arrayBuffer();
-	const buffer = Buffer.from(arrayBuffer);
+	const { extension } = validation;
 
 	// Use Azure Blob Storage in production
 	if (isAzureStorageConfigured()) {

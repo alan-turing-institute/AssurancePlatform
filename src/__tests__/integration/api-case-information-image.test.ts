@@ -1,3 +1,5 @@
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
@@ -12,14 +14,51 @@ vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
 
+// Several tests below spy on saveFile/deleteFile without an inline
+// mockRestore() — restoring here instead means a failed assertion mid-test
+// can't leak a spy into the next test.
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
 const NON_EXISTENT_CASE_ID = "00000000-0000-0000-0000-000000000000";
 const UPLOADED_PATH_PATTERN = /^\/uploads\/cases\//;
 
+// PNG's fixed 8-byte signature — real magic bytes, so the content-signature
+// check (AP-QA-007) accepts these fixtures as a genuine PNG rather than
+// rejecting them for a declared/detected mismatch.
+const PNG_MAGIC_BYTES = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+// Cap enforced by the route (`MAX_IMAGE_UPLOAD_BYTES` in route.ts) —
+// MAX_FILE_SIZE (5 MB) plus 16 KiB of multipart framing headroom.
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024 + 16 * 1024;
+
 function buildImageFormData(filename = "feature.png"): FormData {
+	const formData = new FormData();
+	const file = new File(
+		[new Uint8Array([...PNG_MAGIC_BYTES, 0, 0, 0, 0])],
+		filename,
+		{ type: "image/png" }
+	);
+	formData.append("image", file);
+	return formData;
+}
+
+/** Declares image/png but the bytes are not a real PNG signature. */
+function buildMismatchedImageFormData(filename = "feature.png"): FormData {
 	const formData = new FormData();
 	const file = new File([new Uint8Array([1, 2, 3, 4])], filename, {
 		type: "image/png",
 	});
+	formData.append("image", file);
+	return formData;
+}
+
+/** A multipart body whose file bytes alone exceed the route's upload cap. */
+function buildOversizedImageFormData(filename = "feature.png"): FormData {
+	const formData = new FormData();
+	const oversized = new Uint8Array(MAX_IMAGE_UPLOAD_BYTES + 1024);
+	oversized.set(PNG_MAGIC_BYTES, 0);
+	const file = new File([oversized], filename, { type: "image/png" });
 	formData.append("image", file);
 	return formData;
 }
@@ -145,22 +184,21 @@ describe("POST /api/cases/[id]/information/image", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns 403 for a user with only VIEW permission and does not orphan the file", async () => {
+	it("returns 403 for a user with only VIEW permission and never touches storage", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 
-		// The route saves the file to disk before the EDIT-permission check
-		// rejects the persist step, then cleans up via deleteFile(). Spy on
-		// deleteFile (default vi.spyOn behaviour still calls through to the
-		// real implementation) to capture the path it was given, so we can
-		// independently verify the file is actually gone from disk rather
-		// than just trusting that deleteFile() was invoked.
+		// EDIT is now checked before the body is even parsed (AP-QA-007), so a
+		// VIEW-only user's request should never reach saveFile or deleteFile —
+		// spy on both (default vi.spyOn behaviour still calls through) to prove
+		// it, rather than only inferring it from the response status.
 		const fileStorageService = await import(
 			"@/lib/services/file-storage-service"
 		);
+		const saveFileSpy = vi.spyOn(fileStorageService, "saveFile");
 		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
 
 		const { POST } = await import(
@@ -175,18 +213,187 @@ describe("POST /api/cases/[id]/information/image", () => {
 		});
 
 		expect(response.status).toBe(403);
-		expect(deleteFileSpy).toHaveBeenCalledTimes(1);
-		const deleteFileCall = deleteFileSpy.mock.calls[0];
-		if (!deleteFileCall) {
-			throw new Error("deleteFile was not called");
-		}
-		const [savedPath] = deleteFileCall;
-		expect(savedPath).toMatch(UPLOADED_PATH_PATTERN);
+		expect(saveFileSpy).toHaveBeenCalledTimes(0);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
+	});
 
-		const { fileExists } = fileStorageService;
-		expect(await fileExists(savedPath)).toBe(false);
+	it("returns 403 for a user with no access at all and never touches storage", async () => {
+		const owner = await createTestUser();
+		const outsider = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(outsider.id, outsider.username, outsider.email);
 
-		deleteFileSpy.mockRestore();
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const saveFileSpy = vi.spyOn(fileStorageService, "saveFile");
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
+		const { POST } = await import(
+			"@/app/api/cases/[id]/information/image/route"
+		);
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
+			{ method: "POST", body: buildImageFormData() }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(403);
+		expect(saveFileSpy).toHaveBeenCalledTimes(0);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
+	});
+
+	it("returns 413 for a body whose actual bytes exceed the cap, without calling storage", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const saveFileSpy = vi.spyOn(fileStorageService, "saveFile");
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
+		const { POST } = await import(
+			"@/app/api/cases/[id]/information/image/route"
+		);
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
+			{ method: "POST", body: buildOversizedImageFormData() }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(413);
+		expect(saveFileSpy).toHaveBeenCalledTimes(0);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
+	});
+
+	it("returns 413 when Content-Length alone declares more than the cap, without calling storage", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const saveFileSpy = vi.spyOn(fileStorageService, "saveFile");
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
+		const { POST } = await import(
+			"@/app/api/cases/[id]/information/image/route"
+		);
+		// A raw stream so the declared header can lie about the actual (small)
+		// body — proves the header check alone rejects the request, before any
+		// byte of the body is read.
+		const stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode("irrelevant"));
+				controller.close();
+			},
+		});
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
+			{
+				method: "POST",
+				body: stream,
+				duplex: "half",
+				headers: {
+					"content-type": "multipart/form-data; boundary=x",
+					"content-length": String(MAX_IMAGE_UPLOAD_BYTES + 1),
+				},
+			}
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(413);
+		expect(saveFileSpy).toHaveBeenCalledTimes(0);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
+	});
+
+	it("returns 413 when a file under the multipart cap still exceeds MAX_FILE_SIZE on its own, and writes nothing", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
+		// One byte over MAX_FILE_SIZE, well under MAX_IMAGE_UPLOAD_BYTES (the
+		// multipart framing headroom absorbs it), so readFormDataWithLimit
+		// admits the request and saveFile()'s own post-parse size check is
+		// what has to reject it.
+		const formData = new FormData();
+		const overweight = new Uint8Array(fileStorageService.MAX_FILE_SIZE + 1);
+		overweight.set(PNG_MAGIC_BYTES, 0);
+		formData.append(
+			"image",
+			new File([overweight], "feature.png", { type: "image/png" })
+		);
+
+		const { POST } = await import(
+			"@/app/api/cases/[id]/information/image/route"
+		);
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
+			{ method: "POST", body: formData }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(413);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
+
+		// A rejected validateFile() call never reaches ensureDirectory(), so
+		// the case's upload directory should never have been created at all.
+		const caseUploadDir = join(
+			process.cwd(),
+			"public",
+			"uploads",
+			"cases",
+			testCase.id
+		);
+		await expect(readdir(caseUploadDir)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+	});
+
+	it("returns 400 when the declared type is image/png but the bytes are not a real PNG, and never deletes anything", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		// The content-signature check runs inside saveFile()'s own validation
+		// (AP-QA-007 §3), so saveFile is still called — what must not happen is
+		// an actual write reaching disk/blob storage, which a failed
+		// validation never gets to, and no cleanup delete (nothing was ever
+		// written to clean up).
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
+		const { POST } = await import(
+			"@/app/api/cases/[id]/information/image/route"
+		);
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
+			{ method: "POST", body: buildMismatchedImageFormData() }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
 	});
 });
 
@@ -263,7 +470,7 @@ describe("DELETE /api/cases/[id]/information/image", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns 403 for a user with only VIEW permission", async () => {
+	it("returns 403 for a user with only VIEW permission and never calls deleteFile", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();
 		const testCase = await createTestCase(owner.id);
@@ -272,6 +479,11 @@ describe("DELETE /api/cases/[id]/information/image", () => {
 			featureImageUrl: "/uploads/cases/pre-existing.png",
 		});
 		await mockAuth(viewer.id, viewer.username, viewer.email);
+
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
 
 		const { DELETE } = await import(
 			"@/app/api/cases/[id]/information/image/route"
@@ -285,5 +497,6 @@ describe("DELETE /api/cases/[id]/information/image", () => {
 		});
 
 		expect(response.status).toBe(403);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
 	});
 });

@@ -545,6 +545,42 @@ export async function fetchCaseFromPrisma(
 	};
 }
 
+/**
+ * Resolves a case's name for viewer-facing surfaces that must not disclose
+ * it to someone without VIEW access — currently the case page's server-
+ * rendered `<title>` (AP-QA-012). Checks `canAccessCase` first (owner,
+ * direct and team grants; trashed cases excluded by default) and only then
+ * looks the name up directly, rather than reusing `fetchCaseFromPrisma`,
+ * which does far more work than a page title needs.
+ *
+ * Returns `null` for no access, a missing case and a trashed case alike —
+ * one return value, so the caller cannot distinguish "you can't see this"
+ * from "this doesn't exist", the same anti-enumeration discipline as
+ * `fetchCaseFromPrisma`. `deletedAt: null` on the lookup is defence in
+ * depth alongside `canAccessCase`'s own trash exclusion, not a substitute
+ * for it.
+ */
+export async function getCaseNameForViewer(
+	userId: string,
+	caseId: string
+): Promise<string | null> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	if (!hasAccess) {
+		return null;
+	}
+
+	try {
+		const record = await prisma.assuranceCase.findUnique({
+			where: { id: caseId, deletedAt: null },
+			select: { name: true },
+		});
+		return record?.name ?? null;
+	} catch (error) {
+		log.error("getCaseNameForViewer", { userId, caseId, error });
+		return null;
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Case list types
 // ---------------------------------------------------------------------------

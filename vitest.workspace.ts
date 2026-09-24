@@ -30,6 +30,14 @@ export default defineConfig({
 				},
 			},
 			{
+				// react() gives .tsx modules pulled into an integration test (e.g.
+				// case-page-metadata.test.ts importing a page.tsx that transitively
+				// imports client components) the same automatic JSX transform the
+				// unit project gets via vitest.config.ts. Without it, JSX compiles
+				// to the classic `React.createElement` runtime, which fails at
+				// import time with "React is not defined" in any file that uses
+				// JSX without importing React explicitly.
+				plugins: [react()],
 				resolve: {
 					alias: {
 						"@": path.resolve(import.meta.dirname, "./"),
@@ -55,6 +63,16 @@ export default defineConfig({
 					globalSetup: ["./src/__tests__/scripts/setup-test-db.ts"],
 					testTimeout: 30_000,
 					hookTimeout: 15_000,
+					// codemirror-json-schema's ESM build omits file extensions on its
+					// relative imports, which fails Node's native ESM resolver —
+					// reachable here now that case-page-metadata.test.ts imports a
+					// page.tsx that transitively imports it. Same workaround as
+					// vitest.config.ts (the unit project).
+					server: {
+						deps: {
+							inline: ["codemirror-json-schema"],
+						},
+					},
 					pool: "forks",
 					// vitest 4 replaced poolOptions.forks.maxForks with a single
 					// maxWorkers option shared across pool types.
