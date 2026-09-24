@@ -115,6 +115,13 @@ const ERROR_MAPPINGS: Array<{
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
 	{ pattern: "already", factory: conflict },
+	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
+	// outside the allowed set, or one whose content signature doesn't match
+	// what was declared (AP-QA-007), is a validation failure (400), not the
+	// unmapped 500 this fell through to before: no earlier entry in this
+	// table matched "Invalid file type", so `saveFile`'s rejection reached
+	// production users as an internal error rather than a 400.
+	{ pattern: "Invalid file type", factory: () => validationError("") },
 	// `assertPluginEnabledForUser` ("Plugin '<id>' is not enabled",
 	// `plugin-enablement-service.ts`'s `assertPluginEnabledForUser`) — a
 	// plugin switched off (deployment, or user-level) is a clean, expected

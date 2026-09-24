@@ -64,6 +64,35 @@ export async function getCaseInformation(
 }
 
 /**
+ * Reads the case information record for a case. Requires EDIT — same shape
+ * as `getCaseInformation`, but for callers about to perform a mutating side
+ * effect (e.g. the feature-image upload route) that must refuse a VIEW-only
+ * or inaccessible user before that side effect happens, rather than only
+ * when a later `upsertCaseInformation` call is reached. Same "Permission
+ * denied" for missing and inaccessible cases as `getCaseInformation` (repo
+ * convention — prevents resource-enumeration via this surface).
+ */
+export async function getCaseInformationForEdit(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseInformation | null> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const record = await prisma.caseInformation.findUnique({
+			where: { caseId },
+		});
+		return { data: record };
+	} catch (error) {
+		log.error("Failed to get case information", { error });
+		return { error: "Failed to fetch case information" };
+	}
+}
+
+/**
  * Creates or updates the case information record for a case. Requires EDIT.
  * A single upsert, not separate create/update entry points: the record is a
  * 1:1 "save whatever fields are provided" resource (ADR §1 — "editable any

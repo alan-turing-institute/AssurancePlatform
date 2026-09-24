@@ -121,6 +121,67 @@ export async function readJsonBody(
 }
 
 /**
+ * Reads a `multipart/form-data` request body with a byte cap, before the
+ * body is materialised into `FormData` — the same two-layer enforcement as
+ * `readJsonBody` above (reject on a `Content-Length` that already declares
+ * more than `maxBytes`, without reading anything; otherwise stream the body,
+ * keeping a running byte count, and cancel the moment it crosses `maxBytes`)
+ * so a client that omits or lies about `Content-Length` can't defeat the cap
+ * either way. Throws `payloadTooLarge()` (413) on either path.
+ *
+ * On success, builds the `FormData` from the bytes actually read via a
+ * `Response`, forwarding the original request's `content-type` header (which
+ * carries the multipart boundary) — `FormData` cannot be constructed
+ * directly from raw bytes.
+ */
+export async function readFormDataWithLimit(
+	request: Request,
+	maxBytes: number
+): Promise<FormData> {
+	const declaredLength = request.headers.get("content-length");
+	if (declaredLength !== null) {
+		const declared = Number(declaredLength);
+		if (Number.isFinite(declared) && declared > maxBytes) {
+			throw payloadTooLarge();
+		}
+	}
+
+	if (!request.body) {
+		return new FormData();
+	}
+
+	const reader = request.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let receivedBytes = 0;
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) {
+			break;
+		}
+		receivedBytes += value.byteLength;
+		if (receivedBytes > maxBytes) {
+			// Best-effort clean-up, see the matching comment in `readJsonBody`.
+			await reader.cancel().catch(() => undefined);
+			throw payloadTooLarge();
+		}
+		chunks.push(value);
+	}
+
+	const bytes = new Uint8Array(receivedBytes);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+
+	const contentType = request.headers.get("content-type") ?? "";
+	return await new Response(bytes, {
+		headers: { "content-type": contentType },
+	}).formData();
+}
+
+/**
  * `readJsonBody` followed by `schema.safeParse`. Throws `validationError()`
  * with the schema's own first-issue message on failure — the same message
  * routes surface today via `schema.safeParse(...).error.issues[0]?.message`.
