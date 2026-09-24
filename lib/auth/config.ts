@@ -4,6 +4,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { verifyLinkIntent } from "@/lib/auth/link-intent";
+import {
+	assertSessionVersionCurrent,
+	getSessionVersion,
+} from "@/lib/auth/session-version";
 import { encryptForStorage } from "@/lib/auth/token-encryption";
 import { logger } from "@/lib/logger";
 
@@ -699,16 +703,30 @@ export const authOptions: NextAuthOptions = {
 		/**
 		 * Callback to handle JWT token creation and updates.
 		 *
+		 * On initial sign-in (`user` present), stamps the token with the user's
+		 * current session version. On every later read (`user` absent), rejects
+		 * the token — by throwing `SessionRevokedError` — if that stamped
+		 * version no longer matches the user's current one: the revocation
+		 * lever for AP-QA-003 (password change/reset). See
+		 * `lib/auth/session-version.ts` for why a throw, not a return of
+		 * `null`, is what next-auth's session route actually honours.
+		 *
 		 * @param {Object} params - Parameters related to the JWT.
 		 * @param {Object} params.token - The current token.
 		 * @param {Object} params.user - The user object returned after sign-in (initial sign-in only).
 		 * @returns {Object} The updated token with user ID and provider information.
 		 */
-		jwt({ token, user }) {
+		async jwt({ token, user }) {
 			if (user) {
 				token.id = user.id;
 				token.provider = user.provider || "credentials";
+				token.sessionVersion = user.id
+					? ((await getSessionVersion(user.id)) ?? undefined)
+					: undefined;
+				return token;
 			}
+
+			await assertSessionVersionCurrent(token.id, token.sessionVersion);
 			return token;
 		},
 	},

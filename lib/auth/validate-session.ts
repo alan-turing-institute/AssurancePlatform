@@ -13,7 +13,11 @@ export interface ValidatedSession {
 /**
  * Validates the current user session.
  *
- * Trusts the NextAuth JWT session directly - no database lookup required.
+ * Calls next-auth's `getServerSession`, which runs `callbacks.jwt`
+ * (lib/auth/config.ts) — that callback does a database lookup on every call,
+ * to check the token's stamped session version against the user's current
+ * one (lib/auth/session-version.ts), so a token from before a password
+ * change or reset is rejected here rather than trusted.
  *
  * @returns {Promise<ValidatedSession | null>} The validated session with userId, or null if invalid
  */
