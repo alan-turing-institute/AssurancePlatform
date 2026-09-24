@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
+	cleanupExpiredTokens,
 	requestPasswordReset,
 	resetPassword,
 	validateResetToken,
@@ -287,5 +288,69 @@ describe("resetPassword", () => {
 		});
 		expect(attempt).not.toBeNull();
 		expect(attempt?.successful).toBe(true);
+	});
+
+	it("increments sessionVersion by exactly one on success", async () => {
+		const { userId, token } = await createUserWithValidToken();
+		const before = await prisma.user.findUniqueOrThrow({
+			where: { id: userId },
+		});
+
+		expectSuccess(await resetPassword(token, STRONG_PASSWORD, TEST_IP));
+
+		const after = await prisma.user.findUniqueOrThrow({
+			where: { id: userId },
+		});
+		expect(after.sessionVersion).toBe(before.sessionVersion + 1);
+	});
+});
+
+// ============================================
+// sessionVersion — unaffected paths (AP-QA-003)
+// ============================================
+
+describe("sessionVersion — unaffected paths", () => {
+	it("requestPasswordReset leaves sessionVersion unchanged", async () => {
+		const user = await createTestUser({ authProvider: "LOCAL" });
+
+		expectSuccess(await requestPasswordReset(user.email, TEST_IP));
+
+		const after = await prisma.user.findUniqueOrThrow({
+			where: { id: user.id },
+		});
+		expect(after.sessionVersion).toBe(user.sessionVersion);
+	});
+
+	it("an invalid-token resetPassword leaves sessionVersion unchanged", async () => {
+		const user = await createTestUser({ authProvider: "LOCAL" });
+
+		expectError(
+			await resetPassword("e".repeat(64), STRONG_PASSWORD, TEST_IP),
+			"Invalid or expired reset token"
+		);
+
+		const after = await prisma.user.findUniqueOrThrow({
+			where: { id: user.id },
+		});
+		expect(after.sessionVersion).toBe(user.sessionVersion);
+	});
+
+	it("cleanupExpiredTokens leaves sessionVersion unchanged", async () => {
+		const user = await createTestUser({ authProvider: "LOCAL" });
+		const expiredToken = "f".repeat(64);
+		await prisma.user.update({
+			where: { id: user.id },
+			data: {
+				passwordResetToken: expiredToken,
+				passwordResetExpires: new Date(Date.now() - 61 * 60 * 1000),
+			},
+		});
+
+		await cleanupExpiredTokens();
+
+		const after = await prisma.user.findUniqueOrThrow({
+			where: { id: user.id },
+		});
+		expect(after.sessionVersion).toBe(user.sessionVersion);
 	});
 });

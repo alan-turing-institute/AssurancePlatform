@@ -1,6 +1,13 @@
+import { redirect } from "next/navigation";
 import RegisterForm from "@/components/auth/register-form";
+import { validateSession } from "@/lib/auth/validate-session";
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+	const session = await validateSession();
+	if (session) {
+		redirect("/dashboard");
+	}
+
 	return (
 		<div className="flex min-h-screen flex-1 flex-col justify-center bg-muted py-12 sm:px-6 lg:px-8">
 			<div className="sm:mx-auto sm:w-full sm:max-w-md">

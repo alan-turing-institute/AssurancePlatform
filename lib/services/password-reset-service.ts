@@ -248,7 +248,9 @@ export async function resetPassword(
 	// Hash the new password
 	const passwordHash = await hashPassword(newPassword);
 
-	// Update the user's password and clear the reset token
+	// Update the user's password, clear the reset token, and revoke every
+	// existing session in the same statement (sessionVersion, checked on every
+	// server-side session read in callbacks.jwt — lib/auth/config.ts).
 	await prisma.user.update({
 		where: { id: userId },
 		data: {
@@ -256,6 +258,7 @@ export async function resetPassword(
 			passwordAlgorithm: "argon2id",
 			passwordResetToken: null,
 			passwordResetExpires: null,
+			sessionVersion: { increment: 1 },
 		},
 	});
 

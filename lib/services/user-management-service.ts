@@ -196,7 +196,9 @@ export async function updateUserProfile(
 
 /**
  * Changes a user's password.
- * Verifies current password, validates new password, and revokes all sessions.
+ * Verifies current password, validates new password, and revokes every
+ * existing session by bumping sessionVersion — checked on every server-side
+ * session read in callbacks.jwt (lib/auth/config.ts).
  */
 export async function changePassword(
 	userId: string,
@@ -246,7 +248,8 @@ export async function changePassword(
 		// Hash new password with argon2id
 		const newHash = await hashPassword(input.newPassword);
 
-		// Update password
+		// Update password and revoke every existing session in the same
+		// statement, so the hash change and the revocation are atomic.
 		await prisma.user.update({
 			where: { id: userId },
 			data: {
@@ -255,6 +258,7 @@ export async function changePassword(
 				// Clear any pending password reset
 				passwordResetToken: null,
 				passwordResetExpires: null,
+				sessionVersion: { increment: 1 },
 			},
 		});
 
