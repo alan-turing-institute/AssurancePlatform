@@ -256,7 +256,7 @@ export async function changePassword(
 				passwordHash: newHash,
 				passwordAlgorithm: "argon2id",
 				// Clear any pending password reset
-				passwordResetToken: null,
+				passwordResetTokenHash: null,
 				passwordResetExpires: null,
 				sessionVersion: { increment: 1 },
 			},
