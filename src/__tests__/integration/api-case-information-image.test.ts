@@ -1,3 +1,5 @@
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
@@ -316,6 +318,58 @@ describe("POST /api/cases/[id]/information/image", () => {
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
 
 		saveFileSpy.mockRestore();
+		deleteFileSpy.mockRestore();
+	});
+
+	it("returns 413 when a file under the multipart cap still exceeds MAX_FILE_SIZE on its own, and writes nothing", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const fileStorageService = await import(
+			"@/lib/services/file-storage-service"
+		);
+		const deleteFileSpy = vi.spyOn(fileStorageService, "deleteFile");
+
+		// One byte over MAX_FILE_SIZE, well under MAX_IMAGE_UPLOAD_BYTES (the
+		// multipart framing headroom absorbs it), so readFormDataWithLimit
+		// admits the request and saveFile()'s own post-parse size check is
+		// what has to reject it.
+		const formData = new FormData();
+		const overweight = new Uint8Array(fileStorageService.MAX_FILE_SIZE + 1);
+		overweight.set(PNG_MAGIC_BYTES, 0);
+		formData.append(
+			"image",
+			new File([overweight], "feature.png", { type: "image/png" })
+		);
+
+		const { POST } = await import(
+			"@/app/api/cases/[id]/information/image/route"
+		);
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
+			{ method: "POST", body: formData }
+		);
+		const response = await POST(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(413);
+		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
+
+		// A rejected validateFile() call never reaches ensureDirectory(), so
+		// the case's upload directory should never have been created at all.
+		const caseUploadDir = join(
+			process.cwd(),
+			"public",
+			"uploads",
+			"cases",
+			testCase.id
+		);
+		await expect(readdir(caseUploadDir)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+
 		deleteFileSpy.mockRestore();
 	});
 

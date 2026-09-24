@@ -7,7 +7,7 @@ import {
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
-import type { CaseInformation } from "@/src/generated/prisma";
+import type { CaseInformation, PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "case-information-service" });
@@ -35,7 +35,10 @@ export interface CaseInformationGateFailure {
  */
 
 /**
- * Reads the case information record for a case. Requires VIEW.
+ * Reads the case information record for a case, gated on the given
+ * permission level. Shared body for `getCaseInformation` (VIEW) and
+ * `getCaseInformationForEdit` (EDIT) below — identical apart from the
+ * required level, so it lives once here rather than twice.
  *
  * Returns `{ data: null }` — not an error — when no record exists yet: a
  * case with no curated information is a normal, common state, not a
@@ -43,11 +46,12 @@ export interface CaseInformationGateFailure {
  * non-existent case as for an inaccessible one (repo convention — prevents
  * resource-enumeration via this surface).
  */
-export async function getCaseInformation(
+async function readCaseInformation(
 	userId: string,
-	caseId: string
+	caseId: string,
+	requiredPermission: PermissionLevel
 ): ServiceResult<CaseInformation | null> {
-	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	const hasAccess = await canAccessCase({ userId, caseId }, requiredPermission);
 	if (!hasAccess) {
 		return { error: "Permission denied" };
 	}
@@ -64,6 +68,22 @@ export async function getCaseInformation(
 }
 
 /**
+ * Reads the case information record for a case. Requires VIEW.
+ *
+ * Returns `{ data: null }` — not an error — when no record exists yet: a
+ * case with no curated information is a normal, common state, not a
+ * not-found condition. Returns the same "Permission denied" error for a
+ * non-existent case as for an inaccessible one (repo convention — prevents
+ * resource-enumeration via this surface).
+ */
+export function getCaseInformation(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseInformation | null> {
+	return readCaseInformation(userId, caseId, "VIEW");
+}
+
+/**
  * Reads the case information record for a case. Requires EDIT — same shape
  * as `getCaseInformation`, but for callers about to perform a mutating side
  * effect (e.g. the feature-image upload route) that must refuse a VIEW-only
@@ -72,24 +92,11 @@ export async function getCaseInformation(
  * denied" for missing and inaccessible cases as `getCaseInformation` (repo
  * convention — prevents resource-enumeration via this surface).
  */
-export async function getCaseInformationForEdit(
+export function getCaseInformationForEdit(
 	userId: string,
 	caseId: string
 ): ServiceResult<CaseInformation | null> {
-	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
-	if (!hasAccess) {
-		return { error: "Permission denied" };
-	}
-
-	try {
-		const record = await prisma.caseInformation.findUnique({
-			where: { caseId },
-		});
-		return { data: record };
-	} catch (error) {
-		log.error("Failed to get case information", { error });
-		return { error: "Failed to fetch case information" };
-	}
+	return readCaseInformation(userId, caseId, "EDIT");
 }
 
 /**

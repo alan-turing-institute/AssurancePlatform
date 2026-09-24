@@ -77,7 +77,8 @@ async function requireExistingCaseInformation(params: RouteParams["params"]) {
  * an allowed image format
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (also returned for a non-existent case)
- * @response 413 - Request body too large
+ * @response 413 - Request body too large, or the file itself exceeds the
+ * maximum size even though the request body did not
  * @auth bearer
  * @tag Cases
  */
