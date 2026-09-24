@@ -39,11 +39,10 @@ interface ReadJsonBodyOptions {
 }
 
 /**
- * Reads a JSON request body with a byte cap, before the body is ever
- * parsed. Throws `payloadTooLarge()` (413) if the body exceeds `maxBytes`,
- * or `validationError()` (400) if what is read is not valid JSON. Resolves
- * to `undefined` for a missing or empty body, or to `options.emptyBodyAs`
- * if given.
+ * Reads a request body's raw bytes with a byte cap, before anything
+ * higher-level (JSON, `FormData`) is built from them. Shared by
+ * `readJsonBody` and `readFormDataWithLimit` below, which differ only in how
+ * they decode the resulting bytes.
  *
  * Enforcement has two layers, because either alone can be defeated by a
  * client:
@@ -56,17 +55,16 @@ interface ReadJsonBodyOptions {
  *     `Content-Length` (chunked transfer) or send a lying value, and step 1
  *     alone would let either through.
  *
- * Deliberately does not look at `Content-Type` — the canvas auto-screenshot
- * beacon (`hooks/use-auto-screenshot.ts`) sends its JSON body via
- * `navigator.sendBeacon`, which the browser labels `text/plain`.
+ * Throws `payloadTooLarge()` (413) on either path. Returns `null` for a
+ * request with no body at all (`request.body === null`), and a zero-length
+ * `Uint8Array` for a body stream that starts and immediately ends — kept
+ * distinguishable because `readFormDataWithLimit` treats only the former as
+ * "nothing to parse".
  */
-export async function readJsonBody(
+async function readBodyWithLimit(
 	request: Request,
-	options?: ReadJsonBodyOptions
-): Promise<unknown> {
-	const maxBytes = options?.maxBytes ?? DEFAULT_MAX_JSON_BODY_BYTES;
-	const emptyBodyResult = options?.emptyBodyAs;
-
+	maxBytes: number
+): Promise<Uint8Array<ArrayBuffer> | null> {
 	const declaredLength = request.headers.get("content-length");
 	if (declaredLength !== null) {
 		const declared = Number(declaredLength);
@@ -76,7 +74,7 @@ export async function readJsonBody(
 	}
 
 	if (!request.body) {
-		return emptyBodyResult;
+		return null;
 	}
 
 	const reader = request.body.getReader();
@@ -101,16 +99,39 @@ export async function readJsonBody(
 		chunks.push(value);
 	}
 
-	if (receivedBytes === 0) {
-		return emptyBodyResult;
-	}
-
 	const bytes = new Uint8Array(receivedBytes);
 	let offset = 0;
 	for (const chunk of chunks) {
 		bytes.set(chunk, offset);
 		offset += chunk.byteLength;
 	}
+	return bytes;
+}
+
+/**
+ * Reads a JSON request body with a byte cap, before the body is ever
+ * parsed. Throws `payloadTooLarge()` (413) if the body exceeds `maxBytes`
+ * (see `readBodyWithLimit` for the two-layer enforcement), or
+ * `validationError()` (400) if what is read is not valid JSON. Resolves to
+ * `undefined` for a missing or empty body, or to `options.emptyBodyAs` if
+ * given.
+ *
+ * Deliberately does not look at `Content-Type` — the canvas auto-screenshot
+ * beacon (`hooks/use-auto-screenshot.ts`) sends its JSON body via
+ * `navigator.sendBeacon`, which the browser labels `text/plain`.
+ */
+export async function readJsonBody(
+	request: Request,
+	options?: ReadJsonBodyOptions
+): Promise<unknown> {
+	const maxBytes = options?.maxBytes ?? DEFAULT_MAX_JSON_BODY_BYTES;
+	const emptyBodyResult = options?.emptyBodyAs;
+
+	const bytes = await readBodyWithLimit(request, maxBytes);
+	if (bytes === null || bytes.byteLength === 0) {
+		return emptyBodyResult;
+	}
+
 	const text = new TextDecoder("utf-8").decode(bytes);
 
 	try {
@@ -122,12 +143,9 @@ export async function readJsonBody(
 
 /**
  * Reads a `multipart/form-data` request body with a byte cap, before the
- * body is materialised into `FormData` — the same two-layer enforcement as
- * `readJsonBody` above (reject on a `Content-Length` that already declares
- * more than `maxBytes`, without reading anything; otherwise stream the body,
- * keeping a running byte count, and cancel the moment it crosses `maxBytes`)
- * so a client that omits or lies about `Content-Length` can't defeat the cap
- * either way. Throws `payloadTooLarge()` (413) on either path.
+ * body is materialised into `FormData` (see `readBodyWithLimit` for the
+ * two-layer enforcement shared with `readJsonBody` above). Throws
+ * `payloadTooLarge()` (413) on either path.
  *
  * On success, builds the `FormData` from the bytes actually read via a
  * `Response`, forwarding the original request's `content-type` header (which
@@ -138,41 +156,9 @@ export async function readFormDataWithLimit(
 	request: Request,
 	maxBytes: number
 ): Promise<FormData> {
-	const declaredLength = request.headers.get("content-length");
-	if (declaredLength !== null) {
-		const declared = Number(declaredLength);
-		if (Number.isFinite(declared) && declared > maxBytes) {
-			throw payloadTooLarge();
-		}
-	}
-
-	if (!request.body) {
+	const bytes = await readBodyWithLimit(request, maxBytes);
+	if (bytes === null) {
 		return new FormData();
-	}
-
-	const reader = request.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let receivedBytes = 0;
-
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) {
-			break;
-		}
-		receivedBytes += value.byteLength;
-		if (receivedBytes > maxBytes) {
-			// Best-effort clean-up, see the matching comment in `readJsonBody`.
-			await reader.cancel().catch(() => undefined);
-			throw payloadTooLarge();
-		}
-		chunks.push(value);
-	}
-
-	const bytes = new Uint8Array(receivedBytes);
-	let offset = 0;
-	for (const chunk of chunks) {
-		bytes.set(chunk, offset);
-		offset += chunk.byteLength;
 	}
 
 	const contentType = request.headers.get("content-type") ?? "";

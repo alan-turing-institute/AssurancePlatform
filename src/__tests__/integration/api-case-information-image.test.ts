@@ -14,6 +14,13 @@ vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
 
+// Several tests below spy on saveFile/deleteFile without an inline
+// mockRestore() — restoring here instead means a failed assertion mid-test
+// can't leak a spy into the next test.
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
 const NON_EXISTENT_CASE_ID = "00000000-0000-0000-0000-000000000000";
 const UPLOADED_PATH_PATTERN = /^\/uploads\/cases\//;
 
@@ -208,9 +215,6 @@ describe("POST /api/cases/[id]/information/image", () => {
 		expect(response.status).toBe(403);
 		expect(saveFileSpy).toHaveBeenCalledTimes(0);
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
-
-		saveFileSpy.mockRestore();
-		deleteFileSpy.mockRestore();
 	});
 
 	it("returns 403 for a user with no access at all and never touches storage", async () => {
@@ -239,9 +243,6 @@ describe("POST /api/cases/[id]/information/image", () => {
 		expect(response.status).toBe(403);
 		expect(saveFileSpy).toHaveBeenCalledTimes(0);
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
-
-		saveFileSpy.mockRestore();
-		deleteFileSpy.mockRestore();
 	});
 
 	it("returns 413 for a body whose actual bytes exceed the cap, without calling storage", async () => {
@@ -269,9 +270,6 @@ describe("POST /api/cases/[id]/information/image", () => {
 		expect(response.status).toBe(413);
 		expect(saveFileSpy).toHaveBeenCalledTimes(0);
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
-
-		saveFileSpy.mockRestore();
-		deleteFileSpy.mockRestore();
 	});
 
 	it("returns 413 when Content-Length alone declares more than the cap, without calling storage", async () => {
@@ -316,9 +314,6 @@ describe("POST /api/cases/[id]/information/image", () => {
 		expect(response.status).toBe(413);
 		expect(saveFileSpy).toHaveBeenCalledTimes(0);
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
-
-		saveFileSpy.mockRestore();
-		deleteFileSpy.mockRestore();
 	});
 
 	it("returns 413 when a file under the multipart cap still exceeds MAX_FILE_SIZE on its own, and writes nothing", async () => {
@@ -369,8 +364,6 @@ describe("POST /api/cases/[id]/information/image", () => {
 		await expect(readdir(caseUploadDir)).rejects.toMatchObject({
 			code: "ENOENT",
 		});
-
-		deleteFileSpy.mockRestore();
 	});
 
 	it("returns 400 when the declared type is image/png but the bytes are not a real PNG, and never deletes anything", async () => {
@@ -401,8 +394,6 @@ describe("POST /api/cases/[id]/information/image", () => {
 
 		expect(response.status).toBe(400);
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
-
-		deleteFileSpy.mockRestore();
 	});
 });
 
@@ -507,7 +498,5 @@ describe("DELETE /api/cases/[id]/information/image", () => {
 
 		expect(response.status).toBe(403);
 		expect(deleteFileSpy).toHaveBeenCalledTimes(0);
-
-		deleteFileSpy.mockRestore();
 	});
 });
