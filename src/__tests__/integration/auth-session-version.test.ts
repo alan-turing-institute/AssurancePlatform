@@ -1,9 +1,10 @@
 import type { JWT } from "next-auth/jwt";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { authOptions } from "@/lib/auth/config";
 import { hashPassword } from "@/lib/auth/password-service";
 import { SessionRevokedError } from "@/lib/auth/session-version";
 import prisma from "@/lib/prisma";
+import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import {
 	requestPasswordReset,
 	resetPassword,
@@ -11,6 +12,15 @@ import {
 import { changePassword } from "@/lib/services/user-management-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import { createTestUser } from "../utils/prisma-factories";
+
+// The reset token never touches the database (AP-QA-006) — capture it from
+// the mocked outbound email instead.
+vi.mock("@/lib/services/email-service", () => ({
+	sendPasswordResetEmail: vi.fn().mockResolvedValue({
+		success: true,
+		messageId: "mock-message-id",
+	}),
+}));
 
 /**
  * Exercises `authOptions.callbacks.jwt` (lib/auth/config.ts) directly against
@@ -85,16 +95,13 @@ describe("callbacks.jwt — session version (AP-QA-003)", () => {
 		const oldToken = await jwt(signInParams(user.id));
 
 		await requestPasswordReset(user.email, TEST_IP);
-		const { passwordResetToken } = await prisma.user.findUniqueOrThrow({
-			where: { id: user.id },
-			select: { passwordResetToken: true },
-		});
-		if (!passwordResetToken) {
-			throw new Error("Reset token was not created");
+		const calls = vi.mocked(sendPasswordResetEmail).mock.calls;
+		const lastCall = calls.at(-1);
+		if (!lastCall) {
+			throw new Error("sendPasswordResetEmail was not called");
 		}
-		expectSuccess(
-			await resetPassword(passwordResetToken, NEW_PASSWORD, TEST_IP)
-		);
+		const resetToken = lastCall[0].resetToken;
+		expectSuccess(await resetPassword(resetToken, NEW_PASSWORD, TEST_IP));
 
 		await expect(jwt({ token: oldToken } as JwtParams)).rejects.toThrow(
 			SessionRevokedError

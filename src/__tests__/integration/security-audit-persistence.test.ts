@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
 	acceptInvite,
 	createCaseInvite,
 } from "@/lib/services/case-invite-service";
+import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import {
 	requestPasswordReset,
 	resetPassword,
@@ -13,11 +14,16 @@ import {
 	RATE_LIMIT_CONFIGS,
 } from "@/lib/services/rate-limit-service";
 import { expectSuccess } from "../utils/assertion-helpers";
-import {
-	createTestCase,
-	createTestUser,
-	getTestPasswordResetToken,
-} from "../utils/prisma-factories";
+import { createTestCase, createTestUser } from "../utils/prisma-factories";
+
+// The reset token never touches the database (AP-QA-006) — capture it from
+// the mocked outbound email instead, as password-reset-service.test.ts does.
+vi.mock("@/lib/services/email-service", () => ({
+	sendPasswordResetEmail: vi.fn().mockResolvedValue({
+		success: true,
+		messageId: "mock-message-id",
+	}),
+}));
 
 const TEST_IP = "127.0.0.1";
 
@@ -67,10 +73,12 @@ describe("security audit persistence — password-reset-service", () => {
 	it("persists a row for a completed password reset", async () => {
 		const user = await createTestUser({ authProvider: "LOCAL" });
 		await requestPasswordReset(user.email, TEST_IP);
-		const token = await getTestPasswordResetToken(user.id);
-		if (!token) {
-			throw new Error("Token was not created");
+		const calls = vi.mocked(sendPasswordResetEmail).mock.calls;
+		const lastCall = calls.at(-1);
+		if (!lastCall) {
+			throw new Error("sendPasswordResetEmail was not called");
 		}
+		const token = lastCall[0].resetToken;
 
 		expectSuccess(await resetPassword(token, "StrongP@ss1", TEST_IP));
 

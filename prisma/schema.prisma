@@ -53,7 +53,7 @@ model User {
   emailVerified        Boolean      @default(false) @map("email_verified") /// Whether email has been verified (for email-based signup)
 
   // Password reset
-  passwordResetToken   String?      @map("password_reset_token")
+  passwordResetTokenHash String?    @map("password_reset_token_hash") /// SHA-256 hex digest of the reset token; the raw token is never stored (AP-QA-006)
   passwordResetExpires DateTime?    @map("password_reset_expires")
 
   // Preferences

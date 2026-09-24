@@ -10,6 +10,10 @@ const RESET_TOKEN_EXPIRY_MINUTES = 60;
 const MAX_ATTEMPTS_PER_EMAIL_PER_HOUR = 3;
 const MAX_ATTEMPTS_PER_IP_PER_HOUR = 10;
 
+// Malformed, expired, unknown and replayed tokens are all indistinguishable
+// from the caller's point of view (AP-QA-006) — one message, one event.
+const INVALID_TOKEN_MESSAGE = "Invalid or expired reset token";
+
 // Types
 type RequestResetResult =
 	| { data: null }
@@ -26,6 +30,16 @@ type ResetPasswordResult = { data: null } | { error: string };
  */
 function generateResetToken(): string {
 	return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * SHA-256 hex digest of a presented reset token, for at-rest storage and
+ * lookup (AP-QA-006). The token carries 256 bits of entropy, so no salt and
+ * no slow hash — same pattern as `hashApiTokenSecret` in
+ * `lib/auth/api-token-service.ts`.
+ */
+function hashResetToken(raw: string): string {
+	return crypto.createHash("sha256").update(raw, "utf8").digest("hex");
 }
 
 /**
@@ -148,11 +162,11 @@ export async function requestPasswordReset(
 		Date.now() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000
 	);
 
-	// Store the token
+	// Store only the hash — the raw token exists only in the email below
 	await prisma.user.update({
 		where: { id: user.id },
 		data: {
-			passwordResetToken: resetToken,
+			passwordResetTokenHash: hashResetToken(resetToken),
 			passwordResetExpires: resetExpires,
 		},
 	});
@@ -197,19 +211,19 @@ export async function validateResetToken(
 	token: string
 ): Promise<ValidateTokenResult> {
 	if (!token || token.length !== 64) {
-		return { error: "Invalid reset token" };
+		return { error: INVALID_TOKEN_MESSAGE };
 	}
 
 	const user = await prisma.user.findFirst({
 		where: {
-			passwordResetToken: token,
+			passwordResetTokenHash: hashResetToken(token),
 			passwordResetExpires: { gt: new Date() },
 		},
 		select: { id: true, email: true },
 	});
 
 	if (!user) {
-		return { error: "Invalid or expired reset token" };
+		return { error: INVALID_TOKEN_MESSAGE };
 	}
 
 	return { data: { userId: user.id, email: user.email } };
@@ -224,7 +238,8 @@ export async function resetPassword(
 	ipAddress: string,
 	userAgent?: string
 ): Promise<ResetPasswordResult> {
-	// Validate the token first
+	// Shape check + hash + unexpired lookup, to get the userId/email for the
+	// audit record and to run validatePassword before paying for argon2.
 	const validation = await validateResetToken(token);
 	if ("error" in validation) {
 		await recordSecurityEvent({
@@ -245,22 +260,44 @@ export async function resetPassword(
 		return { error: passwordValidation.error };
 	}
 
-	// Hash the new password
+	// Hash the new password (network-free; kept outside any transaction)
 	const passwordHash = await hashPassword(newPassword);
 
-	// Update the user's password, clear the reset token, and revoke every
-	// existing session in the same statement (sessionVersion, checked on every
-	// server-side session read in callbacks.jwt — lib/auth/config.ts).
-	await prisma.user.update({
-		where: { id: userId },
+	// Consume the token atomically: the predicate carries both the hash and
+	// the expiry, so of two concurrent requests presenting the same token,
+	// only the row-locked update that runs first can match it — the second
+	// sees count 0, because the first has already nulled the hash. No
+	// transaction needed; Postgres's row lock on the conditional UPDATE is
+	// what makes exactly one of two concurrent attempts succeed (AP-QA-006).
+	// The password hash, reset-token clearance and session-version bump stay
+	// in the same statement (AP-QA-003 invariant).
+	const { count } = await prisma.user.updateMany({
+		where: {
+			passwordResetTokenHash: hashResetToken(token),
+			passwordResetExpires: { gt: new Date() },
+		},
 		data: {
 			passwordHash,
 			passwordAlgorithm: "argon2id",
-			passwordResetToken: null,
+			passwordResetTokenHash: null,
 			passwordResetExpires: null,
 			sessionVersion: { increment: 1 },
 		},
 	});
+
+	if (count !== 1) {
+		// Lost the race (or the token was consumed/expired between the
+		// lookup above and here) — treat exactly like any other invalid
+		// token; do not mark the attempt successful.
+		await recordSecurityEvent({
+			event: "password_reset_invalid_token",
+			severity: "medium",
+			ipAddress,
+			userAgent,
+			metadata: { tokenLength: token?.length },
+		});
+		return { error: INVALID_TOKEN_MESSAGE };
+	}
 
 	// Update the attempt record to mark as successful
 	await prisma.passwordResetAttempt.updateMany({
@@ -296,10 +333,10 @@ export async function cleanupExpiredTokens(): Promise<{
 	const tokenResult = await prisma.user.updateMany({
 		where: {
 			passwordResetExpires: { lt: new Date() },
-			passwordResetToken: { not: null },
+			passwordResetTokenHash: { not: null },
 		},
 		data: {
-			passwordResetToken: null,
+			passwordResetTokenHash: null,
 			passwordResetExpires: null,
 		},
 	});
