@@ -29,6 +29,7 @@ model User {
   username             String       @unique /// Unique display name shown throughout the platform
   passwordHash         String?      @map("password_hash") /// Hashed password (null for OAuth-only users)
   passwordAlgorithm    String       @default("django_pbkdf2") @map("password_algorithm") /// Hash algorithm: 'argon2id' (new) or 'django_pbkdf2' (legacy)
+  sessionVersion       Int          @default(1) @map("session_version") /// Bumped on password change/reset (lib/auth/session-version.ts); a signed-in JWT stamped with an older version is rejected in callbacks.jwt, revoking every session issued before the bump.
 
   // Profile
   firstName            String?      @map("first_name") /// User's first name for display

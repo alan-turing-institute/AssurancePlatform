@@ -13,6 +13,7 @@ Table users {
   username String [unique, not null, note: 'Unique display name shown throughout the platform']
   passwordHash String [note: 'Hashed password (null for OAuth-only users)']
   passwordAlgorithm String [not null, default: 'django_pbkdf2', note: 'Hash algorithm: \'argon2id\' (new) or \'django_pbkdf2\' (legacy)']
+  sessionVersion Int [not null, default: 1, note: 'Bumped on password change/reset (lib/auth/session-version.ts); a signed-in JWT stamped with an older version is rejected in callbacks.jwt, revoking every session issued before the bump.']
   firstName String [note: 'User\'s first name for display']
   lastName String [note: 'User\'s last name for display']
   avatarUrl String [note: 'Profile picture URL (from GitHub or uploaded)']
