@@ -1,264 +1,54 @@
 ---
-title: Assurance Case Editor
+title: "Assurance case editor"
+description: "Follow the case editor's data flow, node rendering, changes and live updates."
 sidebar_position: 3
 sidebar_label: 'Assurance Case Editor'
 ---
 
-The assurance case editor is the core interactive component of the TEA Platform. It allows users to visually create and edit assurance cases as node-based diagrams. This page documents how the editor is implemented.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-## Technology
+The editor at `/case/[caseId]` turns a stored assurance case into an interactive diagram. `CaseContainer` loads the case through `/api/cases/[id]`, holds it in the client store and passes it to `Flow`. `Flow` converts the case tree into React Flow nodes and edges, then applies the layout helper. The canvas does not use draggable nodes; the layout is computed from the case structure.
 
-The editor is built with [ReactFlow](https://reactflow.dev), a highly customisable library for building node-based editors and diagrams in React.
+## Node and edge rendering
 
-<Callout type="info">
-**ReactFlow Documentation**
+`components/cases/node-type-resolver.ts` registers six node renderers: goal, strategy, property claim, evidence, away goal and module. `lib/case/node-type-resolver.ts` maps stored element types to those renderer keys. A defeater is a marked argument element with a challenge relationship, rather than a seventh node kind. Context is held as data on relevant elements, rather than rendered as a separate node in the current diagram.
 
-For general ReactFlow concepts and API reference, see the [official ReactFlow documentation](https://reactflow.dev/docs).
-</Callout>
+`lib/case/convert-case.ts` walks the nested goal tree and creates the diagram nodes. It creates support edges from parent-child relationships. Where a defeater cites a target present in the case, it adds a challenge edge, or replaces the support edge when the cited target is also the tree parent. The layout helper positions these nodes, and the toolbar's Focus control can run layout again.
 
-## Architecture Overview
+## Editing
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   FlowEditor Component                   │
-│                   (Client Component)                     │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
-│  │  ReactFlow  │  │   Toolbar   │  │  Node Inspector │ │
-│  │   Canvas    │  │             │  │     Panel       │ │
-│  └─────────────┘  └─────────────┘  └─────────────────┘ │
-├─────────────────────────────────────────────────────────┤
-│                    Custom Node Types                     │
-│  ┌────────┐ ┌──────────┐ ┌────────────┐ ┌────────────┐ │
-│  │ Goal   │ │ Strategy │ │ Evidence   │ │ Context    │ │
-│  │ Node   │ │   Node   │ │   Node     │ │   Node     │ │
-│  └────────┘ └──────────┘ └────────────┘ └────────────┘ │
-├─────────────────────────────────────────────────────────┤
-│                    State Management                      │
-│              (React state + Server Actions)              │
-└─────────────────────────────────────────────────────────┘
-```
+Element controls sit on the nodes. The Add Element popover offers choices according to the parent kind. A goal can add a strategy, property claim, defeater, away goal or module. A property claim can also add evidence. Choosing a kind opens its add dialog. Away goals and modules use a cited-element picker; other kinds use the element form. The edit dialog handles descriptions, applicable attributes, evidence URLs and assertion status. An element's options menu provides further actions.
 
-## Key Files
+The editor uses both server actions and API routes. Element services and validation code are the places to inspect when a change to an element's behaviour is needed. The case route checks the caller's identity, and the service layer enforces the relevant case permissions.
 
-| File | Purpose |
-|------|---------|
-| `components/cases/flow-editor/flow-editor.tsx` | Main editor component |
-| `components/cases/flow-editor/nodes/` | Custom node components |
-| `components/cases/flow-editor/edges/` | Custom edge components |
-| `components/cases/flow-editor/toolbar/` | Editor toolbar |
-| `components/cases/flow-editor/panels/` | Side panels (inspector, etc.) |
-| `actions/elements.ts` | Server Actions for element CRUD |
+## History and other editors
 
-## Custom Node Types
+The toolbar has Undo and Redo controls for people with editing access. `use-keyboard-shortcuts.ts` supports Command or Control plus Z for undo, Command or Control plus Shift plus Z for redo, and Command or Control plus Y as another redo shortcut. These shortcuts do not intercept typing in inputs, textareas or editable content. The toolbar also exposes case information, sharing when the user can manage the case, export and a JSON view. Check permissions before assuming a control is available to every reader.
 
-Each element type has a corresponding custom node component. These are registered with ReactFlow via the `nodeTypes` prop.
+`CaseContainer` subscribes to case events over server-sent events. On a relevant event it refetches the case, with a short debounce, and shows a toast for another user's change. There is no `lockUuid` field or edit-lock flow in this implementation. Changes can still arrive while someone is working, so the editor should be understood as a live shared view, not an exclusive editing session.
 
-### Node Type Registration
+## Key files
 
-```typescript
-const nodeTypes = {
-  goal: GoalNode,
-  strategy: StrategyNode,
-  propertyClaim: PropertyClaimNode,
-  evidence: EvidenceNode,
-  context: ContextNode,
-  assumption: AssumptionNode,
-  justification: JustificationNode,
-  module: ModuleNode,
-}
+- `app/(cases)/case/[caseId]/page.tsx`: editor route.
+- `components/cases/case-container.tsx` and `components/cases/flow.tsx`: data loading, events and canvas.
+- `components/cases/node-type-resolver.ts`, `components/shared/nodes/` and `components/cases/node-add-popover.tsx`: node presentation and controls.
+- `lib/case/convert-case.ts` and `lib/case/layout-helper.ts`: tree conversion and layout.
+- `lib/services/element-service.ts` and `app/api/elements/[id]/route.ts`: element operations.
 
-<ReactFlow
-  nodes={nodes}
-  edges={edges}
-  nodeTypes={nodeTypes}
-  // ...
-/>
-```
+## Sources checked
 
-### Node Component Structure
-
-Each custom node follows a similar pattern:
-
-```typescript
-interface NodeData {
-  id: string
-  elementType: ElementType
-  name: string
-  description: string
-  // ... other element fields
-}
-
-function GoalNode({ data, selected }: NodeProps<NodeData>) {
-  return (
-    <div className={cn(
-      'goal-node',
-      selected && 'selected'
-    )}>
-      <Handle type="target" position={Position.Top} />
-
-      <div className="node-header">
-        <span className="node-label">{data.name}</span>
-      </div>
-
-      <div className="node-content">
-        {data.description}
-      </div>
-
-      <Handle type="source" position={Position.Bottom} />
-    </div>
-  )
-}
-```
-
-### Node Styling
-
-Nodes are styled to follow GSN (Goal Structuring Notation) conventions:
-
-| Element Type | Shape | Colour |
-|--------------|-------|--------|
-| Goal | Rectangle | Blue |
-| Strategy | Parallelogram | Green |
-| Property Claim | Rectangle | Light Blue |
-| Evidence | Circle/Rounded | Orange |
-| Context | Rounded Rectangle | Grey |
-| Assumption | Ellipse | Yellow |
-| Justification | Ellipse | Purple |
-
-## Data Flow
-
-### Loading the Editor
-
-1. Server Component fetches case data with elements
-2. Elements are transformed to ReactFlow nodes/edges
-3. FlowEditor receives initial state as props
-
-```typescript
-// app/(main)/cases/[id]/page.tsx
-async function CasePage({ params }) {
-  const caseData = await getCaseWithElements(params.id)
-  const { nodes, edges } = transformToFlow(caseData.elements)
-
-  return <FlowEditor initialNodes={nodes} initialEdges={edges} />
-}
-```
-
-### Element-to-Node Transformation
-
-Elements from the database are transformed to ReactFlow nodes:
-
-```typescript
-function elementToNode(element: AssuranceElement): Node {
-  return {
-    id: element.id,
-    type: elementTypeToNodeType(element.elementType),
-    position: element.position ?? { x: 0, y: 0 },
-    data: {
-      id: element.id,
-      elementType: element.elementType,
-      name: element.name,
-      description: element.description,
-      // ... other fields
-    }
-  }
-}
-```
-
-### Edge Generation
-
-Edges are generated from the parent-child relationships:
-
-```typescript
-function generateEdges(elements: AssuranceElement[]): Edge[] {
-  return elements
-    .filter(el => el.parentId)
-    .map(el => ({
-      id: `${el.parentId}-${el.id}`,
-      source: el.parentId,
-      target: el.id,
-      type: 'smoothstep',
-    }))
-}
-```
-
-## Interactivity
-
-### Adding Elements
-
-When a user adds a new element:
-
-1. User selects element type from toolbar
-2. User clicks on canvas or existing node
-3. Client creates optimistic node
-4. Server Action creates element in database
-5. On success, node ID is updated; on failure, node is removed
-
-```typescript
-async function handleAddElement(type: ElementType, parentId?: string) {
-  // Optimistic update
-  const tempId = `temp-${Date.now()}`
-  addNode({ id: tempId, type, data: { ... } })
-
-  // Server Action
-  const result = await createElement({ type, parentId, caseId })
-
-  if (result.success) {
-    updateNodeId(tempId, result.data.id)
-  } else {
-    removeNode(tempId)
-    toast.error(result.error)
-  }
-}
-```
-
-### Editing Elements
-
-Element editing is handled through the inspector panel:
-
-1. User selects a node
-2. Inspector panel shows element details
-3. User edits fields
-4. Changes are debounced and saved via Server Action
-
-### Deleting Elements
-
-Deletion cascades to child elements:
-
-1. User selects node and presses Delete or uses context menu
-2. Confirmation dialog for elements with children
-3. Server Action deletes element and children
-4. Nodes are removed from canvas
-
-## State Management
-
-The editor uses a combination of:
-
-- **Local React state** for UI state (selection, viewport)
-- **ReactFlow state** for nodes and edges
-- **Server Actions** for persistence
-
-### Concurrency Control
-
-To prevent conflicts in collaborative editing:
-
-1. Cases have a `lockUuid` field
-2. When editing, user acquires a lock
-3. Lock is released on save or timeout
-4. Other users see "Case is being edited" message
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Delete` / `Backspace` | Delete selected elements |
-| `Ctrl/Cmd + C` | Copy selected elements |
-| `Ctrl/Cmd + V` | Paste elements |
-| `Ctrl/Cmd + Z` | Undo |
-| `Ctrl/Cmd + Shift + Z` | Redo |
-| `Ctrl/Cmd + A` | Select all |
-| `Escape` | Deselect all |
-
-## Further Reading
-
-- [Assurance Case Model](./assurance-case-model) - Data model for elements
-- [ReactFlow Documentation](https://reactflow.dev/docs) - Official ReactFlow docs
+- `content/technical-guide/architecture/assurance-case-editor.mdx`
+- `app/(cases)/case/[caseId]/page.tsx`
+- `app/api/cases/[id]/route.ts`
+- `app/api/elements/[id]/route.ts`
+- `components/cases/case-container.tsx`
+- `components/cases/flow.tsx`
+- `components/cases/action-buttons.tsx`
+- `components/cases/history-controls.tsx`
+- `components/cases/node-type-resolver.ts`
+- `components/cases/node-add-popover.tsx`
+- `components/cases/node-add-dialog.tsx`
+- `components/cases/node-edit-dialog.tsx`
+- `lib/case/node-type-resolver.ts`
+- `lib/case/convert-case.ts`
+- `hooks/use-keyboard-shortcuts.ts`

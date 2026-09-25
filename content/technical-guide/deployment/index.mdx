@@ -1,110 +1,62 @@
 ---
-title: Deployment Overview
+title: "Deployment overview"
+description: "Choose a deployment layout and configure the services the TEA Platform uses."
 sidebar_position: 1
 sidebar_label: 'Overview'
 ---
 
-This section covers deploying the TEA Platform for production use. The recommended approach is Docker Compose for self-hosting.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-<Callout>
-**Development vs Production**
+The application runs as a Next.js service backed by PostgreSQL. The repository supplies `docker-compose.yml` for a self-hosted application and database, and `.github/workflows/build.yaml` deploys the official staging and production builds to Azure App Service. The [Docker deployment guide](/docs/technical-guide/deployment/docker-production) covers the supplied compose layout; the [database guide](/docs/technical-guide/deployment/database-management) covers migrations and backups.
 
-For local development setup, see the [Getting Started](/technical-guide/getting-started/docker-quickstart) section. This section is for production deployments.
+## Deployment layout
+
+The production compose file defines `tea_app` and `postgres`. PostgreSQL uses a named volume and has a health check. The application waits for that database health check before starting. Its image entrypoint runs `prisma migrate deploy`, then starts the Next.js server. The compose file publishes the application on port 3000 by default and stores local uploads in a second named volume.
+
+<Callout type="warn">
+The compose file names `ghcr.io/alan-turing-institute/assuranceplatform:latest`, while the `Build` workflow pushes `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`; resolve that image-path mismatch before using the compose file to pull a release.
 </Callout>
 
-## Deployment Options
+## Configuration
 
-### Docker Compose (Recommended)
+Supply secrets through the deployment environment. These variable names come from the compose file and application code, not from an environment example file.
 
-The simplest way to deploy the TEA Platform is using Docker Compose. This bundles the application and database in containers that can run on any Docker-compatible host.
+| Variable | Used for |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection used by `lib/prisma.ts` |
+| `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | Session signing and the public application URL |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Compose-managed PostgreSQL; defaults are `tea`, `tea_user` and `tea_password` |
+| `TOKEN_ENCRYPTION_KEY` | Base64 key for stored OAuth tokens; the encryption code requires exactly 32 decoded bytes |
+| `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET` | GitHub sign-in and authorised import |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in and Drive access |
+| `USE_LOCAL_STORAGE` | Selects local file storage; compose defaults to `true` |
+| `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY` | Azure Blob storage when configured |
+| `ACS_CONNECTION_STRING`, `ACS_SENDER_ADDRESS` | Email through Azure Communication Services |
+| `CRON_SECRET` | Authenticates scheduled maintenance routes |
+| `LOG_LEVEL` | Sets the structured logger's threshold |
+| `DB_POOL_TIMEOUT_MS` | Database connection wait limit; defaults to 5000 ms |
 
-**Suitable for:**
-- Small to medium deployments
-- Single-server hosting
-- Organisations with Docker experience
+The table covers common settings rather than every application variable. `TEA_PLUGINS_DISABLED` disables selected compiled plugins; `SKIP_ELEMENT_VALIDATION` bypasses write-time element validation and must never be set in production. GitHub sign-in also reads `GITHUB_APP_CLIENT_ID_STAGING` and `GITHUB_APP_CLIENT_SECRET_STAGING` fallbacks. The compose file exposes only a subset of the application's optional integrations. Set Google, email and cron variables in the hosting environment if you use those features. A deployment should use its own secret values and a database password rather than the compose development defaults. The [scheduled jobs page](/docs/technical-guide/deployment/scheduled-jobs) explains the cron routes.
 
-See [Docker Production](./docker-production) for setup instructions.
+## Security and operations
 
-### Manual Deployment
+Terminate HTTPS at a proxy or hosting platform and keep PostgreSQL reachable only by the application and administrators who need it. The code implements rate limiting for several sensitive routes and records security audit events; check the [rate limiting and audit page](/docs/technical-guide/deployment/rate-limiting-and-audit-log) for the covered operations. Monitor `/api/health` as an application endpoint. The supplied compose file health-checks PostgreSQL but does not define an application container health check.
 
-For more control, you can deploy the components separately:
-- Next.js application on any Node.js hosting
-- PostgreSQL on a managed database service
+Plan a database backup and restore process before applying a new build. The entrypoint applies pending migrations automatically, but backups and restore tests remain an operator task.
 
-This approach requires more configuration but allows integration with existing infrastructure.
+## Sources checked
 
-## Environment Variables
-
-The TEA Platform is configured through environment variables. Here's a reference of the key variables:
-
-### Required Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/tea` |
-| `NEXTAUTH_SECRET` | Secret for session encryption | Generate with `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Public URL of the application | `https://tea.example.com` |
-| `TOKEN_ENCRYPTION_KEY` | Base64-encoded 32-byte key used to encrypt stored GitHub/Google OAuth tokens at rest (AES-256-GCM) | Generate with `openssl rand -base64 32` |
-
-### Optional Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GITHUB_APP_CLIENT_ID` | GitHub OAuth client ID | (disabled) |
-| `GITHUB_APP_CLIENT_SECRET` | GitHub OAuth client secret | (disabled) |
-| `NODE_ENV` | Environment mode | `production` |
-
-### Database Configuration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `POSTGRES_USER` | Database user | `tea` |
-| `POSTGRES_PASSWORD` | Database password | (required) |
-| `POSTGRES_DB` | Database name | `tea` |
-| `DB_POOL_TIMEOUT_MS` | How long (ms) a request waits for a free Postgres connection before failing with a 503, instead of hanging — see [Database Management](./database-management) | `5000` |
-
-## Security Considerations
-
-### Secrets Management
-
-- **Never commit secrets** to version control
-- Use environment variables or a secrets manager
-- Rotate `NEXTAUTH_SECRET` periodically
-- Use strong, unique database passwords
-
-### Network Security
-
-- Run behind a reverse proxy (nginx, Traefik)
-- Enable HTTPS with a valid certificate
-- Restrict database access to application only
-- Consider network isolation for database
-
-### Authentication
-
-- Enable GitHub OAuth for easier user onboarding
-- Require email verification for local accounts
-- Implement rate limiting on authentication endpoints
-
-## Backup Strategy
-
-Regular backups are essential for production deployments:
-
-1. **Database backups** - Daily automated backups
-2. **Configuration backups** - Store environment configs securely
-3. **Test restores** - Regularly verify backup integrity
-
-See [Database Management](./database-management) for backup procedures.
-
-## Monitoring
-
-Consider monitoring for production deployments:
-
-- **Application health** - HTTP health checks
-- **Database metrics** - Connection pool, query performance
-- **Error tracking** - Application error monitoring
-- **Uptime monitoring** - External availability checks
-
-## Further Reading
-
-- [Docker Production](./docker-production) - Production Docker Compose setup
-- [Database Management](./database-management) - Backup, restore, and migrations
+- `content/technical-guide/deployment/index.mdx`
+- `docker-compose.yml`
+- `Dockerfile`
+- `scripts/docker-entrypoint.sh`
+- `.github/workflows/build.yaml`
+- `lib/prisma.ts`
+- `lib/db-pool-config.ts`
+- `lib/auth/config.ts`
+- `lib/auth/token-encryption.ts`
+- `lib/services/file-storage-service.ts`
+- `lib/services/blob-storage-service.ts`
+- `lib/services/email-service.ts`
+- `lib/services/cron-auth.ts`
+- `lib/logger.ts`

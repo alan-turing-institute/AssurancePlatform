@@ -1,120 +1,46 @@
 ---
-title: About the Trustworthy and Ethical Assurance Platform
+title: "About the TEA Platform"
+description: "Learn why the Trustworthy and Ethical Assurance Platform supports assurance case work and collaboration."
 ---
 
-The Trustworthy and Ethical Assurance (TEA) platform is an open-source and community-oriented set of resources, which has been designed and developed by researchers at the Alan Turing Institute and the Centre for Assuring Autonomy (University of York) to support the process of developing and communicating trustworthy and ethical assurance cases.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-To better understand the purpose and motivation of the TEA platform, consider the following question.
-
-> **Question**
->
-> How should a project team provide assurance to their stakeholders or users that some ethical principle, such as explainability or safety, has been upheld across the full lifecycle of designing, developing, and deploying a data-driven technology?
-
-This is not an easy question to answer! As we pick it apart, we realise there are many more questions that need to be addressed:
-
-- Which ethical principles are **relevant to the technology** (e.g. fairness, explainability, safety, sustainability)?
-- How are these principles **defined in the context of the project**?
-- How can a project team provide **justified evidence** to their stakeholders or users that these principles have been upheld?
-- Who should be **engaged as part of this process**, and how should this engagement be managed or structured?
-
-## What does the TEA Platform do?
-
-The TEA platform helps multi-stakeholder and multi-disciplinary teams—including researchers, developers, decision-makers, managers, auditors, regulators, and users—answer these questions in a systematic manner. It achieves this through three interlocking features:
-
-1. **The TEA Case Builder**: an interactive tool for developing assurance cases ([accessible here](https://assuranceplatform.azurewebsites.net/))
-2. **The TEA Curriculum**: a structured set of modules and resources that help users get the most out of the tool (see [curriculum](/docs/curriculum))
-3. **The TEA Community**: our community infrastructure that promotes open and collaborative practices, such as the sharing of argument patterns and plugins (see [community resources](/docs/community))
-
-### 1) The TEA Tool: An Interactive Tool for Developing Assurance Cases
-
-The main component of the TEA platform is the interactive tool that allows members of a project team to iteratively develop an assurance case (see Figure 1) using a graphical interface.
-
-{/* TODO: Replace with a dynamic React Flow component that renders a simple assurance case diagram. */}
-
-![Assurance case example](/images/about-page-example.svg 'Assurance case example')
-
-_Figure 1. A simple assurance case showing a top-level goal claim, a set of three property claims, and corresponding evidence._
-
-At the top of an assurance case is a clear and accessible claim about the goal of the technology or system in question (i.e. the goal claim). Underneath this goal claim is a set of additional claims about specific properties of the project or system (i.e. property claims), which help specify the goal and demonstrate what actions or decisions have been taken to achieve the goal. And, at the base of the assurance case is the evidence that justifies the validity of the above claims.
-
-In short, an assurance case presents **a structured argument**, in a logical and graphical format, about how an ethical goal has been achieved.
-
-<Callout type="info">
-**An Introduction to Trustworthy and Ethical Assurance**
-
-A more complete introduction to Trustworthy and Ethical Assurance can be found in our [curriculum](/docs/curriculum) section.
-
+<Callout type="info" title="Claims to confirm (review only)">
+Confirm the listed Alan Turing Institute, EPSRC Networks of Cardiovascular Digital Twins, BRAID, Assuring Autonomy International Programme and UKRI Trustworthy Autonomous Systems Hub support against current organisational records. Check whether GitHub Discussions is active before publication.
 </Callout>
 
-### 2) The TEA Curriculum: Skills and Training Resources
+The Trustworthy and Ethical Assurance (TEA) Platform is an open-source project developed by researchers at the Alan Turing Institute and the Centre for Assuring Autonomy at the University of York. It helps project teams develop and communicate structured arguments about whether a system meets a goal, and what evidence supports that judgement.
 
-Although the logical structure of an assurance case may be simple, the process of developing an assurance case can be complex. As such, a significant element of the TEA platform is our skills and capability-building resources that have been designed to widen the scope of who can participate in the assurance ecosystem.
+## What an assurance case is for
 
-<Callout type="info">
-**Skills and Capabilities Resources**
+A team might need to explain how a system meets a goal such as fairness, safety or explainability. That requires more than a final assertion. The team must define the goal in the project's context, show how it was addressed in design and testing, and make the supporting evidence inspectable. An assurance case gives those claims and evidence a structure that colleagues and stakeholders can challenge and revise.
 
-You can browse our [curriculum](/docs/curriculum) or [technical documentation](/docs/technical-guide) to find out more.
+![An example assurance case with a goal, supporting claims and evidence](/images/about-page-example.svg)
 
-</Callout>
+The diagram is a simple example. A top-level goal states what is to be assured. Strategies and property claims break that goal into more specific claims. Evidence supports those claims. Context and assumptions explain the scope and reasoning. A real case can change as a project learns more.
 
-### 3) The TEA Community: An Open and Collaborative Community Infrastructure
+## The platform and curriculum
 
-The TEA platform is designed to support open and collaborative practices. As our collective understanding of trustworthy and ethical assurance evolves alongside emerging technologies like AI systems and digital twins, it is vital that the process of developing and communicating assurance cases is done in a way that enables knowledge sharing and community engagement.
+The [case builder](https://assuranceplatform.azurewebsites.net/) lets a team create and edit a case in a visual interface. Members can be granted view, comment, edit or administrative access. They can discuss individual elements and publish a frozen snapshot when they want to share a case publicly. The [Discover page](https://assuranceplatform.azurewebsites.net/discover) currently lists published assurance cases.
 
-The platform supports this through several key features:
+The [TEA curriculum](/docs/curriculum) introduces assurance case ideas and guides people through the tool. Its trainee stage starts with reading an example, then moves towards building a case and working with others. The [technical guide](/docs/technical-guide) is for developers and operators.
 
-#### Sharing and Discovering Assurance Cases
+## Community and extensions
 
-The [Discover](/discover) section of the platform allows users to browse and explore publicly shared assurance cases and argument patterns. This enables teams to:
+The platform supports collaboration through teams, sharing and comments. Published cases let a wider audience inspect a snapshot without gaining access to the live working case. Community discussion can continue through the project's [GitHub Discussions](https://github.com/alan-turing-institute/AssurancePlatform/discussions).
 
-- Learn from exemplary assurance cases developed by others
-- Find and adapt reusable argument patterns for common assurance challenges
-- Share their own work to contribute to community best practices
+Plugins already have a foundation in the code, and the health plugin uses it. The [plugin foundation](/docs/technical-guide/architecture/plugin-foundation) describes the current extension mechanism.
 
-#### Collaboration Features
+## Support and partners
 
-The Case Builder includes built-in collaboration tools to support team-based assurance case development:
+The ongoing development and maintenance of TEA is supported by the Alan Turing Institute. The existing project record also names support from the EPSRC Networks of Cardiovascular Digital Twins programme, the BRAID programme, the Assuring Autonomy International Programme and UKRI's Trustworthy Autonomous Systems Hub. The Centre for Assuring Autonomy and the Digital Twins Hub are shown as collaborators in the current site material.
 
-- **Comments**: Add comments to specific elements within an assurance case to discuss evidence, flag concerns, or suggest improvements
-- **Sharing controls**: Manage who can view, comment on, or edit your assurance cases
+## Sources checked
 
-For broader discussions about the platform, methodology, or community initiatives, visit our [GitHub Discussions](https://github.com/alan-turing-institute/AssurancePlatform/discussions).
-
-#### Plugins and Extensions
-
-<Callout type="warn">
-**Coming Soon**
-
-Support for community-developed plugins is planned for a future release. Plugins will allow users to extend the platform's functionality with custom components, integrations, and argument pattern templates.
-
-</Callout>
-
-## Funding Statements
-
-- The ongoing development and maintenance of the TEA platform is supported by the Alan Turing Institute.
-- From October 2024 onwards, the project will receive support as part of the EPSRC Networks of Cardiovascular Digital Twins (CVD-Net) programme (awarded to Professor Steven Niederer, EP/Z531297/1)
-- From March 2024 until September 2024, the project was funded by the BRAID (UKRI AHRC) programme as part of a scoping research grant for the Trustworthy and Ethical Assurance of Digital Twins project, which was awarded to Dr Christopher Burr.
-- Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd's Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
-- Between July 2021 and June 2022 this project received funding from the UKRI's Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
-
-## Collaborators and Partners
-
-<div
-  style={{
-    display: 'flex',
-    gap: '2rem',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  }}
->
-  <img
-    src="/images/cfaa-logo.jpg"
-    alt="CFAA Logo"
-    style={{ height: '80px', width: 'auto' }}
-  />
-  <img
-    src="/images/dt-hub-logo.jpg"
-    alt="DT Hub Logo"
-    style={{ height: '80px', width: 'auto' }}
-  />
-</div>
+- `content/about.mdx`
+- `public/images/about-page-example.svg`
+- `app/(landing)/discover/page.tsx`
+- `lib/services/discover-service.ts`
+- `prisma/schema.prisma`
+- `lib/plugins/bootstrap.ts`
+- `lib/plugins/health/register.ts`

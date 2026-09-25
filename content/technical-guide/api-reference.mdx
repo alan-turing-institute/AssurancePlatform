@@ -1,156 +1,32 @@
 ---
-title: API Reference
+title: "API reference"
+description: "Choose the right authentication method and find the generated TEA Platform API reference."
 sidebar_position: 5
 sidebar_label: 'API Reference'
 ---
 
-The TEA Platform provides a RESTful API built with Next.js 15 App Router and Prisma ORM.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-<Callout type="info">
-**Auto-Generated Documentation**
+The application serves its generated API reference at [/api-docs](/api-docs). That page reads the OpenAPI document at `/openapi.json`. Route definitions and their annotations live in `app/api/`; the `docs:generate` package script runs `next-openapi-gen generate`. Use the generated reference for paths, methods, request shapes and responses.
 
-Our API documentation is automatically generated from the Prisma schema to ensure accuracy and completeness. This page provides an overview and links to the full documentation.
-</Callout>
+## Browser requests
 
-## Authentication
+When you sign in through the web interface, NextAuth.js manages a browser session. Browser-facing API handlers use that session to identify you and then check your access to the requested case or resource. The sign-in configuration supports email and password, GitHub and Google. You do not create a session cookie by hand.
 
-The TEA Platform uses [NextAuth.js](https://next-auth.js.org/) for authentication. API routes are protected and require a valid session.
+## Machine requests
 
-### Authentication Flow
+An integration calls the `/api/machine` surface with an `Authorization: Bearer teap_…` header. The secret is issued for an integration and is checked against the stored token record on each request. Its scopes limit the operations it may perform. Access to individual cases also follows the integration's case grants; a scope alone is not a case grant. The current scope vocabulary is `case:read`, `health:evidence:read` and `health:evidence:write`.
 
-1. **Sign in** via the web interface using GitHub OAuth or email/password
-2. **Session cookies** are automatically managed by NextAuth.js
-3. **API requests** include session cookies for authentication
+Create and revoke integration tokens through the authenticated integration controls. Keep the full token secret when it is issued, since later views expose only a prefix. Use the generated [API reference](/api-docs) for the supported machine routes.
 
-### Making Authenticated Requests
+## Sources checked
 
-When using tools like `curl` or Postman, you'll need to include the session cookie:
-
-```bash
-curl -X GET http://localhost:3000/api/cases \
-     -H 'Cookie: next-auth.session-token=YOUR_SESSION_TOKEN'
-```
-
-<Callout type="warn">
-**Session Tokens**
-
-Session tokens are managed by NextAuth.js and should not be manually created. Use the web interface to authenticate and obtain a valid session.
-</Callout>
-
-## API Overview
-
-The TEA Platform API is organised around REST principles. All endpoints:
-
-- Accept and return JSON
-- Use standard HTTP methods (GET, POST, PUT, DELETE)
-- Return appropriate HTTP status codes
-- Require authentication (except public endpoints)
-
-### Base URL
-
-| Environment | Base URL |
-|-------------|----------|
-| Local Development | `http://localhost:3000/api` |
-| Production | `https://assuranceplatform.azurewebsites.net/api` |
-
-### Core Resources
-
-| Resource | Description |
-|----------|-------------|
-| **Cases** | Assurance cases - the primary resource |
-| **Elements** | Goals, strategies, property claims, evidence, and context within cases |
-| **Teams** | User groups for collaborative case management |
-| **Users** | User accounts and profiles |
-| **Comments** | Discussions and feedback on case elements |
-
-## API Endpoints
-
-### Cases
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/cases` | List all cases accessible to the user |
-| POST | `/api/cases` | Create a new assurance case |
-| GET | `/api/cases/[id]` | Retrieve a specific case |
-| PUT | `/api/cases/[id]` | Update a case |
-| DELETE | `/api/cases/[id]` | Delete a case |
-
-### Elements
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/cases/[id]/elements` | List all elements in a case |
-| POST | `/api/cases/[id]/elements` | Add an element to a case |
-| GET | `/api/elements/[id]` | Retrieve a specific element |
-| PUT | `/api/elements/[id]` | Update an element |
-| DELETE | `/api/elements/[id]` | Delete an element |
-
-### Teams
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/teams` | List teams the user belongs to |
-| POST | `/api/teams` | Create a new team |
-| GET | `/api/teams/[id]` | Retrieve team details |
-| PUT | `/api/teams/[id]` | Update team settings |
-| DELETE | `/api/teams/[id]` | Delete a team |
-
-### Users
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users/me` | Get current user's profile |
-| PUT | `/api/users/me` | Update current user's profile |
-
-## Response Format
-
-### Success Response
-
-```json
-{
-  "id": 1,
-  "name": "Example Case",
-  "description": "An example assurance case",
-  "createdAt": "2025-01-15T10:30:00Z",
-  "updatedAt": "2025-01-15T14:45:00Z"
-}
-```
-
-### Error Response
-
-```json
-{
-  "error": "The requested resource was not found",
-  "code": "NOT_FOUND"
-}
-```
-
-### HTTP Status Codes
-
-| Code | Description |
-|------|-------------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Bad Request - Invalid input |
-| 401 | Unauthorised - Authentication required |
-| 403 | Forbidden - Insufficient permissions |
-| 404 | Not Found |
-| 500 | Internal Server Error |
-
-## Database Schema
-
-The TEA Platform uses Prisma ORM with PostgreSQL. The schema defines:
-
-- **AssuranceCase** - Top-level container for assurance arguments
-- **Element** - Nodes in the assurance case (goals, strategies, claims, evidence, context)
-- **User** - User accounts
-- **Team** - Groups for collaboration
-- **Comment** - Discussions on elements
-
-For the complete schema, see the [Prisma schema file](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/prisma/schema.prisma).
-
-## Further Resources
-
-- [NextAuth.js Documentation](https://next-auth.js.org/) - Authentication
-- [Prisma Documentation](https://www.prisma.io/docs) - Database ORM
-- [Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) - Route handlers
+- `content/technical-guide/api-reference.mdx`
+- `app/api-docs/page.tsx`
+- `package.json`
+- `lib/auth/config.ts`
+- `lib/auth/require-api-token.ts`
+- `lib/auth/scopes.ts`
+- `lib/auth/api-token-service.ts`
+- `lib/services/integration-registry-service.ts`
+- `app/api/machine/whoami/route.ts`

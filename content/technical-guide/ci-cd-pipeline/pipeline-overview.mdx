@@ -1,110 +1,48 @@
 ---
-title: CI/CD Pipeline Overview
+title: "CI and deployment pipeline"
+description: "See how local hooks, GitHub Actions, releases and scheduled maintenance fit together."
 sidebar_position: 1
 ---
 
-The TEA Platform CI/CD pipeline follows a two-gate approach with automated quality checks and deployments to Azure staging and production environments.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-## Two-Gate Architecture
+The repository checks changes locally and in GitHub Actions. The `Build` workflow validates code, tests it, builds a container image and deploys successful `staging` and `main` builds to Azure. Other workflows handle releases, staging data and scheduled maintenance.
 
-The pipeline implements a clean two-gate system for maximum transparency and efficiency:
+## Local checks
 
-### Gate 1: Pre-commit Hooks (Fast, Local)
+`.pre-commit-config.yaml` defines syntax, merge-conflict, large-file and secret checks, followed by Ultracite checks on staged code, a TypeScript check for staged TypeScript changes, integration tests for relevant code changes, and file cleanup. Run these checks on demand with `uv tool run pre-commit run --all-files`, as described in the [pull request guide](/docs/technical-guide/contributing/pull-requests). Integration tests require the dedicated local PostgreSQL test container.
 
-Minimal checks that run automatically on `git commit`:
+The repository's `prepare` script points Git at `.githooks/`. Its pre-push hook runs `pnpm lint` and `pnpm typecheck` when a push targets `staging` or `main`. The hook is a local check; the GitHub workflows provide the remote result.
 
-- **Syntax & safety**: JSON/YAML validation, merge conflict detection, large file checks, secret detection
-- **Linting**: Ultracite (Biome) lint and format on staged `.js`, `.ts`, `.tsx`, `.json` files
-- **Type checking**: TypeScript compiler (`tsc --noEmit`) on staged TypeScript files
-- **Cleanup**: Debug statement detection, trailing whitespace, end-of-file fixes
+## Build workflow
 
-See `.pre-commit-config.yaml` for the full configuration.
+`.github/workflows/build.yaml` runs on pull requests, matching pushes to `main` or `staging`, and manual dispatch. The `validate` job runs Ultracite and TypeScript. It runs `pnpm docs:generate` and fails if `public/openapi.json` changes. It also runs `pnpm audit --audit-level=high`, currently with `continue-on-error`, so an audit finding does not by itself fail that job.
 
-### Gate 2: GitHub Actions (Comprehensive)
+The test job runs unit tests with coverage, integration tests against PostgreSQL, and Playwright end-to-end tests. For pull requests, a changed-path check can skip the expensive test job when no code-relevant path changed. The `Structural Quality (blocking)` job uses fallow on pull requests and consumes merged unit and integration coverage. `.github/workflows/fallow.yml` is a retired manual-only placeholder; the active gate is in `build.yaml`.
 
-Four workflow files handle all CI/CD needs:
+After validation and tests succeed, push and manual-dispatch runs build and push a Docker image to GHCR. Pull requests do not build an image. For `main` and `staging`, its deployment job calls the corresponding Azure webhook and then checks `/api/health`. The workflow's image name is `alan-turing-institute/assuranceplatform/tea-app`. Check the [Docker deployment guide](/docs/technical-guide/deployment/docker-production) for the separate compose-file image setting.
 
-#### 1. `build.yaml` — Build & Quality Checks
-Runs on pushes to `main`/`staging` and all pull requests:
-- **Linting**: Ultracite check (Biome linting and formatting)
-- **Type checking**: TypeScript compiler (`tsc --noEmit`)
-- **Unit tests**: Vitest test suite
-- **Docker build**: Builds and pushes container image to GitHub Container Registry (ghcr.io)
-- **Deployment**: Deploys to Azure App Service (staging or production)
-- **Health check**: Verifies `/api/health` returns 200 after deployment
+## Release and staging data
 
-#### 2. `release.yaml` — Production Release
-Triggered by version tags (`v*.*.*`):
-- Creates a GitHub Release with auto-generated release notes
+The `Release` workflow runs when a successful `Build` workflow completes on `main`. It runs semantic-release, which uses conventional commit history for versioning and release notes, then merges the release commit back into `staging`. It is not triggered by a manually created version tag. The [versioning guide](/docs/technical-guide/ci-cd-pipeline/versioning-strategy) explains the release rules.
 
-#### 3. `seed-staging.yml` — Staging Database Reset
-Runs on push to `staging` or manual dispatch:
-- Resets the staging database (`prisma migrate reset --force`)
-- Grants permissions to the `tea_app` database user
-- Seeds test data (users: chris, alice, bob, charlie)
+`Seed staging database` runs after a successful staging `Build` or on manual dispatch. It checks out `staging`, resets and migrates the staging database, grants the application database user access and runs the seed script. This is a staging reset, so do not treat it as a general production migration procedure.
 
-#### 4. `purge-trash.yml` — Maintenance
-Scheduled cleanup of soft-deleted records.
+## Scheduled workflows
 
-## Branch Strategy
+The workflow directory also contains `Purge expired trash`, `Sweep health staleness`, `Data retention sweep` and `Cleanup PR Docker Images`. Each has a schedule and a manual trigger. The first three call application cron routes using a cron secret; image cleanup acts on the container registry. The retired fallow file remains in the directory, making eight workflow files in total, but seven active workflows.
 
-- **Feature branches** → `staging` → `main`
-- Feature branches are created from `staging` for development
-- Pull requests merge into `staging` for integration testing
-- `staging` is merged into `main` for production release
+## Sources checked
 
-## Quality Gates
-
-### Gate 1 (Pre-commit)
-- **Lint check**: TypeScript/JavaScript files properly formatted
-- **Type check**: No TypeScript errors
-- **Syntax validation**: No invalid JSON/YAML
-- **File safety**: No large files, merge conflicts, or secrets
-
-### Gate 2 (GitHub Actions)
-- **Code quality**: Ultracite linting and TypeScript compilation pass
-- **Tests**: Vitest suite passes
-- **Build success**: Docker image builds correctly
-- **Deployment health**: `/api/health` endpoint responds
-
-## Tools & Technologies
-
-### Version Control & CI/CD
-- **Git & GitHub**: Source control with branch protection
-- **GitHub Actions**: Four workflow files for all CI/CD
-- **GitHub Container Registry** (ghcr.io): Container image storage
-
-### Quality Tools
-- **Ultracite** (Biome wrapper): Linting and formatting
-- **TypeScript**: Type checking (`tsc --noEmit`)
-- **Vitest**: Unit and integration testing
-- **Pre-commit**: Local hooks for fast feedback
-- **detect-secrets**: Secret detection in staged files
-
-### Infrastructure
-- **Docker**: Multi-stage builds for efficient images
-- **Azure App Service**: Staging and production hosting
-- **PostgreSQL**: Database
-
-## Environment Variables
-
-The pipeline manages environment-specific configurations:
-
-- **Development**: Local `.env` files
-- **CI/CD**: GitHub Secrets
-- **Staging/Production**: Azure App Service settings
-
-## Security Considerations
-
-- Secrets never committed to repository (enforced by `detect-secrets` hook)
-- Environment variables injected at build/runtime
-- Container images built from verified base images
-- Least-privilege database users (`tea_app` for runtime, admin for migrations)
-
-## Rollback Strategy
-
-In case of issues:
-
-1. **Automatic**: Health checks verify deployment; failure blocks promotion
-2. **Manual**: Previous container image tags available in ghcr.io
-3. **Database**: Migration rollback via `prisma migrate resolve`
+- `content/technical-guide/ci-cd-pipeline/pipeline-overview.mdx`
+- `.pre-commit-config.yaml`
+- `.githooks/pre-push`
+- `package.json`
+- `.github/workflows/build.yaml`
+- `.github/workflows/release.yaml`
+- `.github/workflows/seed-staging.yml`
+- `.github/workflows/purge-trash.yml`
+- `.github/workflows/health-staleness-sweep.yml`
+- `.github/workflows/retention-sweep.yml`
+- `.github/workflows/cleanup-images.yaml`
+- `.github/workflows/fallow.yml`

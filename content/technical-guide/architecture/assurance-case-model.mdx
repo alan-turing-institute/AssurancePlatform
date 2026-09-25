@@ -1,215 +1,54 @@
 ---
-title: Assurance Case Model
+title: "Assurance case model"
+description: "Understand the case, element, evidence, access and publication records stored by the platform."
 sidebar_position: 2
 sidebar_label: 'Assurance Case Model'
 ---
 
-This page documents the core data model for assurance cases in the TEA Platform. Understanding this model is essential for developers working with the data layer.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-## Overview
+An assurance case is a structured argument. `AssuranceCase` stores its identity and settings; `AssuranceElement` stores the claims, strategies, evidence and references that make up the argument. The schema is in `prisma/schema.prisma`, with application rules in `lib/services/`.
 
-An assurance case is a structured argument demonstrating that a system meets specific requirements. In the TEA Platform, this is modelled as a hierarchical structure of elements.
+## Core records
 
-```
-AssuranceCase
-├── AssuranceElement (Goal - Top Level)
-│   ├── AssuranceElement (Strategy)
-│   │   ├── AssuranceElement (PropertyClaim)
-│   │   │   └── AssuranceElement (Evidence)
-│   │   └── AssuranceElement (PropertyClaim)
-│   │       └── AssuranceElement (Evidence)
-│   └── AssuranceElement (Context)
-└── Comments
-```
+| Model | What it holds |
+| --- | --- |
+| `AssuranceCase` | Name, description, mode, creator, layout, publish status, deletion state and relations to elements and access grants |
+| `AssuranceElement` | Type, optional name, description, parent and case references, type-specific fields, assertion status and deletion state |
+| `CaseInformation` | Case metadata held separately from the element tree |
+| `EvidenceLink` | A many-to-many link from evidence to the claims it supports |
+| `Comment` | Internal discussion on case elements |
 
-## Core Entities
+A case has `STANDARD` or `ADVANCED` mode. Its current publishing states are `DRAFT` and `PUBLISHED`. `deletedAt` marks a case moved to trash. The creator is recorded for attribution and receives access through the permission rules; other users can gain access directly or through a team.
 
-### AssuranceCase
+Elements use `parentId` to form the argument hierarchy. A root goal has no parent and can have the `TOP_LEVEL` role. Other elements can have the `SUPPORTING` role. `name` is nullable, so consumers must not assume it is present. `description` is the main text. `context` is an array on an element, and `assumption` and `justification` are optional fields. Evidence has a `urls` array; the single `url` field remains for compatibility and tracks its first URL. Both cases and elements can be soft deleted.
 
-The top-level container for an assurance argument.
+## Element types and relationships
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Primary key |
-| `name` | String | Case title |
-| `description` | String | Case description |
-| `mode` | Enum | `STANDARD` or `ADVANCED` |
-| `publishStatus` | Enum | `DRAFT`, `READY_TO_PUBLISH`, or `PUBLISHED` |
-| `createdById` | UUID | User who created the case |
+The `ElementType` enum contains `GOAL`, `STRATEGY`, `PROPERTY_CLAIM`, `EVIDENCE`, `CONTEXT`, `ASSUMPTION`, `JUSTIFICATION`, `MODULE`, `AWAY_GOAL` and `CONTRACT`. This is a database vocabulary, not a promise that every type has a separate editor card. The editor currently registers six node renderers. Context is generally stored in the `context` field rather than added as a context node. See the [case editor](/docs/technical-guide/architecture/assurance-case-editor) for the rendered types.
 
-**Key Relations:**
-- `elements` - All AssuranceElements in the case
-- `userPermissions` - Individual user access
-- `teamPermissions` - Team-based access
-- `comments` - Discussion threads
+`EvidenceLink` lets one evidence element support several claims. A defeater uses `isDefeater` and `defeatsElementId` to challenge another element. A module can reference another case with `moduleReferenceId`; an away goal can also name a particular cited element through `citedElementId`. If an imported or deleted target cannot be resolved, dangling flags preserve that fact rather than pretending the citation is valid.
 
-### AssuranceElement
+`assertionStatus` records the status of a claim or strategy. The enum includes `ASSERTED`, `NEEDS_SUPPORT`, `ASSUMED`, `AXIOMATIC`, `DEFEATED` and `AS_CITED`. The first five can be selected by an author in the edit dialog; `AS_CITED` is reserved and is not computed automatically in this build. A null value is treated as the default `ASSERTED` during interpretation or export. See the quick reference for the author-facing meanings.
 
-The building blocks of an assurance case. All element types share a unified model with type-specific fields.
+## Access
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Primary key |
-| `caseId` | UUID | Parent assurance case |
-| `elementType` | Enum | Type of element (see below) |
-| `parentId` | UUID | Parent element (for hierarchy) |
-| `name` | String | Element label |
-| `description` | String | Main content/claim |
-| `assumption` | String | Optional assumption text |
-| `justification` | String | Optional justification (strategies) |
-| `context` | String[] | Context references |
-| `url` | String | Evidence URL (evidence elements) |
+`CasePermission` grants an individual `VIEW`, `COMMENT`, `EDIT` or `ADMIN` access. `CaseTeamPermission` grants one of those levels to a team, and members inherit it. `TeamMember` separately records the member's `OWNER`, `ADMIN` or `MEMBER` team role. A team role and a case permission answer different questions: who manages the team, and what that team may do with this case. `lib/permissions.ts` combines applicable case grants with the creator's access.
 
-### Element Types
+## Published records
 
-The `elementType` enum defines the available element types:
+Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.
 
-| Type | Purpose | GSN Notation |
-|------|---------|--------------|
-| `GOAL` | Top-level claim to be demonstrated | Goal (rectangle) |
-| `STRATEGY` | Argument approach for decomposing goals | Strategy (parallelogram) |
-| `PROPERTY_CLAIM` | Specific claim supporting a strategy | Goal (rectangle) |
-| `EVIDENCE` | Artefact supporting a claim | Solution (circle) |
-| `CONTEXT` | Background information | Context (rounded rectangle) |
-| `ASSUMPTION` | Stated assumption | Assumption (ellipse with 'A') |
-| `JUSTIFICATION` | Rationale for argument choices | Justification (ellipse with 'J') |
-| `MODULE` | Reference to another case | Module (rectangle with line) |
-| `AWAY_GOAL` | Reference to goal in another module | Away Goal |
-| `CONTRACT` | Interface between modules | Contract |
+## Working with the schema
 
-### Element Roles
+The Prisma client is created in `lib/prisma.ts` and generated under `src/generated/prisma`. Prefer the service layer for application operations, since a direct database write can skip case permissions, type-specific validation, publication rules and event handling. Database changes use hand-written SQL migrations followed by `prisma migrate deploy` in the repository's deployment process.
 
-Elements can have a `role` to indicate their position:
+## Sources checked
 
-- `TOP_LEVEL` - The root goal of the assurance case
-- `SUPPORTING` - Elements that support the argument
-
-## Relationships
-
-### Hierarchical Structure
-
-Elements form a tree through the `parentId` relationship:
-
-```typescript
-// Parent-child relationship
-element.parent   // AssuranceElement | null
-element.children // AssuranceElement[]
-```
-
-### Evidence Links
-
-Evidence can support multiple claims through a many-to-many relationship:
-
-```typescript
-// EvidenceLink model
-{
-  evidenceId: string  // The evidence element
-  claimId: string     // The property claim being supported
-}
-```
-
-### Defeaters (Dialogical Reasoning)
-
-Elements can be marked as defeaters to challenge other elements:
-
-```typescript
-// Defeater relationship
-element.isDefeater       // boolean
-element.defeatsElementId // UUID of challenged element
-element.defeatedBy       // Elements challenging this one
-```
-
-## Permissions Model
-
-### Permission Levels
-
-Access is controlled through four levels:
-
-| Level | Can View | Can Comment | Can Edit | Can Manage |
-|-------|----------|-------------|----------|------------|
-| `VIEW` | Yes | No | No | No |
-| `COMMENT` | Yes | Yes | No | No |
-| `EDIT` | Yes | Yes | Yes | No |
-| `ADMIN` | Yes | Yes | Yes | Yes |
-
-### Permission Sources
-
-Permissions can come from:
-1. **Direct user permission** (`CasePermission`)
-2. **Team membership** (`CaseTeamPermission` + `TeamMember`)
-3. **Case ownership** (creator has implicit ADMIN)
-
-## Publishing Workflow
-
-Cases go through a three-stage publishing workflow:
-
-```
-DRAFT → READY_TO_PUBLISH → PUBLISHED
-```
-
-When published, a `Release` is created with:
-- Snapshot of the case content
-- Version number
-- Community settings (comments enabled/disabled)
-
-## Prisma Schema Reference
-
-The full schema is defined in `prisma/schema.prisma`. Key models:
-
-- `AssuranceCase` - Case container
-- `AssuranceElement` - Elements (unified model)
-- `EvidenceLink` - Evidence-to-claim relationships
-- `CasePermission` - User permissions
-- `CaseTeamPermission` - Team permissions
-- `Comment` - Internal comments
-- `Release` - Published versions
-- `ReleaseSnapshot` - Version snapshots
-
-<Callout type="info">
-**Generating Types**
-
-After schema changes, run `npx prisma generate` to update the TypeScript types. The generated client is output to `src/generated/prisma`.
-</Callout>
-
-## Working with the Model
-
-### Fetching a Case with Elements
-
-```typescript
-import { prisma } from '@/lib/db'
-
-const caseWithElements = await prisma.assuranceCase.findUnique({
-  where: { id: caseId },
-  include: {
-    elements: {
-      include: {
-        children: true,
-        evidenceLinksFrom: true,
-        evidenceLinksTo: true,
-      }
-    },
-    userPermissions: true,
-    teamPermissions: true,
-  }
-})
-```
-
-### Creating an Element
-
-```typescript
-const newElement = await prisma.assuranceElement.create({
-  data: {
-    caseId: caseId,
-    elementType: 'PROPERTY_CLAIM',
-    parentId: parentId,
-    name: 'PC1',
-    description: 'The system performs accurately',
-    createdById: userId,
-  }
-})
-```
-
-## Further Reading
-
-- [Assurance Case Editor](./assurance-case-editor) - How elements are rendered visually
-- [API Reference](/technical-guide/api-reference) - REST API for cases and elements
+- `content/technical-guide/architecture/assurance-case-model.mdx`
+- `prisma/schema.prisma`
+- `lib/prisma.ts`
+- `lib/permissions.ts`
+- `lib/services/publish-service.ts`
+- `components/cases/node-type-resolver.ts`
+- `components/cases/node-edit-dialog.tsx`

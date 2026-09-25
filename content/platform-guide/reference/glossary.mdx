@@ -1,6 +1,6 @@
 ---
-title: "Glossary"
-description: "Key terminology and definitions for the TEA Platform"
+title: "TEA glossary"
+description: "Define the argument, project and platform terms used in the trainee modules."
 sidebar_label: "Glossary"
 sidebar_position: 4
 tags:
@@ -8,101 +8,73 @@ tags:
   - quick-reference
 ---
 
-This glossary provides definitions for key terms used throughout the TEA Platform and curriculum.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-## A
+## Argument and evidence
 
-### Argument
+- **Argument:** The stated reasoning that connects a goal, its supporting claims and the evidence offered for them.
+- **Assurance:** Work that builds justified confidence in a system through questions, actions, argument and evidence.
+- **Assurance case:** A structured, reviewable argument about a system in a stated context.
+- **Claim:** A proposition about a system or project that can be supported or challenged.
+- **Goal:** The broad proposition at the top of a case. The editor creates `G1` when a new case is made.
+- **Strategy:** An explanation of how a goal or claim is broken into parts that can be supported.
+- **Property claim:** A narrower proposition about the system or project that a reviewer can test or challenge.
+- **Evidence:** An artefact or result offered for a particular claim. Its relevance, reliability and sufficiency still need assessment.
+- **Evidence quality:** A judgement about whether evidence is relevant to a claim, comes from a credible source and is sufficient for the proposed conclusion.
+- **Relevance:** The degree to which evidence addresses the particular claim to which it is linked.
+- **Reliability:** The trustworthiness of an evidence source, method and record.
+- **Sufficiency:** Whether the available evidence is enough for the claim and its stated scope.
+- **Context:** A definition or boundary needed to understand where a claim applies.
+- **Assumption:** A condition taken as given in an argument and open to challenge if it fails.
+- **Justification:** A reason for including a claim, choice or decomposition in the argument.
+- **Defeater:** An element used to challenge another element. Its name uses `C` before its normal type prefix, such as `CP1`.
+- **Away goal:** An element that cites a goal or other valid target in a referenced case.
+- **Module:** A reference to another case used as part of an argument.
+- **Assertion status:** The author's declared position on an assertion: Asserted, Needs support, Assumed, Axiomatic or Defeated. As cited is reserved and is not computed automatically in this build.
 
-A logical structure that links claims to evidence, showing how evidence supports the claims being made. In the TEA context, arguments are structured using goals, strategies, property claims, evidence, and context elements.
+## Project reasoning
 
-### Assurance
+- **Critical reflection:** Examination of a project's assumptions, possible harms, argument and evidence, repeated as the project develops.
+- **Deliberation:** Careful discussion of options, values and trade-offs with people who bring relevant perspectives.
+- **Stakeholder engagement:** Involving people who use, build, govern or may be affected by a system while its questions and choices can still change.
+- **Ethical principle:** A broad aim, such as fairness, that starts deliberation but needs project-specific interpretation.
+- **Fairness:** A concern with how a system affects people's rights, interests and outcomes, specified for a particular use setting.
+- **Explainability:** The ability to give a useful account of system behaviour to the people who need it, considering the wider use setting as well as the model.
+- **Accountability:** Clear responsibility for project decisions and a record that lets others understand and challenge them.
+- **Proportionality:** Giving inquiry and evidence work attention in relation to a project's likely effects and use setting.
+- **Specification:** Turning a broad principle into a statement precise enough to guide decisions for a particular system.
+- **Operationalisation:** Identifying, weighing, specifying, revising and implementing principles in project activity.
+- **Justified trust:** Confidence grounded in inspectable reasons and evidence, with limits stated.
 
-The process of building justified trust in a system through structured argumentation and evidence. Assurance involves demonstrating that a system meets its stated goals and requirements.
+## Platform collaboration
 
-### Assurance Case
+- **Stakeholder:** A person or group who uses, builds, governs or may be affected by the system.
+- **Trustworthy and Ethical Assurance (TEA):** The practice of building a reviewable argument, with evidence and stakeholder reasoning, for a system in context.
+- **Working case:** The editable case available to people and teams with case permission.
+- **Team role:** A person's membership role within a team; it does not automatically confer case access.
+- **Case permission:** A direct or team grant to view, comment, edit or administer a working case.
+- **Comment:** Discussion attached to a case or element, kept outside the public published snapshot.
+- **Live update:** A case event that prompts another open editor view to refresh after a change.
+- **Public snapshot:** A published version available on Discover under a slug, separate from the working case.
+- **Discover:** The public area where published case versions can be found and read.
+- **Slug:** The readable path segment used for a published case page.
+- **Backup:** A separate exported copy of case data, such as JSON saved to Google Drive.
+- **Machine integration:** A registered external service that uses scoped API tokens and case grants.
+- **Health evidence:** An append-only, hash-chained record of one runtime check result against a property claim, with a metric, value, threshold, verdict and provenance.
+- **API token:** A secret beginning `teap_` that a machine client sends as a bearer credential and that TEA shows once on issue.
+- **Scope:** A named kind of machine action allowed to an integration; case permission still controls which case it can use.
+- **Trash:** The recovery area for deleted cases before the 30-day purge cutoff.
 
-A structured argument, supported by evidence, that provides a compelling and demonstrable case that a system satisfies its stated properties. An assurance case typically includes goals, strategies, claims, evidence, and context.
+For the controls behind these terms, see [platform basics](/docs/platform-guide/reference/01-platform-basics) and [element types](/docs/platform-guide/reference/02-element-types).
 
-## C
+## Sources checked
 
-### Claim
-
-A statement that something is true about a system. In TEA, claims can be goal claims (top-level normative statements) or property claims (specific testable statements about system properties).
-
-### Context
-
-Information that defines the scope, boundaries, and assumptions under which an assurance case applies. Context elements help readers understand the conditions under which claims are valid.
-
-### Critical Reflection
-
-The systematic examination of assumptions, reasoning, and evidence within an assurance case. Critical reflection helps identify weaknesses, biases, and areas for improvement.
-
-## D
-
-### Deliberation
-
-Careful consideration of different perspectives, options, and trade-offs when developing an assurance case. Deliberation involves engaging with diverse stakeholders and viewpoints.
-
-## E
-
-### Evidence
-
-Information that supports claims in an assurance case. Evidence can be technical (test results, metrics), process-based (audits, certifications), stakeholder-derived (surveys, interviews), or based on standards compliance.
-
-### Evidence Quality
-
-The assessment of evidence based on three criteria: relevance (how directly it supports the claim), reliability (how trustworthy the source is), and sufficiency (whether there's enough evidence).
-
-## G
-
-### Goal Claim
-
-The top-level normative claim in an assurance case that directs the entire argument structure. Goal claims state what the assurance case aims to demonstrate about the system.
-
-## J
-
-### Justified Trust
-
-Trust that is based on evidence and reasoning, rather than blind faith or assumption. The TEA approach aims to build justified trust through structured argumentation.
-
-## P
-
-### Property Claim
-
-A specific, testable claim about a property of the system being assured. Property claims support goal claims and are themselves supported by evidence.
-
-## R
-
-### Relevance
-
-One of three evidence quality criteria. Relevance assesses how directly the evidence supports the specific claim it's linked to.
-
-### Reliability
-
-One of three evidence quality criteria. Reliability assesses how trustworthy and credible the evidence source is.
-
-## S
-
-### Stakeholder
-
-Anyone with an interest in or affected by the system being assured. Stakeholders may include users, developers, regulators, affected communities, and others.
-
-### Strategy
-
-An element in an assurance case that explains how a goal or claim is decomposed into sub-claims. Strategies make the reasoning behind the argument structure explicit.
-
-### Sufficiency
-
-One of three evidence quality criteria. Sufficiency assesses whether there is enough evidence to adequately support the claim.
-
-## T
-
-### Trustworthy and Ethical Assurance (TEA)
-
-The methodology and platform for developing argument-based assurance cases that demonstrate systems are trustworthy and ethically designed, developed, and deployed.
-
-## Further Resources
-
-- [Element Types Guide](./02-element-types)
-- [TEA Trainee Curriculum](/docs/curriculum/tea-trainee)
+- `content/curriculum/quick-reference/glossary.mdx`
+- `content/curriculum/tea-trainee/01-first-sip/concepts.ts`
+- `lib/element-names/prefix-registry.ts`
+- `lib/assertion-status.ts`
+- `lib/permissions.ts`
+- `lib/services/publish-service.ts`
+- `lib/services/case-trash-service.ts`
+- `lib/auth/scopes.ts`
+- `lib/auth/api-token-service.ts`

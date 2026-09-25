@@ -1,147 +1,51 @@
 ---
-title: "Platform Basics"
-description: "Essential features and navigation for the TEA Platform"
+title: "Platform basics"
+description: "Find the current case, import, export and collaboration controls quickly."
 sidebar_label: "Platform Basics"
 sidebar_position: 2
 tags:
 
   - quick-reference
   - platform
-
 ---
 
-A quick reference guide to essential TEA Platform features and navigation.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-## Core Features
+Use this page when you need to find a control. For the worked activity, see [Brewing Your Own TEA](/docs/curriculum/tea-trainee/02-brewing-your-own-tea).
 
-### Creating an Assurance Case
+## Create and edit
 
-1. **Navigate to Cases**: Click "Cases" in the main navigation
-2. **Create New**: Click the "New Case" button
-3. **Add Details**: Enter case name, description, and colour coding
-4. **Start Building**: Begin adding goals, claims, and evidence
+1. Sign in at `/login` with email or username and password, Google, or GitHub.
+2. On `/dashboard`, choose **Create new case**. **Create New Assurance Case** asks for **Name** and **Description**. Choose **Submit**.
+3. The editor opens at `/case/<id>` with a generated `G1` goal. Open it to replace the placeholder description and add context.
+4. Use **Add Element** on a goal, strategy or property claim to choose an allowed child. Submit the add dialog to persist the element.
+5. Open an element to inspect or update its description, context, assumption, justification, assertion status or evidence references, where those fields apply.
 
-### Importing and Exporting
+The add and edit dialogs save their own changes. The toolbar provides **Undo** and **Redo** for supported editor operations. There is no general `Ctrl+S` or `Cmd+S` case-save step in this workflow.
 
-**Import a Case:**
+## Import, export and recover
 
-* JSON format supported
-* Click "Import" from the Cases page
-* Select your JSON file
+**Import File** on the dashboard can create a case from local JSON, a GitHub JSON file or a Google Drive backup when connected. In a case, **Export** opens **Export Case** with raw JSON, image and report options. A Google-connected account can also back up a case to Drive. These are separate copies; they do not continuously synchronise with the working case.
 
-**Export a Case:**
+Deleting a case moves it to `/dashboard/trash`. The owner can restore it during the 30-day recovery period. Cases become eligible for permanent deletion after 30 days. Export a copy before removing data if your project needs a separate record.
 
-* Open the case you want to export
-* Click "Export" in the case menu
-* Download as JSON for backup or sharing
+## Work with others
 
-### Case Elements
+**Share** in the case toolbar grants a person or team **Can view**, **Can comment**, **Can edit** or **Admin** access. Teams are managed at `/dashboard/teams`. Another person with the case open can receive live updates when elements, comments or permissions change. Publishing is separate: it makes a public snapshot on Discover. Review the case information and evidence before publishing.
 
-Quick access to add elements:
+## Read the diagram
 
-* **Goal Claim**: Top-level normative claim (usually one per case)
-* **Property Claim**: Specific claims about system properties
-* **Strategy**: Explanation of decomposition approach
-* **Evidence**: Supporting information and data
-* **Context**: Boundaries and scoping information
+The main route through a simple case is `G1` goal → `S1` strategy → `P1` property claim → `E1` evidence. A goal can also lead directly to a property claim; a property claim can have a further strategy or claim. Context, assumptions and justifications are fields associated with applicable elements rather than separate diagram nodes in the current editor. The case model also supports away goals, modules and defeaters. See [element types](/docs/platform-guide/reference/02-element-types) for their meanings and naming rules.
 
-## Navigation
+## Sources checked
 
-### Main Menu
-
-* **Home** - Dashboard and recent cases
-* **Cases** - View and manage all your cases
-* **Templates** - Access case templates
-* **Community** - Connect with other users
-* **Documentation** - Access this documentation
-
-### Case View
-
-When viewing a case:
-
-* **Graph View**: Visual representation of your argument structure
-* **List View**: Tabular view of all elements
-* **Edit Mode**: Modify elements and connections
-* **Comments**: Collaborate with team members
-* **Version History**: Track changes over time
-
-## Key Shortcuts
-
-| Action          | Shortcut                     |
-| --------------- | ---------------------------- |
-| Save case       | `Ctrl+S` (or `Cmd+S` on Mac) |
-| Add new element | `+` key when in graph view   |
-| Search cases    | `Ctrl+K` (or `Cmd+K` on Mac) |
-| Zoom in/out     | Mouse wheel or pinch gesture |
-| Pan view        | Click and drag background    |
-
-## Linking Elements
-
-### Support Links
-
-Connect elements to show logical support:
-
-* **Goal → Strategy**: How you'll decompose the goal
-* **Goal → Property Claim**: Direct claim supporting goal
-* **Strategy → Property Claim**: Claims following strategy
-* **Property Claim → Property Claim**: Sub-claims supporting parent
-* **Property Claim → Evidence**: Evidence supporting claim
-
-### Context Links
-
-Provide contextual information:
-
-* **Goal → Context**: Scope for top-level claim
-* **Property Claim → Context**: Specific context for claim
-* **Strategy → Context**: Context affecting decomposition
-
-<Callout>
-**Visual Feedback**
-
-The platform provides visual indicators when links are valid. Invalid connections are prevented automatically.
-</Callout>
-
-## Collaboration Features
-
-* **Sharing**: Invite team members to view or edit cases
-* **Comments**: Add notes and discussion threads on elements
-* **Version Control**: Track who made what changes and when
-* **Export/Share**: Generate shareable JSON files
-
-## Common Tasks
-
-### Review a Case
-
-1. Switch to graph view for visual overview
-2. Check each claim has supporting evidence
-3. Verify all strategies are implemented
-4. Review context elements for completeness
-5. Use list view to check for gaps
-
-### Prepare for Review
-
-1. Add comments explaining key decisions
-2. Ensure all evidence has URLs or descriptions
-3. Complete long descriptions for clarity
-4. Export JSON as backup
-5. Share case link with reviewers
-
-### Update an Existing Case
-
-1. Add new elements as needed
-2. Update evidence with latest data
-3. Revise claims if requirements changed
-4. Document changes in comments
-5. Review overall argument still holds
-
-## Getting Help
-
-* **Documentation**: Comprehensive guides in [TEA Trainee](/docs/curriculum/tea-trainee)
-* **Community**: Questions and discussions in [Community](/docs/community)
-* **Glossary**: Term definitions in [Glossary](./glossary)
-
-<Callout type="info">
-**In-Depth Learning**
-
-This is a quick reference. For detailed tutorials, see the [TEA Trainee curriculum](/docs/curriculum/tea-trainee).
-</Callout>
+- `components/auth/sign-in-form.tsx`
+- `components/cases/case-list.tsx`
+- `components/modals/case-create-modal.tsx`
+- `lib/services/case-fetch-service.ts`
+- `components/cases/node-add-popover.tsx`
+- `components/cases/node-edit-dialog.tsx`
+- `components/cases/action-buttons.tsx`
+- `components/cases/history-controls.tsx`
+- `components/sharing/case-sharing-dialog.tsx`
+- `lib/services/case-trash-service.ts`

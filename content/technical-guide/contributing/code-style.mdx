@@ -1,365 +1,71 @@
 ---
-title: Code Style Guide
+title: "Code style"
+description: "Follow the repository's TypeScript, data access, logging and test conventions."
 sidebar_position: 2
 sidebar_label: 'Code Style'
 ---
 
-This guide documents the coding conventions and style rules for the TEA Platform codebase.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-## Tooling
+Use the repository's checks and existing module patterns when changing code. `package.json` defines the commands, while `biome.json` and the Ultracite configuration define formatting and lint rules.
 
-### Linting and Formatting
+## Checks
 
-The project uses [Biome](https://biomejs.dev) via Ultracite for linting and formatting:
+Run the named scripts before submitting a change:
 
-```shell
-# Check for issues
-pnpm exec ultracite check
-
-# Fix issues automatically
-pnpm exec ultracite fix
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm test:integration
 ```
+
+`pnpm format` applies the Ultracite fixes. The integration suite needs its PostgreSQL test database.
 
 <Callout type="warn">
-**Always run before committing**
-
-CI will fail if linting errors are present. Run `ultracite check` before pushing.
+Outside CI, `pnpm test:e2e` runs `prisma migrate reset --force` and reseeds whatever database `DATABASE_URL` names. Run it only against a disposable database after checking that URL.
 </Callout>
 
-### Type Checking
+The [pull request guide](/docs/technical-guide/contributing/pull-requests) explains the local hooks and CI checks.
 
-TypeScript strict mode is enabled. Run type checking with:
+## TypeScript and imports
 
-```shell
-npx tsc --noEmit
-```
+Keep types close to the domain code that owns them. Reusable types live in `types/`, and request validation schemas live in `lib/schemas/`. Prisma generates its client into `src/generated/prisma`; import generated types from `@/src/generated/prisma` where needed. Prefer a precise type or `unknown` with a guard over an unchecked `any`.
 
-## TypeScript Rules
+Use the `@/` alias for imports from the repository root. Follow the import order enforced by the formatter rather than arranging groups by hand. React components that use browser state or effects carry the `"use client"` directive; pages can remain server components when they do not need those browser APIs. In the App Router, dynamic route `params` may be a promise and are awaited in the current case page.
 
-### No `any` Type
+## Data access and expected failures
 
-Never use `any`. Use proper types or `unknown` with type guards:
+Keep application Prisma access in services and `lib/prisma.ts`. Never add direct Prisma access to routes, actions, components or hooks. API handlers and server actions should authenticate callers, validate input and delegate domain operations to `lib/services/`. Importing Prisma into a new action simply to bypass a service also bypasses the established permission and validation paths. `lib/prisma.ts` owns the configured client, including element validation on writes.
 
-```typescript
-// Bad
-function process(data: any) { ... }
+Services commonly use `ServiceResult` from `types/service.ts` for expected success or failure. Follow the result shape of the service you are extending. `lib/schemas/` holds the Zod schemas used at boundaries. For an element change, check both the schema and the service rule; the database enum alone does not express every allowed combination.
 
-// Good
-function process(data: unknown) {
-  if (isValidData(data)) { ... }
-}
+## Names, wording and logging
 
-// Good - use proper types
-function process(data: ProcessableData) { ... }
-```
+Most source files use kebab case, exported React components use PascalCase, and functions and values use camelCase. Match the neighbouring code. Use British spelling in product text where external API names do not dictate a spelling. Follow the existing Tailwind CSS v4 conventions for styling.
 
-### Use Defined Types
+Use the structured `logger` in `lib/logger.ts` for application events and errors. A child logger can bind a component name. Supply useful fields without placing secrets or raw credentials in a log entry. Keep comments for a rule, trade-off or surprising behaviour that the code alone does not explain.
 
-Import types from `types/` or generate them from Prisma:
+For changes to documented API routes, run `pnpm docs:generate` and include the updated `public/openapi.json`; CI checks for drift.
 
-```typescript
-// Import from types directory
-import type { AssuranceCaseWithElements } from '@/types/cases'
+## Tests
 
-// Use Prisma generated types
-import type { AssuranceCase, AssuranceElement } from '@prisma/client'
-```
+Tests are not all beside the file they cover. Component and service tests often sit in a nearby `__tests__/` directory; broader integration tests are under `src/__tests__/integration/`, and browser tests are under `e2e/`. Add a test at the level that exercises the behaviour you changed. The CI workflow runs unit, integration and Playwright suites, and merges the first two suites' coverage for its structural-quality check.
 
-### Prefer Type Inference
+## Sources checked
 
-Let TypeScript infer types where obvious:
-
-```typescript
-// Unnecessary - type is inferred
-const count: number = items.length
-
-// Better
-const count = items.length
-
-// Do specify for function return types
-function getCount(items: Item[]): number {
-  return items.length
-}
-```
-
-## Naming Conventions
-
-### Files and Folders
-
-| Type | Convention | Example |
-|------|------------|---------|
-| Components | kebab-case | `flow-editor.tsx` |
-| Utilities | kebab-case | `format-date.ts` |
-| Types | kebab-case | `case-types.ts` |
-| Server Actions | kebab-case | `case-actions.ts` |
-| Folders | kebab-case | `flow-editor/` |
-
-### Code Identifiers
-
-| Type | Convention | Example |
-|------|------------|---------|
-| Variables | camelCase | `caseData` |
-| Functions | camelCase | `getCaseById` |
-| Components | PascalCase | `FlowEditor` |
-| Types/Interfaces | PascalCase | `AssuranceCase` |
-| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRY_COUNT` |
-| Enums | PascalCase (values too) | `ElementType.Goal` |
-
-## British English
-
-Use British English spelling throughout the codebase:
-
-| Use | Don't Use |
-|-----|-----------|
-| colour | color |
-| behaviour | behavior |
-| optimise | optimize |
-| analyse | analyze |
-| centre | center |
-| licence (noun) | license (noun) |
-
-<Callout>
-**Exception**: External API names and library identifiers should use their original spelling (e.g., `backgroundColor` in CSS-in-JS).
-</Callout>
-
-## React Patterns
-
-### Server vs Client Components
-
-Default to Server Components. Use Client Components only when necessary:
-
-```typescript
-// Server Component (default) - no directive needed
-// Note: In Next.js 15, params is a Promise and must be awaited
-async function CasePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const data = await getCaseData(id)
-  return <CaseView data={data} />
-}
-
-// Client Component - needs 'use client'
-'use client'
-
-function InteractiveEditor({ initialData }) {
-  const [state, setState] = useState(initialData)
-  // ...
-}
-```
-
-### Component Structure
-
-Organise components consistently:
-
-```typescript
-'use client' // if needed
-
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
-import type { ComponentProps } from './types'
-
-interface Props {
-  // ...
-}
-
-export function ComponentName({ prop1, prop2 }: Props) {
-  // Hooks first
-  const [state, setState] = useState()
-
-  // Event handlers
-  const handleClick = () => { ... }
-
-  // Render helpers
-  const renderItem = (item: Item) => { ... }
-
-  // Return JSX
-  return (
-    <div>
-      {/* ... */}
-    </div>
-  )
-}
-```
-
-### Props Interface
-
-Define props interface above the component:
-
-```typescript
-interface FlowEditorProps {
-  initialNodes: Node[]
-  initialEdges: Edge[]
-  readOnly?: boolean
-  onSave?: (data: CaseData) => void
-}
-
-export function FlowEditor({
-  initialNodes,
-  initialEdges,
-  readOnly = false,
-  onSave,
-}: FlowEditorProps) {
-  // ...
-}
-```
-
-## Server Actions
-
-### Action Structure
-
-Server Actions follow a consistent pattern:
-
-```typescript
-'use server'
-
-import { z } from 'zod'
-import { validateSession } from '@/lib/auth'
-
-const createElementSchema = z.object({
-  caseId: z.string().uuid(),
-  elementType: z.nativeEnum(ElementType),
-  description: z.string().min(1).trim(),
-})
-
-export async function createElement(
-  input: z.infer<typeof createElementSchema>
-) {
-  const session = await validateSession()
-  if (!session) return { success: false, error: 'Unauthorised' }
-
-  const result = createElementSchema.safeParse(input)
-  if (!result.success) return { success: false, error: 'Invalid input' }
-
-  // Dynamic import for Prisma (keeps Server Action bundle small)
-  const { prisma } = await import('@/lib/prisma')
-
-  // Check permissions in service layer
-  const hasAccess = await checkCaseAccess(result.data.caseId, session.userId, 'EDIT')
-  if (!hasAccess) {
-    return { success: false, error: 'Permission denied' }
-  }
-
-  const element = await prisma.assuranceElement.create({
-    data: {
-      ...result.data,
-      createdById: session.userId,
-    }
-  })
-
-  return { success: true, data: element }
-}
-```
-
-### Return Types
-
-Actions should return consistent result objects (never throw for expected failures):
-
-```typescript
-// Success
-return { success: true, data: result }
-
-// Error
-return { success: false, error: 'Error message' }
-```
-
-## Imports
-
-### Import Order
-
-Organise imports in this order:
-
-1. React/Next.js
-2. External libraries
-3. Internal aliases (`@/`)
-4. Relative imports
-5. Types (with `type` keyword)
-
-```typescript
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-
-import { toast } from 'sonner'
-import { z } from 'zod'
-
-import { prisma } from '@/lib/prisma'
-import { cn } from '@/lib/utils'
-
-import { LocalComponent } from './local-component'
-
-import type { CaseData } from '@/types/cases'
-```
-
-### Path Aliases
-
-Use the `@/` alias for imports from project root:
-
-```typescript
-// Good
-import { Button } from '@/components/ui/button'
-
-// Avoid
-import { Button } from '../../../components/ui/button'
-```
-
-## Comments
-
-### When to Comment
-
-- Complex business logic
-- Non-obvious workarounds
-- TODO items with context
-
-### Comment Style
-
-```typescript
-// Single line for brief notes
-
-/**
- * Multi-line for function documentation.
- * Explains what the function does and why.
- */
-function complexFunction() { ... }
-
-// TODO(username): Description of what needs to be done
-// and why it's deferred
-```
-
-### Avoid Obvious Comments
-
-```typescript
-// Bad - states the obvious
-// Increment counter
-counter++
-
-// Good - explains why
-// Skip the header row when processing CSV
-startIndex = 1
-```
-
-## Testing
-
-### Test File Location
-
-Place test files next to source files:
-
-```
-components/
-  flow-editor/
-    flow-editor.tsx
-    flow-editor.test.tsx
-```
-
-### Test Naming
-
-```typescript
-describe('FlowEditor', () => {
-  it('should render initial nodes', () => { ... })
-  it('should add node when toolbar button clicked', () => { ... })
-  it('should delete selected node on Delete key', () => { ... })
-})
-```
-
-## Further Reading
-
-- [Biome Documentation](https://biomejs.dev)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/)
-- [Next.js Documentation](https://nextjs.org/docs)
+- `content/technical-guide/contributing/code-style.mdx`
+- `package.json`
+- `biome.json`
+- `lib/prisma.ts`
+- `lib/logger.ts`
+- `lib/services/element-service.ts`
+- `types/service.ts`
+- `lib/schemas/element.ts`
+- `app/(cases)/case/[caseId]/page.tsx`
+- `src/__tests__/integration/`
+- `e2e/`
+- `e2e/global-setup.ts`
+- `playwright.config.ts`
+- `public/openapi.json`
+- `.github/workflows/build.yaml`

@@ -1,160 +1,79 @@
 ---
-title: Local Development
+title: "Local development"
+description: "Run the Next.js application on your host against a local PostgreSQL database."
 sidebar_position: 2
 sidebar_label: 'Local Development'
 ---
 
-<Callout>
-**Live Demo Version**
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-For those looking to explore without installing, a live demo version of the assurance platform is available at https://assuranceplatform.azurewebsites.net/. Please be aware that data in the demo environment is periodically cleared.
-</Callout>
+You can run the application on your host while PostgreSQL runs locally or in the repository's development compose stack. The [Docker quickstart](/docs/technical-guide/getting-started/docker-quickstart) runs both application and database in containers. This page covers a host-run Next.js process, which provides hot reload.
 
-Setting up a local installation of the TEA Platform (e.g. for development) involves configuring the application and its database. The recommended approach is to use Docker, but you can also run locally without Docker if preferred.
+## Prerequisites and configuration
 
-<Callout type="info">
-**Docker (Recommended)**
+Use Node 20 from `.nvmrc`. `package.json` accepts Node `>=20 <23` and pnpm `>=10`. Install the package manager version named in `package.json`, then install dependencies:
 
-A quicker way to get the TEA Platform running on your local machine is to use Docker. If you're familiar with Docker and docker-compose, you can follow the [Docker Quickstart guide](./docker-quickstart) to set up the platform with minimal effort.
-</Callout>
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- [Node.js](https://nodejs.org/) (v20 or later)
-- [pnpm](https://pnpm.io/) package manager
-- [PostgreSQL](https://www.postgresql.org/) (v14 or later)
-
-## Step-by-Step Installation
-
-### 1. Clone the Repository
-
-```shell
-git clone https://github.com/alan-turing-institute/AssurancePlatform.git
-cd AssurancePlatform
-```
-
-### 2. Install Dependencies
-
-```shell
+```bash
 pnpm install
 ```
 
-### 3. Set Up Environment Variables
+The package `prepare` script activates `.githooks/` as the local Git hooks path.
 
-Create a `.env` file in the root directory:
+Create a root `.env` for your own development settings without committing it. Set `DATABASE_URL` to a writable PostgreSQL database, `NEXTAUTH_SECRET` for sessions and `NEXTAUTH_URL` to the address where you run the application. Configure provider client values if you plan to test GitHub or Google sign-in. The local compose database is `tea_dev` with user `tea_user` on host port 5432. The separate `postgres-test` service is on host port 5433 for integration tests. Avoid pointing tests at your development database.
 
-```shell
-cp .env.example .env
-```
+## Initialise the database
 
-Edit `.env` with your configuration:
+Start PostgreSQL, generate the Prisma client, apply the checked-in SQL migrations and seed sample data if wanted:
 
 ```bash
-# Database connection
-DATABASE_URL="postgresql://username:password@localhost:5432/tea_dev"
-
-# Authentication
-NEXTAUTH_SECRET="your-secret-key"  # Generate with: openssl rand -base64 32
-NEXTAUTH_URL="http://localhost:3000"
-
-# GitHub OAuth (optional)
-GITHUB_APP_CLIENT_ID="your-github-client-id"
-GITHUB_APP_CLIENT_SECRET="your-github-client-secret"
+docker compose -f docker-compose.local.yml up -d postgres
+pnpm exec prisma generate
+pnpm exec prisma migrate deploy
+pnpm exec tsx prisma/seed/dev-seed.ts
 ```
 
-To generate a unique string for the `NEXTAUTH_SECRET` you can run:
+Create an empty development database before applying migrations. The repository does not use `prisma migrate dev` to generate migrations. `prisma.config.ts` and the migration directory are the places to inspect if generation or deployment fails.
+
+For sample cases and accounts, run `prisma/seed/dev-seed.ts` after migrations. It first reads `prisma/seed/.credentials` if present, then falls back to `SEED_USER_PASSWORD`; a leftover credentials file takes priority. Do not commit that file. The seed skips reseeding when it finds the existing `chris` account. If you do not want sample data, you can run the application against an empty migrated database and register an account through the browser.
+
+## Run and check the application
+
+The development server uses the current `dev` script, `next dev`, and serves the application at `http://localhost:3000` with the default Next.js port. Use the package scripts for routine work:
 
 ```bash
-openssl rand -base64 32
+pnpm dev
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm test:integration
+pnpm build
 ```
 
-### 4. Set Up the Database
+`pnpm format` applies formatting changes. `pnpm test:coverage:check` is the coverage run used by CI. The integration suite needs its dedicated PostgreSQL test service and setup.
 
-Create a PostgreSQL database:
+<Callout type="warn">
+Outside CI, `pnpm test:e2e` runs `prisma migrate reset --force` and reseeds whatever database `DATABASE_URL` names. Run it only against a disposable database, after checking that URL.
+</Callout>
 
-```shell
-createdb tea_dev
-```
-
-Generate the Prisma client and run migrations:
-
-```shell
-npx prisma generate
-npx prisma migrate dev
-```
-
-### 5. Run the Development Server
-
-```shell
-pnpm run dev
-```
-
-The application will be available at [http://localhost:3000](http://localhost:3000).
-
-## Development Commands
-
-### Running Tests
-
-```shell
-pnpm run test           # Run all tests
-pnpm run test:watch     # Run tests in watch mode
-pnpm run test:coverage  # Run tests with coverage report
-```
-
-### Database Management
-
-```shell
-# Generate Prisma client after schema changes
-npx prisma generate
-
-# Create a new migration
-npx prisma migrate dev
-
-# Reset database (drops all data)
-npx prisma migrate reset
-
-# Open Prisma Studio (database GUI)
-npx prisma studio
-```
-
-### Code Quality
-
-```shell
-# Lint and format code
-pnpm exec ultracite fix
-
-# Check for issues without fixing
-pnpm exec ultracite check
-
-# Type check
-npx tsc --noEmit
-```
-
-### Building for Production
-
-```shell
-pnpm run build
-pnpm start
-```
+The [code style guide](/docs/technical-guide/contributing/code-style) gives the intended use of each check.
 
 ## Troubleshooting
 
-### Database Connection Issues
+If the server cannot connect to PostgreSQL, check the host, port and database named by `DATABASE_URL`, then confirm the database is running and migrated. The application uses `DB_POOL_TIMEOUT_MS` to limit how long a request waits for a connection, with a default of 5000 ms. If sign-in fails, check the provider settings and session URL for the route you are using. Read the application log rather than assuming that a build-time warning proves a runtime connection failure.
 
-If you encounter database connection errors:
+## Sources checked
 
-1. Ensure PostgreSQL is running
-2. Verify your `DATABASE_URL` in `.env.local`
-3. Check that the database exists: `psql -l | grep tea_dev`
-
-### Node.js Version Issues
-
-The TEA Platform requires Node.js v20 or later. Check your version with:
-
-```shell
-node --version
-```
-
-If you need to manage multiple Node.js versions, consider using [nvm](https://github.com/nvm-sh/nvm).
+- `content/technical-guide/getting-started/local-development.mdx`
+- `package.json`
+- `Dockerfile`
+- `Dockerfile.dev`
+- `docker-compose.local.yml`
+- `prisma.config.ts`
+- `prisma/seed/dev-seed.ts`
+- `lib/prisma.ts`
+- `lib/db-pool-config.ts`
+- `lib/auth/config.ts`
+- `scripts/run-integration-tests.sh`
+- `.nvmrc`
+- `e2e/global-setup.ts`
+- `playwright.config.ts`

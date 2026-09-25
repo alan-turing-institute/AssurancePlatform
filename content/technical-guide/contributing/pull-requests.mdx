@@ -1,164 +1,57 @@
 ---
-title: Contributing Pull Requests
+title: "Pull requests"
+description: "Prepare a focused change for the staging branch and its automated checks."
 sidebar_position: 1
 sidebar_label: 'Pull Requests'
 ---
 
-Thank you for your interest in contributing to the TEA Platform! This guide explains what kinds of contributions we welcome and how to submit them.
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
 
-<Callout type="info">
-**Community Engagement**
+The repository's contribution flow is feature branch to `staging`, then `staging` to `main` for production release. Start your branch from `staging` and target `staging` with your pull request. Give the reviewer the problem, the change you made, how you checked it and any visible effect on the interface or data. Link an issue when one exists.
 
-For broader community engagement, discussions, and getting help, see our [Community section](/community).
+## Prepare a change
+
+Read the [code style guide](/docs/technical-guide/contributing/code-style) and the relevant architecture page. Keep a pull request focused on one change. Add or update tests for behaviour that can be verified, and update documentation when the user or developer contract changes. For an interface change, include a screenshot or recording that shows the result and any relevant states.
+
+`pnpm install` activates the repository's `.githooks/pre-push` through the `prepare` script. That hook runs `pnpm lint` and `pnpm typecheck` when pushing to `staging` or `main`. The separate `.pre-commit-config.yaml` is available for on-demand checks and pre-commit.ci. As `CONTRIBUTING.md` explains, the configured Git hooks path prevents `pre-commit install` from installing the pre-commit hook in the usual way. Run them on demand with `uv tool run pre-commit run --all-files` instead of assuming they are installed for every local commit.
+
+## Run checks
+
+Choose the package scripts that match your change:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm test:integration
+```
+
+Integration tests use a dedicated PostgreSQL test database.
+
+<Callout type="warn">
+Outside CI, `pnpm test:e2e` runs `prisma migrate reset --force` and reseeds whatever database `DATABASE_URL` names. Run it only against a disposable database after checking that URL.
 </Callout>
 
-## What We Welcome
+A pull request's `Build` workflow validates code, runs tests for code-relevant changes and performs the structural-quality audit. The image build runs on push or manual dispatch. The security audit step currently reports findings without failing validation. See the [pipeline overview](/docs/technical-guide/ci-cd-pipeline/pipeline-overview) for the workflow conditions.
 
-### Bug Fixes
+## Write the commit and request review
 
-Found a bug? We appreciate bug fix contributions:
+Use a lowercase conventional commit type, such as `feat`, `fix`, `docs` or `test`. An optional scope can follow the values described in `.commitlintrc.json`; no hook or CI step enforces this convention. For example, `fix(auth): reject expired token` describes a fix in the authentication area. The configuration describes a 50-character subject limit. `Fix:` and `Feature:` are not the format defined by this repository.
 
-- Check [existing issues](https://github.com/alan-turing-institute/AssurancePlatform/issues) to see if it's already reported
-- If not, create a new issue describing the bug
-- Reference the issue number in your PR
+For a change to a documented API route, run `pnpm docs:generate` and include the regenerated `public/openapi.json`; CI checks for drift.
 
-### Documentation Improvements
+Open the pull request against `staging`. In its description, state what changed and why, include the checks you ran, and call out any migration, deployment or documentation effect. Respond to review comments with a new commit or an explanation of the relevant code. Maintainers decide when to merge and when to promote `staging` to `main`; releases from `main` are automated by semantic-release.
 
-Help us improve the documentation:
+## Sources checked
 
-- Fix typos, clarify explanations
-- Add missing documentation
-- Improve code examples
-
-### Feature Contributions
-
-New features should align with the platform's goals:
-
-- Discuss the feature in a GitHub issue first
-- Get maintainer feedback before significant work
-- Consider impact on existing users
-
-### Test Coverage
-
-Improving test coverage is always welcome:
-
-- Unit tests for utilities and helpers
-- Integration tests for Server Actions
-- End-to-end tests for critical user flows
-
-## Getting Started
-
-### 1. Find an Issue
-
-Browse issues labelled:
-- `good first issue` - Suitable for newcomers
-- `help wanted` - Maintainers would appreciate help
-- `documentation` - Documentation improvements
-
-### 2. Fork and Clone
-
-```shell
-# Fork the repository on GitHub, then:
-git clone https://github.com/YOUR-USERNAME/AssurancePlatform.git
-cd AssurancePlatform
-```
-
-### 3. Set Up Development Environment
-
-Follow the [Docker Quickstart](/technical-guide/getting-started/docker-quickstart) or [Local Development](/technical-guide/getting-started/local-development) guide.
-
-### 4. Create a Branch
-
-Use descriptive branch names:
-
-```shell
-# For features
-git checkout -b feature/add-export-functionality
-
-# For bug fixes
-git checkout -b fix/login-redirect-issue
-
-# For documentation
-git checkout -b docs/improve-api-reference
-```
-
-### 5. Make Your Changes
-
-- Follow the [Code Style Guide](./code-style)
-- Write tests for new functionality
-- Update documentation if needed
-
-### 6. Run Quality Checks
-
-Before submitting, ensure all checks pass:
-
-```shell
-# Lint and format
-pnpm exec ultracite check
-
-# Type check
-npx tsc --noEmit
-
-# Run tests
-pnpm run test
-```
-
-### 7. Commit Your Changes
-
-Write clear, descriptive commit messages:
-
-```shell
-git add .
-git commit -m "Fix: Resolve login redirect issue on expired sessions"
-```
-
-Commit message guidelines:
-- Start with a type: `Fix:`, `Feature:`, `Docs:`, `Refactor:`, `Test:`
-- Use present tense ("Add feature" not "Added feature")
-- Keep the first line under 72 characters
-- Reference issues: `Fixes #123`
-
-### 8. Push and Create PR
-
-```shell
-git push origin your-branch-name
-```
-
-Then create a Pull Request on GitHub with:
-- Clear title describing the change
-- Description of what and why
-- Link to related issue(s)
-- Screenshots for UI changes
-
-## PR Review Process
-
-1. **Automated Checks** - CI runs linting, type checking, and tests
-2. **Maintainer Review** - A maintainer will review your code
-3. **Feedback** - Address any requested changes
-4. **Approval** - Once approved, a maintainer will merge
-
-<Callout>
-**Response Time**
-
-We aim to respond to PRs within a week. For urgent fixes, mention this in the PR description.
-</Callout>
-
-## What Makes a Good PR
-
-- **Focused** - One feature or fix per PR
-- **Tested** - Includes tests for changes
-- **Documented** - Updates docs if needed
-- **Clean** - Passes all quality checks
-- **Explained** - Clear description of changes
-
-## Code of Conduct
-
-All contributors must follow our community guidelines:
-- Be respectful and inclusive
-- Focus on constructive feedback
-- Help others learn and grow
-
-## Questions?
-
-- Open a [GitHub Discussion](https://github.com/alan-turing-institute/AssurancePlatform/discussions)
-- Check the [Community section](/community) for support options
+- `content/technical-guide/contributing/pull-requests.mdx`
+- `CONTRIBUTING.md`
+- `package.json`
+- `.commitlintrc.json`
+- `.pre-commit-config.yaml`
+- `.githooks/pre-push`
+- `.github/workflows/build.yaml`
+- `.github/workflows/release.yaml`
+- `e2e/global-setup.ts`
+- `playwright.config.ts`
+- `public/openapi.json`
