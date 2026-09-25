@@ -215,6 +215,19 @@ jobs:
         run: pnpm audit --audit-level=high
         continue-on-error: true
 
+      - name: Check generated OpenAPI spec is up to date
+        # AGENTS.md requires `pnpm docs:generate` after documented route
+        # changes; nothing enforced that until now (AP-QA-008). Scoped to
+        # public/openapi.json (next.openapi.json's outputFile) so unrelated
+        # build side effects in this job can't trip it.
+        run: |
+          pnpm docs:generate
+          if [ -n "$(git status --porcelain -- public/openapi.json)" ]; then
+            echo "::error::public/openapi.json is out of date — run 'pnpm docs:generate' and commit the result."
+            git diff -- public/openapi.json
+            exit 1
+          fi
+
   test:
     name: Run Tests
     needs: [changes]

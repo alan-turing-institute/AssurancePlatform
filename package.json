@@ -155,6 +155,7 @@
       "valibot": ">=1.2.0",
       "@babel/runtime": ">=7.26.10 <8",
       "js-yaml": ">=4.3.2 <6",
+      "next-openapi-gen>js-yaml": ">=4.3.2 <5",
       "cross-spawn": ">=7.0.5",
       "minimatch": ">=10.2.3",
       "@isaacs/brace-expansion": ">=5.0.1",
@@ -181,7 +182,8 @@
       "mysql2": ">=3.23.1 <4"
     },
     "patchedDependencies": {
-      "nextstepjs": "patches/nextstepjs.patch"
-    }
+      "nextstepjs@2.3.0": "patches/nextstepjs@2.3.0.patch"
+    },
+    "ignorePatchFailures": false
   }
 }
