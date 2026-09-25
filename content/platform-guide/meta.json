@@ -2,6 +2,8 @@
   "title": "Platform Guide",
   "pages": [
     "index",
+    "getting-started",
+    "building-a-case",
     "teams-sharing-permissions",
     "publishing-and-discover",
     "templates",

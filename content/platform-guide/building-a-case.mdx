@@ -1,0 +1,86 @@
+---
+title: "Building a Case"
+description: "Reference for the case editor: elements, controls and the assertion status vocabulary."
+---
+
+This page is a reference for the case editor, not a walkthrough.
+If you want to build something step by step first, see [Module 2 of the TEA Trainee curriculum](/docs/curriculum/tea-trainee/02-brewing-your-own-tea), which uses the same controls described here on a worked example.
+
+## Create a case
+
+From the dashboard, choose **New Case** (or the **Create new case** card if you already have cases) and fill in **Name** and **Description** in the **Create New Assurance Case** dialog, then choose **Submit**.
+This creates a blank working case with a single top-level goal, named `G1` and holding a placeholder description for you to replace.
+There is no starter-template choice in this dialog; a separate **Import File** option on the dashboard creates a case from an existing JSON export instead.
+
+## Element types
+
+An assurance case is built from ten element types, each with a fixed one- or two-letter prefix used in its generated name:
+
+| Element | Prefix | Example name |
+| --- | --- | --- |
+| Goal | `G` | `G1` |
+| Strategy | `S` | `S1` |
+| Property Claim | `P` | `P1` |
+| Evidence | `E` | `E1` |
+| Context | `C` | `C1` |
+| Justification | `J` | `J1` |
+| Assumption | `A` | `A1` |
+| Module | `M` | `M1` |
+| Away Goal | `AG` | `AG1` |
+| Contract | `Ct` | `Ct1` |
+
+Goals, strategies, property claims and evidence make up the argument tree you build with the **+** control described below.
+Context, justification and assumption are added directly on the element they qualify, through its edit dialog rather than the `+` menu.
+
+## Add and edit elements
+
+Each node on the canvas carries a **+** control, labelled **Add child element**.
+It opens a popover offering the child types valid for that node. A goal offers **Add Strategy** and **Add Property Claim**; a strategy offers **Add Property Claim**; a property claim offers **Add Strategy**, **Add Property Claim** and **Add Evidence**. **Add Defeater**, **Add Away Goal** and **Add Module** are offered alongside those on all three node types.
+Evidence nodes have no `+` control, since nothing can be added beneath them.
+
+The pencil icon on a node, labelled **Edit element** (or **View details** if you only have view or comment access), opens that element's edit dialog.
+The dialog's fields depend on the element type — a description for every type, plus **Context** entries and an **Assertion status** selector on goals and property claims, and an optional assumption or justification field where relevant.
+Saving calls the dialog's submit button, labelled **Update** followed by the element type — **Update Goal**, **Update Strategy**, **Update Property**, **Update Evidence** and so on.
+
+## Assertion status
+
+Goals and property claims carry an assertion status, set from the edit dialog.
+There are five values an author can choose from:
+
+- **Asserted** — the author's stated position. This is the default.
+- **Needs support** — flagged by the author as requiring further evidence.
+- **Assumed** — taken as given by the author rather than argued for.
+- **Axiomatic** — treated by the author as self-evidently true in this case.
+- **Defeated** — marked by the author as refuted or withdrawn.
+
+<Callout type="info">
+A sixth status, **As cited**, can appear on an element, but you cannot set it directly. It is computed automatically when an element cites another claim, from that claim's own status.
+</Callout>
+
+Assertion status records the author's own position; it is not an automated verdict on whether the evidence is actually sufficient.
+
+## Element names and the prefix rule
+
+The editor generates each element's name automatically — you do not type one in the add or edit dialogs.
+If you import a case from JSON, any named element must follow the same pattern its type uses: a prefix followed by a number, optionally extended with dotted sub-numbers (for example `P1`, `P1.1`, `G2`).
+An import that breaks this pattern is rejected.
+
+If names in your working case get out of order — after a lot of adding, deleting and restructuring — the toolbar's **Reset Identifiers** control renumbers every element using the same hierarchical naming the editor generates automatically. It requires edit access on the case.
+
+## Undo, redo and the toolbar
+
+The toolbar's history controls are **Undo** (`Cmd+Z`) and **Redo** (`Cmd+Shift+Z`); both operate on your recent add, edit and delete actions within the current session.
+
+The **Export** control opens the **Export Case** dialog, which offers four independent ways to take a copy of your case:
+
+- **Export Raw JSON** — the case data itself, suitable for import elsewhere.
+- **Export as Image** — a rendered picture of the diagram.
+- **Export Report** — a document summarising the case, including a full-report option.
+- **Backup to Google Drive** — saves a JSON copy to your Google Drive, if your account is connected.
+
+None of these dialogs has a separate whole-case "Save" button.
+Every add and edit dialog persists its own change the moment you submit it; export and backup are separate actions for taking a copy, not for saving your work.
+
+## Learn by doing
+
+[Module 2 of the TEA Trainee curriculum](/docs/curriculum/tea-trainee/02-brewing-your-own-tea) walks through every control on this page in order, building a small practice case from a blank goal through to a supported property claim.
