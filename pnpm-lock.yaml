@@ -12,6 +12,7 @@ overrides:
   valibot: '>=1.2.0'
   '@babel/runtime': '>=7.26.10 <8'
   js-yaml: '>=4.3.2 <6'
+  next-openapi-gen>js-yaml: '>=4.3.2 <5'
   cross-spawn: '>=7.0.5'
   minimatch: '>=10.2.3'
   '@isaacs/brace-expansion': '>=5.0.1'
@@ -5648,6 +5649,10 @@ packages:
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
+
+  js-yaml@4.3.2:
+    resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
+    hasBin: true
 
   js-yaml@5.4.1:
     resolution: {integrity: sha512-28R/k+NAjeuf7+CKlTxWZVExJGwVVLwY06DgEnOMz2gEpfNkDcD7QvyiVPT0xy0XXhU8vHsd4Ot42OOPdJG7dQ==}
@@ -14418,6 +14423,10 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
+  js-yaml@4.3.2:
+    dependencies:
+      argparse: 2.0.1
+
   js-yaml@5.4.1:
     dependencies:
       argparse: 2.0.1
@@ -15392,7 +15401,7 @@ snapshots:
       '@babel/types': 7.29.8
       commander: 14.0.3
       fs-extra: 11.4.0
-      js-yaml: 5.4.1
+      js-yaml: 4.3.2
       ora: 8.2.0
     transitivePeerDependencies:
       - supports-color
