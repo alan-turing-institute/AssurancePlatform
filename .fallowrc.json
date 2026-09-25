@@ -47,7 +47,8 @@
     "@prisma/client-runtime-utils",
     "axe-core",
     "conventional-changelog-conventionalcommits",
-    "@radix-ui/react-menu"
+    "@radix-ui/react-menu",
+    "fumadocs-mdx"
   ],
   "ignoreExports": [
     { "file": "actions/connected-accounts.ts", "exports": ["unlinkProvider"] },

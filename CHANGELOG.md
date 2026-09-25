@@ -4,8 +4,6 @@ title: "Changelog"
 description: "Complete version history and release notes for the TEA Platform"
 ---
 
-# Changelog
-
 All notable changes to the TEA Platform will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -117,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * show all evidence URLs and separate context entries visually ([6c0a338](https://github.com/alan-turing-institute/AssurancePlatform/commit/6c0a338ace66ee0680c5e3109c2c1357e3a2b93c))
 * show full name in sidebar, fix team page header ([351f69c](https://github.com/alan-turing-institute/AssurancePlatform/commit/351f69ca45e8835c442ca754be92d983cca2f13c))
 * split Next.js build from Playwright webServer to avoid CI timeout ([6c4af35](https://github.com/alan-turing-institute/AssurancePlatform/commit/6c4af350f51df9172d193df8a50e9d45e6ed6cdf))
-* type safety improvements — noUncheckedIndexedAccess, ServiceResult<T>, schema consolidation (AssurancePlatform-a5w) ([ee95c47](https://github.com/alan-turing-institute/AssurancePlatform/commit/ee95c4790773d31b823c91f21e7495dd27c7a5a4))
+* type safety improvements — noUncheckedIndexedAccess, `ServiceResult<T>`, schema consolidation (AssurancePlatform-a5w) ([ee95c47](https://github.com/alan-turing-institute/AssurancePlatform/commit/ee95c4790773d31b823c91f21e7495dd27c7a5a4))
 * unify service return types, consolidate schemas, and fix route/action patterns ([57a027e](https://github.com/alan-turing-institute/AssurancePlatform/commit/57a027ebe227b5b515ddadc06e3cfd04504a543c))
 * update E2E tests for auto-created goal (AssurancePlatform-m13) ([6e50b19](https://github.com/alan-turing-institute/AssurancePlatform/commit/6e50b1947671f197fdd1fed5e29d14acc554d866))
 * use correct sidebar text colour for logged-in user name ([f1dfc42](https://github.com/alan-turing-institute/AssurancePlatform/commit/f1dfc42a35e9a055c5fa7e319ac1fc50912873ac))

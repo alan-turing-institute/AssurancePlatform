@@ -69,11 +69,13 @@ Coding agents should read [AGENTS.md](./AGENTS.md) before working in the reposit
 
 ### Contributing to the Documentation
 
-We use [Nextra 4](https://nextra.site/) to generate our documentation site. All documentation is written in [MDX](https://mdxjs.com/) format (Markdown with JSX components) and lives in the `content/` directory.
+We use [Fumadocs](https://fumadocs.dev/) to generate our documentation site. All documentation is written in [MDX](https://mdxjs.com/) format (Markdown with JSX components) and lives in the `content/` directory, with a `meta.json` file in each folder controlling its title and page order.
+
+Three Fumadocs components are registered globally and can be used in any page without an import: `Callout`, `Card`/`Cards`, and `Tabs`/`Tab`. Our own curriculum components (`components/docs/curriculum/`) are also available, imported directly in the MDX file that uses them.
 
 If you are new to Markdown, GitHub has a helpful page on
 [getting started with writing and formatting on GitHub](https://help.github.com/articles/getting-started-with-writing-and-formatting-on-github).
-The [Nextra documentation](https://nextra.site/docs) covers additional MDX features and components.
+The [Fumadocs documentation](https://fumadocs.dev/docs) covers additional MDX features and components.
 
 When writing in Markdown, please start each new sentence on a new line. Having
 each sentence on a new line will make no difference to how the text is

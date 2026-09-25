@@ -7,7 +7,7 @@ Where this file and the code disagree, check the code and fix whichever is wrong
 ## Project and map
 
 TEA helps multi-stakeholder teams build, share and publish graphical assurance cases: structured arguments and evidence about trustworthy and ethical technology.
-The application and its Nextra documentation share one Next.js App Router project.
+The application and its Fumadocs documentation share one Next.js App Router project.
 The stack is Next.js 16, React 19, TypeScript, PostgreSQL, Prisma 7, NextAuth 4, Tailwind 4, React Flow and Zustand.
 The Django backend was removed in December 2025; everything is TypeScript.
 Use `package.json` and `pnpm-lock.yaml` for exact dependency versions.

@@ -262,3 +262,6 @@ claude-dir.zip
 # Design records are maintained internally, not in-repo
 docs/adr/
 docs/specs/
+
+# fumadocs-mdx generated content collection
+.source/

@@ -25,17 +25,19 @@ interface ModuleHeaderProps {
 }
 
 /**
- * ModuleHeader - Display module title and metadata badges
+ * ModuleHeader - Display module metadata badges
  *
- * Renders the module title as an H1 and shows duration and prerequisite badges.
+ * Shows duration and prerequisite badges below the page's own title
+ * (rendered once, from frontmatter, by the docs layout — `metadata.title`
+ * is kept on the type for callers that still pass it, but isn't rendered
+ * here, to avoid a second `<h1>` on the page).
  * Prerequisites are rendered as clickable links to the relevant modules.
  */
 const ModuleHeader = ({ metadata }: ModuleHeaderProps): React.ReactNode => {
-	const { title, duration, prerequisites = [] } = metadata;
+	const { duration, prerequisites = [] } = metadata;
 
 	return (
 		<div className="mb-8">
-			<h1 className="mb-4 font-bold text-4xl tracking-tight">{title}</h1>
 			<div className="flex flex-wrap items-center gap-3">
 				{/* Duration Badge */}
 				<Badge
