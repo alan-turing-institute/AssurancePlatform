@@ -94,19 +94,25 @@ describe("nextstepjs pointer recalculation (AP-QA-009)", () => {
 		);
 	});
 
-	it("installs the pointer-recalculation patch, and moves the pointer to the next step's target", async () => {
-		// The deterministic half: fails immediately if
-		// patches/nextstepjs@2.3.0.patch silently failed to apply (pnpm warns
-		// but exits 0 in that case — this is the gap AP-QA-009 closes).
+	it("the nextstepjs patch is applied to the installed package", async () => {
+		// Fails immediately if patches/nextstepjs@2.3.0.patch silently failed
+		// to apply (pnpm warns but exits 0 in that case — this is the gap
+		// AP-QA-009 closes).
 		const packageEntry = fileURLToPath(await import.meta.resolve("nextstepjs"));
 		const nextStepReactPath = join(dirname(packageEntry), "NextStepReact.js");
 		const dist = readFileSync(nextStepReactPath, "utf8");
 		expect(dist).toContain(
 			"Fix: recalculate pointer position after React commits the new step"
 		);
+	});
 
-		// The behavioural half: driving the real, unmocked library through a
-		// step change and checking the pointer follows it.
+	// Does not by itself discriminate patched from unpatched: nextstepjs's own
+	// "update pointer position when currentStep changes" effect already
+	// recalculates on every step change in this simple, static-layout
+	// scenario. The marker test above is what actually catches AP-QA-009;
+	// this documents the user-observable behaviour and guards against a
+	// future regression in that effect.
+	it("advancing the tour moves the pointer to the next step's target", async () => {
 		const user = userEvent.setup();
 		render(
 			<NextStepProvider>
