@@ -2,7 +2,7 @@
 #
 # Local development image for docker-compose.local.yml.
 #
-# Multi-stage on purpose: `pnpm build` (and its Nextra + Next.js compile,
+# Multi-stage on purpose: `pnpm build` (and its docs + Next.js compile,
 # measured at ~12.7GB peak RSS on a clean build) now runs during `docker
 # build`, which is a separate BuildKit process NOT subject to the compose
 # service's `mem_limit`. Only the running server is memory-capped at runtime.

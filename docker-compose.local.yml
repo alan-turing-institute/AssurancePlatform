@@ -89,7 +89,7 @@ services:
       - NODE_OPTIONS=--max-old-space-size=1536
     networks:
       - tea_dev_network
-    # Runtime memory limit only. The Next.js/Nextra production build (measured
+    # Runtime memory limit only. The Next.js production build (measured
     # ~12.7GB peak RSS) now runs during `docker build` (Dockerfile.dev), which
     # is not subject to this limit. Measured peak RSS for migrate + seed +
     # `next start` + several requests, with NODE_OPTIONS capped at 1536m
@@ -98,7 +98,10 @@ services:
     # raise either if the app itself needs more.
     mem_limit: 2g
     memswap_limit: 2g
-    # Run in production mode to avoid Nextra dev compilation crashes.
+    # Run in production mode: `next dev`'s Turbopack keeps a pool of worker
+    # processes alive for hot-module compilation, which measured 2.8GB+ RSS
+    # after loading a single page (checked again on the Fumadocs migration,
+    # not just historically true of Nextra) — well past the 2g limit above.
     # For hot reload, run `pnpm dev` on the host against this stack's Postgres.
     #
     # No bind mount of source: this image bakes the checked-out source in at

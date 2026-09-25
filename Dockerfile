@@ -57,14 +57,15 @@ ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 ENV DATABASE_URL=${DATABASE_URL}
 
-# Note: Documentation is now built as part of Next.js (Nextra integration)
+# Note: Documentation is built as part of Next.js (Fumadocs integration)
 # No separate tea-docs build step needed
 
 # Generate Prisma client and build Next.js
 # Dummy DATABASE_URL is needed at build time for Prisma config and Next.js static analysis
 # The actual URL is provided at runtime via Azure environment variables
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
-# Increase Node.js memory limit for Next.js build (Nextra compilation requires more memory)
+# Increase Node.js memory limit for the Next.js production build (the docs
+# compile is a large share of it, regardless of which docs framework sits on top)
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN --mount=type=cache,target=/app/.next/cache \
     npx prisma generate && corepack enable pnpm && pnpm build

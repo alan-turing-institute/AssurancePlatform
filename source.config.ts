@@ -7,7 +7,7 @@ export const docs = defineDocs({
 	dir: "content",
 	docs: {
 		// Underscore-prefixed files (e.g. _TEMPLATE.md) are drafts/templates,
-		// not pages — Nextra excluded them by the same convention.
+		// not pages — the same convention the docs used before this migration.
 		files: ["**/*.mdx", "**/*.md", "!**/_*"],
 		schema: pageSchema.extend({
 			level: z.string().optional(),

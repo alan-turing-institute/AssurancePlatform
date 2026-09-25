@@ -1,10 +1,10 @@
 # Case Study Template
 
 > **Note**: This file is a template for creating new case studies. It uses a `.md`
-> extension and underscore prefix so that Nextra does not include it in the
-> documentation build. When creating a new case study, copy this file, rename it
+> extension and underscore prefix so that the documentation build does not include
+> it as a page. When creating a new case study, copy this file, rename it
 > to `your-case-study-name.mdx`, and fill in each section following the guidance
-> below. Remember to also add the new case study to the `_meta.ts` file.
+> below. Remember to also add the new case study to the `meta.json` file.
 > The `index.mdx` listing is auto-generated from frontmatter — no manual edit
 > required provided `domain` and `assurance_goal` are set.
 
@@ -12,8 +12,8 @@
 
 ## Frontmatter
 
-Replace the placeholder values below. The frontmatter is required for Nextra to
-correctly index and display the page.
+Replace the placeholder values below. The frontmatter is required for the
+documentation build to correctly index and display the page.
 
 ```yaml
 ---
