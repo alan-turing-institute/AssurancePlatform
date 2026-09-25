@@ -1,0 +1,12 @@
+{
+  "title": "Technical Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "architecture",
+    "contributing",
+    "deployment",
+    "ci-cd-pipeline",
+    "api-reference"
+  ]
+}

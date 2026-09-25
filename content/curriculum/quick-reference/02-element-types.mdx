@@ -8,8 +8,6 @@ tags:
   - elements
 ---
 
-import { Callout, Tabs } from 'nextra/components';
-
 # Element Types Guide
 
 A quick reference for the four core element types in TEA assurance cases.
@@ -43,17 +41,17 @@ A quick reference for the four core element types in TEA assurance cases.
 - Establishing what property you're trying to demonstrate
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "The system is sufficiently safe for use in the intended context"
     - "The AI model produces fair outcomes for all demographic groups"
     - "The deployment process is secure and protects user data"
     - "The system respects user privacy throughout its lifecycle"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "The system is good" *(too vague, not normative)*
     - "We built the system correctly" *(process-focused, not outcome-focused)*
     - "The system passes all tests" *(too narrow, focuses on one type of evidence)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ### Property Claims
@@ -78,21 +76,21 @@ A property claim must be a **claim**—a statement that asserts something about 
 - Connecting abstract goals to concrete evidence
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "The model achieves greater than 95% accuracy on the validation dataset"
     - "Training data includes representative samples from all demographic groups"
     - "All user data is encrypted at rest using AES-256"
     - "The system logs all access attempts for audit purposes"
     - "Response latency is below 200ms for 99% of requests"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "The system works well" *(too vague—what does "well" mean?)*
     - "We followed best practices" *(vague and unverifiable—which practices? According to what standard?)*
     - "Users like the system" *(subjective without defined criteria)*
     - "The team worked hard on security" *(describes effort, not a system property)*
     - "We believe the system is fair" *(expresses belief, not a testable claim)*
     - "The model has been trained on a diverse dataset that was carefully curated by domain experts and includes representative samples from all demographic groups, and the training process used state-of-the-art techniques including data augmentation and regularisation, and the resulting model achieves high accuracy while also being fair across different subgroups as measured by multiple fairness metrics." *(an "essay in a claim"—too long, says multiple things, should be split into separate claims)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ### Strategies
@@ -114,17 +112,17 @@ A property claim must be a **claim**—a statement that asserts something about 
 - Making the argument logic transparent to reviewers
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "Argument over key system attributes: accuracy, fairness, reliability"
     - "Argument over lifecycle stages: data collection, training, deployment, monitoring"
     - "Argument by addressing stakeholder needs: developers, users, regulators"
     - "Argument over system components: data pipeline, model, API, user interface"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "We decompose the goal" *(doesn't explain how or why)*
     - "Breaking down the claim" *(no indication of decomposition logic)*
     - "See below for details" *(provides no structural insight)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ### Evidence
@@ -155,18 +153,18 @@ A property claim must be a **claim**—a statement that asserts something about 
 | **Standards** | Compliance information | ISO certifications, regulatory approvals |
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "Fairness audit conducted by [organisation], dated [date], showing demographic parity within 2%"
     - "User survey (n=200, representative sample) showing 87% satisfaction with explanation quality"
     - "Penetration test report identifying and remediating 15 vulnerabilities"
     - "ISO 27001 certification, valid until [date], covering data handling procedures"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "Test results" *(too vague, no details)*
     - "We did testing" *(no specifics about what or when)*
     - "Good feedback" *(not specific or quantifiable)*
     - "The team reviewed it" *(no documentation or criteria)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ## Element Attributes
@@ -203,19 +201,19 @@ Consider: you cannot assure the safety of an aircraft without specifying (a) who
 | **Temporal** | When the assurance applies | Valid until date, review frequency, version lifecycle |
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "System is operated by clinicians who have completed the mandatory 2-day training programme"
     - "Deployed in UK NHS trusts operating under CQC regulation"
     - "Valid for software version 2.1.x; major version changes require reassessment"
     - "Model predictions are reviewed by a qualified human before any decision is made"
     - "System operates on internal network only; not exposed to public internet"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "Normal use" *(what is normal? For whom?)*
     - "Trained users" *(what training? How verified?)*
     - "Standard deployment" *(no specific configuration)*
     - "Safe conditions" *(circular—safety is what we're trying to assure)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ### Justifications
@@ -235,17 +233,17 @@ Consider: you cannot assure the safety of an aircraft without specifying (a) who
 - Clarifying the rationale for the argument structure
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "Accuracy is a key requirement specified in the project contract and regulatory guidance"
     - "This decomposition follows the ALTAI framework for trustworthy AI assessment"
     - "Fairness metrics were selected based on stakeholder consultation workshops"
     - "This property is required by ISO 27001 certification requirements"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "This is important" *(doesn't explain why)*
     - "Standard practice" *(no specific rationale)*
     - "Because we need to" *(circular reasoning)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ### Assumptions
@@ -265,17 +263,17 @@ Consider: you cannot assure the safety of an aircraft without specifying (a) who
 - Making explicit any simplifications or approximations in the argument
 
 <Tabs items={['✅ Good Examples', '❌ Bad Examples']}>
-  <Tabs.Tab>
+  <Tab>
     - "Assumes compliance with GDPR data handling requirements"
     - "Assumes the training data distribution matches the deployment distribution"
     - "Assumes users have received the mandatory training programme"
     - "Assumes third-party APIs maintain their documented SLAs"
-  </Tabs.Tab>
-  <Tabs.Tab>
+  </Tab>
+  <Tab>
     - "Everything works correctly" *(too vague, not falsifiable)*
     - "Users behave normally" *(undefined behaviour)*
     - "No assumptions" *(unlikely—most arguments have implicit assumptions)*
-  </Tabs.Tab>
+  </Tab>
 </Tabs>
 
 ---
@@ -306,7 +304,7 @@ Attributes can be attached to goals, property claims, and strategies:
 | Strategy       |    ✓    |       ✓       |     ✓      |
 | Evidence       |    ✗    |       ✗       |     ✗      |
 
-<Callout type="warning">
+<Callout type="warn">
 **Invalid Links**
 
 The platform prevents invalid links. If you cannot create a link between two elements, it's not a valid relationship in the TEA structure.

@@ -1,0 +1,9 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "overview",
+    "assurance-case-model",
+    "assurance-case-editor",
+    "plugin-ecosystem"
+  ]
+}

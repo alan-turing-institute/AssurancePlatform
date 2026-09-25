@@ -1,9 +1,6 @@
-import nextra from "nextra";
+import { createMDX } from "fumadocs-mdx/next";
 
-const withNextra = nextra({
-	contentDirBasePath: "/docs",
-	defaultShowCopyCode: true,
-});
+const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -66,4 +63,4 @@ const nextConfig = {
 	},
 };
 
-export default withNextra(nextConfig);
+export default withMDX(nextConfig);

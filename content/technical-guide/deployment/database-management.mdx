@@ -1,15 +1,14 @@
 ---
+title: Database Management
 sidebar_position: 3
 sidebar_label: 'Database Management'
 ---
-
-import { Callout } from 'nextra/components'
 
 # Database Management
 
 This guide covers database administration tasks for the TEA Platform, including backups, restores, migrations, and resets.
 
-<Callout type="warning">
+<Callout type="warn">
 **Caution**
 
 Database operations can result in data loss. Always backup before making changes, and test procedures in a non-production environment first.
@@ -128,7 +127,7 @@ npx prisma migrate resolve --rolled-back "migration_name"
 
 ## Resetting the Database
 
-<Callout type="warning">
+<Callout type="warn">
 **Data Loss Warning**
 
 Resetting the database removes all data. Only do this in development or when intentionally clearing production data.
