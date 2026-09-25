@@ -88,16 +88,18 @@ export function getCaseStudyEntries(pages: CaseStudyPage[]): CaseStudyEntry[] {
  * CaseStudiesIndex — server component that renders the dynamic case-study
  * listing for the index page.
  *
- * Renders two sections:
- *   1. A summary table (Case Study | Domain | Assurance Goal)
- *   2. Per-domain grouped lists with title links and descriptions
+ * Renders a single summary table (Case Study | Domain | Assurance Goal).
+ * An earlier version also rendered a per-domain grouped list of the same
+ * entries beneath it — removed (F9, readability review) because it just
+ * repeated the table's links a second time on the page, on top of the
+ * sidebar navigation's own listing of every case-study page.
  *
  * Adding a new case-study `.mdx` file with `domain` and `assurance_goal`
  * frontmatter makes it appear here automatically — no manual edit required.
  *
  * Plain HTML elements are used directly rather than pulled from the MDX
  * component map: `DocsBody` applies Fumadocs' `prose` typography class to
- * this subtree, so tables/lists are styled without per-element overrides.
+ * this subtree, so the table is styled without per-element overrides.
  *
  * `@/lib/docs-source` is dynamically imported here (not at module scope) to
  * keep `getCaseStudyEntries` unit-testable — see its doc comment.
@@ -105,17 +107,6 @@ export function getCaseStudyEntries(pages: CaseStudyPage[]): CaseStudyEntry[] {
 export async function CaseStudiesIndex() {
 	const { source } = await import("@/lib/docs-source");
 	const entries = getCaseStudyEntries(source.getPages());
-
-	// Build domain groups (preserving insertion order = sidebar_position order)
-	const domainMap = new Map<string, CaseStudyEntry[]>();
-	for (const entry of entries) {
-		const existing = domainMap.get(entry.domain);
-		if (existing) {
-			existing.push(entry);
-		} else {
-			domainMap.set(entry.domain, [entry]);
-		}
-	}
 
 	return (
 		<>
@@ -141,22 +132,6 @@ export async function CaseStudiesIndex() {
 					))}
 				</tbody>
 			</table>
-
-			{Array.from(domainMap.entries()).map(([domain, domainEntries]) => (
-				<section key={domain}>
-					<h3>{domain}</h3>
-					<ul>
-						{domainEntries.map((entry) => (
-							<li key={entry.slug}>
-								<strong>
-									<a href={entry.href}>{entry.title}</a>
-								</strong>{" "}
-								- {entry.description}
-							</li>
-						))}
-					</ul>
-				</section>
-			))}
 		</>
 	);
 }
