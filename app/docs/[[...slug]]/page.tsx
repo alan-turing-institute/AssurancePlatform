@@ -46,6 +46,7 @@ export default async function Page(props: {
 			<DocsTitle>{page.data.title}</DocsTitle>
 			<DocsDescription>{page.data.description}</DocsDescription>
 			<EditOnGitHub
+				className="w-fit self-start"
 				href={`https://github.com/alan-turing-institute/AssurancePlatform/tree/main/content/${page.path}`}
 			/>
 			<DocsBody>
