@@ -58,6 +58,7 @@ Host development against Docker Postgres:
 The app is at `http://localhost:3000`; the dev database is exposed on port 5432.
 With `SEED_USER_PASSWORD` provisioned, seed via `pnpm exec tsx prisma/seed/dev-seed.ts`.
 Seed users are `chris`, `alice`, `bob` and `charlie`; alice and bob share Test Team, charlie is an external viewer.
+For LAN review, `next dev` blocks cross-origin HMR and static-chunk requests by default; set `NEXT_DEV_ALLOWED_ORIGINS` (comma-separated hosts, no protocol) to the reviewer's address before starting the server.
 
 The full local stack starts with `docker compose -f docker-compose.local.yml up -d --build`.
 Its app command applies migrations, seeds, and starts in production mode; use host `pnpm dev` for hot reload.
