@@ -162,6 +162,7 @@ build/
 .vercel
 *.tsbuildinfo
 .next-docs/
+next-env.d.ts
 
 # Prisma generated files
 src/generated/prisma/

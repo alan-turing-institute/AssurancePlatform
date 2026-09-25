@@ -142,6 +142,10 @@
     "vitest-axe": "^0.1.0"
   },
   "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20 <23",
+    "pnpm": ">=10"
+  },
   "pnpm": {
     "overrides": {
       "glob": ">=10.5.0",
