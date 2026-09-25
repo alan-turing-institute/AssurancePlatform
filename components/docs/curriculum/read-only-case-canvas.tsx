@@ -54,8 +54,15 @@ export interface ReadOnlyCaseCanvasProps {
 
 function ReadOnlyCaseCanvasInner({ caseData }: ReadOnlyCaseCanvasProps) {
 	const { fitView } = useReactFlow();
-	const { nodes, edges, onNodesChange, setNodes, setEdges, setAssuranceCase } =
-		useStore();
+	const {
+		nodes,
+		edges,
+		onNodesChange,
+		setNodes,
+		setEdges,
+		setAssuranceCase,
+		setReadOnlyCanvas,
+	} = useStore();
 	const [loading, setLoading] = useState(true);
 
 	// `useReactFlow()`'s returned functions are not referentially stable
@@ -66,6 +73,15 @@ function ReadOnlyCaseCanvasInner({ caseData }: ReadOnlyCaseCanvasProps) {
 	// clears and reloads the case, self-sustaining.
 	const fitViewRef = useRef(fitView);
 	fitViewRef.current = fitView;
+
+	// Separate from the case-loading effect below (which re-runs per stage,
+	// i.e. per `caseData` change): this flag is a property of the canvas
+	// itself, not of which case it's currently showing, so it's set once for
+	// the component's whole lifetime — see `NodeActionGroup` for what it hides.
+	useEffect(() => {
+		setReadOnlyCanvas(true);
+		return () => setReadOnlyCanvas(false);
+	}, [setReadOnlyCanvas]);
 
 	useEffect(() => {
 		let cancelled = false;
