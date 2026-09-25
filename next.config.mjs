@@ -104,6 +104,12 @@ const nextConfig = {
 				destination: "/docs/platform-guide/data-retention-policy",
 				permanent: true,
 			},
+			// The standalone guides were removed from the curriculum (2026-09).
+			{
+				source: "/docs/curriculum/standalone/:path*",
+				destination: "/docs/curriculum",
+				permanent: true,
+			},
 		];
 	},
 };

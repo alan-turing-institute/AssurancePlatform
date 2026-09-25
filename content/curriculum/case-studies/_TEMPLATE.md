@@ -322,13 +322,7 @@ https://alan-turing-institute.github.io/tea-techniques/techniques/
 
 ## Further Reading
 
-A bulleted list of 1-5 links to related resources. Always include:
-
-```markdown
-- [Understanding the Assurance Ecosystem](../../standalone/assurance-ecosystem)
-```
-
-Optionally add links to:
+A bulleted list of 1-5 links to related resources:
 
 - Other relevant pages within the TEA Platform curriculum
 - External standards, guidance documents, or regulations specific to the domain
@@ -351,6 +345,6 @@ Before submitting your new case study, verify:
 - [ ] All technical terms include brief parenthetical explanations
 - [ ] British English is used throughout (e.g. "analyse", "behaviour", "colour")
 - [ ] TEA Techniques links are valid and point to the correct technique pages
-- [ ] Internal links use relative paths (e.g. `../../standalone/assurance-ecosystem`)
+- [ ] Internal links use relative paths (e.g. `../tea-trainee`)
 - [ ] The assurance focus statement is a single, clear sentence in a blockquote
 - [ ] Deliberative prompts probe genuine tensions, not questions with obvious answers
