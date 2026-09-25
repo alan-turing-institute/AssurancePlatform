@@ -1,0 +1,58 @@
+---
+title: "Check your justification process"
+description: Test how you turn broad principles into reviewable project actions.
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+import { Quiz, ConfidenceRating } from "@/components/docs/curriculum/quiz-components";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { steepingTasks } from "./tasks";
+import { steepingQuiz } from "./questions";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="letting-the-tea-steep"
+      tasks={steepingTasks}
+      currentPage="assessment"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+## Knowledge Check
+
+<Quiz
+  config={steepingQuiz}
+  taskId="knowledge-check"
+  useGlobalProgress={true}
+/>
+
+Rate your confidence in specifying one ethical concern as a claim, action and expected evidence.
+
+<ConfidenceRating
+  topic="Specifying one ethical concern as a claim, action and expected evidence"
+  showFeedback={true}
+/>
+
+---
+
+**Navigation:**
+- [Reflection](/docs/curriculum/tea-trainee/03-letting-the-tea-steep/reflection)
+- [Module Summary](/docs/curriculum/tea-trainee/03-letting-the-tea-steep/summary)
+
+## Sources checked
+
+- `lib/assertion-status.ts`
+- `components/cases/node-edit-dialog.tsx`
+- `content/curriculum/tea-trainee/01-first-sip/stages.ts`
+- `specs/docs-drafts-2026-09/curriculum-drafts/001-03-implementing-tea.md` (lines 29–45, 93–105, 125–147, 149–196, 203–245)
+
+</PageContent>

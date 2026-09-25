@@ -1,0 +1,105 @@
+---
+title: "Build your first case"
+description: Follow the editor from sign-in through a small argument and export.
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { brewingTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="brewing-your-own-tea"
+      tasks={brewingTasks}
+      currentPage="exploration"
+    >
+      {children}
+      <ModuleProgressTracker
+        showHints={true}
+        currentPage="exploration"
+        basePath="/docs/curriculum/tea-trainee/02-brewing-your-own-tea"
+      />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+<Callout type="info" title="Claims to confirm (review only)">
+The exact placement of node controls and dialogs needs a running-browser check. Google and GitHub sign-in choices depend on which providers the deployment configures.
+</Callout>
+
+<div id="exploration-content">
+
+Rebuild one branch of the Fair Recruitment AI teaching case. You are making a practice argument, not recording an audit of a real system. Keep the example's missing monitoring evidence in mind: a diagram can look complete while a claim remains unsupported.
+
+## Walkthrough
+
+1. Go to `/login`. Enter your email or username and password and choose **Login**, or choose **Google** or **GitHub** if that provider is configured. Complete sign-in to reach `/dashboard`. A Google connection may also support Drive features later, but it is not required for this activity.
+
+   ![The sign-in form with account options](/images/docs/shots/m2-01.svg)
+
+2. On `/dashboard`, choose **Create new case**. In **Create New Assurance Case**, enter **Fair Recruitment AI** as **Name** and a short practice description. Choose **Submit**. You arrive at `/case/<id>`. This creates a blank working case with a top-level goal named `G1`; there is no template selector in this dialog. **Import File** on the dashboard is a separate way to make a case from JSON.
+
+   ![The case creation dialog with name and description](/images/docs/shots/m2-02.svg)
+
+3. Use the pencil labelled **Edit element** on `G1`. Its initial description is a prompt to describe your top-level assurance goal. Replace it with "The AI recruitment system makes fair and non-discriminatory hiring recommendations." Choose **Update Goal** to save the element edit. You now have a claim to test, not proof of it.
+
+   ![The goal editor containing the fairness goal](/images/docs/shots/m2-03.svg)
+
+4. Use **Edit element** on `G1` again and add two entries in **Context**: fairness is considered against the UK Equality Act 2010 protected characteristics, and this practice system screens applications for entry-level software engineering roles. Save with **Update Goal**. Context explains what the goal means and where it applies; it is not evidence that the goal is met.
+
+   ![Context entries attached to the top-level goal](/images/docs/shots/m2-04.svg)
+
+5. On `G1`, select the **+** button labelled **Add child element**, then choose **Add Strategy** from the popover. In **Add Strategy**, describe an approach based on preventing discrimination in the data and model. Choose **Add**. A strategy tells the reader how you intend to support the goal. The editor generates the element name, such as `S1`.
+
+   ![The Add child element button and strategy option on the goal](/images/docs/shots/m2-05.svg)
+
+6. On the strategy, select its **+** (Add child element) button, choose **Add Property Claim**, and describe a testable statement: "The training dataset has been audited for representation across relevant groups." Choose **Add**. The editor generates a `P` name. In the element's edit dialog, review **Assertion status**. **Asserted** is the default; **Needs support** can mark a claim that still requires evidence. The status states your position, not an automated verdict.
+
+   ![A property claim beneath the strategy](/images/docs/shots/m2-06.svg)
+
+7. On the property claim, select its **+** (Add child element) button and choose **Add Evidence**. Describe the audit report used in the teaching example and, if you have a suitable practice artefact, add its URL or reference in **Evidence Link(s) (Optional)**. Choose **Add**. Do not invent a real report URL. A description alone tells a reviewer what evidence you expect; the underlying artefact must still be available and assessed.
+
+   ![Evidence linked beneath the property claim](/images/docs/shots/m2-07.svg)
+
+8. Use the pencil labelled **Edit element** on the property claim to inspect its description and assertion status, then change wording if it overstates what the example evidence supports. Save with **Update Property**. The toolbar's **Undo** and **Redo** controls can reverse and reapply supported editor operations. Use each once and check the diagram again. The editor generates element names such as `G1`, `S1`, `P1` and `E1`; add and edit dialogs have no name field. Imported names must follow the prefix rule. The toolbar also offers **Reset Identifiers** for people with edit access.
+
+   ![The property claim edit dialog and assertion status](/images/docs/shots/m2-08.svg)
+
+9. Use **Export** in the case toolbar. **Export Case** offers raw JSON, image, report and **Backup to Google Drive** sections. Choose a format to keep a review copy. The element edit and add dialogs save their own changes when you submit them; there is no separate whole-case **Save** button in this workflow. Check the exported result against the diagram before sharing it.
+
+   ![The Export Case dialog showing export choices](/images/docs/shots/m2-09.svg)
+
+Sharing a working case gives named people or teams permission to collaborate. Publishing makes a public snapshot on Discover. You will practise both in [Module 4](/docs/curriculum/tea-trainee/04-drinking-tea-with-others), after you have considered how to justify and review claims in Module 3.
+
+## Check your work
+
+Trace `G1` through the strategy and property claim to the evidence. Say aloud what each connection contributes. Ask whether the evidence you recorded supports only data representation, or the whole fairness goal. The remaining gap is a useful prompt for the next module.
+
+</div>
+
+## Sources checked
+
+- `content/curriculum/tea-trainee/01-first-sip/stages.ts`
+- `public/data/curriculum/first-sip/stage-2-context.json`
+- `components/auth/sign-in-form.tsx`
+- `components/cases/case-list.tsx`
+- `components/modals/case-create-modal.tsx`
+- `lib/services/case-fetch-service.ts`
+- `components/cases/node-add-popover.tsx`
+- `components/cases/add-child-trigger.tsx`
+- `components/shared/nodes/node-action-group.tsx`
+- `components/cases/node-add-dialog.tsx`
+- `components/cases/new-link-form.tsx`
+- `components/cases/node-edit-dialog.tsx`
+- `components/cases/history-controls.tsx`
+- `components/cases/action-buttons.tsx`
+- `components/modals/share-modal.tsx`
+- `lib/element-names/prefix-registry.ts`
+
+</PageContent>

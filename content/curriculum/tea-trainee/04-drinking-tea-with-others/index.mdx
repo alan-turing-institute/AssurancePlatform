@@ -1,0 +1,41 @@
+---
+title: "Drinking TEA with Others"
+description: Collaborate on a working case and choose when to share a public snapshot.
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+import LearningObjectives from '@/components/docs/curriculum/learning-objectives';
+import ModuleHeader from '@/components/docs/curriculum/module-header';
+import { drinkingObjectives } from './objectives';
+
+export const moduleMetadata = {
+  title: 'Drinking TEA with Others',
+  duration: '40-50 minutes',
+  prerequisites: [
+    { path: '/docs/curriculum/tea-trainee/03-letting-the-tea-steep', name: 'Letting the TEA Steep' },
+  ],
+};
+
+<ModuleHeader metadata={moduleMetadata} />
+
+The Fair Recruitment AI practice case began as your own argument. In a real project, its goal and evidence would need scrutiny from people with different responsibilities and experiences. Some need to read, some need to comment, and some need to edit or manage access. The platform offers these permissions, but your team still has to decide how to invite challenge and respond to it.
+
+This module has two parts. First, you will identify the current collaboration controls: teams, case sharing, comments, Discover publishing, import and backup, and machine integrations. Then you will plan how to use a working case during deliberation, design, testing and evidence generation. Publishing is a deliberate choice about a public snapshot, not a replacement for work with affected people.
+
+Use a practice case and a second test account if available. Do not send invitations or publish sensitive example material merely to complete the activity. The screenshots requested here are for the porting team and will be captured from a running application.
+
+<LearningObjectives
+  title="Learning Objectives"
+  variant="card"
+  objectives={drinkingObjectives}
+/>
+
+Continue to [the exploration](/docs/curriculum/tea-trainee/04-drinking-tea-with-others/exploration).
+
+## Sources checked
+
+- `lib/permissions.ts`
+- `components/sharing/case-sharing-dialog.tsx`
+- `lib/services/publish-service.ts`
+- `components/cases/case-container.tsx`

@@ -1,0 +1,42 @@
+---
+title: "Brewing Your Own TEA"
+description: Build a small Fair Recruitment AI assurance case in the current editor.
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+import LearningObjectives from '@/components/docs/curriculum/learning-objectives';
+import ModuleHeader from '@/components/docs/curriculum/module-header';
+import { brewingObjectives } from './objectives';
+
+export const moduleMetadata = {
+  title: 'Brewing Your Own TEA',
+  duration: '35-45 minutes',
+  prerequisites: [
+    { path: '/docs/curriculum/tea-trainee/01-first-sip', name: 'Your First Sip of TEA' },
+  ],
+};
+
+<ModuleHeader metadata={moduleMetadata} />
+
+In [Your First Sip of TEA](/docs/curriculum/tea-trainee/01-first-sip), you explored how a fairness goal branches into a strategy, testable claims and evidence. You also saw a monitoring branch with missing support. Now you build a small slice of that case yourself.
+
+You will use the browser editor to create a working case, revise its top-level goal, describe its context, and add one strategy, property claim and evidence item. Use the Fair Recruitment AI example as practice material. The example's statements are teaching content, so do not present them as findings from a real hiring system.
+
+The current **Create New Assurance Case** dialog starts with a blank case and a generated `G1` goal. It does not offer a starter-template choice. A JSON file can be imported separately, but this activity uses the blank case so that you practise building the argument.
+
+<LearningObjectives
+  title="Learning Objectives"
+  variant="card"
+  objectives={brewingObjectives}
+/>
+
+Continue to [the walkthrough](/docs/curriculum/tea-trainee/02-brewing-your-own-tea/exploration). A matching screen-recording script is provided for the porting team.
+
+## Sources checked
+
+- `components/auth/sign-in-form.tsx`
+- `components/cases/case-list.tsx`
+- `components/modals/case-create-modal.tsx`
+- `lib/services/case-fetch-service.ts`
+- `content/curriculum/tea-trainee/01-first-sip/stages.ts`

@@ -1,0 +1,67 @@
+---
+title: "Reflect on the reasons behind a case"
+description: Revisit the principles and choices that give an argument its meaning.
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+import ConceptCarousel from "@/components/docs/curriculum/concept-carousel";
+import { steepingConcepts } from "./concepts";
+import { steepingReflectionPrompts } from "./reflections";
+import ReflectionPrompts from "@/components/docs/curriculum/reflection-prompts";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { steepingTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="letting-the-tea-steep"
+      tasks={steepingTasks}
+      currentPage="reflection"
+    >
+      {children}
+      <ModuleProgressTracker showHints={true} currentPage="reflection" />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+## The Core Concepts
+
+<div id="core-elements" className="mt-8">
+
+<ConceptCarousel
+  concepts={steepingConcepts}
+  mode="guided"
+  taskId="review-core-elements"
+/>
+
+</div>
+
+## Reflection & Synthesis
+
+<div id="reflection-prompts" className="mt-8">
+
+<ReflectionPrompts
+  prompts={steepingReflectionPrompts}
+  allowSkip={true}
+  autoSave={true}
+  showProgress={true}
+  taskId="complete-reflection"
+/>
+
+</div>
+
+Keep the answers with your project notes and revisit them when the case changes. Reflection is a repeated part of this process.
+
+## Sources checked
+
+- `content/curriculum/tea-trainee/01-first-sip/stages.ts`
+- `components/cases/node-edit-dialog.tsx`
+- `lib/assertion-status.ts`
+- `specs/docs-drafts-2026-09/curriculum-drafts/001-03-implementing-tea.md` (lines 29–45, 51–105, 125–147, 149–196, 203–245)
+
+</PageContent>

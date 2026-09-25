@@ -1,0 +1,49 @@
+---
+title: "Your first case in review"
+description: Check the argument you built and prepare for deeper justification work.
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { brewingTasks } from "./tasks";
+import LearningObjectives from "@/components/docs/curriculum/learning-objectives";
+import { brewingObjectives } from "./objectives";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="brewing-your-own-tea"
+      tasks={brewingTasks}
+      currentPage="summary"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+You have made a working Fair Recruitment AI practice case. The editor began with `G1`; you changed its description, added context, and built one path through a strategy, property claim and evidence item. You inspected assertion status, tried undo and redo, and made an export for review.
+
+<LearningObjectives
+  title="You Can Now"
+  variant="card"
+  objectives={brewingObjectives}
+/>
+
+Your diagram is an argument proposal. A reviewer still has to examine whether the property claim is relevant to the goal and whether the evidence is credible. The [next module](/docs/curriculum/tea-trainee/03-letting-the-tea-steep) focuses on reflection, deliberation and justification across a project. [Module 4](/docs/curriculum/tea-trainee/04-drinking-tea-with-others) then covers collaboration, sharing and publishing.
+
+## Sources checked
+
+- `components/modals/case-create-modal.tsx`
+- `lib/services/case-fetch-service.ts`
+- `components/cases/node-add-popover.tsx`
+- `components/cases/node-edit-dialog.tsx`
+- `components/cases/history-controls.tsx`
+- `components/modals/share-modal.tsx`
+
+</PageContent>
