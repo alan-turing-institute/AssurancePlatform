@@ -5,8 +5,6 @@ sidebar_position: 2
 sidebar_label: 'Local Development'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 You can run the application on your host while PostgreSQL runs locally or in the repository's development compose stack. The [Docker quickstart](/docs/technical-guide/getting-started/docker-quickstart) runs both application and database in containers. This page covers a host-run Next.js process, which provides hot reload.
 
 ## Prerequisites and configuration
@@ -60,20 +58,3 @@ The [code style guide](/docs/technical-guide/contributing/code-style) gives the 
 ## Troubleshooting
 
 If the server cannot connect to PostgreSQL, check the host, port and database named by `DATABASE_URL`, then confirm the database is running and migrated. The application uses `DB_POOL_TIMEOUT_MS` to limit how long a request waits for a connection, with a default of 5000 ms. If sign-in fails, check the provider settings and session URL for the route you are using. Read the application log rather than assuming that a build-time warning proves a runtime connection failure.
-
-## Sources checked
-
-- `content/technical-guide/getting-started/local-development.mdx`
-- `package.json`
-- `Dockerfile`
-- `Dockerfile.dev`
-- `docker-compose.local.yml`
-- `prisma.config.ts`
-- `prisma/seed/dev-seed.ts`
-- `lib/prisma.ts`
-- `lib/db-pool-config.ts`
-- `lib/auth/config.ts`
-- `scripts/run-integration-tests.sh`
-- `.nvmrc`
-- `e2e/global-setup.ts`
-- `playwright.config.ts`

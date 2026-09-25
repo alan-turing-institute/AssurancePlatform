@@ -5,8 +5,6 @@ sidebar_position: 3
 sidebar_label: 'Database Management'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The application uses PostgreSQL through the Prisma client in `lib/prisma.ts`. The production compose file names its database container `tea_postgres`, its default database `tea`, and its default database user `tea_user`. Replace those defaults in the examples if your deployment uses different values.
 
 <Callout type="warn">
@@ -44,15 +42,3 @@ The production image's `scripts/docker-entrypoint.sh` runs `prisma migrate deplo
 `DATABASE_URL` supplies the PostgreSQL connection string. `lib/prisma.ts` creates a `pg` pool for the Prisma adapter. `DB_POOL_TIMEOUT_MS` sets how long a request waits for a pool connection; the default is 5000 ms. Check the application logs for database errors and the [deployment overview](/docs/technical-guide/deployment) for the main configuration variables.
 
 The local compose file also defines `postgres-test` on host port 5433. It uses disposable memory-backed storage and relaxed durability for integration tests. Do not use that service for development data or production records.
-
-## Sources checked
-
-- `content/technical-guide/deployment/database-management.mdx`
-- `docker-compose.yml`
-- `docker-compose.local.yml`
-- `scripts/docker-entrypoint.sh`
-- `Dockerfile`
-- `lib/prisma.ts`
-- `lib/db-pool-config.ts`
-- `prisma/schema.prisma`
-- `prisma/migrations/`

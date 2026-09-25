@@ -5,8 +5,6 @@ sidebar_position: 2
 sidebar_label: 'Code Style'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 Use the repository's checks and existing module patterns when changing code. `package.json` defines the commands, while `biome.json` and the Ultracite configuration define formatting and lint rules.
 
 ## Checks
@@ -51,21 +49,3 @@ For changes to documented API routes, run `pnpm docs:generate` and include the u
 ## Tests
 
 Tests are not all beside the file they cover. Component and service tests often sit in a nearby `__tests__/` directory; broader integration tests are under `src/__tests__/integration/`, and browser tests are under `e2e/`. Add a test at the level that exercises the behaviour you changed. The CI workflow runs unit, integration and Playwright suites, and merges the first two suites' coverage for its structural-quality check.
-
-## Sources checked
-
-- `content/technical-guide/contributing/code-style.mdx`
-- `package.json`
-- `biome.json`
-- `lib/prisma.ts`
-- `lib/logger.ts`
-- `lib/services/element-service.ts`
-- `types/service.ts`
-- `lib/schemas/element.ts`
-- `app/(cases)/case/[caseId]/page.tsx`
-- `src/__tests__/integration/`
-- `e2e/`
-- `e2e/global-setup.ts`
-- `playwright.config.ts`
-- `public/openapi.json`
-- `.github/workflows/build.yaml`

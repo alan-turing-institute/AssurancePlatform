@@ -5,8 +5,6 @@ sidebar_position: 1
 sidebar_label: 'Docker Quickstart'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 Use `docker-compose.local.yml` to run the application and PostgreSQL on your machine. This is a development stack. It builds the application from your checkout, applies the repository's SQL migrations and runs the development seed before starting the server. For a production deployment, use the [Docker production guide](/docs/technical-guide/deployment/docker-production).
 
 ## Prepare the checkout
@@ -45,13 +43,3 @@ For code checks, use the exact package scripts listed in the [code style guide](
 docker compose -f docker-compose.local.yml up -d postgres-test
 pnpm test:integration
 ```
-
-## Sources checked
-
-- `content/technical-guide/getting-started/docker-quickstart.mdx`
-- `docker-compose.local.yml`
-- `Dockerfile.dev`
-- `prisma/seed/dev-seed.ts`
-- `lib/schemas/user.ts`
-- `scripts/run-integration-tests.sh`
-- `package.json`

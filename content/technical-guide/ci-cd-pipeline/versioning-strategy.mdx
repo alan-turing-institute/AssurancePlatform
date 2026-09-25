@@ -5,8 +5,6 @@ sidebar_position: 2
 sidebar_label: 'Versioning Strategy'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 Read `package.json` for the package version in your checkout. Releases are automated by semantic-release after a successful `Build` workflow on `main`; this repository does not use manually pushed version tags as the normal release trigger.
 
 ## Branches and release sequence
@@ -26,13 +24,3 @@ Write a message such as `feat(ui): add case filter` or `fix(auth): reject expire
 The `Build` workflow pushes images under `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Docker metadata adds branch and short-SHA tags, plus `latest` and `main` on the default or main branch and `staging` with a dated staging tag on staging. The workflow also has semantic-version tag rules, but they are inert because `Build` has no tag trigger. Do not assume that each staging build gets a prerelease version number: the release configuration only runs on `main`.
 
 The self-hosting `docker-compose.yml` currently points to `ghcr.io/alan-turing-institute/assuranceplatform:latest`, which differs from the image path pushed by `Build`. Check and correct that deployment configuration before copying the compose image name into operational instructions.
-
-## Sources checked
-
-- `content/technical-guide/ci-cd-pipeline/versioning-strategy.mdx`
-- `package.json`
-- `.releaserc.json`
-- `.commitlintrc.json`
-- `.github/workflows/build.yaml`
-- `.github/workflows/release.yaml`
-- `docker-compose.yml`

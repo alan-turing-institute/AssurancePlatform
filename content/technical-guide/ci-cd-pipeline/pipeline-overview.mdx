@@ -4,8 +4,6 @@ description: "See how local hooks, GitHub Actions, releases and scheduled mainte
 sidebar_position: 1
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The repository checks changes locally and in GitHub Actions. The `Build` workflow validates code, tests it, builds a container image and deploys successful `staging` and `main` builds to Azure. Other workflows handle releases, staging data and scheduled maintenance.
 
 ## Local checks
@@ -31,18 +29,3 @@ The `Release` workflow runs when a successful `Build` workflow completes on `mai
 ## Scheduled workflows
 
 The workflow directory also contains `Purge expired trash`, `Sweep health staleness`, `Data retention sweep` and `Cleanup PR Docker Images`. Each has a schedule and a manual trigger. The first three call application cron routes using a cron secret; image cleanup acts on the container registry. The retired fallow file remains in the directory, making eight workflow files in total, but seven active workflows.
-
-## Sources checked
-
-- `content/technical-guide/ci-cd-pipeline/pipeline-overview.mdx`
-- `.pre-commit-config.yaml`
-- `.githooks/pre-push`
-- `package.json`
-- `.github/workflows/build.yaml`
-- `.github/workflows/release.yaml`
-- `.github/workflows/seed-staging.yml`
-- `.github/workflows/purge-trash.yml`
-- `.github/workflows/health-staleness-sweep.yml`
-- `.github/workflows/retention-sweep.yml`
-- `.github/workflows/cleanup-images.yaml`
-- `.github/workflows/fallow.yml`

@@ -3,12 +3,6 @@ title: "Scheduled jobs"
 description: "Operate the three protected maintenance routes and their workflows."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm job outcomes in the target deployment before claiming that an eligible case was removed.
-</Callout>
-
 The staging code has three scheduled maintenance jobs. GitHub Actions calls an application route for each job. The route delegates the work to a service. These jobs need a reachable application and a configured secret; the workflow file alone does not perform database cleanup.
 
 ## Jobs and schedules
@@ -32,17 +26,3 @@ The workflows check HTTP responses, while the services log their outcomes. For a
 ## Limits and code location
 
 Schedules are GitHub Actions cron expressions, so execution depends on Actions and the deployed app. No in-process timer guarantees a run. The three route files live under `app/api/cron/`, shared authentication is `lib/services/cron-auth.ts`, and schedules live in `.github/workflows/purge-trash.yml`, `health-staleness-sweep.yml` and `retention-sweep.yml`.
-
-## Sources checked
-
-- `app/api/cron/purge-trash/route.ts`
-- `app/api/cron/health-staleness-sweep/route.ts`
-- `app/api/cron/retention-sweep/route.ts`
-- `lib/services/cron-auth.ts`
-- `lib/services/case-trash-service.ts`
-- `lib/services/health-staleness-sweep-service.ts`
-- `lib/services/retention-service.ts`
-- `prisma/migrations/20251206000000_initial_schema/migration.sql`
-- `.github/workflows/purge-trash.yml`
-- `.github/workflows/health-staleness-sweep.yml`
-- `.github/workflows/retention-sweep.yml`

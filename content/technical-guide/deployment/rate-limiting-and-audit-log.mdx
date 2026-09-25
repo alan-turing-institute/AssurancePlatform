@@ -3,12 +3,6 @@ title: "Rate limiting and security audit events"
 description: "Trace guarded requests and persisted security events."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Held for porting until tracked code changes merge.
-</Callout>
-
 Rate limits slow repeated attempts against selected account and machine-authentication paths. Security audit events record security-relevant outcomes in structured logs and, where requested, in a database table. These services support investigation and abuse controls; neither is a substitute for permission checks on a case or token scope checks on a machine route.
 
 ## Apply the configured limits
@@ -26,13 +20,3 @@ Choose specific event names and metadata that explain an outcome without includi
 ## Limits and code location
 
 The present configuration protects registration, invite acceptance, password reset and failed machine authentication. Do not describe it as blanket throttling of all API routes. Rate-limit policy and persistence are in `lib/services/rate-limit-service.ts`; audit persistence is in `lib/services/security-audit-service.ts`; log formatting is in `lib/audit/security-log.ts` and `lib/logger.ts`.
-
-## Sources checked
-
-- `lib/services/rate-limit-service.ts`
-- `lib/services/security-audit-service.ts`
-- `lib/audit/security-log.ts`
-- `lib/logger.ts`
-- `lib/services/integration-registry-service.ts`
-- `prisma/schema.prisma`
-- `lib/services/password-reset-service.ts`

@@ -5,8 +5,6 @@ sidebar_position: 5
 sidebar_label: 'API Reference'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The application serves its generated API reference at [/api-docs](/api-docs). That page reads the OpenAPI document at `/openapi.json`. Route definitions and their annotations live in `app/api/`; the `docs:generate` package script runs `next-openapi-gen generate`. Use the generated reference for paths, methods, request shapes and responses.
 
 ## Browser requests
@@ -18,15 +16,3 @@ When you sign in through the web interface, NextAuth.js manages a browser sessio
 An integration calls the `/api/machine` surface with an `Authorization: Bearer teap_…` header. The secret is issued for an integration and is checked against the stored token record on each request. Its scopes limit the operations it may perform. Access to individual cases also follows the integration's case grants; a scope alone is not a case grant. The current scope vocabulary is `case:read`, `health:evidence:read` and `health:evidence:write`.
 
 Create and revoke integration tokens through the authenticated integration controls. Keep the full token secret when it is issued, since later views expose only a prefix. Use the generated [API reference](/api-docs) for the supported machine routes.
-
-## Sources checked
-
-- `content/technical-guide/api-reference.mdx`
-- `app/api-docs/page.tsx`
-- `package.json`
-- `lib/auth/config.ts`
-- `lib/auth/require-api-token.ts`
-- `lib/auth/scopes.ts`
-- `lib/auth/api-token-service.ts`
-- `lib/services/integration-registry-service.ts`
-- `app/api/machine/whoami/route.ts`

@@ -3,12 +3,6 @@ title: "Google account features and case import"
 description: "Sign in with a connected account and move case files through Drive or GitHub."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Provider buttons and grants depend on deployment OAuth configuration. Confirm them in the target environment before publishing this walkthrough.
-</Callout>
-
 The sign-in page at `/login` offers email or username and password, Google, and GitHub sign-in. A Google connection also enables case backup to Google Drive and import from Drive. GitHub sign-in enables import from a repository. These are account connections: they do not publish a case or give other people case access.
 
 ## Sign in and connect
@@ -28,17 +22,3 @@ In the case's share and export controls, the Google backup section offers **Back
 ## Limits and code location
 
 Drive and GitHub operations require valid account grants and can fail when a provider refuses access or its token expires. The UI does not promise continuous synchronisation with either provider. Sign-in is rendered by `components/auth/sign-in-form.tsx`; import UI is in `components/modals/_import-modal/`; Drive backup UI is in `components/modals/_share-modal/google-backup-section.tsx`. The case import and backup routes are under `app/api/cases/`.
-
-## Sources checked
-
-- `components/auth/sign-in-form.tsx`
-- `components/modals/_import-modal/use-case-import.ts`
-- `components/modals/_import-modal/github-import-tab.tsx`
-- `components/modals/_import-modal/google-drive-import-tab.tsx`
-- `components/modals/_share-modal/google-backup-section.tsx`
-- `app/api/cases/import/github/route.ts`
-- `app/api/cases/import/gdrive/route.ts`
-- `app/api/cases/backup/gdrive/route.ts`
-- `lib/services/google-drive-service.ts`
-- `lib/services/github-api-service.ts`
-- `lib/auth/config.ts`

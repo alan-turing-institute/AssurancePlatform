@@ -8,8 +8,6 @@ tags:
   - elements
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 An assurance case links a broad goal to more specific claims and evidence. The database recognises ten element types. The current diagram has dedicated renderers for goal, strategy, property claim, evidence, away goal and module. Context, assumption and justification appear as fields on applicable elements in the current editor. The types remain part of the model even when they do not have their own diagram renderer.
 
 ## Types and names
@@ -129,15 +127,3 @@ An away goal can cite an existing, active element through a referenced case. The
 ## Assertion status
 
 The author can set **Asserted** (the default), **Needs support**, **Assumed**, **Axiomatic** or **Defeated** on an applicable assertion. Status expresses the author's position. It is not an automatic assessment of evidence quality. **As cited** is reserved and cannot be chosen directly in element create or edit; this build does not derive it automatically. Use **Needs support** to make an unresolved support gap visible rather than treating an empty evidence branch as complete.
-
-## Sources checked
-
-- `prisma/schema.prisma`
-- `lib/element-names/prefix-registry.ts`
-- `lib/assertion-status.ts`
-- `components/cases/node-add-popover.tsx`
-- `components/cases/node-edit-dialog.tsx`
-- `lib/services/element-service.ts`
-- `components/cases/node-type-resolver.ts`
-
-- `content/curriculum/quick-reference/02-element-types.mdx`

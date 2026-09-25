@@ -3,8 +3,6 @@ title: "Build your first case"
 description: Follow the editor from sign-in through a small argument and export.
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
 import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
 import { brewingTasks } from "./tasks";
@@ -28,10 +26,6 @@ export const PageContent = ({ children }) => {
 };
 
 <PageContent>
-
-<Callout type="info" title="Claims to confirm (review only)">
-The exact placement of node controls and dialogs needs a running-browser check. Google and GitHub sign-in choices depend on which providers the deployment configures.
-</Callout>
 
 <div id="exploration-content">
 
@@ -82,24 +76,5 @@ Sharing a working case gives named people or teams permission to collaborate. Pu
 Trace `G1` through the strategy and property claim to the evidence. Say aloud what each connection contributes. Ask whether the evidence you recorded supports only data representation, or the whole fairness goal. The remaining gap is a useful prompt for the next module.
 
 </div>
-
-## Sources checked
-
-- `content/curriculum/tea-trainee/01-first-sip/stages.ts`
-- `public/data/curriculum/first-sip/stage-2-context.json`
-- `components/auth/sign-in-form.tsx`
-- `components/cases/case-list.tsx`
-- `components/modals/case-create-modal.tsx`
-- `lib/services/case-fetch-service.ts`
-- `components/cases/node-add-popover.tsx`
-- `components/cases/add-child-trigger.tsx`
-- `components/shared/nodes/node-action-group.tsx`
-- `components/cases/node-add-dialog.tsx`
-- `components/cases/new-link-form.tsx`
-- `components/cases/node-edit-dialog.tsx`
-- `components/cases/history-controls.tsx`
-- `components/cases/action-buttons.tsx`
-- `components/modals/share-modal.tsx`
-- `lib/element-names/prefix-registry.ts`
 
 </PageContent>

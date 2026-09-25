@@ -3,12 +3,6 @@ title: "Live case updates"
 description: "See how a shared case responds when another collaborator changes it."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm event delivery across server processes in the target deployment.
-</Callout>
-
 When two people have the same case open, the editor listens for changes to that case. A second person's edit can update your view without a manual page reload. This helps collaborators see a current argument while they discuss it, but it is not a shared cursor or a lock that prevents simultaneous editing.
 
 ## What you see
@@ -26,12 +20,3 @@ The connection manager holds subscribers in server memory, grouped by case. It h
 ## Limits and code location
 
 Live events do not expose a collaborator's pointer, indicate that an element is locked, or replace explicit saving and review. `app/api/cases/[id]/events/route.ts` serves the stream, `lib/services/sse-connection-manager.ts` broadcasts events, `hooks/use-case-events.ts` listens in the browser, and `components/cases/case-container.tsx` refreshes the displayed case.
-
-## Sources checked
-
-- `app/api/cases/[id]/events/route.ts`
-- `lib/services/sse-connection-manager.ts`
-- `hooks/use-case-events.ts`
-- `components/cases/case-container.tsx`
-- `app/api/elements/[id]/route.ts`
-- `lib/services/comment-service.ts`

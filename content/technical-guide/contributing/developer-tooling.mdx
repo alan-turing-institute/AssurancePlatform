@@ -3,12 +3,6 @@ title: "Developer tooling"
 description: "Generate API documentation and run the repository's local and CI quality checks."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Check the CI workflow and package scripts when porting this page; tool versions and release rules can change between staging commits.
-</Callout>
-
 The repository uses generated API documentation, conventional commit messages, release automation and several test gates. Run the scripts in `package.json` rather than recreating their underlying commands. The source files and workflow names below describe the checked staging commit.
 
 ## Generate and inspect API documentation
@@ -48,19 +42,3 @@ This setup reduces the risk of test data reaching a developer's working database
 ## Limits and code location
 
 The central scripts are in `package.json`; OpenAPI configuration is `next.openapi.json`; commit rules are `.commitlintrc.json` and `.releaserc.json`; the gate is `.githooks/pre-push`; CI lives under `.github/workflows/`.
-
-## Sources checked
-
-- `package.json`
-- `next.openapi.json`
-- `public/openapi.json`
-- `.commitlintrc.json`
-- `.releaserc.json`
-- `.githooks/pre-push`
-- `.github/workflows/release.yaml`
-- `.github/workflows/fallow.yml`
-- `.github/workflows/build.yaml`
-- `docker-compose.local.yml`
-- `scripts/run-integration-tests.sh`
-- `.nvmrc`
-- `patches/nextstepjs@2.3.0.patch`

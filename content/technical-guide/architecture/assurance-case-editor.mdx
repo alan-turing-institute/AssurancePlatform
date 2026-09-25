@@ -5,8 +5,6 @@ sidebar_position: 3
 sidebar_label: 'Assurance Case Editor'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The editor at `/case/[caseId]` turns a stored assurance case into an interactive diagram. `CaseContainer` loads the case through `/api/cases/[id]`, holds it in the client store and passes it to `Flow`. `Flow` converts the case tree into React Flow nodes and edges, then applies the layout helper. The canvas does not use draggable nodes; the layout is computed from the case structure.
 
 ## Node and edge rendering
@@ -34,21 +32,3 @@ The toolbar has Undo and Redo controls for people with editing access. `use-keyb
 - `components/cases/node-type-resolver.ts`, `components/shared/nodes/` and `components/cases/node-add-popover.tsx`: node presentation and controls.
 - `lib/case/convert-case.ts` and `lib/case/layout-helper.ts`: tree conversion and layout.
 - `lib/services/element-service.ts` and `app/api/elements/[id]/route.ts`: element operations.
-
-## Sources checked
-
-- `content/technical-guide/architecture/assurance-case-editor.mdx`
-- `app/(cases)/case/[caseId]/page.tsx`
-- `app/api/cases/[id]/route.ts`
-- `app/api/elements/[id]/route.ts`
-- `components/cases/case-container.tsx`
-- `components/cases/flow.tsx`
-- `components/cases/action-buttons.tsx`
-- `components/cases/history-controls.tsx`
-- `components/cases/node-type-resolver.ts`
-- `components/cases/node-add-popover.tsx`
-- `components/cases/node-add-dialog.tsx`
-- `components/cases/node-edit-dialog.tsx`
-- `lib/case/node-type-resolver.ts`
-- `lib/case/convert-case.ts`
-- `hooks/use-keyboard-shortcuts.ts`

@@ -3,12 +3,6 @@ title: "Templates and argument patterns"
 description: "Distinguish case creation, import and export templates from planned reusable argument patterns."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm the target deployment's template directory and pattern catalogue before describing a starter choice in its browser UI.
-</Callout>
-
 The platform uses the word *template* in more than one place. A document export template controls the structure of a generated report. A case data file can carry metadata that says an element came from a pattern. The data model also reserves an argument-pattern type for Discover. These pieces do not yet amount to a browser workflow for choosing and publishing reusable argument patterns.
 
 ## Start a case
@@ -28,14 +22,3 @@ Assurance elements have `fromPattern` and `modifiedFromPattern` flags in the dat
 ## Limits and code location
 
 Use the blank case creator or JSON import for today's case setup. Use document presets only for output. `components/modals/case-create-modal.tsx` contains the creation form; `app/api/templates/route.ts` contains the unpopulated template endpoint; `components/modals/_share-modal/document-export-section.tsx` contains export presets. Pattern metadata is defined in `prisma/schema.prisma` and carried by `lib/services/case-import-service.ts` and `lib/services/case-export-service.ts`.
-
-## Sources checked
-
-- `components/modals/case-create-modal.tsx`
-- `app/api/templates/route.ts`
-- `components/modals/_share-modal/document-export-section.tsx`
-- `lib/export/templates/presets/index.ts`
-- `lib/services/case-import-service.ts`
-- `lib/services/case-export-service.ts`
-- `prisma/schema.prisma`
-- `public/data/patterns/model-verification-validation.json`

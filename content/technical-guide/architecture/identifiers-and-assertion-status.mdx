@@ -3,12 +3,6 @@ title: "Sector identifiers, assertion status and citations"
 description: "Work with stable case sectors and the newer element semantics."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm assertion-status behaviour when porting this page.
-</Callout>
-
 Three data rules affect how a case is edited and exported: a sector uses a stable stored identifier, an assertion can carry an explicit status, and an away goal can cite another element. Together they make case data more precise than a free-text sector and an unqualified list of nodes.
 
 ## Sector values
@@ -28,15 +22,3 @@ Only an `AWAY_GOAL` may set `citedElementId`. An away goal must first name a mod
 ## Limits and code location
 
 Sector mapping is in `lib/sectors.ts`; names are in `lib/element-names/prefix-registry.ts`; statuses are in `lib/assertion-status.ts`; citation validation is in `lib/services/element-service.ts`, `lib/services/case-batch-update-service.ts` and `lib/services/case-import-service.ts`.
-
-## Sources checked
-
-- `lib/sectors.ts`
-- `prisma/migrations/20260820000000_sector_stable_ids/migration.sql`
-- `lib/element-names/prefix-registry.ts`
-- `lib/assertion-status.ts`
-- `lib/services/element-service.ts`
-- `lib/services/case-batch-update-service.ts`
-- `lib/services/case-import-service.ts`
-- `lib/transforms/build-tree.ts`
-- `prisma/schema.prisma`

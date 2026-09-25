@@ -3,12 +3,6 @@ title: "Plugin foundation"
 description: "Locate the official plugin manifest, UI slots and plugin data storage."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm which compiled plugins are enabled in the target deployment before publishing its setup instructions.
-</Callout>
-
 The plugin foundation lets first-party features add data and selected interface surfaces without placing every feature's code in the case editor. The checked build has one official plugin, `tea.health`. The manifest defines which plugin IDs and surfaces the build knows about. An operator can withhold a manifest plugin from a deployment with `TEA_PLUGINS_DISABLED`, while a user's effective enablement determines whether its UI appears.
 
 ## Add a registered surface
@@ -24,14 +18,3 @@ The slot types also name case panels and canvas decorators as extension points, 
 ## Limits and code location
 
 This is an official, compiled-in plugin mechanism. It is not runtime loading of arbitrary external packages. UI registration is build-time, and the checked release has no marketplace flow. The manifest is `lib/plugins/manifest.ts`; slot contracts and registry are in `lib/plugins/slots/`; per-user state and data are managed by `lib/services/plugin-enablement-service.ts` and `lib/services/plugin-data-service.ts`.
-
-## Sources checked
-
-- `lib/plugins/manifest.ts`
-- `lib/plugins/bootstrap.ts`
-- `lib/plugins/slots/types.ts`
-- `lib/plugins/slots/registry.ts`
-- `lib/plugins/health/register.ts`
-- `lib/services/plugin-enablement-service.ts`
-- `lib/services/plugin-data-service.ts`
-- `prisma/schema.prisma`

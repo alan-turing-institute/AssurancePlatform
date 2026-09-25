@@ -3,12 +3,6 @@ title: "Health plugin and evidence chain"
 description: "Understand claim health scoring and the append-only evidence record."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-The limitations of the hash chain and the absence of a scheduled verifier should be reviewed before this page makes any assurance claim about tamper detection.
-</Callout>
-
 The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim. It shows a health badge and evidence panel without changing the claim's authored argument. A score is a signal for review, not an automatic decision that a claim is true.
 
 ## Record and read evidence
@@ -24,13 +18,3 @@ The scoring service considers evidence in the validity window and uses the worst
 ## Limits and code location
 
 The chain detects edits that do not also recompute later hashes. It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs. It does not prove that a source system's measurement was correct. The service is `lib/services/health-evidence-service.ts`; scoring is in `lib/services/health-scoring-service.ts`; UI components are under `lib/plugins/health/`.
-
-## Sources checked
-
-- `lib/services/health-evidence-service.ts`
-- `lib/services/health-scoring-service.ts`
-- `lib/plugins/health/health-panel.tsx`
-- `lib/plugins/health/register.ts`
-- `app/api/machine/health/elements/[id]/evidence/route.ts`
-- `lib/schemas/health-evidence.ts`
-- `lib/services/plugin-enablement-service.ts`

@@ -5,12 +5,6 @@ sidebar_position: 2
 sidebar_label: 'Docker Production'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm the published image path in GHCR before using a pull-based deployment: the compose file and the CI workflow name different image repositories.
-</Callout>
-
 `docker-compose.yml` defines a self-hosted application and PostgreSQL stack. The official staging and production services use Azure App Service through `.github/workflows/build.yaml`; this page covers the supplied compose file.
 
 ## Before you start
@@ -40,18 +34,3 @@ docker compose -f docker-compose.yml up -d
 The application waits for the PostgreSQL health check. Its image entrypoint applies pending SQL migrations with `prisma migrate deploy` and then starts `server.js`. Check the application logs and `/api/health` after startup. Do not run a separate manual migration inside `tea_app` as a routine step.
 
 When updating, take a database backup first, then pull the intended image and recreate the application. The image path and tag in your deployment configuration determine which build you receive. The [database guide](/docs/technical-guide/deployment/database-management) covers backup and restore.
-
-## Sources checked
-
-- `content/technical-guide/deployment/docker-production.mdx`
-- `docker-compose.yml`
-- `Dockerfile`
-- `scripts/docker-entrypoint.sh`
-- `.github/workflows/build.yaml`
-- `app/api/health/route.ts`
-- `lib/auth/config.ts`
-- `lib/auth/token-encryption.ts`
-- `lib/services/file-storage-service.ts`
-- `lib/services/blob-storage-service.ts`
-- `lib/services/email-service.ts`
-- `lib/services/cron-auth.ts`

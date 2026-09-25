@@ -5,8 +5,6 @@ sidebar_position: 1
 sidebar_label: 'Overview'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The TEA Platform is a Next.js App Router application. It serves the browser interface, API handlers and documentation from one repository. PostgreSQL stores users, assurance cases, permissions and published snapshots. Prisma provides the database client and schema.
 
 ## Find the main parts
@@ -35,18 +33,3 @@ An assurance case holds its argument elements, case information and access grant
 Publishing creates a frozen `PublishedAssuranceCase` snapshot for Discover. A later publication retires the current public version and creates another snapshot. The active workflow has draft and published states. Public snapshots omit collaboration comments. Unpublishing deletes the published versions and returns the working case to draft.
 
 Plugins contribute features through registered slots.
-
-## Sources checked
-
-- `package.json`
-- `app/(cases)/case/[caseId]/page.tsx`
-- `app/api/cases/[id]/route.ts`
-- `app/api/machine/whoami/route.ts`
-- `components/cases/case-container.tsx`
-- `components/cases/flow.tsx`
-- `components/cases/node-type-resolver.ts`
-- `lib/auth/config.ts`
-- `lib/auth/require-api-token.ts`
-- `lib/services/publish-service.ts`
-- `lib/prisma.ts`
-- `prisma/schema.prisma`

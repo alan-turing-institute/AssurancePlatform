@@ -3,12 +3,6 @@ title: "Teams, sharing and permissions"
 description: "Grant colleagues access to a working case and understand how team roles differ from case permissions."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-A team grant is evaluated against current membership, so a member added later inherits it. Review membership practices before granting a team Admin case access.
-</Callout>
-
 Sharing gives named people or teams access to a working assurance case. It lets collaborators read the argument, discuss elements or edit it according to the permission you choose. Publishing is separate: it creates a public snapshot for Discover without giving visitors access to the working case.
 
 ## Case permissions
@@ -39,20 +33,3 @@ A team role controls management of the team. It does not automatically grant cas
 ## Limits and code location
 
 Sharing does not make the case public, and a case invitation does not bypass sign-in or email matching. Case Admin can move a case to Trash, but only the owner can restore or permanently delete it there. Revoking a team grant removes that route of access for its members, while their direct grants remain. `components/sharing/` contains the **Share Case** dialog; `lib/permissions.ts` calculates effective access, and `lib/services/case-permission-service.ts` and `lib/services/team-member-service.ts` manage grants and membership.
-
-## Sources checked
-
-- `components/cases/action-buttons.tsx`
-- `components/sharing/case-sharing-dialog.tsx`
-- `components/sharing/_case-sharing/permission-components.tsx`
-- `components/teams/team-list.tsx`
-- `components/teams/team-member-list.tsx`
-- `components/teams/create-team-dialog.tsx`
-- `components/teams/invite-member-dialog.tsx`
-- `app/(authenticated)/dashboard/teams/page.tsx`
-- `lib/permissions.ts`
-- `lib/services/case-permission-service.ts`
-- `lib/services/case-invite-service.ts`
-- `lib/services/team-service.ts`
-- `lib/services/team-member-service.ts`
-- `prisma/schema.prisma`

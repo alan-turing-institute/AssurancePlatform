@@ -5,8 +5,6 @@ sidebar_position: 1
 sidebar_label: 'Pull Requests'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The repository's contribution flow is feature branch to `staging`, then `staging` to `main` for production release. Start your branch from `staging` and target `staging` with your pull request. Give the reviewer the problem, the change you made, how you checked it and any visible effect on the interface or data. Link an issue when one exists.
 
 ## Prepare a change
@@ -41,17 +39,3 @@ Use a lowercase conventional commit type, such as `feat`, `fix`, `docs` or `test
 For a change to a documented API route, run `pnpm docs:generate` and include the regenerated `public/openapi.json`; CI checks for drift.
 
 Open the pull request against `staging`. In its description, state what changed and why, include the checks you ran, and call out any migration, deployment or documentation effect. Respond to review comments with a new commit or an explanation of the relevant code. Maintainers decide when to merge and when to promote `staging` to `main`; releases from `main` are automated by semantic-release.
-
-## Sources checked
-
-- `content/technical-guide/contributing/pull-requests.mdx`
-- `CONTRIBUTING.md`
-- `package.json`
-- `.commitlintrc.json`
-- `.pre-commit-config.yaml`
-- `.githooks/pre-push`
-- `.github/workflows/build.yaml`
-- `.github/workflows/release.yaml`
-- `e2e/global-setup.ts`
-- `playwright.config.ts`
-- `public/openapi.json`

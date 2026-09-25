@@ -5,8 +5,6 @@ sidebar_position: 2
 sidebar_label: 'Assurance Case Model'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 An assurance case is a structured argument. `AssuranceCase` stores its identity and settings; `AssuranceElement` stores the claims, strategies, evidence and references that make up the argument. The schema is in `prisma/schema.prisma`, with application rules in `lib/services/`.
 
 ## Core records
@@ -42,13 +40,3 @@ Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. 
 ## Working with the schema
 
 The Prisma client is created in `lib/prisma.ts` and generated under `src/generated/prisma`. Prefer the service layer for application operations, since a direct database write can skip case permissions, type-specific validation, publication rules and event handling. Database changes use hand-written SQL migrations followed by `prisma migrate deploy` in the repository's deployment process.
-
-## Sources checked
-
-- `content/technical-guide/architecture/assurance-case-model.mdx`
-- `prisma/schema.prisma`
-- `lib/prisma.ts`
-- `lib/permissions.ts`
-- `lib/services/publish-service.ts`
-- `components/cases/node-type-resolver.ts`
-- `components/cases/node-edit-dialog.tsx`

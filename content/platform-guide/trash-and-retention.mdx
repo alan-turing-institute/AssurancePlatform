@@ -3,12 +3,6 @@ title: "Trash, soft delete and retention"
 description: "Understand how deleted cases can be restored and when they are purged."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Held for porting until tracked code changes merge.
-</Callout>
-
 Deleting a case moves it to Trash. The platform marks the case as deleted rather than immediately removing its database record. This gives the owner a chance to restore an accidental deletion. A trashed case is hidden from normal case access, including collaborators who previously had permission to see it.
 
 ## Move a case to Trash
@@ -28,16 +22,3 @@ Case Trash concerns whole cases. The schema also records deletion markers for in
 ## Limits and code location
 
 Trash is a recovery window, not a backup or version history. It does not preserve a separately downloadable version of each edit. `lib/services/case-trash-service.ts` implements case soft delete, restore, individual purge and expiry purge. `components/cases/trash-list.tsx` renders the owner's Trash controls; `app/api/cron/purge-trash/route.ts` and `.github/workflows/purge-trash.yml` run the timed cleanup.
-
-## Sources checked
-
-- `lib/services/case-trash-service.ts`
-- `components/cases/trash-list.tsx`
-- `app/(authenticated)/dashboard/trash/page.tsx`
-- `app/api/cases/trash/route.ts`
-- `app/api/cron/purge-trash/route.ts`
-- `.github/workflows/purge-trash.yml`
-- `prisma/schema.prisma`
-- `prisma/migrations/20251206000000_initial_schema/migration.sql`
-- `lib/services/discover-service.ts`
-- `lib/permissions.ts`

@@ -5,8 +5,6 @@ sidebar_position: 1
 sidebar_label: 'Overview'
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
 The application runs as a Next.js service backed by PostgreSQL. The repository supplies `docker-compose.yml` for a self-hosted application and database, and `.github/workflows/build.yaml` deploys the official staging and production builds to Azure App Service. The [Docker deployment guide](/docs/technical-guide/deployment/docker-production) covers the supplied compose layout; the [database guide](/docs/technical-guide/deployment/database-management) covers migrations and backups.
 
 ## Deployment layout
@@ -43,20 +41,3 @@ The table covers common settings rather than every application variable. `TEA_PL
 Terminate HTTPS at a proxy or hosting platform and keep PostgreSQL reachable only by the application and administrators who need it. The code implements rate limiting for several sensitive routes and records security audit events; check the [rate limiting and audit page](/docs/technical-guide/deployment/rate-limiting-and-audit-log) for the covered operations. Monitor `/api/health` as an application endpoint. The supplied compose file health-checks PostgreSQL but does not define an application container health check.
 
 Plan a database backup and restore process before applying a new build. The entrypoint applies pending migrations automatically, but backups and restore tests remain an operator task.
-
-## Sources checked
-
-- `content/technical-guide/deployment/index.mdx`
-- `docker-compose.yml`
-- `Dockerfile`
-- `scripts/docker-entrypoint.sh`
-- `.github/workflows/build.yaml`
-- `lib/prisma.ts`
-- `lib/db-pool-config.ts`
-- `lib/auth/config.ts`
-- `lib/auth/token-encryption.ts`
-- `lib/services/file-storage-service.ts`
-- `lib/services/blob-storage-service.ts`
-- `lib/services/email-service.ts`
-- `lib/services/cron-auth.ts`
-- `lib/logger.ts`

@@ -3,12 +3,6 @@ title: "Structured logger"
 description: "Emit consistent JSON diagnostic events from services and browser code."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-The browser threshold is inferred from Next.js environment variable exposure, rather than measured in a browser build.
-</Callout>
-
 The platform's logger writes one JSON record per entry. A record has a timestamp, level and message, and can carry named fields such as a component or case ID. Structured fields make events easier to filter than text assembled from unrelated fragments. The logger is a small local module rather than a vendor SDK.
 
 ## Use it in application code
@@ -26,10 +20,3 @@ Child bindings and per-call fields cannot replace the logger's own `ts`, `level`
 ## Limits and code location
 
 Use `lib/logger.ts` for application diagnostics and `lib/services/security-audit-service.ts` when an event also needs an audit row. The logger source and tests in `lib/__tests__/logger.test.ts` define the output and collision behaviour. Log retention depends on the deployment's stdout collection and is not implemented by this module.
-
-## Sources checked
-
-- `lib/logger.ts`
-- `lib/__tests__/logger.test.ts`
-- `lib/audit/security-log.ts`
-- `lib/services/security-audit-service.ts`
