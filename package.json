@@ -5,8 +5,8 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
     "postinstall": "fumadocs-mdx",
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "node server.js",
     "lint": "ultracite check",
     "format": "ultracite fix",
