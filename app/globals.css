@@ -684,3 +684,28 @@
 		padding-bottom: 3.5rem;
 	}
 }
+
+/* ========================================================================
+   Docs — code block overflow cue and copy button (F4)
+   On narrow viewports a long line scrolls the code block horizontally
+   with no visual hint that there's more to the right. A persistent inset
+   shadow reads as a scroll cue without needing to match the block's
+   background colour (which varies with the syntax-highlighting theme and
+   light/dark mode, unlike a plain fade-to-background gradient would).
+   Scoped to the docs article (#nd-page) and to Fumadocs' code block
+   markup (figure.shiki), not code elsewhere in the app.
+   ======================================================================== */
+#nd-page figure.shiki > div[role="region"] {
+	box-shadow: inset -12px 0 8px -8px color-mix(in oklch, black 25%, transparent);
+}
+
+/* The untitled-block copy button floats at Fumadocs' default top-3/right-2
+   offset, which lands level with the first code line and reads as if it
+   were resting on the text's baseline. Lift it clear of the text and give
+   it its own background chip so it reads as a floating control. */
+#nd-page figure.shiki > div:has(> button[aria-live="polite"]) {
+	top: 0.375rem;
+	right: 0.375rem;
+	background-color: var(--card);
+	box-shadow: var(--shadow-xs);
+}
