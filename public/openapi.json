@@ -34,33 +34,7 @@
       "multipart": {},
       "ImportResult": {},
       "GitHubImportSchema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "GitHub URL or shorthand path to the JSON file"
-          },
-          "owner": {
-            "type": "string",
-            "description": "Repository owner (overrides URL parsing)"
-          },
-          "repo": {
-            "type": "string",
-            "description": "Repository name (overrides URL parsing)"
-          },
-          "path": {
-            "type": "string",
-            "description": "File path (overrides URL parsing)"
-          },
-          "branch": {
-            "type": "string",
-            "description": "Branch name (optional, uses default branch if not specified)"
-          }
-        },
-        "required": [
-          "url"
-        ],
+        "type": "string",
         "description": "GitHub import request parameters"
       }
     },
@@ -1566,6 +1540,41 @@
         }
       }
     },
+    "/cron/retention-sweep": {
+      "post": {
+        "operationId": "post-cron-retention-sweep",
+        "summary": "Inactive-account data-retention sweep (cron job)",
+        "description": "Warns, then deletes, accounts inactive for two years since",
+        "tags": [
+          "Cron"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true, dryRun: boolean, warned30: number, warned7: number, deleted: number, skipped: number }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/elements/{id}": {
       "get": {
         "operationId": "get-elements-{id}",
@@ -2943,6 +2952,31 @@
       "patch": {
         "operationId": "patch-user-tours",
         "summary": "PATCH /api/user/tours",
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/plugins/{pluginId}/consequences": {
+      "get": {
+        "operationId": "get-user-plugins-{pluginId}-consequences",
+        "summary": "GET /api/user/plugins/[pluginId]/consequences",
         "description": "",
         "tags": [
           "User"
