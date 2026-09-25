@@ -1,3 +1,10 @@
 {
-  "pages": ["index", "about", "curriculum", "technical-guide", "community"]
+  "pages": [
+    "index",
+    "about",
+    "platform-guide",
+    "curriculum",
+    "technical-guide",
+    "community"
+  ]
 }

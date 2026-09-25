@@ -174,7 +174,7 @@ const PrivacyPolicyPage = () => {
 						in the{" "}
 						<Link
 							className="text-primary underline"
-							href="/docs/data-retention-policy"
+							href="/docs/platform-guide/data-retention-policy"
 						>
 							Data Retention Policy
 						</Link>

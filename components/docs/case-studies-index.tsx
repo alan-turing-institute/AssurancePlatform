@@ -1,4 +1,4 @@
-const CASE_STUDIES_ROUTE = "/docs/curriculum/hands-on/case-studies";
+const CASE_STUDIES_ROUTE = "/docs/curriculum/case-studies";
 const CASE_STUDIES_PREFIX = `${CASE_STUDIES_ROUTE}/`;
 
 interface CaseStudyFrontMatter {

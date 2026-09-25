@@ -18,11 +18,10 @@ import { expect, test } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-const INDEX_URL = "/docs/curriculum/hands-on/case-studies";
+const INDEX_URL = "/docs/curriculum/case-studies";
 
 // Top-level regex constants (Biome useTopLevelRegex)
-const RE_ABSOLUTE_CASE_STUDIES_HREF =
-	/^\/docs\/curriculum\/hands-on\/case-studies\//;
+const RE_ABSOLUTE_CASE_STUDIES_HREF = /^\/docs\/curriculum\/case-studies\//;
 const RE_RELATIVE_PATH = /^\.\./;
 const RE_INDEX_HREF = /\/index$/;
 const RE_TEMPLATE_HREF = /_TEMPLATE/;
@@ -280,9 +279,7 @@ test.describe("Case Studies index page", () => {
 });
 
 test.describe("Case Studies index — self-maintaining dynamic listing", () => {
-	const CASE_STUDIES_DIR = path.resolve(
-		"content/curriculum/hands-on/case-studies"
-	);
+	const CASE_STUDIES_DIR = path.resolve("content/curriculum/case-studies");
 	const FIXTURE_SLUG = "zzz-qa-fixture";
 	const FIXTURE_PATH = path.join(CASE_STUDIES_DIR, `${FIXTURE_SLUG}.mdx`);
 
@@ -316,9 +313,10 @@ This is a temporary file created by the Nanaki QA agent to verify the dynamic li
 		fs.writeFileSync(FIXTURE_PATH, FIXTURE_CONTENT, "utf-8");
 
 		// NOTE: Next.js dev server does NOT hot-reload content/ changes — next.config.mjs
-		// explicitly excludes content/** from webpack's file watcher. The Nextra page map
-		// is regenerated per-request in dev mode via getPageMap(), so a hard reload is
-		// sufficient to pick up new files without restarting the server.
+		// explicitly excludes content/** from webpack's file watcher. Fumadocs' own
+		// dev watcher (chokidar, wired up by fumadocs-mdx's Next plugin) picks up new
+		// content files and regenerates `.source/`, so a hard reload is sufficient to
+		// pick up new files without restarting the server.
 		await page.goto(INDEX_URL);
 		await page.reload({ waitUntil: "networkidle" });
 
@@ -335,9 +333,7 @@ This is a temporary file created by the Nanaki QA agent to verify the dynamic li
 		if (isVisible) {
 			await expect(fixtureLink).toBeVisible();
 			const href = await fixtureLink.getAttribute("href");
-			expect(href).toBe(
-				`/docs/curriculum/hands-on/case-studies/${FIXTURE_SLUG}`
-			);
+			expect(href).toBe(`/docs/curriculum/case-studies/${FIXTURE_SLUG}`);
 			// Row count grows to 11 automatically
 			const table = page.locator("table").first();
 			const rows = table.locator("tbody tr");

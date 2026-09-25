@@ -1,12 +1,4 @@
 {
   "title": "TEA Curriculum",
-  "pages": [
-    "index",
-    "tea-trainee",
-    "tea-specialist",
-    "tea-expert",
-    "hands-on",
-    "standalone",
-    "quick-reference"
-  ]
+  "pages": ["index", "tea-trainee", "after-1-0", "case-studies", "standalone"]
 }

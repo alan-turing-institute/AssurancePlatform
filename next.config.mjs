@@ -59,6 +59,39 @@ const nextConfig = {
 				destination: "/docs/:path*",
 				permanent: true,
 			},
+			// D1 phase 2 — the approved 1.0 page map moved these under the
+			// TEA Curriculum and introduced Platform Guide as a new top-level
+			// section.
+			{
+				source: "/docs/curriculum/quick-reference/:path*",
+				destination: "/docs/platform-guide/reference/:path*",
+				permanent: true,
+			},
+			{
+				source: "/docs/curriculum/hands-on/case-studies/:path*",
+				destination: "/docs/curriculum/case-studies/:path*",
+				permanent: true,
+			},
+			{
+				source: "/docs/curriculum/hands-on",
+				destination: "/docs/curriculum",
+				permanent: true,
+			},
+			{
+				source: "/docs/curriculum/tea-specialist",
+				destination: "/docs/curriculum/after-1-0",
+				permanent: true,
+			},
+			{
+				source: "/docs/curriculum/tea-expert",
+				destination: "/docs/curriculum/after-1-0",
+				permanent: true,
+			},
+			{
+				source: "/docs/data-retention-policy",
+				destination: "/docs/platform-guide/data-retention-policy",
+				permanent: true,
+			},
 		];
 	},
 };

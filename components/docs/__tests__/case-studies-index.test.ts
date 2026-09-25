@@ -22,7 +22,7 @@ import { getCaseStudyEntries } from "../case-studies-index";
 // Helpers
 // ---------------------------------------------------------------------------
 
-const ROUTE = "/docs/curriculum/hands-on/case-studies";
+const ROUTE = "/docs/curriculum/case-studies";
 
 function makePage(slug: string, data: Record<string, unknown> = {}) {
 	return {
@@ -62,8 +62,8 @@ describe("getCaseStudyEntries", () => {
 	it("excludes pages outside the case-studies folder", () => {
 		const result = getCaseStudyEntries([
 			{
-				url: "/docs/curriculum/hands-on/index",
-				data: { title: "Hands-On", domain: "Any", assurance_goal: "Any" },
+				url: "/docs/curriculum/index",
+				data: { title: "Curriculum", domain: "Any", assurance_goal: "Any" },
 			},
 		]);
 		expect(result).toHaveLength(0);
@@ -101,7 +101,7 @@ describe("getCaseStudyEntries", () => {
 		expect(result).toHaveLength(0);
 	});
 
-	it("builds absolute href using /docs/curriculum/hands-on/case-studies/<slug>", () => {
+	it("builds absolute href using /docs/curriculum/case-studies/<slug>", () => {
 		const result = getCaseStudyEntries([
 			makePage("diabetic-retinopathy-screening", {
 				title: "Explainable Diabetic Retinopathy Screening System",
@@ -111,7 +111,7 @@ describe("getCaseStudyEntries", () => {
 			}),
 		]);
 		expect(result[0]!.href).toBe(
-			"/docs/curriculum/hands-on/case-studies/diabetic-retinopathy-screening"
+			"/docs/curriculum/case-studies/diabetic-retinopathy-screening"
 		);
 		// Must be absolute — no relative prefix
 		expect(result[0]!.href).not.toMatch(RE_NO_RELATIVE_PREFIX);
@@ -194,7 +194,7 @@ describe("getCaseStudyEntries", () => {
 	});
 
 	it("includes all 10 real case studies from fixture data", () => {
-		// Mirrors content/curriculum/hands-on/case-studies/*.mdx (index and the
+		// Mirrors content/curriculum/case-studies/*.mdx (index and the
 		// underscore-prefixed template are not represented — they never reach
 		// getCaseStudyEntries via the real source, since source.config.ts
 		// excludes underscore-prefixed files from the doc collection).

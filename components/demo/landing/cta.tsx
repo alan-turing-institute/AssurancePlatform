@@ -18,7 +18,7 @@ export default function CTA() {
 					<div className="mt-10 flex items-center justify-center gap-x-6">
 						<Link
 							className="rounded-md bg-primary-foreground px-3.5 py-2.5 font-semibold text-primary text-sm shadow-xs hover:bg-primary-foreground/90 focus-visible:outline-2 focus-visible:outline-primary-foreground focus-visible:outline-solid focus-visible:outline-offset-2 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
-							href="/docs/curriculum/quick-reference/01-platform-basics"
+							href="/docs/platform-guide/reference/01-platform-basics"
 						>
 							See it in action
 						</Link>
