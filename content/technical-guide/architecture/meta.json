@@ -4,6 +4,9 @@
     "overview",
     "assurance-case-model",
     "assurance-case-editor",
+    "identifiers-and-assertion-status",
+    "plugin-foundation",
+    "health-plugin",
     "plugin-ecosystem"
   ]
 }

@@ -1,0 +1,44 @@
+---
+title: "Machine integrations and API tokens"
+description: "Register a machine client, limit its access and manage its tokens."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+Token lifetime depends on an optional expiry supplied at issue time. Tokens issued without one remain valid until revoked or rotated; check the integration's token policy before relying on an expiry.
+</Callout>
+
+Machine integrations let a service call selected TEA endpoints without signing in through a browser. You register an integration under **Settings > Integrations**, choose its scopes, grant it access to particular cases, and issue a token. This is intended for a service acting on behalf of a project, such as a process that supplies health evidence.
+
+## Register and authorise an integration
+
+Open `/dashboard/settings/integrations` and select **Register integration**. Give it a name, optionally describe its purpose, and select at least one scope. The available scopes are `case:read`, `health:evidence:read` and `health:evidence:write`. A scope allows a kind of action; it does not grant access to every case. The case-grant form lists cases you created; granting one requires case Admin access. Review those grants when the service's work changes. Scopes can later be changed through `PATCH /api/integrations/[id]`.
+
+After registration, issue its first token from the integration card. The secret begins `teap_` and is displayed once. Copy it to the client at that point. TEA stores a hash and a short identifying prefix, so it cannot show the full secret again. The client sends the secret in an `Authorization: Bearer` header. The generated reference at `/api-docs` gives the exact requests and responses.
+
+The `/api/machine` surface currently offers a client identity check and health evidence operations for a case element. A token is checked for its integration's scopes and for that integration's case permission. The `case:read` scope belongs to the vocabulary, but the current machine route tree does not provide a general case-list or case-read endpoint. Do not plan an integration around one until it appears in the generated reference.
+
+## Rotate, revoke or pause access
+
+The integration card lists active tokens by identifying prefix. **Rotate** issues a new secret and gives the previous token a 24-hour overlap window so a client can switch without an immediate interruption. Store the new secret when it is shown. **Revoke** stops a token. You can also suspend an integration, reactivate it, revoke or delete the whole integration, or remove a case grant. These controls have different scope: token revocation affects one credential, while suspension and integration revocation affect the client as a whole. Removing a case grant blocks that case even when the token and its scope remain valid.
+
+Give each external service its own integration and only the scopes and case grants it needs. This also makes its tokens and last-seen activity easier to recognise. The UI is for managing machine credentials, not for assigning a human team role. A machine token is not a browser session cookie and does not sign a person into the editor.
+
+## Limits and code location
+
+Token secrets cannot be retrieved after issue. Tokens have no default expiry; unless a caller sets one, a token remains valid until revoked or rotated. Scopes apply to the integration's tokens and can be updated later; case access is managed separately. The settings UI is in `app/(authenticated)/dashboard/settings/integrations/`, token generation is in `lib/auth/api-token-service.ts`, permission and lifecycle logic is in `lib/services/integration-registry-service.ts`, and current machine routes are under `app/api/machine/`.
+
+## Sources checked
+
+- `app/(authenticated)/dashboard/settings/integrations/_components/integration-register-dialog.tsx`
+- `app/(authenticated)/dashboard/settings/integrations/_components/integration-card.tsx`
+- `app/(authenticated)/dashboard/settings/integrations/_components/integration-scope-labels.ts`
+- `lib/auth/scopes.ts`
+- `lib/auth/api-token-service.ts`
+- `lib/services/integration-registry-service.ts`
+- `app/api/machine/whoami/route.ts`
+- `app/api/machine/health/elements/[id]/evidence/route.ts`
+- `app/(authenticated)/dashboard/settings/integrations/_components/grant-case-access-form.tsx`
+- `app/(authenticated)/dashboard/settings/integrations/_components/integration-delete-dialog.tsx`
+- `app/api/integrations/[id]/route.ts`

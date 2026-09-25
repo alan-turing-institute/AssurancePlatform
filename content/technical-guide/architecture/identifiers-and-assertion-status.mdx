@@ -1,0 +1,42 @@
+---
+title: "Sector identifiers, assertion status and citations"
+description: "Work with stable case sectors and the newer element semantics."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+Confirm assertion-status behaviour when porting this page.
+</Callout>
+
+Three data rules affect how a case is edited and exported: a sector uses a stable stored identifier, an assertion can carry an explicit status, and an away goal can cite another element. Together they make case data more precise than a free-text sector and an unqualified list of nodes.
+
+## Sector values
+
+The case information form presents a list of 20 named sectors. `lib/sectors.ts` gives each one a stable numeric ID plus ISIC and NACE codes. The stored `CaseInformation.sector` value is the ID as a string; the UI resolves it back to a readable name. The migration `20260820000000_sector_stable_ids` mapped known legacy names to IDs. An older, unmatched free-text value is displayed verbatim, and an older published snapshot can still contain its earlier text. Code that consumes a sector should use the lookup helper rather than assume every stored value is already a name.
+
+## Element names and status
+
+When an element has a name, its type determines the full prefix format. The ten prefixes are `G` goal, `S` strategy, `P` property claim, `E` evidence, `C` context, `J` justification, `A` assumption, `M` module, `AG` away goal and `Ct` contract. Dot-numbered descendants such as `P1.1` are accepted. A name may be omitted; a supplied name must match its type. Defeaters add `C` before the normal type prefix, for example `CP1`. Here `C` can mean the context prefix or the marker on a defeater name. The prefix registry is the common source for validation and generated identifiers.
+
+An assertion status is an author's explicit statement about support, not a score calculated from evidence. The five values an author can choose are Asserted, Needs support, Assumed, Axiomatic and Defeated. Asserted is the default. `AS_CITED` is reserved: element create and edit reject it, and it is not computed automatically. An imported file can carry it. Integrations and system principals cannot set assertion status. A status helps readers see which propositions need work or have been withdrawn; it does not automatically add evidence.
+
+## Citation integrity
+
+Only an `AWAY_GOAL` may set `citedElementId`. An away goal must first name a module case, then cite an existing, active element in it that is not the away goal itself. Element create and edit enforce the pair, as does the JSON editor's batch update. Import checks the pair too: if the reference is invalid, it clears the citation and sets `citationDangling` or `moduleReferenceDangling` for review. If a cited element is deleted or detached later, the citation is cleared and a dangling indicator remains. Restoring that element does not silently recreate the old citation.
+
+## Limits and code location
+
+Sector mapping is in `lib/sectors.ts`; names are in `lib/element-names/prefix-registry.ts`; statuses are in `lib/assertion-status.ts`; citation validation is in `lib/services/element-service.ts`, `lib/services/case-batch-update-service.ts` and `lib/services/case-import-service.ts`.
+
+## Sources checked
+
+- `lib/sectors.ts`
+- `prisma/migrations/20260820000000_sector_stable_ids/migration.sql`
+- `lib/element-names/prefix-registry.ts`
+- `lib/assertion-status.ts`
+- `lib/services/element-service.ts`
+- `lib/services/case-batch-update-service.ts`
+- `lib/services/case-import-service.ts`
+- `lib/transforms/build-tree.ts`
+- `prisma/schema.prisma`

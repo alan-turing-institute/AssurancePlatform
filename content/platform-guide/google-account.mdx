@@ -1,0 +1,44 @@
+---
+title: "Google account features and case import"
+description: "Sign in with a connected account and move case files through Drive or GitHub."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+Provider buttons and grants depend on deployment OAuth configuration. Confirm them in the target environment before publishing this walkthrough.
+</Callout>
+
+The sign-in page at `/login` offers email or username and password, Google, and GitHub sign-in. A Google connection also enables case backup to Google Drive and import from Drive. GitHub sign-in enables import from a repository. These are account connections: they do not publish a case or give other people case access.
+
+## Sign in and connect
+
+Choose **Google** on the sign-in page to authorise the account. The platform stores connection details and obtains Drive access for the related features. If a Drive grant is absent or later revoked, the import and backup sections prompt you to sign in or reconnect. A successful ordinary login does not by itself prove that Drive access remains available; those sections check it when opened. Choose **GitHub** when you need to import a case file from a repository. The import dialog checks that connection separately. Google requests the `drive.file` scope. GitHub requests the `repo` scope, granting read and write access to all repositories the account can access, including private repositories. Check the consent screen before authorising either connection.
+
+## Import a case
+
+From the dashboard, open **Import File**. The import dialog supports a local JSON file, a GitHub JSON file, and a Google Drive backup. On the GitHub tab, enter a URL to a JSON file or the supported `owner/repo/file.json` shorthand, then select **Import from GitHub**. The connection prompt appears when the account has no usable GitHub token. On the Google Drive tab, select a file from the **TEA Platform Backups** folder and choose **Import from Google Drive**. The Drive tab prompts for Google connection if needed.
+
+An import creates a working case from case data. It does not merge a file into the case you currently have open. The import logic accepts supported case formats and can return warnings. Read those warnings before continuing to the imported case. A GitHub URL must point to a JSON case file; the GitHub tab is not a general repository browser.
+
+## Back up to Drive
+
+In the case's share and export controls, the Google backup section offers **Backup to Google Drive** when Drive is connected. It exports the case as JSON and uploads it to the user's **TEA Platform Backups** folder. The API accepts an `includeComments` option, but the current browser control does not send it. The response identifies the saved file. This is a user-initiated copy, so repeat it after later case changes if you need a newer backup. It is separate from publishing to Discover and from the case Trash recovery period.
+
+## Limits and code location
+
+Drive and GitHub operations require valid account grants and can fail when a provider refuses access or its token expires. The UI does not promise continuous synchronisation with either provider. Sign-in is rendered by `components/auth/sign-in-form.tsx`; import UI is in `components/modals/_import-modal/`; Drive backup UI is in `components/modals/_share-modal/google-backup-section.tsx`. The case import and backup routes are under `app/api/cases/`.
+
+## Sources checked
+
+- `components/auth/sign-in-form.tsx`
+- `components/modals/_import-modal/use-case-import.ts`
+- `components/modals/_import-modal/github-import-tab.tsx`
+- `components/modals/_import-modal/google-drive-import-tab.tsx`
+- `components/modals/_share-modal/google-backup-section.tsx`
+- `app/api/cases/import/github/route.ts`
+- `app/api/cases/import/gdrive/route.ts`
+- `app/api/cases/backup/gdrive/route.ts`
+- `lib/services/google-drive-service.ts`
+- `lib/services/github-api-service.ts`
+- `lib/auth/config.ts`

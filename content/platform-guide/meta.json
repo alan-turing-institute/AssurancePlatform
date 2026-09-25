@@ -1,4 +1,15 @@
 {
   "title": "Platform Guide",
-  "pages": ["index", "reference", "data-retention-policy"]
+  "pages": [
+    "index",
+    "teams-sharing-permissions",
+    "publishing-and-discover",
+    "templates",
+    "google-account",
+    "trash-and-retention",
+    "data-retention-policy",
+    "live-updates",
+    "integrations-and-api-tokens",
+    "reference"
+  ]
 }

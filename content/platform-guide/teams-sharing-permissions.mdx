@@ -1,0 +1,58 @@
+---
+title: "Teams, sharing and permissions"
+description: "Grant colleagues access to a working case and understand how team roles differ from case permissions."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+A team grant is evaluated against current membership, so a member added later inherits it. Review membership practices before granting a team Admin case access.
+</Callout>
+
+Sharing gives named people or teams access to a working assurance case. It lets collaborators read the argument, discuss elements or edit it according to the permission you choose. Publishing is separate: it creates a public snapshot for Discover without giving visitors access to the working case.
+
+## Case permissions
+
+The case permission levels form a hierarchy. A higher level includes the abilities of the levels below it.
+
+| Level in the Share Case dialog | What it allows |
+| --- | --- |
+| **Can view** (`VIEW`) | Read the case. |
+| **Can comment** (`COMMENT`) | Read and comment on the case. |
+| **Can edit** (`EDIT`) | Change the case and its elements; the publishing service also accepts this level. |
+| **Admin** (`ADMIN`) | Manage sharing, grant Admin to a person or team, edit and comment, and move the case to Trash. |
+
+The case creator has implicit `ADMIN` access. A person can receive a direct grant and inherit grants from one or more teams. The platform uses the highest applicable level. Removing one direct grant may leave access through a team, so review both lists when you want to remove a person's access completely. Trashed cases are treated as inaccessible through the normal permission check.
+
+## Share a case
+
+Open the case at `/case/<caseId>` and choose **Share** from the editor toolbar. The **Share Case** dialog is available to someone who can manage the case. In **Share by Email**, enter an address, choose a **Permission Level** and select **Share**. If the address belongs to an existing account, the platform creates a direct case permission. If no account exists, it creates an invitation and shows a link for you to copy and send. That invitation expires after seven days and must be accepted by an account with the invited email address. It is not an anonymous access link.
+
+Use **Share with Team** to grant a permission to one of your teams. The dialog lists teams you belong to that do not already have a grant for the case. Every member of a granted team inherits that case permission, including people its team admin adds later. To change or remove a grant later, use the permission selector or **Remove access** beside a person or team in the dialog. Case sharing and permission changes require `ADMIN` case access.
+
+## Manage a team
+
+The dashboard's `/dashboard/teams` page lists your teams and has a **New Team** action. A team's detail page lists its members. A team admin can add an existing user by email, assign `Member` or `Admin`, change another member's role, or remove a member. The creator of a new team is an `ADMIN`. The schema also has an `OWNER` role, but current team creation and member-management paths use `ADMIN` and `MEMBER`; you cannot promote a member to `OWNER` through this service. A team admin can change team settings and delete the team. Team members can leave, except that the last admin must promote another member first.
+
+A team role controls management of the team. It does not automatically grant case `ADMIN`. The team receives only the case permission explicitly granted in **Share with Team**. Similarly, being a case admin does not make you an admin of every team you share the case with.
+
+## Limits and code location
+
+Sharing does not make the case public, and a case invitation does not bypass sign-in or email matching. Case Admin can move a case to Trash, but only the owner can restore or permanently delete it there. Revoking a team grant removes that route of access for its members, while their direct grants remain. `components/sharing/` contains the **Share Case** dialog; `lib/permissions.ts` calculates effective access, and `lib/services/case-permission-service.ts` and `lib/services/team-member-service.ts` manage grants and membership.
+
+## Sources checked
+
+- `components/cases/action-buttons.tsx`
+- `components/sharing/case-sharing-dialog.tsx`
+- `components/sharing/_case-sharing/permission-components.tsx`
+- `components/teams/team-list.tsx`
+- `components/teams/team-member-list.tsx`
+- `components/teams/create-team-dialog.tsx`
+- `components/teams/invite-member-dialog.tsx`
+- `app/(authenticated)/dashboard/teams/page.tsx`
+- `lib/permissions.ts`
+- `lib/services/case-permission-service.ts`
+- `lib/services/case-invite-service.ts`
+- `lib/services/team-service.ts`
+- `lib/services/team-member-service.ts`
+- `prisma/schema.prisma`

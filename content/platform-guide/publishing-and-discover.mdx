@@ -1,0 +1,54 @@
+---
+title: "Publishing and Discover"
+description: "Publish a frozen assurance case snapshot, update it and remove its public listing."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+Held for porting until tracked code changes merge.
+</Callout>
+
+Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public Discover page at `/discover` lists published cases. A visitor can open a case's public page by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
+
+The same frozen snapshot is also available without sign-in as JSON at `/api/public/discover/<slug>`. Review all case and plugin data included in the export before publishing.
+
+## Prepare the case
+
+Open the case at `/case/<caseId>` and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
+
+When the information is complete, choose **Publish**. The platform exports the case tree and freezes it in a `PublishedAssuranceCase` record. That record includes the case's argument and evidence links, plus Case Information and any plugin data present on the case. The public page presents the snapshot's title, descriptive information and a download of its full JSON content. Internal collaboration comments are excluded from the public snapshot. Review the case content and its attached data before publishing, since a public visitor can download the snapshot.
+
+## Public links and later changes
+
+The first publication makes a slug from the case name: lower case letters and digits, with other characters collapsed to hyphens. If another current public case uses that slug, the platform appends a number. The public page is at `/discover/<slug>`. Republishing a case while it remains published keeps the same slug, even if you rename the working case.
+
+Editing the working case does not silently replace the public record. The status control indicates when the working case has changed since publication. Open it and choose **Update published version** to make a new frozen snapshot. That action runs the same Case Information completeness check as the first publication. The previous snapshot is retired from the current Discover listing; the new one becomes the current public version at the same slug.
+
+## Unpublish
+
+Open the published case's status dialog, choose **Unpublish**, then confirm **Yes, unpublish**. The operation removes all published versions of that case and returns the working case to `Draft`. The Discover link stops resolving to a public page. The editable case remains intact for people who still have case access. If you publish again later, the slug is generated again and may differ if another current publication has claimed it.
+
+Publishing does not grant visitors edit rights, copy private comments into the snapshot or create a live mirror of future changes. Sharing the working case with a colleague is a separate permission action. Discover currently lists assurance cases; it does not list argument patterns as a separate public resource.
+
+## Where this lives in the code
+
+`components/publishing/` owns the status dialog; `lib/services/publish-service.ts` creates and removes snapshots, and `app/(landing)/discover/` renders the public pages.
+
+## Sources checked
+
+- `components/publishing/status-button.tsx`
+- `components/publishing/status-modal.tsx`
+- `components/publishing/status-modal-wrapper.tsx`
+- `lib/schemas/case-information.ts`
+- `lib/services/publish-service.ts`
+- `lib/services/slug.ts`
+- `lib/services/slug-service.ts`
+- `app/api/cases/[id]/publish/route.ts`
+- `app/api/cases/[id]/status/route.ts`
+- `app/(landing)/discover/page.tsx`
+- `app/(landing)/discover/[slug]/page.tsx`
+- `app/api/public/discover/[slug]/route.ts`
+- `lib/services/case-trash-service.ts`
+- `lib/services/discover-service.ts`
+- `prisma/schema.prisma`

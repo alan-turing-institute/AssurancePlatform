@@ -1,0 +1,36 @@
+---
+title: "Health plugin and evidence chain"
+description: "Understand claim health scoring and the append-only evidence record."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+The limitations of the hash chain and the absence of a scheduled verifier should be reviewed before this page makes any assurance claim about tamper detection.
+</Callout>
+
+The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim. It shows a health badge and evidence panel without changing the claim's authored argument. A score is a signal for review, not an automatic decision that a claim is true.
+
+## Record and read evidence
+
+Claim/Evidence Health is on by default when the deployment offers it; a user can turn it off in plugin settings. A machine integration needs `health:evidence:write` and a case grant with edit access to append an item. The item names the claim, metric, value, threshold, verdict, source system, provenance, evaluation time and optional ODD dimensions. The machine route under `/api/machine/health/elements/[id]/evidence` accepts and lists these records subject to token scope and case permission. A browser user with case access can inspect the claim's Health panel. The generated `/api-docs` reference gives request shapes.
+
+The service only appends. It has no update or delete operation for an existing health item. The chain is separate for each property claim. Each record stores `previousRecordHash` and a `recordHash` calculated as `SHA-256(previousRecordHash + "\u0000" + canonicalJSON(content))`. `canonicalJSON` sorts keys at every level. The content includes the evidence fields plus `createdById`, `createdAt` and `formatVersion`. The next append locks the claim row and links to the latest record within a transaction, avoiding two writers branching the chain. The list service returns records in chain order. A verifier could recompute hashes using `computeRecordHash` and `canonicalJSON` in `lib/services/health-evidence-service.ts` and compare each previous link. No scheduled whole-chain verifier runs in this build.
+
+## Interpret the badge
+
+The scoring service considers evidence in the validity window and uses the worst qualifying verdict. If nothing qualifies, the score is zero rather than an assumption of health. Staleness is derived from the last evaluation time and validity window, separately from the score. The staleness sweep broadcasts changes for an open canvas, while reads can derive staleness independently of the sweep. The UI presents the newest evidence first even though the service lists it in append order.
+
+## Limits and code location
+
+The chain detects edits that do not also recompute later hashes. It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs. It does not prove that a source system's measurement was correct. The service is `lib/services/health-evidence-service.ts`; scoring is in `lib/services/health-scoring-service.ts`; UI components are under `lib/plugins/health/`.
+
+## Sources checked
+
+- `lib/services/health-evidence-service.ts`
+- `lib/services/health-scoring-service.ts`
+- `lib/plugins/health/health-panel.tsx`
+- `lib/plugins/health/register.ts`
+- `app/api/machine/health/elements/[id]/evidence/route.ts`
+- `lib/schemas/health-evidence.ts`
+- `lib/services/plugin-enablement-service.ts`

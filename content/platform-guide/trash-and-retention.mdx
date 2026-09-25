@@ -1,0 +1,43 @@
+---
+title: "Trash, soft delete and retention"
+description: "Understand how deleted cases can be restored and when they are purged."
+---
+
+{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
+
+<Callout type="info" title="Claims to confirm (review only)">
+Held for porting until tracked code changes merge.
+</Callout>
+
+Deleting a case moves it to Trash. The platform marks the case as deleted rather than immediately removing its database record. This gives the owner a chance to restore an accidental deletion. A trashed case is hidden from normal case access, including collaborators who previously had permission to see it.
+
+## Move a case to Trash
+
+A case administrator can delete a case from the case controls. The service records when it was deleted and who deleted it. The case then stops appearing as an active working case. This action does not export a backup or send a copy to collaborators. If you need an independent record, export or back up the case before deleting it.
+
+Open `/dashboard/trash` to see cases you own that have been moved to Trash. The list shows the deletion date and the remaining recovery period. Only the case owner can view that list, restore a case, or permanently delete it from Trash. A collaborator with edit or admin access to the active case does not gain the owner's recovery controls.
+
+## Restore or permanently delete
+
+Use **Restore** in Trash to return an item to the dashboard. Restoration clears the deletion markers on the case. Its existing case data and permissions remain with the case; review the grants if you are restoring it after a project has changed hands. Use **Permanently delete** only when the case and its elements should be removed. The confirmation dialog states that this action deletes the case and all its elements. For a successful permanent deletion, there is no restore path.
+
+Cases are eligible for permanent deletion 30 days after they are trashed. A scheduled purge job calls the protected `/api/cron/purge-trash` route. The workflow is in `.github/workflows/purge-trash.yml`. The remaining-days display reflects eligibility; check the job outcome to confirm removal.
+
+Case Trash concerns whole cases. The schema also records deletion markers for individual elements, which are handled by editor and element services. Do not assume the case Trash page is an element history or undo log. The broader inactive-account retention sweep is a separate job and policy from the 30-day case Trash rule.
+
+## Limits and code location
+
+Trash is a recovery window, not a backup or version history. It does not preserve a separately downloadable version of each edit. `lib/services/case-trash-service.ts` implements case soft delete, restore, individual purge and expiry purge. `components/cases/trash-list.tsx` renders the owner's Trash controls; `app/api/cron/purge-trash/route.ts` and `.github/workflows/purge-trash.yml` run the timed cleanup.
+
+## Sources checked
+
+- `lib/services/case-trash-service.ts`
+- `components/cases/trash-list.tsx`
+- `app/(authenticated)/dashboard/trash/page.tsx`
+- `app/api/cases/trash/route.ts`
+- `app/api/cron/purge-trash/route.ts`
+- `.github/workflows/purge-trash.yml`
+- `prisma/schema.prisma`
+- `prisma/migrations/20251206000000_initial_schema/migration.sql`
+- `lib/services/discover-service.ts`
+- `lib/permissions.ts`
