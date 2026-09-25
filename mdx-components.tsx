@@ -3,28 +3,6 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
 import Image from "next/image";
 import type { ComponentProps } from "react";
-import { SafeHeading } from "@/components/docs/safe-heading";
-
-/**
- * Bound to each heading level so the MDX component map can register plain
- * `h1`-`h6` keys (mdx/types' `MDXComponents` has no generic `as` slot).
- *
- * `SafeHeading` replaces Fumadocs' own `Heading` (which every default h1-h6
- * uses) because it unconditionally wraps heading text in `<a href="#id">`.
- * That breaks any heading whose own text is already a link — e.g. this
- * project's changelog, where semantic-release writes headings shaped like
- * `## [0.6.1](https://.../compare/...) (2026-09-08)` — producing a nested
- * `<a>` (invalid HTML) and a React hydration-mismatch error. See
- * `components/docs/safe-heading.tsx` for the detection logic.
- */
-const headingComponents = {
-	h1: (props: ComponentProps<"h1">) => <SafeHeading as="h1" {...props} />,
-	h2: (props: ComponentProps<"h2">) => <SafeHeading as="h2" {...props} />,
-	h3: (props: ComponentProps<"h3">) => <SafeHeading as="h3" {...props} />,
-	h4: (props: ComponentProps<"h4">) => <SafeHeading as="h4" {...props} />,
-	h5: (props: ComponentProps<"h5">) => <SafeHeading as="h5" {...props} />,
-	h6: (props: ComponentProps<"h6">) => <SafeHeading as="h6" {...props} />,
-};
 
 /**
  * Custom image component that renders images without the zoom/expand behaviour.
@@ -75,7 +53,6 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
 		...defaultMdxComponents,
 		Tab,
 		Tabs,
-		...headingComponents,
 		...components,
 		// Override the default img component to disable zoom behaviour
 		img: MdxImage,
