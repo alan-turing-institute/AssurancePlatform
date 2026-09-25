@@ -182,7 +182,8 @@
       "mysql2": ">=3.23.1 <4"
     },
     "patchedDependencies": {
-      "nextstepjs": "patches/nextstepjs.patch"
-    }
+      "nextstepjs@2.3.0": "patches/nextstepjs@2.3.0.patch"
+    },
+    "ignorePatchFailures": false
   }
 }

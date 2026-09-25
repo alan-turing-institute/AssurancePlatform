@@ -1,8 +1,8 @@
 diff --git a/dist/NextStepReact.js b/dist/NextStepReact.js
-index 218eecee38a3f3f8a682c37fa97ffa0520cf7d43..ce00fa7687ad11366ce64e8c861e3d250a4cbead 100644
+index 8c1ba13a8c8bbdedc95075148a84096614dc99e9..58c5d19a41f26fd6fc5d3f435084cbb3bdaa9176 100644
 --- a/dist/NextStepReact.js
 +++ b/dist/NextStepReact.js
-@@ -416,6 +416,24 @@ const NextStepReact = ({ children, steps, shadowRgb = '0, 0, 0', shadowOpacity =
+@@ -497,6 +497,24 @@ const NextStepReact = (props) => {
                      setCurrentStep(nextStepIndex);
                      scrollToElement(nextStepIndex);
                  }
@@ -27,7 +27,7 @@ index 218eecee38a3f3f8a682c37fa97ffa0520cf7d43..ce00fa7687ad11366ce64e8c861e3d25
              }
              catch (error) {
                  if (!disableConsoleLogs) {
-@@ -463,6 +481,24 @@ const NextStepReact = ({ children, steps, shadowRgb = '0, 0, 0', shadowOpacity =
+@@ -544,6 +562,24 @@ const NextStepReact = (props) => {
                      setCurrentStep(prevStepIndex);
                      scrollToElement(prevStepIndex);
                  }
