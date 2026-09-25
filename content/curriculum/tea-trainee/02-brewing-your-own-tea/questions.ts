@@ -10,8 +10,7 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q1",
 		type: "multiple-choice",
-		question:
-			"What does Create New Assurance Case ask you to provide?",
+		question: "What does Create New Assurance Case ask you to provide?",
 		options: [
 			{ id: "a", text: "A name and a starter template" },
 			{ id: "b", text: "A name and description" },
@@ -24,8 +23,7 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q2",
 		type: "multiple-choice",
-		question:
-			"What do you edit first after creating this practice case?",
+		question: "What do you edit first after creating this practice case?",
 		options: [
 			{ id: "a", text: "The generated `G1` goal description" },
 			{ id: "b", text: "A new top-level goal added through the child menu" },
@@ -38,8 +36,7 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q3",
 		type: "multiple-choice",
-		question:
-			"Why add the recruitment setting as context?",
+		question: "Why add the recruitment setting as context?",
 		options: [
 			{ id: "a", text: "It proves the system is fair" },
 			{ id: "b", text: "It automatically imports an audit" },
@@ -52,8 +49,7 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q4",
 		type: "multiple-choice",
-		question:
-			"Which element can you add beneath a strategy in this branch?",
+		question: "Which element can you add beneath a strategy in this branch?",
 		options: [
 			{ id: "a", text: "An evidence item directly beneath the strategy" },
 			{ id: "b", text: "A property claim" },
@@ -66,8 +62,7 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q5",
 		type: "multiple-choice",
-		question:
-			"What does Needs support mean on a property claim?",
+		question: "What does Needs support mean on a property claim?",
 		options: [
 			{ id: "a", text: "The author marks the claim as requiring more support" },
 			{ id: "b", text: "The server has verified the claim is false" },
@@ -80,11 +75,16 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q6",
 		type: "multiple-choice",
-		question:
-			"Which statement about saving this walkthrough is correct?",
+		question: "Which statement about saving this walkthrough is correct?",
 		options: [
-			{ id: "a", text: "You must press a whole-case Save button after every add" },
-			{ id: "b", text: "Submitting each add or edit dialog persists that change" },
+			{
+				id: "a",
+				text: "You must press a whole-case Save button after every add",
+			},
+			{
+				id: "b",
+				text: "Submitting each add or edit dialog persists that change",
+			},
 			{ id: "c", text: "Export is the only way to save the case" },
 		],
 		correctAnswer: "b",
@@ -94,12 +94,14 @@ export const brewingQuestions: Question[] = [
 	{
 		id: "q7",
 		type: "multiple-choice",
-		question:
-			"What does the evidence item establish by itself?",
+		question: "What does the evidence item establish by itself?",
 		options: [
 			{ id: "a", text: "The entire system is fair" },
 			{ id: "b", text: "Every monitoring claim has support" },
-			{ id: "c", text: "A particular artefact is offered to support a particular claim" },
+			{
+				id: "c",
+				text: "A particular artefact is offered to support a particular claim",
+			},
 		],
 		correctAnswer: "c",
 		explanation:

@@ -10,10 +10,12 @@ export const steepingQuestions: Question[] = [
 	{
 		id: "q1",
 		type: "multiple-choice",
-		question:
-			"Why begin a case before the end of a project?",
+		question: "Why begin a case before the end of a project?",
 		options: [
-			{ id: "a", text: "It can guide reflection and evidence generation while decisions are open" },
+			{
+				id: "a",
+				text: "It can guide reflection and evidence generation while decisions are open",
+			},
 			{ id: "b", text: "It guarantees approval for deployment" },
 			{ id: "c", text: "It removes the need for stakeholder engagement" },
 		],
@@ -24,10 +26,12 @@ export const steepingQuestions: Question[] = [
 	{
 		id: "q2",
 		type: "multiple-choice",
-		question:
-			"Which statement is a principle rather than a specified action?",
+		question: "Which statement is a principle rather than a specified action?",
 		options: [
-			{ id: "a", text: "Test dataset coverage for the groups affected by shortlisting" },
+			{
+				id: "a",
+				text: "Test dataset coverage for the groups affected by shortlisting",
+			},
 			{ id: "b", text: "The system should be fair" },
 			{ id: "c", text: "Record how the recruitment data was gathered" },
 		],
@@ -57,7 +61,10 @@ export const steepingQuestions: Question[] = [
 		options: [
 			{ id: "a", text: "To replace technical testing with opinion" },
 			{ id: "b", text: "To obtain an automatic platform score" },
-			{ id: "c", text: "To expose use-setting constraints and possible harms the project team may miss" },
+			{
+				id: "c",
+				text: "To expose use-setting constraints and possible harms the project team may miss",
+			},
 		],
 		correctAnswer: "c",
 		explanation:
@@ -66,10 +73,12 @@ export const steepingQuestions: Question[] = [
 	{
 		id: "q5",
 		type: "multiple-choice",
-		question:
-			"What does specifying fairness for the prison example require?",
+		question: "What does specifying fairness for the prison example require?",
 		options: [
-			{ id: "a", text: "State the particular fairness concerns and actions to examine" },
+			{
+				id: "a",
+				text: "State the particular fairness concerns and actions to examine",
+			},
 			{ id: "b", text: "Assume one statistical metric settles all interests" },
 			{ id: "c", text: "Copy the word fairness into every node" },
 		],
@@ -84,7 +93,10 @@ export const steepingQuestions: Question[] = [
 			"How should you treat a claim whose expected audit does not yet exist?",
 		options: [
 			{ id: "a", text: "Invent a report reference so the diagram is complete" },
-			{ id: "b", text: "Mark the support gap and plan the work that would produce evidence" },
+			{
+				id: "b",
+				text: "Mark the support gap and plan the work that would produce evidence",
+			},
 			{ id: "c", text: "Publish the claim as a verified result" },
 		],
 		correctAnswer: "b",
@@ -98,7 +110,10 @@ export const steepingQuestions: Question[] = [
 			"What if explainability and confidentiality pull in different directions?",
 		options: [
 			{ id: "a", text: "Hide the conflict from the case" },
-			{ id: "b", text: "Record the interests, reasons and chosen trade-off for review" },
+			{
+				id: "b",
+				text: "Record the interests, reasons and chosen trade-off for review",
+			},
 			{ id: "c", text: "Assume the platform resolves it automatically" },
 		],
 		correctAnswer: "b",

@@ -10,16 +10,14 @@ export const drinkingQuestions: Question[] = [
 	{
 		id: "q1",
 		type: "multiple-choice",
-		question:
-			"What gives a team access to a case?",
+		question: "What gives a team access to a case?",
 		options: [
 			{ id: "a", text: "Merely creating the team" },
 			{ id: "b", text: "Granting that team a case permission in Share Case" },
 			{ id: "c", text: "Publishing the case to Discover" },
 		],
 		correctAnswer: "b",
-		explanation:
-			"Team membership and case access are separate controls.",
+		explanation: "Team membership and case access are separate controls.",
 	},
 	{
 		id: "q2",
@@ -38,8 +36,7 @@ export const drinkingQuestions: Question[] = [
 	{
 		id: "q3",
 		type: "multiple-choice",
-		question:
-			"What happens when you publish a case?",
+		question: "What happens when you publish a case?",
 		options: [
 			{ id: "a", text: "Every visitor can edit the working case" },
 			{ id: "b", text: "A public version appears on Discover" },
@@ -80,11 +77,13 @@ export const drinkingQuestions: Question[] = [
 	{
 		id: "q6",
 		type: "multiple-choice",
-		question:
-			"What does a machine integration token enable?",
+		question: "What does a machine integration token enable?",
 		options: [
 			{ id: "a", text: "A human reviewer to sign into the browser" },
-			{ id: "b", text: "An authorised service to call selected machine endpoints" },
+			{
+				id: "b",
+				text: "An authorised service to call selected machine endpoints",
+			},
 			{ id: "c", text: "Automatic publication of every case" },
 		],
 		correctAnswer: "b",
@@ -94,12 +93,14 @@ export const drinkingQuestions: Question[] = [
 	{
 		id: "q7",
 		type: "multiple-choice",
-		question:
-			"What should a team do when evidence is still missing?",
+		question: "What should a team do when evidence is still missing?",
 		options: [
 			{ id: "a", text: "Hide the gap from reviewers" },
 			{ id: "b", text: "Publish an invented reference" },
-			{ id: "c", text: "Record the gap and agree who will generate and review evidence" },
+			{
+				id: "c",
+				text: "Record the gap and agree who will generate and review evidence",
+			},
 		],
 		correctAnswer: "c",
 		explanation:

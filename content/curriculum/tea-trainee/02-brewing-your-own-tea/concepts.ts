@@ -10,8 +10,7 @@ export const brewingConcepts: Concept[] = [
 		name: "Working case",
 		definition:
 			"An editable assurance case kept in the signed-in workspace. Its current contents can change as the team learns more.",
-		example:
-			"your Fair Recruitment AI practice case at `/case/<id>`.",
+		example: "your Fair Recruitment AI practice case at `/case/<id>`.",
 	},
 	{
 		id: "concept-top-level-goal",
@@ -46,8 +45,7 @@ export const brewingConcepts: Concept[] = [
 		name: "Property claim",
 		definition:
 			"A more specific statement that can be examined against evidence.",
-		example:
-			"the training dataset has been audited for representation.",
+		example: "the training dataset has been audited for representation.",
 	},
 	{
 		id: "concept-evidence",
@@ -55,7 +53,6 @@ export const brewingConcepts: Concept[] = [
 		name: "Evidence",
 		definition:
 			"An artefact or result offered to support a claim, which still needs assessment for relevance and quality.",
-		example:
-			"the practice audit report described beneath the property claim.",
+		example: "the practice audit report described beneath the property claim.",
 	},
 ];

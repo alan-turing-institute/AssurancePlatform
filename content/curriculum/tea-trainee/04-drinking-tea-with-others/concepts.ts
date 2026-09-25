@@ -10,8 +10,7 @@ export const drinkingConcepts: Concept[] = [
 		name: "Team role",
 		definition:
 			"A role for managing membership and settings within a team, separate from a case permission.",
-		example:
-			"a team admin adds a recruitment specialist to the review team.",
+		example: "a team admin adds a recruitment specialist to the review team.",
 	},
 	{
 		id: "concept-case-permission",
@@ -44,8 +43,7 @@ export const drinkingConcepts: Concept[] = [
 		id: "concept-backup",
 		type: "general",
 		name: "Backup",
-		definition:
-			"A separate copy of case data kept for later import or review.",
+		definition: "A separate copy of case data kept for later import or review.",
 		example:
 			"an author saves JSON to the TEA Platform Backups folder before a major revision.",
 	},
