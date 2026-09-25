@@ -3,12 +3,6 @@ title: "About the TEA Platform"
 description: "Learn why the Trustworthy and Ethical Assurance Platform supports assurance case work and collaboration."
 ---
 
-{/* Ported from Codex draft r3b; review-only blocks removed at finalise */}
-
-<Callout type="info" title="Claims to confirm (review only)">
-Confirm the listed Alan Turing Institute, EPSRC Networks of Cardiovascular Digital Twins, BRAID, Assuring Autonomy International Programme and UKRI Trustworthy Autonomous Systems Hub support against current organisational records. Check whether GitHub Discussions is active before publication.
-</Callout>
-
 The Trustworthy and Ethical Assurance (TEA) Platform is an open-source project developed by researchers at the Alan Turing Institute and the Centre for Assuring Autonomy at the University of York. It helps project teams develop and communicate structured arguments about whether a system meets a goal, and what evidence supports that judgement.
 
 ## What an assurance case is for
@@ -16,31 +10,31 @@ The Trustworthy and Ethical Assurance (TEA) Platform is an open-source project d
 A team might need to explain how a system meets a goal such as fairness, safety or explainability. That requires more than a final assertion. The team must define the goal in the project's context, show how it was addressed in design and testing, and make the supporting evidence inspectable. An assurance case gives those claims and evidence a structure that colleagues and stakeholders can challenge and revise.
 
 ![An example assurance case with a goal, supporting claims and evidence](/images/about-page-example.svg)
+*Figure 1. An example assurance case with a goal, supporting claims and evidence*
 
-The diagram is a simple example. A top-level goal states what is to be assured. Strategies and property claims break that goal into more specific claims. Evidence supports those claims. Context and assumptions explain the scope and reasoning. A real case can change as a project learns more.
+Figure 1 offers a simple example of an assurance case. The top-level goal claim (G1) states what is to be assured. Underneath, property claims break that goal into more specific claims, and at the bottom layer evidence is presented in support of those claims. Additional elements, such as context and assumptions can also be added to explain the scope and reasoning (not shown here).
 
 ## The platform and curriculum
 
-The [case builder](https://assuranceplatform.azurewebsites.net/) lets a team create and edit a case in a visual interface. Members can be granted view, comment, edit or administrative access. They can discuss individual elements and publish a frozen snapshot when they want to share a case publicly. The [Discover page](https://assuranceplatform.azurewebsites.net/discover) currently lists published assurance cases.
-
-The [TEA curriculum](/docs/curriculum) introduces assurance case ideas and guides people through the tool. Its trainee stage starts with reading an example, then moves towards building a case and working with others. The [technical guide](/docs/technical-guide) is for developers and operators.
+- The [case builder](https://assuranceplatform.azurewebsites.net/) lets a team create and edit a case in a visual interface. Members can be granted view, comment, edit or administrative access. They can discuss individual elements and publish a frozen snapshot when they want to share a case publicly.
+The [Discover page](https://assuranceplatform.azurewebsites.net/discover) is where users can find published assurance cases from members of the community.
+- The [TEA curriculum](/docs/curriculum) introduces assurance case ideas and guides users through learning the tool. Its trainee stage starts with reading an example, then moves towards building a case and working with others.
+- The [technical guide](/docs/technical-guide) is for developers and operators.
 
 ## Community and extensions
 
 The platform supports collaboration through teams, sharing and comments. Published cases let a wider audience inspect a snapshot without gaining access to the live working case. Community discussion can continue through the project's [GitHub Discussions](https://github.com/alan-turing-institute/AssurancePlatform/discussions).
 
-Plugins already have a foundation in the code, and the health plugin uses it. The [plugin foundation](/docs/technical-guide/architecture/plugin-foundation) describes the current extension mechanism.
+Plugins allow users to extend the capabilities of the platform in various ways. Currently, this is limited to core plugins only, but support for community-developed plugins is planned. The [plugin foundation](/docs/technical-guide/architecture/plugin-foundation) describes the current extension mechanism.
 
 ## Support and partners
 
-The ongoing development and maintenance of TEA is supported by the Alan Turing Institute. The existing project record also names support from the EPSRC Networks of Cardiovascular Digital Twins programme, the BRAID programme, the Assuring Autonomy International Programme and UKRI's Trustworthy Autonomous Systems Hub. The Centre for Assuring Autonomy and the Digital Twins Hub are shown as collaborators in the current site material.
+The ongoing development and maintenance of TEA is supported by the Alan Turing Institute, and the Centre for Assuring Autonomy.
 
-## Sources checked
+From April 2026 to March 2027, the project is supported by funding from the UK Digital Twin Centre (Digital Catapult) to build new capabilities for continuous assurance.
 
-- `content/about.mdx`
-- `public/images/about-page-example.svg`
-- `app/(landing)/discover/page.tsx`
-- `lib/services/discover-service.ts`
-- `prisma/schema.prisma`
-- `lib/plugins/bootstrap.ts`
-- `lib/plugins/health/register.ts`
+From March 2024 until September 2024, the project is funded by UKRI's BRAID programme as part of a scoping research award for the Trustworthy and Ethical Assurance of Digital Twins project.
+
+Between April 2023 and December 2023, this project received funding from the Assuring Autonomy International Programme, a partnership between Lloyd’s Register Foundation and the University of York, which was awarded to Dr Christopher Burr.
+
+Between July 2021 and June 2022 this project received funding from the UKRI’s Trustworthy Autonomous Hub, which was awarded to Dr Christopher Burr (Grant number: TAS_PP_00040).
