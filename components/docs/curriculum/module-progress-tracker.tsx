@@ -13,9 +13,17 @@ import {
 	X,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useModuleProgress } from "./module-progress-context";
 import { type TaskDefinition, TaskStatus } from "./task-registry";
+
+/**
+ * Class toggled on <body> while the minimized pill is showing, so
+ * globals.css can reserve matching bottom padding on small viewports —
+ * the pill is `position: fixed` and would otherwise sit on top of the
+ * page's last paragraph or quiz option (F3).
+ */
+const BODY_CLASS_MINIMIZED_TRACKER = "has-minimized-progress-tracker";
 
 interface ModuleProgressTrackerProps {
 	/** Base path for curriculum module (used for cross-page navigation) */
@@ -60,6 +68,18 @@ const ModuleProgressTracker = ({
 	const [isMinimized, setIsMinimized] = useState(true);
 	const [isDismissed, setIsDismissed] = useState(false);
 	const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set());
+
+	// On small viewports the minimized pill docks as a full-width bar
+	// (see globals.css); reserve matching bottom padding on the page
+	// body while it's showing, so it never sits on top of the last
+	// paragraph or a quiz option.
+	const pillShowing = show && !isDismissed && isMinimized;
+	useEffect(() => {
+		document.body.classList.toggle(BODY_CLASS_MINIMIZED_TRACKER, pillShowing);
+		return () => {
+			document.body.classList.remove(BODY_CLASS_MINIMIZED_TRACKER);
+		};
+	}, [pillShowing]);
 
 	// Cast tasks to TaskDefinition for type safety
 	const typedTasks = tasks as TaskDefinition[];
@@ -142,11 +162,11 @@ const ModuleProgressTracker = ({
 		return (
 			<motion.div
 				animate={{ opacity: 1, y: 0 }}
-				className="fixed right-6 bottom-6 z-50"
+				className="fixed inset-x-0 bottom-0 z-50 sm:inset-x-auto sm:right-6 sm:bottom-6"
 				initial={{ opacity: 0, y: 100 }}
 			>
 				<button
-					className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl"
+					className="flex h-14 w-full items-center justify-center gap-2 bg-blue-600 px-4 text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:h-auto sm:w-auto sm:rounded-full sm:py-2"
 					onClick={() => setIsMinimized(false)}
 					title="Show progress tracker"
 					type="button"

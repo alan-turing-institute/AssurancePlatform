@@ -669,3 +669,18 @@
 	width: 100vw !important;
 	height: 100vh !important;
 }
+
+/* ========================================================================
+   Docs — Module Progress Tracker minimized pill (F3)
+   On small viewports the pill docks as a full-width fixed bar (see
+   module-progress-tracker.tsx) instead of floating over the page. Reserve
+   matching bottom padding so it never sits on top of a quiz option or the
+   last paragraph on the page. The 3.5rem matches the bar's h-14 height;
+   the rule drops out entirely at the sm breakpoint, where the bar reverts
+   to the floating desktop pill.
+   ======================================================================== */
+@media (max-width: 639px) {
+	body.has-minimized-progress-tracker {
+		padding-bottom: 3.5rem;
+	}
+}
