@@ -24,17 +24,3 @@ Use a practice account with no sensitive cases. Prepare a short description of t
 ## Production note
 
 The exact visual placement of node controls, toast messages and exported download behaviour needs a running-browser check. Capture these from the application rather than animating an assumed result.
-
-## Sources checked
-
-- `components/auth/sign-in-form.tsx`
-- `components/cases/case-list.tsx`
-- `components/modals/case-create-modal.tsx`
-- `lib/services/case-fetch-service.ts`
-- `components/cases/node-add-popover.tsx`
-- `components/cases/add-child-trigger.tsx`
-- `components/shared/nodes/node-action-group.tsx`
-- `components/cases/node-edit-dialog.tsx`
-- `components/cases/history-controls.tsx`
-- `components/cases/action-buttons.tsx`
-- `components/modals/share-modal.tsx`
