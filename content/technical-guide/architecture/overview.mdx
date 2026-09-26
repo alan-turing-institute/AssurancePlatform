@@ -1,107 +1,35 @@
 ---
-title: Architecture Overview
+title: "Architecture overview"
+description: "Understand the TEA Platform's application layers and where to find their code."
 sidebar_position: 1
 sidebar_label: 'Overview'
 ---
 
-The TEA Platform is a full-stack web application built with Next.js 15 using the App Router pattern. This page provides a high-level overview of how the platform is structured.
+The TEA Platform is a Next.js App Router application. It serves the browser interface, API handlers and documentation from one repository. PostgreSQL stores users, assurance cases, permissions and published snapshots. Prisma provides the database client and schema.
 
-## Directory Structure
+## Find the main parts
 
-```
-AssurancePlatform/
-├── actions/              # Server Actions for data mutations
-├── app/                  # Next.js App Router
-│   ├── (main)/           # Authenticated routes
-│   ├── (auth)/           # Authentication routes (login, register)
-│   └── api/              # REST API routes
-├── components/           # React components
-│   ├── ui/               # Base UI components (shadcn/ui)
-│   ├── common/           # Shared components
-│   └── cases/            # Assurance case components
-├── lib/                  # Utilities and core logic
-│   ├── auth/             # Authentication utilities
-│   └── prisma.ts          # Prisma client
-├── prisma/               # Database schema and migrations
-├── public/               # Static assets
-├── types/                # TypeScript type definitions
-└── content/              # Documentation (Fumadocs)
-```
+| Path | Purpose |
+| --- | --- |
+| `app/` | Pages, layouts and API route handlers |
+| `components/` | Browser interface, including the case editor |
+| `actions/` | Server actions used by parts of the interface |
+| `lib/services/` | Case, element, permission, publishing and integration operations |
+| `lib/auth/` | Session configuration and machine token checks |
+| `lib/prisma.ts`, `prisma/` | Database client, schema and SQL migrations |
+| `hooks/`, `store/` | Browser event subscriptions and editor state |
+| `lib/plugins/` | Plugin registration, slots and the health plugin |
 
-## Key Architectural Patterns
+Browser components call both actions and `/api` handlers. Route handlers check authentication and delegate case operations to services. The editor itself is a client component at `/case/[caseId]`: it fetches case data, converts elements into a React Flow diagram and calls the relevant operations when you edit. See the [case editor](/docs/technical-guide/architecture/assurance-case-editor) for its data flow.
 
-### Server Components and Server Actions
+## Identity and access
 
-The platform uses React Server Components by default, with Client Components only where interactivity is required. Data mutations are handled through [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations), which provide type-safe, server-side data handling.
+NextAuth.js supports email and password, GitHub and Google sign-in. Browser requests use a session. Machine integrations present issued `teap_…` bearer tokens on `/api/machine` routes. A valid identity still needs permission for the case it touches. Case permissions can be granted to users or teams at view, comment, edit or admin levels. The [API reference](/docs/technical-guide/api-reference) explains where to inspect the current routes.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Client (Browser)                    │
-├─────────────────────────────────────────────────────────┤
-│  Server Components     │     Client Components          │
-│  (Default, SSR)        │     ('use client')             │
-│                        │     - Flow Editor              │
-│                        │     - Interactive forms        │
-├────────────────────────┴────────────────────────────────┤
-│                    Server Actions                       │
-│                    (actions/*.ts)                       │
-├─────────────────────────────────────────────────────────┤
-│                    Prisma ORM                           │
-├─────────────────────────────────────────────────────────┤
-│                    PostgreSQL                           │
-└─────────────────────────────────────────────────────────┘
-```
+## Cases and publication
 
-### Authentication
+An assurance case holds its argument elements, case information and access grants. Its editor shows goals, strategies, property claims, evidence, away goals and modules with dedicated node renderers. Context is stored on relevant elements. The [case model](/docs/technical-guide/architecture/assurance-case-model) describes these records.
 
-Authentication is handled by NextAuth.js (Auth.js), supporting:
-- **Local accounts** with email/password
-- **GitHub OAuth** for social login
+Publishing creates a frozen `PublishedAssuranceCase` snapshot for Discover. A later publication retires the current public version and creates another snapshot. The active workflow has draft and published states. Public snapshots omit collaboration comments. Unpublishing deletes the published versions and returns the working case to draft.
 
-Session management uses JWT tokens with refresh token rotation for security. See the [NextAuth.js documentation](https://authjs.dev) for configuration details.
-
-### Database Layer
-
-The database layer uses Prisma ORM with PostgreSQL:
-- **Schema**: Defined in `prisma/schema.prisma`
-- **Migrations**: Managed with `prisma migrate`
-- **Client**: Generated and accessed via `lib/prisma.ts`
-
-For details on the data model, see [Assurance Case Model](./assurance-case-model).
-
-## Core Features
-
-### Assurance Case Editor
-
-The centrepiece of the platform is the visual assurance case editor, built with [ReactFlow](https://reactflow.dev). This allows users to create and edit assurance cases as node-based diagrams.
-
-For implementation details, see [Assurance Case Editor](./assurance-case-editor).
-
-### Teams and Permissions
-
-The platform supports collaborative editing through:
-- **Teams** - Groups of users who can share access to cases
-- **Permissions** - Granular access control (View, Comment, Edit, Admin)
-- **Invites** - Email-based invitations to collaborate on cases
-
-### Publishing and Releases
-
-Assurance cases can be published to share with the community:
-- **Draft** → **Ready to Publish** → **Published** workflow
-- **Releases** with version snapshots
-- **Community comments** on published cases
-
-## API Layer
-
-The platform exposes a REST API for programmatic access:
-- **Base URL**: `/api/`
-- **Authentication**: Bearer token (from session)
-- **Resources**: Cases, Elements, Teams, Users, Comments
-
-See [API Reference](/technical-guide/api-reference) for full documentation.
-
-## Further Reading
-
-- [Assurance Case Model](./assurance-case-model) - Deep-dive into the data model
-- [Assurance Case Editor](./assurance-case-editor) - How the visual editor works
-- [Plugin Ecosystem](./plugin-ecosystem) - Future extensibility plans
+Plugins contribute features through registered slots.

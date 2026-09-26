@@ -1,277 +1,44 @@
 ---
-title: Database Management
+title: "Database management"
+description: "Back up, restore and migrate the PostgreSQL database used by a TEA Platform deployment."
 sidebar_position: 3
 sidebar_label: 'Database Management'
 ---
 
-This guide covers database administration tasks for the TEA Platform, including backups, restores, migrations, and resets.
+The application uses PostgreSQL through the Prisma client in `lib/prisma.ts`. The production compose file names its database container `tea_postgres`, its default database `tea`, and its default database user `tea_user`. Replace those defaults in the examples if your deployment uses different values.
 
 <Callout type="warn">
-**Caution**
-
-Database operations can result in data loss. Always backup before making changes, and test procedures in a non-production environment first.
+A restore or reset can remove current data. Take a backup, verify that it can be read, and rehearse the procedure against a separate database before touching a production deployment.
 </Callout>
 
-## Backups
+## Back up the database
 
-### Creating a Backup
+For the default production compose values, `pg_dump` can make a SQL backup from the database container:
 
-#### Docker Environment
-
-```shell
-# Create a backup
-docker exec tea_postgres pg_dump -U tea tea > backup-$(date +%Y%m%d-%H%M%S).sql
-
-# Compressed backup
-docker exec tea_postgres pg_dump -U tea tea | gzip > backup-$(date +%Y%m%d-%H%M%S).sql.gz
+```bash
+docker exec tea_postgres pg_dump -U tea_user tea > tea-backup.sql
 ```
 
-#### Local PostgreSQL
+Store the backup outside the host and apply an appropriate retention policy. The repository does not schedule database backups for a self-hosted compose installation. The application's Google Drive backup feature exports assurance cases; it is not a replacement for a database backup of users, grants and other records.
 
-```shell
-pg_dump -U postgres tea > backup.sql
+## Restore a backup
+
+Stop application writes before restoring, and restore into a prepared empty database. For a plain SQL backup and the default compose values, the import command is:
+
+```bash
+docker exec -i tea_postgres psql -U tea_user tea < tea-backup.sql
 ```
 
-### Automated Backups
+Check the restored database and application before resuming writes. A plain SQL dump replayed over existing objects can fail or leave a mixed state, so do not treat the command above as an in-place rollback. If the restore changes the schema version, bring the application and migration history into agreement before putting it back into service.
 
-For production, set up automated daily backups:
+## Apply schema changes
 
-```shell
-# Example cron job (add to crontab)
-0 2 * * * docker exec tea_postgres pg_dump -U tea tea | gzip > /backups/tea-$(date +\%Y\%m\%d).sql.gz
-```
+The repository keeps hand-written SQL migrations in `prisma/migrations/`. When changing the schema, update `prisma/schema.prisma`, write and review the SQL migration, and test it against a disposable database. The deployment operation is `prisma migrate deploy`; do not use `prisma migrate dev` to generate a migration for this repository.
 
-### Backup Retention
+The production image's `scripts/docker-entrypoint.sh` runs `prisma migrate deploy` before starting Next.js. The local compose application's command runs the same deployment step and then seeds development data. Normally you do not need a second manual migration command inside a running `tea_app` container. If a migration fails, investigate the database state and migration SQL before using a resolve operation. `prisma migrate resolve` changes migration tracking; it does not reverse the SQL effects of a migration.
 
-Implement a retention policy to manage backup storage:
+## Connections and checks
 
-```shell
-# Keep last 7 daily backups
-find /backups -name "tea-*.sql.gz" -mtime +7 -delete
-```
+`DATABASE_URL` supplies the PostgreSQL connection string. `lib/prisma.ts` creates a `pg` pool for the Prisma adapter. `DB_POOL_TIMEOUT_MS` sets how long a request waits for a pool connection; the default is 5000 ms. Check the application logs for database errors and the [deployment overview](/docs/technical-guide/deployment) for the main configuration variables.
 
-## Restoring from Backup
-
-### Docker Environment
-
-```shell
-# Stop the application
-docker-compose -f docker-compose.yml stop tea_app
-
-# Restore from backup
-cat backup.sql | docker exec -i tea_postgres psql -U tea tea
-
-# Or from compressed backup
-gunzip -c backup.sql.gz | docker exec -i tea_postgres psql -U tea tea
-
-# Start the application
-docker-compose -f docker-compose.yml start tea_app
-```
-
-### Local PostgreSQL
-
-```shell
-# Drop and recreate database
-dropdb tea
-createdb tea
-
-# Restore
-psql -U postgres tea < backup.sql
-```
-
-## Database Migrations
-
-### Running Migrations
-
-Migrations update the database schema to match the Prisma schema:
-
-```shell
-# Development - creates migration and applies it
-npx prisma migrate dev
-
-# Production - applies pending migrations
-npx prisma migrate deploy
-```
-
-#### Docker Environment
-
-```shell
-# Run migrations in container
-docker exec tea_app npx prisma migrate deploy
-```
-
-### Migration Workflow
-
-1. **Make schema changes** in `prisma/schema.prisma`
-2. **Create migration** with `npx prisma migrate dev --name descriptive-name`
-3. **Review** the generated migration SQL
-4. **Commit** the migration files
-5. **Deploy** with `npx prisma migrate deploy` in production
-
-### Handling Migration Issues
-
-If a migration fails:
-
-```shell
-# Check migration status
-npx prisma migrate status
-
-# Mark a migration as applied (use carefully)
-npx prisma migrate resolve --applied "migration_name"
-
-# Mark a migration as rolled back
-npx prisma migrate resolve --rolled-back "migration_name"
-```
-
-## Resetting the Database
-
-<Callout type="warn">
-**Data Loss Warning**
-
-Resetting the database removes all data. Only do this in development or when intentionally clearing production data.
-</Callout>
-
-### Development Reset
-
-```shell
-# Reset database (drops all data, re-runs migrations)
-npx prisma migrate reset
-```
-
-#### Docker Development
-
-```shell
-# Stop containers
-docker-compose -f docker-compose.local.yml down
-
-# Remove database volume
-docker volume rm assuranceplatform_postgres_data
-
-# Restart
-docker-compose -f docker-compose.local.yml up -d --build
-```
-
-### Production Reset
-
-For production, a more careful approach is needed:
-
-```shell
-# 1. Backup first!
-docker exec tea_postgres pg_dump -U tea tea > pre-reset-backup.sql
-
-# 2. Stop application
-docker-compose -f docker-compose.yml stop tea_app
-
-# 3. Connect to database
-docker exec -it tea_postgres psql -U tea tea
-
-# 4. Drop all tables (in psql)
-DROP SCHEMA public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO tea;
-\q
-
-# 5. Run migrations
-docker exec tea_app npx prisma migrate deploy
-
-# 6. Start application
-docker-compose -f docker-compose.yml start tea_app
-```
-
-## Database Connection
-
-### Connection String Format
-
-```
-postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-```
-
-Example:
-```
-postgresql://tea:secret@localhost:5432/tea
-```
-
-### Connection from Application
-
-The application connects using the `DATABASE_URL` environment variable. The Prisma client is configured in `lib/prisma.ts`.
-
-The connection pool waits up to `DB_POOL_TIMEOUT_MS` (default 5000ms) for a
-free connection before failing fast with a 503 rather than hanging
-indefinitely. Raise it if the database is remote or under heavy load and
-requests are failing with `DB_UNAVAILABLE` under normal traffic.
-
-### Direct Database Access
-
-#### Prisma Studio (GUI)
-
-```shell
-npx prisma studio
-```
-
-Opens a web interface at `http://localhost:5555` for browsing and editing data.
-
-#### psql (Command Line)
-
-```shell
-# Local
-psql -U postgres -d tea
-
-# Docker
-docker exec -it tea_postgres_dev psql -U tea tea
-```
-
-### Useful psql Commands
-
-```sql
--- List tables
-\dt
-
--- Describe table
-\d assurance_cases
-
--- Show table contents
-SELECT * FROM assurance_cases LIMIT 10;
-
--- Count records
-SELECT COUNT(*) FROM assurance_elements;
-
--- Exit
-\q
-```
-
-## Performance
-
-### Checking Database Size
-
-```sql
-SELECT pg_size_pretty(pg_database_size('tea'));
-```
-
-### Table Sizes
-
-```sql
-SELECT
-  schemaname,
-  tablename,
-  pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename))
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname || '.' || tablename) DESC;
-```
-
-### Index Usage
-
-```sql
-SELECT
-  indexrelname,
-  idx_scan,
-  idx_tup_read
-FROM pg_stat_user_indexes
-ORDER BY idx_scan DESC;
-```
-
-## Further Reading
-
-- [Prisma Migrate Documentation](https://www.prisma.io/docs/concepts/components/prisma-migrate)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Deployment Overview](./index) - General deployment guidance
+The local compose file also defines `postgres-test` on host port 5433. It uses disposable memory-backed storage and relaxed durability for integration tests. Do not use that service for development data or production records.

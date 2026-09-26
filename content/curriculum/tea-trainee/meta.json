@@ -1,4 +1,10 @@
 {
   "title": "TEA Trainee",
-  "pages": ["index", "01-first-sip"]
+  "pages": [
+    "index",
+    "01-first-sip",
+    "02-brewing-your-own-tea",
+    "03-letting-the-tea-steep",
+    "04-drinking-tea-with-others"
+  ]
 }

@@ -68,6 +68,15 @@ interface Store {
 	onEdgesChange: OnEdgesChange;
 	onNodesChange: OnNodesChange;
 	orphanedElements: OrphanedElement[];
+	// True while a read-only, non-case canvas (the curriculum docs viewer,
+	// `components/docs/curriculum/read-only-case-canvas.tsx`) has this store
+	// populated. Distinct from `assuranceCase.permissions === "view"`, which
+	// a real, authenticated view-only case member also has and which must
+	// keep showing NodeActionGroup's comment button — this flag exists so
+	// that button can be hidden specifically where there is no
+	// `CommentsSheet` mounted to open, without changing that permission's
+	// existing meaning for `/case/<id>`.
+	readOnlyCanvas: boolean;
 	reviewMembers: Member[];
 	setActiveUsers: (users: UserResponse[]) => void;
 	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => void;
@@ -91,6 +100,7 @@ interface Store {
 					evidence?: OrphanedElement[];
 			  }
 	) => void;
+	setReadOnlyCanvas: (readOnlyCanvas: boolean) => void;
 	setReviewMembers: (members: Member[]) => void;
 	setViewMembers: (members: Member[]) => void;
 	triggerLayout: () => Promise<void>;
@@ -270,6 +280,11 @@ const useStore = create<Store>((set, get) => ({
 	caseInformationFocusField: null,
 	setCaseInformationFocusField: (field: string | null) => {
 		set({ caseInformationFocusField: field });
+	},
+	// Read-only docs canvas flag (see the interface doc comment above)
+	readOnlyCanvas: false,
+	setReadOnlyCanvas: (readOnlyCanvas: boolean) => {
+		set({ readOnlyCanvas });
 	},
 }));
 

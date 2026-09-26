@@ -51,8 +51,6 @@ export type {
 	TreeNode,
 } from "@/lib/schemas/case-export";
 
-import type { CaseExportNested } from "@/lib/schemas/case-export";
-
 // ============================================
 // Progress Tracking Types
 // ============================================
@@ -400,37 +398,6 @@ export interface CustomNodeProps<T = ReactFlowNodeData> {
 	data: T;
 	isSelected?: boolean;
 	selected?: boolean;
-}
-
-/**
- * Props for EnhancedInteractiveCaseViewer component.
- * Uses CaseExportNested (v1.0) format only.
- */
-export interface EnhancedInteractiveCaseViewerProps {
-	/** Case data in CaseExportNested (v1.0) format */
-	caseData: CaseExportNested;
-	/** Additional CSS classes */
-	className?: string;
-	/** Enable entrance/hover animations */
-	enableAnimations?: boolean;
-	/** Enable collapsible node sections */
-	enableCollapsible?: boolean;
-	/** Enable right-click context menus */
-	enableContextMenus?: boolean;
-	/** Enable animated edge styling */
-	enableEnhancedEdges?: boolean;
-	/** Enable double-click to create new nodes */
-	enableNodeCreation?: boolean;
-	/** Array of node IDs defining a guided exploration path */
-	guidedPath?: string[];
-	/** Container height */
-	height?: string;
-	/** Array of node IDs to highlight */
-	highlightedNodes?: string[];
-	/** Callback when a node is clicked */
-	onNodeClick?: (nodeId: string, nodeData: ReactFlowNodeData) => void;
-	/** localStorage key for persisting edits */
-	persistKey?: string;
 }
 
 // ============================================

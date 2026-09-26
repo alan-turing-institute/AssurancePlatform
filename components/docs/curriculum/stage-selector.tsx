@@ -168,11 +168,11 @@ const StageSelector = ({
 	return (
 		<div className="w-full">
 			{/* Compact horizontal stepper */}
-			<div className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+			<div className="flex items-center justify-between gap-1 rounded-lg bg-gray-50 p-2 sm:gap-2 sm:p-3 dark:bg-gray-800/50">
 				{/* Previous button */}
 				<button
 					aria-label="Previous stage"
-					className={`flex-shrink-0 rounded-full p-2 transition-colors ${
+					className={`flex-shrink-0 rounded-full p-1.5 transition-colors sm:p-2 ${
 						canGoBack
 							? "bg-white text-gray-600 shadow-sm hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
 							: "cursor-not-allowed text-gray-300 dark:text-gray-600"
@@ -181,11 +181,14 @@ const StageSelector = ({
 					onClick={goToPrevious}
 					type="button"
 				>
-					<ChevronLeft className="h-5 w-5" />
+					<ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
 				</button>
 
-				{/* Stage dots */}
-				<div className="flex flex-1 items-center justify-center">
+				{/* Stage dots — its own horizontal scroll region on narrow
+				    viewports, so the prev/next buttons stay outside it and
+				    always reachable even if a viewport is narrower than the
+				    shrunk dots still need. */}
+				<div className="flex min-w-0 flex-1 items-center justify-center overflow-x-auto">
 					{stages.map((stage, index) => {
 						const isCompleted = completedStages.has(stage.id);
 						const isCurrent = stage.id === currentStage;
@@ -212,7 +215,7 @@ const StageSelector = ({
 										animate={{
 											scale: isCurrent ? 1.15 : 1,
 										}}
-										className={`flex h-9 w-9 items-center justify-center rounded-full font-semibold text-sm ${getDotBgClass(stage.id, currentStage, isCompleted)}`}
+										className={`flex h-7 w-7 items-center justify-center rounded-full font-semibold text-xs sm:h-9 sm:w-9 sm:text-sm ${getDotBgClass(stage.id, currentStage, isCompleted)}`}
 										transition={{
 											type: "spring",
 											stiffness: 300,
@@ -231,7 +234,7 @@ const StageSelector = ({
 								{/* Connector line (not after last dot) */}
 								{!isLast && (
 									<div
-										className={`-mx-1 h-0.5 w-5 sm:w-8 ${getConnectorClass(isCompleted, isStageAccessible(stage.id + 1))}`}
+										className={`-mx-0.5 h-0.5 w-3 sm:-mx-1 sm:w-8 ${getConnectorClass(isCompleted, isStageAccessible(stage.id + 1))}`}
 									/>
 								)}
 							</div>
@@ -243,11 +246,11 @@ const StageSelector = ({
 				{isLastStage && !isCurrentStageCompleted ? (
 					<button
 						aria-label="Mark exploration complete"
-						className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 font-medium text-sm text-white shadow-sm transition-colors hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+						className="flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1.5 font-medium text-sm text-white shadow-sm transition-colors hover:bg-emerald-700 sm:gap-1.5 sm:px-3 sm:py-2 dark:bg-emerald-600 dark:hover:bg-emerald-500"
 						onClick={onAdvance}
 						type="button"
 					>
-						<Check className="h-4 w-4" />
+						<Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 						<span className="hidden sm:inline">Complete</span>
 					</button>
 				) : (
@@ -257,7 +260,7 @@ const StageSelector = ({
 								? "All stages complete"
 								: "Continue to next stage"
 						}
-						className={`flex-shrink-0 rounded-full p-2 transition-colors ${
+						className={`flex-shrink-0 rounded-full p-1.5 transition-colors sm:p-2 ${
 							isLastStage && isCurrentStageCompleted
 								? "cursor-not-allowed text-gray-300 dark:text-gray-600"
 								: "bg-white text-gray-600 shadow-sm hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
@@ -266,7 +269,7 @@ const StageSelector = ({
 						onClick={onAdvance}
 						type="button"
 					>
-						<ChevronRight className="h-5 w-5" />
+						<ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
 					</button>
 				)}
 			</div>

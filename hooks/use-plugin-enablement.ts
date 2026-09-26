@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { parseErrorMessage, useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
+import useStore from "@/store/store";
+
+const NO_PLUGINS: PluginSettingsListItem[] = [];
 
 interface PluginsResponseBody {
 	plugins: PluginSettingsListItem[];
@@ -84,9 +87,22 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
  * memoised on it rather than rebuilt every render (`useElementBadgeSlot`/
  * `useElementPanelSlot` key a `useMemo` off `enabledPluginIds` itself, so a
  * fresh `Set` reference every render would defeat that memoisation).
+ *
+ * On the read-only docs canvas (`store.readOnlyCanvas`), this never calls
+ * `GET /api/user/plugins` at all: a signed-out docs visitor has no session,
+ * so the request always 401s, and every plugin badge/panel is degraded UI
+ * the reveal-stage viewer has no use for anyway. Resolving straight to an
+ * empty list keeps every downstream slot exactly as it renders today for a
+ * failed or disabled-everything response — nothing appears — without a
+ * network round trip.
  */
 export function useEnabledPluginIds(): UseEnabledPluginIdsResult {
-	const { data, loading } = useFetchOnMount(fetchPlugins);
+	const readOnlyCanvas = useStore((state) => state.readOnlyCanvas);
+	const fetcher = useCallback(
+		() => (readOnlyCanvas ? Promise.resolve(NO_PLUGINS) : fetchPlugins()),
+		[readOnlyCanvas]
+	);
+	const { data, loading } = useFetchOnMount(fetcher);
 
 	const enabledPluginIds = useMemo(() => {
 		if (!data) {

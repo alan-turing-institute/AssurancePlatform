@@ -1,47 +1,32 @@
 ---
-title: Technical Documentation
+title: "Technical guide"
+description: "Find the TEA Platform architecture, API, contribution and deployment guides."
 sidebar_position: 1
 sidebar_label: 'Overview'
 ---
 
-This section provides technical documentation for developers who want to contribute to the TEA Platform or deploy their own instance.
+Use this guide when you develop, deploy or extend the TEA Platform. The application uses Next.js App Router for its web interface and route handlers, PostgreSQL for storage, and Prisma for database access.
 
-## Tech Stack
+## Technology
 
-The TEA Platform is built with modern web technologies. Here's an overview of the key technologies and links to their official documentation:
+| Technology | Role |
+| --- | --- |
+| Next.js 16 and React 19 | Web application and interface |
+| TypeScript | Application language |
+| PostgreSQL and Prisma 7 | Data storage and database access |
+| React Flow | Assurance case diagram |
+| Tailwind CSS 4 | Styling |
+| NextAuth.js | Browser sign-in and sessions |
+| Biome, Ultracite and TypeScript | Code checks |
 
-| Technology | Purpose | Documentation |
-|------------|---------|---------------|
-| **Next.js 15** | React framework with App Router | [nextjs.org/docs](https://nextjs.org/docs) |
-| **React 18** | UI component library | [react.dev](https://react.dev) |
-| **TypeScript** | Type-safe JavaScript | [typescriptlang.org/docs](https://www.typescriptlang.org/docs/) |
-| **Prisma 7** | Database ORM for PostgreSQL | [prisma.io/docs](https://www.prisma.io/docs) |
-| **PostgreSQL** | Relational database | [postgresql.org/docs](https://www.postgresql.org/docs/) |
-| **ReactFlow** | Node-based diagram editor | [reactflow.dev](https://reactflow.dev) |
-| **Tailwind CSS** | Utility-first CSS framework | [tailwindcss.com/docs](https://tailwindcss.com/docs) |
-| **shadcn/ui** | Accessible UI components | [ui.shadcn.com](https://ui.shadcn.com) |
-| **NextAuth.js** | Authentication library | [authjs.dev](https://authjs.dev) |
-| **Biome** | Linting and formatting | [biomejs.dev](https://biomejs.dev) |
+The version numbers come from `package.json`.
 
-## Documentation Sections
+## Start here
 
-<Cards>
-  <Card title="Getting Started" href="/docs/technical-guide/getting-started/docker-quickstart" />
-  <Card title="Architecture" href="/docs/technical-guide/architecture/overview" />
-  <Card title="Contributing" href="/docs/technical-guide/contributing/pull-requests" />
-  <Card title="Deployment" href="/docs/technical-guide/deployment" />
-  <Card title="CI/CD Pipeline" href="/docs/technical-guide/ci-cd-pipeline/pipeline-overview" />
-  <Card title="API Reference" href="/docs/technical-guide/api-reference" />
-</Cards>
+- [Local development](/docs/technical-guide/getting-started/local-development) and [Docker quickstart](/docs/technical-guide/getting-started/docker-quickstart) explain how to run the application.
+- [Architecture overview](/docs/technical-guide/architecture/overview), [case model](/docs/technical-guide/architecture/assurance-case-model) and [case editor](/docs/technical-guide/architecture/assurance-case-editor) explain the main implementation.
+- [API reference](/docs/technical-guide/api-reference) explains authentication and links to the generated route reference.
+- [Code style](/docs/technical-guide/contributing/code-style) and [pull requests](/docs/technical-guide/contributing/pull-requests) cover contribution work.
+- [Deployment](/docs/technical-guide/deployment), [pipeline](/docs/technical-guide/ci-cd-pipeline/pipeline-overview) and [versioning](/docs/technical-guide/ci-cd-pipeline/versioning-strategy) cover operations.
 
-## Quick Links
-
-- **Repository**: [github.com/alan-turing-institute/AssurancePlatform](https://github.com/alan-turing-institute/AssurancePlatform)
-- **Issues**: [GitHub Issues](https://github.com/alan-turing-institute/AssurancePlatform/issues)
-- **Live Demo**: [assuranceplatform.azurewebsites.net](https://assuranceplatform.azurewebsites.net/)
-
-<Callout type="info">
-**Looking for user guides?**
-
-If you're looking to learn how to use the TEA Platform rather than develop it, check out the [TEA Curriculum](/docs/curriculum) section.
-</Callout>
+If you are learning to build assurance cases, start with the [TEA Trainee curriculum](/docs/curriculum/tea-trainee).

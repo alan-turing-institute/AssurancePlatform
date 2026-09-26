@@ -1,0 +1,44 @@
+---
+title: "Developer tooling"
+description: "Generate API documentation and run the repository's local and CI quality checks."
+---
+
+The repository uses generated API documentation, conventional commit messages, release automation and several test gates. Run the scripts in `package.json` rather than recreating their underlying commands. The source files and workflow names below describe the checked staging commit.
+
+## Generate and inspect API documentation
+
+Route annotations feed `next-openapi-gen`. After changing a documented route, run the package script and review the generated reference served at `/api-docs`:
+
+```sh
+pnpm docs:generate
+```
+
+The generator configuration is in `next.openapi.json`. Generated output includes `public/openapi.json`. Commit the regenerated file with route changes: CI runs `pnpm docs:generate` and fails when `public/openapi.json` has drifted. Keep route comments and validation schemas aligned with behaviour so the reference remains useful to browser and machine clients. Generating a specification does not test that a route works; run the relevant tests as well.
+
+## Commit messages and releases
+
+`.commitlintrc.json` describes a convention; no hook or CI step enforces it. It allows types such as `feat`, `fix`, `docs`, `test`, `ci` and `chore`, with a defined scope list and lower-case short subjects. The repository's release configuration analyses these types for semantic versioning. Releases run on `main` through `.github/workflows/release.yaml`; `feat` proposes minor, while `fix`, `perf`, `docs`, `style`, `refactor`, `test`, `build` and `revert` propose patch; a breaking change proposes major. `ci` and `chore` do not cut a release. A commit on staging is not itself a published release.
+
+The `prepare` script sets Git's hooks path to `.githooks`. The local pre-push hook runs lint and typecheck for pushes to `staging` or `main`. You can run the same checks while editing:
+
+```sh
+pnpm lint
+pnpm typecheck
+```
+
+The hook is an early check; CI remains the shared gate. Local setup uses Node 20 (`.nvmrc`); `package.json` accepts Node `>=20 <23` and pnpm `>=10`. The repository pins `nextstepjs@2.3.0` with `patches/nextstepjs@2.3.0.patch` and fails installation if that patch does not apply. The separate `.github/workflows/fallow.yml` file is retired. Structural-quality analysis now runs in the `build.yaml` job, using merged unit and integration coverage. Do not add a new required check against the retired workflow name.
+
+## Integration database
+
+Integration tests use the `postgres-test` service in `docker-compose.local.yml`, separate from the development database. `scripts/run-integration-tests.sh` checks for that container. Start it before the package test script:
+
+```sh
+docker compose -f docker-compose.local.yml up -d postgres-test
+pnpm test:integration
+```
+
+This setup reduces the risk of test data reaching a developer's working database. The script still expects the documented local database configuration. The tooling does not replace a code review or a migration review.
+
+## Limits and code location
+
+The central scripts are in `package.json`; OpenAPI configuration is `next.openapi.json`; commit rules are `.commitlintrc.json` and `.releaserc.json`; the gate is `.githooks/pre-push`; CI lives under `.github/workflows/`.

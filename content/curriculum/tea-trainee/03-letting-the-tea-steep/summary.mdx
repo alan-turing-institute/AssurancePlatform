@@ -1,0 +1,40 @@
+---
+title: "Justification across a project"
+description: Carry project reasoning into collaborative work.
+---
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { steepingTasks } from "./tasks";
+import LearningObjectives from "@/components/docs/curriculum/learning-objectives";
+import { steepingObjectives } from "./objectives";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="letting-the-tea-steep"
+      tasks={steepingTasks}
+      currentPage="summary"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+You examined why a case belongs throughout a project. Broad principles start useful conversations. They become practical only when people identify what is relevant, weigh competing concerns, specify a meaning for the project, revise it when challenged, and take actions that generate reviewable evidence.
+
+The prison safety example showed that fairness can refer to several different harms and outcomes. A proposed heart digital twin introduced the need to reflect across a project's lifecycle. In your recruitment case, the same reasoning helps you distinguish a narrow data-audit claim from the wider fairness goal.
+
+<LearningObjectives
+  title="You Can Now"
+  variant="card"
+  objectives={steepingObjectives}
+/>
+
+Continue to [Drinking TEA with Others](/docs/curriculum/tea-trainee/04-drinking-tea-with-others). You will decide who needs access to the working case, how to invite challenge, and what a public snapshot can responsibly communicate.
+
+</PageContent>

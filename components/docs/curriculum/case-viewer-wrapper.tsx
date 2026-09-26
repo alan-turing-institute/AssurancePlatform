@@ -1,16 +1,15 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { Node } from "reactflow";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { logger } from "@/lib/logger";
-import type { CaseExportNested, ReactFlowNodeData } from "@/types/curriculum";
+import type { CaseExportNested } from "@/types/curriculum";
 
 const log = logger.child({ component: "case-viewer-wrapper" });
 
-// Lazy load EnhancedInteractiveCaseViewer to avoid 730+ module import at startup
-const EnhancedInteractiveCaseViewer = lazy(
-	() => import("./enhanced-interactive-case-viewer")
-);
+// Lazy load the canvas (it pulls in the real case editor's node/edge
+// components and ELK layout engine) so it isn't part of the docs route's
+// initial bundle.
+const ReadOnlyCaseCanvas = lazy(() => import("./read-only-case-canvas"));
 
 /**
  * Type guard to check if data is the CaseExportNested format (v1.0)
@@ -44,28 +43,17 @@ interface ViewerState {
 	loading: boolean;
 }
 
-const EMPTY_GUIDED_PATH: string[] = [];
-const EMPTY_HIGHLIGHTED_NODES: string[] = [];
-
 interface CaseViewerWrapperProps {
 	caseFile?: string;
-	/** Enable editing mode (browser-only, no persistence) */
-	editable?: boolean;
-	guidedPath?: string[];
-	highlightedNodes?: string[];
-	onNodeClick?: ((node: Node<ReactFlowNodeData>) => void) | null;
 }
 
 /**
- * Wrapper component that loads case data from static folder and renders the case viewer.
+ * Wrapper component that loads case data from static folder and renders it
+ * read-only on the real case canvas (`read-only-case-canvas.tsx`).
  * Loads JSON data from /public/data/ folder.
  */
 const CaseViewerWrapper = ({
 	caseFile = "demo-case.json",
-	onNodeClick = null,
-	guidedPath = EMPTY_GUIDED_PATH,
-	highlightedNodes = EMPTY_HIGHLIGHTED_NODES,
-	editable = false,
 }: CaseViewerWrapperProps) => {
 	const [state, setState] = useState<ViewerState>({
 		data: null,
@@ -160,13 +148,7 @@ const CaseViewerWrapper = ({
 					</div>
 				}
 			>
-				<EnhancedInteractiveCaseViewer
-					caseData={state.data}
-					editable={editable}
-					guidedPath={guidedPath}
-					highlightedNodes={highlightedNodes}
-					onNodeClick={onNodeClick || undefined}
-				/>
+				<ReadOnlyCaseCanvas caseData={state.data} />
 			</ErrorBoundary>
 		</Suspense>
 	);

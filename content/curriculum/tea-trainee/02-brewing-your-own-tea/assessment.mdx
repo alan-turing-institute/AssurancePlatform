@@ -1,0 +1,47 @@
+---
+title: "Check your first case"
+description: Test the actions and distinctions used in the first-case walkthrough.
+---
+
+import { Quiz, ConfidenceRating } from "@/components/docs/curriculum/quiz-components";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { brewingTasks } from "./tasks";
+import { brewingQuiz } from "./questions";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="brewing-your-own-tea"
+      tasks={brewingTasks}
+      currentPage="assessment"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+<Quiz
+  config={brewingQuiz}
+  taskId="knowledge-check"
+  useGlobalProgress={true}
+/>
+
+Rate your confidence in building and reviewing a short goal-to-evidence chain in the current editor.
+
+<ConfidenceRating
+  topic="Building and reviewing a short goal-to-evidence chain in the current editor"
+  showFeedback={true}
+/>
+
+---
+
+**Navigation:**
+- [Reflection](/docs/curriculum/tea-trainee/02-brewing-your-own-tea/reflection)
+- [Module Summary](/docs/curriculum/tea-trainee/02-brewing-your-own-tea/summary)
+
+</PageContent>

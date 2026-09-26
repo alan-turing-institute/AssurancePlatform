@@ -1,0 +1,47 @@
+---
+title: "Getting Started"
+description: "Create an account, sign in, and find your way around the dashboard."
+---
+
+Before you can build a case, you need an account and a way in.
+This page covers the account and sign-in screens, and orients you on the dashboard once you arrive.
+
+## Create an account
+
+Go to `/register` and fill in **Username**, **Email Address**, **Password** and **Confirm Password**, then choose **Submit**.
+A successful registration takes you to the sign-in page with a confirmation message; sign in with the credentials you just created.
+
+## Sign in
+
+Go to `/login`.
+Enter your **Email or Username** and **Password**, then choose **Login**.
+
+<Callout type="info">
+If your deployment has GitHub or Google sign-in configured, the login page also offers **GitHub** and **Google** buttons under "Or continue with". Connecting a Google account can also enable Google Drive features later, such as backing up a case.
+</Callout>
+
+Forgotten your password? Choose **Forgot password?** on the login page to request a reset link.
+
+## The dashboard
+
+Signing in takes you to `/dashboard`, labelled **My Assurance Cases** in the sidebar.
+This is where your working cases live.
+
+If you have no cases yet, the dashboard offers two ways to start: **New Case** to create one from scratch, or **Import File** to create one from a JSON export, a GitHub JSON file, or a Google Drive backup.
+Once you have at least one case, the same choices appear as a **Create new case** card alongside your existing cases, plus an **Import File** button.
+
+The dashboard's sidebar also links to:
+
+- **Shared With Me** (`/dashboard/shared`) — cases other people or teams have shared with you. It shows the same case list as your own dashboard, but only cases where someone else granted you access.
+- **Teams** (`/dashboard/teams`) — create and manage the teams you belong to.
+- **Trash** (`/dashboard/trash`) — cases you have deleted, awaiting permanent removal.
+- **Discover Public Projects** (`/discover`) — assurance cases the community has published.
+
+<Callout type="info">
+The first time you sign in, the platform creates a small demo case for you automatically, so the dashboard is never completely empty. It behaves like any other case you own — edit it, delete it, or leave it as a reference while you build your own.
+</Callout>
+
+## Where to go next
+
+[Building a case](/docs/platform-guide/building-a-case) covers the editor itself: creating a case, adding elements, and the controls you'll use while working.
+If you would rather learn by working through a guided example first, the [TEA Trainee curriculum](/docs/curriculum/tea-trainee) walks you through building a small case step by step.

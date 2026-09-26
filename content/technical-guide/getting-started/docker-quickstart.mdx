@@ -1,124 +1,45 @@
 ---
-title: Docker Quickstart
+title: "Docker quickstart"
+description: "Run the development stack with its database, seed data and separate integration-test database."
 sidebar_position: 1
 sidebar_label: 'Docker Quickstart'
 ---
 
-This guide is designed for individuals who have a basic understanding of Docker and Docker Compose.
+Use `docker-compose.local.yml` to run the application and PostgreSQL on your machine. This is a development stack. It builds the application from your checkout, applies the repository's SQL migrations and runs the development seed before starting the server. For a production deployment, use the [Docker production guide](/docs/technical-guide/deployment/docker-production).
 
-<Callout>
-**Live Demo Version**
+## Prepare the checkout
 
-For those looking to explore without installing, a live demo version of the assurance platform is available at https://assuranceplatform.azurewebsites.net/. Please be aware that data in the demo environment is periodically cleared.
+Install Docker with Compose, then clone the repository. The local compose file reads a root `.env` file for the application container. Supply the application variables it needs, including `NEXTAUTH_SECRET`, `NEXTAUTH_URL` and `SEED_USER_PASSWORD`. The seed script requires a password source before it can create development accounts. It first reads `prisma/seed/.credentials` when present; `SEED_USER_PASSWORD` is the fallback used by staging and local compose. A leftover credentials file wins. Give it a value that meets the application's password rules. Do not use the seeded accounts or the compose database defaults for production.
+
+The local compose file sets `DATABASE_URL` inside the application container to its own `postgres` service, which uses database `tea_dev` and user `tea_user`. The host-facing database port is 5432. It also defines a separate `postgres-test` service on host port 5433 for integration tests. That test database is disposable and does not hold your development cases.
+
+## Start the stack
+
+From the repository root, build and start the local services:
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+The application is available at `http://localhost:3000` after the build, migration and seed finish. The image uses a production Next.js build in the container. It does not bind mount source files, so rebuild with the same command after changing the checkout. If you need hot reload, run the `dev` package script on the host against the local PostgreSQL service as described in [local development](/docs/technical-guide/getting-started/local-development).
+
+The seed creates development users including `chris`, `alice`, `bob` and `charlie`, plus sample cases and sharing relationships. Their password comes from the seed password source described above.
+
+## Checks and shutdown
+
+Follow the application logs if the page does not load. A failed seed or migration stops the container before Next.js starts. The application image runs `prisma migrate deploy` automatically; do not run `prisma migrate dev` inside it. For a routine stop that preserves the named development database volume, use:
+
+```bash
+docker compose -f docker-compose.local.yml down
+```
+
+<Callout type="warn">
+Adding `-v` to `down` removes the named database volume and its development data. Use that reset only when you intend to discard those cases; the `postgres-test` data is disposable already.
 </Callout>
 
-This Docker-based installation offers a straightforward and efficient way to get the TEA Platform running on your local machine, providing a sandbox for development, testing, or demonstration purposes.
+For code checks, use the exact package scripts listed in the [code style guide](/docs/technical-guide/contributing/code-style). Start the separate test database, then run integration tests:
 
-<Callout type="info">
-**Local Install**
-
-If you wish to install the TEA platform locally on your computer without using Docker, please see our [local development guide](./local-development).
-</Callout>
-
-## Prerequisites
-
-Before beginning, ensure you have Docker and Docker Compose installed on your system. These tools are essential for creating, deploying, and managing containers. For installation instructions, visit the [official Docker documentation](https://docs.docker.com/).
-
-## Step-by-step Guide
-
-### 1. Clone the Repository
-
-Start by cloning the Assurance Platform repository from GitHub to your local machine:
-
-```shell
-git clone https://github.com/alan-turing-institute/AssurancePlatform.git
-cd AssurancePlatform
+```bash
+docker compose -f docker-compose.local.yml up -d postgres-test
+pnpm test:integration
 ```
-
-### 2. Configure Environment Variables
-
-Copy the example environment file:
-
-```shell
-cp .env.example .env
-```
-
-Then generate a secret for NextAuth.js and add it to your `.env` file:
-
-```shell
-# Generate and set NEXTAUTH_SECRET (required)
-echo "NEXTAUTH_SECRET=$(openssl rand -base64 32)" >> .env
-```
-
-The default database credentials in `.env.example` match the Docker Compose configuration and should work out of the box. You may optionally configure:
-- GitHub OAuth credentials for social login
-- `SEED_USER_PASSWORD` for test user accounts (chris, alice, bob, charlie)
-
-<Callout type="info">
-**Test Users**
-
-To log in with the seeded test users, set `SEED_USER_PASSWORD` in your `.env` file. All test users share this password. See the [code style guide](/technical-guide/contributing/code-style) for the full list of test user roles.
-</Callout>
-
-### 3. Deploy with Docker Compose
-
-Start the development environment:
-
-```shell
-docker-compose -f docker-compose.local.yml up -d --build
-```
-
-This command builds the Docker images and starts the containers. The process may take a few minutes the first time as it downloads dependencies and initialises the database.
-
-### 4. Access the Platform
-
-Once the containers are running, the TEA Platform is accessible via your web browser at: [http://localhost:3000](http://localhost:3000)
-
-You should now see the TEA Platform's homepage, ready for exploration and use.
-
-## Common Commands
-
-### View Logs
-
-```shell
-docker-compose -f docker-compose.local.yml logs -f
-```
-
-### Run Database Migrations
-
-```shell
-docker exec tea_app_dev npx prisma migrate dev
-```
-
-### Run Tests
-
-```shell
-docker exec tea_app_dev pnpm run test
-```
-
-### Restart Services
-
-```shell
-docker-compose -f docker-compose.local.yml restart
-```
-
-### Shutting Down
-
-When you're done using the platform and wish to stop the Docker containers:
-
-```shell
-docker-compose -f docker-compose.local.yml down
-```
-
-This command stops and removes the containers, effectively shutting down the platform until you choose to run it again.
-
-### Full Reset (Including Database)
-
-To completely reset the environment including all data:
-
-```shell
-docker-compose -f docker-compose.local.yml down -v
-docker-compose -f docker-compose.local.yml up -d --build
-```
-
-The `-v` flag removes the database volume, giving you a fresh start.

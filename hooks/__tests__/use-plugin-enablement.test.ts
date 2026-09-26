@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { server } from "@/src/__tests__/mocks/server";
+import useStore from "@/store/store";
 import {
 	resetPluginFetchDedupeForTests,
 	useEnabledPluginIds,
@@ -10,6 +11,7 @@ import {
 
 afterEach(() => {
 	resetPluginFetchDedupeForTests();
+	useStore.getState().setReadOnlyCanvas(false);
 	vi.restoreAllMocks();
 });
 
@@ -117,5 +119,38 @@ describe("useEnabledPluginIds", () => {
 			expect(result.current.enabledPluginIds.has("tea.health")).toBe(true);
 		}
 		expect(hitCount).toBe(1);
+	});
+
+	it("makes no request to /api/user/plugins when the read-only canvas flag is set", async () => {
+		let hitCount = 0;
+		server.use(
+			http.get("/api/user/plugins", () => {
+				hitCount += 1;
+				return HttpResponse.json({
+					plugins: [
+						{
+							pluginId: "tea.health",
+							name: "Claim/Evidence Health",
+							version: "0.1.0",
+							description: "Test plugin description.",
+							docsPath: "/docs/technical-guide/architecture/plugin-ecosystem",
+							surfaces: [],
+							available: true,
+							enabled: true,
+							pinnedAt: null,
+							settings: null,
+						},
+					] satisfies PluginSettingsListItem[],
+				});
+			})
+		);
+		useStore.getState().setReadOnlyCanvas(true);
+
+		const { result } = renderHook(() => useEnabledPluginIds());
+
+		await waitFor(() => expect(result.current.loading).toBe(false));
+
+		expect(result.current.enabledPluginIds.size).toBe(0);
+		expect(hitCount).toBe(0);
 	});
 });

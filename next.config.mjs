@@ -2,9 +2,21 @@ import { createMDX } from "fumadocs-mdx/next";
 
 const withMDX = createMDX();
 
+const devAllowedOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
+	.map((s) => s.trim())
+	.filter(Boolean);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	output: process.env.NODE_ENV === "development" ? undefined : "standalone",
+	// Next 16 blocks cross-origin dev requests (HMR, /_next/static chunks) by
+	// default. Set NEXT_DEV_ALLOWED_ORIGINS (comma-separated hosts, no
+	// protocol) when running `next dev` for LAN review; leave it unset for a
+	// normal localhost-only dev server and for production, where this key is
+	// never consulted.
+	...(devAllowedOrigins?.length
+		? { allowedDevOrigins: devAllowedOrigins }
+		: {}),
 	images: {
 		unoptimized: process.env.NODE_ENV === "development",
 		remotePatterns: [
@@ -90,6 +102,12 @@ const nextConfig = {
 			{
 				source: "/docs/data-retention-policy",
 				destination: "/docs/platform-guide/data-retention-policy",
+				permanent: true,
+			},
+			// The standalone guides were removed from the curriculum (2026-09).
+			{
+				source: "/docs/curriculum/standalone/:path*",
+				destination: "/docs/curriculum",
 				permanent: true,
 			},
 		];

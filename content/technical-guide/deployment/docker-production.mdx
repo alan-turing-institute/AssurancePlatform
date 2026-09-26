@@ -1,163 +1,36 @@
 ---
-title: Docker Production Deployment
+title: "Docker production deployment"
+description: "Deploy the supplied PostgreSQL and TEA Platform compose stack with its known configuration limits."
 sidebar_position: 2
 sidebar_label: 'Docker Production'
 ---
 
-## Overview
+`docker-compose.yml` defines a self-hosted application and PostgreSQL stack. The official staging and production services use Azure App Service through `.github/workflows/build.yaml`; this page covers the supplied compose file.
 
-For self-hosted production deployments, the TEA Platform provides a production Docker Compose configuration (`docker-compose.yml`) that differs from the development setup in several ways:
+## Before you start
 
-- Uses the pre-built image from GitHub Container Registry (ghcr.io) instead of building locally
-- Production-optimised Next.js build
-- Proper secret management via environment variables
-- Database persistence with named volumes
-- Health checks for both application and database
+Choose a host with Docker Compose, persistent storage and an HTTPS entry point. The compose file uses a named `postgres_data` volume for the database and an `uploads_data` volume for local files. It maps the application's port 3000 to `APP_PORT`, which defaults to 3000. Only PostgreSQL has a compose health check; `/api/health` is an application endpoint that you can monitor separately.
 
-<Callout type="info">
-**Azure Deployment**
-
-The official staging and production environments are hosted on Azure App Service and deployed automatically via GitHub Actions. This guide is for self-hosted deployments using Docker Compose.
+<Callout type="warn">
+`docker-compose.yml` pulls `ghcr.io/alan-turing-institute/assuranceplatform:latest`, but the Build workflow pushes `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Set the image to a verified published path before deploying.
 </Callout>
 
-## Quick Start
+## Configure the stack
 
-### 1. Clone the Repository
+Supply `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` for the database, and `NEXTAUTH_SECRET` and `NEXTAUTH_URL` for authentication. The compose defaults for the database are `tea`, `tea_user` and `tea_password`; replace the password for a real deployment. Compose builds `DATABASE_URL` from those values and uses the internal host name `postgres`.
 
-```shell
-git clone https://github.com/alan-turing-institute/AssurancePlatform.git
-cd AssurancePlatform
-```
+`USE_LOCAL_STORAGE` defaults to `true`; uploads are stored in the `uploads_data` volume. The compose file shows Azure Blob storage variables as commented alternatives. The authentication configuration reads GitHub and Google client variables; the compose file currently passes GitHub client values but does not pass Google client values. OAuth token storage also reads `TOKEN_ENCRYPTION_KEY`, a base64 encoding of 32 bytes, which the compose file does not pass. If you enable those integrations, add the required variables to your deployment configuration rather than assuming they are already forwarded.
 
-### 2. Create Production Environment File
+Email uses `ACS_CONNECTION_STRING` and `ACS_SENDER_ADDRESS` when configured. The scheduled maintenance routes use `CRON_SECRET`; the compose file does not pass it. See the [deployment overview](/docs/technical-guide/deployment) for the variable list.
 
-```shell
-cp .env.example .env
-```
+## Start and update
 
-Edit `.env` with production values:
+After correcting the image reference and supplying the deployment settings, start the stack with the production compose file:
 
 ```bash
-# Application
-NODE_ENV=production
-NEXTAUTH_URL=https://your-domain.com
-NEXTAUTH_SECRET=<generate-with-openssl-rand-base64-32>
-
-# Database
-DATABASE_URL=postgresql://tea:secure-password@db:5432/tea
-POSTGRES_USER=tea
-POSTGRES_PASSWORD=secure-password
-POSTGRES_DB=tea
-
-# GitHub OAuth (optional)
-GITHUB_APP_CLIENT_ID=your-client-id
-GITHUB_APP_CLIENT_SECRET=your-client-secret
+docker compose -f docker-compose.yml up -d
 ```
 
-### 3. Deploy
+The application waits for the PostgreSQL health check. Its image entrypoint applies pending SQL migrations with `prisma migrate deploy` and then starts `server.js`. Check the application logs and `/api/health` after startup. Do not run a separate manual migration inside `tea_app` as a routine step.
 
-```shell
-docker-compose -f docker-compose.yml up -d
-```
-
-This pulls the latest image from `ghcr.io/alan-turing-institute/assuranceplatform:latest` and starts the application with PostgreSQL.
-
-## Production Configuration
-
-### Container Names
-
-| Container | Service | Port |
-|-----------|---------|------|
-| `tea_app` | Next.js application | 3000 |
-| `tea_postgres` | PostgreSQL database | 5432 |
-
-### Reverse Proxy
-
-For production, place the application behind a reverse proxy for SSL termination:
-
-**Using nginx:**
-```nginx
-server {
-    listen 443 ssl;
-    server_name tea.example.com;
-
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-
-    # Match the app's largest request-body limit (screenshot/case-import
-    # uploads, capped at 10 MiB — see lib/api-request.ts). nginx's own
-    # default is 1m, which would reject those uploads at the proxy before
-    # the app ever sees them.
-    client_max_body_size 10m;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-### Database Persistence
-
-Database data is persisted via a named Docker volume (`postgres_data`). To use a bind mount instead:
-
-```yaml
-volumes:
-  postgres_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /data/postgres
-```
-
-### Health Checks
-
-The application includes a health check endpoint:
-
-- `/api/health` — Returns 200 when the application is ready
-
-## Updating
-
-To update to a new version:
-
-```shell
-# Pull latest image
-docker-compose -f docker-compose.yml pull
-
-# Restart with new image
-docker-compose -f docker-compose.yml up -d
-```
-
-Or to build from source:
-
-```shell
-git pull origin main
-docker-compose -f docker-compose.yml up -d --build
-```
-
-## Troubleshooting
-
-### View Logs
-
-```shell
-docker-compose -f docker-compose.yml logs -f tea_app
-```
-
-### Database Connection Issues
-
-1. Verify `DATABASE_URL` is correct in your `.env` file
-2. Check database container is running: `docker ps | grep tea_postgres`
-3. Ensure network connectivity between containers
-
-### Application Not Starting
-
-1. Check logs for error messages
-2. Verify all required environment variables are set (`NEXTAUTH_SECRET`, `DATABASE_URL`)
-3. Ensure database migrations have run: `docker exec tea_app npx prisma migrate deploy`
-
-## Further Reading
-
-- [Deployment Overview](./index) — General deployment guidance
-- [Database Management](./database-management) — Backup and restore procedures
+When updating, take a database backup first, then pull the intended image and recreate the application. The image path and tag in your deployment configuration determine which build you receive. The [database guide](/docs/technical-guide/deployment/database-management) covers backup and restore.

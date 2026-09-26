@@ -1,4 +1,11 @@
 {
   "title": "Deployment",
-  "pages": ["index", "docker-production", "database-management"]
+  "pages": [
+    "index",
+    "docker-production",
+    "database-management",
+    "logging",
+    "scheduled-jobs",
+    "rate-limiting-and-audit-log"
+  ]
 }

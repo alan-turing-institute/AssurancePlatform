@@ -6,6 +6,7 @@ import {
 	EditOnGitHub,
 } from "fumadocs-ui/layouts/docs/page";
 import { notFound } from "next/navigation";
+import { tocDepthForUrl } from "@/lib/docs/toc-depth";
 import { source } from "@/lib/docs-source";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -41,11 +42,18 @@ export default async function Page(props: {
 
 	const MDXContent = page.data.body;
 
+	// Cap the table of contents per page (F10/F11) — see tocDepthForUrl's
+	// docstring for why the changelog gets a shallower cap than every other
+	// docs page.
+	const maxTocDepth = tocDepthForUrl(page.url);
+	const toc = page.data.toc.filter((item) => item.depth <= maxTocDepth);
+
 	return (
-		<DocsPage toc={page.data.toc}>
+		<DocsPage toc={toc}>
 			<DocsTitle>{page.data.title}</DocsTitle>
 			<DocsDescription>{page.data.description}</DocsDescription>
 			<EditOnGitHub
+				className="w-fit self-start"
 				href={`https://github.com/alan-turing-institute/AssurancePlatform/tree/main/content/${page.path}`}
 			/>
 			<DocsBody>
