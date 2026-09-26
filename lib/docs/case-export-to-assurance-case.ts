@@ -7,10 +7,17 @@
  * `propertyClaims`, `evidence`) rather than the export format's generic
  * `children`.
  *
- * Curriculum case files only ever use GOAL -> STRATEGY -> PROPERTY_CLAIM
- * (nestable) -> EVIDENCE (leaf); AWAY_GOAL, MODULE and CONTEXT-as-a-child
- * never appear in them, so this adapter does not handle those — it throws
- * on an element type it cannot place, rather than silently dropping it.
+ * This adapter only places GOAL -> STRATEGY -> PROPERTY_CLAIM (nestable)
+ * -> EVIDENCE (leaf), plus a PROPERTY_CLAIM directly under a GOAL. Every
+ * curriculum case file shipped today is one of those shapes. AWAY_GOAL,
+ * MODULE, CONTEXT-as-a-child, and a GOAL nested under a STRATEGY are not
+ * handled — it throws on an element type it cannot place, rather than
+ * silently dropping it. `public/data/patterns/model-verification-validation.json`
+ * is one such file (a STRATEGY with a GOAL child): it is not wired into any
+ * curriculum page today, so nothing calls this adapter with it, but were it
+ * wired in unchanged, the throw would happen inside the read-only canvas's
+ * effect and surface as the wrapper's ErrorBoundary fallback ("Interactive
+ * example failed to load"), not a crash of the page around it.
  */
 
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
