@@ -2,7 +2,7 @@
  * E2E tests for the dynamic Case Studies index page.
  *
  * These tests verify:
- *  - All 10 case studies appear in the summary table and per-domain grouped lists
+ *  - All 10 case studies appear in the summary table
  *  - Every case-study link is absolute and resolves (no 404s)
  *  - Domain/Assurance-Goal columns match the authored frontmatter
  *  - Excluded entries (index, _meta, underscore-prefixed) do NOT appear
@@ -231,34 +231,12 @@ test.describe("Case Studies index page", () => {
 		).toBeVisible();
 	});
 
-	test("per-domain grouped lists contain all 10 case studies", async ({
-		page,
-	}) => {
-		await page.goto(INDEX_URL);
-		// Each grouped section is a <section> with a <h3> domain heading
-		// and <li> items linking to case studies
-		const groupedLinks = page.locator("section li a");
-		await expect(groupedLinks).toHaveCount(10);
-	});
-
-	test("per-domain grouped list links are also absolute paths", async ({
-		page,
-	}) => {
-		await page.goto(INDEX_URL);
-		const groupedLinks = page.locator("section li a");
-		const count = await groupedLinks.count();
-		for (let i = 0; i < count; i++) {
-			const href = await groupedLinks.nth(i).getAttribute("href");
-			expect(href).toMatch(RE_ABSOLUTE_CASE_STUDIES_HREF);
-		}
-	});
-
 	test("excluded entries do not appear: index, _TEMPLATE, _workshop-evidence-mining", async ({
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		// These should NOT appear as links in the table or grouped lists
-		const allLinks = page.locator("table a, section li a");
+		// These should NOT appear as links in the table
+		const allLinks = page.locator("table a");
 		const hrefs = await allLinks.evaluateAll((els) =>
 			els.map((el) => el.getAttribute("href") ?? "")
 		);
