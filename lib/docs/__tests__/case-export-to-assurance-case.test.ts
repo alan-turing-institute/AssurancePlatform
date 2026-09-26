@@ -119,7 +119,7 @@ describe("caseExportToAssuranceCase", () => {
 		).toThrow(NOT_A_GOAL_PATTERN);
 	});
 
-	it("throws on a child type it cannot place", () => {
+	it("throws on a child type it cannot place under a goal", () => {
 		expect(() =>
 			caseExportToAssuranceCase(
 				nestedCase({
@@ -136,6 +136,73 @@ describe("caseExportToAssuranceCase", () => {
 							description: "Evidence directly under a goal",
 							inSandbox: false,
 							children: [],
+						},
+					],
+				})
+			)
+		).toThrow(UNSUPPORTED_CHILD_PATTERN);
+	});
+
+	it("throws on a child type it cannot place under a strategy", () => {
+		expect(() =>
+			caseExportToAssuranceCase(
+				nestedCase({
+					id: "g1",
+					type: "GOAL",
+					name: "G1",
+					description: "The goal",
+					inSandbox: false,
+					children: [
+						{
+							id: "s1",
+							type: "STRATEGY",
+							name: "S1",
+							description: "The strategy",
+							inSandbox: false,
+							children: [
+								{
+									id: "g2",
+									type: "GOAL",
+									name: "G2",
+									description: "A goal nested under a strategy",
+									inSandbox: false,
+									children: [],
+								},
+							],
+						},
+					],
+				})
+			)
+		).toThrow(UNSUPPORTED_CHILD_PATTERN);
+	});
+
+	it("throws on a child type it cannot place under a property claim", () => {
+		expect(() =>
+			caseExportToAssuranceCase(
+				nestedCase({
+					id: "g1",
+					type: "GOAL",
+					name: "G1",
+					description: "The goal",
+					inSandbox: false,
+					children: [
+						{
+							id: "p1",
+							type: "PROPERTY_CLAIM",
+							name: "P1",
+							description: "The claim",
+							inSandbox: false,
+							level: 1,
+							children: [
+								{
+									id: "s1",
+									type: "STRATEGY",
+									name: "S1",
+									description: "A strategy nested under a claim",
+									inSandbox: false,
+									children: [],
+								},
+							],
 						},
 					],
 				})
