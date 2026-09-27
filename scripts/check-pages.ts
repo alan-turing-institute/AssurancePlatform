@@ -336,6 +336,29 @@ interface SkippedRoute {
 	reason: string;
 }
 
+/** Fills every dynamic segment in one route template, caching each param's DB lookup across routes. */
+async function resolveFilledPath(
+	template: string,
+	params: string[],
+	cache: Map<string, ParamResolution>,
+	client: Client | null
+): Promise<{ filled?: string; skipReason?: string }> {
+	let filled = template;
+	for (const param of params) {
+		if (!cache.has(param)) {
+			cache.set(param, await resolveParam(client, param));
+		}
+		const resolution = cache.get(param) as ParamResolution;
+		if (resolution.value === undefined) {
+			return {
+				skipReason: resolution.reason ?? `could not resolve {${param}}`,
+			};
+		}
+		filled = filled.replace(`{${param}}`, resolution.value);
+	}
+	return { filled };
+}
+
 async function discoverAllPaths(): Promise<{
 	toCheck: string[];
 	skipped: SkippedRoute[];
@@ -358,22 +381,15 @@ async function discoverAllPaths(): Promise<{
 				toCheck.push(template);
 				continue;
 			}
-			let filled = template;
-			let skipReason: string | undefined;
-			for (const param of params) {
-				if (!cache.has(param)) {
-					cache.set(param, await resolveParam(client, param));
-				}
-				const resolution = cache.get(param) as ParamResolution;
-				if (resolution.value === undefined) {
-					skipReason = resolution.reason ?? `could not resolve {${param}}`;
-					break;
-				}
-				filled = filled.replace(`{${param}}`, resolution.value);
-			}
+			const { filled, skipReason } = await resolveFilledPath(
+				template,
+				params,
+				cache,
+				client
+			);
 			if (skipReason) {
 				skipped.push({ path: template, reason: skipReason });
-			} else {
+			} else if (filled) {
 				toCheck.push(filled);
 			}
 		}
@@ -455,19 +471,29 @@ export function serializeBaseline(baseline: Baseline): string {
 	return `${JSON.stringify(out, null, 2)}\n`;
 }
 
-function loadBaseline(args: Args): Baseline {
+/**
+ * Decides which baseline file (if any) a run should use. Pure given an
+ * injectable existence check, so the file-resolution rules are testable
+ * without touching the real filesystem.
+ */
+export function resolveBaselinePath(
+	args: { baselinePath?: string; noBaseline: boolean },
+	fileExists: (p: string) => boolean
+): string | undefined {
 	if (args.noBaseline) {
-		return {};
+		return;
 	}
-	let filePath: string | undefined;
 	if (args.baselinePath) {
-		if (!fs.existsSync(args.baselinePath)) {
+		if (!fileExists(args.baselinePath)) {
 			throw new Error(`baseline file not found: ${args.baselinePath}`);
 		}
-		filePath = args.baselinePath;
-	} else if (fs.existsSync(DEFAULT_BASELINE_PATH)) {
-		filePath = DEFAULT_BASELINE_PATH;
+		return args.baselinePath;
 	}
+	return fileExists(DEFAULT_BASELINE_PATH) ? DEFAULT_BASELINE_PATH : undefined;
+}
+
+function loadBaseline(args: Args): Baseline {
+	const filePath = resolveBaselinePath(args, fs.existsSync);
 	if (!filePath) {
 		return {};
 	}
@@ -557,6 +583,32 @@ interface AxeRunResults {
 	}>;
 }
 
+/** Pure tally half of the axe check: turns raw violations into the summary the baseline compares against. */
+export function summarizeAxeViolations(
+	violations: AxeRunResults["violations"]
+): AxeSummary {
+	const byImpact: Record<string, number> = {};
+	const ruleCounts = new Map<string, number>();
+	const seriousOrCritical: Record<string, number> = {};
+	for (const violation of violations) {
+		const impact = violation.impact ?? "unknown";
+		byImpact[impact] = (byImpact[impact] ?? 0) + 1;
+		ruleCounts.set(
+			violation.id,
+			(ruleCounts.get(violation.id) ?? 0) + violation.nodes.length
+		);
+		if (impact === "serious" || impact === "critical") {
+			seriousOrCritical[violation.id] =
+				(seriousOrCritical[violation.id] ?? 0) + violation.nodes.length;
+		}
+	}
+	const topRules = [...ruleCounts.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, 5)
+		.map(([id]) => id);
+	return { byImpact, topRules, violations: seriousOrCritical };
+}
+
 async function runAxe(page: Page): Promise<AxeSummary> {
 	try {
 		await page.addScriptTag({ path: AXE_SCRIPT_PATH });
@@ -565,26 +617,7 @@ async function runAxe(page: Page): Promise<AxeSummary> {
 				window as unknown as { axe: { run: () => Promise<AxeRunResults> } }
 			).axe.run();
 		});
-		const byImpact: Record<string, number> = {};
-		const ruleCounts = new Map<string, number>();
-		const violations: Record<string, number> = {};
-		for (const violation of results.violations ?? []) {
-			const impact = violation.impact ?? "unknown";
-			byImpact[impact] = (byImpact[impact] ?? 0) + 1;
-			ruleCounts.set(
-				violation.id,
-				(ruleCounts.get(violation.id) ?? 0) + violation.nodes.length
-			);
-			if (impact === "serious" || impact === "critical") {
-				violations[violation.id] =
-					(violations[violation.id] ?? 0) + violation.nodes.length;
-			}
-		}
-		const topRules = [...ruleCounts.entries()]
-			.sort((a, b) => b[1] - a[1])
-			.slice(0, 5)
-			.map(([id]) => id);
-		return { byImpact, topRules, violations };
+		return summarizeAxeViolations(results.violations ?? []);
 	} catch (err) {
 		return {
 			byImpact: { error: 1 },
@@ -669,6 +702,48 @@ interface PageResult {
 	status: number | null;
 }
 
+/** Pure assembly of a page's failure reasons from its already-computed checks. */
+export function buildFailReasons(input: {
+	cls: number;
+	delta: BaselineDelta;
+	pageErrorCount: number;
+	placeholderHits: string[];
+	redirectFailReason: string | null;
+	status: number | null;
+}): string[] {
+	const failReasons: string[] = [];
+	if (input.status === null || input.status >= 400) {
+		failReasons.push(`status ${input.status ?? "none"}`);
+	}
+	if (input.pageErrorCount > 0) {
+		failReasons.push(`${input.pageErrorCount} page error(s)`);
+	}
+	if (input.redirectFailReason) {
+		failReasons.push(input.redirectFailReason);
+	}
+	if (input.delta.clsExceeded) {
+		failReasons.push(
+			`cls ${input.cls.toFixed(3)} over budget ${input.delta.clsBudgetUsed.toFixed(3)}`
+		);
+	}
+	if (input.delta.newRules.length > 0) {
+		failReasons.push(
+			`new accessibility rule(s): ${input.delta.newRules.join(", ")}`
+		);
+	}
+	if (input.delta.increasedRules.length > 0) {
+		failReasons.push(
+			`accessibility rule(s) increased: ${input.delta.increasedRules
+				.map((r) => `${r.id} ${r.baselineCount}->${r.currentCount}`)
+				.join(", ")}`
+		);
+	}
+	if (input.placeholderHits.length > 0) {
+		failReasons.push(`placeholder text: ${input.placeholderHits.join(", ")}`);
+	}
+	return failReasons;
+}
+
 async function checkPage(
 	context: BrowserContext,
 	routePath: string,
@@ -729,35 +804,14 @@ async function checkPage(
 		baseline[routeTemplate],
 		clsBudget
 	);
-
-	const failReasons: string[] = [];
-	if (status === null || status >= 400) {
-		failReasons.push(`status ${status ?? "none"}`);
-	}
-	if (pageErrors.length > 0) {
-		failReasons.push(`${pageErrors.length} page error(s)`);
-	}
-	if (redirectFailReason) {
-		failReasons.push(redirectFailReason);
-	}
-	if (delta.clsExceeded) {
-		failReasons.push(
-			`cls ${cls.toFixed(3)} over budget ${delta.clsBudgetUsed.toFixed(3)}`
-		);
-	}
-	if (delta.newRules.length > 0) {
-		failReasons.push(`new accessibility rule(s): ${delta.newRules.join(", ")}`);
-	}
-	if (delta.increasedRules.length > 0) {
-		failReasons.push(
-			`accessibility rule(s) increased: ${delta.increasedRules
-				.map((r) => `${r.id} ${r.baselineCount}->${r.currentCount}`)
-				.join(", ")}`
-		);
-	}
-	if (placeholderHits.length > 0) {
-		failReasons.push(`placeholder text: ${placeholderHits.join(", ")}`);
-	}
+	const failReasons = buildFailReasons({
+		status,
+		pageErrorCount: pageErrors.length,
+		redirectFailReason,
+		cls,
+		delta,
+		placeholderHits,
+	});
 
 	return {
 		path: routePath,
@@ -813,6 +867,21 @@ function checkThrewResult(
 // Main
 // ============================================
 
+/** One clear, consistent message for every sign-in failure path. */
+export function signInFailureMessage(detail: string): string {
+	return `sign-in failed: check SEED_USER_PASSWORD or --storage-state (${detail})`;
+}
+
+/** Attempts the form sign-in, returning the failure detail rather than throwing. */
+async function trySignIn(page: Page, password: string): Promise<string | null> {
+	try {
+		await signIn(page, "chris", password);
+		return null;
+	} catch (err) {
+		return err instanceof Error ? err.message : String(err);
+	}
+}
+
 /**
  * Signs in as the seed user unless a storage state was supplied. Reports its
  * own failure with one clear message and returns false rather than throwing,
@@ -827,18 +896,13 @@ async function ensureSignedIn(
 	}
 	const password = process.env.SEED_USER_PASSWORD;
 	if (!password) {
-		console.error(
-			"sign-in failed: check SEED_USER_PASSWORD or --storage-state (SEED_USER_PASSWORD is not set)"
-		);
+		console.error(signInFailureMessage("SEED_USER_PASSWORD is not set"));
 		return false;
 	}
 	const loginPage = await context.newPage();
-	try {
-		await signIn(loginPage, "chris", password);
-	} catch (err) {
-		console.error(
-			`sign-in failed: check SEED_USER_PASSWORD or --storage-state (${err instanceof Error ? err.message : String(err)})`
-		);
+	const failure = await trySignIn(loginPage, password);
+	if (failure) {
+		console.error(signInFailureMessage(failure));
 		return false;
 	}
 	await loginPage.close();
@@ -873,6 +937,43 @@ async function runChecks(
 		console.log(JSON.stringify(result));
 	}
 	return results;
+}
+
+/** Prints skipped routes, optionally writes the baseline and JSON output, and sets the exit code. */
+function reportResults(
+	results: PageResult[],
+	skipped: SkippedRoute[],
+	args: Args
+): void {
+	for (const s of skipped) {
+		console.log(
+			JSON.stringify({ path: s.path, skipped: true, reason: s.reason })
+		);
+	}
+
+	if (args.writeBaseline) {
+		writeBaselineFile(args.baselinePath ?? DEFAULT_BASELINE_PATH, results);
+	}
+
+	if (args.jsonOut) {
+		fs.writeFileSync(
+			args.jsonOut,
+			JSON.stringify({ results, skipped }, null, 2)
+		);
+	}
+
+	const passCount = results.filter((r) => r.pass).length;
+	const failCount = results.length - passCount;
+	console.log(
+		`PAGES pass=${passCount} fail=${failCount} skipped=${skipped.length}`
+	);
+	if (results.some((r) => r.consoleErrors.length > 0)) {
+		console.log(
+			"(console errors are reported per-page above but do not fail a page)"
+		);
+	}
+
+	process.exitCode = failCount > 0 ? 1 : 0;
 }
 
 async function main() {
@@ -914,35 +1015,7 @@ async function main() {
 		await browser.close();
 	}
 
-	for (const s of skipped) {
-		console.log(
-			JSON.stringify({ path: s.path, skipped: true, reason: s.reason })
-		);
-	}
-
-	if (args.writeBaseline) {
-		writeBaselineFile(args.baselinePath ?? DEFAULT_BASELINE_PATH, results);
-	}
-
-	if (args.jsonOut) {
-		fs.writeFileSync(
-			args.jsonOut,
-			JSON.stringify({ results, skipped }, null, 2)
-		);
-	}
-
-	const passCount = results.filter((r) => r.pass).length;
-	const failCount = results.length - passCount;
-	console.log(
-		`PAGES pass=${passCount} fail=${failCount} skipped=${skipped.length}`
-	);
-	if (results.some((r) => r.consoleErrors.length > 0)) {
-		console.log(
-			"(console errors are reported per-page above but do not fail a page)"
-		);
-	}
-
-	process.exitCode = failCount > 0 ? 1 : 0;
+	reportResults(results, skipped, args);
 }
 
 // ESM entry-point guard — runs main() when invoked directly (tsx/pnpm) but

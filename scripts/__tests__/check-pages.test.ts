@@ -5,6 +5,7 @@ import type { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	type Baseline,
+	buildFailReasons,
 	buildRouteRegex,
 	compareToBaseline,
 	describeRedirect,
@@ -12,10 +13,15 @@ import {
 	matchPlaceholders,
 	matchRouteTemplate,
 	parseArgs,
+	resolveBaselinePath,
 	resolveParam,
 	serializeBaseline,
+	signInFailureMessage,
+	summarizeAxeViolations,
 	toRouteTemplate,
 } from "../check-pages";
+
+const BASELINE_FILENAME_RE = /\.a11y-baseline\.json$/;
 
 // ============================================
 // parseArgs
@@ -422,5 +428,159 @@ describe("matchPlaceholders", () => {
 	it("can report more than one distinct hit", () => {
 		const hits = matchPlaceholders("Lorem ipsum dolor, TBD");
 		expect(hits.sort()).toEqual(["Lorem ipsum", "TBD"]);
+	});
+});
+
+// ============================================
+// resolveBaselinePath
+// ============================================
+
+describe("resolveBaselinePath", () => {
+	it("returns undefined when --no-baseline is set, even with a path given", () => {
+		expect(
+			resolveBaselinePath(
+				{ noBaseline: true, baselinePath: "custom.json" },
+				() => true
+			)
+		).toBeUndefined();
+	});
+
+	it("uses an explicit --baseline path when it exists", () => {
+		expect(
+			resolveBaselinePath(
+				{ noBaseline: false, baselinePath: "custom.json" },
+				() => true
+			)
+		).toBe("custom.json");
+	});
+
+	it("throws when an explicit --baseline path does not exist", () => {
+		expect(() =>
+			resolveBaselinePath(
+				{ noBaseline: false, baselinePath: "missing.json" },
+				() => false
+			)
+		).toThrow("baseline file not found: missing.json");
+	});
+
+	it("falls back to the default path when it exists", () => {
+		expect(resolveBaselinePath({ noBaseline: false }, () => true)).toMatch(
+			BASELINE_FILENAME_RE
+		);
+	});
+
+	it("returns undefined when nothing is given and the default is absent", () => {
+		expect(
+			resolveBaselinePath({ noBaseline: false }, () => false)
+		).toBeUndefined();
+	});
+});
+
+// ============================================
+// summarizeAxeViolations
+// ============================================
+
+describe("summarizeAxeViolations", () => {
+	it("counts serious+critical nodes per rule, ignoring lesser impacts", () => {
+		const summary = summarizeAxeViolations([
+			{ id: "color-contrast", impact: "serious", nodes: [1, 2] },
+			{ id: "color-contrast", impact: "serious", nodes: [3] },
+			{ id: "region", impact: "moderate", nodes: [1] },
+		]);
+		expect(summary.violations).toEqual({ "color-contrast": 3 });
+		expect(summary.byImpact).toEqual({ serious: 2, moderate: 1 });
+	});
+
+	it("ranks topRules by total node count across all impacts", () => {
+		const summary = summarizeAxeViolations([
+			{ id: "a", impact: "minor", nodes: [1] },
+			{ id: "b", impact: "critical", nodes: [1, 2, 3] },
+		]);
+		expect(summary.topRules[0]).toBe("b");
+	});
+
+	it("returns empty results for no violations", () => {
+		expect(summarizeAxeViolations([])).toEqual({
+			byImpact: {},
+			topRules: [],
+			violations: {},
+		});
+	});
+});
+
+// ============================================
+// buildFailReasons
+// ============================================
+
+describe("buildFailReasons", () => {
+	const noProblemsDelta = {
+		newRules: [],
+		increasedRules: [],
+		clsBudgetUsed: 0.1,
+		clsExceeded: false,
+	};
+
+	it("passes with no reasons when nothing is wrong", () => {
+		expect(
+			buildFailReasons({
+				status: 200,
+				pageErrorCount: 0,
+				redirectFailReason: null,
+				cls: 0,
+				delta: noProblemsDelta,
+				placeholderHits: [],
+			})
+		).toEqual([]);
+	});
+
+	it("reports a bad status, page errors, a redirect and placeholder text together", () => {
+		const reasons = buildFailReasons({
+			status: 500,
+			pageErrorCount: 2,
+			redirectFailReason: "redirected to sign-in",
+			cls: 0,
+			delta: noProblemsDelta,
+			placeholderHits: ["TODO"],
+		});
+		expect(reasons).toEqual([
+			"status 500",
+			"2 page error(s)",
+			"redirected to sign-in",
+			"placeholder text: TODO",
+		]);
+	});
+
+	it("reports a new and an increased accessibility rule", () => {
+		const reasons = buildFailReasons({
+			status: 200,
+			pageErrorCount: 0,
+			redirectFailReason: null,
+			cls: 0,
+			delta: {
+				newRules: ["image-alt"],
+				increasedRules: [
+					{ id: "color-contrast", baselineCount: 2, currentCount: 5 },
+				],
+				clsBudgetUsed: 0.1,
+				clsExceeded: false,
+			},
+			placeholderHits: [],
+		});
+		expect(reasons).toEqual([
+			"new accessibility rule(s): image-alt",
+			"accessibility rule(s) increased: color-contrast 2->5",
+		]);
+	});
+});
+
+// ============================================
+// signInFailureMessage
+// ============================================
+
+describe("signInFailureMessage", () => {
+	it("wraps the detail in a consistent, actionable message", () => {
+		expect(signInFailureMessage("timed out")).toBe(
+			"sign-in failed: check SEED_USER_PASSWORD or --storage-state (timed out)"
+		);
 	});
 });
