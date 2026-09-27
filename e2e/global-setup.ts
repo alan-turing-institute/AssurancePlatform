@@ -5,6 +5,13 @@ export default function globalSetup() {
 		return;
 	}
 
+	if (
+		["1", "true"].includes((process.env.E2E_SKIP_DB_RESET ?? "").toLowerCase())
+	) {
+		console.log("E2E_SKIP_DB_RESET=1 set; skipping database reset and seed.");
+		return;
+	}
+
 	console.log("Resetting and seeding database for E2E tests...");
 	execSync("npx prisma migrate reset --force --schema=prisma/schema.prisma", {
 		stdio: "inherit",
