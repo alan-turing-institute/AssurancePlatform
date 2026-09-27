@@ -1,5 +1,5 @@
 ---
-name: verify
+name: verify-in-browser
 description: Build and run the app to confirm a change works in a real browser. Serves a production build on a throwaway database, checks each changed page for status, page errors, layout shift, accessibility and placeholder text, then drives the change's own proof steps. Use after any change to a page, component, dialog, stylesheet or UI library, before reporting the change as done.
 ---
 
