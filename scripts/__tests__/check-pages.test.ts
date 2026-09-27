@@ -17,6 +17,7 @@ import {
 	matchRouteTemplate,
 	type PageResult,
 	parseArgs,
+	parseOnly,
 	reportResults,
 	resolveBaselinePath,
 	resolveFilledPath,
@@ -113,6 +114,44 @@ describe("parseArgs", () => {
 	it("throws when a flag requiring a value is given none", () => {
 		expect(() => parseArgs(["--base-url"])).toThrow(
 			"--base-url requires a value"
+		);
+	});
+
+	it("parses --only into a set of check categories", () => {
+		const args = parseArgs([
+			"--base-url",
+			"http://localhost:3000",
+			"--all",
+			"--only",
+			"status,errors,placeholders",
+		]);
+		expect(args.only).toEqual(new Set(["status", "errors", "placeholders"]));
+	});
+
+	it("leaves --only undefined when not given", () => {
+		const args = parseArgs(["--base-url", "http://localhost:3000", "--all"]);
+		expect(args.only).toBeUndefined();
+	});
+});
+
+// ============================================
+// parseOnly
+// ============================================
+
+describe("parseOnly", () => {
+	it("accepts every known category", () => {
+		expect(parseOnly("status,errors,placeholders,a11y,cls")).toEqual(
+			new Set(["status", "errors", "placeholders", "a11y", "cls"])
+		);
+	});
+
+	it("trims whitespace around each entry", () => {
+		expect(parseOnly("status, errors")).toEqual(new Set(["status", "errors"]));
+	});
+
+	it("throws on an unknown check name", () => {
+		expect(() => parseOnly("status,bogus")).toThrow(
+			'--only: unknown check "bogus"'
 		);
 	});
 });
@@ -579,6 +618,37 @@ describe("buildFailReasons", () => {
 			"accessibility rule(s) increased: color-contrast 2->5",
 		]);
 	});
+
+	it("with --only, reports only the listed categories' reasons", () => {
+		const reasons = buildFailReasons({
+			status: 500,
+			pageErrorCount: 1,
+			redirectFailReason: "redirected to sign-in",
+			cls: 0,
+			delta: noProblemsDelta,
+			placeholderHits: ["TODO"],
+			only: new Set(["status", "placeholders"]),
+		});
+		expect(reasons).toEqual(["status 500", "placeholder text: TODO"]);
+	});
+
+	it("with --only excluding a11y and cls, an a11y/cls-only problem passes", () => {
+		const reasons = buildFailReasons({
+			status: 200,
+			pageErrorCount: 0,
+			redirectFailReason: null,
+			cls: 0.5,
+			delta: {
+				newRules: ["image-alt"],
+				increasedRules: [],
+				clsBudgetUsed: 0.1,
+				clsExceeded: true,
+			},
+			placeholderHits: [],
+			only: new Set(["status", "errors", "placeholders"]),
+		});
+		expect(reasons).toEqual([]);
+	});
 });
 
 // ============================================
@@ -764,6 +834,24 @@ describe("checkPage", () => {
 		};
 		const result = await checkPage(context, "/x", 0.1, baseline, "/x");
 		expect(result.pass).toBe(true);
+	});
+
+	it("with --only status,errors,placeholders, a new a11y violation is measured but does not fail the page", async () => {
+		const context = makeFakeContext({
+			axeViolations: [{ id: "button-name", impact: "critical", nodes: [1] }],
+		});
+		const result = await checkPage(
+			context,
+			"/x",
+			0.1,
+			{},
+			"/x",
+			new Set(["status", "errors", "placeholders"])
+		);
+		expect(result.pass).toBe(true);
+		expect(result.failReasons).toEqual([]);
+		expect(result.axe.violations).toEqual({ "button-name": 1 });
+		expect(result.baselineDelta.newRules).toEqual(["button-name"]);
 	});
 });
 
