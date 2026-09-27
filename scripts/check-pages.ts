@@ -337,7 +337,7 @@ interface SkippedRoute {
 }
 
 /** Fills every dynamic segment in one route template, caching each param's DB lookup across routes. */
-async function resolveFilledPath(
+export async function resolveFilledPath(
 	template: string,
 	params: string[],
 	cache: Map<string, ParamResolution>,
@@ -359,7 +359,7 @@ async function resolveFilledPath(
 	return { filled };
 }
 
-async function discoverAllPaths(): Promise<{
+export async function discoverAllPaths(): Promise<{
 	toCheck: string[];
 	skipped: SkippedRoute[];
 }> {
@@ -682,7 +682,7 @@ async function findPlaceholders(page: Page): Promise<string[]> {
 	return matchPlaceholders(text);
 }
 
-interface PageResult {
+export interface PageResult {
 	axe: AxeSummary;
 	baselineDelta: {
 		clsBudgetUsed: number;
@@ -744,7 +744,7 @@ export function buildFailReasons(input: {
 	return failReasons;
 }
 
-async function checkPage(
+export async function checkPage(
 	context: BrowserContext,
 	routePath: string,
 	clsBudget: number,
@@ -940,7 +940,7 @@ async function runChecks(
 }
 
 /** Prints skipped routes, optionally writes the baseline and JSON output, and sets the exit code. */
-function reportResults(
+export function reportResults(
 	results: PageResult[],
 	skipped: SkippedRoute[],
 	args: Args

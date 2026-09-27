@@ -1,19 +1,25 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { BrowserContext } from "@playwright/test";
 import type { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	type Baseline,
 	buildFailReasons,
 	buildRouteRegex,
+	checkPage,
 	compareToBaseline,
 	describeRedirect,
+	discoverAllPaths,
 	findPageFiles,
 	matchPlaceholders,
 	matchRouteTemplate,
+	type PageResult,
 	parseArgs,
+	reportResults,
 	resolveBaselinePath,
+	resolveFilledPath,
 	resolveParam,
 	serializeBaseline,
 	signInFailureMessage,
@@ -22,6 +28,8 @@ import {
 } from "../check-pages";
 
 const BASELINE_FILENAME_RE = /\.a11y-baseline\.json$/;
+const NEW_A11Y_RULE_RE = /new accessibility rule/;
+const NAVIGATION_FAILED_RE = /navigation failed: boom/;
 
 // ============================================
 // parseArgs
@@ -582,5 +590,259 @@ describe("signInFailureMessage", () => {
 		expect(signInFailureMessage("timed out")).toBe(
 			"sign-in failed: check SEED_USER_PASSWORD or --storage-state (timed out)"
 		);
+	});
+});
+
+// ============================================
+// resolveFilledPath
+// ============================================
+
+describe("resolveFilledPath", () => {
+	it("fills every param and caches each lookup across calls", async () => {
+		let queries = 0;
+		const client = {
+			query: () => {
+				queries++;
+				return Promise.resolve({ rows: [{ id: "case-1" }] });
+			},
+		} as unknown as Client;
+		const cache = new Map();
+		const first = await resolveFilledPath(
+			"/case/{caseId}",
+			["caseId"],
+			cache,
+			client
+		);
+		const second = await resolveFilledPath(
+			"/case/{caseId}",
+			["caseId"],
+			cache,
+			client
+		);
+		expect(first).toEqual({ filled: "/case/case-1" });
+		expect(second).toEqual({ filled: "/case/case-1" });
+		expect(queries).toBe(1);
+	});
+
+	it("reports a skip reason and stops at the first unresolvable param", async () => {
+		const client = fakeClient([]);
+		const result = await resolveFilledPath(
+			"/case/{caseId}",
+			["caseId"],
+			new Map(),
+			client
+		);
+		expect(result.filled).toBeUndefined();
+		expect(result.skipReason).toMatch(NO_SEED_CASE_RE);
+	});
+});
+
+// ============================================
+// discoverAllPaths
+// ============================================
+
+describe("discoverAllPaths", () => {
+	const originalDbUrl = process.env.DATABASE_URL;
+
+	afterEach(() => {
+		if (originalDbUrl === undefined) {
+			Reflect.deleteProperty(process.env, "DATABASE_URL");
+		} else {
+			process.env.DATABASE_URL = originalDbUrl;
+		}
+	});
+
+	it("discovers every non-api page route, skipping dynamic ones without a database", async () => {
+		Reflect.deleteProperty(process.env, "DATABASE_URL");
+		const { toCheck, skipped } = await discoverAllPaths();
+		expect(toCheck).toContain("/dashboard");
+		expect(toCheck.every((p) => !p.includes("{"))).toBe(true);
+		expect(skipped.length).toBeGreaterThan(0);
+		expect(skipped.every((s) => NO_DATABASE_URL_RE.test(s.reason))).toBe(true);
+	});
+});
+
+// ============================================
+// checkPage
+// ============================================
+
+interface FakePageOptions {
+	axeViolations?: Array<{ id: string; impact?: string; nodes: unknown[] }>;
+	bodyHtml?: string;
+	clsValue?: number;
+	finalUrl?: string;
+	gotoThrows?: Error;
+	status?: number | null;
+}
+
+/**
+ * A Page/BrowserContext double built for jsdom (the unit project's test
+ * environment): evaluate() runs the given function against the *real*
+ * document jsdom provides, so checkPage's own DOM-reading logic (CLS,
+ * placeholder scan) executes for real; only navigation and axe.run() are
+ * stubbed, since there is no browser to load a page or a script tag in.
+ */
+function makeFakeContext(opts: FakePageOptions = {}): BrowserContext {
+	document.body.innerHTML = opts.bodyHtml ?? "<div>Welcome</div>";
+	(window as unknown as { __clsValue: number }).__clsValue = opts.clsValue ?? 0;
+	(window as unknown as { axe: { run: () => Promise<unknown> } }).axe = {
+		run: () => Promise.resolve({ violations: opts.axeViolations ?? [] }),
+	};
+	const page = {
+		on: () => undefined,
+		goto: (_path: string) => {
+			if (opts.gotoThrows) {
+				return Promise.reject(opts.gotoThrows);
+			}
+			return Promise.resolve({ status: () => opts.status ?? 200 });
+		},
+		url: () => opts.finalUrl ?? "http://localhost:3000/dashboard",
+		waitForTimeout: () => Promise.resolve(),
+		addScriptTag: () => Promise.resolve(),
+		evaluate: (fn: (arg?: unknown) => unknown, arg?: unknown) =>
+			Promise.resolve(fn(arg)),
+		close: () => Promise.resolve(),
+	};
+	return { newPage: () => Promise.resolve(page) } as unknown as BrowserContext;
+}
+
+describe("checkPage", () => {
+	afterEach(() => {
+		document.body.innerHTML = "";
+	});
+
+	it("passes a clean page with no baseline entry", async () => {
+		const context = makeFakeContext({ status: 200 });
+		const result = await checkPage(
+			context,
+			"/dashboard",
+			0.1,
+			{},
+			"/dashboard"
+		);
+		expect(result.pass).toBe(true);
+		expect(result.status).toBe(200);
+		expect(result.failReasons).toEqual([]);
+	});
+
+	it("fails on a new critical accessibility violation", async () => {
+		const context = makeFakeContext({
+			axeViolations: [{ id: "button-name", impact: "critical", nodes: [1] }],
+		});
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.pass).toBe(false);
+		expect(result.failReasons[0]).toMatch(NEW_A11Y_RULE_RE);
+	});
+
+	it("records a navigation failure as a page error and fails", async () => {
+		const context = makeFakeContext({ gotoThrows: new Error("boom") });
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.pageErrors[0]).toMatch(NAVIGATION_FAILED_RE);
+		expect(result.pass).toBe(false);
+	});
+
+	it("fails a signed-in check that lands on the sign-in page", async () => {
+		const context = makeFakeContext({
+			finalUrl: "http://localhost:3000/login",
+		});
+		const result = await checkPage(
+			context,
+			"/dashboard",
+			0.1,
+			{},
+			"/dashboard"
+		);
+		expect(result.failReasons).toContain("redirected to sign-in");
+	});
+
+	it("does not fail on a violation already in the baseline", async () => {
+		const context = makeFakeContext({
+			axeViolations: [{ id: "color-contrast", impact: "serious", nodes: [1] }],
+		});
+		const baseline: Baseline = {
+			"/x": { violations: { "color-contrast": 1 }, cls: 0 },
+		};
+		const result = await checkPage(context, "/x", 0.1, baseline, "/x");
+		expect(result.pass).toBe(true);
+	});
+});
+
+// ============================================
+// reportResults
+// ============================================
+
+describe("reportResults", () => {
+	let dir: string;
+
+	function baseArgs(overrides: Partial<ReturnType<typeof parseArgs>> = {}) {
+		return {
+			...parseArgs(["--base-url", "http://localhost:3000", "--all"]),
+			...overrides,
+		};
+	}
+
+	function fakeResult(overrides: Partial<PageResult> = {}): PageResult {
+		return {
+			path: "/x",
+			routeTemplate: "/x",
+			status: 200,
+			finalUrl: "http://localhost:3000/x",
+			redirectedTo: null,
+			pageErrors: [],
+			consoleErrors: [],
+			cls: 0.01,
+			axe: { byImpact: {}, topRules: [], violations: {} },
+			placeholderHits: [],
+			pass: true,
+			failReasons: [],
+			baselineDelta: { newRules: [], increasedRules: [], clsBudgetUsed: 0.1 },
+			...overrides,
+		};
+	}
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), "report-results-test-"));
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+		process.exitCode = 0;
+	});
+
+	it("sets exit code 0 when every page passes", () => {
+		reportResults([fakeResult()], [], baseArgs());
+		expect(process.exitCode).toBe(0);
+	});
+
+	it("sets exit code 1 when any page fails", () => {
+		reportResults([fakeResult({ pass: false })], [], baseArgs());
+		expect(process.exitCode).toBe(1);
+	});
+
+	it("writes the baseline file from the run's results", () => {
+		const outPath = path.join(dir, "baseline.json");
+		reportResults(
+			[
+				fakeResult({
+					routeTemplate: "/x",
+					axe: { byImpact: {}, topRules: [], violations: { "image-alt": 1 } },
+					cls: 0.02,
+				}),
+			],
+			[],
+			baseArgs({ writeBaseline: true, baselinePath: outPath })
+		);
+		const written = JSON.parse(fs.readFileSync(outPath, "utf8"));
+		expect(written).toEqual({
+			"/x": { violations: { "image-alt": 1 }, cls: 0.02 },
+		});
+	});
+
+	it("writes the JSON results file when --json is set", () => {
+		const outPath = path.join(dir, "out.json");
+		reportResults([fakeResult()], [], baseArgs({ jsonOut: outPath }));
+		const written = JSON.parse(fs.readFileSync(outPath, "utf8"));
+		expect(written.results).toHaveLength(1);
+		expect(written.skipped).toEqual([]);
 	});
 });
