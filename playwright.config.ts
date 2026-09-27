@@ -2,7 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 // Defaults to the standard local dev server; set E2E_BASE_URL to point the
 // suite at a different server (a throwaway build, a staging box) instead.
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+// An empty string counts as unset, so `E2E_BASE_URL=` behaves the same as
+// leaving it unset rather than producing an empty base URL.
+const externalBaseURL = process.env.E2E_BASE_URL || undefined;
+const baseURL = externalBaseURL ?? "http://localhost:3000";
 
 export default defineConfig({
 	globalSetup: "./e2e/global-setup.ts",
@@ -43,7 +46,7 @@ export default defineConfig({
 	// Playwright only manages a server it started itself under this key, and
 	// reuseExistingServer would still race an external server's readiness
 	// against this project's own "pnpm dev"/standalone-server command.
-	...(process.env.E2E_BASE_URL
+	...(externalBaseURL
 		? {}
 		: {
 				webServer: {

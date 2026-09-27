@@ -5,7 +5,9 @@ export default function globalSetup() {
 		return;
 	}
 
-	if (process.env.E2E_SKIP_DB_RESET === "1") {
+	if (
+		["1", "true"].includes((process.env.E2E_SKIP_DB_RESET ?? "").toLowerCase())
+	) {
 		console.log("E2E_SKIP_DB_RESET=1 set; skipping database reset and seed.");
 		return;
 	}
