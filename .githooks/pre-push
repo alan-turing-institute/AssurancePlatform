@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Pre-push gate: regenerates the Prisma client, then runs lint and typecheck
-# before any push, on any branch. CI remains the authoritative gate and also
-# runs the test suite. A push that only deletes branches (all-zero local sha
-# on every ref) is let through without running checks.
+# on every push. CI remains the authoritative gate and also runs the test
+# suite. A push that only deletes branches (all-zero local sha on every ref)
+# is let through without running checks.
 set -u
 
 zero=0000000000000000000000000000000000000000
@@ -18,11 +18,27 @@ done
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+before_dirty="$(git diff --name-only)"
+
 echo "[pre-push] Regenerating Prisma client..."
 # A placeholder DATABASE_URL is enough: generation reads the schema and does
 # not connect to a database, so this does not require Postgres to be running.
-if ! DATABASE_URL="postgresql://prepush:prepush@localhost:5432/prepush" pnpm exec prisma generate; then
+if ! DATABASE_URL="postgresql://prepush:prepush@localhost:5432/prepush" pnpm exec prisma generate --schema=prisma/schema.prisma; then
   echo "[pre-push] ✗ prisma generate failed" >&2
+  echo "[pre-push] Blocked: fix the errors above before pushing." >&2
+  echo "[pre-push] (Emergency bypass: git push --no-verify — CI will still gate.)" >&2
+  exit 1
+fi
+
+after_dirty="$(git diff --name-only)"
+newly_dirty="$(comm -13 \
+  <(printf '%s\n' "$before_dirty" | grep -v '^$' | sort -u) \
+  <(printf '%s\n' "$after_dirty" | grep -v '^$' | sort -u))"
+
+if [[ -n "$newly_dirty" ]]; then
+  echo "[pre-push] ✗ prisma generate changed tracked file(s) that were not already modified:" >&2
+  echo "$newly_dirty" | sed 's/^/[pre-push]     /' >&2
+  echo "[pre-push] Commit the regenerated file(s) and push again." >&2
   echo "[pre-push] Blocked: fix the errors above before pushing." >&2
   echo "[pre-push] (Emergency bypass: git push --no-verify — CI will still gate.)" >&2
   exit 1
