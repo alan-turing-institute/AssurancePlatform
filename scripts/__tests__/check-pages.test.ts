@@ -21,9 +21,9 @@ import {
 	resolveBaselinePath,
 	resolveFilledPath,
 	resolveParam,
-	serializeBaseline,
+	serialiseBaseline,
 	signInFailureMessage,
-	summarizeAxeViolations,
+	summariseAxeViolations,
 	toRouteTemplate,
 } from "../check-pages";
 
@@ -355,22 +355,22 @@ describe("compareToBaseline", () => {
 });
 
 // ============================================
-// serializeBaseline
+// serialiseBaseline
 // ============================================
 
-describe("serializeBaseline", () => {
+describe("serialiseBaseline", () => {
 	it("sorts route keys and per-route rule keys", () => {
 		const baseline: Baseline = {
 			"/b": { violations: { z: 1, a: 2 }, cls: 0 },
 			"/a": { violations: {}, cls: 0.1 },
 		};
-		const serialized = serializeBaseline(baseline);
-		const routeOrder = [...serialized.matchAll(/"(\/[a-z]*)":/g)].map(
+		const serialised = serialiseBaseline(baseline);
+		const routeOrder = [...serialised.matchAll(/"(\/[a-z]*)":/g)].map(
 			(m) => m[1]
 		);
 		expect(routeOrder).toEqual(["/a", "/b"]);
-		expect(serialized.indexOf('"a"')).toBeLessThan(serialized.indexOf('"z"'));
-		expect(serialized.endsWith("\n")).toBe(true);
+		expect(serialised.indexOf('"a"')).toBeLessThan(serialised.indexOf('"z"'));
+		expect(serialised.endsWith("\n")).toBe(true);
 	});
 });
 
@@ -485,12 +485,12 @@ describe("resolveBaselinePath", () => {
 });
 
 // ============================================
-// summarizeAxeViolations
+// summariseAxeViolations
 // ============================================
 
-describe("summarizeAxeViolations", () => {
+describe("summariseAxeViolations", () => {
 	it("counts serious+critical nodes per rule, ignoring lesser impacts", () => {
-		const summary = summarizeAxeViolations([
+		const summary = summariseAxeViolations([
 			{ id: "color-contrast", impact: "serious", nodes: [1, 2] },
 			{ id: "color-contrast", impact: "serious", nodes: [3] },
 			{ id: "region", impact: "moderate", nodes: [1] },
@@ -500,7 +500,7 @@ describe("summarizeAxeViolations", () => {
 	});
 
 	it("ranks topRules by total node count across all impacts", () => {
-		const summary = summarizeAxeViolations([
+		const summary = summariseAxeViolations([
 			{ id: "a", impact: "minor", nodes: [1] },
 			{ id: "b", impact: "critical", nodes: [1, 2, 3] },
 		]);
@@ -508,7 +508,7 @@ describe("summarizeAxeViolations", () => {
 	});
 
 	it("returns empty results for no violations", () => {
-		expect(summarizeAxeViolations([])).toEqual({
+		expect(summariseAxeViolations([])).toEqual({
 			byImpact: {},
 			topRules: [],
 			violations: {},
@@ -819,14 +819,14 @@ describe("reportResults", () => {
 		expect(process.exitCode).toBe(1);
 	});
 
-	it("writes the baseline file from the run's results", () => {
+	it("writes the baseline file from the run's results, rounding cls to 4dp", () => {
 		const outPath = path.join(dir, "baseline.json");
 		reportResults(
 			[
 				fakeResult({
 					routeTemplate: "/x",
 					axe: { byImpact: {}, topRules: [], violations: { "image-alt": 1 } },
-					cls: 0.02,
+					cls: 0.020_004_9,
 				}),
 			],
 			[],

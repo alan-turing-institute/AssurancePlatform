@@ -46,7 +46,7 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { type BrowserContext, chromium, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { signIn } from "../e2e/helpers/auth";
@@ -458,7 +458,7 @@ export function compareToBaseline(
 }
 
 /** Sorted keys and stable formatting, so a regenerated baseline diffs cleanly. */
-export function serializeBaseline(baseline: Baseline): string {
+export function serialiseBaseline(baseline: Baseline): string {
 	const out: Baseline = {};
 	for (const route of Object.keys(baseline).sort()) {
 		const entry = baseline[route] as BaselineEntry;
@@ -500,19 +500,27 @@ function loadBaseline(args: Args): Baseline {
 	return JSON.parse(fs.readFileSync(filePath, "utf8")) as Baseline;
 }
 
+/** Rounds to 4 decimal places, so a regenerated baseline does not churn on floating-point noise. */
+export function roundCls(cls: number): number {
+	return Math.round(cls * 1e4) / 1e4;
+}
+
 function writeBaselineFile(outPath: string, results: PageResult[]): void {
 	const baseline: Baseline = {};
 	for (const r of results) {
-		baseline[r.routeTemplate] = { violations: r.axe.violations, cls: r.cls };
+		baseline[r.routeTemplate] = {
+			violations: r.axe.violations,
+			cls: roundCls(r.cls),
+		};
 	}
-	fs.writeFileSync(outPath, serializeBaseline(baseline));
+	fs.writeFileSync(outPath, serialiseBaseline(baseline));
 }
 
 // ============================================
 // Redirects
 // ============================================
 
-const LOGIN_PATH_RE = /^\/login(?:\/|$|\?)/;
+const LOGIN_PATH_RE = /^\/login(?:\/|$)/;
 
 export interface RedirectInfo {
 	failReason: string | null;
@@ -584,7 +592,7 @@ interface AxeRunResults {
 }
 
 /** Pure tally half of the axe check: turns raw violations into the summary the baseline compares against. */
-export function summarizeAxeViolations(
+export function summariseAxeViolations(
 	violations: AxeRunResults["violations"]
 ): AxeSummary {
 	const byImpact: Record<string, number> = {};
@@ -617,7 +625,7 @@ async function runAxe(page: Page): Promise<AxeSummary> {
 				window as unknown as { axe: { run: () => Promise<AxeRunResults> } }
 			).axe.run();
 		});
-		return summarizeAxeViolations(results.violations ?? []);
+		return summariseAxeViolations(results.violations ?? []);
 	} catch (err) {
 		return {
 			byImpact: { error: 1 },
@@ -1019,8 +1027,13 @@ async function main() {
 }
 
 // ESM entry-point guard — runs main() when invoked directly (tsx/pnpm) but
-// not when a unit test imports this module for its pure functions.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// not when a unit test imports this module for its pure functions. Compares
+// against a file URL built with pathToFileURL rather than a template string,
+// since a path containing a space is not a valid URL when interpolated raw.
+if (
+	process.argv[1] !== undefined &&
+	import.meta.url === pathToFileURL(process.argv[1]).href
+) {
 	main().catch((err) => {
 		console.error(err);
 		process.exitCode = 1;
