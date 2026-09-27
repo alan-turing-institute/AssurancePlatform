@@ -1,0 +1,149 @@
+{
+  "/": {
+    "violations": {
+      "color-contrast": 6,
+      "definition-list": 1
+    },
+    "cls": 0.15178707546657988
+  },
+  "/api-docs": {
+    "violations": {
+      "button-name": 4,
+      "color-contrast": 28
+    },
+    "cls": 0.09267035590277778
+  },
+  "/auth-error": {
+    "violations": {
+      "color-contrast": 6
+    },
+    "cls": 0
+  },
+  "/case/{caseId}": {
+    "violations": {
+      "color-contrast": 1,
+      "nested-interactive": 5
+    },
+    "cls": 0
+  },
+  "/cookie-policy": {
+    "violations": {
+      "color-contrast": 6
+    },
+    "cls": 0.00007934570312499999
+  },
+  "/dashboard": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/dashboard/settings": {
+    "violations": {
+      "color-contrast": 8,
+      "list": 2
+    },
+    "cls": 0.03570285373263889
+  },
+  "/dashboard/settings/integrations": {
+    "violations": {
+      "color-contrast": 8,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/dashboard/settings/plugins": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/dashboard/settings/teams": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/dashboard/shared": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/dashboard/teams": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/dashboard/trash": {
+    "violations": {
+      "color-contrast": 3,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/discover": {
+    "violations": {
+      "button-name": 1,
+      "color-contrast": 6
+    },
+    "cls": 0.011746012369791668
+  },
+  "/discover/{slug}": {
+    "violations": {
+      "color-contrast": 6
+    },
+    "cls": 0.008001747131347657
+  },
+  "/docs": {
+    "violations": {
+      "color-contrast": 2,
+      "svg-img-alt": 1
+    },
+    "cls": 0.08657739448547364
+  },
+  "/feedback": {
+    "violations": {
+      "color-contrast": 1
+    },
+    "cls": 0
+  },
+  "/forgot-password": {
+    "violations": {
+      "color-contrast": 2
+    },
+    "cls": 0
+  },
+  "/login": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/privacy-policy": {
+    "violations": {
+      "color-contrast": 10
+    },
+    "cls": 0.00007934570312499999
+  },
+  "/register": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
+  "/reset-password": {
+    "violations": {
+      "color-contrast": 3
+    },
+    "cls": 0.0032815755208333327
+  }
+}

@@ -39,25 +39,39 @@ if [[ "$action" == "down" ]]; then
 		echo "no state for :$port — nothing started by this script is running"
 		exit 0
 	fi
-	# shellcheck disable=SC1090
-	source "$state_file"
-	if [[ -n "${PID:-}" ]] && kill -0 "$PID" 2>/dev/null; then
-		kill "$PID"; sleep 1; kill -0 "$PID" 2>/dev/null && kill -9 "$PID" || true
-		echo "stopped pid $PID on :$port"
+	# Read only the two keys we expect, one line at a time — never source the
+	# file. A tampered state file (e.g. a shell command tacked onto DB=) is
+	# just a string here until it passes the format checks below.
+	read_state_value() {
+		grep -m1 -E "^${1}=" "$state_file" | cut -d= -f2-
+	}
+	pid="$(read_state_value PID)"
+	db="$(read_state_value DB)"
+	if [[ -n "$pid" && ! "$pid" =~ ^[0-9]+$ ]]; then
+		echo "refusing: state file has an invalid pid '$pid'" >&2
+		exit 1
+	fi
+	if [[ -n "$db" && ! "$db" =~ ^serve_[0-9]+_[0-9]+$ ]]; then
+		echo "refusing: state file has an invalid database name '$db' — does not match '${DB_PREFIX}<port>_<epoch>'" >&2
+		exit 1
+	fi
+	if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+		cmdline=""
+		if [[ -r "/proc/$pid/cmdline" ]]; then
+			cmdline="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || true)"
+		fi
+		if [[ "$cmdline" == *server.js* || "$cmdline" == *next-server* ]]; then
+			kill "$pid"; sleep 1; kill -0 "$pid" 2>/dev/null && kill -9 "$pid" || true
+			echo "stopped pid $pid on :$port"
+		else
+			echo "pid $pid was reused by another process (cmdline does not match) — not killing it"
+		fi
 	else
 		echo "no live process for :$port (already stopped)"
 	fi
-	if [[ -n "${DB:-}" ]]; then
-		case "$DB" in
-			"${DB_PREFIX}"*)
-				docker exec tea_postgres_test psql -U tea_user -d tea_test_admin -c "DROP DATABASE IF EXISTS ${DB}" >/dev/null
-				echo "dropped database $DB"
-				;;
-			*)
-				echo "refusing to drop '$DB' — does not start with '${DB_PREFIX}'" >&2
-				exit 1
-				;;
-		esac
+	if [[ -n "$db" ]]; then
+		docker exec tea_postgres_test psql -U tea_user -d tea_test_admin -c "DROP DATABASE IF EXISTS ${db}" >/dev/null
+		echo "dropped database $db"
 	fi
 	rm -f "$state_file"
 	exit 0
