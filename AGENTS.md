@@ -166,6 +166,8 @@ Presentational component tests are optional; snapshot tests are not the conventi
 Install the browser with `pnpm exec playwright install chromium`.
 Outside CI, `e2e/global-setup.ts` runs `prisma migrate reset --force` and reseeds, so point it only at a disposable database.
 Playwright starts `pnpm dev` locally or reuses a server on port 3000, so that server must use the intended test database too.
+Set `E2E_BASE_URL` to run the suite against a different server, and `E2E_SKIP_DB_RESET=1` to skip the reset and reseed against that server's own database instead of resetting whatever `DATABASE_URL` points at.
+With `E2E_BASE_URL` set, Playwright does not start or manage a server itself; start and stop the target server separately.
 
 Structural quality is checked by fallow in CI's `structural-quality` job, against the per-analysis baselines (`.fallow-baseline.*.json`); findings introduced by the change fail the job.
 

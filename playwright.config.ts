@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Defaults to the standard local dev server; set E2E_BASE_URL to point the
+// suite at a different server (a throwaway build, a staging box) instead.
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+
 export default defineConfig({
 	globalSetup: "./e2e/global-setup.ts",
 	testDir: "./e2e",
@@ -17,7 +21,7 @@ export default defineConfig({
 	// Keep github annotations and also emit the html report CI uploads.
 	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
 	use: {
-		baseURL: "http://localhost:3000",
+		baseURL,
 		trace: "on-first-retry",
 		screenshot: "only-on-failure",
 	},
@@ -35,10 +39,20 @@ export default defineConfig({
 			dependencies: ["setup"],
 		},
 	],
-	webServer: {
-		command: process.env.CI ? "node .next/standalone/server.js" : "pnpm dev",
-		url: "http://localhost:3000",
-		reuseExistingServer: !process.env.CI,
-		timeout: 120_000,
-	},
+	// Omitted entirely when E2E_BASE_URL points at an already-running server:
+	// Playwright only manages a server it started itself under this key, and
+	// reuseExistingServer would still race an external server's readiness
+	// against this project's own "pnpm dev"/standalone-server command.
+	...(process.env.E2E_BASE_URL
+		? {}
+		: {
+				webServer: {
+					command: process.env.CI
+						? "node .next/standalone/server.js"
+						: "pnpm dev",
+					url: baseURL,
+					reuseExistingServer: !process.env.CI,
+					timeout: 120_000,
+				},
+			}),
 });
