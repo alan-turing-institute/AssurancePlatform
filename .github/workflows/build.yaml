@@ -542,9 +542,10 @@ jobs:
         # E2E tests" exits, so it must be started again here the same way —
         # DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL etc. all come from this
         # job's env block above, unchanged. --only limits this build to
-        # status/page-errors/placeholders (per the issue): axe and CLS are
-        # still measured and reported per page, but can't fail the job here —
-        # CI's numbers can differ from the locally generated a11y baseline.
+        # status/page-errors/placeholders: axe and CLS are still measured and
+        # reported per page, but can't fail the job here, because CI's
+        # accessibility and layout-shift numbers can differ from the
+        # locally generated baseline.
         run: |
           set -euo pipefail
           if [ ! -f e2e/.auth/chris.json ]; then
@@ -560,6 +561,7 @@ jobs:
             curl -sf -o /dev/null http://localhost:3000/ && break
             sleep 2
           done
+          curl -sf -o /dev/null http://localhost:3000/ || { echo "::error::standalone server did not become ready within 120 s"; exit 1; }
 
           pnpm exec tsx scripts/check-pages.ts \
             --base-url http://localhost:3000 \
@@ -616,6 +618,7 @@ jobs:
           name: check-pages
           path: check-pages.json
           retention-days: 14
+          if-no-files-found: ignore
 
   structural-quality:
     # Required-check name is "Structural Quality (blocking)" (branch

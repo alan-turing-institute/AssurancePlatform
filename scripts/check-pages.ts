@@ -747,6 +747,68 @@ export interface PageResult {
 	status: number | null;
 }
 
+interface FailReasonEntry {
+	/** which --only category this reason belongs to */
+	category: CheckCategory;
+	/** whether this reason applies, already evaluated (no branching in the loop below) */
+	condition: boolean;
+	/** built lazily so a false condition never touches its inputs (e.g. redirectFailReason may be null) */
+	message: () => string;
+}
+
+/** One row per possible failure reason; buildFailReasons below just filters and formats. */
+function listFailReasonEntries(input: {
+	cls: number;
+	delta: BaselineDelta;
+	pageErrorCount: number;
+	placeholderHits: string[];
+	redirectFailReason: string | null;
+	status: number | null;
+}): FailReasonEntry[] {
+	return [
+		{
+			category: "status",
+			condition: input.status === null || input.status >= 400,
+			message: () => `status ${input.status ?? "none"}`,
+		},
+		{
+			category: "errors",
+			condition: input.pageErrorCount > 0,
+			message: () => `${input.pageErrorCount} page error(s)`,
+		},
+		{
+			category: "errors",
+			condition: Boolean(input.redirectFailReason),
+			message: () => input.redirectFailReason as string,
+		},
+		{
+			category: "cls",
+			condition: input.delta.clsExceeded,
+			message: () =>
+				`cls ${input.cls.toFixed(3)} over budget ${input.delta.clsBudgetUsed.toFixed(3)}`,
+		},
+		{
+			category: "a11y",
+			condition: input.delta.newRules.length > 0,
+			message: () =>
+				`new accessibility rule(s): ${input.delta.newRules.join(", ")}`,
+		},
+		{
+			category: "a11y",
+			condition: input.delta.increasedRules.length > 0,
+			message: () =>
+				`accessibility rule(s) increased: ${input.delta.increasedRules
+					.map((r) => `${r.id} ${r.baselineCount}->${r.currentCount}`)
+					.join(", ")}`,
+		},
+		{
+			category: "placeholders",
+			condition: input.placeholderHits.length > 0,
+			message: () => `placeholder text: ${input.placeholderHits.join(", ")}`,
+		},
+	];
+}
+
 /**
  * Pure assembly of a page's failure reasons from its already-computed checks.
  * `only`, when given, restricts which categories can appear here at all —
@@ -766,34 +828,10 @@ export function buildFailReasons(input: {
 	const include = (category: CheckCategory) =>
 		!input.only || input.only.has(category);
 	const failReasons: string[] = [];
-	if (include("status") && (input.status === null || input.status >= 400)) {
-		failReasons.push(`status ${input.status ?? "none"}`);
-	}
-	if (include("errors") && input.pageErrorCount > 0) {
-		failReasons.push(`${input.pageErrorCount} page error(s)`);
-	}
-	if (include("errors") && input.redirectFailReason) {
-		failReasons.push(input.redirectFailReason);
-	}
-	if (include("cls") && input.delta.clsExceeded) {
-		failReasons.push(
-			`cls ${input.cls.toFixed(3)} over budget ${input.delta.clsBudgetUsed.toFixed(3)}`
-		);
-	}
-	if (include("a11y") && input.delta.newRules.length > 0) {
-		failReasons.push(
-			`new accessibility rule(s): ${input.delta.newRules.join(", ")}`
-		);
-	}
-	if (include("a11y") && input.delta.increasedRules.length > 0) {
-		failReasons.push(
-			`accessibility rule(s) increased: ${input.delta.increasedRules
-				.map((r) => `${r.id} ${r.baselineCount}->${r.currentCount}`)
-				.join(", ")}`
-		);
-	}
-	if (include("placeholders") && input.placeholderHits.length > 0) {
-		failReasons.push(`placeholder text: ${input.placeholderHits.join(", ")}`);
+	for (const entry of listFailReasonEntries(input)) {
+		if (entry.condition && include(entry.category)) {
+			failReasons.push(entry.message());
+		}
 	}
 	return failReasons;
 }
