@@ -534,6 +534,40 @@ jobs:
       - name: Run E2E tests
         run: pnpm exec playwright test
 
+      - name: Check every page loads
+        # Reuses the storage state e2e's "setup" project (auth.setup.ts) wrote
+        # above, so this never types a password. playwright.config.ts's own
+        # webServer (node .next/standalone/server.js, the same standalone
+        # build the E2E step just used) is stopped by Playwright when "Run
+        # E2E tests" exits, so it must be started again here the same way —
+        # DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL etc. all come from this
+        # job's env block above, unchanged. --only limits this build to
+        # status/page-errors/placeholders (per the issue): axe and CLS are
+        # still measured and reported per page, but can't fail the job here —
+        # CI's numbers can differ from the locally generated a11y baseline.
+        run: |
+          set -euo pipefail
+          if [ ! -f e2e/.auth/chris.json ]; then
+            echo "::error::e2e/.auth/chris.json is missing — the e2e 'setup' project did not write a storage state, so this step has no signed-in session to reuse."
+            exit 1
+          fi
+
+          node .next/standalone/server.js &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:3000/ && break
+            sleep 2
+          done
+
+          pnpm exec tsx scripts/check-pages.ts \
+            --base-url http://localhost:3000 \
+            --all \
+            --storage-state e2e/.auth/chris.json \
+            --only status,errors,placeholders \
+            --json check-pages.json
+
       - name: Strip sensitive data from failure artifacts
         # Playwright's failure snapshot (error-context.md) and trace.zip both
         # record the values typed into form fields, including passwords, and
@@ -573,6 +607,14 @@ jobs:
         with:
           name: test-results
           path: test-results/
+          retention-days: 14
+
+      - name: Upload page-check results
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: check-pages
+          path: check-pages.json
           retention-days: 14
 
   structural-quality:
