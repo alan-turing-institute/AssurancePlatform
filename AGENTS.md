@@ -182,7 +182,7 @@ Do not add AI attribution to commits or PRs.
 Keep changes scoped; delete verified-dead code rather than deprecating it, and do not perform incidental cleanups.
 
 `pnpm install` arms the hooks in `.githooks/` by setting `core.hooksPath`.
-The pre-push hook runs lint and typecheck for pushes to `staging` and `main`; CI remains authoritative and also runs the tests.
+The pre-push hook regenerates the Prisma client, then runs lint and typecheck, on every push; CI remains authoritative and also runs the tests.
 `.pre-commit-config.yaml` is for manual runs and pre-commit.ci; `pre-commit install` refuses to install while `core.hooksPath` is set.
 
 Work is tracked in GitHub Issues.
