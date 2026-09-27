@@ -52,7 +52,7 @@ We use a three-branch flow: feature branches → `staging` → `main`.
 #### Git Hooks
 
 `pnpm install` arms the hooks in `.githooks/` by setting `core.hooksPath`.
-The pre-push hook runs `pnpm lint` and `pnpm typecheck` before any push to `staging` or `main`; CI remains the authoritative gate.
+The pre-push hook regenerates the Prisma client, then runs `pnpm lint` and `pnpm typecheck`, before any push on any branch; CI remains the authoritative gate.
 
 A `.pre-commit-config.yaml` is also provided for manual runs and for pre-commit.ci.
 It runs [Ultracite](https://biomejs.dev) (Biome wrapper) for linting and formatting, the TypeScript compiler for type checking, `detect-secrets` for secret detection, and the integration tests.
