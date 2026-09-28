@@ -12,9 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     # Staging deploys (build.yaml's deploy job) share this group, so a reset
-    # never overlaps another reset or an app restart. queue: max means no
-    # waiting run is cancelled — every reset and every deploy still runs,
-    # just one at a time.
+    # never runs while another reset or a staging deploy job is in progress.
+    # queue: max means no waiting run is cancelled: every reset and every
+    # deploy runs, one at a time.
     concurrency:
       group: staging-database
       cancel-in-progress: false
