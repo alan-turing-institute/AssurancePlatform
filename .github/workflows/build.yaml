@@ -978,11 +978,11 @@ jobs:
     # here wouldn't stop the Azure webhook it already fired, it would just
     # abandon that deployment's health-check monitoring. Staging deploys
     # share the `staging-database` group with seed-staging.yml's reset job,
-    # so a deploy's app restart never overlaps a database reset; main keeps
-    # its own group, deploy-refs/heads/main, so production is unaffected.
-    # queue: max means every push still deploys in turn instead of
-    # collapsing to the latest, and a waiting deploy can't be cancelled by a
-    # waiting reset (or vice versa).
+    # so a reset never runs while a staging deploy job is in progress. main
+    # keeps its own group, deploy-refs/heads/main, so production deploys
+    # never wait on staging. queue: max applies to both branches: every push
+    # deploys in turn rather than collapsing to the latest, and no waiting
+    # deploy or reset is cancelled.
     concurrency:
       group: ${{ github.ref == 'refs/heads/staging' && 'staging-database' || format('deploy-{0}', github.ref) }}
       cancel-in-progress: false
