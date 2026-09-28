@@ -16,6 +16,8 @@ import type {
 } from "@/lib/services/discover-service";
 
 export interface PublishableItemSummaryResponse {
+	/** When this copy was archived — a snapshot kept after its case moved to Trash and no longer receives updates. `null` for a live, updating copy. */
+	archivedAt: string | null;
 	authors: string | null;
 	description: string | null;
 	featureImageUrl: string | null;
@@ -132,6 +134,7 @@ export function transformPublishableItemForApi(
 		authors: item.authors,
 		featureImageUrl: item.featureImageUrl,
 		publishedAt: item.publishedAt.toISOString(),
+		archivedAt: item.archivedAt ? item.archivedAt.toISOString() : null,
 	};
 }
 

@@ -93,8 +93,12 @@ export async function PUT(
  *
  * @description Moves a case to trash (soft-delete). Cases remain in trash for 30 days
  * before automatic purge. Requires ADMIN permission on the case.
+ * If the case is published, its Discover copy is removed by default; pass
+ * `archive=true` to keep it, marked archived, instead (Chris's ruling 6,
+ * 2026-09-28 — the API's default is to remove unless asked to archive).
  *
  * @pathParam id - Case ID (UUID)
+ * @queryParam archive - Keep the published copy, archived, instead of removing it (boolean, default: false)
  * @response 200 - { success: true }
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (ADMIN required)
@@ -103,7 +107,7 @@ export async function PUT(
  * @tag Cases
  */
 export async function DELETE(
-	_request: Request,
+	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
@@ -113,7 +117,11 @@ export async function DELETE(
 			"@/lib/services/case-trash-service"
 		);
 
-		const result = await softDeleteCase(userId, id);
+		const { searchParams } = new URL(request.url);
+		const publishedCopy =
+			searchParams.get("archive") === "true" ? "archive" : "remove";
+
+		const result = await softDeleteCase(userId, id, { publishedCopy });
 
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));

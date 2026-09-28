@@ -779,3 +779,44 @@ describe("publishAssuranceCase — case information snapshot capture", () => {
 		expect(content.caseInformation?.description).toBe("After republish");
 	});
 });
+
+// ============================================
+// A case in Trash cannot be published or republished (design note, "A case
+// in Trash cannot be published or republished, including when the two
+// actions overlap")
+// ============================================
+
+describe("publishAssuranceCase / updatePublishedCase — refused for a trashed case", () => {
+	it("refuses to publish a trashed, never-published case", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Trashed Draft");
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		await softDeleteCase(owner.id, testCase.id);
+
+		expectError(await publishAssuranceCase(owner.id, testCase.id));
+
+		const updated = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updated.published).toBe(false);
+	});
+
+	it("refuses to republish a trashed, already-published case whose copy was kept archived", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Trashed Published"
+		);
+		await publishAssuranceCase(owner.id, testCase.id);
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+		expectError(
+			await updatePublishedCase(owner.id, testCase.id, "Should not land")
+		);
+	});
+});

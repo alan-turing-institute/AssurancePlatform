@@ -4,6 +4,7 @@ import { CalendarDaysIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -114,6 +115,9 @@ function PublishedItems({ items }: PublishedItemsProps) {
 											<span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 font-medium text-primary text-xs">
 												{item.sector}
 											</span>
+										)}
+										{item.archivedAt && (
+											<Badge variant="outline">Archived</Badge>
 										)}
 									</div>
 									<div className="group relative">

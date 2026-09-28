@@ -3,6 +3,10 @@
 import { validateSession } from "@/lib/auth/validate-session";
 import type { ActionResult } from "@/lib/errors";
 import { uuidSchema } from "@/lib/schemas/base";
+import {
+	type DeleteCaseOptionsInput,
+	deleteCaseOptionsSchema,
+} from "@/lib/schemas/case-trash";
 import type { CommentResponse } from "@/lib/services/comment-service";
 
 /**
@@ -37,11 +41,16 @@ export async function fetchCaseComments(
 }
 
 /**
- * Soft-deletes an assurance case, moving it to the trash.
- * Requires ADMIN permission on the case.
+ * Soft-deletes an assurance case, moving it to the trash. Requires ADMIN
+ * permission on the case.
+ *
+ * `options.publishedCopy` is the delete dialog's choice for a published
+ * case's Discover copy (design note, Chris's ruling 1, 2026-09-28) — see
+ * `softDeleteCase` in `case-trash-service.ts`.
  */
 export async function deleteAssuranceCase(
-	caseId: string
+	caseId: string,
+	options?: DeleteCaseOptionsInput
 ): Promise<ActionResult<null>> {
 	const session = await validateSession();
 	if (!session) {
@@ -53,11 +62,18 @@ export async function deleteAssuranceCase(
 		return { success: false, error: "Invalid case ID" };
 	}
 
+	const optionsResult = deleteCaseOptionsSchema.safeParse(options ?? {});
+	if (!optionsResult.success) {
+		return { success: false, error: "Invalid delete options" };
+	}
+
 	try {
 		const { softDeleteCase } = await import(
 			"@/lib/services/case-trash-service"
 		);
-		const result = await softDeleteCase(session.userId, idResult.data);
+		const result = await softDeleteCase(session.userId, idResult.data, {
+			publishedCopy: optionsResult.data.publishedCopy,
+		});
 
 		if ("error" in result) {
 			return { success: false, error: result.error };

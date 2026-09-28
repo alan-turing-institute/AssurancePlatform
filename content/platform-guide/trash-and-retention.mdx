@@ -9,16 +9,20 @@ Deleting a case moves it to Trash. The platform marks the case as deleted rather
 
 A case administrator can delete a case from the case controls. The service records when it was deleted and who deleted it. The case then stops appearing as an active working case. This action does not export a backup or send a copy to collaborators. If you need an independent record, export or back up the case before deleting it.
 
+Deleting a case that is published on Discover shows an extra dialog first. It offers **Remove from Discover**, which deletes the public copy, and **Keep as archived**, which keeps the public copy, marked as archived, so it no longer receives updates. The case moves to the trash either way.
+
 Open `/dashboard/trash` to see cases you own that have been moved to Trash. The list shows the deletion date and the remaining recovery period. Only the case owner can view that list, restore a case, or permanently delete it from Trash. A collaborator with edit or admin access to the active case does not gain the owner's recovery controls.
 
 ## Restore or permanently delete
 
-Use **Restore** in Trash to return an item to the dashboard. Restoration clears the deletion markers on the case. Its existing case data and permissions remain with the case; review the grants if you are restoring it after a project has changed hands. Use **Permanently delete** only when the case and its elements should be removed. The confirmation dialog states that this action deletes the case and all its elements. For a successful permanent deletion, there is no restore path.
+Use **Restore** in Trash to return an item to the dashboard. Restoration clears the deletion markers on the case. Its existing case data and permissions remain with the case; review the grants if you are restoring it after a project has changed hands. If the case's public copy was kept as archived, restoring it also brings that copy back live, at the same public address, with the archived label removed. Use **Permanently delete** only when the case and its elements should be removed. The confirmation dialog states that this action deletes the case and all its elements. For a successful permanent deletion, there is no restore path.
 
-Cases are eligible for permanent deletion 30 days after they are trashed. A scheduled purge job calls the protected `/api/cron/purge-trash` route. The workflow is in `.github/workflows/purge-trash.yml`. The remaining-days display reflects eligibility; check the job outcome to confirm removal.
+Cases are eligible for permanent deletion 30 days after they are trashed. A scheduled purge job calls the protected `/api/cron/purge-trash` route. The workflow is in `.github/workflows/purge-trash.yml`. The remaining-days display reflects eligibility; check the job outcome to confirm removal. An archived public copy survives this permanent deletion; it stays on Discover until its owner removes it.
+
+The Trash page has an "Archived on Discover" section, shown only when you have an archived copy. It lists each copy's title and archive date, with a **Remove from Discover** button that permanently removes it, including after its case has been permanently deleted.
 
 Case Trash concerns whole cases. The schema also records deletion markers for individual elements, which are handled by editor and element services. Do not assume the case Trash page is an element history or undo log. The broader inactive-account retention sweep is a separate job and policy from the 30-day case Trash rule.
 
 ## Limits and code location
 
-Trash is a recovery window, not a backup or version history. It does not preserve a separately downloadable version of each edit. `lib/services/case-trash-service.ts` implements case soft delete, restore, individual purge and expiry purge. `components/cases/trash-list.tsx` renders the owner's Trash controls; `app/api/cron/purge-trash/route.ts` and `.github/workflows/purge-trash.yml` run the timed cleanup.
+Trash is a recovery window, not a backup or version history. It does not preserve a separately downloadable version of each edit. `lib/services/case-trash-service.ts` implements case soft delete, restore, individual purge, expiry purge, and the archived-copy list and removal. `components/cases/trash-list.tsx` and `components/cases/archived-copies-list.tsx` render the owner's Trash controls; `app/api/cron/purge-trash/route.ts` and `.github/workflows/purge-trash.yml` run the timed cleanup.

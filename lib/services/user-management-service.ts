@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { ChangePasswordInput } from "@/lib/schemas/auth";
 import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
+import { archivePublishedCopies } from "@/lib/services/publish-service";
 import {
 	validateEmail,
 	validatePassword,
@@ -589,6 +590,11 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 						deletedById: systemUserId,
 					},
 				});
+				// Archives rather than removes each trashed case's Discover copy
+				// (Chris's ruling 4, 2026-09-28): the deleted owner's account is
+				// gone, so `ownerId: null` — nobody can remove these through the
+				// app afterwards; that needs the platform team, by hand.
+				await archivePublishedCopies(tx, toTrash, null);
 			}
 
 			// Handle teams created by user

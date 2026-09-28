@@ -14,9 +14,19 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useExportModal, useHelpModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
@@ -56,7 +66,12 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const exportModal = useExportModal();
 	const helpModal = useHelpModal();
 
-	const onDelete = async () => {
+	/**
+	 * `publishedCopy` is the delete dialog's choice for a published case's
+	 * Discover copy (design note, Chris's ruling 1, 2026-09-28) — omitted
+	 * for an unpublished case, where there is nothing to choose.
+	 */
+	const onDelete = async (publishedCopy?: PublishedCopyChoice) => {
 		if (!assuranceCase) {
 			return;
 		}
@@ -64,7 +79,10 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 		try {
 			setLoading(true);
 			const { deleteAssuranceCase } = await import("@/actions/cases");
-			const result = await deleteAssuranceCase(assuranceCase.id);
+			const result = await deleteAssuranceCase(
+				assuranceCase.id,
+				publishedCopy ? { publishedCopy } : undefined
+			);
 
 			if (result.success) {
 				router.push("/dashboard");
@@ -264,14 +282,68 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						onClose={() => setJsonViewOpen(false)}
 					/>
 				</ErrorBoundary>
-				<AlertModal
-					confirmButtonText={"Move to Trash"}
-					isOpen={deleteOpen}
-					loading={loading}
-					message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
-					onClose={() => setDeleteOpen(false)}
-					onConfirm={onDelete}
-				/>
+				{assuranceCase?.published ? (
+					<AlertDialog onOpenChange={setDeleteOpen} open={deleteOpen}>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>
+									This case is published on Discover
+								</AlertDialogTitle>
+								<AlertDialogDescription asChild>
+									<div className="space-y-3 text-left">
+										<p>
+											The case moves to the trash either way, and you can
+											restore it within 30 days. What should happen to its
+											public copy?
+										</p>
+										<p>
+											<strong className="text-foreground">
+												Remove from Discover
+											</strong>{" "}
+											— the public copy is deleted. If you restore the case, it
+											comes back as a draft.
+										</p>
+										<p>
+											<strong className="text-foreground">
+												Keep as archived
+											</strong>{" "}
+											— the public copy stays on Discover, marked as archived,
+											and no longer receives updates. You can remove it later
+											from your Trash page, even after the case itself is
+											permanently deleted.
+										</p>
+									</div>
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+								<Button
+									disabled={loading}
+									onClick={() => onDelete("archive")}
+									variant="outline"
+								>
+									Keep as archived
+								</Button>
+								<Button
+									disabled={loading}
+									onClick={() => onDelete("remove")}
+									variant="destructive"
+								>
+									Remove from Discover
+								</Button>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				) : (
+					<AlertModal
+						confirmButtonText={"Move to Trash"}
+						isOpen={deleteOpen}
+						loading={loading}
+						message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
+						onClose={() => setDeleteOpen(false)}
+						onConfirm={() => onDelete()}
+					/>
+				)}
 				<AlertModal
 					cancelButtonText={"No, keep current identifiers"}
 					confirmButtonText={"Yes, reset all identifiers"}

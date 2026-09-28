@@ -64,6 +64,12 @@ const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 								Published On {formatShortDate(item.publishedAt)}
 							</p>
 						</div>
+						{item.archivedAt && (
+							<p className="mt-2 text-muted-foreground text-sm">
+								Archived on {formatShortDate(item.archivedAt)}. This case no
+								longer receives updates.
+							</p>
+						)}
 					</div>
 				</div>
 				<div className="mt-8 lg:grid lg:grid-cols-2 lg:gap-8">

@@ -1265,6 +1265,46 @@
         }
       }
     },
+    "/cases/trash/archived": {
+      "get": {
+        "operationId": "get-cases-trash-archived",
+        "summary": "List the caller's archived Discover copies",
+        "description": "Returns the caller's own published copies that were kept,",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Array of archived copies"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/information/image": {
       "post": {
         "operationId": "post-cases-{id}-information-image",
@@ -1377,6 +1417,39 @@
           "Cases"
         ],
         "parameters": [],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/trash/archived/{publishedId}": {
+      "delete": {
+        "operationId": "delete-cases-trash-archived-{publishedId}",
+        "summary": "Remove one of the caller's archived Discover copies",
+        "description": "Permanently removes an archived published copy (Chris's",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
           "204": {
             "description": "No Content"

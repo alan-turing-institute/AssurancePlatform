@@ -6,6 +6,7 @@ export * from "./auth";
 export * from "./base";
 export * from "./case-image";
 export * from "./case-information";
+export * from "./case-trash";
 export * from "./comment";
 export * from "./element";
 export * from "./google-drive";

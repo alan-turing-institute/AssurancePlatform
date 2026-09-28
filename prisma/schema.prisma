@@ -93,6 +93,7 @@ model User {
   deletedCases         AssuranceCase[]    @relation("CaseDeleter")
   ownedIntegrations    Integration[]      @relation("IntegrationOwner")
   integrationPrincipal Integration?       @relation("IntegrationPrincipal")
+  archivedPublishedCases PublishedAssuranceCase[] @relation("PublishedCaseArchivedOwner")
 
   @@map("users")
 }
@@ -996,11 +997,14 @@ model PublishedAssuranceCase {
   title           String              @db.VarChar(255) /// Title at time of publishing
   content         Json                /// Full case content as JSON snapshot
   createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  assuranceCaseId String              @map("assurance_case_id") /// Source case this was published from
+  assuranceCaseId String?             @map("assurance_case_id") /// Source case this was published from. Optional — an archived copy (see `archivedAt` below) outlives its case: the FK is `ON DELETE SET NULL`, so a permanent case delete clears this rather than being refused (Chris's ruling 3, 2026-09-28 — the owner can take an archived copy down at any time, including after the case itself is gone).
   description     String?             @db.VarChar(1000) /// Description at time of publishing
+  archivedAt      DateTime?           @map("archived_at") @db.Timestamptz(6) /// Set when this copy was archived rather than removed at trash time (Chris's ruling 1) — null for a live, updating copy. Archiving keeps exactly this — the case's `isCurrent` row — and deletes the case's other (superseded) rows, so an archived copy is always a single record (see `archivePublishedCopies` in `publish-service.ts`).
+  archivedOwnerId String?             @map("archived_owner_id") /// The account that may remove this archived copy (`removeArchivedCopy` in `case-trash-service.ts`) — the case's owner at archive time, or null when nobody can (account deletion, Chris's ruling 4: the deleted owner's account is gone, so the copy is orphaned until the platform team removes it by hand).
 
   // Relations
-  assuranceCase   AssuranceCase @relation(fields: [assuranceCaseId], references: [id])
+  assuranceCase   AssuranceCase? @relation(fields: [assuranceCaseId], references: [id], onDelete: SetNull)
+  archivedOwner   User?          @relation("PublishedCaseArchivedOwner", fields: [archivedOwnerId], references: [id], onDelete: SetNull)
 
   // @@unique/@@index below cover most access patterns, but the slug's TRUE
   // uniqueness constraint (current version only) is a hand-written partial
@@ -1009,6 +1013,7 @@ model PublishedAssuranceCase {
   @@index([slug, isCurrent], map: "published_assurance_cases_slug_current_idx")
 
   @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
+  @@index([archivedOwnerId], map: "published_assurance_cases_archived_owner_id_idx")
   @@map("published_assurance_cases")
 }
 

@@ -29,6 +29,86 @@ type TransactionClient = TransactionCallback extends (
 	? T
 	: never;
 
+/**
+ * Thrown from inside a publish/republish transaction when the case-row
+ * update matches zero rows — the case was moved to Trash after this
+ * function's own permission check ran but before the transaction committed.
+ * Caught by the caller and translated to the same "Case not found" error a
+ * missing case already returns, closing the publish-versus-trash race
+ * (design note, "Publishing and trashing at the same moment").
+ */
+class CaseTrashedDuringTransactionError extends Error {}
+
+/** The five publish-state fields, reset to their draft values — shared by `removePublishedCopies` and `case-trash-service.ts`'s `removeArchivedCopy`. */
+export const DRAFT_PUBLISH_FIELDS = {
+	published: false,
+	publishedAt: null,
+	publishStatus: "DRAFT" as const,
+	markedReadyAt: null,
+	markedReadyById: null,
+};
+
+/**
+ * Removes every published row for the given cases and resets each case's
+ * publish fields to draft — the "remove" half of the published-copy choice
+ * (Chris's ruling 1, 2026-09-28) and the API's default (ruling 6). Runs
+ * inside the caller's transaction; a no-op for an empty list.
+ */
+export async function removePublishedCopies(
+	tx: TransactionClient,
+	caseIds: string[]
+): Promise<void> {
+	if (caseIds.length === 0) {
+		return;
+	}
+	await tx.publishedAssuranceCase.deleteMany({
+		where: { assuranceCaseId: { in: caseIds } },
+	});
+	await tx.assuranceCase.updateMany({
+		where: { id: { in: caseIds } },
+		data: DRAFT_PUBLISH_FIELDS,
+	});
+}
+
+/**
+ * Archives the current published copy of each of the given cases: keeps
+ * each case's `isCurrent` row (stamping `archivedAt`/`archivedOwnerId` on
+ * it) and deletes that case's other, superseded rows — so an archived copy
+ * is always exactly one record. The case's own publish fields are left
+ * untouched, so a later restore finds the case still `PUBLISHED` (Chris's
+ * ruling 5, 2026-09-28). `ownerId` is who may later remove the archived
+ * copy (`removeArchivedCopy` in `case-trash-service.ts`); `null` when
+ * nobody can — account deletion, Chris's ruling 4. Runs inside the caller's
+ * transaction; a no-op for an empty list or for cases with no current
+ * published row.
+ */
+export async function archivePublishedCopies(
+	tx: TransactionClient,
+	caseIds: string[],
+	ownerId: string | null
+): Promise<void> {
+	if (caseIds.length === 0) {
+		return;
+	}
+
+	const currentRows = await tx.publishedAssuranceCase.findMany({
+		where: { assuranceCaseId: { in: caseIds }, isCurrent: true },
+		select: { id: true },
+	});
+	const currentIds = currentRows.map((row) => row.id);
+	if (currentIds.length === 0) {
+		return;
+	}
+
+	await tx.publishedAssuranceCase.deleteMany({
+		where: { assuranceCaseId: { in: caseIds }, id: { notIn: currentIds } },
+	});
+	await tx.publishedAssuranceCase.updateMany({
+		where: { id: { in: currentIds } },
+		data: { archivedAt: new Date(), archivedOwnerId: ownerId },
+	});
+}
+
 // ============================================
 // Shared helpers — publish / republish
 // ============================================
@@ -246,14 +326,22 @@ export async function publishAssuranceCase(
 				description: description ?? null,
 				createdAt: now,
 			});
-			await tx.assuranceCase.update({
-				where: { id: caseId },
+			// Matches only a case still OUT of Trash — closes the race against a
+			// concurrent trash of this case between the permission check above
+			// and this transaction committing (design note, "Publishing and
+			// trashing at the same moment"). Zero rows means the case was
+			// trashed in between; the caller below maps that to "Case not found".
+			const updateResult = await tx.assuranceCase.updateMany({
+				where: { id: caseId, deletedAt: null },
 				data: {
 					published: true,
 					publishedAt: now,
 					publishStatus: "PUBLISHED",
 				},
 			});
+			if (updateResult.count === 0) {
+				throw new CaseTrashedDuringTransactionError();
+			}
 			return created;
 		});
 
@@ -261,6 +349,9 @@ export async function publishAssuranceCase(
 			data: { publishedId: publishedCase.id, publishedAt: now },
 		};
 	} catch (error) {
+		if (error instanceof CaseTrashedDuringTransactionError) {
+			return { error: "Case not found" };
+		}
 		log.error("Failed to publish case", { error });
 		return { error: "Failed to publish case" };
 	}
@@ -282,18 +373,10 @@ export async function unpublishAssuranceCase(
 		return { error: "Permission denied" };
 	}
 
-	// Get the case with its published versions
+	// Get the case to check it exists and is published
 	const assuranceCase = await prisma.assuranceCase.findUnique({
 		where: { id: caseId },
-		select: {
-			id: true,
-			published: true,
-			publishedVersions: {
-				select: {
-					id: true,
-				},
-			},
-		},
+		select: { id: true, published: true },
 	});
 
 	if (!assuranceCase) {
@@ -305,32 +388,7 @@ export async function unpublishAssuranceCase(
 	}
 
 	try {
-		// Delete all published versions, then update the case
-		await prisma.$transaction(async (tx) => {
-			const publishedVersionIds = assuranceCase.publishedVersions.map(
-				(pv) => pv.id
-			);
-
-			if (publishedVersionIds.length > 0) {
-				await tx.publishedAssuranceCase.deleteMany({
-					where: {
-						id: { in: publishedVersionIds },
-					},
-				});
-			}
-
-			// Update the case
-			await tx.assuranceCase.update({
-				where: { id: caseId },
-				data: {
-					published: false,
-					publishedAt: null,
-					publishStatus: "DRAFT",
-					markedReadyAt: null,
-					markedReadyById: null,
-				},
-			});
-		});
+		await prisma.$transaction((tx) => removePublishedCopies(tx, [caseId]));
 
 		return { data: { success: true as const } };
 	} catch (error) {
@@ -531,11 +589,15 @@ export async function updatePublishedCase(
 				createdAt: now,
 			});
 
-			// Update case's publishedAt timestamp
-			await tx.assuranceCase.update({
-				where: { id: caseId },
+			// Update case's publishedAt timestamp. Matches only a case still OUT
+			// of Trash — see `publishAssuranceCase` above for why.
+			const updateResult = await tx.assuranceCase.updateMany({
+				where: { id: caseId, deletedAt: null },
 				data: { publishedAt: now },
 			});
+			if (updateResult.count === 0) {
+				throw new CaseTrashedDuringTransactionError();
+			}
 
 			return published;
 		});
@@ -544,6 +606,9 @@ export async function updatePublishedCase(
 			data: { publishedId: newPublished.id, publishedAt: now },
 		};
 	} catch (error) {
+		if (error instanceof CaseTrashedDuringTransactionError) {
+			return { error: "Case not found" };
+		}
 		log.error("Failed to update published case", { error });
 		return { error: "Failed to update published case" };
 	}

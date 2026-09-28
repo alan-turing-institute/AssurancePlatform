@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import {
+	ArchivedCopiesList,
+	type ArchivedCopy,
+} from "@/components/cases/archived-copies-list";
 import { type TrashedCase, TrashList } from "@/components/cases/trash-list";
 import PageHeading from "@/components/ui/page-heading";
 import { Separator } from "@/components/ui/separator";
@@ -39,13 +43,24 @@ async function fetchTrashedCases(userId: string): Promise<TrashedCase[]> {
 	});
 }
 
+async function fetchArchivedCopies(userId: string): Promise<ArchivedCopy[]> {
+	const { listArchivedCopies } = await import(
+		"@/lib/services/case-trash-service"
+	);
+	const result = await listArchivedCopies(userId);
+	return "error" in result ? [] : result.data;
+}
+
 async function TrashPage() {
 	const session = await validateSession();
 	if (!session) {
 		redirect("/login");
 	}
 
-	const trashedCases = await fetchTrashedCases(session.userId);
+	const [trashedCases, archivedCopies] = await Promise.all([
+		fetchTrashedCases(session.userId),
+		fetchArchivedCopies(session.userId),
+	]);
 
 	return (
 		<div className="min-h-screen space-y-4 p-8">
@@ -55,6 +70,7 @@ async function TrashPage() {
 			/>
 			<Separator />
 			<TrashList cases={trashedCases} />
+			<ArchivedCopiesList copies={archivedCopies} />
 		</div>
 	);
 }
