@@ -424,10 +424,10 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 	});
 
 	/**
-	 * Chris's ruling 4, 2026-09-28: account deletion ARCHIVES the Discover
-	 * copy of a published case it trashes, rather than removing it — the
-	 * deleted owner's account is gone, so nobody can remove the copy through
-	 * the app afterwards (owner is null).
+	 * Account deletion archives the Discover copy of a published case it
+	 * trashes, rather than removing it — the deleted owner's account is
+	 * gone, so nobody can remove the copy through the app afterwards
+	 * (owner is null).
 	 */
 	it("archives, rather than removes, the published copy of a case it trashes", async () => {
 		const owner = await createTestUser({ authProvider: "GITHUB" });

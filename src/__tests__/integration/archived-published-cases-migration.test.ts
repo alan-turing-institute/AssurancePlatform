@@ -9,8 +9,7 @@
  * test proves the constraint itself, at the database level, independent of
  * any application code).
  *
- * Structure only — no `UPDATE`/`DELETE` of existing rows (Chris's ruling 2,
- * 2026-09-28: nothing in Trash today holds a published case), so unlike
+ * Structure only — no `UPDATE`/`DELETE` of existing rows, so unlike
  * `publishing-schema-migration.test.ts` this test has no "before" state to
  * construct; it applies every migration in one pass and checks the result.
  * Same isolation discipline as that file: its own scratch database and its

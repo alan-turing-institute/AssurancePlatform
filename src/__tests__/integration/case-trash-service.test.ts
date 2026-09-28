@@ -22,6 +22,7 @@ import {
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
+import { holdRowLock } from "../utils/row-lock-test-utils";
 
 const MUST_BE_IN_TRASH_PATTERN = /must be in trash/;
 
@@ -78,6 +79,45 @@ describe("case-trash-service", () => {
 				await softDeleteCase(user.id, testCase.id),
 				"Case is already in trash"
 			);
+		});
+
+		it("reaches the in-transaction guard, not just the pre-check, when two trashes race", async () => {
+			// The test above trashes the case and waits for that call to finish
+			// BEFORE starting the second — its pre-transaction read already sees
+			// `deletedAt` set, so it never reaches the guarded `updateMany`
+			// inside the transaction. This forces a genuine Postgres row-lock
+			// wait so the second call's pre-check passes (the row is still
+			// untrashed at that point) and its own transaction discovers the
+			// trash only when its guarded write blocks, then loses the race.
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id, {
+				name: "Racing Double Delete",
+			});
+
+			const holder = await holdRowLock(async (tx) => {
+				await tx.assuranceCase.update({
+					where: { id: testCase.id },
+					data: { deletedAt: new Date(), deletedById: user.id },
+				});
+			});
+
+			const secondTrashPromise = softDeleteCase(user.id, testCase.id);
+			// `softDeleteCase`'s own pre-check is a plain read, which (unlike
+			// the guarded write further in) never blocks on the holder's row
+			// lock — it just races the holder's commit. This delay gives it
+			// room to run against the pre-trash state, so the race lands
+			// where it's meant to: inside the transaction's guarded write.
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			await holder.release();
+			const result = await secondTrashPromise;
+
+			expectError(result, "Case is already in trash");
+
+			const inDb = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+			});
+			expect(inDb.deletedAt).not.toBeNull();
+			expect(inDb.deletedById).toBe(user.id);
 		});
 	});
 
@@ -344,7 +384,7 @@ describe("case-trash-service", () => {
 	});
 
 	// ============================================
-	// softDeleteCase — published-copy choice (design note, Chris's ruling 1)
+	// softDeleteCase — published-copy choice
 	// ============================================
 
 	describe("softDeleteCase — published-copy choice", () => {
@@ -446,7 +486,7 @@ describe("case-trash-service", () => {
 	});
 
 	// ============================================
-	// restoreCase — archived copies (Chris's ruling 5)
+	// restoreCase — archived copies
 	// ============================================
 
 	describe("restoreCase — archived copies", () => {
@@ -490,8 +530,8 @@ describe("case-trash-service", () => {
 	});
 
 	// ============================================
-	// purgeCase — with an archived copy (design note: "either no published
-	// copy, or exactly one archived copy — nothing else is possible")
+	// purgeCase — with an archived copy: a case in Trash has either no
+	// published copy, or exactly one archived copy, and nothing else
 	// ============================================
 
 	describe("purgeCase — with an archived copy", () => {
@@ -523,7 +563,7 @@ describe("case-trash-service", () => {
 	});
 
 	// ============================================
-	// listArchivedCopies / removeArchivedCopy (Chris's ruling 3)
+	// listArchivedCopies / removeArchivedCopy
 	// ============================================
 
 	describe("listArchivedCopies", () => {
@@ -575,6 +615,31 @@ describe("case-trash-service", () => {
 			expect(inDb).toBeNull();
 		});
 
+		it("removes an archived copy whose case has already been permanently deleted", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Gone Before Removal"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+			await purgeCase(owner.id, testCase.id);
+
+			const before = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(before.assuranceCaseId).toBeNull();
+
+			expectSuccess(await removeArchivedCopy(owner.id, published.publishedId));
+
+			const gone = await prisma.publishedAssuranceCase.findUnique({
+				where: { id: published.publishedId },
+			});
+			expect(gone).toBeNull();
+		});
+
 		it("resets the still-trashed case's publish fields to draft after its archived copy is removed", async () => {
 			const owner = await createTestUser();
 			const testCase = await createTestCaseWithGoal(
@@ -620,6 +685,44 @@ describe("case-trash-service", () => {
 				where: { id: published.publishedId },
 			});
 			expect(stillThere).not.toBeNull();
+		});
+
+		it("survives a copy restored (un-archived) between the caller's read and the removal", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Restored Mid-Removal"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			// Holds the published row's lock with an uncommitted restore —
+			// exactly what `restoreCase` does to the same two columns — so the
+			// removal call below has already read the row as archived by the
+			// time this commits underneath it.
+			const holder = await holdRowLock(async (tx) => {
+				await tx.publishedAssuranceCase.update({
+					where: { id: published.publishedId },
+					data: { archivedAt: null, archivedOwnerId: null },
+				});
+			});
+
+			const removalPromise = removeArchivedCopy(
+				owner.id,
+				published.publishedId
+			);
+			await holder.release();
+			const result = await removalPromise;
+
+			expectError(result);
+			const stillLive = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(stillLive.archivedAt).toBeNull();
+			expect(stillLive.archivedOwnerId).toBeNull();
+			expect(stillLive.isCurrent).toBe(true);
 		});
 	});
 });
