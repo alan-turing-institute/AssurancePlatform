@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
 import {
+	listArchivedCopies,
 	listTrashedCases,
 	purgeCase,
+	removeArchivedCopy,
 	restoreCase,
 	softDeleteCase,
 } from "@/lib/services/case-trash-service";
+import { publishAssuranceCase } from "@/lib/services/publish-service";
 import {
 	expectError,
 	expectSameError,
@@ -13,11 +16,13 @@ import {
 } from "../utils/assertion-helpers";
 import {
 	createTestCase,
+	createTestCaseWithGoal,
 	createTestComment,
 	createTestElement,
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 const MUST_BE_IN_TRASH_PATTERN = /must be in trash/;
 
@@ -74,6 +79,46 @@ describe("case-trash-service", () => {
 				await softDeleteCase(user.id, testCase.id),
 				"Case is already in trash"
 			);
+		});
+
+		it("reaches the in-transaction guard, not just the pre-check, when two trashes race", async () => {
+			// The test above trashes the case and waits for that call to finish
+			// BEFORE starting the second — its pre-transaction read already sees
+			// `deletedAt` set, so it never reaches the guarded `updateMany`
+			// inside the transaction. This forces a genuine Postgres row-lock
+			// wait so the second call's pre-check passes (the row is still
+			// untrashed at that point) and its own transaction discovers the
+			// trash only when its guarded write blocks, then loses the race.
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id, {
+				name: "Racing Double Delete",
+			});
+
+			const holder = await holdRowLock(async (tx) => {
+				await tx.assuranceCase.update({
+					where: { id: testCase.id },
+					data: { deletedAt: new Date(), deletedById: user.id },
+				});
+			});
+
+			const secondTrashPromise = softDeleteCase(user.id, testCase.id);
+			// `softDeleteCase`'s own pre-check is a plain read, which (unlike
+			// the guarded write further in) never blocks on the holder's row
+			// lock — it just races the holder's commit. Waiting for Postgres to
+			// report it blocked on a lock proves it has reached the guarded
+			// write, so the race lands where it's meant to: inside the
+			// transaction, not here.
+			await waitForLockWait();
+			await holder.release();
+			const result = await secondTrashPromise;
+
+			expectError(result, "Case is already in trash");
+
+			const inDb = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+			});
+			expect(inDb.deletedAt).not.toBeNull();
+			expect(inDb.deletedById).toBe(user.id);
 		});
 	});
 
@@ -336,6 +381,355 @@ describe("case-trash-service", () => {
 			);
 
 			expectError(await fetchCaseFromPrisma(testCase.id, user.id));
+		});
+	});
+
+	// ============================================
+	// softDeleteCase — published-copy choice
+	// ============================================
+
+	describe("softDeleteCase — published-copy choice", () => {
+		it("removes the published copy by default when trashing a published case", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(owner.id, "Remove Me");
+			await publishAssuranceCase(owner.id, testCase.id);
+
+			expectSuccess(await softDeleteCase(owner.id, testCase.id));
+
+			const remaining = await prisma.publishedAssuranceCase.findMany({
+				where: { assuranceCaseId: testCase.id },
+			});
+			expect(remaining).toHaveLength(0);
+
+			const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+			});
+			expect(updatedCase.published).toBe(false);
+			expect(updatedCase.publishStatus).toBe("DRAFT");
+		});
+
+		it("archives the published copy, owned by the case's creator, when asked to", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(owner.id, "Archive Me");
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+
+			expectSuccess(
+				await softDeleteCase(owner.id, testCase.id, {
+					publishedCopy: "archive",
+				})
+			);
+
+			const archived = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(archived.archivedAt).not.toBeNull();
+			expect(archived.archivedOwnerId).toBe(owner.id);
+			expect(archived.isCurrent).toBe(true);
+
+			// Publish fields on the case are left as they were — a restore finds
+			// the case still PUBLISHED.
+			const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+			});
+			expect(updatedCase.published).toBe(true);
+			expect(updatedCase.publishStatus).toBe("PUBLISHED");
+		});
+
+		it("archives the copy under the case's OWNER, not an Admin collaborator who does the deleting", async () => {
+			const owner = await createTestUser();
+			const admin = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Collaborator Case"
+			);
+			await createTestPermission(testCase.id, admin.id, owner.id, "ADMIN");
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+
+			expectSuccess(
+				await softDeleteCase(admin.id, testCase.id, {
+					publishedCopy: "archive",
+				})
+			);
+
+			const archived = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(archived.archivedOwnerId).toBe(owner.id);
+		});
+
+		it("keeps only the current version, deleting superseded ones, when archiving", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(owner.id, "Multi-Version");
+			await publishAssuranceCase(owner.id, testCase.id);
+			const { updatePublishedCase } = await import(
+				"@/lib/services/publish-service"
+			);
+			const republished = expectSuccess(
+				await updatePublishedCase(owner.id, testCase.id, "Second release")
+			);
+
+			expectSuccess(
+				await softDeleteCase(owner.id, testCase.id, {
+					publishedCopy: "archive",
+				})
+			);
+
+			const remaining = await prisma.publishedAssuranceCase.findMany({
+				where: { assuranceCaseId: testCase.id },
+			});
+			expect(remaining).toHaveLength(1);
+			expect(remaining[0]!.id).toBe(republished.publishedId);
+		});
+	});
+
+	// ============================================
+	// restoreCase — archived copies
+	// ============================================
+
+	describe("restoreCase — archived copies", () => {
+		it("un-archives the case's archived copy, making it live again", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Restore Archived"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			expectSuccess(await restoreCase(owner.id, testCase.id));
+
+			const restored = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(restored.archivedAt).toBeNull();
+			expect(restored.archivedOwnerId).toBeNull();
+		});
+
+		it("gives a draft when restoring a case whose published copy was removed (not archived)", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Restore Removed"
+			);
+			await publishAssuranceCase(owner.id, testCase.id);
+			await softDeleteCase(owner.id, testCase.id);
+
+			expectSuccess(await restoreCase(owner.id, testCase.id));
+
+			const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+			});
+			expect(updatedCase.published).toBe(false);
+			expect(updatedCase.publishStatus).toBe("DRAFT");
+		});
+	});
+
+	// ============================================
+	// purgeCase — with an archived copy: a case in Trash has either no
+	// published copy, or exactly one archived copy, and nothing else
+	// ============================================
+
+	describe("purgeCase — with an archived copy", () => {
+		it("succeeds and leaves the archived copy public", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Purge With Archive"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			expectSuccess(await purgeCase(owner.id, testCase.id));
+
+			const caseInDb = await prisma.assuranceCase.findUnique({
+				where: { id: testCase.id },
+			});
+			expect(caseInDb).toBeNull();
+
+			const archived = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(archived.assuranceCaseId).toBeNull();
+			expect(archived.isCurrent).toBe(true);
+			expect(archived.archivedAt).not.toBeNull();
+		});
+	});
+
+	// ============================================
+	// listArchivedCopies / removeArchivedCopy
+	// ============================================
+
+	describe("listArchivedCopies", () => {
+		it("returns only the caller's own archived copies", async () => {
+			const userA = await createTestUser();
+			const userB = await createTestUser();
+			const caseA = await createTestCaseWithGoal(userA.id, "A's Case");
+			const caseB = await createTestCaseWithGoal(userB.id, "B's Case");
+			await publishAssuranceCase(userA.id, caseA.id);
+			await publishAssuranceCase(userB.id, caseB.id);
+			await softDeleteCase(userA.id, caseA.id, { publishedCopy: "archive" });
+			await softDeleteCase(userB.id, caseB.id, { publishedCopy: "archive" });
+
+			const data = expectSuccess(await listArchivedCopies(userA.id));
+			expect(data).toHaveLength(1);
+			expect(data[0]!.title).toBe("A's Case");
+		});
+
+		it("includes a copy whose case has since been permanently deleted", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(owner.id, "Gone Case");
+			await publishAssuranceCase(owner.id, testCase.id);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+			await purgeCase(owner.id, testCase.id);
+
+			const data = expectSuccess(await listArchivedCopies(owner.id));
+			expect(data).toHaveLength(1);
+			expect(data[0]!.title).toBe("Gone Case");
+		});
+	});
+
+	describe("removeArchivedCopy", () => {
+		it("removes the owner's own archived copy", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Removable Archive"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			expectSuccess(await removeArchivedCopy(owner.id, published.publishedId));
+
+			const inDb = await prisma.publishedAssuranceCase.findUnique({
+				where: { id: published.publishedId },
+			});
+			expect(inDb).toBeNull();
+		});
+
+		it("removes an archived copy whose case has already been permanently deleted", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Gone Before Removal"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+			await purgeCase(owner.id, testCase.id);
+
+			const before = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(before.assuranceCaseId).toBeNull();
+
+			expectSuccess(await removeArchivedCopy(owner.id, published.publishedId));
+
+			const gone = await prisma.publishedAssuranceCase.findUnique({
+				where: { id: published.publishedId },
+			});
+			expect(gone).toBeNull();
+		});
+
+		it("resets the still-trashed case's publish fields to draft after its archived copy is removed", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Draft After Removal"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			expectSuccess(await removeArchivedCopy(owner.id, published.publishedId));
+
+			const updatedCase = await prisma.assuranceCase.findUniqueOrThrow({
+				where: { id: testCase.id },
+			});
+			expect(updatedCase.published).toBe(false);
+			expect(updatedCase.publishStatus).toBe("DRAFT");
+		});
+
+		it("returns the same error for someone else's archived copy as for a missing id", async () => {
+			const owner = await createTestUser();
+			const stranger = await createTestUser();
+			const testCase = await createTestCaseWithGoal(owner.id, "Someone Else's");
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			const notOwnedResult = await removeArchivedCopy(
+				stranger.id,
+				published.publishedId
+			);
+			const missingResult = await removeArchivedCopy(
+				stranger.id,
+				"00000000-0000-0000-0000-000000000000"
+			);
+
+			expectSameError(notOwnedResult, missingResult);
+
+			// The copy itself is untouched by the failed attempt.
+			const stillThere = await prisma.publishedAssuranceCase.findUnique({
+				where: { id: published.publishedId },
+			});
+			expect(stillThere).not.toBeNull();
+		});
+
+		it("survives a copy restored (un-archived) between the caller's read and the removal", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCaseWithGoal(
+				owner.id,
+				"Restored Mid-Removal"
+			);
+			const published = expectSuccess(
+				await publishAssuranceCase(owner.id, testCase.id)
+			);
+			await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+			// Holds the published row's lock with an uncommitted restore —
+			// exactly what `restoreCase` does to the same two columns — so the
+			// removal call below has already read the row as archived by the
+			// time this commits underneath it.
+			const holder = await holdRowLock(async (tx) => {
+				await tx.publishedAssuranceCase.update({
+					where: { id: published.publishedId },
+					data: { archivedAt: null, archivedOwnerId: null },
+				});
+			});
+
+			const removalPromise = removeArchivedCopy(
+				owner.id,
+				published.publishedId
+			);
+			// Waits for Postgres to report the removal blocked on a lock, proving
+			// it has already read the row as archived and reached its own
+			// guarded delete — so releasing now lands the restore's commit
+			// underneath it, in the middle of the removal's transaction, not
+			// before it starts.
+			await waitForLockWait();
+			await holder.release();
+			const result = await removalPromise;
+
+			expectError(result);
+			const stillLive = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+				where: { id: published.publishedId },
+			});
+			expect(stillLive.archivedAt).toBeNull();
+			expect(stillLive.archivedOwnerId).toBeNull();
+			expect(stillLive.isCurrent).toBe(true);
 		});
 	});
 });

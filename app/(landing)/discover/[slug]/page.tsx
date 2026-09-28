@@ -6,6 +6,7 @@ import { fetchPublishedItemBySlug } from "@/actions/discover";
 import { SanitisedHtml } from "@/components/cases/sanitised-html";
 import { formatShortDate } from "@/lib/date";
 import { resolveFeatureImageSrc } from "@/lib/discover-image";
+import { ArchivedOnNotice } from "../_components/archived-status";
 import DownloadPublishedItemButton from "../_components/download-published-item-button";
 import PublishableItemTypeBadge from "../_components/publishable-item-type-badge";
 
@@ -64,6 +65,7 @@ const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 								Published On {formatShortDate(item.publishedAt)}
 							</p>
 						</div>
+						<ArchivedOnNotice archivedAt={item.archivedAt} />
 					</div>
 				</div>
 				<div className="mt-8 lg:grid lg:grid-cols-2 lg:gap-8">

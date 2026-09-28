@@ -24,6 +24,7 @@ const log = logger.child({ component: "discover-service" });
  * patterns with no shape change.
  */
 export interface PublishableItemSummary {
+	archivedAt: Date | null;
 	authors: string | null;
 	description: string | null;
 	featureImageUrl: string | null;
@@ -41,6 +42,7 @@ export interface PublishableItemDetail extends PublishableItemSummary {
 }
 
 interface PublishedRecord {
+	archivedAt: Date | null;
 	content: unknown;
 	createdAt: Date;
 	description: string | null;
@@ -85,6 +87,7 @@ function toSummary(record: PublishedRecord): PublishableItemSummary {
 		authors: meta.caseInformation?.authors ?? null,
 		featureImageUrl: meta.caseInformation?.featureImageUrl ?? null,
 		publishedAt: record.createdAt,
+		archivedAt: record.archivedAt,
 	};
 }
 

@@ -524,6 +524,7 @@ export async function fetchCaseFromPrisma(
 			createdDate: caseData.createdAt.toISOString(),
 			colourProfile: caseData.colourProfile ?? undefined,
 			owner: caseData.createdById ?? undefined,
+			isOwner: permissionResult.isOwner,
 			goals,
 			permissions,
 			type: "assurance_case",
@@ -593,6 +594,8 @@ export interface AssuranceCaseSummary {
 	name: string;
 	owner?: string;
 	permissions?: string;
+	/** Whether the case has a current published copy on Discover. */
+	published?: boolean;
 	updatedDate: string;
 }
 
@@ -628,6 +631,7 @@ export async function listUserCases(
 				updatedAt: true,
 				createdById: true,
 				isDemo: true,
+				published: true,
 			},
 			orderBy: { createdAt: "desc" },
 		});
@@ -642,6 +646,7 @@ export async function listUserCases(
 				owner: c.createdById ?? undefined,
 				isDemo: c.isDemo,
 				permissions: c.createdById === userId ? "owner" : "view",
+				published: c.published,
 			})),
 		};
 	} catch (error) {
@@ -695,6 +700,7 @@ export async function listSharedCases(
 				createdAt: true,
 				updatedAt: true,
 				createdById: true,
+				published: true,
 			},
 			orderBy: { createdAt: "desc" },
 		});
@@ -707,6 +713,7 @@ export async function listSharedCases(
 				createdDate: c.createdAt.toISOString(),
 				updatedDate: c.updatedAt.toISOString(),
 				owner: c.createdById ?? undefined,
+				published: c.published,
 			})),
 		};
 	} catch (error) {

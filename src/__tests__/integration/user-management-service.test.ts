@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth/password-service";
 import prisma from "@/lib/prisma";
 import { sendAccountDeletedEmail } from "@/lib/services/email-service";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
+import { publishAssuranceCase } from "@/lib/services/publish-service";
 import {
 	changePassword,
 	deleteAccount,
@@ -13,6 +14,7 @@ import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	addTeamMember,
 	createTestCase,
+	createTestCaseWithGoal,
 	createTestIntegrationWithSystemUser,
 	createTestPermission,
 	createTestTeam,
@@ -419,6 +421,51 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 			where: { id: testCase.id },
 		});
 		expect(updatedCase.deletedAt).not.toBeNull();
+	});
+
+	/**
+	 * Account deletion archives the Discover copy of a published case it
+	 * trashes, rather than removing it — the deleted owner's account is
+	 * gone, so nobody can remove the copy through the app afterwards
+	 * (owner is null).
+	 */
+	it("archives, rather than removes, the published copy of a case it trashes", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Solo published case"
+		);
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const archived = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		expect(archived.archivedAt).not.toBeNull();
+		expect(archived.archivedOwnerId).toBeNull();
+	});
+
+	it("does not archive the published copy of a KEPT case (another Admin present)", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const admin = await createTestUser();
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Kept published case"
+		);
+		await createTestPermission(testCase.id, admin.id, owner.id, "ADMIN");
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const stillLive = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		expect(stillLive.archivedAt).toBeNull();
 	});
 });
 

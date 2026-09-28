@@ -54,6 +54,7 @@ Table users {
   deletedCases assurance_cases [not null]
   ownedIntegrations integrations [not null]
   integrationPrincipal integrations
+  archivedPublishedCases published_assurance_cases [not null]
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -563,9 +564,12 @@ Table published_assurance_cases {
   title String [not null, note: 'Title at time of publishing']
   content Json [not null, note: 'Full case content as JSON snapshot']
   createdAt DateTime [default: `now()`, not null]
-  assuranceCaseId String [not null, note: 'Source case this was published from']
+  assuranceCaseId String [note: 'Source case this was published from. Optional — an archived copy (see `archivedAt` below) outlives its case: the FK is `ON DELETE SET NULL`, so a permanent case delete clears this rather than being refused, and the owner can take an archived copy down even after the case itself is gone.']
   description String [note: 'Description at time of publishing']
-  assuranceCase assurance_cases [not null]
+  archivedAt DateTime [note: 'Set when this copy was archived rather than removed at trash time; null for a live, updating copy. Archiving keeps exactly this — the case\'s `isCurrent` row — and deletes the case\'s other (superseded) rows, so an archived copy is always a single record (see `archivePublishedCopies` in `publish-service.ts`).']
+  archivedOwnerId String [note: 'The account that may remove this archived copy (`removeArchivedCopy` in `case-trash-service.ts`) — the case\'s owner at archive time, or null when nobody can (account deletion: the deleted owner\'s account is gone, so the copy is orphaned until the platform team removes it by hand).']
+  assuranceCase assurance_cases
+  archivedOwner users
 
   Note: 'Frozen, point-in-time snapshot of an assurance case (ADR 0003 §3): the
 public/Discover-facing published record. Content stored as JSON;
@@ -889,7 +893,9 @@ Ref: case_type_assignments.caseTypeId > case_types.id [delete: Cascade]
 
 Ref: github_repositories.userId > users.id [delete: Cascade]
 
-Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id
+Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id [delete: Set Null]
+
+Ref: published_assurance_cases.archivedOwnerId > users.id [delete: Set Null]
 
 Ref: plugin_data.caseId > assurance_cases.id [delete: Cascade]
 

@@ -74,6 +74,7 @@ Rules marked **(run)** need a test or CI result, so ask the author for the evide
 - No partner names, internal project codenames, private design records or infrastructure identifiers in code, UI copy, placeholder text, demo content, fixtures, comments, docs or commit messages.
   Check the names the diff adds.
   An existing name that the diff only sits near is not a new finding.
+- Code comments, docs and generated files state behaviour and do not cite internal rulings, people's decisions, internal design records or their dates.
 - A new example name (an organisation, a domain, a case) must already be public and not tied to a partner.
 - Product documentation in `content/` describes how the product works.
   It does not list open software defects or planned bug fixes.

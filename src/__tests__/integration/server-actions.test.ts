@@ -110,6 +110,60 @@ describe("fetchCaseComments", () => {
 });
 
 // ============================================
+// deleteAssuranceCase (actions/cases.ts)
+// ============================================
+
+describe("deleteAssuranceCase", () => {
+	it("archives, rather than removes, the Discover copy when publishedCopy is 'archive'", async () => {
+		const owner = await createTestUser();
+		const { createTestCaseWithGoal } = await import(
+			"../utils/prisma-factories"
+		);
+		const { publishAssuranceCase } = await import(
+			"@/lib/services/publish-service"
+		);
+		const testCase = await createTestCaseWithGoal(owner.id, "Delete Choice");
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { deleteAssuranceCase } = await import("@/actions/cases");
+		expectSuccess(
+			await deleteAssuranceCase(testCase.id, { publishedCopy: "archive" })
+		);
+
+		const prisma = (await import("@/lib/prisma")).default;
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		expect(row.archivedAt).not.toBeNull();
+		expect(row.archivedOwnerId).toBe(owner.id);
+	});
+
+	it('refuses a malformed "options" payload with "Invalid delete options"', async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { deleteAssuranceCase } = await import("@/actions/cases");
+		const result = await deleteAssuranceCase(testCase.id, {
+			// @ts-expect-error — deliberately malformed for the test
+			publishedCopy: "not-a-real-choice",
+		});
+
+		expectError(result, "Invalid delete options");
+
+		const prisma = (await import("@/lib/prisma")).default;
+		const inDb = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(inDb.deletedAt).toBeNull();
+	});
+});
+
+// ============================================
 // loadStaticCaseData (actions/case-data.ts)
 // ============================================
 

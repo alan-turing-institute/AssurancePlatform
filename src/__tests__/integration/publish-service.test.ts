@@ -24,6 +24,7 @@ import {
 	createTestPluginData,
 	createTestUser,
 } from "../utils/prisma-factories";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 // Top-level regex constants required by lint/performance/useTopLevelRegex
 const INVALID_STATUS_TRANSITION = /Invalid status transition/;
@@ -777,5 +778,162 @@ describe("publishAssuranceCase — case information snapshot capture", () => {
 			caseInformation?: { description?: string };
 		};
 		expect(content.caseInformation?.description).toBe("After republish");
+	});
+});
+
+// ============================================
+// archivePublishedCopies — does not re-stamp an already-archived copy
+// ============================================
+
+describe("archivePublishedCopies — idempotent against an already-archived copy", () => {
+	it("keeps the original archivedAt and archivedOwnerId when run again over the same case", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Re-Archive");
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const { archivePublishedCopies } = await import(
+			"@/lib/services/publish-service"
+		);
+		await prisma.$transaction((tx) =>
+			archivePublishedCopies(tx, [testCase.id], owner.id)
+		);
+		const firstArchive = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		expect(firstArchive.archivedAt).not.toBeNull();
+		expect(firstArchive.archivedOwnerId).toBe(owner.id);
+
+		// A later sweep over the same already-trashed case — e.g. an
+		// account-deletion retry, which archives with `ownerId: null` — must
+		// not touch a copy that's already archived.
+		await prisma.$transaction((tx) =>
+			archivePublishedCopies(tx, [testCase.id], null)
+		);
+		const secondArchive = await prisma.publishedAssuranceCase.findUniqueOrThrow(
+			{
+				where: { id: published.publishedId },
+			}
+		);
+		expect(secondArchive.archivedAt).toEqual(firstArchive.archivedAt);
+		expect(secondArchive.archivedOwnerId).toBe(owner.id);
+	});
+});
+
+// ============================================
+// A case in Trash cannot be published or republished, including when the
+// two actions overlap
+// ============================================
+
+describe("publishAssuranceCase / updatePublishedCase — refused for a trashed case", () => {
+	it("refuses to publish a trashed, never-published case", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Trashed Draft");
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		await softDeleteCase(owner.id, testCase.id);
+
+		expectError(await publishAssuranceCase(owner.id, testCase.id));
+
+		const updated = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+		});
+		expect(updated.published).toBe(false);
+	});
+
+	it("refuses to republish a trashed, already-published case whose copy was kept archived", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Trashed Published"
+		);
+		await publishAssuranceCase(owner.id, testCase.id);
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+		expectError(
+			await updatePublishedCase(owner.id, testCase.id, "Should not land")
+		);
+	});
+});
+
+// ============================================
+// The trash race, reached for real: every test above trashes the case
+// BEFORE calling publish/republish, so the permission check (which treats
+// a trashed case as not found) refuses first and never reaches the guard
+// inside the transaction. These force a genuine Postgres row-lock wait so
+// the case is trashed mid-transaction instead — after the permission
+// check has already passed.
+// ============================================
+
+describe("publishAssuranceCase / updatePublishedCase — the trash race, reached for real", () => {
+	it('returns "Case not found" and creates no row when the case is trashed mid-transaction during first publish', async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Race First Publish"
+		);
+
+		const holder = await holdRowLock(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: testCase.id },
+				data: { deletedAt: new Date(), deletedById: owner.id },
+			});
+		});
+
+		const publishPromise = publishAssuranceCase(owner.id, testCase.id);
+		// `publishAssuranceCase`'s own permission check is a plain read, which
+		// (unlike the guarded write further in) never blocks on the holder's
+		// row lock — it just races the holder's commit. Waiting for Postgres to
+		// report it blocked on a lock proves it has reached the guarded write,
+		// so the race lands where it's meant to: inside the transaction, not here.
+		await waitForLockWait();
+		await holder.release();
+		const result = await publishPromise;
+
+		expectError(result, "Case not found");
+
+		const rows = await prisma.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(rows).toHaveLength(0);
+	});
+
+	it('returns "Case not found" and leaves the existing published row untouched when the case is trashed mid-transaction during republish', async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Race Republish");
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const holder = await holdRowLock(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: testCase.id },
+				data: { deletedAt: new Date(), deletedById: owner.id },
+			});
+		});
+
+		const republishPromise = updatePublishedCase(
+			owner.id,
+			testCase.id,
+			"Should not land"
+		);
+		// See the equivalent comment in the first-publish test above.
+		await waitForLockWait();
+		await holder.release();
+		const result = await republishPromise;
+
+		expectError(result, "Case not found");
+
+		const rows = await prisma.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]!.id).toBe(published.publishedId);
+		expect(rows[0]!.isCurrent).toBe(true);
 	});
 });

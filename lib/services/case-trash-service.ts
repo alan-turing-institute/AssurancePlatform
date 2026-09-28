@@ -1,10 +1,19 @@
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import type { DeleteCaseOptionsInput } from "@/lib/schemas/case-trash";
 import { requireCronSecret } from "@/lib/services/cron-auth";
+import {
+	archivePublishedCopies,
+	DRAFT_PUBLISH_FIELDS,
+	removePublishedCopies,
+} from "@/lib/services/publish-service";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "case-trash-service" });
+
+/** Thrown inside `softDeleteCase`'s transaction when the deletion-fields update matches zero rows — the case was already trashed by a concurrent call. */
+class CaseAlreadyInTrashError extends Error {}
 
 // ============================================
 // OUTPUT INTERFACES
@@ -26,6 +35,16 @@ export interface TrashListResponse {
 export interface PurgeResult {
 	cutoffDate: string;
 	purgedCount: number;
+}
+
+/** `softDeleteCase`'s options — the same shape `deleteCaseOptionsSchema` validates at the action layer, so the two never drift apart. */
+export type SoftDeleteCaseOptions = DeleteCaseOptionsInput;
+
+export interface ArchivedCopyResponse {
+	archivedAt: string;
+	id: string;
+	slug: string;
+	title: string;
 }
 
 // ============================================
@@ -109,14 +128,23 @@ export async function listTrashedCases(
 }
 
 /**
- * Soft-deletes a case (moves to trash).
- * Requires ADMIN permission on the case.
+ * Soft-deletes a case (moves to trash). Requires ADMIN permission on the
+ * case.
+ *
+ * When the case has a current published copy, `options.publishedCopy`
+ * chooses what happens to it: `"remove"` (the default, and the pre-existing
+ * behaviour) deletes the Discover copy; `"archive"` keeps it, marked
+ * archived, owned by the case's creator — never the caller, so an Admin
+ * collaborator who trashes someone else's case cannot make themselves the
+ * copy's future remover.
  */
 export async function softDeleteCase(
 	userId: string,
-	caseId: string
+	caseId: string,
+	options?: SoftDeleteCaseOptions
 ): ServiceResult {
 	const { canAccessCase } = await import("@/lib/permissions");
+	const publishedCopy = options?.publishedCopy ?? "remove";
 
 	// Check permission - only ADMIN can delete. `includeTrashed: true` so an
 	// already-trashed case still reaches the ADMIN check below, instead of
@@ -133,7 +161,7 @@ export async function softDeleteCase(
 		// Check if case exists and is not already deleted
 		const existingCase = await prisma.assuranceCase.findUnique({
 			where: { id: caseId },
-			select: { deletedAt: true },
+			select: { createdById: true, deletedAt: true },
 		});
 
 		if (!existingCase) {
@@ -144,25 +172,49 @@ export async function softDeleteCase(
 			return { error: "Case is already in trash" };
 		}
 
-		// Soft-delete: set deletedAt and deletedById
-		await prisma.assuranceCase.update({
-			where: { id: caseId },
-			data: {
-				deletedAt: new Date(),
-				deletedById: userId,
-			},
+		await prisma.$transaction(async (tx) => {
+			// Matches only a case not already in Trash — closes the race against
+			// a concurrent trash of the same case between the check above and
+			// this transaction committing.
+			const updateResult = await tx.assuranceCase.updateMany({
+				where: { id: caseId, deletedAt: null },
+				data: { deletedAt: new Date(), deletedById: userId },
+			});
+			if (updateResult.count === 0) {
+				throw new CaseAlreadyInTrashError();
+			}
+
+			const currentPublished = await tx.publishedAssuranceCase.findFirst({
+				where: { assuranceCaseId: caseId, isCurrent: true },
+				select: { id: true },
+			});
+			if (currentPublished) {
+				if (publishedCopy === "archive") {
+					await archivePublishedCopies(tx, [caseId], existingCase.createdById);
+				} else {
+					await removePublishedCopies(tx, [caseId]);
+				}
+			}
 		});
 
 		return { data: true };
 	} catch (error) {
+		if (error instanceof CaseAlreadyInTrashError) {
+			return { error: "Case is already in trash" };
+		}
 		log.error("Failed to soft-delete case", { error });
 		return { error: "Failed to delete case" };
 	}
 }
 
 /**
- * Restores a case from trash.
- * Only the case owner can restore.
+ * Restores a case from trash. Only the case owner can restore.
+ *
+ * If the case's published copy was archived (rather than removed) when it
+ * was trashed, restoring it also un-archives that copy: it goes live again
+ * at the same address, and the next "Update published version" refreshes
+ * it as normal. A no-op when there is no archived copy (removed already,
+ * or never published).
  */
 export async function restoreCase(
 	userId: string,
@@ -179,12 +231,18 @@ export async function restoreCase(
 	}
 
 	try {
-		await prisma.assuranceCase.update({
-			where: { id: caseId },
-			data: {
-				deletedAt: null,
-				deletedById: null,
-			},
+		await prisma.$transaction(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: caseId },
+				data: {
+					deletedAt: null,
+					deletedById: null,
+				},
+			});
+			await tx.publishedAssuranceCase.updateMany({
+				where: { assuranceCaseId: caseId, archivedAt: { not: null } },
+				data: { archivedAt: null, archivedOwnerId: null },
+			});
 		});
 
 		return { data: true };
@@ -259,5 +317,114 @@ export async function purgeExpiredCases(
 	} catch (error) {
 		log.error("Failed to purge expired cases", { error });
 		return { error: "Failed to purge trash" };
+	}
+}
+
+/**
+ * Lists the caller's own archived Discover copies — the "Archived on
+ * Discover" section on the Trash page. Includes copies whose case is still
+ * in Trash and copies whose case has since been permanently deleted
+ * (`assuranceCaseId` cleared by the relaxed FK); both are handled
+ * identically here, since `archivedOwnerId` alone determines who may
+ * remove one. `archivedAt: { not: null }` is redundant with `archivedOwnerId`
+ * ever being set — every archived row has both — but keeping it in the
+ * `where` clause is what lets `archivedAt` come back non-null without a
+ * cast.
+ */
+export async function listArchivedCopies(
+	userId: string
+): ServiceResult<ArchivedCopyResponse[]> {
+	try {
+		const rows = await prisma.publishedAssuranceCase.findMany({
+			where: { archivedOwnerId: userId, archivedAt: { not: null } },
+			select: { id: true, title: true, slug: true, archivedAt: true },
+			orderBy: { archivedAt: "desc" },
+		});
+
+		return {
+			data: rows.map((row) => {
+				// The `where` clause guarantees this at the database level; Prisma's
+				// generated type doesn't carry that guarantee through to `select`,
+				// so this is a runtime narrowing check, not a cast.
+				if (!row.archivedAt) {
+					throw new Error(
+						`listArchivedCopies: row ${row.id} matched archivedAt: { not: null } but came back null`
+					);
+				}
+				return {
+					id: row.id,
+					title: row.title,
+					slug: row.slug,
+					archivedAt: row.archivedAt.toISOString(),
+				};
+			}),
+		};
+	} catch (error) {
+		log.error("Failed to list archived copies", { error });
+		return { error: "Failed to fetch archived copies" };
+	}
+}
+
+/**
+ * Removes one of the caller's own archived Discover copies — the author
+ * can take an archived copy down at any time, including after the case
+ * itself is permanently deleted. Deletes the row only when
+ * `archivedOwnerId` matches the caller — a missing id and someone else's
+ * copy return the identical error, so the response cannot be used to
+ * enumerate other users' archived copies. When the source case still
+ * exists (still in Trash), its publish fields are reset to draft, matching
+ * what removing the copy at trash time would have done — so restoring it
+ * afterwards gives a draft.
+ */
+export async function removeArchivedCopy(
+	userId: string,
+	publishedId: string
+): ServiceResult {
+	try {
+		const removed = await prisma.$transaction(async (tx) => {
+			const row = await tx.publishedAssuranceCase.findFirst({
+				where: {
+					id: publishedId,
+					archivedOwnerId: userId,
+					archivedAt: { not: null },
+				},
+				select: { assuranceCaseId: true },
+			});
+			if (!row) {
+				return false;
+			}
+
+			// Re-checks the same guard at delete time, closing the race against a
+			// concurrent restore: if the copy was un-archived between the read
+			// above and this delete, `count` comes back 0 and the (now live)
+			// copy is left untouched.
+			const deleted = await tx.publishedAssuranceCase.deleteMany({
+				where: {
+					id: publishedId,
+					archivedOwnerId: userId,
+					archivedAt: { not: null },
+				},
+			});
+			if (deleted.count === 0) {
+				return false;
+			}
+
+			if (row.assuranceCaseId) {
+				await tx.assuranceCase.updateMany({
+					where: { id: row.assuranceCaseId },
+					data: DRAFT_PUBLISH_FIELDS,
+				});
+			}
+			return true;
+		});
+
+		if (!removed) {
+			return { error: "Archived copy not found" };
+		}
+
+		return { data: true };
+	} catch (error) {
+		log.error("Failed to remove archived copy", { error });
+		return { error: "Failed to remove archived copy" };
 	}
 }

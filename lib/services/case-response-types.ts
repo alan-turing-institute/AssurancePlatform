@@ -212,6 +212,8 @@ export interface AssuranceCaseResponse {
 	images?: CaseImageResponse[];
 	/** True for auto-generated tutorial cases */
 	isDemo?: boolean;
+	/** Whether the caller is the case's owner, rather than a collaborator with delete rights (both map to `permissions: "manage"`) */
+	isOwner?: boolean;
 	/** ELK layout direction preference: TB (top-bottom) or LR (left-right) */
 	layoutDirection?: "TB" | "LR";
 	/** When the case was marked as ready to publish */

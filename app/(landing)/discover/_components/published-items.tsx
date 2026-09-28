@@ -16,6 +16,7 @@ import { formatShortDate } from "@/lib/date";
 import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { PublishableItemSummaryResponse } from "@/lib/services/discover-transforms";
+import { ArchivedBadge } from "./archived-status";
 import PublishableItemTypeBadge from "./publishable-item-type-badge";
 
 interface PublishedItemsProps {
@@ -115,6 +116,7 @@ function PublishedItems({ items }: PublishedItemsProps) {
 												{item.sector}
 											</span>
 										)}
+										<ArchivedBadge archivedAt={item.archivedAt} />
 									</div>
 									<div className="group relative">
 										<h3 className="mt-3 font-semibold text-foreground text-lg/6 group-hover:text-muted-foreground">

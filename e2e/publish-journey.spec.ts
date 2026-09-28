@@ -75,9 +75,10 @@ test.describe("ADR 0003 — publish journey", () => {
 		// a shared dev DB (mirrors machine-whoami.spec.ts's afterAll).
 		if (caseId) {
 			// Failure-tolerant: an aborted run can die while the case is still
-			// published, leaving a `published_assurance_cases` row that
-			// foreign-keys onto the case — delete those first or the case
-			// delete throws `published_assurance_cases_assurance_case_id_fkey`.
+			// published, leaving a `published_assurance_cases` row. Deleting the
+			// case alone would now just clear that row's `assuranceCaseId`
+			// rather than fail, but this cleans up the row itself too, so a
+			// repeated run doesn't leave orphaned published rows behind.
 			await prisma.publishedAssuranceCase.deleteMany({
 				where: { assuranceCaseId: caseId },
 			});
