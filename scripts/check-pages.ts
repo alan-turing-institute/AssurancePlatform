@@ -18,6 +18,12 @@
  *                           from the database DATABASE_URL points at
  *   --storage-state <file>  reuse an existing signed-in session instead of
  *                           logging in as the seed user
+ *   --only <list>           comma-separated subset of status,errors,
+ *                           placeholders,a11y,cls. Only the listed checks
+ *                           can fail a page (via failReasons/pass); every
+ *                           check still runs and its result is still on
+ *                           PageResult (axe, cls, placeholderHits, ...).
+ *                           Default: all five can fail.
  *   --json <file>           also write the full result array as JSON
  *   --cls-budget <n>        cumulative layout shift budget (default 0.1)
  *   --baseline <file>       known-problems baseline, keyed by route template
@@ -75,6 +81,17 @@ export const PLACEHOLDER_PATTERNS = [
 	"[object Object]",
 ];
 
+/** The five checks a page result can fail on; --only picks a subset. */
+export const CHECK_CATEGORIES = [
+	"status",
+	"errors",
+	"placeholders",
+	"a11y",
+	"cls",
+] as const;
+
+export type CheckCategory = (typeof CHECK_CATEGORIES)[number];
+
 interface Args {
 	all: boolean;
 	baselinePath?: string;
@@ -82,6 +99,7 @@ interface Args {
 	clsBudget: number;
 	jsonOut?: string;
 	noBaseline: boolean;
+	only?: Set<CheckCategory>;
 	paths: string[];
 	storageState?: string;
 	writeBaseline: boolean;
@@ -93,6 +111,21 @@ function requireValue(argv: string[], i: number, flag: string): string {
 		throw new Error(`${flag} requires a value`);
 	}
 	return v;
+}
+
+/** Parses --only's comma-separated value, rejecting anything not in CHECK_CATEGORIES. */
+export function parseOnly(value: string): Set<CheckCategory> {
+	const categories = value.split(",").map((s) => s.trim());
+	const result = new Set<CheckCategory>();
+	for (const category of categories) {
+		if (!(CHECK_CATEGORIES as readonly string[]).includes(category)) {
+			throw new Error(
+				`--only: unknown check "${category}" (expected one of ${CHECK_CATEGORIES.join(", ")})`
+			);
+		}
+		result.add(category as CheckCategory);
+	}
+	return result;
 }
 
 export function parseArgs(argv: string[]): Args {
@@ -121,6 +154,10 @@ export function parseArgs(argv: string[]): Args {
 			case "--storage-state":
 				i++;
 				args.storageState = requireValue(argv, i, "--storage-state");
+				break;
+			case "--only":
+				i++;
+				args.only = parseOnly(requireValue(argv, i, "--only"));
 				break;
 			case "--json":
 				i++;
@@ -710,44 +747,91 @@ export interface PageResult {
 	status: number | null;
 }
 
-/** Pure assembly of a page's failure reasons from its already-computed checks. */
-export function buildFailReasons(input: {
+interface FailReasonEntry {
+	/** which --only category this reason belongs to */
+	category: CheckCategory;
+	/** whether this reason applies, already evaluated (no branching in the loop below) */
+	condition: boolean;
+	/** built lazily so a false condition never touches its inputs (e.g. redirectFailReason may be null) */
+	message: () => string;
+}
+
+/** One row per possible failure reason; buildFailReasons below just filters and formats. */
+function listFailReasonEntries(input: {
 	cls: number;
 	delta: BaselineDelta;
 	pageErrorCount: number;
 	placeholderHits: string[];
 	redirectFailReason: string | null;
 	status: number | null;
+}): FailReasonEntry[] {
+	return [
+		{
+			category: "status",
+			condition: input.status === null || input.status >= 400,
+			message: () => `status ${input.status ?? "none"}`,
+		},
+		{
+			category: "errors",
+			condition: input.pageErrorCount > 0,
+			message: () => `${input.pageErrorCount} page error(s)`,
+		},
+		{
+			category: "errors",
+			condition: Boolean(input.redirectFailReason),
+			message: () => input.redirectFailReason as string,
+		},
+		{
+			category: "cls",
+			condition: input.delta.clsExceeded,
+			message: () =>
+				`cls ${input.cls.toFixed(3)} over budget ${input.delta.clsBudgetUsed.toFixed(3)}`,
+		},
+		{
+			category: "a11y",
+			condition: input.delta.newRules.length > 0,
+			message: () =>
+				`new accessibility rule(s): ${input.delta.newRules.join(", ")}`,
+		},
+		{
+			category: "a11y",
+			condition: input.delta.increasedRules.length > 0,
+			message: () =>
+				`accessibility rule(s) increased: ${input.delta.increasedRules
+					.map((r) => `${r.id} ${r.baselineCount}->${r.currentCount}`)
+					.join(", ")}`,
+		},
+		{
+			category: "placeholders",
+			condition: input.placeholderHits.length > 0,
+			message: () => `placeholder text: ${input.placeholderHits.join(", ")}`,
+		},
+	];
+}
+
+/**
+ * Pure assembly of a page's failure reasons from its already-computed checks.
+ * `only`, when given, restricts which categories can appear here at all —
+ * the rest of a page's result (axe, cls, placeholderHits, ...) is unaffected,
+ * so an excluded category's findings are still measured and reported there,
+ * just not counted towards `pass`.
+ */
+export function buildFailReasons(input: {
+	cls: number;
+	delta: BaselineDelta;
+	only?: Set<CheckCategory>;
+	pageErrorCount: number;
+	placeholderHits: string[];
+	redirectFailReason: string | null;
+	status: number | null;
 }): string[] {
+	const include = (category: CheckCategory) =>
+		!input.only || input.only.has(category);
 	const failReasons: string[] = [];
-	if (input.status === null || input.status >= 400) {
-		failReasons.push(`status ${input.status ?? "none"}`);
-	}
-	if (input.pageErrorCount > 0) {
-		failReasons.push(`${input.pageErrorCount} page error(s)`);
-	}
-	if (input.redirectFailReason) {
-		failReasons.push(input.redirectFailReason);
-	}
-	if (input.delta.clsExceeded) {
-		failReasons.push(
-			`cls ${input.cls.toFixed(3)} over budget ${input.delta.clsBudgetUsed.toFixed(3)}`
-		);
-	}
-	if (input.delta.newRules.length > 0) {
-		failReasons.push(
-			`new accessibility rule(s): ${input.delta.newRules.join(", ")}`
-		);
-	}
-	if (input.delta.increasedRules.length > 0) {
-		failReasons.push(
-			`accessibility rule(s) increased: ${input.delta.increasedRules
-				.map((r) => `${r.id} ${r.baselineCount}->${r.currentCount}`)
-				.join(", ")}`
-		);
-	}
-	if (input.placeholderHits.length > 0) {
-		failReasons.push(`placeholder text: ${input.placeholderHits.join(", ")}`);
+	for (const entry of listFailReasonEntries(input)) {
+		if (entry.condition && include(entry.category)) {
+			failReasons.push(entry.message());
+		}
 	}
 	return failReasons;
 }
@@ -757,7 +841,8 @@ export async function checkPage(
 	routePath: string,
 	clsBudget: number,
 	baseline: Baseline,
-	routeTemplate: string
+	routeTemplate: string,
+	only?: Set<CheckCategory>
 ): Promise<PageResult> {
 	const page = await context.newPage();
 	const pageErrors: string[] = [];
@@ -819,6 +904,7 @@ export async function checkPage(
 		cls,
 		delta,
 		placeholderHits,
+		only,
 	});
 
 	return {
@@ -922,7 +1008,8 @@ async function runChecks(
 	context: BrowserContext,
 	toCheck: string[],
 	clsBudget: number,
-	baseline: Baseline
+	baseline: Baseline,
+	only?: Set<CheckCategory>
 ): Promise<PageResult[]> {
 	await context.addInitScript(injectClsObserver);
 	const knownTemplates = getKnownRouteTemplates();
@@ -936,7 +1023,8 @@ async function runChecks(
 				routePath,
 				clsBudget,
 				baseline,
-				routeTemplate
+				routeTemplate,
+				only
 			);
 		} catch (err) {
 			result = checkThrewResult(routePath, routeTemplate, clsBudget, err);
@@ -1018,7 +1106,13 @@ async function main() {
 			return;
 		}
 
-		results = await runChecks(context, toCheck, args.clsBudget, baseline);
+		results = await runChecks(
+			context,
+			toCheck,
+			args.clsBudget,
+			baseline,
+			args.only
+		);
 	} finally {
 		await browser.close();
 	}
