@@ -26,17 +26,14 @@ import {
 } from "../utils/prisma-factories";
 
 /**
- * Adversarial coverage for "TEA — Trashing a published case leaves it public
- * and impossible to unpublish", written from the design note's eleven
- * acceptance criteria, targeting behaviour the implementer's own tests in
- * `case-trash-service.test.ts`, `publish-service.test.ts` and
- * `user-management-service.test.ts` do not exercise: no orphan row is left
- * behind by a refused publish/republish, an Admin collaborator who archives
- * cannot become the copy's remover, the daily batch purge
- * (`purgeExpiredCases`) with a mix of archived-copy and ordinary cases, a
- * restore after the archived copy has already been individually removed, a
- * kept account-deletion case's publication left completely untouched, and
- * the DELETE route's own `archive` query-param parsing.
+ * Adversarial coverage for the published-copy choice made when trashing a
+ * published case: no orphan row is left behind by a refused publish or
+ * republish, an Admin collaborator who archives cannot become the copy's
+ * remover, the daily batch purge (`purgeExpiredCases`) handles a mix of
+ * archived-copy and ordinary cases correctly, a restore after the archived
+ * copy has already been individually removed still succeeds, a kept
+ * account-deletion case's publication is left completely untouched, and the
+ * DELETE route's own `archive` query-param parsing is exercised.
  */
 
 const CRON_SECRET = "test-cron-secret";

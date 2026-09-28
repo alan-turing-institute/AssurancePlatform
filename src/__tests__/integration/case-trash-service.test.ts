@@ -22,7 +22,7 @@ import {
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { holdRowLock } from "../utils/row-lock-test-utils";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 const MUST_BE_IN_TRASH_PATTERN = /must be in trash/;
 
@@ -104,10 +104,11 @@ describe("case-trash-service", () => {
 			const secondTrashPromise = softDeleteCase(user.id, testCase.id);
 			// `softDeleteCase`'s own pre-check is a plain read, which (unlike
 			// the guarded write further in) never blocks on the holder's row
-			// lock — it just races the holder's commit. This delay gives it
-			// room to run against the pre-trash state, so the race lands
-			// where it's meant to: inside the transaction's guarded write.
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			// lock — it just races the holder's commit. Waiting for Postgres to
+			// report it blocked on a lock proves it has reached the guarded
+			// write, so the race lands where it's meant to: inside the
+			// transaction, not here.
+			await waitForLockWait();
 			await holder.release();
 			const result = await secondTrashPromise;
 
@@ -713,6 +714,12 @@ describe("case-trash-service", () => {
 				owner.id,
 				published.publishedId
 			);
+			// Waits for Postgres to report the removal blocked on a lock, proving
+			// it has already read the row as archived and reached its own
+			// guarded delete — so releasing now lands the restore's commit
+			// underneath it, in the middle of the removal's transaction, not
+			// before it starts.
+			await waitForLockWait();
 			await holder.release();
 			const result = await removalPromise;
 

@@ -24,7 +24,7 @@ import {
 	createTestPluginData,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { holdRowLock } from "../utils/row-lock-test-utils";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 // Top-level regex constants required by lint/performance/useTopLevelRegex
 const INVALID_STATUS_TRANSITION = /Invalid status transition/;
@@ -888,10 +888,10 @@ describe("publishAssuranceCase / updatePublishedCase — the trash race, reached
 		const publishPromise = publishAssuranceCase(owner.id, testCase.id);
 		// `publishAssuranceCase`'s own permission check is a plain read, which
 		// (unlike the guarded write further in) never blocks on the holder's
-		// row lock — it just races the holder's commit. This delay gives it
-		// room to run against the pre-trash state, so the race lands where
-		// it's meant to: inside the transaction's guarded write, not here.
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		// row lock — it just races the holder's commit. Waiting for Postgres to
+		// report it blocked on a lock proves it has reached the guarded write,
+		// so the race lands where it's meant to: inside the transaction, not here.
+		await waitForLockWait();
 		await holder.release();
 		const result = await publishPromise;
 
@@ -923,7 +923,7 @@ describe("publishAssuranceCase / updatePublishedCase — the trash race, reached
 			"Should not land"
 		);
 		// See the equivalent comment in the first-publish test above.
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		await waitForLockWait();
 		await holder.release();
 		const result = await republishPromise;
 

@@ -20,8 +20,48 @@ export type TestTransactionClient = TransactionCallback extends (
 	: never;
 
 export interface HeldRowLock {
-	/** Signals the holder to commit, and resolves once it actually has. */
+	/**
+	 * Signals the holder to commit, and resolves once it actually has —
+	 * or rejects with the holder transaction's own error, if it failed.
+	 */
 	release: () => Promise<void>;
+}
+
+const LOCK_WAIT_POLL_INTERVAL_MS = 10;
+const LOCK_WAIT_TIMEOUT_MS = 5000;
+
+/**
+ * Polls the test database until another backend is blocked waiting for a
+ * row lock — proof that a racing call has reached its guarded write and is
+ * blocked behind `holdRowLock`'s held lock, rather than still running an
+ * earlier, non-blocking read. Use this in place of a fixed delay before
+ * releasing the lock: a delay only guesses how long the racing call's
+ * earlier steps take, and guesses wrong under load.
+ */
+export async function waitForLockWait(
+	timeoutMs = LOCK_WAIT_TIMEOUT_MS
+): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	for (;;) {
+		const rows = await prisma.$queryRaw<[{ count: bigint }]>`
+			SELECT count(*) AS count
+			FROM pg_stat_activity
+			WHERE datname = current_database()
+				AND wait_event_type = 'Lock'
+				AND pid <> pg_backend_pid()
+		`;
+		if (Number(rows[0]?.count ?? 0) > 0) {
+			return;
+		}
+		if (Date.now() >= deadline) {
+			throw new Error(
+				`waitForLockWait: timed out after ${timeoutMs}ms waiting for another backend to block on a row lock`
+			);
+		}
+		await new Promise((resolve) =>
+			setTimeout(resolve, LOCK_WAIT_POLL_INTERVAL_MS)
+		);
+	}
 }
 
 /**
@@ -52,8 +92,12 @@ export async function holdRowLock(
 	let resolveCommitted: () => void = () => {
 		/* replaced synchronously below */
 	};
-	const committed = new Promise<void>((resolve) => {
+	let rejectCommitted: (error: unknown) => void = () => {
+		/* replaced synchronously below */
+	};
+	const committed = new Promise<void>((resolve, reject) => {
 		resolveCommitted = resolve;
+		rejectCommitted = reject;
 	});
 
 	prisma
@@ -62,7 +106,10 @@ export async function holdRowLock(
 			resolveAcquired();
 			await releaseSignal;
 		})
-		.then(() => resolveCommitted());
+		.then(
+			() => resolveCommitted(),
+			(error) => rejectCommitted(error)
+		);
 
 	await acquired;
 
