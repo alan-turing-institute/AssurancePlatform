@@ -25,10 +25,16 @@ Open the published case's status dialog, choose **Unpublish**, then confirm **Ye
 
 ## Deleting a published case
 
-Deleting a published case from the case controls asks what should happen to its Discover copy, before moving the case to Trash. **Remove from Discover** deletes the public copy at once; restoring the case afterwards brings it back as a draft. **Keep as archived** leaves the public copy up, marked with an "Archived" label and date, and it stops receiving updates. An archived copy survives the case being permanently deleted from Trash; its owner can remove it from the Trash page at any time, including afterwards. A case in Trash cannot be published or republished. Deleting an account archives the Discover copies of the deleted person's own published cases in the same way, rather than removing them.
+Deleting a published case from the case controls asks what should happen to its Discover copy, before moving the case to Trash.
+**Remove from Discover** deletes the public copy at once; restoring the case afterwards brings it back as a draft.
+**Keep as archived** leaves the public copy up, marked with an "Archived" label and date, and it stops receiving updates.
+An archived copy survives the case being permanently deleted from Trash; its owner can remove it from the Trash page at any time, including afterwards.
+A case in Trash cannot be published or republished.
+Deleting an account archives the Discover copies of the deleted person's cases that move to Trash in the same way; a case kept under another Admin stays published as before.
 
 Publishing does not grant visitors edit rights, copy private comments into the snapshot or create a live mirror of future changes. Sharing the working case with a colleague is a separate permission action. Discover currently lists assurance cases; it does not list argument patterns as a separate public resource.
 
 ## Where this lives in the code
 
-`components/publishing/` owns the status dialog; `lib/services/publish-service.ts` creates and removes snapshots, and `app/(landing)/discover/` renders the public pages. `components/cases/action-buttons.tsx` owns the delete dialog's published-copy choice, and `lib/services/case-trash-service.ts` carries it out.
+`components/publishing/` owns the status dialog; `lib/services/publish-service.ts` creates and removes snapshots, and `app/(landing)/discover/` renders the public pages.
+`components/cases/delete-case-dialog.tsx` owns the delete dialog's published-copy choice, and `lib/services/case-trash-service.ts` carries it out.
