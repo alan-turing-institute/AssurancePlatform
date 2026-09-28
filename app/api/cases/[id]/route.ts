@@ -91,11 +91,10 @@ export async function PUT(
 /**
  * Delete an assurance case (soft-delete)
  *
- * @description Moves a case to trash (soft-delete). Cases remain in trash for 30 days
- * before automatic purge. Requires ADMIN permission on the case.
- * If the case is published, its Discover copy is removed by default; pass
- * `archive=true` to keep it, marked archived, instead (Chris's ruling 6,
- * 2026-09-28 — the API's default is to remove unless asked to archive).
+ * @description Moves a case to trash (soft-delete). Requires ADMIN permission on the case.
+ * Cases remain in trash for 30 days before automatic purge. If the case is
+ * published, removes its Discover copy unless `archive=true` is given, which
+ * keeps it, marked archived, instead.
  *
  * @pathParam id - Case ID (UUID)
  * @queryParam archive - Keep the published copy, archived, instead of removing it (boolean, default: false)

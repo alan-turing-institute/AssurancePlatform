@@ -34,8 +34,8 @@ type TransactionClient = TransactionCallback extends (
  * update matches zero rows — the case was moved to Trash after this
  * function's own permission check ran but before the transaction committed.
  * Caught by the caller and translated to the same "Case not found" error a
- * missing case already returns, closing the publish-versus-trash race
- * (design note, "Publishing and trashing at the same moment").
+ * missing case already returns, so a case in Trash can never be published
+ * or republished, even when the two actions overlap.
  */
 class CaseTrashedDuringTransactionError extends Error {}
 
@@ -50,9 +50,9 @@ export const DRAFT_PUBLISH_FIELDS = {
 
 /**
  * Removes every published row for the given cases and resets each case's
- * publish fields to draft — the "remove" half of the published-copy choice
- * (Chris's ruling 1, 2026-09-28) and the API's default (ruling 6). Runs
- * inside the caller's transaction; a no-op for an empty list.
+ * publish fields to draft — the "remove" half of the published-copy choice,
+ * and the default when no choice is given. Runs inside the caller's
+ * transaction; a no-op for an empty list.
  */
 export async function removePublishedCopies(
 	tx: TransactionClient,
@@ -75,12 +75,12 @@ export async function removePublishedCopies(
  * each case's `isCurrent` row (stamping `archivedAt`/`archivedOwnerId` on
  * it) and deletes that case's other, superseded rows — so an archived copy
  * is always exactly one record. The case's own publish fields are left
- * untouched, so a later restore finds the case still `PUBLISHED` (Chris's
- * ruling 5, 2026-09-28). `ownerId` is who may later remove the archived
- * copy (`removeArchivedCopy` in `case-trash-service.ts`); `null` when
- * nobody can — account deletion, Chris's ruling 4. Runs inside the caller's
- * transaction; a no-op for an empty list or for cases with no current
- * published row.
+ * untouched, so a later restore finds the case still `PUBLISHED`. `ownerId`
+ * is who may later remove the archived copy (`removeArchivedCopy` in
+ * `case-trash-service.ts`); `null` when nobody can — used for account
+ * deletion, where the deleted owner's account is gone. Runs inside the
+ * caller's transaction; a no-op for an empty list or for cases with no
+ * current published row.
  */
 export async function archivePublishedCopies(
 	tx: TransactionClient,
@@ -103,8 +103,12 @@ export async function archivePublishedCopies(
 	await tx.publishedAssuranceCase.deleteMany({
 		where: { assuranceCaseId: { in: caseIds }, id: { notIn: currentIds } },
 	});
+	// `archivedAt: null` in the where clause: a row already archived keeps its
+	// original archive date and owner rather than being re-stamped by a later
+	// call (e.g. an account-deletion sweep that re-runs over cases already in
+	// Trash).
 	await tx.publishedAssuranceCase.updateMany({
-		where: { id: { in: currentIds } },
+		where: { id: { in: currentIds }, archivedAt: null },
 		data: { archivedAt: new Date(), archivedOwnerId: ownerId },
 	});
 }
@@ -310,27 +314,23 @@ export async function publishAssuranceCase(
 	const now = new Date();
 
 	try {
-		// Generating the slug and creating the row must share one transaction
-		// — otherwise a concurrent first-publish of a same-named case could
-		// observe the same "no collision yet" result and both try to claim
-		// the identical slug (the table's unique index would then reject the
-		// second, surfacing as an opaque 500 rather than the numeric-suffix
-		// behaviour ADR 0003 §6 promises).
+		// The case-row update runs FIRST, before any published-row write, so
+		// every transaction that can both trash and publish/republish a case
+		// locks the case row in the same order — `softDeleteCase` locks the
+		// case row first too, so the two can never deadlock waiting on each
+		// other's locks in reverse. Matches only a case still OUT of Trash —
+		// closes the race against a concurrent trash of this case between the
+		// permission check above and this transaction committing. Zero rows
+		// means the case was trashed in between; the caller below maps that to
+		// "Case not found", and nothing about the published row is written.
+		//
+		// Generating the slug and creating the row must share this same
+		// transaction — otherwise a concurrent first-publish of a same-named
+		// case could observe the same "no collision yet" result and both try
+		// to claim the identical slug (the table's unique index would then
+		// reject the second, surfacing as an opaque 500 rather than the
+		// numeric-suffix behaviour ADR 0003 §6 promises).
 		const publishedCase = await prisma.$transaction(async (tx) => {
-			const slug = await generateUniqueSlug(assuranceCase.name, tx);
-			const created = await swapCurrentPublishedVersion(tx, {
-				caseId,
-				title: assuranceCase.name,
-				slug,
-				content,
-				description: description ?? null,
-				createdAt: now,
-			});
-			// Matches only a case still OUT of Trash — closes the race against a
-			// concurrent trash of this case between the permission check above
-			// and this transaction committing (design note, "Publishing and
-			// trashing at the same moment"). Zero rows means the case was
-			// trashed in between; the caller below maps that to "Case not found".
 			const updateResult = await tx.assuranceCase.updateMany({
 				where: { id: caseId, deletedAt: null },
 				data: {
@@ -342,7 +342,15 @@ export async function publishAssuranceCase(
 			if (updateResult.count === 0) {
 				throw new CaseTrashedDuringTransactionError();
 			}
-			return created;
+			const slug = await generateUniqueSlug(assuranceCase.name, tx);
+			return await swapCurrentPublishedVersion(tx, {
+				caseId,
+				title: assuranceCase.name,
+				slug,
+				content,
+				description: description ?? null,
+				createdAt: now,
+			});
 		});
 
 		return {
@@ -575,22 +583,12 @@ export async function updatePublishedCase(
 	const now = new Date();
 
 	try {
-		// Create the new version in a transaction
+		// Create the new version in a transaction. The case-row update runs
+		// FIRST — see `publishAssuranceCase` above for why: every transaction
+		// that can both trash and publish/republish a case must lock the case
+		// row before touching the published row, matching the order
+		// `softDeleteCase` locks them in.
 		const newPublished = await prisma.$transaction(async (tx) => {
-			// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
-			// across renames) — never regenerated here, even if
-			// `assuranceCase.name` has changed since first publish.
-			const published = await swapCurrentPublishedVersion(tx, {
-				caseId,
-				title: assuranceCase.name,
-				slug: currentPublished.slug,
-				content,
-				description: description ?? null,
-				createdAt: now,
-			});
-
-			// Update case's publishedAt timestamp. Matches only a case still OUT
-			// of Trash — see `publishAssuranceCase` above for why.
 			const updateResult = await tx.assuranceCase.updateMany({
 				where: { id: caseId, deletedAt: null },
 				data: { publishedAt: now },
@@ -599,7 +597,17 @@ export async function updatePublishedCase(
 				throw new CaseTrashedDuringTransactionError();
 			}
 
-			return published;
+			// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
+			// across renames) — never regenerated here, even if
+			// `assuranceCase.name` has changed since first publish.
+			return await swapCurrentPublishedVersion(tx, {
+				caseId,
+				title: assuranceCase.name,
+				slug: currentPublished.slug,
+				content,
+				description: description ?? null,
+				createdAt: now,
+			});
 		});
 
 		return {

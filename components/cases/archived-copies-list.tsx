@@ -33,10 +33,10 @@ interface ArchivedCopiesListProps {
 }
 
 /**
- * The Trash page's "Archived on Discover" section (design note, Chris's
- * ruling 1 and 3, 2026-09-28) — the owner's archived Discover copies,
- * including copies whose case has since been permanently deleted. Renders
- * nothing when there are none, so the section appears only when non-empty.
+ * The Trash page's "Archived on Discover" section — the owner's archived
+ * Discover copies, including copies whose case has since been permanently
+ * deleted. Renders nothing when there are none, so the section appears
+ * only when non-empty.
  */
 export function ArchivedCopiesList({ copies }: ArchivedCopiesListProps) {
 	const router = useRouter();

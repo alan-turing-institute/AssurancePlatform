@@ -590,10 +590,10 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 						deletedById: systemUserId,
 					},
 				});
-				// Archives rather than removes each trashed case's Discover copy
-				// (Chris's ruling 4, 2026-09-28): the deleted owner's account is
-				// gone, so `ownerId: null` — nobody can remove these through the
-				// app afterwards; that needs the platform team, by hand.
+				// Archives rather than removes each trashed case's Discover copy.
+				// `ownerId: null` because the deleted owner's account is gone —
+				// nobody can remove these through the app afterwards; that needs
+				// the platform team, by hand.
 				await archivePublishedCopies(tx, toTrash, null);
 			}
 

@@ -1,11 +1,9 @@
--- Lets a published copy on Discover outlive its source case (Chris's
--- rulings, 2026-09-28): trashing a published case can now archive its
--- Discover copy instead of removing it, and a permanent case delete must
--- succeed even when an archived copy still references it.
+-- Lets a published copy on Discover outlive its source case: trashing a
+-- published case can archive its Discover copy instead of removing it,
+-- and permanently deleting a case succeeds even when an archived copy
+-- still references it.
 --
--- Structure only — no existing row is touched. Ruling 2: "There aren't any
--- published ones [in Trash], so we will be okay" — nothing today holds a
--- published case that is also in Trash, so there is no backfill to write.
+-- Structure only: no existing row is touched or backfilled.
 
 -- DropForeignKey
 ALTER TABLE "published_assurance_cases" DROP CONSTRAINT "published_assurance_cases_assurance_case_id_fkey";

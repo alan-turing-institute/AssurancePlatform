@@ -20,8 +20,10 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { formatShortDate } from "@/lib/date";
+import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
+import { DeleteCaseDialog } from "./delete-case-dialog";
 
 // Flexible type for case data - compatible with both actions and domain types
 export interface CaseCardData {
@@ -31,6 +33,8 @@ export interface CaseCardData {
 	isDemo?: boolean;
 	name: string;
 	permissions?: string | string[];
+	/** Whether the case has a current published copy on Discover — decides which delete dialog the card shows. */
+	published?: boolean;
 	updatedDate?: string;
 }
 
@@ -60,25 +64,29 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	};
 	const permissions = normalizePermissions();
 
-	const onDelete = useCallback(async () => {
-		try {
-			setLoading(true);
+	const onDelete = useCallback(
+		async (publishedCopy?: PublishedCopyChoice) => {
+			try {
+				setLoading(true);
 
-			// Use Next.js API route for Prisma auth compatibility
-			const response = await fetch(`/api/cases/${assuranceCase.id}`, {
-				method: "DELETE",
-			});
+				// Use Next.js API route for Prisma auth compatibility
+				const query = publishedCopy === "archive" ? "?archive=true" : "";
+				const response = await fetch(`/api/cases/${assuranceCase.id}${query}`, {
+					method: "DELETE",
+				});
 
-			if (response.ok) {
-				router.refresh();
+				if (response.ok) {
+					router.refresh();
+				}
+			} catch (_error: unknown) {
+				// Error handling is done through the response status check above
+			} finally {
+				setLoading(false);
+				setOpen(false);
 			}
-		} catch (_error: unknown) {
-			// Error handling is done through the response status check above
-		} finally {
-			setLoading(false);
-			setOpen(false);
-		}
-	}, [assuranceCase.id, router]);
+		},
+		[assuranceCase.id, router]
+	);
 
 	const fetchScreenshot = useCallback(async () => {
 		try {
@@ -172,13 +180,23 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 					<Trash2 className="h-4 w-4" />
 				</button>
 			)}
-			<AlertModal
-				confirmButtonText={"Delete"}
-				isOpen={open}
-				loading={loading}
-				onClose={() => setOpen(false)}
-				onConfirm={onDelete}
-			/>
+			{assuranceCase.published ? (
+				<DeleteCaseDialog
+					isOpen={open}
+					isOwner={permissions.includes("owner")}
+					loading={loading}
+					onCancel={() => setOpen(false)}
+					onConfirm={onDelete}
+				/>
+			) : (
+				<AlertModal
+					confirmButtonText={"Delete"}
+					isOpen={open}
+					loading={loading}
+					onClose={() => setOpen(false)}
+					onConfirm={() => onDelete()}
+				/>
+			)}
 		</div>
 	);
 };

@@ -15,6 +15,7 @@ interface AssuranceCase {
 	isDemo?: boolean;
 	name: string;
 	owner?: number | string;
+	published?: boolean;
 	updatedDate?: string;
 }
 
