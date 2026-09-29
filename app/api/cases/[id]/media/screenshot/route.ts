@@ -24,13 +24,15 @@ interface RouteParams {
  * @auth bearer
  * @tag Cases
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
 	try {
 		const userId = await requireAuth();
 		const { id: caseId } = await params;
 
 		const result = await getCaseScreenshotMedia(userId, caseId);
-		return mediaResponse(result);
+		return mediaResponse(result, {
+			ifNoneMatch: request.headers.get("if-none-match"),
+		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

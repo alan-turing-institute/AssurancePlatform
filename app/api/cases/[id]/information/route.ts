@@ -7,6 +7,8 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { toMediaKey } from "@/lib/media-key";
+import { mediaVersionToken } from "@/lib/media-response";
 import { resolveCaseFeatureImageAddress } from "@/lib/media-routes";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
 import {
@@ -21,9 +23,10 @@ interface RouteParams {
 
 /**
  * Projects a case-information record's stored `featureImageUrl` to this
- * case's own private-media route address before it ever reaches a browser
- * (D6) — the record itself (and every other caller of the service layer)
- * keeps seeing the real stored key.
+ * case's own private-media route address before it ever reaches a browser —
+ * the record itself (and every other caller of the service layer) keeps
+ * seeing the real stored key. The address carries a `?v=` query derived from
+ * the stored key, so it changes on every re-upload.
  */
 function withResolvedFeatureImage(
 	caseId: string,
@@ -32,11 +35,15 @@ function withResolvedFeatureImage(
 	if (!record) {
 		return record;
 	}
+	const versionToken = record.featureImageUrl
+		? mediaVersionToken(toMediaKey(record.featureImageUrl))
+		: undefined;
 	return {
 		...record,
 		featureImageUrl: resolveCaseFeatureImageAddress(
 			caseId,
-			record.featureImageUrl
+			record.featureImageUrl,
+			versionToken
 		),
 	};
 }

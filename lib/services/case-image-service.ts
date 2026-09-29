@@ -7,7 +7,11 @@
 
 import { logger } from "@/lib/logger";
 import { toMediaKey } from "@/lib/media-key";
-import { type MediaFetchResult, mediaEtag } from "@/lib/media-response";
+import {
+	type MediaFetchResult,
+	mediaEtag,
+	mediaVersionToken,
+} from "@/lib/media-response";
 import { caseScreenshotMediaRoute } from "@/lib/media-routes";
 
 const log = logger.child({ component: "case-image-service" });
@@ -40,8 +44,8 @@ export interface UploadCaseImageData {
 
 /**
  * Fetches the screenshot address for a case — always this case's own
- * private-media route, never the underlying storage key (D1/D6). Checks
- * VIEW permission before returning it.
+ * private-media route, never the underlying storage key. Checks VIEW
+ * permission before returning it.
  *
  * Returns the same "Permission denied" error for both not-found and forbidden
  * to prevent case existence enumeration.
@@ -61,7 +65,7 @@ export async function getCaseImage(
 
 		const caseImage = await prisma.caseImage.findUnique({
 			where: { caseId },
-			select: { uploadedAt: true },
+			select: { uploadedAt: true, imageUrl: true },
 		});
 
 		if (!caseImage) {
@@ -70,7 +74,10 @@ export async function getCaseImage(
 
 		return {
 			data: {
-				image: caseScreenshotMediaRoute(caseId),
+				image: caseScreenshotMediaRoute(
+					caseId,
+					mediaVersionToken(toMediaKey(caseImage.imageUrl))
+				),
 				uploadedAt: caseImage.uploadedAt.toISOString(),
 			},
 		};
@@ -160,7 +167,10 @@ export async function uploadCaseImage(
 
 		return {
 			data: {
-				image: caseScreenshotMediaRoute(caseId),
+				image: caseScreenshotMediaRoute(
+					caseId,
+					mediaVersionToken(uploadResult.data.key)
+				),
 				uploadedAt: now.toISOString(),
 			},
 		};
@@ -171,10 +181,10 @@ export async function uploadCaseImage(
 }
 
 /**
- * Fetches the screenshot's raw bytes for the private media route
- * (D1) — checked against VIEW access, with a missing file and a caller
- * without access both collapsing to the same `not-found` status so a caller
- * can never tell the two apart.
+ * Fetches the screenshot's raw bytes for the private media route — checked
+ * against VIEW access, with a missing file and a caller without access both
+ * collapsing to the same `not-found` status so a caller can never tell the
+ * two apart.
  */
 export async function getCaseScreenshotMedia(
 	userId: string,

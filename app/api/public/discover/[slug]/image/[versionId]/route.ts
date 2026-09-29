@@ -26,7 +26,7 @@ interface RouteParams {
  * @response 404 - No matching current version, or no feature image stored
  * @tag Discover
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
 	const { slug, versionId } = await params;
 
 	const slugResult = publishableItemSlugSchema.safeParse(slug);
@@ -41,5 +41,6 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 	);
 	return mediaResponse(result, {
 		cacheControl: "public, max-age=31536000, immutable",
+		ifNoneMatch: request.headers.get("if-none-match"),
 	});
 }
