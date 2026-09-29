@@ -61,8 +61,8 @@ const TINY_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
 // The Discover render sites still resize the feature image through
-// next/image (D6 leaves that in place — only private-media routes get
-// `unoptimized`), so in a production build `src` goes through
+// next/image (only private-media routes get `unoptimized`), so in a
+// production build `src` goes through
 // `/_next/image?url=<url-encoded>` (`images.unoptimized` is only true in
 // dev — see `next.config.mjs`). The uploaded image now resolves to the
 // public, version-scoped route (`/api/public/discover/<slug>/image/

@@ -587,9 +587,9 @@ async function runAccountDeletionTransaction(
 				});
 			}
 
-			// Superseded-version image keys `archivePublishedCopies` deletes below
-			// (D5) — collected outside the `if` so the function always returns an
-			// array, empty when there was nothing to trash.
+			// Superseded-version image keys `archivePublishedCopies` deletes
+			// below — collected outside the `if` so the function always returns
+			// an array, empty when there was nothing to trash.
 			let publishedImageKeys: string[] = [];
 			if (toTrash.length > 0) {
 				await tx.assuranceCase.updateMany({
