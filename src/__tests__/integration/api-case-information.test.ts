@@ -258,6 +258,95 @@ describe("PUT /api/cases/[id]/information", () => {
 		expect("data" in result && result.data?.featureImageUrl).toBe(storedKey);
 	});
 
+	it("leaves the stored feature-image key unchanged when the form re-submits this case's own media route address with a ?v= query", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const storedKey = "cases/some-id/case-information/original.png";
+		await createTestCaseInformation(testCase.id, {
+			description: "Original description",
+			featureImageUrl: storedKey,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/information/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					description: "Original description",
+					featureImageUrl: `/api/cases/${testCase.id}/media/feature?v=abc123def456`,
+				}),
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
+
+		const { getCaseInformation } = await import(
+			"@/lib/services/case-information-service"
+		);
+		const result = await getCaseInformation(owner.id, testCase.id);
+		expect("data" in result && result.data?.featureImageUrl).toBe(storedKey);
+	});
+
+	it("returns 400 for a bare storage key naming another case, leaving the stored value unchanged", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const storedKey = "cases/some-id/case-information/original.png";
+		await createTestCaseInformation(testCase.id, {
+			featureImageUrl: storedKey,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/information/route");
+		const otherCaseId = "00000000-0000-0000-0000-000000000001";
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					featureImageUrl: `cases/${otherCaseId}/case-information/x.png`,
+				}),
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+
+		const { getCaseInformation } = await import(
+			"@/lib/services/case-information-service"
+		);
+		const result = await getCaseInformation(owner.id, testCase.id);
+		expect("data" in result && result.data?.featureImageUrl).toBe(storedKey);
+	});
+
+	it("returns 400 for an http:// feature-image address", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/information/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					featureImageUrl: "http://example.com/feature.png",
+				}),
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+	});
+
 	it("does clear the feature image when explicitly set to null, not treated as the media route", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
