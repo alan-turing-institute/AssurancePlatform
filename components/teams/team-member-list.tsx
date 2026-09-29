@@ -15,7 +15,10 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useInviteMemberModal } from "@/hooks/use-invite-member-modal";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
+
+const log = logger.child({ component: "team-member-list" });
 
 interface TeamMember {
 	id: string;
@@ -89,7 +92,7 @@ export function TeamMemberList({
 				router.refresh();
 			}
 		} catch (error) {
-			console.error("Failed to update role:", error);
+			log.error("Failed to update role", { error });
 		}
 	};
 

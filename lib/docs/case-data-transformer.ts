@@ -44,7 +44,6 @@ function buildNode(
 		data: {
 			id: node.id,
 			name: node.name || "",
-			title: node.title || undefined,
 			description: node.description,
 			url: node.url || undefined,
 			context: node.context || [],

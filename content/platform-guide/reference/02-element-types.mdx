@@ -1,0 +1,129 @@
+---
+title: "Element types and status"
+description: "Check the current element vocabulary, name prefixes, relationships and status choices."
+sidebar_label: 'Element Types'
+sidebar_position: 3
+tags:
+  - quick-reference
+  - elements
+---
+
+An assurance case links a broad goal to more specific claims and evidence. The database recognises ten element types. The current diagram has dedicated renderers for goal, strategy, property claim, evidence, away goal and module. Context, assumption and justification appear as fields on applicable elements in the current editor. The types remain part of the model even when they do not have their own diagram renderer.
+
+## Types and names
+
+| Type | Prefix | Use |
+| --- | --- | --- |
+| Goal | `G` | State the top-level proposition to justify. |
+| Strategy | `S` | Explain how a goal or claim is broken down. |
+| Property claim | `P` | State a narrower proposition that can be examined. |
+| Evidence | `E` | Offer an artefact or result for a claim. |
+| Context | `C` | Set a boundary or definition. |
+| Justification | `J` | Explain why a choice in the argument is appropriate. |
+| Assumption | `A` | State a condition taken as given. |
+| Module | `M` | Refer to another case as a module. |
+| Away goal | `AG` | Cite a goal in another case. |
+| Contract | `Ct` | Represent the contract type in the data model. |
+
+A name is optional. If supplied, it must be the full format for its type: a prefix, a number and optional dot-numbered descendants, such as `P1` or `P1.2`. A defeater adds `C` before its type's prefix, such as `CP1`. The editor normally generates names. Context is a field on applicable elements in the current canvas.
+
+## Choose a core element
+
+### Goal
+
+**Purpose:** State the broad proposition that directs the case. Use a goal when starting a case or defining what you intend to demonstrate. Name the intended property and context.
+
+| Useful example | Weak example | Why |
+| --- | --- | --- |
+| The system is sufficiently safe for its intended context. | The system is good. | No testable property or context. |
+| The deployment protects user privacy throughout its lifecycle. | The system passes all tests. | Tests are one source of evidence, not the whole goal. |
+
+### Property claim
+
+**Purpose:** Make a specific proposition that could be true or false. Use one to break down a goal or to connect an abstract goal to evidence. Split a sentence that makes several assertions into separate claims.
+
+| Useful example | Weak example | Why |
+| --- | --- | --- |
+| The model exceeds 95% accuracy on the named validation dataset. | The system works well. | “Well” has no defined test. |
+| Training data represents the groups named in the case context. | We followed best practices. | The practice and property are unspecified. |
+| User data is encrypted at rest with AES-256. | We believe the system is fair. | Belief alone gives no checkable property. |
+
+### Strategy
+
+**Purpose:** Explain how a goal or claim is decomposed. Use one when a reviewer needs to understand the structure, for example across attributes, lifecycle stages, components or stakeholder needs. A simple direct claim may need no strategy.
+
+| Useful example | Weak example | Why |
+| --- | --- | --- |
+| Argue over accuracy, fairness and reliability. | We decompose the goal. | It does not say how. |
+| Argue across collection, training, deployment and monitoring. | See below for details. | It hides the decomposition logic. |
+
+### Evidence
+
+**Purpose:** Give concrete, inspectable information supporting a property claim. Use it when you can identify a source, date, method and finding. A reviewer still judges relevance, reliability and sufficiency.
+
+| Type | Useful example | Weak example |
+| --- | --- | --- |
+| Technical | A dated validation run naming dataset, metric and result. | Test results. |
+| Process | A scoped audit report and its findings. | We did testing. |
+| Stakeholder | A survey naming its sample and method. | Good feedback. |
+| Standards | A certification with scope and expiry date. | We meet standards. |
+
+## Explain the argument with attributes
+
+Goals, strategies and property claims can carry context, justification and assumption fields. These explain an assertion; they do not replace evidence.
+
+### Context
+
+**Purpose:** Define conditions in which the claim holds. Use it on a top goal to frame the whole case and on a narrower claim when its conditions differ. Consider operators, location, configuration, regulations and time. An aircraft safety claim, for example, depends on who flies it, where and in what weather.
+
+| Useful example | Weak example |
+| --- | --- |
+| Operated by clinicians who completed the named two-day training. | Trained users. |
+| Applies to software version 2.1.x; major changes require review. | Standard deployment. |
+| A qualified human reviews every model-supported decision. | Normal use. |
+
+### Justification
+
+**Purpose:** Explain why a goal, claim or decomposition belongs in the argument. Use it to expose a rationale that reviewers can challenge.
+
+| Useful example | Weak example |
+| --- | --- |
+| Accuracy is required by the named project contract. | This is important. |
+| Fairness measures follow the documented stakeholder workshop. | Standard practice. |
+
+### Assumption
+
+**Purpose:** State a condition taken as true without direct evidence in this branch. Use it for external dependencies or simplifications that could invalidate a claim.
+
+| Useful example | Weak example |
+| --- | --- |
+| Training and deployment data distributions remain comparable. | Everything works correctly. |
+| The third-party API maintains its stated service level. | No assumptions. |
+
+## Valid relationships
+
+| From | To | Meaning |
+| --- | --- | --- |
+| Goal | Strategy | Explain a decomposition. |
+| Goal | Property claim | Support the goal directly. |
+| Strategy | Property claim | State a claim under the strategy. |
+| Property claim | Property claim | Add a supporting subclaim. |
+| Property claim | Strategy | Decompose a claim further. |
+| Property claim | Evidence | Support a claim with an artefact or result. |
+
+| Element | Context | Justification | Assumption |
+| --- | --- | --- | --- |
+| Goal | Yes | Yes | Yes |
+| Strategy | Yes | Yes | Yes |
+| Property claim | Yes | Yes | Yes |
+| Evidence | No | No | No |
+
+## Relationships and fields
+
+The current **Add Element** menu lets a goal add a strategy or property claim, a strategy add a property claim, and a property claim add a strategy, property claim or evidence. These menus also offer defeaters, away goals and modules at the applicable points. A case starts with one generated top-level goal. Evidence is connected to a claim and may include a description and optional URL or reference. For a goal, strategy or property claim, the edit dialog can hold context entries, an assumption and a justification. These fields explain the argument but do not by themselves prove its claim.
+
+An away goal can cite an existing, active element through a referenced case. The citation cannot point to itself. If the target later disappears, a dangling marker calls for review; restoration does not silently reconnect it. A module refers to another case without that same goal citation.
+
+## Assertion status
+
+The author can set **Asserted** (the default), **Needs support**, **Assumed**, **Axiomatic** or **Defeated** on an applicable assertion. Status expresses the author's position. It is not an automatic assessment of evidence quality. **As cited** is reserved and cannot be chosen directly in element create or edit; this build does not derive it automatically. Use **Needs support** to make an unresolved support gap visible rather than treating an empty evidence branch as complete.

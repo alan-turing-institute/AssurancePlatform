@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/logger";
 import type {
 	SSEEvent,
 	SSEEventType,
 } from "@/lib/services/sse-connection-manager";
+
+const log = logger.child({ component: "use-case-events" });
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -185,7 +188,7 @@ export function useCaseEvents({
 					setLastEvent(event);
 					onEventRef.current?.(event);
 				} catch (error) {
-					console.error("[SSE] Failed to parse event:", error);
+					log.error("Failed to parse SSE event", { error });
 				}
 			});
 		}

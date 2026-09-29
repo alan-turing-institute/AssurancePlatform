@@ -58,8 +58,8 @@ export const ModuleCard = ({
 						{moduleNumber}
 					</div>
 					<div className="flex-1">
-						<CardTitle className="text-xl">{title}</CardTitle>
-						<CardDescription className="mt-1.5 line-clamp-2">
+						<CardTitle className="not-prose text-xl">{title}</CardTitle>
+						<CardDescription className="not-prose mt-1.5 line-clamp-2">
 							{description}
 						</CardDescription>
 					</div>
@@ -101,7 +101,11 @@ export const ModuleCard = ({
 	);
 
 	if (isAvailable && href) {
-		return <Link href={href}>{cardContent}</Link>;
+		return (
+			<Link data-card href={href}>
+				{cardContent}
+			</Link>
+		);
 	}
 
 	return cardContent;

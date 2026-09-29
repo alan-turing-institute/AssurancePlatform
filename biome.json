@@ -60,6 +60,7 @@
         "noBarrelFile": "off"
       },
       "suspicious": {
+        "noConsole": "error",
         "noUnknownAtRules": "off"
       }
     }
@@ -89,10 +90,31 @@
       "linter": {
         "rules": {
           "suspicious": {
+            "noConsole": "off",
             "noExplicitAny": "off"
           },
           "style": {
             "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/logger.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**", "prisma/seed/**", "e2e/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
           }
         }
       }

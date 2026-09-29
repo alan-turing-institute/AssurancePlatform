@@ -13,12 +13,12 @@ import { settingsSectionSlot } from "@/lib/plugins/slots";
  * artefact (an empty border, a stray heading) behind it.
  *
  * Deliberately does not itself gate on enablement (unlike the canvas slots,
- * which read `use-plugin-enablement.ts`): the caller (`PluginToggleRow`)
+ * which read `use-plugin-enablement.ts`): the caller (`PluginCard`)
  * already has the plugin's effective `enabled` state in scope from
  * `usePluginSettings`, so re-fetching it here would just be a second
  * request answering a question the pane already has the answer to. Gating
  * this slot's visibility on `enabled` is the call site's job —
- * `PluginToggleRow` renders this component only when its own `checked`
+ * `PluginCard` renders this component only when its own `checked`
  * (`plugin.available && plugin.enabled`) is true, so an unavailable or
  * user-disabled plugin never mounts its settings UI at all.
  */

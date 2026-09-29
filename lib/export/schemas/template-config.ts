@@ -12,7 +12,7 @@ import { SectionsConfigSchema } from "./section-config";
 /**
  * Element filtering options to control which elements are included
  */
-export const ElementFilterSchema = z
+const ElementFilterSchema = z
 	.object({
 		includeTypes: z
 			.array(ElementTypeSchema)
@@ -40,7 +40,7 @@ export type ElementFilter = z.infer<typeof ElementFilterSchema>;
 /**
  * Template preset identifiers
  */
-export const TemplatePresetSchema = z.enum([
+const TemplatePresetSchema = z.enum([
 	"full-report",
 	"summary",
 	"evidence-list",
@@ -51,7 +51,7 @@ export type TemplatePreset = z.infer<typeof TemplatePresetSchema>;
 /**
  * Full template configuration schema
  */
-export const TemplateConfigSchema = z
+const TemplateConfigSchema = z
 	.object({
 		name: z
 			.string()

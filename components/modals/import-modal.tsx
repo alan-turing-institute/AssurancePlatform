@@ -2,6 +2,7 @@
 
 import { Cloud, Github, Upload } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useImportModal } from "@/hooks/modal-hooks";
@@ -20,6 +21,8 @@ export const ImportModal = () => {
 		loading,
 		error,
 		warnings,
+		pendingCaseId,
+		continueToCase,
 		setError,
 		githubConnected,
 		googleConnected,
@@ -38,6 +41,13 @@ export const ImportModal = () => {
 		setSelectedDriveFile(null);
 		importModal.onClose();
 	};
+
+	// A successful import that also carried warnings stops here instead of
+	// navigating straight away — the old behaviour closed the modal and
+	// navigated in the same tick as setting `warnings`, so the banner never
+	// actually rendered (QA finding, 2026-09-15). The user sees the
+	// warnings and chooses when to continue.
+	const awaitingWarningsAck = pendingCaseId !== null;
 
 	return (
 		<Modal
@@ -59,55 +69,62 @@ export const ImportModal = () => {
 							<li key={w}>{w}</li>
 						))}
 					</ul>
+					{awaitingWarningsAck && (
+						<Button className="mt-2" onClick={continueToCase} size="sm">
+							Continue to case
+						</Button>
+					)}
 				</div>
 			)}
 
-			<Tabs
-				className="w-full"
-				onValueChange={(v) => setActiveTab(v as TabValue)}
-				value={activeTab}
-			>
-				<TabsList className="grid w-full grid-cols-3">
-					<TabsTrigger className="flex items-center gap-2" value="file">
-						<Upload className="h-4 w-4" />
-						File
-					</TabsTrigger>
-					<TabsTrigger className="flex items-center gap-2" value="github">
-						<Github className="h-4 w-4" />
-						GitHub
-					</TabsTrigger>
-					<TabsTrigger className="flex items-center gap-2" value="gdrive">
-						<Cloud className="h-4 w-4" />
-						Drive
-					</TabsTrigger>
-				</TabsList>
+			{!awaitingWarningsAck && (
+				<Tabs
+					className="w-full"
+					onValueChange={(v) => setActiveTab(v as TabValue)}
+					value={activeTab}
+				>
+					<TabsList className="grid w-full grid-cols-3">
+						<TabsTrigger className="flex items-center gap-2" value="file">
+							<Upload className="h-4 w-4" />
+							File
+						</TabsTrigger>
+						<TabsTrigger className="flex items-center gap-2" value="github">
+							<Github className="h-4 w-4" />
+							GitHub
+						</TabsTrigger>
+						<TabsTrigger className="flex items-center gap-2" value="gdrive">
+							<Cloud className="h-4 w-4" />
+							Drive
+						</TabsTrigger>
+					</TabsList>
 
-				<TabsContent className="mt-4" value="file">
-					<FileImportTab
-						importCase={importCase}
-						loading={loading}
-						setError={setError}
-					/>
-				</TabsContent>
+					<TabsContent className="mt-4" value="file">
+						<FileImportTab
+							importCase={importCase}
+							loading={loading}
+							setError={setError}
+						/>
+					</TabsContent>
 
-				<TabsContent className="mt-4" value="github">
-					<GitHubImportTab
-						githubConnected={githubConnected}
-						importFromGitHub={importFromGitHub}
-						loading={loading}
-					/>
-				</TabsContent>
+					<TabsContent className="mt-4" value="github">
+						<GitHubImportTab
+							githubConnected={githubConnected}
+							importFromGitHub={importFromGitHub}
+							loading={loading}
+						/>
+					</TabsContent>
 
-				<TabsContent className="mt-4" value="gdrive">
-					<GoogleDriveImportTab
-						googleConnected={googleConnected}
-						importFromGoogleDrive={importFromGoogleDrive}
-						loading={loading}
-						selectedDriveFile={selectedDriveFile}
-						setSelectedDriveFile={setSelectedDriveFile}
-					/>
-				</TabsContent>
-			</Tabs>
+					<TabsContent className="mt-4" value="gdrive">
+						<GoogleDriveImportTab
+							googleConnected={googleConnected}
+							importFromGoogleDrive={importFromGoogleDrive}
+							loading={loading}
+							selectedDriveFile={selectedDriveFile}
+							setSelectedDriveFile={setSelectedDriveFile}
+						/>
+					</TabsContent>
+				</Tabs>
+			)}
 		</Modal>
 	);
 };

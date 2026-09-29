@@ -1,0 +1,32 @@
+---
+title: "Letting the TEA Steep"
+description: Use an assurance case to record and examine a project's reasoning as the work develops.
+---
+
+import LearningObjectives from '@/components/docs/curriculum/learning-objectives';
+import ModuleHeader from '@/components/docs/curriculum/module-header';
+import { steepingObjectives } from './objectives';
+
+export const moduleMetadata = {
+  title: 'Letting the TEA Steep',
+  duration: '35-45 minutes',
+  prerequisites: [
+    { path: '/docs/curriculum/tea-trainee/02-brewing-your-own-tea', name: 'Brewing Your Own TEA' },
+  ],
+};
+
+<ModuleHeader metadata={moduleMetadata} />
+
+You have built a short assurance argument. It is tempting to wait until a project is nearly finished and then fill in a case for a final review. If the case begins at the end, it cannot help the team decide which risks to examine, whose perspectives to seek, or what evidence to generate during the work.
+
+This module treats a case as a record of an ongoing process: identify what matters, make decisions as the work develops, and support those decisions with an argument and evidence. The examples include a proposed heart digital twin for clinical decision support and a prison safety algorithm used to specify fairness. They are prompts for reasoning, not proof that either system is safe or fair.
+
+The platform does not select principles for your project. Your team brings the principles used in its domain or organisation, then decides which are relevant, how to weigh them and what practical claims and evidence would show progress.
+
+<LearningObjectives
+  title="Learning Objectives"
+  variant="card"
+  objectives={steepingObjectives}
+/>
+
+Continue to [the exploration](/docs/curriculum/tea-trainee/03-letting-the-tea-steep/exploration).

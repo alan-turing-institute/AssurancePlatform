@@ -13,6 +13,7 @@ import {
 } from "reactflow";
 import { create } from "zustand";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import { logger } from "@/lib/logger";
 import type {
 	AssuranceCaseResponse,
 	UserResponse,
@@ -67,6 +68,15 @@ interface Store {
 	onEdgesChange: OnEdgesChange;
 	onNodesChange: OnNodesChange;
 	orphanedElements: OrphanedElement[];
+	// True while a read-only, non-case canvas (the curriculum docs viewer,
+	// `components/docs/curriculum/read-only-case-canvas.tsx`) has this store
+	// populated. Distinct from `assuranceCase.permissions === "view"`, which
+	// a real, authenticated view-only case member also has and which must
+	// keep showing NodeActionGroup's comment button — this flag exists so
+	// that button can be hidden specifically where there is no
+	// `CommentsSheet` mounted to open, without changing that permission's
+	// existing meaning for `/case/<id>`.
+	readOnlyCanvas: boolean;
 	reviewMembers: Member[];
 	setActiveUsers: (users: UserResponse[]) => void;
 	setAssuranceCase: (assuranceCase: AssuranceCaseResponse | null) => void;
@@ -90,6 +100,7 @@ interface Store {
 					evidence?: OrphanedElement[];
 			  }
 	) => void;
+	setReadOnlyCanvas: (readOnlyCanvas: boolean) => void;
 	setReviewMembers: (members: Member[]) => void;
 	setViewMembers: (members: Member[]) => void;
 	triggerLayout: () => Promise<void>;
@@ -176,20 +187,35 @@ const useStore = create<Store>((set, get) => ({
 		// Placeholder function for fitView - to be implemented when needed
 	},
 	layoutNodes: async (nodes: Node[], edges: Edge[]) => {
-		// Layout nodes using ELK
+		// Layout nodes using ELK. getLayoutedElements itself never rejects
+		// (it falls back to the pre-layout positions on an ELK failure), but
+		// this catch is a second line of defence so a regression there can't
+		// leave the canvas stuck with whatever was on screen mid-conversion.
 		const direction = get().layoutDirection;
-		const { nodes: layoutedNodes, edges: layoutedEdges } =
-			await getLayoutedElements(nodes, edges, { direction });
-
-		// Set the layouted nodes and edges
-		set({ nodes: layoutedNodes, edges: layoutedEdges });
+		try {
+			const { nodes: layoutedNodes, edges: layoutedEdges } =
+				await getLayoutedElements(nodes, edges, { direction });
+			set({ nodes: layoutedNodes, edges: layoutedEdges });
+		} catch (error) {
+			logger.error("layoutNodes failed; keeping pre-layout positions", {
+				error,
+			});
+			set({ nodes, edges });
+		}
 	},
 	triggerLayout: async () => {
-		// Re-layout current nodes and edges (used when node sizes change)
+		// Re-layout current nodes and edges (used when node sizes change).
+		// Same belt-and-braces catch as layoutNodes above.
 		const { nodes, edges, layoutDirection } = get();
-		const { nodes: layoutedNodes, edges: layoutedEdges } =
-			await getLayoutedElements(nodes, edges, { direction: layoutDirection });
-		set({ nodes: layoutedNodes, edges: layoutedEdges });
+		try {
+			const { nodes: layoutedNodes, edges: layoutedEdges } =
+				await getLayoutedElements(nodes, edges, { direction: layoutDirection });
+			set({ nodes: layoutedNodes, edges: layoutedEdges });
+		} catch (error) {
+			logger.error("triggerLayout failed; keeping current positions", {
+				error,
+			});
+		}
 	},
 	viewMembers: [],
 	editMembers: [],
@@ -254,6 +280,11 @@ const useStore = create<Store>((set, get) => ({
 	caseInformationFocusField: null,
 	setCaseInformationFocusField: (field: string | null) => {
 		set({ caseInformationFocusField: field });
+	},
+	// Read-only docs canvas flag (see the interface doc comment above)
+	readOnlyCanvas: false,
+	setReadOnlyCanvas: (readOnlyCanvas: boolean) => {
+		set({ readOnlyCanvas });
 	},
 }));
 

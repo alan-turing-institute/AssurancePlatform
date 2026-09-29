@@ -10,7 +10,6 @@
  * - File validation testing
  */
 
-import type { Mock } from "vitest";
 import { expect, vi } from "vitest";
 
 /**
@@ -81,7 +80,7 @@ export interface MockFileOptions {
 /**
  * Options for drag and drop event simulation
  */
-export interface DragDropOptions {
+interface DragDropOptions {
 	altKey?: boolean;
 	clientX?: number;
 	clientY?: number;
@@ -103,7 +102,7 @@ export const FileValidationError = {
 	INVALID_NAME: "INVALID_NAME",
 	CORRUPTED_FILE: "CORRUPTED_FILE",
 } as const;
-export type FileValidationError =
+type FileValidationError =
 	(typeof FileValidationError)[keyof typeof FileValidationError];
 
 // ============================================
@@ -116,18 +115,16 @@ const _mockRevokedURLs: Set<string> = new Set();
 /**
  * Mock implementation of URL.createObjectURL
  */
-export const mockCreateObjectURL = vi.fn(
-	(object: Blob | MediaSource): string => {
-		const url = `blob:http://localhost:3000/${Math.random().toString(36).substr(2, 9)}`;
-		_mockObjectURLs.set(url, object);
-		return url;
-	}
-);
+const mockCreateObjectURL = vi.fn((object: Blob | MediaSource): string => {
+	const url = `blob:http://localhost:3000/${Math.random().toString(36).substr(2, 9)}`;
+	_mockObjectURLs.set(url, object);
+	return url;
+});
 
 /**
  * Mock implementation of URL.revokeObjectURL
  */
-export const mockRevokeObjectURL = vi.fn((url: string): void => {
+const mockRevokeObjectURL = vi.fn((url: string): void => {
 	_mockObjectURLs.delete(url);
 	_mockRevokedURLs.add(url);
 });
@@ -135,30 +132,28 @@ export const mockRevokeObjectURL = vi.fn((url: string): void => {
 /**
  * Check if a URL has been created
  */
-export function mockURLHasObjectURL(url: string): boolean {
+function mockURLHasObjectURL(url: string): boolean {
 	return _mockObjectURLs.has(url);
 }
 
 /**
  * Check if a URL has been revoked
  */
-export function mockURLIsRevoked(url: string): boolean {
+function mockURLIsRevoked(url: string): boolean {
 	return _mockRevokedURLs.has(url);
 }
 
 /**
  * Get the object associated with a URL
  */
-export function mockURLGetObjectForURL(
-	url: string
-): Blob | MediaSource | undefined {
+function mockURLGetObjectForURL(url: string): Blob | MediaSource | undefined {
 	return _mockObjectURLs.get(url);
 }
 
 /**
  * Clear all object URLs (useful for test cleanup)
  */
-export function mockURLClearObjectURLs(): void {
+function mockURLClearObjectURLs(): void {
 	_mockObjectURLs.clear();
 	_mockRevokedURLs.clear();
 }
@@ -289,7 +284,7 @@ export function createMockFileList(files: File[]): FileList {
 /**
  * Create a valid image file for testing screenshot uploads
  */
-export function createImageFile(options: Partial<MockFileOptions> = {}): File {
+function createImageFile(options: Partial<MockFileOptions> = {}): File {
 	return createMockFile({
 		name: "screenshot.png",
 		type: MIME_TYPES.PNG,
@@ -302,7 +297,7 @@ export function createImageFile(options: Partial<MockFileOptions> = {}): File {
 /**
  * Create a valid PDF file for testing document uploads
  */
-export function createPDFFile(options: Partial<MockFileOptions> = {}): File {
+function createPDFFile(options: Partial<MockFileOptions> = {}): File {
 	return createMockFile({
 		name: "document.pdf",
 		type: MIME_TYPES.PDF,
@@ -315,7 +310,7 @@ export function createPDFFile(options: Partial<MockFileOptions> = {}): File {
 /**
  * Create a JSON file for testing case exports/imports
  */
-export function createJSONFile(options: Partial<MockFileOptions> = {}): File {
+function createJSONFile(options: Partial<MockFileOptions> = {}): File {
 	const defaultData = {
 		assuranceCase: {
 			id: 1,
@@ -337,7 +332,7 @@ export function createJSONFile(options: Partial<MockFileOptions> = {}): File {
 /**
  * Create a text file for testing
  */
-export function createTextFile(options: Partial<MockFileOptions> = {}): File {
+function createTextFile(options: Partial<MockFileOptions> = {}): File {
 	return createMockFile({
 		name: "document.txt",
 		type: MIME_TYPES.TXT,
@@ -350,9 +345,7 @@ export function createTextFile(options: Partial<MockFileOptions> = {}): File {
 /**
  * Create an oversized file for testing size validation
  */
-export function createOversizedFile(
-	options: Partial<MockFileOptions> = {}
-): File {
+function createOversizedFile(options: Partial<MockFileOptions> = {}): File {
 	return createMockFile({
 		name: "large-file.pdf",
 		type: MIME_TYPES.PDF,
@@ -365,7 +358,7 @@ export function createOversizedFile(
 /**
  * Create an empty file for testing empty file validation
  */
-export function createEmptyFile(options: Partial<MockFileOptions> = {}): File {
+function createEmptyFile(options: Partial<MockFileOptions> = {}): File {
 	return createMockFile({
 		name: "empty.txt",
 		type: MIME_TYPES.TXT,
@@ -378,9 +371,7 @@ export function createEmptyFile(options: Partial<MockFileOptions> = {}): File {
 /**
  * Create a file with an invalid type for testing type validation
  */
-export function createInvalidTypeFile(
-	options: Partial<MockFileOptions> = {}
-): File {
+function createInvalidTypeFile(options: Partial<MockFileOptions> = {}): File {
 	return createMockFile({
 		name: "malicious.exe",
 		type: "application/x-msdownload",
@@ -393,7 +384,7 @@ export function createInvalidTypeFile(
 /**
  * Create multiple files for batch testing
  */
-export function createMultipleFiles(count = 3): File[] {
+function createMultipleFiles(count = 3): File[] {
 	return Array.from({ length: count }, (_, index) =>
 		createMockFile({
 			name: `file-${index + 1}.txt`,
@@ -425,7 +416,7 @@ export const TestFileFactory = {
 /**
  * Create a mock DataTransfer object for drag and drop events
  */
-export function createMockDataTransfer(files: File[] = []): DataTransfer {
+function createMockDataTransfer(files: File[] = []): DataTransfer {
 	const items: DataTransferItem[] = files.map((file) => ({
 		kind: "file" as const,
 		type: file.type,
@@ -472,7 +463,7 @@ export function createMockDataTransfer(files: File[] = []): DataTransfer {
 /**
  * Create a drag enter event
  */
-export function createDragEnterEvent(
+function createDragEnterEvent(
 	files: File[] = [],
 	options: DragDropOptions = {}
 ): DragEvent {
@@ -496,7 +487,7 @@ export function createDragEnterEvent(
 /**
  * Create a drag over event
  */
-export function createDragOverEvent(
+function createDragOverEvent(
 	files: File[] = [],
 	options: DragDropOptions = {}
 ): DragEvent {
@@ -520,7 +511,7 @@ export function createDragOverEvent(
 /**
  * Create a drop event
  */
-export function createDropEvent(
+function createDropEvent(
 	files: File[] = [],
 	options: DragDropOptions = {}
 ): DragEvent {
@@ -544,7 +535,7 @@ export function createDropEvent(
 /**
  * Create a drag leave event
  */
-export function createDragLeaveEvent(options: DragDropOptions = {}): DragEvent {
+function createDragLeaveEvent(options: DragDropOptions = {}): DragEvent {
 	return new DragEvent("dragleave", {
 		bubbles: true,
 		cancelable: true,
@@ -562,7 +553,7 @@ export function createDragLeaveEvent(options: DragDropOptions = {}): DragEvent {
 /**
  * Simulate a complete drag and drop sequence
  */
-export async function simulateDragAndDrop(
+async function simulateDragAndDrop(
 	element: HTMLElement,
 	files: File[],
 	options: DragDropOptions = {}
@@ -602,56 +593,23 @@ export const DragDropTestUtils = {
 let _downloadLinks: HTMLAnchorElement[] = [];
 
 /**
- * Mock the creation of download links
- */
-export function mockDownloadLink(): Mock {
-	const originalCreateElement = document.createElement;
-
-	return vi.fn().mockImplementation((tagName: string) => {
-		if (tagName === "a") {
-			const link = originalCreateElement.call(
-				document,
-				"a"
-			) as HTMLAnchorElement;
-
-			// Override the click method to track downloads
-			const originalClick = link.click;
-			link.click = vi.fn(() => {
-				_downloadLinks.push(link);
-				originalClick.call(link);
-			});
-
-			return link;
-		}
-		return originalCreateElement.call(document, tagName);
-	});
-}
-
-/**
- * Get all download links that were created
- */
-export function getDownloadLinks(): HTMLAnchorElement[] {
-	return [..._downloadLinks];
-}
-
-/**
  * Get the last download link that was created
  */
-export function getLastDownloadLink(): HTMLAnchorElement | undefined {
+function getLastDownloadLink(): HTMLAnchorElement | undefined {
 	return _downloadLinks.at(-1);
 }
 
 /**
  * Clear the download links history
  */
-export function clearDownloadHistory(): void {
+function clearDownloadHistory(): void {
 	_downloadLinks = [];
 }
 
 /**
  * Assert that a download was triggered with specific properties
  */
-export function assertDownloadTriggered(
+function assertDownloadTriggered(
 	expectedFilename?: string,
 	expectedHref?: string
 ): void {
@@ -671,28 +629,6 @@ export function assertDownloadTriggered(
 	}
 }
 
-/**
- * Create a mock blob for download testing
- */
-export function createMockBlob(
-	content: string,
-	type: string = MIME_TYPES.JSON
-): Blob {
-	return new Blob([content], { type });
-}
-
-/**
- * Namespace alias for backward-compatible access
- */
-export const FileDownloadTestUtils = {
-	mockDownloadLink,
-	getDownloadLinks,
-	getLastDownloadLink,
-	clearDownloadHistory,
-	assertDownloadTriggered,
-	createMockBlob,
-};
-
 // ============================================
 // FileValidationTestUtils — exported named functions
 // ============================================
@@ -700,7 +636,7 @@ export const FileDownloadTestUtils = {
 /**
  * Test file type validation
  */
-export function validateFileType(
+function validateFileType(
 	file: File,
 	allowedTypes: string[]
 ): { isValid: boolean; error?: FileValidationError } {
@@ -713,7 +649,7 @@ export function validateFileType(
 /**
  * Test file size validation
  */
-export function validateFileSize(
+function validateFileSize(
 	file: File,
 	maxSize: number,
 	minSize = 0
@@ -736,7 +672,7 @@ export function validateFileSize(
 /**
  * Test file name validation
  */
-export function validateFileName(
+function validateFileName(
 	file: File,
 	pattern?: RegExp
 ): { isValid: boolean; error?: FileValidationError } {
@@ -754,7 +690,7 @@ export function validateFileName(
 /**
  * Create a comprehensive validation function
  */
-export function createValidator(options: {
+function createValidator(options: {
 	allowedTypes?: string[];
 	maxSize?: number;
 	minSize?: number;
@@ -807,7 +743,7 @@ export const FileValidationTestUtils = {
 /**
  * Simulate file selection on a file input element
  */
-export async function selectFiles(
+async function selectFiles(
 	input: HTMLInputElement,
 	files: File[]
 ): Promise<void> {
@@ -831,7 +767,7 @@ export async function selectFiles(
 /**
  * Create a file input element for testing
  */
-export function createFileInput(
+function createFileInput(
 	options: {
 		accept?: string;
 		multiple?: boolean;
@@ -877,7 +813,7 @@ let _savedCreateElement: typeof document.createElement | undefined;
 /**
  * Setup mock implementations for file-related APIs
  */
-export function setupFileTests(): void {
+function setupFileTests(): void {
 	// Store original implementations
 	_savedCreateObjectURL = URL.createObjectURL;
 	_savedRevokeObjectURL = URL.revokeObjectURL;
@@ -962,7 +898,7 @@ export function setupFileTests(): void {
 /**
  * Cleanup and restore original implementations
  */
-export function cleanupFileTests(): void {
+function cleanupFileTests(): void {
 	// Restore original implementations
 	if (_savedCreateObjectURL) {
 		global.URL.createObjectURL = _savedCreateObjectURL;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
 	Background,
 	Controls,
@@ -10,27 +10,27 @@ import ReactFlow, {
 
 import "reactflow/dist/style.css";
 import { Loader2, Unplug, X } from "lucide-react";
-import EvidenceNode from "@/components/cases/evidence-node";
-import GoalNode from "@/components/cases/goal-node";
-import PropertyNode from "@/components/cases/property-node";
-import StrategyNode from "@/components/cases/strategy-node";
+import ChallengesEdge from "@/components/cases/challenges-edge";
+import { nodeTypes } from "@/components/cases/node-type-resolver";
+import SupportEdge from "@/components/cases/support-edge";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
+import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import ActionButtons from "./action-buttons";
 import CommentsSheet from "./comments-sheet";
 
-// Define nodeTypes at module level to ensure stable reference
-// This prevents React Flow warning about recreated nodeTypes objects
-const nodeTypes = {
-	goal: GoalNode,
-	property: PropertyNode,
-	strategy: StrategyNode,
-	evidence: EvidenceNode,
+// nodeTypes (components/cases/node-type-resolver.ts, ADR 0005 D5) and
+// edgeTypes are defined at module level to ensure stable references — this
+// prevents React Flow warning about recreated type-map objects.
+const edgeTypes = {
+	challenges: ChallengesEdge,
+	support: SupportEdge,
 };
 
 function Flow() {
@@ -71,14 +71,27 @@ function Flow() {
 	const onLayout = async (
 		direction: "LR" | "TB" | "RL" | "BT" = layoutDirection
 	) => {
-		const layouted = await getLayoutedElements(nodes, edges, { direction });
+		// getLayoutedElements itself never rejects (it falls back to the
+		// pre-layout positions on an ELK failure), but this catch is a second
+		// line of defence: on any other failure, leave the canvas exactly as
+		// it was rather than half-applying a broken result.
+		try {
+			const layouted = await getLayoutedElements(nodes, edges, { direction });
 
-		setNodes(layouted.nodes);
-		setEdges(layouted.edges);
+			setNodes(layouted.nodes);
+			setEdges(layouted.edges);
 
-		window.requestAnimationFrame(() => {
-			fitView();
-		});
+			window.requestAnimationFrame(() => {
+				fitView();
+			});
+		} catch (error) {
+			logger.error("onLayout failed; canvas positions unchanged", { error });
+			toast({
+				variant: "destructive",
+				title: "Layout error",
+				description: "Could not re-run the layout. Positions are unchanged.",
+			});
+		}
 	};
 
 	// Sync layout direction from persisted case data (only on case load, not on user toggle)
@@ -179,6 +192,16 @@ function Flow() {
 
 	const reactFlowWrapper = useRef(null);
 
+	// Selected-node edge highlight (issue: highlight a selected node's
+	// edges so overlapping connectors on a cell's shared rail — ADR 0005
+	// D8 — can be traced). Purely a display-layer derivation: `edges` in
+	// the store is never touched, so layout (ELK, expensive) never re-runs
+	// on selection, and deselecting naturally reverts to the plain array.
+	const displayEdges = useMemo(
+		() => getHighlightedEdges(edges, nodes),
+		[edges, nodes]
+	);
+
 	return (
 		<div className="min-h-screen">
 			{loading ? (
@@ -189,7 +212,8 @@ function Flow() {
 				<div data-tour="canvas" id="ChartFlow" ref={reactFlowWrapper}>
 					<ReactFlow
 						className="min-h-screen"
-						edges={edges}
+						edges={displayEdges}
+						edgeTypes={edgeTypes}
 						fitView
 						id="ReactFlow"
 						nodes={nodes}

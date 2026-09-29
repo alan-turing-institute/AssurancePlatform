@@ -24,7 +24,7 @@ const testCase = await createTestCase(user.id, { name: "My Case" });
 Also provides composite helpers:
 - `createTestCaseWithGoal()` — case with a top-level GOAL (required for publishing)
 - `createTestTeamWithAdmin()` — team with an ADMIN member
-- `getTestPasswordResetToken()` — queries the reset token after requesting a password reset
+- `getTestPasswordResetTokenHash()` — queries the stored reset-token hash after requesting a password reset
 - `createNestedCaseJSON()` / `createNestedCaseWithChainJSON()` — plain JSON objects for import testing
 
 ### `mock-data.ts` (unit tests)

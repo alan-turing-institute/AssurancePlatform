@@ -1,0 +1,22 @@
+---
+title: "Rate limiting and security audit events"
+description: "Trace guarded requests and persisted security events."
+---
+
+Rate limits slow repeated attempts against selected account and machine-authentication paths. Security audit events record security-relevant outcomes in structured logs and, where requested, in a database table. These services support investigation and abuse controls; neither is a substitute for permission checks on a case or token scope checks on a machine route.
+
+## Apply the configured limits
+
+`lib/services/rate-limit-service.ts` declares named configurations. Registration allows five attempts per IP and three per email in one hour. Invitation acceptance allows 20 per IP and 10 per user ID in one hour. Password reset allows three per email and ten per IP in one hour. Failed machine bearer authentication allows 20 attempts per IP in 15 minutes. Valid machine polling does not spend the failed-auth budget. The service counts stored `RateLimitAttempt` rows inside the rolling window, returns an allowed flag and retry delay, and records attempts. A blocked request also generates a security event.
+
+Call the shared limit check from a route with the relevant IP, email or user ID. The helper skips an identifier that is absent; it does not invent an identity. Keep authentication and authorisation guards in place after a request passes the limit. A limit is scoped to its configured endpoint and identifier type, not a global cap on every action by one person.
+
+## Record audit events
+
+`recordSecurityEvent` in `lib/services/security-audit-service.ts` takes an event name, severity, optional actor and request context, and metadata. It sends a structured log through `lib/audit/security-log.ts` and writes a `SecurityAuditLog` row. Low and medium events use warning-level logging; high and critical events use error-level logging. If the database audit write fails, the service logs an `audit_log_write_failed` event and does not throw the failure back into an operation that already completed. Operators should therefore monitor log failures as well as query persisted rows.
+
+Choose specific event names and metadata that explain an outcome without including raw credentials. The logger preserves supplied fields, so the caller is responsible for excluding secrets. Database audit rows support later review; they do not automatically show a user-facing activity feed, and the rate-limit table is a record of attempts rather than a full security incident history.
+
+## Limits and code location
+
+The present configuration protects registration, invite acceptance, password reset and failed machine authentication. Do not describe it as blanket throttling of all API routes. Rate-limit policy and persistence are in `lib/services/rate-limit-service.ts`; audit persistence is in `lib/services/security-audit-service.ts`; log formatting is in `lib/audit/security-log.ts` and `lib/logger.ts`.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import {
 	type PluginDataLocation,
@@ -15,6 +16,8 @@ import type {
 	Prisma,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "health-scoring-service" });
 
 /**
  * The health plugin's scoring rule (ADR 0002 v2 §3, ADR 0001 §4): v1 is
@@ -186,7 +189,7 @@ export async function recomputeHealthScore(
 			select: { verdict: true, evaluatedAt: true },
 		});
 	} catch (error) {
-		console.error("Failed to read evidence for scoring:", error);
+		log.error("Failed to read evidence for scoring", { error });
 		return { error: "Failed to compute health score" };
 	}
 
@@ -320,7 +323,7 @@ export async function readHealthState(
 			select: { caseId: true, deletedAt: true, elementType: true },
 		});
 	} catch (error) {
-		console.error("Failed to resolve claim for health state read:", error);
+		log.error("Failed to resolve claim for health state read", { error });
 		return { error: "Failed to read health state" };
 	}
 	if (

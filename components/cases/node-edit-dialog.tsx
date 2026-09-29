@@ -81,6 +81,22 @@ export function getInitialAssertionStatus(
 }
 
 /**
+ * The name of the element a defeater challenges (ADR 0005 D2), for the
+ * edit dialog's read-only "Challenges" line. `null` when the target isn't
+ * (or is no longer) present on the canvas.
+ */
+function findChallengedElementName(
+	defeatsElementId: string | null | undefined,
+	allNodes: Node[]
+): string | null {
+	if (!defeatsElementId) {
+		return null;
+	}
+	const challengedNode = allNodes.find((n) => n.data?.id === defeatsElementId);
+	return (challengedNode?.data?.name as string | undefined) || null;
+}
+
+/**
  * Converts node data URLs to field array format.
  */
 function getInitialUrls(
@@ -109,7 +125,9 @@ function buildUpdatePayload(
 	if (supportsAttributes(nodeType)) {
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
-		updateItem.context = values.context || [];
+		updateItem.context = (values.context || [])
+			.map((c) => c.trim())
+			.filter((c) => c.length > 0);
 		// Per-assertion status (ADR 0004 D3) — always one of the five
 		// author-declarable values; the Select never offers AS_CITED.
 		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
@@ -231,6 +249,7 @@ function AssertionStatusSection({
 
 interface ContextSectionProps {
 	contextItems: Array<{ id: string; value: string }>;
+	form: UseFormReturn<FormValues>;
 	newContextValue: string;
 	onAddContext: () => void;
 	onNewContextChange: (value: string) => void;
@@ -238,8 +257,17 @@ interface ContextSectionProps {
 	readOnly: boolean;
 }
 
+// `context` is a `string[]` on the shared zod schema (`nodeEditFormSchema`),
+// and react-hook-form's `useFieldArray` only accepts array fields whose
+// elements are objects (its `FieldArrayPath` type excludes primitive
+// arrays), so each entry is bound individually via `FormField` at the
+// indexed path `context.${idx}` instead — a plain `Path`, which primitive
+// array elements are valid targets for. Add/remove bookkeeping (stable keys
+// via `contextItems`) stays as before; only the read-only `<span>` becomes
+// an editable `Input`.
 function ContextSection({
 	contextItems,
+	form,
 	readOnly,
 	newContextValue,
 	onNewContextChange,
@@ -259,22 +287,40 @@ function ContextSection({
 			{contextItems.length > 0 && (
 				<div className="space-y-2">
 					{contextItems.map((item, idx) => (
-						<div
-							className="flex items-start gap-2 rounded border bg-muted/50 p-2"
+						<FormField
+							control={form.control}
 							key={item.id}
-						>
-							<span className="flex-1 text-sm">{item.value}</span>
-							{!readOnly && (
-								<button
-									className="rounded p-1 text-destructive hover:bg-destructive/10"
-									onClick={() => onRemoveContext(idx)}
-									title="Remove context"
-									type="button"
-								>
-									<Trash2 className="h-4 w-4" />
-								</button>
+							name={`context.${idx}`}
+							render={({ field }) => (
+								<FormItem>
+									<div className="flex items-start gap-2">
+										<FormControl>
+											<Input
+												aria-label={`Context entry ${idx + 1}`}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") {
+														e.preventDefault();
+													}
+												}}
+												readOnly={readOnly}
+												{...field}
+											/>
+										</FormControl>
+										{!readOnly && (
+											<button
+												className="rounded p-1 text-destructive hover:bg-destructive/10"
+												onClick={() => onRemoveContext(idx)}
+												title="Remove context"
+												type="button"
+											>
+												<Trash2 className="h-4 w-4" />
+											</button>
+										)}
+									</div>
+									<FormMessage />
+								</FormItem>
 							)}
-						</div>
+						/>
 					))}
 				</div>
 			)}
@@ -399,8 +445,15 @@ export default function NodeEditDialog({
 	const [newContextValue, setNewContextValue] = useState("");
 	const componentId = useId();
 	const [idCounter, setIdCounter] = useState(0);
-	const { assuranceCase } = useStore();
+	const { assuranceCase, nodes: allNodes } = useStore();
 	const panelSlot = useElementPanelSlot();
+	// Dialogical reasoning (defeaters, ADR 0005 D2): a read-only "Challenges"
+	// line naming the target — changing the target is out of scope for 1.0.
+	const isDefeater = !!node.data?.isDefeater;
+	const challengedName = findChallengedElementName(
+		node.data?.defeatsElementId as string | null | undefined,
+		allNodes
+	);
 	// Fail-closed, positive rule: editable only when the case permission is
 	// explicitly "edit" or "manage". Any other value — "view", "comment",
 	// or unset/unknown while the case is still loading — renders read-only.
@@ -605,6 +658,14 @@ export default function NodeEditDialog({
 	const detailsForm = (
 		<Form {...form}>
 			<form className="space-y-4" onSubmit={form.handleSubmit(handleSubmit)}>
+				{isDefeater && (
+					<div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm">
+						<span className="font-medium text-muted-foreground">
+							Challenges:{" "}
+						</span>
+						<span>{challengedName ?? "an element outside this case"}</span>
+					</div>
+				)}
 				<TextFieldSection
 					form={form}
 					label="Description"
@@ -636,6 +697,7 @@ export default function NodeEditDialog({
 						/>
 						<ContextSection
 							contextItems={contextItems}
+							form={form}
 							newContextValue={newContextValue}
 							onAddContext={addContext}
 							onNewContextChange={setNewContextValue}

@@ -3,14 +3,22 @@ import {
 	type PasswordAlgorithm,
 	verifyPassword,
 } from "@/lib/auth/password-service";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import type { ChangePasswordInput } from "@/lib/schemas/auth";
 import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
+import {
+	archivePublishedCopies,
+	deleteMediaKeys,
+} from "@/lib/services/publish-service";
 import {
 	validateEmail,
 	validatePassword,
 	validateUsername,
 } from "@/lib/validation/validators";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "user-management-service" });
 
 // ============================================
 // Types
@@ -21,11 +29,6 @@ export interface UpdateProfileInput {
 	firstName?: string;
 	lastName?: string;
 	username?: string;
-}
-
-export interface ChangePasswordInput {
-	currentPassword: string;
-	newPassword: string;
 }
 
 // ============================================
@@ -186,7 +189,7 @@ export async function updateUserProfile(
 			data: toProfileData(user),
 		};
 	} catch (error) {
-		console.error("Error updating user profile:", error);
+		log.error("Error updating user profile", { error });
 		return { error: "Failed to update profile" };
 	}
 }
@@ -197,7 +200,9 @@ export async function updateUserProfile(
 
 /**
  * Changes a user's password.
- * Verifies current password, validates new password, and revokes all sessions.
+ * Verifies current password, validates new password, and revokes every
+ * existing session by bumping sessionVersion — checked on every server-side
+ * session read in callbacks.jwt (lib/auth/config.ts).
  */
 export async function changePassword(
 	userId: string,
@@ -247,21 +252,23 @@ export async function changePassword(
 		// Hash new password with argon2id
 		const newHash = await hashPassword(input.newPassword);
 
-		// Update password
+		// Update password and revoke every existing session in the same
+		// statement, so the hash change and the revocation are atomic.
 		await prisma.user.update({
 			where: { id: userId },
 			data: {
 				passwordHash: newHash,
 				passwordAlgorithm: "argon2id",
 				// Clear any pending password reset
-				passwordResetToken: null,
+				passwordResetTokenHash: null,
 				passwordResetExpires: null,
+				sessionVersion: { increment: 1 },
 			},
 		});
 
 		return { data: true };
 	} catch (error) {
-		console.error("Error changing password:", error);
+		log.error("Error changing password", { error });
 		return { error: "Failed to change password" };
 	}
 }
@@ -382,11 +389,14 @@ export async function deleteAccount(
 	password?: string
 ): ServiceResult {
 	try {
-		// Get user info
+		// Get user info (email/username captured now — the row won't exist
+		// once the deletion transaction below commits)
 		const user = await prisma.user.findUnique({
 			where: { id: userId },
 			select: {
 				id: true,
+				email: true,
+				username: true,
 				passwordHash: true,
 				passwordAlgorithm: true,
 				authProvider: true,
@@ -423,12 +433,43 @@ export async function deleteAccount(
 			}
 		}
 
-		await runAccountDeletionTransaction(userId);
+		const publishedImageKeys = await runAccountDeletionTransaction(userId);
+		await deleteMediaKeys(publishedImageKeys);
+
+		await sendAccountDeletedEmailBestEffort(userId, user.email, user.username);
 
 		return { data: true };
 	} catch (error) {
-		console.error("Error deleting account:", error);
+		log.error("Error deleting account", { error });
 		return { error: "Failed to delete account" };
+	}
+}
+
+/**
+ * Sends the account-deleted confirmation, shared by `deleteAccount` (this
+ * file, self-service) and `deleteAccountForRetention` (below, the sweep).
+ * Best-effort: the account row is already gone by the time this runs, so a
+ * failed send is logged and swallowed here rather than surfaced — it must
+ * never turn an already-successful deletion into an error result.
+ */
+async function sendAccountDeletedEmailBestEffort(
+	userId: string,
+	email: string,
+	username: string
+): Promise<void> {
+	try {
+		const { sendAccountDeletedEmail } = await import(
+			"@/lib/services/email-service"
+		);
+		const result = await sendAccountDeletedEmail({ to: email, username });
+		if ("error" in result) {
+			log.error("Failed to send account-deleted email", {
+				userId,
+				error: result.error,
+			});
+		}
+	} catch (error) {
+		log.error("Failed to send account-deleted email", { userId, error });
 	}
 }
 
@@ -522,8 +563,10 @@ async function partitionCasesToKeepOrTrash(
  * Callers are responsible for their own pre-flight checks
  * (`checkDeletable`, password) before calling this.
  */
-async function runAccountDeletionTransaction(userId: string): Promise<void> {
-	await prisma.$transaction(
+async function runAccountDeletionTransaction(
+	userId: string
+): Promise<string[]> {
+	return await prisma.$transaction(
 		async (tx) => {
 			const systemUserId = await getOrCreateSystemUser(tx);
 
@@ -544,6 +587,10 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 				});
 			}
 
+			// Superseded-version image keys `archivePublishedCopies` deletes
+			// below — collected outside the `if` so the function always returns
+			// an array, empty when there was nothing to trash.
+			let publishedImageKeys: string[] = [];
 			if (toTrash.length > 0) {
 				await tx.assuranceCase.updateMany({
 					where: { id: { in: toTrash } },
@@ -553,6 +600,11 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 						deletedById: systemUserId,
 					},
 				});
+				// Archives rather than removes each trashed case's Discover copy.
+				// `ownerId: null` because the deleted owner's account is gone —
+				// nobody can remove these through the app afterwards; that needs
+				// the platform team, by hand.
+				publishedImageKeys = await archivePublishedCopies(tx, toTrash, null);
 			}
 
 			// Handle teams created by user
@@ -620,6 +672,8 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 			// Delete the user (cascades: RefreshToken, TeamMember, CasePermission
 			// held BY this user, GitHubRepository)
 			await tx.user.delete({ where: { id: userId } });
+
+			return publishedImageKeys;
 		},
 		{
 			timeout: DELETION_TRANSACTION_TIMEOUT_MS,
@@ -652,12 +706,10 @@ export async function deleteAccountForRetention(userId: string): ServiceResult {
 			return { error: deletable.error };
 		}
 
-		await runAccountDeletionTransaction(userId);
+		const publishedImageKeys = await runAccountDeletionTransaction(userId);
+		await deleteMediaKeys(publishedImageKeys);
 
-		const { sendAccountDeletedEmail } = await import(
-			"@/lib/services/email-service"
-		);
-		await sendAccountDeletedEmail({ to: user.email, username: user.username });
+		await sendAccountDeletedEmailBestEffort(userId, user.email, user.username);
 
 		const { logSecurityEvent } = await import("@/lib/audit/security-log");
 		logSecurityEvent({
@@ -668,7 +720,7 @@ export async function deleteAccountForRetention(userId: string): ServiceResult {
 
 		return { data: true };
 	} catch (error) {
-		console.error("Error deleting account for retention:", error);
+		log.error("Error deleting account for retention", { error });
 		return { error: "Failed to delete account" };
 	}
 }

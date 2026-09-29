@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
@@ -7,6 +8,8 @@ import {
 	Prisma,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "plugin-data-service" });
 
 /**
  * Namespaced read/write access over the tier-1 `PluginData` model (ADR 0002
@@ -241,7 +244,7 @@ export async function readPluginData(
 		});
 		return { data: record };
 	} catch (error) {
-		console.error("Failed to read plugin data:", error);
+		log.error("Failed to read plugin data", { error });
 		return { error: "Failed to read plugin data" };
 	}
 }
@@ -264,7 +267,7 @@ export async function listPluginDataForCase(
 		});
 		return { data: records };
 	} catch (error) {
-		console.error("Failed to list plugin data:", error);
+		log.error("Failed to list plugin data", { error });
 		return { error: "Failed to list plugin data" };
 	}
 }
@@ -297,7 +300,7 @@ export async function writePluginData(
 			: await upsertCaseLevelPluginData(pluginId, location.caseId, data);
 		return { data: record };
 	} catch (error) {
-		console.error("Failed to write plugin data:", error);
+		log.error("Failed to write plugin data", { error });
 		return { error: "Failed to write plugin data" };
 	}
 }
@@ -333,7 +336,7 @@ export async function deletePluginData(
 		});
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to delete plugin data:", error);
+		log.error("Failed to delete plugin data", { error });
 		return { error: "Failed to delete plugin data" };
 	}
 }

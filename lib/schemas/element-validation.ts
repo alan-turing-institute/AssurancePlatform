@@ -414,17 +414,26 @@ export type ElementNameValidationResult =
  * `getEnabledPluginIdsForUser` in `lib/services/plugin-enablement-service.ts`)
  * and passed in — this function stays pure, with no Prisma access, matching
  * every other rule in this file.
+ *
+ * `isDefeater` selects the accepted prefix form (Chris's ruling, 2026-09-15):
+ * the plain prefix when false, the GSN-style C-prefixed form when true — a
+ * plain element named in the defeater's form, or a defeater named in the
+ * plain form, is rejected either way.
  */
 export function validateElementName(
 	elementType: string,
 	name: string | null | undefined,
-	enabledPluginIds: readonly string[] = []
+	enabledPluginIds: readonly string[] = [],
+	isDefeater = false
 ): ElementNameValidationResult {
 	if (!name) {
 		return { valid: true };
 	}
-	if (isValidElementName(elementType, name, enabledPluginIds)) {
+	if (isValidElementName(elementType, name, enabledPluginIds, isDefeater)) {
 		return { valid: true };
 	}
-	return { valid: false, error: describeExpectedFormat(elementType) };
+	return {
+		valid: false,
+		error: describeExpectedFormat(elementType, isDefeater),
+	};
 }

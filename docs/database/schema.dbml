@@ -13,21 +13,22 @@ Table users {
   username String [unique, not null, note: 'Unique display name shown throughout the platform']
   passwordHash String [note: 'Hashed password (null for OAuth-only users)']
   passwordAlgorithm String [not null, default: 'django_pbkdf2', note: 'Hash algorithm: \'argon2id\' (new) or \'django_pbkdf2\' (legacy)']
+  sessionVersion Int [not null, default: 1, note: 'Bumped on password change/reset (lib/auth/session-version.ts); a signed-in JWT stamped with an older version is rejected in callbacks.jwt, revoking every session issued before the bump.']
   firstName String [note: 'User\'s first name for display']
   lastName String [note: 'User\'s last name for display']
   avatarUrl String [note: 'Profile picture URL (from GitHub or uploaded)']
   authProvider AuthProvider [not null, default: 'LOCAL']
   githubId String [unique]
   githubUsername String
-  githubAccessToken String [note: 'Encrypted GitHub OAuth access token for API calls']
+  githubAccessToken String [note: 'GitHub OAuth access token for API calls, encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)']
   githubTokenExpiresAt DateTime [note: 'Expiry timestamp for the GitHub token']
   googleId String [unique, note: 'Google account ID for OAuth']
   googleEmail String [note: 'Google email address']
-  googleAccessToken String [note: 'Google OAuth access token for Drive API calls']
-  googleRefreshToken String [note: 'Google OAuth refresh token (tokens expire after 1 hour)']
+  googleAccessToken String [note: 'Google OAuth access token for Drive API calls, encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)']
+  googleRefreshToken String [note: 'Google OAuth refresh token (tokens expire after 1 hour), encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)']
   googleTokenExpiresAt DateTime [note: 'Expiry timestamp for the Google access token']
   emailVerified Boolean [not null, default: false, note: 'Whether email has been verified (for email-based signup)']
-  passwordResetToken String
+  passwordResetTokenHash String [note: 'SHA-256 hex digest of the reset token; the raw token is never stored (AP-QA-006)']
   passwordResetExpires DateTime
   defaultCaseMode CaseMode [not null, default: 'STANDARD', note: 'Default view mode for new cases: STANDARD (simplified) or ADVANCED (full GSN notation)']
   hasSeenMigrationNotice Boolean [not null, default: false, note: 'Whether user has dismissed the Django-to-Next.js migration notice']
@@ -53,6 +54,7 @@ Table users {
   deletedCases assurance_cases [not null]
   ownedIntegrations integrations [not null]
   integrationPrincipal integrations
+  archivedPublishedCases published_assurance_cases [not null]
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -230,6 +232,7 @@ Table assurance_elements {
   url String [note: 'Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]']
   urls String[] [not null, note: 'Multiple evidence URLs. Must be valid http/https URLs']
   moduleReferenceId String [note: 'For MODULE type: the referenced case ID']
+  moduleReferenceDangling Boolean [not null, default: false]
   moduleEmbedType ModuleEmbedType [note: 'COPY (snapshot) or REFERENCE (live link)']
   modulePublicSummary String [note: 'Public summary when module is not viewable']
   fromPattern Boolean [not null, default: false, note: 'True if element came from a pattern template']
@@ -237,6 +240,7 @@ Table assurance_elements {
   inSandbox Boolean [not null, default: false, note: 'True if element is in draft/sandbox mode']
   isDefeater Boolean [not null, default: false, note: 'True if element is a counter-argument']
   defeatsElementId String [note: 'Element this defeater challenges']
+  defeatsDangling Boolean [not null, default: false]
   level Int [note: 'Hierarchy depth level for property claims']
   assertionStatus AssertionStatus
   citedElementId String
@@ -560,9 +564,12 @@ Table published_assurance_cases {
   title String [not null, note: 'Title at time of publishing']
   content Json [not null, note: 'Full case content as JSON snapshot']
   createdAt DateTime [default: `now()`, not null]
-  assuranceCaseId String [not null, note: 'Source case this was published from']
+  assuranceCaseId String [note: 'Source case this was published from. Optional — an archived copy (see `archivedAt` below) outlives its case: the FK is `ON DELETE SET NULL`, so a permanent case delete clears this rather than being refused, and the owner can take an archived copy down even after the case itself is gone.']
   description String [note: 'Description at time of publishing']
-  assuranceCase assurance_cases [not null]
+  archivedAt DateTime [note: 'Set when this copy was archived rather than removed at trash time; null for a live, updating copy. Archiving keeps exactly this — the case\'s `isCurrent` row — and deletes the case\'s other (superseded) rows, so an archived copy is always a single record (see `archivePublishedCopies` in `publish-service.ts`).']
+  archivedOwnerId String [note: 'The account that may remove this archived copy (`removeArchivedCopy` in `case-trash-service.ts`) — the case\'s owner at archive time, or null when nobody can (account deletion: the deleted owner\'s account is gone, so the copy is orphaned until the platform team removes it by hand).']
+  assuranceCase assurance_cases
+  archivedOwner users
 
   Note: 'Frozen, point-in-time snapshot of an assurance case (ADR 0003 §3): the
 public/Discover-facing published record. Content stored as JSON;
@@ -886,7 +893,9 @@ Ref: case_type_assignments.caseTypeId > case_types.id [delete: Cascade]
 
 Ref: github_repositories.userId > users.id [delete: Cascade]
 
-Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id
+Ref: published_assurance_cases.assuranceCaseId > assurance_cases.id [delete: Set Null]
+
+Ref: published_assurance_cases.archivedOwnerId > users.id [delete: Set Null]
 
 Ref: plugin_data.caseId > assurance_cases.id [delete: Cascade]
 

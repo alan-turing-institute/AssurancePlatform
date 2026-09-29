@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
 	DEFAULT_MAX_JSON_BODY_BYTES,
 	parseJsonBody,
+	readFormDataWithLimit,
 	readJsonBody,
 } from "../api-request";
 
@@ -216,5 +217,46 @@ describe("parseJsonBody", () => {
 		await expect(
 			parseJsonBody(request, schema, { maxBytes: 10 })
 		).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+	});
+});
+
+describe("readFormDataWithLimit", () => {
+	it("parses a body under the cap into FormData", async () => {
+		const formData = new FormData();
+		formData.set("field", "value");
+		const request = new NextRequest(URL, { method: "POST", body: formData });
+
+		const result = await readFormDataWithLimit(request, 1024 * 1024);
+		expect(result.get("field")).toBe("value");
+	});
+
+	it("rejects immediately when Content-Length declares more than the cap, without reading the stream", async () => {
+		const { request, pull } = chunkedRequest(["irrelevant body"], {
+			headers: { "content-length": String(10 * 1024 * 1024) },
+		});
+
+		// See the matching comment in the readJsonBody suite above — the
+		// baseline accounts for undici's own readiness probe on construction.
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		const baseline = pull.mock.calls.length;
+
+		await expect(readFormDataWithLimit(request, 1024)).rejects.toMatchObject({
+			code: "PAYLOAD_TOO_LARGE",
+			statusCode: 413,
+		});
+		expect(pull.mock.calls.length).toBe(baseline);
+	});
+
+	it("rejects once the running byte count crosses the cap, streamed with no Content-Length header", async () => {
+		const chunkText = "0123456789"; // 10 bytes
+		const { request, pull } = chunkedRequest([chunkText, chunkText, chunkText]);
+
+		await expect(readFormDataWithLimit(request, 15)).rejects.toMatchObject({
+			code: "PAYLOAD_TOO_LARGE",
+			statusCode: 413,
+		});
+		// 1st chunk (10 bytes, under cap) then the 2nd (crosses 15) — the 3rd
+		// chunk is never pulled.
+		expect(pull).toHaveBeenCalledTimes(2);
 	});
 });

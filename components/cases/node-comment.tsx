@@ -9,10 +9,13 @@ import {
 } from "react";
 import type { Node } from "reactflow";
 import { useCaseEvents } from "@/hooks/use-case-events";
+import { logger } from "@/lib/logger";
 import useStore from "@/store/store";
 import { Skeleton } from "../ui/skeleton";
 import CommentsFeed from "./comments-feed";
 import CommentsForm from "./comments-form";
+
+const log = logger.child({ component: "node-comment" });
 
 /** Event types that trigger a comments refetch */
 const COMMENT_EVENTS = [
@@ -75,14 +78,14 @@ const NodeComment = ({
 			});
 
 			if (!response.ok) {
-				console.error("Failed to fetch comments:", response.status);
+				log.error("Failed to fetch comments", { status: response.status });
 				return [];
 			}
 
 			const result = await response.json();
 			return Array.isArray(result) ? result : [];
 		} catch (error) {
-			console.error("Error fetching comments:", error);
+			log.error("Error fetching comments", { error });
 			return [];
 		} finally {
 			setLoading(false);

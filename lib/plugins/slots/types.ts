@@ -20,8 +20,17 @@ import type { PluginSurface } from "@/lib/plugins/manifest";
  * would be the first crack in that layering for a type that is,
  * structurally, just a string enum. The two unions are identical, so a
  * `DiagramNodeType` value passes through call sites with no cast needed.
+ * Extended for `awayGoal`/`module` (ADR 0005 D3) alongside `DiagramNodeType`
+ * — no plugin registers against either kind, so this is purely keeping the
+ * mirror faithful, not building D6's GSN plugin (explicitly out of scope).
  */
-export type ElementType = "evidence" | "goal" | "property" | "strategy";
+export type ElementType =
+	| "evidence"
+	| "goal"
+	| "property"
+	| "strategy"
+	| "awayGoal"
+	| "module";
 
 /**
  * The UI slot ids a plugin may register into — a subset of `PluginSurface`

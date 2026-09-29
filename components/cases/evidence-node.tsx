@@ -43,6 +43,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				}
 				dataTour={dataTour}
 				description={data.description}
+				isDefeater={!!data.isDefeater}
 				name={data.name}
 				nodeType="evidence"
 				selected={props.selected}

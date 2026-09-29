@@ -34,33 +34,7 @@
       "multipart": {},
       "ImportResult": {},
       "GitHubImportSchema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "GitHub URL or shorthand path to the JSON file"
-          },
-          "owner": {
-            "type": "string",
-            "description": "Repository owner (overrides URL parsing)"
-          },
-          "repo": {
-            "type": "string",
-            "description": "Repository name (overrides URL parsing)"
-          },
-          "path": {
-            "type": "string",
-            "description": "File path (overrides URL parsing)"
-          },
-          "branch": {
-            "type": "string",
-            "description": "Branch name (optional, uses default branch if not specified)"
-          }
-        },
-        "required": [
-          "url"
-        ],
+        "type": "string",
         "description": "GitHub import request parameters"
       }
     },
@@ -326,7 +300,7 @@
       "delete": {
         "operationId": "delete-cases-{id}",
         "summary": "Delete an assurance case (soft-delete)",
-        "description": "Moves a case to trash (soft-delete). Cases remain in trash for 30 days",
+        "description": "Moves a case to trash (soft-delete). Requires ADMIN permission on the case.",
         "tags": [
           "Cases"
         ],
@@ -1291,6 +1265,46 @@
         }
       }
     },
+    "/cases/trash/archived": {
+      "get": {
+        "operationId": "get-cases-trash-archived",
+        "summary": "List the caller's archived Discover copies",
+        "description": "Returns the caller's own archived Discover copies — copies kept, rather than removed, when their published case moved to trash.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Array of archived copies"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/information/image": {
       "post": {
         "operationId": "post-cases-{id}-information-image",
@@ -1371,6 +1385,86 @@
         }
       }
     },
+    "/cases/{id}/media/feature": {
+      "get": {
+        "operationId": "get-cases-{id}-media-feature",
+        "summary": "GET /api/cases/[id]/media/feature",
+        "description": "Streams the case-information record's feature image,",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The feature image's bytes"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/media/screenshot": {
+      "get": {
+        "operationId": "get-cases-{id}-media-screenshot",
+        "summary": "GET /api/cases/[id]/media/screenshot",
+        "description": "Streams the case's dashboard-card screenshot, access-checked",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The screenshot's bytes"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/permissions/{permissionId}": {
       "patch": {
         "operationId": "patch-cases-{id}-permissions-{permissionId}",
@@ -1403,6 +1497,39 @@
           "Cases"
         ],
         "parameters": [],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/trash/archived/{publishedId}": {
+      "delete": {
+        "operationId": "delete-cases-trash-archived-{publishedId}",
+        "summary": "Remove one of the caller's archived Discover copies",
+        "description": "Permanently removes one of the caller's archived Discover copies.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
           "204": {
             "description": "No Content"
@@ -1547,6 +1674,76 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/200 - { success: true, purgedCount: number, cutoffDate: string }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cron/retention-sweep": {
+      "post": {
+        "operationId": "post-cron-retention-sweep",
+        "summary": "Inactive-account data-retention sweep (cron job)",
+        "description": "Warns, then deletes, accounts inactive for two years since",
+        "tags": [
+          "Cron"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true, dryRun: boolean, warned30: number, warned7: number, deleted: number, skipped: number }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/public/discover/{slug}/image/{versionId}": {
+      "get": {
+        "operationId": "get-public-discover-{slug}-image-{versionId}",
+        "summary": "GET /api/public/discover/[slug]/image/[versionId]",
+        "description": "Streams a published item's feature image — public, anonymous",
+        "tags": [
+          "Discover"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The feature image's bytes"
                 }
               }
             }
@@ -2943,6 +3140,31 @@
       "patch": {
         "operationId": "patch-user-tours",
         "summary": "PATCH /api/user/tours",
+        "description": "",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/plugins/{pluginId}/consequences": {
+      "get": {
+        "operationId": "get-user-plugins-{pluginId}-consequences",
+        "summary": "GET /api/user/plugins/[pluginId]/consequences",
         "description": "",
         "tags": [
           "User"

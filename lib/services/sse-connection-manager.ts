@@ -5,6 +5,10 @@
  * Tracks active connections per case and broadcasts events to subscribers.
  */
 
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "sse-connection-manager" });
+
 export type SSEEventType =
 	| "case:updated"
 	| "comment:created"
@@ -71,10 +75,11 @@ class SSEConnectionManager {
 			});
 		}
 
-		console.log(
-			`[SSE] Connection added: ${connectionId} for case ${caseId}. ` +
-				`Total connections for case: ${caseConnections?.size ?? 0}`
-		);
+		log.info("SSE connection added", {
+			connectionId,
+			caseId,
+			totalConnectionsForCase: caseConnections?.size ?? 0,
+		});
 	}
 
 	/**
@@ -84,10 +89,11 @@ class SSEConnectionManager {
 		const caseConnections = this.connections.get(caseId);
 		if (caseConnections) {
 			caseConnections.delete(connectionId);
-			console.log(
-				`[SSE] Connection removed: ${connectionId} from case ${caseId}. ` +
-					`Remaining connections: ${caseConnections.size}`
-			);
+			log.info("SSE connection removed", {
+				connectionId,
+				caseId,
+				remainingConnections: caseConnections.size,
+			});
 
 			// Clean up empty case entries
 			if (caseConnections.size === 0) {
@@ -122,10 +128,11 @@ class SSEConnectionManager {
 			this.removeConnection(event.caseId, connectionId);
 		}
 
-		console.log(
-			`[SSE] Broadcast event ${event.type} to case ${event.caseId}. ` +
-				`Recipients: ${caseConnections.size - deadConnections.length}`
-		);
+		log.info("SSE broadcast event", {
+			eventType: event.type,
+			caseId: event.caseId,
+			recipients: caseConnections.size - deadConnections.length,
+		});
 	}
 
 	/**

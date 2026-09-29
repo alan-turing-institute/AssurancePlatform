@@ -42,8 +42,12 @@ export default function NodeActionGroup({
 	addPopover,
 	commentCount = 0,
 }: NodeActionGroupProps) {
-	const { setCommentsSheetOpen, setCommentsSheetNode, assuranceCase } =
-		useStore();
+	const {
+		setCommentsSheetOpen,
+		setCommentsSheetNode,
+		assuranceCase,
+		readOnlyCanvas,
+	} = useStore();
 
 	const readOnly = !!(
 		assuranceCase?.permissions === "view" ||
@@ -90,24 +94,27 @@ export default function NodeActionGroup({
 			{/* More Options (Detach/Delete) - not shown when read-only */}
 			{!readOnly && <NodeOptionsMenu node={node} nodeType={nodeType} />}
 
-			{/* Comment Button */}
-			<ActionTooltip label={commentLabel}>
-				<button
-					aria-label={commentLabel}
-					onClick={handleCommentClick}
-					onMouseDown={(e) => e.stopPropagation()}
-					type="button"
-				>
-					<div className="relative inline-flex rounded-full p-1 hover:bg-foreground/10">
-						<MessageCircle aria-hidden="true" size={16} />
-						{commentCount > 0 && (
-							<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-info-foreground text-micro">
-								{commentCount}
-							</span>
-						)}
-					</div>
-				</button>
-			</ActionTooltip>
+			{/* Comment Button (not shown on the read-only docs canvas, which
+			mounts no CommentsSheet for it to open) */}
+			{!readOnlyCanvas && (
+				<ActionTooltip label={commentLabel}>
+					<button
+						aria-label={commentLabel}
+						onClick={handleCommentClick}
+						onMouseDown={(e) => e.stopPropagation()}
+						type="button"
+					>
+						<div className="relative inline-flex rounded-full p-1 hover:bg-foreground/10">
+							<MessageCircle aria-hidden="true" size={16} />
+							{commentCount > 0 && (
+								<span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-info px-0.5 font-bold text-info-foreground text-micro">
+									{commentCount}
+								</span>
+							)}
+						</div>
+					</button>
+				</ActionTooltip>
+			)}
 		</div>
 	);
 }

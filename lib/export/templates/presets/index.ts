@@ -2,9 +2,9 @@
  * Template preset exports.
  */
 
-export { EVIDENCE_LIST_CONFIG, EvidenceListTemplate } from "./evidence-list";
-export { FULL_REPORT_CONFIG, FullReportTemplate } from "./full-report";
-export { SUMMARY_CONFIG, SummaryTemplate } from "./summary";
+export { EvidenceListTemplate } from "./evidence-list";
+export { FullReportTemplate } from "./full-report";
+export { SummaryTemplate } from "./summary";
 
 import type { BrandingConfig } from "../../schemas/branding-config";
 import type { TemplatePreset } from "../../schemas/template-config";

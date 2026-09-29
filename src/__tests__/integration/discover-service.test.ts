@@ -104,6 +104,30 @@ describe("getPublishedItems", () => {
 		const matches = items.filter((i) => i.title === "Republished Case");
 		expect(matches).toHaveLength(1);
 	});
+
+	it("carries a null archivedAt for a live, updating copy", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Live Case");
+		await publishAssuranceCase(owner.id, testCase.id);
+
+		const items = expectSuccess(await getPublishedItems());
+		const item = items.find((i) => i.title === "Live Case");
+		expect(item?.archivedAt).toBeNull();
+	});
+
+	it("keeps listing an archived copy, with archivedAt set", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Archived Case");
+		await publishAssuranceCase(owner.id, testCase.id);
+		const { softDeleteCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+		const items = expectSuccess(await getPublishedItems());
+		const item = items.find((i) => i.title === "Archived Case");
+		expect(item?.archivedAt).not.toBeNull();
+	});
 });
 
 describe("getPublishedItemBySlug", () => {
@@ -162,5 +186,20 @@ describe("getPublishedItemBySlug", () => {
 			await getPublishedItemBySlug("gone-case"),
 			"Published item not found"
 		);
+	});
+
+	it("keeps serving an archived copy's slug after its case is permanently deleted", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Outlives Case");
+		await publishAssuranceCase(owner.id, testCase.id);
+		const { softDeleteCase, purgeCase } = await import(
+			"@/lib/services/case-trash-service"
+		);
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+		await purgeCase(owner.id, testCase.id);
+
+		const item = expectSuccess(await getPublishedItemBySlug("outlives-case"));
+		expect(item.title).toBe("Outlives Case");
+		expect(item.archivedAt).not.toBeNull();
 	});
 });

@@ -49,27 +49,33 @@ We use a three-branch flow: feature branches → `staging` → `main`.
 2. Open a pull request to merge into `staging`
 3. After CI passes, `staging` is merged into `main` for production release
 
-#### Pre-commit Hooks
+#### Git Hooks
 
-Pre-commit hooks run automatically on `git commit` to catch issues early. Install them once:
+`pnpm install` arms the hooks in `.githooks/` by setting `core.hooksPath`.
+The pre-push hook regenerates the Prisma client, then runs `pnpm lint` and `pnpm typecheck`, on every push; CI remains the authoritative gate.
+
+A `.pre-commit-config.yaml` is also provided for manual runs and for pre-commit.ci.
+It runs [Ultracite](https://biomejs.dev) (Biome wrapper) for linting and formatting, the TypeScript compiler for type checking, `detect-secrets` for secret detection, and the integration tests.
+Because `core.hooksPath` is set, `pre-commit install` refuses to install; run it on demand instead:
 
 ```bash
-pre-commit install
+uv tool run pre-commit run --all-files
 ```
-
-The hooks run [Ultracite](https://biomejs.dev) (Biome wrapper) for linting and formatting, the TypeScript compiler for type checking, and `detect-secrets` for secret detection.
 
 #### Issue Tracking
 
-We use [Beads](https://github.com/cosmicpudding/beads) for issue tracking. Run `bd ready` to find available work, or create a new issue with `bd create`. See [AGENTS.md](./AGENTS.md) for the full workflow.
+Work is tracked in [GitHub Issues](https://github.com/alan-turing-institute/AssurancePlatform/issues).
+Coding agents should read [AGENTS.md](./AGENTS.md) before working in the repository.
 
 ### Contributing to the Documentation
 
-We use [Nextra 4](https://nextra.site/) to generate our documentation site. All documentation is written in [MDX](https://mdxjs.com/) format (Markdown with JSX components) and lives in the `content/` directory.
+We use [Fumadocs](https://fumadocs.dev/) to generate our documentation site. All documentation is written in [MDX](https://mdxjs.com/) format (Markdown with JSX components) and lives in the `content/` directory, with a `meta.json` file in each folder controlling its title and page order.
+
+Three Fumadocs components are registered globally and can be used in any page without an import: `Callout`, `Card`/`Cards`, and `Tabs`/`Tab`. Our own curriculum components (`components/docs/curriculum/`) are also available, imported directly in the MDX file that uses them.
 
 If you are new to Markdown, GitHub has a helpful page on
 [getting started with writing and formatting on GitHub](https://help.github.com/articles/getting-started-with-writing-and-formatting-on-github).
-The [Nextra documentation](https://nextra.site/docs) covers additional MDX features and components.
+The [Fumadocs documentation](https://fumadocs.dev/docs) covers additional MDX features and components.
 
 When writing in Markdown, please start each new sentence on a new line. Having
 each sentence on a new line will make no difference to how the text is

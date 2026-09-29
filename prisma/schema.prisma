@@ -29,6 +29,7 @@ model User {
   username             String       @unique /// Unique display name shown throughout the platform
   passwordHash         String?      @map("password_hash") /// Hashed password (null for OAuth-only users)
   passwordAlgorithm    String       @default("django_pbkdf2") @map("password_algorithm") /// Hash algorithm: 'argon2id' (new) or 'django_pbkdf2' (legacy)
+  sessionVersion       Int          @default(1) @map("session_version") /// Bumped on password change/reset (lib/auth/session-version.ts); a signed-in JWT stamped with an older version is rejected in callbacks.jwt, revoking every session issued before the bump.
 
   // Profile
   firstName            String?      @map("first_name") /// User's first name for display
@@ -39,20 +40,20 @@ model User {
   authProvider         AuthProvider @default(LOCAL) @map("auth_provider")
   githubId             String?      @unique @map("github_id")
   githubUsername       String?      @map("github_username")
-  githubAccessToken    String?      @map("github_access_token") /// Encrypted GitHub OAuth access token for API calls
+  githubAccessToken    String?      @map("github_access_token") /// GitHub OAuth access token for API calls, encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)
   githubTokenExpiresAt DateTime?    @map("github_token_expires_at") /// Expiry timestamp for the GitHub token
 
   // Google OAuth
   googleId             String?      @unique @map("google_id") /// Google account ID for OAuth
   googleEmail          String?      @map("google_email") /// Google email address
-  googleAccessToken    String?      @map("google_access_token") /// Google OAuth access token for Drive API calls
-  googleRefreshToken   String?      @map("google_refresh_token") /// Google OAuth refresh token (tokens expire after 1 hour)
+  googleAccessToken    String?      @map("google_access_token") /// Google OAuth access token for Drive API calls, encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)
+  googleRefreshToken   String?      @map("google_refresh_token") /// Google OAuth refresh token (tokens expire after 1 hour), encrypted at rest (AES-256-GCM, see lib/auth/token-encryption.ts; key: TOKEN_ENCRYPTION_KEY)
   googleTokenExpiresAt DateTime?    @map("google_token_expires_at") /// Expiry timestamp for the Google access token
 
   emailVerified        Boolean      @default(false) @map("email_verified") /// Whether email has been verified (for email-based signup)
 
   // Password reset
-  passwordResetToken   String?      @map("password_reset_token")
+  passwordResetTokenHash String?    @map("password_reset_token_hash") /// SHA-256 hex digest of the reset token; the raw token is never stored (AP-QA-006)
   passwordResetExpires DateTime?    @map("password_reset_expires")
 
   // Preferences
@@ -92,6 +93,7 @@ model User {
   deletedCases         AssuranceCase[]    @relation("CaseDeleter")
   ownedIntegrations    Integration[]      @relation("IntegrationOwner")
   integrationPrincipal Integration?       @relation("IntegrationPrincipal")
+  archivedPublishedCases PublishedAssuranceCase[] @relation("PublishedCaseArchivedOwner")
 
   @@map("users")
 }
@@ -399,6 +401,16 @@ model AssuranceElement {
 
   // Module-specific
   moduleReferenceId   String?          @map("module_reference_id") /// For MODULE type: the referenced case ID
+  // True when moduleReferenceId was nullified because the imported target
+  // case doesn't exist in this environment (dangling-module-reference
+  // indicator; Chris's ruling 2026-09-16 — degrade like citations rather
+  // than fail the import loudly). Set only by case-import-service.ts's
+  // resolveImportedModuleReferenceId (mirrors defeatsDangling/
+  // citationDangling below — import is the only write path that can produce
+  // this). The cascade is deliberate: when this is true, citedElementId is
+  // also cleared and citationDangling set, since an away goal's
+  // citedElementId cannot be valid without its case.
+  moduleReferenceDangling Boolean      @default(false) @map("module_reference_dangling")
   moduleEmbedType     ModuleEmbedType? @map("module_embed_type") /// COPY (snapshot) or REFERENCE (live link)
   modulePublicSummary String?          @map("module_public_summary") /// Public summary when module is not viewable
 
@@ -412,6 +424,13 @@ model AssuranceElement {
   // Dialogical reasoning (defeaters)
   isDefeater          Boolean          @default(false) @map("is_defeater") /// True if element is a counter-argument
   defeatsElementId    String?          @map("defeats_element_id") /// Element this defeater challenges
+  // True when defeatsElementId was blanked because the imported target
+  // wasn't part of the same import (or the flag was set with no target at
+  // all) — dangling-defeat indicator, set only by case-import-service.ts's
+  // resolveImportedDefeatsElementId (mirrors citationDangling below; import
+  // is the only write path that can produce this, since defeatsElementId is
+  // always same-case and normal author edits go through element-service.ts).
+  defeatsDangling     Boolean          @default(false) @map("defeats_dangling")
 
   // Level (calculated, for property claims)
   level               Int?             /// Hierarchy depth level for property claims
@@ -978,11 +997,14 @@ model PublishedAssuranceCase {
   title           String              @db.VarChar(255) /// Title at time of publishing
   content         Json                /// Full case content as JSON snapshot
   createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  assuranceCaseId String              @map("assurance_case_id") /// Source case this was published from
+  assuranceCaseId String?             @map("assurance_case_id") /// Source case this was published from. Optional — an archived copy (see `archivedAt` below) outlives its case: the FK is `ON DELETE SET NULL`, so a permanent case delete clears this rather than being refused, and the owner can take an archived copy down even after the case itself is gone.
   description     String?             @db.VarChar(1000) /// Description at time of publishing
+  archivedAt      DateTime?           @map("archived_at") @db.Timestamptz(6) /// Set when this copy was archived rather than removed at trash time; null for a live, updating copy. Archiving keeps exactly this — the case's `isCurrent` row — and deletes the case's other (superseded) rows, so an archived copy is always a single record (see `archivePublishedCopies` in `publish-service.ts`).
+  archivedOwnerId String?             @map("archived_owner_id") /// The account that may remove this archived copy (`removeArchivedCopy` in `case-trash-service.ts`) — the case's owner at archive time, or null when nobody can (account deletion: the deleted owner's account is gone, so the copy is orphaned until the platform team removes it by hand).
 
   // Relations
-  assuranceCase   AssuranceCase @relation(fields: [assuranceCaseId], references: [id])
+  assuranceCase   AssuranceCase? @relation(fields: [assuranceCaseId], references: [id], onDelete: SetNull)
+  archivedOwner   User?          @relation("PublishedCaseArchivedOwner", fields: [archivedOwnerId], references: [id], onDelete: SetNull)
 
   // @@unique/@@index below cover most access patterns, but the slug's TRUE
   // uniqueness constraint (current version only) is a hand-written partial
@@ -991,6 +1013,7 @@ model PublishedAssuranceCase {
   @@index([slug, isCurrent], map: "published_assurance_cases_slug_current_idx")
 
   @@index([assuranceCaseId], map: "published_assurance_cases_assurance_case_id_idx")
+  @@index([archivedOwnerId], map: "published_assurance_cases_archived_owner_id_idx")
   @@map("published_assurance_cases")
 }
 

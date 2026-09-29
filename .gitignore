@@ -162,6 +162,7 @@ build/
 .vercel
 *.tsbuildinfo
 .next-docs/
+next-env.d.ts
 
 # Prisma generated files
 src/generated/prisma/
@@ -195,8 +196,9 @@ blob-report/
 # documentation builds - all generated documentation files
 public/documentation/
 
-# local dev uploads (stored in Azure Blob Storage in production)
-public/uploads/
+# local dev uploads (stored in Azure Blob Storage in production; UPLOADS_DIR
+# overrides the default path below)
+/uploads/
 tea-docs/build/
 tea-docs/.docusaurus/
 
@@ -216,7 +218,8 @@ TASKS/
 *~
 .vscode/settings.json
 .vscode/launch.json
-.claude
+.claude/settings.local.json
+.claude/worktrees/
 
 # OS generated files
 Thumbs.db
@@ -261,3 +264,6 @@ claude-dir.zip
 # Design records are maintained internally, not in-repo
 docs/adr/
 docs/specs/
+
+# fumadocs-mdx generated content collection
+.source/

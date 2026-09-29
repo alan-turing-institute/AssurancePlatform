@@ -18,7 +18,7 @@ import { collectElementsByType } from "../renderers/tree-renderer";
 /**
  * Evidence List configuration
  */
-export const EVIDENCE_LIST_CONFIG: TemplateConfig = {
+const EVIDENCE_LIST_CONFIG: TemplateConfig = {
 	name: "Evidence List",
 	description: "Focused list of all evidence items with URLs and descriptions",
 	preset: "evidence-list",

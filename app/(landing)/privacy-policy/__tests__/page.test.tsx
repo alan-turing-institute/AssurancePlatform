@@ -77,7 +77,7 @@ describe("PrivacyPolicyPage", () => {
 			expect(retentionLink).toBeInTheDocument();
 			expect(retentionLink).toHaveAttribute(
 				"href",
-				"/docs/data-retention-policy"
+				"/docs/platform-guide/data-retention-policy"
 			);
 		});
 

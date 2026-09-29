@@ -18,6 +18,7 @@ import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
+import { Badge } from "@/components/ui/badge";
 import {
 	Tooltip,
 	TooltipContent,
@@ -60,6 +61,8 @@ export interface BaseNodeProps {
 	expandTour?: string;
 	/** Whether to start in expanded state */
 	initialExpanded?: boolean;
+	/** Dialogical reasoning (defeaters, ADR 0005 D2) — shows a "Defeater" chip and a distinct destructive-token border, regardless of node kind. */
+	isDefeater?: boolean;
 	/** Justification text */
 	justification?: string;
 	/** The display name/ID of the node (e.g., "G1", "S1", "P1") */
@@ -144,6 +147,7 @@ export default function BaseNode({
 	assumption,
 	justification,
 	initialExpanded = false,
+	isDefeater = false,
 	topRightActions,
 	bottomLeftActions,
 	children,
@@ -159,6 +163,17 @@ export default function BaseNode({
 		layoutDirection === "LR" ? Position.Left : Position.Top;
 	const sourcePosition =
 		layoutDirection === "LR" ? Position.Right : Position.Bottom;
+
+	// Side handles (ADR 0005 D4) for the `challenges` edge: a target handle
+	// on the side facing the row the node's cell sits in (right for a
+	// top-down tree, since side attachments sit to the right — Chris's
+	// ruling; bottom for a left-right tree, mirrored), and a source handle
+	// on the opposite side, so the edge between a defeater and the element
+	// it attacks is always straight and runs along the row.
+	const sideTargetPosition =
+		layoutDirection === "LR" ? Position.Bottom : Position.Right;
+	const sideSourcePosition =
+		layoutDirection === "LR" ? Position.Top : Position.Left;
 
 	const config = getNodeConfig(nodeType);
 	const Icon = config.icon;
@@ -195,6 +210,7 @@ export default function BaseNode({
 	const containerClasses = buildNodeContainerClasses({
 		nodeType,
 		isSelected: selected,
+		isDefeater,
 		className,
 	});
 
@@ -205,6 +221,12 @@ export default function BaseNode({
 				<Handle id="target" position={targetPosition} type="target" />
 			)}
 
+			{/* Side handles (ADR 0005 D4): the `challenges` edge always
+			connects here, regardless of node kind — any card can be a
+			defeater or a defeat target. */}
+			<Handle id="side-target" position={sideTargetPosition} type="target" />
+			<Handle id="side-source" position={sideSourcePosition} type="source" />
+
 			<LazyMotion features={domAnimation} strict>
 				{/* Header: Icon + Name + Top-right Actions */}
 				<div className={buildNodeHeaderClasses()}>
@@ -214,6 +236,15 @@ export default function BaseNode({
 							className={buildNodeIconClasses(nodeType)}
 						/>
 						<span className={buildNodeTitleClasses()}>{name}</span>
+						{isDefeater && (
+							<Badge
+								aria-label="This element is a defeater"
+								className="rounded-full border-none bg-destructive/10 px-2 py-0.5 font-medium text-[10px] text-destructive ring-1 ring-destructive/20 ring-inset"
+								variant="outline"
+							>
+								Defeater
+							</Badge>
+						)}
 					</div>
 					{topRightActions && (
 						<div className="flex items-center">{topRightActions}</div>

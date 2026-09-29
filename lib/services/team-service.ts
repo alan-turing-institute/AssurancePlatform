@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { validateTeamAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -6,6 +7,8 @@ import type {
 } from "@/lib/schemas/team";
 import type { TeamRole } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "team-service" });
 
 // ============================================
 // INPUT INTERFACES — derived from Zod schemas
@@ -179,7 +182,7 @@ export async function createTeam(
 
 		return { data: transformToResponse(team, "ADMIN") };
 	} catch (error) {
-		console.error("Failed to create team:", error);
+		log.error("Failed to create team", { error });
 		return { error: "Failed to create team" };
 	}
 }
@@ -225,7 +228,7 @@ export async function getTeam(
 
 		return { data: transformToResponse(team, userMembership.role) };
 	} catch (error) {
-		console.error("Failed to get team:", error);
+		log.error("Failed to get team", { error });
 		return { error: "Failed to get team" };
 	}
 }
@@ -261,7 +264,7 @@ export async function listUserTeams(
 
 		return { data: teams };
 	} catch (error) {
-		console.error("Failed to list teams:", error);
+		log.error("Failed to list teams", { error });
 		return { error: "Failed to list teams" };
 	}
 }
@@ -321,7 +324,7 @@ export async function updateTeam(
 
 		return { data: transformToResponse(team, userMembership?.role) };
 	} catch (error) {
-		console.error("Failed to update team:", error);
+		log.error("Failed to update team", { error });
 		return { error: "Failed to update team" };
 	}
 }
@@ -347,7 +350,7 @@ export async function deleteTeam(
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to delete team:", error);
+		log.error("Failed to delete team", { error });
 		return { error: "Failed to delete team" };
 	}
 }
@@ -391,7 +394,7 @@ export async function getTeamBySlug(
 
 		return { data: transformToResponse(team, userMembership.role) };
 	} catch (error) {
-		console.error("Failed to get team:", error);
+		log.error("Failed to get team", { error });
 		return { error: "Failed to get team" };
 	}
 }

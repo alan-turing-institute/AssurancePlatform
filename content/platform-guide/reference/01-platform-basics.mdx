@@ -1,0 +1,36 @@
+---
+title: "Platform basics"
+description: "Find the current case, import, export and collaboration controls quickly."
+sidebar_label: "Platform Basics"
+sidebar_position: 2
+tags:
+
+  - quick-reference
+  - platform
+---
+
+Use this page when you need to find a control. For the worked activity, see [Brewing Your Own TEA](/docs/curriculum/tea-trainee/02-brewing-your-own-tea).
+
+## Create and edit
+
+1. Sign in at `/login` with email or username and password, Google, or GitHub.
+2. On `/dashboard`, choose **Create new case**. **Create New Assurance Case** asks for **Name** and **Description**. Choose **Submit**.
+3. The editor opens at `/case/<id>` with a generated `G1` goal. Open it to replace the placeholder description and add context.
+4. Use **Add Element** on a goal, strategy or property claim to choose an allowed child. Submit the add dialog to persist the element.
+5. Open an element to inspect or update its description, context, assumption, justification, assertion status or evidence references, where those fields apply.
+
+The add and edit dialogs save their own changes. The toolbar provides **Undo** and **Redo** for supported editor operations. There is no general `Ctrl+S` or `Cmd+S` case-save step in this workflow.
+
+## Import, export and recover
+
+**Import File** on the dashboard can create a case from local JSON, a GitHub JSON file or a Google Drive backup when connected. In a case, **Export** opens **Export Case** with raw JSON, image and report options. A Google-connected account can also back up a case to Drive. These are separate copies; they do not continuously synchronise with the working case.
+
+Deleting a case moves it to `/dashboard/trash`. The owner can restore it during the 30-day recovery period. Cases become eligible for permanent deletion after 30 days. Export a copy before removing data if your project needs a separate record.
+
+## Work with others
+
+**Share** in the case toolbar grants a person or team **Can view**, **Can comment**, **Can edit** or **Admin** access. Teams are managed at `/dashboard/teams`. Another person with the case open can receive live updates when elements, comments or permissions change. Publishing is separate: it makes a public snapshot on Discover. Review the case information and evidence before publishing.
+
+## Read the diagram
+
+The main route through a simple case is `G1` goal → `S1` strategy → `P1` property claim → `E1` evidence. A goal can also lead directly to a property claim; a property claim can have a further strategy or claim. Context, assumptions and justifications are fields associated with applicable elements rather than separate diagram nodes in the current editor. The case model also supports away goals, modules and defeaters. See [element types](/docs/platform-guide/reference/02-element-types) for their meanings and naming rules.

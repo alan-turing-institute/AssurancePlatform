@@ -34,6 +34,11 @@ export function useGoogleFonts(preset: ThemePreset): void {
 		const link = document.createElement("link");
 		link.rel = "stylesheet";
 		link.href = url;
+		// Google Fonts serves Access-Control-Allow-Origin: *, so loading the
+		// stylesheet with CORS lets html-to-image read its cssRules when
+		// embedding fonts in a canvas capture (otherwise the browser refuses
+		// cssRules access on a cross-origin, non-CORS stylesheet).
+		link.crossOrigin = "anonymous";
 		link.setAttribute(LINK_ATTR, preset.id);
 		document.head.appendChild(link);
 

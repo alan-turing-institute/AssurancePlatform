@@ -89,7 +89,7 @@ describe("HelpModal", () => {
 
 		expect(goalLink).toHaveAttribute(
 			"href",
-			"/docs/curriculum/quick-reference/02-element-types#goal-claims"
+			"/docs/platform-guide/reference/02-element-types#goal-claims"
 		);
 	});
 

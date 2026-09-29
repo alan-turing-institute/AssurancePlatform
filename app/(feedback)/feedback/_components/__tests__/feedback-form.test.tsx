@@ -25,6 +25,7 @@ describe("FeedbackForm", () => {
 		back: vi.fn(),
 		forward: vi.fn(),
 		refresh: vi.fn(),
+		bfcacheId: "test-bfcache-id",
 	};
 
 	beforeEach(() => {

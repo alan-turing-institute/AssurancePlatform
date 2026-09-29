@@ -1,0 +1,118 @@
+---
+title: "Use TEA throughout a project"
+description: Develop an assurance argument through deliberation and project work.
+---
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { steepingTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="letting-the-tea-steep"
+      tasks={steepingTasks}
+      currentPage="exploration"
+    >
+      {children}
+      <ModuleProgressTracker
+        showHints={true}
+        currentPage="exploration"
+        basePath="/docs/curriculum/tea-trainee/03-letting-the-tea-steep"
+      />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+<Callout type="info" title="Claims to confirm (review only)">
+The heart-twin sentences under Stakeholder Engagement and the whole Project Lifecycle section fill empty headings in the author's draft. The Fair Recruitment AI activity applies the draft's method to a new example. The guidance about recording tensions is also a new teaching instruction. The principle-neutral Identify questions replace the draft's five principle-specific prompts following the author's ruling; confirm their wording with the author. Review these additions before publication.
+</Callout>
+
+<div id="exploration-content">
+
+An assurance case is useful while decisions are still open. If you write it only just before deployment, you can document what happened but you miss the chance to use a developing argument to guide action. Use the developing case to ask what matters, record decisions and examine the evidence as the project changes.
+
+Consider a proposed digital twin of a heart used to support clinical decisions. It is an example of a project in which the case could develop alongside the work. A case should not be treated as a compliance form filled only after the system is ready to deploy.
+
+## Stakeholder Engagement
+
+<Callout type="info" title="Drafted without a source; for the author's review">
+This section sketches stakeholder engagement for the heart digital twin example.
+</Callout>
+
+In the heart digital twin example, clinicians and patients could question the proposed use while the team can still change the case goal. Record whose interests were considered, what changed and which questions remain.
+
+## Choose principles for your project
+
+The platform does not choose principles for a project. Your team brings the principles its domain or organisation uses and specifies what each means in this setting. Fairness and explainability are worked examples, rather than a prescribed set. The [TEA Techniques categories](https://alan-turing-institute.github.io/tea-techniques/categories/) offer a wider list for readers who want one, and the Alan Turing Institute's [AI ethics and governance guidebooks](https://aiethics.turing.ac.uk/) cover putting ethical principles into practice.
+
+## Make a principle operational
+
+Use this order to move from a principle to project decisions:
+
+1. **Identify** relevant principles through a proportional review of likely risks and opportunities.
+2. **Weigh** the principles against the project's goals and stakeholder concerns. Record why some concerns receive more attention. Principles can pull in different directions, and a transparent rationale makes the trade-off reviewable.
+3. **Specify** each chosen principle for this particular system and use setting. A broad word such as "fairness" becomes a statement precise enough to guide decisions.
+4. **Revise** the choice and specification when new information or stakeholder feedback changes the picture.
+5. **Implement** the chosen actions, monitor their effects and collect evidence of what occurred.
+
+### Identify ethical risks and opportunities
+
+Start with questions grounded in your own setting:
+
+- Which principles does your domain or organisation already recognise?
+- Which of those principles could this project affect?
+- Who could be affected, and how?
+- Which concern needs the most attention now, and why?
+
+These questions require more than technical expertise. In the prison safety example, social researchers could help identify contextual vulnerability and discrimination risks. Prison staff could explain how a predictive tool would fit their work and affect decisions. Their input can change the concern that the case needs to address.
+
+### Weigh principles and conflicts
+
+Proportionality helps determine where to spend effort. If a simple linear regression is only a minor decision-support tool for analysts, an extensive inquiry into explainability may be disproportionate. A project with greater consequences would require a different judgement. The reasons for the choice should be visible to stakeholders.
+
+Principles can conflict. Explainability may pull against accountability when a team decides how much to disclose publicly. Fairness measures may pull against one another when underlying rates differ between groups. Some apparent conflicts become clearer after further specification; others remain genuine disagreements about values.
+
+Consider Amartya Sen's children and flute dilemma. Anne can play the flute, Bob has no toys, and Carla made it. Each offers a different reason to receive it. No single allocation satisfies all three reasons. The example shows why a project team should state which values it prioritised and why, rather than treating a value conflict as a calculation with one uncontested answer.
+
+### Specify fairness in a use setting
+
+The prison example proposes a predictive tool for monitoring behaviour and risk of physical harm. "Be fair" could mean no discrimination by protected characteristic, better safety for vulnerable prisoners, and no increase in biased staff decision-making. These are related but distinct claims. The team must decide which apply and what action each would require.
+
+Four possible core attributes help make the principle concrete:
+
+| Attribute | Question for the project |
+| --- | --- |
+| Bias mitigation | Which systematic distortions or unequal outcomes might the design create or reinforce? |
+| Diversity and inclusiveness | Which affected and organisational voices shape the aim, design and review? |
+| Non-discrimination | Could members of protected groups receive less favourable treatment because of the system? |
+| Equality | Does the system maintain or promote equal rights, access and opportunities? |
+
+For the non-discrimination attribute, the team could examine how data was gathered, test the model across relevant groups, and document its sources and evaluation measures. These activities give the principle practical form. None of them alone resolves every fairness concern.
+
+## Activity: specify before you claim
+
+Return to your Fair Recruitment AI practice case from Module 2. Use the same method, without pretending it is a real system. Identify a fairness concern in the teaching scenario. Weigh one concern with a reason: for example, dataset representation matters because the model is used to shortlist applicants. Specify that concern as a narrow property claim. Name an action the project team would need to take, such as reviewing data coverage by relevant group, and the resulting artefact you would expect to inspect.
+
+In your working case, revise the property claim description if needed, add the boundary to the goal's context, and mark **Needs support** when the expected report does not yet exist. If you record an evidence item, describe an actual practice artefact or label the teaching example clearly. The case now serves as a question and a work plan, not a declaration that fairness is solved. Return to the goal later and ask whether the added claim really supports it.
+
+## Review the reasoning
+
+Record which interests were considered, whose views informed a choice, and why the chosen action is proportionate. Your argument should let a reviewer see where people disagreed and what remains unresolved.
+
+## The Project Lifecycle
+
+<Callout type="info" title="Drafted without a source; for the author's review">
+This section sketches how a case can change across the project lifecycle.
+</Callout>
+
+Use the case as a changing record across the project. During early deliberation, write the goal, context and unresolved questions. During design, record the reasons for the strategies and specific claims the team chooses. During testing, add the results that actually address those claims and mark gaps that remain. During deployment and later monitoring, revisit the use setting, evidence and justification when the system or its effects change. The argument should show what the team learned at each stage, rather than presenting a late snapshot as if all choices were obvious from the start.
+
+An assurance case links decisions and evidence, but the team still has to carry out the work and listen when evidence challenges its preferred story. In [Module 4](/docs/curriculum/tea-trainee/04-drinking-tea-with-others), you will bring other people into that process and decide what to share.
+
+</div>
+
+</PageContent>

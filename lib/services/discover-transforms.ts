@@ -8,6 +8,7 @@
  * `case-study-transforms.ts`.
  */
 
+import { resolvePublicFeatureImageAddress } from "@/lib/media-routes";
 import type { PublishableItemTypeResponse } from "@/lib/schemas/publishable-item";
 import { getSectorDisplayName } from "@/lib/sectors";
 import type {
@@ -16,6 +17,8 @@ import type {
 } from "@/lib/services/discover-service";
 
 export interface PublishableItemSummaryResponse {
+	/** When this copy was archived — a snapshot kept after its case moved to Trash and no longer receives updates. `null` for a live, updating copy. */
+	archivedAt: string | null;
 	authors: string | null;
 	description: string | null;
 	featureImageUrl: string | null;
@@ -118,6 +121,62 @@ function resolveSectorInContent(content: unknown): unknown {
 	};
 }
 
+/**
+ * Resolves `content.caseInformation.featureImageUrl` to the public,
+ * version-scoped route address before a frozen snapshot's `content` is ever
+ * served — the embedded-content counterpart of `discover-service.ts`'s
+ * `toSummary`, which does the same for the top-level `featureImageUrl`
+ * field. An internal key (or a legacy `/uploads/...`/blob address from an
+ * older snapshot) resolves to the route address; a genuine external address
+ * and an empty value pass through unchanged.
+ *
+ * Non-destructive and defensive, matching `resolveSectorInContent` above:
+ * never mutates the stored snapshot, and any shape that doesn't match
+ * `{ caseInformation: { featureImageUrl } }` (missing, malformed,
+ * non-object) is returned unchanged rather than throwing.
+ */
+function resolveFeatureImageInContent(
+	content: unknown,
+	slug: string,
+	versionId: string
+): unknown {
+	if (
+		content === null ||
+		typeof content !== "object" ||
+		Array.isArray(content)
+	) {
+		return content;
+	}
+	const record = content as Record<string, unknown>;
+	const caseInformation = record.caseInformation;
+	if (
+		caseInformation === null ||
+		typeof caseInformation !== "object" ||
+		Array.isArray(caseInformation)
+	) {
+		return content;
+	}
+	const caseInfoRecord = caseInformation as Record<string, unknown>;
+	if (!("featureImageUrl" in caseInfoRecord)) {
+		return content;
+	}
+	const featureImageUrl = caseInfoRecord.featureImageUrl;
+	if (featureImageUrl !== null && typeof featureImageUrl !== "string") {
+		return content;
+	}
+	return {
+		...record,
+		caseInformation: {
+			...caseInfoRecord,
+			featureImageUrl: resolvePublicFeatureImageAddress(
+				slug,
+				versionId,
+				featureImageUrl
+			),
+		},
+	};
+}
+
 /** Transform a single published item summary for API response. */
 export function transformPublishableItemForApi(
 	item: PublishableItemSummary
@@ -132,6 +191,7 @@ export function transformPublishableItemForApi(
 		authors: item.authors,
 		featureImageUrl: item.featureImageUrl,
 		publishedAt: item.publishedAt.toISOString(),
+		archivedAt: item.archivedAt ? item.archivedAt.toISOString() : null,
 	};
 }
 
@@ -157,6 +217,12 @@ export function transformPublishableItemDetailForApi(
 ): PublishableItemDetailResponse {
 	return {
 		...transformPublishableItemForApi(item),
-		content: stripComments(resolveSectorInContent(item.content)),
+		content: stripComments(
+			resolveFeatureImageInContent(
+				resolveSectorInContent(item.content),
+				item.slug,
+				item.id
+			)
+		),
 	};
 }

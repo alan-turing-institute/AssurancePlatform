@@ -17,12 +17,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useExportModal, useHelpModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import { ErrorBoundary } from "../ui/error-boundary";
 import CaseNotes from "./case-notes";
 import { CaseSettingsPopover } from "./case-settings-popover";
+import { DeleteCaseDialog } from "./delete-case-dialog";
 import { HistoryControls } from "./history-controls";
 import JsonViewPanel from "./json-view-panel";
 
@@ -56,7 +58,12 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const exportModal = useExportModal();
 	const helpModal = useHelpModal();
 
-	const onDelete = async () => {
+	/**
+	 * `publishedCopy` is the delete dialog's choice for a published case's
+	 * Discover copy — omitted for an unpublished case, where there is
+	 * nothing to choose.
+	 */
+	const onDelete = async (publishedCopy?: PublishedCopyChoice) => {
 		if (!assuranceCase) {
 			return;
 		}
@@ -64,7 +71,10 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 		try {
 			setLoading(true);
 			const { deleteAssuranceCase } = await import("@/actions/cases");
-			const result = await deleteAssuranceCase(assuranceCase.id);
+			const result = await deleteAssuranceCase(
+				assuranceCase.id,
+				publishedCopy ? { publishedCopy } : undefined
+			);
 
 			if (result.success) {
 				router.push("/dashboard");
@@ -264,14 +274,24 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						onClose={() => setJsonViewOpen(false)}
 					/>
 				</ErrorBoundary>
-				<AlertModal
-					confirmButtonText={"Move to Trash"}
-					isOpen={deleteOpen}
-					loading={loading}
-					message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
-					onClose={() => setDeleteOpen(false)}
-					onConfirm={onDelete}
-				/>
+				{assuranceCase?.published ? (
+					<DeleteCaseDialog
+						isOpen={deleteOpen}
+						isOwner={assuranceCase?.isOwner ?? false}
+						loading={loading}
+						onCancel={() => setDeleteOpen(false)}
+						onConfirm={onDelete}
+					/>
+				) : (
+					<AlertModal
+						confirmButtonText={"Move to Trash"}
+						isOpen={deleteOpen}
+						loading={loading}
+						message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
+						onClose={() => setDeleteOpen(false)}
+						onConfirm={() => onDelete()}
+					/>
+				)}
 				<AlertModal
 					cancelButtonText={"No, keep current identifiers"}
 					confirmButtonText={"Yes, reset all identifiers"}

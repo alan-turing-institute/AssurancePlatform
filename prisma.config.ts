@@ -3,8 +3,10 @@
 import dotenv from "dotenv";
 import { defineConfig, env } from "prisma/config";
 
-// Load .env file for local development (CLI commands)
-dotenv.config();
+// Load .env file for local development (CLI commands). quiet: true silences
+// dotenv's promotional "tip" lines (third-party product ads in a Turing-
+// published tool's stdout/CI logs) — see dotenv#quiet, dotenv >=17.
+dotenv.config({ quiet: true });
 
 export default defineConfig({
 	schema: "prisma/schema.prisma",

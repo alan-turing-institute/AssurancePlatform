@@ -1,0 +1,22 @@
+---
+title: "Live case updates"
+description: "See how a shared case responds when another collaborator changes it."
+---
+
+When two people have the same case open, the editor listens for changes to that case. A second person's edit can update your view without a manual page reload. This helps collaborators see a current argument while they discuss it, but it is not a shared cursor or a lock that prevents simultaneous editing.
+
+## What you see
+
+Open a case you can view at `/case/<caseId>`. The browser connects to the case's event stream. If another person changes case details, adds or edits an element, moves it, changes a comment, or changes a permission, the case container requests fresh case data. Attachment and detachment events also refresh orphaned elements. For supported case, element and comment events, the editor can show a short notice naming the person and action, such as a new element or a comment. The notice uses event data when available and falls back to a generic name when it is not.
+
+You do not need to select a refresh control to receive those events while the connection is active. Your own actions are not announced back to you as another person's toast. If you are comparing a long description or preparing a review, pause and read the refreshed state before editing the same element. Live updates keep the view current, but they do not reconcile two competing edits at the sentence level.
+
+## How it works and where it stops
+
+The editor uses a server-sent event connection to `/api/cases/<id>/events`. The route checks the browser session and case `VIEW` access before opening a stream. Route handlers and services emit typed events after case, element, comment and permission changes. The client listens for the types it knows, waits briefly to combine nearby events, then refetches the case. A heartbeat keeps the connection active. The browser's event source can reconnect after a temporary interruption, but the stream is a notification channel rather than a durable record of every historical edit.
+
+The connection manager holds subscribers in server memory, grouped by case. It has no shared broker across independent server processes, so deployment topology matters for delivery between people connected to different processes. If a view appears stale, reopen the case or refresh before relying on it for a review decision. Comment events and health plugin state changes are distinct event types; the client has specific handling for each surface rather than treating every event as a full document replacement.
+
+## Limits and code location
+
+Live events do not expose a collaborator's pointer, indicate that an element is locked, or replace explicit saving and review. `app/api/cases/[id]/events/route.ts` serves the stream, `lib/services/sse-connection-manager.ts` broadcasts events, `hooks/use-case-events.ts` listens in the browser, and `components/cases/case-container.tsx` refreshes the displayed case.

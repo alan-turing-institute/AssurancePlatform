@@ -104,38 +104,6 @@ export interface FocusManagementResult {
 	restorationElement: HTMLElement | null;
 }
 
-/**
- * Color contrast test result
- */
-export interface ColorContrastResult {
-	/** Overall contrast compliance */
-	isCompliant: boolean;
-	/** Elements with insufficient contrast */
-	lowContrastElements: Array<{
-		element: HTMLElement;
-		contrastRatio: number;
-		required: number;
-	}>;
-	/** Minimum contrast ratio found */
-	minimumContrast: number;
-}
-
-/**
- * Accessibility preferences for testing
- */
-export interface AccessibilityPreferences {
-	/** Color scheme preference */
-	colorScheme?: "light" | "dark";
-	/** Font size multiplier */
-	fontSizeMultiplier?: number;
-	/** High contrast preference */
-	prefersHighContrast?: boolean;
-	/** Reduced motion preference */
-	prefersReducedMotion?: boolean;
-	/** Screen reader simulation */
-	simulateScreenReader?: boolean;
-}
-
 // =============================================================================
 // Core Accessibility Testing
 // =============================================================================
@@ -377,87 +345,6 @@ async function testKeyboardNavigation(
 		hasLogicalTabOrder: checkLogicalTabOrder(actualFocusable),
 		missingFocusableElements,
 		unexpectedFocusableElements,
-	};
-}
-
-/**
- * Test specific keyboard interactions
- */
-async function testKeyboardInteractions(
-	element: HTMLElement,
-	user?: UserEvent
-): Promise<{
-	enterWorks: boolean;
-	spaceWorks: boolean;
-	escapeWorks: boolean;
-	arrowKeysWork: boolean;
-}> {
-	const testUser = user || userEvent.setup();
-	let enterTriggered = false;
-	let spaceTriggered = false;
-	let escapeTriggered = false;
-	let arrowKeyTriggered = false;
-
-	// Focus the element first
-	element.focus();
-
-	// Test Enter key
-	const enterHandler = () => {
-		enterTriggered = true;
-	};
-	element.addEventListener("click", enterHandler);
-	element.addEventListener("keydown", (e) => {
-		if (e.key === "Enter") {
-			enterTriggered = true;
-		}
-	});
-
-	await testUser.keyboard("{Enter}");
-
-	// Test Space key (for buttons)
-	const _spaceHandler = () => {
-		spaceTriggered = true;
-	};
-	element.addEventListener("keydown", (e) => {
-		if (e.key === " ") {
-			spaceTriggered = true;
-		}
-	});
-
-	await testUser.keyboard(" ");
-
-	// Test Escape key
-	const _escapeHandler = () => {
-		escapeTriggered = true;
-	};
-	element.addEventListener("keydown", (e) => {
-		if (e.key === "Escape") {
-			escapeTriggered = true;
-		}
-	});
-
-	await testUser.keyboard("{Escape}");
-
-	// Test Arrow keys
-	const _arrowHandler = () => {
-		arrowKeyTriggered = true;
-	};
-	element.addEventListener("keydown", (e) => {
-		if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-			arrowKeyTriggered = true;
-		}
-	});
-
-	await testUser.keyboard("{ArrowDown}");
-
-	// Cleanup
-	element.removeEventListener("click", enterHandler);
-
-	return {
-		enterWorks: enterTriggered,
-		spaceWorks: spaceTriggered,
-		escapeWorks: escapeTriggered,
-		arrowKeysWork: arrowKeyTriggered,
 	};
 }
 
@@ -832,69 +719,6 @@ function testFormAccessibility(container: HTMLElement): {
 // Accessibility Preferences Testing
 // =============================================================================
 
-/**
- * Test component with different accessibility preferences
- */
-async function testWithAccessibilityPreferences<T>(
-	renderComponent: () => RenderResult,
-	testFunction: (result: RenderResult) => Promise<T> | T,
-	preferences: AccessibilityPreferences = {}
-): Promise<T> {
-	// Mock media queries for accessibility preferences
-	const mockMatchMedia = (query: string) => {
-		const matches: Record<string, boolean> = {
-			"(prefers-reduced-motion: reduce)":
-				preferences.prefersReducedMotion ?? false,
-			"(prefers-contrast: high)": preferences.prefersHighContrast ?? false,
-			"(prefers-color-scheme: dark)": preferences.colorScheme === "dark",
-		};
-
-		return {
-			matches: matches[query],
-			media: query,
-			onchange: null,
-			// No-op event listener stubs required by the MediaQueryList interface
-			addListener: () => {
-				/* no-op stub */
-			},
-			removeListener: () => {
-				/* no-op stub */
-			},
-			addEventListener: () => {
-				/* no-op stub */
-			},
-			removeEventListener: () => {
-				/* no-op stub */
-			},
-			dispatchEvent: () => true,
-		};
-	};
-
-	const originalMatchMedia = window.matchMedia;
-	window.matchMedia = mockMatchMedia as any;
-
-	// Mock font size if specified
-	if (preferences.fontSizeMultiplier) {
-		const originalStyle = document.documentElement.style.fontSize;
-		document.documentElement.style.fontSize = `${preferences.fontSizeMultiplier}rem`;
-
-		try {
-			const renderResult = renderComponent();
-			return await testFunction(renderResult);
-		} finally {
-			document.documentElement.style.fontSize = originalStyle;
-			window.matchMedia = originalMatchMedia;
-		}
-	}
-
-	try {
-		const renderResult = renderComponent();
-		return await testFunction(renderResult);
-	} finally {
-		window.matchMedia = originalMatchMedia;
-	}
-}
-
 // =============================================================================
 // Utility Functions
 // =============================================================================
@@ -1164,17 +988,8 @@ export {
 	// Main test functions
 	runAccessibilityTests,
 	testKeyboardNavigation,
-	testKeyboardInteractions,
 	testScreenReaderCompatibility,
-	testLandmarkNavigation,
-	testFocusManagement,
 	testFormAccessibility,
-	testWithAccessibilityPreferences,
 	runFullAccessibilityAudit,
 	quickAccessibilityCheck,
-	// Utility functions
-	getAccessibleName,
-	isHidden,
-	getFocusableElements,
-	checkLogicalTabOrder,
 };

@@ -19,6 +19,8 @@ const FAKE_PLUGIN: PluginManifestEntry = {
 	id: "tea.fake",
 	name: "Fake Plugin",
 	version: "0.0.1",
+	description: "Test plugin description.",
+	docsPath: "/docs/technical-guide/architecture/plugin-ecosystem",
 	surfaces: ["element-badge"],
 };
 
@@ -64,6 +66,8 @@ describe("SlotRegistry", () => {
 			id: "tea.other",
 			name: "Other Plugin",
 			version: "0.0.1",
+			description: "Test plugin description.",
+			docsPath: "/docs/technical-guide/architecture/plugin-ecosystem",
 			surfaces: ["element-badge"],
 		};
 		mockGetManifestEntry.mockImplementation((pluginId) =>

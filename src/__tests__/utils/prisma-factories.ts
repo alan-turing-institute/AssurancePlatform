@@ -21,11 +21,6 @@ function nextId(): number {
 	return ++counter;
 }
 
-/** Reset the counter — call in beforeEach if needed for deterministic IDs */
-export function resetCounter(): void {
-	counter = 0;
-}
-
 // ============================================
 // USER
 // ============================================
@@ -177,12 +172,15 @@ type ElementOverrides = Partial<{
 	// MODULE/AWAY_GOAL — required by AwayGoalSchema/ModuleSchema when
 	// elementType is MODULE or AWAY_GOAL (lib/schemas/element-validation.ts).
 	moduleReferenceId: string;
+	// MODULE only — also required (element-validation.ts's REQUIRED_FIELDS).
+	moduleEmbedType: "COPY" | "REFERENCE";
 	// ADR 0004 D5 — AWAY_GOAL only
 	citedElementId: string | null;
 	citationDangling: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type
 	isDefeater: boolean;
 	defeatsElementId: string | null;
+	defeatsDangling: boolean;
 }>;
 
 export function createTestElement(
@@ -204,10 +202,12 @@ export function createTestElement(
 			inSandbox: overrides.inSandbox ?? false,
 			assertionStatus: overrides.assertionStatus,
 			moduleReferenceId: overrides.moduleReferenceId,
+			moduleEmbedType: overrides.moduleEmbedType,
 			citedElementId: overrides.citedElementId,
 			citationDangling: overrides.citationDangling ?? false,
 			isDefeater: overrides.isDefeater ?? false,
 			defeatsElementId: overrides.defeatsElementId,
+			defeatsDangling: overrides.defeatsDangling ?? false,
 		},
 	});
 }
@@ -462,17 +462,20 @@ export async function createTestIntegrationWithSystemUser(
 }
 
 /**
- * Queries the user record and returns the current passwordResetToken.
- * Used after requestPasswordReset to retrieve the generated token.
+ * Queries the user record and returns the current stored reset-token hash
+ * (never the raw bearer token — the database does not hold it, AP-QA-006).
+ * Used to assert what got persisted; to obtain the raw token a test must
+ * present to `resetPassword`/`validateResetToken`, capture it from the
+ * mocked `sendPasswordResetEmail` call instead.
  */
-export async function getTestPasswordResetToken(
+export async function getTestPasswordResetTokenHash(
 	userId: string
 ): Promise<string | null> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { passwordResetToken: true },
+		select: { passwordResetTokenHash: true },
 	});
-	return user?.passwordResetToken ?? null;
+	return user?.passwordResetTokenHash ?? null;
 }
 
 // ============================================

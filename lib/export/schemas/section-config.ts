@@ -11,7 +11,7 @@ import { z } from "zod";
  * Base section configuration - controls whether a section is included
  * and allows title customisation.
  */
-export const SectionConfigSchema = z
+const SectionConfigSchema = z
 	.object({
 		enabled: z
 			.boolean()
@@ -24,12 +24,10 @@ export const SectionConfigSchema = z
 	})
 	.describe("Configuration for a single report section");
 
-export type SectionConfig = z.infer<typeof SectionConfigSchema>;
-
 /**
  * Diagram section options
  */
-export const DiagramSectionOptionsSchema = z
+const DiagramSectionOptionsSchema = z
 	.object({
 		includeImage: z
 			.boolean()
@@ -49,12 +47,10 @@ export const DiagramSectionOptionsSchema = z
 	})
 	.describe("Options specific to the diagram section");
 
-export type DiagramSectionOptions = z.infer<typeof DiagramSectionOptionsSchema>;
-
 /**
  * Evidence section options
  */
-export const EvidenceSectionOptionsSchema = z
+const EvidenceSectionOptionsSchema = z
 	.object({
 		includeUrls: z
 			.boolean()
@@ -67,14 +63,10 @@ export const EvidenceSectionOptionsSchema = z
 	})
 	.describe("Options specific to the evidence section");
 
-export type EvidenceSectionOptions = z.infer<
-	typeof EvidenceSectionOptionsSchema
->;
-
 /**
  * Comments section options
  */
-export const CommentsSectionOptionsSchema = z
+const CommentsSectionOptionsSchema = z
 	.object({
 		includeAuthor: z
 			.boolean()
@@ -87,28 +79,20 @@ export const CommentsSectionOptionsSchema = z
 	})
 	.describe("Options specific to the comments section");
 
-export type CommentsSectionOptions = z.infer<
-	typeof CommentsSectionOptionsSchema
->;
-
 /**
  * Extended section configs with type-specific options
  */
-export const DiagramSectionConfigSchema = SectionConfigSchema.extend({
+const DiagramSectionConfigSchema = SectionConfigSchema.extend({
 	options: DiagramSectionOptionsSchema.optional(),
 });
 
-export const EvidenceSectionConfigSchema = SectionConfigSchema.extend({
+const EvidenceSectionConfigSchema = SectionConfigSchema.extend({
 	options: EvidenceSectionOptionsSchema.optional(),
 });
 
-export const CommentsSectionConfigSchema = SectionConfigSchema.extend({
+const CommentsSectionConfigSchema = SectionConfigSchema.extend({
 	options: CommentsSectionOptionsSchema.optional(),
 });
-
-export type DiagramSectionConfig = z.infer<typeof DiagramSectionConfigSchema>;
-export type EvidenceSectionConfig = z.infer<typeof EvidenceSectionConfigSchema>;
-export type CommentsSectionConfig = z.infer<typeof CommentsSectionConfigSchema>;
 
 /**
  * All sections configuration

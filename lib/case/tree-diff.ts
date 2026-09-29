@@ -233,15 +233,6 @@ function flattenCaseExportWithLinks(
 }
 
 /**
- * Legacy flatten function for backward compatibility
- */
-function flattenCaseExport(
-	caseExport: CaseExportNested
-): Map<string, FlatElement> {
-	return flattenCaseExportWithLinks(caseExport).elements;
-}
-
-/**
  * Compares two arrays for equality (shallow comparison)
  */
 function arraysEqual(
@@ -496,72 +487,6 @@ export function computeTreeDiff(
 			moved: movedCount,
 		},
 	};
-}
-
-/**
- * Orders changes for safe application:
- * 1. Unlink evidence (before deletes to avoid FK issues)
- * 2. Deletes (bottom-up to avoid orphan issues)
- * 3. Creates (top-down for parent availability)
- * 4. Updates
- * 5. Link evidence (after creates so elements exist)
- *
- * @param changes - Unordered changes
- * @param editedExport - The edited export (for parent ordering)
- * @returns Ordered changes safe for sequential application
- */
-export function orderChangesForApplication(
-	changes: ElementChange[],
-	editedExport: CaseExportNested
-): ElementChange[] {
-	const unlinks = changes.filter((c) => c.type === "unlink_evidence");
-	const deletes = changes.filter((c) => c.type === "delete");
-	const creates = changes.filter((c) => c.type === "create");
-	const updates = changes.filter((c) => c.type === "update");
-	const links = changes.filter((c) => c.type === "link_evidence");
-
-	// Build a depth map for ordering creates (parents first)
-	const editedMap = flattenCaseExport(editedExport);
-	const depthMap = new Map<string, number>();
-
-	function getDepth(id: string): number {
-		const cached = depthMap.get(id);
-		if (cached !== undefined) {
-			return cached;
-		}
-		const element = editedMap.get(id);
-		if (!element?.parentId) {
-			depthMap.set(id, 0);
-			return 0;
-		}
-		const parentDepth = getDepth(element.parentId);
-		const depth = parentDepth + 1;
-		depthMap.set(id, depth);
-		return depth;
-	}
-
-	// Calculate depths for all created elements
-	for (const change of creates) {
-		getDepth(change.elementId);
-	}
-
-	// Sort creates by depth (parents first)
-	const orderedCreates = [...creates].sort((a, b) => {
-		const depthA = depthMap.get(a.elementId) ?? 0;
-		const depthB = depthMap.get(b.elementId) ?? 0;
-		return depthA - depthB;
-	});
-
-	// Sort deletes by depth (children first, reverse order)
-	const orderedDeletes = [...deletes].reverse();
-
-	return [
-		...unlinks,
-		...orderedDeletes,
-		...orderedCreates,
-		...updates,
-		...links,
-	];
 }
 
 /**

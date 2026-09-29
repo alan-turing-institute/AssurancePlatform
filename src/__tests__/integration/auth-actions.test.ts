@@ -1,6 +1,13 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
 import { createTestUser } from "../utils/prisma-factories";
+
+/** Mirrors the private `hashResetToken` in password-reset-service.ts — the
+ * database only ever holds this hash, never the raw token (AP-QA-006). */
+function sha256Hex(value: string): string {
+	return createHash("sha256").update(value, "utf8").digest("hex");
+}
 
 // ============================================
 // validatePasswordResetToken
@@ -16,7 +23,7 @@ describe("validatePasswordResetToken", () => {
 		await prisma.user.update({
 			where: { id: user.id },
 			data: {
-				passwordResetToken: token,
+				passwordResetTokenHash: sha256Hex(token),
 				passwordResetExpires: expires,
 			},
 		});
@@ -47,7 +54,7 @@ describe("validatePasswordResetToken", () => {
 		await prisma.user.update({
 			where: { id: user.id },
 			data: {
-				passwordResetToken: token,
+				passwordResetTokenHash: sha256Hex(token),
 				passwordResetExpires: expired,
 			},
 		});
@@ -85,7 +92,7 @@ describe("validatePasswordResetToken", () => {
 		await prisma.user.update({
 			where: { id: user.id },
 			data: {
-				passwordResetToken: token,
+				passwordResetTokenHash: sha256Hex(token),
 				passwordResetExpires: expires,
 			},
 		});
@@ -94,7 +101,7 @@ describe("validatePasswordResetToken", () => {
 		await prisma.user.update({
 			where: { id: user.id },
 			data: {
-				passwordResetToken: null,
+				passwordResetTokenHash: null,
 				passwordResetExpires: null,
 			},
 		});

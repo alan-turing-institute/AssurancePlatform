@@ -6,8 +6,12 @@
  */
 
 import { Octokit } from "@octokit/rest";
+import { decryptToken } from "@/lib/auth/token-encryption";
 import type { ErrorCode } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+
+const tokenEncryptionLog = logger.child({ component: "token-encryption" });
 
 // Top-level regex patterns for URL parsing
 // Matches: raw.githubusercontent.com/owner/repo/branch/path (simple format)
@@ -40,10 +44,18 @@ export interface GitHubServiceError {
 }
 
 /**
- * Retrieves the user's GitHub access token from the database.
- * Returns null if the user doesn't have a GitHub token stored.
+ * Retrieves the user's GitHub access token from the database, decrypted.
+ * Returns null if the user doesn't have a GitHub token stored, if it has
+ * expired, or if it can't be decrypted (tampered ciphertext, an unknown
+ * envelope version, the wrong key, or no key configured) — a corrupted
+ * token is treated as absent rather than thrown out of the service, so the
+ * caller ends up at "reconnect your account" instead of a 500. Exported for
+ * integration testing; other modules should still go through
+ * `fetchFileFromGitHub` / `hasGitHubToken`.
  */
-async function getUserGitHubToken(userId: string): Promise<string | null> {
+export async function getUserGitHubToken(
+	userId: string
+): Promise<string | null> {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
 		select: {
@@ -61,7 +73,19 @@ async function getUserGitHubToken(userId: string): Promise<string | null> {
 		return null;
 	}
 
-	return user.githubAccessToken;
+	try {
+		return decryptToken(user.githubAccessToken);
+	} catch (error) {
+		tokenEncryptionLog.error(
+			"Failed to decrypt stored token; treating as absent",
+			{
+				userId,
+				field: "githubAccessToken",
+				error: error instanceof Error ? error.message : String(error),
+			}
+		);
+		return null;
+	}
 }
 
 /**

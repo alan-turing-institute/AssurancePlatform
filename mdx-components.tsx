@@ -1,24 +1,25 @@
-import type { ImageProps } from "next/image";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import defaultMdxComponents from "fumadocs-ui/mdx";
+import type { MDXComponents } from "mdx/types";
 import Image from "next/image";
-import { useMDXComponents as getThemeComponents } from "nextra-theme-docs";
-
-// Use nextra's MDXComponents type for compatibility
-type MDXComponents = ReturnType<typeof getThemeComponents>;
+import type { ComponentProps } from "react";
 
 /**
  * Custom image component that renders images without the zoom/expand behaviour.
  * Uses Next.js Image for optimisation.
+ *
+ * Typed against the plain `<img>` element (the shape the MDX `img` slot
+ * expects), not `next/image`'s `ImageProps` — content supplies `src` as a
+ * literal string (see `remarkImageOptions.useImport: false` in
+ * `source.config.ts`), never a `StaticImport`.
  */
-function MdxImage({ src, alt, title }: ImageProps) {
-	if (!src) {
+function MdxImage({ src, alt, title }: ComponentProps<"img">) {
+	if (!src || typeof src !== "string") {
 		return null;
 	}
 
-	// Determine if the image should be optimised
 	// Only optimise local images (starting with "/")
-	// src can be a string or a StaticImport object
-	const srcString = typeof src === "string" ? src : "";
-	const isLocalImage = srcString.startsWith("/");
+	const isLocalImage = src.startsWith("/");
 
 	// Use Next.js Image component for all images
 	return (
@@ -37,26 +38,23 @@ function MdxImage({ src, alt, title }: ImageProps) {
 
 /**
  * MDX components for the documentation.
- * This file is required by Nextra 4.x for App Router integration.
  *
- * Uses nextra-theme-docs components for full theme support including
- * callouts, cards, tabs, and other built-in components.
+ * `defaultMdxComponents` already registers Callout and Card/Cards; Tabs/Tab
+ * are added on top. Deliberately nothing else from Fumadocs is registered
+ * here (no Steps, Accordion, TypeTable, Banner, Files) — a simpler component
+ * set, consistent with the TEA canvas.
  *
  * Note: Curriculum components with client-side functionality (React hooks, contexts)
  * should be imported directly in MDX files rather than registered here,
  * as they require "use client" directive and can't be used in server components.
  */
-export function useMDXComponents(components?: MDXComponents): MDXComponents {
-	const themeComponents = getThemeComponents(components ?? {});
+export function getMDXComponents(components?: MDXComponents): MDXComponents {
 	return {
-		...themeComponents,
+		...defaultMdxComponents,
+		Tab,
+		Tabs,
+		...components,
 		// Override the default img component to disable zoom behaviour
 		img: MdxImage,
 	};
 }
-
-/**
- * Alias for useMDXComponents that avoids linter warnings about hooks.
- * Use this in non-component contexts.
- */
-export const getMDXComponents = useMDXComponents;

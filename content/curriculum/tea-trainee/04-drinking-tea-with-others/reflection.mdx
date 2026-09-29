@@ -1,0 +1,56 @@
+---
+title: "Reflect on collaborative assurance"
+description: Consider whose input a case needs and what a public reader can understand.
+---
+
+import ConceptCarousel from "@/components/docs/curriculum/concept-carousel";
+import { drinkingConcepts } from "./concepts";
+import { drinkingReflectionPrompts } from "./reflections";
+import ReflectionPrompts from "@/components/docs/curriculum/reflection-prompts";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { drinkingTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="drinking-tea-with-others"
+      tasks={drinkingTasks}
+      currentPage="reflection"
+    >
+      {children}
+      <ModuleProgressTracker showHints={true} currentPage="reflection" />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+## The Core Concepts
+
+<div id="core-elements" className="mt-8">
+
+<ConceptCarousel
+  concepts={drinkingConcepts}
+  mode="guided"
+  taskId="review-core-elements"
+/>
+
+</div>
+
+<div id="reflection-prompts" className="mt-8">
+
+<ReflectionPrompts
+  prompts={drinkingReflectionPrompts}
+  allowSkip={true}
+  autoSave={true}
+  showProgress={true}
+  taskId="complete-reflection"
+/>
+
+</div>
+
+Use these answers to plan your project's collaboration, then revisit the plan when the use setting or team changes.
+
+</PageContent>

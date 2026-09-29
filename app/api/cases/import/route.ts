@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { JSON_BODY_LIMITS, readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
@@ -40,13 +41,29 @@ export async function POST(request: Request) {
 		const result = await importCase(userId, jsonData);
 
 		if ("error" in result) {
-			return apiError(
-				validationError(result.error, {
-					...(result.validationErrors && {
-						validation: JSON.stringify(result.validationErrors),
-					}),
-				})
-			);
+			// `validationErrors` (already formatted "path: message" strings —
+			// see `case-import-service.ts`'s `processImportData`) needs to
+			// reach the client as its own top-level array: the shared
+			// `apiError`/`AppError` envelope only carries `fieldErrors`, a
+			// `Record<string, string>`, and the import dialog's own error
+			// parsing (`extractErrorMessage`, `use-case-import.ts`) reads
+			// `data.validationErrors` specifically. Stuffing the array into
+			// `fieldErrors` as a JSON string left it invisible to the dialog,
+			// which fell back to the generic "Invalid import data" message
+			// instead of naming the offending field (walkthrough finding 16).
+			// A bespoke envelope for this one error shape only — the error
+			// envelope, not the documented API contract.
+			if (result.validationErrors && result.validationErrors.length > 0) {
+				return NextResponse.json(
+					{
+						error: result.error,
+						code: "VALIDATION",
+						validationErrors: result.validationErrors,
+					},
+					{ status: 400 }
+				);
+			}
+			return apiError(validationError(result.error));
 		}
 
 		return apiSuccess({

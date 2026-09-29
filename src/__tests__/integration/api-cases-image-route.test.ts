@@ -21,7 +21,7 @@ vi.mock("@/lib/auth/validate-session", () => ({
 
 vi.mock("@/lib/services/blob-storage-service", () => ({
 	uploadToBlob: vi.fn().mockResolvedValue({
-		data: { url: "https://example.blob.core.windows.net/media/mock.png" },
+		data: { key: "images/mock.png" },
 	}),
 	generateScreenshotBlobPath: vi.fn().mockReturnValue("images/mock.png"),
 }));

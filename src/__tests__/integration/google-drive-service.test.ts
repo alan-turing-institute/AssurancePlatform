@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { decryptToken, encryptToken } from "@/lib/auth/token-encryption";
 import prisma from "@/lib/prisma";
+import { captureLogs } from "../helpers/capture-logs";
 import { createTestUser } from "../utils/prisma-factories";
 
 /**
@@ -100,6 +102,26 @@ function mockFolderCreation(newFolderId = "new-folder-id") {
 	mockFilesCreate.mockResolvedValueOnce({ data: { id: newFolderId } });
 }
 
+/**
+ * Corrupts an envelope by flipping a bit in its first payload byte — always
+ * a real ciphertext/tag byte. Flipping a character of the base64 STRING
+ * instead (e.g. its last character) is only *sometimes* a real corruption:
+ * when the payload's byte length isn't a multiple of 3, the last character
+ * encodes some bits that base64 decoding discards, so certain flips there
+ * silently round-trip to the same bytes.
+ */
+function tamper(encrypted: string): string {
+	const [version, iv, payload] = encrypted.split(":") as [
+		string,
+		string,
+		string,
+	];
+	const bytes = Buffer.from(payload, "base64url");
+	const firstByte = bytes[0] ?? 0;
+	bytes[0] = (firstByte + 1) % 256;
+	return `${version}:${iv}:${bytes.toString("base64url")}`;
+}
+
 describe("hasGoogleToken / getUserGoogleTokens (via hasGoogleToken)", () => {
 	it("returns true for a valid, unexpired token", async () => {
 		const user = await createTestUser();
@@ -137,8 +159,13 @@ describe("hasGoogleToken / getUserGoogleTokens (via hasGoogleToken)", () => {
 		expect(await hasGoogleToken(user.id)).toBe(true);
 		expect(mockRefreshAccessToken).toHaveBeenCalledTimes(1);
 
+		// The refreshed token is written back encrypted (lib/auth/token-encryption.ts) —
+		// decrypt before comparing to the plaintext the mock returned.
 		const updated = await prisma.user.findUnique({ where: { id: user.id } });
-		expect(updated?.googleAccessToken).toBe("refreshed-token");
+		expect(updated?.googleAccessToken).not.toBe("refreshed-token");
+		expect(
+			updated?.googleAccessToken && decryptToken(updated.googleAccessToken)
+		).toBe("refreshed-token");
 		expect(updated?.googleTokenExpiresAt?.getTime()).toBe(newExpiry);
 	});
 
@@ -763,5 +790,99 @@ describe("needsGoogleReauthorisation", () => {
 			"@/lib/services/google-drive-service"
 		);
 		expect(await needsGoogleReauthorisation(user.id)).toBe(true);
+	});
+});
+
+describe("OAuth token encryption (getUserGoogleTokens, via uploadBackupToDrive)", () => {
+	const originalKey = process.env.TOKEN_ENCRYPTION_KEY;
+
+	beforeEach(() => {
+		process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+	});
+
+	afterEach(() => {
+		if (originalKey === undefined) {
+			Reflect.deleteProperty(process.env, "TOKEN_ENCRYPTION_KEY");
+		} else {
+			process.env.TOKEN_ENCRYPTION_KEY = originalKey;
+		}
+	});
+
+	it("decrypts stored ciphertext before using it as the Drive credentials", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, {
+			googleAccessToken: encryptToken("plain-access-token"),
+			googleRefreshToken: encryptToken("plain-refresh-token"),
+		});
+		mockExistingFolder();
+		mockFilesCreate.mockResolvedValueOnce({
+			data: { id: "file-id", webViewLink: undefined },
+		});
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "Case", "{}");
+
+		expect("data" in result).toBe(true);
+		expect(mockSetCredentials).toHaveBeenCalledWith(
+			expect.objectContaining({
+				access_token: "plain-access-token",
+				refresh_token: "plain-refresh-token",
+			})
+		);
+	});
+
+	it("still accepts legacy plaintext tokens (no encryption envelope)", async () => {
+		const user = await createTestUser();
+		await setGoogleTokens(user.id, {
+			googleAccessToken: "legacy-plaintext-access-token",
+			googleRefreshToken: "legacy-plaintext-refresh-token",
+		});
+		mockExistingFolder();
+		mockFilesCreate.mockResolvedValueOnce({
+			data: { id: "file-id", webViewLink: undefined },
+		});
+
+		const { uploadBackupToDrive } = await import(
+			"@/lib/services/google-drive-service"
+		);
+		const result = await uploadBackupToDrive(user.id, "Case", "{}");
+
+		expect("data" in result).toBe(true);
+		expect(mockSetCredentials).toHaveBeenCalledWith(
+			expect.objectContaining({
+				access_token: "legacy-plaintext-access-token",
+				refresh_token: "legacy-plaintext-refresh-token",
+			})
+		);
+	});
+
+	it("treats a tampered stored access token as absent (NO_TOKEN), logging via the token-encryption component, rather than throwing", async () => {
+		const user = await createTestUser();
+		const encrypted = encryptToken("plain-access-token");
+		await setGoogleTokens(user.id, { googleAccessToken: tamper(encrypted) });
+
+		const logs = captureLogs();
+		try {
+			const { uploadBackupToDrive } = await import(
+				"@/lib/services/google-drive-service"
+			);
+			const result = await uploadBackupToDrive(user.id, "Case", "{}");
+
+			expect("error" in result).toBe(true);
+			if (!("error" in result)) {
+				throw new Error("expected failure");
+			}
+			expect(result.driveError.code).toBe("NO_TOKEN");
+
+			const errorLog = logs.entries.find(
+				(entry) =>
+					entry.level === "error" && entry.component === "token-encryption"
+			);
+			expect(errorLog).toBeDefined();
+		} finally {
+			logs.restore();
+		}
 	});
 });

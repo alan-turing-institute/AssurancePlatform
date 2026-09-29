@@ -731,6 +731,98 @@ describe("applyBatchUpdate", () => {
 	});
 
 	/**
+	 * TEA — Citation integrity is unchecked on the batch-update and import
+	 * write paths (2026-09-16): this batch path can't write citedElementId
+	 * (see the smuggling test above), so changing moduleReferenceId ALONE
+	 * used to leave an existing citedElementId pointing at the OLD case,
+	 * unvalidated. Mirrors api-elements-cited-element-id.test.ts's "rejects
+	 * moduleReferenceId-only changing away from the case the EXISTING
+	 * citedElementId belongs to (review round 2)" for the single-element
+	 * route — same rule, same error shape, batch path.
+	 */
+	it("rejects a batch update that changes moduleReferenceId away from the case an existing citedElementId belongs to", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const caseA = await createTestCase(user.id);
+		const caseB = await createTestCase(user.id);
+		const goalInA = await createTestElement(caseA.id, user.id, {
+			elementType: "GOAL",
+			name: "Goal In A",
+		});
+		const awayGoal = await createTestElement(testCase.id, user.id, {
+			elementType: "AWAY_GOAL",
+			name: "AG1",
+			moduleReferenceId: caseA.id,
+			citedElementId: goalInA.id,
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "update",
+				elementId: awayGoal.id,
+				data: { moduleReferenceId: caseB.id },
+			},
+		];
+
+		expectError(
+			await applyBatchUpdate(user.id, testCase.id, changes),
+			"citedElementId must reference an existing element"
+		);
+
+		// Rejected outright — nothing was written.
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(caseA.id);
+		expect(inDb?.citedElementId).toBe(goalInA.id);
+	});
+
+	/**
+	 * Same-case sanity check for the guard above: a moduleReferenceId change
+	 * that still points at the case the existing citedElementId belongs to
+	 * (a no-op re-send, or a change TO the same case) is not rejected.
+	 */
+	it("accepts a batch update that changes moduleReferenceId to the SAME case an existing citedElementId already belongs to", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id);
+		const caseA = await createTestCase(user.id);
+		const goalInA = await createTestElement(caseA.id, user.id, {
+			elementType: "GOAL",
+			name: "Goal In A",
+		});
+		const awayGoal = await createTestElement(testCase.id, user.id, {
+			elementType: "AWAY_GOAL",
+			name: "AG1",
+			moduleReferenceId: caseA.id,
+			citedElementId: goalInA.id,
+		});
+
+		const { applyBatchUpdate } = await import(
+			"@/lib/services/case-batch-update-service"
+		);
+
+		const changes: ElementChange[] = [
+			{
+				type: "update",
+				elementId: awayGoal.id,
+				data: { moduleReferenceId: caseA.id },
+			},
+		];
+
+		expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(inDb?.moduleReferenceId).toBe(caseA.id);
+		expect(inDb?.citedElementId).toBe(goalInA.id);
+	});
+
+	/**
 	 * perf/n-plus-one-batching (2026-08-25): validateUpdateParents now runs a
 	 * single shared multi-root BFS (getDescendantIdsForRoots) for every
 	 * update in a batch that moves an element, instead of one
@@ -2658,7 +2750,11 @@ describe("applyBatchUpdate", () => {
 					data: {
 						id: defeaterId,
 						type: "PROPERTY_CLAIM",
-						name: "P2",
+						// Defeater naming class (Chris's ruling, 2026-09-15 — D8 of
+						// ADR 0005): a defeater property claim is named CP<n>, never
+						// P<n> — see prefix-registry.test.ts and
+						// element-service.test.ts's "name-format validation" suite.
+						name: "CP1",
 						description: "References a sibling create as its defeats target",
 						inSandbox: false,
 						isDefeater: true,
@@ -2861,6 +2957,326 @@ describe("applyBatchUpdate", () => {
 			});
 			expect(updated?.name).toBe("G1");
 			expect(updated?.description).toBe("Only the description changes");
+		});
+
+		/**
+		 * Defeater identifiers (Chris's ruling, 2026-09-15 — D8 of ADR 0005,
+		 * "TEA — Defeater identifiers follow GSN (CP1, CG1, CE1)"): the
+		 * JSON-editor path validates a name against the SAME defeater-aware
+		 * class the single-element route does — confirming the design note's
+		 * claim that the JSON editor "uses the same Zod schema, so [it]
+		 * follows".
+		 */
+		describe("defeater naming class", () => {
+			it("accepts a create whose name is CP-form when isDefeater is true", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const defeaterId = `defeater-cp1-${Date.now()}`;
+				const changes: ElementChange[] = [
+					{
+						type: "create",
+						elementId: defeaterId,
+						parentId: null,
+						data: {
+							id: defeaterId,
+							type: "PROPERTY_CLAIM",
+							name: "CP1",
+							description: "A fresh defeater, named per the current ruling",
+							inSandbox: false,
+							isDefeater: true,
+						},
+					},
+				];
+
+				const data = expectSuccess(
+					await applyBatchUpdate(user.id, testCase.id, changes)
+				);
+				expect(data.summary.created).toBe(1);
+
+				const created = await prisma.assuranceElement.findUnique({
+					where: { id: defeaterId },
+				});
+				expect(created?.name).toBe("CP1");
+			});
+
+			it("rejects a create whose name is CP-form when isDefeater is NOT set", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const plainId = `plain-cp1-${Date.now()}`;
+				const changes: ElementChange[] = [
+					{
+						type: "create",
+						elementId: plainId,
+						parentId: null,
+						data: {
+							id: plainId,
+							type: "PROPERTY_CLAIM",
+							name: "CP1",
+							description: "Plain claim named in the defeater's form",
+							inSandbox: false,
+						},
+					},
+				];
+
+				expectError(
+					await applyBatchUpdate(user.id, testCase.id, changes),
+					new RegExp(
+						`Property Claim names must look like P1 or P1\\.1 \\(element ${plainId}\\)`
+					)
+				);
+			});
+
+			it("rejects an update renaming an EXISTING defeater to the plain form, using the element's stored isDefeater flag (not passed in this update's payload)", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const defeater = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					name: "CP1",
+					isDefeater: true,
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const changes: ElementChange[] = [
+					{
+						type: "update",
+						elementId: defeater.id,
+						data: { name: "P1" },
+					},
+				];
+
+				expectError(
+					await applyBatchUpdate(user.id, testCase.id, changes),
+					new RegExp(
+						`Property Claim names must look like CP1 or CP1\\.1 \\(element ${defeater.id}\\)`
+					)
+				);
+
+				const unchanged = await prisma.assuranceElement.findUnique({
+					where: { id: defeater.id },
+				});
+				expect(unchanged?.name).toBe("CP1");
+			});
+
+			it("accepts an update that flips isDefeater and renames in the SAME change, using the update's OWN isDefeater value", async () => {
+				const user = await createTestUser();
+				const testCase = await createTestCase(user.id);
+				const claim = await createTestElement(testCase.id, user.id, {
+					elementType: "PROPERTY_CLAIM",
+					name: "P1",
+					isDefeater: false,
+				});
+
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+
+				const changes: ElementChange[] = [
+					{
+						type: "update",
+						elementId: claim.id,
+						data: { name: "CP1", isDefeater: true },
+					},
+				];
+
+				const data = expectSuccess(
+					await applyBatchUpdate(user.id, testCase.id, changes)
+				);
+				expect(data.summary.updated).toBe(1);
+
+				const updated = await prisma.assuranceElement.findUnique({
+					where: { id: claim.id },
+				});
+				expect(updated?.name).toBe("CP1");
+				expect(updated?.isDefeater).toBe(true);
+			});
+
+			/**
+			 * Fix round 2 (vincent finding 2, ruled by cid, 2026-09-15 —
+			 * "identifiers are always set by the app"): flipping isDefeater
+			 * through the JSON-editor batch path without a rename used to
+			 * write the new flag and leave the OLD-class name in place.
+			 * RULING: regenerate the name for the new class server-side when
+			 * no name is supplied with the flip.
+			 */
+			describe("isDefeater flips regenerate the name (fix round 2)", () => {
+				it("flip-only: a plain claim flipped to isDefeater becomes CP<n>", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "P1",
+						isDefeater: false,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const changes: ElementChange[] = [
+						{
+							type: "update",
+							elementId: claim.id,
+							data: { isDefeater: true },
+						},
+					];
+
+					const data = expectSuccess(
+						await applyBatchUpdate(user.id, testCase.id, changes)
+					);
+					expect(data.summary.updated).toBe(1);
+
+					const updated = await prisma.assuranceElement.findUnique({
+						where: { id: claim.id },
+					});
+					expect(updated?.name).toBe("CP1");
+					expect(updated?.isDefeater).toBe(true);
+				});
+
+				it("flip-only: a defeater flipped to plain becomes P<n>", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const defeater = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "CP1",
+						isDefeater: true,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const changes: ElementChange[] = [
+						{
+							type: "update",
+							elementId: defeater.id,
+							data: { isDefeater: false },
+						},
+					];
+
+					const data = expectSuccess(
+						await applyBatchUpdate(user.id, testCase.id, changes)
+					);
+					expect(data.summary.updated).toBe(1);
+
+					const updated = await prisma.assuranceElement.findUnique({
+						where: { id: defeater.id },
+					});
+					expect(updated?.name).toBe("P1");
+					expect(updated?.isDefeater).toBe(false);
+				});
+
+				it("flip + a valid name for the new class is accepted (no regeneration needed)", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "P1",
+						isDefeater: false,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const changes: ElementChange[] = [
+						{
+							type: "update",
+							elementId: claim.id,
+							data: { isDefeater: true, name: "CP1" },
+						},
+					];
+
+					const data = expectSuccess(
+						await applyBatchUpdate(user.id, testCase.id, changes)
+					);
+					expect(data.summary.updated).toBe(1);
+
+					const updated = await prisma.assuranceElement.findUnique({
+						where: { id: claim.id },
+					});
+					expect(updated?.name).toBe("CP1");
+				});
+
+				it("flip + the OLD class's name is rejected, leaving the element unchanged", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "P1",
+						isDefeater: false,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const changes: ElementChange[] = [
+						{
+							type: "update",
+							elementId: claim.id,
+							data: { isDefeater: true, name: "P1" },
+						},
+					];
+
+					expectError(
+						await applyBatchUpdate(user.id, testCase.id, changes),
+						new RegExp(
+							`Property Claim names must look like CP1 or CP1\\.1 \\(element ${claim.id}\\)`
+						)
+					);
+
+					const unchanged = await prisma.assuranceElement.findUnique({
+						where: { id: claim.id },
+					});
+					expect(unchanged?.name).toBe("P1");
+					expect(unchanged?.isDefeater).toBe(false);
+				});
+
+				it("a no-op flip (same value re-sent) does not regenerate the name", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "P1",
+						isDefeater: false,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const changes: ElementChange[] = [
+						{
+							type: "update",
+							elementId: claim.id,
+							data: { isDefeater: false, description: "Unrelated change" },
+						},
+					];
+
+					const data = expectSuccess(
+						await applyBatchUpdate(user.id, testCase.id, changes)
+					);
+					expect(data.summary.updated).toBe(1);
+
+					const updated = await prisma.assuranceElement.findUnique({
+						where: { id: claim.id },
+					});
+					expect(updated?.name).toBe("P1");
+				});
+			});
 		});
 	});
 });

@@ -1,0 +1,28 @@
+---
+title: "Scheduled jobs"
+description: "Operate the three protected maintenance routes and their workflows."
+---
+
+The staging code has three scheduled maintenance jobs. GitHub Actions calls an application route for each job. The route delegates the work to a service. These jobs need a reachable application and a configured secret; the workflow file alone does not perform database cleanup.
+
+## Jobs and schedules
+
+| Job | Workflow schedule | Service effect |
+| --- | --- | --- |
+| Trash purge | Daily at 03:00 UTC | Attempts to purge cases eligible 30 days after deletion. |
+| Health staleness sweep | Every 15 minutes | Finds claim health states that have become stale and emits updates for open case views. |
+| Inactive-account retention | Daily at 03:17 UTC | Advances warning and deletion stages for accounts inactive for two years. |
+
+The Trash job calls `/api/cron/purge-trash` and uses `lib/services/case-trash-service.ts`. The health job calls `/api/cron/health-staleness-sweep` and uses `lib/services/health-staleness-sweep-service.ts`. Health staleness is also computed when read, so the sweep primarily pushes a changed state to a connected canvas. The retention job calls `/api/cron/retention-sweep` and uses `lib/services/retention-service.ts`. It sends a 30-day warning, waits at least 23 days before a seven-day reminder, then waits at least seven more days before deletion. An account already overdue when the job first runs is warned first, rather than immediately deleted.
+
+The retention route also has a manual `dryRun=1` mode. It can report `skipped` for an account that cannot be deleted. A dry run does not send warnings or delete accounts.
+
+## Secure and observe a run
+
+Each route expects a POST request with `Authorization: Bearer <CRON_SECRET>`. The shared guard in `lib/services/cron-auth.ts` fails closed if `CRON_SECRET` is absent and compares the supplied value without an ordinary string equality check. The workflows use an application URL and secret from GitHub Actions secrets. Configure the same cron secret in the application environment. Do not use a user's browser token or a machine integration token for these routes.
+
+The workflows check HTTP responses, while the services log their outcomes. For an operational check, inspect the relevant workflow run and the application's structured logs. A 200 response confirms that the route ran; the response counts and service logs show what it found or changed. The health sweep does not replace an independent evidence assessment, and the Trash job cannot restore an expired case.
+
+## Limits and code location
+
+Schedules are GitHub Actions cron expressions, so execution depends on Actions and the deployed app. No in-process timer guarantees a run. The three route files live under `app/api/cron/`, shared authentication is `lib/services/cron-auth.ts`, and schedules live in `.github/workflows/purge-trash.yml`, `health-staleness-sweep.yml` and `retention-sweep.yml`.

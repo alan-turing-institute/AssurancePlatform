@@ -28,7 +28,7 @@ const PrivacyPolicyPage = () => {
 						privacy notice
 					</a>{" "}
 					has the legal and contact details, including how to contact the
-					Institute&apos;s Data Protection Officer. Contact for the Platform:
+					Institute&apos;s Data Protection Team. Contact for the Platform:
 					tea@turing.ac.uk.
 				</p>
 
@@ -174,7 +174,7 @@ const PrivacyPolicyPage = () => {
 						in the{" "}
 						<Link
 							className="text-primary underline"
-							href="/docs/data-retention-policy"
+							href="/docs/platform-guide/data-retention-policy"
 						>
 							Data Retention Policy
 						</Link>

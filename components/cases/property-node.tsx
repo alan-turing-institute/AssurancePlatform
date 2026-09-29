@@ -37,6 +37,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				context={data.context}
 				dataTour={dataTour}
 				description={data.description}
+				isDefeater={!!data.isDefeater}
 				justification={data.justification}
 				name={data.name}
 				nodeType="property"

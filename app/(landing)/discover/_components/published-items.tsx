@@ -16,6 +16,7 @@ import { formatShortDate } from "@/lib/date";
 import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { PublishableItemSummaryResponse } from "@/lib/services/discover-transforms";
+import { ArchivedBadge } from "./archived-status";
 import PublishableItemTypeBadge from "./publishable-item-type-badge";
 
 interface PublishedItemsProps {
@@ -97,7 +98,11 @@ function PublishedItems({ items }: PublishedItemsProps) {
 											alt={`${item.title} featured image`}
 											className="aspect-video w-full rounded-2xl bg-muted object-cover sm:aspect-2/1 lg:aspect-3/2"
 											height={400}
-											src={resolveFeatureImageSrc(item.featureImageUrl)}
+											src={resolveFeatureImageSrc(
+												item.featureImageUrl,
+												item.slug,
+												item.id
+											)}
 											width={600}
 										/>
 										<div className="absolute inset-0 rounded-2xl ring-1 ring-border ring-inset" />
@@ -115,6 +120,7 @@ function PublishedItems({ items }: PublishedItemsProps) {
 												{item.sector}
 											</span>
 										)}
+										<ArchivedBadge archivedAt={item.archivedAt} />
 									</div>
 									<div className="group relative">
 										<h3 className="mt-3 font-semibold text-foreground text-lg/6 group-hover:text-muted-foreground">

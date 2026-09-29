@@ -4,17 +4,25 @@
  * Pure function module — no Prisma dependency, importable by both client and server.
  *
  * Hierarchy:
- *   goal          → strategy, property_claim
- *   strategy      → property_claim
- *   property_claim → property_claim, evidence, strategy
+ *   goal          → strategy, property_claim, away_goal, module
+ *   strategy      → property_claim, away_goal, module
+ *   property_claim → property_claim, evidence, strategy, away_goal, module
  *   evidence      → (terminal — no valid children)
+ *   away_goal     → (terminal — leaf in 1.0 core, ADR 0005 D3)
+ *   module        → (terminal — leaf in 1.0 core, ADR 0005 D3)
  */
 
 /**
  * Canonical lowercase type representation used internally.
  * All public functions normalise input before lookup.
  */
-type CanonicalType = "goal" | "strategy" | "property_claim" | "evidence";
+type CanonicalType =
+	| "goal"
+	| "strategy"
+	| "property_claim"
+	| "evidence"
+	| "away_goal"
+	| "module";
 
 /**
  * Normalises any element type string to the canonical lowercase form.
@@ -22,7 +30,7 @@ type CanonicalType = "goal" | "strategy" | "property_claim" | "evidence";
  * Handles:
  *   - Prisma UPPERCASE:  "GOAL", "PROPERTY_CLAIM"
  *   - Display lowercase: "goal", "property_claim"
- *   - React Flow:        "propertyClaim"
+ *   - React Flow:        "propertyClaim", "awayGoal"
  *   - Legacy alias:      "property"
  */
 function normalise(type: string): string {
@@ -36,19 +44,32 @@ function normalise(type: string): string {
 	) {
 		return "property_claim";
 	}
+	if (trimmed === "awaygoal" || trimmed === "away_goal") {
+		return "away_goal";
+	}
 
 	// Strip underscores for comparison (e.g. "property_claim" → already handled above)
 	return trimmed.replace(/_/g, "_"); // keep underscores as-is after normalisation above
 }
 
 /**
- * Parent → valid child types mapping.
+ * Parent → valid child types mapping. Away goals and modules (ADR 0005 D3)
+ * are admitted wherever a property claim is — the same three parents — and
+ * are themselves terminal (no create path for their children in 1.0 core).
  */
 const VALID_CHILDREN: Record<CanonicalType, CanonicalType[]> = {
-	goal: ["strategy", "property_claim"],
-	strategy: ["property_claim"],
-	property_claim: ["property_claim", "evidence", "strategy"],
+	goal: ["strategy", "property_claim", "away_goal", "module"],
+	strategy: ["property_claim", "away_goal", "module"],
+	property_claim: [
+		"property_claim",
+		"evidence",
+		"strategy",
+		"away_goal",
+		"module",
+	],
 	evidence: [],
+	away_goal: [],
+	module: [],
 };
 
 /**
@@ -115,6 +136,8 @@ export const REACTFLOW_TO_CANONICAL: Record<string, string> = {
 	evidence: "evidence",
 	context: "context",
 	goal: "goal",
+	awayGoal: "away_goal",
+	module: "module",
 };
 
 export function canBeChildOf(childType: string, parentType: string): boolean {

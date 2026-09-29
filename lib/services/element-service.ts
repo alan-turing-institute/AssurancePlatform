@@ -1,5 +1,6 @@
 import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type {
 	CreateElementSchemaOutput,
@@ -23,6 +24,16 @@ import type {
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "element-service" });
+
+/** Bump the parent case's updatedAt so version checks (JSON editor 409) see element-level writes. */
+async function touchCase(tx: TxClient, caseId: string): Promise<void> {
+	await tx.assuranceCase.update({
+		where: { id: caseId },
+		data: { updatedAt: new Date() },
+	});
+}
 
 /**
  * Create element input — extends the Zod schema output with API-layer fields
@@ -53,6 +64,11 @@ export interface ElementResponse {
 	comments?: unknown[];
 	context?: string[];
 	createdDate: string;
+	// Dangling-defeat indicator: true when defeatsElementId was blanked
+	// because the imported target wasn't part of the same import (see
+	// resolveImportedDefeatsElementId, case-import-service.ts). Omitted (not
+	// false) when there is nothing to flag — mirrors citationDangling above.
+	defeatsDangling?: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	defeatsElementId?: string | null;
 	description: string;
@@ -63,6 +79,12 @@ export interface ElementResponse {
 	isDefeater?: boolean;
 	justification?: string;
 	level?: number;
+	// Dangling-module-reference indicator: true when moduleReferenceId was
+	// nullified because the imported target case doesn't exist in this
+	// environment (see resolveImportedModuleReferenceId, case-import-
+	// service.ts). Omitted (not false) when there is nothing to flag —
+	// mirrors citationDangling/defeatsDangling above.
+	moduleReferenceDangling?: boolean;
 	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
 	moduleReferenceId?: string | null;
 	name: string;
@@ -168,12 +190,46 @@ function rejectDeclaredAsCited(
 
 /**
  * ADR 0004 D5: `citedElementId` must reference an existing, non-deleted
- * element, and an element cannot cite itself. `ownElementId` is only
- * available (and only checked) on update — a not-yet-created element has no
- * id to collide with.
+ * element that belongs to the case `moduleReferenceId` names, and an
+ * element cannot cite itself. `ownElementId` is only available (and only
+ * checked) on update — a not-yet-created element has no id to collide with.
+ *
+ * The case-membership check (security fix, review round 1): without it, an
+ * AWAY_GOAL's `citedElementId` was only checked for existence and
+ * self-reference — a direct API/server-action call could cite ANY element
+ * system-wide, regardless of the case `moduleReferenceId` claims to cite
+ * from, and `buildCitationContext` (`case-fetch-service.ts`) would then
+ * resolve and display that element's name to every viewer of this case,
+ * leaking the existence and name of private elements. Returns the same
+ * "must reference an existing element" message as the not-found case —
+ * matching this file's anti-enumeration convention (mirrors
+ * `validateDefeatsElementId`'s same-case scoping below, except citation is
+ * cross-case by design, so the case checked is the *cited* one, not the
+ * element's own).
+ *
+ * A citation requires a case (security fix, review round 3): the case-
+ * membership check above used `moduleReferenceId && target.caseId !==
+ * moduleReferenceId`, so a null/undefined `moduleReferenceId` short-
+ * circuited the `&&` and skipped the check entirely — `updateElementSchema`
+ * allows `moduleReferenceId: null` (clearing it), so `PUT { moduleReferenceId:
+ * null, citedElementId: <any element in any case> }` was accepted outright,
+ * the same leak as round 1 through a different route. `citedElementId` with
+ * no effective `moduleReferenceId` is now rejected unconditionally, and the
+ * case-membership comparison below always runs rather than being gated on
+ * `moduleReferenceId` being truthy.
+ *
+ * Exported (TEA — citation integrity follow-up, 2026-09-16): this is the ONE
+ * rule "an away goal's citedElementId belongs to the case its
+ * moduleReferenceId names" — case-batch-update-service.ts's
+ * validateModuleReferenceChanges (moduleReferenceId changing alone must not
+ * orphan an existing citedElementId, JSON-editor path) and case-import-
+ * service.ts's resolveImportedCitedElementId (same rule, non-rejecting
+ * degrade instead of reject) both call this directly instead of
+ * re-implementing the query.
  */
-async function validateCitedElementId(
+export async function validateCitedElementId(
 	citedElementId: string | null | undefined,
+	moduleReferenceId: string | null | undefined,
 	ownElementId?: string
 ): Promise<string | undefined> {
 	if (!citedElementId) {
@@ -182,11 +238,14 @@ async function validateCitedElementId(
 	if (ownElementId && citedElementId === ownElementId) {
 		return "citedElementId cannot reference the element itself";
 	}
+	if (!moduleReferenceId) {
+		return "citedElementId must reference an existing element";
+	}
 	const target = await prisma.assuranceElement.findFirst({
 		where: { id: citedElementId, deletedAt: null },
-		select: { id: true },
+		select: { id: true, caseId: true },
 	});
-	if (!target) {
+	if (!target || target.caseId !== moduleReferenceId) {
 		return "citedElementId must reference an existing element";
 	}
 	return;
@@ -194,14 +253,18 @@ async function validateCitedElementId(
 
 /**
  * ADR 0004 D5: runs both citedElementId guards (applicability, then
- * existence/self-citation) in the order createElement and updateElement both
- * need — extracted so the checks live in exactly one place instead of being
- * duplicated verbatim at each call site. `ownElementId` is only meaningful
- * on update (see validateCitedElementId above).
+ * existence/self-citation/case-membership) in the order createElement and
+ * updateElement both need — extracted so the checks live in exactly one
+ * place instead of being duplicated verbatim at each call site.
+ * `moduleReferenceId` is the EFFECTIVE value (input override, falling back
+ * to the existing element's value on update) — see
+ * `validateUpdateElementFields`'s call site. `ownElementId` is only
+ * meaningful on update (see validateCitedElementId above).
  */
 async function enforceCitedElementIdRules(
 	elementType: string,
 	citedElementId: string | null | undefined,
+	moduleReferenceId: string | null | undefined,
 	ownElementId?: string
 ): Promise<string | undefined> {
 	if (citedElementId === undefined) {
@@ -214,7 +277,11 @@ async function enforceCitedElementIdRules(
 	if (applicabilityError) {
 		return applicabilityError;
 	}
-	return await validateCitedElementId(citedElementId, ownElementId);
+	return await validateCitedElementId(
+		citedElementId,
+		moduleReferenceId,
+		ownElementId
+	);
 }
 
 /**
@@ -476,50 +543,105 @@ function applyUrlUpdates(
 	}
 }
 
+type ParentInfoForNaming = {
+	name: string | null;
+	elementType: string;
+	isDefeater?: boolean;
+} | null;
+
 /**
- * Generates an element name based on type and hierarchy.
- *
- * Naming conventions:
- * - For property claims under another property claim: hierarchical (P1.1, P1.1.1)
- * - For top-level property claims (under strategy/goal): case-wide sequential (P1, P2, P3...)
- * - For all other elements: case-wide sequential by type (G1, S1, S2, E1, E2, C1, C2...)
- *
- * Time complexity: O(1) DB query (indexed on caseId/elementType)
- * Space complexity: O(1) - only stores count
+ * Names a DEFEATER property claim (Chris's ruling, 2026-09-15 — D8 of ADR
+ * 0005, "TEA — Defeater identifiers follow GSN"). Two cases:
+ * - Nested under ANOTHER defeater property claim (a counter to a counter,
+ *   GSN §1:6.3.8): hierarchical off the parent defeater's own name (CP1.1),
+ *   counted within the defeater siblings only.
+ * - Every other defeater property claim (attacking a goal, strategy, or a
+ *   PLAIN property claim — the "add defeater" menu creates the defeater as
+ *   a child of the element it attacks, so its parent is not itself a
+ *   defeater): flat, case-wide sequential (CP1, CP2...), regardless of tree
+ *   depth — a defeater is a rival claim, not a sub-claim, of what it
+ *   attacks. The case-wide count excludes defeaters nested under another
+ *   defeater (counted by the first branch instead) via a relation filter
+ *   rather than `level` — a defeater's `level` still reflects tree depth
+ *   from its attack target, not its position in the flat CP-sequence.
  */
-async function generateElementName(
-	elementType: string,
+async function generateDefeaterPropertyClaimName(
 	caseId: string,
 	parentId: string | null,
-	parentInfo: { name: string | null; elementType: string } | null
+	parentInfo: ParentInfoForNaming,
+	prefix: string
 ): Promise<string> {
-	const prefix = toPrefix(elementType);
-
-	// Property claims with a property claim parent get hierarchical names (P1.1, P1.1.1)
 	if (
-		elementType === "PROPERTY_CLAIM" &&
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
+		parentInfo.isDefeater &&
 		parentInfo.name
 	) {
-		// Count existing siblings under the same parent (efficient indexed query)
 		const siblingCount = await prisma.assuranceElement.count({
 			where: {
 				parentId,
 				elementType: "PROPERTY_CLAIM",
+				isDefeater: true,
 				deletedAt: null,
 			},
 		});
 		return `${parentInfo.name}.${siblingCount + 1}`;
 	}
 
-	// Property claims under a strategy: transparent numbering
-	// If the strategy's parent is a property claim, number as a child of that ancestor claim.
-	// If the strategy's parent is a goal, fall through to top-level numbering below.
+	const caseWideCount = await prisma.assuranceElement.count({
+		where: {
+			caseId,
+			elementType: "PROPERTY_CLAIM",
+			isDefeater: true,
+			deletedAt: null,
+			NOT: { parent: { elementType: "PROPERTY_CLAIM", isDefeater: true } },
+		},
+	});
+	return `${prefix}${caseWideCount + 1}`;
+}
+
+/**
+ * Names a PLAIN (non-defeater) property claim.
+ *
+ * - Plain property claims with a PLAIN property-claim parent: hierarchical
+ *   (P1.1, P1.1.1).
+ * - Plain property claims under a strategy: transparent numbering — if the
+ *   strategy's parent is a PLAIN property claim, numbered as a child of
+ *   that ancestor claim; if the strategy's parent is a goal, or a
+ *   defeater property claim, falls through to flat top-level numbering.
+ * - Every other plain property claim — top-level (under strategy/goal),
+ *   OR an ordinary child of a DEFEATER property claim (Chris's ruling, fix
+ *   round 1, 2026-09-15): an ordinary child of a defeater is an ordinary
+ *   element and takes the next flat plain number — it cannot dot-continue
+ *   a C-prefixed name; only defeater-under-defeater dot-continues (see
+ *   `generateDefeaterPropertyClaimName`). Counted via a relation filter
+ *   rather than `level` — a plain child of a defeater gets `level =
+ *   parent.level + 1` from `calculateLevelFromParentChain` (unrelated to
+ *   naming), so `level` no longer reliably marks "top of the flat
+ *   sequence" once a defeater can sit in the parent chain.
+ */
+async function generatePlainPropertyClaimName(
+	caseId: string,
+	parentId: string | null,
+	parentInfo: ParentInfoForNaming,
+	prefix: string
+): Promise<string> {
 	if (
-		elementType === "PROPERTY_CLAIM" &&
-		parentId &&
-		parentInfo?.elementType === "STRATEGY"
+		parentInfo?.elementType === "PROPERTY_CLAIM" &&
+		!parentInfo.isDefeater &&
+		parentInfo.name
 	) {
+		const siblingCount = await prisma.assuranceElement.count({
+			where: {
+				parentId,
+				elementType: "PROPERTY_CLAIM",
+				isDefeater: false,
+				deletedAt: null,
+			},
+		});
+		return `${parentInfo.name}.${siblingCount + 1}`;
+	}
+
+	if (parentId && parentInfo?.elementType === "STRATEGY") {
 		// Look up the strategy's parent (one hop — strategies can't be under other strategies)
 		const grandparent = await prisma.assuranceElement.findFirst({
 			where: { id: parentId, deletedAt: null },
@@ -529,11 +651,19 @@ async function generateElementName(
 		if (grandparent?.parentId) {
 			const ancestor = await prisma.assuranceElement.findFirst({
 				where: { id: grandparent.parentId, deletedAt: null },
-				select: { elementType: true, name: true, level: true },
+				select: {
+					elementType: true,
+					name: true,
+					level: true,
+					isDefeater: true,
+				},
 			});
 
-			if (ancestor?.elementType === "PROPERTY_CLAIM" && ancestor.name) {
-				// Count effective siblings: direct PC children of ancestor + PC children of strategies under ancestor
+			if (
+				ancestor?.elementType === "PROPERTY_CLAIM" &&
+				!ancestor.isDefeater &&
+				ancestor.name
+			) {
 				const strategyChildren = await prisma.assuranceElement.findMany({
 					where: {
 						parentId: grandparent.parentId,
@@ -551,39 +681,103 @@ async function generateElementName(
 					where: {
 						parentId: { in: effectiveParentIds },
 						elementType: "PROPERTY_CLAIM",
+						isDefeater: false,
 						deletedAt: null,
 					},
 				});
 				return `${ancestor.name}.${siblingCount + 1}`;
 			}
 		}
-		// Strategy is under a goal — fall through to top-level numbering
+		// Strategy is under a goal, or under a defeater property claim —
+		// fall through to flat top-level numbering.
 	}
 
-	// Top-level property claims (under strategy/goal, not under another property claim)
-	// Count ALL level-1 property claims in the case for case-wide sequential numbering (P1, P2, P3...)
-	if (
-		elementType === "PROPERTY_CLAIM" &&
-		parentId &&
-		parentInfo?.elementType !== "PROPERTY_CLAIM"
-	) {
-		const caseWideCount = await prisma.assuranceElement.count({
-			where: {
-				caseId,
-				elementType: "PROPERTY_CLAIM",
-				level: 1,
-				deletedAt: null,
+	// Flat, case-wide plain property claim: covers top-level claims under a
+	// strategy/goal AND an ordinary child of a defeater property claim.
+	// Excludes anything that dot-continues instead — not just a DIRECT
+	// plain-property-claim parent (the first branch above) but also the
+	// STRATEGY-TRANSPARENT case (round-2 regression, vincent, 2026-09-15):
+	// a claim whose literal parent is a STRATEGY, but that strategy's OWN
+	// parent is a plain property claim, dot-continues too (the
+	// strategy-transparent branch above) — its direct parent isn't a
+	// PROPERTY_CLAIM at all, so a direct-parent-only filter missed it and
+	// counted it into the flat tally (e.g. "P3" where "P2" was correct,
+	// once a strategy-transparent claim already existed). Mirrors the
+	// branch decision one hop further, via a nested self-relation filter,
+	// instead of `level` — see the round-1 note on why `level` can't be
+	// used here once a defeater can sit in the parent chain.
+	const caseWideCount = await prisma.assuranceElement.count({
+		where: {
+			caseId,
+			elementType: "PROPERTY_CLAIM",
+			isDefeater: false,
+			deletedAt: null,
+			NOT: {
+				OR: [
+					{ parent: { elementType: "PROPERTY_CLAIM", isDefeater: false } },
+					{
+						parent: {
+							elementType: "STRATEGY",
+							parent: { elementType: "PROPERTY_CLAIM", isDefeater: false },
+						},
+					},
+				],
 			},
-		});
-		return `${prefix}${caseWideCount + 1}`;
+		},
+	});
+	return `${prefix}${caseWideCount + 1}`;
+}
+
+/**
+ * Generates an element name based on type, hierarchy, and (Chris's ruling,
+ * 2026-09-15) whether the element is a defeater — see D8 of ADR 0005 and
+ * "TEA — Defeater identifiers follow GSN". Naming class = (elementType,
+ * isDefeater): a defeater's prefix is "C" + the type's own prefix (CP1,
+ * CG1, CE1), counted as its OWN sequence, independent of the plain P/G/E
+ * sequences — see `generateDefeaterPropertyClaimName` /
+ * `generatePlainPropertyClaimName` for the property-claim rules, which are
+ * the only element type with hierarchical (dotted) numbering.
+ *
+ * For every other element type: case-wide sequential by (type, isDefeater)
+ * class (G1/CG1, S1/CS1, E1/CE1, C1/CC1...).
+ *
+ * Time complexity: O(1) DB query (indexed on caseId/elementType)
+ * Space complexity: O(1) - only stores count
+ */
+async function generateElementName(
+	elementType: string,
+	caseId: string,
+	parentId: string | null,
+	parentInfo: ParentInfoForNaming,
+	isDefeater: boolean
+): Promise<string> {
+	const prefix = toPrefix(elementType, isDefeater);
+
+	if (elementType === "PROPERTY_CLAIM") {
+		return isDefeater
+			? await generateDefeaterPropertyClaimName(
+					caseId,
+					parentId,
+					parentInfo,
+					prefix
+				)
+			: await generatePlainPropertyClaimName(
+					caseId,
+					parentId,
+					parentInfo,
+					prefix
+				);
 	}
 
-	// All other element types (Strategy, Evidence, Context) - count case-wide
-	// This ensures unique identifiers across the entire case (S1, S2, E1, E2, C1, C2...)
+	// All other element types (Strategy, Evidence, Context, ...) - count
+	// case-wide within the (type, isDefeater) class. This ensures unique
+	// identifiers across the entire case (S1, S2, E1, E2, C1, C2... and,
+	// independently, CS1, CE1, CC1...).
 	const caseWideCount = await prisma.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: elementType as PrismaElementType,
+			isDefeater,
 			deletedAt: null,
 		},
 	});
@@ -637,11 +831,17 @@ export function calculateLevelFromParentChain(
  */
 async function calculatePropertyClaimLevel(parentId: string): Promise<{
 	level: number;
-	parentInfo: { name: string | null; elementType: string };
+	parentInfo: { name: string | null; elementType: string; isDefeater: boolean };
 }> {
 	const parent = await prisma.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null },
-		select: { level: true, elementType: true, name: true, parentId: true },
+		select: {
+			level: true,
+			elementType: true,
+			name: true,
+			parentId: true,
+			isDefeater: true,
+		},
 	});
 
 	const parentInfo = parent as {
@@ -649,6 +849,7 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 		elementType: string;
 		level?: number | null;
 		parentId?: string | null;
+		isDefeater: boolean;
 	};
 
 	let grandparentInfo: LevelRuleParentInfo | undefined;
@@ -671,6 +872,39 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 }
 
 /**
+ * Regenerates an element's name for a NEW `isDefeater` value (Chris's
+ * ruling, fix round 1, 2026-09-15 — "identifiers are always set by the
+ * app"): when `isDefeater` changes and the request doesn't also supply a
+ * name, the old-class name would otherwise be left in place unchanged
+ * (`enforceElementNameFormat` no-ops on a missing name) — a name the
+ * validator now rejects for the new class. References are by UUID, so
+ * renaming here is safe; the caller writes the returned name into
+ * `updateData.name`. Reuses `generateElementName`'s own class rules
+ * (`PROPERTY_CLAIM` fetches fresh parent info for the hierarchical/flat
+ * decision; every other type doesn't need it). Exported for
+ * case-batch-update-service.ts's own isDefeater-flip handling — the two
+ * mutation paths share this rule rather than each re-implementing it.
+ */
+export async function regenerateNameForIsDefeaterChange(
+	elementType: PrismaElementType,
+	caseId: string,
+	parentId: string | null,
+	isDefeater: boolean
+): Promise<string> {
+	const { parentInfo } =
+		elementType === "PROPERTY_CLAIM" && parentId
+			? await calculatePropertyClaimLevel(parentId)
+			: { parentInfo: null };
+	return generateElementName(
+		elementType,
+		caseId,
+		parentId,
+		parentInfo,
+		isDefeater
+	);
+}
+
+/**
  * Checks if a case already has a goal element.
  * Returns true if a goal exists, false otherwise.
  */
@@ -690,10 +924,11 @@ async function caseHasGoal(caseId: string): Promise<boolean> {
  * Creates an evidence link between an evidence element and a claim.
  */
 async function createEvidenceLink(
+	tx: TxClient,
 	evidenceId: string,
 	claimId: string
 ): Promise<void> {
-	await prisma.evidenceLink.create({
+	await tx.evidenceLink.create({
 		data: {
 			evidenceId,
 			claimId,
@@ -723,47 +958,57 @@ async function createElementInDatabase(
 	userId: string,
 	intendedParentId: string | null
 ): Promise<{ data: ElementResponse } | { error: string }> {
-	const element = await prisma.assuranceElement.create({
-		data: {
-			caseId,
-			elementType: elementType as
-				| "GOAL"
-				| "STRATEGY"
-				| "PROPERTY_CLAIM"
-				| "EVIDENCE",
-			name: elementName,
-			description: resolveDescription(input),
-			parentId: effectiveParentId,
-			...resolveUrls(input),
-			assumption: input.assumption,
-			justification: input.justification,
-			context: input.context ?? [],
-			level,
-			assertionStatus: input.assertionStatus,
-			// Element-level citation (ADR 0004 D5) — applicability, existence,
-			// and self-citation are validated in createElement before this
-			// function is called.
-			citedElementId: input.citedElementId,
-			// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
-			// and existence are validated in createElement before this function
-			// is called.
-			moduleReferenceId: input.moduleReferenceId,
-			// Dialogical reasoning (defeaters) — same-case existence and
-			// self-reference are validated in createElement before this
-			// function is called.
-			isDefeater: input.isDefeater ?? false,
-			defeatsElementId: input.defeatsElementId,
-			createdById: userId,
-		},
-		include: {
-			parent: { select: { id: true, elementType: true } },
-		},
-	});
+	const element = await prisma.$transaction(async (tx) => {
+		const created = await tx.assuranceElement.create({
+			data: {
+				caseId,
+				elementType: elementType as
+					| "GOAL"
+					| "STRATEGY"
+					| "PROPERTY_CLAIM"
+					| "EVIDENCE",
+				name: elementName,
+				description: resolveDescription(input),
+				parentId: effectiveParentId,
+				...resolveUrls(input),
+				assumption: input.assumption,
+				justification: input.justification,
+				context: input.context ?? [],
+				level,
+				assertionStatus: input.assertionStatus,
+				// Element-level citation (ADR 0004 D5) — applicability, existence,
+				// and self-citation are validated in createElement before this
+				// function is called.
+				citedElementId: input.citedElementId,
+				// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
+				// and existence are validated in createElement before this function
+				// is called.
+				moduleReferenceId: input.moduleReferenceId,
+				// Required for MODULE at the Prisma validation layer
+				// (element-validation.ts's REQUIRED_FIELDS); harmless for every
+				// other type, which doesn't declare the field applicable.
+				moduleEmbedType: input.moduleEmbedType,
+				// Dialogical reasoning (defeaters) — same-case existence and
+				// self-reference are validated in createElement before this
+				// function is called.
+				isDefeater: input.isDefeater ?? false,
+				defeatsElementId: input.defeatsElementId,
+				createdById: userId,
+			},
+			include: {
+				parent: { select: { id: true, elementType: true } },
+			},
+		});
 
-	// Create EvidenceLink for evidence elements with an intended parent claim
-	if (intendedParentId) {
-		await createEvidenceLink(element.id, intendedParentId);
-	}
+		// Create EvidenceLink for evidence elements with an intended parent claim
+		if (intendedParentId) {
+			await createEvidenceLink(tx, created.id, intendedParentId);
+		}
+
+		await touchCase(tx, caseId);
+
+		return created;
+	});
 
 	const response = transformToResponse(element);
 
@@ -813,7 +1058,8 @@ async function validateElementReferences(
 
 	const citedElementIdError = await enforceCitedElementIdRules(
 		elementType,
-		input.citedElementId
+		input.citedElementId,
+		input.moduleReferenceId
 	);
 	if (citedElementIdError) {
 		return { error: citedElementIdError };
@@ -837,11 +1083,16 @@ async function validateElementReferences(
  * falsy (null/undefined/empty): names stay optional, and the rule only
  * applies when one is actually given. Resolves the acting user's enabled
  * plugin set itself so both call sites stay a single `if` check.
+ *
+ * `isDefeater` selects the accepted prefix form (Chris's ruling, 2026-09-15
+ * — D8 of ADR 0005): defeaters are named in the GSN C-prefixed form (CP1,
+ * CG1, CE1), plain elements in the ordinary form — each rejects the other.
  */
 async function enforceElementNameFormat(
 	elementType: string,
 	name: string | null | undefined,
-	userId: string
+	userId: string,
+	isDefeater = false
 ): Promise<{ error: string } | undefined> {
 	if (!name) {
 		return;
@@ -850,7 +1101,8 @@ async function enforceElementNameFormat(
 	const nameValidation = validateElementName(
 		elementType,
 		name,
-		enabledPluginIds
+		enabledPluginIds,
+		isDefeater
 	);
 	if (!nameValidation.valid) {
 		return { error: nameValidation.error };
@@ -896,6 +1148,7 @@ export async function createElement(
 		return { error: `Unknown element type '${input.elementType}'` };
 	}
 	const parentId = resolveParentId(input);
+	const isDefeater = input.isDefeater ?? false;
 
 	const referenceError = await validateElementReferences(
 		caseId,
@@ -915,7 +1168,8 @@ export async function createElement(
 	const nameFormatError = await enforceElementNameFormat(
 		elementType,
 		input.name,
-		userId
+		userId,
+		isDefeater
 	);
 	if (nameFormatError) {
 		return nameFormatError;
@@ -927,7 +1181,8 @@ export async function createElement(
 			elementType,
 			caseId,
 			parentId ?? null,
-			parentInfo
+			parentInfo,
+			isDefeater
 		));
 
 	// Evidence uses evidence_links instead of parentId
@@ -947,7 +1202,7 @@ export async function createElement(
 			intendedParentId
 		);
 	} catch (error) {
-		console.error("Failed to create element:", error);
+		log.error("Failed to create element", { error });
 		return { error: "Failed to create element" };
 	}
 }
@@ -981,7 +1236,7 @@ export async function getElement(
 
 		return { data: transformToResponse(element) };
 	} catch (error) {
-		console.error("Failed to get element:", error);
+		log.error("Failed to get element", { error });
 		return { error: "Failed to get element" };
 	}
 }
@@ -1035,6 +1290,11 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	}
 	if (input.defeatsElementId !== undefined) {
 		updateData.defeatsElementId = input.defeatsElementId;
+		// The author explicitly set (or cleared) the defeat target — whatever
+		// dangling flag was left over from a previous import no longer
+		// describes the current state, declared or not (mirrors
+		// citationDangling's reset above).
+		updateData.defeatsDangling = false;
 	}
 
 	return updateData;
@@ -1137,7 +1397,13 @@ async function applyParentChangeForUpdate(
  */
 async function validateUpdateElementFields(
 	elementId: string,
-	existing: { caseId: string; elementType: PrismaElementType },
+	existing: {
+		caseId: string;
+		citedElementId: string | null;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		moduleReferenceId: string | null;
+	},
 	input: UpdateElementInput,
 	userId: string
 ): Promise<{ error: string } | undefined> {
@@ -1166,10 +1432,38 @@ async function validateUpdateElementFields(
 	}
 
 	// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
-	// existing element, and cannot reference the element itself.
+	// existing element in the case moduleReferenceId names, and cannot
+	// reference the element itself. `moduleReferenceId` is the EFFECTIVE
+	// value: this update's own value if it's changing moduleReferenceId too,
+	// otherwise the element's existing one — citedElementId can be updated
+	// on its own without moduleReferenceId appearing in the same request.
+	const effectiveModuleReferenceId =
+		input.moduleReferenceId !== undefined
+			? input.moduleReferenceId
+			: existing.moduleReferenceId;
+
+	// Security fix (review round 2): a request that changes moduleReferenceId
+	// WITHOUT also touching citedElementId would otherwise leave the
+	// existing citedElementId pointing into the old case unvalidated —
+	// enforceCitedElementIdRules short-circuits on citedElementId ===
+	// undefined, so nothing re-checked it against the new case. Re-validate
+	// the EXISTING citedElementId against the new moduleReferenceId in that
+	// case, with the same rule and the same not-found-shaped error as an
+	// explicit citedElementId in the request.
+	let citedElementIdToValidate = input.citedElementId;
+	if (citedElementIdToValidate === undefined) {
+		const moduleReferenceIdChanged =
+			input.moduleReferenceId !== undefined &&
+			input.moduleReferenceId !== existing.moduleReferenceId;
+		if (moduleReferenceIdChanged && existing.citedElementId) {
+			citedElementIdToValidate = existing.citedElementId;
+		}
+	}
+
 	const citedElementIdError = await enforceCitedElementIdRules(
 		existing.elementType,
-		input.citedElementId,
+		citedElementIdToValidate,
+		effectiveModuleReferenceId,
 		elementId
 	);
 	if (citedElementIdError) {
@@ -1191,11 +1485,52 @@ async function validateUpdateElementFields(
 	// Name-format validation (TEA-syntax prefix). `enforceElementNameFormat`
 	// is a no-op when `input.name` is `undefined` — the "not changing it"
 	// case (and, per `optionalString`'s transform, also what an explicit
-	// clear collapses to), so there's nothing new to validate.
+	// clear collapses to), so there's nothing new to validate. `isDefeater`
+	// is the EFFECTIVE value (Chris's ruling, 2026-09-15 — D8 of ADR 0005):
+	// this update's own value if it's changing the flag too, otherwise the
+	// element's existing one — a rename without touching `isDefeater` must
+	// still be checked against the element's current naming class.
+	const effectiveIsDefeater =
+		input.isDefeater !== undefined ? input.isDefeater : existing.isDefeater;
 	return await enforceElementNameFormat(
 		existing.elementType,
 		input.name,
-		userId
+		userId,
+		effectiveIsDefeater
+	);
+}
+
+/**
+ * Regenerates and writes the new-class name into `updateData` IN PLACE when
+ * `isDefeater` is genuinely changing (differs from the existing value) and
+ * the request doesn't also supply an explicit name (Chris's ruling, fix
+ * round 1, 2026-09-15 — "identifiers are always set by the app"). A no-op
+ * otherwise: `isDefeater` unchanged, not present in the input, or a name
+ * was explicitly given (already validated against the new class by
+ * `validateUpdateElementFields`, so nothing more to do here).
+ */
+async function applyRegeneratedNameOnDefeaterFlip(
+	input: UpdateElementInput,
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+	},
+	effectiveParentId: string | null,
+	updateData: Record<string, unknown>
+): Promise<void> {
+	if (
+		input.isDefeater === undefined ||
+		input.isDefeater === existing.isDefeater ||
+		input.name !== undefined
+	) {
+		return;
+	}
+	updateData.name = await regenerateNameForIsDefeaterChange(
+		existing.elementType,
+		existing.caseId,
+		effectiveParentId,
+		input.isDefeater
 	);
 }
 
@@ -1211,7 +1546,16 @@ export async function updateElement(
 		// Get existing element to check permissions (include deleted to give proper error message)
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, elementType: true, level: true, deletedAt: true },
+			select: {
+				caseId: true,
+				elementType: true,
+				level: true,
+				deletedAt: true,
+				moduleReferenceId: true,
+				citedElementId: true,
+				isDefeater: true,
+				parentId: true,
+			},
 		});
 
 		if (!existing) {
@@ -1256,19 +1600,36 @@ export async function updateElement(
 			}
 		}
 
-		const element = await prisma.assuranceElement.update({
-			where: { id: elementId },
-			data: updateData,
-			include: {
-				parent: {
-					select: { id: true, elementType: true },
+		// Regenerate the name on an isDefeater flip with no explicit rename
+		// (Chris's ruling, fix round 1) — uses the EFFECTIVE parent (this
+		// request's own move, if any, else the element's existing parent),
+		// so a simultaneous move + flip regenerates against the right class.
+		const effectiveParentId =
+			newParentId !== undefined ? newParentId : existing.parentId;
+		await applyRegeneratedNameOnDefeaterFlip(
+			input,
+			existing,
+			effectiveParentId,
+			updateData
+		);
+
+		const element = await prisma.$transaction(async (tx) => {
+			const updated = await tx.assuranceElement.update({
+				where: { id: elementId },
+				data: updateData,
+				include: {
+					parent: {
+						select: { id: true, elementType: true },
+					},
 				},
-			},
+			});
+			await touchCase(tx, existing.caseId);
+			return updated;
 		});
 
 		return { data: transformToResponse(element) };
 	} catch (error) {
-		console.error("Failed to update element:", error);
+		log.error("Failed to update element", { error });
 		return { error: "Failed to update element" };
 	}
 }
@@ -1338,11 +1699,12 @@ export async function deleteElement(
 			// `existing.caseId` — every deleted id (the element and its
 			// descendants) may be cited from anywhere.
 			await nullifyDanglingCitations(tx, allIds);
+			await touchCase(tx, existing.caseId);
 		});
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to delete element:", error);
+		log.error("Failed to delete element", { error });
 		return { error: "Failed to delete element" };
 	}
 }
@@ -1392,11 +1754,12 @@ export async function detachElement(
 			});
 			const descendantIds = await getDescendantIds(elementId, tx);
 			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
+			await touchCase(tx, existing.caseId);
 		});
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to detach element:", error);
+		log.error("Failed to detach element", { error });
 		return { error: "Failed to detach element" };
 	}
 }
@@ -1491,11 +1854,12 @@ export async function attachElement(
 					data: { inSandbox: false },
 				});
 			}
+			await touchCase(tx, existing.caseId);
 		});
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to attach element:", error);
+		log.error("Failed to attach element", { error });
 		return { error: "Failed to attach element" };
 	}
 }
@@ -1611,11 +1975,12 @@ export async function moveElement(
 					data: updateData,
 				});
 			}
+			await touchCase(tx, element.caseId);
 		});
 
 		return { data: true };
 	} catch (error) {
-		console.error("[moveElement]", { elementId, newParentId, userId, error });
+		log.error("moveElement", { elementId, newParentId, userId, error });
 		return { error: "Failed to move element" };
 	}
 }
@@ -1650,7 +2015,7 @@ export async function getSandboxElements(
 
 		return { data: elements.map(transformToResponse) };
 	} catch (error) {
-		console.error("Failed to get sandbox elements:", error);
+		log.error("Failed to get sandbox elements", { error });
 		return { error: "Failed to get sandbox elements" };
 	}
 }
@@ -1702,11 +2067,12 @@ export async function restoreElement(
 				where: { id: { in: allIds } },
 				data: { deletedAt: null, deletedById: null },
 			});
+			await touchCase(tx, element.caseId);
 		});
 
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to restore element:", error);
+		log.error("Failed to restore element", { error });
 		return { error: "Failed to restore element" };
 	}
 }

@@ -28,7 +28,6 @@ export type {
 	ElementBadgeRegistration,
 	ElementPanelRegistration,
 	ElementSlotContext,
-	// fallow-ignore-next-line unused-type
 	ElementType,
 	// fallow-ignore-next-line unused-type
 	SettingsSectionRegistration,

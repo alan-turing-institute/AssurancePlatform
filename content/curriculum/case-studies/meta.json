@@ -1,0 +1,16 @@
+{
+  "title": "Case Studies",
+  "pages": [
+    "index",
+    "diabetic-retinopathy-screening",
+    "crop-damage-assessment",
+    "flood-risk-assessment",
+    "student-learning-assessment",
+    "personalised-pharmaceutical-formulations",
+    "clinical-genai-data-governance",
+    "explainable-atc-rl-agent",
+    "adaptive-clinical-trial-allocation",
+    "census-disclosure-control",
+    "aerial-facial-recognition"
+  ]
+}

@@ -3,16 +3,31 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import { verifyLinkIntent } from "@/lib/auth/link-intent";
+import {
+	assertSessionVersionCurrent,
+	getSessionVersion,
+} from "@/lib/auth/session-version";
+import { encryptForStorage } from "@/lib/auth/token-encryption";
 import { logger } from "@/lib/logger";
 
-dotenv.config(); // Explicitly load environment variables
+const log = logger.child({ component: "auth-config" });
+
+// quiet: true silences dotenv's promotional "tip" lines on stdout (third-
+// party product ads in a Turing-published tool's logs) — dotenv >=17.
+dotenv.config({ quiet: true }); // Explicitly load environment variables
 
 /**
  * Cookie name used for account linking flow.
- * When set, the OAuth callback will link to the existing user instead of creating a new one.
- * Exported for use in the link API route.
+ * When set, the OAuth callback will verify it as a signed link intent
+ * (lib/auth/link-intent.ts) and link to the existing user instead of
+ * creating a new one. Exported for use in the link API route.
+ *
+ * The value changed from a raw user id (`tea_link_user_id`) to a signed
+ * intent token; the cookie name changed with it so a cookie issued by an
+ * old build fails verification instead of being read as an intent.
  */
-export const LINK_COOKIE_NAME = "tea_link_user_id";
+export const LINK_COOKIE_NAME = "tea_link_intent";
 
 /**
  * Fields written on every successful login, regardless of provider.
@@ -34,6 +49,26 @@ function loginResetFields(): {
 }
 
 /**
+ * Builds the token data object for GitHub OAuth writes. Extracted (mirrors
+ * `buildGoogleTokenData` below) to reduce cognitive complexity in
+ * `authenticateGitHubWithPrisma` — computed once and reused across its three
+ * branches, so the encryption call (and its production key-absent handling)
+ * happens exactly once per sign-in even though only one branch executes.
+ */
+function buildGitHubTokenData(
+	accessToken: string | undefined,
+	tokenExpiresAt: Date | null
+) {
+	const encryptedAccessToken = accessToken
+		? encryptForStorage(accessToken, "githubAccessToken")
+		: undefined;
+	return {
+		...(encryptedAccessToken && { githubAccessToken: encryptedAccessToken }),
+		...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+	};
+}
+
+/**
  * Builds the token data object for Google OAuth updates.
  * Extracted to reduce cognitive complexity in the main function.
  */
@@ -42,9 +77,17 @@ function buildGoogleTokenData(
 	refreshToken?: string,
 	tokenExpiresAt?: Date | null
 ) {
+	const encryptedAccessToken = accessToken
+		? encryptForStorage(accessToken, "googleAccessToken")
+		: undefined;
+	const encryptedRefreshToken = refreshToken
+		? encryptForStorage(refreshToken, "googleRefreshToken")
+		: undefined;
 	return {
-		...(accessToken && { googleAccessToken: accessToken }),
-		...(refreshToken && { googleRefreshToken: refreshToken }),
+		...(encryptedAccessToken && { googleAccessToken: encryptedAccessToken }),
+		...(encryptedRefreshToken && {
+			googleRefreshToken: encryptedRefreshToken,
+		}),
 		...(tokenExpiresAt && { googleTokenExpiresAt: tokenExpiresAt }),
 	};
 }
@@ -115,7 +158,7 @@ export async function authenticateWithPrisma(
 			data: { ...loginResetFields(), ...upgradeFields },
 		});
 	} catch (error) {
-		logger.error("Failed to record login / reset retention warnings", {
+		log.error("Failed to record login / reset retention warnings", {
 			userId: user.id,
 			error: error instanceof Error ? error.message : String(error),
 		});
@@ -154,12 +197,17 @@ async function authenticateGitHubWithPrisma(
 	const email = profile?.email;
 
 	if (!email) {
-		console.error("GitHub OAuth: No email provided");
+		log.error("GitHub OAuth: No email provided");
 		return null;
 	}
 
 	// Calculate token expiry (GitHub tokens typically don't expire, but we store it if provided)
 	const tokenExpiresAt = expiresAt ? new Date(expiresAt * 1000) : null;
+	// Built once and reused across every branch below — the function executes
+	// exactly one of them per call, but keeping the encryption (and its
+	// production key-absent handling) in one place avoids repeating the
+	// fresh-IV call three times for the same plaintext.
+	const githubTokenData = buildGitHubTokenData(accessToken, tokenExpiresAt);
 
 	// Check if this GitHub account is already linked to another user
 	const githubLinkedUser = await prisma.user.findUnique({
@@ -181,8 +229,7 @@ async function authenticateGitHubWithPrisma(
 				githubId,
 				githubUsername,
 				// Don't change authProvider when linking - user keeps their original provider
-				...(accessToken && { githubAccessToken: accessToken }),
-				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...githubTokenData,
 				...loginResetFields(),
 			},
 		});
@@ -207,8 +254,7 @@ async function authenticateGitHubWithPrisma(
 				githubUsername,
 				authProvider: "GITHUB",
 				// Store access token for GitHub API calls (e.g., importing cases from repos)
-				...(accessToken && { githubAccessToken: accessToken }),
-				...(tokenExpiresAt && { githubTokenExpiresAt: tokenExpiresAt }),
+				...githubTokenData,
 				...loginResetFields(),
 			},
 		});
@@ -220,8 +266,7 @@ async function authenticateGitHubWithPrisma(
 				githubId,
 				githubUsername,
 				authProvider: "GITHUB",
-				githubAccessToken: accessToken,
-				githubTokenExpiresAt: tokenExpiresAt,
+				...githubTokenData,
 			},
 		});
 		userId = newUser.id;
@@ -293,7 +338,7 @@ export async function authenticateGoogleWithPrisma(
 	const email = profile?.email;
 
 	if (!email) {
-		console.error("Google OAuth: No email provided");
+		log.error("Google OAuth: No email provided");
 		return null;
 	}
 
@@ -327,7 +372,8 @@ export async function authenticateGoogleWithPrisma(
 		return { id: existingUser.id };
 	}
 
-	// Create new user for Google login
+	// Create new user for Google login. Reuses `tokenData` (already
+	// encrypted, computed above) rather than the raw tokens directly.
 	const username = email.split("@")[0] || email;
 	const newUser = await prisma.user.create({
 		data: {
@@ -336,13 +382,89 @@ export async function authenticateGoogleWithPrisma(
 			googleId,
 			googleEmail: email,
 			authProvider: "GOOGLE",
-			googleAccessToken: accessToken,
-			googleRefreshToken: refreshToken,
-			googleTokenExpiresAt: tokenExpiresAt,
+			...tokenData,
 		},
 	});
 
 	return { id: newUser.id };
+}
+
+/**
+ * Outcome of checking a present `LINK_COOKIE_NAME` cookie against the
+ * account currently signing in:
+ * - `"skipped"` — not an OAuth sign-in (e.g. credentials), so the intent
+ *   doesn't apply here; the cookie is still deleted by the caller, but
+ *   nothing is verified and nothing is logged.
+ * - `"rejected"` — an OAuth sign-in, but the intent failed verification or
+ *   the caller's live session doesn't match it; the caller must fail the
+ *   sign-in outright (see `signIn`'s rationale comment).
+ * - `"linked"` — an OAuth sign-in with a valid, session-matching intent.
+ */
+type LinkIntentResolution =
+	| { kind: "linked"; userId: string }
+	| { kind: "rejected" }
+	| { kind: "skipped" };
+
+/**
+ * Verifies a present link-intent cookie against the account/session
+ * currently signing in. Extracted from `signIn` to keep that callback's
+ * cyclomatic/cognitive complexity down (fallow flagged it CRITICAL); the
+ * cookie is always deleted by the caller before this runs, regardless of
+ * what it returns — this function only decides whether to *trust* it.
+ */
+async function resolveLinkIntentUserId({
+	account,
+	cookieStore,
+	linkCookieValue,
+}: {
+	account: { provider?: string; type?: string } | null | undefined;
+	cookieStore: Awaited<ReturnType<typeof import("next/headers").cookies>>;
+	linkCookieValue: string;
+}): Promise<LinkIntentResolution> {
+	// Only OAuth callbacks (github/google) can carry a link intent; a
+	// credentials sign-in that merely happens to still hold a stray,
+	// unexpired cookie from an abandoned linking attempt must proceed
+	// normally, not be rejected for a provider it was never issued for.
+	if (account?.type !== "oauth") {
+		return { kind: "skipped" };
+	}
+
+	const provider = account.provider;
+	const intent = provider
+		? verifyLinkIntent(linkCookieValue, { provider })
+		: null;
+	if (!intent) {
+		log.warn("Rejected OAuth account-link attempt", {
+			reason: "link-intent-invalid",
+		});
+		return { kind: "rejected" };
+	}
+
+	const { getToken } = await import("next-auth/jwt");
+	// getToken()'s declared `req` type only names full Next.js request
+	// shapes (IncomingMessage-with-cookies, NextRequest, NextApiRequest),
+	// but its implementation (next-auth/jwt) only ever reads `req.cookies`
+	// (duck-typed: an object with `.getAll()`, a Map, or a plain record —
+	// all satisfied by next/headers' `cookies()`) and `req.headers` (only
+	// consulted for a Bearer-token fallback we don't use). The cast
+	// reflects that narrower runtime contract.
+	const sessionToken = await getToken({
+		req: { cookies: cookieStore, headers: {} } as unknown as Parameters<
+			typeof getToken
+		>[0]["req"],
+		secret: process.env.NEXTAUTH_SECRET,
+	});
+	const sessionUserId =
+		typeof sessionToken?.id === "string" ? sessionToken.id : undefined;
+
+	if (!sessionUserId || sessionUserId !== intent.userId) {
+		log.warn("Rejected OAuth account-link attempt", {
+			reason: "link-intent-session-mismatch",
+		});
+		return { kind: "rejected" };
+	}
+
+	return { kind: "linked", userId: intent.userId };
 }
 
 /**
@@ -434,19 +556,49 @@ export const authOptions: NextAuthOptions = {
 		 * @returns {boolean} `true` to allow the sign-in.
 		 */
 		async signIn({ user, account, profile }) {
-			// Check for account linking cookie (set by /api/auth/link/[provider])
-			let linkToUserId: string | undefined;
+			// Check for an account-linking cookie (set by
+			// /api/auth/link/[provider]). Reading the cookie itself is wrapped in
+			// try/catch because `cookies()` can throw outside a real request
+			// context; that failure is treated the same as no cookie at all, so
+			// the standard sign-in/sign-up flow below still runs. Once a cookie
+			// value IS in hand, it is deleted unconditionally (single-use,
+			// regardless of provider) and `resolveLinkIntentUserId` decides
+			// whether it applies to this sign-in. A `"rejected"` outcome returns
+			// `false` directly rather than falling through to the standard
+			// flow — see the rationale on the linked issue: falling through on
+			// an expired-but-otherwise-legitimate intent would silently create
+			// a fresh account from the provider email instead of surfacing a
+			// rejected sign-in. A `"skipped"` outcome (e.g. a credentials
+			// sign-in that still carries a stray, unexpired intent from an
+			// abandoned OAuth-linking attempt) is not an error and must not
+			// block this sign-in.
+			let cookieStore:
+				| Awaited<ReturnType<typeof import("next/headers").cookies>>
+				| undefined;
+			let linkCookieValue: string | undefined;
 			try {
 				const { cookies } = await import("next/headers");
-				const cookieStore = await cookies();
-				const linkCookie = cookieStore.get(LINK_COOKIE_NAME);
-				if (linkCookie?.value) {
-					linkToUserId = linkCookie.value;
-					// Clear the cookie after reading
-					cookieStore.delete(LINK_COOKIE_NAME);
-				}
+				cookieStore = await cookies();
+				linkCookieValue = cookieStore.get(LINK_COOKIE_NAME)?.value;
 			} catch {
 				// Cookie access may fail in some contexts, continue without linking
+			}
+
+			let linkToUserId: string | undefined;
+			if (linkCookieValue && cookieStore) {
+				cookieStore.delete(LINK_COOKIE_NAME);
+
+				const resolution = await resolveLinkIntentUserId({
+					account,
+					cookieStore,
+					linkCookieValue,
+				});
+				if (resolution.kind === "rejected") {
+					return false;
+				}
+				if (resolution.kind === "linked") {
+					linkToUserId = resolution.userId;
+				}
 			}
 
 			if (account?.provider === "github") {
@@ -551,16 +703,30 @@ export const authOptions: NextAuthOptions = {
 		/**
 		 * Callback to handle JWT token creation and updates.
 		 *
+		 * On initial sign-in (`user` present), stamps the token with the user's
+		 * current session version. On every later read (`user` absent), rejects
+		 * the token — by throwing `SessionRevokedError` — if that stamped
+		 * version no longer matches the user's current one: the revocation
+		 * lever for AP-QA-003 (password change/reset). See
+		 * `lib/auth/session-version.ts` for why a throw, not a return of
+		 * `null`, is what next-auth's session route actually honours.
+		 *
 		 * @param {Object} params - Parameters related to the JWT.
 		 * @param {Object} params.token - The current token.
 		 * @param {Object} params.user - The user object returned after sign-in (initial sign-in only).
 		 * @returns {Object} The updated token with user ID and provider information.
 		 */
-		jwt({ token, user }) {
+		async jwt({ token, user }) {
 			if (user) {
 				token.id = user.id;
 				token.provider = user.provider || "credentials";
+				token.sessionVersion = user.id
+					? ((await getSessionVersion(user.id)) ?? undefined)
+					: undefined;
+				return token;
 			}
+
+			await assertSessionVersionCurrent(token.id, token.sessionVersion);
 			return token;
 		},
 	},

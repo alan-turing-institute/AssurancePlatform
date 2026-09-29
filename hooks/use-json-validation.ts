@@ -31,8 +31,19 @@ export interface JsonValidationResult {
 	diagnostics: Diagnostic[];
 	errors: ValidationError[];
 	isValid: boolean;
+	/**
+	 * True whenever `content` has changed since the debounced `validate()`
+	 * last ran — i.e. `isValid`/`parsedData` describe an EARLIER buffer, not
+	 * the one currently on screen. Callers that derive a diff or send a
+	 * request from `parsedData` must treat a pending validation as "not
+	 * ready", not as whatever the previous pass happened to conclude.
+	 */
+	isValidating: boolean;
 	parsedData: CaseExportNested | null;
 }
+
+/** The part of the result that a completed `validate()` pass produces. */
+type ValidatedContentState = Omit<JsonValidationResult, "isValidating">;
 
 /**
  * Options for the validation hook
@@ -192,7 +203,7 @@ export function useJsonValidation(
 ): JsonValidationResult {
 	const { debounceMs = 300 } = options;
 
-	const [result, setResult] = useState<JsonValidationResult>({
+	const [result, setResult] = useState<ValidatedContentState>({
 		isValid: false,
 		errors: [],
 		diagnostics: [],
@@ -201,6 +212,10 @@ export function useJsonValidation(
 
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const contentRef = useRef(content);
+	// The content `validate()` most recently ran against, so a render can
+	// tell a completed pass (matches `content`) from a pending one (doesn't)
+	// without waiting for `result` state to catch up — see `isValidating`.
+	const lastValidatedContentRef = useRef<string | null>(null);
 
 	// Keep contentRef updated
 	useEffect(() => {
@@ -209,6 +224,7 @@ export function useJsonValidation(
 
 	const validate = useCallback(() => {
 		const currentContent = contentRef.current;
+		lastValidatedContentRef.current = currentContent;
 		const errors: ValidationError[] = [];
 
 		// Skip validation for empty content
@@ -301,8 +317,14 @@ export function useJsonValidation(
 		};
 	}, [content, debounceMs, validate]);
 
-	// Memoize the result to prevent unnecessary re-renders
-	return useMemo(() => result, [result]);
+	// `content` (a prop) changes synchronously on every keystroke; `result`
+	// (debounced state) only catches up once `validate()` runs. Comparing
+	// the two on every render — not just when `result` changes — is what
+	// makes `isValidating` correct during that gap; memoising on `result`
+	// alone would freeze it at whatever it was after the previous pass.
+	const isValidating = content !== lastValidatedContentRef.current;
+
+	return useMemo(() => ({ ...result, isValidating }), [result, isValidating]);
 }
 
 /**

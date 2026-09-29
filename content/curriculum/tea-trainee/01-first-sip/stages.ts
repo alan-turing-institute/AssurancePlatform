@@ -12,7 +12,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "The Main Goal",
 		shortTitle: "Goal",
 		guidance:
-			"All assurance cases begin with a top-level claim called the goal. In this first stage, familiarise yourself with the viewer by dragging the canvas to pan around, using your scroll wheel to zoom in and out, and clicking on the green goal node (G1) to expand its full description. When you're ready, use the right arrow to continue.",
+			"All assurance cases begin with a top-level claim called the goal. In this first stage, familiarise yourself with the viewer by dragging the canvas to pan around, using your scroll wheel to zoom in and out, and clicking on the goal node, G1, to expand its full description. When you're ready, use the right arrow to continue.",
 		caseFile: "curriculum/first-sip/stage-1-goal.json",
 		taskId: "stage-1-goal",
 	},
@@ -21,7 +21,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Setting the Context",
 		shortTitle: "Context",
 		guidance:
-			"Expand G1 again. Context items (shown in grey) define the scope and assumptions of the argument. Notice how the context specifies what 'fairness' means in this case and describes the operational environment. These boundaries are essential for interpreting the rest of the argument.",
+			"Expand G1 again. Its context — a bulleted list inside the goal's own card — defines the scope and assumptions of the argument. Notice how the context specifies what 'fairness' means in this case and describes the operational environment. These boundaries are essential for interpreting the rest of the argument.",
 		caseFile: "curriculum/first-sip/stage-2-context.json",
 		taskId: "stage-2-context",
 	},
@@ -30,7 +30,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Breaking Down the Argument",
 		shortTitle: "Strategies",
 		guidance:
-			"Strategies help structure an argument by breaking it into sub-arguments. Click on each strategy node (S1, S2, S3) to understand how this case argues for fairness through three different approaches: discrimination prevention, transparency, and ongoing monitoring. Use the 'Fullscreen' button to see more of the case.",
+			"Strategies help structure an argument by breaking it into sub-arguments. Click on each strategy node, S1 to S3, to understand how this case argues for fairness through three different approaches: discrimination prevention, transparency, and ongoing monitoring. Drag the canvas or use the controls in the bottom-left to see more of the case.",
 		caseFile: "curriculum/first-sip/stage-3-strategies.json",
 		taskId: "stage-3-strategies",
 	},
@@ -39,7 +39,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Diving into Discrimination Prevention",
 		shortTitle: "Claims",
 		guidance:
-			"Property claims (blue nodes) are specific, testable statements that support a strategy. Expand the discrimination prevention branch by clicking on P1 and P2. Notice how these claims are more concrete than the goal: P1 addresses training data quality, while P2 focuses on statistical testing. Each claim will need evidence to support it. Use the 'Auto Layout' button to reorganise the view if needed.",
+			"Property claims are specific, testable statements that support a strategy. Expand the discrimination prevention branch by clicking on the property claim nodes P1 and P2. Notice how these claims are more concrete than the goal: P1 addresses training data quality, while P2 focuses on statistical testing. Each claim will need evidence to support it.",
 		caseFile: "curriculum/first-sip/stage-4-claims.json",
 		taskId: "stage-4-claims",
 	},
@@ -48,7 +48,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Grounding in Evidence",
 		shortTitle: "Evidence",
 		guidance:
-			"Evidence provides the concrete proof supporting each claim. Click on E1 and E2 to see what artefacts support the discrimination prevention claims. E1 is an audit report demonstrating balanced training data, while E2 presents statistical fairness metrics. Consider whether this evidence is sufficient to support the claims.",
+			"Evidence provides the concrete proof supporting each claim. Click on the evidence nodes E1 and E2 to see what artefacts support the discrimination prevention claims. E1 is an audit report demonstrating balanced training data, while E2 presents statistical fairness metrics. Consider whether this evidence is sufficient to support the claims.",
 		caseFile: "curriculum/first-sip/stage-5-evidence.json",
 		taskId: "stage-5-evidence",
 	},

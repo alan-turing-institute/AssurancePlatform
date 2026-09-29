@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LINK_COOKIE_NAME } from "@/lib/auth/config";
+import { verifyLinkIntent } from "@/lib/auth/link-intent";
 import type { ValidatedSession } from "@/lib/auth/validate-session";
 
 /**
@@ -30,6 +31,7 @@ import { GET } from "@/app/api/auth/link/[provider]/route";
 import { validateSession } from "@/lib/auth/validate-session";
 
 const PUBLIC_ORIGIN = "https://public.example";
+const TEST_NEXTAUTH_SECRET = "route-test-nextauth-secret";
 // The request's own host is the container's internal hostname, standing in
 // for what Azure App Service actually puts on `request.url`.
 const CONTAINER_REQUEST_URL = "http://container:3000/api/auth/link/google";
@@ -55,6 +57,7 @@ describe("GET /api/auth/link/[provider]", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.stubEnv("NEXTAUTH_URL", PUBLIC_ORIGIN);
+		vi.stubEnv("NEXTAUTH_SECRET", TEST_NEXTAUTH_SECRET);
 	});
 
 	afterEach(() => {
@@ -77,9 +80,13 @@ describe("GET /api/auth/link/[provider]", () => {
 		);
 		expect(mockCookieStore.set).toHaveBeenCalledWith(
 			LINK_COOKIE_NAME,
-			VALID_SESSION.userId,
+			expect.any(String),
 			expect.objectContaining({ httpOnly: true, maxAge: 300 })
 		);
+		const cookieValue = mockCookieStore.set.mock.calls[0]?.[1] as string;
+		expect(verifyLinkIntent(cookieValue, { provider: "google" })).toEqual({
+			userId: VALID_SESSION.userId,
+		});
 	});
 
 	it("redirects to the public login page when there is no session", async () => {
@@ -145,7 +152,7 @@ describe("GET /api/auth/link/[provider]", () => {
 
 		expect(mockCookieStore.set).toHaveBeenCalledWith(
 			LINK_COOKIE_NAME,
-			VALID_SESSION.userId,
+			expect.any(String),
 			expect.objectContaining({
 				httpOnly: true,
 				sameSite: "lax",
@@ -153,6 +160,10 @@ describe("GET /api/auth/link/[provider]", () => {
 				path: "/",
 			})
 		);
+		const cookieValue = mockCookieStore.set.mock.calls[0]?.[1] as string;
+		expect(verifyLinkIntent(cookieValue, { provider: "google" })).toEqual({
+			userId: VALID_SESSION.userId,
+		});
 		// Ordering: the mock records the call synchronously before GET returns,
 		// and the redirect Location is already the final signIn URL, so the
 		// cookie call happened strictly before the redirect was constructed.

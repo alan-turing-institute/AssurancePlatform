@@ -145,7 +145,7 @@ export abstract class AbstractExporter implements Exporter {
 /**
  * Exporter registry for managing available exporters
  */
-export class ExporterRegistry {
+class ExporterRegistry {
 	private readonly exporters = new Map<ExportFormat, Exporter>();
 
 	/**

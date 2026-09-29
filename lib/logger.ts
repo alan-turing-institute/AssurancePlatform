@@ -1,9 +1,10 @@
 /**
  * Bespoke structured logger — no vendor SDK, one JSON line per entry on
  * stdout. Runs in every runtime our code runs in: Node server code
- * (services, routes), the Next.js edge runtime (`middleware.ts`), and the
- * browser (components, hooks, store). See the "TEA — Structured logging &
- * OpenTelemetry" issue's Design (G0) section for the rationale.
+ * (services, routes), and the browser (components, hooks, store). Deliberately
+ * not imported from `proxy.ts` (Node runtime too, but on the request-hot
+ * path — see AGENTS.md's Logging section). See the "TEA — Structured
+ * logging & OpenTelemetry" issue's Design (G0) section for the rationale.
  *
  * `setLogSink`/`resetLogSink` are the single seam: the post-1.0
  * `instrumentation.ts` swaps the sink for the OpenTelemetry logs bridge

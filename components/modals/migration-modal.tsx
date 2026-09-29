@@ -9,7 +9,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { useMigrationModal } from "@/hooks/use-migration-modal";
+import { logger } from "@/lib/logger";
 import { Button } from "../ui/button";
+
+const log = logger.child({ component: "migration-modal" });
 
 export const MigrationModal = () => {
 	const migrationModal = useMigrationModal();
@@ -36,10 +39,10 @@ export const MigrationModal = () => {
 			});
 
 			if (!response.ok) {
-				console.error("Failed to mark migration notice as seen");
+				log.error("Failed to mark migration notice as seen");
 			}
 		} catch (error) {
-			console.error("Error marking migration notice as seen:", error);
+			log.error("Error marking migration notice as seen", { error });
 		} finally {
 			setIsSubmitting(false);
 			migrationModal.onClose();

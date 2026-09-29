@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type {
 	AssertionStatus,
@@ -11,6 +12,8 @@ import {
 	buildTreeFromElements,
 	type ElementWithLinks,
 } from "@/lib/transforms/build-tree";
+
+const log = logger.child({ component: "case-export-service" });
 
 export interface ExportOptions {
 	includeComments?: boolean;
@@ -297,7 +300,7 @@ export async function exportCase(
 
 		return { data: exportData };
 	} catch (error) {
-		console.error("Failed to export case:", error);
+		log.error("Failed to export case", { error });
 		return { error: "Failed to export case" };
 	}
 }

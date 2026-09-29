@@ -1,0 +1,40 @@
+---
+title: "Keep the case open to challenge"
+description: Review the collaboration controls and the project process they support.
+---
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { drinkingTasks } from "./tasks";
+import LearningObjectives from "@/components/docs/curriculum/learning-objectives";
+import { drinkingObjectives } from "./objectives";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="drinking-tea-with-others"
+      tasks={drinkingTasks}
+      currentPage="summary"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+You have mapped who can work in a TEA case and what a public reader sees. A team role manages the team. A case grant determines access to the working argument. Comments let a reviewer question an element. Live updates help open views notice changes. Import and backup move copies of case data; integrations let an authorised service make selected machine calls. Publishing makes a public snapshot on Discover.
+
+Those controls support a process that begins before a case is complete. During deliberation, invite perspectives that can change the goal. During design, turn concerns into strategies and claims. During testing and evidence generation, bring in people who can assess methods and results. Share the working case with the people doing that work, and choose public content only after its limits can be explained.
+
+<LearningObjectives
+  title="You Can Now"
+  variant="card"
+  objectives={drinkingObjectives}
+/>
+
+Return to your practice case and write one question you would ask a reviewer before considering publication. Keep the answer with the case, then check whether the current argument supports it. Use the [quick reference](/docs/platform-guide/reference/01-platform-basics) as you work on future cases.
+
+</PageContent>

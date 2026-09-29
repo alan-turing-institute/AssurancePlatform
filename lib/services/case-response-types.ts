@@ -24,20 +24,85 @@ export type AssertionStatusResponseType =
 	| "DEFEATED"
 	| "AS_CITED";
 
+/**
+ * An away goal (ADR 0005 D3): a goal that cites a goal in another case.
+ * `moduleReferenceId` names the cited case; `citedElementId` names the
+ * cited goal within it (ADR 0004 D5). The `cited*` fields are resolved by
+ * `case-fetch-service.ts` — never carried on the Prisma row itself — so the
+ * canvas card can show a name without a follow-up fetch. `citedCaseAccessible`
+ * gates whether the card links to the cited case: false whenever the viewer
+ * lacks permission on it, matching the same-error-for-missing-and-forbidden
+ * rule used elsewhere in this file.
+ */
+export interface AwayGoalResponse {
+	citationDangling?: boolean;
+	citedCaseAccessible?: boolean;
+	citedCaseName?: string | null;
+	citedElementId?: string | null;
+	citedElementName?: string | null;
+	comments?: CommentResponse[];
+	createdDate?: string;
+	description: string;
+	goalId?: string | null;
+	/** Set by frontend tree processing, not present in API response */
+	hidden?: boolean;
+	id: string;
+	inSandbox?: boolean;
+	/** True when moduleReferenceId was cleared because the cited case doesn't exist in this environment (Chris's ruling, 2026-09-16) */
+	moduleReferenceDangling?: boolean;
+	moduleReferenceId: string | null;
+	name: string;
+	/** Set by frontend tree processing, not present in API response */
+	originalHidden?: boolean;
+	strategyId?: string | null;
+	type: string;
+}
+
+/**
+ * A module (ADR 0005 D3): a reference to a whole other case. Same
+ * name-resolution and accessibility rules as `AwayGoalResponse` above, minus
+ * the element-level citation (a module cites a case, not an element within it).
+ */
+export interface ModuleResponse {
+	comments?: CommentResponse[];
+	createdDate?: string;
+	description: string;
+	goalId?: string | null;
+	/** Set by frontend tree processing, not present in API response */
+	hidden?: boolean;
+	id: string;
+	inSandbox?: boolean;
+	moduleCaseAccessible?: boolean;
+	moduleCaseName?: string | null;
+	/** True when moduleReferenceId was cleared because the referenced case doesn't exist in this environment (Chris's ruling, 2026-09-16) */
+	moduleReferenceDangling?: boolean;
+	moduleReferenceId: string | null;
+	name: string;
+	/** Set by frontend tree processing, not present in API response */
+	originalHidden?: boolean;
+	strategyId?: string | null;
+	type: string;
+}
+
 export interface GoalResponse {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	assuranceCaseId: string;
+	awayGoals?: AwayGoalResponse[];
 	comments?: CommentResponse[];
 	context?: string[];
 	createdDate?: string;
+	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
+	defeatsElementId?: string | null;
 	description: string;
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
 	inSandbox?: boolean;
+	isDefeater?: boolean;
 	justification?: string;
 	keywords: string;
+	modules?: ModuleResponse[];
 	name: string;
 	/** Set by frontend tree processing, not present in API response */
 	originalHidden?: boolean;
@@ -49,6 +114,7 @@ export interface GoalResponse {
 export interface StrategyResponse {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
+	awayGoals?: AwayGoalResponse[];
 	comments?: CommentResponse[];
 	context?: string[];
 	createdDate?: string;
@@ -59,6 +125,7 @@ export interface StrategyResponse {
 	id: string;
 	inSandbox?: boolean;
 	justification?: string;
+	modules?: ModuleResponse[];
 	name: string;
 	/** Set by frontend tree processing, not present in API response */
 	originalHidden?: boolean;
@@ -69,10 +136,13 @@ export interface StrategyResponse {
 export interface PropertyClaimResponse {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
+	awayGoals?: AwayGoalResponse[];
 	claimType: string;
 	comments?: CommentResponse[];
 	context?: string[];
 	createdDate?: string;
+	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
+	defeatsElementId?: string | null;
 	description: string;
 	evidence: EvidenceResponse[];
 	goalId: string | null;
@@ -80,8 +150,10 @@ export interface PropertyClaimResponse {
 	hidden?: boolean;
 	id: string;
 	inSandbox?: boolean;
+	isDefeater?: boolean;
 	justification?: string;
 	level: number;
+	modules?: ModuleResponse[];
 	name: string;
 	/** Set by frontend tree processing, not present in API response */
 	originalHidden?: boolean;
@@ -95,11 +167,14 @@ export interface PropertyClaimResponse {
 export interface EvidenceResponse {
 	comments?: CommentResponse[];
 	createdDate?: string;
+	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
+	defeatsElementId?: string | null;
 	description: string;
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
 	inSandbox?: boolean;
+	isDefeater?: boolean;
 	name: string;
 	/** Set by frontend tree processing, not present in API response */
 	originalHidden?: boolean;
@@ -137,6 +212,8 @@ export interface AssuranceCaseResponse {
 	images?: CaseImageResponse[];
 	/** True for auto-generated tutorial cases */
 	isDemo?: boolean;
+	/** Whether the caller is the case's owner, rather than a collaborator with delete rights (both map to `permissions: "manage"`) */
+	isOwner?: boolean;
 	/** ELK layout direction preference: TB (top-bottom) or LR (left-right) */
 	layoutDirection?: "TB" | "LR";
 	/** When the case was marked as ready to publish */
@@ -151,7 +228,6 @@ export interface AssuranceCaseResponse {
 	reviewMembers?: MemberResponse[];
 	title?: string;
 	type: string;
-	updatedOn?: string;
 	viewMembers?: MemberResponse[];
 }
 

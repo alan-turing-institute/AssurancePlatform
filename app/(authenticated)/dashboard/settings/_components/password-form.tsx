@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -81,8 +81,13 @@ export function PasswordForm({ data }: PasswordFormProps) {
 					return;
 				}
 			}
-			notify("Password Updated Successfully!");
+			// Changing the password revokes every session for this account
+			// (AP-QA-003) — including this one, so sign out and send the user
+			// back to the sign-in page rather than let them discover the
+			// revocation on their next click.
+			notify("Password updated. Please sign in again.");
 			form.reset();
+			await signOut({ callbackUrl: "/login" });
 		} catch (_error) {
 			setError("Failed to change password");
 		} finally {

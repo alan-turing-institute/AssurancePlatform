@@ -1,0 +1,22 @@
+---
+title: "Structured logger"
+description: "Emit consistent JSON diagnostic events from services and browser code."
+---
+
+The platform's logger writes one JSON record per entry. A record has a timestamp, level and message, and can carry named fields such as a component or case ID. Structured fields make events easier to filter than text assembled from unrelated fragments. The logger is a small local module rather than a vendor SDK.
+
+## Use it in application code
+
+Import `logger` from `lib/logger.ts`. Create a child with a `component` binding for the module, then call `debug`, `info`, `warn` or `error` with a short message and relevant fields. For example, a service can log the number of expired Trash records it purged and the job that ran. Pass an `Error` object as a field when its message and stack are needed for diagnosis. Keep secrets, token bodies and personal data out of fields; the logger serialises what a caller gives it.
+
+In Node code the default sink writes JSON lines to standard output. In a browser or another runtime without Node stdout, it uses the matching console level. `LOG_LEVEL` sets the threshold in server code when it is a recognised level. It is not exposed to browser code, which falls back to `info`. The default threshold in test mode is silent. The threshold is read on each call, which lets a test or a running environment change it without re-importing the module.
+
+Child bindings and per-call fields cannot replace the logger's own `ts`, `level` or `msg`. The component binding has its intended place; a conflicting per-call component is renamed. Other conflicting values are retained under a `caller_` key. Errors and big integers are serialised, circular references are marked, and a fallback minimal entry is emitted if full serialisation still fails.
+
+## Scope and extension
+
+`setLogSink` and `resetLogSink` provide a single replacement seam for tests or future telemetry output. They do not themselves install OpenTelemetry or ship logs to an external service. The current logger does not automatically attach a request trace or redact sensitive values supplied by a caller. Service code must choose useful fields deliberately. Security events use the logger through `lib/audit/security-log.ts`, with database persistence handled by the separate audit service.
+
+## Limits and code location
+
+Use `lib/logger.ts` for application diagnostics and `lib/services/security-audit-service.ts` when an event also needs an audit row. The logger source and tests in `lib/__tests__/logger.test.ts` define the output and collision behaviour. Log retention depends on the deployment's stdout collection and is not implemented by this module.

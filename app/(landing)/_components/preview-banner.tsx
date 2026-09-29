@@ -17,7 +17,7 @@ export default function PreviewBanner() {
 				<div className="text-primary-foreground text-sm leading-6">
 					<Link
 						className="flex items-center justify-start gap-2"
-						href="/docs/community/community-support"
+						href="/docs/community"
 					>
 						<MessageCircleWarning className="hidden h-4 w-4 md:block" />
 						<div className="flex flex-col items-start justify-start gap-2 md:flex-row md:items-center">

@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback } from "react";
+import { logger } from "@/lib/logger";
 import { applyRedo, applyUndo } from "@/lib/services/history-service";
 import { toastError, toastSuccess } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
+
+const log = logger.child({ component: "use-history" });
 
 /**
  * Hook for managing undo/redo operations in the diagram editor.
@@ -43,7 +46,7 @@ export function useHistory() {
 				setAssuranceCase(data);
 			}
 		} catch (error) {
-			console.error("Failed to refetch case:", error);
+			log.error("Failed to refetch case", { error });
 		}
 	}, [assuranceCase?.id, setAssuranceCase]);
 
@@ -78,7 +81,7 @@ export function useHistory() {
 
 			toastSuccess(`Undid: ${entry.description}`);
 		} catch (error) {
-			console.error("Undo failed:", error);
+			log.error("Undo failed", { error });
 			toastError("Undo failed - element may have been modified");
 		} finally {
 			setIsApplying(false);
@@ -115,7 +118,7 @@ export function useHistory() {
 
 			toastSuccess(`Redid: ${entry.description}`);
 		} catch (error) {
-			console.error("Redo failed:", error);
+			log.error("Redo failed", { error });
 			toastError("Redo failed - element may have been modified");
 		} finally {
 			setIsApplying(false);

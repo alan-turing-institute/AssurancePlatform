@@ -1,3 +1,4 @@
+import { passwordSchema } from "../lib/schemas/user";
 import { expect, test } from "./helpers/auth";
 import { LoginPage } from "./pages/login-page";
 
@@ -5,14 +6,20 @@ import { LoginPage } from "./pages/login-page";
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe("Authentication lifecycle", () => {
-	test("register a new account", async ({ page, seedPassword }) => {
+	test("register a new account", async ({ page }) => {
 		const uniqueUsername = `e2e_user_${Date.now()}`;
+		// Throwaway, per-run password — never the seed secret, so a failure
+		// snapshot (error-context.md / trace.zip) can't leak SEED_USER_PASSWORD.
+		// Fixed prefix guarantees uppercase + digit + special char; the random
+		// tail guarantees length and uniqueness.
+		const registerPassword = `Aa1!${Date.now()}`;
+		expect(passwordSchema.safeParse(registerPassword).success).toBe(true);
 
 		await page.goto("/register");
 		await page.getByLabel("Username").fill(uniqueUsername);
 		await page.getByLabel("Email Address").fill(`${uniqueUsername}@test.com`);
-		await page.locator('input[type="password"]').first().fill(seedPassword);
-		await page.locator('input[type="password"]').last().fill(seedPassword);
+		await page.locator('input[type="password"]').first().fill(registerPassword);
+		await page.locator('input[type="password"]').last().fill(registerPassword);
 		await page.getByRole("button", { name: "Submit" }).click();
 
 		// Redirects to login with success query param

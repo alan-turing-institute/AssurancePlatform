@@ -1,12 +1,27 @@
+import { logger } from "@/lib/logger";
+import {
+	isCaseFeatureImageKey,
+	isExternalMediaUrl,
+	toMediaKey,
+} from "@/lib/media-key";
+import { type MediaFetchResult, mediaEtag } from "@/lib/media-response";
+import {
+	isAcceptableFeatureImageValue,
+	isOwnCaseFeatureImageAddress,
+} from "@/lib/media-routes";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
 	CASE_INFORMATION_FIELD_LABELS,
+	type CaseInformationInput,
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
-import type { CaseInformation } from "@/src/generated/prisma";
+import { deleteFile, readMedia } from "@/lib/services/file-storage-service";
+import type { CaseInformation, PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "case-information-service" });
 
 /**
  * Failure shape for `requireCaseInformationComplete` — a plain `error`
@@ -30,13 +45,37 @@ export interface CaseInformationGateFailure {
  * `publish-service.ts`, not by callers of the CRUD functions.
  */
 
-export interface CaseInformationInput {
-	authors?: string;
-	description?: string;
-	// `null` explicitly clears the stored value; `undefined` (the key
-	// omitted) leaves it untouched — see `lib/schemas/case-information.ts`.
-	featureImageUrl?: string | null;
-	sector?: string;
+/**
+ * Reads the case information record for a case, gated on the given
+ * permission level. Shared body for `getCaseInformation` (VIEW) and
+ * `getCaseInformationForEdit` (EDIT) below — identical apart from the
+ * required level, so it lives once here rather than twice.
+ *
+ * Returns `{ data: null }` — not an error — when no record exists yet: a
+ * case with no curated information is a normal, common state, not a
+ * not-found condition. Returns the same "Permission denied" error for a
+ * non-existent case as for an inaccessible one (repo convention — prevents
+ * resource-enumeration via this surface).
+ */
+async function readCaseInformation(
+	userId: string,
+	caseId: string,
+	requiredPermission: PermissionLevel
+): ServiceResult<CaseInformation | null> {
+	const hasAccess = await canAccessCase({ userId, caseId }, requiredPermission);
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const record = await prisma.caseInformation.findUnique({
+			where: { caseId },
+		});
+		return { data: record };
+	} catch (error) {
+		log.error("Failed to get case information", { error });
+		return { error: "Failed to fetch case information" };
+	}
 }
 
 /**
@@ -48,24 +87,27 @@ export interface CaseInformationInput {
  * non-existent case as for an inaccessible one (repo convention — prevents
  * resource-enumeration via this surface).
  */
-export async function getCaseInformation(
+export function getCaseInformation(
 	userId: string,
 	caseId: string
 ): ServiceResult<CaseInformation | null> {
-	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
-	if (!hasAccess) {
-		return { error: "Permission denied" };
-	}
+	return readCaseInformation(userId, caseId, "VIEW");
+}
 
-	try {
-		const record = await prisma.caseInformation.findUnique({
-			where: { caseId },
-		});
-		return { data: record };
-	} catch (error) {
-		console.error("Failed to get case information:", error);
-		return { error: "Failed to fetch case information" };
-	}
+/**
+ * Reads the case information record for a case. Requires EDIT — same shape
+ * as `getCaseInformation`, but for callers about to perform a mutating side
+ * effect (e.g. the feature-image upload route) that must refuse a VIEW-only
+ * or inaccessible user before that side effect happens, rather than only
+ * when a later `upsertCaseInformation` call is reached. Same "Permission
+ * denied" for missing and inaccessible cases as `getCaseInformation` (repo
+ * convention — prevents resource-enumeration via this surface).
+ */
+export function getCaseInformationForEdit(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseInformation | null> {
+	return readCaseInformation(userId, caseId, "EDIT");
 }
 
 /**
@@ -87,6 +129,30 @@ export async function upsertCaseInformation(
 		return { error: "Permission denied" };
 	}
 
+	// The form is shown this case's own feature-image route address and
+	// submits every field back on save, including that address, whether or
+	// not the author touched the image. Recognising that address here —
+	// treating it as `undefined`, the same "leave untouched" signal an
+	// omitted key carries — keeps the stored key intact; otherwise the first
+	// save after load would overwrite the key with the route address and the
+	// image would break.
+	//
+	// Anything else is refused outright unless it's empty or a genuine
+	// external address: a bare storage key, another case's own route
+	// address, or a legacy `/uploads/...`/blob address would otherwise let a
+	// caller point this case's feature image at storage it does not own.
+	let featureImageUrl = data.featureImageUrl;
+	if (featureImageUrl != null) {
+		if (isOwnCaseFeatureImageAddress(caseId, featureImageUrl)) {
+			featureImageUrl = undefined;
+		} else if (!isAcceptableFeatureImageValue(caseId, featureImageUrl)) {
+			return {
+				error:
+					"featureImageUrl must be this case's own feature image address, empty, or an external https address",
+			};
+		}
+	}
+
 	try {
 		const record = await prisma.caseInformation.upsert({
 			where: { caseId },
@@ -95,7 +161,7 @@ export async function upsertCaseInformation(
 				description: data.description ?? null,
 				authors: data.authors ?? null,
 				sector: data.sector ?? null,
-				featureImageUrl: data.featureImageUrl ?? null,
+				featureImageUrl: featureImageUrl ?? null,
 			},
 			update: {
 				...(data.description !== undefined && {
@@ -103,14 +169,12 @@ export async function upsertCaseInformation(
 				}),
 				...(data.authors !== undefined && { authors: data.authors }),
 				...(data.sector !== undefined && { sector: data.sector }),
-				...(data.featureImageUrl !== undefined && {
-					featureImageUrl: data.featureImageUrl,
-				}),
+				...(featureImageUrl !== undefined && { featureImageUrl }),
 			},
 		});
 		return { data: record };
 	} catch (error) {
-		console.error("Failed to upsert case information:", error);
+		log.error("Failed to upsert case information", { error });
 		return { error: "Failed to save case information" };
 	}
 }
@@ -133,7 +197,7 @@ export async function deleteCaseInformation(
 		await prisma.caseInformation.deleteMany({ where: { caseId } });
 		return { data: true };
 	} catch (error) {
-		console.error("Failed to delete case information:", error);
+		log.error("Failed to delete case information", { error });
 		return { error: "Failed to delete case information" };
 	}
 }
@@ -244,4 +308,104 @@ export async function captureCaseInformationForSnapshot(
 		},
 	});
 	return record ?? undefined;
+}
+
+/**
+ * Fetches the feature image's raw bytes for the private media route —
+ * checked against VIEW access, with a missing image and a caller without
+ * access both collapsing to the same `not-found` status so a caller can
+ * never tell the two apart. Also refuses a stored key that doesn't belong to
+ * this case (`isCaseFeatureImageKey`): the only way a record could carry one
+ * is a value written before the write path validated it, or one edited
+ * directly, and it must never be served through this case's own route.
+ */
+export async function getCaseFeatureImageMedia(
+	userId: string,
+	caseId: string
+): Promise<MediaFetchResult> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	if (!hasAccess) {
+		return { status: "forbidden" };
+	}
+
+	const record = await prisma.caseInformation.findUnique({
+		where: { caseId },
+		select: { featureImageUrl: true },
+	});
+	if (!record?.featureImageUrl) {
+		return { status: "not-found" };
+	}
+
+	const key = toMediaKey(record.featureImageUrl);
+	if (!isCaseFeatureImageKey(caseId, key)) {
+		return { status: "not-found" };
+	}
+
+	const media = await readMedia(key);
+	if (!media) {
+		return { status: "not-found" };
+	}
+
+	return {
+		status: "ok",
+		data: media.data,
+		contentType: media.contentType,
+		etag: mediaEtag(key),
+	};
+}
+
+/**
+ * Sets a case's feature-image key directly, bypassing the address-shape
+ * check `upsertCaseInformation` applies on the write path. Exists only for
+ * the feature-image upload route to persist the key `saveFile` itself just
+ * generated for this case — never for a caller-supplied value, which is
+ * exactly what the write path's check exists to refuse. Requires EDIT.
+ */
+export async function setCaseFeatureImageKey(
+	userId: string,
+	caseId: string,
+	key: string
+): ServiceResult<CaseInformation> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const record = await prisma.caseInformation.upsert({
+			where: { caseId },
+			create: { caseId, featureImageUrl: key },
+			update: { featureImageUrl: key },
+		});
+		return { data: record };
+	} catch (error) {
+		log.error("Failed to set case feature image key", { error });
+		return { error: "Failed to save case information" };
+	}
+}
+
+/**
+ * Deletes a case's feature-image key from storage, but only when it is a
+ * key this app could have written for THIS case. A no-op for an empty or
+ * external value, and for a key that doesn't belong to this case
+ * (`isCaseFeatureImageKey`) — refusing to act on that key is what stops a
+ * value pointed at another case's storage (a pre-fix write, or a row edited
+ * directly) from being deleted through this case's own upload/remove
+ * actions.
+ */
+export async function deleteCaseFeatureImageKey(
+	caseId: string,
+	stored: string | null | undefined
+): Promise<void> {
+	if (!stored || isExternalMediaUrl(stored)) {
+		return;
+	}
+	const key = toMediaKey(stored);
+	if (!isCaseFeatureImageKey(caseId, key)) {
+		log.warn("Skipped deleting a feature-image key outside this case", {
+			caseId,
+		});
+		return;
+	}
+	await deleteFile(stored);
 }

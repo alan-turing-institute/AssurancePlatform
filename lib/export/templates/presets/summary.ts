@@ -26,7 +26,7 @@ import {
 /**
  * Summary configuration
  */
-export const SUMMARY_CONFIG: TemplateConfig = {
+const SUMMARY_CONFIG: TemplateConfig = {
 	name: "Summary",
 	description: "Condensed overview with goals and key evidence only",
 	preset: "summary",

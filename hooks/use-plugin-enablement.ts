@@ -1,19 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { parseErrorMessage, useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
+import useStore from "@/store/store";
+
+const NO_PLUGINS: PluginSettingsListItem[] = [];
 
 interface PluginsResponseBody {
 	plugins: PluginSettingsListItem[];
-}
-
-interface ApiErrorBody {
-	error?: string;
-}
-
-async function parseErrorMessage(response: Response): Promise<string> {
-	const body = (await response.json().catch(() => null)) as ApiErrorBody | null;
-	return body?.error ?? "Something went wrong";
 }
 
 async function requestPlugins(): Promise<PluginSettingsListItem[]> {
@@ -86,28 +81,35 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
  *
  * A failed fetch degrades to "nothing enabled" rather than risking plugin UI
  * the server hasn't actually confirmed is on; the settings pane
- * (`usePluginSettings`) is where the real error surfaces to the user.
+ * (`usePluginSettings`) is where the real error surfaces to the user. Built
+ * on the shared `useFetchOnMount` (`hooks/use-fetch-on-mount.ts`) — `data`
+ * only changes when a fetch actually resolves, so the derived `Set` is
+ * memoised on it rather than rebuilt every render (`useElementBadgeSlot`/
+ * `useElementPanelSlot` key a `useMemo` off `enabledPluginIds` itself, so a
+ * fresh `Set` reference every render would defeat that memoisation).
+ *
+ * On the read-only docs canvas (`store.readOnlyCanvas`), this never calls
+ * `GET /api/user/plugins` at all: a signed-out docs visitor has no session,
+ * so the request always 401s, and every plugin badge/panel is degraded UI
+ * the reveal-stage viewer has no use for anyway. Resolving straight to an
+ * empty list keeps every downstream slot exactly as it renders today for a
+ * failed or disabled-everything response — nothing appears — without a
+ * network round trip.
  */
 export function useEnabledPluginIds(): UseEnabledPluginIdsResult {
-	const [enabledPluginIds, setEnabledPluginIds] =
-		useState<ReadonlySet<string>>(EMPTY_SET);
-	const [loading, setLoading] = useState(true);
+	const readOnlyCanvas = useStore((state) => state.readOnlyCanvas);
+	const fetcher = useCallback(
+		() => (readOnlyCanvas ? Promise.resolve(NO_PLUGINS) : fetchPlugins()),
+		[readOnlyCanvas]
+	);
+	const { data, loading } = useFetchOnMount(fetcher);
 
-	const load = useCallback(async () => {
-		try {
-			const plugins = await fetchPlugins();
-			setEnabledPluginIds(
-				new Set(plugins.filter((p) => p.enabled).map((p) => p.pluginId))
-			);
-		} catch {
-			setEnabledPluginIds(EMPTY_SET);
+	const enabledPluginIds = useMemo(() => {
+		if (!data) {
+			return EMPTY_SET;
 		}
-	}, []);
-
-	useEffect(() => {
-		setLoading(true);
-		load().finally(() => setLoading(false));
-	}, [load]);
+		return new Set(data.filter((p) => p.enabled).map((p) => p.pluginId));
+	}, [data]);
 
 	return { enabledPluginIds, loading };
 }

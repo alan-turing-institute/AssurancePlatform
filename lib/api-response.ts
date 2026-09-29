@@ -9,6 +9,7 @@ import {
 	forbidden,
 	handleError,
 	notFound,
+	payloadTooLarge,
 	unauthorised,
 	validationError,
 } from "./errors";
@@ -115,6 +116,19 @@ const ERROR_MAPPINGS: Array<{
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
 	{ pattern: "already", factory: conflict },
+	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
+	// outside the allowed set, or one whose content signature doesn't match
+	// what was declared (AP-QA-007), is a validation failure (400), not the
+	// unmapped 500 this fell through to before: no earlier entry in this
+	// table matched "Invalid file type", so `saveFile`'s rejection reached
+	// production users as an internal error rather than a 400.
+	{ pattern: "Invalid file type", factory: () => validationError("") },
+	// `file-storage-service.ts`'s `validateFile` post-parse size check
+	// ("File size exceeds maximum of…", AP-QA-007 §2's fix-up) — the
+	// multipart cap (`MAX_FILE_SIZE + 16 KiB`) admits a file whose own bytes
+	// still exceed `MAX_FILE_SIZE`, so this is the same 413 the streaming cap
+	// gives for an oversized body, not an unmapped 500.
+	{ pattern: "exceeds maximum", factory: () => payloadTooLarge() },
 	// `assertPluginEnabledForUser` ("Plugin '<id>' is not enabled",
 	// `plugin-enablement-service.ts`'s `assertPluginEnabledForUser`) — a
 	// plugin switched off (deployment, or user-level) is a clean, expected
@@ -209,6 +223,13 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^Remove your \d+ integrations? before deleting your account$/,
 		factory: conflict,
 	},
+	// `case-information-service.ts`'s `upsertCaseInformation`: a
+	// `featureImageUrl` that is neither empty, this case's own feature-image
+	// route address, nor a genuine external `https://` address (a bare
+	// storage key, another case's route address, a legacy
+	// `/uploads/...`/blob address, or an `http://` address) is a validation
+	// failure (400), not a 500.
+	{ pattern: /^featureImageUrl must be/, factory: () => validationError("") },
 ];
 
 /**

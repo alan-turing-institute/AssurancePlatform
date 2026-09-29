@@ -42,7 +42,7 @@ export interface Team {
 	owner: number;
 }
 
-export interface TeamMember {
+interface TeamMember {
 	id: number;
 	joined_date: string;
 	role: "owner" | "admin" | "member";
@@ -50,7 +50,7 @@ export interface TeamMember {
 	user: number;
 }
 
-export interface CasePermission {
+interface CasePermission {
 	case: number;
 	created_date: string;
 	id: number;
@@ -59,7 +59,7 @@ export interface CasePermission {
 	user?: number;
 }
 
-export interface CaseTemplate {
+interface CaseTemplate {
 	category: string;
 	description: string;
 	id: number;
@@ -394,7 +394,7 @@ export const GoalFactory = {
 };
 
 // Strategy Factory
-export const StrategyFactory = {
+const StrategyFactory = {
 	create(overrides: Partial<StrategyResponse> = {}): StrategyResponse {
 		const id = overrides.id ?? String(getNextId());
 

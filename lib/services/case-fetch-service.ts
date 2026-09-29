@@ -1,15 +1,20 @@
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
+import { logger } from "@/lib/logger";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
 import type {
 	AssuranceCaseResponse,
+	AwayGoalResponse,
 	GoalResponse,
+	ModuleResponse,
 	PropertyClaimResponse,
 	StrategyResponse,
 } from "@/lib/services/case-response-types";
 import type { Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "case-fetch-service" });
 
 // ---------------------------------------------------------------------------
 // Types (derived from Prisma query shape)
@@ -34,6 +39,199 @@ type CaseWithIncludes = Prisma.AssuranceCaseGetPayload<{
 	include: typeof CASE_INCLUDE;
 }>;
 type CaseElement = CaseWithIncludes["elements"][number];
+
+// ---------------------------------------------------------------------------
+// Away goal / module citation resolution (ADR 0005 D3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Names and accessibility, resolved once per fetch, for every AWAY_GOAL/
+ * MODULE element in the case — so the canvas card can show a cited case's
+ * (and, for away goals, cited element's) name without a follow-up fetch.
+ */
+interface CitationContext {
+	accessibleCaseIds: Set<string>;
+	caseNameById: Map<string, string>;
+	elementNameById: Map<string, string>;
+}
+
+const EMPTY_CITATION_CONTEXT: CitationContext = {
+	accessibleCaseIds: new Set(),
+	caseNameById: new Map(),
+	elementNameById: new Map(),
+};
+
+/**
+ * Resolves the case names, cited-element names, and viewer accessibility
+ * needed by every AWAY_GOAL/MODULE element's card. Skips all three extra
+ * queries when the case has none (the common case).
+ */
+async function buildCitationContext(
+	userId: string,
+	elements: CaseElement[]
+): Promise<CitationContext> {
+	const citing = elements.filter(
+		(el) => el.elementType === "AWAY_GOAL" || el.elementType === "MODULE"
+	);
+	if (citing.length === 0) {
+		return EMPTY_CITATION_CONTEXT;
+	}
+
+	const caseIds = [
+		...new Set(
+			citing
+				.map((el) => el.moduleReferenceId)
+				.filter((id): id is string => !!id)
+		),
+	];
+	const elementIds = [
+		...new Set(
+			citing.map((el) => el.citedElementId).filter((id): id is string => !!id)
+		),
+	];
+
+	const [cases, citedElements, accessFlags] = await Promise.all([
+		caseIds.length
+			? prisma.assuranceCase.findMany({
+					where: { id: { in: caseIds }, deletedAt: null },
+					select: { id: true, name: true },
+				})
+			: Promise.resolve([]),
+		elementIds.length
+			? prisma.assuranceElement.findMany({
+					where: { id: { in: elementIds }, deletedAt: null },
+					select: { id: true, name: true },
+				})
+			: Promise.resolve([]),
+		Promise.all(
+			caseIds.map(async (caseId) => ({
+				caseId,
+				accessible: await canAccessCase({ userId, caseId }, "VIEW"),
+			}))
+		),
+	]);
+
+	return {
+		caseNameById: new Map(cases.map((c) => [c.id, c.name])),
+		elementNameById: new Map(citedElements.map((el) => [el.id, el.name ?? ""])),
+		accessibleCaseIds: new Set(
+			accessFlags.filter((f) => f.accessible).map((f) => f.caseId)
+		),
+	};
+}
+
+function buildAwayGoalStructure(
+	element: CaseElement,
+	goalId: string | null,
+	strategyId: string | null,
+	citation: CitationContext
+): AwayGoalResponse {
+	const citedCaseName = element.moduleReferenceId
+		? (citation.caseNameById.get(element.moduleReferenceId) ?? null)
+		: null;
+	const citedElementName = element.citedElementId
+		? (citation.elementNameById.get(element.citedElementId) ?? null)
+		: null;
+
+	return {
+		id: element.id,
+		type: "away_goal",
+		name: element.name ?? "",
+		description: element.description ?? "",
+		createdDate: element.createdAt.toISOString(),
+		goalId,
+		strategyId,
+		moduleReferenceId: element.moduleReferenceId,
+		moduleReferenceDangling: element.moduleReferenceDangling,
+		citedElementId: element.citedElementId,
+		citationDangling: element.citationDangling,
+		citedCaseName,
+		citedElementName,
+		citedCaseAccessible: element.moduleReferenceId
+			? citation.accessibleCaseIds.has(element.moduleReferenceId)
+			: false,
+		comments: [],
+		inSandbox: element.inSandbox,
+	};
+}
+
+function buildModuleStructure(
+	element: CaseElement,
+	goalId: string | null,
+	strategyId: string | null,
+	citation: CitationContext
+): ModuleResponse {
+	const moduleCaseName = element.moduleReferenceId
+		? (citation.caseNameById.get(element.moduleReferenceId) ?? null)
+		: null;
+
+	return {
+		id: element.id,
+		type: "module",
+		name: element.name ?? "",
+		description: element.description ?? "",
+		createdDate: element.createdAt.toISOString(),
+		goalId,
+		strategyId,
+		moduleReferenceId: element.moduleReferenceId,
+		moduleReferenceDangling: element.moduleReferenceDangling,
+		moduleCaseName,
+		moduleCaseAccessible: element.moduleReferenceId
+			? citation.accessibleCaseIds.has(element.moduleReferenceId)
+			: false,
+		comments: [],
+		inSandbox: element.inSandbox,
+	};
+}
+
+/**
+ * Builds the awayGoals and modules arrays for one parent's children (ADR
+ * 0005 D3): AWAY_GOAL and MODULE are admitted wherever PROPERTY_CLAIM is.
+ * Extracted (review round 1 — fallow duplication finding) from
+ * `buildGoalStructure`, `buildStrategyStructure`, and
+ * `buildPropertyClaimStructure`, which otherwise repeated this exact
+ * filter-sort-map pair, once each, identically but for the goalId/
+ * strategyId args each passes through to the two element structures.
+ */
+function buildCitedChildren(
+	children: CaseElement[],
+	goalId: string | null,
+	strategyId: string | null,
+	citation: CitationContext
+): { awayGoals: AwayGoalResponse[]; modules: ModuleResponse[] } {
+	const awayGoals = children
+		.filter((el) => el.elementType === "AWAY_GOAL")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((el) => buildAwayGoalStructure(el, goalId, strategyId, citation));
+
+	const modules = children
+		.filter((el) => el.elementType === "MODULE")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((el) => buildModuleStructure(el, goalId, strategyId, citation));
+
+	return { awayGoals, modules };
+}
+
+/**
+ * Builds a parent's STRATEGY children (sorted, structured). Extracted
+ * (review round 1 — fallow duplication finding) from `buildGoalStructure`
+ * and `buildPropertyClaimStructure`, which otherwise repeated this exact
+ * filter-sort-map pair, differing only in which id (goal's or none, for a
+ * nested claim) each passes through as the strategy's `goalId`.
+ */
+function buildNestedStrategies(
+	children: CaseElement[],
+	goalId: string | null,
+	allElements: CaseElement[],
+	citation: CitationContext
+): StrategyResponse[] {
+	return children
+		.filter((el) => el.elementType === "STRATEGY")
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((strategy) =>
+			buildStrategyStructure(strategy, allElements, goalId, citation)
+		);
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -63,21 +261,33 @@ function mapPermissionToFrontend(
 
 function buildGoalStructure(
 	goal: CaseElement,
-	allElements: CaseElement[]
+	allElements: CaseElement[],
+	citation: CitationContext
 ): GoalResponse {
 	const children = allElements.filter((el) => el.parentId === goal.id);
 
-	const strategies = children
-		.filter((el) => el.elementType === "STRATEGY")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((strategy) => buildStrategyStructure(strategy, allElements, goal.id));
+	const strategies = buildNestedStrategies(
+		children,
+		goal.id,
+		allElements,
+		citation
+	);
 
 	const propertyClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((claim) =>
-			buildPropertyClaimStructure(claim, allElements, goal.id, null)
+			buildPropertyClaimStructure(claim, allElements, goal.id, null, citation)
 		);
+
+	// ADR 0005 D3: AWAY_GOAL and MODULE are admitted wherever PROPERTY_CLAIM
+	// is admitted — a goal's direct children, alongside strategies/claims.
+	const { awayGoals, modules } = buildCitedChildren(
+		children,
+		goal.id,
+		null,
+		citation
+	);
 
 	return {
 		id: goal.id,
@@ -90,10 +300,16 @@ function buildGoalStructure(
 		context: goal.context || [],
 		strategies,
 		propertyClaims,
+		awayGoals,
+		modules,
 		comments: [],
 		assumption: goal.assumption ?? "",
 		justification: goal.justification ?? "",
 		inSandbox: goal.inSandbox,
+		// Dialogical reasoning (defeaters, ADR 0005 D2) — decoration on the
+		// existing card, not a new node kind.
+		isDefeater: goal.isDefeater,
+		defeatsElementId: goal.defeatsElementId,
 		// Per-assertion status (ADR 0004 D3); omitted (not forced to
 		// "ASSERTED") when unset, matching element-response.ts's convention —
 		// the badge/setter treat undefined the same as the default.
@@ -104,7 +320,8 @@ function buildGoalStructure(
 function buildStrategyStructure(
 	strategy: CaseElement,
 	allElements: CaseElement[],
-	goalId: string | null
+	goalId: string | null,
+	citation: CitationContext
 ): StrategyResponse {
 	const children = allElements.filter((el) => el.parentId === strategy.id);
 
@@ -112,8 +329,22 @@ function buildStrategyStructure(
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((claim) =>
-			buildPropertyClaimStructure(claim, allElements, null, strategy.id)
+			buildPropertyClaimStructure(
+				claim,
+				allElements,
+				null,
+				strategy.id,
+				citation
+			)
 		);
+
+	// ADR 0005 D3: AWAY_GOAL and MODULE admitted wherever PROPERTY_CLAIM is.
+	const { awayGoals, modules } = buildCitedChildren(
+		children,
+		null,
+		strategy.id,
+		citation
+	);
 
 	return {
 		id: strategy.id,
@@ -123,6 +354,8 @@ function buildStrategyStructure(
 		createdDate: strategy.createdAt.toISOString(),
 		goalId,
 		propertyClaims,
+		awayGoals,
+		modules,
 		comments: [],
 		assumption: strategy.assumption ?? "",
 		justification: strategy.justification ?? "",
@@ -137,7 +370,8 @@ function buildPropertyClaimStructure(
 	claim: CaseElement,
 	allElements: CaseElement[],
 	goalId: string | null,
-	strategyId: string | null
+	strategyId: string | null,
+	citation: CitationContext
 ): PropertyClaimResponse {
 	const children = allElements.filter((el) => el.parentId === claim.id);
 
@@ -158,19 +392,32 @@ function buildPropertyClaimStructure(
 			propertyClaimId: [claim.id],
 			comments: [],
 			inSandbox: ev.inSandbox,
+			// Dialogical reasoning (defeaters, ADR 0005 D2).
+			isDefeater: ev.isDefeater,
+			defeatsElementId: ev.defeatsElementId,
 		}));
 
 	const nestedClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((nested) =>
-			buildPropertyClaimStructure(nested, allElements, null, null)
+			buildPropertyClaimStructure(nested, allElements, null, null, citation)
 		);
 
-	const nestedStrategies = children
-		.filter((el) => el.elementType === "STRATEGY")
-		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((strategy) => buildStrategyStructure(strategy, allElements, null));
+	const nestedStrategies = buildNestedStrategies(
+		children,
+		null,
+		allElements,
+		citation
+	);
+
+	// ADR 0005 D3: AWAY_GOAL and MODULE admitted wherever PROPERTY_CLAIM is.
+	const { awayGoals, modules } = buildCitedChildren(
+		children,
+		null,
+		null,
+		citation
+	);
 
 	return {
 		id: claim.id,
@@ -185,12 +432,18 @@ function buildPropertyClaimStructure(
 		claimType: "Project claim",
 		propertyClaims: nestedClaims,
 		strategies: nestedStrategies,
+		awayGoals,
+		modules,
 		evidence,
 		comments: [],
 		assumption: claim.assumption ?? "",
 		justification: claim.justification ?? "",
 		context: claim.context || [],
 		inSandbox: claim.inSandbox,
+		// Dialogical reasoning (defeaters, ADR 0005 D2) — decoration on the
+		// existing card, not a new node kind.
+		isDefeater: claim.isDefeater,
+		defeatsElementId: claim.defeatsElementId,
 		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
 		assertionStatus: claim.assertionStatus ?? undefined,
 	};
@@ -253,9 +506,10 @@ export async function fetchCaseFromPrisma(
 
 	// Transform Prisma data to the expected format
 	// Build the nested structure from flat elements
+	const citation = await buildCitationContext(userId, caseData.elements);
 	const goals = caseData.elements
 		.filter((el) => el.elementType === "GOAL" && el.parentId === null)
-		.map((goal) => buildGoalStructure(goal, caseData.elements));
+		.map((goal) => buildGoalStructure(goal, caseData.elements, citation));
 
 	const permissions = mapPermissionToFrontend(
 		permissionResult.permission,
@@ -270,6 +524,7 @@ export async function fetchCaseFromPrisma(
 			createdDate: caseData.createdAt.toISOString(),
 			colourProfile: caseData.colourProfile ?? undefined,
 			owner: caseData.createdById ?? undefined,
+			isOwner: permissionResult.isOwner,
 			goals,
 			permissions,
 			type: "assurance_case",
@@ -291,6 +546,42 @@ export async function fetchCaseFromPrisma(
 	};
 }
 
+/**
+ * Resolves a case's name for viewer-facing surfaces that must not disclose
+ * it to someone without VIEW access — currently the case page's server-
+ * rendered `<title>` (AP-QA-012). Checks `canAccessCase` first (owner,
+ * direct and team grants; trashed cases excluded by default) and only then
+ * looks the name up directly, rather than reusing `fetchCaseFromPrisma`,
+ * which does far more work than a page title needs.
+ *
+ * Returns `null` for no access, a missing case and a trashed case alike —
+ * one return value, so the caller cannot distinguish "you can't see this"
+ * from "this doesn't exist", the same anti-enumeration discipline as
+ * `fetchCaseFromPrisma`. `deletedAt: null` on the lookup is defence in
+ * depth alongside `canAccessCase`'s own trash exclusion, not a substitute
+ * for it.
+ */
+export async function getCaseNameForViewer(
+	userId: string,
+	caseId: string
+): Promise<string | null> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	if (!hasAccess) {
+		return null;
+	}
+
+	try {
+		const record = await prisma.assuranceCase.findUnique({
+			where: { id: caseId, deletedAt: null },
+			select: { name: true },
+		});
+		return record?.name ?? null;
+	} catch (error) {
+		log.error("getCaseNameForViewer", { userId, caseId, error });
+		return null;
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Case list types
 // ---------------------------------------------------------------------------
@@ -303,6 +594,8 @@ export interface AssuranceCaseSummary {
 	name: string;
 	owner?: string;
 	permissions?: string;
+	/** Whether the case has a current published copy on Discover. */
+	published?: boolean;
 	updatedDate: string;
 }
 
@@ -338,6 +631,7 @@ export async function listUserCases(
 				updatedAt: true,
 				createdById: true,
 				isDemo: true,
+				published: true,
 			},
 			orderBy: { createdAt: "desc" },
 		});
@@ -352,10 +646,11 @@ export async function listUserCases(
 				owner: c.createdById ?? undefined,
 				isDemo: c.isDemo,
 				permissions: c.createdById === userId ? "owner" : "view",
+				published: c.published,
 			})),
 		};
 	} catch (error) {
-		console.error("[listUserCases]", { userId, error });
+		log.error("listUserCases", { userId, error });
 		return { error: "Failed to fetch cases" };
 	}
 }
@@ -405,6 +700,7 @@ export async function listSharedCases(
 				createdAt: true,
 				updatedAt: true,
 				createdById: true,
+				published: true,
 			},
 			orderBy: { createdAt: "desc" },
 		});
@@ -417,11 +713,59 @@ export async function listSharedCases(
 				createdDate: c.createdAt.toISOString(),
 				updatedDate: c.updatedAt.toISOString(),
 				owner: c.createdById ?? undefined,
+				published: c.published,
 			})),
 		};
 	} catch (error) {
-		console.error("[listSharedCases]", { userId, error });
+		log.error("listSharedCases", { userId, error });
 		return { error: "Failed to fetch shared cases" };
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Away goal / module creation picker (ADR 0005 D7)
+// ---------------------------------------------------------------------------
+
+export interface CaseGoalSummary {
+	description: string;
+	id: string;
+	name: string;
+}
+
+/**
+ * Lists the GOAL elements of a case, for the "Add away goal" picker's
+ * second step (ADR 0005 D7). Requires at least VIEW access on the cited
+ * case — citing a goal is a read, so the same bar as opening the case.
+ * Same not-found-vs-forbidden error as `fetchCaseFromPrisma` to avoid case
+ * enumeration.
+ */
+export async function listCaseGoalElements(
+	userId: string,
+	caseId: string
+): ServiceResult<CaseGoalSummary[]> {
+	const permissionResult = await getCasePermission({ userId, caseId });
+	if (!permissionResult.hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const goals = await prisma.assuranceElement.findMany({
+			where: { caseId, elementType: "GOAL", deletedAt: null },
+			select: { id: true, name: true, description: true },
+		});
+
+		return {
+			data: goals
+				.map((g) => ({
+					id: g.id,
+					name: g.name ?? "",
+					description: g.description ?? "",
+				}))
+				.sort((a, b) => compareIdentifiers(a.name, b.name)),
+		};
+	} catch (error) {
+		log.error("listCaseGoalElements", { userId, caseId, error });
+		return { error: "Failed to fetch goals" };
 	}
 }
 
@@ -459,7 +803,7 @@ export async function createCase(
 
 		return { data: { id: newCase.id } };
 	} catch (error) {
-		console.error("[createCase]", { userId, error });
+		log.error("createCase", { userId, error });
 		return { error: "Failed to create case" };
 	}
 }

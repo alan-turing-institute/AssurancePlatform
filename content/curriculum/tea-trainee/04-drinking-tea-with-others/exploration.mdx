@@ -1,0 +1,92 @@
+---
+title: "Collaborate and publish with care"
+description: Use current collaboration controls, then plan a shared assurance process.
+---
+
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { drinkingTasks } from "./tasks";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="drinking-tea-with-others"
+      tasks={drinkingTasks}
+      currentPage="exploration"
+    >
+      {children}
+      <ModuleProgressTracker
+        showHints={true}
+        currentPage="exploration"
+        basePath="/docs/curriculum/tea-trainee/04-drinking-tea-with-others"
+      />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+<div id="exploration-content">
+
+The first half maps controls you can use in the current platform. The second half turns those controls into a project process. Keep the distinction clear: a permission setting determines who can do something in TEA; it does not decide whose voice ought to shape the argument.
+
+## Part 1: Collaborative features
+
+### Teams and roles
+
+At `/dashboard/teams`, use **New Team** to create a team for people who will work together over time. A team admin manages membership and settings; a member participates as a member. The creator starts as an admin. A team role does not automatically grant admin rights on a case. The team still needs an explicit case grant.
+
+![The teams dashboard and New Team control](/images/docs/shots/m4-01.svg)
+
+### Share the working case
+
+If you own a case or have Admin access, open `/case/<caseId>` and choose **Share**. In **Share Case**, you can grant an existing account access by email or grant one of your teams access. Choose **Can view**, **Can comment**, **Can edit** or **Admin** for the work they need to do. For an unknown email, the dialog gives you an invite link to copy and send yourself. It works only for an account with that email; the platform does not send the invitation email. A collaborator finds cases shared with them at `/dashboard/shared`. Remove a direct or team grant in the dialog when it is no longer needed. A person may still have access through another grant, so check both lists.
+
+![The Share Case dialog with people, teams and permission levels](/images/docs/shots/m4-02.svg)
+
+### Comment and see changes
+
+People with comment permission can discuss case elements without changing the argument text. Use the speech-bubble **View comments** button on a node to put a question near the claim or evidence it concerns, then record how the case author responds. The case editor also listens for case, element and comment changes and refreshes another open view. You may see a short notice when a colleague acts. This helps you notice a change; it does not resolve conflicting edits or establish that a comment has been answered.
+
+![An element comment and a second viewer's update notice](/images/docs/shots/m4-03.svg)
+
+### Publish to Discover
+
+When the case is ready for wider reading, complete the required case information and select the status badge reading **Draft**. Publishing freezes a public version shown on Discover under a slug. It does not give visitors editor access. Comments stay with the working case and are not part of the public snapshot. If you later change the working case, use **Update published version** in the status modal to make a new public version under the same slug. Unpublishing removes the public versions while the working case remains available to its authorised collaborators.
+
+![The publishing control and public Discover result](/images/docs/shots/m4-04.svg)
+
+### Import and back up
+
+**Import File** on the dashboard creates a case from local JSON, GitHub JSON or a Google Drive backup. A Google-connected account can use **Backup to Google Drive** from the case export controls to save a JSON copy in its **TEA Platform Backups** folder. These are ways to move or preserve case data. They do not merge two teams' live edits or continuously synchronise with a repository.
+
+![The import choices and Google Drive backup control](/images/docs/shots/m4-05.svg)
+
+### Integrate a machine client
+
+Under `/dashboard/settings/integrations`, register an integration, select its scopes, grant case access and issue a token. A service can then use the documented machine surface for identity and health evidence operations. The token secret is shown once. Revoke a token or remove a case grant when the service should stop. A machine integration is for automated work; it is not a substitute for inviting a reviewer as a person.
+
+![An integration card with scopes, tokens and case access](/images/docs/shots/m4-06.svg)
+
+## Part 2: A process across the project
+
+### Deliberation
+
+Invite the project owner, people who understand the use setting, and representatives of those affected before the goal is settled. Give most reviewers **Can comment** so they can challenge scope and definitions. Let designated authors use **Can edit**. Record the disputed interpretations in the case's context, comments and project notes. Share the working case within this group. Keep a public description provisional until its boundaries are clear.
+
+### Design
+
+Bring designers, developers, domain specialists and responsible decision-makers into the case. Have case authors split the goal into strategies and property claims that can guide design choices. Ask reviewers to test whether those claims address the concerns raised during deliberation. Use a team grant if a stable group needs continuing access, and a direct grant for a specific specialist. Give **Admin** only to people who should manage case access and may move the case to Trash. Only the owner can restore it from Trash.
+
+### Testing
+
+Invite test owners, independent reviewers and affected-domain experts to examine proposed evidence. For each property claim, agree what result would support it and what result would challenge it. Record limitations and leave a claim marked **Needs support** when tests are incomplete. Comments can collect questions beside an element; the author should make any resulting change to the argument explicit. Back up a review copy before a major revision if the project needs an independent record.
+
+### Evidence generation and communication
+
+As measurements, audits or monitoring results arrive, attach or reference the artefacts that support particular claims. A machine integration can supply health evidence within its scopes and case grants, while a person still evaluates the source and meaning. Revisit the goal and context when the deployment or affected population changes. When the team can explain what the case says and what remains uncertain, choose what to publish. The public snapshot should be understandable without private comments or unavailable artefacts. Keep a working case for ongoing review and publish a new version when its public argument materially changes.
+
+</div>
+
+</PageContent>

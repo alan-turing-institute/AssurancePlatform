@@ -1,7 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { hashPassword } from "@/lib/auth/password-service";
 import prisma from "@/lib/prisma";
+import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
+import { sendAccountDeletedEmail } from "@/lib/services/email-service";
+import { readMedia } from "@/lib/services/file-storage-service";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
 import {
+	publishAssuranceCase,
+	updatePublishedCase,
+} from "@/lib/services/publish-service";
+import {
+	changePassword,
 	deleteAccount,
 	deleteAccountForRetention,
 } from "@/lib/services/user-management-service";
@@ -9,6 +21,7 @@ import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	addTeamMember,
 	createTestCase,
+	createTestCaseWithGoal,
 	createTestIntegrationWithSystemUser,
 	createTestPermission,
 	createTestTeam,
@@ -209,6 +222,53 @@ describe("deleteAccountForRetention", () => {
 });
 
 /**
+ * Self-service deletion never sent the account-deleted confirmation before
+ * this fix — only the retention sweep's `deleteAccountForRetention` did.
+ * Wraps the real `sendAccountDeletedEmail` (rather than stubbing it outright)
+ * so the "still succeeds when the send rejects" case can override it once
+ * and fall back to the real implementation for every other test.
+ */
+vi.mock("@/lib/services/email-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/services/email-service")>();
+	return {
+		...actual,
+		sendAccountDeletedEmail: vi.fn(actual.sendAccountDeletedEmail),
+	};
+});
+
+describe("deleteAccount — account-deleted confirmation email", () => {
+	afterEach(() => {
+		vi.mocked(sendAccountDeletedEmail).mockRestore();
+	});
+
+	it("sends the account-deleted confirmation to the user's own address on self-service deletion", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		expect(sendAccountDeletedEmail).toHaveBeenCalledWith({
+			to: owner.email,
+			username: owner.username,
+		});
+	});
+
+	it("still succeeds, and still deletes, when the confirmation send rejects", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		vi.mocked(sendAccountDeletedEmail).mockImplementationOnce(() => {
+			throw new Error("simulated send failure");
+		});
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const deletedUser = await prisma.user.findUnique({
+			where: { id: owner.id },
+		});
+		expect(deletedUser).toBeNull();
+	});
+});
+
+/**
  * Chris's ruling (2026-09-07): a case the deleted user created is KEPT
  * (authorship reassigned to the system account, as before) only if another
  * principal already holds ADMIN on it — otherwise it is trashed so it
@@ -369,6 +429,91 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 		});
 		expect(updatedCase.deletedAt).not.toBeNull();
 	});
+
+	/**
+	 * Account deletion archives the Discover copy of a published case it
+	 * trashes, rather than removing it — the deleted owner's account is
+	 * gone, so nobody can remove the copy through the app afterwards
+	 * (owner is null).
+	 */
+	it("archives, rather than removes, the published copy of a case it trashes", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Solo published case"
+		);
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const archived = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		expect(archived.archivedAt).not.toBeNull();
+		expect(archived.archivedOwnerId).toBeNull();
+	});
+
+	it("deletes a superseded republish's published/ copy file when archiving at account deletion", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Solo published case with history"
+		);
+		const liveKey = `cases/${testCase.id}/case-information/original.png`;
+		const filePath = join(UPLOADS_DIR, liveKey);
+		await mkdir(join(filePath, ".."), { recursive: true });
+		await writeFile(filePath, Buffer.from("fake-png-bytes"));
+		await prisma.caseInformation.create({
+			data: { caseId: testCase.id, featureImageUrl: liveKey },
+		});
+
+		const first = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const firstRow = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: first.publishedId },
+		});
+		const firstCopiedKey = (
+			firstRow.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		const second = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const secondRow = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: second.publishedId },
+		});
+		const secondCopiedKey = (
+			secondRow.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		expect(await readMedia(firstCopiedKey)).toBeNull();
+		expect(await readMedia(secondCopiedKey)).not.toBeNull();
+	});
+
+	it("does not archive the published copy of a KEPT case (another Admin present)", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const admin = await createTestUser();
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Kept published case"
+		);
+		await createTestPermission(testCase.id, admin.id, owner.id, "ADMIN");
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		const stillLive = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		expect(stillLive.archivedAt).toBeNull();
+	});
 });
 
 /**
@@ -500,5 +645,91 @@ describe("deleteAccount — bulk deletion within the transaction budget (QA roun
 		for (const t of teamsAfter) {
 			expect(t.createdById).toBe(otherMember.id);
 		}
+	});
+});
+
+// ============================================
+// changePassword — sessionVersion (AP-QA-003)
+// ============================================
+
+describe("changePassword — sessionVersion", () => {
+	const CURRENT_PASSWORD = "correct horse battery staple";
+	const NEW_PASSWORD = "StrongP@ss1";
+
+	it("increments sessionVersion by exactly one on a successful change", async () => {
+		const passwordHash = await hashPassword(CURRENT_PASSWORD);
+		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
+
+		expectSuccess(
+			await changePassword(user.id, {
+				currentPassword: CURRENT_PASSWORD,
+				newPassword: NEW_PASSWORD,
+			})
+		);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.sessionVersion).toBe(user.sessionVersion + 1);
+	});
+
+	it("leaves sessionVersion unchanged when the current password is wrong", async () => {
+		const passwordHash = await hashPassword(CURRENT_PASSWORD);
+		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
+
+		expectError(
+			await changePassword(user.id, {
+				currentPassword: "wrong-password",
+				newPassword: NEW_PASSWORD,
+			})
+		);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.sessionVersion).toBe(user.sessionVersion);
+	});
+
+	it("leaves sessionVersion unchanged for a non-LOCAL account", async () => {
+		const user = await createTestUser({ authProvider: "GITHUB" });
+
+		expectError(
+			await changePassword(user.id, {
+				currentPassword: CURRENT_PASSWORD,
+				newPassword: NEW_PASSWORD,
+			})
+		);
+
+		const updated = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(updated?.sessionVersion).toBe(user.sessionVersion);
+	});
+});
+
+// ============================================
+// changePassword — clears a pending password reset (AP-QA-006)
+// ============================================
+
+describe("changePassword — clears a pending password reset (AP-QA-006)", () => {
+	it("nulls the pending reset token hash and expiry on a successful change", async () => {
+		const currentPassword = "correct horse battery staple";
+		const newPassword = "StrongP@ss1";
+		const passwordHash = await hashPassword(currentPassword);
+		const user = await createTestUser({ passwordHash, authProvider: "LOCAL" });
+
+		await prisma.user.update({
+			where: { id: user.id },
+			data: {
+				passwordResetTokenHash: createHash("sha256")
+					.update("a".repeat(64), "utf8")
+					.digest("hex"),
+				passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000),
+			},
+		});
+
+		expectSuccess(
+			await changePassword(user.id, { currentPassword, newPassword })
+		);
+
+		const updated = await prisma.user.findUniqueOrThrow({
+			where: { id: user.id },
+		});
+		expect(updated.passwordResetTokenHash).toBeNull();
+		expect(updated.passwordResetExpires).toBeNull();
 	});
 });

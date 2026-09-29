@@ -1,7 +1,8 @@
+import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import { RootProvider } from "fumadocs-ui/provider/next";
 import Image from "next/image";
-import { getPageMap } from "nextra/page-map";
-import { Footer, Layout, Navbar } from "nextra-theme-docs";
 import type { ReactNode } from "react";
+import { source } from "@/lib/docs-source";
 
 export const metadata = {
 	title: {
@@ -15,57 +16,46 @@ interface DocsLayoutPageProps {
 	children: ReactNode;
 }
 
-const navbar = (
-	<Navbar
-		logo={
-			<div className="flex items-center gap-2">
-				<Image
-					alt="TEA Platform"
-					className="dark:hidden"
-					height={28}
-					src="/images/logos/tea-logo-icon-light.png"
-					width={32}
-				/>
-				<Image
-					alt="TEA Platform"
-					className="hidden dark:block"
-					height={28}
-					src="/images/logos/tea-logo-icon-dark.png"
-					width={32}
-				/>
-				<span className="font-bold text-lg">TEA Docs</span>
-			</div>
-		}
-		projectLink="https://github.com/alan-turing-institute/AssurancePlatform"
-	/>
+const navTitle = (
+	<div className="flex items-center gap-2">
+		<Image
+			alt="TEA Platform"
+			className="dark:hidden"
+			height={28}
+			src="/images/logos/tea-logo-icon-light.png"
+			width={32}
+		/>
+		<Image
+			alt="TEA Platform"
+			className="hidden dark:block"
+			height={28}
+			src="/images/logos/tea-logo-icon-dark.png"
+			width={32}
+		/>
+		<span className="font-bold text-lg">TEA Docs</span>
+	</div>
 );
 
-const footer = (
-	<Footer>
-		<div className="flex w-full flex-col items-center sm:flex-row sm:justify-between">
-			<span>MIT {new Date().getFullYear()} © Alan Turing Institute</span>
-			<span className="text-muted-foreground text-sm">
-				Trustworthy and Ethical Assurance Platform
-			</span>
-		</div>
-	</Footer>
-);
-
-export default async function DocsLayoutPage({
-	children,
-}: DocsLayoutPageProps) {
-	const pageMap = await getPageMap("/docs");
-
+export default function DocsLayoutPage({ children }: DocsLayoutPageProps) {
 	return (
-		<Layout
-			docsRepositoryBase="https://github.com/alan-turing-institute/AssurancePlatform/tree/main/content"
-			editLink="Edit this page on GitHub"
-			footer={footer}
-			navbar={navbar}
-			pageMap={pageMap}
-			sidebar={{ defaultMenuCollapseLevel: 1 }}
+		<RootProvider
+			search={{ options: { api: "/docs/api/search" } }}
+			theme={{ enabled: false }}
 		>
-			{children}
-		</Layout>
+			<DocsLayout
+				githubUrl="https://github.com/alan-turing-institute/AssurancePlatform"
+				nav={{ title: navTitle }}
+				sidebar={{ defaultOpenLevel: 1 }}
+				tree={source.getPageTree()}
+			>
+				{children}
+			</DocsLayout>
+			<footer className="flex w-full flex-col items-center gap-1 border-t px-6 py-4 sm:flex-row sm:justify-between">
+				<span>MIT {new Date().getFullYear()} © Alan Turing Institute</span>
+				<span className="text-muted-foreground text-sm">
+					Trustworthy and Ethical Assurance Platform
+				</span>
+			</footer>
+		</RootProvider>
 	);
 }

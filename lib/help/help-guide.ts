@@ -23,7 +23,7 @@ export interface HelpGuideEntry {
 }
 
 const ELEMENT_TYPES_DOCS_PAGE =
-	"/docs/curriculum/quick-reference/02-element-types";
+	"/docs/platform-guide/reference/02-element-types";
 
 /**
  * The full set of element types a case can contain, matching the Prisma

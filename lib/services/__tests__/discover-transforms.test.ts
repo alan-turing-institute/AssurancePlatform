@@ -27,6 +27,7 @@ const BASE_SUMMARY: PublishableItemSummary = {
 	authors: "Ada Lovelace",
 	featureImageUrl: null,
 	publishedAt: new Date("2026-08-01T00:00:00.000Z"),
+	archivedAt: null,
 };
 
 function detailWith(content: unknown): PublishableItemDetail {
@@ -47,6 +48,7 @@ describe("transformPublishableItemForApi", () => {
 			authors: "Ada Lovelace",
 			featureImageUrl: null,
 			publishedAt: "2026-08-01T00:00:00.000Z",
+			archivedAt: null,
 		});
 	});
 });

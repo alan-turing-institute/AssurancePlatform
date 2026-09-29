@@ -1,0 +1,47 @@
+---
+title: "Check your justification process"
+description: Test how you turn broad principles into reviewable project actions.
+---
+
+import { Quiz, ConfidenceRating } from "@/components/docs/curriculum/quiz-components";
+import { ModuleProgressProvider } from "@/components/docs/curriculum/module-progress-context";
+import ModuleProgressTracker from "@/components/docs/curriculum/module-progress-tracker";
+import { steepingTasks } from "./tasks";
+import { steepingQuiz } from "./questions";
+
+export const PageContent = ({ children }) => {
+  return (
+    <ModuleProgressProvider
+      courseId="tea-trainee"
+      moduleId="letting-the-tea-steep"
+      tasks={steepingTasks}
+      currentPage="assessment"
+    >
+      {children}
+      <ModuleProgressTracker show={true} />
+    </ModuleProgressProvider>
+  );
+};
+
+<PageContent>
+
+<Quiz
+  config={steepingQuiz}
+  taskId="knowledge-check"
+  useGlobalProgress={true}
+/>
+
+Rate your confidence in specifying one ethical concern as a claim, action and expected evidence.
+
+<ConfidenceRating
+  topic="Specifying one ethical concern as a claim, action and expected evidence"
+  showFeedback={true}
+/>
+
+---
+
+**Navigation:**
+- [Reflection](/docs/curriculum/tea-trainee/03-letting-the-tea-steep/reflection)
+- [Module Summary](/docs/curriculum/tea-trainee/03-letting-the-tea-steep/summary)
+
+</PageContent>

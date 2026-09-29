@@ -3,11 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import { useAutoScreenshot } from "../use-auto-screenshot";
 
-vi.mock("html2canvas", () => ({
-	default: vi.fn(),
+vi.mock("html-to-image", () => ({
+	toPng: vi.fn(),
 }));
 
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 const CASE_ID = "case-1";
 const TARGET_SELECTOR = "#screenshot-target";
@@ -36,12 +36,12 @@ describe("useAutoScreenshot — capture failure handling", () => {
 		target.remove();
 		resetLogSink();
 		vi.unstubAllEnvs();
-		vi.mocked(html2canvas).mockReset();
+		vi.mocked(toPng).mockReset();
 		fetchSpy.mockRestore();
 	});
 
-	it("logs an error carrying the caseId when html2canvas throws, and never uploads", async () => {
-		vi.mocked(html2canvas).mockRejectedValue(
+	it("logs an error carrying the caseId when toPng throws, and never uploads", async () => {
+		vi.mocked(toPng).mockRejectedValue(
 			new Error('Attempting to parse an unsupported color function "oklch"')
 		);
 		const entries = capture();
@@ -66,10 +66,8 @@ describe("useAutoScreenshot — capture failure handling", () => {
 		);
 	});
 
-	it("skips the upload and logs a warning when html2canvas returns a degenerate capture", async () => {
-		vi.mocked(html2canvas).mockResolvedValue({
-			toDataURL: () => "",
-		} as unknown as HTMLCanvasElement);
+	it("skips the upload and logs a warning when toPng returns a degenerate capture", async () => {
+		vi.mocked(toPng).mockResolvedValue("");
 		const entries = capture();
 
 		const { result } = renderHook(() =>

@@ -54,6 +54,10 @@ export const createElementSchema = z.strictObject({
 	// applicability, requiredness, and existence are enforced in
 	// element-service.ts, matching the citedElementId pattern above.
 	moduleReferenceId: z.string().uuid().nullable().optional(),
+	// How a MODULE is embedded — required for MODULE at the Prisma
+	// validation layer (lib/schemas/element-validation.ts's REQUIRED_FIELDS);
+	// not applicable to any other type. Only shape is validated here.
+	moduleEmbedType: z.enum(["COPY", "REFERENCE"]).optional(),
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	// Same-case, exists, not-deleted, not-self checks are enforced in
 	// element-service.ts, mirroring the batch path

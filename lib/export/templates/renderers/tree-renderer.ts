@@ -12,7 +12,7 @@ import { ELEMENT_TYPE_LABELS } from "../../types";
 /**
  * Options for rendering tree elements
  */
-export interface TreeRenderOptions {
+interface TreeRenderOptions {
 	excludeTypes?: ElementType[];
 	includeSandbox?: boolean;
 	includeTypes?: ElementType[];
@@ -22,7 +22,7 @@ export interface TreeRenderOptions {
 /**
  * Rendered element with metadata
  */
-export interface RenderedElement {
+interface RenderedElement {
 	blocks: ContentBlock[];
 	depth: number;
 	node: TreeNode;
@@ -66,10 +66,7 @@ export function shouldIncludeElement(
  * - Description
  * - Type-specific fields (assumption, justification, context, url)
  */
-export function renderElementAsBlocks(
-	node: TreeNode,
-	depth: number
-): ContentBlock[] {
+function renderElementAsBlocks(node: TreeNode, depth: number): ContentBlock[] {
 	const blocks: ContentBlock[] = [];
 	const headingLevel = Math.min(depth + 2, 6) as 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -141,30 +138,6 @@ export function renderElementAsBlocks(
 				? `Defeats: ${node.defeatsElementId}`
 				: "Yes",
 		});
-	}
-
-	return blocks;
-}
-
-/**
- * Recursively render tree nodes as a flat list of content blocks
- *
- * Traverses the tree depth-first, rendering each element in document order.
- */
-export function renderTreeAsBlocks(
-	node: TreeNode,
-	depth: number,
-	options: TreeRenderOptions = {}
-): ContentBlock[] {
-	const blocks: ContentBlock[] = [];
-
-	if (shouldIncludeElement(node, depth, options)) {
-		blocks.push(...renderElementAsBlocks(node, depth));
-	}
-
-	// Process children
-	for (const child of node.children ?? []) {
-		blocks.push(...renderTreeAsBlocks(child, depth + 1, options));
 	}
 
 	return blocks;
