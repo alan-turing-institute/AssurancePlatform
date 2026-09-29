@@ -1,6 +1,17 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { afterAll, afterEach } from "vitest";
 import { workerDatabaseName } from "./scripts/test-db-config";
+
+// Every worker gets its own throwaway uploads root, so integration tests
+// that write real files (the private-media adversarial suite) never touch
+// this worktree's own `uploads/` directory. `UPLOADS_DIR` is read once at
+// import time by `blob-storage-service.ts`, so this must run before
+// anything in this process imports it — same ordering constraint as
+// DATABASE_URL below.
+process.env.UPLOADS_DIR = mkdtempSync(join(tmpdir(), "tea-uploads-"));
 
 // Redirect this worker onto its own throwaway database, cloned from the
 // migrated template by globalSetup (setup-test-db.ts). This MUST happen
@@ -76,7 +87,9 @@ afterEach(async () => {
 	}
 });
 
-// Cleanup pool on process exit
+// Cleanup pool and the worker's throwaway uploads root on process exit
 afterAll(async () => {
 	await cleanupPool.end();
+	const { rm } = await import("node:fs/promises");
+	await rm(process.env.UPLOADS_DIR ?? "", { recursive: true, force: true });
 });

@@ -22,6 +22,10 @@ pids
 *.seed
 *.pid.lock
 
+# Local dev uploads (stored in Azure Blob Storage in production; UPLOADS_DIR
+# for self-hosted local storage)
+uploads/
+
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
