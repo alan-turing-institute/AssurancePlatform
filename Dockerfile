@@ -78,6 +78,12 @@ RUN \
   addgroup -g 1001 -S nodejs; \
   adduser -S nextjs -u 1001
 
+# Local upload root (UPLOADS_DIR default: <cwd>/uploads — the standalone
+# server chdir()s here, so this is where the app writes/reads local uploads).
+# Created and owned by the runtime user up front so a fresh volume mounted
+# over it is writable.
+RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
+
 COPY --from=builder --link /app/public ./public
 
 # Automatically leverage output traces to reduce image size

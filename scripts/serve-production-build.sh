@@ -144,8 +144,10 @@ DATABASE_URL="$db_url" SEED_USER_PASSWORD="$seed_password" \
 
 echo "== 6/6 start standalone server on :$port"
 # USE_LOCAL_STORAGE: a production build has no Azure Blob settings here, so without it every upload
-# route returns "storage not configured". Files land in the standalone folder's public/uploads,
-# which is disposable with everything else this script creates.
+# route returns "storage not configured". Files land under <standalone>/uploads (UPLOADS_DIR's
+# default, <cwd>/uploads — Next's generated standalone server.js chdir()s to its own folder on
+# startup, so that's where this server's process.cwd() resolves to), which is disposable with
+# everything else this script creates.
 DATABASE_URL="$db_url" NEXTAUTH_SECRET="$secret" NEXTAUTH_URL="http://localhost:${port}" PORT="$port" HOSTNAME=127.0.0.1 \
 	USE_LOCAL_STORAGE=true nohup node "$REPO_ROOT/.next/standalone/server.js" >"$server_log" 2>&1 &
 pid=$!

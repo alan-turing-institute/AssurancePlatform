@@ -1,10 +1,14 @@
 import { logger } from "@/lib/logger";
+import { toMediaKey } from "@/lib/media-key";
+import { type MediaFetchResult, mediaEtag } from "@/lib/media-response";
+import { resolvePublicFeatureImageAddress } from "@/lib/media-routes";
 import { prisma } from "@/lib/prisma";
 import {
 	type PublishedSnapshotMeta,
 	publishedSnapshotMetaSchema,
 } from "@/lib/schemas/publishable-item";
 import { getSectorDisplayName } from "@/lib/sectors";
+import { readMedia } from "@/lib/services/file-storage-service";
 import type { PublishableItemType } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -85,7 +89,16 @@ function toSummary(record: PublishedRecord): PublishableItemSummary {
 		// name).
 		sector: getSectorDisplayName(meta.caseInformation?.sector),
 		authors: meta.caseInformation?.authors ?? null,
-		featureImageUrl: meta.caseInformation?.featureImageUrl ?? null,
+		// The snapshot's raw stored value never leaves the server: an internal
+		// key (or a legacy `/uploads/...`/blob address from before publish-time
+		// copies existed) is projected to the public, version-scoped route
+		// address; a genuine external address and an empty value pass through
+		// unchanged.
+		featureImageUrl: resolvePublicFeatureImageAddress(
+			record.slug,
+			record.id,
+			meta.caseInformation?.featureImageUrl ?? null
+		),
 		publishedAt: record.createdAt,
 		archivedAt: record.archivedAt,
 	};
@@ -136,4 +149,46 @@ export async function getPublishedItemBySlug(
 		log.error("Failed to fetch published item by slug", { error });
 		return { error: "Failed to fetch published item" };
 	}
+}
+
+/**
+ * Fetches a published item's feature-image bytes for the public,
+ * version-scoped media route — anonymous, no access check, but scoped
+ * to exactly the row Discover currently serves for `slug` (`isCurrent:
+ * true`, which an archived copy stays until its case is permanently
+ * deleted). `versionId` must match that row's own id: a superseded version's
+ * address, or any id that isn't the current row, resolves to `not-found`
+ * rather than serving stale content — so republishing changes the address
+ * and the old one stops working immediately, not just once caches expire.
+ */
+export async function getPublishedItemMedia(
+	slug: string,
+	versionId: string
+): Promise<MediaFetchResult> {
+	const record = await prisma.publishedAssuranceCase.findFirst({
+		where: { slug, isCurrent: true },
+		select: { id: true, content: true },
+	});
+	if (!record || record.id !== versionId) {
+		return { status: "not-found" };
+	}
+
+	const meta = readSnapshotMeta(record.content);
+	const stored = meta.caseInformation?.featureImageUrl;
+	if (!stored) {
+		return { status: "not-found" };
+	}
+
+	const key = toMediaKey(stored);
+	const media = await readMedia(key);
+	if (!media) {
+		return { status: "not-found" };
+	}
+
+	return {
+		status: "ok",
+		data: media.data,
+		contentType: media.contentType,
+		etag: mediaEtag(key),
+	};
 }

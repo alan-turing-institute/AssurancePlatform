@@ -223,6 +223,13 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^Remove your \d+ integrations? before deleting your account$/,
 		factory: conflict,
 	},
+	// `case-information-service.ts`'s `upsertCaseInformation`: a
+	// `featureImageUrl` that is neither empty, this case's own feature-image
+	// route address, nor a genuine external `https://` address (a bare
+	// storage key, another case's route address, a legacy
+	// `/uploads/...`/blob address, or an `http://` address) is a validation
+	// failure (400), not a 500.
+	{ pattern: /^featureImageUrl must be/, factory: () => validationError("") },
 ];
 
 /**

@@ -60,11 +60,16 @@ const CASE_ID_FROM_URL_PATTERN = /\/case\/([a-f0-9-]+)/;
 const TINY_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
-// next/image rewrites `src` through `/_next/image?url=<url-encoded>` in a
-// production build (`images.unoptimized` is only true in dev — see
-// `next.config.mjs`), so the uploaded image's path has to be matched
-// tolerant of that encoding rather than as an exact `/uploads/...` string.
-const UPLOADED_IMAGE_PATTERN = /(?:\/|%2F)uploads(?:\/|%2F)/;
+// The Discover render sites still resize the feature image through
+// next/image (only private-media routes get `unoptimized`), so in a
+// production build `src` goes through
+// `/_next/image?url=<url-encoded>` (`images.unoptimized` is only true in
+// dev — see `next.config.mjs`). The uploaded image now resolves to the
+// public, version-scoped route (`/api/public/discover/<slug>/image/
+// <versionId>`), so the match has to be tolerant of that URL-encoding
+// rather than an exact string.
+const UPLOADED_IMAGE_PATTERN =
+	/(?:\/|%2F)api(?:\/|%2F)public(?:\/|%2F)discover(?:\/|%2F)/;
 
 test.describe("ADR 0003 — publish journey", () => {
 	let caseId: string | undefined;

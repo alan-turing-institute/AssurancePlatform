@@ -6,6 +6,8 @@ import { requireCronSecret } from "@/lib/services/cron-auth";
 import {
 	archivePublishedCopies,
 	DRAFT_PUBLISH_FIELDS,
+	deleteMediaKeys,
+	extractPublishedImageKey,
 	removePublishedCopies,
 } from "@/lib/services/publish-service";
 import type { ServiceResult } from "@/types/service";
@@ -172,6 +174,7 @@ export async function softDeleteCase(
 			return { error: "Case is already in trash" };
 		}
 
+		let removedKeys: string[] = [];
 		await prisma.$transaction(async (tx) => {
 			// Matches only a case not already in Trash — closes the race against
 			// a concurrent trash of the same case between the check above and
@@ -189,13 +192,17 @@ export async function softDeleteCase(
 				select: { id: true },
 			});
 			if (currentPublished) {
-				if (publishedCopy === "archive") {
-					await archivePublishedCopies(tx, [caseId], existingCase.createdById);
-				} else {
-					await removePublishedCopies(tx, [caseId]);
-				}
+				removedKeys =
+					publishedCopy === "archive"
+						? await archivePublishedCopies(
+								tx,
+								[caseId],
+								existingCase.createdById
+							)
+						: await removePublishedCopies(tx, [caseId]);
 			}
 		});
+		await deleteMediaKeys(removedKeys);
 
 		return { data: true };
 	} catch (error) {
@@ -381,17 +388,20 @@ export async function removeArchivedCopy(
 	publishedId: string
 ): ServiceResult {
 	try {
-		const removed = await prisma.$transaction(async (tx) => {
+		// `undefined` (never found / lost the race) is distinct from `null`
+		// (found and removed, but held no image) — only the latter still needs
+		// `deleteMediaKeys` called on it.
+		const removedKey = await prisma.$transaction(async (tx) => {
 			const row = await tx.publishedAssuranceCase.findFirst({
 				where: {
 					id: publishedId,
 					archivedOwnerId: userId,
 					archivedAt: { not: null },
 				},
-				select: { assuranceCaseId: true },
+				select: { assuranceCaseId: true, content: true },
 			});
 			if (!row) {
-				return false;
+				return;
 			}
 
 			// Re-checks the same guard at delete time, closing the race against a
@@ -406,7 +416,7 @@ export async function removeArchivedCopy(
 				},
 			});
 			if (deleted.count === 0) {
-				return false;
+				return;
 			}
 
 			if (row.assuranceCaseId) {
@@ -415,11 +425,14 @@ export async function removeArchivedCopy(
 					data: DRAFT_PUBLISH_FIELDS,
 				});
 			}
-			return true;
+			return extractPublishedImageKey(row.content);
 		});
 
-		if (!removed) {
+		if (removedKey === undefined) {
 			return { error: "Archived copy not found" };
+		}
+		if (removedKey) {
+			await deleteMediaKeys([removedKey]);
 		}
 
 		return { data: true };

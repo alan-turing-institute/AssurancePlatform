@@ -22,7 +22,13 @@ afterEach(() => {
 });
 
 const NON_EXISTENT_CASE_ID = "00000000-0000-0000-0000-000000000000";
-const UPLOADED_PATH_PATTERN = /^\/uploads\/cases\//;
+// The raw stored key — a bare key, no `/uploads/` prefix. The route's own
+// JSON response never carries this: it always returns the case's own
+// `/api/cases/<id>/media/feature` route address instead (with a `?v=` query
+// that changes on every upload), asserted separately below.
+const UPLOADED_KEY_PATTERN = /^cases\//;
+const FEATURE_IMAGE_ROUTE_PATTERN = (caseId: string) =>
+	new RegExp(`^/api/cases/${caseId}/media/feature\\?v=[0-9a-f]{12}$`);
 
 // PNG's fixed 8-byte signature — real magic bytes, so the content-signature
 // check (AP-QA-007) accepts these fixtures as a genuine PNG rather than
@@ -105,19 +111,22 @@ describe("POST /api/cases/[id]/information/image", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body.featureImageUrl).toMatch(UPLOADED_PATH_PATTERN);
-		writtenPaths.push(body.featureImageUrl);
+		expect(body.featureImageUrl).toMatch(
+			FEATURE_IMAGE_ROUTE_PATTERN(testCase.id)
+		);
 
 		const { getCaseInformation } = await import(
 			"@/lib/services/case-information-service"
 		);
 		const result = await getCaseInformation(owner.id, testCase.id);
-		expect("data" in result && result.data?.featureImageUrl).toBe(
-			body.featureImageUrl
-		);
+		const storedKey = "data" in result ? result.data?.featureImageUrl : null;
+		expect(storedKey).toMatch(UPLOADED_KEY_PATTERN);
+		if (storedKey) {
+			writtenPaths.push(storedKey);
+		}
 	});
 
-	it("deletes the previous image when a new one is uploaded", async () => {
+	it("deletes the previous stored image when a new one is uploaded, and the route address changes", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
@@ -125,6 +134,10 @@ describe("POST /api/cases/[id]/information/image", () => {
 		const { POST } = await import(
 			"@/app/api/cases/[id]/information/image/route"
 		);
+		const { getCaseInformation } = await import(
+			"@/lib/services/case-information-service"
+		);
+
 		const firstReq = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
 			{ method: "POST", body: buildImageFormData("first.png") }
@@ -133,6 +146,9 @@ describe("POST /api/cases/[id]/information/image", () => {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 		const firstBody = await firstResponse.json();
+		const firstResult = await getCaseInformation(owner.id, testCase.id);
+		const firstKey =
+			"data" in firstResult ? firstResult.data?.featureImageUrl : null;
 
 		const secondReq = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
@@ -142,12 +158,25 @@ describe("POST /api/cases/[id]/information/image", () => {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 		const secondBody = await secondResponse.json();
-		writtenPaths.push(secondBody.featureImageUrl);
+		const secondResult = await getCaseInformation(owner.id, testCase.id);
+		const secondKey =
+			"data" in secondResult ? secondResult.data?.featureImageUrl : null;
+		if (secondKey) {
+			writtenPaths.push(secondKey);
+		}
 
+		// The route address changes on every re-upload (its `?v=` query is
+		// derived from the new key), so a browser that already cached bytes for
+		// the old address fetches the new one instead of reusing them.
+		expect(secondBody.featureImageUrl).toMatch(
+			FEATURE_IMAGE_ROUTE_PATTERN(testCase.id)
+		);
 		expect(secondBody.featureImageUrl).not.toBe(firstBody.featureImageUrl);
+		// The underlying stored key is what actually changed.
+		expect(secondKey).not.toBe(firstKey);
 
 		const { fileExists } = await import("@/lib/services/file-storage-service");
-		expect(await fileExists(firstBody.featureImageUrl)).toBe(false);
+		expect(await fileExists(firstKey ?? "")).toBe(false);
 	});
 
 	it("returns 400 when no file is provided", async () => {

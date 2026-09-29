@@ -7,7 +7,10 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { ChangePasswordInput } from "@/lib/schemas/auth";
 import { countIntegrationsOwnedBy } from "@/lib/services/integration-registry-service";
-import { archivePublishedCopies } from "@/lib/services/publish-service";
+import {
+	archivePublishedCopies,
+	deleteMediaKeys,
+} from "@/lib/services/publish-service";
 import {
 	validateEmail,
 	validatePassword,
@@ -430,7 +433,8 @@ export async function deleteAccount(
 			}
 		}
 
-		await runAccountDeletionTransaction(userId);
+		const publishedImageKeys = await runAccountDeletionTransaction(userId);
+		await deleteMediaKeys(publishedImageKeys);
 
 		await sendAccountDeletedEmailBestEffort(userId, user.email, user.username);
 
@@ -559,8 +563,10 @@ async function partitionCasesToKeepOrTrash(
  * Callers are responsible for their own pre-flight checks
  * (`checkDeletable`, password) before calling this.
  */
-async function runAccountDeletionTransaction(userId: string): Promise<void> {
-	await prisma.$transaction(
+async function runAccountDeletionTransaction(
+	userId: string
+): Promise<string[]> {
+	return await prisma.$transaction(
 		async (tx) => {
 			const systemUserId = await getOrCreateSystemUser(tx);
 
@@ -581,6 +587,10 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 				});
 			}
 
+			// Superseded-version image keys `archivePublishedCopies` deletes
+			// below — collected outside the `if` so the function always returns
+			// an array, empty when there was nothing to trash.
+			let publishedImageKeys: string[] = [];
 			if (toTrash.length > 0) {
 				await tx.assuranceCase.updateMany({
 					where: { id: { in: toTrash } },
@@ -594,7 +604,7 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 				// `ownerId: null` because the deleted owner's account is gone —
 				// nobody can remove these through the app afterwards; that needs
 				// the platform team, by hand.
-				await archivePublishedCopies(tx, toTrash, null);
+				publishedImageKeys = await archivePublishedCopies(tx, toTrash, null);
 			}
 
 			// Handle teams created by user
@@ -662,6 +672,8 @@ async function runAccountDeletionTransaction(userId: string): Promise<void> {
 			// Delete the user (cascades: RefreshToken, TeamMember, CasePermission
 			// held BY this user, GitHubRepository)
 			await tx.user.delete({ where: { id: userId } });
+
+			return publishedImageKeys;
 		},
 		{
 			timeout: DELETION_TRANSACTION_TIMEOUT_MS,
@@ -694,7 +706,8 @@ export async function deleteAccountForRetention(userId: string): ServiceResult {
 			return { error: deletable.error };
 		}
 
-		await runAccountDeletionTransaction(userId);
+		const publishedImageKeys = await runAccountDeletionTransaction(userId);
+		await deleteMediaKeys(publishedImageKeys);
 
 		await sendAccountDeletedEmailBestEffort(userId, user.email, user.username);
 

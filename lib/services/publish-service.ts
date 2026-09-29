@@ -1,9 +1,18 @@
+import { randomUUID } from "node:crypto";
+import { basename } from "node:path";
 import { logger } from "@/lib/logger";
+import {
+	isCaseFeatureImageKey,
+	isExternalMediaUrl,
+	toMediaKey,
+} from "@/lib/media-key";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
 import { exportCase } from "@/lib/services/case-export-service";
 import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
+import { copyMedia, deleteMedia } from "@/lib/services/file-storage-service";
 import { capturePluginDataForSnapshot } from "@/lib/services/plugin-data-service";
 import type {
 	FullPublishStatus,
@@ -48,19 +57,139 @@ export const DRAFT_PUBLISH_FIELDS = {
 	markedReadyById: null,
 };
 
+/** The key prefix under which every publish-time image copy lives — `published/<random id>/<filename>`. Only keys under this prefix are ever deleted by the clean-up helpers below; a row's raw, uncopied stored value never is. */
+const PUBLISHED_MEDIA_PREFIX = "published";
+
+/**
+ * Reads a stored snapshot's `caseInformation.featureImageUrl`, and only when
+ * it is one of THIS module's own publish-time copies (the `published/`
+ * prefix) — never a live case's raw key, and never an older snapshot's
+ * uncopied `/uploads/...`/blob value (from before this module started
+ * copying images at publish time), both of which stay the live case's
+ * concern, not a copy this module owns and may delete.
+ */
+export function extractPublishedImageKey(content: unknown): string | null {
+	const parsed = publishedSnapshotMetaSchema.safeParse(content);
+	if (!parsed.success) {
+		return null;
+	}
+	const url = parsed.data.caseInformation?.featureImageUrl;
+	if (!url?.startsWith(`${PUBLISHED_MEDIA_PREFIX}/`)) {
+		return null;
+	}
+	return url;
+}
+
+/**
+ * Deletes a batch of `published/` copy keys, best-effort — used after a
+ * transaction that removed the database rows pointing at them has already
+ * committed, since storage writes aren't transactional with Postgres. A
+ * failed delete is logged, not thrown: the row is gone either way, and an
+ * orphaned file is a known, accepted risk, not a caller-visible failure.
+ */
+export async function deleteMediaKeys(keys: string[]): Promise<void> {
+	await Promise.all(
+		keys.map(async (key) => {
+			const deleted = await deleteMedia(key);
+			if (!deleted) {
+				log.warn("Failed to delete a published-copy file", { key });
+			}
+		})
+	);
+}
+
+/**
+ * Copies a case's current feature image into a publish-time, version-scoped
+ * key before the snapshot is written, so later edits to the live image can
+ * never affect — or break — a published or archived Discover page. A no-op,
+ * returning `content` unchanged (and logging why), when the case has no
+ * feature image, when its recorded value is a genuine external address
+ * (nothing of ours to copy — not logged, this is the normal case), when the
+ * recorded key doesn't belong to this case (`isCaseFeatureImageKey` — the
+ * only way that can happen is a value written before the case-information
+ * write path validated it, or a row edited directly), or when the copy
+ * itself fails (the snapshot then carries whatever `composeSnapshotContent`
+ * already captured, exactly as it did before this copy step existed — no
+ * regression, just no protection for that one publish). `copiedKey` is
+ * `null` unless a copy actually happened, so the caller only ever cleans up
+ * a copy it truly made.
+ */
+async function copyFeatureImageForSnapshot(
+	caseId: string,
+	content: Record<string, unknown>
+): Promise<{ content: Record<string, unknown>; copiedKey: string | null }> {
+	const stored = extractStoredFeatureImageUrl(content);
+	if (!stored || isExternalMediaUrl(stored)) {
+		return { content, copiedKey: null };
+	}
+
+	const sourceKey = toMediaKey(stored);
+	if (!isCaseFeatureImageKey(caseId, sourceKey)) {
+		log.warn(
+			"Skipped publish-time image copy: key does not belong to this case",
+			{
+				caseId,
+			}
+		);
+		return { content, copiedKey: null };
+	}
+
+	const newKey = `${PUBLISHED_MEDIA_PREFIX}/${randomUUID()}/${basename(sourceKey)}`;
+	const copied = await copyMedia(sourceKey, newKey);
+	if (!copied) {
+		log.warn("Failed to copy feature image for publish snapshot", { caseId });
+		return { content, copiedKey: null };
+	}
+
+	// `publishedSnapshotMetaSchema`'s successful parse above (inside
+	// `extractStoredFeatureImageUrl`) is what makes this narrowing safe: a
+	// `stored` value only exists when `content.caseInformation` genuinely has
+	// that shape.
+	const existingCaseInformation = content.caseInformation as Record<
+		string,
+		unknown
+	>;
+	return {
+		content: {
+			...content,
+			caseInformation: { ...existingCaseInformation, featureImageUrl: newKey },
+		},
+		copiedKey: newKey,
+	};
+}
+
+/** The live, uncopied value `composeSnapshotContent` just captured — read via the same defensive schema `extractPublishedImageKey` uses, so a malformed snapshot degrades to "no image" rather than throwing. */
+function extractStoredFeatureImageUrl(content: unknown): string | null {
+	const parsed = publishedSnapshotMetaSchema.safeParse(content);
+	if (!parsed.success) {
+		return null;
+	}
+	return parsed.data.caseInformation?.featureImageUrl ?? null;
+}
+
 /**
  * Removes every published row for the given cases and resets each case's
  * publish fields to draft — the "remove" half of the published-copy choice,
  * and the default when no choice is given. Runs inside the caller's
- * transaction; a no-op for an empty list.
+ * transaction; a no-op for an empty list. Storage isn't transactional, so
+ * this returns the `published/` copy keys the deleted rows held — the
+ * caller deletes those files once its transaction has committed.
  */
 export async function removePublishedCopies(
 	tx: TransactionClient,
 	caseIds: string[]
-): Promise<void> {
+): Promise<string[]> {
 	if (caseIds.length === 0) {
-		return;
+		return [];
 	}
+	const rows = await tx.publishedAssuranceCase.findMany({
+		where: { assuranceCaseId: { in: caseIds } },
+		select: { content: true },
+	});
+	const keys = rows
+		.map((row) => extractPublishedImageKey(row.content))
+		.filter((key): key is string => key !== null);
+
 	await tx.publishedAssuranceCase.deleteMany({
 		where: { assuranceCaseId: { in: caseIds } },
 	});
@@ -68,6 +197,7 @@ export async function removePublishedCopies(
 		where: { id: { in: caseIds } },
 		data: DRAFT_PUBLISH_FIELDS,
 	});
+	return keys;
 }
 
 /**
@@ -80,15 +210,17 @@ export async function removePublishedCopies(
  * `case-trash-service.ts`); `null` when nobody can — used for account
  * deletion, where the deleted owner's account is gone. Runs inside the
  * caller's transaction; a no-op for an empty list or for cases with no
- * current published row.
+ * current published row. Returns the `published/` copy keys the deleted
+ * (superseded) rows held — never the surviving, archived row's own copy —
+ * so the caller can delete those files once its transaction has committed.
  */
 export async function archivePublishedCopies(
 	tx: TransactionClient,
 	caseIds: string[],
 	ownerId: string | null
-): Promise<void> {
+): Promise<string[]> {
 	if (caseIds.length === 0) {
-		return;
+		return [];
 	}
 
 	const currentRows = await tx.publishedAssuranceCase.findMany({
@@ -97,8 +229,16 @@ export async function archivePublishedCopies(
 	});
 	const currentIds = currentRows.map((row) => row.id);
 	if (currentIds.length === 0) {
-		return;
+		return [];
 	}
+
+	const supersededRows = await tx.publishedAssuranceCase.findMany({
+		where: { assuranceCaseId: { in: caseIds }, id: { notIn: currentIds } },
+		select: { content: true },
+	});
+	const keys = supersededRows
+		.map((row) => extractPublishedImageKey(row.content))
+		.filter((key): key is string => key !== null);
 
 	await tx.publishedAssuranceCase.deleteMany({
 		where: { assuranceCaseId: { in: caseIds }, id: { notIn: currentIds } },
@@ -111,6 +251,7 @@ export async function archivePublishedCopies(
 		where: { id: { in: currentIds }, archivedAt: null },
 		data: { archivedAt: new Date(), archivedOwnerId: ownerId },
 	});
+	return keys;
 }
 
 // ============================================
@@ -213,6 +354,55 @@ async function swapCurrentPublishedVersion(
 	});
 }
 
+/**
+ * Shared body for `publishAssuranceCase` and `updatePublishedCase`: copies
+ * the case's current feature image into its own publish-time key before
+ * anything is written to the database (so a republish or a live edit
+ * afterwards can never touch this snapshot's picture), runs the caller's own
+ * transaction, and on any failure deletes the copy it just made — the copy
+ * happens outside the transaction, so a failure after it but before commit
+ * would otherwise leave it orphaned. Translates a case trashed
+ * mid-transaction into "Case not found"; anything else into `failureMessage`.
+ */
+async function publishSnapshot(
+	caseId: string,
+	contentResult: { data: Record<string, unknown> } | { error: string },
+	runTransaction: (
+		content: Prisma.InputJsonValue,
+		now: Date
+	) => Promise<{ id: string }>,
+	failureMessage: string
+): Promise<PublishResult> {
+	if ("error" in contentResult) {
+		return { error: contentResult.error };
+	}
+	const { content: preparedContent, copiedKey } =
+		await copyFeatureImageForSnapshot(caseId, contentResult.data);
+	// The composed snapshot is plain JSON but, as a plain object built from
+	// named interfaces (`CaseInformationSnapshot` etc.) with no index
+	// signature of their own, doesn't structurally satisfy `InputJsonObject`
+	// even though every value it can hold is a valid `InputJsonValue`.
+	// Routing through `unknown` is TS's own prescribed escape hatch for
+	// exactly this "no sufficient overlap" case (same pattern as
+	// `health-scoring-service.ts`) — not a blind `any`.
+	const content = preparedContent as unknown as Prisma.InputJsonValue;
+	const now = new Date();
+
+	try {
+		const row = await runTransaction(content, now);
+		return { data: { publishedId: row.id, publishedAt: now } };
+	} catch (error) {
+		if (copiedKey) {
+			await deleteMediaKeys([copiedKey]);
+		}
+		if (error instanceof CaseTrashedDuringTransactionError) {
+			return { error: "Case not found" };
+		}
+		log.error(failureMessage, { error });
+		return { error: failureMessage };
+	}
+}
+
 // ============================================
 // Service Functions
 // ============================================
@@ -299,70 +489,51 @@ export async function publishAssuranceCase(
 	// information) — shared with `updatePublishedCase`, see
 	// `composeSnapshotContent` above.
 	const contentResult = await composeSnapshotContent(userId, caseId);
-	if ("error" in contentResult) {
-		return { error: contentResult.error };
-	}
-	// The composed snapshot is plain JSON but, as a plain object built from
-	// named interfaces (`CaseInformationSnapshot` etc.) with no index
-	// signature of their own, doesn't structurally satisfy `InputJsonObject`
-	// even though every value it can hold is a valid `InputJsonValue`.
-	// Routing through `unknown` is TS's own prescribed escape hatch for
-	// exactly this "no sufficient overlap" case (same pattern as
-	// `health-scoring-service.ts`) — not a blind `any`.
-	const content = contentResult.data as unknown as Prisma.InputJsonValue;
 
-	const now = new Date();
-
-	try {
-		// The case-row update runs FIRST, before any published-row write, so
-		// every transaction that can both trash and publish/republish a case
-		// locks the case row in the same order — `softDeleteCase` locks the
-		// case row first too, so the two can never deadlock waiting on each
-		// other's locks in reverse. Matches only a case still OUT of Trash —
-		// closes the race against a concurrent trash of this case between the
-		// permission check above and this transaction committing. Zero rows
-		// means the case was trashed in between; the caller below maps that to
-		// "Case not found", and nothing about the published row is written.
-		//
-		// Generating the slug and creating the row must share this same
-		// transaction — otherwise a concurrent first-publish of a same-named
-		// case could observe the same "no collision yet" result and both try
-		// to claim the identical slug (the table's unique index would then
-		// reject the second, surfacing as an opaque 500 rather than the
-		// numeric-suffix behaviour ADR 0003 §6 promises).
-		const publishedCase = await prisma.$transaction(async (tx) => {
-			const updateResult = await tx.assuranceCase.updateMany({
-				where: { id: caseId, deletedAt: null },
-				data: {
-					published: true,
-					publishedAt: now,
-					publishStatus: "PUBLISHED",
-				},
-			});
-			if (updateResult.count === 0) {
-				throw new CaseTrashedDuringTransactionError();
-			}
-			const slug = await generateUniqueSlug(assuranceCase.name, tx);
-			return await swapCurrentPublishedVersion(tx, {
-				caseId,
-				title: assuranceCase.name,
-				slug,
-				content,
-				description: description ?? null,
-				createdAt: now,
-			});
-		});
-
-		return {
-			data: { publishedId: publishedCase.id, publishedAt: now },
-		};
-	} catch (error) {
-		if (error instanceof CaseTrashedDuringTransactionError) {
-			return { error: "Case not found" };
-		}
-		log.error("Failed to publish case", { error });
-		return { error: "Failed to publish case" };
-	}
+	return publishSnapshot(
+		caseId,
+		contentResult,
+		(content, now) =>
+			// The case-row update runs FIRST, before any published-row write, so
+			// every transaction that can both trash and publish/republish a case
+			// locks the case row in the same order — `softDeleteCase` locks the
+			// case row first too, so the two can never deadlock waiting on each
+			// other's locks in reverse. Matches only a case still OUT of Trash —
+			// closes the race against a concurrent trash of this case between the
+			// permission check above and this transaction committing. Zero rows
+			// means the case was trashed in between; `publishSnapshot` maps that
+			// to "Case not found", and nothing about the published row is written.
+			//
+			// Generating the slug and creating the row must share this same
+			// transaction — otherwise a concurrent first-publish of a same-named
+			// case could observe the same "no collision yet" result and both try
+			// to claim the identical slug (the table's unique index would then
+			// reject the second, surfacing as an opaque 500 rather than the
+			// numeric-suffix behaviour ADR 0003 §6 promises).
+			prisma.$transaction(async (tx) => {
+				const updateResult = await tx.assuranceCase.updateMany({
+					where: { id: caseId, deletedAt: null },
+					data: {
+						published: true,
+						publishedAt: now,
+						publishStatus: "PUBLISHED",
+					},
+				});
+				if (updateResult.count === 0) {
+					throw new CaseTrashedDuringTransactionError();
+				}
+				const slug = await generateUniqueSlug(assuranceCase.name, tx);
+				return await swapCurrentPublishedVersion(tx, {
+					caseId,
+					title: assuranceCase.name,
+					slug,
+					content,
+					description: description ?? null,
+					createdAt: now,
+				});
+			}),
+		"Failed to publish case"
+	);
 }
 
 /**
@@ -396,7 +567,10 @@ export async function unpublishAssuranceCase(
 	}
 
 	try {
-		await prisma.$transaction((tx) => removePublishedCopies(tx, [caseId]));
+		const removedKeys = await prisma.$transaction((tx) =>
+			removePublishedCopies(tx, [caseId])
+		);
+		await deleteMediaKeys(removedKeys);
 
 		return { data: { success: true as const } };
 	} catch (error) {
@@ -574,52 +748,39 @@ export async function updatePublishedCase(
 	// Compose the JSON snapshot content — shared with `publishAssuranceCase`,
 	// see `composeSnapshotContent` above.
 	const contentResult = await composeSnapshotContent(userId, caseId);
-	if ("error" in contentResult) {
-		return { error: contentResult.error };
-	}
-	// See `publishAssuranceCase` above for why this cast is needed.
-	const content = contentResult.data as unknown as Prisma.InputJsonValue;
 
-	const now = new Date();
+	return publishSnapshot(
+		caseId,
+		contentResult,
+		(content, now) =>
+			// Create the new version in a transaction. The case-row update runs
+			// FIRST — see `publishAssuranceCase` above for why: every transaction
+			// that can both trash and publish/republish a case must lock the case
+			// row before touching the published row, matching the order
+			// `softDeleteCase` locks them in.
+			prisma.$transaction(async (tx) => {
+				const updateResult = await tx.assuranceCase.updateMany({
+					where: { id: caseId, deletedAt: null },
+					data: { publishedAt: now },
+				});
+				if (updateResult.count === 0) {
+					throw new CaseTrashedDuringTransactionError();
+				}
 
-	try {
-		// Create the new version in a transaction. The case-row update runs
-		// FIRST — see `publishAssuranceCase` above for why: every transaction
-		// that can both trash and publish/republish a case must lock the case
-		// row before touching the published row, matching the order
-		// `softDeleteCase` locks them in.
-		const newPublished = await prisma.$transaction(async (tx) => {
-			const updateResult = await tx.assuranceCase.updateMany({
-				where: { id: caseId, deletedAt: null },
-				data: { publishedAt: now },
-			});
-			if (updateResult.count === 0) {
-				throw new CaseTrashedDuringTransactionError();
-			}
-
-			// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
-			// across renames) — never regenerated here, even if
-			// `assuranceCase.name` has changed since first publish.
-			return await swapCurrentPublishedVersion(tx, {
-				caseId,
-				title: assuranceCase.name,
-				slug: currentPublished.slug,
-				content,
-				description: description ?? null,
-				createdAt: now,
-			});
-		});
-
-		return {
-			data: { publishedId: newPublished.id, publishedAt: now },
-		};
-	} catch (error) {
-		if (error instanceof CaseTrashedDuringTransactionError) {
-			return { error: "Case not found" };
-		}
-		log.error("Failed to update published case", { error });
-		return { error: "Failed to update published case" };
-	}
+				// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable
+				// across renames) — never regenerated here, even if
+				// `assuranceCase.name` has changed since first publish.
+				return await swapCurrentPublishedVersion(tx, {
+					caseId,
+					title: assuranceCase.name,
+					slug: currentPublished.slug,
+					content,
+					description: description ?? null,
+					createdAt: now,
+				});
+			}),
+		"Failed to update published case"
+	);
 }
 
 /**
