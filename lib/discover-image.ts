@@ -17,10 +17,10 @@ export const FALLBACK_IMAGE =
  * broken image instead of the Unsplash placeholder.
  *
  * A stored value this app wrote itself (the frozen snapshot's key, or a
- * legacy `/uploads/...`/blob address from before D5) resolves to the public,
- * version-scoped route address (D5) rather than the raw storage address — a
- * genuine external address passes through unchanged, since there is nothing
- * of ours to protect.
+ * legacy `/uploads/...`/blob address from an older snapshot) resolves to the
+ * public, version-scoped route address rather than the raw storage
+ * address — a genuine external address passes through unchanged, since
+ * there is nothing of ours to protect.
  */
 export function resolveFeatureImageSrc(
 	stored: string | null | undefined,

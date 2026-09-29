@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { toMediaKey } from "@/lib/media-key";
 import { type MediaFetchResult, mediaEtag } from "@/lib/media-response";
+import { resolvePublicFeatureImageAddress } from "@/lib/media-routes";
 import { prisma } from "@/lib/prisma";
 import {
 	type PublishedSnapshotMeta,
@@ -88,7 +89,16 @@ function toSummary(record: PublishedRecord): PublishableItemSummary {
 		// name).
 		sector: getSectorDisplayName(meta.caseInformation?.sector),
 		authors: meta.caseInformation?.authors ?? null,
-		featureImageUrl: meta.caseInformation?.featureImageUrl ?? null,
+		// The snapshot's raw stored value never leaves the server: an internal
+		// key (or a legacy `/uploads/...`/blob address from before publish-time
+		// copies existed) is projected to the public, version-scoped route
+		// address; a genuine external address and an empty value pass through
+		// unchanged.
+		featureImageUrl: resolvePublicFeatureImageAddress(
+			record.slug,
+			record.id,
+			meta.caseInformation?.featureImageUrl ?? null
+		),
 		publishedAt: record.createdAt,
 		archivedAt: record.archivedAt,
 	};
@@ -143,7 +153,7 @@ export async function getPublishedItemBySlug(
 
 /**
  * Fetches a published item's feature-image bytes for the public,
- * version-scoped media route (D5) — anonymous, no access check, but scoped
+ * version-scoped media route — anonymous, no access check, but scoped
  * to exactly the row Discover currently serves for `slug` (`isCurrent:
  * true`, which an archived copy stays until its case is permanently
  * deleted). `versionId` must match that row's own id: a superseded version's
