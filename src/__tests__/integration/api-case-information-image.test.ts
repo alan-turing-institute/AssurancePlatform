@@ -22,7 +22,11 @@ afterEach(() => {
 });
 
 const NON_EXISTENT_CASE_ID = "00000000-0000-0000-0000-000000000000";
-const UPLOADED_PATH_PATTERN = /^\/uploads\/cases\//;
+// The raw stored key (D3) — no `/uploads/` prefix, unlike the pre-D1 shape.
+// The route's own JSON response never carries this: it always returns the
+// fixed `/api/cases/<id>/media/feature` address instead (D6), asserted
+// separately below.
+const UPLOADED_KEY_PATTERN = /^cases\//;
 
 // PNG's fixed 8-byte signature — real magic bytes, so the content-signature
 // check (AP-QA-007) accepts these fixtures as a genuine PNG rather than
@@ -105,19 +109,22 @@ describe("POST /api/cases/[id]/information/image", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body.featureImageUrl).toMatch(UPLOADED_PATH_PATTERN);
-		writtenPaths.push(body.featureImageUrl);
+		expect(body.featureImageUrl).toBe(
+			`/api/cases/${testCase.id}/media/feature`
+		);
 
 		const { getCaseInformation } = await import(
 			"@/lib/services/case-information-service"
 		);
 		const result = await getCaseInformation(owner.id, testCase.id);
-		expect("data" in result && result.data?.featureImageUrl).toBe(
-			body.featureImageUrl
-		);
+		const storedKey = "data" in result ? result.data?.featureImageUrl : null;
+		expect(storedKey).toMatch(UPLOADED_KEY_PATTERN);
+		if (storedKey) {
+			writtenPaths.push(storedKey);
+		}
 	});
 
-	it("deletes the previous image when a new one is uploaded", async () => {
+	it("deletes the previous stored image when a new one is uploaded, though both responses carry the same route address", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
@@ -125,6 +132,10 @@ describe("POST /api/cases/[id]/information/image", () => {
 		const { POST } = await import(
 			"@/app/api/cases/[id]/information/image/route"
 		);
+		const { getCaseInformation } = await import(
+			"@/lib/services/case-information-service"
+		);
+
 		const firstReq = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
 			{ method: "POST", body: buildImageFormData("first.png") }
@@ -133,6 +144,9 @@ describe("POST /api/cases/[id]/information/image", () => {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 		const firstBody = await firstResponse.json();
+		const firstResult = await getCaseInformation(owner.id, testCase.id);
+		const firstKey =
+			"data" in firstResult ? firstResult.data?.featureImageUrl : null;
 
 		const secondReq = new NextRequest(
 			`http://localhost:3000/api/cases/${testCase.id}/information/image`,
@@ -142,12 +156,21 @@ describe("POST /api/cases/[id]/information/image", () => {
 			params: Promise.resolve({ id: testCase.id }),
 		});
 		const secondBody = await secondResponse.json();
-		writtenPaths.push(secondBody.featureImageUrl);
+		const secondResult = await getCaseInformation(owner.id, testCase.id);
+		const secondKey =
+			"data" in secondResult ? secondResult.data?.featureImageUrl : null;
+		if (secondKey) {
+			writtenPaths.push(secondKey);
+		}
 
-		expect(secondBody.featureImageUrl).not.toBe(firstBody.featureImageUrl);
+		// The route address the browser is shown never changes (D6): it's
+		// always this case's own `/media/feature` route, not the key.
+		expect(secondBody.featureImageUrl).toBe(firstBody.featureImageUrl);
+		// The underlying stored key is what actually changed.
+		expect(secondKey).not.toBe(firstKey);
 
 		const { fileExists } = await import("@/lib/services/file-storage-service");
-		expect(await fileExists(firstBody.featureImageUrl)).toBe(false);
+		expect(await fileExists(firstKey ?? "")).toBe(false);
 	});
 
 	it("returns 400 when no file is provided", async () => {

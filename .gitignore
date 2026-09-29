@@ -196,8 +196,9 @@ blob-report/
 # documentation builds - all generated documentation files
 public/documentation/
 
-# local dev uploads (stored in Azure Blob Storage in production)
-public/uploads/
+# local dev uploads (stored in Azure Blob Storage in production; UPLOADS_DIR
+# overrides the default path below)
+/uploads/
 tea-docs/build/
 tea-docs/.docusaurus/
 

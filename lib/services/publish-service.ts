@@ -1,9 +1,14 @@
+import { randomUUID } from "node:crypto";
+import { basename } from "node:path";
 import { logger } from "@/lib/logger";
+import { isExternalMediaUrl, toMediaKey } from "@/lib/media-key";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
 import { exportCase } from "@/lib/services/case-export-service";
 import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
+import { copyMedia, deleteMedia } from "@/lib/services/file-storage-service";
 import { capturePluginDataForSnapshot } from "@/lib/services/plugin-data-service";
 import type {
 	FullPublishStatus,
@@ -48,19 +53,123 @@ export const DRAFT_PUBLISH_FIELDS = {
 	markedReadyById: null,
 };
 
+/** The key prefix under which every publish-time image copy lives (D5) — `published/<random id>/<filename>`. Only keys under this prefix are ever deleted by the clean-up helpers below; a row's raw, uncopied stored value never is. */
+const PUBLISHED_MEDIA_PREFIX = "published";
+
+/**
+ * Reads a stored snapshot's `caseInformation.featureImageUrl`, and only when
+ * it is one of THIS module's own publish-time copies (the `published/`
+ * prefix) — never a live case's raw key, and never a pre-D5 snapshot's
+ * uncopied `/uploads/...`/blob value, both of which stay the live case's
+ * concern, not a copy this module owns and may delete.
+ */
+export function extractPublishedImageKey(content: unknown): string | null {
+	const parsed = publishedSnapshotMetaSchema.safeParse(content);
+	if (!parsed.success) {
+		return null;
+	}
+	const url = parsed.data.caseInformation?.featureImageUrl;
+	if (!url?.startsWith(`${PUBLISHED_MEDIA_PREFIX}/`)) {
+		return null;
+	}
+	return url;
+}
+
+/**
+ * Deletes a batch of `published/` copy keys, best-effort — used after a
+ * transaction that removed the database rows pointing at them has already
+ * committed, since storage writes aren't transactional with Postgres. A
+ * failed delete is logged, not thrown: the row is gone either way, and an
+ * orphaned file is a known, accepted risk (see the design's Risks section),
+ * not a caller-visible failure.
+ */
+export async function deleteMediaKeys(keys: string[]): Promise<void> {
+	await Promise.all(
+		keys.map(async (key) => {
+			const deleted = await deleteMedia(key);
+			if (!deleted) {
+				log.warn("Failed to delete a published-copy file", { key });
+			}
+		})
+	);
+}
+
+/**
+ * Copies a case's current feature image into a publish-time, version-scoped
+ * key (D5) before the snapshot is written, so later edits to the live image
+ * can never affect — or break — a published or archived Discover page. A
+ * no-op, returning `content` unchanged, when the case has no feature image,
+ * when its recorded value is a genuine external address (nothing of ours to
+ * copy), or when the copy itself fails (the snapshot then carries whatever
+ * `composeSnapshotContent` already captured, exactly as it did before D5 —
+ * no regression, just no protection for that one publish). `copiedKey` is
+ * `null` unless a copy actually happened, so the caller only ever cleans up
+ * a copy it truly made.
+ */
+async function copyFeatureImageForSnapshot(
+	content: Record<string, unknown>
+): Promise<{ content: Record<string, unknown>; copiedKey: string | null }> {
+	const stored = extractStoredFeatureImageUrl(content);
+	if (!stored || isExternalMediaUrl(stored)) {
+		return { content, copiedKey: null };
+	}
+
+	const sourceKey = toMediaKey(stored);
+	const newKey = `${PUBLISHED_MEDIA_PREFIX}/${randomUUID()}/${basename(sourceKey)}`;
+	const copied = await copyMedia(sourceKey, newKey);
+	if (!copied) {
+		return { content, copiedKey: null };
+	}
+
+	// `publishedSnapshotMetaSchema`'s successful parse above (inside
+	// `extractStoredFeatureImageUrl`) is what makes this narrowing safe: a
+	// `stored` value only exists when `content.caseInformation` genuinely has
+	// that shape.
+	const existingCaseInformation = content.caseInformation as Record<
+		string,
+		unknown
+	>;
+	return {
+		content: {
+			...content,
+			caseInformation: { ...existingCaseInformation, featureImageUrl: newKey },
+		},
+		copiedKey: newKey,
+	};
+}
+
+/** The live, uncopied value `composeSnapshotContent` just captured — read via the same defensive schema `extractPublishedImageKey` uses, so a malformed snapshot degrades to "no image" rather than throwing. */
+function extractStoredFeatureImageUrl(content: unknown): string | null {
+	const parsed = publishedSnapshotMetaSchema.safeParse(content);
+	if (!parsed.success) {
+		return null;
+	}
+	return parsed.data.caseInformation?.featureImageUrl ?? null;
+}
+
 /**
  * Removes every published row for the given cases and resets each case's
  * publish fields to draft — the "remove" half of the published-copy choice,
  * and the default when no choice is given. Runs inside the caller's
- * transaction; a no-op for an empty list.
+ * transaction; a no-op for an empty list. Storage isn't transactional, so
+ * this returns the `published/` copy keys the deleted rows held — the
+ * caller deletes those files once its transaction has committed.
  */
 export async function removePublishedCopies(
 	tx: TransactionClient,
 	caseIds: string[]
-): Promise<void> {
+): Promise<string[]> {
 	if (caseIds.length === 0) {
-		return;
+		return [];
 	}
+	const rows = await tx.publishedAssuranceCase.findMany({
+		where: { assuranceCaseId: { in: caseIds } },
+		select: { content: true },
+	});
+	const keys = rows
+		.map((row) => extractPublishedImageKey(row.content))
+		.filter((key): key is string => key !== null);
+
 	await tx.publishedAssuranceCase.deleteMany({
 		where: { assuranceCaseId: { in: caseIds } },
 	});
@@ -68,6 +177,7 @@ export async function removePublishedCopies(
 		where: { id: { in: caseIds } },
 		data: DRAFT_PUBLISH_FIELDS,
 	});
+	return keys;
 }
 
 /**
@@ -80,15 +190,17 @@ export async function removePublishedCopies(
  * `case-trash-service.ts`); `null` when nobody can — used for account
  * deletion, where the deleted owner's account is gone. Runs inside the
  * caller's transaction; a no-op for an empty list or for cases with no
- * current published row.
+ * current published row. Returns the `published/` copy keys the deleted
+ * (superseded) rows held — never the surviving, archived row's own copy —
+ * so the caller can delete those files once its transaction has committed.
  */
 export async function archivePublishedCopies(
 	tx: TransactionClient,
 	caseIds: string[],
 	ownerId: string | null
-): Promise<void> {
+): Promise<string[]> {
 	if (caseIds.length === 0) {
-		return;
+		return [];
 	}
 
 	const currentRows = await tx.publishedAssuranceCase.findMany({
@@ -97,8 +209,16 @@ export async function archivePublishedCopies(
 	});
 	const currentIds = currentRows.map((row) => row.id);
 	if (currentIds.length === 0) {
-		return;
+		return [];
 	}
+
+	const supersededRows = await tx.publishedAssuranceCase.findMany({
+		where: { assuranceCaseId: { in: caseIds }, id: { notIn: currentIds } },
+		select: { content: true },
+	});
+	const keys = supersededRows
+		.map((row) => extractPublishedImageKey(row.content))
+		.filter((key): key is string => key !== null);
 
 	await tx.publishedAssuranceCase.deleteMany({
 		where: { assuranceCaseId: { in: caseIds }, id: { notIn: currentIds } },
@@ -111,6 +231,7 @@ export async function archivePublishedCopies(
 		where: { id: { in: currentIds }, archivedAt: null },
 		data: { archivedAt: new Date(), archivedOwnerId: ownerId },
 	});
+	return keys;
 }
 
 // ============================================
@@ -302,6 +423,11 @@ export async function publishAssuranceCase(
 	if ("error" in contentResult) {
 		return { error: contentResult.error };
 	}
+	// Copies the case's current feature image into its own publish-time key
+	// (D5) before anything is written to the database, so a republish or a
+	// live edit afterwards can never touch this snapshot's picture.
+	const { content: preparedContent, copiedKey } =
+		await copyFeatureImageForSnapshot(contentResult.data);
 	// The composed snapshot is plain JSON but, as a plain object built from
 	// named interfaces (`CaseInformationSnapshot` etc.) with no index
 	// signature of their own, doesn't structurally satisfy `InputJsonObject`
@@ -309,7 +435,7 @@ export async function publishAssuranceCase(
 	// Routing through `unknown` is TS's own prescribed escape hatch for
 	// exactly this "no sufficient overlap" case (same pattern as
 	// `health-scoring-service.ts`) — not a blind `any`.
-	const content = contentResult.data as unknown as Prisma.InputJsonValue;
+	const content = preparedContent as unknown as Prisma.InputJsonValue;
 
 	const now = new Date();
 
@@ -357,6 +483,11 @@ export async function publishAssuranceCase(
 			data: { publishedId: publishedCase.id, publishedAt: now },
 		};
 	} catch (error) {
+		// The image copy above happened outside this transaction, so a failure
+		// here leaves it orphaned unless removed explicitly.
+		if (copiedKey) {
+			await deleteMediaKeys([copiedKey]);
+		}
 		if (error instanceof CaseTrashedDuringTransactionError) {
 			return { error: "Case not found" };
 		}
@@ -396,7 +527,10 @@ export async function unpublishAssuranceCase(
 	}
 
 	try {
-		await prisma.$transaction((tx) => removePublishedCopies(tx, [caseId]));
+		const removedKeys = await prisma.$transaction((tx) =>
+			removePublishedCopies(tx, [caseId])
+		);
+		await deleteMediaKeys(removedKeys);
 
 		return { data: { success: true as const } };
 	} catch (error) {
@@ -577,8 +711,13 @@ export async function updatePublishedCase(
 	if ("error" in contentResult) {
 		return { error: contentResult.error };
 	}
+	// Copies the case's current feature image into its own publish-time key
+	// (D5) — see `publishAssuranceCase` above for why this runs before the
+	// transaction.
+	const { content: preparedContent, copiedKey } =
+		await copyFeatureImageForSnapshot(contentResult.data);
 	// See `publishAssuranceCase` above for why this cast is needed.
-	const content = contentResult.data as unknown as Prisma.InputJsonValue;
+	const content = preparedContent as unknown as Prisma.InputJsonValue;
 
 	const now = new Date();
 
@@ -614,6 +753,11 @@ export async function updatePublishedCase(
 			data: { publishedId: newPublished.id, publishedAt: now },
 		};
 	} catch (error) {
+		// The image copy above happened outside this transaction, so a failure
+		// here leaves it orphaned unless removed explicitly.
+		if (copiedKey) {
+			await deleteMediaKeys([copiedKey]);
+		}
 		if (error instanceof CaseTrashedDuringTransactionError) {
 			return { error: "Case not found" };
 		}

@@ -1,5 +1,9 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
+import { readMedia } from "@/lib/services/file-storage-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
 	getFullPublishStatus,
@@ -28,6 +32,7 @@ import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 // Top-level regex constants required by lint/performance/useTopLevelRegex
 const INVALID_STATUS_TRANSITION = /Invalid status transition/;
+const PUBLISHED_MEDIA_KEY_PATTERN = /^published\//;
 
 // ============================================
 // publishAssuranceCase
@@ -935,5 +940,148 @@ describe("publishAssuranceCase / updatePublishedCase — the trash race, reached
 		expect(rows).toHaveLength(1);
 		expect(rows[0]!.id).toBe(published.publishedId);
 		expect(rows[0]!.isCurrent).toBe(true);
+	});
+});
+
+// ============================================
+// Feature-image copy at publish time (D5)
+// ============================================
+
+/** Writes a fake feature-image file directly under `UPLOADS_DIR`, as if `saveFile` had stored it there, and returns its key. */
+async function seedLiveFeatureImage(caseId: string): Promise<string> {
+	const key = `cases/${caseId}/case-information/original.png`;
+	const filePath = join(UPLOADS_DIR, key);
+	await mkdir(join(filePath, ".."), { recursive: true });
+	await writeFile(filePath, Buffer.from("fake-png-bytes"));
+	return key;
+}
+
+describe("publishAssuranceCase / updatePublishedCase — feature-image copy", () => {
+	it("copies an internal feature image to its own published/ key, leaving the live key untouched", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			caseInformation?: { featureImageUrl?: string };
+		};
+		const copiedKey = content.caseInformation?.featureImageUrl;
+
+		expect(copiedKey).toMatch(PUBLISHED_MEDIA_KEY_PATTERN);
+		expect(copiedKey).not.toBe(liveKey);
+		expect(await readMedia(copiedKey ?? "")).not.toBeNull();
+		// The live key is untouched — still there, still itself.
+		expect(await readMedia(liveKey)).not.toBeNull();
+	});
+
+	it("leaves a published copy intact when the live image is replaced afterwards", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const copiedKey = (
+			published?.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		// Simulate the editor replacing the live image (a new upload writes a
+		// new key and the old one is deleted — see the information/image route).
+		await prisma.caseInformation.update({
+			where: { caseId: testCase.id },
+			data: { featureImageUrl: "cases/x/case-information/replacement.png" },
+		});
+
+		const stillThere = await readMedia(copiedKey);
+		expect(stillThere).not.toBeNull();
+		expect(stillThere?.data.toString()).toBe("fake-png-bytes");
+	});
+
+	it("gives a republish its own new copy, distinct from the first publish's", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+
+		const first = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const second = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+
+		const firstRow = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: first.publishedId },
+		});
+		const secondRow = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: second.publishedId },
+		});
+		const firstKey = (
+			firstRow?.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl;
+		const secondKey = (
+			secondRow?.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl;
+
+		expect(secondKey).not.toBe(firstKey);
+	});
+
+	it("does not attempt a copy for a genuine external address", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			featureImageUrl: "https://example.com/original.png",
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const content = published?.content as {
+			caseInformation?: { featureImageUrl?: string };
+		};
+		expect(content.caseInformation?.featureImageUrl).toBe(
+			"https://example.com/original.png"
+		);
+	});
+});
+
+describe("unpublishAssuranceCase — feature-image copy clean-up", () => {
+	it("deletes the published/ copy file when the case is unpublished", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const published = await prisma.publishedAssuranceCase.findUnique({
+			where: { id: data.publishedId },
+		});
+		const copiedKey = (
+			published?.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+		expect(await readMedia(copiedKey)).not.toBeNull();
+
+		expectSuccess(await unpublishAssuranceCase(owner.id, testCase.id));
+
+		expect(await readMedia(copiedKey)).toBeNull();
+		// The live key is a different concern — untouched by unpublishing.
+		expect(await readMedia(liveKey)).not.toBeNull();
 	});
 });

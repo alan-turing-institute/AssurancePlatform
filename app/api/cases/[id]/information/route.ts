@@ -7,14 +7,38 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { resolveCaseFeatureImageAddress } from "@/lib/media-routes";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
 import {
 	getCaseInformation,
 	upsertCaseInformation,
 } from "@/lib/services/case-information-service";
+import type { CaseInformation } from "@/src/generated/prisma";
 
 interface RouteParams {
 	params: Promise<{ id: string }>;
+}
+
+/**
+ * Projects a case-information record's stored `featureImageUrl` to this
+ * case's own private-media route address before it ever reaches a browser
+ * (D6) — the record itself (and every other caller of the service layer)
+ * keeps seeing the real stored key.
+ */
+function withResolvedFeatureImage(
+	caseId: string,
+	record: CaseInformation | null
+): CaseInformation | null {
+	if (!record) {
+		return record;
+	}
+	return {
+		...record,
+		featureImageUrl: resolveCaseFeatureImageAddress(
+			caseId,
+			record.featureImageUrl
+		),
+	};
 }
 
 /**
@@ -42,7 +66,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return apiSuccess(result.data);
+		return apiSuccess(withResolvedFeatureImage(caseId, result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -79,7 +103,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return apiSuccess(result.data);
+		return apiSuccess(withResolvedFeatureImage(caseId, result.data));
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

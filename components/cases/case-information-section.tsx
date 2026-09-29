@@ -227,6 +227,7 @@ export function CaseInformationSection({
 								fill
 								sizes="(max-width: 768px) 100vw, 672px"
 								src={information.featureImageUrl}
+								unoptimized
 							/>
 						</div>
 					</div>

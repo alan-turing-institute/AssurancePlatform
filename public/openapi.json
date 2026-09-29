@@ -1385,6 +1385,86 @@
         }
       }
     },
+    "/cases/{id}/media/feature": {
+      "get": {
+        "operationId": "get-cases-{id}-media-feature",
+        "summary": "GET /api/cases/[id]/media/feature",
+        "description": "Streams the case-information record's feature image,",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The feature image's bytes"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/media/screenshot": {
+      "get": {
+        "operationId": "get-cases-{id}-media-screenshot",
+        "summary": "GET /api/cases/[id]/media/screenshot",
+        "description": "Streams the case's dashboard-card screenshot, access-checked",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The screenshot's bytes"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/permissions/{permissionId}": {
       "patch": {
         "operationId": "patch-cases-{id}-permissions-{permissionId}",
@@ -1629,6 +1709,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/200 - { success: true, dryRun: boolean, warned30: number, warned7: number, deleted: number, skipped: number }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/public/discover/{slug}/image/{versionId}": {
+      "get": {
+        "operationId": "get-public-discover-{slug}-image-{versionId}",
+        "summary": "GET /api/public/discover/[slug]/image/[versionId]",
+        "description": "Streams a published item's feature image — public, anonymous",
+        "tags": [
+          "Discover"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The feature image's bytes"
                 }
               }
             }

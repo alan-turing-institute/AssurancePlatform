@@ -69,25 +69,41 @@ describe("middleware route matcher", () => {
 		}
 	});
 
-	it("exempts every route under uploads from session auth, regardless of extension", async () => {
+	it("no longer exempts /uploads by prefix — the route it used to serve is gone", async () => {
 		const re = await getMatcherRegex();
+		// `.gif` and `.webp` carry no other exemption, so these prove the
+		// dedicated `uploads` prefix is really gone, not just shadowed by
+		// something else.
 		const uploadPaths = [
 			"/uploads",
-			"/uploads/cases/123/case-information/abc.png",
-			// .gif and .webp aren't in the file-extension exemption list
-			// below, so without a dedicated `uploads` exemption these two
-			// (both in ALLOWED_MIME_TYPES, lib/services/file-storage-service.ts)
-			// would 307-redirect to /login same as any other protected route.
 			"/uploads/cases/123/case-information/abc.gif",
 			"/uploads/cases/123/case-information/abc.webp",
 		];
 		for (const path of uploadPaths) {
-			expect(re.test(path)).toBe(false);
+			expect(re.test(path)).toBe(true);
 		}
 	});
 
-	it("boundary-anchors uploads — a hypothetical /uploadsfoo stays protected", async () => {
+	it("a .png under /uploads still matches the pre-existing, unrelated extension exemption — harmless now the route it used to serve is gone (404, not the app)", async () => {
 		const re = await getMatcherRegex();
-		expect(re.test("/uploadsfoo")).toBe(true);
+		expect(re.test("/uploads/cases/123/case-information/abc.png")).toBe(false);
+	});
+
+	it("exempts the version-scoped public discover image route from session auth", async () => {
+		const re = await getMatcherRegex();
+		const path =
+			"/api/public/discover/medium-case/image/11111111-1111-1111-1111-111111111111";
+		expect(re.test(path)).toBe(false);
+	});
+
+	it("still enforces session auth on the private case-media routes", async () => {
+		const re = await getMatcherRegex();
+		const protectedPaths = [
+			"/api/cases/123/media/screenshot",
+			"/api/cases/123/media/feature",
+		];
+		for (const path of protectedPaths) {
+			expect(re.test(path)).toBe(true);
+		}
 	});
 });

@@ -105,8 +105,9 @@ export const config = {
 		 *   reaching the route handler.)
 		 * - api/health (health checks)
 		 * - api/public (published-content read endpoints — no auth by
-		 *   design, e.g. GET /api/public/discover/[slug]. Every route under
-		 *   this prefix is
+		 *   design, e.g. GET /api/public/discover/[slug] and
+		 *   GET /api/public/discover/[slug]/image/[versionId]. Every route
+		 *   under this prefix is
 		 *   audited to serve only already-published content via read-only
 		 *   GET handlers with no session-derived data — see the route
 		 *   audit in the fix-public-api-auth issue. Without this exemption
@@ -117,20 +118,14 @@ export const config = {
 		 * - _next/image (image optimization files)
 		 * - favicon.ico (favicon file)
 		 * - public folder
-		 * - uploads (locally-stored user uploads — served via the
-		 *   `/uploads/[...path]` route handler at runtime, or straight off
-		 *   `public/` for anything present at build time; these are the same
-		 *   URLs Azure Blob Storage returns in production, which are public
-		 *   by URL, so this exemption keeps both storage backends behaving
-		 *   the same way. Without it, uploads whose extension isn't in the
-		 *   `.*\.ext$` list below — `.gif`, `.webp` — were 307-redirected to
-		 *   `/login` even for files that existed at build time (the file
-		 *   extension list happened to cover `.png`/`.jpg`/`.jpeg` but not
-		 *   every `ALLOWED_MIME_TYPES` extension); a bare `uploads` prefix
-		 *   here covers all of them without relying on an extension list.
-		 *   This exemption is extension-independent by construction: anything
-		 *   a future writer places under `public/uploads` becomes publicly
-		 *   readable, regardless of what it is.)
+		 *
+		 * No `uploads` exemption: local uploads now live under `UPLOADS_DIR`,
+		 * outside `public/`, with no route serving them unauthenticated. Case
+		 * media reaches a browser only through the access-checked
+		 * `/api/cases/[id]/media/*` routes — matched by this proxy like every
+		 * other `/api/cases` route, so an unauthenticated request gets the
+		 * standard JSON 401 above rather than the bytes — and the
+		 * version-scoped `/api/public/discover/*` route exempted above.
 		 *
 		 * Each of the five `api/*` prefixes above is boundary-anchored
 		 * (`(?:/|$)`) rather than a bare string prefix — otherwise a
@@ -150,6 +145,6 @@ export const config = {
 		 * with no valid session, before any page-redirect logic runs. Page
 		 * paths are unaffected — they still redirect to /login as before.
 		 */
-		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|uploads(?:/|$)|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
+		"/((?!api/auth(?:/|$)|api/cron(?:/|$)|api/machine(?:/|$)|api/health(?:/|$)|api/public(?:/|$)|api/users/register|_next/static|_next/image|favicon.ico|images|data|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.json$|.*\\.html$).*)",
 	],
 };

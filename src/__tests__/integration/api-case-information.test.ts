@@ -67,6 +67,28 @@ describe("GET /api/cases/[id]/information", () => {
 		expect(body.featureImageUrl).toBe("https://example.com/feature.png");
 	});
 
+	it("projects a stored key to this case's own media route, never the raw key", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			featureImageUrl: "cases/some-id/case-information/original.png",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/cases/[id]/information/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information`
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		const body = await response.json();
+		expect(body.featureImageUrl).toBe(
+			`/api/cases/${testCase.id}/media/feature`
+		);
+	});
+
 	it("returns 401 when the request is not authenticated", async () => {
 		const { GET } = await import("@/app/api/cases/[id]/information/route");
 		const req = new NextRequest(
@@ -190,6 +212,69 @@ describe("PUT /api/cases/[id]/information", () => {
 		expect(body.description).toBe("Updated description");
 		expect(body.authors).toBe("Original authors");
 		expect(body.sector).toBe("Original sector");
+	});
+
+	it("leaves the stored feature-image key unchanged when the form re-submits this case's own media route address", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const storedKey = "cases/some-id/case-information/original.png";
+		await createTestCaseInformation(testCase.id, {
+			description: "Original description",
+			featureImageUrl: storedKey,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/information/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information`,
+			{
+				method: "PUT",
+				body: JSON.stringify({
+					description: "Original description",
+					// Exactly what GET would have returned for this case's stored
+					// key — the value the form was shown and re-submits unchanged.
+					featureImageUrl: `/api/cases/${testCase.id}/media/feature`,
+				}),
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		// The response is projected too (D6) — same address back, not the key.
+		expect(body.featureImageUrl).toBe(
+			`/api/cases/${testCase.id}/media/feature`
+		);
+
+		const { getCaseInformation } = await import(
+			"@/lib/services/case-information-service"
+		);
+		const result = await getCaseInformation(owner.id, testCase.id);
+		expect("data" in result && result.data?.featureImageUrl).toBe(storedKey);
+	});
+
+	it("does clear the feature image when explicitly set to null, not treated as the media route", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await createTestCaseInformation(testCase.id, {
+			featureImageUrl: "cases/some-id/case-information/original.png",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/information/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/information`,
+			{ method: "PUT", body: JSON.stringify({ featureImageUrl: null }) }
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(body.featureImageUrl).toBeNull();
 	});
 
 	it("returns 400 when no fields are supplied", async () => {

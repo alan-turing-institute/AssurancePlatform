@@ -1,4 +1,7 @@
 import { logger } from "@/lib/logger";
+import { toMediaKey } from "@/lib/media-key";
+import { type MediaFetchResult, mediaEtag } from "@/lib/media-response";
+import { caseFeatureImageMediaRoute } from "@/lib/media-routes";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -7,6 +10,7 @@ import {
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
+import { readMedia } from "@/lib/services/file-storage-service";
 import type { CaseInformation, PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -118,6 +122,17 @@ export async function upsertCaseInformation(
 		return { error: "Permission denied" };
 	}
 
+	// The form is shown this case's own feature-image route address (D6) and
+	// submits every field back on save, including that address, whether or
+	// not the author touched the image. Treating it as `undefined` here — the
+	// same "leave untouched" signal an omitted key carries — keeps the
+	// stored key intact; otherwise the first save after load would overwrite
+	// the key with the route address and the image would break.
+	const featureImageUrl =
+		data.featureImageUrl === caseFeatureImageMediaRoute(caseId)
+			? undefined
+			: data.featureImageUrl;
+
 	try {
 		const record = await prisma.caseInformation.upsert({
 			where: { caseId },
@@ -126,7 +141,7 @@ export async function upsertCaseInformation(
 				description: data.description ?? null,
 				authors: data.authors ?? null,
 				sector: data.sector ?? null,
-				featureImageUrl: data.featureImageUrl ?? null,
+				featureImageUrl: featureImageUrl ?? null,
 			},
 			update: {
 				...(data.description !== undefined && {
@@ -134,9 +149,7 @@ export async function upsertCaseInformation(
 				}),
 				...(data.authors !== undefined && { authors: data.authors }),
 				...(data.sector !== undefined && { sector: data.sector }),
-				...(data.featureImageUrl !== undefined && {
-					featureImageUrl: data.featureImageUrl,
-				}),
+				...(featureImageUrl !== undefined && { featureImageUrl }),
 			},
 		});
 		return { data: record };
@@ -275,4 +288,41 @@ export async function captureCaseInformationForSnapshot(
 		},
 	});
 	return record ?? undefined;
+}
+
+/**
+ * Fetches the feature image's raw bytes for the private media route
+ * (D1) — checked against VIEW access, with a missing image and a caller
+ * without access both collapsing to the same `not-found` status so a caller
+ * can never tell the two apart.
+ */
+export async function getCaseFeatureImageMedia(
+	userId: string,
+	caseId: string
+): Promise<MediaFetchResult> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "VIEW");
+	if (!hasAccess) {
+		return { status: "forbidden" };
+	}
+
+	const record = await prisma.caseInformation.findUnique({
+		where: { caseId },
+		select: { featureImageUrl: true },
+	});
+	if (!record?.featureImageUrl) {
+		return { status: "not-found" };
+	}
+
+	const key = toMediaKey(record.featureImageUrl);
+	const media = await readMedia(key);
+	if (!media) {
+		return { status: "not-found" };
+	}
+
+	return {
+		status: "ok",
+		data: media.data,
+		contentType: media.contentType,
+		etag: mediaEtag(key),
+	};
 }

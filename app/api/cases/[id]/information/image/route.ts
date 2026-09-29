@@ -8,6 +8,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { caseFeatureImageMediaRoute } from "@/lib/media-routes";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
 import {
 	getCaseInformationForEdit,
@@ -109,22 +110,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		}
 
 		const updateResult = await upsertCaseInformation(userId, caseId, {
-			featureImageUrl: saveResult.data.path,
+			featureImageUrl: saveResult.data.key,
 		});
 		if ("error" in updateResult) {
 			// Not authorised to persist the change after all — clean up the
 			// file we just wrote rather than leaving it orphaned in storage.
-			await deleteFile(saveResult.data.path);
+			await deleteFile(saveResult.data.key);
 			return apiError(serviceErrorToAppError(updateResult.error));
 		}
 
 		// Best-effort cleanup of the previous image, if any and different.
 		const previousUrl = existing?.featureImageUrl;
-		if (previousUrl && previousUrl !== saveResult.data.path) {
+		if (previousUrl && previousUrl !== saveResult.data.key) {
 			await deleteFile(previousUrl);
 		}
 
-		return apiSuccess({ featureImageUrl: saveResult.data.path });
+		return apiSuccess({
+			featureImageUrl: caseFeatureImageMediaRoute(caseId),
+		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

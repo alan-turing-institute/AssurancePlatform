@@ -10,22 +10,32 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import {
-	BlobServiceClient,
-	StorageSharedKeyCredential,
-} from "@azure/storage-blob";
+import { join, resolve } from "node:path";
 import { logger } from "@/lib/logger";
+import {
+	azureDeleteBlob,
+	azureDownloadBlob,
+	azureUploadBlob,
+} from "./azure-blob-adapter";
 
 const log = logger.child({ service: "blob-storage-service" });
 
-const CONTAINER_NAME = "media";
-const LOCAL_UPLOAD_DIR = "public/uploads";
+/**
+ * Local upload root — never under `public/`, so nothing written here is
+ * served by Next's static-file handling. Shared with `file-storage-service.ts`
+ * (which imports this constant) so both files' local-storage fallbacks agree
+ * on one root. `UPLOADS_DIR` overrides the default for deployments that need
+ * a different mount point (Docker, self-hosting); the default suits `next
+ * dev` and the bare-Node local path.
+ */
+export const UPLOADS_DIR = process.env.UPLOADS_DIR
+	? resolve(process.env.UPLOADS_DIR)
+	: join(process.cwd(), "uploads");
 
 export type UploadResult =
 	| {
 			success: true;
-			url: string;
+			key: string;
 	  }
 	| {
 			success: false;
@@ -34,8 +44,11 @@ export type UploadResult =
 
 /**
  * Service-layer upload result using the canonical `{ data } | { error }` discriminated union.
+ * Carries the storage key only — never a URL — so a caller never has anything
+ * to hand a browser directly; every uploader resolves its own route address
+ * from the key instead.
  */
-export type BlobUploadResult = { data: { url: string } } | { error: string };
+export type BlobUploadResult = { data: { key: string } } | { error: string };
 
 /**
  * Checks if Azure Blob Storage is configured.
@@ -45,26 +58,6 @@ export function isAzureStorageConfigured(): boolean {
 		process.env.AZURE_STORAGE_ACCOUNT_NAME &&
 		process.env.AZURE_STORAGE_ACCOUNT_KEY
 	);
-}
-
-/**
- * Gets a configured BlobServiceClient for Azure Storage.
- * Returns null if not configured.
- */
-function getBlobServiceClient(): BlobServiceClient | null {
-	const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-	const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-
-	if (!(accountName && accountKey)) {
-		return null;
-	}
-
-	const sharedKeyCredential = new StorageSharedKeyCredential(
-		accountName,
-		accountKey
-	);
-	const blobServiceUrl = `https://${accountName}.blob.core.windows.net`;
-	return new BlobServiceClient(blobServiceUrl, sharedKeyCredential);
 }
 
 /**
@@ -78,7 +71,7 @@ export function uploadToLocalStorage(
 	blobPath: string
 ): UploadResult {
 	try {
-		const fullPath = join(process.cwd(), LOCAL_UPLOAD_DIR, blobPath);
+		const fullPath = join(UPLOADS_DIR, blobPath);
 		const dirPath = join(fullPath, "..");
 
 		// Ensure the upload directory exists
@@ -88,10 +81,8 @@ export function uploadToLocalStorage(
 
 		writeFileSync(fullPath, buffer);
 
-		// Return a URL relative to the public directory
-		const url = `/uploads/${blobPath}`;
-		log.info("Dev file saved locally", { url });
-		return { success: true, url };
+		log.info("Dev file saved locally", { key: blobPath });
+		return { success: true, key: blobPath };
 	} catch (error) {
 		log.error("Failed to save file locally", { error });
 		return {
@@ -106,51 +97,34 @@ export function uploadToLocalStorage(
  * Falls back to local storage in development when Azure is not configured.
  *
  * @param buffer - The file data as a Buffer
- * @param blobPath - The path within the container (e.g., 'images/screenshot.png')
+ * @param blobPath - The path within the container (e.g., 'images/screenshot.png') — also the storage key returned on success
  * @param contentType - MIME type of the file (default: image/png)
- * @returns `{ data: { url } }` on success, `{ error }` on failure
+ * @returns `{ data: { key } }` on success, `{ error }` on failure
  */
 export async function uploadToBlob(
 	buffer: Buffer,
 	blobPath: string,
 	contentType = "image/png"
 ): Promise<BlobUploadResult> {
-	const blobServiceClient = getBlobServiceClient();
-	const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
+	if (isAzureStorageConfigured()) {
+		const uploaded = await azureUploadBlob(blobPath, buffer, contentType);
+		if (!uploaded) {
+			return { error: "Upload failed" };
+		}
+		return { data: { key: blobPath } };
+	}
 
 	// Fall back to local storage when Azure isn't configured
-	if (!blobServiceClient) {
-		if (process.env.NODE_ENV === "development") {
-			log.info(
-				"Dev Azure Blob Storage not configured, using local file storage"
-			);
-			const localResult = uploadToLocalStorage(buffer, blobPath);
-			if (!localResult.success) {
-				return { error: localResult.error };
-			}
-			return { data: { url: localResult.url } };
+	if (process.env.NODE_ENV === "development") {
+		log.info("Dev Azure Blob Storage not configured, using local file storage");
+		const localResult = uploadToLocalStorage(buffer, blobPath);
+		if (!localResult.success) {
+			return { error: localResult.error };
 		}
-		log.error("Azure Blob Storage credentials not configured");
-		return { error: "Storage not configured" };
+		return { data: { key: localResult.key } };
 	}
-
-	try {
-		const containerClient =
-			blobServiceClient.getContainerClient(CONTAINER_NAME);
-		const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
-
-		await blockBlobClient.uploadData(buffer, {
-			blobHTTPHeaders: { blobContentType: contentType },
-		});
-
-		const imageUrl = `https://${accountName}.blob.core.windows.net/${CONTAINER_NAME}/${blobPath}`;
-		return { data: { url: imageUrl } };
-	} catch (error) {
-		log.error("Failed to upload to Azure Blob Storage", { error });
-		return {
-			error: error instanceof Error ? error.message : "Upload failed",
-		};
-	}
+	log.error("Azure Blob Storage credentials not configured");
+	return { error: "Storage not configured" };
 }
 
 /**
@@ -161,35 +135,39 @@ export async function uploadToBlob(
  * @returns true if deleted successfully
  */
 export async function deleteBlob(blobPath: string): Promise<boolean> {
-	const blobServiceClient = getBlobServiceClient();
+	if (isAzureStorageConfigured()) {
+		return azureDeleteBlob(blobPath);
+	}
 
 	// Fall back to local storage when Azure isn't configured
-	if (!blobServiceClient) {
-		if (process.env.NODE_ENV === "development") {
-			try {
-				const { unlink } = await import("node:fs/promises");
-				const fullPath = join(process.cwd(), LOCAL_UPLOAD_DIR, blobPath);
-				await unlink(fullPath);
-				log.info("Dev file deleted locally", { blobPath });
-				return true;
-			} catch (error) {
-				log.error("Failed to delete local file", { error });
-				return false;
-			}
+	if (process.env.NODE_ENV === "development") {
+		try {
+			const { unlink } = await import("node:fs/promises");
+			const fullPath = join(UPLOADS_DIR, blobPath);
+			await unlink(fullPath);
+			log.info("Dev file deleted locally", { blobPath });
+			return true;
+		} catch (error) {
+			log.error("Failed to delete local file", { error });
+			return false;
 		}
-		return false;
 	}
+	return false;
+}
 
-	try {
-		const containerClient =
-			blobServiceClient.getContainerClient(CONTAINER_NAME);
-		const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
-		await blockBlobClient.delete();
-		return true;
-	} catch (error) {
-		log.error("Failed to delete blob", { error });
-		return false;
+/**
+ * Reads a blob's full contents from Azure Blob Storage. Used by
+ * `file-storage-service.ts`'s `readMedia` for the Azure branch — kept here
+ * (rather than calling the adapter directly from that file) so every
+ * Azure-configuration check stays behind this file's `isAzureStorageConfigured`.
+ */
+export function downloadFromBlob(
+	blobPath: string
+): Promise<{ data: Buffer; contentType: string } | null> {
+	if (!isAzureStorageConfigured()) {
+		return Promise.resolve(null);
 	}
+	return azureDownloadBlob(blobPath);
 }
 
 /**

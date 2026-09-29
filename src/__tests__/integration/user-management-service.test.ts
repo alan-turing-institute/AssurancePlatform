@@ -1,10 +1,17 @@
 import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { hashPassword } from "@/lib/auth/password-service";
 import prisma from "@/lib/prisma";
+import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
 import { sendAccountDeletedEmail } from "@/lib/services/email-service";
+import { readMedia } from "@/lib/services/file-storage-service";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
-import { publishAssuranceCase } from "@/lib/services/publish-service";
+import {
+	publishAssuranceCase,
+	updatePublishedCase,
+} from "@/lib/services/publish-service";
 import {
 	changePassword,
 	deleteAccount,
@@ -446,6 +453,46 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 		});
 		expect(archived.archivedAt).not.toBeNull();
 		expect(archived.archivedOwnerId).toBeNull();
+	});
+
+	it("deletes a superseded republish's published/ copy file when archiving at account deletion", async () => {
+		const owner = await createTestUser({ authProvider: "GITHUB" });
+		const testCase = await createTestCaseWithGoal(
+			owner.id,
+			"Solo published case with history"
+		);
+		const liveKey = `cases/${testCase.id}/case-information/original.png`;
+		const filePath = join(UPLOADS_DIR, liveKey);
+		await mkdir(join(filePath, ".."), { recursive: true });
+		await writeFile(filePath, Buffer.from("fake-png-bytes"));
+		await prisma.caseInformation.create({
+			data: { caseId: testCase.id, featureImageUrl: liveKey },
+		});
+
+		const first = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const firstRow = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: first.publishedId },
+		});
+		const firstCopiedKey = (
+			firstRow.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		const second = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const secondRow = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: second.publishedId },
+		});
+		const secondCopiedKey = (
+			secondRow.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		expectSuccess(await deleteAccount(owner.id));
+
+		expect(await readMedia(firstCopiedKey)).toBeNull();
+		expect(await readMedia(secondCopiedKey)).not.toBeNull();
 	});
 
 	it("does not archive the published copy of a KEPT case (another Admin present)", async () => {

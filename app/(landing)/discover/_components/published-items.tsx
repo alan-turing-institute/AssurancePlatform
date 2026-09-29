@@ -98,7 +98,11 @@ function PublishedItems({ items }: PublishedItemsProps) {
 											alt={`${item.title} featured image`}
 											className="aspect-video w-full rounded-2xl bg-muted object-cover sm:aspect-2/1 lg:aspect-3/2"
 											height={400}
-											src={resolveFeatureImageSrc(item.featureImageUrl)}
+											src={resolveFeatureImageSrc(
+												item.featureImageUrl,
+												item.slug,
+												item.id
+											)}
 											width={600}
 										/>
 										<div className="absolute inset-0 rounded-2xl ring-1 ring-border ring-inset" />

@@ -94,6 +94,7 @@ export function ImageUpload({
 							className="object-cover"
 							fill
 							src={imageToShow}
+							unoptimized
 						/>
 					</div>
 					<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">

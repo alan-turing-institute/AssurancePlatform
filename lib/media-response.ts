@@ -1,0 +1,53 @@
+import { createHash } from "node:crypto";
+import { NextResponse } from "next/server";
+
+/**
+ * A private- or public-media route's result: bytes to serve, or a reason to
+ * refuse that a caller never has to distinguish in the response — a missing
+ * file and a caller without access both become the identical empty 404
+ * `mediaResponse` produces below.
+ */
+export type MediaFetchResult =
+	| {
+			status: "ok";
+			data: Buffer;
+			contentType: string;
+			etag: string;
+	  }
+	| { status: "forbidden" | "not-found" };
+
+/** A short, stable ETag derived from the storage key — the key changes with every upload, so this is exact. */
+export function mediaEtag(key: string): string {
+	return `"${createHash("sha1").update(key).digest("hex")}"`;
+}
+
+/**
+ * Serves a media-fetch result as raw bytes, outside the JSON envelope — like
+ * the SSE and health routes. `forbidden` and `not-found` both become the
+ * same empty 404: nothing about the response tells a caller which one
+ * happened, so probing this route reveals nothing about whether the case or
+ * the image exists.
+ */
+export function mediaResponse(
+	result: MediaFetchResult,
+	options?: { cacheControl?: string }
+): NextResponse {
+	if (result.status !== "ok") {
+		return new NextResponse(null, { status: 404 });
+	}
+
+	// Buffer is a Uint8Array at runtime, but its generic type doesn't
+	// structurally match `BodyInit` — wrapping it in a plain `Uint8Array`
+	// satisfies the type without changing what's sent (images here are
+	// capped at MAX_FILE_SIZE, so the copy this makes is small).
+	return new NextResponse(new Uint8Array(result.data), {
+		status: 200,
+		headers: {
+			"Content-Type": result.contentType,
+			"Content-Length": String(result.data.byteLength),
+			"X-Content-Type-Options": "nosniff",
+			"Cache-Control": options?.cacheControl ?? "private, no-cache",
+			ETag: result.etag,
+		},
+	});
+}

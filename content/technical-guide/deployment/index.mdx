@@ -28,6 +28,7 @@ Supply secrets through the deployment environment. These variable names come fro
 | `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET` | GitHub sign-in and authorised import |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in and Drive access |
 | `USE_LOCAL_STORAGE` | Selects local file storage; compose defaults to `true` |
+| `UPLOADS_DIR` | Local upload root when `USE_LOCAL_STORAGE` is set; defaults to `<working directory>/uploads`, which the compose file mounts the `uploads_data` volume onto |
 | `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_ACCOUNT_KEY` | Azure Blob storage when configured |
 | `ACS_CONNECTION_STRING`, `ACS_SENDER_ADDRESS` | Email through Azure Communication Services |
 | `CRON_SECRET` | Authenticates scheduled maintenance routes |

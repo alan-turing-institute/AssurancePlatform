@@ -1,5 +1,8 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
 import {
 	listArchivedCopies,
 	listTrashedCases,
@@ -8,7 +11,11 @@ import {
 	restoreCase,
 	softDeleteCase,
 } from "@/lib/services/case-trash-service";
-import { publishAssuranceCase } from "@/lib/services/publish-service";
+import { readMedia } from "@/lib/services/file-storage-service";
+import {
+	publishAssuranceCase,
+	updatePublishedCase,
+} from "@/lib/services/publish-service";
 import {
 	expectError,
 	expectSameError,
@@ -16,6 +23,7 @@ import {
 } from "../utils/assertion-helpers";
 import {
 	createTestCase,
+	createTestCaseInformation,
 	createTestCaseWithGoal,
 	createTestComment,
 	createTestElement,
@@ -731,5 +739,116 @@ describe("case-trash-service", () => {
 			expect(stillLive.archivedOwnerId).toBeNull();
 			expect(stillLive.isCurrent).toBe(true);
 		});
+	});
+});
+
+// ============================================
+// Published-copy media clean-up (D5)
+// ============================================
+
+/** Writes a fake feature-image file directly under `UPLOADS_DIR`, as if `saveFile` had stored it there, and returns its key. */
+async function seedLiveFeatureImage(caseId: string): Promise<string> {
+	const key = `cases/${caseId}/case-information/original.png`;
+	const filePath = join(UPLOADS_DIR, key);
+	await mkdir(join(filePath, ".."), { recursive: true });
+	await writeFile(filePath, Buffer.from("fake-png-bytes"));
+	return key;
+}
+
+describe("published-copy media clean-up", () => {
+	it("softDeleteCase (remove, the default) deletes the published/ copy file", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		const copiedKey = (
+			row.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+		expect(await readMedia(copiedKey)).not.toBeNull();
+
+		await softDeleteCase(owner.id, testCase.id);
+
+		expect(await readMedia(copiedKey)).toBeNull();
+	});
+
+	it("archiving at trash time deletes only a superseded republish's copy file, keeping the current one", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+
+		const first = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const firstRow = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: first.publishedId },
+		});
+		const firstCopiedKey = (
+			firstRow.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		const second = expectSuccess(
+			await updatePublishedCase(owner.id, testCase.id)
+		);
+		const secondRow = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: second.publishedId },
+		});
+		const secondCopiedKey = (
+			secondRow.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+		expect(await readMedia(firstCopiedKey)).toBeNull();
+		expect(await readMedia(secondCopiedKey)).not.toBeNull();
+	});
+
+	it("removeArchivedCopy deletes its published/ copy file", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		const copiedKey = (
+			row.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+		expect(await readMedia(copiedKey)).not.toBeNull();
+
+		expectSuccess(await removeArchivedCopy(owner.id, published.publishedId));
+
+		expect(await readMedia(copiedKey)).toBeNull();
+	});
+
+	it("permanently deleting a case whose copy is archived leaves the archived image on disk", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		const copiedKey = (
+			row.content as { caseInformation?: { featureImageUrl?: string } }
+		).caseInformation?.featureImageUrl as string;
+		await softDeleteCase(owner.id, testCase.id, { publishedCopy: "archive" });
+
+		await purgeCase(owner.id, testCase.id);
+
+		expect(await readMedia(copiedKey)).not.toBeNull();
 	});
 });
