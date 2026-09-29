@@ -13,6 +13,7 @@ import {
 	StorageSharedKeyCredential,
 } from "@azure/storage-blob";
 import { logger } from "@/lib/logger";
+import { isValidMediaKey } from "@/lib/media-key";
 
 const log = logger.child({ service: "azure-blob-adapter" });
 
@@ -56,12 +57,15 @@ async function streamToBuffer(
 	return Buffer.concat(chunks);
 }
 
-/** Uploads `data` to `key`, overwriting anything already there. Returns `false` when Azure isn't configured. */
+/** Uploads `data` to `key`, overwriting anything already there. Returns `false` when Azure isn't configured or `key` fails `isValidMediaKey`. */
 export async function azureUploadBlob(
 	key: string,
 	data: Buffer,
 	contentType: string
 ): Promise<boolean> {
+	if (!isValidMediaKey(key)) {
+		return false;
+	}
 	const container = getContainerClient();
 	if (!container) {
 		return false;
@@ -77,10 +81,13 @@ export async function azureUploadBlob(
 	}
 }
 
-/** Downloads `key`'s full contents. `null` when Azure isn't configured, the blob doesn't exist, or the download fails. */
+/** Downloads `key`'s full contents. `null` when `key` fails `isValidMediaKey`, Azure isn't configured, the blob doesn't exist, or the download fails. */
 export async function azureDownloadBlob(
 	key: string
 ): Promise<{ data: Buffer; contentType: string } | null> {
+	if (!isValidMediaKey(key)) {
+		return null;
+	}
 	const container = getContainerClient();
 	if (!container) {
 		return null;
@@ -101,8 +108,11 @@ export async function azureDownloadBlob(
 	}
 }
 
-/** Deletes `key`. Returns `true` when the blob is gone (deleted now, or already absent), `false` on a genuine failure or when Azure isn't configured. */
+/** Deletes `key`. Returns `true` when the blob is gone (deleted now, or already absent), `false` on a genuine failure, when Azure isn't configured, or when `key` fails `isValidMediaKey`. */
 export async function azureDeleteBlob(key: string): Promise<boolean> {
+	if (!isValidMediaKey(key)) {
+		return false;
+	}
 	const container = getContainerClient();
 	if (!container) {
 		return false;

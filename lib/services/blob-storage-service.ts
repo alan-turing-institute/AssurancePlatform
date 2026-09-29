@@ -10,8 +10,9 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { logger } from "@/lib/logger";
+import { isValidMediaKey } from "@/lib/media-key";
 import {
 	azureDeleteBlob,
 	azureDownloadBlob,
@@ -61,6 +62,25 @@ export function isAzureStorageConfigured(): boolean {
 }
 
 /**
+ * Resolves a media key to an absolute path under `UPLOADS_DIR`, rejecting
+ * anything that could escape it. `isValidMediaKey` does the actual
+ * segment-level check (empty, `.`/`..`, backslash, NUL, leading `/`); the
+ * `resolve`-and-containment check here is a second, independent guard on the
+ * resulting path. The one function every local-storage path goes through —
+ * `file-storage-service.ts` imports this rather than keeping its own copy,
+ * so there is exactly one place a local path is ever built from a key.
+ */
+export function resolveSafeUploadsPath(key: string): string | null {
+	if (!isValidMediaKey(key)) {
+		return null;
+	}
+	const root = resolve(UPLOADS_DIR);
+	const candidate = resolve(root, ...key.split("/"));
+	const isWithinRoot = candidate === root || candidate.startsWith(root + sep);
+	return isWithinRoot ? candidate : null;
+}
+
+/**
  * Uploads a buffer to local file storage (development fallback).
  *
  * @param buffer - The file data as a Buffer
@@ -70,8 +90,12 @@ export function uploadToLocalStorage(
 	buffer: Buffer,
 	blobPath: string
 ): UploadResult {
+	const fullPath = resolveSafeUploadsPath(blobPath);
+	if (!fullPath) {
+		log.error("Refused to save a file outside the uploads root", { blobPath });
+		return { success: false, error: "Invalid storage key" };
+	}
 	try {
-		const fullPath = join(UPLOADS_DIR, blobPath);
 		const dirPath = join(fullPath, "..");
 
 		// Ensure the upload directory exists
@@ -141,9 +165,15 @@ export async function deleteBlob(blobPath: string): Promise<boolean> {
 
 	// Fall back to local storage when Azure isn't configured
 	if (process.env.NODE_ENV === "development") {
+		const fullPath = resolveSafeUploadsPath(blobPath);
+		if (!fullPath) {
+			log.error("Refused to delete a file outside the uploads root", {
+				blobPath,
+			});
+			return false;
+		}
 		try {
 			const { unlink } = await import("node:fs/promises");
-			const fullPath = join(UPLOADS_DIR, blobPath);
 			await unlink(fullPath);
 			log.info("Dev file deleted locally", { blobPath });
 			return true;

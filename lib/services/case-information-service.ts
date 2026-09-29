@@ -1,7 +1,14 @@
 import { logger } from "@/lib/logger";
-import { toMediaKey } from "@/lib/media-key";
+import {
+	isCaseFeatureImageKey,
+	isExternalMediaUrl,
+	toMediaKey,
+} from "@/lib/media-key";
 import { type MediaFetchResult, mediaEtag } from "@/lib/media-response";
-import { caseFeatureImageMediaRoute } from "@/lib/media-routes";
+import {
+	isAcceptableFeatureImageValue,
+	isOwnCaseFeatureImageAddress,
+} from "@/lib/media-routes";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,7 +17,7 @@ import {
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
-import { readMedia } from "@/lib/services/file-storage-service";
+import { deleteFile, readMedia } from "@/lib/services/file-storage-service";
 import type { CaseInformation, PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -122,16 +129,29 @@ export async function upsertCaseInformation(
 		return { error: "Permission denied" };
 	}
 
-	// The form is shown this case's own feature-image route address (D6) and
+	// The form is shown this case's own feature-image route address and
 	// submits every field back on save, including that address, whether or
-	// not the author touched the image. Treating it as `undefined` here — the
-	// same "leave untouched" signal an omitted key carries — keeps the
-	// stored key intact; otherwise the first save after load would overwrite
-	// the key with the route address and the image would break.
-	const featureImageUrl =
-		data.featureImageUrl === caseFeatureImageMediaRoute(caseId)
-			? undefined
-			: data.featureImageUrl;
+	// not the author touched the image. Recognising that address here —
+	// treating it as `undefined`, the same "leave untouched" signal an
+	// omitted key carries — keeps the stored key intact; otherwise the first
+	// save after load would overwrite the key with the route address and the
+	// image would break.
+	//
+	// Anything else is refused outright unless it's empty or a genuine
+	// external address: a bare storage key, another case's own route
+	// address, or a legacy `/uploads/...`/blob address would otherwise let a
+	// caller point this case's feature image at storage it does not own.
+	let featureImageUrl = data.featureImageUrl;
+	if (featureImageUrl != null) {
+		if (isOwnCaseFeatureImageAddress(caseId, featureImageUrl)) {
+			featureImageUrl = undefined;
+		} else if (!isAcceptableFeatureImageValue(caseId, featureImageUrl)) {
+			return {
+				error:
+					"featureImageUrl must be this case's own feature image address, empty, or an external https address",
+			};
+		}
+	}
 
 	try {
 		const record = await prisma.caseInformation.upsert({
@@ -291,10 +311,13 @@ export async function captureCaseInformationForSnapshot(
 }
 
 /**
- * Fetches the feature image's raw bytes for the private media route
- * (D1) — checked against VIEW access, with a missing image and a caller
- * without access both collapsing to the same `not-found` status so a caller
- * can never tell the two apart.
+ * Fetches the feature image's raw bytes for the private media route —
+ * checked against VIEW access, with a missing image and a caller without
+ * access both collapsing to the same `not-found` status so a caller can
+ * never tell the two apart. Also refuses a stored key that doesn't belong to
+ * this case (`isCaseFeatureImageKey`): the only way a record could carry one
+ * is a value written before the write path validated it, or one edited
+ * directly, and it must never be served through this case's own route.
  */
 export async function getCaseFeatureImageMedia(
 	userId: string,
@@ -314,6 +337,10 @@ export async function getCaseFeatureImageMedia(
 	}
 
 	const key = toMediaKey(record.featureImageUrl);
+	if (!isCaseFeatureImageKey(caseId, key)) {
+		return { status: "not-found" };
+	}
+
 	const media = await readMedia(key);
 	if (!media) {
 		return { status: "not-found" };
@@ -325,4 +352,60 @@ export async function getCaseFeatureImageMedia(
 		contentType: media.contentType,
 		etag: mediaEtag(key),
 	};
+}
+
+/**
+ * Sets a case's feature-image key directly, bypassing the address-shape
+ * check `upsertCaseInformation` applies on the write path. Exists only for
+ * the feature-image upload route to persist the key `saveFile` itself just
+ * generated for this case — never for a caller-supplied value, which is
+ * exactly what the write path's check exists to refuse. Requires EDIT.
+ */
+export async function setCaseFeatureImageKey(
+	userId: string,
+	caseId: string,
+	key: string
+): ServiceResult<CaseInformation> {
+	const hasAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
+
+	try {
+		const record = await prisma.caseInformation.upsert({
+			where: { caseId },
+			create: { caseId, featureImageUrl: key },
+			update: { featureImageUrl: key },
+		});
+		return { data: record };
+	} catch (error) {
+		log.error("Failed to set case feature image key", { error });
+		return { error: "Failed to save case information" };
+	}
+}
+
+/**
+ * Deletes a case's feature-image key from storage, but only when it is a
+ * key this app could have written for THIS case. A no-op for an empty or
+ * external value, and for a key that doesn't belong to this case
+ * (`isCaseFeatureImageKey`) — refusing to act on that key is what stops a
+ * value pointed at another case's storage (a pre-fix write, or a row edited
+ * directly) from being deleted through this case's own upload/remove
+ * actions.
+ */
+export async function deleteCaseFeatureImageKey(
+	caseId: string,
+	stored: string | null | undefined
+): Promise<void> {
+	if (!stored || isExternalMediaUrl(stored)) {
+		return;
+	}
+	const key = toMediaKey(stored);
+	if (!isCaseFeatureImageKey(caseId, key)) {
+		log.warn("Skipped deleting a feature-image key outside this case", {
+			caseId,
+		});
+		return;
+	}
+	await deleteFile(stored);
 }

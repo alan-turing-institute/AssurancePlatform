@@ -8,10 +8,13 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { mediaVersionToken } from "@/lib/media-response";
 import { caseFeatureImageMediaRoute } from "@/lib/media-routes";
 import { upsertCaseInformationSchema } from "@/lib/schemas/case-information";
 import {
+	deleteCaseFeatureImageKey,
 	getCaseInformationForEdit,
+	setCaseFeatureImageKey,
 	upsertCaseInformation,
 } from "@/lib/services/case-information-service";
 import {
@@ -109,9 +112,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 			return apiError(serviceErrorToAppError(saveResult.error));
 		}
 
-		const updateResult = await upsertCaseInformation(userId, caseId, {
-			featureImageUrl: saveResult.data.key,
-		});
+		// The write path (`upsertCaseInformation`) refuses a bare storage key —
+		// it only ever accepts this case's own route address, empty, or an
+		// external address. `saveFile` just generated a genuine new key for
+		// this case, so this goes through the internal setter the write path
+		// itself cannot reach.
+		const updateResult = await setCaseFeatureImageKey(
+			userId,
+			caseId,
+			saveResult.data.key
+		);
 		if ("error" in updateResult) {
 			// Not authorised to persist the change after all — clean up the
 			// file we just wrote rather than leaving it orphaned in storage.
@@ -122,11 +132,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 		// Best-effort cleanup of the previous image, if any and different.
 		const previousUrl = existing?.featureImageUrl;
 		if (previousUrl && previousUrl !== saveResult.data.key) {
-			await deleteFile(previousUrl);
+			await deleteCaseFeatureImageKey(caseId, previousUrl);
 		}
 
 		return apiSuccess({
-			featureImageUrl: caseFeatureImageMediaRoute(caseId),
+			featureImageUrl: caseFeatureImageMediaRoute(
+				caseId,
+				mediaVersionToken(saveResult.data.key)
+			),
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
@@ -181,7 +194,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 		}
 
 		if (currentUrl) {
-			await deleteFile(currentUrl);
+			await deleteCaseFeatureImageKey(caseId, currentUrl);
 		}
 
 		return apiSuccess({ success: true });

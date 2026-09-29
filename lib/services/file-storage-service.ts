@@ -7,14 +7,19 @@ import {
 	unlink,
 	writeFile,
 } from "node:fs/promises";
-import { extname, join, resolve, sep } from "node:path";
+import { extname, join } from "node:path";
 import { logger } from "@/lib/logger";
-import { isExternalMediaUrl, toMediaKey } from "@/lib/media-key";
+import {
+	isExternalMediaUrl,
+	isValidMediaKey,
+	toMediaKey,
+} from "@/lib/media-key";
 import {
 	deleteBlob,
 	downloadFromBlob,
 	getMimeTypeFromExtension,
 	isAzureStorageConfigured,
+	resolveSafeUploadsPath,
 	UPLOADS_DIR,
 	uploadToBlob,
 } from "./blob-storage-service";
@@ -240,10 +245,10 @@ export async function saveFile(
 }
 
 // ============================================
-// Stored-value shapes (D3): a row written before this change may still hold
-// a `/uploads/<key>` path or a full Azure blob URL; a row written after it
-// holds the bare key. `toMediaKey` accepts all three and returns the key,
-// so nothing has to be rewritten for old rows to keep working.
+// Stored-value shapes: an older row may still hold a `/uploads/<key>` path
+// or a full Azure blob URL; a row written since this app started storing
+// bare keys holds just the key. `toMediaKey` accepts all three and returns
+// the key, so nothing has to be rewritten for old rows to keep working.
 // ============================================
 
 const UPLOADS_PATH_PREFIX = "/uploads/";
@@ -257,39 +262,11 @@ const UPLOADS_PATH_PREFIX = "/uploads/";
 // `case-information-service.ts`, `case-image-service.ts`) imports them
 // straight from `lib/media-key.ts` as well.
 
-/**
- * Resolves a media key to an absolute path under `UPLOADS_DIR`, rejecting
- * anything that could escape it — traversal segments (`..`, `.`), empty
- * segments, and segments carrying a raw separator or NUL byte. Returns
- * `null` for anything rejected, and re-checks containment on the resolved
- * path as a second, independent guard. Moved from the deleted
- * `app/uploads/[...path]/route.ts`, adapted to take a key string rather than
- * pre-split route segments.
- */
-function resolveSafeUploadsPath(key: string): string | null {
-	const segments = key.split("/");
-	if (segments.length === 0) {
-		return null;
-	}
-
-	for (const segment of segments) {
-		if (
-			!segment ||
-			segment === "." ||
-			segment === ".." ||
-			segment.includes("\\") ||
-			segment.includes("\0")
-		) {
-			return null;
-		}
-	}
-
-	const root = resolve(UPLOADS_DIR);
-	const candidate = resolve(root, ...segments);
-	const isWithinRoot = candidate === root || candidate.startsWith(root + sep);
-
-	return isWithinRoot ? candidate : null;
-}
+// `resolveSafeUploadsPath` itself lives in `blob-storage-service.ts`
+// (imported above), so this is the one place a local path is ever built
+// from a key — `blob-storage-service.ts`'s own local-storage fallback
+// (`uploadToLocalStorage`, `deleteBlob`) goes through the same function
+// rather than keeping a second copy.
 
 async function readLocalMedia(
 	key: string
@@ -339,14 +316,19 @@ async function deleteLocalMedia(key: string): Promise<boolean> {
 }
 
 /**
- * Reads a media key's full contents from whichever backend is active
- * (D2) — Azure when configured, local disk otherwise. `null` for a missing
- * or unreadable key on either backend; callers turn that into a 404, never
- * a distinguishable error.
+ * Reads a media key's full contents from whichever backend is active — Azure
+ * when configured, local disk otherwise. `null` for a key that fails
+ * `isValidMediaKey` (an empty/`.`/`..` segment, a backslash, a NUL byte, or
+ * a leading `/` — checked before either backend is ever touched) as well as
+ * for a missing or unreadable key on either backend; callers turn every case
+ * into a 404, never a distinguishable error.
  */
 export async function readMedia(
 	key: string
 ): Promise<{ data: Buffer; contentType: string } | null> {
+	if (!isValidMediaKey(key)) {
+		return null;
+	}
 	if (isAzureStorageConfigured()) {
 		return await downloadFromBlob(key);
 	}
@@ -355,15 +337,18 @@ export async function readMedia(
 
 /**
  * Copies a media key to a new key on the same backend, by reading its full
- * contents and writing them to `toKey` — used at publish time (D5) to give a
+ * contents and writing them to `toKey` — used at publish time to give a
  * published snapshot its own, independent copy of the feature image.
- * `false` when the source key doesn't exist or the write fails; never
- * throws.
+ * `false` when either key fails `isValidMediaKey`, when the source key
+ * doesn't exist, or when the write fails; never throws.
  */
 export async function copyMedia(
 	fromKey: string,
 	toKey: string
 ): Promise<boolean> {
+	if (!(isValidMediaKey(fromKey) && isValidMediaKey(toKey))) {
+		return false;
+	}
 	const media = await readMedia(fromKey);
 	if (!media) {
 		return false;
@@ -376,12 +361,16 @@ export async function copyMedia(
 }
 
 /**
- * Deletes a media key from whichever backend is active. `true` when the key
- * is gone (deleted now, or already absent); `false` on a genuine failure.
- * Used for `published/` copies (D5) — call sites treat a `false` as
- * best-effort and log it rather than fail the caller's own operation.
+ * Deletes a media key from whichever backend is active. `false` for a key
+ * that fails `isValidMediaKey`; otherwise `true` when the key is gone
+ * (deleted now, or already absent), `false` on a genuine failure. Used for
+ * `published/` copies — call sites treat a `false` as best-effort and log it
+ * rather than fail the caller's own operation.
  */
 export async function deleteMedia(key: string): Promise<boolean> {
+	if (!isValidMediaKey(key)) {
+		return false;
+	}
 	if (isAzureStorageConfigured()) {
 		return await deleteBlob(key);
 	}
@@ -390,7 +379,7 @@ export async function deleteMedia(key: string): Promise<boolean> {
 
 /**
  * Deletes a file from storage, given any of the shapes a stored value can
- * take: a bare key (new uploads, D3), a legacy `/uploads/<key>` path, or a
+ * take: a bare key (a new upload), a legacy `/uploads/<key>` path, or a
  * legacy Azure blob URL. The legacy shapes name their own backend
  * unambiguously; a bare key is deleted from whichever backend is currently
  * active.
@@ -417,8 +406,7 @@ export async function deleteFile(filePath: string): Promise<boolean> {
 		return false;
 	}
 
-	// A bare key from a post-D3 upload — delete from whichever backend is
-	// currently active.
+	// A bare key — delete from whichever backend is currently active.
 	return await deleteMedia(filePath);
 }
 
