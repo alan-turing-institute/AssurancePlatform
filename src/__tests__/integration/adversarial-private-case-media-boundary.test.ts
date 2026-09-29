@@ -142,7 +142,9 @@ describe("the Azure-backed storage path", () => {
 			elementType: "GOAL",
 			role: "TOP_LEVEL",
 		});
-		const liveKey = "case-studies/azure-case/feature.png";
+		// Shaped `cases/<caseId>/case-information/...` — the only shape the
+		// publish-time copy step accepts for a given case (F1c).
+		const liveKey = `cases/${testCase.id}/case-information/feature.png`;
 		blobs.set(liveKey, {
 			data: Buffer.from([9, 9, 9]),
 			contentType: "image/png",

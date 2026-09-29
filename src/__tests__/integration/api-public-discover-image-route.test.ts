@@ -16,9 +16,9 @@ import {
 
 /**
  * Route-level coverage for `GET /api/public/discover/[slug]/image/
- * [versionId]` (D5) — anonymous, no session anywhere in this file. Local
- * disk is this test environment's active backend (Azure is exercised at the
- * service layer and via the private-media route tests).
+ * [versionId]` — anonymous, no session anywhere in this file. Local disk is
+ * this test environment's active backend (Azure is exercised at the service
+ * layer and via the private-media route tests).
  */
 
 const PNG_MAGIC_BYTES = Buffer.from([
@@ -68,6 +68,9 @@ describe("GET /api/public/discover/[slug]/image/[versionId]", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Cache-Control")).toBe(
 			"public, max-age=31536000, immutable"
+		);
+		expect(response.headers.get("Content-Length")).toBe(
+			String(PNG_MAGIC_BYTES.byteLength)
 		);
 		const body = Buffer.from(await response.arrayBuffer());
 		expect(body.equals(PNG_MAGIC_BYTES)).toBe(true);
@@ -166,5 +169,84 @@ describe("GET /api/public/discover/[slug]/image/[versionId]", () => {
 			params: Promise.resolve({ slug: row.slug, versionId: row.id }),
 		});
 		expect(response.status).toBe(404);
+	});
+
+	it("serves bytes for an older snapshot whose recorded value is a legacy /uploads/<key> path", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const result = await publishAssuranceCase(owner.id, testCase.id);
+		if ("error" in result) {
+			throw new Error(result.error);
+		}
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: result.data.publishedId },
+		});
+		// Simulates a snapshot published before this app started copying
+		// images at publish time — its recorded value is a live, uncopied
+		// legacy path rather than a `published/` key.
+		const key = `legacy/${testCase.id}.png`;
+		const filePath = join(UPLOADS_DIR, key);
+		await mkdir(join(filePath, ".."), { recursive: true });
+		await writeFile(filePath, PNG_MAGIC_BYTES);
+		await prisma.publishedAssuranceCase.update({
+			where: { id: row.id },
+			data: {
+				content: {
+					...(row.content as Record<string, unknown>),
+					caseInformation: { featureImageUrl: `/uploads/${key}` },
+				},
+			},
+		});
+
+		const { GET } = await getRoute();
+		const req = new NextRequest(
+			`http://localhost:3000/api/public/discover/${row.slug}/image/${row.id}`
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ slug: row.slug, versionId: row.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = Buffer.from(await response.arrayBuffer());
+		expect(body.equals(PNG_MAGIC_BYTES)).toBe(true);
+	});
+
+	it("serves bytes for an older snapshot whose recorded value is a legacy Azure blob URL", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const result = await publishAssuranceCase(owner.id, testCase.id);
+		if ("error" in result) {
+			throw new Error(result.error);
+		}
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: result.data.publishedId },
+		});
+		const key = `legacy/${testCase.id}-blob.png`;
+		const filePath = join(UPLOADS_DIR, key);
+		await mkdir(join(filePath, ".."), { recursive: true });
+		await writeFile(filePath, PNG_MAGIC_BYTES);
+		await prisma.publishedAssuranceCase.update({
+			where: { id: row.id },
+			data: {
+				content: {
+					...(row.content as Record<string, unknown>),
+					caseInformation: {
+						featureImageUrl: `https://teststorageaccount.blob.core.windows.net/media/${key}`,
+					},
+				},
+			},
+		});
+
+		const { GET } = await getRoute();
+		const req = new NextRequest(
+			`http://localhost:3000/api/public/discover/${row.slug}/image/${row.id}`
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ slug: row.slug, versionId: row.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = Buffer.from(await response.arrayBuffer());
+		expect(body.equals(PNG_MAGIC_BYTES)).toBe(true);
 	});
 });

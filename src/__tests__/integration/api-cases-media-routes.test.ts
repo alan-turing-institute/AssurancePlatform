@@ -12,7 +12,7 @@ import {
 } from "../utils/prisma-factories";
 
 /**
- * Route-level coverage for the two private-media routes (D1):
+ * Route-level coverage for the two private-media routes:
  * `GET /api/cases/[id]/media/screenshot` and `GET /api/cases/[id]/media/
  * feature`. Both are exercised against the local-disk backend (the default
  * in this test environment) and again with Azure "configured" — stubbing
@@ -52,13 +52,21 @@ async function writeLocalFixture(key: string): Promise<void> {
 	await writeFile(filePath, PNG_MAGIC_BYTES);
 }
 
-/** Configures Azure as the active backend and makes the mocked adapter serve `key` from an in-memory map. */
-async function configureAzureBackend(): Promise<void> {
+/**
+ * Configures Azure as the active backend and makes the mocked adapter serve
+ * `featureKey` (a feature-image key — must be shaped `cases/<caseId>/...`
+ * for the case under test, since the feature-image read path refuses a key
+ * that doesn't belong to the case it's attached to) or the fixed screenshot
+ * key from an in-memory map.
+ */
+async function configureAzureBackend(
+	featureKey = "azure/feature.png"
+): Promise<void> {
 	vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", "teststorageaccount");
 	vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", "testkey");
 	const adapter = await import("@/lib/services/azure-blob-adapter");
 	vi.mocked(adapter.azureDownloadBlob).mockImplementation((key: string) =>
-		key === "azure/feature.png" || key === "azure/screenshot.png"
+		key === featureKey || key === "azure/screenshot.png"
 			? Promise.resolve({ data: PNG_MAGIC_BYTES, contentType: "image/png" })
 			: Promise.resolve(null)
 	);
@@ -162,12 +170,13 @@ describe.each([
 	{ backend: "azure" as const },
 ])("GET /api/cases/[id]/media/feature — $backend backend", ({ backend }) => {
 	async function seedFeatureImage(caseId: string): Promise<void> {
-		const key =
-			backend === "azure" ? "azure/feature.png" : `cases/${caseId}/feature.png`;
+		// Shaped `cases/<caseId>/...` on both backends — the only shape the
+		// feature-image read path ever accepts for a given case.
+		const key = `cases/${caseId}/feature.png`;
 		if (backend === "local") {
 			await writeLocalFixture(key);
 		} else {
-			await configureAzureBackend();
+			await configureAzureBackend(key);
 		}
 		await createTestCaseInformation(caseId, { featureImageUrl: key });
 	}
@@ -236,6 +245,54 @@ describe.each([
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toBe("image/png");
 		expect(response.headers.get("ETag")).toBeTruthy();
+		const body = Buffer.from(await response.arrayBuffer());
+		expect(body.equals(PNG_MAGIC_BYTES)).toBe(true);
+	});
+});
+
+describe("GET /api/cases/[id]/media/feature — legacy stored value shapes", () => {
+	it("serves bytes when the stored value is a legacy /uploads/<key> path", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const key = `cases/${testCase.id}/case-information/legacy.png`;
+		await writeLocalFixture(key);
+		await createTestCaseInformation(testCase.id, {
+			featureImageUrl: `/uploads/${key}`,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/cases/[id]/media/feature/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/media/feature`
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = Buffer.from(await response.arrayBuffer());
+		expect(body.equals(PNG_MAGIC_BYTES)).toBe(true);
+	});
+
+	it("serves bytes when the stored value is a legacy Azure blob URL", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const key = `cases/${testCase.id}/case-information/legacy-blob.png`;
+		await writeLocalFixture(key);
+		await createTestCaseInformation(testCase.id, {
+			featureImageUrl: `https://teststorageaccount.blob.core.windows.net/media/${key}`,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/cases/[id]/media/feature/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}/media/feature`
+		);
+		const response = await GET(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
 		const body = Buffer.from(await response.arrayBuffer());
 		expect(body.equals(PNG_MAGIC_BYTES)).toBe(true);
 	});

@@ -743,7 +743,7 @@ describe("case-trash-service", () => {
 });
 
 // ============================================
-// Published-copy media clean-up (D5)
+// Published-copy media clean-up
 // ============================================
 
 /** Writes a fake feature-image file directly under `UPLOADS_DIR`, as if `saveFile` had stored it there, and returns its key. */

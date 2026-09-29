@@ -83,7 +83,7 @@ describe("saving case information with the displayed feature-image address", () 
 		);
 		const shown = await getResponse.json();
 		expect(shown.featureImageUrl).toMatch(
-			new RegExp(`/api/cases/${testCase.id}/media/feature$`)
+			new RegExp(`/api/cases/${testCase.id}/media/feature(\\?v=[0-9a-f]+)?$`)
 		);
 
 		const putResponse = await PUT(
@@ -95,8 +95,8 @@ describe("saving case information with the displayed feature-image address", () 
 		);
 		expect(putResponse.status).toBe(200);
 		const saved = await putResponse.json();
-		// The response is projected back to the route address (D6) — the
-		// underlying key is what must have survived unchanged.
+		// The response is projected back to the route address — the underlying
+		// key is what must have survived unchanged.
 		expect(saved.featureImageUrl).toBe(shown.featureImageUrl);
 
 		const { prisma } = await import("@/lib/prisma");
@@ -113,15 +113,18 @@ describe("saving case information with the displayed feature-image address", () 
 		const { upsertCaseInformation } = await import(
 			"@/lib/services/case-information-service"
 		);
+		// A bare storage key is refused outright (F1) — the only values this
+		// path accepts besides this case's own route address are empty or a
+		// genuine external https address.
 		const result = await upsertCaseInformation(owner.id, testCase.id, {
-			featureImageUrl: "case-studies/new/replacement.png",
+			featureImageUrl: "https://images.example.com/replacement.png",
 		});
 		if ("error" in result) {
 			throw new Error(result.error);
 		}
 
 		expect(result.data.featureImageUrl).toBe(
-			"case-studies/new/replacement.png"
+			"https://images.example.com/replacement.png"
 		);
 	});
 
@@ -142,7 +145,7 @@ describe("saving case information with the displayed feature-image address", () 
 		expect(result.data.featureImageUrl).toBeNull();
 	});
 
-	it("does not treat another case's own route address as unchanged", async () => {
+	it("refuses another case's own route address rather than treating it as unchanged", async () => {
 		const owner = await createTestUser();
 		const testCase = await seedCaseWithFeatureImage(owner.id);
 		const otherCase = await createTestCase(owner.id);
@@ -153,18 +156,19 @@ describe("saving case information with the displayed feature-image address", () 
 		const { caseFeatureImageMediaRoute } = await import("@/lib/media-routes");
 
 		// Simulates a value copy-pasted from a different case's information
-		// panel — this case's own address is the only one treated as
-		// "unchanged"; anything else, even another valid route address, is a
-		// genuine new value to store.
+		// panel — this case's own address is the only route address treated as
+		// "unchanged"; any other case's route address is refused outright
+		// (F1), the same as a bare storage key would be.
 		const result = await upsertCaseInformation(owner.id, testCase.id, {
 			featureImageUrl: caseFeatureImageMediaRoute(otherCase.id),
 		});
-		if ("error" in result) {
-			throw new Error(result.error);
-		}
 
-		expect(result.data.featureImageUrl).toBe(
-			caseFeatureImageMediaRoute(otherCase.id)
-		);
+		expect("error" in result).toBe(true);
+
+		const { prisma } = await import("@/lib/prisma");
+		const stored = await prisma.caseInformation.findUniqueOrThrow({
+			where: { caseId: testCase.id },
+		});
+		expect(stored.featureImageUrl).toBe(STORED_KEY);
 	});
 });

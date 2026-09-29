@@ -58,7 +58,9 @@ async function setUpPublishableCase(ownerId: string) {
 		elementType: "GOAL",
 		role: "TOP_LEVEL",
 	});
-	const liveKey = `case-studies/${testCase.id}/feature.png`;
+	// Shaped `cases/<caseId>/case-information/...` — the only shape the
+	// publish-time copy step accepts for a given case (F1c).
+	const liveKey = `cases/${testCase.id}/case-information/feature.png`;
 	await writeFixtureImage(liveKey, PNG_BYTES);
 	await prisma.caseInformation.create({
 		data: {

@@ -944,7 +944,7 @@ describe("publishAssuranceCase / updatePublishedCase — the trash race, reached
 });
 
 // ============================================
-// Feature-image copy at publish time (D5)
+// Feature-image copy at publish time
 // ============================================
 
 /** Writes a fake feature-image file directly under `UPLOADS_DIR`, as if `saveFile` had stored it there, and returns its key. */
@@ -1057,6 +1057,55 @@ describe("publishAssuranceCase / updatePublishedCase — feature-image copy", ()
 		expect(content.caseInformation?.featureImageUrl).toBe(
 			"https://example.com/original.png"
 		);
+	});
+
+	it("deletes the publish-time copy when the transaction fails after the copy was made", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id);
+		const liveKey = await seedLiveFeatureImage(testCase.id);
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
+
+		// The worker's `published/` directory is shared across this file's
+		// tests (each publish adds its own `<random id>/<filename>` file, and
+		// a deleted copy leaves its now-empty parent directory behind), so a
+		// snapshot of the actual FILES already there — not a top-level
+		// directory listing — is what proves this test's own copy,
+		// specifically, was cleaned up rather than left orphaned.
+		const publishedDir = join(UPLOADS_DIR, "published");
+		const listPublishedFiles = async (): Promise<string[]> => {
+			const { readdir } = await import("node:fs/promises");
+			const subDirs = await readdir(publishedDir).catch(() => []);
+			const files = await Promise.all(
+				subDirs.map(async (sub) => {
+					const nested = await readdir(join(publishedDir, sub)).catch(() => []);
+					return nested.map((file) => `${sub}/${file}`);
+				})
+			);
+			return files.flat();
+		};
+		const filesBefore = await listPublishedFiles();
+
+		const holder = await holdRowLock(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: testCase.id },
+				data: { deletedAt: new Date(), deletedById: owner.id },
+			});
+		});
+
+		const publishPromise = publishAssuranceCase(owner.id, testCase.id);
+		await waitForLockWait();
+		await holder.release();
+		const result = await publishPromise;
+
+		expectError(result, "Case not found");
+
+		// The copy runs before the transaction, so a transaction failure after
+		// the copy was made must clean it up rather than leaving it orphaned —
+		// the shared helper both publish flows use is what does this.
+		const filesAfter = await listPublishedFiles();
+		expect(filesAfter.sort()).toEqual(filesBefore.sort());
+		// The live key is a different concern — untouched by the failure.
+		expect(await readMedia(liveKey)).not.toBeNull();
 	});
 });
 

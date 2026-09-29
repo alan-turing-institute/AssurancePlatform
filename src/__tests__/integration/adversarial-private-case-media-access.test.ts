@@ -4,8 +4,11 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
+	addTeamMember,
 	createTestCase,
 	createTestPermission,
+	createTestTeam,
+	createTestTeamPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -91,8 +94,10 @@ describe.each([
 				update: { featureImageUrl: key },
 			});
 		},
+		// Shaped `cases/<caseId>/case-information/...` — the only shape the
+		// feature-image read path accepts for a given case (F1c).
 		writeMedia: (caseId: string, data: Buffer, filename = "feature.png") =>
-			writeFixtureMedia("case-studies", `${caseId}-${filename}`, data),
+			writeFixtureMedia(`cases/${caseId}/case-information`, filename, data),
 	},
 ])("GET /api/cases/[id]/media/$name", (route) => {
 	it("returns the proxy's 401 with no session, before any case lookup", async () => {
@@ -173,8 +178,48 @@ describe.each([
 		expect(response.headers.get("content-type")).toBe("image/png");
 		expect(response.headers.get("etag")).toBeTruthy();
 		expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+		expect(response.headers.get("cache-control")).toBe("private, no-cache");
+		expect(response.headers.get("content-length")).toBe(
+			String(PNG_BYTES.byteLength)
+		);
 		const body = Buffer.from(await response.arrayBuffer());
 		expect(body.equals(PNG_BYTES)).toBe(true);
+	});
+
+	it("serves the bytes to a direct EDIT collaborator", async () => {
+		const owner = await createTestUser();
+		const editor = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const key = await route.writeMedia(testCase.id, PNG_BYTES);
+		await route.seed(testCase.id, key, owner.id);
+		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
+		await mockAuth(editor.id, editor.username, editor.email);
+
+		const { GET } = await route.routeModule();
+		const response = await GET(getRequest(route.url(testCase.id)), {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
+	});
+
+	it("serves the bytes to a user with access through a team grant", async () => {
+		const owner = await createTestUser();
+		const teamMember = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const key = await route.writeMedia(testCase.id, PNG_BYTES);
+		await route.seed(testCase.id, key, owner.id);
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, teamMember.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
+		await mockAuth(teamMember.id, teamMember.username, teamMember.email);
+
+		const { GET } = await route.routeModule();
+		const response = await GET(getRequest(route.url(testCase.id)), {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(200);
 	});
 
 	it("serves new bytes and a new ETag after the owner replaces the stored media", async () => {

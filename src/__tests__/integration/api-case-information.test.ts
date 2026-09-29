@@ -13,6 +13,8 @@ vi.mock("@/lib/auth/validate-session", () => ({
 }));
 
 const NON_EXISTENT_CASE_ID = "00000000-0000-0000-0000-000000000000";
+const FEATURE_IMAGE_ROUTE_PATTERN = (caseId: string) =>
+	new RegExp(`^/api/cases/${caseId}/media/feature\\?v=[0-9a-f]{12}$`);
 
 beforeEach(async () => {
 	await mockNoAuth();
@@ -84,8 +86,8 @@ describe("GET /api/cases/[id]/information", () => {
 		});
 
 		const body = await response.json();
-		expect(body.featureImageUrl).toBe(
-			`/api/cases/${testCase.id}/media/feature`
+		expect(body.featureImageUrl).toMatch(
+			FEATURE_IMAGE_ROUTE_PATTERN(testCase.id)
 		);
 	});
 
@@ -243,9 +245,10 @@ describe("PUT /api/cases/[id]/information", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		// The response is projected too (D6) — same address back, not the key.
-		expect(body.featureImageUrl).toBe(
-			`/api/cases/${testCase.id}/media/feature`
+		// The response is projected too — this case's own route address back,
+		// not the key.
+		expect(body.featureImageUrl).toMatch(
+			FEATURE_IMAGE_ROUTE_PATTERN(testCase.id)
 		);
 
 		const { getCaseInformation } = await import(

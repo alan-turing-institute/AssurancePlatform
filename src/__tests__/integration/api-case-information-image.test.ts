@@ -22,11 +22,13 @@ afterEach(() => {
 });
 
 const NON_EXISTENT_CASE_ID = "00000000-0000-0000-0000-000000000000";
-// The raw stored key (D3) — no `/uploads/` prefix, unlike the pre-D1 shape.
-// The route's own JSON response never carries this: it always returns the
-// fixed `/api/cases/<id>/media/feature` address instead (D6), asserted
-// separately below.
+// The raw stored key — a bare key, no `/uploads/` prefix. The route's own
+// JSON response never carries this: it always returns the case's own
+// `/api/cases/<id>/media/feature` route address instead (with a `?v=` query
+// that changes on every upload), asserted separately below.
 const UPLOADED_KEY_PATTERN = /^cases\//;
+const FEATURE_IMAGE_ROUTE_PATTERN = (caseId: string) =>
+	new RegExp(`^/api/cases/${caseId}/media/feature\\?v=[0-9a-f]{12}$`);
 
 // PNG's fixed 8-byte signature — real magic bytes, so the content-signature
 // check (AP-QA-007) accepts these fixtures as a genuine PNG rather than
@@ -109,8 +111,8 @@ describe("POST /api/cases/[id]/information/image", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body.featureImageUrl).toBe(
-			`/api/cases/${testCase.id}/media/feature`
+		expect(body.featureImageUrl).toMatch(
+			FEATURE_IMAGE_ROUTE_PATTERN(testCase.id)
 		);
 
 		const { getCaseInformation } = await import(
@@ -124,7 +126,7 @@ describe("POST /api/cases/[id]/information/image", () => {
 		}
 	});
 
-	it("deletes the previous stored image when a new one is uploaded, though both responses carry the same route address", async () => {
+	it("deletes the previous stored image when a new one is uploaded, and the route address changes", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
@@ -163,9 +165,13 @@ describe("POST /api/cases/[id]/information/image", () => {
 			writtenPaths.push(secondKey);
 		}
 
-		// The route address the browser is shown never changes (D6): it's
-		// always this case's own `/media/feature` route, not the key.
-		expect(secondBody.featureImageUrl).toBe(firstBody.featureImageUrl);
+		// The route address changes on every re-upload (its `?v=` query is
+		// derived from the new key), so a browser that already cached bytes for
+		// the old address fetches the new one instead of reusing them.
+		expect(secondBody.featureImageUrl).toMatch(
+			FEATURE_IMAGE_ROUTE_PATTERN(testCase.id)
+		);
+		expect(secondBody.featureImageUrl).not.toBe(firstBody.featureImageUrl);
 		// The underlying stored key is what actually changed.
 		expect(secondKey).not.toBe(firstKey);
 
