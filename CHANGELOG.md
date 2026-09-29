@@ -487,6 +487,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/api/public/assurance-case/[id]` endpoints. Publishing an assurance case
   now goes through the publish flow's snapshot endpoint, and published cases
   are served from the Discover pages at `/discover/<slug>`.
+- The anonymous `/uploads/*` route is removed; case images are now served
+  through access-checked routes, and the public Discover `featureImageUrl`
+  field holds the public image route address rather than a storage address.
 
 ## [0.2.0] - TBD
 
