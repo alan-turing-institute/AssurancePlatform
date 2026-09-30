@@ -16,6 +16,14 @@ updates:
       major:
         update-types:
           - "major"
+    ignore:
+      # Major 10 needs conventional-changelog-writer 9. The release tooling
+      # (@semantic-release/release-notes-generator 14) loads writer 8, with
+      # which this preset renders empty release notes. Drop this once the
+      # generator moves to writer 9.
+      - dependency-name: "conventional-changelog-conventionalcommits"
+        update-types:
+          - "version-update:semver-major"
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "staging"
