@@ -6,7 +6,7 @@ declare module "@semantic-release/commit-analyzer" {
 	export function analyzeCommits(
 		pluginConfig: Record<string, unknown>,
 		context: Record<string, unknown>
-	): Promise<string | false>;
+	): Promise<string | null>;
 }
 
 declare module "@semantic-release/release-notes-generator" {
