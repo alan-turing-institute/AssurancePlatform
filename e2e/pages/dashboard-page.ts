@@ -9,7 +9,14 @@ export class DashboardPage {
 
 	constructor(page: Page) {
 		this.page = page;
-		this.caseGrid = page.getByTestId("case-list-grid");
+		// The streamed dashboard briefly holds a hidden second copy of the
+		// grid (the server's loading-placeholder shell keeps the real list
+		// rendered but hidden until React swaps it into view), so an
+		// unfiltered lookup can momentarily see two grids and two of every
+		// card inside them.
+		this.caseGrid = page
+			.getByTestId("case-list-grid")
+			.filter({ visible: true });
 		this.createCaseButton = page.getByRole("button", {
 			name: "Create new case",
 		});

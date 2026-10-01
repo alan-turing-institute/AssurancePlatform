@@ -27,8 +27,8 @@ test.describe("Case management", () => {
 		await dashboard.goto();
 
 		await expect(dashboard.caseGrid).toBeVisible();
-		await expect(page.getByText("Simple Case")).toBeVisible();
-		await expect(page.getByText("Medium Case")).toBeVisible();
+		await expect(dashboard.caseCard("Simple Case")).toBeVisible();
+		await expect(dashboard.caseCard("Medium Case")).toBeVisible();
 	});
 
 	test("create a new case via modal", async ({ page }) => {
@@ -66,29 +66,33 @@ test.describe("Case management", () => {
 
 		await dashboard.searchInput.fill("Simple");
 
-		await expect(page.getByText("Simple Case")).toBeVisible();
-		await expect(page.getByText("Medium Case")).not.toBeVisible();
+		await expect(dashboard.caseCard("Simple Case")).toBeVisible();
+		await expect(dashboard.caseCard("Medium Case")).not.toBeVisible();
 	});
 
 	test("delete a case", async ({ page }) => {
 		const dashboard = new DashboardPage(page);
 		await dashboard.goto();
 
+		// Timestamped so a case left behind by a failed attempt can't
+		// collide with a retry's own lookups.
+		const name = `Delete Me Case ${Date.now()}`;
+
 		// Create a throwaway case first
 		await dashboard.createCaseButton.click();
 		await page.getByLabel("Name").waitFor({ state: "visible" });
-		await page.getByLabel("Name").fill("Delete Me Case");
+		await page.getByLabel("Name").fill(name);
 		await page.getByLabel("Description").fill("To be deleted");
 		await page.getByRole("button", { name: "Submit" }).click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		// Navigate back to dashboard
 		await dashboard.goto();
-		await expect(page.getByText("Delete Me Case")).toBeVisible();
+		await expect(dashboard.caseCard(name)).toBeVisible();
 
 		// Hover over card to reveal delete button, then click it
-		await dashboard.caseCard("Delete Me Case").hover();
-		await dashboard.deleteCaseButton("Delete Me Case").click();
+		await dashboard.caseCard(name).hover();
+		await dashboard.deleteCaseButton(name).click();
 
 		// Confirm deletion in alert modal and wait for the API response
 		await Promise.all([
@@ -103,7 +107,7 @@ test.describe("Case management", () => {
 		// Re-navigate to dashboard to ensure fresh data (router.refresh()
 		// triggers an async RSC re-fetch that may not complete in CI)
 		await dashboard.goto();
-		await expect(page.getByText("Delete Me Case")).not.toBeVisible();
+		await expect(dashboard.caseCard(name)).not.toBeVisible();
 	});
 
 	test("clicking the case title opens the case information sheet", async ({
