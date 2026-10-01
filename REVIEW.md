@@ -52,6 +52,8 @@ Rules marked **(run)** need a test or CI result, so ask the author for the evide
   - a malformed-input fixture that trips an earlier check than the one under test
   - a jsdom test of native browser behaviour (focus, key capture, outside-click dismissal), which jsdom does not reproduce
 - Browser behaviour that jsdom cannot reproduce needs a Playwright test or a recorded browser check.
+- A new error message a service returns has a test that exercises the route or action that delivers it, not only the service.
+  Check the status code and the body the client actually gets; a service-level test alone can pass while the route maps the error to the wrong status or drops it.
 
 ## 6. Canvas accessibility and end-to-end locators
 
@@ -59,6 +61,8 @@ Rules marked **(run)** need a test or CI result, so ask the author for the evide
   Adding or changing an `aria-label` or visible text inside a node changes the wrapper's name too.
 - End-to-end locators on the canvas or in dialogs are scoped first (to the node, dialog or section), then queried by role with an exact name.
   Unscoped `getByText` or `getByLabel`, or `getByRole` without `exact`, can match an unrelated element such as the node wrapper, and give false evidence.
+- On a page that streams its content under a `loading.tsx`, React briefly keeps a hidden second copy of the content while revealing it.
+  Role lookups and visibility-filtered locators skip the hidden copy, but a "not visible" check can still pass against it before the real content is shown; wait for a visible anchor before any such check.
 - **(run)** Any change to a name, role or label on the canvas means running the canvas end-to-end specs on the branch.
 
 ## 7. Structural quality and coverage
