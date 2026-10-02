@@ -517,9 +517,9 @@ export function nextCounters(
 	};
 }
 
-export const ruleLabel = (n: number) => `r${n}`;
-export const reductionLabel = (n: number) => `d${n}`;
-export const aggregationLabel = (n: number) => `a${n}`;
+const ruleLabel = (n: number) => `r${n}`;
+const reductionLabel = (n: number) => `d${n}`;
+const aggregationLabel = (n: number) => `a${n}`;
 
 export interface ServedSettings {
 	aggregation?: AggregationBlock & { version: string };

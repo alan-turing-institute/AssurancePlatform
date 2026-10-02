@@ -135,8 +135,6 @@ const recommendedSchema = z.strictObject({
 	valid_for: z.string().max(64).optional(),
 });
 
-export type HealthCheckRecommended = z.output<typeof recommendedSchema>;
-
 const checkEntrySchema = z.strictObject({
 	name: checkTextString("name"),
 	version: checkTextString("version"),

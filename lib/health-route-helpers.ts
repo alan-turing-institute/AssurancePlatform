@@ -120,3 +120,18 @@ export function criteriaFailure(
 	}
 	return apiError(serviceErrorToAppError(failure.error));
 }
+
+/**
+ * The first steps of a session-only route addressed to one claim: the
+ * signed-in user and the claim id from the path (a 400 when it is not a UUID).
+ */
+export async function requireClaimRequest(
+	params: Promise<{ id: string }>
+): Promise<{ claimId: string; userId: string }> {
+	const session = await requireAuthSession();
+	const claimId = uuidSchema.safeParse((await params).id.toLowerCase());
+	if (!claimId.success) {
+		throw validationError("Invalid element id");
+	}
+	return { userId: session.userId, claimId: claimId.data };
+}

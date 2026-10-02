@@ -304,6 +304,46 @@ function withScope(
 		: { ...settings, check: { ...settings.check, scope } };
 }
 
+/** The state a save leaves and the history action it is recorded as. */
+function stateAndAction(
+	previous: PluginHealthCriteriaState | undefined,
+	accept: boolean
+): { action: PluginHealthCriteriaAction; state: PluginHealthCriteriaState } {
+	if (previous === "ACCEPTED") {
+		return { state: "ACCEPTED", action: "EDITED" };
+	}
+	if (accept) {
+		return { state: "ACCEPTED", action: "ACCEPTED" };
+	}
+	return {
+		state: "SUGGESTED",
+		action: previous === "SUGGESTED" ? "EDITED" : "SUGGESTED",
+	};
+}
+
+/** Who accepted and when: set on acceptance, kept on a later edit, cleared on a suggestion. */
+function acceptanceColumns(
+	state: PluginHealthCriteriaState,
+	wasAccepted: boolean,
+	who: { ownerId: string; userId: string },
+	now: Date
+) {
+	if (state === "SUGGESTED") {
+		return {
+			acceptedById: null,
+			acceptedAt: null,
+			acceptedByOwnsIntegration: false,
+		};
+	}
+	return wasAccepted
+		? {}
+		: {
+				acceptedById: who.userId,
+				acceptedAt: now,
+				acceptedByOwnsIntegration: who.ownerId === who.userId,
+			};
+}
+
 async function writeSave(
 	tx: HealthTransaction,
 	claimId: string,
@@ -331,27 +371,15 @@ async function writeSave(
 				}
 			: null
 	);
-	const wasAccepted = previous?.state === "ACCEPTED";
-	const state: PluginHealthCriteriaState =
-		input.accept || wasAccepted ? "ACCEPTED" : "SUGGESTED";
-	let action: PluginHealthCriteriaAction = "SUGGESTED";
-	if (wasAccepted) {
-		action = "EDITED";
-	} else if (state === "ACCEPTED") {
-		action = "ACCEPTED";
-	} else if (previous?.state === "SUGGESTED") {
-		action = "EDITED";
-	}
+	const { state, action } = stateAndAction(previous?.state, input.accept);
 	const now = new Date();
 	const revision = (previous?.revision ?? 0) + 1;
-	const acceptance =
-		state === "ACCEPTED" && !wasAccepted
-			? {
-					acceptedById: userId,
-					acceptedAt: now,
-					acceptedByOwnsIntegration: context.ownerId === userId,
-				}
-			: null;
+	const acceptance = acceptanceColumns(
+		state,
+		previous?.state === "ACCEPTED",
+		{ userId, ownerId: context.ownerId },
+		now
+	);
 	const data = {
 		integrationId: input.integration_id,
 		state,
@@ -364,14 +392,7 @@ async function writeSave(
 		revision,
 		updatedById: userId,
 		updatedAt: now,
-		...(acceptance ??
-			(state === "SUGGESTED"
-				? {
-						acceptedById: null,
-						acceptedAt: null,
-						acceptedByOwnsIntegration: false,
-					}
-				: {})),
+		...acceptance,
 	};
 	if (previous) {
 		await tx.pluginHealthCriteria.update({ where: { claimId }, data });
@@ -402,6 +423,56 @@ async function writeSave(
 	}
 }
 
+function findOffered(
+	offered: HealthCheck[],
+	settings: HealthCriteriaSettings
+): HealthCheck | null {
+	const { name, version } = settings.check;
+	return (
+		offered.find((entry) => entry.name === name && entry.version === version) ??
+		null
+	);
+}
+
+/**
+ * Why `input` cannot be saved against the offered check, or null. The check
+ * must be in the list when it is first chosen, when the integration or the
+ * check changes, or when settings start again after being inactive; other
+ * edits stand even if the check has since left the list.
+ */
+function offerRefusal(
+	input: SaveCriteriaInput,
+	check: HealthCheck | null,
+	previous: PluginHealthCriteria | null,
+	previousSettings: HealthCriteriaSettings | null
+): InvalidSettings | null {
+	if (check) {
+		const issues = checkListIssues(input.settings, check).map((issue) => ({
+			...issue,
+			path: ["settings", ...issue.path],
+		}));
+		const fieldErrors = issuesToFieldErrors(issues);
+		const [field, message] = Object.entries(fieldErrors)[0] ?? ["", ""];
+		return issues.length > 0
+			? { message: `${field}: ${message}`, fieldErrors }
+			: null;
+	}
+	const checkChanged =
+		!previousSettings ||
+		previous?.state === "INACTIVE" ||
+		previous?.integrationId !== input.integration_id ||
+		JSON.stringify(checkCore(previousSettings)) !==
+			JSON.stringify(checkCore(input.settings));
+	if (checkChanged) {
+		return invalid("settings.check.name", CHECK_NOT_OFFERED).invalid;
+	}
+	const { scope } = input.settings.check;
+	return scope !== undefined && scope !== previousSettings?.check.scope
+		? invalid("settings.check.scope", "must be the scope the check list gives")
+				.invalid
+		: null;
+}
+
 /** Validates and stores one save under the claim lock; see `saveCriteria`. */
 async function saveUnderLock(
 	tx: HealthTransaction,
@@ -417,58 +488,21 @@ async function saveUnderLock(
 	if (previous?.state === "ACCEPTED" && !input.accept) {
 		return { kind: "refused", error: ACCEPTED_CANNOT_SUGGEST };
 	}
-	const previousSettings = previous
-		? (previous.settings as unknown as HealthCriteriaSettings)
-		: null;
-	const { name, version } = input.settings.check;
-	const check =
-		offered.find((entry) => entry.name === name && entry.version === version) ??
-		null;
-	// The check must be in the list when it is first chosen, when the
-	// integration or the check changes, or when settings start again after
-	// being inactive; other edits stand even if the check has since left it.
-	const checkChanged =
-		!previousSettings ||
-		previous?.state === "INACTIVE" ||
-		previous?.integrationId !== input.integration_id ||
-		JSON.stringify(checkCore(previousSettings)) !==
-			JSON.stringify(checkCore(input.settings));
-	if (!check && checkChanged) {
-		return {
-			kind: "invalid",
-			...invalid("settings.check.name", CHECK_NOT_OFFERED),
-		};
-	}
-	if (
-		!check &&
-		input.settings.check.scope !== undefined &&
-		input.settings.check.scope !== previousSettings?.check.scope
-	) {
-		return {
-			kind: "invalid",
-			...invalid(
-				"settings.check.scope",
-				"must be the scope the check list gives"
-			),
-		};
-	}
-	if (check) {
-		const issues = checkListIssues(input.settings, check).map((issue) => ({
-			...issue,
-			path: ["settings", ...issue.path],
-		}));
-		if (issues.length > 0) {
-			const fieldErrors = issuesToFieldErrors(issues);
-			const [field, message] = Object.entries(fieldErrors)[0] ?? ["", ""];
-			return {
-				kind: "invalid",
-				invalid: { message: `${field}: ${message}`, fieldErrors },
-			};
-		}
+	const check = findOffered(offered, input.settings);
+	const refusal = offerRefusal(
+		input,
+		check,
+		previous,
+		previous ? (previous.settings as unknown as HealthCriteriaSettings) : null
+	);
+	if (refusal) {
+		return { kind: "invalid", invalid: refusal };
 	}
 	const settings = withScope(
 		input.settings,
-		check?.scope ?? previousSettings?.check.scope
+		check?.scope ??
+			(previous?.settings as unknown as HealthCriteriaSettings | undefined)
+				?.check.scope
 	);
 	await writeSave(tx, claimId, { ...context, check }, previous, settings);
 	return { kind: "saved" };

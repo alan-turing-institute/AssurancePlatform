@@ -1,17 +1,11 @@
 import type { NextRequest } from "next/server";
-import {
-	apiError,
-	apiErrorFromUnknown,
-	apiSuccess,
-	requireAuthSession,
-} from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
+import { apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
 import {
 	announceHealthChange,
 	criteriaFailure,
 	parseHealthBody,
+	requireClaimRequest,
 } from "@/lib/health-route-helpers";
-import { uuidSchema } from "@/lib/schemas/base";
 import { criteriaRetirementRequestSchema } from "@/lib/schemas/health-criteria";
 import { retireCriteria } from "@/lib/services/health-criteria-service";
 
@@ -41,23 +35,18 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const session = await requireAuthSession();
-		const { id } = await params;
-		const claimId = uuidSchema.safeParse(id.toLowerCase());
-		if (!claimId.success) {
-			return apiError(validationError("Invalid element id"));
-		}
+		const { userId, claimId } = await requireClaimRequest(params);
 		const body = await parseHealthBody(
 			request,
 			criteriaRetirementRequestSchema
 		);
 
-		const result = await retireCriteria(session.userId, claimId.data, body);
+		const result = await retireCriteria(userId, claimId, body);
 		if ("error" in result || "invalid" in result) {
 			return criteriaFailure(result);
 		}
 
-		await announceHealthChange(claimId.data, result.data.caseId);
+		await announceHealthChange(claimId, result.data.caseId);
 		return apiSuccess(result.data.view);
 	} catch (error) {
 		return apiErrorFromUnknown(error);

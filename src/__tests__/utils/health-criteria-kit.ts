@@ -16,7 +16,7 @@ import {
 	createTestUser,
 } from "./prisma-factories";
 
-export const HEALTH_SCOPES = [
+const HEALTH_SCOPES = [
 	"case:read",
 	"health:checks:write",
 	"health:criteria:read",
@@ -96,7 +96,7 @@ export function saveBody(
 	return { integration_id: integrationId, settings, accept };
 }
 
-export function jsonRequest(
+function jsonRequest(
 	url: string,
 	method: string,
 	body?: unknown,
@@ -114,7 +114,7 @@ export function jsonRequest(
 const bearer = (token?: string): Record<string, string> =>
 	token ? { authorization: `Bearer ${token}` } : {};
 
-export const criteriaUrl = (claimId: string) =>
+const criteriaUrl = (claimId: string) =>
 	`${BASE}/elements/${claimId}/health/criteria`;
 
 export async function callCriteriaGet(claimId: string, token?: string) {

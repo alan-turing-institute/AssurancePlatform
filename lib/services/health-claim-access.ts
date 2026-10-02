@@ -17,10 +17,10 @@ export const HEALTH_PLUGIN_ID = "tea.health";
  * let a caller probe arbitrary ids and learn, from the message, whether
  * something exists elsewhere on the platform.
  */
-export const CLAIM_NOT_FOUND = "Claim not found";
+const CLAIM_NOT_FOUND = "Claim not found";
 
 /** The same promise for a case reference. */
-export const CASE_NOT_FOUND = "Case not found";
+const CASE_NOT_FOUND = "Case not found";
 
 async function resolveClaim(
 	claimId: string

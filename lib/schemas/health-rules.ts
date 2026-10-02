@@ -204,7 +204,7 @@ export function ruleParamIssues(rule: RuleInput): ParamIssue[] {
 	return RULE_PARAM_CHECKS[rule.kind](rule, rule.params ?? {});
 }
 
-export function checkRuleParams(rule: RuleInput, ctx: z.RefinementCtx): void {
+function checkRuleParams(rule: RuleInput, ctx: z.RefinementCtx): void {
 	for (const issue of ruleParamIssues(rule)) {
 		ctx.addIssue({ code: "custom", ...issue });
 	}
@@ -260,7 +260,7 @@ export const reductionSchema = reductionBaseSchema.extend({
 
 const AGGREGATION_KINDS = ["proportion", "worst-of", "percentile"] as const;
 
-export function isFraction(value: unknown): boolean {
+function isFraction(value: unknown): boolean {
 	return typeof value === "number" && value >= 0 && value <= 1;
 }
 
