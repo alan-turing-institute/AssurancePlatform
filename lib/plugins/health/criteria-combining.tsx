@@ -51,6 +51,44 @@ interface HeldStep {
 	title: string;
 }
 
+/** Step 2 as a held step, when the draft still holds it. */
+function heldReduction({
+	analysis,
+	disabled,
+	draft,
+	setDraft,
+}: SectionProps): HeldStep[] {
+	return draft.reductionOn
+		? [
+				{
+					disabled,
+					error: analysis.errors.reduction,
+					onRemove: () => setDraft({ reductionOn: false }),
+					title: "step 2",
+				},
+			]
+		: [];
+}
+
+/** Step 3 as a held step, when the draft still holds it. */
+function heldAggregation({
+	analysis,
+	disabled,
+	draft,
+	setDraft,
+}: SectionProps): HeldStep[] {
+	return aggregationIsHeld(draft.aggregation)
+		? [
+				{
+					disabled,
+					error: analysis.errors.aggregation,
+					onRemove: () => setDraft({ aggregation: BLANK_AGGREGATION }),
+					title: "step 3",
+				},
+			]
+		: [];
+}
+
 /** A step the check does not use, with a button for each step the settings still hold that the check cannot use. */
 function NotUsed({
 	held = [],
@@ -153,18 +191,7 @@ function ReductionSection({
 	if (!reductionAvailable(check)) {
 		return (
 			<NotUsed
-				held={
-					draft.reductionOn
-						? [
-								{
-									disabled,
-									error: analysis.errors.reduction,
-									onRemove: () => setDraft({ reductionOn: false }),
-									title: "step 2",
-								},
-							]
-						: []
-				}
+				held={heldReduction({ analysis, check, disabled, draft, setDraft })}
 				reason="This check returns text, which cannot be combined."
 				title={title}
 			/>
@@ -342,32 +369,10 @@ export function CombiningSections(
 }
 
 /** The note that a whole-system check combines nothing, with a way to remove any combining step the settings still hold. */
-function WholeSystemNotUsed({
-	analysis,
-	disabled,
-	draft,
-	setDraft,
-}: SectionProps) {
-	const held: HeldStep[] = [];
-	if (draft.reductionOn) {
-		held.push({
-			disabled,
-			error: analysis.errors.reduction,
-			onRemove: () => setDraft({ reductionOn: false }),
-			title: "step 2",
-		});
-	}
-	if (aggregationIsHeld(draft.aggregation)) {
-		held.push({
-			disabled,
-			error: analysis.errors.aggregation,
-			onRemove: () => setDraft({ aggregation: BLANK_AGGREGATION }),
-			title: "step 3",
-		});
-	}
+function WholeSystemNotUsed(props: SectionProps) {
 	return (
 		<NotUsed
-			held={held}
+			held={[...heldReduction(props), ...heldAggregation(props)]}
 			reason="A whole-system check gives one reading at a time, so there is nothing to combine."
 			title="Combining readings: not used"
 		/>

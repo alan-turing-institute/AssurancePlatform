@@ -434,6 +434,59 @@ function FormNotices({
 	);
 }
 
+/** Tells the host whether the form holds unsaved changes, and that it holds none once it is gone. */
+function useReportUnsaved(
+	dirty: boolean,
+	onUnsavedChange: ((unsaved: boolean) => void) | undefined
+) {
+	useEffect(() => {
+		onUnsavedChange?.(dirty);
+		return () => onUnsavedChange?.(false);
+	}, [dirty, onUnsavedChange]);
+}
+
+interface ReloadOptions {
+	actions: CriteriaActions;
+	form: CriteriaDraftState;
+	move: PendingMove | undefined;
+	onCancelNew: () => void;
+	onRefresh: () => void;
+	state: FormState;
+}
+
+/** What Reload does: drop the unsaved values, leave a move or a fresh pick, and read the settings again after a refused save. */
+function reloadOf({
+	actions,
+	form,
+	move,
+	onCancelNew,
+	onRefresh,
+	state,
+}: ReloadOptions): () => void {
+	return () => {
+		form.reload();
+		move?.onCancel();
+		if (state === "new") {
+			onCancelNew();
+		}
+		if (actions.refused) {
+			actions.clearRefusal();
+			onRefresh();
+		}
+	};
+}
+
+/** The reason saving is off for settings whose pipeline has been deleted. */
+function PipelineGoneNote() {
+	return (
+		<p className="wrap-anywhere text-sm">
+			The pipeline these settings were set up for no longer exists. Choose the
+			check again from a current list to keep using them, or stop using these
+			settings.
+		</p>
+	);
+}
+
 interface ShortViewOptions {
 	canEdit: boolean;
 	state: FormState;
@@ -492,15 +545,17 @@ export function CriteriaForm({
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
 	const cancel = cancelOf(state, move, onCancelNew, form.resetToStored);
-	const changedElsewhere =
-		form.changedElsewhere || superseded || actions.refused;
-	const { dirty } = form;
-	useEffect(() => {
-		onUnsavedChange?.(dirty);
-		return () => onUnsavedChange?.(false);
-	}, [dirty, onUnsavedChange]);
+	useReportUnsaved(form.dirty, onUnsavedChange);
 	const short = useShortView(form.check, form.draft.integrationId, {
 		canEdit,
+		state,
+	});
+	const reload = reloadOf({
+		actions,
+		form,
+		move,
+		onCancelNew,
+		onRefresh,
 		state,
 	});
 
@@ -508,21 +563,11 @@ export function CriteriaForm({
 		<div className="space-y-4" data-testid="health-criteria-form">
 			<FormNotices
 				changedElsewhere={
-					actions.refused || superseded || (changedElsewhere && dirty)
+					actions.refused || superseded || (form.changedElsewhere && form.dirty)
 				}
 				compare={compare}
 				move={move}
-				onReload={() => {
-					form.reload();
-					move?.onCancel();
-					if (state === "new") {
-						onCancelNew();
-					}
-					if (actions.refused) {
-						actions.clearRefusal();
-						onRefresh();
-					}
-				}}
+				onReload={reload}
 				recommends={hasRecommendation(form.check)}
 				state={state}
 				view={view}
@@ -538,17 +583,13 @@ export function CriteriaForm({
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
 			<PipelineFooter view={view} />
-			{canEdit && form.draft.integrationId === "" && (
-				<p className="wrap-anywhere text-sm" role="note">
-					The pipeline these settings were set up for no longer exists. Choose
-					the check again from a current list to keep using them, or stop using
-					these settings.
-				</p>
-			)}
+			{canEdit && form.draft.integrationId === "" && <PipelineGoneNote />}
 			{canEdit && (
 				<FormFooter
 					canSave={canSaveOf(form, state)}
-					changedElsewhere={changedElsewhere}
+					changedElsewhere={
+						form.changedElsewhere || superseded || actions.refused
+					}
 					claimId={claimId}
 					hasProblems={form.hasProblems}
 					onAccept={() => actions.save(true)}

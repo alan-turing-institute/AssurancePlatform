@@ -576,6 +576,8 @@ function emitChange() {
 
 const CHANGED_NOTICE =
 	"These settings were changed by someone else. Reload to see them.";
+const PICKER_INTRO =
+	"Choose the check a pipeline runs for this claim. You can then set how its results are judged.";
 const NO_PIPELINE_LINE =
 	"The pipeline these settings were set up for no longer exists. Choose the check again from a current list to keep using them, or stop using these settings.";
 
@@ -658,10 +660,9 @@ describe("Settings: edits that someone else's change or a failed read must not l
 		expect(
 			screen.getByRole("button", { name: "Save settings" })
 		).toBeDisabled();
+		expect(screen.queryByText(PICKER_INTRO)).toBeNull();
 		await user.click(screen.getByRole("button", { name: "Reload" }));
-		expect(
-			await screen.findByRole("combobox", { name: "Check" })
-		).toBeVisible();
+		expect(await screen.findByText(PICKER_INTRO)).toBeVisible();
 	});
 
 	it("keeps the form when someone else discards the suggestion under unsaved edits", async () => {

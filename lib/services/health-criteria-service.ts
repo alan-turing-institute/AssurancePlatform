@@ -523,6 +523,17 @@ function settingsRefusal(
 		: null;
 }
 
+/** Whether the save names a revision other than the stored one (null when nothing is stored). */
+function isStaleSave(
+	input: SaveCriteriaInput,
+	previous: { revision: number } | null
+): boolean {
+	return (
+		input.expected_revision !== undefined &&
+		input.expected_revision !== (previous?.revision ?? null)
+	);
+}
+
 /** Validates and stores one save under the claim lock; see `saveCriteria`. */
 async function saveUnderLock(
 	tx: HealthTransaction,
@@ -538,10 +549,7 @@ async function saveUnderLock(
 	const previous = await tx.pluginHealthCriteria.findUnique({
 		where: { claimId },
 	});
-	if (
-		input.expected_revision !== undefined &&
-		input.expected_revision !== (previous?.revision ?? null)
-	) {
+	if (isStaleSave(input, previous)) {
 		return { kind: "refused", error: CHANGED_BY_SOMEONE_ELSE };
 	}
 	if (!(await integrationIsActive(tx, input.integration_id))) {

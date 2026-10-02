@@ -469,6 +469,25 @@ interface StoredSettings {
 	view: HealthCriteriaResponse;
 }
 
+/**
+ * The stored settings the view shows. While the form holds unsaved edits,
+ * settings that someone else has since stopped or discarded stay on screen
+ * (`held`), so the edits are not lost.
+ */
+function useShownSettings(
+	view: HealthCriteriaResponse,
+	picked: CheckChoice | null,
+	unsaved: boolean
+) {
+	const stored = storedChoice(view);
+	const [lastStored, setLastStored] = useState<StoredSettings | null>(null);
+	if (stored && lastStored?.view !== view) {
+		setLastStored({ stored, view });
+	}
+	const held = !(picked || stored) && unsaved ? lastStored : null;
+	return { held, shown: stored ? { stored, view } : held, stored };
+}
+
 /** The loaded Settings view: the claim's text, then the picker, the form for a fresh pick, or the form for stored settings. */
 function SettingsContent({
 	canEdit,
@@ -482,14 +501,7 @@ function SettingsContent({
 	view,
 }: SettingsContentProps) {
 	const [picked, setPicked] = useState<CheckChoice | null>(null);
-	const stored = storedChoice(view);
-	const [lastStored, setLastStored] = useState<StoredSettings | null>(null);
-	if (stored && lastStored?.view !== view) {
-		setLastStored({ stored, view });
-	}
-	// Settings that someone else stopped or discarded stay on screen while the form holds unsaved edits.
-	const held = !(picked || stored) && unsaved ? lastStored : null;
-	const shown = stored ? { stored, view } : held;
+	const { held, shown, stored } = useShownSettings(view, picked, unsaved);
 	const choices = useMemo(() => {
 		const live = choicesFrom(checks.lists);
 		return stored
@@ -542,7 +554,7 @@ function SettingsContent({
 					/>
 				</>
 			)}
-			{!(picked || stored) && (
+			{!(picked || shown) && (
 				<WithoutSettings
 					canEdit={canEdit}
 					checks={checks}

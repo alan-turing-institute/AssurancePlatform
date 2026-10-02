@@ -94,40 +94,51 @@ export function serveHealth({
 }
 
 /** A stand-in for the browser's event stream that records each connection and lets a test push events. */
-export class FakeEventSource {
-	static readonly CONNECTING = 0;
-	static readonly OPEN = 1;
-	static readonly CLOSED = 2;
-	static instances: FakeEventSource[] = [];
-
-	readyState = 0;
-	onerror: (() => void) | null = null;
-	onopen: (() => void) | null = null;
+interface FakeSource {
+	addEventListener: (
+		type: string,
+		listener: (event: { data: string }) => void
+	) => void;
+	close: () => void;
+	emit: (type: string, payload: Record<string, unknown>) => void;
+	onerror: (() => void) | null;
+	onopen: (() => void) | null;
+	readyState: number;
 	readonly url: string;
-	private readonly listeners = new Map<
-		string,
-		((event: { data: string }) => void)[]
-	>();
-
-	constructor(url: string) {
-		this.url = url;
-		FakeEventSource.instances.push(this);
-	}
-
-	addEventListener(type: string, listener: (event: { data: string }) => void) {
-		this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
-	}
-
-	close() {
-		this.readyState = FakeEventSource.CLOSED;
-	}
-
-	emit(type: string, payload: Record<string, unknown>) {
-		for (const listener of this.listeners.get(type) ?? []) {
-			listener({ data: JSON.stringify({ type, payload }) });
-		}
-	}
 }
+
+const CLOSED = 2;
+
+function connect(url: string): FakeSource {
+	const listeners = new Map<string, ((event: { data: string }) => void)[]>();
+	const source: FakeSource = {
+		readyState: 0,
+		onerror: null,
+		onopen: null,
+		url,
+		addEventListener(type, listener) {
+			listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+		},
+		close() {
+			source.readyState = CLOSED;
+		},
+		emit(type, payload) {
+			for (const listener of listeners.get(type) ?? []) {
+				listener({ data: JSON.stringify({ type, payload }) });
+			}
+		},
+	};
+	FakeEventSource.instances.push(source);
+	return source;
+}
+
+/** A stand-in for the browser's event stream that records each connection and lets a test push events. */
+export const FakeEventSource = Object.assign(
+	function FakeEventSourceConstructor(url: string) {
+		return connect(url);
+	},
+	{ CONNECTING: 0, OPEN: 1, CLOSED, instances: [] as FakeSource[] }
+);
 
 export function installFakeEventSource() {
 	FakeEventSource.instances = [];
@@ -135,9 +146,9 @@ export function installFakeEventSource() {
 }
 
 /** The connections that are still open. */
-export function openConnections(): FakeEventSource[] {
+export function openConnections(): FakeSource[] {
 	return FakeEventSource.instances.filter(
-		(source) => source.readyState !== FakeEventSource.CLOSED
+		(source) => source.readyState !== CLOSED
 	);
 }
 
