@@ -553,6 +553,11 @@ async function saveUnderLock(
 	if (!description) {
 		return notOffered;
 	}
+	// Starting to accept settings needs the check in the live list; the stored
+	// copy only stands in for later edits of settings that are already accepted.
+	if (!check && input.accept && previous?.state !== "ACCEPTED") {
+		return notOffered;
+	}
 	const refusal = settingsRefusal(input, description);
 	if (refusal) {
 		return { kind: "invalid", invalid: refusal };

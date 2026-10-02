@@ -166,6 +166,7 @@ Settings are checked on every save, whether suggested or accepted, so nothing in
 The check must be in that list by name and version when settings are first set up, when they are set up again after being inactive, and whenever the check's name or version or the integration changes.
 Every save that finds the check in the list stores a copy of the check's whole entry beside the settings.
 A save that does not find the check is allowed only when the check's name, version and own settings and the integration are unchanged and the settings are not inactive.
+A save that accepts settings which were not accepted before, whether from a suggestion or from inactive settings, always needs the check in the list.
 Every check below then runs against the stored copy, exactly as it would against a listed entry, and the copy is kept.
 A change to the check's own settings needs the check in the list; an own setting that the stored copy does not describe is refused by name.
 An unknown integration, one without access and a check it does not offer all give the same 400.

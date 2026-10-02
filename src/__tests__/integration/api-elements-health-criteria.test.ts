@@ -1020,6 +1020,48 @@ describe("the check list offered", () => {
 		expect(editedBody.criteria.source.timing).toBe("edited");
 	});
 
+	it("refuses to accept a suggestion whose check has left the list, and still allows editing accepted settings", async () => {
+		const context = await setup();
+		await save(context.claim.id, context.integration.id, itemSettings(), false);
+
+		const { buildHealthCheckList } = await import("../fixtures/health-checks");
+		const list = buildHealthCheckList();
+		expectSuccess(
+			await publishHealthCheckList(
+				{
+					integrationId: context.integration.id,
+					systemUserId: context.systemUserId,
+				},
+				{
+					...list,
+					checks: list.checks.filter(
+						(check) => check.name !== "Surface Finish Check"
+					),
+				} as never
+			)
+		);
+
+		const refused = await callCriteriaPut(
+			context.claim.id,
+			saveBody(context.integration.id, itemSettings(), true)
+		);
+		expect(refused.status).toBe(400);
+		const refusedBody = await refused.json();
+		expect(refusedBody.error).toBe(`settings.check.name: ${NOT_OFFERED}`);
+		expect(refusedBody.fieldErrors["settings.check.name"]).toBe(NOT_OFFERED);
+
+		// Saving it as a suggestion again is still allowed.
+		const stillSuggested = await callCriteriaPut(
+			context.claim.id,
+			saveBody(
+				context.integration.id,
+				itemSettings({ valid_for: "PT20M" }),
+				false
+			)
+		);
+		expect(stillSuggested.status).toBe(200);
+	});
+
 	it("serves nothing after the integration is deleted, and restores on a save against a new one", async () => {
 		const context = await setup();
 		await save(context.claim.id, context.integration.id, itemSettings(), true);
