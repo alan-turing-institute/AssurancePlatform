@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
@@ -293,23 +293,30 @@ function useCriteriaActions(
 }
 
 interface FormSectionsProps {
+	canEdit: boolean;
 	choices: CheckChoice[];
 	chosen: string;
 	onPick: (key: string) => void;
 	sectionProps: SectionProps;
-	short: boolean;
+	state: FormState;
 	versions: VersionLabels | undefined;
 }
 
 /** The short view, or every section of the full form. */
 function FormSections({
+	canEdit,
 	choices,
 	chosen,
 	onPick,
 	sectionProps,
-	short,
+	state,
 	versions,
 }: FormSectionsProps) {
+	const short = useShortView(
+		sectionProps.check,
+		sectionProps.draft.integrationId,
+		{ canEdit, state }
+	);
 	const [showAll, setShowAll] = useState(false);
 	if (short && !showAll) {
 		return (
@@ -432,17 +439,6 @@ function FormNotices({
 			{changedElsewhere && <ChangedElsewhere onReload={onReload} />}
 		</>
 	);
-}
-
-/** Tells the host whether the form holds unsaved changes, and that it holds none once it is gone. */
-function useReportUnsaved(
-	dirty: boolean,
-	onUnsavedChange: ((unsaved: boolean) => void) | undefined
-) {
-	useEffect(() => {
-		onUnsavedChange?.(dirty);
-		return () => onUnsavedChange?.(false);
-	}, [dirty, onUnsavedChange]);
 }
 
 interface ReloadOptions {
@@ -609,16 +605,12 @@ export function CriteriaForm({
 		initialCheck,
 		initialChoiceKey,
 		initialDraft,
+		onUnsavedChange,
 		revision,
 		unsaved: startsUnsaved(move, state),
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
 	const cancel = cancelOf(state, move, onCancelNew, form.resetToStored);
-	useReportUnsaved(form.dirty, onUnsavedChange);
-	const short = useShortView(form.check, form.draft.integrationId, {
-		canEdit,
-		state,
-	});
 	const reload = reloadOf({
 		actions,
 		form,
@@ -642,11 +634,12 @@ export function CriteriaForm({
 			/>
 			<PlainWordsSummary sentences={form.sentences} />
 			<FormSections
+				canEdit={canEdit}
 				choices={choices}
 				chosen={form.draftKey}
 				onPick={form.onPick}
 				sectionProps={sectionPropsOf(form, actions, canEdit)}
-				short={short}
+				state={state}
 				versions={versionsOf(view, move)}
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />

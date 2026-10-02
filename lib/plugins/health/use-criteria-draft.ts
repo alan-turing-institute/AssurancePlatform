@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import {
 	analyseDraft,
@@ -19,6 +19,8 @@ interface UseCriteriaDraftOptions {
 	initialCheck: HealthCheck;
 	initialChoiceKey: string;
 	initialDraft: CriteriaDraft;
+	/** Told whether the form holds unsaved changes, and that it holds none once it is gone. */
+	onUnsavedChange?: ((unsaved: boolean) => void) | undefined;
 	/** The stored revision the values were taken from; null for a check that has not been saved. */
 	revision: number | null;
 	/** True when the initial draft is itself an unsaved change, such as settings moved to a new check version. */
@@ -37,6 +39,7 @@ export function useCriteriaDraft({
 	initialCheck,
 	initialChoiceKey,
 	initialDraft,
+	onUnsavedChange,
 	revision,
 	unsaved = false,
 }: UseCriteriaDraftOptions) {
@@ -48,6 +51,10 @@ export function useCriteriaDraft({
 	const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
 
 	const dirty = stillUnsaved || !draftsEqual(draft, baseline);
+	useEffect(() => {
+		onUnsavedChange?.(dirty);
+		return () => onUnsavedChange?.(false);
+	}, [dirty, onUnsavedChange]);
 	if (revision !== baseRevision && !dirty) {
 		setDraftState(initialDraft);
 		setBaseline(initialDraft);
