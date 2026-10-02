@@ -30,7 +30,7 @@ const DURATION_PATTERN =
 const SECONDS_PER_UNIT = [604_800, 86_400, 3600, 60, 1] as const;
 
 /** The longest accepted duration: 100 years of 365 days. */
-export const MAX_DURATION_SECONDS = 100 * 365 * 86_400;
+const MAX_DURATION_SECONDS = 100 * 365 * 86_400;
 
 /**
  * Length of an ISO 8601 duration in seconds, or `null` when the text is not

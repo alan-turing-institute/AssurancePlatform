@@ -47,7 +47,7 @@ export function wireRecord(
 }
 
 /** Validated record, as the routes hand it to the service. */
-export function parsedRecord(
+function parsedRecord(
 	claimId: string,
 	name: HealthRecordName = "populationPass",
 	overrides: Record<string, unknown> = {}
@@ -132,11 +132,11 @@ const BASE = "http://localhost:3000/api/elements";
 
 export const revocationUrl = (claimId: string, recordId: string) =>
 	`${BASE}/${claimId}/health/records/${recordId}/revocation`;
-export const reinstatementUrl = (claimId: string, recordId: string) =>
+const reinstatementUrl = (claimId: string, recordId: string) =>
 	`${BASE}/${claimId}/health/records/${recordId}/reinstatement`;
-export const boundCheckUrl = (claimId: string) =>
+const boundCheckUrl = (claimId: string) =>
 	`${BASE}/${claimId}/health/bound-check`;
-export const statusUrl = (claimId: string) => `${BASE}/${claimId}/health`;
+const statusUrl = (claimId: string) => `${BASE}/${claimId}/health`;
 
 export async function callRevoke(
 	claimId: string,
@@ -183,13 +183,4 @@ export async function callStatus(claimId: string) {
 	return await GET(new NextRequest(statusUrl(claimId)), {
 		params: Promise.resolve({ id: claimId }),
 	});
-}
-
-/** Element `index` of `items`; throws when it is not there. */
-export function at<T>(items: readonly T[], index: number): T {
-	const value = items.at(index);
-	if (value === undefined) {
-		throw new Error(`no element at index ${index}`);
-	}
-	return value;
 }

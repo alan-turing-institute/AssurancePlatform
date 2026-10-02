@@ -259,7 +259,7 @@ const UNSTORABLE_TEXT_MESSAGE =
 	"must not contain a NUL character or an unpaired surrogate";
 
 /** Whether `text` can be stored in a Postgres `jsonb` value. */
-export const isStorableText = (text: string): boolean =>
+const isStorableText = (text: string): boolean =>
 	!(text.includes("\u0000") || LONE_SURROGATE.test(text));
 
 /** Adds an issue for every key and string value, at any depth, that Postgres cannot store. */
