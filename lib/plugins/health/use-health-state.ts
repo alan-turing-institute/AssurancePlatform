@@ -8,7 +8,7 @@ interface HealthStateResponseBody {
 	status: HealthStatus | null;
 }
 
-async function fetchHealthStatus(
+export async function fetchHealthStatus(
 	elementId: string
 ): Promise<HealthStatus | null> {
 	const response = await fetch(`/api/elements/${elementId}/health`);

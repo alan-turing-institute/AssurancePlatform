@@ -10,7 +10,6 @@ import { EvidenceLogEntry } from "./evidence-log-entry";
 import { ChangeCheckDialog } from "./health-record-dialogs";
 import type { HealthStatus } from "./health-types";
 import { useHealthEvidence } from "./use-health-evidence";
-import { useHealthState } from "./use-health-state";
 
 function EvidenceSkeleton() {
 	return (
@@ -96,7 +95,6 @@ export function HealthPanel({
 }: ElementSlotContext) {
 	const context = { caseId, elementId, elementType };
 	const evidence = useHealthEvidence(context);
-	const state = useHealthState(context);
 
 	if (elementType !== "property") {
 		return (
@@ -108,7 +106,7 @@ export function HealthPanel({
 		);
 	}
 
-	if (evidence.status === "loading" || state.status === "loading") {
+	if (evidence.status === "loading") {
 		return <EvidenceSkeleton />;
 	}
 
@@ -122,10 +120,9 @@ export function HealthPanel({
 		);
 	}
 
-	const { healthStatus } = state;
+	const { healthStatus } = evidence;
 	const onChanged = () => {
 		evidence.refetch();
-		state.refetch();
 	};
 	const header = healthStatus ? (
 		<PanelHeader
@@ -150,7 +147,10 @@ export function HealthPanel({
 	}
 
 	return (
-		<div className="space-y-2" data-testid="health-evidence-log">
+		<div
+			className="max-h-[60vh] space-y-2 overflow-y-auto pr-1"
+			data-testid="health-evidence-log"
+		>
 			{header}
 			{evidence.evidence.map((item) => (
 				<EvidenceLogEntry

@@ -2,8 +2,13 @@
 
 import { useCallback, useState } from "react";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
-import type { HealthEvidenceLogItem, HealthEvidencePage } from "./health-types";
+import type {
+	HealthEvidenceLogItem,
+	HealthEvidencePage,
+	HealthStatus,
+} from "./health-types";
 import { useClaimScopedFetch } from "./use-claim-scoped-fetch";
+import { fetchHealthStatus } from "./use-health-state";
 
 const PAGE_SIZE = 50;
 
@@ -24,13 +29,32 @@ async function fetchEvidencePage(
 	return (await response.json()) as HealthEvidencePage;
 }
 
-const fetchNewestPage = (claimId: string) => fetchEvidencePage(claimId);
+interface NewestLoad {
+	/** The claim's status, or null when it has none or could not be read. */
+	healthStatus: HealthStatus | null;
+	page: HealthEvidencePage;
+}
+
+/**
+ * The newest page and the claim's status together, so the panel needs only
+ * one live-update subscription and one refetch path. A status that cannot
+ * be read leaves the header out; it does not hide the log.
+ */
+async function fetchNewestLoad(claimId: string): Promise<NewestLoad> {
+	const [page, healthStatus] = await Promise.all([
+		fetchEvidencePage(claimId),
+		fetchHealthStatus(claimId).catch(() => null),
+	]);
+	return { page, healthStatus };
+}
 
 export type HealthEvidenceStatus = "error" | "loading" | "ready";
 
 export interface UseHealthEvidenceResult {
 	evidence: HealthEvidenceLogItem[] | null;
 	hasMore: boolean;
+	/** The claim's status, for the panel header; null when it has none. */
+	healthStatus: HealthStatus | null;
 	loadingOlder: boolean;
 	/** Appends the next, older page. */
 	loadOlder: () => Promise<void>;
@@ -43,14 +67,14 @@ export interface UseHealthEvidenceResult {
 
 interface OlderPages {
 	/** The newest page these were loaded behind; a different one makes them stale. */
-	base: HealthEvidencePage;
+	base: NewestLoad;
 	items: HealthEvidenceLogItem[];
 	nextBefore: number | null;
 }
 
 /**
  * The `tea.health` evidence log for one claim, newest first, 50 at a time:
- * the newest page is fetched on mount and again on each
+ * the newest page (with the claim's status) is fetched on mount and again on each
  * `tea.health/state-changed` for the element, and `loadOlder` appends the
  * next older page. A refetch of the newest page drops the older pages
  * already loaded, since a withdrawal or reinstatement may have changed
@@ -64,21 +88,25 @@ export function useHealthEvidence({
 	elementId,
 	elementType,
 }: ElementSlotContext): UseHealthEvidenceResult {
-	const { data, status, refetch } =
-		useClaimScopedFetch<HealthEvidencePage | null>({
-			caseId,
-			elementId,
-			elementType,
-			fetchFn: fetchNewestPage,
-			errorValue: null,
-			notApplicableValue: { evidence: [], next_before: null },
-		});
+	const { data, status, refetch } = useClaimScopedFetch<NewestLoad | null>({
+		caseId,
+		elementId,
+		elementType,
+		fetchFn: fetchNewestLoad,
+		errorValue: null,
+		notApplicableValue: {
+			healthStatus: null,
+			page: { evidence: [], next_before: null },
+		},
+	});
 	const [older, setOlder] = useState<OlderPages | null>(null);
 	const [loadingOlder, setLoadingOlder] = useState(false);
 	const [olderFailed, setOlderFailed] = useState(false);
 
 	const current = older && older.base === data ? older : null;
-	const nextBefore = current ? current.nextBefore : (data?.next_before ?? null);
+	const nextBefore = current
+		? current.nextBefore
+		: (data?.page.next_before ?? null);
 
 	const loadOlder = useCallback(async () => {
 		if (!data || nextBefore === null) {
@@ -101,7 +129,8 @@ export function useHealthEvidence({
 	}, [current, data, elementId, nextBefore]);
 
 	return {
-		evidence: data ? [...data.evidence, ...(current?.items ?? [])] : null,
+		evidence: data ? [...data.page.evidence, ...(current?.items ?? [])] : null,
+		healthStatus: data?.healthStatus ?? null,
 		hasMore: nextBefore !== null,
 		loadingOlder,
 		loadOlder,
