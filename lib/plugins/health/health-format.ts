@@ -11,7 +11,7 @@ export const VERDICT_DOT_CLASSES: Record<HealthVerdict, string> = {
 	indeterminate: "bg-muted-foreground",
 };
 
-export const VERDICT_WORDS: Record<HealthVerdict, string> = {
+const VERDICT_WORDS: Record<HealthVerdict, string> = {
 	pass: "passing",
 	marginal: "marginal",
 	fail: "failing",
