@@ -100,7 +100,7 @@ export interface RuleDraft {
 	shape: RuleShape;
 }
 
-export const REDUCTION_KINDS = [
+const REDUCTION_KINDS = [
 	"mean",
 	"median",
 	"max",
@@ -220,7 +220,7 @@ function clean(value: number): number {
 }
 
 /** A fraction as the percentage text shown in the form. */
-export function fractionToPercent(value: unknown): string {
+function fractionToPercent(value: unknown): string {
 	return typeof value === "number" && Number.isFinite(value)
 		? String(clean(value * 100))
 		: "";
@@ -282,7 +282,7 @@ function shapeOfRule(rule: RuleBlock): RuleShape {
 }
 
 /** A stored rule as a draft; `share` shows pass and marginal limits as percentages. */
-export function ruleToDraft(
+function ruleToDraft(
 	rule: RuleBlock | undefined,
 	share: boolean
 ): RuleDraft | null {

@@ -99,7 +99,7 @@ function OwnRuleChoice({
 }
 
 /** Step 2: combine one subject's readings over the window. */
-export function ReductionSection({
+function ReductionSection({
 	analysis,
 	check,
 	disabled,
@@ -222,7 +222,7 @@ export function ReductionSection({
 }
 
 /** Step 3: combine all subjects into the claim's result. */
-export function AggregationSection({
+function AggregationSection({
 	analysis,
 	check,
 	disabled,

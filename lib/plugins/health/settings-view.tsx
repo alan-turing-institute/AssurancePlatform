@@ -9,7 +9,7 @@ import {
 	draftFromStored,
 	recommendationIsUsable,
 } from "./criteria-draft";
-import { CriteriaForm } from "./criteria-form";
+import { CriteriaForm, type CriteriaFormProps } from "./criteria-form";
 import { StoppedNotice } from "./criteria-notices";
 import { type CheckChoice, CheckSelect } from "./criteria-sections";
 import type {
@@ -49,26 +49,23 @@ function storedChoice(view: HealthCriteriaResponse | null): CheckChoice | null {
 	};
 }
 
-function PickerNote({ state }: { state: CaseChecksState["status"] }) {
-	const text = {
-		idle: "",
-		loading: "Loading the checks your pipelines offer.",
-		error:
-			"Could not load the checks your pipelines offer. Try reopening this element.",
-		ready: "No pipeline has published a check list for this case yet.",
-	}[state];
-	return text ? (
-		<p className="wrap-anywhere text-muted-foreground text-sm">{text}</p>
-	) : null;
-}
+const PICKER_NOTES: Record<CaseChecksState["status"], string> = {
+	idle: "",
+	loading: "Loading the checks your pipelines offer.",
+	error:
+		"Could not load the checks your pipelines offer. Try reopening this element.",
+	ready: "No pipeline has published a check list for this case yet.",
+};
 
-interface CheckPickerProps {
+function CheckPicker({
+	checks,
+	choices,
+	onPick,
+}: {
 	checks: CaseChecksState;
 	choices: CheckChoice[];
 	onPick: (choice: CheckChoice) => void;
-}
-
-function CheckPicker({ checks, choices, onPick }: CheckPickerProps) {
+}) {
 	return (
 		<div className="space-y-3">
 			<p className="text-sm">
@@ -90,9 +87,77 @@ function CheckPicker({ checks, choices, onPick }: CheckPickerProps) {
 					value=""
 				/>
 			) : (
-				<PickerNote state={checks.status} />
+				<p className="wrap-anywhere text-muted-foreground text-sm">
+					{PICKER_NOTES[checks.status]}
+				</p>
 			)}
 		</div>
+	);
+}
+
+type FormHost = Pick<
+	CriteriaFormProps,
+	"canEdit" | "choices" | "claimId" | "onCancelNew" | "onChanged" | "onReplace"
+>;
+
+/** The form for a check that has just been picked and not yet saved. */
+function PickedForm({
+	host,
+	picked,
+	view,
+}: {
+	host: FormHost;
+	picked: CheckChoice;
+	view: HealthCriteriaResponse;
+}) {
+	return (
+		<div className="space-y-3">
+			<StoppedNotice view={view} />
+			<CriteriaForm
+				{...host}
+				initialCheck={picked.check}
+				initialChoiceKey={picked.key}
+				initialDraft={draftFromCheck(picked.check, picked.integrationId)}
+				key={`new:${picked.key}`}
+				revision={null}
+				startShort={recommendationIsUsable(picked.check, picked.integrationId)}
+				state="new"
+				view={null}
+			/>
+		</div>
+	);
+}
+
+/** The form for settings the claim already has, suggested or accepted. */
+function StoredForm({
+	host,
+	stored,
+	view,
+}: {
+	host: FormHost;
+	stored: CheckChoice;
+	view: HealthCriteriaResponse;
+}) {
+	const criteria = view.criteria;
+	if (!criteria) {
+		return null;
+	}
+	return (
+		<CriteriaForm
+			{...host}
+			initialCheck={stored.check}
+			initialChoiceKey={stored.key}
+			initialDraft={draftFromStored(
+				criteria,
+				stored.check,
+				stored.integrationId
+			)}
+			key="stored"
+			revision={criteria.revision}
+			startShort={criteria.state === "suggested"}
+			state={criteria.state === "accepted" ? "accepted" : "suggested"}
+			view={view}
+		/>
 	);
 }
 
@@ -146,68 +211,27 @@ export function SettingsView({
 		);
 	}
 
-	const onReplace = (next: HealthCriteriaResponse) => {
-		criteria.replace(next);
-		setPicked(null);
-	};
-	const onChanged = () => {
-		setPicked(null);
-		criteria.refetch();
+	const host: FormHost = {
+		canEdit,
+		choices,
+		claimId,
+		onCancelNew: () => setPicked(null),
+		onChanged: () => {
+			setPicked(null);
+			criteria.refetch();
+		},
+		onReplace: (next) => {
+			criteria.replace(next);
+			setPicked(null);
+		},
 	};
 
 	if (picked) {
-		return (
-			<div className="space-y-3">
-				<StoppedNotice view={view} />
-				<CriteriaForm
-					canEdit={canEdit}
-					choices={choices}
-					claimId={claimId}
-					initialCheck={picked.check}
-					initialChoiceKey={picked.key}
-					initialDraft={draftFromCheck(picked.check, picked.integrationId)}
-					key={`new:${picked.key}`}
-					onCancelNew={() => setPicked(null)}
-					onChanged={onChanged}
-					onReplace={onReplace}
-					revision={null}
-					startShort={recommendationIsUsable(
-						picked.check,
-						picked.integrationId
-					)}
-					state="new"
-					view={null}
-				/>
-			</div>
-		);
+		return <PickedForm host={host} picked={picked} view={view} />;
 	}
-
-	if (stored && view.criteria) {
-		const { state } = view.criteria;
-		return (
-			<CriteriaForm
-				canEdit={canEdit}
-				choices={choices}
-				claimId={claimId}
-				initialCheck={stored.check}
-				initialChoiceKey={stored.key}
-				initialDraft={draftFromStored(
-					view.criteria,
-					stored.check,
-					stored.integrationId
-				)}
-				key="stored"
-				onCancelNew={() => setPicked(null)}
-				onChanged={onChanged}
-				onReplace={onReplace}
-				revision={view.criteria.revision}
-				startShort={state === "suggested"}
-				state={state === "accepted" ? "accepted" : "suggested"}
-				view={view}
-			/>
-		);
+	if (stored) {
+		return <StoredForm host={host} stored={stored} view={view} />;
 	}
-
 	return (
 		<div className="space-y-3">
 			<StoppedNotice view={view} />

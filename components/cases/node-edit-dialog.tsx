@@ -783,7 +783,7 @@ export default function NodeEditDialog({
 		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent
 				className={cn(
-					"max-h-[90vh] overflow-y-auto",
+					"max-h-9/10 overflow-y-auto",
 					wideTab ? "sm:max-w-2xl" : "sm:max-w-lg"
 				)}
 				// `onPointerDownOutside` is the path this fix targets: it's

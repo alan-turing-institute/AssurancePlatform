@@ -185,7 +185,7 @@ const VERDICT_VERBS = {
 } as const;
 
 /** "passes when it is at least 5, is marginal when it is at least 3 but below 5, and fails when it is below 3". */
-export function outcomesClause(outcomes: RuleOutcome[]): string {
+function outcomesClause(outcomes: RuleOutcome[]): string {
 	const parts = outcomes.map(
 		({ verdict, text }) => `${VERDICT_VERBS[verdict]} when ${text}`
 	);
@@ -421,15 +421,6 @@ export function plainWords(
 		validitySentence(settings)
 	);
 	return sentences;
-}
-
-/** The step-1 rule's sentence alone, for the form's own step. */
-export function ruleSentence(
-	rule: RuleBlock,
-	scale: Scale,
-	subject: string
-): string {
-	return `${capitalise(subject)} ${outcomesClause(ruleOutcomes(rule, scale))}.`;
 }
 
 export interface SummaryLine {

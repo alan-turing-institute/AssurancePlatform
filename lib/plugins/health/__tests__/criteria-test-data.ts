@@ -14,9 +14,9 @@ import type {
 
 export const INTEGRATION = { id: "integration-1", name: "Demo integration" };
 
-export const CHECKS = buildHealthCheckList().checks as HealthCheck[];
+const CHECKS = buildHealthCheckList().checks as HealthCheck[];
 
-export function demoCheck(name: string): HealthCheck {
+function demoCheck(name: string): HealthCheck {
 	const found = CHECKS.find((check) => check.name === name);
 	if (!found) {
 		throw new Error(`no demo check ${name}`);

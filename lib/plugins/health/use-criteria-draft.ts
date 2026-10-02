@@ -1,0 +1,111 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { HealthCheck } from "@/lib/schemas/health-checks";
+import {
+	analyseDraft,
+	type CriteriaDraft,
+	draftFromCheck,
+	draftsEqual,
+	friendlyMessage,
+} from "./criteria-draft";
+import { plainWords } from "./criteria-plain-words";
+import type { CheckChoice } from "./criteria-sections";
+
+interface UseCriteriaDraftOptions {
+	choices: CheckChoice[];
+	initialCheck: HealthCheck;
+	initialChoiceKey: string;
+	initialDraft: CriteriaDraft;
+	/** The stored revision the values were taken from; null for a check that has not been saved. */
+	revision: number | null;
+}
+
+/**
+ * The settings form's value and what is known about it: the draft being
+ * edited, whether it differs from what is stored, the problems the shared
+ * checks find in it, and the plain-words summary. A refetch never replaces a
+ * draft with unsaved changes; when the stored revision moves under one,
+ * `changedElsewhere` is true until the person reloads.
+ */
+export function useCriteriaDraft({
+	choices,
+	initialCheck,
+	initialChoiceKey,
+	initialDraft,
+	revision,
+}: UseCriteriaDraftOptions) {
+	const [draft, setDraftState] = useState(initialDraft);
+	const [baseline, setBaseline] = useState(initialDraft);
+	const [baseRevision, setBaseRevision] = useState(revision);
+	const [chosenKey, setChosenKey] = useState(initialChoiceKey);
+	const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
+
+	const dirty = !draftsEqual(draft, baseline);
+	if (revision !== baseRevision && !dirty) {
+		setDraftState(initialDraft);
+		setBaseline(initialDraft);
+		setBaseRevision(revision);
+		setChosenKey(initialChoiceKey);
+	}
+
+	const listed = choices.find((choice) => choice.key === chosenKey)?.check;
+	const check =
+		chosenKey === initialChoiceKey ? initialCheck : (listed ?? initialCheck);
+	const analysis = useMemo(() => analyseDraft(draft, check), [draft, check]);
+	const errors = useMemo(
+		() =>
+			Object.fromEntries(
+				Object.entries({ ...serverErrors, ...analysis.errors }).map(
+					([path, message]) => [path, friendlyMessage(path, message)]
+				)
+			),
+		[serverErrors, analysis.errors]
+	);
+	const sentences = useMemo(
+		() => plainWords(analysis.settings, check),
+		[analysis.settings, check]
+	);
+
+	const reload = () => {
+		setDraftState(initialDraft);
+		setBaseline(initialDraft);
+		setBaseRevision(revision);
+		setChosenKey(initialChoiceKey);
+	};
+
+	return {
+		analysis,
+		changedElsewhere: revision !== baseRevision,
+		check,
+		dirty,
+		draft,
+		draftKey: chosenKey,
+		errors,
+		hasProblems: Object.keys(analysis.errors).length > 0,
+		onPick: (key: string) => {
+			const choice = choices.find((candidate) => candidate.key === key);
+			if (choice) {
+				setChosenKey(key);
+				setDraftState(draftFromCheck(choice.check, choice.integrationId));
+				setServerErrors({});
+			}
+		},
+		reload,
+		resetToStored: () => {
+			setDraftState(baseline);
+			setChosenKey(initialChoiceKey);
+			setServerErrors({});
+		},
+		saved: (savedRevision: number | null) => {
+			setBaseline(draft);
+			setBaseRevision(savedRevision);
+		},
+		sentences,
+		setDraft: (patch: Partial<CriteriaDraft>) => {
+			setDraftState((current) => ({ ...current, ...patch }));
+			setServerErrors({});
+		},
+		setServerErrors,
+	};
+}

@@ -107,7 +107,7 @@ export function TextField({
 						value={value}
 					/>
 					{suffix && (
-						<span className="max-w-[40%] shrink-0 break-words text-muted-foreground text-sm">
+						<span className="max-w-2/5 shrink-0 break-words text-muted-foreground text-sm">
 							{suffix}
 						</span>
 					)}
@@ -243,7 +243,7 @@ export function VersionChip({ children }: { children: ReactNode }) {
 }
 
 /** A verdict word with a dot in the verdict's colour; the word carries the meaning. */
-export function VerdictChip({ verdict }: { verdict: RuleOutcome["verdict"] }) {
+function VerdictChip({ verdict }: { verdict: RuleOutcome["verdict"] }) {
 	return (
 		<span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 align-middle text-xs">
 			<span

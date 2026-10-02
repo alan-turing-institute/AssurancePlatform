@@ -7,7 +7,7 @@ import type { RuleDraft, RuleShape, ValueType } from "./criteria-draft";
 import { Field, OutcomeLine, TextField } from "./criteria-fields";
 import type { RuleOutcome } from "./criteria-plain-words";
 
-export const SHAPE_LABELS: Record<RuleShape, string> = {
+const SHAPE_LABELS: Record<RuleShape, string> = {
 	identity: "Yes or no",
 	"at-least": "At least",
 	"at-most": "At most",
