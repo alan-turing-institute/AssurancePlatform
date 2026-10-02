@@ -532,22 +532,31 @@ function hostOf({
 	};
 }
 
+/** A line saying the last read of the settings failed and what is shown was read before. */
+function RefreshFailedNote({ show }: { show: boolean }) {
+	return show ? (
+		<output className="wrap-anywhere block text-sm">
+			The settings could not be refreshed.
+		</output>
+	) : null;
+}
+
 interface StoredBranchProps {
-	entry: CheckChoice | null;
 	/** True when the settings shown were stopped or discarded by someone else. */
 	held: boolean;
 	host: FormHost;
+	lists: HealthCheckListOffer[] | null;
 	shown: StoredSettings;
 	view: HealthCriteriaResponse;
 }
 
 /** The form for stored settings, with who stopped them when someone else has since stopped them under unsaved edits. */
-function StoredBranch({ entry, held, host, shown, view }: StoredBranchProps) {
+function StoredBranch({ held, host, lists, shown, view }: StoredBranchProps) {
 	return (
 		<>
 			{held && <StoppedNotice view={view} />}
 			<StoredForm
-				entry={entry}
+				entry={held ? null : newerVersionOf(view, lists)}
 				host={host}
 				stored={shown.stored}
 				superseded={held}
@@ -591,18 +600,14 @@ function SettingsContent({
 
 	return (
 		<div className="space-y-4">
-			{refreshFailed && (
-				<output className="wrap-anywhere block text-sm">
-					The settings could not be refreshed.
-				</output>
-			)}
+			<RefreshFailedNote show={refreshFailed} />
 			<ClaimText text={claimText} />
 			{picked && <PickedForm host={host} picked={picked} view={view} />}
 			{!picked && shown && (
 				<StoredBranch
-					entry={stored ? newerVersionOf(view, checks.lists) : null}
 					held={held !== null}
 					host={host}
+					lists={checks.lists}
 					shown={shown}
 					view={view}
 				/>

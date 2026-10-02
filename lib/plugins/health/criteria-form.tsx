@@ -485,12 +485,48 @@ function startsUnsaved(move: PendingMove | undefined, state: FormState) {
 function changeFlags(
 	form: CriteriaDraftState,
 	actions: CriteriaActions,
-	superseded: boolean
+	superseded = false
 ) {
 	return {
 		locked: form.changedElsewhere || superseded || actions.refused,
 		warn:
 			actions.refused || superseded || (form.changedElsewhere && form.dirty),
+	};
+}
+
+interface FooterInput {
+	actions: CriteriaActions;
+	cancel: () => void;
+	claimId: string;
+	form: CriteriaDraftState;
+	/** True while a change made elsewhere has turned saving off. */
+	locked: boolean;
+	onChanged: () => void;
+	state: FormState;
+}
+
+/** The props of the footer: what each button does and when it is off. */
+function footerOf({
+	actions,
+	cancel,
+	claimId,
+	form,
+	locked,
+	onChanged,
+	state,
+}: FooterInput): FormFooterProps {
+	return {
+		canSave: canSaveOf(form, state),
+		changedElsewhere: locked,
+		claimId,
+		hasProblems: form.hasProblems,
+		onAccept: () => actions.save(true),
+		onCancel: cancel,
+		onChanged,
+		onDiscard: actions.discard,
+		onSuggest: () => actions.save(false),
+		pending: actions.pending,
+		state,
 	};
 }
 
@@ -565,7 +601,7 @@ export function CriteriaForm({
 	onUnsavedChange,
 	revision,
 	state,
-	superseded = false,
+	superseded,
 	view,
 }: CriteriaFormProps) {
 	const form = useCriteriaDraft({
@@ -617,19 +653,15 @@ export function CriteriaForm({
 			<PipelineFooter view={view} />
 			<EditControls
 				canEdit={canEdit}
-				footer={{
-					canSave: canSaveOf(form, state),
-					changedElsewhere: change.locked,
+				footer={footerOf({
+					actions,
+					cancel,
 					claimId,
-					hasProblems: form.hasProblems,
-					onAccept: () => actions.save(true),
-					onCancel: cancel,
+					form,
+					locked: change.locked,
 					onChanged,
-					onDiscard: actions.discard,
-					onSuggest: () => actions.save(false),
-					pending: actions.pending,
 					state,
-				}}
+				})}
 				pipelineGone={form.draft.integrationId === ""}
 			/>
 		</div>
