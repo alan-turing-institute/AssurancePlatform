@@ -11,7 +11,6 @@ import { expectSuccess } from "./assertion-helpers";
 import { mockAuth } from "./auth-helpers";
 import { importMachineRoute, machinePost } from "./health-adversarial-kit";
 import {
-	addPipeline,
 	callCriteriaGet,
 	callCriteriaPut,
 	callMachineClaimCriteria,
@@ -80,10 +79,6 @@ export async function actAs(
 		return;
 	}
 	await mockAuth(actors[role]?.id ?? "");
-}
-
-export async function json(response: Response) {
-	return await response.json();
 }
 
 /** Saves through the route and returns status and body. */
@@ -179,13 +174,8 @@ export async function addPipelineWithoutAccess(ownerId: string) {
 	return { integration, systemUserId };
 }
 
-/** A pipeline, with EDIT on the case and a check list, for a second integration in the same case. */
-export async function secondPipeline(ownerId: string, caseId: string) {
-	return await addPipeline(ownerId, caseId);
-}
-
 /** The served settings from a machine read, narrowed to what a record echoes. */
-export function echoFields(served: Record<string, unknown>) {
+function echoFields(served: Record<string, unknown>) {
 	const { check, rule, reduction, aggregation, window, valid_for } = served;
 	return { check, rule, reduction, aggregation, window, valid_for };
 }
