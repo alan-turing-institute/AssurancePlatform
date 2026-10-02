@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
 	CAUSE_LABELS,
 	describeDuration,
-	describeRule,
+	describeLevels,
 	describeUncertainty,
 	describeValue,
 	formatDateTime,
@@ -54,13 +54,11 @@ function RunText({ run }: { run: string }) {
 /** What the record found: value, rule, judged statistic, uncertainty, comment, subject, and a summary's members. */
 function FindingRows({ record }: { record: Record1 }) {
 	const value = describeValue(record);
-	const rule = describeRule(record);
 	const { members, failed_subjects: failed } = record.provenance;
 
 	return (
 		<>
 			{value !== null && <Row label="Value">{value}</Row>}
-			{rule !== null && <Row label="Rule">{rule}</Row>}
 			{record.judged && (
 				<Row label="Judged">
 					{record.judged.statistic} {String(record.judged.value)} (
@@ -91,14 +89,7 @@ function FindingRows({ record }: { record: Record1 }) {
 	);
 }
 
-function describeNamedRule(rule: NonNullable<Record1["reduction"]>["rule"]) {
-	if (!rule) {
-		return "";
-	}
-	return `, rule ${rule.kind}${rule.direction ? ` (${rule.direction})` : ""}`;
-}
-
-/** How the finding was produced: check, rule, reduction, aggregation, window, validity and run. */
+/** How the finding was produced: check, the levels of judgement, window, validity and run. */
 function MethodRows({
 	expiresAt,
 	record,
@@ -121,19 +112,11 @@ function MethodRows({
 			<Row label="Check">
 				{record.check.name} {record.check.version}, scope {record.check.scope}
 			</Row>
-			<Row label="Rule kind">
-				{record.rule.kind}
-				{record.rule.direction ? `, ${record.rule.direction}` : ""}
-			</Row>
-			{record.reduction && (
-				<Row label="Reduction">
-					{record.reduction.kind}
-					{describeNamedRule(record.reduction.rule)}
+			{describeLevels(record).map((level) => (
+				<Row key={level.label} label={level.label}>
+					{level.text}
 				</Row>
-			)}
-			{record.aggregation && (
-				<Row label="Aggregation">{record.aggregation.kind}</Row>
-			)}
+			))}
 			{window && (
 				<Row label="Window">
 					{formatDateTime(window.start)} to {formatDateTime(window.end)}

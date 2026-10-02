@@ -123,30 +123,115 @@ const DIRECTION_PHRASES = {
 	target: "exactly",
 } as const;
 
+type Rule1 = Record1["rule"];
+
+const MARGINAL_PHRASES = {
+	maximize: "marginal from",
+	minimize: "marginal up to",
+	target: "marginal at",
+} as const;
+
+function pairText(pair: unknown): string {
+	return Array.isArray(pair) ? `${pair[0]} and ${pair[1]}` : scalarText(pair);
+}
+
+function listText(list: unknown): string {
+	return Array.isArray(list)
+		? list.map(scalarText).join(", ")
+		: scalarText(list);
+}
+
 /**
- * What the rule the record names asks of a value, in words: "at least 0.8"
- * for a maximising threshold, "at most" for a minimising one, "exactly" for
- * a target, "between a and b" for a band, "one of ..." for a membership
- * rule. The record's own rule is used when it judges, otherwise the
- * reduction's.
+ * A rule in words: "passes when true" for identity, "at least N", "at most
+ * N" or "exactly N" for a threshold by direction, "between a and b" for a
+ * band, "one of ..." for a membership rule. A marginal limit is added in
+ * brackets when the rule has one.
  */
-export function describeRule(record: Record1): string | null {
-	const rule =
-		record.rule.kind === "identity" ? record.reduction?.rule : record.rule;
-	const pass = rule?.params?.pass_values;
-	if (!rule || pass === undefined) {
-		return null;
+export function describeRuleWords(rule: Rule1): string {
+	const pass = rule.params?.pass_values;
+	const marginal = rule.params?.marginal_values;
+	let text = "passes when true";
+	let marginalText: string | null = null;
+	if (rule.kind === "threshold" && rule.direction && pass !== undefined) {
+		text = `${DIRECTION_PHRASES[rule.direction]} ${scalarText(pass)}`;
+		if (marginal !== undefined) {
+			marginalText = `${MARGINAL_PHRASES[rule.direction]} ${scalarText(marginal)}`;
+		}
+	} else if (rule.kind === "band" && pass !== undefined) {
+		text = `between ${pairText(pass)}`;
+		if (marginal !== undefined) {
+			marginalText = `marginal between ${pairText(marginal)}`;
+		}
+	} else if (rule.kind === "membership" && pass !== undefined) {
+		text = `one of ${listText(pass)}`;
+		if (marginal !== undefined) {
+			marginalText = `marginal: ${listText(marginal)}`;
+		}
 	}
-	if (rule.kind === "threshold" && rule.direction) {
-		return `${DIRECTION_PHRASES[rule.direction]} ${scalarText(pass)}`;
+	return marginalText ? `${text} (${marginalText})` : text;
+}
+
+function describeReduction(
+	reduction: NonNullable<Record1["reduction"]>
+): string {
+	const p = reduction.params?.p;
+	const kind =
+		reduction.kind === "percentile" && p !== undefined
+			? `percentile ${scalarText(p)}`
+			: reduction.kind;
+	const judged = reduction.rule
+		? describeRuleWords(reduction.rule)
+		: "judged by the reading rule";
+	return `${kind}, ${judged} \u00b7 ${reduction.version}`;
+}
+
+function describeAggregation(
+	aggregation: NonNullable<Record1["aggregation"]>
+): string {
+	const { params } = aggregation;
+	let text: string = aggregation.kind;
+	if (aggregation.kind === "proportion") {
+		text = `share passing at least ${scalarText(params.threshold)}`;
+		if (params.marginal_threshold !== undefined) {
+			text += ` (marginal from ${scalarText(params.marginal_threshold)})`;
+		}
+	} else if (aggregation.kind === "percentile") {
+		text = `the ${scalarText(params.percentile)}th percentile, judged by the rule above`;
+	} else if (aggregation.kind === "worst-of") {
+		text = "the worst value, judged by the rule above";
 	}
-	if (rule.kind === "band" && Array.isArray(pass)) {
-		return `between ${pass[0]} and ${pass[1]}`;
+	return `${text} \u00b7 ${aggregation.version}`;
+}
+
+/**
+ * One line per level of judgement the record has, in the order the evidence
+ * flows: each reading, each subject over the window (when a reduction is
+ * present), then across all subjects (when an aggregation is present). The
+ * scope word is the record's own, unaltered.
+ */
+export function describeLevels(
+	record: Record1
+): { label: string; text: string }[] {
+	const { scope } = record.check;
+	const levels = [
+		{
+			label: "Each reading",
+			text: `${describeRuleWords(record.rule)} \u00b7 ${record.rule.version}`,
+		},
+	];
+	if (record.reduction) {
+		levels.push({
+			label: `Each ${scope} over the window`,
+			text: describeReduction(record.reduction),
+		});
 	}
-	if (rule.kind === "membership" && Array.isArray(pass)) {
-		return `one of ${pass.map(scalarText).join(", ")}`;
+	if (record.aggregation) {
+		levels.push({
+			label: `Across all ${scope} subjects`,
+			text: describeAggregation(record.aggregation),
+		});
 	}
-	return null;
+	return levels;
 }
 
 function quantileLabel(key: string): string {

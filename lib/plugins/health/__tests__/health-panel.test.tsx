@@ -124,9 +124,15 @@ describe("HealthPanel — a record", () => {
 		const text = entry.textContent ?? "";
 		expect(text).toContain("Pass");
 		expect(text).toContain("0.97 ratio");
-		expect(text).toContain("at least 0.8");
+		expect(text).toContain("Each reading: passes when true \u00b7 r1");
+		expect(text).toContain(
+			"Each sensor over the window: mean, at least 0.8 (marginal from 0.5) \u00b7 d1"
+		);
+		expect(text).toContain(
+			"Across all sensor subjects: share passing at least 0.95 \u00b7 a1"
+		);
+		expect(text).not.toContain("Value: 0.97 ratio Rule");
 		expect(text).toContain("Sensor Range Checker 1.2, scope sensor");
-		expect(text).toContain("proportion");
 		expect(text).toContain("Window: ");
 		expect(text).toContain("for 1 hour, until ");
 		expect(text).toContain("Members: 1");
@@ -180,8 +186,12 @@ describe("HealthPanel — a record", () => {
 		]);
 		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
 		const entries = await screen.findAllByTestId("health-evidence-entry");
-		expect(entries[0]).toHaveTextContent("at most 2");
-		expect(entries[1]).toHaveTextContent("exactly 2");
+		expect(entries[0]).toHaveTextContent("Each reading: at most 2 \u00b7 r1");
+		expect(entries[1]).toHaveTextContent("Each reading: exactly 2 \u00b7 r1");
+		for (const entry of entries) {
+			expect(entry.textContent).not.toContain("over the window");
+			expect(entry.textContent).not.toContain("Across all");
+		}
 	});
 
 	it("labels an indeterminate record whose comment begins 'inapplicable' as Inapplicable", async () => {
@@ -248,6 +258,36 @@ describe("HealthPanel — a record", () => {
 		expect(details).not.toHaveAttribute("open");
 		expect(details).toHaveTextContent("<b>bold</b>");
 		expect(details.querySelector("b")).toBeNull();
+	});
+});
+
+describe("HealthPanel — levels with a marginal limit", () => {
+	it("shows a marginal value on a band rule and a percentile aggregation", async () => {
+		mockLog([
+			item(
+				{},
+				{
+					rule: {
+						kind: "band",
+						params: { pass_values: [1, 2], marginal_values: [0, 3] },
+						version: "r2",
+					},
+					aggregation: {
+						kind: "percentile",
+						params: { percentile: 90 },
+						version: "a2",
+					},
+				}
+			),
+		]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+		const entry = await screen.findByTestId("health-evidence-entry");
+		expect(entry).toHaveTextContent(
+			"Each reading: between 1 and 2 (marginal between 0 and 3) \u00b7 r2"
+		);
+		expect(entry).toHaveTextContent(
+			"the 90th percentile, judged by the rule above \u00b7 a2"
+		);
 	});
 });
 
