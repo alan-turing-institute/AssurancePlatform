@@ -1,3 +1,4 @@
+import { canonicalJSON } from "@/lib/health-canonical-json";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
@@ -53,6 +54,7 @@ const ACCEPTED_CANNOT_SUGGEST =
 	"Accepted settings cannot be saved as a suggestion";
 const ALREADY_INACTIVE = "These settings are already inactive";
 const SETTINGS_NOT_FOUND = "Settings not found";
+const CLAIM_NOT_FOUND = "Claim not found";
 
 /** A failed validation that names the offending fields. */
 export interface InvalidSettings {
@@ -91,7 +93,20 @@ function invalid(field: string, message: string): { invalid: InvalidSettings } {
 }
 
 function lockClaim(tx: HealthTransaction, claimId: string) {
-	return tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+	return tx.$queryRaw<
+		{ deleted_at: Date | null; id: string }[]
+	>`SELECT id, deleted_at FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+}
+
+/** Whether `integrationId` still names an active integration; the row cannot be deleted until the transaction ends. */
+async function integrationIsActive(
+	tx: HealthTransaction,
+	integrationId: string
+): Promise<boolean> {
+	const rows = await tx.$queryRaw<
+		{ status: string }[]
+	>`SELECT status FROM integrations WHERE id = ${integrationId} FOR KEY SHARE`;
+	return rows[0]?.status === "ACTIVE";
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +136,8 @@ export type CheckOffer = "current" | "newer-version" | "not-offered";
 
 export interface CriteriaView {
 	accepted_by: { name: string; owns_integration: boolean } | null;
+	/** The check's entry in the check list as it was when the check was last found there; null when the claim has no settings. */
+	check_description: HealthCheck | null;
 	check_offer: CheckOffer | null;
 	criteria: ServedCriteria | null;
 	integration: { id: string; name: string } | null;
@@ -136,6 +153,7 @@ export interface CriteriaView {
 
 const NO_CRITERIA: CriteriaView = {
 	criteria: null,
+	check_description: null,
 	integration: null,
 	accepted_by: null,
 	last_change: null,
@@ -219,6 +237,7 @@ async function buildCriteriaView(
 	const nameOf = (id: string) => names.get(id) ?? DELETED_USER_NAME;
 	return {
 		criteria: servedCriteria(row),
+		check_description: row.checkDescription as unknown as HealthCheck,
 		integration,
 		accepted_by:
 			row.state === "ACCEPTED" && row.acceptedById
@@ -281,13 +300,18 @@ type SaveOutcome =
 	| { kind: "invalid"; invalid: InvalidSettings };
 
 interface SaveContext {
+	/** The check's entry in the list as published now, or null when the check is no longer listed. */
 	check: HealthCheck | null;
+	/** The entry the save is judged against and stores: the listed one, or the stored copy. */
+	description: HealthCheck;
 	input: SaveCriteriaInput;
 	integrationName: string;
 	ownerId: string;
 	pipeline: string;
 	userId: string;
 }
+
+type SaveBase = Omit<SaveContext, "check" | "description">;
 
 function checkCore(settings: HealthCriteriaSettings) {
 	const { name, version, params } = settings.check;
@@ -324,8 +348,8 @@ function stateAndAction(
 /** Who accepted and when: set on acceptance, kept on a later edit, cleared on a suggestion. */
 function acceptanceColumns(
 	state: PluginHealthCriteriaState,
-	wasAccepted: boolean,
-	who: { ownerId: string; userId: string },
+	previous: PluginHealthCriteria | null,
+	who: { integrationId: string; ownerId: string; userId: string },
 	now: Date
 ) {
 	if (state === "SUGGESTED") {
@@ -335,13 +359,16 @@ function acceptanceColumns(
 			acceptedByOwnsIntegration: false,
 		};
 	}
-	return wasAccepted
-		? {}
-		: {
-				acceptedById: who.userId,
-				acceptedAt: now,
-				acceptedByOwnsIntegration: who.ownerId === who.userId,
-			};
+	if (previous?.state === "ACCEPTED") {
+		return previous.integrationId === who.integrationId
+			? {}
+			: { acceptedByOwnsIntegration: previous.acceptedById === who.ownerId };
+	}
+	return {
+		acceptedById: who.userId,
+		acceptedAt: now,
+		acceptedByOwnsIntegration: who.ownerId === who.userId,
+	};
 }
 
 async function writeSave(
@@ -376,8 +403,12 @@ async function writeSave(
 	const revision = (previous?.revision ?? 0) + 1;
 	const acceptance = acceptanceColumns(
 		state,
-		previous?.state === "ACCEPTED",
-		{ userId, ownerId: context.ownerId },
+		previous,
+		{
+			userId,
+			ownerId: context.ownerId,
+			integrationId: input.integration_id,
+		},
 		now
 	);
 	const data = {
@@ -389,6 +420,7 @@ async function writeSave(
 		reductionVersion: counters.reduction,
 		aggregationVersion: counters.aggregation,
 		source: source as unknown as Prisma.InputJsonObject,
+		checkDescription: context.description as unknown as Prisma.InputJsonObject,
 		revision,
 		updatedById: userId,
 		updatedAt: now,
@@ -434,42 +466,57 @@ function findOffered(
 	);
 }
 
+/** Whether the check's name, version and own settings are the same in both. Key order does not matter. */
+function sameCheck(
+	before: HealthCriteriaSettings,
+	after: HealthCriteriaSettings
+): boolean {
+	return canonicalJSON(checkCore(before)) === canonicalJSON(checkCore(after));
+}
+
 /**
- * Why `input` cannot be saved against the offered check, or null. The check
- * must be in the list when it is first chosen, when the integration or the
- * check changes, or when settings start again after being inactive; other
- * edits stand even if the check has since left the list.
+ * The stored copy of the check's entry, when `input` names the same check
+ * (name and version) and the same integration and the settings are not
+ * inactive: the only case in which a check that has left the list may still
+ * be saved against.
  */
-function offerRefusal(
+function storedCheckCopy(
 	input: SaveCriteriaInput,
-	check: HealthCheck | null,
-	previous: PluginHealthCriteria | null,
-	previousSettings: HealthCriteriaSettings | null
+	previous: PluginHealthCriteria | null
+): HealthCheck | null {
+	if (
+		!previous ||
+		previous.state === "INACTIVE" ||
+		previous.integrationId !== input.integration_id
+	) {
+		return null;
+	}
+	const before = (previous.settings as unknown as HealthCriteriaSettings).check;
+	return before.name === input.settings.check.name &&
+		before.version === input.settings.check.version
+		? (previous.checkDescription as unknown as HealthCheck)
+		: null;
+}
+
+/**
+ * Why `input` cannot be saved against `description`, or null. The check must
+ * be in the list when it is first chosen, when the integration or the check
+ * changes, or when settings start again after being inactive. Other edits are
+ * judged against the copy of the check's entry stored with the settings, so
+ * they meet the same checks even if the check has since left the list.
+ */
+function settingsRefusal(
+	input: SaveCriteriaInput,
+	description: HealthCheck
 ): InvalidSettings | null {
-	if (check) {
-		const issues = checkListIssues(input.settings, check).map((issue) => ({
-			...issue,
-			path: ["settings", ...issue.path],
-		}));
-		const fieldErrors = issuesToFieldErrors(issues);
-		const [field, message] = Object.entries(fieldErrors)[0] ?? ["", ""];
-		return issues.length > 0
-			? { message: `${field}: ${message}`, fieldErrors }
-			: null;
-	}
-	const checkChanged =
-		!previousSettings ||
-		previous?.state === "INACTIVE" ||
-		previous?.integrationId !== input.integration_id ||
-		JSON.stringify(checkCore(previousSettings)) !==
-			JSON.stringify(checkCore(input.settings));
-	if (checkChanged) {
-		return invalid("settings.check.name", CHECK_NOT_OFFERED).invalid;
-	}
-	const { scope } = input.settings.check;
-	return scope !== undefined && scope !== previousSettings?.check.scope
-		? invalid("settings.check.scope", "must be the scope the check list gives")
-				.invalid
+	const issues = checkListIssues(input.settings, description).map((issue) => ({
+		...issue,
+		path: ["settings", ...issue.path],
+	}));
+	const fieldErrors = issuesToFieldErrors(issues);
+	const [field, message] = Object.entries(fieldErrors)[0] ?? ["", ""];
+	return issues.length > 0
+		? { message: `${field}: ${message}`, fieldErrors }
 		: null;
 }
 
@@ -477,11 +524,20 @@ function offerRefusal(
 async function saveUnderLock(
 	tx: HealthTransaction,
 	claimId: string,
-	context: SaveContext,
+	context: SaveBase,
 	offered: HealthCheck[]
 ): Promise<SaveOutcome> {
-	await lockClaim(tx, claimId);
+	const [claimRow] = await lockClaim(tx, claimId);
+	if (!claimRow || claimRow.deleted_at) {
+		return { kind: "refused", error: CLAIM_NOT_FOUND };
+	}
 	const { input } = context;
+	if (!(await integrationIsActive(tx, input.integration_id))) {
+		return {
+			kind: "invalid",
+			invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
+		};
+	}
 	const previous = await tx.pluginHealthCriteria.findUnique({
 		where: { claimId },
 	});
@@ -489,22 +545,37 @@ async function saveUnderLock(
 		return { kind: "refused", error: ACCEPTED_CANNOT_SUGGEST };
 	}
 	const check = findOffered(offered, input.settings);
-	const refusal = offerRefusal(
-		input,
-		check,
-		previous,
-		previous ? (previous.settings as unknown as HealthCriteriaSettings) : null
-	);
+	const description = check ?? storedCheckCopy(input, previous);
+	const notOffered = {
+		kind: "invalid",
+		invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
+	} as const;
+	if (!description) {
+		return notOffered;
+	}
+	const refusal = settingsRefusal(input, description);
 	if (refusal) {
 		return { kind: "invalid", invalid: refusal };
 	}
-	const settings = withScope(
-		input.settings,
-		check?.scope ??
-			(previous?.settings as unknown as HealthCriteriaSettings | undefined)
-				?.check.scope
+	// Without the list, the check's own settings must be exactly the saved ones.
+	if (
+		!check &&
+		previous &&
+		!sameCheck(
+			previous.settings as unknown as HealthCriteriaSettings,
+			input.settings
+		)
+	) {
+		return notOffered;
+	}
+	const settings = withScope(input.settings, description.scope);
+	await writeSave(
+		tx,
+		claimId,
+		{ ...context, check, description },
+		previous,
+		settings
 	);
-	await writeSave(tx, claimId, { ...context, check }, previous, settings);
 	return { kind: "saved" };
 }
 
@@ -535,8 +606,7 @@ export async function saveCriteria(
 		if (!offered) {
 			return invalid("settings.check.name", CHECK_NOT_OFFERED);
 		}
-		const context: SaveContext = {
-			check: null,
+		const context: SaveBase = {
 			input,
 			integrationName: offered.integration.name,
 			ownerId: offered.integration.ownerId,

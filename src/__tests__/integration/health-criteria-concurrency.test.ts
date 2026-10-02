@@ -9,16 +9,15 @@ import {
 	appendHealthEvidence,
 	changeBoundCheck,
 } from "@/lib/services/health-evidence-service";
+import { deleteIntegrationRegistration } from "@/lib/services/integration-registry-service";
 import { expectSuccess } from "../utils/assertion-helpers";
-import { addClaim, wireRecord } from "../utils/health-adversarial-kit";
+import { wireRecord } from "../utils/health-adversarial-kit";
 import { itemSettings, setupCriteriaCase } from "../utils/health-criteria-kit";
 import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
-
-const RACES = 8;
 
 /** A save or retirement succeeded; its failure variants carry no `data`. */
 function expectSaved(result: object) {
@@ -44,56 +43,69 @@ function recordFor(claimId: string) {
 }
 
 describe("evidence settings take the claim lock", () => {
-	it("an acceptance racing a claim's first result leaves one state row, one binding history and a consistent comparison", async () => {
+	/**
+	 * Holds the claim's lock, queues the two calls behind it in the order given,
+	 * then releases it, so the first in line always runs first.
+	 */
+	async function raceInOrder(first: "save" | "append") {
 		const context = await setupCriteriaCase();
-		const claims = [context.claim];
-		for (let i = 1; i < RACES; i++) {
-			claims.push(await addClaim(context.testCase.id, context.owner.id));
-		}
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${context.claim.id} FOR UPDATE`;
+		});
+		const save = () =>
+			saveCriteria(
+				context.owner.id,
+				context.claim.id,
+				saveInput(context.integration.id)
+			).then(expectSaved);
+		const append = () =>
+			appendHealthEvidence(
+				context.systemUserId,
+				context.claim.id,
+				recordFor(context.claim.id)
+			).then((result) => {
+				expectSuccess(result);
+			});
+		const [startFirst, startSecond] =
+			first === "save" ? [save, append] : [append, save];
+		const running = [startFirst()];
+		await waitForLockWait(undefined, 1);
+		running.push(startSecond());
+		await waitForLockWait(undefined, 2);
+		await lock.release();
+		await Promise.all(running);
 
-		const outcomes = await Promise.all(
-			claims.map(async (claim) => {
-				const [saved, appended] = await Promise.all([
-					saveCriteria(
-						context.owner.id,
-						claim.id,
-						saveInput(context.integration.id)
-					),
-					appendHealthEvidence(
-						context.systemUserId,
-						claim.id,
-						recordFor(claim.id)
-					),
-				]);
-				expectSaved(saved);
-				expectSuccess(appended);
-				return claim.id;
-			})
-		);
+		const claimId = context.claim.id;
+		return {
+			states: await prisma.pluginHealthClaimState.count({
+				where: { claimId },
+			}),
+			changes: await prisma.pluginHealthBindingChange.findMany({
+				where: { claimId },
+			}),
+			evidence: await prisma.pluginHealthEvidence.findFirstOrThrow({
+				where: { claimId },
+			}),
+		};
+	}
 
-		for (const claimId of outcomes) {
-			const states = await prisma.pluginHealthClaimState.count({
-				where: { claimId },
-			});
-			const changes = await prisma.pluginHealthBindingChange.findMany({
-				where: { claimId },
-			});
-			const evidence = await prisma.pluginHealthEvidence.findFirstOrThrow({
-				where: { claimId },
-			});
-			expect(states).toBe(1);
-			expect(changes).toHaveLength(1);
-			if (evidence.echoState === "UNDECLARED") {
-				// The result arrived first: it bound the claim, and was compared with no settings.
-				expect(changes[0]?.source).toBe("FIRST_RECORD");
-				expect(evidence.criteriaRevision).toBeNull();
-			} else {
-				// The acceptance came first: it bound the claim, and the result was compared with it.
-				expect(changes[0]?.source).toBe("DECLARATION");
-				expect(evidence.criteriaRevision).toBe(1);
-			}
-		}
-	}, 60_000);
+	it("an acceptance that reaches the claim first binds it, and the result is compared with its revision", async () => {
+		const { states, changes, evidence } = await raceInOrder("save");
+		expect(states).toBe(1);
+		expect(changes).toHaveLength(1);
+		expect(changes[0]?.source).toBe("DECLARATION");
+		expect(evidence.echoState).not.toBe("UNDECLARED");
+		expect(evidence.criteriaRevision).toBe(1);
+	});
+
+	it("a result that reaches the claim first binds it, and is compared with no settings", async () => {
+		const { states, changes, evidence } = await raceInOrder("append");
+		expect(states).toBe(1);
+		expect(changes).toHaveLength(1);
+		expect(changes[0]?.source).toBe("FIRST_RECORD");
+		expect(evidence.echoState).toBe("UNDECLARED");
+		expect(evidence.criteriaRevision).toBeNull();
+	});
 
 	it("a save waits for a held claim lock and stores nothing until it is released", async () => {
 		const context = await setupCriteriaCase();
@@ -145,5 +157,57 @@ describe("evidence settings take the claim lock", () => {
 		await holder.release();
 		expectSuccess(await binding);
 		expect(await prisma.pluginHealthClaimState.count()).toBe(1);
+	});
+});
+
+describe("a save whose claim or integration changes after the list was read", () => {
+	it("answers 'Claim not found' when the claim is soft-deleted while the save waits for its lock", async () => {
+		const context = await setupCriteriaCase();
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${context.claim.id} FOR UPDATE`;
+			await tx.$executeRaw`UPDATE assurance_elements SET deleted_at = now() WHERE id = ${context.claim.id}`;
+		});
+		const saving = saveCriteria(
+			context.owner.id,
+			context.claim.id,
+			saveInput(context.integration.id)
+		);
+		await waitForLockWait();
+		await lock.release();
+		expect(await saving).toEqual({ error: "Claim not found" });
+		expect(await prisma.pluginHealthCriteria.count()).toBe(0);
+		expect(await prisma.pluginHealthCriteriaRevision.count()).toBe(0);
+	});
+
+	it("answers 'Check not offered' when the integration is deleted while the save waits for the claim lock", async () => {
+		const context = await setupCriteriaCase();
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${context.claim.id} FOR UPDATE`;
+		});
+		const saving = saveCriteria(
+			context.owner.id,
+			context.claim.id,
+			saveInput(context.integration.id)
+		);
+		// The save has read the list and is queued behind the lock.
+		await waitForLockWait();
+		expectSuccess(
+			await deleteIntegrationRegistration(
+				context.integration.id,
+				context.owner.id
+			)
+		);
+		await lock.release();
+		const result = await saving;
+		expect(result).toEqual({
+			invalid: {
+				message: "settings.check.name: Check not offered for this case",
+				fieldErrors: {
+					"settings.check.name": "Check not offered for this case",
+				},
+			},
+		});
+		expect(await prisma.pluginHealthCriteria.count()).toBe(0);
+		expect(await prisma.pluginHealthCriteriaRevision.count()).toBe(0);
 	});
 });

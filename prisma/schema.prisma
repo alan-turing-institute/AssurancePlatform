@@ -1312,6 +1312,7 @@ model PluginHealthCriteria {
   reductionVersion   Int @map("reduction_version")
   aggregationVersion Int @map("aggregation_version")
   source        Json /// Where each block came from, worked out by the server
+  checkDescription Json @map("check_description") /// The check's entry in the check list, as published when the check was last found there
   revision      Int /// Goes up by one on every save
 
   acceptedById              String?   @map("accepted_by_id")

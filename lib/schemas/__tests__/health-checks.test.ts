@@ -85,6 +85,47 @@ describe("check list schema", () => {
 		).toEqual(["checks.0.params.0.default"]);
 	});
 
+	it("refuses options on a setting that is not an enum, and a default that does not fit each type", () => {
+		const withParam = (param: Record<string, unknown>) => ({
+			pipeline: "p",
+			checks: [{ ...minimalCheck("a"), params: [param] }],
+		});
+		const fields = (param: Record<string, unknown>) =>
+			fieldsOf(withParam({ key: "k", label: "K", ...param }));
+		expect(fields({ type: "string", options: ["x"] })).toEqual([
+			"checks.0.params.0.options",
+		]);
+		for (const param of [
+			{ type: "string", default: 5 },
+			{ type: "boolean", default: "yes" },
+			{ type: "duration", default: 5 },
+			{ type: "duration", default: "" },
+			{ type: "enum", options: ["x", "y"], default: "z" },
+		]) {
+			expect(fields(param), JSON.stringify(param)).toEqual([
+				"checks.0.params.0.default",
+			]);
+		}
+		for (const param of [
+			{ type: "string", default: "s" },
+			{ type: "number", default: 5 },
+			{ type: "boolean", default: false },
+			{ type: "duration", default: "PT5M" },
+			{ type: "enum", options: ["x", "y"], default: "y" },
+		]) {
+			expect(fields(param), JSON.stringify(param)).toEqual([]);
+		}
+	});
+
+	it("refuses a prototype key in a recommendation's parameters and in a rule's parameters", () => {
+		const list = JSON.parse(
+			'{"pipeline":"p","checks":[{"name":"a","version":"1","scope":"item","value":{"type":"boolean"},"recommended":{"rule":{"kind":"identity","params":{"__proto__":{"x":1}}}}}]}'
+		);
+		expect(fieldsOf(list)).toEqual([
+			"checks.0.recommended.rule.params.__proto__",
+		]);
+	});
+
 	it("refuses text a database cannot store", () => {
 		expect(
 			fieldsOf({

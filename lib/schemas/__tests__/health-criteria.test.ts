@@ -251,9 +251,69 @@ describe("settings against a check", () => {
 					},
 				})
 			)["reduction.rule"];
-		expect(reduction("mean", false)).toContain("cannot judge");
+		expect(reduction("mean", false)).toBe(
+			"is required: an identity rule cannot judge the mean of several readings"
+		);
 		expect(reduction("mean", true)).toBeUndefined();
 		expect(reduction("last", false)).toBeUndefined();
+	});
+
+	it("names the rule kind a check is judged by, with the right article", () => {
+		expect(
+			fieldErrorsFor(
+				itemSettings({
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 1 },
+					},
+				})
+			)["rule.kind"]
+		).toBe("a yes-or-no check is judged by an identity rule, not threshold");
+		expect(
+			fieldErrorsFor(
+				{
+					check: { name: numericCheck.name, version: numericCheck.version },
+					...numericCheck.recommended,
+					rule: { kind: "identity" },
+				},
+				numericCheck
+			)["rule.kind"]
+		).toBe(
+			"a numeric check is judged by a threshold or band or membership rule, not identity"
+		);
+	});
+
+	it("lowercases the integration id in a save request", () => {
+		const parsed = criteriaSaveRequestSchema.parse({
+			integration_id: "7ACD824E-0000-4000-8000-0000000000AA",
+			settings: itemSettings(),
+			accept: true,
+		});
+		expect(parsed.integration_id).toBe("7acd824e-0000-4000-8000-0000000000aa");
+	});
+
+	it("refuses a prototype key in a check's own settings, at any depth", () => {
+		const bag = (json: string) =>
+			parse(
+				itemSettings({
+					check: JSON.parse(
+						`{"name":"${itemCheck.name}","version":"${itemCheck.version}","params":${json}}`
+					),
+				})
+			);
+		for (const [json, field] of [
+			['{"__proto__":"x"}', "check.params.__proto__"],
+			['{"a":{"__proto__":{"b":1}}}', "check.params.a.__proto__"],
+		] as const) {
+			const result = bag(json);
+			expect(result.success).toBe(false);
+			expect(
+				result.success
+					? []
+					: result.error.issues.map((issue) => issue.path.join("."))
+			).toEqual([field]);
+		}
 	});
 
 	it("refuses a check setting the check does not describe, or of the wrong type", () => {
@@ -286,7 +346,7 @@ describe("settings against a check", () => {
 				numericCheck
 			)["check.params.tolerance_profile"];
 		expect(tolerance("strict")).toBeUndefined();
-		expect(tolerance("loose")).toContain("enum");
+		expect(tolerance("loose")).toBe("must be one of standard, strict");
 	});
 
 	it("refuses any reduction on a check that returns text", () => {

@@ -232,6 +232,22 @@ describe("PUT /api/machine/health/checks", () => {
 		expect(await prisma.pluginHealthCheckCatalogue.count()).toBe(1);
 	});
 
+	it("refuses a prototype key in a recommendation's parameters, naming the field, and keeps the previous list", async () => {
+		const context = await setup();
+		const body =
+			'{"pipeline":"p","checks":[{"name":"a","version":"1","scope":"item","value":{"type":"boolean"},"recommended":{"aggregation":{"kind":"proportion","params":{"threshold":0.9,"__proto__":{"x":1}}}}}]}';
+		const response = await callPublishChecks(body, context.secret);
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toContain(
+			"checks.0.recommended.aggregation.params.__proto__"
+		);
+		expect(
+			await prisma.pluginHealthCheckCatalogue.findUniqueOrThrow({
+				where: { integrationId: context.integration.id },
+			})
+		).toMatchObject({ pipeline: "Inspection pipeline (demo)" });
+	});
+
 	it("refuses a body over 256 KB with a 413", async () => {
 		const context = await setup();
 		const response = await callPublishChecks(
@@ -325,6 +341,29 @@ describe("machine reads of the accepted settings", () => {
 		).json();
 		expect(all.criteria).toHaveLength(1);
 		expect(all.criteria[0]).not.toHaveProperty("accepted_by");
+	});
+
+	it("returns every accepted claim of the calling integration, ordered by claim id", async () => {
+		const context = await setup();
+		const claims = [context.claim];
+		for (let i = 0; i < 2; i++) {
+			claims.push(
+				await createTestElement(context.testCase.id, context.owner.id, {
+					elementType: "PROPERTY_CLAIM",
+				})
+			);
+		}
+		for (const claim of claims) {
+			await accept(claim.id, context.integration.id);
+		}
+		const body = await (
+			await callMachineCaseCriteria(context.testCase.id, context.secret)
+		).json();
+		expect(
+			body.criteria.map((item: { claim_ref: string }) => item.claim_ref)
+		).toEqual(
+			claims.map((claim) => claim.id).sort((a, b) => a.localeCompare(b))
+		);
 	});
 
 	it("returns only settings whose check came from the calling integration's list", async () => {

@@ -146,7 +146,7 @@ A person with edit access sets them up; a machine token cannot.
 
 | Route | Purpose |
 |---|---|
-| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, and how the claim's current result compares. Needs view access. |
+| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, and the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings). Needs view access. |
 | `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept }`. Needs edit access. |
 | `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason }`. Needs edit access. |
 | `GET /api/cases/[id]/health/checks` | The check lists of the active integrations whose system user can edit the case. Needs view access. |
@@ -163,7 +163,11 @@ Retired and discarded settings stay in the table as inactive, so the revision nu
 Settings are checked on every save, whether suggested or accepted, so nothing invalid is stored:
 
 - The integration must be active, its system user must hold edit access to the case, and it must have published a check list.
-The check must be in that list by name and version whenever the check or the integration changes; later edits to other blocks stand even if the check has since left the list.
+The check must be in that list by name and version when settings are first set up, when they are set up again after being inactive, and whenever the check's name or version or the integration changes.
+Every save that finds the check in the list stores a copy of the check's whole entry beside the settings.
+A save that does not find the check is allowed only when the check's name, version and own settings and the integration are unchanged and the settings are not inactive.
+Every check below then runs against the stored copy, exactly as it would against a listed entry, and the copy is kept.
+A change to the check's own settings needs the check in the list; an own setting that the stored copy does not describe is refused by name.
 An unknown integration, one without access and a check it does not offer all give the same 400.
 These checks run only after the access check, so a person without access learns nothing about what an integration offers.
 - `check.params` may name only the settings the check describes, with the types it gives.

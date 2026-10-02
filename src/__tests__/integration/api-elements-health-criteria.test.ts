@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { publishHealthCheckList } from "@/lib/services/health-check-catalogue-service";
 import {
 	deleteIntegrationRegistration,
 	registerIntegration,
 } from "@/lib/services/integration-registry-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
+import { buildHealthCheckList } from "../fixtures/health-checks";
 import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import { callBoundCheck } from "../utils/health-adversarial-kit";
@@ -817,6 +819,16 @@ describe("refused settings", () => {
 				owner.id
 			)
 		);
+		// It publishes a list, so the refusal can only come from the missing EDIT.
+		expectSuccess(
+			await publishHealthCheckList(
+				{
+					integrationId: noAccess.integration.id,
+					systemUserId: noAccess.systemUserId,
+				},
+				buildHealthCheckList() as never
+			)
+		);
 		const unknownIntegration = "7acd824e-0000-4000-8000-0000000000cc";
 		const bodies: unknown[] = [];
 		for (const [integrationId, settings] of [
@@ -1042,6 +1054,250 @@ describe("the check list offered", () => {
 		expect(
 			(await callMachineClaimCriteria(context.claim.id, fresh.secret)).status
 		).toBe(200);
+	});
+});
+
+describe("settings of a check that has left the list", () => {
+	const ORDERED_CHECK = "Two Setting Check";
+	const TEXT_CHECK = "Text Reader";
+	const AGGREGATION = {
+		kind: "proportion",
+		params: { threshold: 0.9, avail_floor: 0.8, use_verdict: true },
+	};
+	const extraChecks = [
+		{
+			name: ORDERED_CHECK,
+			version: "1",
+			scope: "item",
+			value: { type: "boolean" },
+			params: [
+				{ key: "long_parameter_name", label: "Long", type: "string" },
+				{ key: "b", label: "B", type: "string" },
+			],
+		},
+		{
+			name: TEXT_CHECK,
+			version: "1",
+			scope: "item",
+			value: { type: "string" },
+		},
+	];
+
+	function orderedSettings(
+		params: Record<string, unknown>,
+		overrides: Record<string, unknown> = {}
+	) {
+		return {
+			check: { name: ORDERED_CHECK, version: "1", scope: "item", params },
+			rule: { kind: "identity" },
+			aggregation: AGGREGATION,
+			window: "PT1M",
+			valid_for: "PT5M",
+			...overrides,
+		};
+	}
+
+	function textSettings(overrides: Record<string, unknown> = {}) {
+		return {
+			check: { name: TEXT_CHECK, version: "1", scope: "item" },
+			rule: { kind: "membership", params: { pass_values: ["OK"] } },
+			aggregation: AGGREGATION,
+			window: "PT1M",
+			valid_for: "PT5M",
+			...overrides,
+		};
+	}
+
+	async function publishChecks(
+		context: { integration: { id: string }; systemUserId: string },
+		checks: unknown[]
+	) {
+		expectSuccess(
+			await publishHealthCheckList(
+				{
+					integrationId: context.integration.id,
+					systemUserId: context.systemUserId,
+				},
+				{ ...buildHealthCheckList(), checks } as never
+			)
+		);
+	}
+
+	/** Accepts `settings` while every check is listed, then publishes a list with no checks. */
+	async function acceptedThenUnlisted(settings: Record<string, unknown>) {
+		const context = await setup();
+		await publishChecks(context, [
+			...buildHealthCheckList().checks,
+			...extraChecks,
+		]);
+		await save(context.claim.id, context.integration.id, settings, true);
+		await publishChecks(context, []);
+		return context;
+	}
+
+	it("accepts an edit that sends the check's own settings in another order than they were stored", async () => {
+		const context = await acceptedThenUnlisted(
+			orderedSettings({ long_parameter_name: "x", b: "y" })
+		);
+		// The database hands object keys back shortest first, so `b` is stored before `long_parameter_name`.
+		for (const params of [
+			{ long_parameter_name: "x", b: "y" },
+			{ b: "y", long_parameter_name: "x" },
+		]) {
+			const response = await callCriteriaPut(
+				context.claim.id,
+				saveBody(
+					context.integration.id,
+					orderedSettings(params, { valid_for: "PT20M" }),
+					true
+				)
+			);
+			expect(response.status).toBe(200);
+		}
+	});
+
+	it("refuses an edit that changes the check's own settings", async () => {
+		const context = await acceptedThenUnlisted(
+			orderedSettings({ long_parameter_name: "x", b: "y" })
+		);
+		const response = await callCriteriaPut(
+			context.claim.id,
+			saveBody(
+				context.integration.id,
+				orderedSettings({ long_parameter_name: "x", b: "changed" }),
+				true
+			)
+		);
+		expect(response.status).toBe(400);
+		expect((await response.json()).fieldErrors).toEqual({
+			"settings.check.name": NOT_OFFERED,
+		});
+	});
+
+	it("stores the check's entry with the settings and returns it beside them", async () => {
+		const context = await setup();
+		const empty = await (await callCriteriaGet(context.claim.id)).json();
+		expect(empty.check_description).toBeNull();
+
+		const entry = buildHealthCheckList().checks.find(
+			(check) => check.name === "Surface Finish Check"
+		);
+		const saved = await save(
+			context.claim.id,
+			context.integration.id,
+			itemSettings(),
+			true
+		);
+		expect(saved.check_description).toEqual(entry);
+
+		await publishChecks(context, []);
+		const edited = await save(
+			context.claim.id,
+			context.integration.id,
+			itemSettings({ valid_for: "PT20M" }),
+			true
+		);
+		expect(edited.check_offer).toBe("not-offered");
+		expect(edited.check_description).toEqual(entry);
+
+		const { callMachineClaimCriteria } = await import(
+			"../utils/health-criteria-kit"
+		);
+		const read = await (
+			await callMachineClaimCriteria(context.claim.id, context.secret)
+		).json();
+		expect(read).not.toHaveProperty("check_description");
+	});
+
+	it.each([
+		[
+			"removing the aggregation from a per-item check",
+			() => itemSettings(),
+			() => itemSettings({ aggregation: undefined }),
+			"settings.aggregation",
+		],
+		[
+			"a rule kind that does not fit the value type",
+			() => itemSettings(),
+			() =>
+				itemSettings({
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.5 },
+					},
+				}),
+			"settings.rule.kind",
+		],
+		[
+			"a reduction on a text check",
+			() => textSettings(),
+			() => textSettings({ reduction: { kind: "last" } }),
+			"settings.reduction",
+		],
+		[
+			"an own setting the check did not describe",
+			() => orderedSettings({ long_parameter_name: "x", b: "y" }),
+			() => orderedSettings({ long_parameter_name: "x", b: "y", extra: "z" }),
+			"settings.check.params.extra",
+		],
+	])("refuses %s, names the field and stores nothing", async (_label, base, edit, field) => {
+		const context = await acceptedThenUnlisted(base());
+		const stored = () =>
+			prisma.pluginHealthCriteria.findUniqueOrThrow({
+				where: { claimId: context.claim.id },
+			});
+		const before = await stored();
+		const response = await callCriteriaPut(
+			context.claim.id,
+			saveBody(context.integration.id, edit(), true)
+		);
+		expect(response.status).toBe(400);
+		expect(Object.keys((await response.json()).fieldErrors)).toContain(field);
+		expect(await stored()).toEqual(before);
+		expect(
+			await prisma.pluginHealthCriteriaRevision.count({
+				where: { claimId: context.claim.id },
+			})
+		).toBe(1);
+	});
+});
+
+describe("saving with an upper-case integration id and a moved integration", () => {
+	it("accepts an integration id in upper case", async () => {
+		const context = await setup();
+		const body = await save(
+			context.claim.id,
+			context.integration.id.toUpperCase(),
+			itemSettings(),
+			true
+		);
+		expect(body.integration.id).toBe(context.integration.id);
+	});
+
+	it("works out again who owns the integration when accepted settings move to another", async () => {
+		const context = await setup();
+		await save(context.claim.id, context.integration.id, itemSettings(), true);
+		const other = await createTestUser();
+		const second = await addPipeline(other.id, context.testCase.id);
+
+		const moved = await save(
+			context.claim.id,
+			second.integration.id,
+			itemSettings(),
+			true
+		);
+		expect(moved.accepted_by).toEqual({
+			name: context.owner.username,
+			owns_integration: false,
+		});
+		const back = await save(
+			context.claim.id,
+			context.integration.id,
+			itemSettings(),
+			true
+		);
+		expect(back.accepted_by.owns_integration).toBe(true);
 	});
 });
 

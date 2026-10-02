@@ -278,7 +278,7 @@ export type HealthCriteriaSettings = z.output<
 
 /** The body of `PUT /api/elements/[id]/health/criteria`. */
 export const criteriaSaveRequestSchema = z.strictObject({
-	integration_id: uuidSchema,
+	integration_id: uuidSchema.transform((id) => id.toLowerCase()),
 	settings: healthCriteriaSettingsSchema,
 	accept: z.boolean({ error: "must be true or false" }),
 });
@@ -310,6 +310,13 @@ const VALUE_WORDS: Record<ValueType, string> = {
 
 /** Readings combined into a number that an identity or membership rule cannot judge. */
 const NUMERIC_REDUCTIONS = ["sum", "mean", "median", "percentile"];
+
+const STARTS_WITH_VOWEL = /^[aeiou]/i;
+
+/** `a` or `an` before `word`. */
+function withArticle(word: string): string {
+	return STARTS_WITH_VOWEL.test(word) ? `an ${word}` : `a ${word}`;
+}
 
 function paramFits(
 	type: CheckParamType,
@@ -347,7 +354,10 @@ function checkParamIssues(
 		} else if (!paramFits(spec.type, value, spec.options)) {
 			issues.push({
 				path: ["check", "params", key],
-				message: `must be a value of type ${spec.type}`,
+				message:
+					spec.type === "enum"
+						? `must be one of ${(spec.options ?? []).join(", ")}`
+						: `must be a value of type ${spec.type}`,
 			});
 		}
 	}
@@ -391,7 +401,7 @@ function structureIssues(
 	) {
 		issues.push({
 			path: ["reduction", "rule"],
-			message: `is required: a ${settings.rule.kind} rule cannot judge the ${settings.reduction.kind} of several readings`,
+			message: `is required: ${withArticle(`${settings.rule.kind} rule`)} cannot judge the ${settings.reduction.kind} of several readings`,
 		});
 	}
 	return issues;
@@ -430,7 +440,7 @@ export function checkListIssues(
 				message:
 					allowed.length === 0
 						? "a check that returns a date and time cannot be set up yet"
-						: `a ${VALUE_WORDS[check.value.type]} check is judged by a ${allowed.join(" or ")} rule, not ${settings.rule.kind}`,
+						: `${withArticle(`${VALUE_WORDS[check.value.type]} check`)} is judged by ${withArticle(`${allowed.join(" or ")} rule`)}, not ${settings.rule.kind}`,
 			});
 		}
 	}

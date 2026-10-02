@@ -39,6 +39,7 @@ CREATE TABLE "plugin_health_criteria" (
     "reduction_version" INTEGER NOT NULL,
     "aggregation_version" INTEGER NOT NULL,
     "source" JSONB NOT NULL,
+    "check_description" JSONB NOT NULL,
     "revision" INTEGER NOT NULL,
     "accepted_by_id" TEXT,
     "accepted_at" TIMESTAMP(3),

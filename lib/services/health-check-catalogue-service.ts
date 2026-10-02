@@ -155,8 +155,9 @@ export async function loadOfferedChecks(
 
 /**
  * The check lists of the active integrations whose system user has EDIT on
- * `caseId`, which are the checks a person can set up for its claims. Requires
- * VIEW-level case access.
+ * `caseId`, which are the checks a person can set up for its claims. Only
+ * integrations whose system user holds a direct permission on the case are
+ * considered; each is then tested for EDIT. Requires VIEW-level case access.
  */
 export async function listCaseCheckLists(
 	actingUserId: string,

@@ -36,10 +36,13 @@ const LOCK_WAIT_TIMEOUT_MS = 5000;
  * blocked behind `holdRowLock`'s held lock, rather than still running an
  * earlier, non-blocking read. Use this in place of a fixed delay before
  * releasing the lock: a delay only guesses how long the racing call's
- * earlier steps take, and guesses wrong under load.
+ * earlier steps take, and guesses wrong under load. With
+ * `minimumWaiters` above one it waits until that many backends are
+ * blocked, which fixes the order they queue in.
  */
 export async function waitForLockWait(
-	timeoutMs = LOCK_WAIT_TIMEOUT_MS
+	timeoutMs = LOCK_WAIT_TIMEOUT_MS,
+	minimumWaiters = 1
 ): Promise<void> {
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
@@ -50,7 +53,7 @@ export async function waitForLockWait(
 				AND wait_event_type = 'Lock'
 				AND pid <> pg_backend_pid()
 		`;
-		if (Number(rows[0]?.count ?? 0) > 0) {
+		if (Number(rows[0]?.count ?? 0) >= minimumWaiters) {
 			return;
 		}
 		if (Date.now() >= deadline) {

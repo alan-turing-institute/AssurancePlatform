@@ -81,12 +81,43 @@ export const validForSchema = z
 // Parameter bags
 // ---------------------------------------------------------------------------
 
+const PROTOTYPE_KEY = "__proto__";
+
+/**
+ * Refuses a key named `__proto__` at any depth. A record schema drops such a
+ * key without reporting it, so the value would be saved without the key the
+ * sender included; it is refused by name instead.
+ */
+const noPrototypeKeys = z.unknown().superRefine((value, ctx) => {
+	const pending: { path: (string | number)[]; value: unknown }[] = [
+		{ path: [], value },
+	];
+	while (pending.length > 0) {
+		const item = pending.pop();
+		if (!item || item.value === null || typeof item.value !== "object") {
+			continue;
+		}
+		if (Object.hasOwn(item.value, PROTOTYPE_KEY)) {
+			ctx.addIssue({
+				code: "custom",
+				path: [...item.path, PROTOTYPE_KEY],
+				message: `${PROTOTYPE_KEY} is not an allowed name`,
+			});
+		}
+		for (const [key, child] of Object.entries(item.value)) {
+			pending.push({ path: [...item.path, key], value: child });
+		}
+	}
+});
+
 /** A free-form parameter object, kept verbatim and bounded to 4 KB. */
-export const paramsBagSchema = z
-	.record(z.string().max(200), z.json())
-	.refine((obj) => serializedByteLength(obj) <= PARAMS_MAX_BYTES, {
-		message: `must serialize to at most ${PARAMS_MAX_BYTES} bytes`,
-	});
+export const paramsBagSchema = noPrototypeKeys.pipe(
+	z
+		.record(z.string().max(200), z.json())
+		.refine((obj) => serializedByteLength(obj) <= PARAMS_MAX_BYTES, {
+			message: `must serialize to at most ${PARAMS_MAX_BYTES} bytes`,
+		})
+);
 
 export type ParamsBag = z.infer<typeof paramsBagSchema>;
 

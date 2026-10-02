@@ -756,6 +756,7 @@ Table plugin_health_criteria {
   reductionVersion Int [not null]
   aggregationVersion Int [not null]
   source Json [not null, note: 'Where each block came from, worked out by the server']
+  checkDescription Json [not null, note: 'The check\'s entry in the check list, as published when the check was last found there']
   revision Int [not null, note: 'Goes up by one on every save']
   acceptedById String
   acceptedAt DateTime

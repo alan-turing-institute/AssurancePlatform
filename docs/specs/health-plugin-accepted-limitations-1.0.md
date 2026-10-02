@@ -4,7 +4,7 @@
 - **Date:** 2026-07-13
 - **Related:** ADR 0002 (plugin architecture), the technical guide's health plugin page (evidence format 1.1)
 
-The claim/evidence health plugin ships in 1.0 with seven known limitations,
+The claim/evidence health plugin ships in 1.0 with eight known limitations,
 each accepted deliberately rather than silently carried forward. Each entry
 below states the limitation and the concrete trigger that would make it
 worth revisiting — none of them are blockers for the 1.0 release.
@@ -115,3 +115,13 @@ were declared for it.
 
 **Revisit trigger:** the same trigger as limitation 1: a deployment where the
 record of what was declared must outlive the case.
+
+## 8. A status shows the settings declared for a claim to every pipeline that can view the case
+
+A claim's status belongs to the claim, not to a pipeline.
+A pipeline that can view a case can therefore read, through the status routes, the version labels and check settings declared for a claim whose settings were set up for another pipeline on the same case.
+The criteria routes return only the settings whose check came from the calling pipeline's own list.
+The status routes are not filtered in that way.
+The same token can already read the claim's evidence records, which carry the same labels and check settings.
+
+**Revisit trigger:** a case where two pipelines run for different parties and the settings declared for one must not be visible to the other.

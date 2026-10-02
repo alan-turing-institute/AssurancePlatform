@@ -35,7 +35,9 @@ import {
  * the pipeline last fetched the settings and which revision it got.
  * `check_offer` is `current`, `newer-version` or `not-offered`. `latest_result`
  * compares the claim's current result with the accepted settings.
- * @response 200 - `{ criteria, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`
+ * `check_description` is the check's entry in the check list as it was when
+ * the check was last found there, and is null when the claim has no settings.
+ * @response 200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`
  * @response 400 - `id` is not a UUID
  * @response 401 - No session
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/user
