@@ -1,20 +1,140 @@
 ---
 title: "Health plugin and evidence chain"
-description: "Understand claim health scoring and the append-only evidence record."
+description: "Understand the evidence record format, how a claim's status is computed, and how records are revoked."
 ---
 
-The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim. It shows a health badge and evidence panel without changing the claim's authored argument. A score is a signal for review, not an automatic decision that a claim is true.
+The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim.
+It shows a health badge and evidence panel without changing the claim's authored argument.
+A status is a signal for review, not an automatic decision that a claim is true.
 
-## Record and read evidence
+## Send evidence
 
-Claim/Evidence Health is on by default when the deployment offers it; a user can turn it off in plugin settings. A machine integration needs `health:evidence:write` and a case grant with edit access to append an item. The item names the claim, metric, value, threshold, verdict, source system, provenance, evaluation time and optional ODD dimensions. The machine route under `/api/machine/health/elements/[id]/evidence` accepts and lists these records subject to token scope and case permission. A browser user with case access can inspect the claim's Health panel. The generated `/api-docs` reference gives request shapes.
+Claim/Evidence Health is on by default when the deployment offers it; a user can turn it off in plugin settings.
+A machine integration needs the `health:evidence:write` scope and a case grant with edit access to send a record.
+It posts one record per request to `/api/machine/health/elements/[id]/evidence`, where `[id]` is the property claim's id.
+The generated `/api-docs` reference gives the request and response shapes.
 
-The service only appends. It has no update or delete operation for an existing health item. The chain is separate for each property claim. Each record stores `previousRecordHash` and a `recordHash` calculated as `SHA-256(previousRecordHash + "\u0000" + canonicalJSON(content))`. `canonicalJSON` sorts keys at every level. The content includes the evidence fields plus `createdById`, `createdAt` and `formatVersion`. The next append locks the claim row and links to the latest record within a transaction, avoiding two writers branching the chain. The list service returns records in chain order. A verifier could recompute hashes using `computeRecordHash` and `canonicalJSON` in `lib/services/health-evidence-service.ts` and compare each previous link. No scheduled whole-chain verifier runs in this build.
+A record is a JSON object in evidence format 1.1.
+Field names are `snake_case`.
+Unknown top-level fields are rejected, so a producer cannot supply values the server sets itself.
 
-## Interpret the badge
+| Field | Meaning |
+|---|---|
+| `format_version` | The literal `"1.1"`. |
+| `record_id` | A UUID, unique across the deployment. Revocation refers to a record by this id. |
+| `timestamp` | When the latest reading in the window was taken, as ISO 8601 UTC. It may be at most five minutes ahead of the server clock. |
+| `claim_ref` | The property claim's UUID. It must equal the id in the path. |
+| `check` | `name`, `version` and `scope` (non-empty strings), and optional `params`. A `scope` of `environment` means the check measures the whole system. |
+| `rule` | How each reading is judged: `kind` (`identity`, `threshold`, `band`, `membership`), the `direction` (`maximize` or `minimize`) for a threshold, `params`, and a `version`. |
+| `reduction` | Optional. How one subject's readings in the window were combined: `kind` (`sum`, `mean`, `max`, `min`, `median`, `percentile`, `last`), `params`, an optional `rule`, and a `version`. |
+| `aggregation` | Present on a population summary. `kind` (`proportion`, `worst-of`, `percentile`), `params` and a `version`. |
+| `value` | A boolean, a string, or `{number, unit}`. It may be absent only when the verdict is `indeterminate`. A `null` value is stored as absent. |
+| `verdict` | `pass`, `marginal`, `fail` or `indeterminate`. The verdict is the check's own; TEA does not re-judge it. |
+| `window` | The window's length as an ISO 8601 duration. The window is `[timestamp - window, timestamp]`. |
+| `valid_for` | How long the verdict may be relied on: a duration, or the literal `indefinite`. Required. |
+| `valid_while` | Optional conditions, as an object of `{variable: expected}`. Each variable must be a key of `provenance` whose value is a string. |
+| `uncertainty` and `judged` | Optional. `uncertainty` describes the spread (`interval`, `std`, `quantiles` or `probability`) with its `method` and `nature`; it requires `judged`, the statistic and method the verdict was based on. TEA stores and displays them and never computes with them. |
+| `subject` | Optional. `{kind, id}` for a record about one subject. It is rejected on a population summary. |
+| `provenance` | Required. `session` and `pipeline_version` are required strings. `run` and `twin_version` are strings when present. `members` lists up to 5,000 member UUIDs and is required and non-empty on a population summary. `failed_subjects` lists up to 5,000 `{kind, id}` pairs. Other keys are kept as sent, within size limits. |
+| `payload` | Optional free-form object, up to 16 KB, never interpreted. |
+| `comment` | Optional text up to 2,000 characters. It is required when the verdict is `indeterminate`, where it gives the reason. |
 
-The scoring service considers evidence in the validity window and uses the worst qualifying verdict. If nothing qualifies, the score is zero rather than an assumption of health. Staleness is derived from the last evaluation time and validity window, separately from the score. The staleness sweep broadcasts changes for an open canvas, while reads can derive staleness independently of the sweep. The UI presents the newest evidence first even though the service lists it in append order.
+Durations use weeks, days, hours, minutes and seconds, for example `PT5M` or `P1DT12H`, and must be greater than zero.
+Months and years are refused because their length depends on the calendar.
+
+A record is checked for structure only.
+A malformed record is refused with 400 and the failing field is named; nothing is stored.
+A repeated `record_id` is refused with 409.
+A record whose `claim_ref` differs from the path id is refused with 400.
+A claim that does not exist, is not a property claim, or that the integration cannot edit gets the same 404 whichever applies.
+A successful request returns 201 with `{ record, status }`: the stored record and the claim's status after it.
+
+### One check per claim
+
+A claim is bound to one check.
+The first accepted record for a claim binds it to that record's `check.name`.
+A record naming a different check is refused with 422 and the message "This claim is bound to check ‹name›. Evidence from another check needs its own evidence claim in the case."
+Nothing is stored for a refused record, but the refusals since the last accepted record are counted and reported on the claim's status as `rejected_since_last_accept`.
+The next accepted record returns the count to zero.
+A person with edit access can change the bound check from the Evidence tab, giving a reason.
+Each change is kept in a history table with who made it and why.
+
+## Read evidence
+
+`GET /api/machine/health/elements/[id]/evidence` returns the log newest first, in pages.
+It accepts a token with `health:evidence:read` or a signed-in user with view access.
+`limit` sets the page size (default 50, at most 200) and `before` is a `chain_sequence`, returning only older records.
+The response carries `next_before`, the value to pass as `before` for the next page, or `null` on the last page.
+Each item has the stored `record`, its hash fields, `created_by_id`, `created_at`, `expires_at`, and `revocation`, which is the record's open revocation or `null`.
+
+## The hash chain
+
+The service only appends.
+It has no update or delete operation for an existing evidence row.
+The chain is separate for each property claim.
+Each row stores `previous_record_hash` and a `record_hash` calculated as `SHA-256(previous_record_hash + "\u0000" + canonicalJSON(content))`.
+`canonicalJSON` sorts keys at every level.
+The content is `{record, createdById, createdAt}`: the record as stored, the integration's system user that stored it, and the storing time.
+The next append locks the claim row and links to the latest record within a transaction, so two writers cannot branch the chain.
+A verifier can recompute any hash from a list item using `computeRecordHash` and `canonicalJSON` in `lib/services/health-evidence-service.ts` and compare each previous link.
+No scheduled whole-chain verifier runs in this build.
+
+## How status is computed
+
+A claim's status is computed from its evidence every time it is read.
+Nothing about it is stored as a fact, and no per-user setting enters the computation, so everyone looking at a claim sees the same thing.
+
+The current record is the one with the latest `timestamp` that is not revoked, with arrival order breaking ties.
+Records can arrive out of order, so a late backfill never displaces a later reading.
+The status is:
+
+- No status when no record has ever been accepted for the claim.
+- The current record's verdict otherwise, with `stale` set when the record is no longer to be relied on.
+- A record is stale when `timestamp + valid_for` has passed (`stale_reason` is `expired`).
+A record with `valid_for` of `indefinite` never expires by clock.
+- A record is also stale when one of its `valid_while` conditions no longer holds (`stale_reason` is `condition`).
+The current value of a variable is the one carried by the latest-timestamp, non-revoked record that has the same `provenance.session` in the same case, compared as an exact string.
+A session name used in another case has no effect.
+- When every record the claim has received is revoked, the status has no verdict, is stale, and `stale_reason` is `all-revoked`.
+
+The status object has `verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check` and `rejected_since_last_accept`.
+`GET /api/elements/[id]/health` returns it as `{ status }` for a signed-in user with view access, or `{ status: null }` when the claim has no record.
+
+Staleness is separate from the verdict: a passing claim can be stale.
+The badge colour follows the verdict and a stale claim carries an additional marker.
+
+The staleness sweep runs every 15 minutes.
+For each claim that has newly become stale it broadcasts `tea.health/state-changed` to the case, so an open canvas updates without a reload, and it announces a claim once until the claim is fresh again.
+Reads compute staleness themselves and do not depend on the sweep.
+
+A small summary of the status (`verdict`, `record_id`, `timestamp`, `expires_at`, `bound_check`) is written to the claim's plugin data when a record or revocation changes it, so that a published snapshot has something to capture.
+Live status never reads it.
+
+## Revoke and reinstate
+
+A person with edit access to the case can withdraw a record from the claim's status.
+`POST /api/elements/[id]/health/records/[recordId]/revocation` takes a `cause` and a required `reason`, where `[recordId]` is the record's `record_id`.
+The causes are `evidence-defect`, `binding-defect`, `duplicate`, `superseded` and `other`.
+These routes accept a signed-in session only; a machine token cannot revoke.
+Revoking an already revoked record is refused with 409.
+
+A revocation is a separate row, so the record stays in the log, marked revoked, and keeps its place in the hash chain.
+A revoked record is left out of the status and out of the `valid_while` variables.
+
+`POST /api/elements/[id]/health/records/[recordId]/reinstatement` takes a required `reason` and puts the record back.
+The revocation row stays, now closed with who reinstated the record, when and why.
+Revoking the record again adds a new row.
+
+`PUT /api/elements/[id]/health/bound-check` takes a `name` and a `reason` and changes the claim's bound check.
+
+Each of these changes emits `tea.health/state-changed` after it commits.
 
 ## Limits and code location
 
-The chain detects edits that do not also recompute later hashes. It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs. It does not prove that a source system's measurement was correct. The service is `lib/services/health-evidence-service.ts`; scoring is in `lib/services/health-scoring-service.ts`; UI components are under `lib/plugins/health/`.
+The chain detects edits that do not also recompute later hashes.
+It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs.
+It does not prove that a source system's measurement was correct.
+The evidence service is `lib/services/health-evidence-service.ts`, the only code that writes the evidence tables.
+Status is computed in `lib/services/health-status-service.ts` and the sweep is in `lib/services/health-staleness-sweep-service.ts`.
+The record schema is `lib/schemas/health-evidence.ts`, with the rule, reduction, aggregation and duration shapes in `lib/schemas/health-rules.ts`.
+UI components are under `lib/plugins/health/`.

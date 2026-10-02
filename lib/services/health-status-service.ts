@@ -1,0 +1,302 @@
+import { logger } from "@/lib/logger";
+import { canAccessCase } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import type { HealthVerdict } from "@/lib/schemas/health-evidence";
+import { writePluginData } from "@/lib/services/plugin-data-service";
+import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
+import type {
+	PluginHealthEvidenceVerdict,
+	Prisma,
+} from "@/src/generated/prisma";
+import type { ServiceResult } from "@/types/service";
+
+const log = logger.child({ component: "health-status-service" });
+
+/**
+ * A claim's health status, computed from its evidence log every time it is
+ * read — nothing about status is stored as a fact. The inputs are the
+ * records themselves (verdict, timestamp, validity, conditions) and their
+ * revocations, so every viewer of a claim sees the same status.
+ *
+ * The current record is the one with the latest `timestamp` (ties broken by
+ * arrival order) that is not revoked. Records may arrive out of order, so a
+ * late backfill never displaces a later reading. The claim shows that
+ * record's verdict, and is stale when the record has expired, when one of
+ * its `valid_while` conditions no longer holds, or when every record it ever
+ * received has been revoked.
+ *
+ * Alongside, a small summary (`{verdict, record_id, timestamp, expires_at,
+ * bound_check}`) is written to the claim's `PluginData` row under
+ * `tea.health` so a published snapshot has something to capture. Nothing
+ * reads that summary for live status.
+ */
+
+const PLUGIN_ID = "tea.health";
+
+export type HealthStaleReason = "expired" | "condition" | "all-revoked";
+
+export interface HealthStatus {
+	bound_check: string | null;
+	expires_at: string | null;
+	record_id: string | null;
+	rejected_since_last_accept: number;
+	stale: boolean;
+	stale_reason: HealthStaleReason | null;
+	stale_since: string | null;
+	timestamp: string | null;
+	verdict: HealthVerdict | null;
+}
+
+const VERDICT_FROM_DB: Record<PluginHealthEvidenceVerdict, HealthVerdict> = {
+	PASS: "pass",
+	MARGINAL: "marginal",
+	FAIL: "fail",
+	INDETERMINATE: "indeterminate",
+};
+
+/** Evidence rows that are not currently revoked. */
+const NOT_REVOKED = { revocations: { none: { reinstatedAt: null } } } as const;
+
+/**
+ * The latest `timestamp` among live records in `caseId` and `session` that
+ * carry `key` in their provenance, and the value they carry. Scoped to the
+ * case so a session name used in another case cannot affect this one.
+ */
+async function currentVariable(
+	caseId: string,
+	session: string,
+	key: string
+): Promise<{ value: string; timestamp: Date } | null> {
+	const rows = await prisma.$queryRaw<
+		Array<{ value: string; record_timestamp: Date }>
+	>`
+		SELECT e.record->'provenance'->>${key}::text AS value, e.record_timestamp
+		FROM plugin_health_evidence e
+		JOIN assurance_elements ae ON ae.id = e.claim_id
+		WHERE ae.case_id = ${caseId}
+			AND ae.deleted_at IS NULL
+			AND e.session = ${session}
+			AND e.record->'provenance'->>${key}::text IS NOT NULL
+			AND NOT EXISTS (
+				SELECT 1 FROM plugin_health_revocations r
+				WHERE r.evidence_id = e.id AND r.reinstated_at IS NULL
+			)
+		ORDER BY e.record_timestamp DESC, e.chain_sequence DESC
+		LIMIT 1
+	`;
+	const row = rows[0];
+	return row ? { value: row.value, timestamp: row.record_timestamp } : null;
+}
+
+/**
+ * When the first violated `valid_while` condition began to differ, or null
+ * if every condition still holds. A condition is violated once the latest
+ * value of its variable (in the record's case and session) differs from the
+ * value the record expects; the time reported is the timestamp of the
+ * record that carries the differing value.
+ */
+async function conditionViolatedSince(
+	caseId: string,
+	session: string,
+	validWhile: Record<string, string>
+): Promise<Date | null> {
+	const violated: Date[] = [];
+	for (const [key, expected] of Object.entries(validWhile)) {
+		const current = await currentVariable(caseId, session, key);
+		if (current && current.value !== expected) {
+			violated.push(current.timestamp);
+		}
+	}
+	if (violated.length === 0) {
+		return null;
+	}
+	return new Date(Math.max(...violated.map((date) => date.getTime())));
+}
+
+function validWhileOf(record: unknown): Record<string, string> {
+	const raw = (record as { valid_while?: unknown } | null)?.valid_while;
+	if (typeof raw !== "object" || raw === null) {
+		return {};
+	}
+	return Object.fromEntries(
+		Object.entries(raw).filter(
+			(entry): entry is [string, string] => typeof entry[1] === "string"
+		)
+	);
+}
+
+/**
+ * Computes `claimId`'s status at `now`. Returns null when the claim has
+ * never had a record accepted (no status, as opposed to a stale one).
+ * Performs no access check: callers have already established access.
+ */
+export async function computeHealthStatus(
+	claimId: string,
+	caseId: string,
+	now: Date = new Date()
+): Promise<HealthStatus | null> {
+	const [state, current, anyRecord] = await Promise.all([
+		prisma.pluginHealthClaimState.findUnique({ where: { claimId } }),
+		prisma.pluginHealthEvidence.findFirst({
+			where: { claimId, ...NOT_REVOKED },
+			orderBy: [{ recordTimestamp: "desc" }, { chainSequence: "desc" }],
+		}),
+		prisma.pluginHealthEvidence.findFirst({
+			where: { claimId },
+			select: { id: true },
+		}),
+	]);
+	if (!anyRecord) {
+		return null;
+	}
+	const base = {
+		bound_check: state?.boundCheckName ?? null,
+		rejected_since_last_accept: state?.rejectedSinceLastAccept ?? 0,
+	};
+
+	if (!current) {
+		const latestRevocation = await prisma.pluginHealthRevocation.findFirst({
+			where: { evidence: { claimId }, reinstatedAt: null },
+			orderBy: { revokedAt: "desc" },
+			select: { revokedAt: true },
+		});
+		return {
+			...base,
+			verdict: null,
+			stale: true,
+			stale_reason: "all-revoked",
+			stale_since: latestRevocation?.revokedAt.toISOString() ?? null,
+			expires_at: null,
+			record_id: null,
+			timestamp: null,
+		};
+	}
+
+	const common = {
+		...base,
+		verdict: VERDICT_FROM_DB[current.verdict],
+		expires_at: current.expiresAt?.toISOString() ?? null,
+		record_id: current.recordId,
+		timestamp: current.recordTimestamp.toISOString(),
+	};
+
+	if (current.expiresAt && current.expiresAt < now) {
+		return {
+			...common,
+			stale: true,
+			stale_reason: "expired",
+			stale_since: current.expiresAt.toISOString(),
+		};
+	}
+
+	const validWhile = validWhileOf(current.record);
+	if (Object.keys(validWhile).length > 0) {
+		const since = await conditionViolatedSince(
+			caseId,
+			current.session,
+			validWhile
+		);
+		if (since) {
+			return {
+				...common,
+				stale: true,
+				stale_reason: "condition",
+				stale_since: since.toISOString(),
+			};
+		}
+	}
+
+	return { ...common, stale: false, stale_reason: null, stale_since: null };
+}
+
+/**
+ * A single generic message for every reason this read can fail to resolve a
+ * claim — doesn't exist, is soft-deleted, isn't a `PROPERTY_CLAIM`, or the
+ * caller lacks case access — so the message reveals nothing about what
+ * exists elsewhere on the platform.
+ */
+const CLAIM_NOT_FOUND = "Claim not found";
+
+/**
+ * Reads one claim's current status for a signed-in person. Returns
+ * `{ data: null }` (not an error) for a claim that has never had a record
+ * accepted.
+ *
+ * Enablement is checked FIRST, before the element lookup runs: the lookup
+ * queries `assuranceElement` directly with no case-permission check of its
+ * own, so running it before enablement would let a user who has switched
+ * the plugin off tell real element ids from fabricated ones by the error
+ * that comes back. A disabled plugin refuses every id identically.
+ */
+export async function readHealthStatus(
+	actingUserId: string,
+	claimId: string
+): ServiceResult<HealthStatus | null> {
+	const enablement = await assertPluginEnabledForUser(PLUGIN_ID, actingUserId);
+	if ("error" in enablement) {
+		return { error: enablement.error };
+	}
+
+	try {
+		const element = await prisma.assuranceElement.findUnique({
+			where: { id: claimId },
+			select: { caseId: true, deletedAt: true, elementType: true },
+		});
+		if (
+			!element ||
+			element.deletedAt ||
+			element.elementType !== "PROPERTY_CLAIM"
+		) {
+			return { error: CLAIM_NOT_FOUND };
+		}
+		const hasAccess = await canAccessCase(
+			{ userId: actingUserId, caseId: element.caseId },
+			"VIEW"
+		);
+		if (!hasAccess) {
+			return { error: CLAIM_NOT_FOUND };
+		}
+		return { data: await computeHealthStatus(claimId, element.caseId) };
+	} catch (error) {
+		log.error("Failed to read health status", { error });
+		return { error: "Failed to read health status" };
+	}
+}
+
+/**
+ * Computes `claimId`'s status after a change to its evidence and returns
+ * it, writing the small snapshot summary to the claim's `PluginData` row.
+ * Called by the routes once the change has committed. A failed summary
+ * write is logged and does not fail the call: the change itself is
+ * already durable and live status never reads the summary.
+ */
+export async function refreshHealthSummary(
+	actingUserId: string,
+	claimId: string,
+	caseId: string
+): Promise<HealthStatus | null> {
+	const status = await computeHealthStatus(claimId, caseId);
+	if (!status) {
+		return null;
+	}
+	const summary = {
+		verdict: status.verdict,
+		record_id: status.record_id,
+		timestamp: status.timestamp,
+		expires_at: status.expires_at,
+		bound_check: status.bound_check,
+	};
+	const result = await writePluginData(
+		PLUGIN_ID,
+		actingUserId,
+		{ caseId, elementId: claimId },
+		summary as Prisma.InputJsonValue
+	);
+	if ("error" in result) {
+		log.error("Failed to write health summary", {
+			claimId,
+			error: result.error,
+		});
+	}
+	return status;
+}

@@ -7,121 +7,380 @@ import {
 	boundedJsonValueSchema,
 	serializedByteLength,
 } from "@/lib/schemas/bounded-json";
+import {
+	aggregationSchema,
+	durationSchema,
+	paramsBagSchema,
+	reductionSchema,
+	ruleSchema,
+	validForSchema,
+} from "@/lib/schemas/health-rules";
 
 /**
- * Zod schema for `docs/specs/evidence-format-v0.1.md` — the FROZEN
- * ingestion contract for `POST /api/machine/health/elements/[id]/evidence`.
- * Implemented exactly: unknown top-level fields are rejected (`z.strictObject()`),
- * unknown `provenance` keys are preserved verbatim (`.catchall()`, not
- * `.strip()`). Any deviation from the spec is a question back to cid, not a
- * unilateral change — see the health-plugin delegation brief.
+ * Zod schema for evidence format 1.1: the record a producer posts to
+ * `POST /api/machine/health/elements/[id]/evidence`. Field names are the
+ * snake_case wire names. Unknown top-level fields are rejected, so a
+ * producer cannot supply fields the server sets itself (hashes, storing
+ * time, recording principal, revocation state). TEA checks the record's
+ * structure; it never re-judges whether a verdict follows from a value.
  *
- * Fields the spec says a producer does NOT send (`recordHash`,
- * `previousRecordHash`, `createdAt`, `createdById`) are simply absent from
- * this schema — they are set server-side by `health-evidence-service.ts`
- * and would be rejected anyway by `z.strictObject()` if a caller tried to smuggle
- * them in.
+ * `claim_ref` is required here, but its equality with the path `[id]` is
+ * enforced at the route, since path and body are parsed separately.
  */
 
-export const EVIDENCE_FORMAT_VERSION = "0.1";
+export const EVIDENCE_FORMAT_VERSION = "1.1";
 
-const METRIC_NAME_MAX_LENGTH = 200;
-const SOURCE_SYSTEM_MAX_LENGTH = 100;
-const ODD_DIMENSION_MAX_ITEMS = 50;
-const ODD_DIMENSION_MAX_LENGTH = 200;
+export const VERDICTS = ["pass", "marginal", "fail", "indeterminate"] as const;
+export type HealthVerdict = (typeof VERDICTS)[number];
+
+/** A record's timestamp may run ahead of the server clock by at most this long. */
+export const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+const NAME_MAX_LENGTH = 200;
+const COMMENT_MAX_LENGTH = 2000;
+const PAYLOAD_MAX_BYTES = 16 * 1024;
+const MEMBERS_MAX_ITEMS = 5000;
+const VALID_WHILE_MAX_KEYS = 20;
+const SCALAR_STRING_MAX_LENGTH = 500;
+
+const nameString = (label: string) =>
+	z
+		.string()
+		.min(1, `${label} is required`)
+		.max(
+			NAME_MAX_LENGTH,
+			`${label} must be at most ${NAME_MAX_LENGTH} characters`
+		);
+
+const checkSchema = z.strictObject({
+	name: nameString("name"),
+	version: nameString("version"),
+	scope: nameString("scope"),
+	params: paramsBagSchema.optional(),
+});
+
+const valueSchema = z.union(
+	[
+		z.boolean(),
+		z.string().max(SCALAR_STRING_MAX_LENGTH),
+		z.strictObject({
+			number: z.number().finite(),
+			unit: z.string().max(100).nullable(),
+		}),
+		z.null(),
+	],
+	{
+		error: "must be a boolean, a string, {number, unit} or null",
+	}
+);
+
+const failedSubjectSchema = z.strictObject({
+	kind: nameString("kind"),
+	id: nameString("id"),
+});
 
 /**
- * Bounded-JSON cap for `provenance` (vincent's settings-cap review finding):
- * `provenance` is regulator-grade and stored verbatim, but "verbatim" must
- * not mean "unbounded" on a machine-write endpoint. `check` and `runId` are
- * required (evidence-format-v0.1); every other key is free-form but capped
- * in depth/count/length exactly like the plugin-settings JSON — the
- * recursive shape and those caps are shared with `lib/schemas/plugin.ts` via
- * `lib/schemas/bounded-json.ts`. Only the final serialized-byte cap is
- * specific to `provenance` (regulator-grade payloads get a larger budget
- * than a settings blob).
+ * `provenance`: `session` and `pipeline_version` are required, `run`,
+ * `twin_version`, `members` and `failed_subjects` are typed when present,
+ * and every other key is kept verbatim within the shared bounded-JSON
+ * limits. `members` and `failed_subjects` carry their own, larger limits
+ * because a population summary lists every member.
  */
-/** Final belt-and-braces bound on the whole object, serialized as UTF-8 bytes. */
-const PROVENANCE_MAX_BYTES = 8192;
-
-/**
- * `provenance` — evidence-format-v0.1 requires at least `check` and `runId`
- * (strings); further keys are "recommended and preserved verbatim". Zod's
- * `.catchall()` gives exactly that shape: named required keys, plus any
- * additional key validated (and KEPT, never stripped) against the bounded
- * JSON schema shared with `lib/schemas/plugin.ts`.
- */
-// biome-ignore lint/plugin: evidence-format-v0.1 requires unknown provenance keys to be PRESERVED verbatim (.catchall(), see the schema comment above) — the opposite problem to the usual silent-strip leniency, but z.strictObject()'s reject-unknown-keys behaviour is just as wrong here.
+// biome-ignore lint/plugin: provenance keys beyond the typed ones must be PRESERVED verbatim (.catchall()), the opposite of the usual silent-strip leniency; z.strictObject() would reject them.
 const provenanceSchema = z
 	.object({
-		check: z
+		session: z
 			.string()
-			.min(1, "provenance.check is required")
+			.min(1, "session is required")
 			.max(BOUNDED_JSON_MAX_STRING_LENGTH),
-		runId: z
+		pipeline_version: z
 			.string()
-			.min(1, "provenance.runId is required")
+			.min(1, "pipeline_version is required")
 			.max(BOUNDED_JSON_MAX_STRING_LENGTH),
+		run: z.string().max(BOUNDED_JSON_MAX_STRING_LENGTH).optional(),
+		twin_version: z.string().max(BOUNDED_JSON_MAX_STRING_LENGTH).optional(),
+		members: z
+			.array(uuidSchema)
+			.max(MEMBERS_MAX_ITEMS, `must have at most ${MEMBERS_MAX_ITEMS} entries`)
+			.optional(),
+		failed_subjects: z
+			.array(failedSubjectSchema)
+			.max(MEMBERS_MAX_ITEMS, `must have at most ${MEMBERS_MAX_ITEMS} entries`)
+			.optional(),
 	})
 	.catchall(boundedJsonValueSchema(BOUNDED_JSON_MAX_DEPTH - 1))
-	.refine((obj) => Object.keys(obj).length <= BOUNDED_JSON_MAX_KEYS, {
-		message: `provenance must have at most ${BOUNDED_JSON_MAX_KEYS} keys`,
-	})
-	.refine((obj) => serializedByteLength(obj) <= PROVENANCE_MAX_BYTES, {
-		message: `provenance must serialize to at most ${PROVENANCE_MAX_BYTES} bytes`,
+	.refine((obj) => Object.keys(obj).length <= BOUNDED_JSON_MAX_KEYS * 2, {
+		message: `must have at most ${BOUNDED_JSON_MAX_KEYS * 2} keys`,
 	});
 
-/**
- * One evidence-format-v0.1 item, exactly as documented. `claimId` is
- * required here (a producer supplies it), but its equality with the path
- * `[id]` is enforced at the ROUTE layer (`app/api/machine/health/elements/
- * [id]/evidence/route.ts`) — the spec is explicit that this is not
- * expressible in the body schema alone, since path and body are parsed
- * separately.
- */
-export const healthEvidenceItemSchema = z.strictObject({
-	formatVersion: z.literal(EVIDENCE_FORMAT_VERSION, {
-		message: `formatVersion must be "${EVIDENCE_FORMAT_VERSION}"`,
+const UNCERTAINTY_KINDS = [
+	"interval",
+	"std",
+	"quantiles",
+	"probability",
+] as const;
+
+const uncertaintySchema = z
+	.strictObject({
+		kind: z.enum(UNCERTAINTY_KINDS, {
+			message: `must be one of ${UNCERTAINTY_KINDS.join(", ")}`,
+		}),
+		params: z.record(z.string().max(100), z.json()),
+		level: z
+			.number()
+			.gt(0, "must be greater than 0")
+			.max(1, "must be at most 1")
+			.optional(),
+		method: nameString("method"),
+		validated: z.boolean().optional(),
+		nature: z.enum(["predictive", "sampling"], {
+			message: "must be predictive or sampling",
+		}),
+	})
+	.superRefine((uncertainty, ctx) => {
+		const { kind, params } = uncertainty;
+		const fail = (message: string) =>
+			ctx.addIssue({ code: "custom", path: ["params"], message });
+		const isNumber = (v: unknown) =>
+			typeof v === "number" && Number.isFinite(v);
+		if (
+			kind === "interval" &&
+			!(isNumber(params.lower) && isNumber(params.upper))
+		) {
+			fail("must carry numeric lower and upper for an interval");
+		}
+		if (kind === "std" && !(isNumber(params.std) && Number(params.std) >= 0)) {
+			fail("must carry a non-negative numeric std");
+		}
+		if (
+			kind === "quantiles" &&
+			!(
+				typeof params.q === "object" &&
+				params.q !== null &&
+				!Array.isArray(params.q) &&
+				Object.keys(params.q).length > 0 &&
+				Object.values(params.q).every(isNumber)
+			)
+		) {
+			fail("must carry q, an object of numeric quantiles");
+		}
+		if (
+			kind === "probability" &&
+			!(isNumber(params.p) && Number(params.p) >= 0 && Number(params.p) <= 1)
+		) {
+			fail("must carry p, a number from 0 to 1");
+		}
+	});
+
+const judgedSchema = z.strictObject({
+	statistic: nameString("statistic"),
+	method: nameString("method"),
+	value: z.union([
+		z.number().finite(),
+		z.string().max(SCALAR_STRING_MAX_LENGTH),
+		z.boolean(),
+	]),
+});
+
+const subjectSchema = z.strictObject({
+	kind: nameString("kind"),
+	id: nameString("id"),
+});
+
+const payloadSchema = z
+	.record(z.string().max(200), z.json())
+	.refine((obj) => serializedByteLength(obj) <= PAYLOAD_MAX_BYTES, {
+		message: `must serialize to at most ${PAYLOAD_MAX_BYTES} bytes`,
+	});
+
+const validWhileSchema = z
+	.record(
+		z.string().min(1).max(NAME_MAX_LENGTH),
+		z.string("must be a string").max(SCALAR_STRING_MAX_LENGTH)
+	)
+	.refine((obj) => Object.keys(obj).length <= VALID_WHILE_MAX_KEYS, {
+		message: `must have at most ${VALID_WHILE_MAX_KEYS} keys`,
+	});
+
+const timestampSchema = z
+	.string()
+	.datetime({ message: "must be an ISO 8601 UTC timestamp" })
+	.refine((text) => Date.parse(text) <= Date.now() + MAX_FUTURE_SKEW_MS, {
+		message: "must not be more than five minutes ahead of the server clock",
+	});
+
+const recordObjectSchema = z.strictObject({
+	format_version: z.literal(EVIDENCE_FORMAT_VERSION, {
+		message: `must be "${EVIDENCE_FORMAT_VERSION}"`,
 	}),
-	claimId: uuidSchema,
-	metricName: z
-		.string()
-		.min(1, "metricName is required")
-		.max(
-			METRIC_NAME_MAX_LENGTH,
-			`metricName must be at most ${METRIC_NAME_MAX_LENGTH} characters`
-		),
-	value: z.number().finite().optional(),
-	threshold: z.number().finite().optional(),
-	verdict: z.enum(["PASS", "FAIL", "DEGRADED"], {
-		message: "verdict must be PASS, FAIL, or DEGRADED",
+	record_id: uuidSchema,
+	timestamp: timestampSchema,
+	claim_ref: uuidSchema,
+	check: checkSchema,
+	rule: ruleSchema,
+	reduction: reductionSchema.optional(),
+	aggregation: aggregationSchema.optional(),
+	value: valueSchema.optional(),
+	verdict: z.enum(VERDICTS, {
+		message: `must be one of ${VERDICTS.join(", ")}`,
 	}),
-	oddDimensions: z
-		.array(
-			z
-				.string()
-				.min(1)
-				.max(
-					ODD_DIMENSION_MAX_LENGTH,
-					`Each oddDimensions entry must be at most ${ODD_DIMENSION_MAX_LENGTH} characters`
-				)
-		)
-		.max(
-			ODD_DIMENSION_MAX_ITEMS,
-			`oddDimensions must have at most ${ODD_DIMENSION_MAX_ITEMS} entries`
-		)
-		.default([]),
-	sourceSystem: z
-		.string()
-		.min(1, "sourceSystem is required")
-		.max(
-			SOURCE_SYSTEM_MAX_LENGTH,
-			`sourceSystem must be at most ${SOURCE_SYSTEM_MAX_LENGTH} characters`
-		),
+	window: durationSchema,
+	valid_for: validForSchema,
+	valid_while: validWhileSchema.optional(),
+	uncertainty: uncertaintySchema.optional(),
+	judged: judgedSchema.optional(),
+	subject: subjectSchema.optional(),
 	provenance: provenanceSchema,
-	// "ISO 8601 UTC" (spec) — no offset variants accepted, matching the
-	// spec's own example ("...T09:41:07Z").
-	evaluatedAt: z
+	payload: payloadSchema.optional(),
+	comment: z
 		.string()
-		.datetime({ message: "evaluatedAt must be an ISO 8601 UTC timestamp" }),
+		.max(COMMENT_MAX_LENGTH, `must be at most ${COMMENT_MAX_LENGTH} characters`)
+		.optional(),
+});
+
+type RecordInput = z.infer<typeof recordObjectSchema>;
+type IssueSink = (path: (string | number)[], message: string) => void;
+
+function checkSummaryRules(record: RecordInput, fail: IssueSink): void {
+	if (record.aggregation === undefined) {
+		return;
+	}
+	if (!record.provenance.members?.length) {
+		fail(
+			["provenance", "members"],
+			"is required and must not be empty on a summary (a record with an aggregation)"
+		);
+	}
+	if (record.subject !== undefined) {
+		fail(
+			["subject"],
+			"is not accepted on a summary (a record with an aggregation)"
+		);
+	}
+	if (record.uncertainty && record.uncertainty.nature !== "sampling") {
+		fail(["uncertainty", "nature"], "must be sampling on a summary");
+	}
+}
+
+function checkValidWhile(record: RecordInput, fail: IssueSink): void {
+	for (const key of Object.keys(record.valid_while ?? {})) {
+		const carried = (record.provenance as Record<string, unknown>)[key];
+		if (carried === undefined) {
+			fail(["valid_while", key], "must name a key present in provenance");
+		} else if (typeof carried !== "string") {
+			fail(
+				["valid_while", key],
+				"must name a provenance key whose value is a string"
+			);
+		}
+	}
+}
+
+function checkRecordConsistency(
+	record: RecordInput,
+	ctx: z.RefinementCtx
+): void {
+	const fail: IssueSink = (path, message) =>
+		ctx.addIssue({ code: "custom", path, message });
+	const indeterminate = record.verdict === "indeterminate";
+
+	if (!indeterminate && (record.value === undefined || record.value === null)) {
+		fail(["value"], "is required unless the verdict is indeterminate");
+	}
+	if (indeterminate && !record.comment?.trim()) {
+		fail(["comment"], "is required when the verdict is indeterminate");
+	}
+	if (record.uncertainty && !record.judged) {
+		fail(["judged"], "is required when uncertainty is present");
+	}
+	checkSummaryRules(record, fail);
+	checkValidWhile(record, fail);
+}
+
+export const healthEvidenceRecordSchema = recordObjectSchema
+	.superRefine(checkRecordConsistency)
+	.transform((record) => {
+		// A null value is stored as absent; the timestamp is re-serialised from
+		// the parsed date so a stored record's hash recomputes from the row.
+		const { value, ...rest } = record;
+		return {
+			...rest,
+			...(value === undefined || value === null ? {} : { value }),
+			timestamp: new Date(record.timestamp).toISOString(),
+		};
+	});
+
+export type HealthEvidenceRecord = z.output<typeof healthEvidenceRecordSchema>;
+
+/**
+ * Names the offending field in a failed parse's first issue, in the form
+ * `<path>: <message>`, plus a map of field path to message for every issue.
+ */
+export function describeEvidenceIssues(error: z.ZodError): {
+	message: string;
+	fieldErrors: Record<string, string>;
+} {
+	const fieldErrors: Record<string, string> = {};
+	for (const issue of error.issues) {
+		if (issue.code === "unrecognized_keys") {
+			for (const key of issue.keys) {
+				fieldErrors[[...issue.path, key].join(".")] ??=
+					"is not a recognised field";
+			}
+			continue;
+		}
+		fieldErrors[issue.path.join(".") || "(record)"] ??= issue.message;
+	}
+	const [firstPath, firstMessage] = Object.entries(fieldErrors)[0] ?? [
+		"(record)",
+		"Invalid record",
+	];
+	return { message: `${firstPath}: ${firstMessage}`, fieldErrors };
+}
+
+// ---------------------------------------------------------------------------
+// Requests from a signed-in person
+// ---------------------------------------------------------------------------
+
+const REVOCATION_CAUSE_VALUES = [
+	"evidence-defect",
+	"binding-defect",
+	"duplicate",
+	"superseded",
+	"other",
+] as const;
+
+const reasonSchema = z
+	.string()
+	.trim()
+	.min(1, "reason is required")
+	.max(
+		COMMENT_MAX_LENGTH,
+		`reason must be at most ${COMMENT_MAX_LENGTH} characters`
+	);
+
+export const revocationRequestSchema = z.strictObject({
+	cause: z.enum(REVOCATION_CAUSE_VALUES, {
+		message: `cause must be one of ${REVOCATION_CAUSE_VALUES.join(", ")}`,
+	}),
+	reason: reasonSchema,
+});
+
+export const reinstatementRequestSchema = z.strictObject({
+	reason: reasonSchema,
+});
+
+export const boundCheckRequestSchema = z.strictObject({
+	name: z
+		.string()
+		.trim()
+		.min(1, "name is required")
+		.max(NAME_MAX_LENGTH, `name must be at most ${NAME_MAX_LENGTH} characters`),
+	reason: reasonSchema,
+});
+
+/** Query parameters of the evidence list: page size and the `chain_sequence` to page back from. */
+export const evidenceListQuerySchema = z.strictObject({
+	limit: z.coerce.number().int().min(1).max(200).optional(),
+	before: z.coerce.number().int().min(1).optional(),
 });

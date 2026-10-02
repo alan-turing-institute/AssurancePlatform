@@ -266,6 +266,8 @@ Table assurance_elements {
   releaseComments release_comments [not null]
   pluginData plugin_data [not null]
   pluginHealthEvidence plugin_health_evidence [not null]
+  pluginHealthClaimState plugin_health_claim_states
+  pluginHealthBindingChanges plugin_health_binding_changes [not null]
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
@@ -669,29 +671,72 @@ rest; plaintext shown once at issuance.'
 
 Table plugin_health_evidence {
   id String [pk]
-  claimId String [not null, note: 'The PROPERTY_CLAIM AssuranceElement this evidence bears on']
-  metricName String [not null]
-  value Float
-  threshold Float
+  claimId String [not null, note: 'The PROPERTY_CLAIM AssuranceElement this record bears on']
+  record Json [not null, note: 'The validated record exactly as received (snake_case wire shape), apart from a null value stored as absent and the timestamp re-serialised from the parsed date.']
+  recordId String [unique, not null, note: 'The producer\'s record id; unique per deployment']
+  recordTimestamp DateTime [not null, note: 'The record\'s own timestamp (latest reading in its window), not the time it was stored']
   verdict PluginHealthEvidenceVerdict [not null]
-  oddDimensions String[] [not null]
-  sourceSystem String [not null]
-  provenance Json [not null]
-  evaluatedAt DateTime [not null, note: 'When the check ran (client-supplied) — NOT when we stored it']
-  formatVersion String [not null, note: 'Which evidence-format-v0.1(.x) version governed this item\'s capture.']
+  checkName String [not null]
+  session String [not null, note: 'provenance.session']
+  validFor String [not null, note: 'ISO 8601 duration, or "indefinite"']
+  expiresAt DateTime [note: 'recordTimestamp + validFor; null when validFor is "indefinite"']
+  formatVersion String [not null]
   recordHash String [not null]
   previousRecordHash String
   chainSequence Int [increment, unique, not null, note: 'Server-assigned, globally monotonic ordering anchor for the hash chain.
-Deliberately NOT `createdAt`: two records for the same claim could in
-principle share a millisecond-resolution timestamp, which would make
-"walk the chain in order" ambiguous. An autoincrementing column has no
-such ambiguity. Internal only — never part of the evidence-format-v0.1
-wire contract in either direction.']
+Deliberately NOT `createdAt`: two records for the same claim could share
+a millisecond-resolution timestamp, which would make "walk the chain in
+order" ambiguous. An autoincrementing column has no such ambiguity.']
   createdById String [not null, note: 'The machine principal (an Integration\'s system User) that appended this record']
   createdAt DateTime [default: `now()`, not null]
   claim assurance_elements [not null]
+  revocations plugin_health_revocations [not null]
 
-  Note: 'One item of runtime evidence bearing on a PROPERTY_CLAIM (evidence-format-v0.1).'
+  Note: 'One accepted evidence record (format 1.1) bearing on a PROPERTY_CLAIM.'
+}
+
+Table plugin_health_claim_states {
+  claimId String [pk]
+  boundCheckName String [not null, note: 'The one check this claim accepts evidence from']
+  rejectedSinceLastAccept Int [not null, default: 0, note: 'Records refused for naming a different check since the last accepted one']
+  staleNotifiedAt DateTime [note: 'Set when the sweep has told open browsers the claim is stale; cleared when it is fresh again']
+  claim assurance_elements [not null]
+
+  Note: 'Per-claim bookkeeping, one row per claim that has ever had an accepted record.'
+}
+
+Table plugin_health_binding_changes {
+  id String [pk]
+  claimId String [not null]
+  fromCheckName String [note: 'Null for the first binding']
+  toCheckName String [not null]
+  source PluginHealthBindingSource [not null]
+  reason String [note: 'Required when a person changes the binding']
+  changedById String [not null, note: 'The machine principal or the person who made the change']
+  createdAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+
+  Note: 'Append-only history of which check a claim is bound to.'
+}
+
+Table plugin_health_revocations {
+  id String [pk]
+  evidenceId String [not null]
+  cause PluginHealthRevocationCause [not null]
+  reason String [not null]
+  revokedById String [not null]
+  revokedAt DateTime [default: `now()`, not null]
+  reinstatedById String
+  reinstatedAt DateTime
+  reinstatementReason String
+  evidence plugin_health_evidence [not null]
+
+  Note: 'A withdrawal of one evidence record. A record is revoked while it has a
+row with no reinstatement. A partial unique index on (evidence_id) WHERE
+reinstated_at IS NULL, hand-written in the migration because Prisma\'s
+schema DSL cannot express partial indexes, allows at most one open
+revocation per record. Revoking again after a reinstatement adds a new
+row; rows are never deleted.'
 }
 
 Enum AuthProvider {
@@ -799,8 +844,22 @@ Enum IntegrationStatus {
 
 Enum PluginHealthEvidenceVerdict {
   PASS
+  MARGINAL
   FAIL
-  DEGRADED
+  INDETERMINATE
+}
+
+Enum PluginHealthBindingSource {
+  FIRST_RECORD
+  PERSON
+}
+
+Enum PluginHealthRevocationCause {
+  EVIDENCE_DEFECT
+  BINDING_DEFECT
+  DUPLICATE
+  SUPERSEDED
+  OTHER
 }
 
 Ref: teams.createdById > users.id
@@ -908,3 +967,9 @@ Ref: integrations.systemUserId > users.id
 Ref: api_tokens.integrationId > integrations.id [delete: Cascade]
 
 Ref: plugin_health_evidence.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_claim_states.claimId - assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_binding_changes.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_revocations.evidenceId > plugin_health_evidence.id [delete: Cascade]

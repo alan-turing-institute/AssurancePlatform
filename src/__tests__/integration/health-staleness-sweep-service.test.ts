@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { healthEvidenceRecordSchema } from "@/lib/schemas/health-evidence";
+import {
+	appendHealthEvidence,
+	revokeHealthEvidence,
+} from "@/lib/services/health-evidence-service";
 import { sweepHealthStaleness } from "@/lib/services/health-staleness-sweep-service";
-import { upsertCaseLevelPluginData } from "@/lib/services/plugin-data-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
+import { buildHealthRecords, withOverrides } from "../fixtures/health-records";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
 	createTestElement,
-	createTestPluginData,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -22,25 +26,13 @@ vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
 	};
 });
 
-// Wrapped (not stubbed): defaults to the REAL implementation for every case
-// except the one test below that overrides it per-caseId to simulate a
-// marker-persist failure for a single case.
-vi.mock("@/lib/services/plugin-data-service", async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import("@/lib/services/plugin-data-service")>();
-	return {
-		...actual,
-		upsertCaseLevelPluginData: vi.fn(actual.upsertCaseLevelPluginData),
-	};
-});
-
-const PLUGIN_ID = "tea.health";
 const CRON_SECRET = "test-cron-secret";
 const ONE_OF_TWO_CASES_FAILED_PATTERN =
 	/Failed to sweep staleness for 1 of 2 case/;
+const MINUTE = 60_000;
 
 beforeEach(() => {
-	vi.mocked(emitSSEEvent).mockClear();
+	vi.mocked(emitSSEEvent).mockReset();
 	vi.stubEnv("CRON_SECRET", CRON_SECRET);
 });
 
@@ -57,25 +49,21 @@ async function setup() {
 	return { owner, testCase, claim };
 }
 
-function staleHealthData(
-	secondsPastWindow: number,
-	validityWindowSeconds = 60
+/** Appends a fixture record whose reading was `ageMinutes` ago and is valid for `validFor`. */
+async function append(
+	ownerId: string,
+	claimId: string,
+	ageMinutes: number,
+	validFor: string
 ) {
-	return {
-		score: 1,
-		lastEvaluatedAt: new Date(
-			Date.now() - (validityWindowSeconds + secondsPastWindow) * 1000
-		).toISOString(),
-		validityWindowSeconds,
-	};
-}
-
-function freshHealthData(validityWindowSeconds = 60) {
-	return {
-		score: 1,
-		lastEvaluatedAt: new Date().toISOString(),
-		validityWindowSeconds,
-	};
+	const record = healthEvidenceRecordSchema.parse(
+		withOverrides(buildHealthRecords(claimId).populationPass, {
+			timestamp: new Date(Date.now() - ageMinutes * MINUTE).toISOString(),
+			valid_for: validFor,
+		})
+	);
+	expectSuccess(await appendHealthEvidence(ownerId, claimId, record));
+	return record;
 }
 
 describe("sweepHealthStaleness — auth", () => {
@@ -101,232 +89,140 @@ describe("sweepHealthStaleness — auth", () => {
 });
 
 describe("sweepHealthStaleness — detecting newly-stale claims", () => {
-	it("notifies a claim that has just crossed into staleness", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: staleHealthData(60), // well past the window
-		});
+	it("notifies a claim whose current record has expired", async () => {
+		const { owner, testCase, claim } = await setup();
+		await append(owner.id, claim.id, 10, "PT1M");
 
 		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
-		expect(result.staleClaimsNotified).toBe(1);
-		expect(result.casesNotified).toBe(1);
+		expect(result).toEqual({ casesNotified: 1, staleClaimsNotified: 1 });
 		expect(emitSSEEvent).toHaveBeenCalledTimes(1);
 		expect(emitSSEEvent).toHaveBeenCalledWith(
 			"tea.health/state-changed",
 			testCase.id,
-			expect.objectContaining({ claimId: claim.id, stale: true })
+			expect.objectContaining({
+				claimId: claim.id,
+				stale: true,
+				status: expect.objectContaining({
+					stale: true,
+					stale_reason: "expired",
+				}),
+			})
 		);
 	});
 
-	it("does NOT notify a claim still inside its validity window", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: freshHealthData(),
-		});
+	it("does NOT notify a claim whose record is still valid or never expires", async () => {
+		const first = await setup();
+		await append(first.owner.id, first.claim.id, 1, "PT1H");
+		const second = await setup();
+		await append(second.owner.id, second.claim.id, 600, "indefinite");
 
 		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
 		expect(result.staleClaimsNotified).toBe(0);
-		expect(result.casesNotified).toBe(0);
 		expect(emitSSEEvent).not.toHaveBeenCalled();
 	});
 
-	it("never touches a different plugin's PluginData row for the same element", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: "tea.other-plugin",
-			elementId: claim.id,
-			data: { untouched: true },
-		});
+	it("notifies a claim whose records have all been revoked", async () => {
+		const { owner, claim } = await setup();
+		const record = await append(owner.id, claim.id, 1, "PT1H");
+		expectSuccess(
+			await revokeHealthEvidence(owner.id, claim.id, record.record_id, {
+				cause: "evidence-defect",
+				reason: "Bad run",
+			})
+		);
 
-		expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(result.staleClaimsNotified).toBe(1);
+	});
 
-		const otherRow = await prisma.pluginData.findFirst({
-			where: {
-				pluginId: "tea.other-plugin",
-				caseId: testCase.id,
-				elementId: claim.id,
-			},
-		});
-		expect(otherRow?.data).toEqual({ untouched: true });
+	it("ignores a claim that has never had a record", async () => {
+		await setup();
+
+		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(result.staleClaimsNotified).toBe(0);
 	});
 });
 
-describe("sweepHealthStaleness — malformed rows (safeParse-skip contract)", () => {
-	it("skips a row missing validityWindowSeconds without crashing, notifying nothing", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: {
-				score: 1,
-				lastEvaluatedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-				// validityWindowSeconds deliberately omitted — fails healthStateSchema.
-			},
-		});
-
-		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
-		expect(result.staleClaimsNotified).toBe(0);
-		expect(result.casesNotified).toBe(0);
-		expect(emitSSEEvent).not.toHaveBeenCalled();
-	});
-
-	it("skips a row with a non-numeric score without crashing, notifying nothing", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: {
-				score: "not-a-number",
-				lastEvaluatedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-				validityWindowSeconds: 60,
-			},
-		});
-
-		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
-		expect(result.staleClaimsNotified).toBe(0);
-		expect(result.casesNotified).toBe(0);
-		expect(emitSSEEvent).not.toHaveBeenCalled();
-	});
-});
-
-describe("sweepHealthStaleness — idempotency", () => {
+describe("sweepHealthStaleness — notifies once", () => {
 	it("a second immediate run notifies nothing new for an already-notified claim", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: staleHealthData(60),
-		});
-
-		const first = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
-		expect(first.staleClaimsNotified).toBe(1);
-		expect(emitSSEEvent).toHaveBeenCalledTimes(1);
-
+		const { owner, claim } = await setup();
+		await append(owner.id, claim.id, 10, "PT1M");
+		expectSuccess(await sweepHealthStaleness(CRON_SECRET));
 		vi.mocked(emitSSEEvent).mockClear();
 
 		const second = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
 		expect(second.staleClaimsNotified).toBe(0);
-		expect(second.casesNotified).toBe(0);
 		expect(emitSSEEvent).not.toHaveBeenCalled();
 	});
 
-	it("persists the notified marker as a case-level PluginData row under tea.health", async () => {
-		const { testCase, claim } = await setup();
-		await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: staleHealthData(60),
-		});
-
+	it("keeps the marker on the claim's state row", async () => {
+		const { owner, claim } = await setup();
+		await append(owner.id, claim.id, 10, "PT1M");
 		expectSuccess(await sweepHealthStaleness(CRON_SECRET));
 
-		const markerRow = await prisma.pluginData.findFirst({
-			where: { pluginId: PLUGIN_ID, caseId: testCase.id, elementId: null },
+		const state = await prisma.pluginHealthClaimState.findUniqueOrThrow({
+			where: { claimId: claim.id },
 		});
-		expect(markerRow).not.toBeNull();
-		expect(markerRow?.data).toMatchObject({
-			notifiedStaleClaimIds: { [claim.id]: expect.any(String) },
-		});
+		expect(state.staleNotifiedAt).not.toBeNull();
 	});
 
-	it("re-notifies a claim that went fresh again (new evidence) and later goes stale a second time", async () => {
-		const { testCase, claim } = await setup();
-		const dataRow = await createTestPluginData(testCase.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claim.id,
-			data: staleHealthData(60),
-		});
-
+	it("notifies again when the claim has been fresh in between", async () => {
+		const { owner, claim } = await setup();
+		await append(owner.id, claim.id, 10, "PT1M");
 		expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+
+		// A newer, valid record makes the claim fresh; the sweep clears the marker.
+		const fresh = await append(owner.id, claim.id, 0, "PT1H");
+		const cleared = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(cleared.staleClaimsNotified).toBe(0);
+		expect(
+			(
+				await prisma.pluginHealthClaimState.findUniqueOrThrow({
+					where: { claimId: claim.id },
+				})
+			).staleNotifiedAt
+		).toBeNull();
+
+		// Revoking it leaves the expired record current again: stale a second time.
+		expectSuccess(
+			await revokeHealthEvidence(owner.id, claim.id, fresh.record_id, {
+				cause: "evidence-defect",
+				reason: "Bad run",
+			})
+		);
 		vi.mocked(emitSSEEvent).mockClear();
-
-		// New evidence arrives — health is fresh again.
-		await prisma.pluginData.update({
-			where: { id: dataRow.id },
-			data: { data: freshHealthData() },
-		});
-		expectSuccess(await sweepHealthStaleness(CRON_SECRET));
-		expect(emitSSEEvent).not.toHaveBeenCalled();
-
-		const markerAfterFresh = await prisma.pluginData.findFirst({
-			where: { pluginId: PLUGIN_ID, caseId: testCase.id, elementId: null },
-		});
-		expect(markerAfterFresh?.data).toMatchObject({
-			notifiedStaleClaimIds: {},
-		});
-
-		// Goes stale again.
-		await prisma.pluginData.update({
-			where: { id: dataRow.id },
-			data: { data: staleHealthData(60) },
-		});
-		const third = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
-		expect(third.staleClaimsNotified).toBe(1);
+		const again = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(again.staleClaimsNotified).toBe(1);
 		expect(emitSSEEvent).toHaveBeenCalledTimes(1);
 	});
 });
 
 describe("sweepHealthStaleness — per-case error isolation", () => {
-	it("isolates one case's marker-persist failure so the other case is still processed and notified", async () => {
-		const { testCase: caseA, claim: claimA } = await setup();
-		const { testCase: caseB, claim: claimB } = await setup();
-		await createTestPluginData(caseA.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claimA.id,
-			data: staleHealthData(60),
-		});
-		await createTestPluginData(caseB.id, {
-			pluginId: PLUGIN_ID,
-			elementId: claimB.id,
-			data: staleHealthData(60),
-		});
+	it("isolates one case's failure so the other case is still processed and notified", async () => {
+		const failing = await setup();
+		const healthy = await setup();
+		await append(failing.owner.id, failing.claim.id, 10, "PT1M");
+		await append(healthy.owner.id, healthy.claim.id, 10, "PT1M");
 
-		const { upsertCaseLevelPluginData: actualUpsert } = await vi.importActual<
-			typeof import("@/lib/services/plugin-data-service")
-		>("@/lib/services/plugin-data-service");
-
-		vi.mocked(upsertCaseLevelPluginData).mockImplementation(
-			(pluginId, caseId, data) => {
-				if (caseId === caseA.id) {
-					return Promise.reject(new Error("simulated marker-persist failure"));
-				}
-				return actualUpsert(pluginId, caseId, data);
+		vi.mocked(emitSSEEvent).mockImplementation((_type, caseId) => {
+			if (caseId === failing.testCase.id) {
+				throw new Error("simulated broadcast failure");
 			}
+		});
+
+		expectError(
+			await sweepHealthStaleness(CRON_SECRET),
+			ONE_OF_TWO_CASES_FAILED_PATTERN
 		);
 
-		try {
-			const result = await sweepHealthStaleness(CRON_SECRET);
-			expectError(result, ONE_OF_TWO_CASES_FAILED_PATTERN);
-
-			// Case B was still processed and notified, despite case A's failure —
-			// the loop does not abort partway through.
-			expect(emitSSEEvent).toHaveBeenCalledWith(
-				"tea.health/state-changed",
-				caseB.id,
-				expect.objectContaining({ claimId: claimB.id, stale: true })
-			);
-
-			const markerB = await prisma.pluginData.findFirst({
-				where: { pluginId: PLUGIN_ID, caseId: caseB.id, elementId: null },
-			});
-			expect(markerB?.data).toMatchObject({
-				notifiedStaleClaimIds: { [claimB.id]: expect.any(String) },
-			});
-
-			// Case A's marker never persisted (the mocked write rejected), so a
-			// future scheduled run naturally retries it — a failed case is
-			// never silently dropped.
-			const markerA = await prisma.pluginData.findFirst({
-				where: { pluginId: PLUGIN_ID, caseId: caseA.id, elementId: null },
-			});
-			expect(markerA).toBeNull();
-		} finally {
-			// Restore the mock to the real implementation for every other test.
-			vi.mocked(upsertCaseLevelPluginData).mockImplementation(actualUpsert);
-		}
+		const healthyState = await prisma.pluginHealthClaimState.findUniqueOrThrow({
+			where: { claimId: healthy.claim.id },
+		});
+		expect(healthyState.staleNotifiedAt).not.toBeNull();
+		// The failed claim is not marked, so the next run announces it again.
+		const failedState = await prisma.pluginHealthClaimState.findUniqueOrThrow({
+			where: { claimId: failing.claim.id },
+		});
+		expect(failedState.staleNotifiedAt).toBeNull();
 	});
 });

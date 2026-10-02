@@ -1,62 +1,27 @@
-import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { requireCronSecret } from "@/lib/services/cron-auth";
-import {
-	type HealthState,
-	isHealthStateStale,
-} from "@/lib/services/health-scoring-service";
-import { upsertCaseLevelPluginData } from "@/lib/services/plugin-data-service";
+import { computeHealthStatus } from "@/lib/services/health-status-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
-import type { Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "health-staleness-sweep-service" });
 
 /**
- * The health plugin's staleness sweeper (ADR 0002 v2 §3: "the existing
- * cron-route pattern, marking stale claims and emitting SSE"). Protected by
+ * The health plugin's staleness sweeper: the existing cron-route pattern,
+ * telling open browsers when a claim has newly become stale. Protected by
  * `CRON_SECRET`, mirroring `case-trash-service.ts`'s `purgeExpiredCases`
- * exactly (same env var, same timing-safe compare, same "unset secret is a
- * 500, not a silent open door" failure mode).
+ * (same env var, same timing-safe compare, same "unset secret is a 500, not
+ * a silent open door" failure mode).
  *
- * Staleness itself is NEVER computed or stored here as a first-class fact —
- * it is re-derived on every sweep from `health-scoring-service.ts`'s
- * `isHealthStateStale`, the single source of truth every read path (this
- * sweeper, `readHealthState`, the `HealthBadge` client) agrees with. What
- * THIS module persists is bookkeeping ONLY: which claims this sweep has
- * already notified about, so a claim doesn't get re-broadcast on every
- * subsequent run just because it's still stale.
+ * Staleness itself is never stored as a fact here — each sweep recomputes
+ * it from the evidence with `computeHealthStatus`, the same computation
+ * every read path uses. What the sweep persists is bookkeeping only:
+ * `staleNotifiedAt` on the claim's state row, so a claim is announced once
+ * when it becomes stale rather than on every run while it stays stale. The
+ * marker is cleared when the claim is fresh again, so a later staleness is
+ * announced afresh.
  */
-
-const PLUGIN_ID = "tea.health";
-
-const healthStateSchema = z.object({
-	lastEvaluatedAt: z.string().nullable(),
-	score: z.number(),
-	validityWindowSeconds: z.number(),
-});
-
-/**
- * Case-level bookkeeping row (`elementId: null`, same `tea.health`
- * namespace, tier-1 `PluginData` — "plugin data, not core schema"): which
- * claims in this case have already been notified stale, keyed by claimId to
- * the ISO timestamp of the sweep that noticed the transition. An entry is
- * REMOVED the moment its claim's health becomes fresh again (e.g. new
- * evidence pushes `lastEvaluatedAt` forward past the window's start) — so a
- * LATER staleness on the same claim is treated as a fresh transition and
- * notified again, rather than being permanently suppressed by one stale
- * evidence run's marker.
- */
-const sweepMarkerSchema = z.object({
-	notifiedStaleClaimIds: z.record(z.string(), z.string()).default({}),
-});
-type SweepMarker = z.infer<typeof sweepMarkerSchema>;
-
-function parseMarker(data: unknown): SweepMarker {
-	const parsed = sweepMarkerSchema.safeParse(data ?? {});
-	return parsed.success ? parsed.data : { notifiedStaleClaimIds: {} };
-}
 
 export interface HealthStalenessSweepResult {
 	/** How many distinct cases had at least one claim newly notified this run. */
@@ -65,123 +30,87 @@ export interface HealthStalenessSweepResult {
 	staleClaimsNotified: number;
 }
 
-interface ClaimHealthRow {
-	elementId: string;
-	health: HealthState;
+interface ClaimToSweep {
+	claimId: string;
+	notified: boolean;
 }
 
-/** Groups every parseable element-level `tea.health` row by its case. Rows whose `data` no longer parses as a `HealthState` are skipped (defensive — mirrors `readHealthState`'s own degrade-on-shape-mismatch). */
-function groupHealthRowsByCase(
-	rows: Array<{
-		caseId: string;
-		data: Prisma.JsonValue;
-		elementId: string | null;
-	}>
-): Map<string, ClaimHealthRow[]> {
-	const byCase = new Map<string, ClaimHealthRow[]>();
-	for (const row of rows) {
-		if (!row.elementId) {
-			continue;
-		}
-		const parsed = healthStateSchema.safeParse(row.data);
-		if (!parsed.success) {
-			continue;
-		}
-		const claims = byCase.get(row.caseId) ?? [];
-		claims.push({ elementId: row.elementId, health: parsed.data });
-		byCase.set(row.caseId, claims);
+/** Every claim with a state row, grouped by case. Claims whose element is soft-deleted are skipped. */
+async function claimsByCase(): Promise<Map<string, ClaimToSweep[]>> {
+	const states = await prisma.pluginHealthClaimState.findMany({
+		where: { claim: { deletedAt: null } },
+		select: {
+			claimId: true,
+			staleNotifiedAt: true,
+			claim: { select: { caseId: true } },
+		},
+	});
+	const byCase = new Map<string, ClaimToSweep[]>();
+	for (const state of states) {
+		const claims = byCase.get(state.claim.caseId) ?? [];
+		claims.push({
+			claimId: state.claimId,
+			notified: state.staleNotifiedAt !== null,
+		});
+		byCase.set(state.claim.caseId, claims);
 	}
 	return byCase;
 }
 
-interface CaseSweepOutcome {
-	hadNewStale: boolean;
-	staleNotified: number;
-}
-
 /**
- * Sweeps one case's claims against its sweep marker: emits SSE + records the
- * marker for every claim newly crossing into staleness, and clears the
- * marker for any claim that's fresh again. Persists the marker only when it
- * actually changed.
+ * Sweeps one case's claims: emits the SSE event and sets the marker for
+ * every claim newly crossing into staleness, and clears the marker for any
+ * claim that is fresh (or has no status) again.
  */
 async function sweepCaseClaims(
 	caseId: string,
-	claims: ClaimHealthRow[],
+	claims: ClaimToSweep[],
 	now: Date
-): Promise<CaseSweepOutcome> {
-	const markerRow = await prisma.pluginData.findFirst({
-		where: { pluginId: PLUGIN_ID, caseId, elementId: null },
-		select: { data: true },
-	});
-	const marker = parseMarker(markerRow?.data);
-	const notified = { ...marker.notifiedStaleClaimIds };
-	let markerChanged = false;
-	let staleNotified = 0;
+): Promise<number> {
+	let newlyNotified = 0;
+	for (const { claimId, notified } of claims) {
+		const status = await computeHealthStatus(claimId, caseId, now);
+		const stale = status?.stale === true;
 
-	for (const { elementId, health } of claims) {
-		const stale = isHealthStateStale(health, now);
-		const alreadyNotified = elementId in notified;
-
-		if (stale && !alreadyNotified) {
-			notified[elementId] = now.toISOString();
-			markerChanged = true;
-			staleNotified++;
+		if (stale && !notified) {
+			// Announced before the marker is stored: if storing it fails, the next
+			// run announces the claim again rather than never.
 			emitSSEEvent("tea.health/state-changed", caseId, {
-				claimId: elementId,
-				health,
+				claimId,
+				status,
 				stale: true,
 			});
-		} else if (alreadyNotified && !stale) {
-			// Fresh again (new evidence arrived since the last notification) —
-			// clear the marker so a FUTURE staleness re-notifies rather than
-			// being permanently suppressed by this one.
-			delete notified[elementId];
-			markerChanged = true;
+			await prisma.pluginHealthClaimState.update({
+				where: { claimId },
+				data: { staleNotifiedAt: now },
+			});
+			newlyNotified++;
+		} else if (!stale && notified) {
+			await prisma.pluginHealthClaimState.update({
+				where: { claimId },
+				data: { staleNotifiedAt: null },
+			});
 		}
 	}
-
-	if (markerChanged) {
-		const updatedMarker: SweepMarker = { notifiedStaleClaimIds: notified };
-		await upsertCaseLevelPluginData(
-			PLUGIN_ID,
-			caseId,
-			updatedMarker as unknown as Prisma.InputJsonValue
-		);
-	}
-
-	return { hadNewStale: staleNotified > 0, staleNotified };
+	return newlyNotified;
 }
 
 /**
- * Runs one sweep: scans every element-level `tea.health` `PluginData` row
- * across the WHOLE deployment (a system maintenance job, not a per-user
- * view — it reads only its own `tea.health` namespace directly, with no
- * enablement/permission guard, the same deliberate bypass
- * `capturePluginDataForSnapshot` uses for snapshot capture and for the same
- * reason: this isn't any one viewer's read). For every claim that has
- * newly crossed into staleness since the last sweep (`sweepCaseClaims`
- * above):
- *
- *  1. emits `tea.health/state-changed` to that claim's case (payload shape
- *     matches the evidence-append route's: `{ claimId, health }`, plus
- *     `stale: true` — the client's `useClaimScopedFetch` filters strictly
- *     on `payload.claimId === elementId`, so this is emitted per newly-stale
- *     CLAIM, not once per case, even though every emission is addressed to
- *     that claim's case);
- *  2. records the claimId in that case's sweep marker, so re-running the
- *     sweep is a no-op for claims already flagged (idempotent — a second
- *     immediate run notifies zero claims).
+ * Runs one sweep across the WHOLE deployment (a system maintenance job, not
+ * a per-user view, so it reads the health tables directly with no
+ * enablement or permission guard). For every claim that has newly crossed
+ * into staleness since the last sweep it emits `tea.health/state-changed`
+ * to that claim's case with `{ claimId, status, stale: true }` and records
+ * the marker, so re-running the sweep is a no-op for claims already
+ * flagged. Events are emitted per claim: the client filters on
+ * `payload.claimId`.
  *
  * Per-case error isolation: each case is swept inside its own try/catch, so
- * one case's failure (e.g. its marker-persist write rejecting) does not
- * abort the run for every case still queued — the sweep always processes
- * every case it found before returning. If any case failed, the overall
- * result is still an error (surfaced to the cron caller for alerting/retry),
- * but only after every other case has already had its shot; a failed case's
- * marker is simply not updated, so the next scheduled run naturally retries
- * it (re-notify-on-failure, never silent loss — mirrors the module's
- * existing re-arm behaviour for fresh-then-stale transitions).
+ * one case's failure does not abort the run for every case still queued. If
+ * any case failed, the overall result is still an error (surfaced to the
+ * cron caller for alerting and retry), but only after every other case has
+ * had its turn; a failed claim's marker is simply not updated, so the next
+ * scheduled run retries it.
  */
 export async function sweepHealthStaleness(
 	authToken: string | null
@@ -192,12 +121,7 @@ export async function sweepHealthStaleness(
 	}
 
 	try {
-		const rows = await prisma.pluginData.findMany({
-			where: { pluginId: PLUGIN_ID, elementId: { not: null } },
-			select: { caseId: true, elementId: true, data: true },
-		});
-		const byCase = groupHealthRowsByCase(rows);
-
+		const byCase = await claimsByCase();
 		const now = new Date();
 		let casesNotified = 0;
 		let staleClaimsNotified = 0;
@@ -205,15 +129,12 @@ export async function sweepHealthStaleness(
 
 		for (const [caseId, claims] of byCase) {
 			try {
-				const outcome = await sweepCaseClaims(caseId, claims, now);
-				if (outcome.hadNewStale) {
+				const newlyNotified = await sweepCaseClaims(caseId, claims, now);
+				if (newlyNotified > 0) {
 					casesNotified++;
 				}
-				staleClaimsNotified += outcome.staleNotified;
+				staleClaimsNotified += newlyNotified;
 			} catch (error) {
-				// Isolated per case: one case's marker-persist (or other) failure
-				// must not abort the sweep for every other case still queued —
-				// each case gets its own shot, in whatever order the Map iterates.
 				failedCaseCount++;
 				log.error("Failed to sweep case staleness", { caseId, error });
 			}

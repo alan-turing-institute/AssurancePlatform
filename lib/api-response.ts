@@ -11,6 +11,7 @@ import {
 	notFound,
 	payloadTooLarge,
 	unauthorised,
+	unprocessable,
 	validationError,
 } from "./errors";
 
@@ -112,10 +113,23 @@ const ERROR_MAPPINGS: Array<{
 	pattern: ErrorPattern;
 	factory: () => AppError;
 }> = [
+	// `health-evidence-service.ts`'s bound-check refusal: the request is
+	// well-formed but names a check other than the one the claim is bound to
+	// (422). Anchored and listed first because the message embeds a
+	// producer-supplied check name, which must not be able to trigger any of
+	// the substring patterns below.
+	{
+		pattern: /^This claim is bound to check /,
+		factory: () => unprocessable(""),
+	},
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
 	{ pattern: "already", factory: conflict },
+	// `health-evidence-service.ts`'s `reinstateHealthEvidence`: reinstating a
+	// record that has no open revocation is a state conflict, like revoking
+	// one twice ("already revoked" above).
+	{ pattern: /^This record is not revoked$/, factory: conflict },
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
 	// outside the allowed set, or one whose content signature doesn't match
 	// what was declared (AP-QA-007), is a validation failure (400), not the

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted for the 1.0 release
 - **Date:** 2026-07-13
-- **Related:** ADR 0002 (plugin architecture), evidence format v0.1 (`docs/specs/evidence-format-v0.1.md`)
+- **Related:** ADR 0002 (plugin architecture), the technical guide's health plugin page (evidence format 1.1)
 
 The claim/evidence health plugin ships in 1.0 with four known limitations,
 each accepted deliberately rather than silently carried forward. Each entry
@@ -62,16 +62,19 @@ underlying connection rather than each opening its own. This softens the
 concern considerably — the trigger above still applies for very large
 canvases, but it is no longer a near-term one.
 
-## 4. No settings-management path for automated integrations
+## 4. The evidence log has no retention rule
 
-The scoring thresholds and validity window used to compute a claim's health
-score are read per human user (each user can have their own settings), but
-there's no equivalent settings entry point for an automated system acting on
-its own account — such an integration always gets the platform defaults,
-with no way to configure them for itself.
+Every accepted evidence record is kept for as long as its case exists. A
+check that reports once a minute adds about 1,440 records to its claim each
+day, and a record can carry several kilobytes (its member list, provenance
+and payload), so a busy claim's log grows without limit. Nothing archives,
+thins or deletes records other than the case purge described in limitation
+1. Reads are paged, so a long log does not slow the evidence tab, but the
+storage it occupies keeps growing.
 
-This is a non-issue while only one external pipeline (DARTER) is producing
-evidence, since its evaluating account can simply use the defaults.
+This is acceptable while a small number of claims receive evidence from one
+pipeline and the deployment's database is sized for it.
 
-**Revisit trigger:** a second automated integration begins sharing a case's
-evidence and needs its own distinct scoring configuration.
+**Revisit trigger:** the evidence table's size becoming a storage or backup
+concern, or any deployment where claims receive evidence at a high rate for
+months at a time.
