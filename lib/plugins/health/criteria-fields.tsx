@@ -26,7 +26,8 @@ import { VERDICT_DOT_CLASSES, VERDICT_LABELS } from "./health-format";
  * outside the panel and the canvas would otherwise take their arrow keys.
  */
 
-export const NOKEY_CONTENT = "nokey";
+export const NOKEY_CONTENT =
+	"nokey max-w-(--radix-select-content-available-width)";
 
 interface FieldProps {
 	children: (control: {
@@ -106,7 +107,7 @@ export function TextField({
 						value={value}
 					/>
 					{suffix && (
-						<span className="wrap-anywhere max-w-[40%] text-muted-foreground text-sm">
+						<span className="max-w-[40%] shrink-0 break-words text-muted-foreground text-sm">
 							{suffix}
 						</span>
 					)}

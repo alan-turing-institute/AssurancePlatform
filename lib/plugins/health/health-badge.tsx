@@ -115,7 +115,7 @@ export function HealthBadge({
 						{healthStatus.mismatch && (
 							<span
 								aria-hidden="true"
-								className="font-semibold text-[10px] text-muted-foreground leading-none"
+								className="font-semibold text-muted-foreground text-xs leading-none"
 								data-testid="health-badge-mismatch-mark"
 							>
 								{"\u2260"}

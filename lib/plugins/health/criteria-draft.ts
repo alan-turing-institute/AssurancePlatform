@@ -908,11 +908,3 @@ export function friendlyMessage(path: string, message: string): string {
 		? text.replace("from 0 to 1", "from 0 to 100")
 		: text;
 }
-
-/** The step-1 and step-2 values the settings form never shows beside a field of its own. */
-export function unplacedErrors(
-	errors: Record<string, string>,
-	known: (path: string) => boolean
-): [string, string][] {
-	return Object.entries(errors).filter(([path]) => !known(path));
-}

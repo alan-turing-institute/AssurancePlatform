@@ -270,14 +270,22 @@ export function HealthPanel({
 						Settings
 					</TabsTrigger>
 				</TabsList>
-				<TabsContent className="mt-3" forceMount value="results">
+				<TabsContent
+					className="mt-3 data-[state=inactive]:hidden"
+					forceMount
+					value="results"
+				>
 					<ResultsView
 						context={context}
 						hasAcceptedSettings={hasAcceptedSettings}
 						onOpenSettings={() => setView("settings")}
 					/>
 				</TabsContent>
-				<TabsContent className="mt-3" forceMount value="settings">
+				<TabsContent
+					className="mt-3 data-[state=inactive]:hidden"
+					forceMount
+					value="settings"
+				>
 					<SettingsView
 						active={view === "settings"}
 						canEdit={canEdit}

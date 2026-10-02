@@ -31,7 +31,7 @@ import {
 	TextField,
 	VersionChip,
 } from "./criteria-fields";
-import { readingUnit, ruleOutcomes, subjectsOf } from "./criteria-plain-words";
+import { readingUnit, ruleOutcomes } from "./criteria-plain-words";
 import { disabledShapeHint, RuleFields } from "./criteria-rule-fields";
 
 export interface SectionProps {
@@ -216,7 +216,6 @@ export function SourceSection({
 	setDraft,
 	version,
 }: SourceSectionProps) {
-	const subjects = subjectsOf(check);
 	const about = isWholeSystem(check)
 		? "The whole system"
 		: (check.scope_label?.one ?? check.scope);
@@ -243,9 +242,6 @@ export function SourceSection({
 					label="Reading type"
 					value={READING_TYPES[check.value.type](check)}
 				/>
-				{!isWholeSystem(check) && (
-					<ReadOnlyRow label="All of them together" value={subjects.many} />
-				)}
 			</dl>
 			{params.length === 0 ? (
 				<p className="text-muted-foreground text-sm">
