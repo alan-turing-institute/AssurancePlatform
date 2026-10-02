@@ -83,15 +83,15 @@ interface OlderPages {
  *
  * Non-claim callers get `status: "ready"`, `evidence: []` without a request.
  */
-export function useHealthEvidence({
-	caseId,
-	elementId,
-	elementType,
-}: ElementSlotContext): UseHealthEvidenceResult {
+export function useHealthEvidence(
+	{ caseId, elementId, elementType }: ElementSlotContext,
+	onStateChanged?: () => void
+): UseHealthEvidenceResult {
 	const { data, status, refetch } = useClaimScopedFetch<NewestLoad | null>({
 		caseId,
 		elementId,
 		elementType,
+		onStateChanged,
 		fetchFn: fetchNewestLoad,
 		errorValue: null,
 		notApplicableValue: {

@@ -145,6 +145,12 @@ const ERROR_MAPPINGS: Array<{
 		factory: conflict,
 	},
 	{ pattern: /^These settings are already inactive$/, factory: conflict },
+	// `health-criteria-service.ts`'s `saveCriteria`: a save made from settings
+	// that were replaced since the form read them is a state conflict (409).
+	{
+		pattern: /^These settings were changed by someone else$/,
+		factory: conflict,
+	},
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
 	// outside the allowed set, or one whose content signature doesn't match
 	// what was declared (AP-QA-007), is a validation failure (400), not the

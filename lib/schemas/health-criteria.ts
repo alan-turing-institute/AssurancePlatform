@@ -281,6 +281,8 @@ export const criteriaSaveRequestSchema = z.strictObject({
 	integration_id: uuidSchema.transform((id) => id.toLowerCase()),
 	settings: healthCriteriaSettingsSchema,
 	accept: z.boolean({ error: "must be true or false" }),
+	/** The revision the person's form was read at, null when no settings were stored; a different stored revision refuses the save. */
+	expected_revision: z.number().int().nullable().optional(),
 });
 
 /** The body of `POST /api/elements/[id]/health/criteria/retirement`. */
@@ -603,7 +605,34 @@ const BLOCK_KEYS = [
 	"timing",
 ] as const;
 
+interface TimingBlock {
+	valid_for?: string;
+	window?: string;
+}
+
+function isTimingBlock(value: unknown): value is TimingBlock {
+	return typeof value === "object" && value !== null;
+}
+
+function sameOptionalLength(a: unknown, b: unknown): boolean {
+	return typeof a === "string" && typeof b === "string"
+		? sameLength(a, b)
+		: a === b;
+}
+
+/** Whether two values of one block are the same; the timing block's lengths are compared as lengths of time. */
+function sameBlock(key: string, a: unknown, b: unknown): boolean {
+	if (key === "timing" && isTimingBlock(a) && isTimingBlock(b)) {
+		return (
+			sameOptionalLength(a.window, b.window) &&
+			sameOptionalLength(a.valid_for, b.valid_for)
+		);
+	}
+	return same(a, b);
+}
+
 function compareBlock(
+	key: string,
 	recommended: unknown,
 	current: unknown
 ): BlockSource | null {
@@ -613,7 +642,7 @@ function compareBlock(
 	if (recommended === undefined) {
 		return "hand";
 	}
-	return same(recommended, current) ? "recommended" : "edited";
+	return sameBlock(key, recommended, current) ? "recommended" : "edited";
 }
 
 function overallKind(
@@ -665,7 +694,8 @@ function sourceAgainstCheck(
 	const recommended = recommendedBlocks(check);
 	const result: SourceByKey = {};
 	for (const key of BLOCK_KEYS) {
-		result[key] = compareBlock(recommended[key], current[key]) ?? undefined;
+		result[key] =
+			compareBlock(key, recommended[key], current[key]) ?? undefined;
 	}
 	return result;
 }
@@ -681,7 +711,7 @@ function sourceAgainstPrevious(
 			continue;
 		}
 		const earlier = previous?.source[key];
-		if (before && same(before[key], current[key])) {
+		if (before && sameBlock(key, before[key], current[key])) {
 			result[key] = earlier;
 		} else {
 			result[key] =

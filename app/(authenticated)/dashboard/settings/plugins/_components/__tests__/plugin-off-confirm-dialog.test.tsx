@@ -50,7 +50,7 @@ describe("PluginOffConfirmDialog", () => {
 			"Turn off Claim/Evidence Health for your account?"
 		);
 		expect(dialog).toHaveTextContent(
-			"Health badges and the Evidence tab will disappear for you."
+			"Health badges, the Evidence tab and the Evidence health panel will disappear for you."
 		);
 		// The two variable lines only render once the mocked fetch above has
 		// resolved — `findByText` polls rather than asserting synchronously
@@ -118,7 +118,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		const dialog = await screen.findByRole("alertdialog");
 		expect(dialog).toHaveTextContent(
-			"Health badges and the Evidence tab will disappear for you."
+			"Health badges, the Evidence tab and the Evidence health panel will disappear for you."
 		);
 		expect(dialog).toHaveTextContent("Other collaborators are not affected.");
 		expect(dialog).not.toHaveTextContent(EVIDENCE_RECORD_REGEX);

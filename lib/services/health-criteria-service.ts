@@ -52,6 +52,7 @@ const log = logger.child({ component: "health-criteria-service" });
 const CHECK_NOT_OFFERED = "Check not offered for this case";
 const ACCEPTED_CANNOT_SUGGEST =
 	"Accepted settings cannot be saved as a suggestion";
+const CHANGED_BY_SOMEONE_ELSE = "These settings were changed by someone else";
 const ALREADY_INACTIVE = "These settings are already inactive";
 const SETTINGS_NOT_FOUND = "Settings not found";
 const CLAIM_NOT_FOUND = "Claim not found";
@@ -290,6 +291,8 @@ export async function readCriteria(
 
 export interface SaveCriteriaInput {
 	accept: boolean;
+	/** When present, the stored revision (null for none) the save is allowed to replace. */
+	expected_revision?: number | null;
 	integration_id: string;
 	settings: HealthCriteriaSettings;
 }
@@ -520,6 +523,17 @@ function settingsRefusal(
 		: null;
 }
 
+/** Whether the save names a revision other than the stored one (null when nothing is stored). */
+function isStaleSave(
+	input: SaveCriteriaInput,
+	previous: { revision: number } | null
+): boolean {
+	return (
+		input.expected_revision !== undefined &&
+		input.expected_revision !== (previous?.revision ?? null)
+	);
+}
+
 /** Validates and stores one save under the claim lock; see `saveCriteria`. */
 async function saveUnderLock(
 	tx: HealthTransaction,
@@ -532,15 +546,18 @@ async function saveUnderLock(
 		return { kind: "refused", error: CLAIM_NOT_FOUND };
 	}
 	const { input } = context;
+	const previous = await tx.pluginHealthCriteria.findUnique({
+		where: { claimId },
+	});
+	if (isStaleSave(input, previous)) {
+		return { kind: "refused", error: CHANGED_BY_SOMEONE_ELSE };
+	}
 	if (!(await integrationIsActive(tx, input.integration_id))) {
 		return {
 			kind: "invalid",
 			invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
 		};
 	}
-	const previous = await tx.pluginHealthCriteria.findUnique({
-		where: { claimId },
-	});
 	if (previous?.state === "ACCEPTED" && !input.accept) {
 		return { kind: "refused", error: ACCEPTED_CANNOT_SUGGEST };
 	}
@@ -551,6 +568,11 @@ async function saveUnderLock(
 		invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
 	} as const;
 	if (!description) {
+		return notOffered;
+	}
+	// Starting to accept settings needs the check in the live list; the stored
+	// copy only stands in for later edits of settings that are already accepted.
+	if (!check && input.accept && previous?.state !== "ACCEPTED") {
 		return notOffered;
 	}
 	const refusal = settingsRefusal(input, description);

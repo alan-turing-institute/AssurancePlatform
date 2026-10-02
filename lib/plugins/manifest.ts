@@ -72,6 +72,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 			"machine-endpoints",
 			"element-badge",
 			"element-panel",
+			"case-panel",
 			"settings-section",
 			"events",
 		],

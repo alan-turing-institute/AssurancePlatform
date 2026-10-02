@@ -52,15 +52,19 @@ import {
 	getNodeMutationErrorMessage,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import type { ElementPanelRegistration } from "@/lib/plugins/slots";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import useStore from "@/store/store";
 
 type FormValues = NodeEditFormInput;
+
+const DETAILS_TAB = "details";
 
 // Helper to check if element type supports attributes
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
@@ -426,6 +430,38 @@ function UrlsSection({
 	);
 }
 
+/**
+ * The tab showing in the dialog, so the dialog can be wider while a tab that
+ * asks for it is showing. It goes back to Details each time the dialog closes.
+ * It also remembers which tabs have been shown, so a tab keeps its state when
+ * the person moves to another one; the memory is cleared with the dialog.
+ */
+function useActiveTab(
+	open: boolean,
+	registrations: readonly ElementPanelRegistration[]
+) {
+	const [activeTab, setActiveTabState] = useState(DETAILS_TAB);
+	const [shownTabs, setShownTabs] = useState<ReadonlySet<string>>(new Set());
+	const [wasOpen, setWasOpen] = useState(open);
+	if (open !== wasOpen) {
+		setWasOpen(open);
+		if (!open) {
+			setActiveTabState(DETAILS_TAB);
+			setShownTabs(new Set());
+		}
+	}
+	const setActiveTab = (tab: string) => {
+		setActiveTabState(tab);
+		setShownTabs((current) =>
+			current.has(tab) ? current : new Set(current).add(tab)
+		);
+	};
+	const wideTab = registrations.some(
+		(registration) => registration.tabId === activeTab && registration.wide
+	);
+	return { activeTab, setActiveTab, shownTabs, wideTab };
+}
+
 // --- Main component ---
 
 interface NodeEditDialogProps {
@@ -447,6 +483,10 @@ export default function NodeEditDialog({
 	const [idCounter, setIdCounter] = useState(0);
 	const { assuranceCase, nodes: allNodes } = useStore();
 	const panelSlot = useElementPanelSlot();
+	const { activeTab, setActiveTab, shownTabs, wideTab } = useActiveTab(
+		open,
+		panelSlot.registrations
+	);
 	// Dialogical reasoning (defeaters, ADR 0005 D2): a read-only "Challenges"
 	// line naming the target — changing the target is out of scope for 1.0.
 	const isDefeater = !!node.data?.isDefeater;
@@ -746,13 +786,17 @@ export default function NodeEditDialog({
 		canEdit: !readOnly,
 		caseId: assuranceCase?.id?.toString() ?? "",
 		elementId: String(node.data?.id ?? ""),
+		elementText: form.watch("description"),
 		elementType: nodeType,
 	};
 
 	return (
 		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent
-				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+				className={cn(
+					"max-h-9/10 overflow-y-auto",
+					wideTab ? "sm:max-w-2xl" : "sm:max-w-lg"
+				)}
 				// `onPointerDownOutside` is the path this fix targets: it's
 				// the click-through case where a click inside the dialog
 				// falls through to the Dialog's own overlay while the
@@ -787,9 +831,14 @@ export default function NodeEditDialog({
 				{panelSlot.registrations.length === 0 ? (
 					detailsForm
 				) : (
-					<Tabs defaultValue="details">
+					<Tabs
+						// A grid item of the dialog: without `min-w-0`, a tab's unbreakable content sets the dialog's width.
+						className="min-w-0"
+						onValueChange={setActiveTab}
+						value={activeTab}
+					>
 						<TabsList>
-							<TabsTrigger value="details">Details</TabsTrigger>
+							<TabsTrigger value={DETAILS_TAB}>Details</TabsTrigger>
 							{panelSlot.registrations.map(
 								({ pluginId, tabId, label, icon: Icon }) => (
 									<TabsTrigger key={pluginId} value={tabId}>
@@ -799,10 +848,15 @@ export default function NodeEditDialog({
 								)
 							)}
 						</TabsList>
-						<TabsContent value="details">{detailsForm}</TabsContent>
+						<TabsContent value={DETAILS_TAB}>{detailsForm}</TabsContent>
 						{panelSlot.registrations.map(({ pluginId, tabId, Component }) => (
-							<TabsContent key={pluginId} value={tabId}>
-								<Component {...panelContext} />
+							<TabsContent
+								className="data-[state=inactive]:hidden"
+								forceMount
+								key={pluginId}
+								value={tabId}
+							>
+								{shownTabs.has(tabId) && <Component {...panelContext} />}
 							</TabsContent>
 						))}
 					</Tabs>

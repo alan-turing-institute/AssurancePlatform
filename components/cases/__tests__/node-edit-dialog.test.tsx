@@ -1,6 +1,7 @@
 import { waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
+import { useState } from "react";
 import type { Node } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
@@ -175,6 +176,160 @@ describe("NodeEditDialog — element-panel slot", () => {
 		);
 		expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
 		expect(screen.queryByText("Evidence")).not.toBeInTheDocument();
+	});
+});
+
+describe("NodeEditDialog — width follows the showing tab", () => {
+	it("is wider while a tab registered as wide is showing, and back to its width on Details", async () => {
+		const user = userEvent.setup();
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			wide: true,
+			Component: FakePanel,
+		});
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const dialog = await screen.findByRole("dialog");
+		expect(dialog.className).toContain("sm:max-w-lg");
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect(dialog.className).toContain("sm:max-w-2xl");
+		expect(dialog.className).not.toContain("sm:max-w-lg");
+		await user.click(screen.getByRole("tab", { name: "Details" }));
+		expect(dialog.className).toContain("sm:max-w-lg");
+	});
+
+	it("keeps the narrow width for a tab that does not ask for more", async () => {
+		const user = userEvent.setup();
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			Component: FakePanel,
+		});
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect((await screen.findByRole("dialog")).className).toContain(
+			"sm:max-w-lg"
+		);
+	});
+});
+
+describe("NodeEditDialog — a tab that has been shown stays mounted", () => {
+	function TypingPanel() {
+		const [text, setText] = useState("");
+		return (
+			<input
+				aria-label="Panel note"
+				onChange={(event) => setText(event.target.value)}
+				value={text}
+			/>
+		);
+	}
+
+	function register() {
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			Component: TypingPanel,
+		});
+		mockPluginsResponse(true);
+	}
+
+	function renderDialog(open: boolean) {
+		return render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={open}
+			/>,
+			{ withProviders: false }
+		);
+	}
+
+	it("mounts nothing for a tab that has not been shown", async () => {
+		register();
+		renderDialog(true);
+		await screen.findByRole("tab", { name: "Evidence" });
+		expect(
+			screen.queryByLabelText("Panel note", { selector: "input" })
+		).toBeNull();
+	});
+
+	it("keeps what was typed in the tab after the person switches to Details and back", async () => {
+		const user = userEvent.setup();
+		register();
+		renderDialog(true);
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		await user.type(screen.getByLabelText("Panel note"), "kept");
+		await user.click(screen.getByRole("tab", { name: "Details" }));
+		expect(
+			screen
+				.getByLabelText("Panel note", { selector: "input" })
+				.closest("[role=tabpanel]")
+		).toHaveAttribute("data-state", "inactive");
+		await user.click(screen.getByRole("tab", { name: "Evidence" }));
+		expect(screen.getByLabelText("Panel note")).toHaveValue("kept");
+	});
+
+	it("starts the tab afresh after the dialog has been closed and opened again", async () => {
+		const user = userEvent.setup();
+		register();
+		const { rerender } = renderDialog(true);
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		await user.type(screen.getByLabelText("Panel note"), "gone");
+		rerender(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={false}
+			/>
+		);
+		rerender(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>
+		);
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect(screen.getByLabelText("Panel note")).toHaveValue("");
 	});
 });
 

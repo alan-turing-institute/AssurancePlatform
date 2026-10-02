@@ -23,6 +23,8 @@ export interface ClaimScopedFetchResult<T> {
 	data: T;
 	/** Fetches again now, for a caller that has just changed the claim's state. */
 	refetch: () => Promise<void>;
+	/** Shows `value` now, for a caller that already holds the server's answer to a change. */
+	replace: (value: T) => void;
 	status: ClaimScopedFetchStatus;
 }
 
@@ -49,6 +51,18 @@ export interface UseClaimScopedFetchOptions<T> extends ElementSlotContext {
 	 * instead of a request that would never resolve.
 	 */
 	notApplicableValue: T;
+	/**
+	 * Called when `tea.health/state-changed` arrives for this element, after
+	 * this hook's own refetch has started. Lets a caller that reads more than
+	 * one thing for the claim refetch the others from this one subscription.
+	 */
+	onStateChanged?: () => void;
+	/**
+	 * Whether this hook opens its own live-update subscription. Defaults to
+	 * true; a caller that refetches this read from another hook's subscription
+	 * passes false so the claim opens no more than one connection.
+	 */
+	subscribe?: boolean;
 }
 
 /**
@@ -67,6 +81,8 @@ export function useClaimScopedFetch<T>({
 	errorValue,
 	notApplicableValue,
 	fetchFn,
+	onStateChanged,
+	subscribe = true,
 }: UseClaimScopedFetchOptions<T>): ClaimScopedFetchResult<T> {
 	const isClaim = elementType === "property";
 	const [data, setData] = useState<T>(
@@ -96,13 +112,19 @@ export function useClaimScopedFetch<T>({
 
 	useCaseEvents({
 		caseId,
-		enabled: isClaim && Boolean(caseId),
+		enabled: subscribe && isClaim && Boolean(caseId),
 		onEvent: (event) => {
 			if (isHealthStateEventForElement(event, elementId)) {
 				refetch();
+				onStateChanged?.();
 			}
 		},
 	});
 
-	return { data, status, refetch };
+	const replace = useCallback((value: T) => {
+		setData(value);
+		setStatus("ready");
+	}, []);
+
+	return { data, status, refetch, replace };
 }
