@@ -224,6 +224,33 @@ describe("healthEvidenceRecordSchema — refused records", () => {
 	});
 });
 
+describe("healthEvidenceRecordSchema — uncertainty", () => {
+	const withUncertainty = (kind: string, params: Record<string, unknown>) =>
+		withOverrides(records.singleSubject, {
+			uncertainty: { kind, params, method: "bootstrap", nature: "predictive" },
+		});
+
+	it.each([
+		["interval", { lower: 1, upper: 2 }],
+		["std", { std: 0.2 }],
+		["quantiles", { q: { "0.05": 1, "0.95": 3 } }],
+		["probability", { p: 0.3 }],
+	])("accepts a %s uncertainty with its parameters", (kind, params) => {
+		expect(parse(withUncertainty(kind, params)).success).toBe(true);
+	});
+
+	it.each([
+		["interval", { lower: 1 }],
+		["std", { std: -1 }],
+		["quantiles", { q: {} }],
+		["quantiles", { q: { "0.5": "high" } }],
+		["probability", { p: 1.5 }],
+		["median", { m: 1 }],
+	])("refuses a %s uncertainty with parameters %j", (kind, params) => {
+		expect(parse(withUncertainty(kind, params)).success).toBe(false);
+	});
+});
+
 describe("requests from a signed-in person", () => {
 	it("requires a known cause and a reason for a revocation", () => {
 		expect(

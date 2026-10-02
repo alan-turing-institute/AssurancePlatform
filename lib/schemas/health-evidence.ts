@@ -30,11 +30,11 @@ import {
 
 export const EVIDENCE_FORMAT_VERSION = "1.1";
 
-export const VERDICTS = ["pass", "marginal", "fail", "indeterminate"] as const;
+const VERDICTS = ["pass", "marginal", "fail", "indeterminate"] as const;
 export type HealthVerdict = (typeof VERDICTS)[number];
 
 /** A record's timestamp may run ahead of the server clock by at most this long. */
-export const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 const NAME_MAX_LENGTH = 200;
 const COMMENT_MAX_LENGTH = 2000;
@@ -113,12 +113,45 @@ const provenanceSchema = z
 		message: `must have at most ${BOUNDED_JSON_MAX_KEYS * 2} keys`,
 	});
 
-const UNCERTAINTY_KINDS = [
-	"interval",
-	"std",
-	"quantiles",
-	"probability",
-] as const;
+const isNumber = (value: unknown): boolean =>
+	typeof value === "number" && Number.isFinite(value);
+
+const isFractionOrZero = (value: unknown): boolean =>
+	isNumber(value) && (value as number) >= 0 && (value as number) <= 1;
+
+const isQuantileMap = (value: unknown): boolean =>
+	typeof value === "object" &&
+	value !== null &&
+	!Array.isArray(value) &&
+	Object.keys(value).length > 0 &&
+	Object.values(value).every(isNumber);
+
+/** What `params` must carry for each kind of uncertainty; the message names the missing shape. */
+const UNCERTAINTY_PARAM_CHECKS = {
+	interval: {
+		isValid: (params: Record<string, unknown>) =>
+			isNumber(params.lower) && isNumber(params.upper),
+		message: "must carry numeric lower and upper for an interval",
+	},
+	std: {
+		isValid: (params: Record<string, unknown>) =>
+			isNumber(params.std) && Number(params.std) >= 0,
+		message: "must carry a non-negative numeric std",
+	},
+	quantiles: {
+		isValid: (params: Record<string, unknown>) => isQuantileMap(params.q),
+		message: "must carry q, an object of numeric quantiles",
+	},
+	probability: {
+		isValid: (params: Record<string, unknown>) => isFractionOrZero(params.p),
+		message: "must carry p, a number from 0 to 1",
+	},
+} as const;
+
+const UNCERTAINTY_KINDS = Object.keys(UNCERTAINTY_PARAM_CHECKS) as [
+	keyof typeof UNCERTAINTY_PARAM_CHECKS,
+	...(keyof typeof UNCERTAINTY_PARAM_CHECKS)[],
+];
 
 const uncertaintySchema = z
 	.strictObject({
@@ -138,37 +171,13 @@ const uncertaintySchema = z
 		}),
 	})
 	.superRefine((uncertainty, ctx) => {
-		const { kind, params } = uncertainty;
-		const fail = (message: string) =>
-			ctx.addIssue({ code: "custom", path: ["params"], message });
-		const isNumber = (v: unknown) =>
-			typeof v === "number" && Number.isFinite(v);
-		if (
-			kind === "interval" &&
-			!(isNumber(params.lower) && isNumber(params.upper))
-		) {
-			fail("must carry numeric lower and upper for an interval");
-		}
-		if (kind === "std" && !(isNumber(params.std) && Number(params.std) >= 0)) {
-			fail("must carry a non-negative numeric std");
-		}
-		if (
-			kind === "quantiles" &&
-			!(
-				typeof params.q === "object" &&
-				params.q !== null &&
-				!Array.isArray(params.q) &&
-				Object.keys(params.q).length > 0 &&
-				Object.values(params.q).every(isNumber)
-			)
-		) {
-			fail("must carry q, an object of numeric quantiles");
-		}
-		if (
-			kind === "probability" &&
-			!(isNumber(params.p) && Number(params.p) >= 0 && Number(params.p) <= 1)
-		) {
-			fail("must carry p, a number from 0 to 1");
+		const check = UNCERTAINTY_PARAM_CHECKS[uncertainty.kind];
+		if (!check.isValid(uncertainty.params)) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["params"],
+				message: check.message,
+			});
 		}
 	});
 

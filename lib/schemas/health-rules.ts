@@ -50,7 +50,7 @@ export function parseDurationSeconds(text: string): number | null {
 	return anyPart && total > 0 ? total : null;
 }
 
-export const DURATION_FORMAT_MESSAGE =
+const DURATION_FORMAT_MESSAGE =
 	"must be an ISO 8601 duration in weeks, days, hours, minutes and seconds (for example PT5M), greater than zero; months and years are not accepted";
 
 export const durationSchema = z
@@ -91,23 +91,40 @@ const versionSchema = z
 	.min(1, "is required")
 	.max(VERSION_MAX_LENGTH, `must be at most ${VERSION_MAX_LENGTH} characters`);
 
-function isNumberPair(value: unknown): boolean {
-	return (
-		Array.isArray(value) &&
-		value.length === 2 &&
-		value.every((entry) => typeof entry === "number" && Number.isFinite(entry))
-	);
+const isFiniteNumber = (value: unknown): boolean =>
+	typeof value === "number" && Number.isFinite(value);
+
+const isNumberPair = (value: unknown): boolean =>
+	Array.isArray(value) && value.length === 2 && value.every(isFiniteNumber);
+
+const isNonEmptyArray = (value: unknown): boolean =>
+	Array.isArray(value) && value.length > 0;
+
+interface ParamIssue {
+	message: string;
+	path: (string | number)[];
 }
 
-function isNonEmptyArray(value: unknown): boolean {
-	return Array.isArray(value) && value.length > 0;
+/** An issue for `params[key]` when it is missing (and required) or present but not valid. */
+function paramIssue(
+	params: ParamsBag,
+	key: string,
+	isValid: (value: unknown) => boolean,
+	message: string,
+	required: boolean
+): ParamIssue[] {
+	const value = params[key];
+	if (value === undefined ? !required : isValid(value)) {
+		return [];
+	}
+	return [{ path: ["params", key], message }];
 }
 
 // ---------------------------------------------------------------------------
 // Rule
 // ---------------------------------------------------------------------------
 
-export const RULE_KINDS = [
+const RULE_KINDS = [
 	"identity",
 	"threshold",
 	"band",
@@ -115,72 +132,80 @@ export const RULE_KINDS = [
 	"target",
 ] as const;
 
-export const RULE_DIRECTIONS = ["maximize", "minimize"] as const;
+const RULE_DIRECTIONS = ["maximize", "minimize"] as const;
+
+interface RuleInput {
+	direction?: (typeof RULE_DIRECTIONS)[number];
+	kind: (typeof RULE_KINDS)[number];
+	params?: ParamsBag;
+}
 
 /**
- * Checks that `params` carries what a rule of `kind` needs. `target` is
- * stored when a record carries it but is not otherwise interpreted.
+ * What each kind of rule needs in `params`. `target` is stored when a
+ * record carries it but is not otherwise interpreted.
  */
-function checkRuleParams(
-	rule: {
-		kind: (typeof RULE_KINDS)[number];
-		direction?: (typeof RULE_DIRECTIONS)[number];
-		params?: ParamsBag;
-	},
-	ctx: z.RefinementCtx
-): void {
-	const params = rule.params ?? {};
-	const fail = (path: (string | number)[], message: string) =>
-		ctx.addIssue({ code: "custom", path, message });
+const RULE_PARAM_CHECKS: Record<
+	RuleInput["kind"],
+	(rule: RuleInput, params: ParamsBag) => ParamIssue[]
+> = {
+	identity: () => [],
+	target: () => [],
+	threshold: (rule, params) => [
+		...(rule.direction
+			? []
+			: [{ path: ["direction"], message: "is required for a threshold rule" }]),
+		...paramIssue(
+			params,
+			"pass_values",
+			isFiniteNumber,
+			"must be a number",
+			true
+		),
+		...paramIssue(
+			params,
+			"marginal_values",
+			isFiniteNumber,
+			"must be a number",
+			false
+		),
+	],
+	band: (_rule, params) => [
+		...paramIssue(
+			params,
+			"pass_values",
+			isNumberPair,
+			"must be a [low, high] pair of numbers",
+			true
+		),
+		...paramIssue(
+			params,
+			"marginal_values",
+			isNumberPair,
+			"must be a [low, high] pair of numbers",
+			false
+		),
+	],
+	membership: (_rule, params) => [
+		...paramIssue(
+			params,
+			"pass_values",
+			isNonEmptyArray,
+			"must be a non-empty list",
+			true
+		),
+		...paramIssue(
+			params,
+			"marginal_values",
+			Array.isArray,
+			"must be a list",
+			false
+		),
+	],
+};
 
-	switch (rule.kind) {
-		case "identity":
-		case "target":
-			return;
-		case "threshold":
-			if (!rule.direction) {
-				fail(["direction"], "is required for a threshold rule");
-			}
-			if (typeof params.pass_values !== "number") {
-				fail(["params", "pass_values"], "must be a number");
-			}
-			if (
-				params.marginal_values !== undefined &&
-				typeof params.marginal_values !== "number"
-			) {
-				fail(["params", "marginal_values"], "must be a number");
-			}
-			return;
-		case "band":
-			if (!isNumberPair(params.pass_values)) {
-				fail(
-					["params", "pass_values"],
-					"must be a [low, high] pair of numbers"
-				);
-			}
-			if (
-				params.marginal_values !== undefined &&
-				!isNumberPair(params.marginal_values)
-			) {
-				fail(
-					["params", "marginal_values"],
-					"must be a [low, high] pair of numbers"
-				);
-			}
-			return;
-		case "membership":
-			if (!isNonEmptyArray(params.pass_values)) {
-				fail(["params", "pass_values"], "must be a non-empty list");
-			}
-			if (
-				params.marginal_values !== undefined &&
-				!Array.isArray(params.marginal_values)
-			) {
-				fail(["params", "marginal_values"], "must be a list");
-			}
-			return;
-		default:
-			return;
+function checkRuleParams(rule: RuleInput, ctx: z.RefinementCtx): void {
+	for (const issue of RULE_PARAM_CHECKS[rule.kind](rule, rule.params ?? {})) {
+		ctx.addIssue({ code: "custom", ...issue });
 	}
 }
 
@@ -201,7 +226,7 @@ export const ruleSchema = z
 // Reduction
 // ---------------------------------------------------------------------------
 
-export const REDUCTION_KINDS = [
+const REDUCTION_KINDS = [
 	"sum",
 	"mean",
 	"max",
@@ -224,11 +249,7 @@ export const reductionSchema = z.strictObject({
 // Aggregation
 // ---------------------------------------------------------------------------
 
-export const AGGREGATION_KINDS = [
-	"proportion",
-	"worst-of",
-	"percentile",
-] as const;
+const AGGREGATION_KINDS = ["proportion", "worst-of", "percentile"] as const;
 
 function isFraction(value: unknown): boolean {
 	return typeof value === "number" && value >= 0 && value <= 1;
@@ -282,7 +303,3 @@ export const aggregationSchema = z
 		version: versionSchema,
 	})
 	.superRefine(checkAggregationParams);
-
-export type HealthRule = z.infer<typeof ruleSchema>;
-export type HealthReduction = z.infer<typeof reductionSchema>;
-export type HealthAggregation = z.infer<typeof aggregationSchema>;

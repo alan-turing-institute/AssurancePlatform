@@ -8,11 +8,10 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
+import { announceHealthChange } from "@/lib/health-route-helpers";
 import { uuidSchema } from "@/lib/schemas/base";
 import { boundCheckRequestSchema } from "@/lib/schemas/health-evidence";
 import { changeBoundCheck } from "@/lib/services/health-evidence-service";
-import { refreshHealthSummary } from "@/lib/services/health-status-service";
-import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 /**
  * PUT /api/elements/[id]/health/bound-check
@@ -53,15 +52,11 @@ export async function PUT(
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		const status = await refreshHealthSummary(
+		const status = await announceHealthChange(
 			session.userId,
 			claimId.data,
 			result.data.caseId
 		);
-		emitSSEEvent("tea.health/state-changed", result.data.caseId, {
-			claimId: claimId.data,
-			status,
-		});
 
 		return apiSuccess({ status });
 	} catch (error) {

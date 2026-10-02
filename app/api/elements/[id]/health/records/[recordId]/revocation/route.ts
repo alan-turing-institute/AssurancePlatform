@@ -1,18 +1,8 @@
 import type { NextRequest } from "next/server";
-import { parseJsonBody } from "@/lib/api-request";
-import {
-	apiError,
-	apiErrorFromUnknown,
-	apiSuccess,
-	requireAuthSession,
-	serviceErrorToAppError,
-} from "@/lib/api-response";
-import { validationError } from "@/lib/errors";
-import { uuidSchema } from "@/lib/schemas/base";
+import { apiSuccess } from "@/lib/api-response";
+import { handleHealthRecordAction } from "@/lib/health-route-helpers";
 import { revocationRequestSchema } from "@/lib/schemas/health-evidence";
 import { revokeHealthEvidence } from "@/lib/services/health-evidence-service";
-import { refreshHealthSummary } from "@/lib/services/health-status-service";
-import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 /**
  * POST /api/elements/[id]/health/records/[recordId]/revocation
@@ -34,43 +24,15 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
  * @auth SessionAuth
  * @tag Elements
  */
-export async function POST(
+export function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string; recordId: string }> }
 ) {
-	try {
-		const session = await requireAuthSession();
-		const { id, recordId } = await params;
-
-		const claimId = uuidSchema.safeParse(id);
-		const parsedRecordId = uuidSchema.safeParse(recordId);
-		if (!(claimId.success && parsedRecordId.success)) {
-			return apiError(validationError("Invalid element or record id"));
-		}
-		const body = await parseJsonBody(request, revocationRequestSchema);
-
-		const result = await revokeHealthEvidence(
-			session.userId,
-			claimId.data,
-			parsedRecordId.data,
-			body
-		);
-		if ("error" in result) {
-			return apiError(serviceErrorToAppError(result.error));
-		}
-
-		const status = await refreshHealthSummary(
-			session.userId,
-			claimId.data,
-			result.data.caseId
-		);
-		emitSSEEvent("tea.health/state-changed", result.data.caseId, {
-			claimId: claimId.data,
-			status,
-		});
-
-		return apiSuccess({ revocation: result.data.revocation, status }, 201);
-	} catch (error) {
-		return apiErrorFromUnknown(error);
-	}
+	return handleHealthRecordAction(
+		request,
+		params,
+		revocationRequestSchema,
+		revokeHealthEvidence,
+		(data, status) => apiSuccess({ revocation: data.revocation, status }, 201)
+	);
 }

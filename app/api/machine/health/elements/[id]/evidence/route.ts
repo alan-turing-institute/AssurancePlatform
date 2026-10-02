@@ -9,6 +9,7 @@ import {
 } from "@/lib/api-response";
 import { requireApiToken } from "@/lib/auth/require-api-token";
 import { validationError } from "@/lib/errors";
+import { announceHealthChange } from "@/lib/health-route-helpers";
 import {
 	describeEvidenceIssues,
 	evidenceListQuerySchema,
@@ -18,8 +19,6 @@ import {
 	appendHealthEvidence,
 	listHealthEvidence,
 } from "@/lib/services/health-evidence-service";
-import { refreshHealthSummary } from "@/lib/services/health-status-service";
-import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 /**
  * The health plugin's machine ingestion endpoint. The body is an evidence
@@ -172,19 +171,14 @@ export async function POST(
 		}
 		const { caseId } = appendResult.data;
 
-		const status = await refreshHealthSummary(
-			principal.systemUserId,
-			claimId,
-			caseId
-		);
-
 		// After the write has committed — never inside the transaction, never
 		// on a failed write.
-		emitSSEEvent("tea.health/state-changed", caseId, {
+		const status = await announceHealthChange(
+			principal.systemUserId,
 			claimId,
-			status,
-			integrationName: principal.integrationName,
-		});
+			caseId,
+			{ integrationName: principal.integrationName }
+		);
 
 		return apiSuccess({ record: appendResult.data.record, status }, 201);
 	} catch (error) {
