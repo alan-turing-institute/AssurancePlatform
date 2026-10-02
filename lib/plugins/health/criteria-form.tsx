@@ -240,6 +240,87 @@ function useCriteriaActions(
 	};
 }
 
+interface FormSectionsProps {
+	choices: CheckChoice[];
+	chosen: string;
+	onPick: (key: string) => void;
+	sectionProps: SectionProps;
+	short: boolean;
+	versions: VersionLabels | undefined;
+}
+
+/** The short view, or every section of the full form. */
+function FormSections({
+	choices,
+	chosen,
+	onPick,
+	sectionProps,
+	short,
+	versions,
+}: FormSectionsProps) {
+	const [showAll, setShowAll] = useState(false);
+	if (short && !showAll) {
+		return (
+			<ShortViewBody {...sectionProps} onShowAll={() => setShowAll(true)} />
+		);
+	}
+	return (
+		<>
+			<SourceSection
+				{...sectionProps}
+				choices={choices}
+				chosen={chosen}
+				onPick={onPick}
+				version={versions?.check}
+			/>
+			<RuleSection {...sectionProps} version={versions?.rule} />
+			<CombiningSections {...sectionProps} versions={versions} />
+			<TimingSection {...sectionProps} />
+		</>
+	);
+}
+
+interface FormFooterProps
+	extends Omit<ButtonRowProps, "onStop" | "stopButton"> {
+	claimId: string;
+	hasProblems: boolean;
+	onChanged: () => void;
+}
+
+/** The buttons, with the reminder about problems and the dialog for stopping the use of accepted settings. */
+function FormFooter({
+	claimId,
+	hasProblems,
+	onChanged,
+	...buttons
+}: FormFooterProps) {
+	const [stopping, setStopping] = useState(false);
+	const stopButton = useRef<HTMLButtonElement>(null);
+	return (
+		<div className="space-y-2">
+			{hasProblems && (
+				<p className="text-muted-foreground text-xs">
+					Fix the problems marked above before saving.
+				</p>
+			)}
+			<ButtonRow
+				{...buttons}
+				onStop={() => setStopping(true)}
+				stopButton={stopButton}
+			/>
+			{buttons.state === "accepted" && (
+				<RetireCriteriaDialog
+					claimId={claimId}
+					onDone={onChanged}
+					onOpenChange={setStopping}
+					open={stopping}
+					returnFocusTo={stopButton}
+				/>
+			)}
+		</div>
+	);
+}
+
 /**
  * The settings for one claim: the plain-words summary, then either the short
  * view or every setting, then the buttons. The form keeps its own draft, so a
@@ -269,10 +350,6 @@ export function CriteriaForm({
 		revision,
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
-	const [showAll, setShowAll] = useState(false);
-	const [stopping, setStopping] = useState(false);
-	const stopButton = useRef<HTMLButtonElement>(null);
-
 	const sectionProps: SectionProps = {
 		analysis: { ...form.analysis, errors: form.errors },
 		check: form.check,
@@ -283,8 +360,6 @@ export function CriteriaForm({
 			actions.clearMessage();
 		},
 	};
-	const versions = versionsOf(view);
-	const short = state !== "accepted" && startShort && !showAll;
 	const canSave =
 		form.analysis.complete !== null &&
 		form.draft.integrationId !== "" &&
@@ -297,53 +372,30 @@ export function CriteriaForm({
 				<ChangedElsewhere onReload={form.reload} />
 			)}
 			<PlainWordsSummary sentences={form.sentences} />
-			{short ? (
-				<ShortViewBody {...sectionProps} onShowAll={() => setShowAll(true)} />
-			) : (
-				<>
-					<SourceSection
-						{...sectionProps}
-						choices={choices}
-						chosen={form.draftKey}
-						onPick={form.onPick}
-						version={versions?.check}
-					/>
-					<RuleSection {...sectionProps} version={versions?.rule} />
-					<CombiningSections {...sectionProps} versions={versions} />
-					<TimingSection {...sectionProps} />
-				</>
-			)}
+			<FormSections
+				choices={choices}
+				chosen={form.draftKey}
+				onPick={form.onPick}
+				sectionProps={sectionProps}
+				short={state !== "accepted" && startShort}
+				versions={versionsOf(view)}
+			/>
 			<ProblemList errors={form.errors} message={actions.message} />
 			{view && <PipelineFooter view={view} />}
 			{canEdit && (
-				<div className="space-y-2">
-					{form.hasProblems && (
-						<p className="text-muted-foreground text-xs">
-							Fix the problems marked above before saving.
-						</p>
-					)}
-					<ButtonRow
-						canSave={canSave}
-						changedElsewhere={form.changedElsewhere}
-						onAccept={() => actions.save(true)}
-						onCancel={state === "new" ? onCancelNew : form.resetToStored}
-						onDiscard={actions.discard}
-						onStop={() => setStopping(true)}
-						onSuggest={() => actions.save(false)}
-						pending={actions.pending}
-						state={state}
-						stopButton={stopButton}
-					/>
-					{state === "accepted" && (
-						<RetireCriteriaDialog
-							claimId={claimId}
-							onDone={onChanged}
-							onOpenChange={setStopping}
-							open={stopping}
-							returnFocusTo={stopButton}
-						/>
-					)}
-				</div>
+				<FormFooter
+					canSave={canSave}
+					changedElsewhere={form.changedElsewhere}
+					claimId={claimId}
+					hasProblems={form.hasProblems}
+					onAccept={() => actions.save(true)}
+					onCancel={state === "new" ? onCancelNew : form.resetToStored}
+					onChanged={onChanged}
+					onDiscard={actions.discard}
+					onSuggest={() => actions.save(false)}
+					pending={actions.pending}
+					state={state}
+				/>
 			)}
 		</div>
 	);
