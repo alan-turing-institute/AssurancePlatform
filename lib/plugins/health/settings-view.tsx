@@ -488,6 +488,75 @@ function useShownSettings(
 	return { held, shown: stored ? { stored, view } : held, stored };
 }
 
+interface HostInput {
+	canEdit: boolean;
+	choices: CheckChoice[];
+	claimId: string;
+	criteria: SettingsViewProps["criteria"];
+	focusAfterStop: ReturnType<typeof useFocusAfterStop>;
+	onUnsavedChange: (unsaved: boolean) => void;
+	setPicked: (picked: CheckChoice | null) => void;
+}
+
+/** What the forms call back into: leaving a pick, reading again, showing the server's answer, and reporting unsaved edits. */
+function hostOf({
+	canEdit,
+	choices,
+	claimId,
+	criteria,
+	focusAfterStop,
+	onUnsavedChange,
+	setPicked,
+}: HostInput): FormHost {
+	return {
+		canEdit,
+		choices,
+		claimId,
+		onCancelNew: () => setPicked(null),
+		onChanged: () => {
+			// Only stopping the use of settings calls this; focus moves into the view once the read shows no settings.
+			focusAfterStop.request();
+			onUnsavedChange(false);
+			setPicked(null);
+			criteria.refetch();
+		},
+		onRefresh: () => {
+			criteria.refetch();
+		},
+		onReplace: (next) => {
+			onUnsavedChange(false);
+			criteria.replace(next);
+			setPicked(null);
+		},
+		onUnsavedChange,
+	};
+}
+
+interface StoredBranchProps {
+	entry: CheckChoice | null;
+	/** True when the settings shown were stopped or discarded by someone else. */
+	held: boolean;
+	host: FormHost;
+	shown: StoredSettings;
+	view: HealthCriteriaResponse;
+}
+
+/** The form for stored settings, with who stopped them when someone else has since stopped them under unsaved edits. */
+function StoredBranch({ entry, held, host, shown, view }: StoredBranchProps) {
+	return (
+		<>
+			{held && <StoppedNotice view={view} />}
+			<StoredForm
+				entry={entry}
+				host={host}
+				stored={shown.stored}
+				superseded={held}
+				view={shown.view}
+			/>
+		</>
+	);
+}
+
 /** The loaded Settings view: the claim's text, then the picker, the form for a fresh pick, or the form for stored settings. */
 function SettingsContent({
 	canEdit,
@@ -510,28 +579,15 @@ function SettingsContent({
 	}, [checks.lists, stored]);
 	const focusAfterStop = useFocusAfterStop(stored === null && held === null);
 
-	const host: FormHost = {
+	const host = hostOf({
 		canEdit,
 		choices,
 		claimId,
-		onCancelNew: () => setPicked(null),
-		onChanged: () => {
-			// Only stopping the use of settings calls this; focus moves into the view once the read shows no settings.
-			focusAfterStop.request();
-			onUnsavedChange(false);
-			setPicked(null);
-			criteria.refetch();
-		},
-		onRefresh: () => {
-			criteria.refetch();
-		},
-		onReplace: (next) => {
-			onUnsavedChange(false);
-			criteria.replace(next);
-			setPicked(null);
-		},
+		criteria,
+		focusAfterStop,
 		onUnsavedChange,
-	};
+		setPicked,
+	});
 
 	return (
 		<div className="space-y-4">
@@ -543,16 +599,13 @@ function SettingsContent({
 			<ClaimText text={claimText} />
 			{picked && <PickedForm host={host} picked={picked} view={view} />}
 			{!picked && shown && (
-				<>
-					{held && <StoppedNotice view={view} />}
-					<StoredForm
-						entry={stored ? newerVersionOf(view, checks.lists) : null}
-						host={host}
-						stored={shown.stored}
-						superseded={held !== null}
-						view={shown.view}
-					/>
-				</>
+				<StoredBranch
+					entry={stored ? newerVersionOf(view, checks.lists) : null}
+					held={held !== null}
+					host={host}
+					shown={shown}
+					view={view}
+				/>
 			)}
 			{!(picked || shown) && (
 				<WithoutSettings

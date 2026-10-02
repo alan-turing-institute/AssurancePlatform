@@ -476,14 +476,47 @@ function reloadOf({
 	};
 }
 
-/** The reason saving is off for settings whose pipeline has been deleted. */
-function PipelineGoneNote() {
+/** Whether the form starts with changes that are not stored: a move to another check version, or a fresh pick. */
+function startsUnsaved(move: PendingMove | undefined, state: FormState) {
+	return move !== undefined || state === "new";
+}
+
+/** How a change made elsewhere shows: `warn` shows the notice, `locked` turns saving off. */
+function changeFlags(
+	form: CriteriaDraftState,
+	actions: CriteriaActions,
+	superseded: boolean
+) {
+	return {
+		locked: form.changedElsewhere || superseded || actions.refused,
+		warn:
+			actions.refused || superseded || (form.changedElsewhere && form.dirty),
+	};
+}
+
+interface EditControlsProps {
+	canEdit: boolean;
+	footer: FormFooterProps;
+	/** True when the pipeline the settings were set up for no longer exists. */
+	pipelineGone: boolean;
+}
+
+/** What a person who can edit sees below the form: the reason saving is off for a deleted pipeline, and the buttons. */
+function EditControls({ canEdit, footer, pipelineGone }: EditControlsProps) {
+	if (!canEdit) {
+		return null;
+	}
 	return (
-		<p className="wrap-anywhere text-sm">
-			The pipeline these settings were set up for no longer exists. Choose the
-			check again from a current list to keep using them, or stop using these
-			settings.
-		</p>
+		<>
+			{pipelineGone && (
+				<p className="wrap-anywhere text-sm">
+					The pipeline these settings were set up for no longer exists. Choose
+					the check again from a current list to keep using them, or stop using
+					these settings.
+				</p>
+			)}
+			<FormFooter {...footer} />
+		</>
 	);
 }
 
@@ -541,7 +574,7 @@ export function CriteriaForm({
 		initialChoiceKey,
 		initialDraft,
 		revision,
-		unsaved: move !== undefined || state === "new",
+		unsaved: startsUnsaved(move, state),
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
 	const cancel = cancelOf(state, move, onCancelNew, form.resetToStored);
@@ -558,13 +591,12 @@ export function CriteriaForm({
 		onRefresh,
 		state,
 	});
+	const change = changeFlags(form, actions, superseded);
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
 			<FormNotices
-				changedElsewhere={
-					actions.refused || superseded || (form.changedElsewhere && form.dirty)
-				}
+				changedElsewhere={change.warn}
 				compare={compare}
 				move={move}
 				onReload={reload}
@@ -583,24 +615,23 @@ export function CriteriaForm({
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
 			<PipelineFooter view={view} />
-			{canEdit && form.draft.integrationId === "" && <PipelineGoneNote />}
-			{canEdit && (
-				<FormFooter
-					canSave={canSaveOf(form, state)}
-					changedElsewhere={
-						form.changedElsewhere || superseded || actions.refused
-					}
-					claimId={claimId}
-					hasProblems={form.hasProblems}
-					onAccept={() => actions.save(true)}
-					onCancel={cancel}
-					onChanged={onChanged}
-					onDiscard={actions.discard}
-					onSuggest={() => actions.save(false)}
-					pending={actions.pending}
-					state={state}
-				/>
-			)}
+			<EditControls
+				canEdit={canEdit}
+				footer={{
+					canSave: canSaveOf(form, state),
+					changedElsewhere: change.locked,
+					claimId,
+					hasProblems: form.hasProblems,
+					onAccept: () => actions.save(true),
+					onCancel: cancel,
+					onChanged,
+					onDiscard: actions.discard,
+					onSuggest: () => actions.save(false),
+					pending: actions.pending,
+					state,
+				}}
+				pipelineGone={form.draft.integrationId === ""}
+			/>
 		</div>
 	);
 }
