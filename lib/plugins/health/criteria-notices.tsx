@@ -181,8 +181,12 @@ export function StoppedNotice({ view }: { view: HealthCriteriaResponse }) {
 }
 
 /** What the pipeline has read of accepted settings, and how its latest result compares. */
-export function PipelineFooter({ view }: { view: HealthCriteriaResponse }) {
-	if (view.criteria?.state !== "accepted") {
+export function PipelineFooter({
+	view,
+}: {
+	view: HealthCriteriaResponse | null;
+}) {
+	if (view?.criteria?.state !== "accepted") {
 		return null;
 	}
 	const read = view.pipeline_read;

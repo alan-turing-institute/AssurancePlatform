@@ -5,7 +5,7 @@ import type { HealthCheck } from "@/lib/schemas/health-checks";
 import type { CriteriaDraft } from "./criteria-draft";
 
 /** Accepted settings moved to another version of their check, held until they are saved or abandoned. */
-export interface MovedSettings {
+interface MovedSettings {
 	check: HealthCheck;
 	draft: CriteriaDraft;
 }

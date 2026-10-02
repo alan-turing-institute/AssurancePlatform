@@ -401,36 +401,18 @@ function ClaimText({ text }: { text: string | undefined }) {
  * for a suggestion, and the full form for accepted settings. A person
  * without edit rights sees the same settings with every control off.
  */
-export function SettingsView({
-	active,
-	canEdit,
-	caseId,
-	claimId,
-	claimText,
-	criteria,
-}: SettingsViewProps) {
+export function SettingsView(props: SettingsViewProps) {
+	const { active, canEdit, caseId, criteria } = props;
 	const [opened, setOpened] = useState(active);
 	if (active && !opened) {
 		setOpened(true);
 	}
 	const checks = useCaseChecks(caseId, opened && canEdit);
-	const [picked, setPicked] = useState<CheckChoice | null>(null);
-	const view = criteria.data;
-	const stored = storedChoice(view);
-	const choices = useMemo(() => {
-		const live = choicesFrom(checks.lists);
-		return stored
-			? [stored, ...live.filter((choice) => choice.key !== stored.key)]
-			: live;
-	}, [checks.lists, stored]);
-	const focusAfterStop = useFocusAfterStop(
-		stored === null && criteria.status === "ready"
-	);
 
 	if (criteria.status === "loading") {
 		return <Skeleton className="h-40 w-full rounded-md" />;
 	}
-	if (criteria.status === "error" || !view) {
+	if (criteria.status === "error" || !criteria.data) {
 		return (
 			<EmptyState
 				icon={FileText}
@@ -439,6 +421,32 @@ export function SettingsView({
 			/>
 		);
 	}
+	return <SettingsContent {...props} checks={checks} view={criteria.data} />;
+}
+
+interface SettingsContentProps extends SettingsViewProps {
+	checks: CaseChecksState;
+	view: HealthCriteriaResponse;
+}
+
+/** The loaded Settings view: the claim's text, then the picker, the form for a fresh pick, or the form for stored settings. */
+function SettingsContent({
+	canEdit,
+	checks,
+	claimId,
+	claimText,
+	criteria,
+	view,
+}: SettingsContentProps) {
+	const [picked, setPicked] = useState<CheckChoice | null>(null);
+	const stored = storedChoice(view);
+	const choices = useMemo(() => {
+		const live = choicesFrom(checks.lists);
+		return stored
+			? [stored, ...live.filter((choice) => choice.key !== stored.key)]
+			: live;
+	}, [checks.lists, stored]);
+	const focusAfterStop = useFocusAfterStop(stored === null);
 
 	const host: FormHost = {
 		canEdit,

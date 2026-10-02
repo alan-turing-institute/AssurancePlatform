@@ -473,7 +473,7 @@ export function CriteriaForm({
 				versions={versionsOf(view, move)}
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
-			{view && <PipelineFooter view={view} />}
+			<PipelineFooter view={view} />
 			{canEdit && (
 				<FormFooter
 					canSave={canSaveOf(form, state)}
