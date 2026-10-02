@@ -1,6 +1,7 @@
 /**
- * Pins two hand-written migrations. The second, `20261002120000_health_criteria`,
- * is described by its own block at the end of the file.
+ * Pins three hand-written migrations. The second, `20261002120000_health_criteria`,
+ * and the third, `20261002130000_health_criteria_check_description`, are
+ * described by their own block at the end of the file.
  *
  * Pins the hand-written migration
  * `prisma/migrations/20261002000000_health_evidence_v1_1`: format 0.1
@@ -26,6 +27,8 @@ const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
 const REAL_MIGRATIONS_DIR = path.join(PROJECT_ROOT, "prisma/migrations");
 const NEW_MIGRATION_NAME = "20261002000000_health_evidence_v1_1";
 const CRITERIA_MIGRATION_NAME = "20261002120000_health_criteria";
+const CHECK_DESCRIPTION_MIGRATION_NAME =
+	"20261002130000_health_criteria_check_description";
 const HEALTH = "tea.health";
 const OTHER = "tea.other";
 
@@ -334,7 +337,10 @@ describe("health criteria migration", () => {
 				[randomUUID(), claimId, userId]
 			);
 
-			copyMigrations(scratch, [CRITERIA_MIGRATION_NAME]);
+			copyMigrations(scratch, [
+				CRITERIA_MIGRATION_NAME,
+				CHECK_DESCRIPTION_MIGRATION_NAME,
+			]);
 			runMigrateDeploy(scratch);
 
 			const rows = await pool.query<{
@@ -388,6 +394,14 @@ describe("health criteria migration", () => {
 				]
 			);
 			expect(tables.rows).toHaveLength(3);
+
+			const column = await pool.query<{
+				is_nullable: string;
+				data_type: string;
+			}>(
+				"SELECT is_nullable, data_type FROM information_schema.columns WHERE table_name = 'plugin_health_criteria' AND column_name = 'check_description'"
+			);
+			expect(column.rows).toEqual([{ is_nullable: "NO", data_type: "jsonb" }]);
 
 			const sources = await pool.query<{ enumlabel: string }>(
 				`SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid

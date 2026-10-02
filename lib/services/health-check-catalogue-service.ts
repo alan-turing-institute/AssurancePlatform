@@ -169,7 +169,12 @@ export async function listCaseCheckLists(
 	}
 	try {
 		const catalogues = await prisma.pluginHealthCheckCatalogue.findMany({
-			where: { integration: { status: "ACTIVE" } },
+			where: {
+				integration: {
+					status: "ACTIVE",
+					systemUser: { casePermissions: { some: { caseId } } },
+				},
+			},
 			select: { integrationId: true },
 			orderBy: { publishedAt: "asc" },
 		});
