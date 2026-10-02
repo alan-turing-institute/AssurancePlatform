@@ -20,7 +20,7 @@ export function status(overrides: Partial<HealthStatus> = {}): HealthStatus {
 type Record1 = HealthEvidenceLogItem["record"];
 
 /** A population summary record in the stored shape, with optional overrides. */
-export function record(overrides: Partial<Record1> = {}): Record1 {
+function record(overrides: Partial<Record1> = {}): Record1 {
 	return {
 		format_version: "1.1",
 		record_id: "e0bbe873-0000-4000-8000-000000000001",

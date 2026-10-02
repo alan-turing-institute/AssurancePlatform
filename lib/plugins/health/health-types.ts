@@ -1,6 +1,7 @@
-import type { HealthEvidenceRecord } from "@/lib/schemas/health-evidence";
-
-export type HealthVerdict = HealthEvidenceRecord["verdict"];
+import type {
+	HealthEvidenceRecord,
+	HealthVerdict,
+} from "@/lib/schemas/health-evidence";
 
 export type HealthStaleReason = "all-revoked" | "condition" | "expired";
 

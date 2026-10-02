@@ -10,10 +10,9 @@ import {
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
 import {
-	formatDateTime,
+	describeBadge,
 	isStatusStale,
 	VERDICT_DOT_CLASSES,
-	VERDICT_WORDS,
 } from "./health-format";
 import { useHealthState } from "./use-health-state";
 
@@ -82,25 +81,12 @@ export function HealthBadge({
 	}
 
 	const { verdict } = healthStatus;
-	const allRevoked =
-		verdict === null && healthStatus.stale_reason === "all-revoked";
-	if (verdict === null && !allRevoked) {
+	if (verdict === null && healthStatus.stale_reason !== "all-revoked") {
 		return null;
 	}
 
 	const stale = isStatusStale(healthStatus, Date.now());
-	const staleSince = healthStatus.stale_since ?? healthStatus.expires_at;
-	let label: string;
-	if (verdict === null) {
-		label = "Health: all evidence revoked";
-	} else {
-		label = `Health: ${VERDICT_WORDS[verdict]}`;
-		if (stale) {
-			label += staleSince
-				? `, stale since ${formatDateTime(staleSince)}`
-				: ", stale";
-		}
-	}
+	const label = describeBadge(healthStatus, stale);
 
 	const dotClassName = cn(
 		"inline-block size-2 rounded-full",

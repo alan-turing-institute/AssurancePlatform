@@ -1,9 +1,8 @@
-import type { HealthEvidenceRecord } from "@/lib/schemas/health-evidence";
 import type {
-	HealthRevocationCause,
-	HealthStatus,
+	HealthEvidenceRecord,
 	HealthVerdict,
-} from "./health-types";
+} from "@/lib/schemas/health-evidence";
+import type { HealthRevocationCause, HealthStatus } from "./health-types";
 
 export const VERDICT_DOT_CLASSES: Record<HealthVerdict, string> = {
 	pass: "bg-success",
@@ -56,7 +55,7 @@ const DURATION_UNITS = [
 ] as const;
 
 /** Length of a week/day/hour/minute/second ISO 8601 duration, or null. */
-export function durationSeconds(text: string): number | null {
+function durationSeconds(text: string): number | null {
 	const match = DURATION_PATTERN.exec(text);
 	if (!match || text === "P" || text.endsWith("T")) {
 		return null;
@@ -158,7 +157,7 @@ function quantileLabel(key: string): string {
 }
 
 /** The uncertainty's interval, spread, quantiles or probability, as text. */
-export function describeUncertaintyShape(
+function describeUncertaintyShape(
 	uncertainty: NonNullable<Record1["uncertainty"]>
 ): string {
 	const { kind, params } = uncertainty;
@@ -222,4 +221,22 @@ export function isStatusStale(status: HealthStatus, now: number): boolean {
 		status.stale ||
 		(status.expires_at !== null && Date.parse(status.expires_at) <= now)
 	);
+}
+
+/**
+ * The dot's accessible label: the verdict in words, "stale since <time>" for
+ * a stale one, or "all evidence revoked" when no verdict is left.
+ */
+export function describeBadge(status: HealthStatus, stale: boolean): string {
+	if (status.verdict === null) {
+		return "Health: all evidence revoked";
+	}
+	const label = `Health: ${VERDICT_WORDS[status.verdict]}`;
+	if (!stale) {
+		return label;
+	}
+	const since = status.stale_since ?? status.expires_at;
+	return since
+		? `${label}, stale since ${formatDateTime(since)}`
+		: `${label}, stale`;
 }
