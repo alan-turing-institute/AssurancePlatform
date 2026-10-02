@@ -1795,15 +1795,6 @@
           "maxLength": 200
         }
       },
-      "HealthRule": {
-        "type": "string"
-      },
-      "HealthReduction": {
-        "type": "string"
-      },
-      "HealthAggregation": {
-        "type": "string"
-      },
       "RegisterIntegrationBody": {
         "type": "string"
       },
