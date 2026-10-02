@@ -21,6 +21,8 @@ export type ClaimScopedFetchStatus = "error" | "loading" | "ready";
 
 export interface ClaimScopedFetchResult<T> {
 	data: T;
+	/** Fetches again now, for a caller that has just changed the claim's state. */
+	refetch: () => Promise<void>;
 	status: ClaimScopedFetchStatus;
 }
 
@@ -33,7 +35,7 @@ export interface UseClaimScopedFetchOptions<T> extends ElementSlotContext {
 	 */
 	errorValue: T;
 	/**
-	 * What `fetchFn` resolves to. Fetched once on mount and refetched whenever
+	 * What `fetchFn` resolves to. Must be a stable reference. Fetched once on mount and refetched whenever
 	 * `tea.health/state-changed` arrives for this element over the case's SSE
 	 * stream (`useCaseEvents`) — never merged from the event payload directly,
 	 * so this hook's contract stays stable regardless of what any given
@@ -102,5 +104,5 @@ export function useClaimScopedFetch<T>({
 		},
 	});
 
-	return { data, status };
+	return { data, status, refetch };
 }

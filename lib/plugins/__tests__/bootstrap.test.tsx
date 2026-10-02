@@ -34,7 +34,6 @@ vi.mock("@/hooks/use-case-events", () => ({
 
 const CLAIM_ELEMENT_ID = "1";
 const CASE_ID = "case-1";
-const DAY_SECONDS = 24 * 60 * 60;
 
 const CLAIM_CONTEXT: ElementSlotContext = {
 	caseId: CASE_ID,
@@ -80,10 +79,16 @@ function mockHealthState() {
 	server.use(
 		http.get(`/api/elements/${CLAIM_ELEMENT_ID}/health`, () =>
 			HttpResponse.json({
-				health: {
-					score: 1,
-					lastEvaluatedAt: new Date().toISOString(),
-					validityWindowSeconds: DAY_SECONDS,
+				status: {
+					bound_check: "Sensor Range Checker",
+					rejected_since_last_accept: 0,
+					verdict: "pass",
+					expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+					record_id: "e0bbe873-0000-4000-8000-000000000001",
+					timestamp: new Date().toISOString(),
+					stale: false,
+					stale_reason: null,
+					stale_since: null,
 				},
 			})
 		)
@@ -96,24 +101,34 @@ function mockEvidenceLog() {
 			HttpResponse.json({
 				evidence: [
 					{
-						id: "evidence-1",
-						claimId: CLAIM_ELEMENT_ID,
-						metricName: "in-distribution-rate",
-						value: 0.98,
-						threshold: 0.95,
-						verdict: "PASS",
-						oddDimensions: ["traffic-density"],
-						sourceSystem: "darter-pipeline",
-						provenance: { check: "ood-monitor/kl-divergence" },
-						evaluatedAt: new Date().toISOString(),
-						formatVersion: "0.1",
-						recordHash: "hash-1",
-						previousRecordHash: null,
-						chainSequence: 1,
-						createdAt: new Date().toISOString(),
-						createdById: "system-user-1",
+						id: "row-1",
+						record: {
+							format_version: "1.1",
+							record_id: "e0bbe873-0000-4000-8000-000000000001",
+							timestamp: new Date().toISOString(),
+							claim_ref: "7acd824e-0000-4000-8000-000000000001",
+							check: {
+								name: "Sensor Range Checker",
+								version: "1.2",
+								scope: "sensor",
+							},
+							rule: { kind: "identity", version: "r1" },
+							verdict: "pass",
+							window: "PT1M",
+							valid_for: "PT1H",
+							provenance: { session: "RUN-A", pipeline_version: "0.4.0" },
+							value: { number: 0.97, unit: "ratio" },
+						},
+						chain_sequence: 1,
+						record_hash: "hash-1",
+						previous_record_hash: null,
+						created_by_id: "system-user-1",
+						created_at: new Date().toISOString(),
+						expires_at: null,
+						revocation: null,
 					},
 				],
+				next_before: null,
 			})
 		)
 	);
@@ -205,7 +220,7 @@ describe("lib/plugins/bootstrap — real end-to-end wiring", () => {
 		await waitFor(() =>
 			expect(screen.getByTestId("health-evidence-log")).toBeInTheDocument()
 		);
-		expect(screen.getByText("in-distribution-rate")).toBeInTheDocument();
+		expect(screen.getByText("0.97 ratio")).toBeInTheDocument();
 		expect(screen.getByText("Pass")).toBeInTheDocument();
 	});
 });
