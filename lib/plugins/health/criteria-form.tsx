@@ -64,6 +64,19 @@ export interface CriteriaFormProps {
 const PLACED_PATH =
 	/^(check\.params\.[^.]+|rule\.(kind|params\.(pass_values|marginal_values))|reduction\.(kind|params\.(p|avail_floor)|rule\.(kind|params\.(pass_values|marginal_values)))|aggregation\.params\.(threshold|avail_floor)|window|valid_for)$/;
 
+/** What Cancel does: leave a form for a check not yet saved, leave a move to another version, or put the stored values back. */
+function cancelOf(
+	state: FormState,
+	move: PendingMove | undefined,
+	leaveNew: () => void,
+	resetToStored: () => void
+): () => void {
+	if (state === "new") {
+		return leaveNew;
+	}
+	return move ? move.onCancel : resetToStored;
+}
+
 /** Whether the check's entry recommends anything at all. */
 function hasRecommendation(check: HealthCheck): boolean {
 	return (
@@ -438,12 +451,7 @@ export function CriteriaForm({
 		unsaved: move !== undefined,
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
-	let cancel = form.resetToStored;
-	if (state === "new") {
-		cancel = onCancelNew;
-	} else if (move) {
-		cancel = move.onCancel;
-	}
+	const cancel = cancelOf(state, move, onCancelNew, form.resetToStored);
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">

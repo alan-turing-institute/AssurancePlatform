@@ -21,7 +21,7 @@ import { type PlainSentence, plainWords } from "./criteria-plain-words";
  * into the draft the settings form holds, unsaved. Everything here is pure.
  */
 
-export const MOVE_BLOCKS = [
+const MOVE_BLOCKS = [
 	"check",
 	"rule",
 	"reduction",
@@ -33,7 +33,7 @@ export type MoveBlock = (typeof MOVE_BLOCKS)[number];
 export type MoveChoice = "keep" | "take";
 export type MoveChoices = Partial<Record<MoveBlock, MoveChoice>>;
 
-export const MOVE_BLOCK_LABELS: Record<MoveBlock, string> = {
+const MOVE_BLOCK_LABELS: Record<MoveBlock, string> = {
 	check: "The check's own settings",
 	rule: "Step 1: judging each reading",
 	reduction: "Step 2: combining one subject's readings",

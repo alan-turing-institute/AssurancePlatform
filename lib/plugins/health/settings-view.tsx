@@ -2,7 +2,7 @@
 
 import { FileText } from "lucide-react";
 import {
-	type ReactNode,
+	type RefObject,
 	useEffect,
 	useId,
 	useMemo,
@@ -11,19 +11,14 @@ import {
 } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { HealthCheck } from "@/lib/schemas/health-checks";
+import type { ServedSettings } from "@/lib/schemas/health-criteria";
 import { VersionCompare } from "./criteria-compare";
 import {
-	type CriteriaDraft,
 	draftFromCheck,
 	draftFromStored,
 	recommendationIsUsable,
 } from "./criteria-draft";
-import {
-	CriteriaForm,
-	type CriteriaFormProps,
-	type PendingMove,
-} from "./criteria-form";
+import { CriteriaForm, type CriteriaFormProps } from "./criteria-form";
 import { StoppedNotice } from "./criteria-notices";
 import { type CheckChoice, CheckSelect } from "./criteria-sections";
 import { compareBlocks, mergeVersionMove } from "./criteria-version-move";
@@ -33,6 +28,7 @@ import type {
 } from "./health-types";
 import type { ClaimScopedFetchResult } from "./use-claim-scoped-fetch";
 import { type CaseChecksState, useCaseChecks } from "./use-criteria";
+import { useVersionMove, type VersionMove } from "./use-version-move";
 
 function choiceKey(integrationId: string, name: string): string {
 	return JSON.stringify([integrationId, name]);
@@ -167,9 +163,65 @@ function newerVersionOf(
 		: null;
 }
 
-interface MovedSettings {
-	check: HealthCheck;
-	draft: CriteriaDraft;
+/** The host callbacks for a form holding moved settings: leaving the form also leaves the move, and the moved check stands in the list. */
+function hostForMove(
+	host: FormHost,
+	stored: CheckChoice,
+	move: VersionMove
+): FormHost {
+	const { moved } = move;
+	if (!moved) {
+		return host;
+	}
+	return {
+		...host,
+		choices: host.choices.map((choice) =>
+			choice.key === stored.key ? { ...choice, check: moved.check } : choice
+		),
+		onChanged: () => {
+			move.clear();
+			host.onChanged();
+		},
+		onReplace: (next) => {
+			move.clear();
+			host.onReplace(next);
+		},
+	};
+}
+
+interface CompareStepProps {
+	accepted: ServedSettings;
+	entry: CheckChoice;
+	move: VersionMove;
+	stored: CheckChoice;
+}
+
+/** The comparison of accepted settings with the newer version; continuing hands the merged settings to the move. */
+function CompareStep({ accepted, entry, move, stored }: CompareStepProps) {
+	const { check, integrationId } = entry;
+	return (
+		<VersionCompare
+			newVersion={check.version}
+			onCancel={move.cancel}
+			onContinue={(choices) =>
+				move.continueWith({
+					check,
+					draft: mergeVersionMove({
+						accepted,
+						choices,
+						entry: check,
+						integrationId,
+					}),
+				})
+			}
+			rows={compareBlocks({
+				accepted,
+				acceptedCheck: stored.check,
+				entry: check,
+				integrationId,
+			})}
+		/>
+	);
 }
 
 interface StoredFormProps {
@@ -187,94 +239,51 @@ interface StoredFormProps {
  * the merged settings, which stay unsaved until the person saves.
  */
 function StoredForm({ entry, host, stored, view }: StoredFormProps) {
-	const [comparing, setComparing] = useState(false);
-	const [moved, setMoved] = useState<MovedSettings | null>(null);
-	const opener = useRef<HTMLButtonElement>(null);
-	const refocusOpener = useRef(false);
-	useEffect(() => {
-		if (!comparing && refocusOpener.current) {
-			refocusOpener.current = false;
-			opener.current?.focus();
-		}
-	}, [comparing]);
+	const move = useVersionMove();
 	const criteria = view.criteria;
 	if (!criteria) {
 		return null;
 	}
 	const accepted = criteria.state === "accepted";
-	const move: PendingMove | undefined = moved
-		? { version: moved.check.version, onCancel: () => setMoved(null) }
-		: undefined;
+	const { moved } = move;
 	const offered =
 		host.canEdit && accepted && view.check_offer === "newer-version"
 			? entry
 			: null;
-	const formHost: FormHost = moved
-		? {
-				...host,
-				choices: host.choices.map((choice) =>
-					choice.key === stored.key ? { ...choice, check: moved.check } : choice
-				),
-				onChanged: () => {
-					setMoved(null);
-					host.onChanged();
-				},
-				onReplace: (next) => {
-					setMoved(null);
-					host.onReplace(next);
-				},
-			}
-		: host;
 	return (
 		<>
-			{comparing && offered && (
-				<VersionCompare
-					newVersion={offered.check.version}
-					onCancel={() => {
-						refocusOpener.current = true;
-						setComparing(false);
-					}}
-					onContinue={(choices) => {
-						setMoved({
-							check: offered.check,
-							draft: mergeVersionMove({
-								accepted: criteria,
-								choices,
-								entry: offered.check,
-								integrationId: offered.integrationId,
-							}),
-						});
-						setComparing(false);
-					}}
-					rows={compareBlocks({
-						accepted: criteria,
-						acceptedCheck: stored.check,
-						entry: offered.check,
-						integrationId: offered.integrationId,
-					})}
+			{move.comparing && offered && (
+				<CompareStep
+					accepted={criteria}
+					entry={offered}
+					move={move}
+					stored={stored}
 				/>
 			)}
-			<div hidden={comparing}>
+			<div hidden={move.comparing}>
 				<CriteriaForm
-					{...formHost}
+					{...hostForMove(host, stored, move)}
 					compare={
 						offered && !moved
 							? {
-									buttonRef: opener,
+									buttonRef: move.opener,
 									newVersion: offered.check.version,
-									onOpen: () => setComparing(true),
+									onOpen: move.open,
 								}
 							: null
 					}
-					initialCheck={moved ? moved.check : stored.check}
+					initialCheck={moved?.check ?? stored.check}
 					initialChoiceKey={stored.key}
 					initialDraft={
-						moved
-							? moved.draft
-							: draftFromStored(criteria, stored.check, stored.integrationId)
+						moved?.draft ??
+						draftFromStored(criteria, stored.check, stored.integrationId)
 					}
 					key={moved ? "moved" : "stored"}
-					move={move}
+					move={
+						moved
+							? { version: moved.check.version, onCancel: move.clear }
+							: undefined
+					}
 					revision={criteria.revision}
 					startShort={criteria.state === "suggested"}
 					state={accepted ? "accepted" : "suggested"}
@@ -298,6 +307,71 @@ export interface SettingsViewProps {
 
 const FOCUSABLE =
 	'button:not([disabled]), [role="combobox"]:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]';
+
+/**
+ * Moves focus into the region shown for a claim without settings, once, after
+ * `request` was called and `ready` is true: to its first control, else to its
+ * heading, else to the region itself. Stopping the use of settings removes
+ * the button that opened the dialog, so focus would otherwise fall out of the
+ * view.
+ */
+function useFocusAfterStop(ready: boolean) {
+	const requested = useRef(false);
+	const region = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!(requested.current && ready)) {
+			return;
+		}
+		requested.current = false;
+		const target =
+			region.current?.querySelector<HTMLElement>(FOCUSABLE) ??
+			region.current?.querySelector<HTMLElement>("[data-settings-heading]") ??
+			region.current;
+		target?.focus();
+	});
+	return {
+		region,
+		request: () => {
+			requested.current = true;
+		},
+	};
+}
+
+interface WithoutSettingsProps {
+	canEdit: boolean;
+	checks: CaseChecksState;
+	choices: CheckChoice[];
+	onPick: (choice: CheckChoice) => void;
+	regionRef: RefObject<HTMLDivElement | null>;
+	view: HealthCriteriaResponse;
+}
+
+/** What a claim without settings shows: the picker for a person who can edit, a heading saying there are none for one who cannot. */
+function WithoutSettings({
+	canEdit,
+	checks,
+	choices,
+	onPick,
+	regionRef,
+	view,
+}: WithoutSettingsProps) {
+	return (
+		<div className="space-y-3 outline-none" ref={regionRef} tabIndex={-1}>
+			<StoppedNotice view={view} />
+			{canEdit ? (
+				<CheckPicker checks={checks} choices={choices} onPick={onPick} />
+			) : (
+				<h3
+					className="font-normal text-sm outline-none"
+					data-settings-heading
+					tabIndex={-1}
+				>
+					No evidence settings for this claim.
+				</h3>
+			)}
+		</div>
+	);
+}
 
 /** The claim's text in a muted block, as text and wrapped; absent when the claim has none. */
 function ClaimText({ text }: { text: string | undefined }) {
@@ -349,21 +423,9 @@ export function SettingsView({
 			? [stored, ...live.filter((choice) => choice.key !== stored.key)]
 			: live;
 	}, [checks.lists, stored]);
-	const focusAfterStop = useRef(false);
-	const withoutSettings = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		if (!focusAfterStop.current || stored || criteria.status !== "ready") {
-			return;
-		}
-		focusAfterStop.current = false;
-		const region = withoutSettings.current;
-		(
-			region?.querySelector<HTMLElement>(FOCUSABLE) ??
-			region?.querySelector<HTMLElement>("[data-settings-heading]") ??
-			region
-		)?.focus();
-	});
+	const focusAfterStop = useFocusAfterStop(
+		stored === null && criteria.status === "ready"
+	);
 
 	if (criteria.status === "loading") {
 		return <Skeleton className="h-40 w-full rounded-md" />;
@@ -385,7 +447,7 @@ export function SettingsView({
 		onCancelNew: () => setPicked(null),
 		onChanged: () => {
 			// Only stopping the use of settings calls this; focus moves into the view once the read shows no settings.
-			focusAfterStop.current = true;
+			focusAfterStop.request();
 			setPicked(null);
 			criteria.refetch();
 		},
@@ -395,44 +457,28 @@ export function SettingsView({
 		},
 	};
 
-	let body: ReactNode;
-	if (picked) {
-		body = <PickedForm host={host} picked={picked} view={view} />;
-	} else if (stored) {
-		body = (
-			<StoredForm
-				entry={newerVersionOf(view, checks.lists)}
-				host={host}
-				stored={stored}
-				view={view}
-			/>
-		);
-	} else {
-		body = (
-			<div
-				className="space-y-3 outline-none"
-				ref={withoutSettings}
-				tabIndex={-1}
-			>
-				<StoppedNotice view={view} />
-				{canEdit ? (
-					<CheckPicker checks={checks} choices={choices} onPick={setPicked} />
-				) : (
-					<h3
-						className="font-normal text-sm outline-none"
-						data-settings-heading
-						tabIndex={-1}
-					>
-						No evidence settings for this claim.
-					</h3>
-				)}
-			</div>
-		);
-	}
 	return (
 		<div className="space-y-4">
 			<ClaimText text={claimText} />
-			{body}
+			{picked && <PickedForm host={host} picked={picked} view={view} />}
+			{!picked && stored && (
+				<StoredForm
+					entry={newerVersionOf(view, checks.lists)}
+					host={host}
+					stored={stored}
+					view={view}
+				/>
+			)}
+			{!(picked || stored) && (
+				<WithoutSettings
+					canEdit={canEdit}
+					checks={checks}
+					choices={choices}
+					onPick={setPicked}
+					regionRef={focusAfterStop.region}
+					view={view}
+				/>
+			)}
 		</div>
 	);
 }

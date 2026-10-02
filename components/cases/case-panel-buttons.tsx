@@ -5,15 +5,13 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCasePanelSlot } from "@/hooks/use-case-panel-slot";
 import type { CasePanelRegistration } from "@/lib/plugins/slots";
+import useStore from "@/store/store";
 import ActionTooltip from "../ui/action-tooltip";
 import { CasePanelSheet } from "./case-panel-sheet";
 
-interface CasePanelButtonsProps {
+interface CasePanelEntryProps {
 	canEdit: boolean;
 	caseId: string;
-}
-
-interface CasePanelEntryProps extends CasePanelButtonsProps {
 	registration: CasePanelRegistration;
 }
 
@@ -58,14 +56,21 @@ function CasePanelEntry({
  * each opening its panel in a side sheet. Renders nothing when no enabled
  * plugin has registered one.
  */
-export function CasePanelButtons({ canEdit, caseId }: CasePanelButtonsProps) {
+export function CasePanelButtons() {
 	const { registrations } = useCasePanelSlot();
+	const assuranceCase = useStore((state) => state.assuranceCase);
+	if (!assuranceCase) {
+		return null;
+	}
+	const canEdit =
+		assuranceCase.permissions === "edit" ||
+		assuranceCase.permissions === "manage";
 	return (
 		<>
 			{registrations.map((registration) => (
 				<CasePanelEntry
 					canEdit={canEdit}
-					caseId={caseId}
+					caseId={assuranceCase.id?.toString() ?? ""}
 					key={`${registration.pluginId}:${registration.panelId}`}
 					registration={registration}
 				/>

@@ -243,15 +243,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							<span className="sr-only">Notes</span>
 						</Button>
 					</ActionTooltip>
-					{assuranceCase && (
-						<CasePanelButtons
-							canEdit={
-								assuranceCase.permissions === "edit" ||
-								assuranceCase.permissions === "manage"
-							}
-							caseId={assuranceCase.id?.toString() ?? ""}
-						/>
-					)}
+					<CasePanelButtons />
 					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>
