@@ -6,6 +6,9 @@ import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
 import type { CriteriaDraft } from "./criteria-draft";
 import {
+	type CompareOffer,
+	FreshPickNotice,
+	MoveNotice,
 	PipelineFooter,
 	PlainWordsSummary,
 	StateNotices,
@@ -26,13 +29,25 @@ import { useCriteriaDraft } from "./use-criteria-draft";
 
 export type FormState = "accepted" | "new" | "suggested";
 
+/** Settings moved to another version of their check, held in the form and not yet saved. */
+export interface PendingMove {
+	/** Leaves the move and returns to the settings as stored. */
+	onCancel: () => void;
+	/** The version of the check the settings were moved to. */
+	version: string;
+}
+
 export interface CriteriaFormProps {
 	canEdit: boolean;
 	choices: CheckChoice[];
 	claimId: string;
+	/** Offers the move to a newer version of the check, from the notice that says there is one. */
+	compare?: CompareOffer | null;
 	initialCheck: HealthCheck;
 	initialChoiceKey: string;
 	initialDraft: CriteriaDraft;
+	/** Set when `initialDraft` is a move to a new check version, which is an unsaved change. */
+	move?: PendingMove;
 	/** Leaves a form for a check that has not been saved. */
 	onCancelNew: () => void;
 	/** Called when something changed that the form cannot read from the answer, so the view is fetched again. */
@@ -49,15 +64,23 @@ export interface CriteriaFormProps {
 const PLACED_PATH =
 	/^(check\.params\.[^.]+|rule\.(kind|params\.(pass_values|marginal_values))|reduction\.(kind|params\.(p|avail_floor)|rule\.(kind|params\.(pass_values|marginal_values)))|aggregation\.params\.(threshold|avail_floor)|window|valid_for)$/;
 
+/** Whether the check's entry recommends anything at all. */
+function hasRecommendation(check: HealthCheck): boolean {
+	return (
+		check.recommended !== undefined && Object.keys(check.recommended).length > 0
+	);
+}
+
 function versionsOf(
-	view: HealthCriteriaResponse | null
+	view: HealthCriteriaResponse | null,
+	move: PendingMove | undefined
 ): VersionLabels | undefined {
 	const stored = view?.criteria;
 	if (!stored || stored.state === "inactive") {
 		return undefined;
 	}
 	return {
-		check: stored.check.version,
+		check: move?.version ?? stored.check.version,
 		rule: stored.rule.version,
 		reduction: stored.reduction?.version,
 		aggregation: stored.aggregation?.version,
@@ -352,17 +375,32 @@ function canSaveOf(form: CriteriaDraftState, state: FormState): boolean {
 
 /** The notices above the summary: the settings' state, and a change made by someone else under unsaved edits. */
 function FormNotices({
+	compare,
 	form,
+	move,
+	state,
+	recommends,
 	view,
 }: {
+	compare: CompareOffer | null | undefined;
 	form: CriteriaDraftState;
+	move: PendingMove | undefined;
+	recommends: boolean;
+	state: FormState;
 	view: HealthCriteriaResponse | null;
 }) {
 	return (
 		<>
-			{view && <StateNotices view={view} />}
+			{state === "new" && <FreshPickNotice recommends={recommends} />}
+			{view && <StateNotices compare={move ? null : compare} view={view} />}
+			{move && <MoveNotice version={move.version} />}
 			{form.changedElsewhere && form.dirty && (
-				<ChangedElsewhere onReload={form.reload} />
+				<ChangedElsewhere
+					onReload={() => {
+						form.reload();
+						move?.onCancel();
+					}}
+				/>
 			)}
 		</>
 	);
@@ -378,9 +416,11 @@ export function CriteriaForm({
 	canEdit,
 	choices,
 	claimId,
+	compare,
 	initialCheck,
 	initialChoiceKey,
 	initialDraft,
+	move,
 	onCancelNew,
 	onChanged,
 	onReplace,
@@ -395,12 +435,26 @@ export function CriteriaForm({
 		initialChoiceKey,
 		initialDraft,
 		revision,
+		unsaved: move !== undefined,
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
+	let cancel = form.resetToStored;
+	if (state === "new") {
+		cancel = onCancelNew;
+	} else if (move) {
+		cancel = move.onCancel;
+	}
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
-			<FormNotices form={form} view={view} />
+			<FormNotices
+				compare={compare}
+				form={form}
+				move={move}
+				recommends={hasRecommendation(initialCheck)}
+				state={state}
+				view={view}
+			/>
 			<PlainWordsSummary sentences={form.sentences} />
 			<FormSections
 				choices={choices}
@@ -408,7 +462,7 @@ export function CriteriaForm({
 				onPick={form.onPick}
 				sectionProps={sectionPropsOf(form, actions, canEdit)}
 				short={state !== "accepted" && startShort}
-				versions={versionsOf(view)}
+				versions={versionsOf(view, move)}
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
 			{view && <PipelineFooter view={view} />}
@@ -419,7 +473,7 @@ export function CriteriaForm({
 					claimId={claimId}
 					hasProblems={form.hasProblems}
 					onAccept={() => actions.save(true)}
-					onCancel={state === "new" ? onCancelNew : form.resetToStored}
+					onCancel={cancel}
 					onChanged={onChanged}
 					onDiscard={actions.discard}
 					onSuggest={() => actions.save(false)}

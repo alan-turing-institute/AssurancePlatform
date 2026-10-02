@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -197,6 +198,54 @@ function ParamControl({
 	);
 }
 
+/** Settings the check's description no longer lists: each shows its value and the problem, with a button that removes it. */
+function UnlistedParams({
+	analysis,
+	disabled,
+	draft,
+	setDraft,
+}: Pick<SectionProps, "analysis" | "disabled" | "draft" | "setDraft">) {
+	const entries = Object.entries(draft.unlistedParams ?? {});
+	if (entries.length === 0) {
+		return null;
+	}
+	return (
+		<ul className="space-y-2" data-testid="health-unlisted-params">
+			{entries.map(([key, value]) => (
+				<li
+					className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
+					key={key}
+				>
+					<div className="min-w-0 space-y-0.5">
+						<p className="wrap-anywhere text-sm">
+							{key}: {String(value)}
+						</p>
+						<p className="wrap-anywhere text-destructive text-sm">
+							{analysis.errors[`check.params.${key}`] ??
+								"is not a setting this check describes"}
+						</p>
+					</div>
+					<Button
+						disabled={disabled}
+						onClick={() =>
+							setDraft({
+								unlistedParams: Object.fromEntries(
+									entries.filter(([other]) => other !== key)
+								),
+							})
+						}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						Remove {key}
+					</Button>
+				</li>
+			))}
+		</ul>
+	);
+}
+
 interface SourceSectionProps extends SectionProps {
 	choices: CheckChoice[];
 	chosen: string;
@@ -268,6 +317,12 @@ export function SourceSection({
 					))}
 				</div>
 			)}
+			<UnlistedParams
+				analysis={analysis}
+				disabled={disabled}
+				draft={draft}
+				setDraft={setDraft}
+			/>
 		</Section>
 	);
 }

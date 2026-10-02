@@ -20,9 +20,10 @@ async function fetchCriteria(
 }
 
 /**
- * A claim's evidence settings with everything around them, fetched once and
- * again whenever `tea.health/state-changed` arrives for the claim. `replace`
- * shows the server's answer to a save without another request.
+ * A claim's evidence settings with everything around them, fetched once. It
+ * opens no live-update subscription of its own: the caller refetches it from
+ * the subscription it already holds, so the claim opens one connection.
+ * `replace` shows the server's answer to a save without another request.
  */
 export function useCriteria({
 	caseId,
@@ -36,6 +37,7 @@ export function useCriteria({
 		fetchFn: fetchCriteria,
 		errorValue: null,
 		notApplicableValue: null,
+		subscribe: false,
 	});
 }
 

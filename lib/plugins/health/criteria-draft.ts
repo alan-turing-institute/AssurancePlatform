@@ -141,6 +141,12 @@ export interface CriteriaDraft {
 	reduction: ReductionDraft;
 	reductionOn: boolean;
 	rule: RuleDraft;
+	/**
+	 * Values the settings hold for the check's own settings that the check's
+	 * description no longer lists. They are sent as they stand, so the shared
+	 * checks report each one beside its row until it is removed.
+	 */
+	unlistedParams?: Record<string, string | number | boolean>;
 	validFor: DurationDraft;
 	window: DurationDraft;
 }
@@ -693,7 +699,9 @@ function checkBlock(
 	check: HealthCheck,
 	problems: Problems
 ): NonNullable<PartialSettings["check"]> {
-	const params: Record<string, string | number | boolean> = {};
+	const params: Record<string, string | number | boolean> = {
+		...draft.unlistedParams,
+	};
 	for (const spec of check.params ?? []) {
 		const value = paramValue(
 			spec,

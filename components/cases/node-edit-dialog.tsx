@@ -776,6 +776,7 @@ export default function NodeEditDialog({
 		canEdit: !readOnly,
 		caseId: assuranceCase?.id?.toString() ?? "",
 		elementId: String(node.data?.id ?? ""),
+		elementText: form.watch("description"),
 		elementType: nodeType,
 	};
 

@@ -23,6 +23,7 @@ import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import { ErrorBoundary } from "../ui/error-boundary";
 import CaseNotes from "./case-notes";
+import { CasePanelButtons } from "./case-panel-buttons";
 import { CaseSettingsPopover } from "./case-settings-popover";
 import { DeleteCaseDialog } from "./delete-case-dialog";
 import { HistoryControls } from "./history-controls";
@@ -242,6 +243,15 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							<span className="sr-only">Notes</span>
 						</Button>
 					</ActionTooltip>
+					{assuranceCase && (
+						<CasePanelButtons
+							canEdit={
+								assuranceCase.permissions === "edit" ||
+								assuranceCase.permissions === "manage"
+							}
+							caseId={assuranceCase.id?.toString() ?? ""}
+						/>
+					)}
 					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>

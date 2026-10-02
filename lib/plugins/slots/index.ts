@@ -11,11 +11,14 @@
  */
 
 export {
+	casePanelSlot,
 	elementBadgeSlot,
 	elementPanelSlot,
 	settingsSectionSlot,
 } from "./registry";
 export type {
+	CasePanelRegistration,
+	CaseSlotContext,
 	// Staged re-exports (ADR 0002 v2 §2.3): no consumer imports these four
 	// yet in 1.0 — they exist for the health plugin (1.0's only official
 	// plugin) to register `element-badge`/`settings-section` slots against,

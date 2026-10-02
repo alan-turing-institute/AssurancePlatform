@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import type { PlainSentence } from "./criteria-plain-words";
 import { describeDifferences } from "./echo-difference-words";
 import { formatDateTime } from "./health-format";
@@ -64,8 +65,19 @@ export function PlainWordsSummary({
 	);
 }
 
-/** Notices that depend on the state the settings are in. */
-export function StateNotices({ view }: { view: HealthCriteriaResponse }) {
+export interface CompareOffer {
+	newVersion: string;
+	onOpen: () => void;
+}
+
+/** Notices that depend on the state the settings are in; `compare` adds the button that opens the move to a newer version. */
+export function StateNotices({
+	compare,
+	view,
+}: {
+	compare?: CompareOffer | null;
+	view: HealthCriteriaResponse;
+}) {
 	const { criteria, last_change: change } = view;
 	const notices: ReactNode[] = [];
 	if (criteria?.state === "suggested" && change) {
@@ -95,12 +107,45 @@ export function StateNotices({ view }: { view: HealthCriteriaResponse }) {
 	}
 	if (view.check_offer === "newer-version") {
 		notices.push(
-			<Notice key="newer" tone="warning">
-				The pipeline now offers a different version of this check.
-			</Notice>
+			<div className="space-y-2" key="newer">
+				<Notice tone="warning">
+					The pipeline now offers a different version of this check.
+				</Notice>
+				{compare && (
+					<Button
+						onClick={compare.onOpen}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						Compare with version {compare.newVersion}
+					</Button>
+				)}
+			</div>
 		);
 	}
 	return notices.length > 0 ? <div className="space-y-2">{notices}</div> : null;
+}
+
+/** Where a fresh pick's numbers come from, and that none of them is in use yet. */
+export function FreshPickNotice({ recommends }: { recommends: boolean }) {
+	return (
+		<Notice testId="health-fresh-pick-notice">
+			{recommends
+				? "These are the settings the check recommends. Nothing is used until you accept them. Change any number first if it does not fit this claim."
+				: "This check recommends no settings. Nothing is used until you accept the ones you enter."}
+		</Notice>
+	);
+}
+
+/** Settings moved to another version of the check are held in the form and not yet saved. */
+export function MoveNotice({ version }: { version: string }) {
+	return (
+		<Notice testId="health-move-notice">
+			These settings are for version {version} of the check. Nothing is saved
+			until you press Save settings.
+		</Notice>
+	);
 }
 
 /** For settings that were stopped or discarded: who, when and why. */

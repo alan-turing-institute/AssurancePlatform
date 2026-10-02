@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { elementBadgeSlot, elementPanelSlot } from "@/lib/plugins/slots";
+import {
+	casePanelSlot,
+	elementBadgeSlot,
+	elementPanelSlot,
+} from "@/lib/plugins/slots";
 import { captureLogs } from "@/src/__tests__/helpers/capture-logs";
+import { EvidenceHealthPanel } from "../evidence-health-panel";
 import { HealthBadge } from "../health-badge";
 import { HealthPanel } from "../health-panel";
 import { registerHealthPlugin } from "../register";
@@ -43,6 +48,24 @@ describe("registerHealthPlugin — wiring", () => {
 			wide: true,
 			Component: HealthPanel,
 		});
+	});
+});
+
+describe("registerHealthPlugin — case panel", () => {
+	it("registers EvidenceHealthPanel into casePanelSlot as 'Evidence health'", () => {
+		casePanelSlot.resetForTests();
+
+		registerHealthPlugin();
+
+		expect(casePanelSlot.list()).toEqual([
+			{
+				pluginId: PLUGIN_ID,
+				panelId: PLUGIN_ID,
+				label: "Evidence health",
+				Component: EvidenceHealthPanel,
+			},
+		]);
+		casePanelSlot.resetForTests();
 	});
 });
 

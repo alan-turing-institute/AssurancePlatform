@@ -122,6 +122,8 @@ interface ResultsViewProps {
 	context: ElementSlotContext;
 	hasAcceptedSettings: boolean;
 	onOpenSettings: () => void;
+	/** Called when the claim's state changes, from this view's live-update subscription, which the panel shares with the settings read. */
+	onStateChanged: () => void;
 }
 
 /**
@@ -135,9 +137,10 @@ function ResultsView({
 	context,
 	hasAcceptedSettings,
 	onOpenSettings,
+	onStateChanged,
 }: ResultsViewProps) {
 	const { canEdit = false, elementId } = context;
-	const evidence = useHealthEvidence(context);
+	const evidence = useHealthEvidence(context, onStateChanged);
 
 	if (evidence.status === "loading") {
 		return <EvidenceSkeleton />;
@@ -235,6 +238,7 @@ const VIEW_TRIGGER_CLASSES =
 export function HealthPanel({
 	caseId,
 	elementId,
+	elementText,
 	elementType,
 	canEdit = false,
 }: ElementSlotContext) {
@@ -279,6 +283,7 @@ export function HealthPanel({
 						context={context}
 						hasAcceptedSettings={hasAcceptedSettings}
 						onOpenSettings={() => setView("settings")}
+						onStateChanged={criteria.refetch}
 					/>
 				</TabsContent>
 				<TabsContent
@@ -291,6 +296,7 @@ export function HealthPanel({
 						canEdit={canEdit}
 						caseId={caseId}
 						claimId={elementId}
+						claimText={elementText}
 						criteria={criteria}
 					/>
 				</TabsContent>

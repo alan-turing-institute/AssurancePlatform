@@ -37,9 +37,10 @@ export type ElementType =
  * (`extension-data` / `plugin-tables` / `machine-endpoints` / `events` are
  * non-UI surfaces with no registry here). ADR §2.3 also names `case-panel`
  * and `canvas-decorator` as 1.1 slots; they're included in this union so
- * their eventual registries slot in without a type redesign, but 1.0 builds
- * a live `SlotRegistry` instance only for the three below (`registry.ts`) —
- * there is no official plugin consuming the other two yet.
+ * their eventual registries slot in without a type redesign. A live
+ * `SlotRegistry` instance exists for `case-panel`, `element-badge`,
+ * `element-panel` and `settings-section` (`registry.ts`); no official plugin
+ * consumes `canvas-decorator` yet.
  */
 export type SlotId = Extract<
 	PluginSurface,
@@ -56,12 +57,21 @@ export interface ElementSlotContext {
 	canEdit?: boolean;
 	caseId: string;
 	elementId: string;
+	/** The element's own text, as the details form holds it. Absent where the host has none to give. */
+	elementText?: string;
 	elementType: ElementType;
 }
 
 interface SlotRegistrationBase {
 	/** Must name a `PluginManifestEntry.id` whose `surfaces` includes this slot's id — enforced at `.register()` time, not just documented. */
 	pluginId: string;
+}
+
+/** Everything a case-scoped slot's render function needs. */
+export interface CaseSlotContext {
+	/** Whether the viewer may edit the case's elements. The server enforces permission whatever a slot shows. */
+	canEdit: boolean;
+	caseId: string;
 }
 
 /** A small status affordance rendered on a canvas node (ADR §2.3: "the state dot"). */
@@ -85,4 +95,15 @@ export interface ElementPanelRegistration extends SlotRegistrationBase {
 /** A plugin's own settings UI within its row in the plugins pane (ADR §2.3: "settings-section ... All"). */
 export interface SettingsSectionRegistration extends SlotRegistrationBase {
 	Component: ComponentType<{ pluginId: string }>;
+}
+
+/** A panel contributed to the case toolbar: one button, opening a side sheet that holds the component. */
+export interface CasePanelRegistration extends SlotRegistrationBase {
+	Component: ComponentType<CaseSlotContext>;
+	/** Optional icon for the toolbar button. */
+	icon?: ComponentType<{ className?: string }>;
+	/** The button's tooltip and accessible name, and the sheet's title. */
+	label: string;
+	/** Stable per registration; names the button's test id. */
+	panelId: string;
 }

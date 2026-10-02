@@ -1,6 +1,7 @@
-import { waitFor } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
+import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UseCaseEventsOptions } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
@@ -13,7 +14,10 @@ import {
 import { server } from "@/src/__tests__/mocks/server";
 import { render, screen } from "@/src/__tests__/utils/test-utils";
 import { HealthPanel } from "../health-panel";
-import type { HealthCriteriaResponse } from "../health-types";
+import type {
+	HealthCheckListOffer,
+	HealthCriteriaResponse,
+} from "../health-types";
 import {
 	checkLists,
 	INTEGRATION,
@@ -558,5 +562,303 @@ describe("Settings: refetches", () => {
 		await waitFor(() =>
 			expect(screen.getByLabelText("Pass at")).toHaveValue("0.7")
 		);
+	});
+});
+
+describe("Settings: the claim's own text", () => {
+	it("shows the claim's text, as text, above the plain-words summary", async () => {
+		serve(storedCriteria());
+		const user = userEvent.setup();
+		render(
+			<HealthPanel {...CONTEXT} elementText="<b>Items are free of marks</b>" />,
+			{ withProviders: false }
+		);
+		await user.click(await screen.findByRole("tab", { name: "Settings" }));
+
+		const block = await screen.findByTestId("health-claim-text");
+		expect(block).toHaveTextContent("Claim");
+		expect(block).toHaveTextContent("<b>Items are free of marks</b>");
+		expect(block.querySelector("b")).toBeNull();
+		expect(
+			block.compareDocumentPosition(screen.getByTestId("health-plain-words"))
+		).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
+
+	it("shows no block for a claim without text", async () => {
+		serve(NO_CRITERIA);
+		const user = userEvent.setup();
+		render(<HealthPanel {...CONTEXT} elementText="  " />, {
+			withProviders: false,
+		});
+		await user.click(await screen.findByRole("tab", { name: "Settings" }));
+		await screen.findByRole("combobox", { name: "Check" });
+
+		expect(screen.queryByTestId("health-claim-text")).toBeNull();
+	});
+});
+
+describe("Settings: one live-update subscription", () => {
+	it("opens one subscription for the whole tab and refetches the settings from it", async () => {
+		let open = 0;
+		let mostOpen = 0;
+		vi.mocked(useCaseEvents).mockImplementation((options) => {
+			eventHandlers.push(options);
+			useEffect(() => {
+				if (!options.enabled) {
+					return;
+				}
+				open += 1;
+				mostOpen = Math.max(mostOpen, open);
+				return () => {
+					open -= 1;
+				};
+			}, [options.enabled]);
+			return {
+				status: "connected",
+				isConnected: true,
+				lastEvent: null,
+				reconnect: vi.fn(),
+				disconnect: vi.fn(),
+			};
+		});
+		const served = serve(storedCriteria());
+		let reads = 0;
+		server.use(
+			http.get(CRITERIA_URL, () => {
+				reads += 1;
+				return HttpResponse.json(served.criteria);
+			})
+		);
+		const user = await openSettings();
+		await screen.findByLabelText("Claim passes at");
+
+		expect(open).toBe(1);
+		expect(mostOpen).toBe(1);
+
+		const before = reads;
+		await user.click(screen.getByRole("tab", { name: "Results" }));
+		for (const handler of eventHandlers.filter((entry) => entry.enabled)) {
+			handler.onEvent?.({
+				type: "tea.health/state-changed",
+				payload: { claimId: "claim-42" },
+			} as never);
+		}
+		await waitFor(() => expect(reads).toBeGreaterThan(before));
+	});
+});
+
+describe("Settings: where a fresh pick's numbers come from", () => {
+	it("says the numbers are the check's recommendation and count for nothing until accepted", async () => {
+		serve(NO_CRITERIA);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+
+		const notice = await screen.findByTestId("health-fresh-pick-notice");
+		expect(notice).toHaveTextContent(
+			"These are the settings the check recommends. Nothing is used until you accept them. Change any number first if it does not fit this claim."
+		);
+		expect(
+			notice.compareDocumentPosition(screen.getByTestId("health-plain-words"))
+		).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
+
+	it("says so when the check recommends nothing", async () => {
+		const served = serve(NO_CRITERIA);
+		const [list] = checkLists();
+		server.use(
+			http.get("/api/cases/case-1/health/checks", () =>
+				HttpResponse.json([
+					{
+						...list,
+						checks: list?.checks.map((check) => ({
+							...check,
+							recommended: undefined,
+						})),
+					},
+				])
+			)
+		);
+		expect(served.puts).toEqual([]);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+
+		expect(
+			await screen.findByTestId("health-fresh-pick-notice")
+		).toHaveTextContent(
+			"This check recommends no settings. Nothing is used until you accept the ones you enter."
+		);
+	});
+
+	it("does not show the notice for settings that are already stored", async () => {
+		serve(storedCriteria());
+		await openSettings();
+		await screen.findByLabelText("Claim passes at");
+
+		expect(screen.queryByTestId("health-fresh-pick-notice")).toBeNull();
+	});
+});
+
+describe("Settings: after the use of settings is stopped", () => {
+	it("puts focus on the check picker, inside the view", async () => {
+		const served = serve(storedCriteria());
+		const user = await openSettings();
+		await user.click(
+			await screen.findByRole("button", { name: "Stop using these settings" })
+		);
+		await user.type(screen.getByLabelText("Reason"), "Check replaced");
+		served.criteria = {
+			...NO_CRITERIA,
+			criteria: { ...storedCriteria().criteria, state: "inactive" } as never,
+			last_change: {
+				action: "retired",
+				by_name: "Alice",
+				at: "2026-10-02T11:00:00.000Z",
+				reason: "Check replaced",
+			},
+		};
+		await user.click(
+			screen
+				.getAllByRole("button", { name: "Stop using these settings" })
+				.at(-1) as HTMLElement
+		);
+
+		const picker = await screen.findByRole("combobox", { name: "Check" });
+		await waitFor(() => expect(picker).toHaveFocus());
+	});
+});
+
+describe("Settings: moving to a newer version of the check", () => {
+	function newerLists(): HealthCheckListOffer[] {
+		const [list] = checkLists();
+		return [
+			{
+				...(list as HealthCheckListOffer),
+				checks: (list as HealthCheckListOffer).checks.map((check) =>
+					check.name === ITEM_CHECK_NAME
+						? {
+								...check,
+								version: "0.4",
+								recommended: {
+									...check.recommended,
+									aggregation: {
+										kind: "proportion" as const,
+										params: {
+											threshold: 0.9,
+											avail_floor: 0.8,
+											use_verdict: true,
+										},
+									},
+									valid_for: "PT10M",
+								},
+							}
+						: check
+				),
+			},
+		];
+	}
+
+	function serveNewer(): Served {
+		const served = serve(
+			storedCriteria({ overrides: { check_offer: "newer-version" } })
+		);
+		server.use(
+			http.get("/api/cases/case-1/health/checks", () =>
+				HttpResponse.json(newerLists())
+			)
+		);
+		return served;
+	}
+
+	it("offers the comparison to a person who can edit, and not to one who cannot", async () => {
+		serveNewer();
+		await openSettings(false);
+		await screen.findByLabelText("Claim passes at");
+		expect(
+			screen.getByText(
+				"The pipeline now offers a different version of this check."
+			)
+		).toBeVisible();
+		expect(
+			screen.queryByRole("button", { name: "Compare with version 0.4" })
+		).toBeNull();
+	});
+
+	it("compares block by block, keeps what is kept, takes what is taken and saves only on Save", async () => {
+		const served = serveNewer();
+		const user = await openSettings();
+		await user.click(
+			await screen.findByRole("button", { name: "Compare with version 0.4" })
+		);
+
+		const aggregation = await screen.findByTestId("health-compare-aggregation");
+		expect(aggregation).toHaveTextContent("Your accepted settings");
+		expect(aggregation).toHaveTextContent("Recommended for version 0.4");
+		expect(aggregation).toHaveTextContent("at least 95% of the items pass");
+		expect(aggregation).toHaveTextContent("at least 90% of the items pass");
+		const keep = within(aggregation).getByRole("radio", { name: "Keep yours" });
+		expect(keep).toBeChecked();
+		expect(screen.getByTestId("health-compare-rule")).not.toHaveTextContent(
+			"Take the recommendation"
+		);
+
+		await user.click(
+			within(aggregation).getByRole("radio", {
+				name: "Take the recommendation",
+			})
+		);
+		await user.click(screen.getByRole("button", { name: "Continue" }));
+
+		expect(await screen.findByLabelText("Claim passes at")).toHaveValue("90");
+		expect(screen.getByLabelText("Each result counts for")).toHaveValue("5");
+		expect(screen.getByTestId("health-move-notice")).toHaveTextContent(
+			"version 0.4"
+		);
+		expect(served.puts).toEqual([]);
+
+		served.criteria = storedCriteria({ revision: 2 });
+		await user.click(screen.getByRole("button", { name: "Save settings" }));
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		expect(served.puts[0]).toMatchObject({
+			accept: true,
+			settings: {
+				check: { name: ITEM_CHECK_NAME, version: "0.4" },
+				aggregation: { params: { threshold: 0.9 } },
+				valid_for: "PT5M",
+			},
+		});
+	});
+
+	it("saves the new version even when every block is kept", async () => {
+		const served = serveNewer();
+		const user = await openSettings();
+		await user.click(
+			await screen.findByRole("button", { name: "Compare with version 0.4" })
+		);
+		await user.click(await screen.findByRole("button", { name: "Continue" }));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Save settings" })
+		);
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		expect(served.puts[0]).toMatchObject({
+			settings: {
+				check: { version: "0.4" },
+				aggregation: { params: { threshold: 0.95 } },
+			},
+		});
+	});
+
+	it("returns to the form unchanged on Cancel", async () => {
+		const served = serveNewer();
+		const user = await openSettings();
+		await user.click(
+			await screen.findByRole("button", { name: "Compare with version 0.4" })
+		);
+		await user.click(await screen.findByRole("button", { name: "Cancel" }));
+
+		expect(await screen.findByLabelText("Claim passes at")).toHaveValue("95");
+		expect(screen.queryByTestId("health-version-compare")).toBeNull();
+		expect(screen.queryByTestId("health-move-notice")).toBeNull();
+		expect(served.puts).toEqual([]);
 	});
 });

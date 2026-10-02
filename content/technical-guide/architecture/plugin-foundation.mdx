@@ -7,9 +7,11 @@ The plugin foundation lets first-party features add data and selected interface 
 
 ## Add a registered surface
 
-The manifest in `lib/plugins/manifest.ts` lists the health plugin's ID, version, description and surfaces. A plugin registers browser UI in typed slots. Current live registries cover an element badge, an element panel and a settings section. Health uses these for its node badge, evidence panel and settings. `lib/plugins/bootstrap.ts` imports the plugin's registration module at the client boundary. A registration must name a known plugin and a surface declared by its manifest entry. The editor then filters registered components by effective plugin enablement.
+The manifest in `lib/plugins/manifest.ts` lists the health plugin's ID, version, description and surfaces. A plugin registers browser UI in typed slots. Current live registries cover an element badge, an element panel, a case panel and a settings section.
+Health uses these for its node badge, evidence panel, case-level evidence health panel and settings.
+A case panel appears as one button in the case toolbar, after Notes, and opens in a side sheet; the toolbar renders whatever enabled plugins have registered. `lib/plugins/bootstrap.ts` imports the plugin's registration module at the client boundary. A registration must name a known plugin and a surface declared by its manifest entry. The editor then filters registered components by effective plugin enablement.
 
-The slot types also name case panels and canvas decorators as extension points, but the current registry has no live instance for those future surfaces. Do not assume that declaring one in a manifest makes it render. Server features such as machine routes and plugin-owned tables are separate from browser slots.
+The slot types also name canvas decorators as an extension point, but the current registry has no live instance for that future surface. Do not assume that declaring one in a manifest makes it render. Server features such as machine routes and plugin-owned tables are separate from browser slots.
 
 ## Store plugin state
 

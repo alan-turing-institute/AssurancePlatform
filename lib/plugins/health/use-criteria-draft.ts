@@ -19,6 +19,8 @@ interface UseCriteriaDraftOptions {
 	initialDraft: CriteriaDraft;
 	/** The stored revision the values were taken from; null for a check that has not been saved. */
 	revision: number | null;
+	/** True when the initial draft is itself an unsaved change, such as settings moved to a new check version. */
+	unsaved?: boolean;
 }
 
 /**
@@ -34,14 +36,16 @@ export function useCriteriaDraft({
 	initialChoiceKey,
 	initialDraft,
 	revision,
+	unsaved = false,
 }: UseCriteriaDraftOptions) {
+	const [stillUnsaved, setStillUnsaved] = useState(unsaved);
 	const [draft, setDraftState] = useState(initialDraft);
 	const [baseline, setBaseline] = useState(initialDraft);
 	const [baseRevision, setBaseRevision] = useState(revision);
 	const [chosenKey, setChosenKey] = useState(initialChoiceKey);
 	const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
 
-	const dirty = !draftsEqual(draft, baseline);
+	const dirty = stillUnsaved || !draftsEqual(draft, baseline);
 	if (revision !== baseRevision && !dirty) {
 		setDraftState(initialDraft);
 		setBaseline(initialDraft);
@@ -100,6 +104,7 @@ export function useCriteriaDraft({
 		saved: (savedRevision: number | null) => {
 			setBaseline(draft);
 			setBaseRevision(savedRevision);
+			setStillUnsaved(false);
 		},
 		sentences,
 		setDraft: (patch: Partial<CriteriaDraft>) => {

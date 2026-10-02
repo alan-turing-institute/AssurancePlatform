@@ -1,17 +1,32 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+	type ReactNode,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { HealthCheck } from "@/lib/schemas/health-checks";
+import { VersionCompare } from "./criteria-compare";
 import {
+	type CriteriaDraft,
 	draftFromCheck,
 	draftFromStored,
 	recommendationIsUsable,
 } from "./criteria-draft";
-import { CriteriaForm, type CriteriaFormProps } from "./criteria-form";
+import {
+	CriteriaForm,
+	type CriteriaFormProps,
+	type PendingMove,
+} from "./criteria-form";
 import { StoppedNotice } from "./criteria-notices";
 import { type CheckChoice, CheckSelect } from "./criteria-sections";
+import { compareBlocks, mergeVersionMove } from "./criteria-version-move";
 import type {
 	HealthCheckListOffer,
 	HealthCriteriaResponse,
@@ -128,36 +143,133 @@ function PickedForm({
 	);
 }
 
-/** The form for settings the claim already has, suggested or accepted. */
-function StoredForm({
-	host,
-	stored,
-	view,
-}: {
+/** The check list's entry for a different version of the stored settings' check, from the same pipeline; null when there is none. */
+function newerVersionOf(
+	view: HealthCriteriaResponse,
+	lists: HealthCheckListOffer[] | null
+): CheckChoice | null {
+	const accepted = view.criteria;
+	const integrationId = view.integration?.id;
+	if (!(accepted && integrationId)) {
+		return null;
+	}
+	const list = lists?.find((offer) => offer.integration.id === integrationId);
+	const check = list?.checks.find(
+		(candidate) => candidate.name === accepted.check.name
+	);
+	return list && check && check.version !== accepted.check.version
+		? {
+				check,
+				integrationId,
+				key: choiceKey(integrationId, check.name),
+				pipeline: list.pipeline,
+			}
+		: null;
+}
+
+interface MovedSettings {
+	check: HealthCheck;
+	draft: CriteriaDraft;
+}
+
+interface StoredFormProps {
+	/** The newer version's entry, when the pipeline offers one. */
+	entry: CheckChoice | null;
 	host: FormHost;
 	stored: CheckChoice;
 	view: HealthCriteriaResponse;
-}) {
+}
+
+/**
+ * The form for settings the claim already has, suggested or accepted. For
+ * accepted settings whose check has a newer version, a person who can edit
+ * can compare the two versions block by block and continue to the form with
+ * the merged settings, which stay unsaved until the person saves.
+ */
+function StoredForm({ entry, host, stored, view }: StoredFormProps) {
+	const [comparing, setComparing] = useState(false);
+	const [moved, setMoved] = useState<MovedSettings | null>(null);
 	const criteria = view.criteria;
 	if (!criteria) {
 		return null;
 	}
+	const accepted = criteria.state === "accepted";
+	const move: PendingMove | undefined = moved
+		? { version: moved.check.version, onCancel: () => setMoved(null) }
+		: undefined;
+	const offered =
+		host.canEdit && accepted && view.check_offer === "newer-version"
+			? entry
+			: null;
+	const formHost: FormHost = moved
+		? {
+				...host,
+				choices: host.choices.map((choice) =>
+					choice.key === stored.key ? { ...choice, check: moved.check } : choice
+				),
+				onChanged: () => {
+					setMoved(null);
+					host.onChanged();
+				},
+				onReplace: (next) => {
+					setMoved(null);
+					host.onReplace(next);
+				},
+			}
+		: host;
 	return (
-		<CriteriaForm
-			{...host}
-			initialCheck={stored.check}
-			initialChoiceKey={stored.key}
-			initialDraft={draftFromStored(
-				criteria,
-				stored.check,
-				stored.integrationId
+		<>
+			{comparing && offered && (
+				<VersionCompare
+					newVersion={offered.check.version}
+					onCancel={() => setComparing(false)}
+					onContinue={(choices) => {
+						setMoved({
+							check: offered.check,
+							draft: mergeVersionMove({
+								accepted: criteria,
+								choices,
+								entry: offered.check,
+								integrationId: offered.integrationId,
+							}),
+						});
+						setComparing(false);
+					}}
+					rows={compareBlocks({
+						accepted: criteria,
+						acceptedCheck: stored.check,
+						entry: offered.check,
+						integrationId: offered.integrationId,
+					})}
+				/>
 			)}
-			key="stored"
-			revision={criteria.revision}
-			startShort={criteria.state === "suggested"}
-			state={criteria.state === "accepted" ? "accepted" : "suggested"}
-			view={view}
-		/>
+			<div hidden={comparing}>
+				<CriteriaForm
+					{...formHost}
+					compare={
+						offered && !moved
+							? {
+									newVersion: offered.check.version,
+									onOpen: () => setComparing(true),
+								}
+							: null
+					}
+					initialCheck={moved ? moved.check : stored.check}
+					initialChoiceKey={stored.key}
+					initialDraft={
+						moved
+							? moved.draft
+							: draftFromStored(criteria, stored.check, stored.integrationId)
+					}
+					key={moved ? "moved" : "stored"}
+					move={move}
+					revision={criteria.revision}
+					startShort={criteria.state === "suggested"}
+					state={accepted ? "accepted" : "suggested"}
+					view={view}
+				/>
+			</div>
+		</>
 	);
 }
 
@@ -167,7 +279,34 @@ export interface SettingsViewProps {
 	canEdit: boolean;
 	caseId: string;
 	claimId: string;
+	/** The claim's own text, shown above the settings so its wording can be read beside its numbers. */
+	claimText?: string;
 	criteria: ClaimScopedFetchResult<HealthCriteriaResponse | null>;
+}
+
+const FOCUSABLE =
+	'button:not([disabled]), [role="combobox"]:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]';
+
+/** The claim's text in a muted block, as text and wrapped; absent when the claim has none. */
+function ClaimText({ text }: { text: string | undefined }) {
+	const headingId = useId();
+	if (!text?.trim()) {
+		return null;
+	}
+	return (
+		<section
+			aria-labelledby={headingId}
+			className="space-y-1 rounded-md border bg-muted/30 p-3"
+			data-testid="health-claim-text"
+		>
+			<h3 className="font-medium text-muted-foreground text-xs" id={headingId}>
+				Claim
+			</h3>
+			<p className="wrap-anywhere max-h-40 overflow-y-auto whitespace-pre-wrap text-muted-foreground text-sm">
+				{text}
+			</p>
+		</section>
+	);
 }
 
 /**
@@ -181,6 +320,7 @@ export function SettingsView({
 	canEdit,
 	caseId,
 	claimId,
+	claimText,
 	criteria,
 }: SettingsViewProps) {
 	const [opened, setOpened] = useState(active);
@@ -197,6 +337,21 @@ export function SettingsView({
 			? [stored, ...live.filter((choice) => choice.key !== stored.key)]
 			: live;
 	}, [checks.lists, stored]);
+	const focusAfterStop = useRef(false);
+	const withoutSettings = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!focusAfterStop.current || stored || criteria.status !== "ready") {
+			return;
+		}
+		focusAfterStop.current = false;
+		const region = withoutSettings.current;
+		(
+			region?.querySelector<HTMLElement>(FOCUSABLE) ??
+			region?.querySelector<HTMLElement>("[data-settings-heading]") ??
+			region
+		)?.focus();
+	});
 
 	if (criteria.status === "loading") {
 		return <Skeleton className="h-40 w-full rounded-md" />;
@@ -217,6 +372,8 @@ export function SettingsView({
 		claimId,
 		onCancelNew: () => setPicked(null),
 		onChanged: () => {
+			// Only stopping the use of settings calls this; focus moves into the view once the read shows no settings.
+			focusAfterStop.current = true;
 			setPicked(null);
 			criteria.refetch();
 		},
@@ -226,20 +383,44 @@ export function SettingsView({
 		},
 	};
 
+	let body: ReactNode;
 	if (picked) {
-		return <PickedForm host={host} picked={picked} view={view} />;
-	}
-	if (stored) {
-		return <StoredForm host={host} stored={stored} view={view} />;
+		body = <PickedForm host={host} picked={picked} view={view} />;
+	} else if (stored) {
+		body = (
+			<StoredForm
+				entry={newerVersionOf(view, checks.lists)}
+				host={host}
+				stored={stored}
+				view={view}
+			/>
+		);
+	} else {
+		body = (
+			<div
+				className="space-y-3 outline-none"
+				ref={withoutSettings}
+				tabIndex={-1}
+			>
+				<StoppedNotice view={view} />
+				{canEdit ? (
+					<CheckPicker checks={checks} choices={choices} onPick={setPicked} />
+				) : (
+					<h3
+						className="font-normal text-sm outline-none"
+						data-settings-heading
+						tabIndex={-1}
+					>
+						No evidence settings for this claim.
+					</h3>
+				)}
+			</div>
+		);
 	}
 	return (
-		<div className="space-y-3">
-			<StoppedNotice view={view} />
-			{canEdit ? (
-				<CheckPicker checks={checks} choices={choices} onPick={setPicked} />
-			) : (
-				<p className="text-sm">No evidence settings for this claim.</p>
-			)}
+		<div className="space-y-4">
+			<ClaimText text={claimText} />
+			{body}
 		</div>
 	);
 }

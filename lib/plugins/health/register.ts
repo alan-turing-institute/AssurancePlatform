@@ -27,7 +27,12 @@
  */
 
 import { logger } from "@/lib/logger";
-import { elementBadgeSlot, elementPanelSlot } from "@/lib/plugins/slots";
+import {
+	casePanelSlot,
+	elementBadgeSlot,
+	elementPanelSlot,
+} from "@/lib/plugins/slots";
+import { EvidenceHealthPanel } from "./evidence-health-panel";
 import { HealthBadge } from "./health-badge";
 import { HealthPanel } from "./health-panel";
 
@@ -45,6 +50,12 @@ export function registerHealthPlugin(): void {
 			label: "Evidence",
 			wide: true,
 			Component: HealthPanel,
+		});
+		casePanelSlot.register({
+			pluginId: PLUGIN_ID,
+			panelId: PLUGIN_ID,
+			label: "Evidence health",
+			Component: EvidenceHealthPanel,
 		});
 	} catch (error) {
 		logger.error(
