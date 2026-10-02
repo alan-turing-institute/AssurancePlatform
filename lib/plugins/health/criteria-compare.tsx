@@ -32,6 +32,13 @@ function CompareColumn({ lines, title }: CompareColumnProps) {
 	);
 }
 
+const ARROW_KEYS: ReadonlySet<string> = new Set([
+	"ArrowDown",
+	"ArrowLeft",
+	"ArrowRight",
+	"ArrowUp",
+]);
+
 const ROW_NOTES: Record<"none" | "same", string> = {
 	same: "The recommendation is the same as your settings. Nothing to choose.",
 	none: "The new version recommends nothing for this. Your settings stay as they are.",
@@ -68,6 +75,12 @@ function CompareRow({ choice, onChoice, row, version }: CompareRowProps) {
 			{row.kind === "pick" ? (
 				<RadioGroup
 					aria-labelledby={legendId}
+					onKeyDown={(event) => {
+						// With two options, any arrow key moves to the other one and selects it, however briefly the key is held.
+						if (ARROW_KEYS.has(event.key)) {
+							onChoice(choice === "keep" ? "take" : "keep");
+						}
+					}}
 					onValueChange={(next) => onChoice(next === "take" ? "take" : "keep")}
 					value={choice}
 				>

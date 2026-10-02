@@ -138,6 +138,44 @@ describe("mergeVersionMove", () => {
 		);
 	});
 
+	it("carries a kept setting through as it is when the new version gives it another type, and shows its row", () => {
+		const entry = newVersion({
+			params: [{ key: "camera_line", label: "Camera line", type: "number" }],
+		});
+		const draft = merge(entry, {});
+		expect(draft.unlistedParams).toEqual({ camera_line: "ALL" });
+		expect(draft.params.camera_line?.text).toBe("");
+		const analysis = analyseDraft(draft, entry);
+		expect(analysis.settings.check?.params).toEqual({ camera_line: "ALL" });
+		expect(analysis.errors["check.params.camera_line"]).toBeDefined();
+		expect(rows(entry).map((row) => row.block)).toContain("check");
+	});
+
+	it("keeps a setting whose type is unchanged as an ordinary field", () => {
+		const draft = merge(newVersion(), {});
+		expect(draft.unlistedParams).toBeUndefined();
+		expect(draft.params.camera_line?.text).toBe("ALL");
+	});
+
+	it("holds the combining steps for a check that became whole-system, and reports both", () => {
+		const entry = newVersion({ scope: "environment", scope_label: undefined });
+		const draft = merge(entry, {});
+		expect(draft.reductionOn).toBe(true);
+		const analysis = analyseDraft(draft, entry);
+		expect(analysis.settings.reduction).toBeDefined();
+		expect(analysis.settings.aggregation).toBeDefined();
+		expect(analysis.errors.reduction).toContain("is not used by");
+		expect(analysis.errors.aggregation).toContain("is not used by");
+		expect(analysis.complete).toBeNull();
+	});
+
+	it("holds the reduction for a check that now returns text, and reports it", () => {
+		const entry = newVersion({ value: { type: "string" } });
+		const analysis = analyseDraft(merge(entry, {}), entry);
+		expect(analysis.settings.reduction).toBeDefined();
+		expect(analysis.errors.reduction).toContain("returns text");
+	});
+
 	it("reports a kept rule the new version cannot judge", () => {
 		const entry = newVersion({ value: { type: "number", unit: "mm" } });
 		const draft = merge(entry, {});
@@ -186,6 +224,14 @@ describe("compareBlocks", () => {
 		}).map((row) => row.block);
 		expect(blocks).not.toContain("check");
 		expect(rows(entry).map((row) => row.block)).toContain("check");
+	});
+
+	it("words the combining rows in the check's own names for what a reading is about", () => {
+		const labels = Object.fromEntries(
+			rows(newVersion()).map((row) => [row.block, row.label])
+		);
+		expect(labels.reduction).toBe("Step 2: combining one item's readings");
+		expect(labels.aggregation).toBe("Step 3: combining items");
 	});
 
 	it("describes each side of a block in plain words, for that block alone", () => {

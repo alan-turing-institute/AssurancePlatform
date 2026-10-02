@@ -1,10 +1,10 @@
 "use client";
 
-import { type RefObject, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
-import type { CriteriaDraft } from "./criteria-draft";
+import { type CriteriaDraft, recommendationIsUsable } from "./criteria-draft";
 import {
 	type CompareOffer,
 	FreshPickNotice,
@@ -52,17 +52,25 @@ export interface CriteriaFormProps {
 	onCancelNew: () => void;
 	/** Called when something changed that the form cannot read from the answer, so the view is fetched again. */
 	onChanged: () => void;
+	/** Fetches the settings again, after a save was refused because they had changed. */
+	onRefresh: () => void;
 	/** Called when the server has answered a change and the view should show its answer. */
 	onReplace: (view: HealthCriteriaResponse) => void;
+	/** Reports whether the form holds changes that have not been saved. */
+	onUnsavedChange?: (unsaved: boolean) => void;
 	/** The stored revision these values were taken from; null for a check that has not been saved. */
 	revision: number | null;
-	startShort: boolean;
 	state: FormState;
+	/** True when the settings the form was opened on have since been stopped or discarded by someone else. */
+	superseded?: boolean;
 	view: HealthCriteriaResponse | null;
 }
 
+/** The server's refusal of a save made from settings that were replaced since the form read them. */
+const CHANGED_MESSAGE = "These settings were changed by someone else";
+
 const PLACED_PATH =
-	/^(check\.params\.[^.]+|rule\.(kind|params\.(pass_values|marginal_values))|reduction\.(kind|params\.(p|avail_floor)|rule\.(kind|params\.(pass_values|marginal_values)))|aggregation\.params\.(threshold|avail_floor)|window|valid_for)$/;
+	/^(check\.params\.[^.]+|rule\.(kind|params\.(pass_values|marginal_values))|reduction\.(kind|params\.(p|avail_floor)|rule\.(kind|params\.(pass_values|marginal_values)))|aggregation\.params\.(threshold|avail_floor)|window|valid_for|reduction|aggregation)$/;
 
 /** What Cancel does: leave a form for a check not yet saved, leave a move to another version, or put the stored values back. */
 function cancelOf(
@@ -229,6 +237,7 @@ function useCriteriaActions(
 ) {
 	const [pending, setPending] = useState(false);
 	const [message, setMessage] = useState<string | null>(null);
+	const [refused, setRefused] = useState(false);
 	const { analysis, draft } = form;
 
 	const run = async (
@@ -241,6 +250,10 @@ function useCriteriaActions(
 		if (outcome.ok) {
 			return outcome.view;
 		}
+		if (outcome.status === 409 && outcome.message === CHANGED_MESSAGE) {
+			setRefused(true);
+			return null;
+		}
 		form.setServerErrors(outcome.fieldErrors);
 		setMessage(outcome.message);
 		return null;
@@ -248,6 +261,8 @@ function useCriteriaActions(
 
 	return {
 		clearMessage: () => setMessage(null),
+		clearRefusal: () => setRefused(false),
+		refused,
 		discard: async () => {
 			const view = await run(() => retireCriteria(claimId));
 			if (view) {
@@ -264,12 +279,13 @@ function useCriteriaActions(
 			const view = await run(() =>
 				saveCriteria(claimId, {
 					accept,
+					expectedRevision: form.baseRevision,
 					integrationId: draft.integrationId,
 					settings,
 				})
 			);
 			if (view) {
-				form.saved(view.criteria?.revision ?? null);
+				form.saved(view);
 				onReplace(view);
 			}
 		},
@@ -306,7 +322,11 @@ function FormSections({
 				{...sectionProps}
 				choices={choices}
 				chosen={chosen}
-				onPick={onPick}
+				onPick={(key) => {
+					// Choosing another check here keeps the full form open.
+					setShowAll(true);
+					onPick(key);
+				}}
 				version={versions?.check}
 			/>
 			<RuleSection {...sectionProps} version={versions?.rule} />
@@ -388,16 +408,18 @@ function canSaveOf(form: CriteriaDraftState, state: FormState): boolean {
 
 /** The notices above the summary: the settings' state, and a change made by someone else under unsaved edits. */
 function FormNotices({
+	changedElsewhere,
 	compare,
-	form,
 	move,
+	onReload,
 	state,
 	recommends,
 	view,
 }: {
+	changedElsewhere: boolean;
 	compare: CompareOffer | null | undefined;
-	form: CriteriaDraftState;
 	move: PendingMove | undefined;
+	onReload: () => void;
 	recommends: boolean;
 	state: FormState;
 	view: HealthCriteriaResponse | null;
@@ -407,16 +429,32 @@ function FormNotices({
 			{state === "new" && <FreshPickNotice recommends={recommends} />}
 			{view && <StateNotices compare={move ? null : compare} view={view} />}
 			{move && <MoveNotice version={move.version} />}
-			{form.changedElsewhere && form.dirty && (
-				<ChangedElsewhere
-					onReload={() => {
-						form.reload();
-						move?.onCancel();
-					}}
-				/>
-			)}
+			{changedElsewhere && <ChangedElsewhere onReload={onReload} />}
 		</>
 	);
+}
+
+interface ShortViewOptions {
+	canEdit: boolean;
+	state: FormState;
+}
+
+/**
+ * Whether the form opens as the short view: for a person who can accept, a
+ * suggestion, or a fresh pick whose recommendation can be saved as it stands.
+ * It follows the check currently chosen. A person who cannot edit reads the
+ * full form.
+ */
+function useShortView(
+	check: HealthCheck,
+	integrationId: string,
+	{ canEdit, state }: ShortViewOptions
+): boolean {
+	const usable = useMemo(
+		() => state === "new" && recommendationIsUsable(check, integrationId),
+		[check, integrationId, state]
+	);
+	return canEdit && (state === "suggested" || usable);
 }
 
 /**
@@ -436,10 +474,12 @@ export function CriteriaForm({
 	move,
 	onCancelNew,
 	onChanged,
+	onRefresh,
 	onReplace,
+	onUnsavedChange,
 	revision,
-	startShort,
 	state,
+	superseded = false,
 	view,
 }: CriteriaFormProps) {
 	const form = useCriteriaDraft({
@@ -448,18 +488,42 @@ export function CriteriaForm({
 		initialChoiceKey,
 		initialDraft,
 		revision,
-		unsaved: move !== undefined,
+		unsaved: move !== undefined || state === "new",
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
 	const cancel = cancelOf(state, move, onCancelNew, form.resetToStored);
+	const changedElsewhere =
+		form.changedElsewhere || superseded || actions.refused;
+	const { dirty } = form;
+	useEffect(() => {
+		onUnsavedChange?.(dirty);
+		return () => onUnsavedChange?.(false);
+	}, [dirty, onUnsavedChange]);
+	const short = useShortView(form.check, form.draft.integrationId, {
+		canEdit,
+		state,
+	});
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
 			<FormNotices
+				changedElsewhere={
+					actions.refused || superseded || (changedElsewhere && dirty)
+				}
 				compare={compare}
-				form={form}
 				move={move}
-				recommends={hasRecommendation(initialCheck)}
+				onReload={() => {
+					form.reload();
+					move?.onCancel();
+					if (state === "new") {
+						onCancelNew();
+					}
+					if (actions.refused) {
+						actions.clearRefusal();
+						onRefresh();
+					}
+				}}
+				recommends={hasRecommendation(form.check)}
 				state={state}
 				view={view}
 			/>
@@ -469,15 +533,22 @@ export function CriteriaForm({
 				chosen={form.draftKey}
 				onPick={form.onPick}
 				sectionProps={sectionPropsOf(form, actions, canEdit)}
-				short={state !== "accepted" && startShort}
+				short={short}
 				versions={versionsOf(view, move)}
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
 			<PipelineFooter view={view} />
+			{canEdit && form.draft.integrationId === "" && (
+				<p className="wrap-anywhere text-sm" role="note">
+					The pipeline these settings were set up for no longer exists. Choose
+					the check again from a current list to keep using them, or stop using
+					these settings.
+				</p>
+			)}
 			{canEdit && (
 				<FormFooter
 					canSave={canSaveOf(form, state)}
-					changedElsewhere={form.changedElsewhere}
+					changedElsewhere={changedElsewhere}
 					claimId={claimId}
 					hasProblems={form.hasProblems}
 					onAccept={() => actions.save(true)}

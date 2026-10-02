@@ -530,6 +530,16 @@ describe("where each block came from", () => {
 		expect(source.kind).toBe("edited");
 	});
 
+	it("compares the window and the validity as lengths of time, so the same length in other units is not an edit", () => {
+		const source = computeSource(
+			parsedSettings(itemSettings({ window: "PT60S", valid_for: "PT300S" })),
+			itemCheck,
+			null
+		);
+		expect(source.timing).toBe("recommended");
+		expect(source.kind).toBe("recommended");
+	});
+
 	it("calls a block written by hand when the check recommends none", () => {
 		const bare = healthCheckListSchema.parse({
 			pipeline: "p",

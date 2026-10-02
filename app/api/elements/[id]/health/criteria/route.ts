@@ -76,14 +76,17 @@ export async function GET(
  * server owns those, and `source`, `revision` and the accepting person.
  * `accept: false` stores the settings as a suggestion; `accept: true` accepts
  * them and binds the claim to the check. Saving over accepted settings keeps
- * them accepted, and `accept: false` over accepted settings is refused.
- * @body { integration_id, settings, accept }
+ * them accepted, and `accept: false` over accepted settings is refused. The
+ * optional `expected_revision` is the stored revision the person's form was
+ * read at (null when no settings were stored); a different stored revision
+ * refuses the save.
+ * @body { integration_id, settings, accept, expected_revision }
  * @response 200 - The same body as the GET, after the save
  * @response 400 - Invalid body; the field is named and nothing is stored
  * @response 401 - No session
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/user
  * @response 404 - Claim not found (a missing claim and no EDIT access give the same message)
- * @response 409 - The settings are accepted and cannot be saved as a suggestion
+ * @response 409 - The settings are accepted and cannot be saved as a suggestion, or `expected_revision` is not the stored revision
  * @auth SessionAuth
  * @tag Elements
  */

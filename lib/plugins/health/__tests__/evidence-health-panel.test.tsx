@@ -30,22 +30,25 @@ describe("EvidenceHealthPanel", () => {
 
 		expect(
 			await screen.findByText(
-				"1 of 4 claims with a current result have no time limit on that result."
+				"claims with a current result have no time limit on that result."
 			)
 		).toBeInTheDocument();
+		expect(screen.getByText("1 of 4")).toBeInTheDocument();
 		expect(
 			screen.getByText(
 				"A result with no time limit counts until someone withdraws it."
 			)
 		).toBeInTheDocument();
 		expect(
-			screen.getByText("1 of 2 checks in use have at least one such claim.")
+			screen.getByText("checks in use have at least one such claim.")
 		).toBeInTheDocument();
+		expect(screen.getByText("1 of 2")).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"3 of 5 accepted settings were accepted exactly as the pipeline recommended."
+				"accepted settings were accepted exactly as the pipeline recommended."
 			)
 		).toBeInTheDocument();
+		expect(screen.getByText("3 of 5")).toBeInTheDocument();
 		expect(
 			screen.getByText(
 				"Settings accepted without a change deserve a second look: the numbers came from the pipeline."
@@ -90,17 +93,11 @@ describe("EvidenceHealthPanel", () => {
 		server.use(http.get(URL, () => HttpResponse.json(current)));
 		const user = userEvent.setup();
 		renderPanel();
-		await screen.findByText(
-			"1 of 2 checks in use have at least one such claim."
-		);
+		await screen.findByText("1 of 2");
 
 		current = figures({ checks_without_time_limit: { count: 2, of: 2 } });
 		await user.click(screen.getByRole("button", { name: "Refresh" }));
 
-		expect(
-			await screen.findByText(
-				"2 of 2 checks in use have at least one such claim."
-			)
-		).toBeInTheDocument();
+		expect(await screen.findByText("2 of 2")).toBeInTheDocument();
 	});
 });

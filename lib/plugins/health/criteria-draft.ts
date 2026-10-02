@@ -210,9 +210,12 @@ export function paramDraftOf(draft: CriteriaDraft, key: string): ParamDraft {
 // Numbers
 // ---------------------------------------------------------------------------
 
+const PLAIN_DECIMAL = /^-?(\d+(\.\d*)?|\.\d+)$/;
+
+/** A plain decimal number with an optional leading minus sign; hexadecimal, exponent and other forms are not numbers here. */
 function parseNumber(text: string): number | null {
 	const trimmed = text.trim();
-	if (trimmed === "") {
+	if (!PLAIN_DECIMAL.test(trimmed)) {
 		return null;
 	}
 	const value = Number(trimmed);
@@ -225,16 +228,46 @@ function clean(value: number): number {
 	return Number(value.toPrecision(PRECISION));
 }
 
-/** A fraction as the percentage text shown in the form. */
+const LEADING_ZEROS = /^0+(?=\d)/;
+const TRAILING_ZEROS = /0+$/;
+const NUMBER_PARTS = /^(-?)(\d*)\.?(\d*)(?:e([+-]?\d+))?$/i;
+
+/** Moves the decimal point of a number's text by `places` digits, without arithmetic, so no digit is lost. */
+function shiftPoint(text: string, places: number): string {
+	const parts = NUMBER_PARTS.exec(text.trim());
+	if (!parts) {
+		return text;
+	}
+	const [, sign = "", whole = "", fraction = "", exponent = "0"] = parts;
+	const digits = `${whole}${fraction}`;
+	const point = whole.length + Number(exponent) + places;
+	let shifted: string;
+	if (point <= 0) {
+		shifted = `0.${"0".repeat(-point)}${digits}`;
+	} else if (point >= digits.length) {
+		shifted = `${digits}${"0".repeat(point - digits.length)}`;
+	} else {
+		shifted = `${digits.slice(0, point)}.${digits.slice(point)}`;
+	}
+	const [integer = "", decimals = ""] = shifted.split(".");
+	const trimmedInteger = integer.replace(LEADING_ZEROS, "");
+	const trimmedDecimals = decimals.replace(TRAILING_ZEROS, "");
+	const magnitude = trimmedDecimals
+		? `${trimmedInteger}.${trimmedDecimals}`
+		: trimmedInteger;
+	return magnitude === "0" ? magnitude : `${sign}${magnitude}`;
+}
+
+/** A fraction as the percentage text shown in the form; every digit of the stored number is kept. */
 function fractionToPercent(value: unknown): string {
 	return typeof value === "number" && Number.isFinite(value)
-		? String(clean(value * 100))
+		? shiftPoint(String(value), 2)
 		: "";
 }
 
+/** A typed percentage as the fraction it stands for, by moving the decimal point only. */
 function percentToFraction(text: string): number | null {
-	const value = parseNumber(text);
-	return value === null ? null : clean(value / 100);
+	return parseNumber(text) === null ? null : Number(shiftPoint(text, -2));
 }
 
 function numberText(value: unknown): string {
@@ -366,6 +399,9 @@ function pair(
 ): [number, number] | undefined {
 	const a = limit(low, options, path, problems);
 	const b = limit(high, options, path, problems);
+	if ((low.trim() === "") !== (high.trim() === "") && !problems[path]) {
+		problems[path] = "needs both ends";
+	}
 	return a === undefined || b === undefined ? undefined : [a, b];
 }
 
@@ -762,12 +798,31 @@ function reductionBlock(
 	};
 }
 
+/** Whether the draft's step 3 holds any value, as opposed to being blank. */
+export function aggregationIsHeld(aggregation: AggregationDraft): boolean {
+	return (
+		aggregation.threshold.trim() !== "" ||
+		aggregation.answersNeeded.trim() !== "" ||
+		Object.keys(aggregation.extra).length > 0
+	);
+}
+
+/** Step 3 with nothing in it. */
+export const BLANK_AGGREGATION: AggregationDraft = {
+	answersNeeded: "",
+	extra: {},
+	threshold: "",
+};
+
 function aggregationBlock(
 	draft: CriteriaDraft,
 	problems: Problems
 ): AggregationBlock {
 	const { aggregation } = draft;
 	const params: ParamsBag = { ...aggregation.extra };
+	if (aggregation.threshold.trim() === "") {
+		problems["aggregation.params.threshold"] = "is required";
+	}
 	for (const [text, key] of [
 		[aggregation.threshold, "threshold"],
 		[aggregation.answersNeeded, "avail_floor"],
@@ -842,10 +897,12 @@ export function analyseDraft(
 			problems
 		),
 	};
-	if (!isWholeSystem(check)) {
-		if (draft.reductionOn && reductionAvailable(check)) {
-			settings.reduction = reductionBlock(draft, check, problems);
-		}
+	// A combining step the check cannot use is still sent when the draft holds
+	// it, so the shared checks report it and the person can remove it.
+	if (draft.reductionOn) {
+		settings.reduction = reductionBlock(draft, check, problems);
+	}
+	if (!isWholeSystem(check) || aggregationIsHeld(draft.aggregation)) {
 		settings.aggregation = aggregationBlock(draft, problems);
 	}
 	const window = durationFromDraft(draft.window);

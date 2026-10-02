@@ -11,6 +11,7 @@ import { render, screen, within } from "@/src/__tests__/utils/test-utils";
 import { EvidenceHealthPanel } from "../evidence-health-panel";
 
 const HYGIENE_URL = "/api/cases/case-9/health/hygiene";
+const OF_TWELVE = /3 of 12/g;
 
 interface Figures {
 	checks_without_time_limit: { count: number; of: number };
@@ -58,9 +59,9 @@ describe("the Evidence health panel", () => {
 		serveFigures(FIGURES);
 		renderPanel();
 		const claims = await screen.findByTestId("hygiene-claims");
-		expect(claims).toHaveTextContent("3 of 12");
+		expect(claims.textContent?.match(OF_TWELVE)).toHaveLength(1);
 		expect(claims).toHaveTextContent(
-			"3 of 12 claims with a current result have no time limit on that result."
+			"claims with a current result have no time limit on that result."
 		);
 		expect(claims).toHaveTextContent(
 			"A result with no time limit counts until someone withdraws it."
@@ -68,12 +69,12 @@ describe("the Evidence health panel", () => {
 		const checks = screen.getByTestId("hygiene-checks");
 		expect(checks).toHaveTextContent("2 of 5");
 		expect(checks).toHaveTextContent(
-			"2 of 5 checks in use have at least one such claim."
+			"checks in use have at least one such claim."
 		);
 		const settings = screen.getByTestId("hygiene-settings");
 		expect(settings).toHaveTextContent("7 of 9");
 		expect(settings).toHaveTextContent(
-			"7 of 9 accepted settings were accepted exactly as the pipeline recommended."
+			"accepted settings were accepted exactly as the pipeline recommended."
 		);
 		expect(settings).toHaveTextContent(
 			"Settings accepted without a change deserve a second look: the numbers came from the pipeline."
@@ -88,13 +89,13 @@ describe("the Evidence health panel", () => {
 		});
 		renderPanel();
 		expect(await screen.findByTestId("hygiene-claims")).toHaveTextContent(
-			"1 of 2 claims"
+			"1 of 2claims"
 		);
 		expect(screen.getByTestId("hygiene-checks")).toHaveTextContent(
-			"3 of 4 checks"
+			"3 of 4checks"
 		);
 		expect(screen.getByTestId("hygiene-settings")).toHaveTextContent(
-			"5 of 6 accepted settings"
+			"5 of 6accepted settings"
 		);
 	});
 
@@ -106,7 +107,7 @@ describe("the Evidence health panel", () => {
 		});
 		renderPanel();
 		expect(await screen.findByTestId("hygiene-claims")).toHaveTextContent(
-			"0 of 4 claims with a current result have no time limit on that result."
+			"0 of 4claims with a current result have no time limit on that result."
 		);
 	});
 

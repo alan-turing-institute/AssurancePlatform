@@ -13,7 +13,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import {
 	type CriteriaDraft,
@@ -129,6 +128,24 @@ export function CheckSelect({
 	);
 }
 
+type FlagChoice = "no" | "unset" | "yes";
+
+const FLAG_OPTIONS: { label: string; value: FlagChoice }[] = [
+	{ label: "Not set", value: "unset" },
+	{ label: "Yes", value: "yes" },
+	{ label: "No", value: "no" },
+];
+
+const FLAG_OF_CHOICE: Record<FlagChoice, boolean | undefined> = {
+	unset: undefined,
+	yes: true,
+	no: false,
+};
+
+function choiceOfFlag(flag: boolean): FlagChoice {
+	return flag ? "yes" : "no";
+}
+
 function ParamControl({
 	disabled,
 	error,
@@ -142,20 +159,16 @@ function ParamControl({
 	spec: NonNullable<HealthCheck["params"]>[number];
 	value: ParamDraft;
 }) {
-	const switchId = useId();
 	if (spec.type === "boolean") {
 		return (
-			<div className="flex items-center gap-3">
-				<Switch
-					checked={value.flag === true}
-					disabled={disabled}
-					id={switchId}
-					onCheckedChange={(flag) => onChange({ flag })}
-				/>
-				<Label className="wrap-anywhere" htmlFor={switchId}>
-					{spec.label}
-				</Label>
-			</div>
+			<SelectField
+				disabled={disabled}
+				error={error}
+				label={spec.label}
+				onChange={(choice) => onChange({ flag: FLAG_OF_CHOICE[choice] })}
+				options={FLAG_OPTIONS}
+				value={value.flag === undefined ? "unset" : choiceOfFlag(value.flag)}
+			/>
 		);
 	}
 	if (spec.type === "enum") {

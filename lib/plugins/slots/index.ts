@@ -19,14 +19,11 @@ export {
 export type {
 	CasePanelRegistration,
 	CaseSlotContext,
-	// Staged re-exports (ADR 0002 v2 §2.3): no consumer imports these four
-	// yet in 1.0 — they exist for the health plugin (1.0's only official
-	// plugin) to register `element-badge`/`settings-section` slots against,
-	// and for the `element-panel`/`case-panel`/`canvas-decorator` id space
-	// `SlotId` already spans. `ElementPanelRegistration` and
-	// `ElementSlotContext` below have real consumers today, so they're
-	// unmarked; these four are dead by fallow's count only because the thing
-	// that will use them hasn't shipped.
+	// No consumer imports the three marked types from here: they describe the
+	// `element-badge` and `settings-section` registrations and the id space
+	// that every slot shares, and stay exported so the barrel covers each
+	// slot. The other types have importers, so they carry no marker; the
+	// three marked ones are unused by fallow's count alone.
 	// fallow-ignore-next-line unused-type
 	ElementBadgeRegistration,
 	ElementPanelRegistration,

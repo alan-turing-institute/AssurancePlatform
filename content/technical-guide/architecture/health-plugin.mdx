@@ -147,7 +147,7 @@ A person with edit access sets them up; a machine token cannot.
 | Route | Purpose |
 |---|---|
 | `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, and the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings). Needs view access. |
-| `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept }`. Needs edit access. |
+| `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept, expected_revision? }`. Needs edit access. |
 | `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason }`. Needs edit access. |
 | `GET /api/cases/[id]/health/checks` | The check lists of the active integrations whose system user can edit the case. Needs view access. |
 | `GET /api/cases/[id]/health/hygiene` | Three counts for the case (see below). Needs view access. |
@@ -157,6 +157,7 @@ It carries no version labels, `source` or revision: the server sets those, and a
 `accept: false` stores the settings as a suggestion.
 `accept: true` accepts them, recording who and when, and whether that person owns the integration the check came from.
 A later save on accepted settings keeps them accepted; saving accepted settings as a suggestion is refused with 409.
+The body may also carry `expected_revision`, the stored revision the person's form was read at (null when no settings were stored); when it differs from the stored revision the save is refused with 409 and nothing changes.
 Retiring accepted settings needs a reason; a suggestion can be discarded without one.
 Retired and discarded settings stay in the table as inactive, so the revision number and the version counters carry on if settings are set up again.
 

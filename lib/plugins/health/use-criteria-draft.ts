@@ -6,11 +6,13 @@ import {
 	analyseDraft,
 	type CriteriaDraft,
 	draftFromCheck,
+	draftFromStored,
 	draftsEqual,
 	friendlyMessage,
 } from "./criteria-draft";
 import { plainWords } from "./criteria-plain-words";
 import type { CheckChoice } from "./criteria-sections";
+import type { HealthCriteriaResponse } from "./health-types";
 
 interface UseCriteriaDraftOptions {
 	choices: CheckChoice[];
@@ -80,6 +82,7 @@ export function useCriteriaDraft({
 
 	return {
 		analysis,
+		baseRevision,
 		changedElsewhere: revision !== baseRevision,
 		check,
 		dirty,
@@ -101,9 +104,19 @@ export function useCriteriaDraft({
 			setChosenKey(initialChoiceKey);
 			setServerErrors({});
 		},
-		saved: (savedRevision: number | null) => {
-			setBaseline(draft);
-			setBaseRevision(savedRevision);
+		saved: (view: HealthCriteriaResponse) => {
+			const stored = view.criteria;
+			const shown =
+				stored && stored.state !== "inactive"
+					? draftFromStored(
+							stored,
+							view.check_description ?? check,
+							view.integration?.id ?? draft.integrationId
+						)
+					: draft;
+			setDraftState(shown);
+			setBaseline(shown);
+			setBaseRevision(stored?.revision ?? null);
 			setStillUnsaved(false);
 		},
 		sentences,

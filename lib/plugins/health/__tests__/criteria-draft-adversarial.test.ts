@@ -686,26 +686,32 @@ describe("shape and combining rules", () => {
 		expect(analysis.settings.reduction?.rule?.kind).toBe("threshold");
 	});
 
-	it("does not send a combining step for a whole-system check or a text check, whatever the draft holds", () => {
+	it("reports a combining step that a whole-system check or a text check cannot use when the draft holds it, and sends none otherwise", () => {
 		for (const [settings, check] of [
 			[SYSTEM_SETTINGS, SYSTEM_CHECK],
 			[TEXT_MEMBERSHIP, TEXT_CHECK],
 		] as const) {
 			const base = draftFromStored(served(settings), check, INTEGRATION_ID);
+			expect(analyseDraft(base, check).settings.reduction).toBeUndefined();
 			const analysis = analyseDraft({ ...base, reductionOn: true }, check);
-			expect(analysis.settings.reduction).toBeUndefined();
+			expect(analysis.settings.reduction).toBeDefined();
+			expect(analysis.errors.reduction).toContain("is not used by");
+			expect(analysis.complete).toBeNull();
 		}
 		const system = draftFromStored(
 			served(SYSTEM_SETTINGS),
 			SYSTEM_CHECK,
 			INTEGRATION_ID
 		);
+		expect(
+			analyseDraft(system, SYSTEM_CHECK).settings.aggregation
+		).toBeUndefined();
 		const analysis = analyseDraft(
 			{ ...system, aggregation: { ...system.aggregation, threshold: "90" } },
 			SYSTEM_CHECK
 		);
-		expect(analysis.settings.aggregation).toBeUndefined();
-		expect(analysis.errors).toEqual({});
+		expect(analysis.settings.aggregation).toBeDefined();
+		expect(analysis.errors.aggregation).toContain("is not used by");
 	});
 
 	it("reports a percentile outside 0 to 100", () => {

@@ -4,6 +4,7 @@ import {
 	recommendedCheckParams,
 	type ServedSettings,
 } from "@/lib/schemas/health-criteria";
+import { parseDurationSeconds } from "@/lib/schemas/health-rules";
 import {
 	analyseDraft,
 	type CriteriaDraft,
@@ -12,7 +13,11 @@ import {
 	isWholeSystem,
 	reductionAvailable,
 } from "./criteria-draft";
-import { type PlainSentence, plainWords } from "./criteria-plain-words";
+import {
+	type PlainSentence,
+	plainWords,
+	subjectsOf,
+} from "./criteria-plain-words";
 
 /**
  * Moving accepted settings to a different version of their check. The person
@@ -33,13 +38,22 @@ export type MoveBlock = (typeof MOVE_BLOCKS)[number];
 export type MoveChoice = "keep" | "take";
 export type MoveChoices = Partial<Record<MoveBlock, MoveChoice>>;
 
-const MOVE_BLOCK_LABELS: Record<MoveBlock, string> = {
-	check: "The check's own settings",
-	rule: "Step 1: judging each reading",
-	reduction: "Step 2: combining one subject's readings",
-	aggregation: "Step 3: combining subjects",
-	timing: "Timing",
-};
+/** A row's heading, in the check's own words for what one reading is about. */
+function blockLabel(block: MoveBlock, check: HealthCheck): string {
+	const subjects = subjectsOf(check);
+	switch (block) {
+		case "check":
+			return "The check's own settings";
+		case "rule":
+			return "Step 1: judging each reading";
+		case "reduction":
+			return `Step 2: combining one ${subjects.one}'s readings`;
+		case "aggregation":
+			return `Step 3: combining ${subjects.many}`;
+		default:
+			return "Timing";
+	}
+}
 
 function recommendsBlock(entry: HealthCheck, block: MoveBlock): boolean {
 	const { recommended } = entry;
@@ -99,18 +113,36 @@ function takeBlock(
 	}
 }
 
+type ParamSpec = NonNullable<HealthCheck["params"]>[number];
+
+/** Whether a stored value is of the kind the check's description now gives the setting. */
+function valueFitsSpec(spec: ParamSpec, value: unknown): boolean {
+	switch (spec.type) {
+		case "boolean":
+			return typeof value === "boolean";
+		case "number":
+			return typeof value === "number";
+		case "duration":
+			return typeof value === "string" && parseDurationSeconds(value) !== null;
+		default:
+			return typeof value === "string";
+	}
+}
+
+/** The kept settings the new version does not describe, or describes as another kind of value; they are carried as they are. */
 function unlistedParamsOf(
 	accepted: ServedSettings,
 	entry: HealthCheck
 ): Record<string, string | number | boolean> {
-	const listed = new Set((entry.params ?? []).map((spec) => spec.key));
+	const specs = new Map((entry.params ?? []).map((spec) => [spec.key, spec]));
 	const unlisted: Record<string, string | number | boolean> = {};
 	for (const [key, value] of Object.entries(accepted.check.params ?? {})) {
+		const spec = specs.get(key);
 		if (
-			!listed.has(key) &&
 			(typeof value === "string" ||
 				typeof value === "number" ||
-				typeof value === "boolean")
+				typeof value === "boolean") &&
+			!(spec && valueFitsSpec(spec, value))
 		) {
 			unlisted[key] = value;
 		}
@@ -124,11 +156,23 @@ function yoursAgainst(
 	entry: HealthCheck,
 	integrationId: string
 ): CriteriaDraft {
-	const draft = draftFromStored(accepted, entry, integrationId);
 	const unlisted = unlistedParamsOf(accepted, entry);
-	return Object.keys(unlisted).length > 0
-		? { ...draft, unlistedParams: unlisted }
-		: draft;
+	if (Object.keys(unlisted).length === 0) {
+		return draftFromStored(accepted, entry, integrationId);
+	}
+	const params = Object.fromEntries(
+		Object.entries(accepted.check.params ?? {}).filter(
+			([key]) => !(key in unlisted)
+		)
+	);
+	return {
+		...draftFromStored(
+			{ ...accepted, check: { ...accepted.check, params } },
+			entry,
+			integrationId
+		),
+		unlistedParams: unlisted,
+	};
 }
 
 export interface MergeInput {
@@ -311,7 +355,7 @@ export function compareBlocks({
 		rows.push({
 			block,
 			kind,
-			label: MOVE_BLOCK_LABELS[block],
+			label: blockLabel(block, entry),
 			yours: describeBlock(yoursAsAccepted, acceptedCheck, block),
 			recommended: recommends
 				? describeBlock(recommended, entry, block)

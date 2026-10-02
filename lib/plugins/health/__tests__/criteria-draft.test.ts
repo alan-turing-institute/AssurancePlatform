@@ -20,6 +20,7 @@ import {
 	friendlyMessage,
 	ownRuleRequired,
 	recommendationIsUsable,
+	rescaleRule,
 	shapeFitsCheck,
 } from "../criteria-draft";
 
@@ -346,5 +347,208 @@ describe("messages", () => {
 				"must be a number from 0 to 1"
 			)
 		).toBe("must be a number from 0 to 100");
+	});
+});
+
+describe("stored rules through the draft", () => {
+	const numeric = demo(NUMERIC_CHECK_NAME);
+	const item = demo(ITEM_CHECK_NAME);
+
+	function storedWith(check: HealthCheck, patch: Record<string, unknown>) {
+		const base = analyseDraft(draftFromCheck(check, "i"), check).complete;
+		if (!base) {
+			throw new Error("the demo recommendation is not complete");
+		}
+		return servedSettings({ ...base, ...patch } as typeof base, {
+			rule: 1,
+			reduction: 1,
+			aggregation: 1,
+		});
+	}
+
+	it("shows a stored between rule as its four ends and sends the same numbers back", () => {
+		const rule = {
+			kind: "band",
+			params: { pass_values: [1, 2], marginal_values: [0, 3] },
+		};
+		const draft = draftFromStored(storedWith(numeric, { rule }), numeric, "i");
+		expect(draft.rule).toMatchObject({
+			shape: "between",
+			passLow: "1",
+			passHigh: "2",
+			marginalLow: "0",
+			marginalHigh: "3",
+		});
+		expect(analyseDraft(draft, numeric).complete?.rule).toEqual(rule);
+	});
+
+	it("shows a stored one-of rule as one value to a line and sends the same values back", () => {
+		const rule = {
+			kind: "membership",
+			params: { pass_values: [1, 2, 3], marginal_values: [4] },
+		};
+		const draft = draftFromStored(storedWith(numeric, { rule }), numeric, "i");
+		expect(draft.rule).toMatchObject({
+			shape: "one-of",
+			passList: "1\n2\n3",
+			marginalList: "4",
+		});
+		expect(analyseDraft(draft, numeric).complete?.rule).toEqual(rule);
+	});
+
+	it("shows the limits of a between rule on an average of yes-or-no readings as percentages", () => {
+		const reduction = {
+			kind: "mean",
+			params: { avail_floor: 0.8 },
+			rule: {
+				kind: "band",
+				params: { pass_values: [0.5, 0.9], marginal_values: [0.25, 0.95] },
+			},
+		};
+		const draft = draftFromStored(storedWith(item, { reduction }), item, "i");
+		expect(draft.reduction.rule).toMatchObject({
+			shape: "between",
+			passLow: "50",
+			passHigh: "90",
+			marginalLow: "25",
+			marginalHigh: "95",
+		});
+		expect(analyseDraft(draft, item).complete?.reduction?.rule).toEqual(
+			reduction.rule
+		);
+	});
+
+	it("moves every limit of a rule between shares and plain numbers, and leaves text alone", () => {
+		const rule = {
+			...draftFromCheck(numeric, "i").rule,
+			shape: "between" as const,
+			pass: "0.8",
+			marginal: "0.5",
+			passLow: "0.5",
+			passHigh: "0.9",
+			marginalLow: "abc",
+			marginalHigh: "",
+			passList: "1\n2",
+		};
+		const up = rescaleRule(rule, 100);
+		expect(up).toMatchObject({
+			pass: "80",
+			marginal: "50",
+			passLow: "50",
+			passHigh: "90",
+			marginalLow: "abc",
+			marginalHigh: "",
+			passList: "1\n2",
+		});
+		expect(rescaleRule(up, 0.01)).toMatchObject({
+			pass: "0.8",
+			passLow: "0.5",
+			passHigh: "0.9",
+		});
+	});
+});
+
+describe("numbers as typed", () => {
+	const item = demo(ITEM_CHECK_NAME);
+	const numeric = demo(NUMERIC_CHECK_NAME);
+
+	it("sends a stored share with many decimal places back exactly when nothing was touched", () => {
+		const base = analyseDraft(draftFromCheck(item, "i"), item).complete;
+		if (!base?.aggregation) {
+			throw new Error("the demo recommendation is not complete");
+		}
+		const stored = servedSettings(
+			{
+				...base,
+				aggregation: {
+					...base.aggregation,
+					params: {
+						...base.aggregation.params,
+						threshold: 0.333_333_333_333_333,
+					},
+				},
+			},
+			{ rule: 1, reduction: 1, aggregation: 1 }
+		);
+		const draft = draftFromStored(stored, item, "i");
+		expect(draft.aggregation.threshold).toBe("33.3333333333333");
+		expect(
+			analyseDraft(draft, item).complete?.aggregation?.params.threshold
+		).toBe(0.333_333_333_333_333);
+	});
+
+	it.each([
+		["33.3", 0.333],
+		["7", 0.07],
+		["0.1", 0.001],
+		["100", 1],
+		["57", 0.57],
+	])("turns the percentage %s into the fraction %s by moving the point", (typed, fraction) => {
+		const draft = edited(item, (d) => {
+			d.aggregation.threshold = typed;
+		});
+		expect(
+			analyseDraft(draft, item).complete?.aggregation?.params.threshold
+		).toBe(fraction);
+	});
+
+	it.each([
+		"0x10",
+		"1e3",
+		"+5",
+		"1,5",
+		"5%",
+		"Infinity",
+		"1 000",
+		"-",
+		".",
+	])("does not read %j as a number", (typed) => {
+		const draft = edited(numeric, (d) => {
+			d.rule = { ...d.rule, pass: typed };
+		});
+		expect(analyseDraft(draft, numeric).errors["rule.params.pass_values"]).toBe(
+			"must be a number"
+		);
+	});
+
+	it.each([
+		"-5",
+		"0",
+		"5",
+		"5.25",
+		"-0.5",
+		".5",
+	])("reads %j as a number", (typed) => {
+		const draft = edited(numeric, (d) => {
+			d.rule = { ...d.rule, pass: typed };
+		});
+		expect(
+			analyseDraft(draft, numeric).errors["rule.params.pass_values"]
+		).toBeUndefined();
+	});
+
+	it("says a required percentage is required when it is empty, not that it is out of range", () => {
+		const draft = edited(item, (d) => {
+			d.aggregation.threshold = "";
+		});
+		const analysis = analyseDraft(draft, item);
+		expect(analysis.errors["aggregation.params.threshold"]).toBe("is required");
+		expect(analysis.complete).toBeNull();
+	});
+
+	it("reports a between rule with one end of its limits typed", () => {
+		const draft = edited(numeric, (d) => {
+			d.rule = {
+				...d.rule,
+				shape: "between",
+				passLow: "1",
+				passHigh: "2",
+				marginalLow: "",
+				marginalHigh: "3",
+			};
+		});
+		expect(
+			analyseDraft(draft, numeric).errors["rule.params.marginal_values"]
+		).toBe("needs both ends");
 	});
 });

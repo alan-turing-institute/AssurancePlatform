@@ -1,10 +1,13 @@
 "use client";
 
 import { useId } from "react";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import {
+	aggregationIsHeld,
+	BLANK_AGGREGATION,
 	isWholeSystem,
 	ownRuleRequired,
 	type ReductionDraft,
@@ -39,11 +42,48 @@ const KIND_OPTIONS = (Object.keys(KIND_LABELS) as ReductionKind[]).map(
 
 const OWN_RULE_SHAPES = ["at-least", "at-most", "between"] as const;
 
-function NotUsed({ reason, title }: { reason: string; title: string }) {
+interface HeldStep {
+	disabled: boolean;
+	/** The shared checks' problem with keeping the step. */
+	error: string | undefined;
+	onRemove: () => void;
+	/** What the remove button names. */
+	title: string;
+}
+
+/** A step the check does not use, with a button for each step the settings still hold that the check cannot use. */
+function NotUsed({
+	held = [],
+	reason,
+	title,
+}: {
+	held?: HeldStep[];
+	reason: string;
+	title: string;
+}) {
 	return (
 		<section className="min-w-0 space-y-1 rounded-md border border-dashed p-3 text-muted-foreground">
 			<h3 className="wrap-anywhere font-medium text-sm">{title}</h3>
 			<p className="wrap-anywhere text-sm">{reason}</p>
+			{held.map((step) => (
+				<div
+					className="flex min-w-0 flex-wrap items-center justify-between gap-2"
+					key={step.title}
+				>
+					<p className="wrap-anywhere text-destructive text-sm">
+						{step.title}: {step.error ?? "is not used by this check"}
+					</p>
+					<Button
+						disabled={step.disabled}
+						onClick={step.onRemove}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						Remove {step.title}
+					</Button>
+				</div>
+			))}
 		</section>
 	);
 }
@@ -113,6 +153,18 @@ function ReductionSection({
 	if (!reductionAvailable(check)) {
 		return (
 			<NotUsed
+				held={
+					draft.reductionOn
+						? [
+								{
+									disabled,
+									error: analysis.errors.reduction,
+									onRemove: () => setDraft({ reductionOn: false }),
+									title: "step 2",
+								},
+							]
+						: []
+				}
 				reason="This check returns text, which cannot be combined."
 				title={title}
 			/>
@@ -279,17 +331,45 @@ export function CombiningSections(
 	props: SectionProps & { versions: VersionLabels | undefined }
 ) {
 	if (isWholeSystem(props.check)) {
-		return (
-			<NotUsed
-				reason="A whole-system check gives one reading at a time, so there is nothing to combine."
-				title="Combining readings: not used"
-			/>
-		);
+		return <WholeSystemNotUsed {...props} />;
 	}
 	return (
 		<>
 			<ReductionSection {...props} />
 			<AggregationSection {...props} />
 		</>
+	);
+}
+
+/** The note that a whole-system check combines nothing, with a way to remove any combining step the settings still hold. */
+function WholeSystemNotUsed({
+	analysis,
+	disabled,
+	draft,
+	setDraft,
+}: SectionProps) {
+	const held: HeldStep[] = [];
+	if (draft.reductionOn) {
+		held.push({
+			disabled,
+			error: analysis.errors.reduction,
+			onRemove: () => setDraft({ reductionOn: false }),
+			title: "step 2",
+		});
+	}
+	if (aggregationIsHeld(draft.aggregation)) {
+		held.push({
+			disabled,
+			error: analysis.errors.aggregation,
+			onRemove: () => setDraft({ aggregation: BLANK_AGGREGATION }),
+			title: "step 3",
+		});
+	}
+	return (
+		<NotUsed
+			held={held}
+			reason="A whole-system check gives one reading at a time, so there is nothing to combine."
+			title="Combining readings: not used"
+		/>
 	);
 }

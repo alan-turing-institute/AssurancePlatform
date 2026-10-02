@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,10 +21,16 @@ function FakePanel({ canEdit, caseId }: CaseSlotContext) {
 	);
 }
 
-function servePlugins(enabled: boolean) {
+/** Answers the enablement read; the returned promise settles once the answer has been sent. */
+function servePlugins(enabled: boolean): Promise<void> {
+	let answered: () => void = () => undefined;
+	const sent = new Promise<void>((resolve) => {
+		answered = resolve;
+	});
 	server.use(
-		http.get("/api/user/plugins", () =>
-			HttpResponse.json({
+		http.get("/api/user/plugins", () => {
+			queueMicrotask(answered);
+			return HttpResponse.json({
 				plugins: [
 					{
 						pluginId: "tea.health",
@@ -39,9 +45,10 @@ function servePlugins(enabled: boolean) {
 						settings: null,
 					},
 				] satisfies PluginSettingsListItem[],
-			})
-		)
+			});
+		})
 	);
+	return sent;
 }
 
 function setCase(permissions: string) {
@@ -91,15 +98,18 @@ describe("ActionButtons toolbar — case panels", () => {
 	});
 
 	it("shows no button when the plugin is off, and leaves the other buttons alone", async () => {
-		servePlugins(false);
+		const answered = servePlugins(false);
 		renderToolbar();
 
 		await screen.findByTestId("toolbar-notes");
-		await vi.waitFor(() =>
-			expect(
-				screen.queryByTestId("toolbar-case-panel-tea.health")
-			).not.toBeInTheDocument()
-		);
+		// The button must be absent after the enablement answer has been used, not only before it arrived.
+		await answered;
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		});
+		expect(
+			screen.queryByTestId("toolbar-case-panel-tea.health")
+		).not.toBeInTheDocument();
 		for (const id of ["toolbar-focus", "toolbar-json", "toolbar-notes"]) {
 			expect(screen.getByTestId(id)).toBeInTheDocument();
 		}

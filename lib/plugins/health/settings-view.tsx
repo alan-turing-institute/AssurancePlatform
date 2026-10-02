@@ -13,11 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ServedSettings } from "@/lib/schemas/health-criteria";
 import { VersionCompare } from "./criteria-compare";
-import {
-	draftFromCheck,
-	draftFromStored,
-	recommendationIsUsable,
-} from "./criteria-draft";
+import { draftFromCheck, draftFromStored } from "./criteria-draft";
 import { CriteriaForm, type CriteriaFormProps } from "./criteria-form";
 import { StoppedNotice } from "./criteria-notices";
 import { type CheckChoice, CheckSelect } from "./criteria-sections";
@@ -108,7 +104,14 @@ function CheckPicker({
 
 type FormHost = Pick<
 	CriteriaFormProps,
-	"canEdit" | "choices" | "claimId" | "onCancelNew" | "onChanged" | "onReplace"
+	| "canEdit"
+	| "choices"
+	| "claimId"
+	| "onCancelNew"
+	| "onChanged"
+	| "onRefresh"
+	| "onReplace"
+	| "onUnsavedChange"
 >;
 
 /** The form for a check that has just been picked and not yet saved. */
@@ -130,8 +133,7 @@ function PickedForm({
 				initialChoiceKey={picked.key}
 				initialDraft={draftFromCheck(picked.check, picked.integrationId)}
 				key={`new:${picked.key}`}
-				revision={null}
-				startShort={recommendationIsUsable(picked.check, picked.integrationId)}
+				revision={view.criteria?.revision ?? null}
 				state="new"
 				view={null}
 			/>
@@ -229,6 +231,8 @@ interface StoredFormProps {
 	entry: CheckChoice | null;
 	host: FormHost;
 	stored: CheckChoice;
+	/** True when the settings were stopped or discarded by someone else while the form holds unsaved edits. */
+	superseded: boolean;
 	view: HealthCriteriaResponse;
 }
 
@@ -238,7 +242,13 @@ interface StoredFormProps {
  * can compare the two versions block by block and continue to the form with
  * the merged settings, which stay unsaved until the person saves.
  */
-function StoredForm({ entry, host, stored, view }: StoredFormProps) {
+function StoredForm({
+	entry,
+	host,
+	stored,
+	superseded,
+	view,
+}: StoredFormProps) {
 	const move = useVersionMove();
 	const criteria = view.criteria;
 	if (!criteria) {
@@ -285,8 +295,8 @@ function StoredForm({ entry, host, stored, view }: StoredFormProps) {
 							: undefined
 					}
 					revision={criteria.revision}
-					startShort={criteria.state === "suggested"}
 					state={accepted ? "accepted" : "suggested"}
+					superseded={superseded}
 					view={view}
 				/>
 			</div>
@@ -408,11 +418,22 @@ export function SettingsView(props: SettingsViewProps) {
 		setOpened(true);
 	}
 	const checks = useCaseChecks(caseId, opened && canEdit);
+	const [unsaved, setUnsaved] = useState(false);
+	const [lastView, setLastView] = useState<HealthCriteriaResponse | null>(null);
+	if (
+		criteria.status === "ready" &&
+		criteria.data &&
+		criteria.data !== lastView
+	) {
+		setLastView(criteria.data);
+	}
 
 	if (criteria.status === "loading") {
 		return <Skeleton className="h-40 w-full rounded-md" />;
 	}
-	if (criteria.status === "error" || !criteria.data) {
+	const failed = criteria.status === "error" || !criteria.data;
+	const view = criteria.data ?? (unsaved ? lastView : null);
+	if (!view) {
 		return (
 			<EmptyState
 				icon={FileText}
@@ -421,11 +442,30 @@ export function SettingsView(props: SettingsViewProps) {
 			/>
 		);
 	}
-	return <SettingsContent {...props} checks={checks} view={criteria.data} />;
+	return (
+		<SettingsContent
+			{...props}
+			checks={checks}
+			onUnsavedChange={setUnsaved}
+			refreshFailed={failed}
+			unsaved={unsaved}
+			view={view}
+		/>
+	);
 }
 
 interface SettingsContentProps extends SettingsViewProps {
 	checks: CaseChecksState;
+	onUnsavedChange: (unsaved: boolean) => void;
+	/** True when the last read of the settings failed and the view shows what was read before. */
+	refreshFailed: boolean;
+	/** True while a form holds changes that have not been saved. */
+	unsaved: boolean;
+	view: HealthCriteriaResponse;
+}
+
+interface StoredSettings {
+	stored: CheckChoice;
 	view: HealthCriteriaResponse;
 }
 
@@ -436,17 +476,27 @@ function SettingsContent({
 	claimId,
 	claimText,
 	criteria,
+	onUnsavedChange,
+	refreshFailed,
+	unsaved,
 	view,
 }: SettingsContentProps) {
 	const [picked, setPicked] = useState<CheckChoice | null>(null);
 	const stored = storedChoice(view);
+	const [lastStored, setLastStored] = useState<StoredSettings | null>(null);
+	if (stored && lastStored?.view !== view) {
+		setLastStored({ stored, view });
+	}
+	// Settings that someone else stopped or discarded stay on screen while the form holds unsaved edits.
+	const held = !(picked || stored) && unsaved ? lastStored : null;
+	const shown = stored ? { stored, view } : held;
 	const choices = useMemo(() => {
 		const live = choicesFrom(checks.lists);
 		return stored
 			? [stored, ...live.filter((choice) => choice.key !== stored.key)]
 			: live;
 	}, [checks.lists, stored]);
-	const focusAfterStop = useFocusAfterStop(stored === null);
+	const focusAfterStop = useFocusAfterStop(stored === null && held === null);
 
 	const host: FormHost = {
 		canEdit,
@@ -456,26 +506,41 @@ function SettingsContent({
 		onChanged: () => {
 			// Only stopping the use of settings calls this; focus moves into the view once the read shows no settings.
 			focusAfterStop.request();
+			onUnsavedChange(false);
 			setPicked(null);
 			criteria.refetch();
 		},
+		onRefresh: () => {
+			criteria.refetch();
+		},
 		onReplace: (next) => {
+			onUnsavedChange(false);
 			criteria.replace(next);
 			setPicked(null);
 		},
+		onUnsavedChange,
 	};
 
 	return (
 		<div className="space-y-4">
+			{refreshFailed && (
+				<output className="wrap-anywhere block text-sm">
+					The settings could not be refreshed.
+				</output>
+			)}
 			<ClaimText text={claimText} />
 			{picked && <PickedForm host={host} picked={picked} view={view} />}
-			{!picked && stored && (
-				<StoredForm
-					entry={newerVersionOf(view, checks.lists)}
-					host={host}
-					stored={stored}
-					view={view}
-				/>
+			{!picked && shown && (
+				<>
+					{held && <StoppedNotice view={view} />}
+					<StoredForm
+						entry={stored ? newerVersionOf(view, checks.lists) : null}
+						host={host}
+						stored={shown.stored}
+						superseded={held !== null}
+						view={shown.view}
+					/>
+				</>
 			)}
 			{!(picked || stored) && (
 				<WithoutSettings

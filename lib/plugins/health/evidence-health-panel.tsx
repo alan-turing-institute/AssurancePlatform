@@ -57,20 +57,20 @@ function Figures({ figures }: { figures: HygieneFigures }) {
 				emptyText={NO_RESULTS}
 				figure={claims}
 				note="A result with no time limit counts until someone withdraws it."
-				sentence={`${claims.count} of ${claims.of} claims with a current result have no time limit on that result.`}
+				sentence="claims with a current result have no time limit on that result."
 				testId="hygiene-claims"
 			/>
 			<Figure
 				emptyText={NO_RESULTS}
 				figure={checks}
-				sentence={`${checks.count} of ${checks.of} checks in use have at least one such claim.`}
+				sentence="checks in use have at least one such claim."
 				testId="hygiene-checks"
 			/>
 			<Figure
 				emptyText={NO_SETTINGS}
 				figure={settings}
 				note="Settings accepted without a change deserve a second look: the numbers came from the pipeline."
-				sentence={`${settings.count} of ${settings.of} accepted settings were accepted exactly as the pipeline recommended.`}
+				sentence="accepted settings were accepted exactly as the pipeline recommended."
 				testId="hygiene-settings"
 			/>
 		</div>

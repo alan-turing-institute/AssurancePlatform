@@ -199,6 +199,25 @@ function capitalise(text: string): string {
 	return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+const SOUNDS_LIKE_CONSONANT = /^(uni|use|usu|uti|eu|one|once)/i;
+const SOUNDS_LIKE_VOWEL = /^(hour|honest|honou?r|heir)/i;
+const LEADING_NUMBER = /^\d+/;
+const VOWEL_START = /^[aeiou]/i;
+
+/** The word with "a" or "an" before it, chosen by how the word starts when spoken. */
+function withArticle(word: string): string {
+	const number = LEADING_NUMBER.exec(word)?.[0];
+	let an: boolean;
+	if (number !== undefined) {
+		an = number.startsWith("8") || number === "11" || number === "18";
+	} else if (SOUNDS_LIKE_CONSONANT.test(word)) {
+		an = false;
+	} else {
+		an = VOWEL_START.test(word) || SOUNDS_LIKE_VOWEL.test(word);
+	}
+	return `${an ? "an" : "a"} ${word}`;
+}
+
 const WINDOW_PATTERN = /^(\d+) (second|minute|hour|day|week)s?$/;
 
 /** "10-minute" for a single-unit length, the length in words otherwise. */
@@ -342,7 +361,7 @@ function reductionSentences(
 	if (hasValue(floor)) {
 		sentences.push({
 			key: "readings-needed",
-			text: `If fewer than ${writeShare(floor)} of an ${subjects.one}'s readings have an answer, that ${subjects.one} has no answer.`,
+			text: `If fewer than ${writeShare(floor)} of ${withArticle(subjects.one)}'s readings have an answer, that ${subjects.one} has no answer.`,
 		});
 	}
 	return sentences;
@@ -413,7 +432,7 @@ export function plainWords(
 	} else {
 		sentences.push({
 			key: "window",
-			text: `Each result uses the readings in a ${windowAdjective(settings.window)} window.`,
+			text: `Each result uses the readings in ${withArticle(windowAdjective(settings.window))} window.`,
 		});
 	}
 	sentences.push(

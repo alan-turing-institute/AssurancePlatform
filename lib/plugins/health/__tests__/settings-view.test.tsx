@@ -565,6 +565,330 @@ describe("Settings: refetches", () => {
 	});
 });
 
+function emitChange() {
+	for (const handler of eventHandlers) {
+		handler.onEvent?.({
+			type: "tea.health/state-changed",
+			payload: { claimId: "claim-42" },
+		} as never);
+	}
+}
+
+const CHANGED_NOTICE =
+	"These settings were changed by someone else. Reload to see them.";
+const NO_PIPELINE_LINE =
+	"The pipeline these settings were set up for no longer exists. Choose the check again from a current list to keep using them, or stop using these settings.";
+
+describe("Settings: a fresh pick when someone else changes the settings", () => {
+	it("sends the revision the pick was opened on, null when nothing was stored", async () => {
+		const served = serve(NO_CRITERIA);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+		await user.click(
+			await screen.findByRole("button", { name: "Accept settings" })
+		);
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		expect(served.puts[0]).toMatchObject({ expected_revision: null });
+	});
+
+	it("shows the notice and refuses saving once the stored settings change under the pick", async () => {
+		const served = serve(NO_CRITERIA);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+		await screen.findByRole("button", { name: "Accept settings" });
+		served.criteria = storedCriteria({ revision: 1 });
+		emitChange();
+		expect(await screen.findByText(CHANGED_NOTICE)).toBeVisible();
+		expect(
+			screen.getByRole("button", { name: "Accept settings" })
+		).toBeDisabled();
+		expect(
+			screen.getByRole("button", { name: "Save without accepting" })
+		).toBeDisabled();
+		await user.click(screen.getByRole("button", { name: "Reload" }));
+		expect(await screen.findByLabelText("Claim passes at")).toBeInTheDocument();
+		expect(served.puts).toEqual([]);
+	});
+
+	it("shows the same notice when the server refuses the save because the settings changed", async () => {
+		const served = serve(NO_CRITERIA, {
+			onPut: () =>
+				HttpResponse.json(
+					{ error: "These settings were changed by someone else" },
+					{ status: 409 }
+				),
+		});
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+		await user.click(
+			await screen.findByRole("button", { name: "Accept settings" })
+		);
+		expect(await screen.findByText(CHANGED_NOTICE)).toBeVisible();
+		expect(
+			screen.getByRole("button", { name: "Accept settings" })
+		).toBeDisabled();
+		served.criteria = storedCriteria({ revision: 1 });
+		await user.click(screen.getByRole("button", { name: "Reload" }));
+		expect(await screen.findByLabelText("Claim passes at")).toBeInTheDocument();
+	});
+
+	it("sends the stored revision when accepted settings are saved", async () => {
+		const served = serve(storedCriteria({ revision: 3 }));
+		const user = await openSettings();
+		const window = await screen.findByLabelText("Window length");
+		await user.clear(window);
+		await user.type(window, "7");
+		await user.click(screen.getByRole("button", { name: "Save settings" }));
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		expect(served.puts[0]).toMatchObject({ expected_revision: 3 });
+	});
+});
+
+describe("Settings: edits that someone else's change or a failed read must not lose", () => {
+	it("keeps the form, with the notice and saving off, when someone else stops the settings", async () => {
+		const served = serve(storedCriteria());
+		const user = await openSettings();
+		const window = await screen.findByLabelText("Window length");
+		await user.clear(window);
+		await user.type(window, "7");
+		served.criteria = storedCriteria({ revision: 2, state: "inactive" });
+		emitChange();
+		expect(await screen.findByText(CHANGED_NOTICE)).toBeVisible();
+		expect(screen.getByLabelText("Window length")).toHaveValue("7");
+		expect(
+			screen.getByRole("button", { name: "Save settings" })
+		).toBeDisabled();
+		await user.click(screen.getByRole("button", { name: "Reload" }));
+		expect(
+			await screen.findByRole("combobox", { name: "Check" })
+		).toBeVisible();
+	});
+
+	it("keeps the form when someone else discards the suggestion under unsaved edits", async () => {
+		const served = serve(storedCriteria({ state: "suggested" }));
+		const user = await openSettings();
+		await user.click(
+			await screen.findByRole("button", { name: "Show all settings" })
+		);
+		const window = await screen.findByLabelText("Window length");
+		await user.clear(window);
+		await user.type(window, "9");
+		served.criteria = NO_CRITERIA;
+		emitChange();
+		expect(await screen.findByText(CHANGED_NOTICE)).toBeVisible();
+		expect(screen.getByLabelText("Window length")).toHaveValue("9");
+		expect(
+			screen.getByRole("button", { name: "Accept settings" })
+		).toBeDisabled();
+	});
+
+	it("does not keep the form after the person's own stop, even with edits", async () => {
+		const served = serve(storedCriteria());
+		const user = await openSettings();
+		const window = await screen.findByLabelText("Window length");
+		await user.clear(window);
+		await user.type(window, "7");
+		await user.click(
+			screen.getByRole("button", { name: "Stop using these settings" })
+		);
+		await user.type(await screen.findByLabelText("Reason"), "no longer needed");
+		served.criteria = NO_CRITERIA;
+		await user.click(
+			screen
+				.getAllByRole("button", { name: "Stop using these settings" })
+				.at(-1) as HTMLElement
+		);
+		expect(
+			await screen.findByRole("combobox", { name: "Check" })
+		).toBeVisible();
+		expect(screen.queryByText(CHANGED_NOTICE)).toBeNull();
+	});
+
+	it("keeps the form and its edits, with a line, when the read after a change fails", async () => {
+		serve(storedCriteria());
+		const user = await openSettings();
+		const window = await screen.findByLabelText("Window length");
+		await user.clear(window);
+		await user.type(window, "7");
+		server.use(
+			http.get(CRITERIA_URL, () =>
+				HttpResponse.json({ error: "down" }, { status: 500 })
+			)
+		);
+		emitChange();
+		expect(
+			await screen.findByText("The settings could not be refreshed.")
+		).toBeVisible();
+		expect(screen.getByLabelText("Window length")).toHaveValue("7");
+		expect(screen.queryByText("Settings unavailable")).toBeNull();
+	});
+
+	it("still says the settings are unavailable when the read fails with nothing unsaved", async () => {
+		serve(storedCriteria());
+		await openSettings();
+		await screen.findByLabelText("Window length");
+		server.use(
+			http.get(CRITERIA_URL, () =>
+				HttpResponse.json({ error: "down" }, { status: 500 })
+			)
+		);
+		emitChange();
+		expect(await screen.findByText("Settings unavailable")).toBeVisible();
+	});
+});
+
+describe("Settings: when the check lists cannot be read", () => {
+	it("says so in place of the picker", async () => {
+		serve(NO_CRITERIA);
+		server.use(
+			http.get("/api/cases/case-1/health/checks", () =>
+				HttpResponse.json({ error: "down" }, { status: 500 })
+			)
+		);
+		await openSettings();
+		expect(
+			await screen.findByText(
+				"Could not load the checks your pipelines offer. Try reopening this element."
+			)
+		).toBeVisible();
+		expect(screen.queryByRole("combobox", { name: "Check" })).toBeNull();
+	});
+});
+
+describe("Settings: views and fields", () => {
+	it("shows a viewer of suggested settings the full form, with no short view to open", async () => {
+		serve(storedCriteria({ state: "suggested" }));
+		await openSettings(false);
+		expect(await screen.findByText("1. Judge each reading")).toBeVisible();
+		expect(
+			screen.queryByRole("button", { name: "Show all settings" })
+		).toBeNull();
+		expect(screen.getByLabelText("Window length")).toBeDisabled();
+	});
+
+	it("says why saving is off when the pipeline the settings were set up for no longer exists", async () => {
+		serve(storedCriteria({ overrides: { integration: null } }));
+		const user = await openSettings();
+		expect(await screen.findByText(NO_PIPELINE_LINE)).toBeVisible();
+		expect(
+			screen.getByRole("button", { name: "Save settings" })
+		).toBeDisabled();
+		expect(
+			screen.getByRole("button", { name: "Stop using these settings" })
+		).toBeEnabled();
+		await user.click(
+			screen.getByRole("button", { name: "Stop using these settings" })
+		);
+		expect(await screen.findByLabelText("Reason")).toBeVisible();
+	});
+
+	it("does not show that line while the pipeline exists", async () => {
+		serve(storedCriteria());
+		await openSettings();
+		await screen.findByLabelText("Window length");
+		expect(screen.queryByText(NO_PIPELINE_LINE)).toBeNull();
+	});
+
+	function listsWithFlag(): HealthCheckListOffer[] {
+		const [list] = checkLists();
+		return [
+			{
+				...(list as HealthCheckListOffer),
+				checks: (list as HealthCheckListOffer).checks.map((check) =>
+					check.name === ITEM_CHECK_NAME
+						? {
+								...check,
+								params: [
+									...(check.params ?? []),
+									{ key: "strict", label: "Strict mode", type: "boolean" },
+								],
+							}
+						: check
+				),
+			},
+		];
+	}
+
+	it("offers Not set, Yes and No for a yes-or-no check setting, and sends what is shown", async () => {
+		const served = serve(NO_CRITERIA);
+		server.use(
+			http.get("/api/cases/case-1/health/checks", () =>
+				HttpResponse.json(listsWithFlag())
+			)
+		);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+		await user.click(
+			await screen.findByRole("button", { name: "Show all settings" })
+		);
+		const flag = await screen.findByRole("combobox", { name: "Strict mode" });
+		// The suite's select stand-in knows an option's label only once its list has been opened.
+		await user.click(flag);
+		expect(screen.getByRole("option", { name: "Not set" })).toBeVisible();
+		expect(screen.getByRole("option", { name: "Yes" })).toBeVisible();
+		await user.click(screen.getByRole("option", { name: "No" }));
+		expect(
+			screen.getByRole("combobox", { name: "Strict mode" })
+		).toHaveTextContent("No");
+		await user.click(screen.getByRole("button", { name: "Accept settings" }));
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		const body = served.puts[0] as { settings: { check: { params: unknown } } };
+		expect(body.settings.check.params).toMatchObject({ strict: false });
+	});
+
+	it("sends nothing for a yes-or-no check setting that is left at Not set", async () => {
+		const served = serve(NO_CRITERIA);
+		server.use(
+			http.get("/api/cases/case-1/health/checks", () =>
+				HttpResponse.json(listsWithFlag())
+			)
+		);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+		await user.click(
+			await screen.findByRole("button", { name: "Accept settings" })
+		);
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		const body = served.puts[0] as {
+			settings: { check: { params: Record<string, unknown> } };
+		};
+		expect(body.settings.check.params).not.toHaveProperty("strict");
+	});
+
+	it("follows the check currently chosen for the recommendation notice", async () => {
+		serve(NO_CRITERIA);
+		const [list] = checkLists();
+		server.use(
+			http.get("/api/cases/case-1/health/checks", () =>
+				HttpResponse.json([
+					{
+						...list,
+						checks: list?.checks.map((check) =>
+							check.name === NUMERIC_CHECK_NAME
+								? { ...check, recommended: undefined }
+								: check
+						),
+					},
+				])
+			)
+		);
+		const user = await openSettings();
+		await pick(user, ITEM_CHECK_NAME);
+		await user.click(
+			await screen.findByRole("button", { name: "Show all settings" })
+		);
+		expect(
+			await screen.findByTestId("health-fresh-pick-notice")
+		).toHaveTextContent("These are the settings the check recommends.");
+		await pick(user, NUMERIC_CHECK_NAME);
+		await waitFor(() =>
+			expect(screen.getByTestId("health-fresh-pick-notice")).toHaveTextContent(
+				"This check recommends no settings."
+			)
+		);
+	});
+});
+
 describe("Settings: the claim's own text", () => {
 	it("shows the claim's text, as text, above the plain-words summary", async () => {
 		serve(storedCriteria());

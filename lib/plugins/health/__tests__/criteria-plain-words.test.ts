@@ -53,6 +53,22 @@ describe("the plain words for each demo check's recommended settings", () => {
 		]);
 	});
 
+	it.each([
+		["PT8H", "an 8-hour window"],
+		["PT11H", "an 11-hour window"],
+		["PT18M", "an 18-minute window"],
+		["PT5M", "a 5-minute window"],
+		["PT10M", "a 10-minute window"],
+		["PT1H", "a 1-hour window"],
+		["PT12H", "a 12-hour window"],
+	])("writes the window %s with the right article", (window, phrase) => {
+		const check = demo(NUMERIC_CHECK_NAME);
+		const draft = draftFromCheck(check, "i");
+		const { settings } = analyseDraft(draft, check);
+		const text = plainWords({ ...settings, window }, check).map((s) => s.text);
+		expect(text).toContain(`Each result uses the readings in ${phrase}.`);
+	});
+
 	it("a whole-system check", () => {
 		expect(wordsFor(demo(SYSTEM_CHECK_NAME)).map((s) => s.text)).toEqual([
 			"Each reading is about the whole system: “How many items the line processes each minute.”",

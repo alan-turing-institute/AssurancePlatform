@@ -569,6 +569,41 @@ describe("saving, accepting and reading settings", () => {
 		);
 	});
 
+	it("refuses a save made from a revision that is no longer stored, and stores nothing", async () => {
+		const context = await setup();
+		await save(context.claim.id, context.integration.id, itemSettings(), true);
+		const stale = await callCriteriaPut(context.claim.id, {
+			...saveBody(
+				context.integration.id,
+				itemSettings({ window: "PT2M" }),
+				true
+			),
+			expected_revision: null,
+		});
+		expect(stale.status).toBe(409);
+		expect((await stale.json()).error).toBe(
+			"These settings were changed by someone else"
+		);
+		const row = await prisma.pluginHealthCriteria.findUniqueOrThrow({
+			where: { claimId: context.claim.id },
+		});
+		expect(row.revision).toBe(1);
+	});
+
+	it("saves when the expected revision is the stored one, or null for no stored settings", async () => {
+		const context = await setup();
+		const first = await callCriteriaPut(context.claim.id, {
+			...saveBody(context.integration.id, itemSettings(), false),
+			expected_revision: null,
+		});
+		expect(first.status).toBe(200);
+		const second = await callCriteriaPut(context.claim.id, {
+			...saveBody(context.integration.id, itemSettings(), true),
+			expected_revision: (await first.json()).criteria.revision,
+		});
+		expect(second.status).toBe(200);
+	});
+
 	it("answers a missing id with a 400 and a body that is not JSON with a 400", async () => {
 		const context = await setup();
 		expect((await callCriteriaGet("not-a-uuid")).status).toBe(400);
@@ -1020,7 +1055,7 @@ describe("the check list offered", () => {
 		expect(editedBody.criteria.source.timing).toBe("edited");
 	});
 
-	it("refuses to accept a suggestion whose check has left the list, and still allows editing accepted settings", async () => {
+	it("refuses to accept a suggestion whose check has left the list, and still allows saving it again as a suggestion", async () => {
 		const context = await setup();
 		await save(context.claim.id, context.integration.id, itemSettings(), false);
 

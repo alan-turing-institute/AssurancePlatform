@@ -43,7 +43,13 @@ export function useCriteria({
 
 export type CriteriaOutcome =
 	| { ok: true; view: HealthCriteriaResponse }
-	| { fieldErrors: Record<string, string>; message: string; ok: false };
+	| {
+			fieldErrors: Record<string, string>;
+			message: string;
+			ok: false;
+			/** The HTTP status of the refusal; absent when the request could not be sent. */
+			status?: number;
+	  };
 
 const SETTINGS_PREFIX = "settings.";
 
@@ -89,6 +95,7 @@ async function outcomeOf(response: Response): Promise<CriteriaOutcome> {
 				? body.error
 				: `The server refused the change (${response.status}).`,
 		fieldErrors: fieldErrorsOf(body.fieldErrors),
+		status: response.status,
 	};
 }
 
@@ -116,6 +123,8 @@ async function send(
 
 export interface SaveCriteriaRequest {
 	accept: boolean;
+	/** The stored revision the form was read at, null when no settings were stored; the server refuses the save when it has moved. */
+	expectedRevision: number | null;
 	integrationId: string;
 	settings: HealthCriteriaSettings;
 }
@@ -129,6 +138,7 @@ export function saveCriteria(
 		integration_id: request.integrationId,
 		settings: request.settings,
 		accept: request.accept,
+		expected_revision: request.expectedRevision,
 	});
 }
 
