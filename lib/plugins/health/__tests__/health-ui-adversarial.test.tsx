@@ -170,8 +170,10 @@ describe("evidence log: untrusted producer text", () => {
 
 		expect(linkHrefs().filter((h) => h.includes(run.trim()))).toEqual([]);
 		expect(
-			linkHrefs().some((h) => h.toLowerCase().startsWith("javascript:"))
-		).toBe(false);
+			linkHrefs().every(
+				(h) => h.startsWith("http://") || h.startsWith("https://")
+			)
+		).toBe(true);
 	});
 
 	it("makes a plain https run address a link", async () => {
