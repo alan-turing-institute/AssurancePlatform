@@ -19,6 +19,110 @@ function parse(record: HealthRecordFixture) {
 	return healthEvidenceRecordSchema.safeParse(record);
 }
 
+function firstIssuePath(record: HealthRecordFixture): string | undefined {
+	const result = parse(record);
+	return result.success
+		? undefined
+		: Object.keys(describeEvidenceIssues(result.error).fieldErrors)[0];
+}
+
+describe("healthEvidenceRecordSchema — strings Postgres cannot store", () => {
+	it.each([
+		["a NUL in a comment", { comment: "a\u0000b" }, "comment"],
+		["a lone surrogate in a comment", { comment: "a\ud800b" }, "comment"],
+		[
+			"a NUL in a nested provenance value",
+			{
+				provenance: {
+					...(records.populationPass.provenance as Record<string, unknown>),
+					extra: { deep: ["ok", "x\u0000"] },
+				},
+			},
+			"provenance.extra.deep.1",
+		],
+		[
+			"a NUL in a provenance key",
+			{
+				provenance: {
+					...(records.populationPass.provenance as Record<string, unknown>),
+					"bad\u0000key": "x",
+				},
+			},
+			"provenance.bad\u0000key",
+		],
+		[
+			"a lone low surrogate in a payload key",
+			{ payload: { "k\udc00": 1 } },
+			"payload.k\udc00",
+		],
+	])("refuses %s, naming the path", (_name, overrides, path) => {
+		expect(
+			firstIssuePath(withOverrides(records.populationPass, overrides))
+		).toBe(path);
+	});
+
+	it("accepts a well-formed surrogate pair", () => {
+		expect(
+			parse(withOverrides(records.populationPass, { comment: "ok \u{1F600}" }))
+				.success
+		).toBe(true);
+	});
+
+	it("refuses a NUL in the reason and name of a session request", () => {
+		expect(
+			revocationRequestSchema.safeParse({ cause: "other", reason: "a\u0000" })
+				.success
+		).toBe(false);
+		expect(
+			boundCheckRequestSchema.safeParse({ name: "a\ud800", reason: "r" })
+				.success
+		).toBe(false);
+	});
+});
+
+describe("healthEvidenceRecordSchema — identifiers and check text", () => {
+	it("stores record_id and claim_ref in lower case", () => {
+		const result = parse(
+			withOverrides(records.populationPass, {
+				record_id: String(records.populationPass.record_id).toUpperCase(),
+				claim_ref: CLAIM_ID.toUpperCase(),
+			})
+		);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.record_id).toBe(records.populationPass.record_id);
+			expect(result.data.claim_ref).toBe(CLAIM_ID);
+		}
+	});
+
+	it.each([
+		"name",
+		"version",
+		"scope",
+	])("refuses a check %s with edge whitespace, naming the field", (field) => {
+		const check = {
+			...(records.populationPass.check as Record<string, unknown>),
+			[field]: " padded ",
+		};
+		expect(
+			firstIssuePath(withOverrides(records.populationPass, { check }))
+		).toBe(`check.${field}`);
+	});
+});
+
+describe("healthEvidenceRecordSchema — durations", () => {
+	it.each([
+		"window",
+		"valid_for",
+	])("refuses an absurd %s, naming the field", (field) => {
+		expect(
+			firstIssuePath(
+				withOverrides(records.populationPass, { [field]: "P99999999W" })
+			)
+		).toBe(field);
+	});
+});
+
 describe("healthEvidenceRecordSchema — accepted records", () => {
 	it.each(
 		Object.entries(records)

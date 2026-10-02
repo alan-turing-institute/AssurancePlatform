@@ -195,9 +195,7 @@ describe("status: which record is current", () => {
 			valid_for: "PT1H",
 		});
 		// Give the second person view access to the same case.
-		const { createTestPermission } = await import(
-			"../utils/prisma-factories"
-		);
+		const { createTestPermission } = await import("../utils/prisma-factories");
 		await createTestPermission(testCase.id, other.id, owner.id, "VIEW");
 
 		const forOwner = expectSuccess(await readHealthStatus(owner.id, claim.id));

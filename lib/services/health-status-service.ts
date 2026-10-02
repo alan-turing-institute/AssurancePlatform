@@ -2,12 +2,8 @@ import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { HealthVerdict } from "@/lib/schemas/health-evidence";
-import { writePluginData } from "@/lib/services/plugin-data-service";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
-import type {
-	PluginHealthEvidenceVerdict,
-	Prisma,
-} from "@/src/generated/prisma";
+import type { PluginHealthEvidenceVerdict } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "health-status-service" });
@@ -25,10 +21,8 @@ const log = logger.child({ component: "health-status-service" });
  * its `valid_while` conditions no longer holds, or when every record it ever
  * received has been revoked.
  *
- * Alongside, a small summary (`{verdict, record_id, timestamp, expires_at,
- * bound_check}`) is written to the claim's `PluginData` row under
- * `tea.health` so a published snapshot has something to capture. Nothing
- * reads that summary for live status.
+ * Nothing about a claim's status is written to `PluginData`: a published
+ * snapshot carries no `tea.health` entry.
  */
 
 const PLUGIN_ID = "tea.health";
@@ -281,42 +275,4 @@ export async function readHealthStatus(
 		log.error("Failed to read health status", { error });
 		return { error: "Failed to read health status" };
 	}
-}
-
-/**
- * Computes `claimId`'s status after a change to its evidence and returns
- * it, writing the small snapshot summary to the claim's `PluginData` row.
- * Called by the routes once the change has committed. A failed summary
- * write is logged and does not fail the call: the change itself is
- * already durable and live status never reads the summary.
- */
-export async function refreshHealthSummary(
-	actingUserId: string,
-	claimId: string,
-	caseId: string
-): Promise<HealthStatus | null> {
-	const status = await computeHealthStatus(claimId, caseId);
-	if (!status) {
-		return null;
-	}
-	const summary = {
-		verdict: status.verdict,
-		record_id: status.record_id,
-		timestamp: status.timestamp,
-		expires_at: status.expires_at,
-		bound_check: status.bound_check,
-	};
-	const result = await writePluginData(
-		PLUGIN_ID,
-		actingUserId,
-		{ caseId, elementId: claimId },
-		summary as Prisma.InputJsonValue
-	);
-	if ("error" in result) {
-		log.error("Failed to write health summary", {
-			claimId,
-			error: result.error,
-		});
-	}
-	return status;
 }

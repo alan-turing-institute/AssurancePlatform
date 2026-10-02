@@ -41,7 +41,7 @@ export async function PUT(
 		const session = await requireAuthSession();
 		const { id } = await params;
 
-		const claimId = uuidSchema.safeParse(id);
+		const claimId = uuidSchema.safeParse(id.toLowerCase());
 		if (!claimId.success) {
 			return apiError(validationError("Invalid element id"));
 		}
@@ -52,11 +52,7 @@ export async function PUT(
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		const status = await announceHealthChange(
-			session.userId,
-			claimId.data,
-			result.data.caseId
-		);
+		const status = await announceHealthChange(claimId.data, result.data.caseId);
 
 		return apiSuccess({ status });
 	} catch (error) {

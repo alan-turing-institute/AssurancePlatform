@@ -122,7 +122,8 @@ describe("staleness sweep", () => {
 		const calls = notifiedFor(claim.id);
 		expect(calls).toHaveLength(1);
 		expect(
-			(calls[0]?.[2] as { status: { stale_reason: string } }).status.stale_reason
+			(calls[0]?.[2] as { status: { stale_reason: string } }).status
+				.stale_reason
 		).toBe("condition");
 	});
 

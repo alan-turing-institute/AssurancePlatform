@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { publishAssuranceCase } from "@/lib/services/publish-service";
+import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	appendRecord,
@@ -93,6 +95,18 @@ describe("revocation and reinstatement requests", () => {
 		expect(await openRows(record.record_id)).toBe(1);
 	});
 
+	it("finds a record and a claim addressed in capitals", async () => {
+		const { claim, record } = await revokedSetup();
+
+		const revoked = await callRevoke(
+			claim.id.toUpperCase(),
+			record.record_id.toUpperCase()
+		);
+
+		expect(revoked.status).toBe(201);
+		expect(await openRows(record.record_id)).toBe(1);
+	});
+
 	it("reinstating a record that is not revoked is refused and writes nothing", async () => {
 		const { claim, record } = await revokedSetup();
 
@@ -123,22 +137,51 @@ describe("revocation and reinstatement requests", () => {
 		expect(rows[1]?.reinstatedAt).toBeNull();
 	});
 
-	it("leaves a snapshot summary that holds no payload, provenance or person's name", async () => {
-		const { owner, claim, testCase, record } = await revokedSetup();
-		await callRevoke(claim.id, record.record_id);
-
-		const row = await prisma.pluginData.findFirstOrThrow({
-			where: {
-				caseId: testCase.id,
-				elementId: claim.id,
-				pluginId: "tea.health",
-			},
+	it("writes no tea.health plugin data after an append, a revocation or a bound-check change", async () => {
+		const { owner, claim, testCase } = await setupClaim();
+		const { secret } = await setupMachineWriter(owner.id, testCase.id);
+		const { POST } = await importMachineRoute();
+		const pluginRows = () =>
+			prisma.pluginData.count({ where: { pluginId: "tea.health" } });
+		const record = wireRecord(claim.id);
+		const appended = await POST(machinePost(claim.id, record, secret), {
+			params: Promise.resolve({ id: claim.id }),
 		});
+		expect(appended.status).toBe(201);
+		expect(await pluginRows()).toBe(0);
 
-		expect(Object.keys(row.data as object).sort()).toEqual(
-			["bound_check", "expires_at", "record_id", "timestamp", "verdict"].sort()
+		await mockAuth(owner.id);
+		expect((await callRevoke(claim.id, String(record.record_id))).status).toBe(
+			201
 		);
-		expect(JSON.stringify(row.data)).not.toContain(owner.username);
+		expect(await pluginRows()).toBe(0);
+
+		const changed = await callBoundCheck(claim.id, {
+			name: "Another Checker",
+			reason: "Renamed",
+		});
+		expect(changed.status).toBe(200);
+		expect(await pluginRows()).toBe(0);
+	});
+
+	it("publishes a case with evidence without a tea.health entry in the snapshot", async () => {
+		const { owner, claim, testCase } = await setupClaim();
+		await appendRecord(owner.id, claim.id);
+		await mockAuth(owner.id);
+		await callRevoke(
+			claim.id,
+			(await prisma.pluginHealthEvidence.findFirstOrThrow()).recordId
+		);
+
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		const content = row.content as { pluginData?: Record<string, unknown> };
+		expect(content.pluginData?.["tea.health"]).toBeUndefined();
 	});
 });
 

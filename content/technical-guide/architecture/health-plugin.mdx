@@ -21,17 +21,17 @@ Unknown top-level fields are rejected, so a producer cannot supply values the se
 | Field | Meaning |
 |---|---|
 | `format_version` | The literal `"1.1"`. |
-| `record_id` | A UUID, unique across the deployment. Revocation refers to a record by this id. |
+| `record_id` | A UUID, unique across the deployment and stored in lower case, so ids that differ only in letter case are the same id. Revocation refers to a record by this id. |
 | `timestamp` | When the latest reading in the window was taken, as ISO 8601 UTC. It may be at most five minutes ahead of the server clock. |
 | `claim_ref` | The property claim's UUID. It must equal the id in the path. |
-| `check` | `name`, `version` and `scope` (non-empty strings), and optional `params`. A `scope` of `environment` means the check measures the whole system. |
+| `check` | `name`, `version` and `scope` (non-empty strings without leading or trailing whitespace), and optional `params`. A `scope` of `environment` means the check measures the whole system. |
 | `rule` | How each reading is judged: `kind` (`identity`, `threshold`, `band`, `membership`), the `direction` (`maximize`, `minimize` or `target`) for a threshold, `params`, and a `version`. |
 | `reduction` | Optional. How one subject's readings in the window were combined: `kind` (`sum`, `mean`, `max`, `min`, `median`, `percentile`, `last`), `params`, an optional `rule`, and a `version`. |
 | `aggregation` | Present on a population summary. `kind` (`proportion`, `worst-of`, `percentile`), `params` and a `version`. |
 | `value` | A boolean, a string, or `{number, unit}` where `unit` may be a string, `null` or left out. It may be absent only when the verdict is `indeterminate`. A `null` value is stored as absent. |
 | `verdict` | `pass`, `marginal`, `fail` or `indeterminate`. The verdict is the check's own; TEA does not re-judge it. |
-| `window` | The window's length as an ISO 8601 duration. The window is `[timestamp - window, timestamp]`. |
-| `valid_for` | How long the verdict may be relied on: a duration, or the literal `indefinite`. Required. |
+| `window` | The window's length as an ISO 8601 duration of at most 100 years. The window is `[timestamp - window, timestamp]`. |
+| `valid_for` | How long the verdict may be relied on: a duration of at most 100 years, or the literal `indefinite`. Required. |
 | `valid_while` | Optional conditions, as an object of `{variable: expected}`. Each variable must be a key of `provenance` whose value is a string. |
 | `uncertainty` and `judged` | Optional. `uncertainty` describes the spread (`interval`, `std`, `quantiles` or `probability`) with its `method` and `nature`; it requires `judged`, the statistic and method the verdict was based on. TEA stores and displays them and never computes with them. |
 | `subject` | Optional. `{kind, id}` for a record about one subject. It is rejected on a population summary. |
@@ -45,6 +45,7 @@ Months and years are refused because their length depends on the calendar.
 A record is checked for structure only.
 A malformed record is refused with 400 and the failing field is named; nothing is stored.
 A repeated `record_id` is refused with 409.
+A string containing a NUL character or an unpaired surrogate, anywhere in the record, is refused with 400 naming its path.
 A record whose `claim_ref` differs from the path id is refused with 400.
 A claim that does not exist, is not a property claim, or that the integration cannot edit gets the same 404 whichever applies.
 A successful request returns 201 with `{ record, status }`: the stored record and the claim's status after it.
@@ -88,7 +89,7 @@ The current record is the one with the latest `timestamp` that is not revoked, w
 Records can arrive out of order, so a late backfill never displaces a later reading.
 The status is:
 
-- No status when no record has ever been accepted for the claim.
+- No status when the claim has neither an accepted record nor a bound check; a claim bound to a check that has no record yet has a status with no verdict that is not stale.
 - The current record's verdict otherwise, with `stale` set when the record is no longer to be relied on.
 - A record is stale when `timestamp + valid_for` has passed (`stale_reason` is `expired`).
 A record with `valid_for` of `indefinite` never expires by clock.
@@ -98,7 +99,7 @@ A session name used in another case has no effect.
 - When every record the claim has received is revoked, the status has no verdict, is stale, and `stale_reason` is `all-revoked`.
 
 The status object has `verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check` and `rejected_since_last_accept`.
-`GET /api/elements/[id]/health` returns it as `{ status }` for a signed-in user with view access, or `{ status: null }` when the claim has no record.
+`GET /api/elements/[id]/health` returns it as `{ status }` for a signed-in user with view access, or `{ status: null }` when the claim has neither a record nor a bound check.
 
 Staleness is separate from the verdict: a passing claim can be stale.
 The badge colour follows the verdict and a stale claim carries an additional marker.
@@ -107,8 +108,7 @@ The staleness sweep runs every 15 minutes.
 For each claim that has newly become stale it broadcasts `tea.health/state-changed` to the case, so an open canvas updates without a reload, and it announces a claim once until the claim is fresh again.
 Reads compute staleness themselves and do not depend on the sweep.
 
-A small summary of the status (`verdict`, `record_id`, `timestamp`, `expires_at`, `bound_check`) is written to the claim's plugin data when a record or revocation changes it, so that a published snapshot has something to capture.
-Live status never reads it.
+Nothing about status is written to the claim's plugin data, so a published snapshot carries no `tea.health` entry.
 
 ## Revoke and reinstate
 

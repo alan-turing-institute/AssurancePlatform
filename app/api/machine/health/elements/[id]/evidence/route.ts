@@ -64,8 +64,8 @@ async function resolveReadPrincipalUserId(
  * size; `before` is a `chain_sequence`, returning only older records.
  * `next_before` is the value to pass as `before` for the next page, or null
  * on the last page.
- * @params limit - Page size, 1 to 200 (default 50)
- * @params before - Return only records with a lower chain_sequence
+ * @query limit - Page size, 1 to 200 (default 50)
+ * @query before - Return only records with a lower chain_sequence
  * @response 200 - `{ evidence: Item[], next_before: number | null }`
  * @response 400 - Invalid `limit` or `before`
  * @response 401 - Unauthorised (no valid token or session)
@@ -140,7 +140,8 @@ export async function POST(
 ) {
 	try {
 		const principal = await requireApiToken(request, "health:evidence:write");
-		const { id: claimId } = await params;
+		const { id } = await params;
+		const claimId = id.toLowerCase();
 
 		const parsed = healthEvidenceRecordSchema.safeParse(
 			await readJsonBody(request)
@@ -173,12 +174,9 @@ export async function POST(
 
 		// After the write has committed — never inside the transaction, never
 		// on a failed write.
-		const status = await announceHealthChange(
-			principal.systemUserId,
-			claimId,
-			caseId,
-			{ integrationName: principal.integrationName }
-		);
+		const status = await announceHealthChange(claimId, caseId, {
+			integrationName: principal.integrationName,
+		});
 
 		return apiSuccess({ record: appendResult.data.record, status }, 201);
 	} catch (error) {

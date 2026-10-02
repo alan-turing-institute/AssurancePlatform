@@ -29,9 +29,13 @@ const DURATION_PATTERN =
 
 const SECONDS_PER_UNIT = [604_800, 86_400, 3600, 60, 1] as const;
 
+/** The longest accepted duration: 100 years of 365 days. */
+export const MAX_DURATION_SECONDS = 100 * 365 * 86_400;
+
 /**
  * Length of an ISO 8601 duration in seconds, or `null` when the text is not
- * a duration in the accepted form or its length is not greater than zero.
+ * a duration in the accepted form, its length is not greater than zero, or it
+ * exceeds 100 years.
  */
 export function parseDurationSeconds(text: string): number | null {
 	const match = DURATION_PATTERN.exec(text);
@@ -47,11 +51,11 @@ export function parseDurationSeconds(text: string): number | null {
 			total += Number(part) * unitSeconds;
 		}
 	}
-	return anyPart && total > 0 ? total : null;
+	return anyPart && total > 0 && total <= MAX_DURATION_SECONDS ? total : null;
 }
 
 const DURATION_FORMAT_MESSAGE =
-	"must be an ISO 8601 duration in weeks, days, hours, minutes and seconds (for example PT5M), greater than zero; months and years are not accepted";
+	"must be an ISO 8601 duration in weeks, days, hours, minutes and seconds (for example PT5M), greater than zero and at most 100 years; months and years are not accepted";
 
 export const durationSchema = z
 	.string()

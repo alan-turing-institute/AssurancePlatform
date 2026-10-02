@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	aggregationSchema,
+	durationSchema,
 	parseDurationSeconds,
 	reductionSchema,
 	ruleSchema,
@@ -35,6 +36,21 @@ describe("parseDurationSeconds", () => {
 		"",
 	])("refuses %j", (text) => {
 		expect(parseDurationSeconds(text)).toBeNull();
+	});
+});
+
+describe("duration cap", () => {
+	it("accepts exactly 100 years and refuses one second more", () => {
+		expect(parseDurationSeconds("P36500D")).toBe(36_500 * 86_400);
+		expect(parseDurationSeconds("P36500DT1S")).toBeNull();
+		expect(parseDurationSeconds("P5214W")).not.toBeNull();
+		expect(parseDurationSeconds("P5215W")).toBeNull();
+	});
+
+	it("refuses an absurd duration as window and as valid_for", () => {
+		expect(durationSchema.safeParse("P99999999W").success).toBe(false);
+		expect(validForSchema.safeParse("P99999999W").success).toBe(false);
+		expect(validForSchema.safeParse("P36500D").success).toBe(true);
 	});
 });
 

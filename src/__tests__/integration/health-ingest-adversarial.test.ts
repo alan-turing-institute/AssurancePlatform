@@ -354,6 +354,28 @@ describe("ingest: size limits and null handling", () => {
 });
 
 describe("ingest: identifiers and the one-check rule", () => {
+	it("treats a record_id that differs only in letter case as the same id, and answers a claim path in capitals", async () => {
+		const { claim, post } = await writer();
+		const first = wireRecord(claim.id);
+		expect((await post(first)).status).toBe(201);
+
+		const upper = await post({
+			...first,
+			record_id: String(first.record_id).toUpperCase(),
+		});
+		const upperPath = await post(
+			{
+				...wireRecord(claim.id, "populationPass"),
+				record_id: crypto.randomUUID(),
+			},
+			claim.id.toUpperCase()
+		);
+
+		expect(upper.status).toBe(409);
+		expect(upperPath.status).toBe(201);
+		expect(await stored(claim.id)).toBe(2);
+	});
+
 	it("refuses a record_id already used on another claim of the same case, and stores nothing on the second claim", async () => {
 		const { owner, testCase, claim, post } = await writer();
 		const second = await addClaim(testCase.id, owner.id);

@@ -345,11 +345,16 @@ export async function appendHealthEvidence(
 			return { error: DUPLICATE_RECORD };
 		}
 		if (outcome.kind === "bound-elsewhere") {
-			// Counted in its own short write: the refusal must be visible even
-			// though the append transaction stored nothing.
-			await prisma.pluginHealthClaimState.update({
-				where: { claimId },
-				data: { rejectedSinceLastAccept: { increment: 1 } },
+			// Counted in its own short transaction: the refusal must be visible
+			// even though the append transaction stored nothing. It takes the
+			// same claim-row lock as an append, so it cannot land after a later
+			// accepted record has reset the count.
+			await prisma.$transaction(async (tx) => {
+				await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+				await tx.pluginHealthClaimState.update({
+					where: { claimId },
+					data: { rejectedSinceLastAccept: { increment: 1 } },
+				});
 			});
 			return { error: boundCheckRefusal(outcome.boundCheckName) };
 		}

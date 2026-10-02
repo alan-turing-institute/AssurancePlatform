@@ -10,30 +10,29 @@ import {
 import { validationError } from "@/lib/errors";
 import { uuidSchema } from "@/lib/schemas/base";
 import {
+	computeHealthStatus,
 	type HealthStatus,
-	refreshHealthSummary,
 } from "@/lib/services/health-status-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import type { ServiceResult } from "@/types/service";
 
 /**
  * Shared steps of the health plugin's routes that change a claim's
- * evidence: after a change has committed, recompute the claim's status,
- * refresh its snapshot summary and tell open browsers.
+ * evidence: after a change has committed, recompute the claim's status
+ * and tell open browsers.
  */
 
 /**
- * Recomputes `claimId`'s status after a committed change, writes the
- * snapshot summary, and emits `tea.health/state-changed` to the claim's case
- * (never from inside a transaction). Returns the new status.
+ * Recomputes `claimId`'s status after a committed change and emits
+ * `tea.health/state-changed` to the claim's case (never from inside a
+ * transaction). Writes nothing. Returns the new status.
  */
 export async function announceHealthChange(
-	userId: string,
 	claimId: string,
 	caseId: string,
 	extraPayload: Record<string, unknown> = {}
 ): Promise<HealthStatus | null> {
-	const status = await refreshHealthSummary(userId, claimId, caseId);
+	const status = await computeHealthStatus(claimId, caseId);
 	emitSSEEvent("tea.health/state-changed", caseId, {
 		claimId,
 		status,
@@ -67,8 +66,8 @@ export async function handleHealthRecordAction<
 		const session = await requireAuthSession();
 		const { id, recordId } = await params;
 
-		const claimId = uuidSchema.safeParse(id);
-		const parsedRecordId = uuidSchema.safeParse(recordId);
+		const claimId = uuidSchema.safeParse(id.toLowerCase());
+		const parsedRecordId = uuidSchema.safeParse(recordId.toLowerCase());
 		if (!(claimId.success && parsedRecordId.success)) {
 			return apiError(validationError("Invalid element or record id"));
 		}
@@ -84,11 +83,7 @@ export async function handleHealthRecordAction<
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		const status = await announceHealthChange(
-			session.userId,
-			claimId.data,
-			result.data.caseId
-		);
+		const status = await announceHealthChange(claimId.data, result.data.caseId);
 		return respond(result.data, status);
 	} catch (error) {
 		return apiErrorFromUnknown(error);

@@ -52,10 +52,16 @@ const nameString = (label: string) =>
 			`${label} must be at most ${NAME_MAX_LENGTH} characters`
 		);
 
+/** A check's identifying text is matched exactly, so it cannot carry edge whitespace. */
+const checkTextString = (label: string) =>
+	nameString(label).refine((text) => text === text.trim(), {
+		message: `${label} must not start or end with whitespace`,
+	});
+
 const checkSchema = z.strictObject({
-	name: nameString("name"),
-	version: nameString("version"),
-	scope: nameString("scope"),
+	name: checkTextString("name"),
+	version: checkTextString("version"),
+	scope: checkTextString("scope"),
 	params: paramsBagSchema.optional(),
 });
 
@@ -247,6 +253,47 @@ const recordObjectSchema = z.strictObject({
 		.optional(),
 });
 
+const LONE_SURROGATE =
+	/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+const UNSTORABLE_TEXT_MESSAGE =
+	"must not contain a NUL character or an unpaired surrogate";
+
+/** Whether `text` can be stored in a Postgres `jsonb` value. */
+export const isStorableText = (text: string): boolean =>
+	!(text.includes("\u0000") || LONE_SURROGATE.test(text));
+
+/** Adds an issue for every key and string value, at any depth, that Postgres cannot store. */
+function checkStorableStrings(
+	value: unknown,
+	path: (string | number)[],
+	ctx: z.RefinementCtx
+): void {
+	if (typeof value === "string") {
+		if (!isStorableText(value)) {
+			ctx.addIssue({
+				code: "custom",
+				path,
+				message: UNSTORABLE_TEXT_MESSAGE,
+			});
+		}
+	} else if (Array.isArray(value)) {
+		for (const [i, item] of value.entries()) {
+			checkStorableStrings(item, [...path, i], ctx);
+		}
+	} else if (typeof value === "object" && value !== null) {
+		for (const [key, item] of Object.entries(value)) {
+			if (!isStorableText(key)) {
+				ctx.addIssue({
+					code: "custom",
+					path: [...path, key],
+					message: `key ${UNSTORABLE_TEXT_MESSAGE}`,
+				});
+			}
+			checkStorableStrings(item, [...path, key], ctx);
+		}
+	}
+}
+
 type RecordInput = z.infer<typeof recordObjectSchema>;
 type IssueSink = (path: (string | number)[], message: string) => void;
 
@@ -304,6 +351,7 @@ function checkRecordConsistency(
 	}
 	checkSummaryRules(record, fail);
 	checkValidWhile(record, fail);
+	checkStorableStrings(record, [], ctx);
 }
 
 export const healthEvidenceRecordSchema = recordObjectSchema
@@ -311,9 +359,13 @@ export const healthEvidenceRecordSchema = recordObjectSchema
 	.transform((record) => {
 		// A null value is stored as absent; the timestamp is re-serialised from
 		// the parsed date so a stored record's hash recomputes from the row.
+		// `record_id` and `claim_ref` are stored lower-case so identifiers that
+		// differ only in letter case are the same identifier.
 		const { value, ...rest } = record;
 		return {
 			...rest,
+			record_id: record.record_id.toLowerCase(),
+			claim_ref: record.claim_ref.toLowerCase(),
 			...(value === undefined || value === null ? {} : { value }),
 			timestamp: new Date(record.timestamp).toISOString(),
 		};
@@ -362,6 +414,7 @@ const REVOCATION_CAUSE_VALUES = [
 const reasonSchema = z
 	.string()
 	.trim()
+	.refine(isStorableText, { message: UNSTORABLE_TEXT_MESSAGE })
 	.min(1, "reason is required")
 	.max(
 		COMMENT_MAX_LENGTH,
@@ -383,6 +436,7 @@ export const boundCheckRequestSchema = z.strictObject({
 	name: z
 		.string()
 		.trim()
+		.refine(isStorableText, { message: UNSTORABLE_TEXT_MESSAGE })
 		.min(1, "name is required")
 		.max(NAME_MAX_LENGTH, `name must be at most ${NAME_MAX_LENGTH} characters`),
 	reason: reasonSchema,

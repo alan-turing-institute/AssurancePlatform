@@ -11,7 +11,6 @@ import {
 import {
 	computeHealthStatus,
 	readHealthStatus,
-	refreshHealthSummary,
 } from "@/lib/services/health-status-service";
 import {
 	buildHealthRecords,
@@ -455,25 +454,5 @@ describe("readHealthStatus — access", () => {
 			await readHealthStatus(owner.id, "00000000-0000-0000-0000-000000000000"),
 			NOT_ENABLED_PATTERN
 		);
-	});
-});
-
-describe("refreshHealthSummary", () => {
-	it("writes only the small summary to the claim's tea.health PluginData row", async () => {
-		const { owner, testCase, claim } = await setup();
-		const record = await append(owner.id, claim.id, "populationPass");
-
-		const status = await refreshHealthSummary(owner.id, claim.id, testCase.id);
-
-		const row = await prisma.pluginData.findFirstOrThrow({
-			where: { pluginId: PLUGIN_ID, elementId: claim.id },
-		});
-		expect(row.data).toEqual({
-			verdict: "pass",
-			record_id: record.record_id,
-			timestamp: record.timestamp,
-			expires_at: status?.expires_at,
-			bound_check: "Sensor Range Checker",
-		});
 	});
 });
