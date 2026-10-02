@@ -178,6 +178,68 @@ describe("NodeEditDialog — element-panel slot", () => {
 	});
 });
 
+describe("NodeEditDialog — width follows the showing tab", () => {
+	it("is wider while a tab registered as wide is showing, and back to its width on Details", async () => {
+		const user = userEvent.setup();
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			wide: true,
+			Component: FakePanel,
+		});
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const dialog = await screen.findByRole("dialog");
+		expect(dialog.className).toContain("sm:max-w-lg");
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect(dialog.className).toContain("sm:max-w-2xl");
+		expect(dialog.className).not.toContain("sm:max-w-lg");
+		await user.click(screen.getByRole("tab", { name: "Details" }));
+		expect(dialog.className).toContain("sm:max-w-lg");
+	});
+
+	it("keeps the narrow width for a tab that does not ask for more", async () => {
+		const user = userEvent.setup();
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			Component: FakePanel,
+		});
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect((await screen.findByRole("dialog")).className).toContain(
+			"sm:max-w-lg"
+		);
+	});
+});
+
 describe("NodeEditDialog — form reset on node changes while open", () => {
 	it("keeps unsaved edits when the host re-renders with a new `node` object for the same element", async () => {
 		const user = userEvent.setup();

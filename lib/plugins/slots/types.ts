@@ -78,6 +78,8 @@ export interface ElementPanelRegistration extends SlotRegistrationBase {
 	label: string;
 	/** Stable per registration — becomes the Radix `Tabs` value; must be unique among a given element's panel tabs. */
 	tabId: string;
+	/** Whether the element dialog is wider while this tab is showing. */
+	wide?: boolean;
 }
 
 /** A plugin's own settings UI within its row in the plugins pane (ADR §2.3: "settings-section ... All"). */

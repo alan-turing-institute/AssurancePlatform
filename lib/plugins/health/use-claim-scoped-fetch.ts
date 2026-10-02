@@ -23,6 +23,8 @@ export interface ClaimScopedFetchResult<T> {
 	data: T;
 	/** Fetches again now, for a caller that has just changed the claim's state. */
 	refetch: () => Promise<void>;
+	/** Shows `value` now, for a caller that already holds the server's answer to a change. */
+	replace: (value: T) => void;
 	status: ClaimScopedFetchStatus;
 }
 
@@ -104,5 +106,10 @@ export function useClaimScopedFetch<T>({
 		},
 	});
 
-	return { data, status, refetch };
+	const replace = useCallback((value: T) => {
+		setData(value);
+		setStatus("ready");
+	}, []);
+
+	return { data, status, refetch, replace };
 }

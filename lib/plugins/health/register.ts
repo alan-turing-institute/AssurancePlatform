@@ -43,6 +43,7 @@ export function registerHealthPlugin(): void {
 			pluginId: PLUGIN_ID,
 			tabId: PLUGIN_ID,
 			label: "Evidence",
+			wide: true,
 			Component: HealthPanel,
 		});
 	} catch (error) {

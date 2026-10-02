@@ -4,6 +4,10 @@ import { type ReactNode, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+	describeDifferences,
+	NO_SETTINGS_ON_ARRIVAL,
+} from "./echo-difference-words";
+import {
 	CAUSE_LABELS,
 	describeDuration,
 	describeLevels,
@@ -151,6 +155,28 @@ function RevocationNotice({
 	);
 }
 
+/** How the record compared with the settings accepted when it arrived: nothing for a match. */
+function EchoNotes({ item }: { item: HealthEvidenceLogItem }) {
+	let lines: string[] = [];
+	if (item.echo_state === "undeclared") {
+		lines = [NO_SETTINGS_ON_ARRIVAL];
+	} else if (item.echo_state === "mismatch") {
+		lines = describeDifferences(item.echo_differences ?? [], true);
+	}
+	if (lines.length === 0) {
+		return null;
+	}
+	return (
+		<div className="space-y-0.5" data-testid="health-evidence-echo">
+			{lines.map((line) => (
+				<p className="wrap-anywhere text-muted-foreground text-sm" key={line}>
+					{line}
+				</p>
+			))}
+		</div>
+	);
+}
+
 interface RecordActionsProps {
 	claimId: string;
 	onChanged?: () => void;
@@ -256,6 +282,7 @@ export function EvidenceLogEntry({
 			</div>
 
 			{revocation && <RevocationNotice revocation={revocation} />}
+			<EchoNotes item={item} />
 			<FindingRows record={record} />
 			<MethodRows expiresAt={item.expires_at} record={record} />
 

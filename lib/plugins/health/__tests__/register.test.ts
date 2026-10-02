@@ -40,6 +40,7 @@ describe("registerHealthPlugin — wiring", () => {
 			pluginId: PLUGIN_ID,
 			tabId: PLUGIN_ID,
 			label: "Evidence",
+			wide: true,
 			Component: HealthPanel,
 		});
 	});
