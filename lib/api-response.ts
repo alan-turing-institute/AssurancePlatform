@@ -130,6 +130,21 @@ const ERROR_MAPPINGS: Array<{
 	// record that has no open revocation is a state conflict, like revoking
 	// one twice ("already revoked" above).
 	{ pattern: /^This record is not revoked$/, factory: conflict },
+	// `health-evidence-service.ts`'s `changeBoundCheck`: while a claim has
+	// accepted evidence settings, its check is set there, so changing the
+	// binding by hand is a state conflict (409).
+	{
+		pattern: /^This claim's check is set in its evidence settings$/,
+		factory: conflict,
+	},
+	// `health-criteria-service.ts`: saving accepted settings as a suggestion,
+	// and stopping the use of settings that are already inactive, are state
+	// conflicts (409).
+	{
+		pattern: /^Accepted settings cannot be saved as a suggestion$/,
+		factory: conflict,
+	},
+	{ pattern: /^These settings are already inactive$/, factory: conflict },
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
 	// outside the allowed set, or one whose content signature doesn't match
 	// what was declared (AP-QA-007), is a validation failure (400), not the

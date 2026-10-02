@@ -91,6 +91,7 @@ describe("GET /api/elements/[id]/health — happy path", () => {
 			timestamp: record.timestamp,
 			bound_check: "Sensor Range Checker",
 			rejected_since_last_accept: 0,
+			mismatch: { state: "undeclared" },
 		});
 	});
 

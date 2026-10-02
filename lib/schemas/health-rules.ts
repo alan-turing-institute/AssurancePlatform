@@ -81,14 +81,45 @@ export const validForSchema = z
 // Parameter bags
 // ---------------------------------------------------------------------------
 
-/** A free-form parameter object, kept verbatim and bounded to 4 KB. */
-export const paramsBagSchema = z
-	.record(z.string().max(200), z.json())
-	.refine((obj) => serializedByteLength(obj) <= PARAMS_MAX_BYTES, {
-		message: `must serialize to at most ${PARAMS_MAX_BYTES} bytes`,
-	});
+const PROTOTYPE_KEY = "__proto__";
 
-type ParamsBag = z.infer<typeof paramsBagSchema>;
+/**
+ * Refuses a key named `__proto__` at any depth. A record schema drops such a
+ * key without reporting it, so the value would be saved without the key the
+ * sender included; it is refused by name instead.
+ */
+const noPrototypeKeys = z.unknown().superRefine((value, ctx) => {
+	const pending: { path: (string | number)[]; value: unknown }[] = [
+		{ path: [], value },
+	];
+	while (pending.length > 0) {
+		const item = pending.pop();
+		if (!item || item.value === null || typeof item.value !== "object") {
+			continue;
+		}
+		if (Object.hasOwn(item.value, PROTOTYPE_KEY)) {
+			ctx.addIssue({
+				code: "custom",
+				path: [...item.path, PROTOTYPE_KEY],
+				message: `${PROTOTYPE_KEY} is not an allowed name`,
+			});
+		}
+		for (const [key, child] of Object.entries(item.value)) {
+			pending.push({ path: [...item.path, key], value: child });
+		}
+	}
+});
+
+/** A free-form parameter object, kept verbatim and bounded to 4 KB. */
+export const paramsBagSchema = noPrototypeKeys.pipe(
+	z
+		.record(z.string().max(200), z.json())
+		.refine((obj) => serializedByteLength(obj) <= PARAMS_MAX_BYTES, {
+			message: `must serialize to at most ${PARAMS_MAX_BYTES} bytes`,
+		})
+);
+
+export type ParamsBag = z.infer<typeof paramsBagSchema>;
 
 const versionSchema = z
 	.string()
@@ -104,7 +135,7 @@ const isNumberPair = (value: unknown): boolean =>
 const isNonEmptyArray = (value: unknown): boolean =>
 	Array.isArray(value) && value.length > 0;
 
-interface ParamIssue {
+export interface ParamIssue {
 	message: string;
 	path: (string | number)[];
 }
@@ -132,7 +163,7 @@ const RULE_KINDS = ["identity", "threshold", "band", "membership"] as const;
 
 const RULE_DIRECTIONS = ["maximize", "minimize", "target"] as const;
 
-interface RuleInput {
+export interface RuleInput {
 	direction?: (typeof RULE_DIRECTIONS)[number];
 	kind: (typeof RULE_KINDS)[number];
 	params?: ParamsBag;
@@ -199,25 +230,32 @@ const RULE_PARAM_CHECKS: Record<
 	],
 };
 
+/** What `rule` is missing or has wrong for its kind, as issues relative to the rule. */
+export function ruleParamIssues(rule: RuleInput): ParamIssue[] {
+	return RULE_PARAM_CHECKS[rule.kind](rule, rule.params ?? {});
+}
+
 function checkRuleParams(rule: RuleInput, ctx: z.RefinementCtx): void {
-	for (const issue of RULE_PARAM_CHECKS[rule.kind](rule, rule.params ?? {})) {
+	for (const issue of ruleParamIssues(rule)) {
 		ctx.addIssue({ code: "custom", ...issue });
 	}
 }
 
-export const ruleSchema = z
-	.strictObject({
-		kind: z.enum(RULE_KINDS, {
-			message: `must be one of ${RULE_KINDS.join(", ")}`,
-		}),
-		direction: z
-			.enum(RULE_DIRECTIONS, {
-				message: "must be maximize, minimize or target",
-			})
-			.optional(),
-		params: paramsBagSchema.optional(),
-		version: versionSchema,
-	})
+/** A rule without its version label and without the per-kind parameter checks. */
+export const ruleBaseSchema = z.strictObject({
+	kind: z.enum(RULE_KINDS, {
+		message: `must be one of ${RULE_KINDS.join(", ")}`,
+	}),
+	direction: z
+		.enum(RULE_DIRECTIONS, {
+			message: "must be maximize, minimize or target",
+		})
+		.optional(),
+	params: paramsBagSchema.optional(),
+});
+
+export const ruleSchema = ruleBaseSchema
+	.extend({ version: versionSchema })
 	.superRefine(checkRuleParams);
 
 // ---------------------------------------------------------------------------
@@ -234,11 +272,15 @@ const REDUCTION_KINDS = [
 	"last",
 ] as const;
 
-export const reductionSchema = z.strictObject({
+/** A reduction without its own rule and without its version label. */
+export const reductionBaseSchema = z.strictObject({
 	kind: z.enum(REDUCTION_KINDS, {
 		message: `must be one of ${REDUCTION_KINDS.join(", ")}`,
 	}),
 	params: paramsBagSchema.optional(),
+});
+
+export const reductionSchema = reductionBaseSchema.extend({
 	rule: ruleSchema.optional(),
 	version: versionSchema,
 });
@@ -253,16 +295,19 @@ function isFraction(value: unknown): boolean {
 	return typeof value === "number" && value >= 0 && value <= 1;
 }
 
-function checkAggregationParams(
-	aggregation: {
-		kind: (typeof AGGREGATION_KINDS)[number];
-		params: ParamsBag;
-	},
-	ctx: z.RefinementCtx
-): void {
+export interface AggregationInput {
+	kind: (typeof AGGREGATION_KINDS)[number];
+	params: ParamsBag;
+}
+
+/** What `aggregation` has wrong in its `params` for its kind, as issues relative to the aggregation. */
+export function aggregationParamIssues(
+	aggregation: AggregationInput
+): ParamIssue[] {
 	const { params } = aggregation;
+	const issues: ParamIssue[] = [];
 	const fail = (key: string, message: string) =>
-		ctx.addIssue({ code: "custom", path: ["params", key], message });
+		issues.push({ path: ["params", key], message });
 
 	if (params.avail_floor !== undefined && !isFraction(params.avail_floor)) {
 		fail("avail_floor", "must be a number from 0 to 1");
@@ -290,14 +335,26 @@ function checkAggregationParams(
 			fail("percentile", "must be a number from 0 to 100");
 		}
 	}
+	return issues;
 }
 
-export const aggregationSchema = z
-	.strictObject({
-		kind: z.enum(AGGREGATION_KINDS, {
-			message: `must be one of ${AGGREGATION_KINDS.join(", ")}`,
-		}),
-		params: paramsBagSchema,
-		version: versionSchema,
-	})
+function checkAggregationParams(
+	aggregation: AggregationInput,
+	ctx: z.RefinementCtx
+): void {
+	for (const issue of aggregationParamIssues(aggregation)) {
+		ctx.addIssue({ code: "custom", ...issue });
+	}
+}
+
+/** An aggregation without its version label and without the per-kind parameter checks. */
+export const aggregationBaseSchema = z.strictObject({
+	kind: z.enum(AGGREGATION_KINDS, {
+		message: `must be one of ${AGGREGATION_KINDS.join(", ")}`,
+	}),
+	params: paramsBagSchema,
+});
+
+export const aggregationSchema = aggregationBaseSchema
+	.extend({ version: versionSchema })
 	.superRefine(checkAggregationParams);

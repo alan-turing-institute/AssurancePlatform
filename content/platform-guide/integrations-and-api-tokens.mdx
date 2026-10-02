@@ -7,11 +7,26 @@ Machine integrations let a service call selected TEA endpoints without signing i
 
 ## Register and authorise an integration
 
-Open `/dashboard/settings/integrations` and select **Register integration**. Give it a name, optionally describe its purpose, and select at least one scope. The available scopes are `case:read`, `health:evidence:read` and `health:evidence:write`. A scope allows a kind of action; it does not grant access to every case. The case-grant form lists cases you created; granting one requires case Admin access. Review those grants when the service's work changes. Scopes can later be changed through `PATCH /api/integrations/[id]`.
+Open `/dashboard/settings/integrations` and select **Register integration**. Give it a name, optionally describe its purpose, and select at least one scope. The available scopes are `case:read`, `health:checks:write`, `health:criteria:read`, `health:evidence:read` and `health:evidence:write`. A scope allows a kind of action; it does not grant access to every case. The case-grant form lists cases you created; granting one requires case Admin access. Review those grants when the service's work changes. Scopes can later be changed through `PATCH /api/integrations/[id]`.
 
 After registration, issue its first token from the integration card. The secret begins `teap_` and is displayed once. Copy it to the client at that point. TEA stores a hash and a short identifying prefix, so it cannot show the full secret again. The client sends the secret in an `Authorization: Bearer` header. The generated reference at `/api-docs` gives the exact requests and responses.
 
-The `/api/machine` surface currently offers a client identity check and health evidence operations for a case element. A token is checked for its integration's scopes and for that integration's case permission. The `case:read` scope belongs to the vocabulary, but the current machine route tree does not provide a general case-list or case-read endpoint. Do not plan an integration around one until it appears in the generated reference.
+The `/api/machine` surface currently offers a client identity check, health evidence operations for a case element, and the health plugin's check list and evidence settings routes. A token is checked for its integration's scopes and, on routes that address a case or a claim, for that integration's case permission. The `case:read` scope belongs to the vocabulary, but the current machine route tree does not provide a general case-list or case-read endpoint. Do not plan an integration around one until it appears in the generated reference.
+
+## Scopes for the health plugin
+
+| Scope | Allows |
+|---|---|
+| `health:evidence:write` | Posting evidence records to `/api/machine/health/elements/[id]/evidence`. |
+| `health:evidence:read` | Reading a claim's evidence log, with `?live=true` to leave out revoked and expired records, and its status at `/api/machine/health/elements/[id]/status` or, for a whole case, `/api/machine/health/cases/[id]/status`. |
+| `health:checks:write` | Publishing the list of checks the service can run, with `PUT /api/machine/health/checks`. |
+| `health:criteria:read` | Reading the evidence settings accepted for claims, at `/api/machine/health/cases/[id]/criteria` and `/api/machine/health/elements/[id]/criteria`. |
+
+Each route that addresses a case or a claim also needs the integration's system user to hold the case permission it requires: view access to read, edit access to post evidence.
+Publishing a check list addresses no case, so it needs only the `health:checks:write` scope and the health plugin to be enabled for the integration.
+Settings accepted by a person are returned only to the integration whose check list the check came from.
+An integration registered before `health:checks:write` and `health:criteria:read` existed does not hold them.
+Its owner adds them with one `PATCH /api/integrations/[id]` request that lists every scope the integration should hold, because no screen edits the scopes of an existing integration.
 
 ## Rotate, revoke or pause access
 

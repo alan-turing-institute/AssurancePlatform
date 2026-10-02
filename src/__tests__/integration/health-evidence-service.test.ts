@@ -35,6 +35,7 @@ const EXPECTED_EXPORTS = [
 	"DEFAULT_EVIDENCE_PAGE_SIZE",
 	"MAX_EVIDENCE_PAGE_SIZE",
 	"appendHealthEvidence",
+	"applyBoundCheck",
 	"boundCheckRefusal",
 	"canonicalJSON",
 	"changeBoundCheck",
@@ -69,7 +70,7 @@ function validRecord(
 }
 
 describe("health-evidence-service — module surface (append-only, structurally)", () => {
-	it("exposes append, list, revoke, reinstate, change-bound-check and the hash helpers — still no update or delete path for an evidence row", async () => {
+	it("exposes append, list, revoke, reinstate, change-bound-check, the binding helper for the settings service and the hash helpers — still no update or delete path for an evidence row", async () => {
 		const module = await import("@/lib/services/health-evidence-service");
 		const exportedNames = Object.keys(module).sort();
 

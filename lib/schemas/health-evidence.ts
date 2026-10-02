@@ -43,7 +43,7 @@ const MEMBERS_MAX_ITEMS = 5000;
 const VALID_WHILE_MAX_KEYS = 20;
 const SCALAR_STRING_MAX_LENGTH = 500;
 
-const nameString = (label: string) =>
+export const nameString = (label: string) =>
 	z
 		.string()
 		.min(1, `${label} is required`)
@@ -53,7 +53,7 @@ const nameString = (label: string) =>
 		);
 
 /** A check's identifying text is matched exactly, so it cannot carry edge whitespace. */
-const checkTextString = (label: string) =>
+export const checkTextString = (label: string) =>
 	nameString(label).refine((text) => text === text.trim(), {
 		message: `${label} must not start or end with whitespace`,
 	});
@@ -263,7 +263,7 @@ const isStorableText = (text: string): boolean =>
 	!(text.includes("\u0000") || LONE_SURROGATE.test(text));
 
 /** Adds an issue for every key and string value, at any depth, that Postgres cannot store. */
-function checkStorableStrings(
+export function checkStorableStrings(
 	value: unknown,
 	path: (string | number)[],
 	ctx: z.RefinementCtx
@@ -411,7 +411,7 @@ const REVOCATION_CAUSE_VALUES = [
 	"other",
 ] as const;
 
-const reasonSchema = z
+export const reasonSchema = z
 	.string()
 	.trim()
 	.refine(isStorableText, { message: UNSTORABLE_TEXT_MESSAGE })
@@ -446,4 +446,5 @@ export const boundCheckRequestSchema = z.strictObject({
 export const evidenceListQuerySchema = z.strictObject({
 	limit: z.coerce.number().int().min(1).max(200).optional(),
 	before: z.coerce.number().int().min(1).optional(),
+	live: z.enum(["true", "false"]).optional(),
 });

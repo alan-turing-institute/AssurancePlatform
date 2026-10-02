@@ -58,14 +58,20 @@ async function resolveReadPrincipalUserId(
  * OR a human session — either way the acting principal still needs case
  * access and the `tea.health` plugin must be enabled for them. Each item is
  * `{ id, record, chain_sequence, record_hash, previous_record_hash,
- * created_by_id, created_at, expires_at, revocation }`, where `revocation`
+ * created_by_id, created_at, expires_at, revocation, echo_state,
+ * echo_differences, criteria_revision }`, where `revocation`
  * is the record's open revocation (`cause`, `reason`, `revoked_at`,
  * `revoked_by_name`) or null. `limit` (default 50, at most 200) sets the page
  * size; `before` is a `chain_sequence`, returning only older records.
  * `next_before` is the value to pass as `before` for the next page, or null
- * on the last page.
+ * on the last page. Each item also carries `echo_state` (`match`, `mismatch`
+ * or `undeclared`), `echo_differences` and `criteria_revision`: the
+ * comparison with the claim's accepted evidence settings made when the record
+ * arrived. With `live=true`, only records that are not revoked and whose
+ * validity has not run out are returned.
  * @query limit - Page size, 1 to 200 (default 50)
  * @query before - Return only records with a lower chain_sequence
+ * @query live - `true` to return only records that are not revoked and not expired
  * @response 200 - `{ evidence: Item[], next_before: number | null }`
  * @response 400 - Invalid `limit` or `before`
  * @response 401 - Unauthorised (no valid token or session)
@@ -94,6 +100,7 @@ export async function GET(
 		const result = await listHealthEvidence(userId, claimId, {
 			limit: query.data.limit,
 			before: query.data.before,
+			live: query.data.live === "true",
 		});
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
@@ -123,7 +130,7 @@ export async function GET(
  * hash chain and `tea.health/state-changed` is broadcast to the claim's case
  * — emitted only after the write has committed, never from inside a
  * transaction.
- * @response 201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`)
+ * @response 201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`, `mismatch`)
  * @response 400 - Invalid body (the field is named), or `claim_ref` doesn't match the path id
  * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
  * @response 404 - Claim not found (covers non-existent, wrong element type, and no-access — same message, no enumeration oracle)

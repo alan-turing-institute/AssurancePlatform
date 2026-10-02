@@ -42,6 +42,7 @@ async function insertEvidence(claimId: string, createdById: string) {
 			session: "test",
 			validFor: "indefinite",
 			formatVersion: "1.1",
+			echoState: "UNDECLARED",
 			recordHash: `hash-${n}`,
 			createdById,
 		},

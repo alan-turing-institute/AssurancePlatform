@@ -1,6 +1,6 @@
 ---
 title: "Health plugin and evidence chain"
-description: "Understand the evidence record format, how a claim's status is computed, and how records are revoked."
+description: "Understand the evidence record format, the settings declared for a claim, how a claim's status is computed, and how records are revoked."
 ---
 
 The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim.
@@ -59,6 +59,7 @@ Nothing is stored for a refused record, but the refusals since the last accepted
 The next accepted record returns the count to zero.
 A person with edit access can change the bound check from the Evidence tab, giving a reason.
 Each change is kept in a history table with who made it and why.
+While a claim has accepted evidence settings, its check is the one those settings name, and changing the bound check by hand is refused with 409 (see [Declare evidence settings](#declare-evidence-settings)).
 
 ## Read evidence
 
@@ -67,6 +68,13 @@ It accepts a token with `health:evidence:read` or a signed-in user with view acc
 `limit` sets the page size (default 50, at most 200) and `before` is a `chain_sequence`, returning only older records.
 The response carries `next_before`, the value to pass as `before` for the next page, or `null` on the last page.
 Each item has the stored `record`, its hash fields, `created_by_id`, `created_at`, `expires_at`, and `revocation`, which is the record's open revocation or `null`.
+Each item also carries `echo_state`, `echo_differences` and `criteria_revision`, described under [The echo check](#the-echo-check).
+With `live=true` the list holds only records that are not revoked and whose validity has not run out by the clock.
+A `valid_while` condition is not evaluated per record in a list; the claim's status is where that is answered.
+
+`GET /api/machine/health/elements/[id]/status` and `GET /api/machine/health/cases/[id]/status` return the status object described below for one claim, or for every claim in a case that has one.
+Both need the `health:evidence:read` scope and view access to the case.
+A status belongs to the claim, so these routes are not limited to the checks of one integration.
 
 ## The hash chain
 
@@ -98,7 +106,8 @@ The current value of a variable is the one carried by the latest-timestamp, non-
 A session name used in another case has no effect.
 - When every record the claim has received is revoked, the status has no verdict, is stale, and `stale_reason` is `all-revoked`.
 
-The status object has `verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check` and `rejected_since_last_accept`.
+The status object has `verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept` and `mismatch`.
+`mismatch` compares the current record with the evidence settings accepted for the claim now, and is described under [The echo check](#the-echo-check).
 `GET /api/elements/[id]/health` returns it as `{ status }` for a signed-in user with view access, or `{ status: null }` when the claim has neither a record nor a bound check.
 
 Staleness is separate from the verdict: a passing claim can be stale.
@@ -129,6 +138,127 @@ Revoking the record again adds a new row.
 
 Each of these changes emits `tea.health/state-changed` after it commits.
 
+## Declare evidence settings
+
+A claim's evidence settings say which check to run, how each reading is judged, how a subject's readings are combined, how subjects are combined into the claim's result, and how long a result counts.
+They are stored in the plugin's own tables, so a published case carries none of them.
+A person with edit access sets them up; a machine token cannot.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, and the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings). Needs view access. |
+| `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept }`. Needs edit access. |
+| `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason }`. Needs edit access. |
+| `GET /api/cases/[id]/health/checks` | The check lists of the active integrations whose system user can edit the case. Needs view access. |
+| `GET /api/cases/[id]/health/hygiene` | Three counts for the case (see below). Needs view access. |
+
+`settings` holds `check` (`name`, `version`, optional `scope` and `params`), `rule`, optional `reduction` and `aggregation`, `window` and `valid_for`.
+It carries no version labels, `source` or revision: the server sets those, and a request that sends them is refused.
+`accept: false` stores the settings as a suggestion.
+`accept: true` accepts them, recording who and when, and whether that person owns the integration the check came from.
+A later save on accepted settings keeps them accepted; saving accepted settings as a suggestion is refused with 409.
+Retiring accepted settings needs a reason; a suggestion can be discarded without one.
+Retired and discarded settings stay in the table as inactive, so the revision number and the version counters carry on if settings are set up again.
+
+Settings are checked on every save, whether suggested or accepted, so nothing invalid is stored:
+
+- The integration must be active, its system user must hold edit access to the case, and it must have published a check list.
+The check must be in that list by name and version when settings are first set up, when they are set up again after being inactive, and whenever the check's name or version or the integration changes.
+Every save that finds the check in the list stores a copy of the check's whole entry beside the settings.
+A save that does not find the check is allowed only when the check's name, version and own settings and the integration are unchanged and the settings are not inactive.
+Every check below then runs against the stored copy, exactly as it would against a listed entry, and the copy is kept.
+A change to the check's own settings needs the check in the list; an own setting that the stored copy does not describe is refused by name.
+An unknown integration, one without access and a check it does not offer all give the same 400.
+These checks run only after the access check, so a person without access learns nothing about what an integration offers.
+- `check.params` may name only the settings the check describes, with the types it gives.
+- The rule must suit the check's value: `identity` for yes-or-no, `threshold` or `band` for numbers, `membership` for text or numbers.
+A date-and-time check cannot be set up yet.
+The direction is `maximize` or `minimize`, and a marginal limit must lie on the failing side of the pass limit.
+- A whole-system check (scope `environment`) has no reduction and no aggregation.
+Any other check needs an aggregation.
+A check that returns text takes no reduction.
+- A reduction is one of `sum`, `mean`, `max`, `min`, `median`, `percentile` (with `p`) or `last`.
+When the reading rule is `identity` or `membership` and the reduction averages, adds or takes a percentile, the reduction needs its own `threshold` or `band` rule, because the combined value is a number.
+- The aggregation is `proportion` with a `threshold` from 0 to 1 and `use_verdict` set to true.
+A marginal threshold is not available.
+- `window` and `valid_for` are durations of at most 100 years; `valid_for` may be `indefinite`.
+`window` is required for every check, because every record carries one.
+
+Version labels count the changes to a block.
+The rule's label is `r<n>`, the reduction's `d<n>` and the aggregation's `a<n>`.
+Each counter goes up by one when a save changes that block, and the first save makes each present block `1`.
+Changing the check's name raises all three.
+A counter never goes back, so a label never means two different things.
+
+`source` records where each block came from, worked out by the server: `recommended` when it equals what the check recommends, `edited` when the check recommends a block and this one differs, and `hand` when the check recommends none.
+`kind` is `recommended` when every block is, `hand` when none is, and `edited` otherwise.
+
+Every save, acceptance, retirement and discard writes one row to an append-only history, holding the settings exactly as the pipeline would be served them, the person and the time.
+Each write takes the claim-row lock first, the same lock an arriving result takes, so a save cannot interleave with a result being compared.
+
+Accepted settings set the claim's check.
+When a save leaves settings accepted and the check differs from the claim's bound check, the same transaction rebinds the claim, creating its state row if it has none, and writes a binding history row with source `DECLARATION`.
+
+`GET /api/cases/[id]/health/hygiene` returns `claims_without_time_limit`, `checks_without_time_limit` and `settings_as_recommended`, each as `{ count, of }`.
+A claim's current result is the one that colours its badge.
+The first figure counts claims whose current result has no time limit, out of claims with a current result.
+The second counts checks with at least one such claim, out of the checks in use.
+The third counts accepted settings that are exactly what the check recommends, out of all accepted settings.
+
+## Publish a check list
+
+A pipeline tells TEA which checks it can run with `PUT /api/machine/health/checks`, using a token with the `health:checks:write` scope.
+The body is `{ pipeline, checks }`.
+Each check has `name`, `version`, `scope` and `value` (`boolean`, `number` with an optional `unit`, `string` with an optional `allowed` list, or `datetime`).
+It may also have `description`, `scope_label` (`{ one, many }`), `params` (the settings the check describes, each with a `key`, `label`, `type`, optional `default`, `unit` and `options`) and `recommended` (suggested settings, with any block absent).
+Unknown keys are refused, apart from inside the `params` bags of a rule, reduction or aggregation.
+A list has at most 200 checks, one entry per check name, and a body of at most 256 KB, above which the answer is 413.
+Names, versions and scopes may not start or end with a space.
+
+The list replaces the integration's previous one.
+Publishing never changes any claim's settings.
+A recommendation is checked for shape when published, and judged as settings only for the blocks it names.
+One that would not pass as settings is stored all the same, and the response names the problem: `200 { checks, warnings: [{ check, problem }] }`.
+`GET /api/cases/[id]/health/checks` returns the lists of the active integrations that can edit the case, which is what the settings form offers.
+
+## Read settings back
+
+A pipeline reads the settings accepted for its claims with a token that has the `health:criteria:read` scope and view access to the case.
+
+- `GET /api/machine/health/cases/[id]/criteria` returns `{ case_id, criteria }`: every accepted set of settings in the case whose check came from the calling integration's own check list, on claims that are not deleted.
+A second pipeline on the same case gets only its own.
+- `GET /api/machine/health/elements/[id]/criteria` returns one item, or 404 when the claim has no accepted settings for this integration.
+
+Suggested and inactive settings are never returned.
+Each item is `{ claim_ref, state, revision, check, rule, reduction?, aggregation?, window, valid_for, source, accepted_at, updated_at }`, with version labels in place.
+The reduction's own rule carries the reduction's label.
+People's names are left out.
+
+Reading records `last_read_at` and `last_read_revision` in one statement that returns the rows it touched, so the revision recorded is the revision served.
+It does not change `updated_at`, so a read does not look like an edit.
+A token can keep the read time fresh without using the settings, so the read time shows that settings were fetched and never that they were used.
+
+## The echo check
+
+A record echoes the settings it was judged with: its `check.version`, the version of its `rule`, `reduction` and `aggregation`, its `window` and `valid_for`, and its `check.params`.
+When a record arrives, inside the append transaction and under the claim lock, it is compared with the claim's accepted settings.
+The record is stored either way.
+
+- With no accepted settings the record's `echo_state` is `undeclared`.
+- Otherwise the check's version, the rule's version, whether a reduction and an aggregation are used and their versions, `window` and `valid_for` (compared as lengths of time, so `PT60S` equals `PT1M`), and `check.params` (compared as canonical JSON, with absent equal to `{}` and no defaults filled in) must all agree.
+If they do, `echo_state` is `match`.
+If not, it is `mismatch` and `echo_differences` lists each difference as `{ field, declared, used }`.
+The field names are `check.version`, `check.params`, `rule.version`, `reduction`, `reduction.version`, `aggregation`, `aggregation.version`, `window` and `valid_for`.
+- `criteria_revision` is the settings revision the record was compared with.
+
+A record's check name needs no comparison, because the claim's binding already refuses a record naming another check.
+Every record stored before the settings tables existed is `undeclared`.
+What is stored on a record is the comparison made when it arrived, and it does not change afterwards.
+The echo columns are not part of the record's hash.
+
+The status object's `mismatch` is worked out on each read from the claim's current record and the settings as they are now: `null` when they agree or there is no current record, `{ state: "undeclared" }` when the claim has no accepted settings, and `{ state: "mismatch", differences }` otherwise.
+Editing or retiring settings therefore flags the claim at once, and the flag stays until a result judged with the current settings arrives.
+
 ## Limits and code location
 
 The chain detects edits that do not also recompute later hashes.
@@ -137,4 +267,6 @@ It does not prove that a source system's measurement was correct.
 The evidence service is `lib/services/health-evidence-service.ts`, the only code that writes the evidence tables.
 Status is computed in `lib/services/health-status-service.ts` and the sweep is in `lib/services/health-staleness-sweep-service.ts`.
 The record schema is `lib/schemas/health-evidence.ts`, with the rule, reduction, aggregation and duration shapes in `lib/schemas/health-rules.ts`.
+Settings are in `lib/services/health-criteria-service.ts` and `lib/schemas/health-criteria.ts`, which also holds the version labels and the echo comparison.
+Check lists are in `lib/services/health-check-catalogue-service.ts` and `lib/schemas/health-checks.ts`.
 UI components are under `lib/plugins/health/`.

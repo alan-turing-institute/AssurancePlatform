@@ -3,6 +3,23 @@ import type {
 	HealthVerdict,
 } from "@/lib/schemas/health-evidence";
 
+/** One way a result differed from the evidence settings accepted for its claim. */
+export interface HealthEchoDifference {
+	declared: unknown;
+	field: string;
+	used: unknown;
+}
+
+export type HealthEchoState = "match" | "mismatch" | "undeclared";
+
+/**
+ * How the claim's current result compares with the settings accepted for the
+ * claim now; null when there is no current result to compare.
+ */
+export type HealthMismatch =
+	| { state: "undeclared" }
+	| { state: "mismatch"; differences: HealthEchoDifference[] };
+
 export type HealthStaleReason = "all-revoked" | "condition" | "expired";
 
 /**
@@ -14,6 +31,7 @@ export type HealthStaleReason = "all-revoked" | "condition" | "expired";
 export interface HealthStatus {
 	bound_check: string;
 	expires_at: string | null;
+	mismatch: HealthMismatch | null;
 	record_id: string | null;
 	rejected_since_last_accept: number;
 	stale: boolean;
@@ -43,6 +61,9 @@ export interface HealthEvidenceLogItem {
 	chain_sequence: number;
 	created_at: string;
 	created_by_id: string;
+	criteria_revision: number | null;
+	echo_differences: HealthEchoDifference[] | null;
+	echo_state: HealthEchoState;
 	expires_at: string | null;
 	id: string;
 	previous_record_hash: string | null;

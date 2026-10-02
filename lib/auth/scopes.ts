@@ -15,6 +15,8 @@
  */
 export const SCOPES = [
 	"case:read",
+	"health:checks:write",
+	"health:criteria:read",
 	"health:evidence:read",
 	"health:evidence:write",
 ] as const;

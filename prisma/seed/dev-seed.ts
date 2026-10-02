@@ -14,6 +14,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 import { Pool } from "pg";
 import { prisma as appPrisma } from "../../lib/prisma";
+import { healthCheckListSchema } from "../../lib/schemas/health-checks";
 import { sectors } from "../../lib/sectors";
 import { upsertCaseInformation } from "../../lib/services/case-information-service";
 import {
@@ -22,6 +23,7 @@ import {
 	ensureDarterIntegration,
 } from "../../lib/services/darter-integration-service";
 import { publishAssuranceCase } from "../../lib/services/publish-service";
+import { buildHealthCheckList } from "../../src/__tests__/fixtures/health-checks";
 import { PrismaClient } from "../../src/generated/prisma";
 
 const HEALTH_AND_SOCIAL_CARE_SECTOR_ID = sectors.find(
@@ -996,7 +998,7 @@ async function main() {
 	// visible, which they are by this point. Reuses the exact registration
 	// logic `scripts/seed-darter-integration.ts` uses (shared via
 	// `lib/services/darter-integration-service.ts`), actor = the chris seed
-	// user, scopes = case:read + health:evidence:write. Deliberately issues
+	// user, scopes = DARTER_EXPECTED_SCOPES. Deliberately issues
 	// NO token — shown-once semantics mean the token is issued through the
 	// management UI (PR #849) at demo time, never baked into the seed.
 	console.log("\nRegistering DARTER integration...");
@@ -1012,6 +1014,27 @@ async function main() {
 	);
 	console.log(
 		`Registered "${DARTER_INTEGRATION_NAME}" integration (${darter.data.status}) and granted EDIT on the DARTER demo case to its system user. No token issued — issue one via the management UI at demo time.`
+	);
+
+	// Publishes a small demo check list for the integration, so the evidence
+	// settings form has checks to offer before a real pipeline publishes one.
+	const checkList = healthCheckListSchema.parse(buildHealthCheckList());
+	await prisma.pluginHealthCheckCatalogue.upsert({
+		where: { integrationId: darter.data.integrationId },
+		create: {
+			integrationId: darter.data.integrationId,
+			pipeline: checkList.pipeline,
+			checks: checkList.checks,
+			publishedAt: new Date(),
+		},
+		update: {
+			pipeline: checkList.pipeline,
+			checks: checkList.checks,
+			publishedAt: new Date(),
+		},
+	});
+	console.log(
+		`Published a demo check list (${checkList.checks.length} checks) for "${DARTER_INTEGRATION_NAME}".`
 	);
 
 	// ============================================
@@ -1038,7 +1061,7 @@ async function main() {
 	);
 	console.log("  - 2 comments on Medium Case");
 	console.log(
-		`  - 1 machine integration: ${DARTER_INTEGRATION_NAME} (case:read + health:evidence:write, EDIT on the demo case, no token issued)`
+		`  - 1 machine integration: ${DARTER_INTEGRATION_NAME} (all five scopes, EDIT on the demo case, a demo check list, no token issued)`
 	);
 	console.log("\nLogin with any test user using the SEED_USER_PASSWORD");
 }

@@ -1305,6 +1305,86 @@
         }
       }
     },
+    "/cases/{id}/health/checks": {
+      "get": {
+        "operationId": "get-cases-{id}-health-checks",
+        "summary": "GET /api/cases/[id]/health/checks",
+        "description": "Human session only; the session user needs VIEW on the case.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `[{ integration, pipeline, published_at, checks }]`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/health/hygiene": {
+      "get": {
+        "operationId": "get-cases-{id}-health-hygiene",
+        "summary": "GET /api/cases/[id]/health/hygiene",
+        "description": "Human session only; the session user needs VIEW on the case.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ claims_without_time_limit, checks_without_time_limit, settings_as_recommended }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/information/image": {
       "post": {
         "operationId": "post-cases-{id}-information-image",
@@ -2035,7 +2115,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ status: { verdict, stale, stale_reason, stale_since, expires_at, record_id, timestamp, bound_check, rejected_since_last_accept } | null }`"
+                  "$ref": "#/components/schemas/200 - `{ status: { verdict, stale, stale_reason, stale_since, expires_at, record_id, timestamp, bound_check, rejected_since_last_accept, mismatch } | null }`"
                 }
               }
             }
@@ -2126,6 +2206,124 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/200 - `{ status }` (null when the claim has no accepted record yet)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/criteria": {
+      "get": {
+        "operationId": "get-elements-{id}-health-criteria",
+        "summary": "GET /api/elements/[id]/health/criteria",
+        "description": "Human session only; the session user needs VIEW on the",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "put": {
+        "operationId": "put-elements-{id}-health-criteria",
+        "summary": "PUT /api/elements/[id]/health/criteria",
+        "description": "Human session only — a machine token cannot change settings.",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The same body as the GET, after the save"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/criteria/retirement": {
+      "post": {
+        "operationId": "post-elements-{id}-health-criteria-retirement",
+        "summary": "POST /api/elements/[id]/health/criteria/retirement",
+        "description": "Human session only. The session user needs EDIT on the claim's",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The same body as `GET /api/elements/[id]/health/criteria`, after the change"
                 }
               }
             }
@@ -2808,6 +3006,166 @@
         }
       }
     },
+    "/machine/health/checks": {
+      "put": {
+        "operationId": "put-machine-health-checks",
+        "summary": "PUT /api/machine/health/checks",
+        "description": "Machine-only (`requireApiToken(\"health:checks:write\")`). The",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ checks: number, warnings: [{ check, problem }] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/cases/{id}/criteria": {
+      "get": {
+        "operationId": "get-machine-health-cases-{id}-criteria",
+        "summary": "GET /api/machine/health/cases/[id]/criteria",
+        "description": "Machine-only (`requireApiToken(\"health:criteria:read\")`); the",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ case_id, criteria: Item[] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/cases/{id}/status": {
+      "get": {
+        "operationId": "get-machine-health-cases-{id}-status",
+        "summary": "GET /api/machine/health/cases/[id]/status",
+        "description": "Machine-only (`requireApiToken(\"health:evidence:read\")`); the",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ case_id, statuses: [{ claim_ref, status }] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/elements/{id}/criteria": {
+      "get": {
+        "operationId": "get-machine-health-elements-{id}-criteria",
+        "summary": "GET /api/machine/health/elements/[id]/criteria",
+        "description": "Machine-only (`requireApiToken(\"health:criteria:read\")`); the",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - One item, as in `GET /api/machine/health/cases/[id]/criteria`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/machine/health/elements/{id}/evidence": {
       "get": {
         "operationId": "get-machine-health-elements-{id}-evidence",
@@ -2869,7 +3227,47 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`)"
+                  "$ref": "#/components/schemas/201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`, `mismatch`)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/elements/{id}/status": {
+      "get": {
+        "operationId": "get-machine-health-elements-{id}-status",
+        "summary": "GET /api/machine/health/elements/[id]/status",
+        "description": "Machine-only (`requireApiToken(\"health:evidence:read\")`); the",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ status }` (null when the claim has no bound check and no record)"
                 }
               }
             }

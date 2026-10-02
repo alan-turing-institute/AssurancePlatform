@@ -82,6 +82,7 @@ describe("computeHealthStatus — current record", () => {
 			expires_at: null,
 			record_id: null,
 			timestamp: null,
+			mismatch: null,
 		};
 
 		it("shows the bound check when a person bound it before any record arrived", async () => {
@@ -141,6 +142,7 @@ describe("computeHealthStatus — current record", () => {
 			timestamp: record.timestamp,
 			bound_check: "Sensor Range Checker",
 			rejected_since_last_accept: 0,
+			mismatch: { state: "undeclared" },
 		});
 	});
 

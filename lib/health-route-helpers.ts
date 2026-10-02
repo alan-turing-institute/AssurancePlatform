@@ -1,6 +1,6 @@
 import type { NextRequest, NextResponse } from "next/server";
 import type { z } from "zod";
-import { parseJsonBody } from "@/lib/api-request";
+import { parseJsonBody, readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -9,6 +9,8 @@ import {
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { uuidSchema } from "@/lib/schemas/base";
+import { describeEvidenceIssues } from "@/lib/schemas/health-evidence";
+import type { InvalidSettings } from "@/lib/services/health-criteria-service";
 import {
 	computeHealthStatus,
 	type HealthStatus,
@@ -88,4 +90,48 @@ export async function handleHealthRecordAction<
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
+}
+
+/**
+ * Parses a JSON body against `schema`. A failure is a 400 that names the
+ * offending field (`<path>: <message>`) and lists every field's message.
+ */
+export async function parseHealthBody<S extends z.ZodType>(
+	request: NextRequest,
+	schema: S,
+	options?: { maxBytes?: number }
+): Promise<z.output<S>> {
+	const parsed = schema.safeParse(await readJsonBody(request, options));
+	if (!parsed.success) {
+		const { message, fieldErrors } = describeEvidenceIssues(parsed.error);
+		throw validationError(message, fieldErrors);
+	}
+	return parsed.data;
+}
+
+/** The response for a failed save: a 400 naming the fields, or the mapped service error. */
+export function criteriaFailure(
+	failure: { error: string } | { invalid: InvalidSettings }
+): NextResponse {
+	if ("invalid" in failure) {
+		return apiError(
+			validationError(failure.invalid.message, failure.invalid.fieldErrors)
+		);
+	}
+	return apiError(serviceErrorToAppError(failure.error));
+}
+
+/**
+ * The first steps of a session-only route addressed to one claim: the
+ * signed-in user and the claim id from the path (a 400 when it is not a UUID).
+ */
+export async function requireClaimRequest(
+	params: Promise<{ id: string }>
+): Promise<{ claimId: string; userId: string }> {
+	const session = await requireAuthSession();
+	const claimId = uuidSchema.safeParse((await params).id.toLowerCase());
+	if (!claimId.success) {
+		throw validationError("Invalid element id");
+	}
+	return { userId: session.userId, claimId: claimId.data };
 }

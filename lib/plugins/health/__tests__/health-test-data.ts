@@ -13,6 +13,7 @@ export function status(overrides: Partial<HealthStatus> = {}): HealthStatus {
 		stale: false,
 		stale_reason: null,
 		stale_since: null,
+		mismatch: null,
 		...overrides,
 	};
 }
@@ -80,6 +81,9 @@ export function item(
 		created_at: "2026-10-02T08:08:01.000Z",
 		expires_at: "2026-10-02T09:08:00.000Z",
 		revocation: null,
+		echo_state: "undeclared",
+		echo_differences: null,
+		criteria_revision: null,
 		...overrides,
 	};
 }
