@@ -147,7 +147,7 @@ function listText(list: unknown): string {
  * band, "one of ..." for a membership rule. A marginal limit is added in
  * brackets when the rule has one.
  */
-export function describeRuleWords(rule: Rule1): string {
+function describeRuleWords(rule: Rule1): string {
 	const pass = rule.params?.pass_values;
 	const marginal = rule.params?.marginal_values;
 	let text = "passes when true";
