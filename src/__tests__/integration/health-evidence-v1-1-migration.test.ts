@@ -1,4 +1,7 @@
 /**
+ * Pins two hand-written migrations. The second, `20261002120000_health_criteria`,
+ * is described by its own block at the end of the file.
+ *
  * Pins the hand-written migration
  * `prisma/migrations/20261002000000_health_evidence_v1_1`: format 0.1
  * evidence and the `tea.health` cached summaries are removed with their
@@ -22,6 +25,7 @@ import { INTEGRATION_TEST_ADMIN_DATABASE_URL } from "../scripts/test-db-config";
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
 const REAL_MIGRATIONS_DIR = path.join(PROJECT_ROOT, "prisma/migrations");
 const NEW_MIGRATION_NAME = "20261002000000_health_evidence_v1_1";
+const CRITERIA_MIGRATION_NAME = "20261002120000_health_criteria";
 const HEALTH = "tea.health";
 const OTHER = "tea.other";
 
@@ -70,8 +74,11 @@ function runMigrateDeploy(scratch: Scratch): void {
 	});
 }
 
-/** Creates the scratch database and applies every migration before the one under test. */
-async function setUp(scratch: Scratch): Promise<void> {
+/** Creates the scratch database and applies every migration before `before`, which is the one under test. */
+async function setUp(
+	scratch: Scratch,
+	before: string = NEW_MIGRATION_NAME
+): Promise<void> {
 	const adminPool = new Pool({
 		connectionString: INTEGRATION_TEST_ADMIN_DATABASE_URL,
 	});
@@ -106,9 +113,7 @@ async function setUp(scratch: Scratch): Promise<void> {
 		scratch,
 		fs
 			.readdirSync(REAL_MIGRATIONS_DIR)
-			.filter(
-				(name) => name !== "migration_lock.toml" && name !== NEW_MIGRATION_NAME
-			)
+			.filter((name) => name !== "migration_lock.toml" && name < before)
 	);
 	runMigrateDeploy(scratch);
 }
@@ -279,6 +284,120 @@ describe("health evidence v1.1 migration", () => {
 				[NEW_TABLES]
 			);
 			expect(tables.rows[0]?.n).toBe("4");
+		} finally {
+			await pool.end();
+		}
+	}, 120_000);
+});
+
+describe("health criteria migration", () => {
+	it("keeps stored records, marks them undeclared, and adds the settings tables", async () => {
+		const scratch = createScratch();
+		await setUp(scratch, CRITERIA_MIGRATION_NAME);
+		const pool = new Pool({ connectionString: scratch.url });
+		try {
+			const userId = randomUUID();
+			const caseId = randomUUID();
+			const claimId = randomUUID();
+			await pool.query(
+				`INSERT INTO users (id, email, username, password_algorithm, auth_provider, created_at, updated_at)
+				 VALUES ($1, $2, $3, 'argon2id', 'LOCAL', now(), now())`,
+				[userId, `health-mig-${userId}@example.com`, `m${userId.slice(0, 8)}`]
+			);
+			await pool.query(
+				`INSERT INTO assurance_cases
+				 (id, name, description, created_by_id, mode, color_profile, is_demo, layout_direction, created_at, updated_at, published, publish_status)
+				 VALUES ($1, 'Case', 'desc', $2, 'STANDARD', 'default', false, 'TB', now(), now(), false, 'DRAFT')`,
+				[caseId, userId]
+			);
+			await pool.query(
+				`INSERT INTO assurance_elements (id, case_id, element_type, name, description, created_by_id, created_at, updated_at)
+				 VALUES ($1, $2, 'PROPERTY_CLAIM', 'Claim', 'desc', $3, now(), now())`,
+				[claimId, caseId, userId]
+			);
+			const recordIds = [randomUUID(), randomUUID()];
+			for (const [i, recordId] of recordIds.entries()) {
+				await pool.query(
+					`INSERT INTO plugin_health_evidence
+					 (id, claim_id, record, record_id, record_timestamp, verdict, check_name, session, valid_for, format_version, record_hash, created_by_id)
+					 VALUES ($1, $2, '{"format_version":"1.1"}'::jsonb, $3, now(), 'PASS', 'c', 's', 'PT1H', '1.1', $4, $5)`,
+					[randomUUID(), claimId, recordId, `hash-${i}`, userId]
+				);
+			}
+			await pool.query(
+				`INSERT INTO plugin_health_claim_states (claim_id, bound_check_name) VALUES ($1, 'c')`,
+				[claimId]
+			);
+			await pool.query(
+				`INSERT INTO plugin_health_binding_changes (id, claim_id, to_check_name, source, changed_by_id)
+				 VALUES ($1, $2, 'c', 'FIRST_RECORD', $3)`,
+				[randomUUID(), claimId, userId]
+			);
+
+			copyMigrations(scratch, [CRITERIA_MIGRATION_NAME]);
+			runMigrateDeploy(scratch);
+
+			const rows = await pool.query<{
+				record_id: string;
+				echo_state: string;
+				echo_differences: unknown;
+				criteria_revision: number | null;
+			}>(
+				"SELECT record_id, echo_state, echo_differences, criteria_revision FROM plugin_health_evidence ORDER BY record_id"
+			);
+			expect(rows.rows.map((row) => row.record_id)).toEqual(
+				[...recordIds].sort()
+			);
+			expect(rows.rows.map((row) => row.echo_state)).toEqual([
+				"UNDECLARED",
+				"UNDECLARED",
+			]);
+			expect(rows.rows.every((row) => row.echo_differences === null)).toBe(
+				true
+			);
+			expect(rows.rows.every((row) => row.criteria_revision === null)).toBe(
+				true
+			);
+
+			const states = await pool.query(
+				"SELECT count(*) AS n FROM plugin_health_claim_states"
+			);
+			const changes = await pool.query(
+				"SELECT count(*) AS n FROM plugin_health_binding_changes"
+			);
+			expect([states.rows[0]?.n, changes.rows[0]?.n]).toEqual(["1", "1"]);
+
+			// The column has no default afterwards: a row must say what it is.
+			await expect(
+				pool.query(
+					`INSERT INTO plugin_health_evidence
+					 (id, claim_id, record, record_id, record_timestamp, verdict, check_name, session, valid_for, format_version, record_hash, created_by_id)
+					 VALUES ($1, $2, '{}'::jsonb, $3, now(), 'PASS', 'c', 's', 'PT1H', '1.1', 'h', $4)`,
+					[randomUUID(), claimId, randomUUID(), userId]
+				)
+			).rejects.toThrow("echo_state");
+
+			const tables = await pool.query<{ table_name: string }>(
+				"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)",
+				[
+					[
+						"plugin_health_criteria",
+						"plugin_health_criteria_revisions",
+						"plugin_health_check_catalogues",
+					],
+				]
+			);
+			expect(tables.rows).toHaveLength(3);
+
+			const sources = await pool.query<{ enumlabel: string }>(
+				`SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+				 WHERE t.typname = 'PluginHealthBindingSource' ORDER BY e.enumsortorder`
+			);
+			expect(sources.rows.map((row) => row.enumlabel)).toEqual([
+				"FIRST_RECORD",
+				"PERSON",
+				"DECLARATION",
+			]);
 		} finally {
 			await pool.end();
 		}

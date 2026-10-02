@@ -268,6 +268,8 @@ Table assurance_elements {
   pluginHealthEvidence plugin_health_evidence [not null]
   pluginHealthClaimState plugin_health_claim_states
   pluginHealthBindingChanges plugin_health_binding_changes [not null]
+  pluginHealthCriteria plugin_health_criteria
+  pluginHealthCriteriaRevisions plugin_health_criteria_revisions [not null]
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
@@ -645,6 +647,8 @@ Table integrations {
   owner users [not null]
   systemUser users [not null]
   tokens api_tokens [not null]
+  pluginHealthCriteria plugin_health_criteria [not null]
+  pluginHealthCheckCatalogue plugin_health_check_catalogues
 
   Note: 'External machine client holding scoped API tokens (renamed from
 PluginRegistration in ADR 0002 v1 — these are integrations, not in-app
@@ -681,6 +685,9 @@ Table plugin_health_evidence {
   validFor String [not null, note: 'ISO 8601 duration, or "indefinite"']
   expiresAt DateTime [note: 'recordTimestamp + validFor; null when validFor is "indefinite"']
   formatVersion String [not null]
+  echoState PluginHealthEchoState [not null, note: 'No default: code that forgets to set it does not compile']
+  echoDifferences Json [note: 'A list of {field, declared, used}; null unless echoState is MISMATCH']
+  criteriaRevision Int [note: 'The settings revision the record was compared with']
   recordHash String [not null]
   previousRecordHash String
   chainSequence Int [increment, unique, not null, note: 'Server-assigned, globally monotonic ordering anchor for the hash chain.
@@ -737,6 +744,67 @@ reinstated_at IS NULL, hand-written in the migration because Prisma\'s
 schema DSL cannot express partial indexes, allows at most one open
 revocation per record. Revoking again after a reinstatement adds a new
 row; rows are never deleted.'
+}
+
+Table plugin_health_criteria {
+  claimId String [pk]
+  integrationId String [note: 'Whose check list the check came from; null once that integration is deleted']
+  state PluginHealthCriteriaState [not null]
+  checkName String [not null]
+  settings Json [not null, note: 'check, rule, reduction?, aggregation?, window, valid_for; no version labels']
+  ruleVersion Int [not null]
+  reductionVersion Int [not null]
+  aggregationVersion Int [not null]
+  source Json [not null, note: 'Where each block came from, worked out by the server']
+  revision Int [not null, note: 'Goes up by one on every save']
+  acceptedById String
+  acceptedAt DateTime
+  acceptedByOwnsIntegration Boolean [not null, default: false, note: 'Worked out when accepted, so a later change of owner does not rewrite it']
+  updatedById String [not null]
+  updatedAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  lastReadAt DateTime [note: 'When the pipeline last fetched these settings']
+  lastReadRevision Int
+  claim assurance_elements [not null]
+  integration integrations
+
+  Note: 'One claim\'s evidence settings: which check to run, how each reading is
+judged, how readings are combined, and how long a result counts. The row
+is never deleted while the claim exists: retiring accepted settings and
+discarding a suggestion both set the state to INACTIVE, so `revision` and
+the version counters carry on. `updatedAt` is set by the service, not by
+Prisma, so recording a read does not look like an edit.'
+}
+
+Table plugin_health_criteria_revisions {
+  id String [pk]
+  claimId String [not null]
+  revision Int [not null]
+  action PluginHealthCriteriaAction [not null]
+  declaration Json [not null, note: 'The settings exactly as they would be served, with version labels']
+  reason String [note: 'Required to retire accepted settings']
+  integrationName String [note: 'Copied, so the history still reads after an integration is deleted']
+  pipelineName String
+  actorId String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+
+  indexes {
+    (claimId, revision) [unique]
+  }
+
+  Note: 'Append-only history of a claim\'s evidence settings. No code path updates
+or deletes a row; deleting the claim removes its history with it.'
+}
+
+Table plugin_health_check_catalogues {
+  integrationId String [pk]
+  pipeline String [not null, note: 'The pipeline\'s display name']
+  checks Json [not null]
+  publishedAt DateTime [not null]
+  integration integrations [not null]
+
+  Note: 'The checks a pipeline says it can run, replaced whole on each publish.'
 }
 
 Enum AuthProvider {
@@ -842,6 +910,12 @@ Enum IntegrationStatus {
   REVOKED
 }
 
+Enum PluginHealthEchoState {
+  MATCH
+  MISMATCH
+  UNDECLARED
+}
+
 Enum PluginHealthEvidenceVerdict {
   PASS
   MARGINAL
@@ -852,6 +926,7 @@ Enum PluginHealthEvidenceVerdict {
 Enum PluginHealthBindingSource {
   FIRST_RECORD
   PERSON
+  DECLARATION
 }
 
 Enum PluginHealthRevocationCause {
@@ -860,6 +935,20 @@ Enum PluginHealthRevocationCause {
   DUPLICATE
   SUPERSEDED
   OTHER
+}
+
+Enum PluginHealthCriteriaState {
+  SUGGESTED
+  ACCEPTED
+  INACTIVE
+}
+
+Enum PluginHealthCriteriaAction {
+  SUGGESTED
+  ACCEPTED
+  EDITED
+  RETIRED
+  DISCARDED
 }
 
 Ref: teams.createdById > users.id
@@ -973,3 +1062,11 @@ Ref: plugin_health_claim_states.claimId - assurance_elements.id [delete: Cascade
 Ref: plugin_health_binding_changes.claimId > assurance_elements.id [delete: Cascade]
 
 Ref: plugin_health_revocations.evidenceId > plugin_health_evidence.id [delete: Cascade]
+
+Ref: plugin_health_criteria.claimId - assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_criteria.integrationId > integrations.id [delete: Set Null]
+
+Ref: plugin_health_criteria_revisions.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_check_catalogues.integrationId - integrations.id [delete: Cascade]

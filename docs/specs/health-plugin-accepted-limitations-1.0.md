@@ -4,7 +4,7 @@
 - **Date:** 2026-07-13
 - **Related:** ADR 0002 (plugin architecture), the technical guide's health plugin page (evidence format 1.1)
 
-The claim/evidence health plugin ships in 1.0 with four known limitations,
+The claim/evidence health plugin ships in 1.0 with seven known limitations,
 each accepted deliberately rather than silently carried forward. Each entry
 below states the limitation and the concrete trigger that would make it
 worth revisiting — none of them are blockers for the 1.0 release.
@@ -78,3 +78,40 @@ pipeline and the deployment's database is sized for it.
 **Revisit trigger:** the evidence table's size becoming a storage or backup
 concern, or any deployment where claims receive evidence at a high rate for
 months at a time.
+
+## 5. The echo shows a pipeline that is behind, not one that misreports
+
+A result carries a copy of the settings' version labels, and TEA compares
+that copy with the accepted settings when the result arrives. The comparison
+catches a pipeline that has not yet picked up an edit. It cannot catch a
+pipeline that copies the declared labels while judging by other rules, because
+the labels are the pipeline's own statement about what it did. Likewise, a
+pipeline can keep the "read at" time of settings fresh by fetching them
+without using them, so the read time is never described as use.
+
+**Revisit trigger:** a requirement that the judging itself, not the pipeline's
+account of it, is verified, for example by re-deriving a verdict from the
+reported value.
+
+## 6. The echo columns are outside the hash chain
+
+The comparison stored with a result (`echo_state`, `echo_differences` and
+`criteria_revision`) is set by the server and is not part of what a record's
+hash covers, like its expiry time. A change to those columns is not detected
+by the chain. They describe how the record compared with the settings of the
+moment, not the evidence itself, so the chain protects the record and who
+stored it, and nothing else.
+
+**Revisit trigger:** any use of the comparison as evidence in its own right,
+rather than as a signal that a pipeline is behind.
+
+## 7. Deleting a claim removes its settings history with it
+
+A claim's settings and their history are removed when the claim is deleted
+for good, as its evidence is, by the same cascade. Within a living claim the
+history is append-only and settings are never deleted, only made inactive.
+After a claim, or a case, is purged, nothing remains to show what settings
+were declared for it.
+
+**Revisit trigger:** the same trigger as limitation 1: a deployment where the
+record of what was declared must outlive the case.

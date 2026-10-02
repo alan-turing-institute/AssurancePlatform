@@ -13,6 +13,6 @@ When you sign in through the web interface, NextAuth.js manages a browser sessio
 
 ## Machine requests
 
-An integration calls the `/api/machine` surface with an `Authorization: Bearer teap_…` header. The secret is issued for an integration and is checked against the stored token record on each request. Its scopes limit the operations it may perform. Access to individual cases also follows the integration's case grants; a scope alone is not a case grant. The current scope vocabulary is `case:read`, `health:evidence:read` and `health:evidence:write`.
+An integration calls the `/api/machine` surface with an `Authorization: Bearer teap_…` header. The secret is issued for an integration and is checked against the stored token record on each request. Its scopes limit the operations it may perform. Access to individual cases also follows the integration's case grants; a scope alone is not a case grant. The current scope vocabulary is `case:read`, `health:checks:write`, `health:criteria:read`, `health:evidence:read` and `health:evidence:write`.
 
 Create and revoke integration tokens through the authenticated integration controls. Keep the full token secret when it is issued, since later views expose only a prefix. Use the generated [API reference](/api-docs) for the supported machine routes.

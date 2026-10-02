@@ -1,15 +1,25 @@
 import { createHash } from "node:crypto";
+import { canonicalJSON as canonical } from "@/lib/health-canonical-json";
 import { logger } from "@/lib/logger";
-import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import {
+	type EchoDifference,
+	echoAgainst,
+} from "@/lib/schemas/health-criteria";
 import type {
 	HealthEvidenceRecord,
 	HealthVerdict,
 } from "@/lib/schemas/health-evidence";
 import { EVIDENCE_FORMAT_VERSION } from "@/lib/schemas/health-evidence";
 import { INDEFINITE, parseDurationSeconds } from "@/lib/schemas/health-rules";
-import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
+	DELETED_USER_NAME,
+	guardClaimAccess,
+	usernamesById,
+} from "@/lib/services/health-claim-access";
+import {
+	type PluginHealthBindingSource,
+	type PluginHealthEchoState,
 	type PluginHealthEvidenceVerdict,
 	type PluginHealthRevocationCause,
 	Prisma,
@@ -23,7 +33,9 @@ const log = logger.child({ component: "health-evidence-service" });
  * This module is the ONLY code path allowed to write to the evidence table
  * and to the tables that qualify it (claim bound-check state, binding
  * history, revocations). Its operations on those tables are: append a
- * record, revoke one, reinstate one, and change a claim's bound check.
+ * record, revoke one, reinstate one, and change a claim's bound check, which
+ * `applyBoundCheck` also does for the evidence settings service inside that
+ * service's own transaction.
  * There is no function anywhere in this file that updates or deletes an
  * evidence row — append-only is a structural property of the service
  * surface — and revoking a record adds a separate revocation row, so the
@@ -41,21 +53,13 @@ const log = logger.child({ component: "health-evidence-service" });
  * never block each other.
  */
 
-const PLUGIN_ID = "tea.health";
-
-/**
- * A single generic message for every reason a claim reference could fail —
- * doesn't exist, is soft-deleted, isn't a PROPERTY_CLAIM, or the caller
- * lacks the case access the operation needs. Distinguishing these would
- * let a caller probe arbitrary ids and learn, from the message, whether
- * something exists elsewhere on the platform.
- */
-const CLAIM_NOT_FOUND = "Claim not found";
 const RECORD_NOT_FOUND = "Record not found";
 const DUPLICATE_RECORD = "A record with this record_id already exists";
 const ALREADY_REVOKED = "This record is already revoked";
 const NOT_REVOKED = "This record is not revoked";
 const ALREADY_BOUND = "This claim is already bound to that check";
+const CHECK_SET_BY_SETTINGS =
+	"This claim's check is set in its evidence settings";
 
 export const DEFAULT_EVIDENCE_PAGE_SIZE = 50;
 export const MAX_EVIDENCE_PAGE_SIZE = 200;
@@ -101,89 +105,10 @@ const CAUSE_FROM_DB: Record<PluginHealthRevocationCause, RevocationCauseWire> =
 	};
 
 // ---------------------------------------------------------------------------
-// Access
-// ---------------------------------------------------------------------------
-
-async function resolveClaim(
-	claimId: string
-): Promise<{ caseId: string } | null> {
-	const element = await prisma.assuranceElement.findUnique({
-		where: { id: claimId },
-		select: { caseId: true, elementType: true, deletedAt: true },
-	});
-	if (
-		!element ||
-		element.deletedAt ||
-		element.elementType !== "PROPERTY_CLAIM"
-	) {
-		return null;
-	}
-	return { caseId: element.caseId };
-}
-
-/**
- * Shared guard for every operation below: plugin enablement (for the
- * acting principal, human or machine) + case permission + claim
- * resolution. Returns the resolved `caseId` on success, or the error to
- * surface otherwise.
- */
-async function guardClaimAccess(
-	userId: string,
-	claimId: string,
-	requiredLevel: "VIEW" | "EDIT"
-): Promise<{ caseId: string } | { error: string }> {
-	const enablement = await assertPluginEnabledForUser(PLUGIN_ID, userId);
-	if ("error" in enablement) {
-		return { error: enablement.error };
-	}
-
-	const claim = await resolveClaim(claimId);
-	if (!claim) {
-		return { error: CLAIM_NOT_FOUND };
-	}
-
-	const hasAccess = await canAccessCase(
-		{ userId, caseId: claim.caseId },
-		requiredLevel
-	);
-	if (!hasAccess) {
-		return { error: CLAIM_NOT_FOUND };
-	}
-
-	return { caseId: claim.caseId };
-}
-
-// ---------------------------------------------------------------------------
 // Hash chain
 // ---------------------------------------------------------------------------
 
-/**
- * Canonical (sorted-key) JSON serialization. Used ONLY for hash-chain
- * content, never for storage or the API response: Postgres's `jsonb` type
- * does not guarantee it will hand back object keys in their original
- * insertion order, so re-deriving `recordHash` from a rehydrated row using
- * plain `JSON.stringify` would let an unmodified record fail its own hash
- * check purely from key reordering. Sorting keys at every level makes the
- * serialization depend only on content.
- *
- * Exported (alongside `computeRecordHash`) so tests, and any sweeper that
- * re-verifies a chain, can recompute a record's hash from the row.
- */
-export function canonicalJSON(value: unknown): string {
-	if (value === null || typeof value !== "object") {
-		return JSON.stringify(value);
-	}
-	if (Array.isArray(value)) {
-		return `[${value.map((item) => canonicalJSON(item)).join(",")}]`;
-	}
-	const entries = Object.keys(value as Record<string, unknown>)
-		.sort()
-		.map(
-			(key) =>
-				`${JSON.stringify(key)}:${canonicalJSON((value as Record<string, unknown>)[key])}`
-		);
-	return `{${entries.join(",")}}`;
-}
+export { canonicalJSON } from "@/lib/health-canonical-json";
 
 /** What a record's hash covers: the record as stored, who stored it, and when. */
 export interface EvidenceHashContent {
@@ -205,7 +130,7 @@ export function computeRecordHash(
 	content: EvidenceHashContent,
 	previousRecordHash: string | null
 ): string {
-	const payload = `${previousRecordHash ?? ""}\u0000${canonicalJSON(content)}`;
+	const payload = `${previousRecordHash ?? ""}\u0000${canonical(content)}`;
 	return createHash("sha256").update(payload).digest("hex");
 }
 
@@ -285,19 +210,18 @@ export async function appendHealthEvidence(
 					};
 				}
 				if (!state) {
-					await tx.pluginHealthClaimState.create({
-						data: { claimId, boundCheckName: record.check.name },
-					});
-					await tx.pluginHealthBindingChange.create({
-						data: {
-							claimId,
-							fromCheckName: null,
-							toCheckName: record.check.name,
-							source: "FIRST_RECORD",
-							changedById: actingUserId,
-						},
+					await applyBoundCheck(tx, {
+						claimId,
+						name: record.check.name,
+						source: "FIRST_RECORD",
+						changedById: actingUserId,
 					});
 				}
+
+				const echo = echoAgainst(
+					record,
+					await tx.pluginHealthCriteria.findUnique({ where: { claimId } })
+				);
 
 				const previous = await tx.pluginHealthEvidence.findFirst({
 					where: { claimId },
@@ -326,6 +250,11 @@ export async function appendHealthEvidence(
 						validFor: record.valid_for,
 						expiresAt: expiryOf(record, recordTimestamp),
 						formatVersion: EVIDENCE_FORMAT_VERSION,
+						echoState: echo.state,
+						echoDifferences: echo.differences
+							? (echo.differences as unknown as Prisma.InputJsonArray)
+							: undefined,
+						criteriaRevision: echo.revision,
 						recordHash,
 						previousRecordHash,
 						createdById: actingUserId,
@@ -383,10 +312,23 @@ export interface HealthRevocationView {
 	revoked_by_name: string;
 }
 
+type EchoWire = "match" | "mismatch" | "undeclared";
+
+const ECHO_FROM_DB: Record<PluginHealthEchoState, EchoWire> = {
+	MATCH: "match",
+	MISMATCH: "mismatch",
+	UNDECLARED: "undeclared",
+};
+
 export interface HealthEvidenceListItem {
 	chain_sequence: number;
 	created_at: string;
 	created_by_id: string;
+	/** The settings revision the record was compared with when it arrived. */
+	criteria_revision: number | null;
+	/** How the record differed from the accepted settings when it arrived; null unless `echo_state` is `mismatch`. */
+	echo_differences: EchoDifference[] | null;
+	echo_state: EchoWire;
 	expires_at: string | null;
 	id: string;
 	previous_record_hash: string | null;
@@ -399,19 +341,6 @@ export interface HealthEvidencePage {
 	items: HealthEvidenceListItem[];
 	/** Pass as `before` to read the next (older) page; null when there is none. */
 	nextBefore: number | null;
-}
-
-const DELETED_USER_NAME = "Deleted user";
-
-async function usernamesById(ids: string[]): Promise<Map<string, string>> {
-	if (ids.length === 0) {
-		return new Map();
-	}
-	const users = await prisma.user.findMany({
-		where: { id: { in: ids } },
-		select: { id: true, username: true },
-	});
-	return new Map(users.map((user) => [user.id, user.username]));
 }
 
 function toRevocationView(
@@ -434,12 +363,14 @@ function toRevocationView(
 /**
  * One page of `claimId`'s evidence log, newest first, each item carrying
  * its open revocation (or null). `before` is a `chain_sequence`: only
- * records older than it are returned. Requires VIEW-level case access.
+ * records older than it are returned. With `live`, only records that are
+ * not revoked and whose validity has not run out are returned. Requires
+ * VIEW-level case access.
  */
 export async function listHealthEvidence(
 	actingUserId: string,
 	claimId: string,
-	options: { limit?: number; before?: number } = {}
+	options: { limit?: number; before?: number; live?: boolean } = {}
 ): ServiceResult<HealthEvidencePage> {
 	const guard = await guardClaimAccess(actingUserId, claimId, "VIEW");
 	if ("error" in guard) {
@@ -457,6 +388,12 @@ export async function listHealthEvidence(
 				...(options.before === undefined
 					? {}
 					: { chainSequence: { lt: options.before } }),
+				...(options.live
+					? {
+							revocations: { none: { reinstatedAt: null } },
+							OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+						}
+					: {}),
 			},
 			orderBy: { chainSequence: "desc" },
 			take: limit + 1,
@@ -484,6 +421,9 @@ export async function listHealthEvidence(
 				previous_record_hash: row.previousRecordHash,
 				created_by_id: row.createdById,
 				created_at: row.createdAt.toISOString(),
+				echo_state: ECHO_FROM_DB[row.echoState],
+				echo_differences: row.echoDifferences as EchoDifference[] | null,
+				criteria_revision: row.criteriaRevision,
 				expires_at: row.expiresAt?.toISOString() ?? null,
 				revocation: row.revocations[0]
 					? toRevocationView(row.revocations[0], names)
@@ -617,11 +557,67 @@ export async function reinstateHealthEvidence(
 // Bound check
 // ---------------------------------------------------------------------------
 
+type TransactionCallback = Parameters<typeof prisma.$transaction>[0];
+
+/** The client handed to an interactive transaction callback. */
+export type HealthTransaction = TransactionCallback extends (
+	tx: infer T
+) => Promise<unknown>
+	? T
+	: never;
+
+/**
+ * Points a claim at `name` and writes the history row, inside the caller's
+ * open transaction, which must already hold the claim-row lock. Creates the
+ * claim's state row when it has none. Returns false, writing nothing, when
+ * the claim is already bound to that check.
+ */
+export async function applyBoundCheck(
+	tx: HealthTransaction,
+	change: {
+		claimId: string;
+		name: string;
+		source: PluginHealthBindingSource;
+		changedById: string;
+		reason?: string;
+	}
+): Promise<boolean> {
+	const { claimId, name } = change;
+	const state = await tx.pluginHealthClaimState.findUnique({
+		where: { claimId },
+	});
+	if (state?.boundCheckName === name) {
+		return false;
+	}
+	if (state) {
+		await tx.pluginHealthClaimState.update({
+			where: { claimId },
+			data: { boundCheckName: name },
+		});
+	} else {
+		await tx.pluginHealthClaimState.create({
+			data: { claimId, boundCheckName: name },
+		});
+	}
+	await tx.pluginHealthBindingChange.create({
+		data: {
+			claimId,
+			fromCheckName: state?.boundCheckName ?? null,
+			toCheckName: name,
+			source: change.source,
+			reason: change.reason,
+			changedById: change.changedById,
+		},
+	});
+	return true;
+}
+
 /**
  * Changes the one check a claim accepts evidence from, writing a history
  * row naming the person and their reason. Records for the new check are
- * accepted from then on, and records for the old one are refused. Requires
- * EDIT.
+ * accepted from then on, and records for the old one are refused. Refused
+ * while the claim has accepted evidence settings, which name its check.
+ * Requires EDIT.
  */
 export async function changeBoundCheck(
 	actingUserId: string,
@@ -636,34 +632,25 @@ export async function changeBoundCheck(
 	try {
 		const outcome = await prisma.$transaction(async (tx) => {
 			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
-			const state = await tx.pluginHealthClaimState.findUnique({
+			const criteria = await tx.pluginHealthCriteria.findUnique({
 				where: { claimId },
+				select: { state: true },
 			});
-			if (state?.boundCheckName === input.name) {
-				return "unchanged" as const;
+			if (criteria?.state === "ACCEPTED") {
+				return "declared" as const;
 			}
-			if (state) {
-				await tx.pluginHealthClaimState.update({
-					where: { claimId },
-					data: { boundCheckName: input.name },
-				});
-			} else {
-				await tx.pluginHealthClaimState.create({
-					data: { claimId, boundCheckName: input.name },
-				});
-			}
-			await tx.pluginHealthBindingChange.create({
-				data: {
-					claimId,
-					fromCheckName: state?.boundCheckName ?? null,
-					toCheckName: input.name,
-					source: "PERSON",
-					reason: input.reason,
-					changedById: actingUserId,
-				},
+			const changed = await applyBoundCheck(tx, {
+				claimId,
+				name: input.name,
+				source: "PERSON",
+				changedById: actingUserId,
+				reason: input.reason,
 			});
-			return "changed" as const;
+			return changed ? ("changed" as const) : ("unchanged" as const);
 		});
+		if (outcome === "declared") {
+			return { error: CHECK_SET_BY_SETTINGS };
+		}
 		if (outcome === "unchanged") {
 			return { error: ALREADY_BOUND };
 		}

@@ -23,7 +23,7 @@ import { readHealthStatus } from "@/lib/services/health-status-service";
  * is unavailable/disabled for the session user, or when the element isn't a
  * claim this session can access. `status: null` (200, not an error) means
  * the claim exists and is accessible but has never had a record accepted.
- * @response 200 - `{ status: { verdict, stale, stale_reason, stale_since, expires_at, record_id, timestamp, bound_check, rejected_since_last_accept } | null }`
+ * @response 200 - `{ status: { verdict, stale, stale_reason, stale_since, expires_at, record_id, timestamp, bound_check, rejected_since_last_accept, mismatch } | null }`
  * @response 400 - `id` is not a UUID
  * @response 401 - No session
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/user

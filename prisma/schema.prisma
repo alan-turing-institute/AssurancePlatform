@@ -494,6 +494,8 @@ model AssuranceElement {
   pluginHealthEvidence PluginHealthEvidence[]
   pluginHealthClaimState PluginHealthClaimState?
   pluginHealthBindingChanges PluginHealthBindingChange[]
+  pluginHealthCriteria PluginHealthCriteria?
+  pluginHealthCriteriaRevisions PluginHealthCriteriaRevision[]
 
   @@index([caseId])
   @@index([caseId, elementType])
@@ -1104,6 +1106,8 @@ model Integration {
   owner      User       @relation("IntegrationOwner", fields: [ownerId], references: [id])
   systemUser User       @relation("IntegrationPrincipal", fields: [systemUserId], references: [id])
   tokens     ApiToken[]
+  pluginHealthCriteria       PluginHealthCriteria[]
+  pluginHealthCheckCatalogue PluginHealthCheckCatalogue?
 
   @@map("integrations")
 }
@@ -1138,8 +1142,10 @@ model ApiToken {
 // ============================================
 // Prefixed `plugin_health_` per the tier-2 naming rule. Every relation is a
 // one-way FK to the CORE `AssuranceElement` table (or to another health
-// table); no core table is referenced BY these tables, and no other plugin's
-// table may reference them.
+// table), apart from two tables that also point at the core `Integration`
+// table: the settings row (set to null when the integration is deleted) and
+// the check list (removed with the integration). No core table is
+// referenced BY these tables, and no other plugin's table may reference them.
 //
 // plugin_health_evidence is the append-only, hash-chained log of runtime
 // evidence records (evidence format 1.1). Its only writer is
@@ -1164,6 +1170,12 @@ model PluginHealthEvidence {
   validFor        String   @map("valid_for") /// ISO 8601 duration, or "indefinite"
   expiresAt       DateTime? @map("expires_at") /// recordTimestamp + validFor; null when validFor is "indefinite"
   formatVersion   String   @map("format_version")
+
+  // Comparison with the claim's accepted evidence settings, made when the
+  // record arrived. Server-set and outside the hash, like `expiresAt`.
+  echoState       PluginHealthEchoState @map("echo_state") /// No default: code that forgets to set it does not compile
+  echoDifferences Json?    @map("echo_differences") /// A list of {field, declared, used}; null unless echoState is MISMATCH
+  criteriaRevision Int?    @map("criteria_revision") /// The settings revision the record was compared with
 
   // Tamper-evidence: append-only hash chain, per claim.
   // recordHash = hash(content + previousRecordHash); server-computed, never
@@ -1191,6 +1203,12 @@ model PluginHealthEvidence {
   @@map("plugin_health_evidence")
 }
 
+enum PluginHealthEchoState {
+  MATCH
+  MISMATCH
+  UNDECLARED
+}
+
 enum PluginHealthEvidenceVerdict {
   PASS
   MARGINAL
@@ -1213,6 +1231,7 @@ model PluginHealthClaimState {
 enum PluginHealthBindingSource {
   FIRST_RECORD
   PERSON
+  DECLARATION
 }
 
 /// Append-only history of which check a claim is bound to.
@@ -1261,4 +1280,86 @@ model PluginHealthRevocation {
 
   @@index([evidenceId])
   @@map("plugin_health_revocations")
+}
+
+enum PluginHealthCriteriaState {
+  SUGGESTED
+  ACCEPTED
+  INACTIVE
+}
+
+enum PluginHealthCriteriaAction {
+  SUGGESTED
+  ACCEPTED
+  EDITED
+  RETIRED
+  DISCARDED
+}
+
+/// One claim's evidence settings: which check to run, how each reading is
+/// judged, how readings are combined, and how long a result counts. The row
+/// is never deleted while the claim exists: retiring accepted settings and
+/// discarding a suggestion both set the state to INACTIVE, so `revision` and
+/// the version counters carry on. `updatedAt` is set by the service, not by
+/// Prisma, so recording a read does not look like an edit.
+model PluginHealthCriteria {
+  claimId       String                    @id @map("claim_id")
+  integrationId String?                   @map("integration_id") /// Whose check list the check came from; null once that integration is deleted
+  state         PluginHealthCriteriaState
+  checkName     String                    @map("check_name")
+  settings      Json /// check, rule, reduction?, aggregation?, window, valid_for; no version labels
+  ruleVersion        Int @map("rule_version")
+  reductionVersion   Int @map("reduction_version")
+  aggregationVersion Int @map("aggregation_version")
+  source        Json /// Where each block came from, worked out by the server
+  revision      Int /// Goes up by one on every save
+
+  acceptedById              String?   @map("accepted_by_id")
+  acceptedAt                DateTime? @map("accepted_at")
+  acceptedByOwnsIntegration Boolean   @default(false) @map("accepted_by_owns_integration") /// Worked out when accepted, so a later change of owner does not rewrite it
+
+  updatedById String   @map("updated_by_id")
+  updatedAt   DateTime @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  lastReadAt       DateTime? @map("last_read_at") /// When the pipeline last fetched these settings
+  lastReadRevision Int?      @map("last_read_revision")
+
+  claim       AssuranceElement @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  integration Integration?     @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@index([integrationId])
+  @@map("plugin_health_criteria")
+}
+
+/// Append-only history of a claim's evidence settings. No code path updates
+/// or deletes a row; deleting the claim removes its history with it.
+model PluginHealthCriteriaRevision {
+  id              String                     @id @default(uuid())
+  claimId         String                     @map("claim_id")
+  revision        Int
+  action          PluginHealthCriteriaAction
+  declaration     Json /// The settings exactly as they would be served, with version labels
+  reason          String? /// Required to retire accepted settings
+  integrationName String?                    @map("integration_name") /// Copied, so the history still reads after an integration is deleted
+  pipelineName    String?                    @map("pipeline_name")
+  actorId         String                     @map("actor_id")
+  createdAt       DateTime                   @default(now()) @map("created_at")
+
+  claim AssuranceElement @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@unique([claimId, revision])
+  @@map("plugin_health_criteria_revisions")
+}
+
+/// The checks a pipeline says it can run, replaced whole on each publish.
+model PluginHealthCheckCatalogue {
+  integrationId String   @id @map("integration_id")
+  pipeline      String /// The pipeline's display name
+  checks        Json
+  publishedAt   DateTime @map("published_at")
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@map("plugin_health_check_catalogues")
 }

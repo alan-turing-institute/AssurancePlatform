@@ -1,7 +1,15 @@
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import type { HealthVerdict } from "@/lib/schemas/health-evidence";
+import {
+	type EchoDifference,
+	echoAgainst,
+} from "@/lib/schemas/health-criteria";
+import type {
+	HealthEvidenceRecord,
+	HealthVerdict,
+} from "@/lib/schemas/health-evidence";
+import { guardCaseAccess } from "@/lib/services/health-claim-access";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import type { PluginHealthEvidenceVerdict } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -21,6 +29,11 @@ const log = logger.child({ component: "health-status-service" });
  * its `valid_while` conditions no longer holds, or when every record it ever
  * received has been revoked.
  *
+ * `mismatch` compares that record with the settings as they are now, not as
+ * they were when it arrived, so editing or retiring the settings flags the
+ * claim at once and the flag stays until a result judged with the current
+ * settings arrives.
+ *
  * Nothing about a claim's status is written to `PluginData`: a published
  * snapshot carries no `tea.health` entry.
  */
@@ -29,9 +42,18 @@ const PLUGIN_ID = "tea.health";
 
 export type HealthStaleReason = "expired" | "condition" | "all-revoked";
 
+/**
+ * How the claim's current result compares with the evidence settings accepted
+ * for the claim now. Null when there is no current result to compare.
+ */
+export type HealthMismatch =
+	| { state: "undeclared" }
+	| { state: "mismatch"; differences: EchoDifference[] };
+
 export interface HealthStatus {
 	bound_check: string | null;
 	expires_at: string | null;
+	mismatch: HealthMismatch | null;
 	record_id: string | null;
 	rejected_since_last_accept: number;
 	stale: boolean;
@@ -124,6 +146,17 @@ function validWhileOf(record: unknown): Record<string, string> {
 	);
 }
 
+function mismatchOf(
+	echo: ReturnType<typeof echoAgainst>
+): HealthMismatch | null {
+	if (echo.state === "UNDECLARED") {
+		return { state: "undeclared" };
+	}
+	return echo.state === "MISMATCH" && echo.differences
+		? { state: "mismatch", differences: echo.differences }
+		: null;
+}
+
 /**
  * Computes `claimId`'s status at `now`. Returns null when the claim has
  * neither a bound check nor a record (no status, as opposed to a stale one).
@@ -136,7 +169,7 @@ export async function computeHealthStatus(
 	caseId: string,
 	now: Date = new Date()
 ): Promise<HealthStatus | null> {
-	const [state, current, anyRecord] = await Promise.all([
+	const [state, current, anyRecord, criteria] = await Promise.all([
 		prisma.pluginHealthClaimState.findUnique({ where: { claimId } }),
 		prisma.pluginHealthEvidence.findFirst({
 			where: { claimId, ...NOT_REVOKED },
@@ -146,6 +179,7 @@ export async function computeHealthStatus(
 			where: { claimId },
 			select: { id: true },
 		}),
+		prisma.pluginHealthCriteria.findUnique({ where: { claimId } }),
 	]);
 	if (!(anyRecord || state)) {
 		return null;
@@ -153,6 +187,7 @@ export async function computeHealthStatus(
 	const base = {
 		bound_check: state?.boundCheckName ?? null,
 		rejected_since_last_accept: state?.rejectedSinceLastAccept ?? 0,
+		mismatch: null as HealthMismatch | null,
 	};
 
 	if (!(current || anyRecord)) {
@@ -186,8 +221,13 @@ export async function computeHealthStatus(
 		};
 	}
 
+	const echo = echoAgainst(
+		current.record as unknown as HealthEvidenceRecord,
+		criteria
+	);
 	const common = {
 		...base,
+		mismatch: mismatchOf(echo),
 		verdict: VERDICT_FROM_DB[current.verdict],
 		expires_at: current.expiresAt?.toISOString() ?? null,
 		record_id: current.recordId,
@@ -273,6 +313,53 @@ export async function readHealthStatus(
 		return { data: await computeHealthStatus(claimId, element.caseId) };
 	} catch (error) {
 		log.error("Failed to read health status", { error });
+		return { error: "Failed to read health status" };
+	}
+}
+
+export interface HealthCaseStatus {
+	claim_ref: string;
+	status: HealthStatus;
+}
+
+/**
+ * The status of every claim in `caseId` that has one (a bound check or at
+ * least one record), for a signed-in person or a machine principal. Requires
+ * VIEW-level case access; a missing case and an inaccessible one give the
+ * same error.
+ */
+export async function readHealthStatusesForCase(
+	actingUserId: string,
+	caseId: string
+): ServiceResult<HealthCaseStatus[]> {
+	const guard = await guardCaseAccess(actingUserId, caseId, "VIEW");
+	if ("error" in guard) {
+		return { error: guard.error };
+	}
+	try {
+		const claims = await prisma.assuranceElement.findMany({
+			where: {
+				caseId,
+				deletedAt: null,
+				elementType: "PROPERTY_CLAIM",
+				OR: [
+					{ pluginHealthClaimState: { isNot: null } },
+					{ pluginHealthEvidence: { some: {} } },
+				],
+			},
+			select: { id: true },
+			orderBy: { createdAt: "asc" },
+		});
+		const statuses: HealthCaseStatus[] = [];
+		for (const claim of claims) {
+			const status = await computeHealthStatus(claim.id, caseId);
+			if (status) {
+				statuses.push({ claim_ref: claim.id, status });
+			}
+		}
+		return { data: statuses };
+	} catch (error) {
+		log.error("Failed to read health statuses", { error });
 		return { error: "Failed to read health status" };
 	}
 }
