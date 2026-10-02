@@ -321,6 +321,53 @@ function FormFooter({
 	);
 }
 
+type CriteriaDraftState = ReturnType<typeof useCriteriaDraft>;
+type CriteriaActions = ReturnType<typeof useCriteriaActions>;
+
+function sectionPropsOf(
+	form: CriteriaDraftState,
+	actions: CriteriaActions,
+	canEdit: boolean
+): SectionProps {
+	return {
+		analysis: { ...form.analysis, errors: form.errors },
+		check: form.check,
+		disabled: !canEdit || actions.pending,
+		draft: form.draft,
+		setDraft: (patch) => {
+			form.setDraft(patch);
+			actions.clearMessage();
+		},
+	};
+}
+
+/** Whether the form's value can be sent: no known problem, a pipeline to send it for, and for accepted settings something changed. */
+function canSaveOf(form: CriteriaDraftState, state: FormState): boolean {
+	return (
+		form.analysis.complete !== null &&
+		form.draft.integrationId !== "" &&
+		(state !== "accepted" || form.dirty)
+	);
+}
+
+/** The notices above the summary: the settings' state, and a change made by someone else under unsaved edits. */
+function FormNotices({
+	form,
+	view,
+}: {
+	form: CriteriaDraftState;
+	view: HealthCriteriaResponse | null;
+}) {
+	return (
+		<>
+			{view && <StateNotices view={view} />}
+			{form.changedElsewhere && form.dirty && (
+				<ChangedElsewhere onReload={form.reload} />
+			)}
+		</>
+	);
+}
+
 /**
  * The settings for one claim: the plain-words summary, then either the short
  * view or every setting, then the buttons. The form keeps its own draft, so a
@@ -350,33 +397,16 @@ export function CriteriaForm({
 		revision,
 	});
 	const actions = useCriteriaActions(claimId, form, onReplace);
-	const sectionProps: SectionProps = {
-		analysis: { ...form.analysis, errors: form.errors },
-		check: form.check,
-		disabled: !canEdit || actions.pending,
-		draft: form.draft,
-		setDraft: (patch) => {
-			form.setDraft(patch);
-			actions.clearMessage();
-		},
-	};
-	const canSave =
-		form.analysis.complete !== null &&
-		form.draft.integrationId !== "" &&
-		(state !== "accepted" || form.dirty);
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
-			{view && <StateNotices view={view} />}
-			{form.changedElsewhere && form.dirty && (
-				<ChangedElsewhere onReload={form.reload} />
-			)}
+			<FormNotices form={form} view={view} />
 			<PlainWordsSummary sentences={form.sentences} />
 			<FormSections
 				choices={choices}
 				chosen={form.draftKey}
 				onPick={form.onPick}
-				sectionProps={sectionProps}
+				sectionProps={sectionPropsOf(form, actions, canEdit)}
 				short={state !== "accepted" && startShort}
 				versions={versionsOf(view)}
 			/>
@@ -384,7 +414,7 @@ export function CriteriaForm({
 			{view && <PipelineFooter view={view} />}
 			{canEdit && (
 				<FormFooter
-					canSave={canSave}
+					canSave={canSaveOf(form, state)}
 					changedElsewhere={form.changedElsewhere}
 					claimId={claimId}
 					hasProblems={form.hasProblems}
