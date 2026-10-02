@@ -1,14 +1,22 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { appendHealthEvidence } from "@/lib/services/health-evidence-service";
-import { recomputeHealthScore } from "@/lib/services/health-scoring-service";
+import { healthEvidenceRecordSchema } from "@/lib/schemas/health-evidence";
+import {
+	appendHealthEvidence,
+	revokeHealthEvidence,
+} from "@/lib/services/health-evidence-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
+import {
+	buildHealthRecords,
+	type HealthRecordName,
+	withOverrides,
+} from "../fixtures/health-records";
+import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
-	createTestPluginData,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -39,6 +47,19 @@ async function setup() {
 	return { owner, testCase, claim };
 }
 
+async function append(
+	ownerId: string,
+	claimId: string,
+	name: HealthRecordName = "populationPass",
+	overrides: Record<string, unknown> = {}
+) {
+	const record = healthEvidenceRecordSchema.parse(
+		withOverrides(buildHealthRecords(claimId)[name], overrides)
+	);
+	expectSuccess(await appendHealthEvidence(ownerId, claimId, record));
+	return record;
+}
+
 function getRequest(elementId: string): NextRequest {
 	return new NextRequest(HEALTH_PATH(elementId));
 }
@@ -48,22 +69,10 @@ function importRoute() {
 }
 
 describe("GET /api/elements/[id]/health — happy path", () => {
-	it("returns the score written by recomputeHealthScore, end to end", async () => {
-		const { owner, testCase, claim } = await setup();
+	it("returns the status computed from the claim's evidence", async () => {
+		const { owner, claim } = await setup();
 		await mockAuth(owner.id, owner.username, owner.email);
-		const appended = await appendHealthEvidence(owner.id, {
-			claimId: claim.id,
-			metricName: "in-distribution-rate",
-			value: 0.98,
-			threshold: 0.95,
-			verdict: "PASS",
-			oddDimensions: [],
-			sourceSystem: "darter-pipeline",
-			provenance: { check: "ood-monitor/kl-divergence", runId: "run-1" },
-			evaluatedAt: new Date().toISOString(),
-		});
-		expect("data" in appended).toBe(true);
-		await recomputeHealthScore(owner.id, claim.id, testCase.id);
+		const record = await append(owner.id, claim.id, "marginalSummary");
 
 		const { GET } = await importRoute();
 		const response = await GET(getRequest(claim.id), {
@@ -72,11 +81,20 @@ describe("GET /api/elements/[id]/health — happy path", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body.health.score).toBe(1);
-		expect(body.health.lastEvaluatedAt).not.toBeNull();
+		expect(body.status).toEqual({
+			verdict: "marginal",
+			stale: false,
+			stale_reason: null,
+			stale_since: null,
+			expires_at: expect.any(String),
+			record_id: record.record_id,
+			timestamp: record.timestamp,
+			bound_check: "Sensor Range Checker",
+			rejected_since_last_accept: 0,
+		});
 	});
 
-	it("returns health: null for a claim that has never been scored", async () => {
+	it("returns status: null for a claim that has never had a record", async () => {
 		const { owner, claim } = await setup();
 		await mockAuth(owner.id, owner.username, owner.email);
 		const { GET } = await importRoute();
@@ -87,22 +105,14 @@ describe("GET /api/elements/[id]/health — happy path", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body.health).toBeNull();
+		expect(body.status).toBeNull();
 	});
 
 	it("reads via a viewer's session with only VIEW access", async () => {
 		const { owner, testCase, claim } = await setup();
 		const viewer = await createTestUser();
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
-		await createTestPluginData(testCase.id, {
-			pluginId: "tea.health",
-			elementId: claim.id,
-			data: {
-				score: 0.5,
-				lastEvaluatedAt: null,
-				validityWindowSeconds: 86_400,
-			},
-		});
+		await append(owner.id, claim.id, "failingSummary");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 		const { GET } = await importRoute();
 
@@ -112,7 +122,31 @@ describe("GET /api/elements/[id]/health — happy path", () => {
 
 		expect(response.status).toBe(200);
 		const body = await response.json();
-		expect(body.health.score).toBe(0.5);
+		expect(body.status.verdict).toBe("fail");
+	});
+
+	it("shows a stale status with no verdict when every record is revoked", async () => {
+		const { owner, claim } = await setup();
+		await mockAuth(owner.id, owner.username, owner.email);
+		const record = await append(owner.id, claim.id);
+		expectSuccess(
+			await revokeHealthEvidence(owner.id, claim.id, record.record_id, {
+				cause: "duplicate",
+				reason: "Sent twice",
+			})
+		);
+		const { GET } = await importRoute();
+
+		const response = await GET(getRequest(claim.id), {
+			params: Promise.resolve({ id: claim.id }),
+		});
+
+		const body = await response.json();
+		expect(body.status).toMatchObject({
+			verdict: null,
+			stale: true,
+			stale_reason: "all-revoked",
+		});
 	});
 });
 

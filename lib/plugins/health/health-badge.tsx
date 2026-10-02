@@ -1,85 +1,100 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatRelativeToNow } from "@/lib/date";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
-import type { HealthBand } from "./health-bands";
-import { deriveHealthBand, isHealthStale } from "./health-bands";
-import { useHealthBandScores } from "./use-health-band-scores";
+import {
+	describeBadge,
+	isStatusStale,
+	VERDICT_DOT_CLASSES,
+} from "./health-format";
 import { useHealthState } from "./use-health-state";
 
-const BAND_DOT_CLASSES: Record<HealthBand, string> = {
-	pass: "bg-success",
-	degraded: "bg-warning",
-	fail: "bg-destructive",
-};
-
-const BAND_LABELS: Record<HealthBand, string> = {
-	pass: "Health: passing",
-	degraded: "Health: degraded",
-	fail: "Health: failing",
-};
-
-/** The band word alone, for composing into the stale label below. */
-const BAND_WORDS: Record<HealthBand, string> = {
-	pass: "passing",
-	degraded: "degraded",
-	fail: "failing",
-};
-
 /**
- * Stale marker (ADR 0002 v2 §3 — "green-but-stale is preserved"): health and
- * freshness are orthogonal, so staleness must never REPLACE the band colour,
- * only annotate it. A ring keeps the dot's fill on its band colour and adds
- * a second, concentric shape around it — a geometry cue, not a colour one,
- * so it reads even without colour vision. `ring-offset-background` keeps the
- * gap between dot and ring visible against either theme.
+ * Stale marker: health and freshness are separate, so staleness never
+ * replaces the verdict colour, only annotates it. A ring keeps the dot's
+ * fill and adds a second, concentric shape around it, a cue that reads
+ * without colour vision. `ring-offset-background` keeps the gap visible in
+ * either theme.
  */
 const STALE_RING_CLASSES =
 	"ring-2 ring-muted-foreground/70 ring-offset-1 ring-offset-background";
 
+/** Largest delay `setTimeout` accepts; a longer wait is taken in steps. */
+const MAX_TIMER_MS = 2_147_483_647;
+
 /**
- * The `element-badge` slot's health state dot (ADR 0002 v2 §3 — "the state
- * dot"). Renders nothing for anything `useHealthState` can't turn into a
- * confident answer: not a claim, no health data yet, or a fetch error —
- * fail-closed rather than guess (delegation brief, item 2). Plugin-disabled
- * is already handled one layer up: `useElementBadgeSlot` filters this
- * registration out of the list entirely before it would ever mount.
+ * Re-renders the caller once `expiresAt` has passed on this device's clock,
+ * so the dot gains its ring without waiting for the next server push.
+ */
+function useRerenderAtExpiry(expiresAt: string | null): void {
+	const [tick, setTick] = useState(0);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `tick` re-arms the timer after each step of a long wait.
+	useEffect(() => {
+		if (expiresAt === null) {
+			return;
+		}
+		const remaining = Date.parse(expiresAt) - Date.now();
+		if (Number.isNaN(remaining) || remaining <= 0) {
+			return;
+		}
+		const timer = setTimeout(
+			() => setTick((value) => value + 1),
+			Math.min(remaining + 50, MAX_TIMER_MS)
+		);
+		return () => clearTimeout(timer);
+	}, [expiresAt, tick]);
+}
+
+/**
+ * The `element-badge` slot's health dot. The colour comes from the status's
+ * verdict alone: green, amber, red or grey. A stale status keeps its colour
+ * and gains a ring; a claim whose records have all been withdrawn shows an
+ * unfilled dot with the ring. A claim with no status, or bound to a check
+ * but without a record yet, shows nothing, as does a failed fetch.
  *
  * Colour is never the only signal: the dot is an `<output>` element (an
- * implicit `status` live region — apt, since this genuinely updates live
- * over SSE) with an `aria-label` naming the band/staleness in words, so the
- * state reaches assistive tech independent of the tooltip, which repeats it
- * for sighted hover users.
+ * implicit live region, apt since the state updates over SSE) whose
+ * `aria-label` says the verdict and any staleness in words.
  */
 export function HealthBadge({
 	caseId,
 	elementId,
 	elementType,
 }: ElementSlotContext) {
-	const { health, status } = useHealthState({ caseId, elementId, elementType });
-	const bandScores = useHealthBandScores();
+	const { healthStatus, status } = useHealthState({
+		caseId,
+		elementId,
+		elementType,
+	});
+	useRerenderAtExpiry(healthStatus?.expires_at ?? null);
 
-	if (status !== "ready" || !health) {
+	if (status !== "ready" || !healthStatus) {
 		return null;
 	}
 
-	const stale = isHealthStale(health);
-	const band = deriveHealthBand(health.score, bandScores);
+	const { verdict } = healthStatus;
+	if (verdict === null && healthStatus.stale_reason !== "all-revoked") {
+		return null;
+	}
+
+	const stale = isStatusStale(healthStatus, Date.now());
+	const label = describeBadge(healthStatus, stale);
+
 	const dotClassName = cn(
 		"inline-block size-2 rounded-full",
-		BAND_DOT_CLASSES[band],
+		verdict === null
+			? "border border-muted-foreground bg-transparent"
+			: VERDICT_DOT_CLASSES[verdict],
 		stale && STALE_RING_CLASSES
 	);
-	const label = stale
-		? `Health: ${BAND_WORDS[band]} — stale (last evaluated ${formatRelativeToNow(health.lastEvaluatedAt)})`
-		: BAND_LABELS[band];
 
 	return (
 		<TooltipProvider>

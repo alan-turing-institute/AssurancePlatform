@@ -736,7 +736,7 @@ async function main() {
 			// commits) can point at this case and its P1 claim by name. P1 is
 			// deliberately left WITHOUT a static EvidenceLink — it's the
 			// keystone claim whose badge flips live when the DARTER pipeline
-			// posts its first evidence-format-v0.1 item through the health
+			// posts its first evidence format 1.1 record through the health
 			// plugin's machine endpoint. Do not seed PluginHealthEvidence or
 			// PluginData for it; that would pre-empt the live demo.
 			const demoCase = await tx.assuranceCase.create({

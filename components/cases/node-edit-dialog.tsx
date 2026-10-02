@@ -743,6 +743,7 @@ export default function NodeEditDialog({
 	);
 
 	const panelContext = {
+		canEdit: !readOnly,
 		caseId: assuranceCase?.id?.toString() ?? "",
 		elementId: String(node.data?.id ?? ""),
 		elementType: nodeType,

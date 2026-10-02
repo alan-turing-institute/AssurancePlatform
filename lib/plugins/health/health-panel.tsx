@@ -1,10 +1,14 @@
 "use client";
 
 import { FileText } from "lucide-react";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { EvidenceLogEntry } from "./evidence-log-entry";
+import { ChangeCheckDialog } from "./health-record-dialogs";
+import type { HealthStatus } from "./health-types";
 import { useHealthEvidence } from "./use-health-evidence";
 
 function EvidenceSkeleton() {
@@ -16,29 +20,86 @@ function EvidenceSkeleton() {
 	);
 }
 
+function refusedLine(count: number): string {
+	return count === 1
+		? "1 result was refused since the last accepted one. It named a different check."
+		: `${count} results were refused since the last accepted one. They named a different check.`;
+}
+
+interface PanelHeaderProps {
+	canEdit: boolean;
+	claimId: string;
+	onChanged: () => void;
+	status: HealthStatus;
+}
+
+function PanelHeader({
+	canEdit,
+	claimId,
+	onChanged,
+	status,
+}: PanelHeaderProps) {
+	const [changing, setChanging] = useState(false);
+	const changeButton = useRef<HTMLButtonElement>(null);
+
+	return (
+		<div className="space-y-1" data-testid="health-panel-header">
+			<div className="flex items-center justify-between gap-2">
+				<p className="wrap-anywhere min-w-0 text-sm">
+					<span className="text-muted-foreground">Bound check: </span>
+					<span className="font-medium">{status.bound_check}</span>
+				</p>
+				{canEdit && (
+					<Button
+						className="shrink-0"
+						onClick={() => setChanging(true)}
+						ref={changeButton}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						Change
+					</Button>
+				)}
+			</div>
+			{status.rejected_since_last_accept > 0 && (
+				<p className="text-muted-foreground text-sm">
+					{refusedLine(status.rejected_since_last_accept)}
+				</p>
+			)}
+			{canEdit && (
+				<ChangeCheckDialog
+					claimId={claimId}
+					currentCheck={status.bound_check}
+					onDone={onChanged}
+					onOpenChange={setChanging}
+					onRefused={onChanged}
+					open={changing}
+					returnFocusTo={changeButton}
+				/>
+			)}
+		</div>
+	);
+}
+
 /**
- * The `element-panel` slot's evidence-trace tab (ADR 0002 v2 §3): the
- * claim's append-only `tea.health` log, newest first. `useHealthEvidence`
- * returns the log in append (oldest-first, hash-chain) order — the reversal
- * here is display-only, never re-persisted.
+ * The `element-panel` slot's Evidence tab: the claim's bound check, then its
+ * evidence log newest first, 50 at a time with "Load older". A person who
+ * can edit (`canEdit`) also gets Change on the header and Revoke or
+ * Reinstate on each record; the server enforces permission regardless.
  *
- * The `element-panel` slot has no per-element-type filtering of its own
- * (`node-edit-dialog.tsx` shows one registered tab strip for every element
- * type), so this component handles the "not a claim" case itself rather
- * than showing a misleading fetch error on every goal/strategy/evidence
- * node's dialog — `useHealthEvidence` never makes a request for a non-claim
- * element, and this renders a distinct "not applicable" state instead.
+ * The slot has no per-element-type filtering of its own, so this component
+ * shows a "not applicable" state for anything but a property claim;
+ * neither hook makes a request for one.
  */
 export function HealthPanel({
 	caseId,
 	elementId,
 	elementType,
+	canEdit = false,
 }: ElementSlotContext) {
-	const { evidence, status } = useHealthEvidence({
-		caseId,
-		elementId,
-		elementType,
-	});
+	const context = { caseId, elementId, elementType };
+	const evidence = useHealthEvidence(context);
 
 	if (elementType !== "property") {
 		return (
@@ -50,11 +111,11 @@ export function HealthPanel({
 		);
 	}
 
-	if (status === "loading") {
+	if (evidence.status === "loading") {
 		return <EvidenceSkeleton />;
 	}
 
-	if (status === "error" || !evidence) {
+	if (evidence.status === "error" || !evidence.evidence) {
 		return (
 			<EmptyState
 				icon={FileText}
@@ -64,23 +125,62 @@ export function HealthPanel({
 		);
 	}
 
-	if (evidence.length === 0) {
+	const { healthStatus } = evidence;
+	const onChanged = () => {
+		evidence.refetch();
+	};
+	const header = healthStatus ? (
+		<PanelHeader
+			canEdit={canEdit}
+			claimId={elementId}
+			onChanged={onChanged}
+			status={healthStatus}
+		/>
+	) : null;
+
+	if (evidence.evidence.length === 0) {
 		return (
-			<EmptyState
-				icon={FileText}
-				message="No evidence has been recorded against this claim yet."
-				title="No evidence yet"
-			/>
+			<div className="space-y-3">
+				{header}
+				<EmptyState
+					icon={FileText}
+					message="No evidence has been recorded against this claim yet."
+					title="No evidence yet"
+				/>
+			</div>
 		);
 	}
 
-	const newestFirst = [...evidence].reverse();
-
 	return (
-		<div className="space-y-2" data-testid="health-evidence-log">
-			{newestFirst.map((item) => (
-				<EvidenceLogEntry item={item} key={item.id} />
+		<div
+			className="max-h-[60vh] space-y-2 overflow-y-auto pr-1"
+			data-testid="health-evidence-log"
+		>
+			{header}
+			{evidence.evidence.map((item) => (
+				<EvidenceLogEntry
+					canEdit={canEdit}
+					claimId={elementId}
+					item={item}
+					key={item.id}
+					onChanged={onChanged}
+				/>
 			))}
+			{evidence.olderFailed && (
+				<p className="text-destructive text-sm" role="alert">
+					Could not load older records. Try again.
+				</p>
+			)}
+			{evidence.hasMore && (
+				<Button
+					disabled={evidence.loadingOlder}
+					onClick={() => evidence.loadOlder()}
+					type="button"
+					variant="outline"
+				>
+					Load older
+				</Button>
+			)}
 		</div>
 	);
 }

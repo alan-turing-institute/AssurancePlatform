@@ -1627,7 +1627,7 @@
       "post": {
         "operationId": "post-cron-health-staleness-sweep",
         "summary": "Sweep tea.health claims for newly-stale state (cron job)",
-        "description": "Scans every claim carrying `tea.health` PluginData and emits",
+        "description": "Computes the status of every claim that has accepted",
         "tags": [
           "Cron"
         ],
@@ -2035,7 +2035,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ health: { score, lastEvaluatedAt, validityWindowSeconds } | null }`"
+                  "$ref": "#/components/schemas/200 - `{ status: { verdict, stale, stale_reason, stale_since, expires_at, record_id, timestamp, bound_check, rejected_since_last_accept } | null }`"
                 }
               }
             }
@@ -2090,6 +2090,126 @@
         ],
         "parameters": [],
         "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/bound-check": {
+      "put": {
+        "operationId": "put-elements-{id}-health-bound-check",
+        "summary": "PUT /api/elements/[id]/health/bound-check",
+        "description": "Human session only — a machine token cannot change the",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ status }` (null when the claim has no accepted record yet)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/records/{recordId}/reinstatement": {
+      "post": {
+        "operationId": "post-elements-{id}-health-records-{recordId}-reinstatement",
+        "summary": "POST /api/elements/[id]/health/records/[recordId]/reinstatement",
+        "description": "Human session only — a machine token cannot reinstate. The",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ status }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/records/{recordId}/revocation": {
+      "post": {
+        "operationId": "post-elements-{id}-health-records-{recordId}-revocation",
+        "summary": "POST /api/elements/[id]/health/records/[recordId]/revocation",
+        "description": "Human session only — a machine token cannot revoke. The",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - `{ revocation: { cause, reason, revoked_at, revoked_by_name }, status }`"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -2711,7 +2831,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ evidence: PluginHealthEvidence[] }`"
+                  "$ref": "#/components/schemas/200 - `{ evidence: Item[], next_before: number | null }`"
                 }
               }
             }
@@ -2749,7 +2869,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/201 - `{ evidence: PluginHealthEvidence, health: { score, lastEvaluatedAt, validityWindowSeconds } }`"
+                  "$ref": "#/components/schemas/201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`)"
                 }
               }
             }

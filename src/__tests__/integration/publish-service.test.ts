@@ -400,7 +400,13 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		await createTestPluginData(testCase.id, {
 			pluginId: "tea.health",
 			elementId: claim.id,
-			data: { score: 1, lastEvaluatedAt: null, validityWindowSeconds: 86_400 },
+			data: {
+				verdict: "pass",
+				record_id: "record-1",
+				timestamp: null,
+				expires_at: null,
+				bound_check: "Check A",
+			},
 		});
 
 		const data = expectSuccess(
@@ -418,9 +424,11 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 				{
 					elementId: claim.id,
 					data: {
-						score: 1,
-						lastEvaluatedAt: null,
-						validityWindowSeconds: 86_400,
+						verdict: "pass",
+						record_id: "record-1",
+						timestamp: null,
+						expires_at: null,
+						bound_check: "Check A",
 					},
 				},
 			],
@@ -453,7 +461,13 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		await createTestPluginData(testCase.id, {
 			pluginId: "tea.health",
 			elementId: claim.id,
-			data: { score: 0.5, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+			data: {
+				verdict: "marginal",
+				record_id: "record-1",
+				timestamp: null,
+				expires_at: null,
+				bound_check: "Check A",
+			},
 		});
 		expectSuccess(
 			await setPluginEnabledForUser("tea.health", owner.id, { enabled: false })
@@ -474,9 +488,11 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 				{
 					elementId: claim.id,
 					data: {
-						score: 0.5,
-						lastEvaluatedAt: null,
-						validityWindowSeconds: 60,
+						verdict: "marginal",
+						record_id: "record-1",
+						timestamp: null,
+						expires_at: null,
+						bound_check: "Check A",
 					},
 				},
 			],
@@ -521,7 +537,13 @@ describe("updatePublishedCase — snapshot pluginData capture", () => {
 		const dataRow = await createTestPluginData(testCase.id, {
 			pluginId: "tea.health",
 			elementId: claim.id,
-			data: { score: 0, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+			data: {
+				verdict: "fail",
+				record_id: "record-1",
+				timestamp: null,
+				expires_at: null,
+				bound_check: "Check A",
+			},
 		});
 
 		const updated = expectSuccess(

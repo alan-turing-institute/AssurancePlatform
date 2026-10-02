@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { parseJsonBody } from "@/lib/api-request";
+import { readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
@@ -9,18 +9,20 @@ import {
 } from "@/lib/api-response";
 import { requireApiToken } from "@/lib/auth/require-api-token";
 import { validationError } from "@/lib/errors";
-import { healthEvidenceItemSchema } from "@/lib/schemas/health-evidence";
+import { announceHealthChange } from "@/lib/health-route-helpers";
+import {
+	describeEvidenceIssues,
+	evidenceListQuerySchema,
+	healthEvidenceRecordSchema,
+} from "@/lib/schemas/health-evidence";
 import {
 	appendHealthEvidence,
 	listHealthEvidence,
 } from "@/lib/services/health-evidence-service";
-import { recomputeHealthScore } from "@/lib/services/health-scoring-service";
-import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 
 /**
- * The health plugin's machine ingestion endpoint (ADR 0002 v2 §3, DARTER
- * Interface C). Body = evidence-format-v0.1 exactly
- * (`docs/specs/evidence-format-v0.1.md`).
+ * The health plugin's machine ingestion endpoint. The body is an evidence
+ * format 1.1 record.
  */
 
 const BEARER_PREFIX = "Bearer ";
@@ -50,13 +52,22 @@ async function resolveReadPrincipalUserId(
 /**
  * GET /api/machine/health/elements/[id]/evidence
  *
- * Returns the append-only evidence log for a claim, oldest first.
+ * Returns one page of the claim's evidence log, newest first.
  *
  * @description Auth is EITHER a bearer token scoped `health:evidence:read`
  * OR a human session — either way the acting principal still needs case
- * access and the `tea.health` plugin must be enabled for them. Refuses with
- * a clean error (never a 500) when the plugin is unavailable/disabled.
- * @response 200 - `{ evidence: PluginHealthEvidence[] }`
+ * access and the `tea.health` plugin must be enabled for them. Each item is
+ * `{ id, record, chain_sequence, record_hash, previous_record_hash,
+ * created_by_id, created_at, expires_at, revocation }`, where `revocation`
+ * is the record's open revocation (`cause`, `reason`, `revoked_at`,
+ * `revoked_by_name`) or null. `limit` (default 50, at most 200) sets the page
+ * size; `before` is a `chain_sequence`, returning only older records.
+ * `next_before` is the value to pass as `before` for the next page, or null
+ * on the last page.
+ * @query limit - Page size, 1 to 200 (default 50)
+ * @query before - Return only records with a lower chain_sequence
+ * @response 200 - `{ evidence: Item[], next_before: number | null }`
+ * @response 400 - Invalid `limit` or `before`
  * @response 401 - Unauthorised (no valid token or session)
  * @response 404 - Claim not found (covers non-existent, wrong element type, and no-access — same message, no enumeration oracle)
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/principal
@@ -71,12 +82,27 @@ export async function GET(
 		const { id: claimId } = await params;
 		const userId = await resolveReadPrincipalUserId(request);
 
-		const result = await listHealthEvidence(userId, claimId);
+		const query = evidenceListQuerySchema.safeParse(
+			Object.fromEntries(request.nextUrl.searchParams)
+		);
+		if (!query.success) {
+			return apiError(
+				validationError(describeEvidenceIssues(query.error).message)
+			);
+		}
+
+		const result = await listHealthEvidence(userId, claimId, {
+			limit: query.data.limit,
+			before: query.data.before,
+		});
 		if ("error" in result) {
 			return apiError(serviceErrorToAppError(result.error));
 		}
 
-		return apiSuccess({ evidence: result.data });
+		return apiSuccess({
+			evidence: result.data.items,
+			next_before: result.data.nextBefore,
+		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
@@ -85,27 +111,26 @@ export async function GET(
 /**
  * POST /api/machine/health/elements/[id]/evidence
  *
- * Appends one evidence-format-v0.1 item, recomputes the claim's health
- * score, and broadcasts the change over SSE.
+ * Appends one evidence format 1.1 record, and broadcasts the change over SSE.
  *
  * @description Machine-only (`requireApiToken("health:evidence:write")`).
- * Body must be evidence-format-v0.1 exactly — unknown top-level fields are
- * rejected, `provenance` keys are preserved verbatim. `claimId` in the body
- * MUST equal the path `[id]`; a mismatch is a 400 (never a silent
- * re-target). On success: the evidence is appended to the hash chain, the
- * score is recomputed and written to `PluginData` under `tea.health`, and
- * `tea.health/state-changed` is broadcast to the claim's case — emitted
- * only after both writes have committed, never from inside a transaction.
- * If scoring fails after a successful append, the evidence is still
- * durably recorded (append-only, already committed); no event is emitted
- * and the caller sees the scoring error — the next evidence append (or a
- * future recompute-only path) will retry the computation from the full log.
- * @response 201 - `{ evidence: PluginHealthEvidence, health: { score, lastEvaluatedAt, validityWindowSeconds } }`
- * @response 400 - Invalid body, or `claimId` doesn't match the path id
+ * Body must be a format 1.1 record exactly — unknown top-level fields are
+ * rejected, extra `provenance` keys are preserved verbatim. `claim_ref` in
+ * the body MUST equal the path `[id]`; a mismatch is a 400 (never a silent
+ * re-target). The first record accepted for a claim binds the claim to its
+ * check; a record naming another check is refused with 422. A repeated
+ * `record_id` is refused with 409. On success the record is appended to the
+ * hash chain and `tea.health/state-changed` is broadcast to the claim's case
+ * — emitted only after the write has committed, never from inside a
+ * transaction.
+ * @response 201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`)
+ * @response 400 - Invalid body (the field is named), or `claim_ref` doesn't match the path id
  * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
  * @response 404 - Claim not found (covers non-existent, wrong element type, and no-access — same message, no enumeration oracle)
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/principal
+ * @response 409 - A record with this `record_id` already exists
  * @response 413 - Payload too large
+ * @response 422 - The claim is bound to a different check
  * @auth bearer
  * @tag Machine
  */
@@ -115,52 +140,45 @@ export async function POST(
 ) {
 	try {
 		const principal = await requireApiToken(request, "health:evidence:write");
-		const { id: claimId } = await params;
+		const { id } = await params;
+		const claimId = id.toLowerCase();
 
-		const data = await parseJsonBody(request, healthEvidenceItemSchema);
+		const parsed = healthEvidenceRecordSchema.safeParse(
+			await readJsonBody(request)
+		);
+		if (!parsed.success) {
+			const { message, fieldErrors } = describeEvidenceIssues(parsed.error);
+			return apiError(validationError(message, fieldErrors));
+		}
+		const record = parsed.data;
 
-		// Route-layer equality check (evidence-format-v0.1): path and body are
-		// parsed separately, so this isn't expressible in the zod schema alone.
-		if (data.claimId !== claimId) {
+		// Route-layer equality check: path and body are parsed separately, so
+		// this isn't expressible in the zod schema alone.
+		if (record.claim_ref !== claimId) {
 			return apiError(
-				validationError("claimId must match the evidence path id")
+				validationError("claim_ref must match the evidence path id", {
+					claim_ref: "must match the evidence path id",
+				})
 			);
 		}
 
-		const appendResult = await appendHealthEvidence(principal.systemUserId, {
+		const appendResult = await appendHealthEvidence(
+			principal.systemUserId,
 			claimId,
-			metricName: data.metricName,
-			value: data.value,
-			threshold: data.threshold,
-			verdict: data.verdict,
-			oddDimensions: data.oddDimensions,
-			sourceSystem: data.sourceSystem,
-			provenance: data.provenance,
-			evaluatedAt: data.evaluatedAt,
-		});
+			record
+		);
 		if ("error" in appendResult) {
 			return apiError(serviceErrorToAppError(appendResult.error));
 		}
-		const { evidence, caseId } = appendResult.data;
+		const { caseId } = appendResult.data;
 
-		const scoreResult = await recomputeHealthScore(
-			principal.systemUserId,
-			claimId,
-			caseId
-		);
-		if ("error" in scoreResult) {
-			return apiError(serviceErrorToAppError(scoreResult.error));
-		}
-
-		// After both writes have committed — never inside either transaction,
-		// never on a failed write (ADR 0002 v2 §2.5).
-		emitSSEEvent("tea.health/state-changed", caseId, {
-			claimId,
-			health: scoreResult.data,
+		// After the write has committed — never inside the transaction, never
+		// on a failed write.
+		const status = await announceHealthChange(claimId, caseId, {
 			integrationName: principal.integrationName,
 		});
 
-		return apiSuccess({ evidence, health: scoreResult.data }, 201);
+		return apiSuccess({ record: appendResult.data.record, status }, 201);
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}

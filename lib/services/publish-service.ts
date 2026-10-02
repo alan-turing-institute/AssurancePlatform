@@ -384,7 +384,7 @@ async function publishSnapshot(
 	// even though every value it can hold is a valid `InputJsonValue`.
 	// Routing through `unknown` is TS's own prescribed escape hatch for
 	// exactly this "no sufficient overlap" case (same pattern as
-	// `health-scoring-service.ts`) — not a blind `any`.
+	// `health-evidence-service.ts`) — not a blind `any`.
 	const content = preparedContent as unknown as Prisma.InputJsonValue;
 	const now = new Date();
 

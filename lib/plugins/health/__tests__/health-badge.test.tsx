@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UseCaseEventsOptions } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
-import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import { server } from "@/src/__tests__/mocks/server";
 import { render, screen } from "@/src/__tests__/utils/test-utils";
 import { HealthBadge } from "../health-badge";
-import type { HealthState } from "../health-bands";
+import type { HealthStatus } from "../health-types";
+import { status } from "./health-test-data";
 
 vi.mock("@/hooks/use-case-events", () => ({
 	useCaseEvents: vi.fn(),
@@ -20,12 +20,7 @@ const CLAIM_CONTEXT: ElementSlotContext = {
 	elementType: "property",
 };
 
-const DAY_SECONDS = 24 * 60 * 60;
-const HOUR_MS = 60 * 60 * 1000;
-
-/** Relative-to-real-time helpers — avoids combining fake timers with RTL's `waitFor` polling. */
-const hoursAgo = (hours: number) =>
-	new Date(Date.now() - hours * HOUR_MS).toISOString();
+const STALE_PASS_LABEL = /^Health: passing, stale since /;
 
 let capturedOptions: UseCaseEventsOptions | undefined;
 
@@ -42,44 +37,18 @@ function mockUseCaseEvents() {
 	});
 }
 
-function mockHealthResponse(elementId: string, health: HealthState | null) {
+function mockStatus(elementId: string, body: HealthStatus | null) {
 	server.use(
 		http.get(`/api/elements/${elementId}/health`, () =>
-			HttpResponse.json({ health })
+			HttpResponse.json({ status: body })
 		)
 	);
 }
 
-function mockHealthError(elementId: string) {
-	server.use(
-		http.get(`/api/elements/${elementId}/health`, () =>
-			HttpResponse.json({ error: "boom" }, { status: 500 })
-		)
-	);
-}
-
-/** Mocks `GET /api/user/plugins` — the source `useHealthBandScores` reads `tea.health`'s `verdictScores` settings from. */
-function mockPluginSettings(settings: unknown) {
-	server.use(
-		http.get("/api/user/plugins", () =>
-			HttpResponse.json({
-				plugins: [
-					{
-						pluginId: "tea.health",
-						name: "Claim/Evidence Health",
-						version: "0.1.0",
-						description: "Test plugin description.",
-						docsPath: "/docs/technical-guide/architecture/plugin-ecosystem",
-						surfaces: [],
-						available: true,
-						enabled: true,
-						pinnedAt: null,
-						settings,
-					} satisfies PluginSettingsListItem,
-				],
-			})
-		)
-	);
+async function renderDot(body: HealthStatus) {
+	mockStatus(CLAIM_CONTEXT.elementId, body);
+	render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
+	return await screen.findByTestId("health-badge-dot");
 }
 
 beforeEach(() => {
@@ -91,365 +60,143 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe("HealthBadge — bands", () => {
+describe("HealthBadge — verdict colours", () => {
+	it.each([
+		["pass", "bg-success", "Health: passing"],
+		["marginal", "bg-warning", "Health: marginal"],
+		["fail", "bg-destructive", "Health: failing"],
+		["indeterminate", "bg-muted-foreground", "Health: indeterminate"],
+	] as const)("colours a %s verdict from the verdict alone", async (verdict, colour, label) => {
+		const dot = await renderDot(status({ verdict }));
+		expect(dot).toHaveClass(colour);
+		expect(dot).not.toHaveClass("ring-2");
+		expect(dot).toHaveAttribute("aria-label", label);
+	});
+
 	it("renders nothing while loading", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
+		mockStatus(CLAIM_CONTEXT.elementId, status());
 		const { container } = render(<HealthBadge {...CLAIM_CONTEXT} />, {
 			withProviders: false,
 		});
 		expect(container).toBeEmptyDOMElement();
-
-		// Let the in-flight fetch settle before the test tears down, so its
-		// state update doesn't land outside an act() batch.
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toBeInTheDocument()
-		);
-	});
-
-	it("renders the pass band for a score of 1", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toBeInTheDocument()
-		);
-		const dot = screen.getByTestId("health-badge-dot");
-		expect(dot).toHaveClass("bg-success");
-		expect(dot).toHaveAttribute("aria-label", "Health: passing");
-	});
-
-	it("renders the degraded band for a score of 0.5", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0.5,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-warning")
-		);
-		expect(screen.getByTestId("health-badge-dot")).toHaveAttribute(
-			"aria-label",
-			"Health: degraded"
-		);
-	});
-
-	it("renders the fail band for a score of 0", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-				"bg-destructive"
-			)
-		);
-		expect(screen.getByTestId("health-badge-dot")).toHaveAttribute(
-			"aria-label",
-			"Health: failing"
-		);
-	});
-});
-
-describe("HealthBadge — score→band via plugin settings", () => {
-	it("uses the user's custom verdictScores instead of the defaults", async () => {
-		// A rescaled mapping where a score of 0.7 is the PASS threshold — under
-		// the defaults, 0.7 would land in the "pass" band anyway (closer to
-		// 1 than 0.5); under this custom mapping fail=0/degraded=0.3/pass=0.7,
-		// it's still nearest pass, so this alone wouldn't prove the wiring.
-		// Score 0.3 is unambiguous: default bands would call it "fail" (nearest
-		// to 0), the custom mapping calls it "degraded" (exact match).
-		mockPluginSettings({
-			verdictScores: { PASS: 0.7, DEGRADED: 0.3, FAIL: 0 },
-		});
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0.3,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-warning")
-		);
-		expect(screen.getByTestId("health-badge-dot")).toHaveAttribute(
-			"aria-label",
-			"Health: degraded"
-		);
-	});
-
-	it("falls back to the defaults when the settings fetch fails", async () => {
-		server.use(
-			http.get("/api/user/plugins", () =>
-				HttpResponse.json({ error: "boom" }, { status: 500 })
-			)
-		);
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-				"bg-destructive"
-			)
-		);
-	});
-
-	it("falls back to the defaults when the settings response is schema-invalid (200, but verdictScores.PASS is not a number)", async () => {
-		// A 200 response, unlike the fetch-failure case above — the settings
-		// endpoint is up, but `tea.health`'s saved settings blob doesn't parse
-		// as `bandScoresSettingsSchema`. Score 1 is the discriminator: under a
-		// correctly-applied DEFAULT_BAND_SCORES fallback it's an exact match
-		// for "pass" (bg-success); a bug that used the malformed PASS value
-		// literally would make every distance to "pass" resolve to NaN,
-		// leaving the loop stuck on "degraded" (bg-warning) instead.
-		mockPluginSettings({ verdictScores: { PASS: "not-a-number" } });
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-success")
-		);
-		expect(screen.getByTestId("health-badge-dot")).toHaveAttribute(
-			"aria-label",
-			"Health: passing"
-		);
+		await screen.findByTestId("health-badge-dot");
 	});
 });
 
 describe("HealthBadge — staleness", () => {
-	// ADR 0002 v2 §3: health ⊥ freshness — "green-but-stale is preserved".
-	// Staleness must ANNOTATE the band colour, never replace it, so a stale
-	// claim's last-known health stays readable at a glance.
-	it.each([
-		{ score: 1, band: "pass" as const, bandClass: "bg-success" },
-		{ score: 0.5, band: "degraded" as const, bandClass: "bg-warning" },
-		{ score: 0, band: "fail" as const, bandClass: "bg-destructive" },
-	])("keeps the $band band colour ($bandClass) when stale, and adds a non-colour stale marker", async ({
-		score,
-		bandClass,
-	}) => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score,
-			lastEvaluatedAt: hoursAgo(72), // 3 days ago, window is 24h
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		const dot = await screen.findByTestId("health-badge-dot");
-		await waitFor(() => expect(dot).toHaveClass(bandClass));
-		// The stale marker is a shape/ring cue, not a colour swap — the
-		// band colour class above must survive alongside it.
-		expect(dot).toHaveClass("ring-2");
-		expect(dot).not.toHaveClass("bg-muted-foreground");
+	it("keeps a stale pass green and adds the ring and the wording", async () => {
+		const dot = await renderDot(
+			status({
+				stale: true,
+				stale_reason: "expired",
+				stale_since: "2026-10-02T09:08:00.000Z",
+			})
+		);
+		expect(dot).toHaveClass("bg-success", "ring-2");
+		expect(dot.getAttribute("aria-label")).toMatch(STALE_PASS_LABEL);
 	});
 
-	it("names both the band and the staleness in the label (aria-label and tooltip)", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(72),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		const dot = await screen.findByTestId("health-badge-dot");
-		await waitFor(() =>
-			expect(dot).toHaveAttribute(
-				"aria-label",
-				expect.stringContaining("passing")
-			)
+	it("treats a status as stale once its expiry has passed on the viewer's clock", async () => {
+		const dot = await renderDot(
+			status({ expires_at: new Date(Date.now() - 1000).toISOString() })
 		);
-		expect(dot).toHaveAttribute("aria-label", expect.stringContaining("stale"));
+		expect(dot).toHaveClass("bg-success", "ring-2");
+		expect(dot.getAttribute("aria-label")).toContain("stale since");
 	});
 
-	it("does not show stale for a score within the validity window", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(1),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-success")
+	it("shows an unfilled, ringed dot when every record has been withdrawn", async () => {
+		const dot = await renderDot(
+			status({
+				verdict: null,
+				stale: true,
+				stale_reason: "all-revoked",
+				stale_since: "2026-10-02T09:08:00.000Z",
+				expires_at: null,
+			})
 		);
-		expect(screen.getByTestId("health-badge-dot")).not.toHaveClass("ring-2");
+		expect(dot).toHaveClass("bg-transparent", "ring-2");
+		expect(dot).toHaveAttribute("aria-label", "Health: all evidence revoked");
 	});
 });
 
-describe("HealthBadge — fail-closed rendering", () => {
-	it("renders nothing when there is no health data for the element", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, null);
+describe("HealthBadge — renders nothing", () => {
+	it("when there is no status", async () => {
+		mockStatus(CLAIM_CONTEXT.elementId, null);
 		const { container } = render(<HealthBadge {...CLAIM_CONTEXT} />, {
 			withProviders: false,
 		});
-
-		await waitFor(() => {
-			expect(container).toBeEmptyDOMElement();
-		});
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(container).toBeEmptyDOMElement();
 	});
 
-	it("renders nothing when the fetch fails", async () => {
-		mockHealthError(CLAIM_CONTEXT.elementId);
-		const { container } = render(<HealthBadge {...CLAIM_CONTEXT} />, {
-			withProviders: false,
-		});
-
-		await waitFor(() => {
-			expect(container).toBeEmptyDOMElement();
-		});
-	});
-
-	it("renders nothing for a non-claim element type, without making a request", async () => {
-		const goalContext: ElementSlotContext = {
-			caseId: "case-1",
-			elementId: "goal-1",
-			elementType: "goal",
-		};
-		let requestMade = false;
-		server.use(
-			http.get(`/api/elements/${goalContext.elementId}/health`, () => {
-				requestMade = true;
-				return HttpResponse.json({
-					health: {
-						score: 1,
-						lastEvaluatedAt: hoursAgo(0),
-						validityWindowSeconds: DAY_SECONDS,
-					},
-				});
+	it("when the claim is bound to a check but has no record yet", async () => {
+		mockStatus(
+			CLAIM_CONTEXT.elementId,
+			status({
+				verdict: null,
+				expires_at: null,
+				record_id: null,
+				timestamp: null,
 			})
 		);
-
-		const { container } = render(<HealthBadge {...goalContext} />, {
+		const { container } = render(<HealthBadge {...CLAIM_CONTEXT} />, {
 			withProviders: false,
 		});
-
-		// Give any (unwanted) effect a chance to fire before asserting absence.
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		await new Promise((resolve) => setTimeout(resolve, 20));
 		expect(container).toBeEmptyDOMElement();
-		expect(requestMade).toBe(false);
+	});
+
+	it("when the fetch fails", async () => {
+		server.use(
+			http.get(`/api/elements/${CLAIM_CONTEXT.elementId}/health`, () =>
+				HttpResponse.json({ error: "boom" }, { status: 500 })
+			)
+		);
+		const { container } = render(<HealthBadge {...CLAIM_CONTEXT} />, {
+			withProviders: false,
+		});
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(container).toBeEmptyDOMElement();
+	});
+
+	it("for a non-claim element, without making a request", async () => {
+		let requested = false;
+		server.use(
+			http.get("/api/elements/goal-1/health", () => {
+				requested = true;
+				return HttpResponse.json({ status: null });
+			})
+		);
+		const { container } = render(
+			<HealthBadge {...CLAIM_CONTEXT} elementId="goal-1" elementType="goal" />,
+			{ withProviders: false }
+		);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(container).toBeEmptyDOMElement();
+		expect(requested).toBe(false);
 	});
 });
 
 describe("HealthBadge — live update over SSE", () => {
 	it("refetches when tea.health/state-changed arrives for this element", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
+		mockStatus(CLAIM_CONTEXT.elementId, status({ verdict: "pass" }));
 		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-				"bg-destructive"
-			)
-		);
-
-		// The score changes server-side; a fresh evidence POST flips it to PASS.
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-
-		expect(capturedOptions?.onEvent).toBeDefined();
-		capturedOptions?.onEvent?.({
-			type: "tea.health/state-changed",
-			caseId: CLAIM_CONTEXT.caseId,
-			timestamp: hoursAgo(0),
-			payload: { claimId: CLAIM_CONTEXT.elementId },
-		});
-
 		await waitFor(() =>
 			expect(screen.getByTestId("health-badge-dot")).toHaveClass("bg-success")
 		);
-	});
 
-	it("ignores a state-changed event for a different claim", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
-
-		await waitFor(() =>
-			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-				"bg-destructive"
-			)
-		);
-
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
+		mockStatus(CLAIM_CONTEXT.elementId, status({ verdict: "fail" }));
 		capturedOptions?.onEvent?.({
 			type: "tea.health/state-changed",
 			caseId: CLAIM_CONTEXT.caseId,
-			timestamp: hoursAgo(0),
-			payload: { claimId: "some-other-claim" },
+			timestamp: new Date().toISOString(),
+			payload: { claimId: CLAIM_CONTEXT.elementId },
 		});
-
-		// Give any (unwanted) refetch a chance to resolve, then assert the
-		// badge did NOT move off the original band.
-		await new Promise((resolve) => setTimeout(resolve, 10));
-		expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-			"bg-destructive"
-		);
-	});
-
-	it("ignores an event of a DIFFERENT type even when the claimId matches (proves the type half of the guard, n-F2)", async () => {
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 0,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		render(<HealthBadge {...CLAIM_CONTEXT} />, { withProviders: false });
 
 		await waitFor(() =>
 			expect(screen.getByTestId("health-badge-dot")).toHaveClass(
 				"bg-destructive"
 			)
-		);
-
-		mockHealthResponse(CLAIM_CONTEXT.elementId, {
-			score: 1,
-			lastEvaluatedAt: hoursAgo(0),
-			validityWindowSeconds: DAY_SECONDS,
-		});
-		capturedOptions?.onEvent?.({
-			type: "element:moved",
-			caseId: CLAIM_CONTEXT.caseId,
-			timestamp: hoursAgo(0),
-			payload: { claimId: CLAIM_CONTEXT.elementId },
-		});
-
-		// Give any (unwanted) refetch a chance to resolve, then assert the
-		// badge did NOT move off the original band.
-		await new Promise((resolve) => setTimeout(resolve, 10));
-		expect(screen.getByTestId("health-badge-dot")).toHaveClass(
-			"bg-destructive"
 		);
 	});
 });

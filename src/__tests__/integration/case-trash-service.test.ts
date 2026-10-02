@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { healthEvidenceRecordSchema } from "@/lib/schemas/health-evidence";
 import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
 import {
 	listArchivedCopies,
@@ -16,6 +17,7 @@ import {
 	publishAssuranceCase,
 	updatePublishedCase,
 } from "@/lib/services/publish-service";
+import { buildHealthRecords } from "../fixtures/health-records";
 import {
 	expectError,
 	expectSameError,
@@ -310,27 +312,23 @@ describe("case-trash-service", () => {
 				elementType: "PROPERTY_CLAIM",
 			});
 
-			const appended = expectSuccess(
-				await appendHealthEvidence(owner.id, {
-					claimId: claim.id,
-					metricName: "in-distribution-rate",
-					value: 0.98,
-					threshold: 0.95,
-					verdict: "PASS",
-					oddDimensions: [],
-					sourceSystem: "darter-pipeline",
-					provenance: { check: "ood-monitor/kl-divergence", runId: "run-1" },
-					evaluatedAt: new Date().toISOString(),
-				})
+			const record = healthEvidenceRecordSchema.parse(
+				buildHealthRecords(claim.id).populationPass
 			);
+			expectSuccess(await appendHealthEvidence(owner.id, claim.id, record));
 
 			await softDeleteCase(owner.id, testCase.id);
 			expectSuccess(await purgeCase(owner.id, testCase.id));
 
 			const evidenceInDb = await prisma.pluginHealthEvidence.findUnique({
-				where: { id: appended.evidence.id },
+				where: { recordId: record.record_id },
 			});
 			expect(evidenceInDb).toBeNull();
+			expect(
+				await prisma.pluginHealthClaimState.count({
+					where: { claimId: claim.id },
+				})
+			).toBe(0);
 		});
 	});
 

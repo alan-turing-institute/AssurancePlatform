@@ -2,74 +2,111 @@ import { createHash } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import type {
+	HealthEvidenceRecord,
+	HealthVerdict,
+} from "@/lib/schemas/health-evidence";
 import { EVIDENCE_FORMAT_VERSION } from "@/lib/schemas/health-evidence";
+import { INDEFINITE, parseDurationSeconds } from "@/lib/schemas/health-rules";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
-import type { PluginHealthEvidence } from "@/src/generated/prisma";
+import {
+	type PluginHealthEvidenceVerdict,
+	type PluginHealthRevocationCause,
+	Prisma,
+} from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "health-evidence-service" });
 
 /**
- * The health plugin's append-only evidence log (ADR 0001 §2, relocated by
- * ADR 0002 v2 §3 — `plugin_health_evidence`). This module is the ONLY code
- * path allowed to write to that table, and it exposes exactly two
- * operations that touch the table: `appendHealthEvidence` and
- * `listHealthEvidence` (plus the pure, side-effect-free hash helpers
- * `canonicalJSON`/`computeRecordHash`, exported for hash-chain
- * verification). There is no update or delete function anywhere in this
- * file — append-only is a structural property of the service surface, not a
- * convention a caller could violate, and
+ * The health plugin's append-only evidence log (`plugin_health_evidence`).
+ * This module is the ONLY code path allowed to write to the evidence table
+ * and to the tables that qualify it (claim bound-check state, binding
+ * history, revocations). Its operations on those tables are: append a
+ * record, revoke one, reinstate one, and change a claim's bound check.
+ * There is no function anywhere in this file that updates or deletes an
+ * evidence row — append-only is a structural property of the service
+ * surface — and revoking a record adds a separate revocation row, so the
+ * record and its place in the hash chain never change.
  * `src/__tests__/integration/health-evidence-service.test.ts` asserts the
  * module's exports directly to prove it.
  *
  * Concurrency: two writers racing to append evidence for the SAME claim
- * could both read the same "current tip" and both compute a
- * `previousRecordHash` pointing at it — forking the chain. This is
+ * could both read the same "current tip" and fork the chain. This is
  * prevented by locking the claim's own `AssuranceElement` row
  * (`SELECT ... FOR UPDATE`) for the duration of the read-tip + insert
  * critical section, inside one Prisma interactive transaction. The claim
- * row always exists (evidence cannot be posted against a nonexistent
- * claim), so this works identically for a claim's first evidence item and
- * its hundredth — unlike locking the latest evidence row, which has
- * nothing to lock before the first item exists. Writers for DIFFERENT
- * claims lock different rows and never block each other.
+ * row always exists, so this works identically for a claim's first record
+ * and its hundredth. Writers for DIFFERENT claims lock different rows and
+ * never block each other.
  */
 
 const PLUGIN_ID = "tea.health";
 
-export interface HealthEvidenceInput {
-	claimId: string;
-	evaluatedAt: string;
-	metricName: string;
-	oddDimensions: string[];
-	provenance: Record<string, unknown>;
-	sourceSystem: string;
-	threshold?: number;
-	value?: number;
-	verdict: "PASS" | "FAIL" | "DEGRADED";
-}
-
 /**
  * A single generic message for every reason a claim reference could fail —
  * doesn't exist, is soft-deleted, isn't a PROPERTY_CLAIM, or the caller
- * lacks case access. Mirrors `element-service.ts`'s `updateElement`
- * precedent and `plugin-data-service.ts`'s `validateElementBelongsToCase`:
- * distinguishing these would let a caller with access to ANY case probe
- * arbitrary ids and learn, from the message, whether something exists
- * elsewhere on the platform.
+ * lacks the case access the operation needs. Distinguishing these would
+ * let a caller probe arbitrary ids and learn, from the message, whether
+ * something exists elsewhere on the platform.
  */
 const CLAIM_NOT_FOUND = "Claim not found";
+const RECORD_NOT_FOUND = "Record not found";
+const DUPLICATE_RECORD = "A record with this record_id already exists";
+const ALREADY_REVOKED = "This record is already revoked";
+const NOT_REVOKED = "This record is not revoked";
+const ALREADY_BOUND = "This claim is already bound to that check";
 
-interface ResolvedClaim {
-	caseId: string;
+export const DEFAULT_EVIDENCE_PAGE_SIZE = 50;
+export const MAX_EVIDENCE_PAGE_SIZE = 200;
+
+/** The refusal for a record naming a check other than the one the claim is bound to. */
+export function boundCheckRefusal(boundCheckName: string): string {
+	return `This claim is bound to check ${boundCheckName}. Evidence from another check needs its own evidence claim in the case.`;
 }
 
-/**
- * Resolves `claimId` to its `caseId`, or the generic not-found message if
- * the claim doesn't exist, is soft-deleted, or isn't a PROPERTY_CLAIM (the
- * only element type evidence-format-v0.1 evidence bears on).
- */
-async function resolveClaim(claimId: string): Promise<ResolvedClaim | null> {
+// ---------------------------------------------------------------------------
+// Wire vocabularies
+// ---------------------------------------------------------------------------
+
+const VERDICT_TO_DB: Record<HealthVerdict, PluginHealthEvidenceVerdict> = {
+	pass: "PASS",
+	marginal: "MARGINAL",
+	fail: "FAIL",
+	indeterminate: "INDETERMINATE",
+};
+
+export type RevocationCauseWire =
+	| "evidence-defect"
+	| "binding-defect"
+	| "duplicate"
+	| "superseded"
+	| "other";
+
+const CAUSE_TO_DB: Record<RevocationCauseWire, PluginHealthRevocationCause> = {
+	"evidence-defect": "EVIDENCE_DEFECT",
+	"binding-defect": "BINDING_DEFECT",
+	duplicate: "DUPLICATE",
+	superseded: "SUPERSEDED",
+	other: "OTHER",
+};
+
+const CAUSE_FROM_DB: Record<PluginHealthRevocationCause, RevocationCauseWire> =
+	{
+		EVIDENCE_DEFECT: "evidence-defect",
+		BINDING_DEFECT: "binding-defect",
+		DUPLICATE: "duplicate",
+		SUPERSEDED: "superseded",
+		OTHER: "other",
+	};
+
+// ---------------------------------------------------------------------------
+// Access
+// ---------------------------------------------------------------------------
+
+async function resolveClaim(
+	claimId: string
+): Promise<{ caseId: string } | null> {
 	const element = await prisma.assuranceElement.findUnique({
 		where: { id: claimId },
 		select: { caseId: true, elementType: true, deletedAt: true },
@@ -85,11 +122,10 @@ async function resolveClaim(claimId: string): Promise<ResolvedClaim | null> {
 }
 
 /**
- * Shared guard for both operations below: plugin enablement (for the
- * acting principal — human or machine, see the module doc on
- * `health-evidence-service.ts`'s callers for the machine-principal
- * enablement decision) + case permission + claim resolution. Returns the
- * resolved `caseId` on success, or the error to surface otherwise.
+ * Shared guard for every operation below: plugin enablement (for the
+ * acting principal, human or machine) + case permission + claim
+ * resolution. Returns the resolved `caseId` on success, or the error to
+ * surface otherwise.
  */
 async function guardClaimAccess(
 	userId: string,
@@ -117,22 +153,21 @@ async function guardClaimAccess(
 	return { caseId: claim.caseId };
 }
 
+// ---------------------------------------------------------------------------
+// Hash chain
+// ---------------------------------------------------------------------------
+
 /**
  * Canonical (sorted-key) JSON serialization. Used ONLY for hash-chain
  * content, never for storage or the API response: Postgres's `jsonb` type
  * does not guarantee it will hand back object keys in their original
  * insertion order, so re-deriving `recordHash` from a rehydrated row using
- * plain `JSON.stringify` would be a latent tamper-detection bug — a
- * legitimate, unmodified record could fail its own hash check purely from
- * key reordering. Sorting keys at every level makes the serialization
- * depend only on content, never on any particular storage/transport's
- * ordering behaviour.
+ * plain `JSON.stringify` would let an unmodified record fail its own hash
+ * check purely from key reordering. Sorting keys at every level makes the
+ * serialization depend only on content.
  *
- * Exported (alongside `computeRecordHash` below) for two callers outside
- * this file: the future hardening sweeper that periodically re-verifies the
- * whole chain, and this module's own integration tests, which recompute a
- * record's hash from the columns Prisma hands back and assert it against
- * the stored `recordHash` — the only way to actually prove a round trip.
+ * Exported (alongside `computeRecordHash`) so tests, and any sweeper that
+ * re-verifies a chain, can recompute a record's hash from the row.
  */
 export function canonicalJSON(value: unknown): string {
 	if (value === null || typeof value !== "object") {
@@ -150,32 +185,21 @@ export function canonicalJSON(value: unknown): string {
 	return `{${entries.join(",")}}`;
 }
 
-interface EvidenceHashContent {
-	claimId: string;
+/** What a record's hash covers: the record as stored, who stored it, and when. */
+export interface EvidenceHashContent {
 	createdAt: string;
 	createdById: string;
-	evaluatedAt: string;
-	formatVersion: string;
-	metricName: string;
-	oddDimensions: string[];
-	provenance: Record<string, unknown>;
-	sourceSystem: string;
-	threshold: number | null;
-	value: number | null;
-	verdict: string;
+	record: unknown;
 }
 
 /**
- * `recordHash = hash(content + previousRecordHash)` (ADR 0001 §2). A NUL
- * separator sits between the previous hash and the canonical content string
- * so that no ambiguous concatenation (e.g. previousHash `"ab"` + content
- * `"c"` vs. previousHash `"a"` + content `"bc"`) can ever produce the same
- * bytes fed to the digest. That guarantee depends on this being the ONLY NUL
- * byte in the assembled payload — `canonicalJSON` always serializes string
- * values through `JSON.stringify`, which escapes an embedded NUL character
- * as a six-character JSON escape sequence, never as a raw byte, so a
- * producer cannot smuggle in a second raw separator byte via, say, a
- * `provenance` string.
+ * `recordHash = hash(content + previousRecordHash)`. A NUL separator sits
+ * between the previous hash and the canonical content string so that no
+ * ambiguous concatenation can produce the same bytes. That guarantee
+ * depends on this being the ONLY NUL byte in the assembled payload —
+ * `canonicalJSON` serializes strings through `JSON.stringify`, which
+ * escapes an embedded NUL character as a six-character JSON escape
+ * sequence, never as a raw byte.
  */
 export function computeRecordHash(
 	content: EvidenceHashContent,
@@ -185,120 +209,467 @@ export function computeRecordHash(
 	return createHash("sha256").update(payload).digest("hex");
 }
 
+// ---------------------------------------------------------------------------
+// Append
+// ---------------------------------------------------------------------------
+
 export interface AppendedHealthEvidence {
 	caseId: string;
-	evidence: PluginHealthEvidence;
+	/** The record exactly as stored. */
+	record: HealthEvidenceRecord;
+}
+
+type AppendOutcome =
+	| { kind: "ok"; record: HealthEvidenceRecord }
+	| { kind: "duplicate" }
+	| { kind: "bound-elsewhere"; boundCheckName: string };
+
+function expiryOf(record: HealthEvidenceRecord, timestamp: Date): Date | null {
+	if (record.valid_for === INDEFINITE) {
+		return null;
+	}
+	const seconds = parseDurationSeconds(record.valid_for);
+	if (seconds === null) {
+		// Refuse rather than store a record that would never go stale.
+		throw new Error("valid_for is not a valid duration");
+	}
+	return new Date(timestamp.getTime() + seconds * 1000);
 }
 
 /**
- * Appends one evidence-format-v0.1 item to `claimId`'s log, computing the
- * next hash-chain link under a claim-row lock (see module doc). Requires
- * EDIT-level case access for `actingUserId` (a write, same bar as
- * `writePluginData`). Returns the persisted record plus the claim's
- * `caseId` — the route layer needs it to recompute the score and to
- * address the SSE broadcast (which is by case), and resolving it here
- * avoids a second round-trip to look it up again.
+ * Appends one validated record to `claimId`'s log, computing the next
+ * hash-chain link under a claim-row lock (see module doc). In the same
+ * locked section it refuses a repeated `record_id` and enforces the claim's
+ * bound check: the first accepted record binds its check, and a record
+ * naming another check is refused and counted. Requires EDIT-level case
+ * access for `actingUserId`. Returns the stored record plus the claim's
+ * `caseId`, which the route needs to address the SSE broadcast.
  */
 export async function appendHealthEvidence(
 	actingUserId: string,
-	input: HealthEvidenceInput
+	claimId: string,
+	input: HealthEvidenceRecord
 ): ServiceResult<AppendedHealthEvidence> {
-	const guard = await guardClaimAccess(actingUserId, input.claimId, "EDIT");
+	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
 	if ("error" in guard) {
 		return { error: guard.error };
 	}
 	const { caseId } = guard;
 
+	// Hashed and stored from the same JSON-normalised value, so the stored row
+	// recomputes to the same hash.
+	const record = JSON.parse(JSON.stringify(input)) as HealthEvidenceRecord;
+	const createdAt = new Date();
+	const recordTimestamp = new Date(record.timestamp);
+
 	try {
-		const createdAt = new Date();
-		// Parsed ONCE and reused for both the hash preimage and storage — the
-		// same fix as `createdAt` above. `evaluatedAt` is client-supplied and
-		// round-trips through Postgres's `TIMESTAMP(3)` column as a `Date`, not
-		// as the producer's original wire string; if the hash were computed
-		// from `input.evaluatedAt` directly but the column stored
-		// `new Date(input.evaluatedAt)`, a record's hash could never be
-		// recomputed from its own returned data (e.g. a wire value with no
-		// fractional seconds hashes as `"...07Z"` but re-serializes from the
-		// stored `Date` as `"...07.000Z"` — a spurious tamper signal on an
-		// untouched record). Hashing and storing the SAME `Date` instance
-		// makes the round trip exact.
-		const evaluatedAtDate = new Date(input.evaluatedAt);
-		const record = await prisma.$transaction(async (tx) => {
-			// Locks the claim's own row for the duration of this transaction.
-			// It is guaranteed to exist (guardClaimAccess just resolved it), so
-			// this works identically for a claim's first evidence item as for
-			// its Nth — unlike locking "the latest evidence row", which has
-			// nothing to lock before one exists.
-			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${input.claimId} FOR UPDATE`;
+		const outcome = await prisma.$transaction(
+			async (tx): Promise<AppendOutcome> => {
+				await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
 
-			const previous = await tx.pluginHealthEvidence.findFirst({
-				where: { claimId: input.claimId },
-				orderBy: { chainSequence: "desc" },
-				select: { recordHash: true },
+				const existing = await tx.pluginHealthEvidence.findUnique({
+					where: { recordId: record.record_id },
+					select: { id: true },
+				});
+				if (existing) {
+					return { kind: "duplicate" };
+				}
+
+				const state = await tx.pluginHealthClaimState.findUnique({
+					where: { claimId },
+				});
+				if (state && state.boundCheckName !== record.check.name) {
+					return {
+						kind: "bound-elsewhere",
+						boundCheckName: state.boundCheckName,
+					};
+				}
+				if (!state) {
+					await tx.pluginHealthClaimState.create({
+						data: { claimId, boundCheckName: record.check.name },
+					});
+					await tx.pluginHealthBindingChange.create({
+						data: {
+							claimId,
+							fromCheckName: null,
+							toCheckName: record.check.name,
+							source: "FIRST_RECORD",
+							changedById: actingUserId,
+						},
+					});
+				}
+
+				const previous = await tx.pluginHealthEvidence.findFirst({
+					where: { claimId },
+					orderBy: { chainSequence: "desc" },
+					select: { recordHash: true },
+				});
+				const previousRecordHash = previous?.recordHash ?? null;
+				const recordHash = computeRecordHash(
+					{
+						record,
+						createdById: actingUserId,
+						createdAt: createdAt.toISOString(),
+					},
+					previousRecordHash
+				);
+
+				await tx.pluginHealthEvidence.create({
+					data: {
+						claimId,
+						record: record as unknown as Prisma.InputJsonObject,
+						recordId: record.record_id,
+						recordTimestamp,
+						verdict: VERDICT_TO_DB[record.verdict],
+						checkName: record.check.name,
+						session: record.provenance.session,
+						validFor: record.valid_for,
+						expiresAt: expiryOf(record, recordTimestamp),
+						formatVersion: EVIDENCE_FORMAT_VERSION,
+						recordHash,
+						previousRecordHash,
+						createdById: actingUserId,
+						createdAt,
+					},
+				});
+				await tx.pluginHealthClaimState.update({
+					where: { claimId },
+					data: { rejectedSinceLastAccept: 0 },
+				});
+
+				return { kind: "ok", record };
+			}
+		);
+
+		if (outcome.kind === "duplicate") {
+			return { error: DUPLICATE_RECORD };
+		}
+		if (outcome.kind === "bound-elsewhere") {
+			// Counted in its own short transaction: the refusal must be visible
+			// even though the append transaction stored nothing. It takes the
+			// same claim-row lock as an append, so it cannot land after a later
+			// accepted record has reset the count.
+			await prisma.$transaction(async (tx) => {
+				await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+				await tx.pluginHealthClaimState.update({
+					where: { claimId },
+					data: { rejectedSinceLastAccept: { increment: 1 } },
+				});
 			});
-			const previousRecordHash = previous?.recordHash ?? null;
-
-			const content: EvidenceHashContent = {
-				claimId: input.claimId,
-				metricName: input.metricName,
-				value: input.value ?? null,
-				threshold: input.threshold ?? null,
-				verdict: input.verdict,
-				oddDimensions: input.oddDimensions,
-				sourceSystem: input.sourceSystem,
-				provenance: input.provenance,
-				evaluatedAt: evaluatedAtDate.toISOString(),
-				formatVersion: EVIDENCE_FORMAT_VERSION,
-				createdById: actingUserId,
-				createdAt: createdAt.toISOString(),
-			};
-			const recordHash = computeRecordHash(content, previousRecordHash);
-
-			return await tx.pluginHealthEvidence.create({
-				data: {
-					claimId: input.claimId,
-					metricName: input.metricName,
-					value: input.value,
-					threshold: input.threshold,
-					verdict: input.verdict,
-					oddDimensions: input.oddDimensions,
-					sourceSystem: input.sourceSystem,
-					provenance: input.provenance,
-					evaluatedAt: evaluatedAtDate,
-					formatVersion: EVIDENCE_FORMAT_VERSION,
-					recordHash,
-					previousRecordHash,
-					createdById: actingUserId,
-					createdAt,
-				},
-			});
-		});
-
-		return { data: { evidence: record, caseId } };
+			return { error: boundCheckRefusal(outcome.boundCheckName) };
+		}
+		return { data: { record: outcome.record, caseId } };
 	} catch (error) {
+		if (
+			error instanceof Prisma.PrismaClientKnownRequestError &&
+			error.code === "P2002"
+		) {
+			// Two appends for different claims raced on the same record_id.
+			return { error: DUPLICATE_RECORD };
+		}
 		log.error("Failed to append health evidence", { error });
 		return { error: "Failed to append health evidence" };
 	}
 }
 
-/** Returns `claimId`'s full evidence log in append order. Requires VIEW-level case access. */
+// ---------------------------------------------------------------------------
+// List
+// ---------------------------------------------------------------------------
+
+export interface HealthRevocationView {
+	cause: RevocationCauseWire;
+	reason: string;
+	revoked_at: string;
+	revoked_by_name: string;
+}
+
+export interface HealthEvidenceListItem {
+	chain_sequence: number;
+	created_at: string;
+	created_by_id: string;
+	expires_at: string | null;
+	id: string;
+	previous_record_hash: string | null;
+	record: HealthEvidenceRecord;
+	record_hash: string;
+	revocation: HealthRevocationView | null;
+}
+
+export interface HealthEvidencePage {
+	items: HealthEvidenceListItem[];
+	/** Pass as `before` to read the next (older) page; null when there is none. */
+	nextBefore: number | null;
+}
+
+const DELETED_USER_NAME = "Deleted user";
+
+async function usernamesById(ids: string[]): Promise<Map<string, string>> {
+	if (ids.length === 0) {
+		return new Map();
+	}
+	const users = await prisma.user.findMany({
+		where: { id: { in: ids } },
+		select: { id: true, username: true },
+	});
+	return new Map(users.map((user) => [user.id, user.username]));
+}
+
+function toRevocationView(
+	revocation: {
+		cause: PluginHealthRevocationCause;
+		reason: string;
+		revokedAt: Date;
+		revokedById: string;
+	},
+	names: Map<string, string>
+): HealthRevocationView {
+	return {
+		cause: CAUSE_FROM_DB[revocation.cause],
+		reason: revocation.reason,
+		revoked_at: revocation.revokedAt.toISOString(),
+		revoked_by_name: names.get(revocation.revokedById) ?? DELETED_USER_NAME,
+	};
+}
+
+/**
+ * One page of `claimId`'s evidence log, newest first, each item carrying
+ * its open revocation (or null). `before` is a `chain_sequence`: only
+ * records older than it are returned. Requires VIEW-level case access.
+ */
 export async function listHealthEvidence(
 	actingUserId: string,
-	claimId: string
-): ServiceResult<PluginHealthEvidence[]> {
+	claimId: string,
+	options: { limit?: number; before?: number } = {}
+): ServiceResult<HealthEvidencePage> {
 	const guard = await guardClaimAccess(actingUserId, claimId, "VIEW");
+	if ("error" in guard) {
+		return { error: guard.error };
+	}
+	const limit = Math.min(
+		Math.max(options.limit ?? DEFAULT_EVIDENCE_PAGE_SIZE, 1),
+		MAX_EVIDENCE_PAGE_SIZE
+	);
+
+	try {
+		const rows = await prisma.pluginHealthEvidence.findMany({
+			where: {
+				claimId,
+				...(options.before === undefined
+					? {}
+					: { chainSequence: { lt: options.before } }),
+			},
+			orderBy: { chainSequence: "desc" },
+			take: limit + 1,
+			include: {
+				revocations: { where: { reinstatedAt: null }, take: 1 },
+			},
+		});
+		const hasMore = rows.length > limit;
+		const page = hasMore ? rows.slice(0, limit) : rows;
+
+		const names = await usernamesById([
+			...new Set(
+				page.flatMap((row) =>
+					row.revocations.map((revocation) => revocation.revokedById)
+				)
+			),
+		]);
+
+		const items = page.map(
+			(row): HealthEvidenceListItem => ({
+				id: row.id,
+				record: row.record as unknown as HealthEvidenceRecord,
+				chain_sequence: row.chainSequence,
+				record_hash: row.recordHash,
+				previous_record_hash: row.previousRecordHash,
+				created_by_id: row.createdById,
+				created_at: row.createdAt.toISOString(),
+				expires_at: row.expiresAt?.toISOString() ?? null,
+				revocation: row.revocations[0]
+					? toRevocationView(row.revocations[0], names)
+					: null,
+			})
+		);
+		return {
+			data: {
+				items,
+				nextBefore: hasMore ? (items.at(-1)?.chain_sequence ?? null) : null,
+			},
+		};
+	} catch (error) {
+		log.error("Failed to list health evidence", { error });
+		return { error: "Failed to list health evidence" };
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Revocation
+// ---------------------------------------------------------------------------
+
+export interface RevokedHealthEvidence {
+	caseId: string;
+	revocation: HealthRevocationView;
+}
+
+/**
+ * Withdraws one record from its claim's status. The evidence row is not
+ * touched: the revocation is a separate row, so the record stays in the log
+ * (marked revoked) and keeps its place in the hash chain. Requires EDIT.
+ */
+export async function revokeHealthEvidence(
+	actingUserId: string,
+	claimId: string,
+	recordId: string,
+	input: { cause: RevocationCauseWire; reason: string }
+): ServiceResult<RevokedHealthEvidence> {
+	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
 	if ("error" in guard) {
 		return { error: guard.error };
 	}
 
 	try {
-		const records = await prisma.pluginHealthEvidence.findMany({
-			where: { claimId },
-			orderBy: { chainSequence: "asc" },
+		const evidence = await prisma.pluginHealthEvidence.findFirst({
+			where: { recordId, claimId },
+			select: { id: true },
 		});
-		return { data: records };
+		if (!evidence) {
+			return { error: RECORD_NOT_FOUND };
+		}
+		const open = await prisma.pluginHealthRevocation.findFirst({
+			where: { evidenceId: evidence.id, reinstatedAt: null },
+			select: { id: true },
+		});
+		if (open) {
+			return { error: ALREADY_REVOKED };
+		}
+
+		const created = await prisma.pluginHealthRevocation.create({
+			data: {
+				evidenceId: evidence.id,
+				cause: CAUSE_TO_DB[input.cause],
+				reason: input.reason,
+				revokedById: actingUserId,
+			},
+		});
+		const names = await usernamesById([actingUserId]);
+		return {
+			data: {
+				caseId: guard.caseId,
+				revocation: toRevocationView(created, names),
+			},
+		};
 	} catch (error) {
-		log.error("Failed to list health evidence", { error });
-		return { error: "Failed to list health evidence" };
+		if (
+			error instanceof Prisma.PrismaClientKnownRequestError &&
+			error.code === "P2002"
+		) {
+			// A concurrent revocation of the same record won the open-revocation index.
+			return { error: ALREADY_REVOKED };
+		}
+		log.error("Failed to revoke health evidence", { error });
+		return { error: "Failed to revoke health evidence" };
+	}
+}
+
+/**
+ * Puts a revoked record back. The revocation row stays, now closed with who
+ * reinstated it, when and why; revoking the record again adds a new row.
+ * Requires EDIT.
+ */
+export async function reinstateHealthEvidence(
+	actingUserId: string,
+	claimId: string,
+	recordId: string,
+	input: { reason: string }
+): ServiceResult<{ caseId: string }> {
+	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
+	if ("error" in guard) {
+		return { error: guard.error };
+	}
+
+	try {
+		const evidence = await prisma.pluginHealthEvidence.findFirst({
+			where: { recordId, claimId },
+			select: { id: true },
+		});
+		if (!evidence) {
+			return { error: RECORD_NOT_FOUND };
+		}
+		const closed = await prisma.pluginHealthRevocation.updateMany({
+			where: { evidenceId: evidence.id, reinstatedAt: null },
+			data: {
+				reinstatedAt: new Date(),
+				reinstatedById: actingUserId,
+				reinstatementReason: input.reason,
+			},
+		});
+		if (closed.count === 0) {
+			return { error: NOT_REVOKED };
+		}
+		return { data: { caseId: guard.caseId } };
+	} catch (error) {
+		log.error("Failed to reinstate health evidence", { error });
+		return { error: "Failed to reinstate health evidence" };
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Bound check
+// ---------------------------------------------------------------------------
+
+/**
+ * Changes the one check a claim accepts evidence from, writing a history
+ * row naming the person and their reason. Records for the new check are
+ * accepted from then on, and records for the old one are refused. Requires
+ * EDIT.
+ */
+export async function changeBoundCheck(
+	actingUserId: string,
+	claimId: string,
+	input: { name: string; reason: string }
+): ServiceResult<{ caseId: string }> {
+	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
+	if ("error" in guard) {
+		return { error: guard.error };
+	}
+
+	try {
+		const outcome = await prisma.$transaction(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+			const state = await tx.pluginHealthClaimState.findUnique({
+				where: { claimId },
+			});
+			if (state?.boundCheckName === input.name) {
+				return "unchanged" as const;
+			}
+			if (state) {
+				await tx.pluginHealthClaimState.update({
+					where: { claimId },
+					data: { boundCheckName: input.name },
+				});
+			} else {
+				await tx.pluginHealthClaimState.create({
+					data: { claimId, boundCheckName: input.name },
+				});
+			}
+			await tx.pluginHealthBindingChange.create({
+				data: {
+					claimId,
+					fromCheckName: state?.boundCheckName ?? null,
+					toCheckName: input.name,
+					source: "PERSON",
+					reason: input.reason,
+					changedById: actingUserId,
+				},
+			});
+			return "changed" as const;
+		});
+		if (outcome === "unchanged") {
+			return { error: ALREADY_BOUND };
+		}
+		return { data: { caseId: guard.caseId } };
+	} catch (error) {
+		log.error("Failed to change health bound check", { error });
+		return { error: "Failed to change the bound check" };
 	}
 }

@@ -52,6 +52,8 @@ export type SlotId = Extract<
 
 /** Everything an element-scoped slot's render function needs to key its own data (tier-1 `PluginData` is namespaced by case + element). */
 export interface ElementSlotContext {
+	/** Whether the viewer may edit the case. Absent means view-only. The server enforces permission whatever a slot shows. */
+	canEdit?: boolean;
 	caseId: string;
 	elementId: string;
 	elementType: ElementType;

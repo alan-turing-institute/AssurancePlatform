@@ -1,88 +1,141 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
+import type {
+	HealthEvidenceLogItem,
+	HealthEvidencePage,
+	HealthStatus,
+} from "./health-types";
 import { useClaimScopedFetch } from "./use-claim-scoped-fetch";
+import { fetchHealthStatus } from "./use-health-state";
 
-export type HealthEvidenceVerdict = "DEGRADED" | "FAIL" | "PASS";
+const PAGE_SIZE = 50;
 
-/**
- * One evidence-format-v0.1 item as returned by
- * `GET /api/machine/health/elements/[id]/evidence` — mirrors
- * `PluginHealthEvidence` (`prisma/schema.prisma`) field-for-field so a mock
- * fixture can be checked with `satisfies` against the real response shape.
- */
-export interface HealthEvidenceLogItem {
-	chainSequence: number;
-	claimId: string;
-	createdAt: string;
-	createdById: string;
-	evaluatedAt: string;
-	formatVersion: string;
-	id: string;
-	metricName: string;
-	oddDimensions: string[];
-	previousRecordHash: string | null;
-	provenance: Record<string, unknown>;
-	recordHash: string;
-	sourceSystem: string;
-	threshold: number | null;
-	value: number | null;
-	verdict: HealthEvidenceVerdict;
-}
-
-interface EvidenceResponseBody {
-	evidence: HealthEvidenceLogItem[];
-}
-
-async function fetchEvidenceLog(
-	claimId: string
-): Promise<HealthEvidenceLogItem[]> {
+async function fetchEvidencePage(
+	claimId: string,
+	before?: number
+): Promise<HealthEvidencePage> {
+	const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
+	if (before !== undefined) {
+		query.set("before", String(before));
+	}
 	const response = await fetch(
-		`/api/machine/health/elements/${claimId}/evidence`
+		`/api/machine/health/elements/${claimId}/evidence?${query}`
 	);
 	if (!response.ok) {
 		throw new Error(`Failed to fetch evidence log (${response.status})`);
 	}
-	const body = (await response.json()) as EvidenceResponseBody;
-	return body.evidence;
+	return (await response.json()) as HealthEvidencePage;
+}
+
+interface NewestLoad {
+	/** The claim's status, or null when it has none or could not be read. */
+	healthStatus: HealthStatus | null;
+	page: HealthEvidencePage;
+}
+
+/**
+ * The newest page and the claim's status together, so the panel needs only
+ * one live-update subscription and one refetch path. A status that cannot
+ * be read leaves the header out; it does not hide the log.
+ */
+async function fetchNewestLoad(claimId: string): Promise<NewestLoad> {
+	const [page, healthStatus] = await Promise.all([
+		fetchEvidencePage(claimId),
+		fetchHealthStatus(claimId).catch(() => null),
+	]);
+	return { page, healthStatus };
 }
 
 export type HealthEvidenceStatus = "error" | "loading" | "ready";
 
 export interface UseHealthEvidenceResult {
 	evidence: HealthEvidenceLogItem[] | null;
+	hasMore: boolean;
+	/** The claim's status, for the panel header; null when it has none. */
+	healthStatus: HealthStatus | null;
+	loadingOlder: boolean;
+	/** Appends the next, older page. */
+	loadOlder: () => Promise<void>;
+	/** True when the last attempt to load an older page failed. */
+	olderFailed: boolean;
+	/** Fetches the newest page again; older pages already loaded are dropped. */
+	refetch: () => Promise<void>;
 	status: HealthEvidenceStatus;
 }
 
+interface OlderPages {
+	/** The newest page these were loaded behind; a different one makes them stale. */
+	base: NewestLoad;
+	items: HealthEvidenceLogItem[];
+	nextBefore: number | null;
+}
+
 /**
- * The `tea.health` append-only evidence log for one claim (ADR 0002 v2 §3),
- * via the existing machine endpoint's human-session auth path — a session
- * with case VIEW access is an accepted caller of
- * `GET /api/machine/health/elements/[id]/evidence` alongside a scoped bearer
- * token (verified in the server-core review). No new route: the
- * `element-panel` slot is simply the second, already-anticipated consumer of
- * an endpoint built for DARTER. Fetch-once-on-mount + SSE refetch wiring is
- * shared with `useHealthState` via `useClaimScopedFetch`
- * (`use-claim-scoped-fetch.ts`).
+ * The `tea.health` evidence log for one claim, newest first, 50 at a time:
+ * the newest page (with the claim's status) is fetched on mount and again on each
+ * `tea.health/state-changed` for the element, and `loadOlder` appends the
+ * next older page. A refetch of the newest page drops the older pages
+ * already loaded, since a withdrawal or reinstatement may have changed
+ * them. The endpoint is the machine one, which accepts a signed-in person
+ * with view access.
  *
- * Only meaningful for `PROPERTY_CLAIM` elements — see `useHealthState`'s
- * doc. Non-claim callers get `status: "ready"`, `evidence: []` without a
- * request ever being made, so the panel can render a distinct "not
- * applicable" state instead of a misleading fetch error.
+ * Non-claim callers get `status: "ready"`, `evidence: []` without a request.
  */
 export function useHealthEvidence({
 	caseId,
 	elementId,
 	elementType,
 }: ElementSlotContext): UseHealthEvidenceResult {
-	const { data, status } = useClaimScopedFetch<HealthEvidenceLogItem[] | null>({
+	const { data, status, refetch } = useClaimScopedFetch<NewestLoad | null>({
 		caseId,
 		elementId,
 		elementType,
-		fetchFn: fetchEvidenceLog,
+		fetchFn: fetchNewestLoad,
 		errorValue: null,
-		notApplicableValue: [],
+		notApplicableValue: {
+			healthStatus: null,
+			page: { evidence: [], next_before: null },
+		},
 	});
+	const [older, setOlder] = useState<OlderPages | null>(null);
+	const [loadingOlder, setLoadingOlder] = useState(false);
+	const [olderFailed, setOlderFailed] = useState(false);
 
-	return { evidence: data, status };
+	const current = older && older.base === data ? older : null;
+	const nextBefore = current
+		? current.nextBefore
+		: (data?.page.next_before ?? null);
+
+	const loadOlder = useCallback(async () => {
+		if (!data || nextBefore === null) {
+			return;
+		}
+		setLoadingOlder(true);
+		setOlderFailed(false);
+		try {
+			const page = await fetchEvidencePage(elementId, nextBefore);
+			setOlder({
+				base: data,
+				items: [...(current?.items ?? []), ...page.evidence],
+				nextBefore: page.next_before,
+			});
+		} catch {
+			setOlderFailed(true);
+		} finally {
+			setLoadingOlder(false);
+		}
+	}, [current, data, elementId, nextBefore]);
+
+	return {
+		evidence: data ? [...data.page.evidence, ...(current?.items ?? [])] : null,
+		healthStatus: data?.healthStatus ?? null,
+		hasMore: nextBefore !== null,
+		loadingOlder,
+		loadOlder,
+		olderFailed,
+		refetch,
+		status,
+	};
 }

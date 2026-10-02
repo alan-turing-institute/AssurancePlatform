@@ -7,6 +7,13 @@ import {
 	revokeToken,
 } from "@/lib/services/integration-registry-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
+import {
+	buildHealthRecords,
+	type HealthRecordFixture,
+	type HealthRecordName,
+	SUMMARY_CHECK_NAME,
+	withOverrides,
+} from "../fixtures/health-records";
 import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
@@ -28,20 +35,6 @@ vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
 	return {
 		...actual,
 		emitSSEEvent: vi.fn(),
-	};
-});
-
-// Wrapped (not stubbed): defaults to the REAL implementation for every test
-// except the one that deliberately overrides it with `mockResolvedValueOnce`
-// (see "POST — evidence persists even when scoring fails" below).
-vi.mock("@/lib/services/health-scoring-service", async (importOriginal) => {
-	const actual =
-		await importOriginal<
-			typeof import("@/lib/services/health-scoring-service")
-		>();
-	return {
-		...actual,
-		recomputeHealthScore: vi.fn(actual.recomputeHealthScore),
 	};
 });
 
@@ -94,23 +87,13 @@ async function setupIntegration(
 	return { integration, systemUserId, secret, apiToken };
 }
 
+/** A fresh fixture record (default: a passing population summary) for `claimId`. */
 function evidenceBody(
 	claimId: string,
+	name: HealthRecordName = "populationPass",
 	overrides: Record<string, unknown> = {}
-): Record<string, unknown> {
-	return {
-		formatVersion: "0.1",
-		claimId,
-		metricName: "in-distribution-rate",
-		value: 0.982,
-		threshold: 0.95,
-		verdict: "PASS",
-		oddDimensions: ["traffic-density"],
-		sourceSystem: "darter-pipeline",
-		provenance: { check: "ood-monitor/kl-divergence", runId: "gh-run-1" },
-		evaluatedAt: new Date().toISOString(),
-		...overrides,
-	};
+): HealthRecordFixture {
+	return withOverrides(buildHealthRecords(claimId)[name], overrides);
 }
 
 function postRequest(
@@ -128,8 +111,8 @@ function postRequest(
 	});
 }
 
-function getRequest(claimId: string, token?: string): NextRequest {
-	return new NextRequest(EVIDENCE_PATH(claimId), {
+function getRequest(claimId: string, token?: string, query = ""): NextRequest {
+	return new NextRequest(`${EVIDENCE_PATH(claimId)}${query}`, {
 		headers: token ? { authorization: `Bearer ${token}` } : {},
 	});
 }
@@ -138,273 +121,336 @@ function importRoute() {
 	return import("@/app/api/machine/health/elements/[id]/evidence/route");
 }
 
-describe("POST /api/machine/health/elements/[id]/evidence — happy path", () => {
-	it("appends evidence, recomputes score, and returns 201 with both", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
+/** Sets up a case with a claim and a writer integration, and returns a `post` helper bound to them. */
+async function setupWriter() {
+	const context = await setup();
+	const { secret } = await setupIntegration(
+		context.owner.id,
+		context.testCase.id,
+		["health:evidence:write"]
+	);
+	const { POST } = await importRoute();
+	const post = (body: unknown, claimId = context.claim.id) =>
+		POST(postRequest(claimId, body, secret), {
+			params: Promise.resolve({ id: claimId }),
+		});
+	return { ...context, secret, post };
+}
 
-		const response = await POST(
-			postRequest(claim.id, evidenceBody(claim.id), secret),
-			{
-				params: Promise.resolve({ id: claim.id }),
-			}
-		);
+describe("POST /api/machine/health/elements/[id]/evidence — happy path", () => {
+	it("accepts a population summary with 201 { record, status }, storing the record as sent", async () => {
+		const { claim, post } = await setupWriter();
+		const sent = evidenceBody(claim.id);
+
+		const response = await post(sent);
 
 		expect(response.status).toBe(201);
 		const body = await response.json();
-		expect(body.evidence.claimId).toBe(claim.id);
-		expect(body.evidence.previousRecordHash).toBeNull();
-		expect(body.health.score).toBe(1);
+		expect(body.record).toEqual(sent);
+		expect(body.status).toMatchObject({
+			verdict: "pass",
+			stale: false,
+			stale_reason: null,
+			record_id: sent.record_id,
+			bound_check: SUMMARY_CHECK_NAME,
+			rejected_since_last_accept: 0,
+		});
+		const row = await prisma.pluginHealthEvidence.findFirstOrThrow({
+			where: { claimId: claim.id },
+		});
+		expect(row.record).toEqual(sent);
 	});
 
-	it("emits tea.health/state-changed to the claim's case AFTER the write commits", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
+	it("accepts a whole-system record", async () => {
+		const { claim, post } = await setupWriter();
 
-		const response = await POST(
-			postRequest(claim.id, evidenceBody(claim.id), secret),
-			{
-				params: Promise.resolve({ id: claim.id }),
-			}
+		const response = await post(evidenceBody(claim.id, "wholeSystem"));
+
+		expect(response.status).toBe(201);
+		expect((await response.json()).status.bound_check).toBe(
+			"Forecast Availability Checker"
 		);
+	});
+
+	it("stores a null value as absent", async () => {
+		const { claim, post } = await setupWriter();
+
+		const response = await post(
+			evidenceBody(claim.id, "indeterminate", { value: null })
+		);
+
+		expect(response.status).toBe(201);
+		expect("value" in (await response.json()).record).toBe(false);
+	});
+
+	it("accepts a value whose unit is left out", async () => {
+		const { claim, post } = await setupWriter();
+
+		const response = await post(
+			evidenceBody(claim.id, "populationPass", { value: { number: 0.97 } })
+		);
+
+		expect(response.status).toBe(201);
+		expect((await response.json()).record.value).toEqual({ number: 0.97 });
+	});
+
+	it("accepts a summary listing 2,000 members", async () => {
+		const { claim, post } = await setupWriter();
+		const fixture = evidenceBody(claim.id);
+
+		const response = await post(
+			withOverrides(fixture, {
+				provenance: {
+					...(fixture.provenance as object),
+					members: Array.from({ length: 2000 }, () => crypto.randomUUID()),
+				},
+			})
+		);
+
+		expect(response.status).toBe(201);
+	});
+
+	it("emits tea.health/state-changed to the claim's case once the write has committed", async () => {
+		const { testCase, claim, post } = await setupWriter();
+
+		const response = await post(evidenceBody(claim.id));
 		expect(response.status).toBe(201);
 
 		expect(emitSSEEvent).toHaveBeenCalledTimes(1);
 		expect(emitSSEEvent).toHaveBeenCalledWith(
 			"tea.health/state-changed",
 			testCase.id,
-			expect.objectContaining({ claimId: claim.id })
+			expect.objectContaining({
+				claimId: claim.id,
+				status: expect.objectContaining({ verdict: "pass" }),
+			})
+		);
+		// The evidence is committed by the time the event fires.
+		expect(
+			await prisma.pluginHealthEvidence.count({ where: { claimId: claim.id } })
+		).toBe(1);
+	});
+
+	it("chains a second POST's previous record hash to the first's record hash", async () => {
+		const { claim, post } = await setupWriter();
+		expect((await post(evidenceBody(claim.id))).status).toBe(201);
+		expect((await post(evidenceBody(claim.id, "marginalSummary"))).status).toBe(
+			201
 		);
 
-		// Evidence must actually be committed by the time the event fires.
-		const persisted = await prisma.pluginHealthEvidence.findMany({
+		const rows = await prisma.pluginHealthEvidence.findMany({
 			where: { claimId: claim.id },
+			orderBy: { chainSequence: "asc" },
 		});
-		expect(persisted).toHaveLength(1);
+		expect(rows[0]?.previousRecordHash).toBeNull();
+		expect(rows[1]?.previousRecordHash).toBe(rows[0]?.recordHash);
 	});
 
-	it("chains a second POST's previousRecordHash to the first's recordHash", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
+	it("preserves provenance keys beyond the recognised ones verbatim", async () => {
+		const { claim, post } = await setupWriter();
+		const fixture = evidenceBody(claim.id);
+		const provenance = {
+			...(fixture.provenance as object),
+			scenario_notes: { nested: ["a", "b"], flag: true },
+		};
 
-		const first = await POST(
-			postRequest(claim.id, evidenceBody(claim.id), secret),
-			{ params: Promise.resolve({ id: claim.id }) }
-		);
-		const firstBody = await first.json();
-
-		const second = await POST(
-			postRequest(
-				claim.id,
-				evidenceBody(claim.id, { verdict: "FAIL" }),
-				secret
-			),
-			{ params: Promise.resolve({ id: claim.id }) }
-		);
-		const secondBody = await second.json();
-
-		expect(secondBody.evidence.previousRecordHash).toBe(
-			firstBody.evidence.recordHash
-		);
-		expect(secondBody.health.score).toBe(0);
-	});
-
-	it("uses default scoring settings when no PluginState row exists for the integration's system user", async () => {
-		const { DEFAULT_VALIDITY_WINDOW_SECONDS } = await import(
-			"@/lib/services/health-scoring-service"
-		);
-		const { owner, testCase, claim } = await setup();
-		const { secret, systemUserId } = await setupIntegration(
-			owner.id,
-			testCase.id,
-			["health:evidence:write"]
-		);
-
-		const settingsRow = await prisma.pluginState.findUnique({
-			where: {
-				pluginId_scopeType_scopeId: {
-					pluginId: "tea.health",
-					scopeType: "USER",
-					scopeId: systemUserId,
-				},
-			},
-		});
-		expect(settingsRow).toBeNull();
-
-		const { POST } = await importRoute();
-		const response = await POST(
-			postRequest(claim.id, evidenceBody(claim.id), secret),
-			{ params: Promise.resolve({ id: claim.id }) }
-		);
+		const response = await post(withOverrides(fixture, { provenance }));
 
 		expect(response.status).toBe(201);
-		const body = await response.json();
-		expect(body.health.validityWindowSeconds).toBe(
-			DEFAULT_VALIDITY_WINDOW_SECONDS
-		);
-		expect(body.health.score).toBe(1);
+		const row = await prisma.pluginHealthEvidence.findFirstOrThrow({
+			where: { claimId: claim.id },
+		});
+		expect(row.record).toHaveProperty("provenance", provenance);
 	});
 });
 
-describe("POST — evidence persists even when scoring fails", () => {
-	it("keeps the appended evidence, does not emit SSE, and surfaces the scoring error", async () => {
-		const { recomputeHealthScore } = await import(
-			"@/lib/services/health-scoring-service"
-		);
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		vi.mocked(recomputeHealthScore).mockResolvedValueOnce({
-			error: "Failed to compute health score",
-		});
-		const { POST } = await importRoute();
+describe("POST — evidence format 1.1 body validation", () => {
+	it.each([
+		[
+			"a claim_ref that does not match the path id",
+			{ claim_ref: crypto.randomUUID() },
+			"claim_ref",
+		],
+		["an unknown top-level field", { record_hash: "abc" }, "record_hash"],
+		[
+			"a format_version other than 1.1",
+			{ format_version: "0.1" },
+			"format_version",
+		],
+		["no valid_for", { valid_for: undefined }, "valid_for"],
+		["a window in months", { window: "P1M" }, "window"],
+		[
+			"a timestamp more than five minutes ahead",
+			{ timestamp: new Date(Date.now() + 10 * 60_000).toISOString() },
+			"timestamp",
+		],
+	])("refuses %s with 400 naming the field, storing nothing", async (_label, overrides, field) => {
+		const { claim, post } = await setupWriter();
 
-		const response = await POST(
-			postRequest(claim.id, evidenceBody(claim.id), secret),
-			{ params: Promise.resolve({ id: claim.id }) }
+		const response = await post(
+			evidenceBody(claim.id, "populationPass", overrides)
 		);
 
-		expect(response.status).toBe(500);
+		expect(response.status).toBe(400);
 		const body = await response.json();
-		expect(body.error).toBe("Failed to compute health score");
-
-		// The evidence write already committed inside appendHealthEvidence,
-		// BEFORE recomputeHealthScore was ever called — append-only durability
-		// does not depend on the scoring step succeeding.
-		const persisted = await prisma.pluginHealthEvidence.findMany({
-			where: { claimId: claim.id },
-		});
-		expect(persisted).toHaveLength(1);
-
+		expect(body.error).toContain(field);
+		expect(
+			await prisma.pluginHealthEvidence.count({ where: { claimId: claim.id } })
+		).toBe(0);
 		expect(emitSSEEvent).not.toHaveBeenCalled();
 	});
+
+	it("refuses a body that is not valid JSON", async () => {
+		const { claim, secret } = await setupWriter();
+		const { POST } = await importRoute();
+
+		const response = await POST(
+			new NextRequest(EVIDENCE_PATH(claim.id), {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					authorization: `Bearer ${secret}`,
+				},
+				body: "{not json",
+			}),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+
+		expect(response.status).toBe(400);
+	});
 });
 
-describe("POST — evidence-format-v0.1 body validation", () => {
-	it("rejects a body whose claimId does not match the path id (400, not a silent re-target)", async () => {
-		const { owner, testCase, claim } = await setup();
-		const otherClaim = await createTestElement(testCase.id, owner.id, {
-			elementType: "PROPERTY_CLAIM",
-			name: "Other claim",
-		});
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
+describe("POST — repeated record_id and the bound check", () => {
+	it("refuses a repeated record_id with 409 and stores nothing more", async () => {
+		const { claim, post } = await setupWriter();
+		const sent = evidenceBody(claim.id);
+		expect((await post(sent)).status).toBe(201);
 
-		const response = await POST(
-			postRequest(claim.id, evidenceBody(otherClaim.id), secret),
-			{ params: Promise.resolve({ id: claim.id }) }
+		const response = await post(sent);
+
+		expect(response.status).toBe(409);
+		expect(
+			await prisma.pluginHealthEvidence.count({ where: { claimId: claim.id } })
+		).toBe(1);
+	});
+
+	it("refuses a record from a second check with 422 and the contract's message, then returns the count to zero on the next accepted record", async () => {
+		const { claim, post } = await setupWriter();
+		expect((await post(evidenceBody(claim.id))).status).toBe(201);
+
+		const refused = await post(evidenceBody(claim.id, "wholeSystem"));
+		expect(refused.status).toBe(422);
+		expect((await refused.json()).error).toBe(
+			`This claim is bound to check ${SUMMARY_CHECK_NAME}. Evidence from another check needs its own evidence claim in the case.`
 		);
-
-		expect(response.status).toBe(400);
-		const body = await response.json();
-		expect(body.code).toBe("VALIDATION");
-
-		const persisted = await prisma.pluginHealthEvidence.findMany({
+		expect(
+			await prisma.pluginHealthEvidence.count({ where: { claimId: claim.id } })
+		).toBe(1);
+		const state = await prisma.pluginHealthClaimState.findUniqueOrThrow({
 			where: { claimId: claim.id },
 		});
-		expect(persisted).toHaveLength(0);
+		expect(state.rejectedSinceLastAccept).toBe(1);
+
+		const accepted = await post(evidenceBody(claim.id, "marginalSummary"));
+		expect(accepted.status).toBe(201);
+		expect((await accepted.json()).status.rejected_since_last_accept).toBe(0);
 	});
 
-	it("rejects an unknown top-level field (fail-loud, not silent drift)", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
+	it("does not count a 400 towards rejected_since_last_accept", async () => {
+		const { claim, post } = await setupWriter();
+		expect((await post(evidenceBody(claim.id))).status).toBe(201);
 
-		const response = await POST(
-			postRequest(
-				claim.id,
-				evidenceBody(claim.id, { unexpectedField: "sneaky" }),
-				secret
-			),
-			{ params: Promise.resolve({ id: claim.id }) }
+		const refused = await post(
+			evidenceBody(claim.id, "wholeSystem", { format_version: "0.1" })
 		);
+		expect(refused.status).toBe(400);
 
-		expect(response.status).toBe(400);
-	});
-
-	it("rejects provenance missing the required check/runId keys", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
-
-		const response = await POST(
-			postRequest(
-				claim.id,
-				evidenceBody(claim.id, { provenance: { twinVersion: "2.1.0" } }),
-				secret
-			),
-			{ params: Promise.resolve({ id: claim.id }) }
-		);
-
-		expect(response.status).toBe(400);
-	});
-
-	it("rejects a formatVersion other than 0.1", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
-
-		const response = await POST(
-			postRequest(
-				claim.id,
-				evidenceBody(claim.id, { formatVersion: "0.2" }),
-				secret
-			),
-			{ params: Promise.resolve({ id: claim.id }) }
-		);
-
-		expect(response.status).toBe(400);
-	});
-
-	it("preserves provenance keys beyond check/runId verbatim", async () => {
-		const { owner, testCase, claim } = await setup();
-		const { secret } = await setupIntegration(owner.id, testCase.id, [
-			"health:evidence:write",
-		]);
-		const { POST } = await importRoute();
-
-		const response = await POST(
-			postRequest(
-				claim.id,
-				evidenceBody(claim.id, {
-					provenance: {
-						check: "ood-monitor/kl-divergence",
-						runId: "gh-run-1",
-						checkVersion: "1.4.2",
-						scenarioId: "replay-2026-06-30-heathrow-07",
-					},
-				}),
-				secret
-			),
-			{ params: Promise.resolve({ id: claim.id }) }
-		);
-
-		expect(response.status).toBe(201);
-		const body = await response.json();
-		expect(body.evidence.provenance).toEqual({
-			check: "ood-monitor/kl-divergence",
-			runId: "gh-run-1",
-			checkVersion: "1.4.2",
-			scenarioId: "replay-2026-06-30-heathrow-07",
+		const state = await prisma.pluginHealthClaimState.findUniqueOrThrow({
+			where: { claimId: claim.id },
 		});
+		expect(state.rejectedSinceLastAccept).toBe(0);
+	});
+});
+
+describe("GET /api/machine/health/elements/[id]/evidence — paged list", () => {
+	it("returns newest first with next_before, snake_case items and the open revocation", async () => {
+		const { owner, claim, post } = await setupWriter();
+		const sent = [
+			evidenceBody(claim.id, "populationPass"),
+			evidenceBody(claim.id, "marginalSummary"),
+			evidenceBody(claim.id, "failingSummary"),
+		];
+		for (const record of sent) {
+			expect((await post(record)).status).toBe(201);
+		}
+		const { revokeHealthEvidence } = await import(
+			"@/lib/services/health-evidence-service"
+		);
+		expectSuccess(
+			await revokeHealthEvidence(
+				owner.id,
+				claim.id,
+				sent[2]?.record_id as string,
+				{
+					cause: "evidence-defect",
+					reason: "Bad run",
+				}
+			)
+		);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const { GET } = await importRoute();
+
+		const page = await GET(getRequest(claim.id, undefined, "?limit=2"), {
+			params: Promise.resolve({ id: claim.id }),
+		});
+
+		expect(page.status).toBe(200);
+		const body = await page.json();
+		expect(body.evidence).toHaveLength(2);
+		expect(body.evidence[0]).toMatchObject({
+			record: { record_id: sent[2]?.record_id },
+			revocation: {
+				cause: "evidence-defect",
+				reason: "Bad run",
+				revoked_by_name: owner.username,
+			},
+		});
+		expect(body.evidence[0].revocation.revoked_at).toEqual(expect.any(String));
+		expect(body.evidence[1].revocation).toBeNull();
+		expect(body.evidence[0]).toEqual(
+			expect.objectContaining({
+				id: expect.any(String),
+				chain_sequence: expect.any(Number),
+				record_hash: expect.any(String),
+				previous_record_hash: expect.any(String),
+				created_by_id: expect.any(String),
+				created_at: expect.any(String),
+				expires_at: expect.any(String),
+			})
+		);
+		expect(body.next_before).toBe(body.evidence[1].chain_sequence);
+
+		const older = await GET(
+			getRequest(claim.id, undefined, `?limit=2&before=${body.next_before}`),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+		const olderBody = await older.json();
+		expect(olderBody.evidence).toHaveLength(1);
+		expect(olderBody.evidence[0].record.record_id).toBe(sent[0]?.record_id);
+		expect(olderBody.next_before).toBeNull();
+	});
+
+	it("refuses an invalid limit or before with 400", async () => {
+		const { owner, claim } = await setup();
+		await mockAuth(owner.id, owner.username, owner.email);
+		const { GET } = await importRoute();
+
+		for (const query of ["?limit=0", "?limit=500", "?before=abc", "?x=1"]) {
+			const response = await GET(getRequest(claim.id, undefined, query), {
+				params: Promise.resolve({ id: claim.id }),
+			});
+			expect(response.status).toBe(400);
+		}
 	});
 });
 
