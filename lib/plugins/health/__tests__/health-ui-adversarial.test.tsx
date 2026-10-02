@@ -16,6 +16,8 @@ import { item, status } from "./health-test-data";
 vi.mock("@/hooks/use-case-events", () => ({ useCaseEvents: vi.fn() }));
 vi.mock("@/lib/toast", () => ({ toast: vi.fn() }));
 
+const STALE_SINCE = /stale since/;
+const ONERROR = /onerror/i;
 const CONTEXT: ElementSlotContext = {
 	caseId: "case-1",
 	elementId: "claim-42",
@@ -86,7 +88,7 @@ describe("badge", () => {
 
 		expect(element?.className).toContain(VERDICT_DOT_CLASSES.pass);
 		expect(element?.className).toContain(RING);
-		expect(element?.getAttribute("aria-label")).toMatch(/stale since/);
+		expect(element?.getAttribute("aria-label")).toMatch(STALE_SINCE);
 	});
 
 	it("adds the ring when the expiry has passed on the viewer's clock although the server still says fresh", async () => {
@@ -220,7 +222,7 @@ describe("evidence log: untrusted producer text", () => {
 
 		expect(container.querySelector("img")).toBeNull();
 		expect(container.querySelector("b")).toBeNull();
-		expect(screen.getAllByText(/onerror/i).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(ONERROR).length).toBeGreaterThan(0);
 	});
 });
 

@@ -41,7 +41,7 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
 /** A timestamp for people, in the viewer's time zone; the original text when it is not a date. */
 export function formatDateTime(iso: string): string {
 	const date = new Date(iso);
-	return Number.isNaN(date.getTime()) ? iso : dateTimeFormat.format(date);
+	return Number.isFinite(date.getTime()) ? dateTimeFormat.format(date) : iso;
 }
 
 const DURATION_PATTERN =
@@ -83,20 +83,26 @@ export function describeDuration(text: string): string {
 	return parts.join(" ");
 }
 
-/** The window a record covers: its timestamp minus `window`, up to the timestamp. */
+/**
+ * The window a record covers: its timestamp minus `window`, up to the
+ * timestamp; null when either end is not a date that can be shown.
+ */
 export function windowRange(
 	timestamp: string,
 	window: string
 ): { end: string; start: string } | null {
 	const seconds = durationSeconds(window);
-	const end = Date.parse(timestamp);
-	if (seconds === null || Number.isNaN(end)) {
+	const end = new Date(timestamp);
+	if (seconds === null || !Number.isFinite(end.getTime())) {
 		return null;
 	}
-	return {
-		start: new Date(end - seconds * 1000).toISOString(),
-		end: new Date(end).toISOString(),
-	};
+	// A window long enough to reach before the earliest representable date
+	// has no start to show.
+	const start = new Date(end.getTime() - seconds * 1000);
+	if (!Number.isFinite(start.getTime())) {
+		return null;
+	}
+	return { start: start.toISOString(), end: end.toISOString() };
 }
 
 type Record1 = HealthEvidenceRecord;

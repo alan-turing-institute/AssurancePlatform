@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +28,7 @@ type Record1 = HealthEvidenceLogItem["record"];
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<p className="text-sm">
+		<p className="wrap-anywhere text-sm">
 			<span className="text-muted-foreground">{label}: </span>
 			{children}
 		</p>
@@ -139,7 +139,7 @@ function RevocationNotice({
 }) {
 	return (
 		<p
-			className="rounded bg-destructive/10 px-2 py-1 text-sm"
+			className="wrap-anywhere rounded bg-destructive/10 px-2 py-1 text-sm"
 			data-testid="health-evidence-revoked"
 		>
 			Revoked ({CAUSE_LABELS[revocation.cause]}): {revocation.reason}
@@ -166,12 +166,20 @@ function RecordActions({
 	revoked,
 }: RecordActionsProps) {
 	const [open, setOpen] = useState(false);
-	const Dialog = revoked ? ReinstateRecordDialog : RevokeRecordDialog;
+	const [reinstating, setReinstating] = useState(revoked);
+	const button = useRef<HTMLButtonElement>(null);
+	// The dialog is chosen when it opens and kept until the next opening, so a
+	// refetch that flips `revoked` underneath an open dialog does not swap it.
+	const Dialog = reinstating ? ReinstateRecordDialog : RevokeRecordDialog;
 
 	return (
 		<div className="flex justify-end pt-1">
 			<Button
-				onClick={() => setOpen(true)}
+				onClick={() => {
+					setReinstating(revoked);
+					setOpen(true);
+				}}
+				ref={button}
 				size="sm"
 				type="button"
 				variant="outline"
@@ -182,8 +190,10 @@ function RecordActions({
 				claimId={claimId}
 				onDone={() => onChanged?.()}
 				onOpenChange={setOpen}
+				onRefused={() => onChanged?.()}
 				open={open}
 				recordId={recordId}
+				returnFocusTo={button}
 			/>
 		</div>
 	);
@@ -223,7 +233,7 @@ export function EvidenceLogEntry({
 			data-testid="health-evidence-entry"
 		>
 			<div className="flex items-center justify-between gap-2">
-				<div className="flex items-center gap-2">
+				<div className="flex min-w-0 items-center gap-2">
 					<span
 						aria-hidden="true"
 						className={cn(
@@ -236,7 +246,7 @@ export function EvidenceLogEntry({
 					>
 						{verdictLabel}
 					</span>
-					<span className="text-muted-foreground text-sm">
+					<span className="wrap-anywhere min-w-0 text-muted-foreground text-sm">
 						{record.check.name}
 					</span>
 				</div>
@@ -256,7 +266,7 @@ export function EvidenceLogEntry({
 				<summary className="cursor-pointer text-muted-foreground">
 					Provenance and payload
 				</summary>
-				<pre className="mt-1 overflow-x-auto rounded bg-muted p-2">
+				<pre className="wrap-anywhere mt-1 whitespace-pre-wrap rounded bg-muted p-2">
 					{JSON.stringify(
 						{ provenance: record.provenance, payload: record.payload },
 						null,

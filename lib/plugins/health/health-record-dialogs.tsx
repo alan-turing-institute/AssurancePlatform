@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,9 +12,11 @@ interface RecordDialogProps {
 	claimId: string;
 	onDone: () => void;
 	onOpenChange: (open: boolean) => void;
+	onRefused?: () => void;
 	open: boolean;
 	/** The record's own `record_id`. */
 	recordId: string;
+	returnFocusTo?: RefObject<HTMLElement | null>;
 }
 
 const CAUSES = Object.keys(CAUSE_LABELS) as HealthRevocationCause[];
@@ -24,8 +26,10 @@ export function RevokeRecordDialog({
 	claimId,
 	onDone,
 	onOpenChange,
+	onRefused,
 	open,
 	recordId,
+	returnFocusTo,
 }: RecordDialogProps) {
 	const [cause, setCause] = useState<HealthRevocationCause | "">("");
 
@@ -41,7 +45,9 @@ export function RevokeRecordDialog({
 			fieldsValid={cause !== ""}
 			onDone={onDone}
 			onOpenChange={onOpenChange}
+			onRefused={onRefused}
 			open={open}
+			returnFocusTo={returnFocusTo}
 			submitLabel="Revoke"
 			submitVariant="destructive"
 			title="Revoke this record"
@@ -71,8 +77,10 @@ export function ReinstateRecordDialog({
 	claimId,
 	onDone,
 	onOpenChange,
+	onRefused,
 	open,
 	recordId,
+	returnFocusTo,
 }: RecordDialogProps) {
 	return (
 		<HealthActionDialog
@@ -85,7 +93,9 @@ export function ReinstateRecordDialog({
 			failureTitle="Could not reinstate the record"
 			onDone={onDone}
 			onOpenChange={onOpenChange}
+			onRefused={onRefused}
 			open={open}
+			returnFocusTo={returnFocusTo}
 			submitLabel="Reinstate"
 			title="Reinstate this record"
 		/>
@@ -97,7 +107,9 @@ interface ChangeCheckDialogProps {
 	currentCheck: string;
 	onDone: () => void;
 	onOpenChange: (open: boolean) => void;
+	onRefused?: () => void;
 	open: boolean;
+	returnFocusTo?: RefObject<HTMLElement | null>;
 }
 
 /** Changes the check the claim accepts records from. */
@@ -106,7 +118,9 @@ export function ChangeCheckDialog({
 	currentCheck,
 	onDone,
 	onOpenChange,
+	onRefused,
 	open,
+	returnFocusTo,
 }: ChangeCheckDialogProps) {
 	const [name, setName] = useState("");
 	const trimmed = name.trim();
@@ -123,7 +137,9 @@ export function ChangeCheckDialog({
 			fieldsValid={trimmed.length > 0 && trimmed !== currentCheck}
 			onDone={onDone}
 			onOpenChange={onOpenChange}
+			onRefused={onRefused}
 			open={open}
+			returnFocusTo={returnFocusTo}
 			submitLabel="Change check"
 			title="Change the accepted check"
 		>

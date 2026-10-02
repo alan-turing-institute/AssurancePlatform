@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,17 +40,20 @@ function PanelHeader({
 	status,
 }: PanelHeaderProps) {
 	const [changing, setChanging] = useState(false);
+	const changeButton = useRef<HTMLButtonElement>(null);
 
 	return (
 		<div className="space-y-1" data-testid="health-panel-header">
 			<div className="flex items-center justify-between gap-2">
-				<p className="text-sm">
+				<p className="wrap-anywhere min-w-0 text-sm">
 					<span className="text-muted-foreground">Bound check: </span>
 					<span className="font-medium">{status.bound_check}</span>
 				</p>
 				{canEdit && (
 					<Button
+						className="shrink-0"
 						onClick={() => setChanging(true)}
+						ref={changeButton}
 						size="sm"
 						type="button"
 						variant="outline"
@@ -70,7 +73,9 @@ function PanelHeader({
 					currentCheck={status.bound_check}
 					onDone={onChanged}
 					onOpenChange={setChanging}
+					onRefused={onChanged}
 					open={changing}
+					returnFocusTo={changeButton}
 				/>
 			)}
 		</div>

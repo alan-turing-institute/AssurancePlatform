@@ -261,6 +261,18 @@ describe("HealthPanel — a record", () => {
 	});
 });
 
+describe("HealthPanel — dates that cannot be shown", () => {
+	it("shows the record without a window when the window reaches before the earliest date", async () => {
+		mockLog([item({}, { window: "P99999999W" })]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		const entry = await screen.findByTestId("health-evidence-entry");
+
+		expect(within(entry).queryByText("Window:")).toBeNull();
+		expect(within(entry).getByText("Valid:")).toBeInTheDocument();
+	});
+});
+
 describe("HealthPanel — levels with a marginal limit", () => {
 	it("shows a marginal value on a band rule and a percentile aggregation", async () => {
 		mockLog([
@@ -473,6 +485,55 @@ describe("HealthPanel — controls", () => {
 				within(dialog).getByRole("button", { name: "Revoke" })
 			).toBeEnabled()
 		);
+		expect(screen.getByRole("dialog")).toBeInTheDocument();
+	});
+});
+
+describe("HealthPanel — keyboard and focus", () => {
+	function mockRevocation(
+		status = 201,
+		body: Record<string, string | object> = { revocation: {} }
+	) {
+		server.use(
+			http.post(
+				"/api/elements/claim-42/health/records/:recordId/revocation",
+				() => HttpResponse.json(body, { status })
+			)
+		);
+	}
+
+	async function openRevokeDialog(user: ReturnType<typeof userEvent.setup>) {
+		render(<HealthPanel {...CLAIM_CONTEXT} canEdit />, {
+			withProviders: false,
+		});
+		const opener = await screen.findByRole("button", { name: "Revoke" });
+		await user.click(opener);
+		return { opener, dialog: await screen.findByRole("dialog") };
+	}
+
+	it("fetches the log and status again when the server refuses with 409, keeping the dialog open", async () => {
+		let evidenceFetches = 0;
+		let statusFetches = 0;
+		server.use(
+			http.get(EVIDENCE_URL, () => {
+				evidenceFetches += 1;
+				return HttpResponse.json({ evidence: [item()], next_before: null });
+			}),
+			http.get(STATUS_URL, () => {
+				statusFetches += 1;
+				return HttpResponse.json({ status: status() });
+			})
+		);
+		mockRevocation(409, { error: "This record is already revoked" });
+		const user = userEvent.setup();
+		const { dialog } = await openRevokeDialog(user);
+		await waitFor(() => expect(evidenceFetches).toBe(1));
+		await user.click(within(dialog).getByLabelText("Other"));
+		await user.type(within(dialog).getByLabelText("Reason"), "x");
+		await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
+
+		await waitFor(() => expect(evidenceFetches).toBe(2));
+		expect(statusFetches).toBe(2);
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
 	});
 });

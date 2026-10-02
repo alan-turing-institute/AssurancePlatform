@@ -1,6 +1,11 @@
 "use client";
 
-import { type FormEvent, type ReactNode, useState } from "react";
+import {
+	type FormEvent,
+	type ReactNode,
+	type RefObject,
+	useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -32,7 +37,11 @@ export interface HealthActionDialogProps {
 	fieldsValid?: boolean;
 	onDone: () => void;
 	onOpenChange: (open: boolean) => void;
+	/** Called when the server answers 409, so the list can show the record's real state. */
+	onRefused?: () => void;
 	open: boolean;
+	/** The control that opened the dialog; it gets focus back when the dialog closes. */
+	returnFocusTo?: RefObject<HTMLElement | null>;
 	submitLabel: string;
 	submitVariant?: "default" | "destructive";
 	title: string;
@@ -55,7 +64,9 @@ async function readErrorMessage(response: Response): Promise<string> {
  * back, change the accepted check): a required reason, a submit button that
  * sends the request the caller builds, and the server's own message in an
  * error toast when it refuses. The dialog stays open on a refusal so the
- * person can read it and try again.
+ * person can read it and try again; a 409 also calls `onRefused`, because it
+ * means the list the person was looking at is out of date. When the dialog
+ * closes, focus goes back to `returnFocusTo`.
  */
 export function HealthActionDialog({
 	buildRequest,
@@ -65,7 +76,9 @@ export function HealthActionDialog({
 	fieldsValid = true,
 	onDone,
 	onOpenChange,
+	onRefused,
 	open,
+	returnFocusTo,
 	submitLabel,
 	submitVariant = "default",
 	title,
@@ -93,6 +106,9 @@ export function HealthActionDialog({
 				onOpenChange(false);
 				onDone();
 			} else {
+				if (response.status === 409) {
+					onRefused?.();
+				}
 				toast({
 					variant: "destructive",
 					title: failureTitle,
@@ -112,7 +128,16 @@ export function HealthActionDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent>
+			{/* `nokey` keeps the canvas from treating arrow keys and Space typed in the dialog as node keys; the dialog is part of the node's React tree. */}
+			<DialogContent
+				className="nokey"
+				onCloseAutoFocus={(event) => {
+					if (returnFocusTo?.current) {
+						event.preventDefault();
+						returnFocusTo.current.focus();
+					}
+				}}
+			>
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
