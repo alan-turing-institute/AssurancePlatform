@@ -124,15 +124,9 @@ function paramIssue(
 // Rule
 // ---------------------------------------------------------------------------
 
-const RULE_KINDS = [
-	"identity",
-	"threshold",
-	"band",
-	"membership",
-	"target",
-] as const;
+const RULE_KINDS = ["identity", "threshold", "band", "membership"] as const;
 
-const RULE_DIRECTIONS = ["maximize", "minimize"] as const;
+const RULE_DIRECTIONS = ["maximize", "minimize", "target"] as const;
 
 interface RuleInput {
 	direction?: (typeof RULE_DIRECTIONS)[number];
@@ -141,15 +135,13 @@ interface RuleInput {
 }
 
 /**
- * What each kind of rule needs in `params`. `target` is stored when a
- * record carries it but is not otherwise interpreted.
+ * What each kind of rule needs in `params`.
  */
 const RULE_PARAM_CHECKS: Record<
 	RuleInput["kind"],
 	(rule: RuleInput, params: ParamsBag) => ParamIssue[]
 > = {
 	identity: () => [],
-	target: () => [],
 	threshold: (rule, params) => [
 		...(rule.direction
 			? []
@@ -215,7 +207,9 @@ export const ruleSchema = z
 			message: `must be one of ${RULE_KINDS.join(", ")}`,
 		}),
 		direction: z
-			.enum(RULE_DIRECTIONS, { message: "must be maximize or minimize" })
+			.enum(RULE_DIRECTIONS, {
+				message: "must be maximize, minimize or target",
+			})
 			.optional(),
 		params: paramsBagSchema.optional(),
 		version: versionSchema,

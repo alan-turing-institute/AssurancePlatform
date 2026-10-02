@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { healthEvidenceRecordSchema } from "@/lib/schemas/health-evidence";
 import {
 	appendHealthEvidence,
+	changeBoundCheck,
 	revokeHealthEvidence,
 } from "@/lib/services/health-evidence-service";
 import { sweepHealthStaleness } from "@/lib/services/health-staleness-sweep-service";
@@ -133,6 +134,19 @@ describe("sweepHealthStaleness — detecting newly-stale claims", () => {
 
 		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
 		expect(result.staleClaimsNotified).toBe(1);
+	});
+
+	it("does not treat a claim bound to a check but with no record as stale", async () => {
+		const { owner, claim } = await setup();
+		expectSuccess(
+			await changeBoundCheck(owner.id, claim.id, {
+				name: "Sensor Range Checker",
+				reason: "Bind ahead of the first record",
+			})
+		);
+
+		const result = expectSuccess(await sweepHealthStaleness(CRON_SECRET));
+		expect(result.staleClaimsNotified).toBe(0);
 	});
 
 	it("ignores a claim that has never had a record", async () => {

@@ -229,9 +229,11 @@ function expiryOf(record: HealthEvidenceRecord, timestamp: Date): Date | null {
 		return null;
 	}
 	const seconds = parseDurationSeconds(record.valid_for);
-	return seconds === null
-		? null
-		: new Date(timestamp.getTime() + seconds * 1000);
+	if (seconds === null) {
+		// Refuse rather than store a record that would never go stale.
+		throw new Error("valid_for is not a valid duration");
+	}
+	return new Date(timestamp.getTime() + seconds * 1000);
 }
 
 /**

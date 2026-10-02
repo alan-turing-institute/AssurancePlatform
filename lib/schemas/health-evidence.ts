@@ -65,7 +65,7 @@ const valueSchema = z.union(
 		z.string().max(SCALAR_STRING_MAX_LENGTH),
 		z.strictObject({
 			number: z.number().finite(),
-			unit: z.string().max(100).nullable(),
+			unit: z.string().max(100).nullable().optional(),
 		}),
 		z.null(),
 	],

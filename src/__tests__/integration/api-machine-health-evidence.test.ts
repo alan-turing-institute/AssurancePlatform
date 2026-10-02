@@ -183,6 +183,17 @@ describe("POST /api/machine/health/elements/[id]/evidence — happy path", () =>
 		expect("value" in (await response.json()).record).toBe(false);
 	});
 
+	it("accepts a value whose unit is left out", async () => {
+		const { claim, post } = await setupWriter();
+
+		const response = await post(
+			evidenceBody(claim.id, "populationPass", { value: { number: 0.97 } })
+		);
+
+		expect(response.status).toBe(201);
+		expect((await response.json()).record.value).toEqual({ number: 0.97 });
+	});
+
 	it("accepts a summary listing 2,000 members", async () => {
 		const { claim, post } = await setupWriter();
 		const fixture = evidenceBody(claim.id);

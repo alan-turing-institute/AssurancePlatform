@@ -69,6 +69,20 @@ describe("ruleSchema", () => {
 		}
 	});
 
+	it("accepts target as a direction, needing a numeric pass value, and refuses it as a kind", () => {
+		const target = {
+			kind: "threshold",
+			direction: "target",
+			params: { pass_values: 5 },
+			version: "r1",
+		};
+		expect(ruleSchema.safeParse(target).success).toBe(true);
+		expect(ruleSchema.safeParse({ ...target, params: {} }).success).toBe(false);
+		expect(
+			ruleSchema.safeParse({ kind: "target", version: "r1" }).success
+		).toBe(false);
+	});
+
 	it("refuses a rule missing the keys its kind needs", () => {
 		const shapes = [
 			{ kind: "threshold", params: { pass_values: 1 }, version: "r1" },

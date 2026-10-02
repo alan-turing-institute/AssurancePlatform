@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { healthEvidenceRecordSchema } from "@/lib/schemas/health-evidence";
 import {
 	appendHealthEvidence,
+	boundCheckRefusal,
+	changeBoundCheck,
 	reinstateHealthEvidence,
 	revokeHealthEvidence,
 } from "@/lib/services/health-evidence-service";
@@ -70,6 +72,57 @@ describe("computeHealthStatus — current record", () => {
 	it("is null for a claim that has never had a record accepted", async () => {
 		const { testCase, claim } = await setup();
 		expect(await computeHealthStatus(claim.id, testCase.id)).toBeNull();
+	});
+
+	describe("a claim with a bound check but no record", () => {
+		const noVerdict = {
+			verdict: null,
+			stale: false,
+			stale_reason: null,
+			stale_since: null,
+			expires_at: null,
+			record_id: null,
+			timestamp: null,
+		};
+
+		it("shows the bound check when a person bound it before any record arrived", async () => {
+			const { owner, testCase, claim } = await setup();
+			expectSuccess(
+				await changeBoundCheck(owner.id, claim.id, {
+					name: "Sensor Range Checker",
+					reason: "Bind ahead of the first record",
+				})
+			);
+
+			expect(await computeHealthStatus(claim.id, testCase.id)).toEqual({
+				...noVerdict,
+				bound_check: "Sensor Range Checker",
+				rejected_since_last_accept: 0,
+			});
+		});
+
+		it("shows the refused count when every record sent was refused for naming another check", async () => {
+			const { owner, testCase, claim } = await setup();
+			expectSuccess(
+				await changeBoundCheck(owner.id, claim.id, {
+					name: "Some Other Checker",
+					reason: "Bind ahead of the first record",
+				})
+			);
+			const refused = healthEvidenceRecordSchema.parse(
+				buildHealthRecords(claim.id).populationPass
+			);
+			expectError(
+				await appendHealthEvidence(owner.id, claim.id, refused),
+				boundCheckRefusal("Some Other Checker")
+			);
+
+			expect(await computeHealthStatus(claim.id, testCase.id)).toEqual({
+				...noVerdict,
+				bound_check: "Some Other Checker",
+				rejected_since_last_accept: 1,
+			});
+		});
 	});
 
 	it("shows the verdict, record id, timestamp, expiry and bound check of the latest record", async () => {
@@ -200,6 +253,24 @@ describe("computeHealthStatus — staleness", () => {
 				stale_reason: "condition",
 				stale_since: changer.timestamp,
 			});
+		});
+
+		it("reports when the variable first stopped matching, not the latest differing record", async () => {
+			const { owner, testCase, claim, other } = await setupConditional();
+			const differing = (claimId: string, minutes: number) =>
+				append(owner.id, claimId, "populationPass", {
+					timestamp: minutesAgo(minutes),
+					provenance: {
+						...(buildHealthRecords(claimId).populationPass
+							.provenance as object),
+						twin_version: "2.4",
+					},
+				});
+			const firstChange = await differing(other.id, 2);
+			await differing(other.id, 1);
+
+			const status = await computeHealthStatus(claim.id, testCase.id);
+			expect(status?.stale_since).toBe(firstChange.timestamp);
 		});
 
 		it("does not go stale for a record in another session", async () => {

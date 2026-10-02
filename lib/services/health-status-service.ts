@@ -58,42 +58,47 @@ const VERDICT_FROM_DB: Record<PluginHealthEvidenceVerdict, HealthVerdict> = {
 const NOT_REVOKED = { revocations: { none: { reinstatedAt: null } } } as const;
 
 /**
- * The latest `timestamp` among live records in `caseId` and `session` that
- * carry `key` in their provenance, and the value they carry. Scoped to the
- * case so a session name used in another case cannot affect this one.
+ * When `key` first stopped carrying `expected`: among live records in
+ * `caseId` and `session` that carry the key, the earliest timestamp with a
+ * differing value that is later than the latest record carrying the expected
+ * value (or the earliest differing value at all when none carries it). Null
+ * means the variable still has the expected value. Scoped to the case so a
+ * session name used in another case cannot affect this one.
  */
-async function currentVariable(
+async function variableMismatchSince(
 	caseId: string,
 	session: string,
-	key: string
-): Promise<{ value: string; timestamp: Date } | null> {
-	const rows = await prisma.$queryRaw<
-		Array<{ value: string; record_timestamp: Date }>
-	>`
-		SELECT e.record->'provenance'->>${key}::text AS value, e.record_timestamp
-		FROM plugin_health_evidence e
-		JOIN assurance_elements ae ON ae.id = e.claim_id
-		WHERE ae.case_id = ${caseId}
-			AND ae.deleted_at IS NULL
-			AND e.session = ${session}
-			AND e.record->'provenance'->>${key}::text IS NOT NULL
-			AND NOT EXISTS (
-				SELECT 1 FROM plugin_health_revocations r
-				WHERE r.evidence_id = e.id AND r.reinstated_at IS NULL
+	key: string,
+	expected: string
+): Promise<Date | null> {
+	const rows = await prisma.$queryRaw<Array<{ since: Date | null }>>`
+		WITH live AS (
+			SELECT e.record->'provenance'->>${key}::text AS value, e.record_timestamp AS ts
+			FROM plugin_health_evidence e
+			JOIN assurance_elements ae ON ae.id = e.claim_id
+			WHERE ae.case_id = ${caseId}
+				AND ae.deleted_at IS NULL
+				AND e.session = ${session}
+				AND e.record->'provenance'->>${key}::text IS NOT NULL
+				AND NOT EXISTS (
+					SELECT 1 FROM plugin_health_revocations r
+					WHERE r.evidence_id = e.id AND r.reinstated_at IS NULL
+				)
+		)
+		SELECT min(ts) AS since FROM live
+		WHERE value <> ${expected}
+			AND ts > COALESCE(
+				(SELECT max(ts) FROM live WHERE value = ${expected}),
+				'-infinity'::timestamp
 			)
-		ORDER BY e.record_timestamp DESC, e.chain_sequence DESC
-		LIMIT 1
 	`;
-	const row = rows[0];
-	return row ? { value: row.value, timestamp: row.record_timestamp } : null;
+	return rows[0]?.since ?? null;
 }
 
 /**
  * When the first violated `valid_while` condition began to differ, or null
- * if every condition still holds. A condition is violated once the latest
- * value of its variable (in the record's case and session) differs from the
- * value the record expects; the time reported is the timestamp of the
- * record that carries the differing value.
+ * if every condition still holds. With several violated conditions, the
+ * earliest of their times is reported.
  */
 async function conditionViolatedSince(
 	caseId: string,
@@ -102,15 +107,15 @@ async function conditionViolatedSince(
 ): Promise<Date | null> {
 	const violated: Date[] = [];
 	for (const [key, expected] of Object.entries(validWhile)) {
-		const current = await currentVariable(caseId, session, key);
-		if (current && current.value !== expected) {
-			violated.push(current.timestamp);
+		const since = await variableMismatchSince(caseId, session, key, expected);
+		if (since) {
+			violated.push(since);
 		}
 	}
 	if (violated.length === 0) {
 		return null;
 	}
-	return new Date(Math.max(...violated.map((date) => date.getTime())));
+	return new Date(Math.min(...violated.map((date) => date.getTime())));
 }
 
 function validWhileOf(record: unknown): Record<string, string> {
@@ -127,7 +132,9 @@ function validWhileOf(record: unknown): Record<string, string> {
 
 /**
  * Computes `claimId`'s status at `now`. Returns null when the claim has
- * never had a record accepted (no status, as opposed to a stale one).
+ * neither a bound check nor a record (no status, as opposed to a stale one).
+ * A claim with a bound check but no record has a status with no verdict that
+ * is not stale, so the bound check and refusal count are visible.
  * Performs no access check: callers have already established access.
  */
 export async function computeHealthStatus(
@@ -146,13 +153,26 @@ export async function computeHealthStatus(
 			select: { id: true },
 		}),
 	]);
-	if (!anyRecord) {
+	if (!(anyRecord || state)) {
 		return null;
 	}
 	const base = {
 		bound_check: state?.boundCheckName ?? null,
 		rejected_since_last_accept: state?.rejectedSinceLastAccept ?? 0,
 	};
+
+	if (!(current || anyRecord)) {
+		return {
+			...base,
+			verdict: null,
+			stale: false,
+			stale_reason: null,
+			stale_since: null,
+			expires_at: null,
+			record_id: null,
+			timestamp: null,
+		};
+	}
 
 	if (!current) {
 		const latestRevocation = await prisma.pluginHealthRevocation.findFirst({
