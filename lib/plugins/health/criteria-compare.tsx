@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -107,11 +107,22 @@ export function VersionCompare({
 	rows,
 }: VersionCompareProps) {
 	const [choices, setChoices] = useState<MoveChoices>({});
+	const heading = useRef<HTMLHeadingElement>(null);
+	// The button that opened this view is hidden with the form, so focus moves here.
+	useEffect(() => {
+		heading.current?.focus();
+	}, []);
 	const choose = (block: MoveBlock, choice: MoveChoice) =>
 		setChoices((current) => ({ ...current, [block]: choice }));
 	return (
 		<div className="space-y-4" data-testid="health-version-compare">
-			<h3 className="font-medium text-sm">Compare with version {newVersion}</h3>
+			<h3
+				className="font-medium text-sm outline-none"
+				ref={heading}
+				tabIndex={-1}
+			>
+				Compare with version {newVersion}
+			</h3>
 			<p className="text-sm">
 				Choose, block by block, whether to keep your accepted settings or take
 				what the new version recommends. Nothing changes until you save the

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import type { PlainSentence } from "./criteria-plain-words";
 import { describeDifferences } from "./echo-difference-words";
@@ -14,21 +14,32 @@ import type { HealthCriteriaResponse } from "./health-types";
 
 function Notice({
 	children,
+	focusOnMount = false,
 	testId,
 	tone = "info",
 }: {
 	children: ReactNode;
+	/** Takes focus when it first appears, for a notice that heads a view the person has just moved to. */
+	focusOnMount?: boolean;
 	testId?: string;
 	tone?: "info" | "warning";
 }) {
+	const element = useRef<HTMLParagraphElement>(null);
+	useEffect(() => {
+		if (focusOnMount) {
+			element.current?.focus();
+		}
+	}, [focusOnMount]);
 	return (
 		<p
 			className={
 				tone === "warning"
 					? "wrap-anywhere rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm"
-					: "wrap-anywhere rounded-md border bg-muted/40 px-3 py-2 text-sm"
+					: "wrap-anywhere rounded-md border bg-muted/40 px-3 py-2 text-sm outline-none"
 			}
 			data-testid={testId}
+			ref={element}
+			tabIndex={focusOnMount ? -1 : undefined}
 		>
 			{children}
 		</p>
@@ -66,6 +77,8 @@ export function PlainWordsSummary({
 }
 
 export interface CompareOffer {
+	/** The button's element, so focus can return to it when the comparison is cancelled. */
+	buttonRef?: RefObject<HTMLButtonElement | null>;
 	newVersion: string;
 	onOpen: () => void;
 }
@@ -114,6 +127,7 @@ export function StateNotices({
 				{compare && (
 					<Button
 						onClick={compare.onOpen}
+						ref={compare.buttonRef}
 						size="sm"
 						type="button"
 						variant="outline"
@@ -141,7 +155,7 @@ export function FreshPickNotice({ recommends }: { recommends: boolean }) {
 /** Settings moved to another version of the check are held in the form and not yet saved. */
 export function MoveNotice({ version }: { version: string }) {
 	return (
-		<Notice testId="health-move-notice">
+		<Notice focusOnMount testId="health-move-notice">
 			These settings are for version {version} of the check. Nothing is saved
 			until you press Save settings.
 		</Notice>

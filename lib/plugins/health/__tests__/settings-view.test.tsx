@@ -861,4 +861,33 @@ describe("Settings: moving to a newer version of the check", () => {
 		expect(screen.queryByTestId("health-move-notice")).toBeNull();
 		expect(served.puts).toEqual([]);
 	});
+
+	it("moves focus into the comparison, back to its button on Cancel, and to the notice on Continue", async () => {
+		serveNewer();
+		const user = await openSettings();
+		const open = await screen.findByRole("button", {
+			name: "Compare with version 0.4",
+		});
+		await user.click(open);
+
+		const heading = await screen.findByRole("heading", {
+			name: "Compare with version 0.4",
+		});
+		await waitFor(() => expect(heading).toHaveFocus());
+
+		await user.click(screen.getByRole("button", { name: "Cancel" }));
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Compare with version 0.4" })
+			).toHaveFocus()
+		);
+
+		await user.click(
+			screen.getByRole("button", { name: "Compare with version 0.4" })
+		);
+		await user.click(await screen.findByRole("button", { name: "Continue" }));
+		await waitFor(() =>
+			expect(screen.getByTestId("health-move-notice")).toHaveFocus()
+		);
+	});
 });

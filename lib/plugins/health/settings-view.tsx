@@ -189,6 +189,14 @@ interface StoredFormProps {
 function StoredForm({ entry, host, stored, view }: StoredFormProps) {
 	const [comparing, setComparing] = useState(false);
 	const [moved, setMoved] = useState<MovedSettings | null>(null);
+	const opener = useRef<HTMLButtonElement>(null);
+	const refocusOpener = useRef(false);
+	useEffect(() => {
+		if (!comparing && refocusOpener.current) {
+			refocusOpener.current = false;
+			opener.current?.focus();
+		}
+	}, [comparing]);
 	const criteria = view.criteria;
 	if (!criteria) {
 		return null;
@@ -222,7 +230,10 @@ function StoredForm({ entry, host, stored, view }: StoredFormProps) {
 			{comparing && offered && (
 				<VersionCompare
 					newVersion={offered.check.version}
-					onCancel={() => setComparing(false)}
+					onCancel={() => {
+						refocusOpener.current = true;
+						setComparing(false);
+					}}
 					onContinue={(choices) => {
 						setMoved({
 							check: offered.check,
@@ -249,6 +260,7 @@ function StoredForm({ entry, host, stored, view }: StoredFormProps) {
 					compare={
 						offered && !moved
 							? {
+									buttonRef: opener,
 									newVersion: offered.check.version,
 									onOpen: () => setComparing(true),
 								}

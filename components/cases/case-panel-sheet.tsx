@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import {
 	Sheet,
 	SheetContent,
@@ -15,6 +16,8 @@ interface CasePanelSheetProps {
 	isOpen: boolean;
 	onClose: () => void;
 	registration: CasePanelRegistration;
+	/** The toolbar button that opened the sheet; it gets focus back when the sheet closes. */
+	returnFocusTo: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -27,6 +30,7 @@ export function CasePanelSheet({
 	isOpen,
 	onClose,
 	registration,
+	returnFocusTo,
 }: CasePanelSheetProps) {
 	const { Component, label } = registration;
 	return (
@@ -38,7 +42,13 @@ export function CasePanelSheet({
 			}}
 			open={isOpen}
 		>
-			<SheetContent className="w-full overflow-y-auto sm:max-w-md">
+			<SheetContent
+				className="w-full overflow-y-auto sm:max-w-md"
+				onCloseAutoFocus={(event) => {
+					event.preventDefault();
+					returnFocusTo.current?.focus();
+				}}
+			>
 				<SheetHeader>
 					<SheetTitle>{label}</SheetTitle>
 					<SheetDescription className="sr-only">{label}</SheetDescription>
