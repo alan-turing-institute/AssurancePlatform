@@ -314,11 +314,15 @@ export function isStatusStale(status: HealthStatus, now: number): boolean {
 	);
 }
 
-/**
- * The dot's accessible label: the verdict in words, "stale since <time>" for
- * a stale one, or "all evidence revoked" when no verdict is left.
- */
-export function describeBadge(status: HealthStatus, stale: boolean): string {
+const MISMATCH_WORDS = {
+	mismatch: "judged with different settings",
+	undeclared: "no accepted settings",
+} as const;
+
+function describeVerdictAndStaleness(
+	status: HealthStatus,
+	stale: boolean
+): string {
 	if (status.verdict === null) {
 		return "Health: all evidence revoked";
 	}
@@ -330,4 +334,17 @@ export function describeBadge(status: HealthStatus, stale: boolean): string {
 	return since
 		? `${label}, stale since ${formatDateTime(since)}`
 		: `${label}, stale`;
+}
+
+/**
+ * The dot's accessible label: the verdict in words, "stale since <time>" for
+ * a stale one, or "all evidence revoked" when no verdict is left; then
+ * whether the current result was judged with settings other than the ones
+ * accepted, or no settings are accepted at all.
+ */
+export function describeBadge(status: HealthStatus, stale: boolean): string {
+	const label = describeVerdictAndStaleness(status, stale);
+	return status.mismatch
+		? `${label}, ${MISMATCH_WORDS[status.mismatch.state]}`
+		: label;
 }

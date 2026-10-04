@@ -169,6 +169,7 @@ describe("lib/plugins/bootstrap — real end-to-end wiring", () => {
 				pluginId: "tea.health",
 				tabId: "tea.health",
 				label: "Evidence",
+				wide: true,
 				Component: HealthPanel,
 			},
 		]);

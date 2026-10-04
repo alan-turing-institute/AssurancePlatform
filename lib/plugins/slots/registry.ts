@@ -25,6 +25,7 @@
 
 import { getManifestEntry } from "@/lib/plugins/manifest";
 import type {
+	CasePanelRegistration,
 	ElementBadgeRegistration,
 	ElementPanelRegistration,
 	SettingsSectionRegistration,
@@ -142,6 +143,9 @@ export class SlotRegistry<TRegistration extends { pluginId: string }> {
 }
 
 /** 1.0 slot registries — one instance per slot id, shared process-wide. */
+export const casePanelSlot = new SlotRegistry<CasePanelRegistration>(
+	"case-panel"
+);
 export const elementBadgeSlot = new SlotRegistry<ElementBadgeRegistration>(
 	"element-badge"
 );

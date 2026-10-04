@@ -43,7 +43,7 @@ export function buildPluginOffCopy({
 
 	const introLine =
 		pluginId === HEALTH_PLUGIN_ID
-			? "Health badges and the Evidence tab will disappear for you."
+			? "Health badges, the Evidence tab and the Evidence health panel will disappear for you."
 			: "Its additions to the case builder will disappear for you.";
 
 	const closingLine = "Other collaborators are not affected.";

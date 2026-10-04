@@ -60,9 +60,15 @@ function useRerenderAtExpiry(expiresAt: string | null): void {
  * unfilled dot with the ring. A claim with no status, or bound to a check
  * but without a record yet, shows nothing, as does a failed fetch.
  *
+ * A claim whose current result was judged with other settings than the ones
+ * accepted, or which has no accepted settings, also shows a small "\u2260"
+ * beside the dot. The mark is hidden from assistive technology; the dot's
+ * label says the same in words.
+ *
  * Colour is never the only signal: the dot is an `<output>` element (an
  * implicit live region, apt since the state updates over SSE) whose
- * `aria-label` says the verdict and any staleness in words.
+ * `aria-label` says the verdict, any staleness and any settings mismatch in
+ * words.
  */
 export function HealthBadge({
 	caseId,
@@ -100,11 +106,22 @@ export function HealthBadge({
 		<TooltipProvider>
 			<Tooltip delayDuration={200}>
 				<TooltipTrigger asChild>
-					<output
-						aria-label={label}
-						className={dotClassName}
-						data-testid="health-badge-dot"
-					/>
+					<span className="inline-flex items-center gap-0.5">
+						<output
+							aria-label={label}
+							className={dotClassName}
+							data-testid="health-badge-dot"
+						/>
+						{healthStatus.mismatch && (
+							<span
+								aria-hidden="true"
+								className="font-semibold text-muted-foreground text-xs leading-none"
+								data-testid="health-badge-mismatch-mark"
+							>
+								{"\u2260"}
+							</span>
+						)}
+					</span>
 				</TooltipTrigger>
 				<TooltipContent>{label}</TooltipContent>
 			</Tooltip>
