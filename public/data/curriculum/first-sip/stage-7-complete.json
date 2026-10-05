@@ -29,6 +29,7 @@
             "type": "PROPERTY_CLAIM",
             "name": "P1",
             "description": "The training dataset has been audited and balanced to ensure representation across all demographic groups and cleansed of historically discriminatory patterns.",
+            "assumption": "Assumes the training data distribution matches the deployment distribution and that demographic patterns remain stable over time.",
             "inSandbox": false,
             "level": 1,
             "children": [
@@ -48,6 +49,7 @@
             "type": "PROPERTY_CLAIM",
             "name": "P2",
             "description": "Statistical testing demonstrates that the AI system's recommendations show no disparate impact or treatment across protected characteristic groups.",
+            "justification": "Fairness metrics were selected based on stakeholder consultation workshops and regulatory guidance from the Equality and Human Rights Commission.",
             "inSandbox": false,
             "level": 1,
             "children": [

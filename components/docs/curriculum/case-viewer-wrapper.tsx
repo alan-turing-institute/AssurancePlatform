@@ -1,6 +1,7 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import type { SelectedElementSummary } from "@/lib/docs/selected-element";
 import { logger } from "@/lib/logger";
 import type { CaseExportNested } from "@/types/curriculum";
 
@@ -44,7 +45,8 @@ interface ViewerState {
 }
 
 interface CaseViewerWrapperProps {
-	caseFile?: string;
+	caseFile: string;
+	onSelectedElementChange?: (element: SelectedElementSummary | null) => void;
 }
 
 /**
@@ -53,7 +55,8 @@ interface CaseViewerWrapperProps {
  * Loads JSON data from /public/data/ folder.
  */
 const CaseViewerWrapper = ({
-	caseFile = "demo-case.json",
+	caseFile,
+	onSelectedElementChange,
 }: CaseViewerWrapperProps) => {
 	const [state, setState] = useState<ViewerState>({
 		data: null,
@@ -148,7 +151,10 @@ const CaseViewerWrapper = ({
 					</div>
 				}
 			>
-				<ReadOnlyCaseCanvas caseData={state.data} />
+				<ReadOnlyCaseCanvas
+					caseData={state.data}
+					onSelectedElementChange={onSelectedElementChange}
+				/>
 			</ErrorBoundary>
 		</Suspense>
 	);

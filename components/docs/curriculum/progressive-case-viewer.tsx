@@ -1,12 +1,15 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { SelectedElementSummary } from "@/lib/docs/selected-element";
 import CaseViewerWrapper from "./case-viewer-wrapper";
+import ElementInspector from "./element-inspector";
 import { useModuleProgress } from "./module-progress-context";
 import {
 	getStageById,
 	isLastStage,
+	isPromptDone,
 	type StageDefinition,
 } from "./stage-definitions";
 import StageGuidancePanel from "./stage-guidance-panel";
@@ -41,6 +44,32 @@ const ProgressiveCaseViewer = ({
 	// Track current stage (1-indexed)
 	const [currentStage, setCurrentStage] = useState(initialStage);
 
+	// Names of the elements the learner has selected, per stage
+	const [selectedByStage, setSelectedByStage] = useState<
+		Record<number, Set<string>>
+	>({});
+	const [selectedElement, setSelectedElement] =
+		useState<SelectedElementSummary | null>(null);
+
+	const handleSelectedElementChange = useCallback(
+		(element: SelectedElementSummary | null): void => {
+			setSelectedElement(element);
+			if (!element) {
+				return;
+			}
+			setSelectedByStage((prev) => {
+				if (prev[currentStage]?.has(element.name)) {
+					return prev;
+				}
+				return {
+					...prev,
+					[currentStage]: new Set(prev[currentStage]).add(element.name),
+				};
+			});
+		},
+		[currentStage]
+	);
+
 	// Calculate completed stages from task completion status
 	const completedStages = useMemo(() => {
 		const completed = new Set<number>();
@@ -58,6 +87,35 @@ const ProgressiveCaseViewer = ({
 		() => getStageById(stages, currentStage),
 		[stages, currentStage]
 	);
+
+	// Complete the stage's task once every prompt on it is done
+	useEffect(() => {
+		const stage = getStageById(stages, currentStage);
+		const prompts = stage?.prompts;
+		if (!(stage && prompts?.length) || getTask(stage.taskId)?.completed) {
+			return;
+		}
+		const selected = selectedByStage[currentStage];
+		if (selected && prompts.every((p) => isPromptDone(p, selected))) {
+			completeTask(stage.taskId);
+		}
+	}, [selectedByStage, currentStage, stages, getTask, completeTask]);
+
+	// Prompts done on the current stage; a completed stage shows all done
+	const donePromptIds = useMemo(() => {
+		const done = new Set<string>();
+		const prompts = currentStageDefinition?.prompts ?? [];
+		const stageComplete = currentStageDefinition
+			? completedStages.has(currentStageDefinition.id)
+			: false;
+		const selected = selectedByStage[currentStage] ?? new Set<string>();
+		for (const prompt of prompts) {
+			if (stageComplete || isPromptDone(prompt, selected)) {
+				done.add(prompt.id);
+			}
+		}
+		return done;
+	}, [currentStageDefinition, completedStages, selectedByStage, currentStage]);
 
 	// Handle stage selection from stepper
 	const handleStageSelect = useCallback((stageId: number): void => {
@@ -93,15 +151,23 @@ const ProgressiveCaseViewer = ({
 		<div className="space-y-4">
 			{/* Guidance panel - above viewer to read first */}
 			<div className="mt-4">
-				<StageGuidancePanel stage={currentStageDefinition} />
+				<StageGuidancePanel
+					donePromptIds={donePromptIds}
+					prompts={currentStageDefinition.prompts}
+					stage={currentStageDefinition}
+				/>
 			</div>
 
 			{/* Case viewer - the main interactive element */}
-			<div className="h-[500px] overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
-				<CaseViewerWrapper
-					caseFile={currentStageDefinition.caseFile}
-					key={currentStageDefinition.caseFile}
-				/>
+			<div className="overflow-hidden rounded-xl border shadow-sm">
+				<div className="h-[500px]">
+					<CaseViewerWrapper
+						caseFile={currentStageDefinition.caseFile}
+						key={currentStageDefinition.caseFile}
+						onSelectedElementChange={handleSelectedElementChange}
+					/>
+				</div>
+				<ElementInspector element={selectedElement} />
 			</div>
 
 			{/* Stage selector (stepper) - below viewer after exploration */}

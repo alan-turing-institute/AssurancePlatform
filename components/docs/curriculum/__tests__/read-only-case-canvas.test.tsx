@@ -16,18 +16,27 @@ import ReadOnlyCaseCanvas from "../read-only-case-canvas";
  * per-file `vi.mock` replaces the global one rather than extending it, so
  * this reproduces the pieces both this file's components need.
  */
+let capturedSelectionHandler:
+	| ((params: { nodes: Node[]; edges: unknown[] }) => void)
+	| undefined;
+
 vi.mock("reactflow", () => ({
 	default: ({
 		children,
+		onSelectionChange,
 		...props
 	}: {
 		children?: React.ReactNode;
+		onSelectionChange?: typeof capturedSelectionHandler;
 		[key: string]: unknown;
-	}) => (
-		<div data-testid="react-flow" {...props}>
-			{children}
-		</div>
-	),
+	}) => {
+		capturedSelectionHandler = onSelectionChange;
+		return (
+			<div data-testid="react-flow" {...props}>
+				{children}
+			</div>
+		);
+	},
 	ReactFlowProvider: ({ children }: { children: React.ReactNode }) => (
 		<div data-testid="react-flow-provider">{children}</div>
 	),
@@ -154,5 +163,42 @@ describe("ReadOnlyCaseCanvas", () => {
 		expect(
 			screen.getByRole("button", { name: COMMENT_BUTTON_NAME })
 		).toBeInTheDocument();
+	});
+
+	it("reports the selected element, and null when nothing is selected or the case changes", async () => {
+		const spy = vi.fn();
+		const { rerender } = render(
+			<ReadOnlyCaseCanvas caseData={CASE_DATA} onSelectedElementChange={spy} />
+		);
+
+		await waitFor(() => {
+			expect(useStore.getState().nodes.length).toBe(4);
+			expect(capturedSelectionHandler).toBeDefined();
+		});
+
+		const s1 = useStore
+			.getState()
+			.nodes.find((n) => n.data.name === "S1") as Node;
+		capturedSelectionHandler?.({ nodes: [s1], edges: [] });
+		expect(spy).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				name: "S1",
+				type: "strategy",
+				parent: { name: "G1", type: "goal" },
+				children: [{ name: "P1", type: "property" }],
+			})
+		);
+
+		capturedSelectionHandler?.({ nodes: [], edges: [] });
+		expect(spy).toHaveBeenLastCalledWith(null);
+
+		capturedSelectionHandler?.({ nodes: [s1], edges: [] });
+		rerender(
+			<ReadOnlyCaseCanvas
+				caseData={{ ...CASE_DATA, case: { name: "Other", description: "x" } }}
+				onSelectedElementChange={spy}
+			/>
+		);
+		expect(spy).toHaveBeenLastCalledWith(null);
 	});
 });
