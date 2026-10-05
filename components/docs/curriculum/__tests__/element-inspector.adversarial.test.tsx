@@ -15,6 +15,11 @@ const TYPES: DiagramNodeType[] = [
 	"awayGoal",
 	"module",
 ];
+const EVIDENCES = /evidences/i;
+const EVIDENCE = /evidence/i;
+const SUPPORTED_BY_P1 = /supported by P1\./;
+const SUPPORTED_BY_P1_P2 = /supported by P1 and P2\./;
+const SUPPORTED_BY_S1_S3 = /supported by S1, S2 and S3\./;
 const COLOUR_WORDS = /\b(blue|green|purple|red|orange|yellow)\b/i;
 
 const summary = (
@@ -52,8 +57,8 @@ describe("ElementInspector (adversarial)", () => {
 	it("does not pluralise evidence in the footer link", () => {
 		render(<ElementInspector element={summary("evidence")} />);
 		const link = screen.getByRole("link");
-		expect(link.textContent).not.toMatch(/evidences/i);
-		expect(link.textContent).toMatch(/evidence/i);
+		expect(link.textContent).not.toMatch(EVIDENCES);
+		expect(link.textContent).toMatch(EVIDENCE);
 	});
 
 	it.each(["awayGoal", "module"] as const)("shows no link for %s", (type) => {
@@ -61,16 +66,17 @@ describe("ElementInspector (adversarial)", () => {
 		expect(screen.queryByRole("link")).not.toBeInTheDocument();
 	});
 
-	it("keeps the polite live region in the empty state", () => {
+	it("keeps a polite live line in the empty state", () => {
 		render(<ElementInspector element={null} />);
 		const region = screen.getByRole("region", { name: "Selected element" });
-		expect(region).toHaveAttribute("aria-live", "polite");
+		const live = region.querySelector("[aria-live='polite']");
+		expect(live).toHaveTextContent("Nothing selected");
 	});
 
 	it.each([
-		[["P1"], /supported by P1\./],
-		[["P1", "P2"], /supported by P1 and P2\./],
-		[["S1", "S2", "S3"], /supported by S1, S2 and S3\./],
+		[["P1"], SUPPORTED_BY_P1],
+		[["P1", "P2"], SUPPORTED_BY_P1_P2],
+		[["S1", "S2", "S3"], SUPPORTED_BY_S1_S3],
 	])("lists children %j with natural punctuation", (names, pattern) => {
 		const { container } = render(
 			<ElementInspector

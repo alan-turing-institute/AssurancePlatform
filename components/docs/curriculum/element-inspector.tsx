@@ -27,6 +27,9 @@ const lowerLabel = (type: DiagramNodeType): string =>
 
 const pluralLabel = (type: DiagramNodeType): string => {
 	const label = lowerLabel(type);
+	if (type === "evidence") {
+		return label;
+	}
 	return label.endsWith("y") ? `${label.slice(0, -1)}ies` : `${label}s`;
 };
 
@@ -77,14 +80,20 @@ const presentAttributes = (
 const ElementInspector = ({
 	element,
 }: ElementInspectorProps): React.ReactNode => {
-	const body = element ? <Details element={element} /> : null;
+	const shown = element && element.type in nodeTypeConfigs ? element : null;
+	const body = shown ? <Details element={shown} /> : null;
+	const announcement = shown
+		? `${nodeTypeConfigs[shown.type].label} ${shown.name} selected`
+		: "Nothing selected";
 
 	return (
 		<section
 			aria-label="Selected element"
-			aria-live="polite"
 			className="min-h-32 border-t bg-muted/30 p-4 text-sm"
 		>
+			<p aria-live="polite" className="sr-only">
+				{announcement}
+			</p>
 			{body ?? <p className="text-muted-foreground">{EMPTY_TEXT}</p>}
 		</section>
 	);
@@ -155,7 +164,7 @@ const Details = ({
 
 			{guide.docsHref && (
 				<a
-					className="font-medium text-primary underline underline-offset-4"
+					className="font-medium text-foreground underline underline-offset-4"
 					href={guide.docsHref}
 				>
 					Read more about {pluralLabel(element.type)}

@@ -1,5 +1,5 @@
 import { render, waitFor } from "@testing-library/react";
-import type { OnSelectionChangeParams } from "reactflow";
+import type { Node, OnSelectionChangeParams } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import useStore from "@/store/store";
 import type { CaseExportNested } from "@/types/curriculum";
@@ -88,7 +88,7 @@ describe("ReadOnlyCaseCanvas selection (adversarial)", () => {
 
 		expect(new Set(captured).size).toBe(1);
 
-		const selected = useStore.getState().nodes[0];
+		const selected = useStore.getState().nodes[0] as Node;
 		first.mockClear();
 		latest()({ nodes: [selected], edges: [] });
 		expect(second).toHaveBeenCalledTimes(1);
@@ -146,7 +146,7 @@ describe("ReadOnlyCaseCanvas selection (adversarial)", () => {
 		);
 		await waitFor(() => expect(useStore.getState().nodes.length).toBe(2));
 		await waitFor(() => expect(captured.length).toBeGreaterThan(0));
-		latest()({ nodes: [useStore.getState().nodes[0]], edges: [] });
+		latest()({ nodes: [useStore.getState().nodes[0] as Node], edges: [] });
 		expect(spy).toHaveBeenLastCalledWith(
 			expect.objectContaining({ name: "G1" })
 		);

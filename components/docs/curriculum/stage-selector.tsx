@@ -101,16 +101,19 @@ const getConnectorClass = (
 
 /**
  * True when the key press belongs to something else on the page: a text
- * field (the caret keys move the cursor), the canvas (arrow keys pan and move
- * focus between nodes), or any region marked `.nokey`.
+ * field or select (the arrow keys change their value), the canvas (arrow keys
+ * pan and move focus between nodes), a dialog (portalled outside the canvas), or
+ * any region marked `.nokey`.
  */
 const isKeyboardCaptured = (target: EventTarget | null): boolean => {
 	if (!(target instanceof Element)) {
 		return false;
 	}
 	return (
-		target.matches("input, textarea, [contenteditable]") ||
-		target.closest(".react-flow, .nokey") !== null
+		target.matches("input, textarea, select, [contenteditable]") ||
+		target.closest(
+			'.react-flow, .nokey, [role="dialog"], [role="alertdialog"]'
+		) !== null
 	);
 };
 

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import type { Node } from "reactflow";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NodeActionGroup } from "@/components/shared/nodes";
+import { NodeActionGroup } from "@/components/shared/nodes/index";
 import useStore from "@/store/store";
 import type { CaseExportNested } from "@/types/curriculum";
 import ReadOnlyCaseCanvas from "../read-only-case-canvas";
@@ -200,5 +200,24 @@ describe("ReadOnlyCaseCanvas", () => {
 			/>
 		);
 		expect(spy).toHaveBeenLastCalledWith(null);
+	});
+
+	it("reports every selected node's name, while the summary describes the first", async () => {
+		const spy = vi.fn();
+		render(
+			<ReadOnlyCaseCanvas caseData={CASE_DATA} onSelectedElementChange={spy} />
+		);
+		await waitFor(() => {
+			expect(useStore.getState().nodes.length).toBe(4);
+			expect(capturedSelectionHandler).toBeDefined();
+		});
+
+		const { nodes } = useStore.getState();
+		const g1 = nodes.find((n) => n.data.name === "G1") as Node;
+		const s1 = nodes.find((n) => n.data.name === "S1") as Node;
+		capturedSelectionHandler?.({ nodes: [s1, g1], edges: [] });
+		expect(spy).toHaveBeenLastCalledWith(
+			expect.objectContaining({ name: "S1", selectedNames: ["S1", "G1"] })
+		);
 	});
 });

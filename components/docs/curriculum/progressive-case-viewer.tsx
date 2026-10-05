@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SelectedElementSummary } from "@/lib/docs/selected-element";
 import CaseViewerWrapper from "./case-viewer-wrapper";
 import ElementInspector from "./element-inspector";
@@ -51,23 +51,40 @@ const ProgressiveCaseViewer = ({
 	const [selectedElement, setSelectedElement] =
 		useState<SelectedElementSummary | null>(null);
 
+	// Mirrors `selectedByStage` so two selection events in one tick both count
+	const selectedRef = useRef(selectedByStage);
+	selectedRef.current = selectedByStage;
+
+	// Record every selected node against the current stage, and complete the
+	// stage's task once the updated set satisfies all of its prompts. The
+	// inspector shows one element; prompts count all of them.
 	const handleSelectedElementChange = useCallback(
 		(element: SelectedElementSummary | null): void => {
 			setSelectedElement(element);
 			if (!element) {
 				return;
 			}
-			setSelectedByStage((prev) => {
-				if (prev[currentStage]?.has(element.name)) {
-					return prev;
-				}
-				return {
-					...prev,
-					[currentStage]: new Set(prev[currentStage]).add(element.name),
-				};
-			});
+			const names = element.selectedNames ?? [element.name];
+			const stage = getStageById(stages, currentStage);
+			const merged = new Set(selectedRef.current[currentStage]);
+			for (const name of names) {
+				merged.add(name);
+			}
+			const next = { ...selectedRef.current, [currentStage]: merged };
+			selectedRef.current = next;
+			setSelectedByStage(next);
+
+			const prompts = stage?.prompts;
+			if (
+				stage &&
+				prompts?.length &&
+				!getTask(stage.taskId)?.completed &&
+				prompts.every((p) => isPromptDone(p, merged))
+			) {
+				completeTask(stage.taskId);
+			}
 		},
-		[currentStage]
+		[currentStage, stages, getTask, completeTask]
 	);
 
 	// Calculate completed stages from task completion status
@@ -88,18 +105,19 @@ const ProgressiveCaseViewer = ({
 		[stages, currentStage]
 	);
 
-	// Complete the stage's task once every prompt on it is done
+	// Forget the selections when a stage's task is reset, so the prompts start
+	// again and the stage cannot re-complete from stale selections
+	const previousCompleted = useRef(completedStages);
 	useEffect(() => {
-		const stage = getStageById(stages, currentStage);
-		const prompts = stage?.prompts;
-		if (!(stage && prompts?.length) || getTask(stage.taskId)?.completed) {
-			return;
+		const wasReset = [...previousCompleted.current].some(
+			(id) => !completedStages.has(id)
+		);
+		previousCompleted.current = completedStages;
+		if (wasReset) {
+			selectedRef.current = {};
+			setSelectedByStage({});
 		}
-		const selected = selectedByStage[currentStage];
-		if (selected && prompts.every((p) => isPromptDone(p, selected))) {
-			completeTask(stage.taskId);
-		}
-	}, [selectedByStage, currentStage, stages, getTask, completeTask]);
+	}, [completedStages]);
 
 	// Prompts done on the current stage; a completed stage shows all done
 	const donePromptIds = useMemo(() => {
@@ -119,6 +137,7 @@ const ProgressiveCaseViewer = ({
 
 	// Handle stage selection from stepper
 	const handleStageSelect = useCallback((stageId: number): void => {
+		setSelectedElement(null);
 		setCurrentStage(stageId);
 	}, []);
 
@@ -133,6 +152,7 @@ const ProgressiveCaseViewer = ({
 
 		// Move to next stage if not on last stage
 		if (!isLastStage(stages, currentStage)) {
+			setSelectedElement(null);
 			setCurrentStage((prev) => prev + 1);
 		}
 	}, [currentStageDefinition, currentStage, stages, completeTask]);

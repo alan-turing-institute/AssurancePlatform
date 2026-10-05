@@ -28,6 +28,17 @@ describe("ElementInspector", () => {
 		expect(screen.getByText(EMPTY_STATE)).toBeInTheDocument();
 	});
 
+	it("shows the empty state for a type outside the six node types", () => {
+		render(
+			<ElementInspector
+				element={
+					{ ...strategy, type: "mystery" } as unknown as SelectedElementSummary
+				}
+			/>
+		);
+		expect(screen.getByText(EMPTY_STATE)).toBeInTheDocument();
+	});
+
 	it("headlines the element with its type label and icon colour class", () => {
 		const { container } = render(<ElementInspector element={strategy} />);
 		expect(

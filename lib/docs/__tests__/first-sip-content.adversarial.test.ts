@@ -6,7 +6,8 @@ import { ELEMENT_GUIDE } from "@/lib/help/help-guide";
 import { CaseExportNestedSchema } from "@/lib/schemas/case-export";
 import { caseExportToAssuranceCase } from "../case-export-to-assurance-case";
 
-const ROOT = path.resolve(__dirname, "../../..");
+const STAGE_NUMBER = /stage-(\d)/;
+const ROOT = path.resolve(import.meta.dirname, "../../..");
 const DIR = path.join(ROOT, "public/data/curriculum/first-sip");
 
 interface RawNode {
@@ -51,7 +52,7 @@ describe("first-sip stage files (adversarial)", () => {
 	it.each(
 		files
 	)("%s carries the assumption and justification from stage 4", (file) => {
-		const stageNumber = Number(file.match(/stage-(\d)/)?.[1]);
+		const stageNumber = Number(file.match(STAGE_NUMBER)?.[1]);
 		const nodes = collect(load(file).tree);
 		const p1 = nodes.find((n) => n.name === "P1");
 		const p2 = nodes.find((n) => n.name === "P2");
@@ -109,7 +110,9 @@ describe("element guide links (adversarial)", () => {
 				continue;
 			}
 			const fragment = entry.docsHref.split("#")[1];
-			expect(slugs.has(fragment), `${entry.id} -> #${fragment}`).toBe(true);
+			expect(slugs.has(fragment as string), `${entry.id} -> #${fragment}`).toBe(
+				true
+			);
 		}
 	});
 });

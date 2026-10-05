@@ -99,7 +99,14 @@ function ReadOnlyCaseCanvasInner({
 			const first = selected[0];
 			onSelectedElementChangeRef.current?.(
 				first
-					? summariseSelectedNode(first, nodesRef.current, edgesRef.current)
+					? {
+							...summariseSelectedNode(
+								first,
+								nodesRef.current,
+								edgesRef.current
+							),
+							selectedNames: selected.map((n) => String(n.data?.name ?? "")),
+						}
 					: null
 			);
 		},

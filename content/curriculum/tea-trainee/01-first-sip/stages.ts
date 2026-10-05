@@ -16,7 +16,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		prompts: [
 			{
 				id: "select-g1",
-				text: "Select the goal, G1, then use the chevron in its bottom-right corner to expand it.",
+				text: "Select the goal, G1.",
 				select: ["G1"],
 			},
 		],
@@ -32,7 +32,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		prompts: [
 			{
 				id: "select-g1",
-				text: "Select G1 and expand it to read its context.",
+				text: "Select G1.",
 				select: ["G1"],
 			},
 		],
@@ -60,11 +60,11 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Diving into Discrimination Prevention",
 		shortTitle: "Claims",
 		guidance:
-			"Property claims are specific, testable statements that support a strategy. Expand the discrimination prevention branch by selecting the property claims P1 and P2. Notice how these claims are more concrete than the goal: P1 addresses training data quality, while P2 focuses on statistical testing. Each claim will need evidence to support it. Expand P1 and P2 to find an assumption on P1 and a justification on P2.",
+			"Property claims are specific, testable statements that support a strategy. Select the property claims P1 and P2 in the discrimination prevention branch. Notice how these claims are more concrete than the goal: P1 addresses training data quality, while P2 focuses on statistical testing. Each claim will need evidence to support it. Expand P1 and P2 to find an assumption on P1 and a justification on P2.",
 		prompts: [
 			{
 				id: "select-claims",
-				text: "Select the property claims P1 and P2, then expand each one.",
+				text: "Select the property claims P1 and P2.",
 				select: ["P1", "P2"],
 			},
 		],

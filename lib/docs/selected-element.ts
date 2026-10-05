@@ -26,6 +26,8 @@ export interface SelectedElementSummary {
 	isDefeater: boolean;
 	name: string;
 	parent: ElementRef | null;
+	/** Names of every selected node, for prompt tracking; defaults to just this element. */
+	selectedNames?: string[];
 	type: DiagramNodeType;
 }
 
@@ -45,6 +47,7 @@ const CHALLENGES_EDGE_TYPE = "challenges";
 const hasText = (value: unknown): boolean =>
 	typeof value === "string" && value.trim().length > 0;
 
+// The converter emits only the six node types in `nodeTypes`, so the cast is safe.
 const toRef = (node: Node): ElementRef => ({
 	name: String(node.data?.name ?? ""),
 	type: node.type as DiagramNodeType,
@@ -73,6 +76,7 @@ export function summariseSelectedNode(
 	return {
 		id: node.id,
 		name: String(node.data?.name ?? ""),
+		// Same six-type guarantee as `toRef`.
 		type: node.type as DiagramNodeType,
 		isDefeater: Boolean(node.data?.isDefeater),
 		attributes: {
