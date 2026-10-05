@@ -1,11 +1,8 @@
 import { act, render, waitFor } from "@testing-library/react";
 import type { Tour } from "nextstepjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getTour } from "@/lib/tours/index.ts";
-import {
-	resetTourControls,
-	useTourControls,
-} from "@/lib/tours/tour-controls.ts";
+import { getTour } from "@/lib/tours";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
 
 const SELECTOR_ID = /'([^']+)'/;
 
@@ -55,7 +52,7 @@ vi.mock("@/lib/tours", async () => {
 	};
 });
 
-const { TourProvider } = await import("../tour-provider.tsx");
+const { TourProvider } = await import("../tour-provider");
 
 function addTarget(selector: string) {
 	const id = SELECTOR_ID.exec(selector)?.[1] ?? "";
@@ -159,7 +156,7 @@ describe("TourProvider (adversarial)", () => {
 		const given = lastSteps.find((t) => t.tour === "dashboard") as Tour;
 		expect(given.steps).toHaveLength(original.steps.length - 1);
 		expect(given.steps.map((s) => s.selector)).not.toContain(
-			targeted[0].selector
+			targeted[0]?.selector
 		);
 		// Other tours are untouched.
 		expect(lastSteps.find((t) => t.tour === "demo-case")).toBe(

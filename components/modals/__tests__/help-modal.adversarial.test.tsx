@@ -1,11 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	resetTourControls,
-	useTourControls,
-} from "@/lib/tours/tour-controls.ts";
-import useStore from "@/store/store.ts";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
+import useStore from "@/store/store";
 
 const onClose = vi.fn();
 
@@ -19,7 +16,7 @@ vi.mock("@/hooks/modal-hooks", async () => {
 	};
 });
 
-const { HelpModal } = await import("../help-modal.tsx");
+const { HelpModal } = await import("../help-modal");
 
 const startTour = vi.fn();
 const RESTART = /restart the tour/i;

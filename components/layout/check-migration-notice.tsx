@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useMigrationModal } from "@/hooks/use-migration-modal";
+import { isEmailMissing, isMigrationNoticeDue } from "@/lib/migration-notice";
 
 interface CheckMigrationNoticeProps {
 	user: {
@@ -29,12 +30,12 @@ const CheckMigrationNotice = ({ user }: CheckMigrationNoticeProps) => {
 		}
 
 		// Check if user is missing a valid email (including placeholder emails)
-		const isMissingEmail = !user.email || user.email.includes("@placeholder");
+		const isMissingEmail = isEmailMissing(user.email);
 
 		// Show modal if:
 		// 1. User is missing email (will show every time until email is added)
 		// 2. User has email but hasn't seen the migration notice yet
-		if (isMissingEmail || !user.hasSeenMigrationNotice) {
+		if (isMigrationNoticeDue(user)) {
 			onOpen(isMissingEmail);
 		}
 	}, [user, onOpen]);

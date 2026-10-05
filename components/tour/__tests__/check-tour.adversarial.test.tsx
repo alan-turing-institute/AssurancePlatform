@@ -1,9 +1,6 @@
 import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	resetTourControls,
-	useTourControls,
-} from "@/lib/tours/tour-controls.ts";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
 
 const markTourCompleted = vi.fn(async (_id: string) => [] as string[]);
 const fetchCompletedTours = vi.fn(async () => [] as string[]);
@@ -13,7 +10,7 @@ vi.mock("@/actions/tours", () => ({
 	fetchCompletedTours: () => fetchCompletedTours(),
 }));
 
-const { default: CheckTour } = await import("../check-tour.tsx");
+const { default: CheckTour } = await import("../check-tour");
 
 const startTour = vi.fn();
 const originalWidth = window.innerWidth;
@@ -37,7 +34,7 @@ describe("CheckTour (adversarial)", () => {
 		fetchCompletedTours.mockResolvedValue([]);
 		startTour.mockClear();
 		resetTourControls();
-		useTourControls.setState({ startTour });
+		useTourControls.setState({ startTour, ready: true });
 		window.innerWidth = 1280;
 	});
 

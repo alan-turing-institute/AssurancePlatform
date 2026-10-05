@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMigrationModal } from "@/hooks/use-migration-modal";
 import type { TourId } from "@/lib/tours";
 import { useTourControls } from "@/lib/tours/tour-controls";
 
@@ -19,6 +20,12 @@ interface CheckTourProps {
 	 */
 	minWidth?: number;
 	tourId: TourId;
+	/**
+	 * Set when the migration notice is due for this user. The tour then waits
+	 * until the notice has opened and been closed, without recording the tour
+	 * as completed.
+	 */
+	waitForMigrationNotice?: boolean;
 }
 
 /**
@@ -31,8 +38,17 @@ const CheckTour = ({
 	enabled = true,
 	minWidth,
 	tourId,
+	waitForMigrationNotice = false,
 }: CheckTourProps) => {
-	const startTour = useTourControls((state) => state.startTour);
+	const ready = useTourControls((state) => state.ready);
+	const noticeOpen = useMigrationModal((state) => state.isOpen);
+	const [noticeSeen, setNoticeSeen] = useState(false);
+	useEffect(() => {
+		if (noticeOpen) {
+			setNoticeSeen(true);
+		}
+	}, [noticeOpen]);
+	const heldForNotice = waitForMigrationNotice && !(noticeSeen && !noticeOpen);
 	const showing = useTourControls(
 		(state) => state.isTourVisible && state.activeTour === tourId
 	);
@@ -41,7 +57,12 @@ const CheckTour = ({
 	const isCompletedRef = useRef(completedTours?.includes(tourId) ?? false);
 
 	useEffect(() => {
-		if (!enabled || hasStartedRef.current || isCompletedRef.current) {
+		if (
+			!(enabled && ready) ||
+			heldForNotice ||
+			hasStartedRef.current ||
+			isCompletedRef.current
+		) {
 			return;
 		}
 		if (minWidth !== undefined && window.innerWidth < minWidth) {
@@ -66,16 +87,19 @@ const CheckTour = ({
 				return;
 			}
 			hasStartedRef.current = true;
-			startTour(tourId);
+			useTourControls.getState().startTour(tourId);
 		};
 		begin();
 
 		return () => {
 			cancelled = true;
 		};
-	}, [completedTours, enabled, minWidth, startTour, tourId]);
+	}, [completedTours, enabled, heldForNotice, minWidth, ready, tourId]);
 
 	useEffect(() => {
+		if (minWidth !== undefined && window.innerWidth < minWidth) {
+			return;
+		}
 		if (showing) {
 			sawTourRef.current = true;
 			return;
@@ -89,7 +113,7 @@ const CheckTour = ({
 			.catch(() => {
 				// The tour shows again next visit if recording fails.
 			});
-	}, [showing, tourId]);
+	}, [minWidth, showing, tourId]);
 
 	return null;
 };

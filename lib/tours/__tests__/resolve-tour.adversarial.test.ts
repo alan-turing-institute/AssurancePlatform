@@ -1,6 +1,6 @@
 import type { Step, Tour } from "nextstepjs";
 import { afterEach, describe, expect, it } from "vitest";
-import { resolveTour } from "../resolve-tour.ts";
+import { resolveTour } from "../resolve-tour";
 
 const FAST = { timeoutMs: 150, intervalMs: 10 };
 

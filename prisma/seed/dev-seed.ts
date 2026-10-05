@@ -23,6 +23,7 @@ import {
 	ensureDarterIntegration,
 } from "../../lib/services/darter-integration-service";
 import { publishAssuranceCase } from "../../lib/services/publish-service";
+import { TOUR_IDS } from "../../lib/tours";
 import { buildHealthCheckList } from "../../src/__tests__/fixtures/health-checks";
 import { PrismaClient } from "../../src/generated/prisma";
 
@@ -145,7 +146,7 @@ async function main() {
 			console.log("Creating users...");
 
 			// Skip onboarding tours and migration notice for seeded users so E2E tests aren't blocked
-			const allToursCompleted = ["dashboard", "case-canvas", "demo-case"];
+			const allToursCompleted = [...TOUR_IDS];
 
 			const chris = await tx.user.create({
 				data: {

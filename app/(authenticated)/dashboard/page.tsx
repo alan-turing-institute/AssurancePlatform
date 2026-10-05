@@ -8,6 +8,7 @@ import CheckMigrationNotice from "@/components/layout/check-migration-notice";
 import CheckUserEmail from "@/components/layout/check-user-email";
 import CheckTour from "@/components/tour/check-tour";
 import { validateSession } from "@/lib/auth/validate-session";
+import { isMigrationNoticeDue } from "@/lib/migration-notice";
 
 const Dashboard = async () => {
 	// Validate session (supports both JWT-only and legacy modes)
@@ -39,6 +40,7 @@ const Dashboard = async () => {
 				completedTours={currentUser.completedTours ?? []}
 				minWidth={1024}
 				tourId="dashboard"
+				waitForMigrationNotice={isMigrationNoticeDue(currentUser)}
 			/>
 			{assuranceCases.length === 0 ? (
 				<NoCasesFound

@@ -3,11 +3,8 @@ import userEvent from "@testing-library/user-event";
 import type React from "react";
 import type { NodeProps } from "reactflow";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	resetTourControls,
-	useTourControls,
-} from "@/lib/tours/tour-controls.ts";
-import { renderWithReactFlow } from "@/src/__tests__/utils/test-utils.tsx";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
+import { renderWithReactFlow } from "@/src/__tests__/utils/test-utils";
 
 const pathnameRef = { current: "/dashboard" };
 
@@ -41,9 +38,9 @@ vi.mock("reactflow", () => {
 	};
 });
 
-const { default: CaseCard } = await import("@/components/cases/case-card.tsx");
-const { default: GoalNode } = await import("@/components/cases/goal-node.tsx");
-const { Navbar } = await import("@/components/navigation/navbar.tsx");
+const { default: CaseCard } = await import("@/components/cases/case-card");
+const { default: GoalNode } = await import("@/components/cases/goal-node");
+const { Navbar } = await import("@/components/navigation/navbar");
 
 function goalProps(data: Record<string, unknown>): NodeProps {
 	return {

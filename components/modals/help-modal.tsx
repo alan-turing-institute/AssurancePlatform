@@ -93,7 +93,6 @@ function HelpGuideSection({ entries, title }: HelpGuideSectionProps) {
 export const HelpModal = () => {
 	const helpModal = useHelpModal();
 	const { assuranceCase } = useStore();
-	const startTour = useTourControls((state) => state.startTour);
 	const [query, setQuery] = useState("");
 
 	const normalisedQuery = query.trim().toLowerCase();
@@ -120,7 +119,9 @@ export const HelpModal = () => {
 
 	const handleRestartTour = () => {
 		helpModal.onClose();
-		startTour(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
+		useTourControls
+			.getState()
+			.startTour(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
 	};
 
 	return (
@@ -164,7 +165,12 @@ export const HelpModal = () => {
 				</div>
 
 				<SheetFooter className="flex-row items-center justify-between gap-2 sm:justify-between">
-					<Button onClick={handleRestartTour} type="button" variant="outline">
+					<Button
+						data-tour-return-focus='[data-testid="toolbar-help"]'
+						onClick={handleRestartTour}
+						type="button"
+						variant="outline"
+					>
 						Restart the tour
 					</Button>
 					<Button asChild variant="ghost">

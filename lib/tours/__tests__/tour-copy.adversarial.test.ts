@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { allTours, getTour, TOUR_IDS } from "../index.ts";
+import { allTours, getTour, TOUR_IDS } from "../index";
 
 const TS_FILE = /\.(ts|tsx)$/;
 const TEST_FILE = /\.test\./;

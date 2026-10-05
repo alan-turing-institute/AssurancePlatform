@@ -105,17 +105,39 @@ function TourControlsBridge({
 	const { startNextStep, currentTour, isNextStepVisible } = useNextStep();
 	const startNextStepRef = useRef(startNextStep);
 	startNextStepRef.current = startNextStep;
+	const returnFocusRef = useRef<{
+		element: HTMLElement;
+		fallback: string | undefined;
+	} | null>(null);
+	const wasVisibleRef = useRef(false);
 
 	useEffect(() => {
 		let mounted = true;
+		let generation = 0;
 		useTourControls.setState({
+			ready: true,
 			startTour: (id) => {
 				const tour = getTour(id);
 				if (!tour) {
 					return;
 				}
+				// Each start supersedes the one before it, and a start only
+				// goes ahead on the page it was requested from.
+				generation += 1;
+				const mine = generation;
+				const origin = document.activeElement;
+				returnFocusRef.current =
+					origin instanceof HTMLElement && origin !== document.body
+						? { element: origin, fallback: origin.dataset.tourReturnFocus }
+						: null;
+				const requestedAt = window.location.pathname;
 				resolveTour(tour).then((resolved) => {
-					if (!mounted || resolved.steps.length === 0) {
+					if (
+						!mounted ||
+						mine !== generation ||
+						window.location.pathname !== requestedAt ||
+						resolved.steps.length === 0
+					) {
 						return;
 					}
 					setSteps((previous) =>
@@ -137,6 +159,33 @@ function TourControlsBridge({
 			isTourVisible: isNextStepVisible,
 		});
 	}, [currentTour, isNextStepVisible]);
+
+	// When the tour closes with nothing focused, hand focus back to the
+	// control that started it, or to the element its `data-tour-return-focus`
+	// selector names when that control has since been removed.
+	useEffect(() => {
+		if (isNextStepVisible) {
+			wasVisibleRef.current = true;
+			return;
+		}
+		if (!wasVisibleRef.current) {
+			return;
+		}
+		wasVisibleRef.current = false;
+		const origin = returnFocusRef.current;
+		returnFocusRef.current = null;
+		const active = document.activeElement;
+		if (!origin || (active && active !== document.body)) {
+			return;
+		}
+		let target: HTMLElement | null = null;
+		if (origin.element.isConnected) {
+			target = origin.element;
+		} else if (origin.fallback) {
+			target = document.querySelector<HTMLElement>(origin.fallback);
+		}
+		target?.focus();
+	}, [isNextStepVisible]);
 
 	return null;
 }

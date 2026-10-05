@@ -2,7 +2,7 @@
 
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { BaseNode, NodeActionGroup } from "@/components/shared/nodes/index";
+import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
 import { useNodeTopRightActions } from "@/hooks/use-node-top-right-actions";
 import AddChildTrigger from "./add-child-trigger";
 import NodeEditDialog from "./node-edit-dialog";

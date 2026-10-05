@@ -26,7 +26,6 @@ interface NavbarProps {
 export const Navbar = ({ children, teams }: NavbarProps) => {
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const pathname = usePathname();
-	const startTour = useTourControls((state) => state.startTour);
 	const getPageName = (path: string): string => {
 		if (path === "/") {
 			return "assurance cases";
@@ -71,7 +70,9 @@ export const Navbar = ({ children, teams }: NavbarProps) => {
 								<Button
 									className="hidden lg:inline-flex"
 									data-testid="dashboard-tour-button"
-									onClick={() => startTour("dashboard")}
+									onClick={() =>
+										useTourControls.getState().startTour("dashboard")
+									}
 									size="sm"
 									type="button"
 									variant="ghost"

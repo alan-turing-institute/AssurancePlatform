@@ -40,7 +40,17 @@ describe("tour anchors", () => {
 	it.each(targets)("$tour step target $id exists in the components", ({
 		id,
 	}) => {
-		const literal = new RegExp(`["'\`]${id}["'\`]`);
-		expect(SOURCE).toMatch(literal);
+		const quoted = `["'\`]${id}["'\`]`;
+		// Only forms that put the id on an element count: a `data-tour`
+		// attribute, a `tourId` property in the navigation config, or a value
+		// assigned to a node's `dataTour` / `expandTour`.
+		const anchor = new RegExp(
+			[
+				`data-tour=(?:${quoted}|\\{[^}]*?${quoted})`,
+				`tourId:\\s*${quoted}`,
+				`(?:dataTour|expandTour)\\s*=\\s*[^;>]*?${quoted}`,
+			].join("|")
+		);
+		expect(SOURCE).toMatch(anchor);
 	});
 });
