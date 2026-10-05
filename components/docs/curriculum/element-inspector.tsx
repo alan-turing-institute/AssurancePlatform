@@ -109,7 +109,7 @@ const Details = ({
 				</h4>
 				{element.isDefeater && (
 					<Badge
-						className="rounded-full border-none bg-destructive/10 px-2 py-0.5 font-medium text-micro text-destructive ring-1 ring-destructive/20 ring-inset"
+						className="rounded-full border-none bg-destructive/10 px-2 py-0.5 font-medium text-destructive text-micro ring-1 ring-destructive/20 ring-inset"
 						variant="outline"
 					>
 						Defeater
