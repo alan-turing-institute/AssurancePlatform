@@ -83,7 +83,7 @@ const ElementInspector = ({
 		<section
 			aria-label="Selected element"
 			aria-live="polite"
-			className="min-h-[8rem] border-t bg-muted/30 p-4 text-sm"
+			className="min-h-32 border-t bg-muted/30 p-4 text-sm"
 		>
 			{body ?? <p className="text-muted-foreground">{EMPTY_TEXT}</p>}
 		</section>
@@ -109,7 +109,7 @@ const Details = ({
 				</h4>
 				{element.isDefeater && (
 					<Badge
-						className="rounded-full border-none bg-destructive/10 px-2 py-0.5 font-medium text-[10px] text-destructive ring-1 ring-destructive/20 ring-inset"
+						className="rounded-full border-none bg-destructive/10 px-2 py-0.5 font-medium text-micro text-destructive ring-1 ring-destructive/20 ring-inset"
 						variant="outline"
 					>
 						Defeater

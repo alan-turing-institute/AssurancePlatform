@@ -160,7 +160,7 @@ const ProgressiveCaseViewer = ({
 
 			{/* Case viewer - the main interactive element */}
 			<div className="overflow-hidden rounded-xl border shadow-sm">
-				<div className="h-[500px]">
+				<div className="h-125">
 					<CaseViewerWrapper
 						caseFile={currentStageDefinition.caseFile}
 						key={currentStageDefinition.caseFile}

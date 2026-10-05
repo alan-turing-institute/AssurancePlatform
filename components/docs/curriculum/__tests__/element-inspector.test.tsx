@@ -42,11 +42,7 @@ describe("ElementInspector", () => {
 
 	it("states how the element connects to its parent and children", () => {
 		render(<ElementInspector element={strategy} />);
-		expect(
-			screen.getByText(
-				/S1 supports G1, a goal\. S1 is supported by P1 and P2\./
-			)
-		).toBeInTheDocument();
+		expect(screen.getByText(RELATIONSHIP)).toBeInTheDocument();
 	});
 
 	it("hints at context on the card when the count is two", () => {
