@@ -1,13 +1,18 @@
 "use client";
 
-import { NextStep, NextStepProvider, useNextStep } from "nextstepjs";
-import { type ReactNode, useEffect, useRef } from "react";
+import { NextStep, NextStepProvider, type Tour, useNextStep } from "nextstepjs";
+import {
+	type Dispatch,
+	type ReactNode,
+	type SetStateAction,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import TourCard from "@/components/tour/tour-card";
-import { caseCanvasTour } from "@/lib/tours/case-canvas-tour";
-import { dashboardTour } from "@/lib/tours/dashboard-tour";
-import { demoCaseTour } from "@/lib/tours/demo-case-tour";
-
-const allTours = [dashboardTour, caseCanvasTour, demoCaseTour];
+import { allTours, getTour } from "@/lib/tours";
+import { resolveTour } from "@/lib/tours/resolve-tour";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
 
 interface TourProviderProps {
 	children: ReactNode;
@@ -30,7 +35,7 @@ interface TourProviderProps {
  * A pnpm patch (patches/nextstepjs.patch) also fixes this at the
  * library level for when the dev server picks up the patched bundle.
  */
-function TourPointerFix() {
+function TourPointerFix({ steps }: { steps: Tour[] }) {
 	const { currentStep, currentTour, isNextStepVisible } = useNextStep();
 	const prevStep = useRef(currentStep);
 
@@ -44,7 +49,7 @@ function TourPointerFix() {
 		prevStep.current = currentStep;
 
 		// Find the tour config
-		const tour = allTours.find((t) => t.tour === currentTour);
+		const tour = steps.find((t) => t.tour === currentTour);
 		if (!tour) {
 			return;
 		}
@@ -81,15 +86,68 @@ function TourPointerFix() {
 				pointer.style.height = `${height}px`;
 			}
 		});
-	}, [currentStep, currentTour, isNextStepVisible]);
+	}, [currentStep, currentTour, isNextStepVisible, steps]);
+
+	return null;
+}
+
+/**
+ * Connects `useTourControls` to the tour library while mounted. Starting a
+ * tour first waits for its targets and drops the steps whose target is
+ * absent, then hands the trimmed tour to the library, so the spotlight never
+ * stays on the previous element for a step that has nothing to point at.
+ */
+function TourControlsBridge({
+	setSteps,
+}: {
+	setSteps: Dispatch<SetStateAction<Tour[]>>;
+}) {
+	const { startNextStep, currentTour, isNextStepVisible } = useNextStep();
+	const startNextStepRef = useRef(startNextStep);
+	startNextStepRef.current = startNextStep;
+
+	useEffect(() => {
+		let mounted = true;
+		useTourControls.setState({
+			startTour: (id) => {
+				const tour = getTour(id);
+				if (!tour) {
+					return;
+				}
+				resolveTour(tour).then((resolved) => {
+					if (!mounted || resolved.steps.length === 0) {
+						return;
+					}
+					setSteps((previous) =>
+						previous.map((t) => (t.tour === id ? resolved : t))
+					);
+					startNextStepRef.current(id);
+				});
+			},
+		});
+		return () => {
+			mounted = false;
+			resetTourControls();
+		};
+	}, [setSteps]);
+
+	useEffect(() => {
+		useTourControls.setState({
+			activeTour: currentTour,
+			isTourVisible: isNextStepVisible,
+		});
+	}, [currentTour, isNextStepVisible]);
 
 	return null;
 }
 
 export function TourProvider({ children }: TourProviderProps) {
+	const [steps, setSteps] = useState<Tour[]>(allTours);
+
 	return (
 		<NextStepProvider>
-			<TourPointerFix />
+			<TourControlsBridge setSteps={setSteps} />
+			<TourPointerFix steps={steps} />
 			<NextStep
 				cardComponent={TourCard}
 				clickThroughOverlay={false}
@@ -97,7 +155,7 @@ export function TourProvider({ children }: TourProviderProps) {
 				noInViewScroll={true}
 				scrollToTop={false}
 				shadowOpacity="0.6"
-				steps={allTours}
+				steps={steps}
 			>
 				{children}
 			</NextStep>

@@ -37,6 +37,7 @@ const Dashboard = async () => {
 			<CheckUserEmail user={currentUser} />
 			<CheckTour
 				completedTours={currentUser.completedTours ?? []}
+				minWidth={1024}
 				tourId="dashboard"
 			/>
 			{assuranceCases.length === 0 ? (

@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
-import CheckTourClient from "@/components/tour/check-tour-client";
+import CheckTour from "@/components/tour/check-tour";
 import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
 import { useCaseEvents } from "@/hooks/use-case-events";
-import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
+import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case/index";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
@@ -301,7 +301,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	if (assuranceCase) {
 		return (
 			<ReactFlowProvider>
-				<CheckTourClient
+				<CheckTour
 					enabled={!loading}
 					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
 				/>

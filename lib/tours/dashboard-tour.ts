@@ -1,136 +1,64 @@
 import type { Tour } from "nextstepjs";
+import { tourStep } from "./step";
 
 export const dashboardTour: Tour = {
 	tour: "dashboard",
 	steps: [
-		{
-			icon: "👋",
-			title: "Welcome to the TEA Platform",
+		tourStep({
+			title: "Welcome to TEA",
 			content:
-				"The Trustworthy and Ethical Assurance Platform helps you create, manage, and share structured assurance cases. Let us show you around.",
+				"TEA helps you build, share and publish assurance cases: structured arguments, backed by evidence, that a system has a property such as safety or fairness. This short tour shows you around the dashboard. Use the arrow keys to move between steps, or press Escape to close it.",
 			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 0,
-			pointerRadius: 0,
-		},
-		{
-			icon: "🔍",
-			title: "Search Your Cases",
-			content: "Quickly find cases by filtering by name.",
-			selector: "[data-tour='case-filter']",
-			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "📊",
-			title: "Sort Your Cases",
+		}),
+		tourStep({
+			title: "Create a case",
 			content:
-				"Organise your cases by date created, name, or last modified to find what you need.",
-			selector: "[data-tour='case-sort']",
-			side: "left",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "📂",
-			title: "Import an Existing Case",
-			content:
-				"Already have an assurance case? Upload a JSON file to import it into the platform.",
-			selector: "[data-tour='import-case']",
-			side: "left",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "➕",
-			title: "Create a New Case",
-			content:
-				"Start building an assurance case from scratch. You'll be guided through setting up your first goal and structuring your argument.",
-			selector: "[data-tour='create-case']",
-			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🤝",
-			title: "Shared With Me",
-			content:
-				"View assurance cases that others have shared with you for collaboration or review.",
-			selector: "[data-tour='sidebar-shared']",
+				"Choose this card to start a case of your own. You give it a name and a description, and the platform opens it with a single top-level goal for you to fill in.",
+			target: "create-case",
 			side: "right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "👥",
+		}),
+		tourStep({
+			title: "Import a case",
+			content:
+				"If you already have a case as a JSON export, a file in a GitHub repository or a Google Drive backup, import it here rather than rebuilding it.",
+			target: "import-case",
+			side: "bottom-right",
+		}),
+		tourStep({
+			title: "Find a case",
+			content:
+				"Type part of a name to narrow the list. The menu to the right sorts your cases by date created, name or last modified.",
+			target: "case-filter",
+			side: "bottom",
+		}),
+		tourStep({
+			title: "Cases shared with you",
+			content:
+				"Cases that other people or teams have shared with you appear here, with the permission they granted: view, comment or edit.",
+			target: "sidebar-shared",
+			side: "right",
+		}),
+		tourStep({
 			title: "Teams",
 			content:
-				"Create or join teams to collaborate on assurance cases with colleagues.",
-			selector: "[data-tour='sidebar-teams']",
+				"Create a team to share cases with a group of colleagues at once, instead of inviting each person separately.",
+			target: "sidebar-teams",
 			side: "right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🌐",
-			title: "Discover Public Projects",
+		}),
+		tourStep({
+			title: "Discover",
 			content:
-				"Explore assurance cases shared by the community to learn from real-world examples.",
-			selector: "[data-tour='sidebar-discover']",
+				"Published cases from other users are listed here. Reading a few is a good way to see how an argument is laid out before you write your own.",
+			target: "sidebar-discover",
 			side: "right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🗑️",
-			title: "Trash",
+		}),
+		tourStep({
+			title: "Start with the tutorial case",
 			content:
-				"Deleted cases are kept here for 30 days. You can restore them or permanently remove them.",
-			selector: "[data-tour='sidebar-trash']",
-			side: "right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "📖",
-			title: "Documentation",
-			content:
-				"Access guides, tutorials, and reference material to help you get the most out of the platform.",
-			selector: "[data-tour='sidebar-docs']",
-			side: "right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🚀",
-			title: "You're Ready!",
-			content:
-				"You now know the essentials. Open the 'Tutorial: Safe Chatbot Deployment' case to learn how assurance cases are structured, or create your own to get started.",
-			side: "top",
-			showControls: true,
-			showSkip: false,
-			pointerPadding: 0,
-			pointerRadius: 0,
-		},
+				"This case is a worked example you can explore and edit without risk. Open it next: a second short tour explains each type of element as you look at it. The Documentation link in the sidebar covers everything else, and you can run this tour again from the Take the tour button at the top of the page.",
+			target: "tutorial-case",
+			side: "left",
+			final: true,
+		}),
 	],
 };

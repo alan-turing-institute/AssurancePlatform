@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useNextStep } from "nextstepjs";
 import { useMemo, useState } from "react";
 import {
 	Accordion,
@@ -25,6 +24,7 @@ import {
 	ELEMENT_GUIDE,
 	type HelpGuideEntry,
 } from "@/lib/help/help-guide";
+import { useTourControls } from "@/lib/tours/tour-controls";
 import useStore from "@/store/store";
 
 /** Case-insensitive match against an entry's title and body text. */
@@ -93,7 +93,7 @@ function HelpGuideSection({ entries, title }: HelpGuideSectionProps) {
 export const HelpModal = () => {
 	const helpModal = useHelpModal();
 	const { assuranceCase } = useStore();
-	const { startNextStep } = useNextStep();
+	const startTour = useTourControls((state) => state.startTour);
 	const [query, setQuery] = useState("");
 
 	const normalisedQuery = query.trim().toLowerCase();
@@ -120,7 +120,7 @@ export const HelpModal = () => {
 
 	const handleRestartTour = () => {
 		helpModal.onClose();
-		startNextStep(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
+		startTour(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
 	};
 
 	return (

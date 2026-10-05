@@ -125,6 +125,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 						"flex h-full flex-col items-start justify-start transition-all group-hover:bg-primary/5",
 						isDemo && "ring-2 ring-primary/20"
 					)}
+					data-tour={isDemo ? "tutorial-case" : undefined}
 				>
 					<CardHeader className="w-full flex-1">
 						{imageLoading ? (
