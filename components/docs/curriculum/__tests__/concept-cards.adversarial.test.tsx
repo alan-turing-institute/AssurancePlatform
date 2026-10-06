@@ -4,7 +4,7 @@ import { nodeTypeConfigs } from "@/components/shared/nodes/node-config";
 import type { Concept } from "@/types/curriculum";
 import ConceptCards from "../concept-cards";
 
-const CARD_TEST_ID = /^concept-card-[a-h]$/;
+const CARD_TEST_ID = /^concept-card-\w$/;
 const NODE_COLOUR = /(text|border)-node-/;
 
 const completeTask = vi.fn();
