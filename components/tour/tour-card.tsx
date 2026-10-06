@@ -88,7 +88,7 @@ const TourCard = ({
 		<div
 			aria-labelledby="tour-step-title"
 			aria-modal="true"
-			className="w-[320px] rounded-lg border border-border bg-card p-4 shadow-lg sm:w-[380px]"
+			className="w-80 rounded-lg border border-border bg-card p-4 shadow-lg sm:w-95"
 			ref={cardRef}
 			role="dialog"
 		>
