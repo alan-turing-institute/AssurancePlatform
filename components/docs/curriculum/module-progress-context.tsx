@@ -48,6 +48,13 @@ export const useModuleProgress = (): ModuleProgressContextValue => {
 };
 
 /**
+ * Like useModuleProgress, but returns null outside a ModuleProgressProvider
+ * instead of throwing.
+ */
+export const useOptionalModuleProgress =
+	(): ModuleProgressContextValue | null => useContext(ModuleProgressContext);
+
+/**
  * Extended context value with additional fields needed by the provider
  */
 type ExtendedContextValue = ModuleProgressContextValue & {

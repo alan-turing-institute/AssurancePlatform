@@ -8,20 +8,6 @@
 // Assurance Case Element Types
 // ============================================
 
-/**
- * Node types for React Flow visualisation in curriculum components.
- * Uses full element names (e.g. "propertyClaim") matching the export schema.
- *
- * Note on Context: The Prisma schema supports CONTEXT as an ElementType, but in
- * the current design context is stored as a string[] attribute on nodes
- * (see TreeNode.context), not as a separate node type.
- */
-export type CurriculumNodeType =
-	| "goal"
-	| "strategy"
-	| "propertyClaim"
-	| "evidence";
-
 export type TaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 
 export type ImportanceLevel = "critical" | "medium" | "low";
@@ -243,10 +229,13 @@ export type ConceptType =
 	| "strategy"
 	| "property_claim"
 	| "evidence"
+	| "context"
+	| "assumption"
+	| "justification"
 	| "general";
 
 /**
- * A learning concept for display in carousel or reveal components.
+ * A learning concept for display in the concept cards.
  */
 export interface Concept {
 	brief?: string;
@@ -260,26 +249,12 @@ export interface Concept {
 }
 
 /**
- * Props for ConceptCarousel component.
+ * Props for ConceptCards component.
  */
-export interface ConceptCarouselProps {
+export interface ConceptCardsProps {
 	concepts: Concept[];
-	mode?: "guided" | "free";
-	onComplete?: () => void;
-	onConceptView?: (id: string, index: number) => void;
-	/** Task ID to mark complete when all concepts have been viewed */
+	/** Task ID to mark complete when every card has been expanded once */
 	taskId?: string;
-}
-
-/**
- * Props for ConceptReveal component.
- */
-export interface ConceptRevealProps {
-	animationSpeed?: AnimationSpeed;
-	concepts: Concept[];
-	mode?: "progressive" | "all" | "interactive";
-	onConceptReveal?: (id: string) => void;
-	showDefinitions?: boolean;
 }
 
 // ============================================
@@ -344,60 +319,6 @@ export interface ReflectionPromptsProps {
 	/** Task ID to mark complete when all required prompts are submitted */
 	taskId?: string;
 	useGlobalProgress?: boolean;
-}
-
-// ============================================
-// React Flow Node/Edge Types
-// ============================================
-
-/**
- * Data attached to React Flow nodes in the case viewer.
- */
-export interface ReactFlowNodeData {
-	/** Single-string assumption from TreeNode export */
-	assumption?: string;
-	childCount?: number;
-	confidence?: number;
-	/** Context strings from TreeNode export */
-	context?: string[];
-	contextType?: string;
-	description: string;
-	hasChildren?: boolean;
-	id?: string;
-	importance?: ImportanceLevel;
-	/** Single-string justification from TreeNode export */
-	justification?: string;
-	name: string;
-	progress?: number;
-	strength?: string;
-	/** Optional display title separate from identifier */
-	title?: string;
-	/** URL for evidence nodes */
-	url?: string;
-	verificationStatus?: string;
-}
-
-/**
- * Data attached to React Flow edges.
- */
-export interface ReactFlowEdgeData {
-	animateGradient?: boolean;
-	flowSpeed?: number;
-	glowIntensity?: number;
-	gradientStops?: number;
-	particleCount?: number;
-	showLabel?: boolean;
-	state?: "active" | "error" | "success" | "warning" | "inactive";
-	strength?: number;
-}
-
-/**
- * Props for custom node components in React Flow.
- */
-export interface CustomNodeProps<T = ReactFlowNodeData> {
-	data: T;
-	isSelected?: boolean;
-	selected?: boolean;
 }
 
 // ============================================

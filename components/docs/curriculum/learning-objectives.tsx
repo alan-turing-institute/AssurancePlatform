@@ -35,20 +35,16 @@ const LearningObjectives = ({
 	// Compact variant - simple list
 	if (variant === "compact") {
 		return (
-			<div className="my-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+			<div className="my-6 rounded-lg border bg-muted/40 p-4">
 				<div className="mb-3 flex items-center gap-2">
-					<Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-					<h3 className="font-semibold text-blue-900 text-lg dark:text-blue-100">
-						{title}
-					</h3>
+					<Target className="h-5 w-5 text-primary" />
+					<h3 className="font-semibold text-foreground text-lg">{title}</h3>
 				</div>
 				<ul className="space-y-2">
 					{objectives.map((objective) => (
 						<li className="flex items-start gap-2 text-sm" key={objective.id}>
-							<span className="mt-0.5 text-blue-600 dark:text-blue-400">•</span>
-							<span className="text-blue-900 dark:text-blue-100">
-								{objective.text}
-							</span>
+							<span className="mt-0.5 text-primary">•</span>
+							<span className="text-foreground">{objective.text}</span>
 						</li>
 					))}
 				</ul>
@@ -61,17 +57,17 @@ const LearningObjectives = ({
 		return (
 			<div className="my-6">
 				<div className="mb-4 flex items-center gap-2">
-					<Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+					<Target className="h-5 w-5 text-primary" />
 					<h3 className="font-semibold text-xl">{title}</h3>
 				</div>
 				<ul className="space-y-3">
 					{objectives.map((objective) => (
 						<li className="flex items-start gap-3" key={objective.id}>
-							<Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+							<Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
 							<div className="flex-1">
 								<p>{objective.text}</p>
 								{objective.description && (
-									<p className="mt-1 text-gray-600 text-sm dark:text-gray-400">
+									<p className="mt-1 text-muted-foreground text-sm">
 										{objective.description}
 									</p>
 								)}
@@ -85,26 +81,26 @@ const LearningObjectives = ({
 
 	// Card variant (default) - rich display with optional collapsing
 	return (
-		<div className="my-6 overflow-hidden rounded-xl border border-blue-200 bg-linear-to-br from-blue-50 to-purple-50 dark:border-blue-800 dark:from-blue-900/20 dark:to-purple-900/20">
+		<div className="my-6 overflow-hidden rounded-xl border bg-muted/40">
 			{/* Header */}
 			<div className="p-6">
 				<div className="flex items-start justify-between">
 					<div className="flex flex-1 items-start gap-3">
-						<div className="rounded-lg bg-blue-600 p-2">
-							<Target className="h-6 w-6 text-white" />
+						<div className="rounded-lg bg-primary p-2">
+							<Target className="h-6 w-6 text-primary-foreground" />
 						</div>
 						<div className="flex-1">
-							<h3 className="mb-1 font-bold text-2xl text-gray-900 dark:text-gray-100">
+							<h3 className="mb-1 font-bold text-2xl text-foreground">
 								{title}
 							</h3>
-							<p className="text-gray-600 text-sm dark:text-gray-400">
+							<p className="text-muted-foreground text-sm">
 								By the end of this module, you will be able to:
 							</p>
 						</div>
 					</div>
 					{collapsible && (
 						<button
-							className="rounded-lg p-2 transition-colors hover:bg-white/50 dark:hover:bg-black/20"
+							className="rounded-lg p-2 transition-colors hover:bg-muted"
 							onClick={() => setIsExpanded(!isExpanded)}
 							type="button"
 						>
@@ -134,26 +130,26 @@ const LearningObjectives = ({
 							return (
 								<motion.div
 									animate={{ opacity: 1, x: 0 }}
-									className="flex items-start gap-4 rounded-lg bg-white p-4 transition-all dark:bg-gray-800"
+									className="flex items-start gap-4 rounded-lg border bg-card p-4 transition-all"
 									initial={{ opacity: 0, x: -20 }}
 									key={objective.id}
 									transition={{ delay: idx * 0.1 }}
 								>
-									<div className="shrink-0 rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-										<Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+									<div className="shrink-0 rounded-lg bg-muted p-2">
+										<Icon className="h-5 w-5 text-primary" />
 									</div>
 
 									<div className="flex-1">
-										<p className="mb-1 font-medium text-gray-900 dark:text-gray-100">
+										<p className="mb-1 font-medium text-foreground">
 											{objective.text}
 										</p>
 										{objective.description && (
-											<p className="text-gray-600 text-sm dark:text-gray-400">
+											<p className="text-muted-foreground text-sm">
 												{objective.description}
 											</p>
 										)}
 										{objective.relatedTask && (
-											<p className="mt-2 text-blue-600 text-xs dark:text-blue-400">
+											<p className="mt-2 text-primary text-xs">
 												Related: {objective.relatedTask}
 											</p>
 										)}

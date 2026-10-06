@@ -51,7 +51,7 @@ export const steepingConcepts: Concept[] = [
 	},
 	{
 		id: "concept-justification",
-		type: "general",
+		type: "justification",
 		name: "Justification",
 		definition:
 			"The reasoned link between a claim, the action taken and evidence offered for it.",
