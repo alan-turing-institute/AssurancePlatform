@@ -30,7 +30,7 @@ export const steepingTasks: TaskDefinition[] = [
 	createTask({
 		id: "review-core-elements",
 		title: "Review the core concepts",
-		description: "Click through the concept cards to review each term",
+		description: "Expand each concept card to review each term",
 		type: TaskType.INTERACT,
 		page: "reflection",
 		section: "core-elements",

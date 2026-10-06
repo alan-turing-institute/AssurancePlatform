@@ -23,7 +23,7 @@ export const brewingConcepts: Concept[] = [
 	},
 	{
 		id: "concept-context",
-		type: "general",
+		type: "context",
 		name: "Context",
 		definition:
 			"A boundary or definition needed to interpret a claim. It does not prove the claim.",

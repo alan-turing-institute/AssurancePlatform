@@ -68,7 +68,7 @@ export const coreElementsConcepts: Concept[] = [
 	},
 	{
 		id: "concept-context",
-		type: "general",
+		type: "context",
 		name: "Context",
 		definition:
 			"Context defines the specific conditions under which claims are valid. It specifies the boundaries, operational environment, and scope of the assurance.",
@@ -82,7 +82,7 @@ export const coreElementsConcepts: Concept[] = [
 	},
 	{
 		id: "concept-justification",
-		type: "general",
+		type: "justification",
 		name: "Justification",
 		definition:
 			"Justifications explain why a particular claim, goal, or strategy is appropriate or relevant to the argument. They provide the rationale for including an element.",
@@ -96,7 +96,7 @@ export const coreElementsConcepts: Concept[] = [
 	},
 	{
 		id: "concept-assumption",
-		type: "general",
+		type: "assumption",
 		name: "Assumption",
 		definition:
 			"Assumptions make explicit any conditions that are taken to be true without direct evidence. They identify dependencies that must hold for the argument to be valid.",

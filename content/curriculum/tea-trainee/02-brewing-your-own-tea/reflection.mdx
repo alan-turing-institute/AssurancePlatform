@@ -3,7 +3,7 @@ title: "Reflect on your first case"
 description: Review the elements and the decisions you made while building a case.
 ---
 
-import ConceptCarousel from "@/components/docs/curriculum/concept-carousel";
+import ConceptCards from "@/components/docs/curriculum/concept-cards";
 import { brewingConcepts } from "./concepts";
 import { brewingReflectionPrompts } from "./reflections";
 import ReflectionPrompts from "@/components/docs/curriculum/reflection-prompts";
@@ -31,11 +31,9 @@ export const PageContent = ({ children }) => {
 
 <div id="core-elements" className="mt-8">
 
-<ConceptCarousel
+<ConceptCards
   concepts={brewingConcepts}
-  mode="guided"
-  taskId="review-core-elements"
-/>
+  taskId="review-core-elements" />
 
 </div>
 
