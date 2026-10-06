@@ -10,8 +10,6 @@
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 
-export type ImportanceLevel = "critical" | "medium" | "low";
-
 export type QualityLevel = "high" | "medium" | "low";
 
 // ============================================
@@ -32,10 +30,7 @@ export type QualityLevel = "high" | "medium" | "low";
  * was removed (fallow — unused type exports / duplicate exports vs
  * lib/schemas/case-export.ts, which already exports all four).
  */
-export type {
-	CaseExportNested,
-	TreeNode,
-} from "@/lib/schemas/case-export";
+export type { CaseExportNested } from "@/lib/schemas/case-export";
 
 // ============================================
 // Progress Tracking Types
@@ -324,8 +319,6 @@ export interface ReflectionPromptsProps {
 // ============================================
 // Animation Types
 // ============================================
-
-export type AnimationSpeed = "slow" | "normal" | "fast";
 
 export interface AnimationPreset {
 	delay?: number;
