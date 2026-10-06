@@ -1,10 +1,13 @@
 "use client";
 
+import { HelpCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import LogoutButton from "@/components/auth/logout-button";
 import FeedbackBanner from "@/components/navigation/feedback-banner";
+import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/theme-toggle";
+import { useTourControls } from "@/lib/tours/tour-controls";
 import DesktopNav from "./desktop-nav";
 import MenuToggleButton from "./menu-toggle";
 import { MobileNav } from "./mobile-nav";
@@ -63,6 +66,21 @@ export const Navbar = ({ children, teams }: NavbarProps) => {
                 <BellIcon className="h-6 w-6" aria-hidden="true" />
               </button> */}
 
+							{pathname === "/dashboard" && (
+								<Button
+									className="hidden lg:inline-flex"
+									data-testid="dashboard-tour-button"
+									onClick={() =>
+										useTourControls.getState().startTour("dashboard")
+									}
+									size="sm"
+									type="button"
+									variant="ghost"
+								>
+									<HelpCircle aria-hidden="true" className="h-4 w-4" />
+									Take the tour
+								</Button>
+							)}
 							<div
 								aria-hidden="true"
 								className="hidden lg:block lg:h-6 lg:w-px lg:bg-border"

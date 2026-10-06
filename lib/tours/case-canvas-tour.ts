@@ -1,89 +1,63 @@
 import type { Tour } from "nextstepjs";
+import { tourStep } from "./step";
 
 export const caseCanvasTour: Tour = {
 	tour: "case-canvas",
 	steps: [
-		{
-			icon: "🎨",
-			title: "Welcome to the Case Canvas",
+		tourStep({
+			title: "The case canvas",
 			content:
-				"This is where you build and visualise your assurance case. The canvas shows a hierarchical tree of goals, strategies, claims, and evidence.",
+				"This is where you build the case. The canvas shows it as a tree: a goal at the top, broken down by strategies into property claims, each supported by evidence. This tour covers the controls; the Help button covers the element types.",
 			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 0,
-			pointerRadius: 0,
-		},
-		{
-			icon: "📝",
-			title: "Case Name",
+		}),
+		tourStep({
+			title: "Your goal",
 			content:
-				"Click here to view and edit the details of your assurance case, including its name and description.",
-			selector: "[data-tour='case-header']",
+				"Every case has a top-level goal. Where you can edit the case, the controls at the foot of the element let you change its text and add a strategy or property claim beneath it.",
+			target: "top-goal",
+			side: "right",
+		}),
+		tourStep({
+			title: "Case information",
+			content:
+				"Choose the case name, or the information button in the toolbar, to open the case's details: its name, description and other case-level settings.",
+			target: "case-header",
 			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "📋",
-			title: "Publication Status",
+		}),
+		tourStep({
+			title: "The toolbar",
 			content:
-				"Track whether your case is a Draft or Published. Click to manage the publication workflow.",
-			selector: "[data-tour='case-status']",
+				"Undo and redo step through your changes, and also work as Cmd+Z and Cmd+Shift+Z. Focus re-lays out the diagram and fits it to the window. Settings switches the diagram between top-down and left-right. Hover over any button for its name.",
+			target: "toolbar",
+			side: "top",
+		}),
+		tourStep({
+			title: "Share and export",
+			content:
+				"Share invites people or teams to view, comment on or edit the case. Export, next to it, downloads a copy in one of the supported formats, for people without an account or for your own records.",
+			target: "toolbar-share",
+			side: "top",
+		}),
+		tourStep({
+			title: "Help",
+			content:
+				"Help lists every element type and toolbar option, links to the full documentation, and can restart this tour at any time.",
+			target: "toolbar-help",
+			side: "top",
+		}),
+		tourStep({
+			title: "Draft and published",
+			content:
+				"A case starts as a draft that only you and the people you share it with can see. When it is ready, choose the status to publish a copy to Discover; the original stays editable.",
+			target: "case-status",
 			side: "bottom-right",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🛠️",
-			title: "The Toolbar",
+		}),
+		tourStep({
+			title: "Over to you",
 			content:
-				"All your editing tools are here — Undo/Redo, Auto-Layout, Case Information, Help, Share, Export, JSON View, Notes, and Settings. Hover over each icon to see what it does.",
-			selector: "[data-tour='toolbar']",
+				"Start by editing the goal, then add a strategy or claim beneath it. Keep each claim narrow enough to support with evidence. You can restart this tour from Help whenever you need it.",
 			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "↩️",
-			title: "Undo & Redo",
-			content:
-				"Made a mistake? Use undo and redo to step through your change history. You can also use Cmd+Z and Cmd+Shift+Z.",
-			selector: "[data-tour='toolbar-undo-redo']",
-			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🔗",
-			title: "Share & Export",
-			content:
-				"Invite collaborators to view or edit your case, or export it as JSON for backup and sharing.",
-			selector: "[data-tour='toolbar-share']",
-			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "✨",
-			title: "Start Building!",
-			content:
-				"You're all set. Click on any node to explore it, or use the + button in the toolbar to add a new Goal node.",
-			side: "top",
-			showControls: true,
-			showSkip: false,
-			pointerPadding: 0,
-			pointerRadius: 0,
-		},
+			final: true,
+		}),
 	],
 };

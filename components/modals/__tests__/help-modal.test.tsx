@@ -5,6 +5,7 @@ import {
 	AUTHORITATIVE_ELEMENT_TYPE_IDS,
 	ELEMENT_GUIDE,
 } from "@/lib/help/help-guide";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
 import useStore from "@/store/store";
 
 const onCloseSpy = vi.fn();
@@ -25,11 +26,7 @@ vi.mock("@/hooks/modal-hooks", async () => {
 
 const READ_MORE_LINK_NAME = /read more in the docs/i;
 
-const startNextStepSpy = vi.fn();
-
-vi.mock("nextstepjs", () => ({
-	useNextStep: () => ({ startNextStep: startNextStepSpy }),
-}));
+const startTourSpy = vi.fn();
 
 // Import after the mocks above so the module under test picks them up.
 const { HelpModal } = await import("../help-modal");
@@ -42,7 +39,9 @@ describe("HelpModal", () => {
 	beforeEach(() => {
 		resetStore();
 		onCloseSpy.mockClear();
-		startNextStepSpy.mockClear();
+		startTourSpy.mockClear();
+		resetTourControls();
+		useTourControls.setState({ startTour: startTourSpy });
 	});
 
 	it("opens from the hook and renders the sheet title", () => {
@@ -103,7 +102,7 @@ describe("HelpModal", () => {
 		await user.click(screen.getByRole("button", { name: "Restart the tour" }));
 
 		expect(onCloseSpy).toHaveBeenCalledTimes(1);
-		expect(startNextStepSpy).toHaveBeenCalledWith("demo-case");
+		expect(startTourSpy).toHaveBeenCalledWith("demo-case");
 	});
 
 	it("restarts the case-canvas tour (not the demo tour) when the case isn't a demo, and closes the sheet", async () => {
@@ -115,7 +114,7 @@ describe("HelpModal", () => {
 		await user.click(screen.getByRole("button", { name: "Restart the tour" }));
 
 		expect(onCloseSpy).toHaveBeenCalledTimes(1);
-		expect(startNextStepSpy).toHaveBeenCalledWith("case-canvas");
+		expect(startTourSpy).toHaveBeenCalledWith("case-canvas");
 	});
 
 	it("narrows to an entry whose match is only in its body text, case-insensitively", async () => {

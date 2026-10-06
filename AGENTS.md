@@ -58,6 +58,8 @@ Host development against Docker Postgres:
 The app is at `http://localhost:3000`; the dev database is exposed on port 5432.
 With `SEED_USER_PASSWORD` provisioned, seed via `pnpm exec tsx prisma/seed/dev-seed.ts`.
 Seed users are `chris`, `alice`, `bob` and `charlie`; alice and bob share Test Team, charlie is an external viewer.
+To see the first-visit tours locally, register a new user, or run `UPDATE users SET completed_tours = '{}' WHERE username = 'chris'` on the dev database and reload.
+Seed users have every tour marked complete, because the end-to-end tests depend on it.
 For LAN review, `next dev` blocks cross-origin HMR and static-chunk requests by default; set `NEXT_DEV_ALLOWED_ORIGINS` (comma-separated hosts, no protocol) to the reviewer's address before starting the server.
 
 The full local stack starts with `docker compose -f docker-compose.local.yml up -d --build`.

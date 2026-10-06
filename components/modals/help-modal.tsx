@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useNextStep } from "nextstepjs";
 import { useMemo, useState } from "react";
 import {
 	Accordion,
@@ -25,6 +24,7 @@ import {
 	ELEMENT_GUIDE,
 	type HelpGuideEntry,
 } from "@/lib/help/help-guide";
+import { useTourControls } from "@/lib/tours/tour-controls";
 import useStore from "@/store/store";
 
 /** Case-insensitive match against an entry's title and body text. */
@@ -93,7 +93,6 @@ function HelpGuideSection({ entries, title }: HelpGuideSectionProps) {
 export const HelpModal = () => {
 	const helpModal = useHelpModal();
 	const { assuranceCase } = useStore();
-	const { startNextStep } = useNextStep();
 	const [query, setQuery] = useState("");
 
 	const normalisedQuery = query.trim().toLowerCase();
@@ -120,7 +119,9 @@ export const HelpModal = () => {
 
 	const handleRestartTour = () => {
 		helpModal.onClose();
-		startNextStep(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
+		useTourControls
+			.getState()
+			.startTour(assuranceCase?.isDemo ? "demo-case" : "case-canvas");
 	};
 
 	return (
@@ -164,7 +165,12 @@ export const HelpModal = () => {
 				</div>
 
 				<SheetFooter className="flex-row items-center justify-between gap-2 sm:justify-between">
-					<Button onClick={handleRestartTour} type="button" variant="outline">
+					<Button
+						data-tour-return-focus='[data-testid="toolbar-help"]'
+						onClick={handleRestartTour}
+						type="button"
+						variant="outline"
+					>
 						Restart the tour
 					</Button>
 					<Button asChild variant="ghost">

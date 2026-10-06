@@ -1,13 +1,18 @@
 "use client";
 
-import { NextStep, NextStepProvider, useNextStep } from "nextstepjs";
-import { type ReactNode, useEffect, useRef } from "react";
+import { NextStep, NextStepProvider, type Tour, useNextStep } from "nextstepjs";
+import {
+	type Dispatch,
+	type ReactNode,
+	type SetStateAction,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import TourCard from "@/components/tour/tour-card";
-import { caseCanvasTour } from "@/lib/tours/case-canvas-tour";
-import { dashboardTour } from "@/lib/tours/dashboard-tour";
-import { demoCaseTour } from "@/lib/tours/demo-case-tour";
-
-const allTours = [dashboardTour, caseCanvasTour, demoCaseTour];
+import { allTours, getTour } from "@/lib/tours";
+import { resolveTour } from "@/lib/tours/resolve-tour";
+import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
 
 interface TourProviderProps {
 	children: ReactNode;
@@ -30,7 +35,7 @@ interface TourProviderProps {
  * A pnpm patch (patches/nextstepjs.patch) also fixes this at the
  * library level for when the dev server picks up the patched bundle.
  */
-function TourPointerFix() {
+function TourPointerFix({ steps }: { steps: Tour[] }) {
 	const { currentStep, currentTour, isNextStepVisible } = useNextStep();
 	const prevStep = useRef(currentStep);
 
@@ -44,7 +49,7 @@ function TourPointerFix() {
 		prevStep.current = currentStep;
 
 		// Find the tour config
-		const tour = allTours.find((t) => t.tour === currentTour);
+		const tour = steps.find((t) => t.tour === currentTour);
 		if (!tour) {
 			return;
 		}
@@ -81,15 +86,117 @@ function TourPointerFix() {
 				pointer.style.height = `${height}px`;
 			}
 		});
-	}, [currentStep, currentTour, isNextStepVisible]);
+	}, [currentStep, currentTour, isNextStepVisible, steps]);
+
+	return null;
+}
+
+/**
+ * Connects `useTourControls` to the tour library while mounted. Starting a
+ * tour first waits for its targets and drops the steps whose target is
+ * absent, then hands the trimmed tour to the library, so the spotlight never
+ * stays on the previous element for a step that has nothing to point at.
+ */
+function TourControlsBridge({
+	setSteps,
+}: {
+	setSteps: Dispatch<SetStateAction<Tour[]>>;
+}) {
+	const { startNextStep, currentTour, isNextStepVisible } = useNextStep();
+	const startNextStepRef = useRef(startNextStep);
+	startNextStepRef.current = startNextStep;
+	const returnFocusRef = useRef<{
+		element: HTMLElement;
+		fallback: string | undefined;
+	} | null>(null);
+	const wasVisibleRef = useRef(false);
+
+	useEffect(() => {
+		let mounted = true;
+		let generation = 0;
+		useTourControls.setState({
+			ready: true,
+			startTour: (id) => {
+				const tour = getTour(id);
+				if (!tour) {
+					return;
+				}
+				// Each start supersedes the one before it, and a start only
+				// goes ahead on the page it was requested from.
+				generation += 1;
+				const mine = generation;
+				const origin = document.activeElement;
+				returnFocusRef.current =
+					origin instanceof HTMLElement && origin !== document.body
+						? { element: origin, fallback: origin.dataset.tourReturnFocus }
+						: null;
+				const requestedAt = window.location.pathname;
+				resolveTour(tour).then((resolved) => {
+					if (
+						!mounted ||
+						mine !== generation ||
+						window.location.pathname !== requestedAt ||
+						resolved.steps.length === 0
+					) {
+						return;
+					}
+					setSteps((previous) =>
+						previous.map((t) => (t.tour === id ? resolved : t))
+					);
+					startNextStepRef.current(id);
+				});
+			},
+		});
+		return () => {
+			mounted = false;
+			resetTourControls();
+		};
+	}, [setSteps]);
+
+	useEffect(() => {
+		useTourControls.setState({
+			activeTour: currentTour,
+			isTourVisible: isNextStepVisible,
+		});
+	}, [currentTour, isNextStepVisible]);
+
+	// When the tour closes with nothing focused, hand focus back to the
+	// control that started it, or to the element its `data-tour-return-focus`
+	// selector names when that control has since been removed.
+	useEffect(() => {
+		if (isNextStepVisible) {
+			wasVisibleRef.current = true;
+			return;
+		}
+		if (!wasVisibleRef.current) {
+			return;
+		}
+		wasVisibleRef.current = false;
+		const origin = returnFocusRef.current;
+		returnFocusRef.current = null;
+		const active = document.activeElement;
+		if (!origin || (active && active !== document.body)) {
+			return;
+		}
+		let target: HTMLElement | null = null;
+		if (origin.element.isConnected) {
+			target = origin.element;
+		} else if (origin.fallback) {
+			target = document.querySelector<HTMLElement>(origin.fallback);
+		}
+		target?.focus();
+	}, [isNextStepVisible]);
 
 	return null;
 }
 
 export function TourProvider({ children }: TourProviderProps) {
+	const [steps, setSteps] = useState<Tour[]>(allTours);
+
 	return (
 		<NextStepProvider>
-			<TourPointerFix />
+			<TourControlsBridge setSteps={setSteps} />
+			<TourPointerFix steps={steps} />
 			<NextStep
 				cardComponent={TourCard}
 				clickThroughOverlay={false}
@@ -97,7 +204,7 @@ export function TourProvider({ children }: TourProviderProps) {
 				noInViewScroll={true}
 				scrollToTop={false}
 				shadowOpacity="0.6"
-				steps={allTours}
+				steps={steps}
 			>
 				{children}
 			</NextStep>

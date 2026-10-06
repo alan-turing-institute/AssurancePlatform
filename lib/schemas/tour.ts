@@ -1,16 +1,11 @@
 import { z } from "zod";
 
-/**
- * Known tour IDs in the platform.
- * Matches the list used in `app/api/user/tours/route.ts`.
- */
-export const KNOWN_TOUR_IDS = [
-	"dashboard",
-	"case-canvas",
-	"demo-case",
-] as const;
+import { TOUR_IDS } from "@/lib/tours";
 
-export type TourId = (typeof KNOWN_TOUR_IDS)[number];
+/** Known tour IDs in the platform; the list lives in `lib/tours`. */
+export const KNOWN_TOUR_IDS = TOUR_IDS;
+
+export type { TourId } from "@/lib/tours";
 
 /**
  * Schema for marking a tour as completed.
