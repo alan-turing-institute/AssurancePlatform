@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect } from "react";
@@ -35,7 +34,7 @@ const getProgressDotClass = (
 
 	if (stageId === currentStage) {
 		// Current stage - highlighted
-		return `${baseClasses} ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-gray-900`;
+		return `${baseClasses} ring-2 ring-primary/40 ring-offset-2 ring-offset-background`;
 	}
 	if (isCompleted) {
 		// Completed stage - filled
@@ -58,12 +57,12 @@ const getDotBgClass = (
 	isCompleted: boolean
 ): string => {
 	if (stageId === currentStage) {
-		return "bg-blue-600 text-white";
+		return "bg-primary text-primary-foreground";
 	}
 	if (isCompleted) {
-		return "bg-emerald-500 text-white";
+		return "bg-success text-success-foreground";
 	}
-	return "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400";
+	return "bg-muted text-muted-foreground";
 };
 
 /**
@@ -92,12 +91,30 @@ const getConnectorClass = (
 	isNextAccessible: boolean
 ): string => {
 	if (isCompleted) {
-		return "bg-emerald-500";
+		return "bg-success";
 	}
 	if (isNextAccessible) {
-		return "bg-blue-300 dark:bg-blue-700";
+		return "bg-primary/40";
 	}
-	return "bg-gray-200 dark:bg-gray-700";
+	return "bg-border";
+};
+
+/**
+ * True when the key press belongs to something else on the page: a text
+ * field or select (the arrow keys change their value), the canvas (arrow keys
+ * pan and move focus between nodes), a dialog (portalled outside the canvas), or
+ * any region marked `.nokey`.
+ */
+const isKeyboardCaptured = (target: EventTarget | null): boolean => {
+	if (!(target instanceof Element)) {
+		return false;
+	}
+	return (
+		target.matches("input, textarea, select, [contenteditable]") ||
+		target.closest(
+			'.react-flow, .nokey, [role="dialog"], [role="alertdialog"]'
+		) !== null
+	);
 };
 
 /**
@@ -148,6 +165,9 @@ const StageSelector = ({
 		}
 
 		const handleKeyDown = (e: KeyboardEvent): void => {
+			if (isKeyboardCaptured(e.target)) {
+				return;
+			}
 			if (e.key === "ArrowRight") {
 				e.preventDefault();
 				onAdvance();
@@ -168,14 +188,14 @@ const StageSelector = ({
 	return (
 		<div className="w-full">
 			{/* Compact horizontal stepper */}
-			<div className="flex items-center justify-between gap-1 rounded-lg bg-gray-50 p-2 sm:gap-2 sm:p-3 dark:bg-gray-800/50">
+			<div className="flex items-center justify-between gap-1 rounded-lg bg-muted/40 p-2 sm:gap-2 sm:p-3">
 				{/* Previous button */}
 				<button
 					aria-label="Previous stage"
 					className={`flex-shrink-0 rounded-full p-1.5 transition-colors sm:p-2 ${
 						canGoBack
-							? "bg-white text-gray-600 shadow-sm hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-							: "cursor-not-allowed text-gray-300 dark:text-gray-600"
+							? "bg-background text-foreground shadow-sm hover:bg-accent"
+							: "cursor-not-allowed text-muted-foreground/50"
 					}`}
 					disabled={!canGoBack}
 					onClick={goToPrevious}
@@ -211,16 +231,8 @@ const StageSelector = ({
 									onClick={() => handleStageClick(stage.id)}
 									type="button"
 								>
-									<motion.div
-										animate={{
-											scale: isCurrent ? 1.15 : 1,
-										}}
-										className={`flex h-7 w-7 items-center justify-center rounded-full font-semibold text-xs sm:h-9 sm:w-9 sm:text-sm ${getDotBgClass(stage.id, currentStage, isCompleted)}`}
-										transition={{
-											type: "spring",
-											stiffness: 300,
-											damping: 20,
-										}}
+									<div
+										className={`flex h-7 w-7 items-center justify-center rounded-full font-semibold text-xs transition-transform sm:h-9 sm:w-9 sm:text-sm ${isCurrent ? "scale-110" : ""} ${getDotBgClass(stage.id, currentStage, isCompleted)}`}
 									>
 										{renderDotContent(
 											stage.id,
@@ -228,7 +240,7 @@ const StageSelector = ({
 											isCurrent,
 											isAccessible
 										)}
-									</motion.div>
+									</div>
 								</button>
 
 								{/* Connector line (not after last dot) */}
@@ -246,7 +258,7 @@ const StageSelector = ({
 				{isLastStage && !isCurrentStageCompleted ? (
 					<button
 						aria-label="Mark exploration complete"
-						className="flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1.5 font-medium text-sm text-white shadow-sm transition-colors hover:bg-emerald-700 sm:gap-1.5 sm:px-3 sm:py-2 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+						className="flex flex-shrink-0 items-center gap-1 rounded-full bg-success px-2.5 py-1.5 font-medium text-sm text-success-foreground shadow-sm transition-colors hover:bg-success/90 sm:gap-1.5 sm:px-3 sm:py-2"
 						onClick={onAdvance}
 						type="button"
 					>
@@ -262,8 +274,8 @@ const StageSelector = ({
 						}
 						className={`flex-shrink-0 rounded-full p-1.5 transition-colors sm:p-2 ${
 							isLastStage && isCurrentStageCompleted
-								? "cursor-not-allowed text-gray-300 dark:text-gray-600"
-								: "bg-white text-gray-600 shadow-sm hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+								? "cursor-not-allowed text-muted-foreground/50"
+								: "bg-background text-foreground shadow-sm hover:bg-accent"
 						}`}
 						disabled={isLastStage && isCurrentStageCompleted}
 						onClick={onAdvance}

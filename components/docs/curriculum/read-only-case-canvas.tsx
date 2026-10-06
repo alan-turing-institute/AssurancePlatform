@@ -23,10 +23,11 @@
  * does not briefly inherit docs-page state before its own fetch resolves.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
 	Background,
 	Controls,
+	type OnSelectionChangeParams,
 	ReactFlowProvider,
 	useReactFlow,
 } from "reactflow";
@@ -39,6 +40,10 @@ import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { caseExportToAssuranceCase } from "@/lib/docs/case-export-to-assurance-case";
+import {
+	type SelectedElementSummary,
+	summariseSelectedNode,
+} from "@/lib/docs/selected-element";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import useStore from "@/store/store";
 
@@ -50,9 +55,14 @@ const edgeTypes = {
 export interface ReadOnlyCaseCanvasProps {
 	/** A case in the same v1.0 nested export format the import/export pipeline uses. */
 	caseData: CaseExportNested;
+	/** Called with the selected element's summary, or null when nothing is selected or the case changes. */
+	onSelectedElementChange?: (element: SelectedElementSummary | null) => void;
 }
 
-function ReadOnlyCaseCanvasInner({ caseData }: ReadOnlyCaseCanvasProps) {
+function ReadOnlyCaseCanvasInner({
+	caseData,
+	onSelectedElementChange,
+}: ReadOnlyCaseCanvasProps) {
 	const { fitView } = useReactFlow();
 	const {
 		nodes,
@@ -73,6 +83,35 @@ function ReadOnlyCaseCanvasInner({ caseData }: ReadOnlyCaseCanvasProps) {
 	// clears and reloads the case, self-sustaining.
 	const fitViewRef = useRef(fitView);
 	fitViewRef.current = fitView;
+
+	// Selection reaches the parent through refs so the handler handed to React
+	// Flow keeps one identity for the canvas's whole lifetime (React Flow
+	// re-registers its selection listener whenever the callback changes).
+	const nodesRef = useRef(nodes);
+	nodesRef.current = nodes;
+	const edgesRef = useRef(edges);
+	edgesRef.current = edges;
+	const onSelectedElementChangeRef = useRef(onSelectedElementChange);
+	onSelectedElementChangeRef.current = onSelectedElementChange;
+
+	const handleSelectionChange = useCallback(
+		({ nodes: selected }: OnSelectionChangeParams) => {
+			const first = selected[0];
+			onSelectedElementChangeRef.current?.(
+				first
+					? {
+							...summariseSelectedNode(
+								first,
+								nodesRef.current,
+								edgesRef.current
+							),
+							selectedNames: selected.map((n) => String(n.data?.name ?? "")),
+						}
+					: null
+			);
+		},
+		[]
+	);
 
 	// Separate from the case-loading effect below (which re-runs per stage,
 	// i.e. per `caseData` change): this flag is a property of the canvas
@@ -114,6 +153,7 @@ function ReadOnlyCaseCanvasInner({ caseData }: ReadOnlyCaseCanvasProps) {
 			setAssuranceCase(null);
 			setNodes([]);
 			setEdges([]);
+			onSelectedElementChangeRef.current?.(null);
 		};
 	}, [caseData, setAssuranceCase, setNodes, setEdges]);
 
@@ -139,6 +179,7 @@ function ReadOnlyCaseCanvasInner({ caseData }: ReadOnlyCaseCanvasProps) {
 			nodesDraggable={false}
 			nodeTypes={nodeTypes}
 			onNodesChange={onNodesChange}
+			onSelectionChange={handleSelectionChange}
 		>
 			<Controls />
 			<Background />
