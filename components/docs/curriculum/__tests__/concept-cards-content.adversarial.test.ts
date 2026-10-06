@@ -5,10 +5,6 @@ import type { Concept } from "@/types/curriculum";
 
 const IMPORT_CARDS =
 	/import ConceptCards from "@\/components\/docs\/curriculum\/concept-cards"/;
-const FRONTMATTER = /^---[\s\S]*?---/;
-const IMPORT_EXPORT_LINES = /^(import|export) .*$/gm;
-const BRACES = /\{[^{}]*\}/g;
-const TAGS = /<[^>]*>/g;
 const CAROUSEL = /ConceptCarousel/i;
 const SOURCE_FILE = /\.(tsx?|mdx?|json|jsx?)$/;
 
@@ -82,11 +78,21 @@ describe("reflection pages", () => {
 
 	it("keep the prose free of carousel instructions and exclamation marks", () => {
 		for (const f of reflections) {
-			const prose = readFileSync(f, "utf8")
-				.replace(FRONTMATTER, "")
-				.replace(IMPORT_EXPORT_LINES, "")
-				.replace(BRACES, "")
-				.replace(TAGS, "");
+			const lines = readFileSync(f, "utf8").split("\n");
+			const bodyStart =
+				lines[0]?.trim() === "---" ? lines.indexOf("---", 1) + 1 : 0;
+			const prose = lines
+				.slice(bodyStart)
+				.map((line) => line.trim())
+				.filter(
+					(line) =>
+						line !== "" &&
+						!line.startsWith("import") &&
+						!line.startsWith("export") &&
+						!line.startsWith("<") &&
+						!line.startsWith("{")
+				)
+				.join("\n");
 			expect(prose, f).not.toContain("Click through each card");
 			expect(prose, f).not.toContain("!");
 		}
