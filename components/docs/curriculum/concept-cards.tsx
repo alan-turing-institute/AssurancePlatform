@@ -83,7 +83,10 @@ const ConceptCard = ({ concept, expanded, onToggle }: ConceptCardProps) => {
 
 	return (
 		<div
-			className={cn("rounded-xl border-2 bg-card shadow-sm", style.border)}
+			className={cn(
+				"not-prose rounded-xl border-2 bg-card shadow-sm",
+				style.border
+			)}
 			data-testid={`concept-card-${concept.id}`}
 		>
 			<div className="flex items-start gap-3 p-4">
