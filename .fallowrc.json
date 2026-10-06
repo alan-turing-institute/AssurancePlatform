@@ -11,8 +11,7 @@
     "coverage-merge-input/**"
   ],
   "entry": [
-    "components/docs/curriculum/index.ts",
-    "components/docs/curriculum/concept-carousel.tsx",
+    "components/docs/curriculum/concept-cards.tsx",
     "components/docs/curriculum/learning-objectives.tsx",
     "components/docs/curriculum/module-card.tsx",
     "components/docs/curriculum/module-header.tsx",

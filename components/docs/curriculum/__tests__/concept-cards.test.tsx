@@ -93,20 +93,40 @@ describe("ConceptCards", () => {
 
 	it("completes the task once, after every card has been expanded", () => {
 		const completeTask = vi.fn();
+		const getTask = vi.fn(() => undefined);
 		render(
 			<ModuleProgressContext.Provider
-				value={{ completeTask } as unknown as ModuleProgressContextValue}
+				value={
+					{ completeTask, getTask } as unknown as ModuleProgressContextValue
+				}
 			>
 				<ConceptCards concepts={concepts} taskId="review-core-elements" />
 			</ModuleProgressContext.Provider>
 		);
-		expandAll();
+		for (const [index, concept] of concepts.entries()) {
+			fireEvent.click(
+				screen.getByRole("button", { name: `Expand ${concept.name}` })
+			);
+			if (index < concepts.length - 1) {
+				fireEvent.click(
+					screen.getByRole("button", { name: `Collapse ${concept.name}` })
+				);
+				expect(completeTask).not.toHaveBeenCalled();
+			}
+			if (index === 0) {
+				expect(screen.getByText("1 of 4 reviewed")).toBeInTheDocument();
+			}
+		}
 		expect(completeTask).toHaveBeenCalledTimes(1);
 		expect(completeTask).toHaveBeenCalledWith("review-core-elements");
 
 		// Collapsing and re-expanding does not complete it again.
-		fireEvent.click(screen.getByRole("button", { name: "Collapse Goal" }));
-		fireEvent.click(screen.getByRole("button", { name: "Expand Goal" }));
+		fireEvent.click(
+			screen.getByRole("button", { name: "Collapse Justification" })
+		);
+		fireEvent.click(
+			screen.getByRole("button", { name: "Expand Justification" })
+		);
 		expect(completeTask).toHaveBeenCalledTimes(1);
 	});
 

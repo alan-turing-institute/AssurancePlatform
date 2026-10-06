@@ -3,6 +3,15 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Concept } from "@/types/curriculum";
 
+const IMPORT_CARDS =
+	/import ConceptCards from "@\/components\/docs\/curriculum\/concept-cards"/;
+const FRONTMATTER = /^---[\s\S]*?---/;
+const IMPORT_EXPORT_LINES = /^(import|export) .*$/gm;
+const BRACES = /\{[^{}]*\}/g;
+const TAGS = /<[^>]*>/g;
+const CAROUSEL = /ConceptCarousel/i;
+const SOURCE_FILE = /\.(tsx?|mdx?|json|jsx?)$/;
+
 const ROOT = path.resolve(import.meta.dirname, "../../../..");
 const TRAINEE = path.join(ROOT, "content/curriculum/tea-trainee");
 
@@ -17,10 +26,10 @@ const conceptTypes = [
 	"general",
 ];
 
-const conceptModules = import.meta.glob<Record<string, unknown>>(
+const conceptModules = import.meta.glob(
 	"../../../../content/curriculum/tea-trainee/*/concepts.ts",
 	{ eager: true }
-);
+) as Record<string, Record<string, unknown>>;
 
 const allConcepts = Object.entries(conceptModules).flatMap(([file, mod]) =>
 	Object.values(mod)
@@ -66,20 +75,18 @@ describe("reflection pages", () => {
 	it("import ConceptCards and never mention the carousel", () => {
 		for (const f of reflections) {
 			const src = readFileSync(f, "utf8");
-			expect(src, f).toMatch(
-				/import ConceptCards from "@\/components\/docs\/curriculum\/concept-cards"/
-			);
-			expect(src, f).not.toMatch(/ConceptCarousel/i);
+			expect(src, f).toMatch(IMPORT_CARDS);
+			expect(src, f).not.toMatch(CAROUSEL);
 		}
 	});
 
 	it("keep the prose free of carousel instructions and exclamation marks", () => {
 		for (const f of reflections) {
 			const prose = readFileSync(f, "utf8")
-				.replace(/^---[\s\S]*?---/, "")
-				.replace(/^(import|export) .*$/gm, "")
-				.replace(/\{[^{}]*\}/g, "")
-				.replace(/<[^>]*>/g, "");
+				.replace(FRONTMATTER, "")
+				.replace(IMPORT_EXPORT_LINES, "")
+				.replace(BRACES, "")
+				.replace(TAGS, "");
 			expect(prose, f).not.toContain("Click through each card");
 			expect(prose, f).not.toContain("!");
 		}
@@ -119,11 +126,11 @@ describe("removed files", () => {
 
 	it("are not referenced from app, components, content, lib or types", () => {
 		const needles = [
-			"concept-" + "carousel",
-			"ConceptCa" + "rousel",
-			"elk-" + "layout",
-			"case-data-" + "transformer",
-			"@/components/docs/curriculum\"",
+			"concept-carousel",
+			"ConceptCarousel",
+			"elk-layout",
+			"case-data-transformer",
+			'@/components/docs/curriculum"',
 			"@/components/docs/curriculum'",
 			"@/components/docs/curriculum/index",
 			...removedFiles
@@ -134,7 +141,7 @@ describe("removed files", () => {
 		const hits: string[] = [];
 		for (const dir of ["app", "components", "content", "lib", "types"]) {
 			for (const f of walk(path.join(ROOT, dir))) {
-				if (!/\.(tsx?|mdx?|json|jsx?)$/.test(f) || f.endsWith(self)) {
+				if (!SOURCE_FILE.test(f) || f.endsWith(self)) {
 					continue;
 				}
 				const src = readFileSync(f, "utf8");

@@ -157,7 +157,7 @@ const LearningObjectives = ({
 
 									{objective.badge && (
 										<div className="shrink-0">
-											<Award className="h-5 w-5 text-yellow-500" />
+											<Award className="h-5 w-5 text-warning" />
 										</div>
 									)}
 								</motion.div>

@@ -162,6 +162,9 @@ const ConceptCards = ({
 	const [viewed, setViewed] = useState<Set<string>>(new Set());
 	const completedRef = useRef(false);
 	const completeTask = progress?.completeTask;
+	const alreadyCompleted = Boolean(
+		taskId && progress?.getTask(taskId)?.completed
+	);
 
 	const toggle = (id: string) => {
 		setExpanded((prev) => {
@@ -180,11 +183,17 @@ const ConceptCards = ({
 		concepts.length > 0 && concepts.every((c) => viewed.has(c.id));
 
 	useEffect(() => {
-		if (allViewed && taskId && completeTask && !completedRef.current) {
+		if (
+			allViewed &&
+			taskId &&
+			completeTask &&
+			!alreadyCompleted &&
+			!completedRef.current
+		) {
 			completedRef.current = true;
 			completeTask(taskId);
 		}
-	}, [allViewed, taskId, completeTask]);
+	}, [allViewed, taskId, completeTask, alreadyCompleted]);
 
 	if (concepts.length === 0) {
 		return null;

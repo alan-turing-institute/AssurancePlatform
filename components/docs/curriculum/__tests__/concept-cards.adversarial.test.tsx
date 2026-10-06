@@ -4,6 +4,9 @@ import { nodeTypeConfigs } from "@/components/shared/nodes/node-config";
 import type { Concept } from "@/types/curriculum";
 import ConceptCards from "../concept-cards";
 
+const CARD_TEST_ID = /^concept-card-[a-h]$/;
+const NODE_COLOUR = /(text|border)-node-/;
+
 const completeTask = vi.fn();
 let progress: {
 	completeTask: (id: string) => void;
@@ -15,7 +18,13 @@ vi.mock("../module-progress-context", () => ({
 }));
 
 const make = (id: string, type: Concept["type"], extra?: Partial<Concept>) =>
-	({ id, type, name: `NaMe ${id}`, definition: `DeF ${id}`, ...extra }) as Concept;
+	({
+		id,
+		type,
+		name: `NaMe ${id}`,
+		definition: `DeF ${id}`,
+		...extra,
+	}) as Concept;
 
 const concepts: Concept[] = [
 	make("a", "goal", { details: ["d1"], example: "ex" }),
@@ -27,6 +36,14 @@ const concepts: Concept[] = [
 	make("g", "justification"),
 	make("h", "general"),
 ];
+
+const conceptAt = (index: number): Concept => {
+	const concept = concepts[index];
+	if (!concept) {
+		throw new Error(`No concept at index ${index}`);
+	}
+	return concept;
+};
 
 const expand = (c: Concept) =>
 	fireEvent.click(screen.getByRole("button", { name: `Expand ${c.name}` }));
@@ -44,7 +61,7 @@ beforeEach(() => {
 describe("ConceptCards rendering", () => {
 	it("renders one card per concept in the given order, text as given", () => {
 		render(<ConceptCards concepts={concepts} />);
-		const cards = screen.getAllByTestId(/^concept-card-[a-h]$/);
+		const cards = screen.getAllByTestId(CARD_TEST_ID);
 		expect(cards.map((c) => c.dataset.testid)).toEqual(
 			concepts.map((c) => `concept-card-${c.id}`)
 		);
@@ -61,13 +78,11 @@ describe("ConceptCards rendering", () => {
 				?.getAttribute("class") ?? "";
 		expect(iconClass("a")).toContain(nodeTypeConfigs.goal.colours.icon);
 		expect(iconClass("b")).toContain(nodeTypeConfigs.strategy.colours.icon);
-		expect(iconClass("c")).toContain(
-			nodeTypeConfigs.property.colours.icon
-		);
+		expect(iconClass("c")).toContain(nodeTypeConfigs.property.colours.icon);
 		expect(iconClass("d")).toContain(nodeTypeConfigs.evidence.colours.icon);
 		for (const id of ["e", "f", "g", "h"]) {
 			const card = screen.getByTestId(`concept-card-${id}`);
-			expect(card.outerHTML).not.toMatch(/(text|border)-node-/);
+			expect(card.outerHTML).not.toMatch(NODE_COLOUR);
 		}
 	});
 
@@ -82,7 +97,7 @@ describe("ConceptCards rendering", () => {
 	it("shows details and example only once expanded", () => {
 		render(<ConceptCards concepts={concepts} />);
 		expect(screen.queryByText("d1")).toBeNull();
-		expand(concepts[0]);
+		expand(conceptAt(0));
 		expect(screen.getByText("d1")).toBeTruthy();
 		expect(screen.getByText("ex")).toBeTruthy();
 	});
@@ -97,10 +112,10 @@ describe("ConceptCards expand and reviewed count", () => {
 		fireEvent.click(btn);
 		expect(btn.getAttribute("aria-expanded")).toBe("true");
 		expect(screen.getByText("1 of 8 reviewed")).toBeTruthy();
-		collapse(concepts[0]);
+		collapse(conceptAt(0));
 		expect(btn.getAttribute("aria-expanded")).toBe("false");
 		expect(screen.getByText("1 of 8 reviewed")).toBeTruthy();
-		expand(concepts[0]);
+		expand(conceptAt(0));
 		expect(screen.getByText("1 of 8 reviewed")).toBeTruthy();
 	});
 
@@ -127,17 +142,17 @@ describe("ConceptCards completion", () => {
 		expect(completeTask).toHaveBeenCalledTimes(1);
 		expect(completeTask).toHaveBeenCalledWith("t1");
 		// further toggling does not re-fire
-		collapse(concepts[0]);
-		expand(concepts[0]);
-		collapse(concepts[1]);
+		collapse(conceptAt(0));
+		expand(conceptAt(0));
+		collapse(conceptAt(1));
 		expect(completeTask).toHaveBeenCalledTimes(1);
 	});
 
 	it("does not complete when a card is toggled repeatedly but others are unseen", () => {
 		render(<ConceptCards concepts={concepts} taskId="t1" />);
 		for (let i = 0; i < 3; i++) {
-			expand(concepts[0]);
-			collapse(concepts[0]);
+			expand(conceptAt(0));
+			collapse(conceptAt(0));
 		}
 		expect(completeTask).not.toHaveBeenCalled();
 	});
