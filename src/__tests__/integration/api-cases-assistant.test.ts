@@ -1,5 +1,6 @@
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readUserApiKey } from "@/lib/plugins/assistant/key-store";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
@@ -19,6 +20,10 @@ vi.mock("@/lib/auth/validate-session", () => ({
 }));
 
 // The model provider is replaced: no test here may reach a real model.
+vi.mock("@/lib/plugins/assistant/key-store", () => ({
+	readUserApiKey: vi.fn().mockResolvedValue("ollama"),
+}));
+
 const mockModel = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("@/lib/plugins/assistant/model", () => ({
 	createAssistantModel: () => mockModel.current,
@@ -84,7 +89,6 @@ function useModel(
 beforeEach(async () => {
 	await mockNoAuth();
 	vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", BASE_URL);
-	vi.stubEnv("ASSISTANT_DEV_API_KEY", "ollama");
 	useModel([textStep("ok")]);
 });
 
@@ -270,7 +274,7 @@ describe("POST /api/cases/[id]/assistant — plugin and configuration", () => {
 	it("returns 409 when no API key is available", async () => {
 		const { owner, testCase } = await setup();
 		await configure(owner.id);
-		vi.stubEnv("ASSISTANT_DEV_API_KEY", "");
+		vi.mocked(readUserApiKey).mockResolvedValueOnce(null);
 		await mockAuth(owner.id, owner.username, owner.email);
 
 		const response = await post(testCase.id);

@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readUserApiKey } from "@/lib/plugins/assistant/key-store";
 import { resolveProviderConfig } from "@/lib/plugins/assistant/provider-config";
 import { getUserPluginSettings } from "@/lib/services/plugin-enablement-service";
+
+vi.mock("@/lib/plugins/assistant/key-store", () => ({
+	readUserApiKey: vi.fn().mockResolvedValue("ollama"),
+}));
 
 vi.mock("@/lib/services/plugin-enablement-service", () => ({
 	getUserPluginSettings: vi.fn(),
@@ -16,7 +21,6 @@ function stored(settings: unknown) {
 
 beforeEach(() => {
 	vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", ALLOWED);
-	vi.stubEnv("ASSISTANT_DEV_API_KEY", "ollama");
 });
 
 afterEach(() => {
@@ -67,7 +71,7 @@ describe("resolveProviderConfig", () => {
 	});
 
 	it("reports a missing key", async () => {
-		vi.stubEnv("ASSISTANT_DEV_API_KEY", "");
+		vi.mocked(readUserApiKey).mockResolvedValueOnce(null);
 		stored({ provider: "anthropic", model: "m" });
 
 		expect(await resolveProviderConfig("u1")).toHaveProperty("error");

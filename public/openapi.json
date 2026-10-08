@@ -505,6 +505,31 @@
         }
       }
     },
+    "/cases/{id}/assistant": {
+      "post": {
+        "operationId": "post-cases-{id}-assistant",
+        "summary": "POST /api/cases/[id]/assistant",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/changes": {
       "get": {
         "operationId": "get-cases-{id}-changes",

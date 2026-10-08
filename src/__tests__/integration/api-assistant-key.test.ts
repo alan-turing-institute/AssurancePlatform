@@ -11,27 +11,6 @@ vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
 
-// The assistant plugin joins the real manifest in a separate change; until
-// then the enablement service is shown a manifest entry for it.
-vi.mock("@/lib/plugins/manifest", async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import("@/lib/plugins/manifest")>();
-	const entry = {
-		id: "tea.assistant",
-		name: "Case Assistant",
-		version: "0.1.0",
-		surfaces: ["settings-section"],
-		description: "test",
-	} as const;
-	return {
-		...actual,
-		isPluginAvailableForDeployment: (id: string) =>
-			id === "tea.assistant" || actual.isPluginAvailableForDeployment(id),
-		getManifestEntry: (id: string) =>
-			id === "tea.assistant" ? entry : actual.getManifestEntry(id),
-	};
-});
-
 const ENVELOPE = /^v\d+:/;
 const SECRET = "sk-test-secret-value-123";
 const URL_ = "http://localhost:3000/api/user/plugins/assistant/key";

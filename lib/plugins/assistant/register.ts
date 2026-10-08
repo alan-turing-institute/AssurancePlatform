@@ -1,6 +1,7 @@
 /**
- * The `tea.assistant` plugin's UI registration: one case panel, a non-modal
- * chat sheet beside the canvas. Runs once at import time, like the other
+ * The `tea.assistant` plugin's UI registration: a case panel (a non-modal
+ * chat sheet beside the canvas) and a settings section for the provider, model
+ * and API key. Runs once at import time, like the other
  * official plugins; a registration failure degrades to "no panel" rather than
  * taking the bundle down.
  */
@@ -8,7 +9,8 @@
 import { Bot } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { AssistantPanel } from "@/lib/plugins/assistant/assistant-panel";
-import { casePanelSlot } from "@/lib/plugins/slots/index";
+import { AssistantSettings } from "@/lib/plugins/assistant/settings";
+import { casePanelSlot, settingsSectionSlot } from "@/lib/plugins/slots/index";
 
 const PLUGIN_ID = "tea.assistant";
 
@@ -21,6 +23,10 @@ export function registerAssistantPlugin(): void {
 			icon: Bot,
 			modal: false,
 			Component: AssistantPanel,
+		});
+		settingsSectionSlot.register({
+			pluginId: PLUGIN_ID,
+			Component: AssistantSettings,
 		});
 	} catch (error) {
 		logger.error(
