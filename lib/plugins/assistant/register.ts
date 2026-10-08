@@ -14,7 +14,7 @@ import { casePanelSlot, settingsSectionSlot } from "@/lib/plugins/slots/index";
 
 const PLUGIN_ID = "tea.assistant";
 
-export function registerAssistantPlugin(): void {
+function registerAssistantPlugin(): void {
 	try {
 		casePanelSlot.register({
 			pluginId: PLUGIN_ID,

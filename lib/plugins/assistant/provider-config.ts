@@ -38,7 +38,7 @@ function normaliseUrl(url: string): string {
  * can change it per case. An unset or invalid value yields an empty list, so
  * nothing is allowed.
  */
-export function allowedBaseUrls(): string[] {
+function allowedBaseUrls(): string[] {
 	const raw = process.env.ASSISTANT_ALLOWED_BASE_URLS;
 	if (!raw) {
 		return [];

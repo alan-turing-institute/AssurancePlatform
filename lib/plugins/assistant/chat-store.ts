@@ -22,8 +22,3 @@ export function getCaseChat(userId: string, caseId: string): Chat<UIMessage> {
 	}
 	return chat;
 }
-
-/** Test hook: forgets every held chat. */
-export function resetCaseChatsForTests(): void {
-	chats.clear();
-}

@@ -97,7 +97,10 @@ export function AssistantPanel({
 	}
 
 	return (
-		<div className="flex h-[calc(100vh-8rem)] flex-col gap-3">
+		<div
+			className="flex flex-col gap-3"
+			style={{ height: "calc(100vh - 8rem)" }}
+		>
 			<p
 				className="text-muted-foreground text-sm"
 				data-testid="assistant-selection"
@@ -142,7 +145,7 @@ export function AssistantPanel({
 			<form className="flex items-end gap-2" onSubmit={onSubmit}>
 				<Textarea
 					aria-label="Message the assistant"
-					className="min-h-[60px] flex-1"
+					className="min-h-16 flex-1"
 					onChange={(event) => setDraft(event.target.value)}
 					onKeyDown={onKeyDown}
 					placeholder="Ask about this case"
