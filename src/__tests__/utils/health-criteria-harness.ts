@@ -1,6 +1,7 @@
 import { act } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { vi } from "vitest";
+import { resetCaseEventStreams } from "@/hooks/use-case-events";
 import type {
 	HealthCheckListOffer,
 	HealthCriteriaResponse,
@@ -141,6 +142,7 @@ export const FakeEventSource = Object.assign(
 );
 
 export function installFakeEventSource() {
+	resetCaseEventStreams();
 	FakeEventSource.instances = [];
 	vi.stubGlobal("EventSource", FakeEventSource);
 }

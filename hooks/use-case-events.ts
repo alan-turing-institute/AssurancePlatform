@@ -72,8 +72,194 @@ export const CASE_EVENT_TYPES: SSEEventType[] = [
 	"tea.health/state-changed",
 ];
 
+interface Subscriber {
+	onEvent: (event: SSEEvent) => void;
+	onStatus: (status: ConnectionStatus) => void;
+}
+
+interface CaseStream {
+	attempts: number;
+	closeTimer: ReturnType<typeof setTimeout> | null;
+	maxReconnectAttempts: number;
+	reconnectDelay: number;
+	reconnectTimer: ReturnType<typeof setTimeout> | null;
+	source: EventSource | null;
+	status: ConnectionStatus;
+	subscribers: Set<Subscriber>;
+}
+
 /**
- * React hook for subscribing to real-time case events via SSE.
+ * One stream per case, shared by every `useCaseEvents` caller for that case.
+ * Browsers allow about six HTTP/1.1 connections per host, and each open
+ * `EventSource` holds one for as long as it lives, so a stream per component
+ * starves ordinary requests.
+ */
+const streams = new Map<string, CaseStream>();
+
+/** Closes every stream and forgets it. Tests call this between cases so a stream left by one test is not reused by the next. */
+export function resetCaseEventStreams() {
+	for (const stream of streams.values()) {
+		if (stream.closeTimer) {
+			clearTimeout(stream.closeTimer);
+		}
+		closeStream(stream);
+	}
+	streams.clear();
+}
+
+function setStreamStatus(stream: CaseStream, status: ConnectionStatus) {
+	stream.status = status;
+	for (const subscriber of [...stream.subscribers]) {
+		subscriber.onStatus(status);
+	}
+}
+
+function connectStream(caseId: string, stream: CaseStream) {
+	if (stream.source) {
+		return;
+	}
+	setStreamStatus(stream, "connecting");
+
+	const source = new EventSource(`/api/cases/${caseId}/events`);
+	stream.source = source;
+
+	source.onopen = () => {
+		stream.attempts = 0;
+		setStreamStatus(stream, "connected");
+	};
+
+	source.onerror = () => {
+		// A source already closed and removed must not schedule a reconnect.
+		if (
+			streams.get(caseId) !== stream ||
+			stream.source !== source ||
+			stream.subscribers.size === 0
+		) {
+			return;
+		}
+		source.close();
+		stream.source = null;
+
+		// Reconnect with exponential backoff, once for the whole case.
+		if (stream.attempts < stream.maxReconnectAttempts) {
+			setStreamStatus(stream, "connecting");
+			const delay = stream.reconnectDelay * 2 ** stream.attempts;
+			stream.attempts += 1;
+			stream.reconnectTimer = setTimeout(() => {
+				stream.reconnectTimer = null;
+				connectStream(caseId, stream);
+			}, delay);
+		} else {
+			setStreamStatus(stream, "error");
+		}
+	};
+
+	source.addEventListener("connected", (e) => {
+		try {
+			JSON.parse(e.data);
+		} catch {
+			// Ignore parsing errors for connection event
+		}
+	});
+
+	// Set up event type handlers — see `CASE_EVENT_TYPES`'s doc comment.
+	for (const eventType of CASE_EVENT_TYPES) {
+		source.addEventListener(eventType, (e) => {
+			try {
+				const event = JSON.parse(e.data) as SSEEvent;
+				for (const subscriber of [...stream.subscribers]) {
+					subscriber.onEvent(event);
+				}
+			} catch (error) {
+				log.error("Failed to parse SSE event", { error });
+			}
+		});
+	}
+}
+
+function closeStream(stream: CaseStream) {
+	if (stream.reconnectTimer) {
+		clearTimeout(stream.reconnectTimer);
+		stream.reconnectTimer = null;
+	}
+	if (stream.source) {
+		stream.source.close();
+		stream.source = null;
+	}
+}
+
+function disconnectStream(stream: CaseStream) {
+	closeStream(stream);
+	setStreamStatus(stream, "disconnected");
+}
+
+function reconnectStream(caseId: string, stream: CaseStream) {
+	disconnectStream(stream);
+	stream.attempts = 0;
+	connectStream(caseId, stream);
+}
+
+/**
+ * Adds a subscriber to the case's stream, opening it if this is the first.
+ * The reconnect settings are those of the first subscriber; later
+ * subscribers' values are ignored while the stream is open. Returns the
+ * unsubscribe function, which closes the stream on the next tick once the
+ * last subscriber has left (so a remount in the same tick keeps it open).
+ */
+function subscribe(
+	caseId: string,
+	subscriber: Subscriber,
+	maxReconnectAttempts: number,
+	reconnectDelay: number
+): () => void {
+	let stream = streams.get(caseId);
+	if (!stream) {
+		stream = {
+			attempts: 0,
+			closeTimer: null,
+			maxReconnectAttempts,
+			reconnectDelay,
+			reconnectTimer: null,
+			source: null,
+			status: "disconnected",
+			subscribers: new Set(),
+		};
+		streams.set(caseId, stream);
+	}
+	const shared = stream;
+	if (shared.closeTimer) {
+		clearTimeout(shared.closeTimer);
+		shared.closeTimer = null;
+	}
+	shared.subscribers.add(subscriber);
+	subscriber.onStatus(shared.status);
+	if (!(shared.source || shared.reconnectTimer)) {
+		shared.attempts = 0;
+		connectStream(caseId, shared);
+	}
+
+	return () => {
+		shared.subscribers.delete(subscriber);
+		if (shared.subscribers.size > 0 || shared.closeTimer) {
+			return;
+		}
+		shared.closeTimer = setTimeout(() => {
+			shared.closeTimer = null;
+			if (shared.subscribers.size === 0) {
+				closeStream(shared);
+				if (streams.get(caseId) === shared) {
+					streams.delete(caseId);
+				}
+			}
+		}, 0);
+	};
+}
+
+/**
+ * React hook for subscribing to real-time case events via SSE. All callers
+ * for the same case share one `EventSource`; `disconnect` and `reconnect`
+ * act on that shared stream, so one caller's `reconnect` reconnects everyone.
+ * With `enabled: false` the hook is not subscribed and holds no stream open.
  *
  * @example
  * ```tsx
@@ -98,15 +284,11 @@ export function useCaseEvents({
 	const [status, setStatus] = useState<ConnectionStatus>("disconnected");
 	const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
 
-	const eventSourceRef = useRef<EventSource | null>(null);
-	const reconnectAttemptsRef = useRef(0);
-	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
 	// Stable callback refs
 	const onEventRef = useRef(onEvent);
 	const onStatusChangeRef = useRef(onStatusChange);
+	const reconnectSettingsRef = useRef({ maxReconnectAttempts, reconnectDelay });
 
-	// Update refs when callbacks change
 	useEffect(() => {
 		onEventRef.current = onEvent;
 	}, [onEvent]);
@@ -115,103 +297,46 @@ export function useCaseEvents({
 		onStatusChangeRef.current = onStatusChange;
 	}, [onStatusChange]);
 
-	const updateStatus = useCallback((newStatus: ConnectionStatus) => {
-		setStatus(newStatus);
-		onStatusChangeRef.current?.(newStatus);
-	}, []);
+	useEffect(() => {
+		reconnectSettingsRef.current = { maxReconnectAttempts, reconnectDelay };
+	}, [maxReconnectAttempts, reconnectDelay]);
 
 	const disconnect = useCallback(() => {
-		if (reconnectTimeoutRef.current) {
-			clearTimeout(reconnectTimeoutRef.current);
-			reconnectTimeoutRef.current = null;
+		const stream = streams.get(caseId);
+		if (stream) {
+			disconnectStream(stream);
 		}
-
-		if (eventSourceRef.current) {
-			eventSourceRef.current.close();
-			eventSourceRef.current = null;
-		}
-
-		updateStatus("disconnected");
-	}, [updateStatus]);
-
-	const connect = useCallback(() => {
-		// Don't connect if already connected or connecting
-		if (
-			eventSourceRef.current?.readyState === EventSource.OPEN ||
-			eventSourceRef.current?.readyState === EventSource.CONNECTING
-		) {
-			return;
-		}
-
-		updateStatus("connecting");
-
-		const eventSource = new EventSource(`/api/cases/${caseId}/events`);
-		eventSourceRef.current = eventSource;
-
-		eventSource.onopen = () => {
-			reconnectAttemptsRef.current = 0;
-			updateStatus("connected");
-		};
-
-		eventSource.onerror = () => {
-			eventSource.close();
-			eventSourceRef.current = null;
-
-			// Attempt to reconnect with exponential backoff
-			if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-				updateStatus("connecting");
-				const delay = reconnectDelay * 2 ** reconnectAttemptsRef.current;
-				reconnectAttemptsRef.current += 1;
-
-				reconnectTimeoutRef.current = setTimeout(() => {
-					connect();
-				}, delay);
-			} else {
-				updateStatus("error");
-			}
-		};
-
-		// Listen for the connected event
-		eventSource.addEventListener("connected", (e) => {
-			try {
-				JSON.parse(e.data);
-			} catch {
-				// Ignore parsing errors for connection event
-			}
-		});
-
-		// Set up event type handlers — see `CASE_EVENT_TYPES`'s doc comment.
-		for (const eventType of CASE_EVENT_TYPES) {
-			eventSource.addEventListener(eventType, (e) => {
-				try {
-					const event = JSON.parse(e.data) as SSEEvent;
-					setLastEvent(event);
-					onEventRef.current?.(event);
-				} catch (error) {
-					log.error("Failed to parse SSE event", { error });
-				}
-			});
-		}
-	}, [caseId, maxReconnectAttempts, reconnectDelay, updateStatus]);
+	}, [caseId]);
 
 	const reconnect = useCallback(() => {
-		disconnect();
-		reconnectAttemptsRef.current = 0;
-		connect();
-	}, [disconnect, connect]);
-
-	// Set up connection when enabled
-	useEffect(() => {
-		if (enabled && caseId) {
-			connect();
-		} else {
-			disconnect();
+		const stream = streams.get(caseId);
+		if (stream) {
+			reconnectStream(caseId, stream);
 		}
+	}, [caseId]);
 
-		return () => {
-			disconnect();
-		};
-	}, [enabled, caseId, connect, disconnect]);
+	useEffect(() => {
+		if (!(enabled && caseId)) {
+			setStatus("disconnected");
+			return;
+		}
+		const settings = reconnectSettingsRef.current;
+		return subscribe(
+			caseId,
+			{
+				onEvent: (event) => {
+					setLastEvent(event);
+					onEventRef.current?.(event);
+				},
+				onStatus: (next) => {
+					setStatus(next);
+					onStatusChangeRef.current?.(next);
+				},
+			},
+			settings.maxReconnectAttempts,
+			settings.reconnectDelay
+		);
+	}, [enabled, caseId]);
 
 	return {
 		status,

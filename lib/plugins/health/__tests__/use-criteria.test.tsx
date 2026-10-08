@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
 import { useCaseChecks } from "../use-criteria";
 import { checkLists } from "./criteria-test-data";
@@ -44,5 +44,37 @@ describe("useCaseChecks", () => {
 		const { result } = renderHook(() => useCaseChecks("case-1", true));
 		await waitFor(() => expect(result.current.status).toBe("error"));
 		expect(result.current.lists).toBeNull();
+	});
+
+	describe("when the request never answers", () => {
+		afterEach(() => {
+			vi.useRealTimers();
+			vi.unstubAllGlobals();
+		});
+
+		it("gives up after 15 seconds and is in the error state", async () => {
+			vi.useFakeTimers();
+			vi.stubGlobal(
+				"fetch",
+				(_url: string, init?: RequestInit) =>
+					new Promise((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new DOMException("aborted", "AbortError"))
+						);
+					})
+			);
+			const { result } = renderHook(() => useCaseChecks("case-1", true));
+			expect(result.current.status).toBe("loading");
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(14_999);
+			});
+			expect(result.current.status).toBe("loading");
+
+			await act(async () => {
+				await vi.advanceTimersByTimeAsync(1);
+			});
+			expect(result.current).toEqual({ lists: null, status: "error" });
+		});
 	});
 });

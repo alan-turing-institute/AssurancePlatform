@@ -159,6 +159,8 @@ export interface CaseChecksState {
 	status: "error" | "idle" | "loading" | "ready";
 }
 
+const CHECKS_TIMEOUT_MS = 15_000;
+
 /** The check lists a person can choose from for the case, fetched the first time `enabled` is true. */
 export function useCaseChecks(
 	caseId: string,
@@ -174,8 +176,10 @@ export function useCaseChecks(
 			return;
 		}
 		let cancelled = false;
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), CHECKS_TIMEOUT_MS);
 		setState((current) => ({ ...current, status: "loading" }));
-		fetch(`/api/cases/${caseId}/health/checks`)
+		fetch(`/api/cases/${caseId}/health/checks`, { signal: controller.signal })
 			.then(async (response) => {
 				if (!response.ok) {
 					throw new Error(`Failed to fetch check lists (${response.status})`);
@@ -191,9 +195,12 @@ export function useCaseChecks(
 				if (!cancelled) {
 					setState({ lists: null, status: "error" });
 				}
-			});
+			})
+			.finally(() => clearTimeout(timeout));
 		return () => {
 			cancelled = true;
+			clearTimeout(timeout);
+			controller.abort();
 		};
 	}, [caseId, enabled]);
 
