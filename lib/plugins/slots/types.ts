@@ -72,6 +72,10 @@ export interface CaseSlotContext {
 	/** Whether the viewer may edit the case's elements. The server enforces permission whatever a slot shows. */
 	canEdit: boolean;
 	caseId: string;
+	/** The id of the element currently selected on the canvas, if any. Browser-supplied: a hint for the UI, never an authorisation. */
+	selectedElementId?: string;
+	/** Display name of the selected element (e.g. "G1"), for headings. Absent when nothing is selected. */
+	selectedElementLabel?: string;
 }
 
 /** A small status affordance rendered on a canvas node (ADR §2.3: "the state dot"). */
@@ -104,6 +108,8 @@ export interface CasePanelRegistration extends SlotRegistrationBase {
 	icon?: ComponentType<{ className?: string }>;
 	/** The button's tooltip and accessible name, and the sheet's title. */
 	label: string;
+	/** `false` for a panel that sits beside the canvas without blocking it: no overlay, clicks outside do not close it, and the panel keeps any state it needs across close and reopen. Absent means a modal sheet. */
+	modal?: false;
 	/** Stable per registration; names the button's test id. */
 	panelId: string;
 }

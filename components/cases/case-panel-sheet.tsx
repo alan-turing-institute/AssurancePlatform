@@ -8,7 +8,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import type { CasePanelRegistration } from "@/lib/plugins/slots";
+import type { CasePanelRegistration } from "@/lib/plugins/slots/index";
 
 interface CasePanelSheetProps {
 	canEdit: boolean;
@@ -18,11 +18,16 @@ interface CasePanelSheetProps {
 	registration: CasePanelRegistration;
 	/** The toolbar button that opened the sheet; it gets focus back when the sheet closes. */
 	returnFocusTo: RefObject<HTMLElement | null>;
+	selectedElementId?: string;
+	selectedElementLabel?: string;
 }
 
 /**
  * The side sheet for one registered case panel. The sheet is mounted only
  * while open, so a panel fetches its data when it is opened and not before.
+ * A panel registered with `modal: false` has no overlay and is not dismissed
+ * by clicks or focus outside it, so the canvas stays usable beside it; it
+ * keeps any state it needs across close and reopen itself.
  */
 export function CasePanelSheet({
 	canEdit,
@@ -31,10 +36,14 @@ export function CasePanelSheet({
 	onClose,
 	registration,
 	returnFocusTo,
+	selectedElementId,
+	selectedElementLabel,
 }: CasePanelSheetProps) {
 	const { Component, label } = registration;
+	const nonModal = registration.modal === false;
 	return (
 		<Sheet
+			modal={!nonModal}
 			onOpenChange={(open) => {
 				if (!open) {
 					onClose();
@@ -44,17 +53,26 @@ export function CasePanelSheet({
 		>
 			<SheetContent
 				className="w-full overflow-y-auto sm:max-w-md"
+				hideOverlay={nonModal}
 				onCloseAutoFocus={(event) => {
 					event.preventDefault();
 					returnFocusTo.current?.focus();
 				}}
+				onInteractOutside={
+					nonModal ? (event) => event.preventDefault() : undefined
+				}
 			>
 				<SheetHeader>
 					<SheetTitle>{label}</SheetTitle>
 					<SheetDescription className="sr-only">{label}</SheetDescription>
 				</SheetHeader>
 				<div className="nokey mt-4 min-w-0">
-					<Component canEdit={canEdit} caseId={caseId} />
+					<Component
+						canEdit={canEdit}
+						caseId={caseId}
+						selectedElementId={selectedElementId}
+						selectedElementLabel={selectedElementLabel}
+					/>
 				</div>
 			</SheetContent>
 		</Sheet>

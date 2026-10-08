@@ -25,3 +25,4 @@
  */
 
 import "@/lib/plugins/health/register";
+import "@/lib/plugins/assistant/register";

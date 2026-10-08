@@ -79,6 +79,14 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		description:
 			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
 	},
+	{
+		id: "tea.assistant",
+		name: "Case Assistant",
+		version: "0.1.0",
+		surfaces: ["case-panel", "settings-section"],
+		description:
+			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You supply your own model provider and API key in this plugin's settings.",
+	},
 ];
 
 const MANIFEST_BY_ID: ReadonlyMap<string, PluginManifestEntry> = new Map(
