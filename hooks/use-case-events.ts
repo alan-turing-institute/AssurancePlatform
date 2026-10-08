@@ -129,6 +129,14 @@ function connectStream(caseId: string, stream: CaseStream) {
 	};
 
 	source.onerror = () => {
+		// A source already closed and removed must not schedule a reconnect.
+		if (
+			streams.get(caseId) !== stream ||
+			stream.source !== source ||
+			stream.subscribers.size === 0
+		) {
+			return;
+		}
 		source.close();
 		stream.source = null;
 

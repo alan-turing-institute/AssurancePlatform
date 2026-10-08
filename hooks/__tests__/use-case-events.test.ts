@@ -215,7 +215,9 @@ describe("useCaseEvents — one shared stream per case", () => {
 			streamAt(0).dispatch("tea.health/state-changed", event);
 		});
 		expect(first).toHaveBeenCalledWith(event);
+		expect(first).toHaveBeenCalledTimes(1);
 		expect(second).toHaveBeenCalledWith(event);
+		expect(second).toHaveBeenCalledTimes(1);
 	});
 
 	it("moves a subscriber to the new case's stream when caseId changes", async () => {
