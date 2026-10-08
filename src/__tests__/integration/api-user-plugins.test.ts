@@ -49,7 +49,7 @@ describe("GET /api/user/plugins", () => {
 		expect(response.status).toBe(200);
 
 		const body = await response.json();
-		expect(body.plugins).toHaveLength(1);
+		expect(body.plugins).toHaveLength(2);
 		expect(body.plugins[0]).toMatchObject({
 			pluginId: KNOWN_PLUGIN_ID,
 			name: "Claim/Evidence Health",
