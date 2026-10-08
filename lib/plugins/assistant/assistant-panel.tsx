@@ -48,7 +48,7 @@ function ErrorNotice({ error }: { error: Error }) {
 			>
 				<p>{notConfigured}</p>
 				<p className="mt-1">
-					<Link className="underline" href="/settings/plugins">
+					<Link className="underline" href="/dashboard/settings/plugins">
 						Open plugin settings
 					</Link>
 				</p>
@@ -62,15 +62,24 @@ function ErrorNotice({ error }: { error: Error }) {
 	);
 }
 
-/** The case assistant's chat: messages, tool calls as collapsible rows, and a prompt box. Messages live in a per-user, per-case module store, so closing the sheet keeps them. */
-export function AssistantPanel({
+/** The case assistant's chat: messages, tool calls as collapsible rows, and a prompt box. Messages live in a per-user, per-case module store, so closing the sheet keeps them. The chat is built only once the session is known, so no entry is ever keyed to an unknown user. */
+export function AssistantPanel(context: CaseSlotContext) {
+	const { data: session, status } = useSession();
+	const userId = session?.user?.id;
+	if (status !== "authenticated" || !userId) {
+		return null;
+	}
+	return <AssistantChat {...context} userId={userId} />;
+}
+
+function AssistantChat({
 	caseId,
 	selectedElementId,
 	selectedElementLabel,
-}: CaseSlotContext) {
-	const { data: session } = useSession();
+	userId,
+}: CaseSlotContext & { userId: string }) {
 	const { messages, sendMessage, status, stop, error } = useChat({
-		chat: getCaseChat(session?.user?.id ?? "anonymous", caseId),
+		chat: getCaseChat(userId, caseId),
 	});
 	const [draft, setDraft] = useState("");
 	const busy = status === "submitted" || status === "streaming";

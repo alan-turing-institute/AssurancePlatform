@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+	listAllowedBaseUrls,
+	normaliseBaseUrl,
+} from "@/lib/plugins/assistant/allowed-base-urls";
 import { readUserApiKey } from "@/lib/plugins/assistant/key-store";
 import { getUserPluginSettings } from "@/lib/services/plugin-enablement-service";
 
@@ -24,34 +28,6 @@ const settingsSchema = z.object({
 	model: z.string().trim().min(1),
 });
 
-const allowListSchema = z.array(z.url());
-
-const TRAILING_SLASHES = /\/+$/;
-
-function normaliseUrl(url: string): string {
-	return url.trim().replace(TRAILING_SLASHES, "");
-}
-
-/**
- * The operator's allow-list of OpenAI-compatible endpoints, from the
- * comma-separated `ASSISTANT_ALLOWED_BASE_URLS`. Read on every call so tests
- * can change it per case. An unset or invalid value yields an empty list, so
- * nothing is allowed.
- */
-function allowedBaseUrls(): string[] {
-	const raw = process.env.ASSISTANT_ALLOWED_BASE_URLS;
-	if (!raw) {
-		return [];
-	}
-	const parsed = allowListSchema.safeParse(
-		raw
-			.split(",")
-			.map((entry) => entry.trim())
-			.filter(Boolean)
-	);
-	return parsed.success ? parsed.data.map(normaliseUrl) : [];
-}
-
 /**
  * Resolves the provider, endpoint, model and key for one user's request. The
  * stored base URL is checked against the allow-list on every call, so a value
@@ -75,8 +51,8 @@ export async function resolveProviderConfig(
 
 	let baseUrl: string | undefined;
 	if (settings.data.provider === "openai-compatible") {
-		const wanted = normaliseUrl(settings.data.baseUrl ?? "");
-		if (!(wanted && allowedBaseUrls().includes(wanted))) {
+		const wanted = normaliseBaseUrl(settings.data.baseUrl ?? "");
+		if (!(wanted && listAllowedBaseUrls().includes(wanted))) {
 			return {
 				error: "The configured base URL is not on this server's allow-list.",
 			};

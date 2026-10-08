@@ -7,6 +7,8 @@ import {
 	requireAuth,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { TokenEncryptionUnavailableError } from "@/lib/auth/token-encryption";
+import { AppError } from "@/lib/errors";
 import {
 	deleteUserApiKey,
 	hasUserApiKey,
@@ -24,6 +26,9 @@ const putKeySchema = z.strictObject({
 		.min(1, "key is required")
 		.max(2048, "key must be less than 2048 characters"),
 });
+
+const ENCRYPTION_UNAVAILABLE_MESSAGE =
+	"This server cannot store keys: token encryption is not configured.";
 
 /** Authenticates, then refuses unless the assistant plugin is on for the user. */
 async function authorise(): Promise<string | Response> {
@@ -61,6 +66,14 @@ export async function PUT(req: Request) {
 		await writeUserApiKey(userId, key);
 		return apiSuccess({ hasKey: true });
 	} catch (error) {
+		if (error instanceof TokenEncryptionUnavailableError) {
+			return apiError(
+				new AppError({
+					code: "SERVICE_UNAVAILABLE",
+					message: ENCRYPTION_UNAVAILABLE_MESSAGE,
+				})
+			);
+		}
 		return apiErrorFromUnknown(error);
 	}
 }
@@ -68,10 +81,8 @@ export async function PUT(req: Request) {
 /** DELETE /api/user/plugins/assistant/key — removes the stored key. */
 export async function DELETE() {
 	try {
-		const userId = await authorise();
-		if (typeof userId !== "string") {
-			return userId;
-		}
+		// Auth only: a user who has turned the plugin off can still remove their secret.
+		const userId = await requireAuth();
 		await deleteUserApiKey(userId);
 		return apiSuccess({ hasKey: false });
 	} catch (error) {

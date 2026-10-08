@@ -27,10 +27,14 @@ const log = logger.child({ component: "assistant-route" });
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_MESSAGES = 100;
 const MAX_STEPS = 8;
+/** Bounds on one model call: total wall time, tokens written, and provider retries. */
+const MODEL_TIMEOUT_MS = 60_000;
+const MAX_OUTPUT_TOKENS = 2048;
+const MAX_RETRIES = 1;
 
 const messageSchema = z.looseObject({
 	id: z.string().max(200),
-	role: z.enum(["user", "assistant", "system"]),
+	role: z.enum(["user", "assistant"]),
 	parts: z.array(z.unknown()).max(200),
 });
 
@@ -90,13 +94,18 @@ export async function POST(
 			tools: createCaseTools(userId, caseId),
 			stopWhen: stepCountIs(MAX_STEPS),
 			abortSignal: request.signal,
+			timeout: MODEL_TIMEOUT_MS,
+			maxOutputTokens: MAX_OUTPUT_TOKENS,
+			maxRetries: MAX_RETRIES,
+			// Replaces the SDK's default console logging, which prints the whole
+			// request (prompt, history, case trees) with the provider error.
+			onError: ({ error }) => {
+				log.error("Assistant stream failed", { error });
+			},
 		});
 
 		return result.toUIMessageStreamResponse({
-			onError: (error) => {
-				log.error("Assistant stream failed", { error });
-				return "The model provider returned an error.";
-			},
+			onError: () => "The model provider returned an error.",
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

@@ -65,8 +65,12 @@ function CasePanelEntry({
 export function CasePanelButtons() {
 	const { registrations } = useCasePanelSlot();
 	const assuranceCase = useStore((state) => state.assuranceCase);
-	const selectedNode = useStore((state) =>
-		state.nodes.find((node) => node.selected)
+	const selectedId = useStore((state) => {
+		const id = state.nodes.find((node) => node.selected)?.data?.id;
+		return id === undefined ? undefined : String(id);
+	});
+	const selectedName = useStore(
+		(state) => state.nodes.find((node) => node.selected)?.data?.name
 	);
 	if (!assuranceCase) {
 		return null;
@@ -82,12 +86,8 @@ export function CasePanelButtons() {
 					caseId={assuranceCase.id?.toString() ?? ""}
 					key={`${registration.pluginId}:${registration.panelId}`}
 					registration={registration}
-					selectedElementId={
-						selectedNode?.data?.id === undefined
-							? undefined
-							: String(selectedNode.data.id)
-					}
-					selectedElementLabel={selectedNode?.data?.name || undefined}
+					selectedElementId={selectedId}
+					selectedElementLabel={selectedName || undefined}
 				/>
 			))}
 		</>

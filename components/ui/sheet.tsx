@@ -60,17 +60,14 @@ const sheetVariants = cva(
 
 interface SheetContentProps
 	extends React.ComponentPropsWithoutRef<typeof Content>,
-		VariantProps<typeof sheetVariants> {
-	/** Omit the dimming overlay, for a non-modal sheet that leaves the page beneath it usable. */
-	hideOverlay?: boolean;
-}
+		VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<
 	React.ElementRef<typeof Content>,
 	SheetContentProps
->(({ side = "right", className, children, hideOverlay, ...props }, ref) => (
+>(({ side = "right", className, children, ...props }, ref) => (
 	<SheetPortal>
-		{!hideOverlay && <SheetOverlay />}
+		<SheetOverlay />
 		<Content
 			aria-describedby={undefined}
 			className={cn(sheetVariants({ side }), className)}

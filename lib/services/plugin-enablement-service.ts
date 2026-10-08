@@ -19,6 +19,8 @@ const log = logger.child({ component: "plugin-enablement-service" });
  * for a user iff it is available at the deployment level AND no
  * `PluginState` row with `enabled: false` exists at any scope at-or-above
  * the user in the ORGANISATION -> TEAM -> USER chain ("off wins downward").
+ * A manifest entry with `defaultEnabled: false` additionally needs the
+ * user's own USER-scope row to be on.
  *
  * 1.0 activates only the USER tier for writes (`setPluginEnabledForUser`
  * below) — there is no Organisation model yet, and mapping a user to their
@@ -114,6 +116,21 @@ export async function resolveEffectivePluginState(
 						enabled: false,
 						availableAtDeployment: true,
 						disabledAt: scopeType,
+					},
+				};
+			}
+		}
+
+		if (getManifestEntry(pluginId)?.defaultEnabled === false) {
+			const userRow = rows.find(
+				(r) => r.scopeType === "USER" && r.scopeId === scopeIds.userId
+			);
+			if (!userRow?.enabled) {
+				return {
+					data: {
+						enabled: false,
+						availableAtDeployment: true,
+						disabledAt: "USER",
 					},
 				};
 			}

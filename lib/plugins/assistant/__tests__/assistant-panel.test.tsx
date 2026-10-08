@@ -17,12 +17,18 @@ const chat = vi.hoisted(() => ({
 }));
 
 vi.mock("@ai-sdk/react", () => ({ useChat: () => chat.state }));
+const session = vi.hoisted(() => ({
+	value: { data: { user: { id: "u1" } }, status: "authenticated" } as {
+		data: { user: { id: string } } | null;
+		status: string;
+	},
+}));
+const getCaseChat = vi.hoisted(() => vi.fn(() => ({})));
+
 vi.mock("next-auth/react", () => ({
-	useSession: () => ({ data: { user: { id: "u1" } } }),
+	useSession: () => session.value,
 }));
-vi.mock("@/lib/plugins/assistant/chat-store", () => ({
-	getCaseChat: () => ({}),
-}));
+vi.mock("@/lib/plugins/assistant/chat-store", () => ({ getCaseChat }));
 
 const CTX = {
 	canEdit: false,
@@ -32,6 +38,8 @@ const CTX = {
 };
 
 beforeEach(() => {
+	session.value = { data: { user: { id: "u1" } }, status: "authenticated" };
+	getCaseChat.mockClear();
 	chat.state.messages = [];
 	chat.state.status = "ready";
 	chat.state.error = undefined;
@@ -89,6 +97,20 @@ describe("AssistantPanel", () => {
 		);
 		expect(
 			screen.getByRole("link", { name: "Open plugin settings" })
-		).toHaveAttribute("href", "/settings/plugins");
+		).toHaveAttribute("href", "/dashboard/settings/plugins");
+	});
+
+	it("builds no chat until the session is authenticated", () => {
+		session.value = { data: null, status: "loading" };
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(getCaseChat).not.toHaveBeenCalled();
+		expect(screen.queryByLabelText("Message the assistant")).toBeNull();
+	});
+
+	it("keys the chat by the signed-in user and the case", () => {
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(getCaseChat).toHaveBeenCalledWith("u1", "case-1");
 	});
 });

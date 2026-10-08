@@ -30,6 +30,12 @@ export type PluginSurface =
 
 export interface PluginManifestEntry {
 	/**
+	 * Whether a user who has never set this plugin gets it on. Absent means
+	 * on. When `false`, the plugin is off until the user's own USER-scope row
+	 * turns it on; an off row at any higher scope still wins.
+	 */
+	readonly defaultEnabled?: boolean;
+	/**
 	 * Two or three plain sentences for the Plugins page card (TEA — Plugin
 	 * management surface D2). Written for the person deciding whether to turn
 	 * the plugin on or off, not for a developer.
@@ -83,6 +89,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		id: "tea.assistant",
 		name: "Case Assistant",
 		version: "0.1.0",
+		defaultEnabled: false,
 		surfaces: ["case-panel", "settings-section"],
 		description:
 			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You supply your own model provider and API key in this plugin's settings.",

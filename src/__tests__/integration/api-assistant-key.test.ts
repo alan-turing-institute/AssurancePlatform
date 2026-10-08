@@ -57,6 +57,10 @@ describe("/api/user/plugins/assistant/key", () => {
 
 	it("lets the owner write, check and remove the key, and never returns it", async () => {
 		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			enabled: true,
+		});
 		await mockAuth(user.id, user.username, user.email);
 		const route = await import("@/app/api/user/plugins/assistant/key/route");
 
@@ -78,6 +82,10 @@ describe("/api/user/plugins/assistant/key", () => {
 
 	it("rejects an empty or malformed key body", async () => {
 		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			enabled: true,
+		});
 		await mockAuth(user.id, user.username, user.email);
 		const route = await import("@/app/api/user/plugins/assistant/key/route");
 		expect((await route.PUT(put({ key: "  " }))).status).toBe(400);
@@ -95,8 +103,49 @@ describe("/api/user/plugins/assistant/key", () => {
 		const route = await import("@/app/api/user/plugins/assistant/key/route");
 		expect((await route.GET()).status).toBe(403);
 		expect((await route.PUT(put({ key: SECRET }))).status).toBe(403);
-		expect((await route.DELETE()).status).toBe(403);
+		expect((await route.DELETE()).status).toBe(200);
 		expect(await prisma.pluginAssistantKey.count()).toBe(0);
+	});
+
+	it("refuses with 403 for a user who has never turned the assistant on", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+		const route = await import("@/app/api/user/plugins/assistant/key/route");
+		expect((await route.GET()).status).toBe(403);
+		expect((await route.PUT(put({ key: SECRET }))).status).toBe(403);
+	});
+
+	it("answers 503 with a clear message when token encryption is not configured", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			enabled: true,
+		});
+		await mockAuth(user.id, user.username, user.email);
+		vi.stubEnv("TOKEN_ENCRYPTION_KEY", "");
+		const route = await import("@/app/api/user/plugins/assistant/key/route");
+		const res = await route.PUT(put({ key: SECRET }));
+		vi.unstubAllEnvs();
+		expect(res.status).toBe(503);
+		expect(await res.json()).toEqual({
+			error:
+				"This server cannot store keys: token encryption is not configured.",
+			code: "SERVICE_UNAVAILABLE",
+		});
+	});
+
+	it("lets a user who switched the plugin off remove a key they stored earlier", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			enabled: false,
+		});
+		const store = await import("@/lib/plugins/assistant/key-store");
+		await store.writeUserApiKey(user.id, SECRET);
+		await mockAuth(user.id, user.username, user.email);
+		const route = await import("@/app/api/user/plugins/assistant/key/route");
+		expect((await route.DELETE()).status).toBe(200);
+		expect(await store.readUserApiKey(user.id)).toBeNull();
 	});
 
 	it("does not appear in GET /api/user/plugins", async () => {
