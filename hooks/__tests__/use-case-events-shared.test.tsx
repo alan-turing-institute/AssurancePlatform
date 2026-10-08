@@ -1,9 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as events from "../use-case-events";
-
-const { useCaseEvents } = events;
+import { resetCaseEventStreams, useCaseEvents } from "../use-case-events";
 
 class Src {
 	static readonly CONNECTING = 0;
@@ -65,12 +63,12 @@ const ev = (caseId: string, n = 1) => ({
 
 beforeEach(() => {
 	vi.useFakeTimers();
-	(events as { resetCaseEventStreams?: () => void }).resetCaseEventStreams?.();
+	resetCaseEventStreams();
 	Src.all = [];
 	vi.stubGlobal("EventSource", Src);
 });
 afterEach(() => {
-	(events as { resetCaseEventStreams?: () => void }).resetCaseEventStreams?.();
+	resetCaseEventStreams();
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
 });
