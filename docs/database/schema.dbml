@@ -55,6 +55,7 @@ Table users {
   ownedIntegrations integrations [not null]
   integrationPrincipal integrations
   archivedPublishedCases published_assurance_cases [not null]
+  pluginAssistantKey plugin_assistant_keys
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -808,6 +809,17 @@ Table plugin_health_check_catalogues {
   Note: 'The checks a pipeline says it can run, replaced whole on each publish.'
 }
 
+Table plugin_assistant_keys {
+  userId String [unique, not null]
+  apiKeyEncrypted String [not null]
+  updatedAt DateTime [not null]
+  user users [not null]
+
+  Note: 'The assistant plugin\'s per-user model-provider key, encrypted at rest with
+the same AES-256-GCM envelope as the OAuth tokens (lib/auth/token-encryption.ts).
+Write-only from the API: no route returns the value. Removed with the user.'
+}
+
 Enum AuthProvider {
   LOCAL
   GITHUB
@@ -1071,3 +1083,5 @@ Ref: plugin_health_criteria.integrationId > integrations.id [delete: Set Null]
 Ref: plugin_health_criteria_revisions.claimId > assurance_elements.id [delete: Cascade]
 
 Ref: plugin_health_check_catalogues.integrationId - integrations.id [delete: Cascade]
+
+Ref: plugin_assistant_keys.userId - users.id [delete: Cascade]

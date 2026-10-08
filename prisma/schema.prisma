@@ -94,6 +94,7 @@ model User {
   ownedIntegrations    Integration[]      @relation("IntegrationOwner")
   integrationPrincipal Integration?       @relation("IntegrationPrincipal")
   archivedPublishedCases PublishedAssuranceCase[] @relation("PublishedCaseArchivedOwner")
+  pluginAssistantKey   PluginAssistantKey?
 
   @@map("users")
 }
@@ -1363,4 +1364,17 @@ model PluginHealthCheckCatalogue {
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
   @@map("plugin_health_check_catalogues")
+}
+
+/// The assistant plugin's per-user model-provider key, encrypted at rest with
+/// the same AES-256-GCM envelope as the OAuth tokens (lib/auth/token-encryption.ts).
+/// Write-only from the API: no route returns the value. Removed with the user.
+model PluginAssistantKey {
+  userId          String   @unique @map("user_id")
+  apiKeyEncrypted String   @map("api_key_encrypted")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("plugin_assistant_keys")
 }
