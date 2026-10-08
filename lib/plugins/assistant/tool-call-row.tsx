@@ -1,6 +1,7 @@
 "use client";
 
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
+import { LintCaseResult, parseLintOutput } from "./lint-case-row";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -26,6 +27,10 @@ export function ToolCallRow({ part }: { part: MessagePart }) {
 		return null;
 	}
 	const name = getToolName(part);
+	const lint =
+		name === "lint_case" && part.state === "output-available"
+			? parseLintOutput(part.output)
+			: null;
 	return (
 		<details
 			className="rounded-md border bg-muted/40 px-2 py-1 text-xs"
@@ -40,7 +45,8 @@ export function ToolCallRow({ part }: { part: MessagePart }) {
 			<pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words">
 				{pretty(part.input)}
 			</pre>
-			{part.state === "output-available" && (
+			{lint && <LintCaseResult result={lint} />}
+			{part.state === "output-available" && !lint && (
 				<pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words">
 					{pretty(part.output)}
 				</pre>

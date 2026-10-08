@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
+import { lintCase } from "./linter/lint-case";
 
 interface TreeNode {
 	children?: TreeNode[];
@@ -85,6 +86,15 @@ export function createCaseTools(userId: string, caseId: string) {
 					: NOT_FOUND;
 			},
 		}),
+		lint_case: tool({
+			description:
+				"Lint the open assurance case against the rule catalogue. Returns structural findings (rule id, element label, severity, reason, fix), gaps the author has acknowledged, questions for the author, and judgementRules: further rules for you to apply to the case yourself.",
+			inputSchema: z.object({}),
+			execute: async () => {
+				const data = await loadExport(userId, caseId);
+				return data ? { found: true, ...lintCase(data) } : NOT_FOUND;
+			},
+		}),
 	};
 }
 
@@ -92,4 +102,6 @@ export const ASSISTANT_SYSTEM_PROMPT = `You are the Case Assistant inside TEA (T
 
 You have two read-only tools. read_case returns the whole open case as a tree. read_element returns one element and its direct children by id. You cannot change the case.
 
-Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.`;
+Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.
+
+When the user asks you to lint, check or review the case, call lint_case. Report its findings exactly as returned, by rule id and element label. Then apply the judgementRules text it returns to the case yourself, and report any further findings in the same form, by rule id and element label. Never say whether the case is adequate or good enough.`;
