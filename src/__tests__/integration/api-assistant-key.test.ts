@@ -25,6 +25,8 @@ vi.mock("@/lib/plugins/manifest", async (importOriginal) => {
 	} as const;
 	return {
 		...actual,
+		isPluginAvailableForDeployment: (id: string) =>
+			id === "tea.assistant" || actual.isPluginAvailableForDeployment(id),
 		getManifestEntry: (id: string) =>
 			id === "tea.assistant" ? entry : actual.getManifestEntry(id),
 	};
