@@ -1,0 +1,27 @@
+---
+title: "Case Assistant"
+description: "Set up the Case Assistant plugin: the environment variables it needs, how the provider list and encryption key work, and the technique suggestions service."
+---
+
+The `tea.assistant` plugin adds a chat panel to the case editor.
+The assistant reads the open case to answer questions about it and never changes it.
+A user turns the plugin on and chooses a provider in plugin settings.
+
+## Environment variables
+
+| Variable | Needed for | Meaning |
+|---|---|---|
+| `TOKEN_ENCRYPTION_KEY` | Saving a provider key | A base64-encoded 32-byte key the server uses to encrypt each user's provider API key before it is stored. Without it a user cannot save a key. |
+| `ASSISTANT_ALLOWED_BASE_URLS` | OpenAI-compatible providers | A comma-separated list of endpoint URLs, for example `http://localhost:11434/v1`. Users choose an endpoint from this list and never type one. An entry that is not a URL is ignored. |
+| `TECHNIQUES_MCP_URL` | Technique suggestions | The address of a techniques service that accepts JSON-RPC 2.0 `tools/call` requests over HTTP. When it is unset, the `suggest_techniques` tool is not offered and the assistant says that technique suggestions are unavailable. |
+
+All three are read when they are used, so a change takes effect on the next request after the server restarts.
+
+## Technique suggestions
+
+When `TECHNIQUES_MCP_URL` is set, the assistant can call `suggest_techniques` for a claim.
+Without a claim in the request, it uses the text of the element the user has selected.
+The server sends one `suggest_techniques_for_claim` request to the service, with no session, and waits up to 20 seconds.
+The assistant recommends only techniques in the reply.
+If the service does not answer or replies in an unexpected shape, the assistant is told that the service is not reachable.
+In the chat, the tool call shows each technique with a link, its score and its goals.

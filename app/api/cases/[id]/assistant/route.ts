@@ -16,6 +16,11 @@ import {
 	resolveProviderConfig,
 } from "@/lib/plugins/assistant/provider-config";
 import {
+	resolveSelectedElement,
+	selectionPrompt,
+} from "@/lib/plugins/assistant/selected-element";
+import { techniquesPrompt } from "@/lib/plugins/assistant/techniques-tool";
+import {
 	ASSISTANT_SYSTEM_PROMPT,
 	createCaseTools,
 } from "@/lib/plugins/assistant/tools";
@@ -83,15 +88,20 @@ export async function POST(
 			throw new AppError({ code: "CONFLICT", message: resolved.error });
 		}
 
-		const selection = body.selectedElementId
-			? `\n\nThe user currently has the element with id ${body.selectedElementId} selected on the canvas.`
-			: "";
+		const selection = await resolveSelectedElement(
+			userId,
+			caseId,
+			body.selectedElementId
+		);
 
 		const result = streamText({
 			model: createAssistantModel(resolved.config),
-			system: ASSISTANT_SYSTEM_PROMPT + selection,
+			system:
+				ASSISTANT_SYSTEM_PROMPT +
+				selectionPrompt(selection) +
+				techniquesPrompt(),
 			messages: await convertToModelMessages(body.messages as UIMessage[]),
-			tools: createCaseTools(userId, caseId),
+			tools: createCaseTools(userId, caseId, selection),
 			stopWhen: stepCountIs(MAX_STEPS),
 			abortSignal: request.signal,
 			timeout: MODEL_TIMEOUT_MS,

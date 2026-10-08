@@ -1,5 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
+import {
+	createTechniquesTool,
+	type SelectedElement,
+	techniquesConfigured,
+} from "@/lib/plugins/assistant/techniques-tool";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 
@@ -56,8 +61,15 @@ async function loadExport(
  * looked up inside that case's own export, so an id from another case is
  * simply not found. Comments are never exported.
  */
-export function createCaseTools(userId: string, caseId: string) {
+export function createCaseTools(
+	userId: string,
+	caseId: string,
+	selection: SelectedElement | null = null
+) {
 	return {
+		...(techniquesConfigured()
+			? { suggest_techniques: createTechniquesTool(selection) }
+			: {}),
 		read_case: tool({
 			description:
 				"Read the whole open assurance case: its name, description and the full element tree (goals, strategies, property claims, evidence, contexts, assumptions, justifications).",

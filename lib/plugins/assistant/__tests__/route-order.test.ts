@@ -23,6 +23,10 @@ vi.mock("@/lib/plugins/assistant/tools", () => ({
 	ASSISTANT_SYSTEM_PROMPT: "",
 	createCaseTools: vi.fn(),
 }));
+vi.mock("@/lib/plugins/assistant/selected-element", () => ({
+	resolveSelectedElement: vi.fn(),
+	selectionPrompt: vi.fn(() => ""),
+}));
 vi.mock("@/lib/permissions", () => ({ canAccessCase: vi.fn() }));
 vi.mock("@/lib/plugins/assistant/provider-config", () => ({
 	ASSISTANT_PLUGIN_ID: "tea.assistant",

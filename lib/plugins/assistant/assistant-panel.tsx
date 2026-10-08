@@ -4,7 +4,13 @@ import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import {
+	type FormEvent,
+	type KeyboardEvent,
+	type ReactNode,
+	useState,
+} from "react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
@@ -36,6 +42,46 @@ function keyedParts(
 		seen.set(part.type, count + 1);
 		return { key: `${part.type}:${count}`, part };
 	});
+}
+
+const MARKDOWN_COMPONENTS = {
+	a: ({ href, children }: { href?: string; children?: ReactNode }) => (
+		<a
+			className="underline"
+			href={href}
+			rel="noopener noreferrer"
+			target="_blank"
+		>
+			{children}
+		</a>
+	),
+	// Remote images would let a reply make the browser fetch an arbitrary URL.
+	img: ({ alt }: { alt?: string }) => (alt ? <span>{alt}</span> : null),
+};
+
+/** Assistant text as markdown. Raw HTML is never rendered: it appears as text. */
+function AssistantText({ text }: { text: string }) {
+	return (
+		<div className="space-y-2 break-words [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
+			<ReactMarkdown components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
+		</div>
+	);
+}
+
+function MessagePartView({
+	part,
+	role,
+}: {
+	part: MessagePart;
+	role: UIMessage["role"];
+}) {
+	if (part.type !== "text") {
+		return <ToolCallRow part={part} />;
+	}
+	if (role === "assistant") {
+		return <AssistantText text={part.text} />;
+	}
+	return <p className="whitespace-pre-wrap break-words">{part.text}</p>;
 }
 
 function ErrorNotice({ error }: { error: Error }) {
@@ -138,15 +184,9 @@ function AssistantChat({
 						data-testid={`assistant-message-${message.role}`}
 						key={message.id}
 					>
-						{keyedParts(message.parts).map(({ key, part }) =>
-							part.type === "text" ? (
-								<p className="whitespace-pre-wrap break-words" key={key}>
-									{part.text}
-								</p>
-							) : (
-								<ToolCallRow key={key} part={part} />
-							)
-						)}
+						{keyedParts(message.parts).map(({ key, part }) => (
+							<MessagePartView key={key} part={part} role={message.role} />
+						))}
 					</div>
 				))}
 				{error && <ErrorNotice error={error} />}
