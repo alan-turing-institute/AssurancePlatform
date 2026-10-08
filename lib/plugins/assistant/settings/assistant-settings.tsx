@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { parseErrorMessage } from "@/hooks/use-fetch-on-mount";
 import { fetchPlugins } from "@/hooks/use-plugin-enablement";
-import { toastError, toastSuccess } from "@/lib/toast";
+import { toast } from "@/lib/toast";
 
 const KEY_URL = "/api/user/plugins/assistant/key";
 const OPTIONS_URL = "/api/user/plugins/assistant/options";
@@ -88,9 +88,13 @@ function KeyControl({
 			setValue("");
 			setReplacing(false);
 			onChanged(true);
-			toastSuccess("API key saved");
+			toast({ title: "API key saved" });
 		} catch (error) {
-			toastError("Could not save the key", (error as Error).message);
+			toast({
+				variant: "destructive",
+				title: "Could not save the key",
+				description: (error as Error).message,
+			});
 		} finally {
 			setBusy(false);
 		}
@@ -102,9 +106,13 @@ function KeyControl({
 			await requestJson(KEY_URL, { method: "DELETE" });
 			setReplacing(false);
 			onChanged(false);
-			toastSuccess("API key removed");
+			toast({ title: "API key removed" });
 		} catch (error) {
-			toastError("Could not remove the key", (error as Error).message);
+			toast({
+				variant: "destructive",
+				title: "Could not remove the key",
+				description: (error as Error).message,
+			});
 		} finally {
 			setBusy(false);
 		}
@@ -195,7 +203,11 @@ export function AssistantSettings({ pluginId }: { pluginId: string }) {
 			})
 			.catch((error: Error) => {
 				if (!cancelled) {
-					toastError("Could not load the assistant settings", error.message);
+					toast({
+						variant: "destructive",
+						title: "Could not load the assistant settings",
+						description: error.message,
+					});
 				}
 			});
 		return () => {
@@ -207,9 +219,13 @@ export function AssistantSettings({ pluginId }: { pluginId: string }) {
 		setSaving(true);
 		try {
 			await saveSettings(pluginId, settings);
-			toastSuccess("Assistant settings saved");
+			toast({ title: "Assistant settings saved" });
 		} catch (error) {
-			toastError("Could not save the settings", (error as Error).message);
+			toast({
+				variant: "destructive",
+				title: "Could not save the settings",
+				description: (error as Error).message,
+			});
 		} finally {
 			setSaving(false);
 		}
