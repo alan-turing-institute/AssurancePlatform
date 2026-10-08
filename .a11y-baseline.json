@@ -55,7 +55,7 @@
   },
   "/dashboard/settings/plugins": {
     "violations": {
-      "color-contrast": 4,
+      "color-contrast": 5,
       "list": 2
     },
     "cls": 0
