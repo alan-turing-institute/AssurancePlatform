@@ -749,7 +749,7 @@ describe("Settings: when the check lists cannot be read", () => {
 		await openSettings();
 		expect(
 			await screen.findByText(
-				"Could not load the checks your pipelines offer. Try reopening this element."
+				"Could not load the checks your pipelines offer. Reload the page; if it keeps happening, close other tabs showing this case."
 			)
 		).toBeVisible();
 		expect(screen.queryByRole("combobox", { name: "Check" })).toBeNull();

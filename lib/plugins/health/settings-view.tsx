@@ -60,7 +60,7 @@ const PICKER_NOTES: Record<CaseChecksState["status"], string> = {
 	idle: "",
 	loading: "Loading the checks your pipelines offer.",
 	error:
-		"Could not load the checks your pipelines offer. Try reopening this element.",
+		"Could not load the checks your pipelines offer. Reload the page; if it keeps happening, close other tabs showing this case.",
 	ready: "No pipeline has published a check list for this case yet.",
 };
 
