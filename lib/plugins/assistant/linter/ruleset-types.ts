@@ -1,4 +1,4 @@
-export type Severity = "error" | "warning" | "style";
+import type { Severity } from "./types";
 
 export interface RuleApply {
 	look_for: string;

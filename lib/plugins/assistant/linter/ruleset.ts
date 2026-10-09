@@ -10,7 +10,7 @@ export interface Ruleset {
 	version: string;
 }
 
-export function buildRuleset(data: RulesetData): Ruleset {
+function buildRuleset(data: RulesetData): Ruleset {
 	return {
 		version: data.version,
 		date: data.date,

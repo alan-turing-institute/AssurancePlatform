@@ -1,8 +1,7 @@
 import { JUDGEMENT_PROMPT } from "./judgement-prompt";
 import { RULESET } from "./ruleset";
-import type { Severity } from "./ruleset-types";
 import { checkStructure } from "./structural";
-import type { LintCase, LintNode } from "./types";
+import type { LintCase, LintNode, Severity } from "./types";
 
 export interface LintFinding {
 	elementLabel: string;

@@ -9,7 +9,6 @@
  */
 
 import type { Ruleset } from "./ruleset";
-import type { Severity } from "./ruleset-types";
 import type {
 	ConformanceFinding,
 	ElementType,
@@ -19,6 +18,7 @@ import type {
 	Precheck,
 	Question,
 	Report,
+	Severity,
 } from "./types";
 
 type CaseExportNested = LintCase;
