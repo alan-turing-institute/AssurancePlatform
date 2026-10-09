@@ -5,7 +5,13 @@ import { isToolUIPart, type UIMessage } from "ai";
 import { Bot } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import {
+	type FormEvent,
+	type KeyboardEvent,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import {
 	Conversation,
 	ConversationContent,
@@ -25,6 +31,7 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Button } from "@/components/ui/button";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Textarea } from "@/components/ui/textarea";
 import { ABORT_NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
@@ -71,6 +78,11 @@ function thinkingText(message: UIMessage): string {
 		.join("\n\n");
 }
 
+/** How many thinking steps the reply has had so far, counting ones still empty. */
+function thinkingSteps(message: UIMessage): number {
+	return message.parts.filter((part) => part.type === "reasoning").length;
+}
+
 function MessagePartView({
 	part,
 	role,
@@ -100,34 +112,47 @@ function MessageView({
 	thinking,
 }: {
 	message: UIMessage;
-	thinking: { text: string; streaming: boolean };
+	thinking: { steps: number; streaming: boolean; text: string };
 }) {
 	return (
-		<Message
-			data-testid={`assistant-message-${message.role}`}
-			from={message.role}
+		<ErrorBoundary
+			fallback={
+				<p
+					className="text-destructive text-sm"
+					data-testid="assistant-message-failed"
+					role="alert"
+				>
+					This message could not be shown.
+				</p>
+			}
 		>
-			<MessageContent
-				className={
-					message.role === "user" ? "whitespace-pre-wrap break-words" : ""
-				}
+			<Message
+				data-testid={`assistant-message-${message.role}`}
+				from={message.role}
 			>
-				{thinking.text && (
-					<Reasoning
-						data-testid="assistant-reasoning"
-						isStreaming={thinking.streaming}
-					>
-						<ReasoningTrigger />
-						<ReasoningContent streamdownProps={REPLY_MARKDOWN_PROPS}>
-							{thinking.text}
-						</ReasoningContent>
-					</Reasoning>
-				)}
-				{keyedParts(message.parts).map(({ key, part }) => (
-					<MessagePartView key={key} part={part} role={message.role} />
-				))}
-			</MessageContent>
-		</Message>
+				<MessageContent
+					className={
+						message.role === "user" ? "whitespace-pre-wrap break-words" : ""
+					}
+				>
+					{thinking.text && (
+						<Reasoning
+							data-testid="assistant-reasoning"
+							isStreaming={thinking.streaming}
+							key={thinking.steps}
+						>
+							<ReasoningTrigger />
+							<ReasoningContent streamdownProps={REPLY_MARKDOWN_PROPS}>
+								{thinking.text}
+							</ReasoningContent>
+						</Reasoning>
+					)}
+					{keyedParts(message.parts).map(({ key, part }) => (
+						<MessagePartView key={key} part={part} role={message.role} />
+					))}
+				</MessageContent>
+			</Message>
+		</ErrorBoundary>
 	);
 }
 
@@ -189,11 +214,21 @@ function AssistantChat({
 		label: selectedElementLabel,
 	});
 	const lastId = messages.at(-1)?.id;
+	// Set as a message goes out, before the chat reports that it is busy, so a
+	// second call in the same task sends nothing. It is cleared after any
+	// render in which the chat is idle, whether the reply finished or failed.
+	const sending = useRef(false);
+	useEffect(() => {
+		if (!busy) {
+			sending.current = false;
+		}
+	});
 
 	function send(text: string) {
-		if (busy) {
+		if (busy || sending.current) {
 			return;
 		}
+		sending.current = true;
 		sendMessage({ text }, { body: { selectedElementId } });
 	}
 
@@ -246,11 +281,12 @@ function AssistantChat({
 							key={message.id}
 							message={message}
 							thinking={{
-								text: thinkingText(message),
+								steps: thinkingSteps(message),
 								streaming:
 									status === "streaming" &&
 									message.id === lastId &&
 									message.parts.at(-1)?.type === "reasoning",
+								text: thinkingText(message),
 							}}
 						/>
 					))}
@@ -264,9 +300,17 @@ function AssistantChat({
 				<ConversationScrollButton aria-label="Scroll to the latest message" />
 			</Conversation>
 			{messages.length === 0 && prompts.length > 0 && (
-				<Suggestions data-testid="assistant-suggestions">
+				<Suggestions
+					className="w-full flex-wrap"
+					data-testid="assistant-suggestions"
+				>
 					{prompts.map((prompt) => (
-						<Suggestion key={prompt} onClick={send} suggestion={prompt} />
+						<Suggestion
+							className="h-auto max-w-full whitespace-normal py-1.5 text-left"
+							key={prompt}
+							onClick={send}
+							suggestion={prompt}
+						/>
 					))}
 				</Suggestions>
 			)}

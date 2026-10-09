@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	act,
 	renderWithoutProviders,
 	screen,
 } from "@/src/__tests__/utils/test-utils";
@@ -214,6 +215,50 @@ describe("AssistantPanel", () => {
 			{ body: { selectedElementId: "el-1" } }
 		);
 		expect(box).toHaveValue("half-written question");
+	});
+
+	it("sends one message when a prompt is clicked twice before the chat reports it is busy", () => {
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+		const prompt = screen.getByRole("button", {
+			name: "What evidence supports G1?",
+		});
+
+		act(() => {
+			prompt.click();
+			prompt.click();
+		});
+
+		expect(chat.state.sendMessage).toHaveBeenCalledTimes(1);
+	});
+
+	it("sends again once the chat is idle, even if it was never seen busy", async () => {
+		const { rerender } = renderWithoutProviders(<AssistantPanel {...CTX} />);
+		await userEvent.click(
+			screen.getByRole("button", { name: "What evidence supports G1?" })
+		);
+		rerender(<AssistantPanel {...CTX} />);
+
+		await userEvent.type(
+			screen.getByLabelText("Message the assistant"),
+			"Next question{Enter}"
+		);
+
+		expect(chat.state.sendMessage).toHaveBeenCalledTimes(2);
+		expect(chat.state.sendMessage).toHaveBeenLastCalledWith(
+			{ text: "Next question" },
+			{ body: { selectedElementId: "el-1" } }
+		);
+	});
+
+	it("lets the prompts wrap onto further lines instead of scrolling sideways", () => {
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		const row = screen.getByRole("button", {
+			name: "What evidence supports G1?",
+		}).parentElement;
+
+		expect(row).toHaveClass("flex-wrap");
+		expect(row).not.toHaveClass("flex-nowrap");
 	});
 
 	it("offers the case-wide prompts when nothing is selected", () => {
