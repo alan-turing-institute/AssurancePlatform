@@ -86,6 +86,19 @@ describe("lintCase", () => {
 		}
 	});
 
+	it("leaves prechecks and prechecksTruncated out when there are no prechecks", () => {
+		const result = lintCase(gapDoc());
+		expect(Object.keys(result).sort()).toEqual([
+			"acknowledgedGaps",
+			"acknowledgedGapsTruncated",
+			"findings",
+			"judgementRules",
+			"questions",
+			"questionsTruncated",
+			"truncated",
+		]);
+	});
+
 	it("labels a whole-case finding by the element's name", () => {
 		const result = lintCase(brokenDoc());
 		for (const f of result.findings) {
@@ -187,15 +200,15 @@ describe("ASSISTANT_SYSTEM_PROMPT", () => {
 		expect(ASSISTANT_SYSTEM_PROMPT).toContain('"Judgement findings"');
 	});
 
-	it("lists prechecks only when some were returned, and mentions prechecksTruncated", () => {
+	it("lists prechecks only when the result has a prechecks field, and mentions prechecksTruncated", () => {
 		expect(ASSISTANT_SYSTEM_PROMPT).toContain(
-			'only if it returned at least one precheck, list the prechecks it returned under a heading "Prechecks"'
+			'if the result contains a prechecks field, list its entries under a heading "Prechecks"'
 		);
 		expect(ASSISTANT_SYSTEM_PROMPT).toContain(
-			'print no "Prechecks" heading when it returned none'
+			'if the result has no prechecks field, write no "Prechecks" heading and do not mention prechecks'
 		);
 		expect(ASSISTANT_SYSTEM_PROMPT).toContain(
-			"if prechecksTruncated is more than 0"
+			"mention prechecksTruncated when it is more than 0"
 		);
 	});
 

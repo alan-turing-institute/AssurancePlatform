@@ -5,7 +5,7 @@ import {
 } from "@/src/__tests__/utils/test-utils";
 import { ToolCallRow } from "../tool-call-row";
 
-const output = {
+const withoutPrechecks = {
 	found: true,
 	findings: [
 		{
@@ -28,11 +28,15 @@ const output = {
 		},
 	],
 	acknowledgedGaps: [],
+	questions: [],
+	judgementRules: "long text",
+};
+
+const output = {
+	...withoutPrechecks,
 	prechecks: [
 		{ ruleId: "SCOP01", elementLabel: "G1", detail: "context list is empty" },
 	],
-	questions: [],
-	judgementRules: "long text",
 };
 
 describe("lint_case row", () => {
@@ -66,6 +70,27 @@ describe("lint_case row", () => {
 		expect(
 			screen.getByText("context list is empty", { exact: false })
 		).toBeInTheDocument();
+	});
+
+	it("shows the findings and no Prechecks section for a result with no prechecks field", () => {
+		renderWithoutProviders(
+			<ToolCallRow
+				part={
+					{
+						type: "tool-lint_case",
+						toolCallId: "l3",
+						state: "output-available",
+						input: {},
+						output: withoutPrechecks,
+					} as never
+				}
+			/>
+		);
+
+		expect(screen.getByText("TREE03")).toBeInTheDocument();
+		expect(
+			screen.queryByRole("heading", { name: "Prechecks" })
+		).not.toBeInTheDocument();
 	});
 
 	it("ignores a malformed prechecks field and still shows the findings", () => {

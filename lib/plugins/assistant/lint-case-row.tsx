@@ -59,7 +59,11 @@ function isRowList(value: unknown): value is LintRow[] {
 	);
 }
 
-/** The lint_case result when it has the expected shape, otherwise null. */
+/**
+ * The lint_case result when it has the expected shape, otherwise null. A result
+ * with no prechecks field, which is how the tool reports none, or a malformed one,
+ * parses with an empty list.
+ */
 export function parseLintOutput(output: unknown): LintOutput | null {
 	if (typeof output !== "object" || output === null) {
 		return null;

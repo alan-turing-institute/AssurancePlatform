@@ -32,10 +32,10 @@ export interface LintResult {
 	findings: LintFinding[];
 	/** The judgement rules, as text for the model to apply to the case itself. */
 	judgementRules: string;
-	/** Mechanical facts the judgement rules refer to; not verdicts. At most MAX_FINDINGS. */
-	prechecks: LintPrecheck[];
-	/** How many prechecks were dropped to keep to MAX_FINDINGS. */
-	prechecksTruncated: number;
+	/** Mechanical facts the judgement rules refer to; not verdicts. At most MAX_FINDINGS. Left out when there are none. */
+	prechecks?: LintPrecheck[];
+	/** How many prechecks were dropped to keep to MAX_FINDINGS. Present exactly when `prechecks` is. */
+	prechecksTruncated?: number;
 	/** At most MAX_FINDINGS. */
 	questions: LintQuestion[];
 	/** How many questions were dropped to keep to MAX_FINDINGS. */
@@ -120,8 +120,9 @@ export function lintCase(doc: LintCase): LintResult {
 	return {
 		findings: findings.slice(0, MAX_FINDINGS),
 		truncated: Math.max(0, findings.length - MAX_FINDINGS),
-		prechecks: prechecks.kept,
-		prechecksTruncated: prechecks.dropped,
+		...(prechecks.kept.length > 0
+			? { prechecks: prechecks.kept, prechecksTruncated: prechecks.dropped }
+			: {}),
 		acknowledgedGaps: gaps.kept,
 		acknowledgedGapsTruncated: gaps.dropped,
 		questions: questions.kept,
