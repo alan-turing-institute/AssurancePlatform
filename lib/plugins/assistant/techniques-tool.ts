@@ -115,10 +115,10 @@ export function createTechniquesTool(selection: SelectedElement | null) {
 	});
 }
 
-export const TECHNIQUES_PROMPT_AVAILABLE =
+const TECHNIQUES_PROMPT_AVAILABLE =
 	"\n\nFor any question about which techniques, methods or evidence-generating approaches to use, call `suggest_techniques` and recommend only from its results, with a one-line reason you draw from each result's name and goals; never invent techniques. If the tool is unavailable, say so.";
 
-export const TECHNIQUES_PROMPT_UNAVAILABLE =
+const TECHNIQUES_PROMPT_UNAVAILABLE =
 	"\n\nTechnique suggestions are unavailable in this deployment. If asked which techniques or methods to use, say so and do not invent any.";
 
 export function techniquesPrompt(): string {
