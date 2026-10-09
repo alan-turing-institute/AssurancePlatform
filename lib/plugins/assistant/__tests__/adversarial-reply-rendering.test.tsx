@@ -370,7 +370,7 @@ describe.each(SURFACES)("model text in the %s", (surface) => {
 		);
 
 		await userEvent.click(await within(region).findByText("the docs"));
-		await userEvent.click(screen.getByTitle("Close"));
+		await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
 		expect(openSpy).not.toHaveBeenCalled();
 		expect(screen.queryByRole("button", { name: "Open link" })).toBeNull();

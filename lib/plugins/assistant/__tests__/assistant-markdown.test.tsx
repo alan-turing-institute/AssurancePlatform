@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	renderWithoutProviders,
 	screen,
+	waitFor,
+	within,
 } from "@/src/__tests__/utils/test-utils";
 import { AssistantPanel } from "../assistant-panel";
 
@@ -169,5 +171,63 @@ describe("assistant thinking as markdown", () => {
 		expect(thinking).toHaveTextContent("chart");
 		expect(container.querySelectorAll("script, img")).toHaveLength(0);
 		expect(container.querySelector("[onerror]")).toBeNull();
+	});
+});
+
+/** Shows the text as a reply, or as the model's thinking with the block opened. */
+async function showModelText(surface: "reply" | "thinking", text: string) {
+	if (surface === "reply") {
+		return show("assistant", text);
+	}
+	chat.state.messages = [
+		{
+			id: "m",
+			role: "assistant",
+			parts: [{ type: "reasoning", text, state: "done" }],
+		},
+	];
+	const rendered = renderWithoutProviders(<AssistantPanel {...CTX} />);
+	await userEvent.click(
+		within(screen.getByTestId("assistant-reasoning")).getByRole("button")
+	);
+	return rendered;
+}
+
+describe.each([
+	"reply",
+	"thinking",
+] as const)("a diagram or an unusual link in the %s", (surface) => {
+	it("shows a diagram as code and does not draw it", async () => {
+		const { container } = await showModelText(
+			surface,
+			"```mermaid\ngraph TD\n A[\"<img src='https://evil.example/m.png'>\"]\n```"
+		);
+
+		await waitFor(() =>
+			expect(
+				container.querySelector(
+					'[data-streamdown="code-block"][data-language="mermaid"]'
+				)
+			).not.toBeNull()
+		);
+		expect(
+			container.querySelector('[data-streamdown="mermaid-block"]')
+		).toBeNull();
+	});
+
+	it.each([
+		["xmpp", "[x](xmpp:a@b.c)", "x"],
+		["irc", "[i](irc://e.example/c)", "i"],
+	])("leaves an %s link as plain text with no button", async (_name, markdown, label) => {
+		const { container } = await showModelText(surface, markdown);
+
+		await waitFor(() =>
+			expect(
+				screen.getByTestId("assistant-message-assistant")
+			).toHaveTextContent(label)
+		);
+		expect(screen.queryByRole("button", { name: label })).toBeNull();
+		expect(container.querySelector("a, [data-streamdown='link']")).toBeNull();
+		expect(container).not.toHaveTextContent("blocked");
 	});
 });

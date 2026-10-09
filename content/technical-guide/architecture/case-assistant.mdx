@@ -61,17 +61,23 @@ The line is not shown while thinking or text is arriving, while a tool is runnin
 When the provider sends the model's thinking, the panel shows it as one block at the top of the reply.
 The block opens while the model is thinking, closes a second after it finishes, and then reads "Thought for" and a number of seconds.
 Several thinking steps in one reply are joined into that one block, and a reply whose thinking is empty has no block.
+When the model thinks again after a tool has finished, the block opens again and closes a second after that step ends.
 Thinking text is shown with the same safety settings as the reply.
 Replies are rendered as markdown.
 Raw HTML appears as text, an image appears as its alt text, and only `http`, `https` and `mailto` links are active.
-A link opens in a new tab after the reader confirms it.
+Any other link, such as an `irc` or `xmpp` link, appears as plain text.
+A diagram written in markdown appears as code and is not drawn, because a drawn diagram can fetch from other sites.
+A link opens in a new tab after the reader confirms it in a dialog that shows the address.
+The dialog takes keyboard focus and keeps it until it closes, the Escape key closes only the dialog, and focus then returns to the link.
+Text nested more than 50 levels deep, such as a long run of nested quotations, is shown without the extra nesting.
+If a message cannot be drawn at all, a short notice takes its place and the rest of the panel keeps working.
 Each tool call is one collapsed row with a plain title and a state label: Pending, Running, Completed or Error.
 Opening a row shows the tool's input when it has one, then its result.
 Technique suggestions and lint results appear as lists, and the other tools show their result as text cut to 4,000 characters.
 
 ## Suggested prompts
 
-Before the first message, the panel shows a short introduction to the assistant and a row of prompts the user can click.
+Before the first message, the panel shows a short introduction to the assistant and prompts the user can click, which wrap onto further lines to fit the panel.
 A prompt sends its text at once, with the current selection, and leaves any draft in the box as it was.
 The prompts depend on the tools registered for the case and on the selection.
 With nothing selected, the panel offers "What is the top-level goal?" and "Which claims lack evidence?", both of which need `read_case`.
