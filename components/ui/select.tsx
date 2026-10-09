@@ -30,13 +30,14 @@ const SelectValue = Value;
 
 const SelectTrigger = React.forwardRef<
 	React.ElementRef<typeof Trigger>,
-	React.ComponentPropsWithoutRef<typeof Trigger>
->(({ className, children, ...props }, ref) => (
+	React.ComponentPropsWithoutRef<typeof Trigger> & { size?: "sm" | "default" }
+>(({ className, children, size = "default", ...props }, ref) => (
 	<Trigger
 		className={cn(
-			"flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+			"flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[size=sm]:h-8 [&>span]:line-clamp-1",
 			className
 		)}
+		data-size={size}
 		ref={ref}
 		{...props}
 	>
