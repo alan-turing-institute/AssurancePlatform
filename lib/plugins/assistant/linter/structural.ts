@@ -433,54 +433,62 @@ function checkTREE02(
  * and evidence are not claims). Either list may be empty, in which case that record is
  * omitted rather than emitted empty.
  */
+interface TREE03Scan {
+	ackedId: string | undefined;
+	emptyStrategyCount: number;
+	surfacedIds: string[];
+	surfacedParts: string[];
+}
+
+/** Single ordered pass over the tree (root first) so `elements` lists ids in tree order. */
+function scanTREE03(
+	doc: CaseExportNested,
+	occurrences: Occurrence[]
+): TREE03Scan {
+	const scan: TREE03Scan = {
+		surfacedIds: [],
+		surfacedParts: [],
+		ackedId: undefined,
+		emptyStrategyCount: 0,
+	};
+	for (const occ of uniqueById(occurrences)) {
+		const node = occ.node;
+		const isRoot = node.id === doc.tree.id;
+
+		if (isRoot && node.type === "EVIDENCE") {
+			// Root Evidence: orphan by construction, since nested export only reaches Evidence via
+			// a parent's children array. Not a claim — never ackable.
+			scan.surfacedIds.push(node.id);
+			scan.surfacedParts.push(
+				"an Evidence node is the root of the case, so it supports nothing"
+			);
+		} else if (isRoot && node.type === "GOAL" && !hasRealSupport(node)) {
+			// Covers the "GOAL claim" half of TREE03's statement — a Goal never appears anywhere but
+			// the root in TEA's nested export, per CASE-FORMAT.md.
+			if (node.assertionStatus === "NEEDS_SUPPORT") {
+				scan.ackedId = node.id;
+			} else {
+				scan.surfacedIds.push(node.id);
+				scan.surfacedParts.push(
+					"the top goal has no strategy, sub-claim or evidence beneath it"
+				);
+			}
+		} else if (node.type === "STRATEGY" && node.children.length === 0) {
+			scan.surfacedIds.push(node.id);
+			scan.emptyStrategyCount++;
+		}
+	}
+	return scan;
+}
+
 function checkTREE03(
 	doc: CaseExportNested,
 	occurrences: Occurrence[],
 	ruleset: LoadedRuleset
 ): Finding[] {
 	const findings: Finding[] = [];
-	const surfacedIds: string[] = [];
-	const surfacedParts: string[] = [];
-	let ackedId: string | undefined;
-	let emptyStrategyCount = 0;
-
-	// Single ordered pass over the tree (root first) so `elements` lists ids in tree order.
-	for (const occ of uniqueById(occurrences)) {
-		const node = occ.node;
-
-		if (node.id === doc.tree.id && node.type === "EVIDENCE") {
-			// Root Evidence: orphan by construction, since nested export only reaches Evidence via
-			// a parent's children array. Not a claim — never ackable.
-			surfacedIds.push(node.id);
-			surfacedParts.push(
-				"an Evidence node is the root of the case, so it supports nothing"
-			);
-			continue;
-		}
-
-		if (
-			node.id === doc.tree.id &&
-			node.type === "GOAL" &&
-			!hasRealSupport(node)
-		) {
-			// Covers the "GOAL claim" half of TREE03's statement — a Goal never appears anywhere but
-			// the root in TEA's nested export, per CASE-FORMAT.md.
-			if (node.assertionStatus === "NEEDS_SUPPORT") {
-				ackedId = node.id;
-			} else {
-				surfacedIds.push(node.id);
-				surfacedParts.push(
-					"the top goal has no strategy, sub-claim or evidence beneath it"
-				);
-			}
-			continue;
-		}
-
-		if (node.type === "STRATEGY" && node.children.length === 0) {
-			surfacedIds.push(node.id);
-			emptyStrategyCount++;
-		}
-	}
+	const { surfacedIds, surfacedParts, ackedId, emptyStrategyCount } =
+		scanTREE03(doc, occurrences);
 
 	if (emptyStrategyCount > 0) {
 		surfacedParts.push(
@@ -703,6 +711,24 @@ function hasZeroSegment(label: string): boolean {
 	return numeric.split(".").some((seg) => Number(seg) === 0);
 }
 
+type LabelProblem = "unlabelled" | "notG1" | "zeroSegment";
+
+function labelProblem(node: TreeNode, rootId: string): LabelProblem | null {
+	if (
+		node.name === null ||
+		node.name === undefined ||
+		node.name.trim() === ""
+	) {
+		return "unlabelled";
+	}
+	if (node.id === rootId && node.name !== "G1") {
+		return "notG1";
+	}
+	return LABEL_RE.test(node.name) && hasZeroSegment(node.name)
+		? "zeroSegment"
+		: null;
+}
+
 function checkTREE06(
 	doc: CaseExportNested,
 	occurrences: Occurrence[],
@@ -718,25 +744,16 @@ function checkTREE06(
 		if (!LABELLED_TYPES.has(node.type)) {
 			continue;
 		}
-
-		if (
-			node.name === null ||
-			node.name === undefined ||
-			node.name.trim() === ""
-		) {
-			elements.push(node.id);
+		const problem = labelProblem(node, doc.tree.id);
+		if (problem === null) {
+			continue;
+		}
+		elements.push(node.id);
+		if (problem === "unlabelled") {
 			unlabelledCount++;
-			continue;
-		}
-
-		if (node.id === doc.tree.id && node.name !== "G1") {
-			elements.push(node.id);
+		} else if (problem === "notG1") {
 			notG1Count++;
-			continue;
-		}
-
-		if (LABEL_RE.test(node.name) && hasZeroSegment(node.name)) {
-			elements.push(node.id);
+		} else {
 			zeroSegmentCount++;
 		}
 	}
@@ -772,21 +789,36 @@ function checkTREE06(
 // SCOP02 — restated context (exact match only; narrowing is SCOP04's business)
 // ===========================================================================
 
+interface ContextWithAncestors {
+	ancestorEntries: string[];
+	context: string[];
+	node: TreeNode;
+}
+
+/** Elements that have context entries of their own and at least one ancestor context entry. */
+function withInheritedContext(
+	occurrences: Occurrence[]
+): ContextWithAncestors[] {
+	const out: ContextWithAncestors[] = [];
+	for (const occ of uniqueById(occurrences)) {
+		const node = occ.node;
+		const context = node.context ?? [];
+		const ancestorEntries = occ.ancestors.flatMap((a) => a.context ?? []);
+		if (context.length > 0 && ancestorEntries.length > 0) {
+			out.push({ node, context, ancestorEntries });
+		}
+	}
+	return out;
+}
+
 function checkSCOP02(
 	occurrences: Occurrence[],
 	ruleset: LoadedRuleset
 ): Finding[] {
 	const findings: Finding[] = [];
-	for (const occ of uniqueById(occurrences)) {
-		const node = occ.node;
-		const context = node.context ?? [];
-		if (context.length === 0) {
-			continue;
-		}
-		const ancestorEntries = occ.ancestors.flatMap((a) => a.context ?? []);
-		if (ancestorEntries.length === 0) {
-			continue;
-		}
+	for (const { node, context, ancestorEntries } of withInheritedContext(
+		occurrences
+	)) {
 		const ancestorNormalised = ancestorEntries.map(normalise);
 
 		context.forEach((entry, i) => {
@@ -864,17 +896,9 @@ interface SCOP04Candidate {
 /** Shared by the SCOP04 precheck and the STEP01/STEP10 narrowing question — computed once. */
 function findSCOP04Candidates(occurrences: Occurrence[]): SCOP04Candidate[] {
 	const out: SCOP04Candidate[] = [];
-	for (const occ of uniqueById(occurrences)) {
-		const node = occ.node;
-		const context = node.context ?? [];
-		if (context.length === 0) {
-			continue;
-		}
-		const ancestorEntries = occ.ancestors.flatMap((a) => a.context ?? []);
-		if (ancestorEntries.length === 0) {
-			continue;
-		}
-
+	for (const { node, context, ancestorEntries } of withInheritedContext(
+		occurrences
+	)) {
 		context.forEach((childEntry, i) => {
 			const childNorm = normalise(childEntry);
 			const childTokens = wordTokens(childEntry);
