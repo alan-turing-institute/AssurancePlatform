@@ -33,7 +33,7 @@ const log = logger.child({ component: "assistant-route" });
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_MESSAGES = 100;
 const MAX_STEPS = 8;
-/** Bounds on one model call: tokens written and provider retries (wall time: ASSISTANT_MODEL_TIMEOUT_MS). */
+/** Bounds on one model call: tokens written and provider retries. The wall time of the whole reply is ASSISTANT_MODEL_TIMEOUT_MS. */
 const MAX_OUTPUT_TOKENS = 2048;
 const MAX_RETRIES = 1;
 
@@ -91,7 +91,11 @@ export async function POST(
 			throw new AppError({ code: "CONFLICT", message: resolved.error });
 		}
 
-		const tools = createCaseTools(userId, caseId, selection);
+		// The limit covers the whole reply, tool calls included; tools get the
+		// moment it ends so that they can keep their own waits inside it.
+		const timeoutMs = modelTimeoutMs();
+		const replyDeadline = Date.now() + timeoutMs;
+		const tools = createCaseTools(userId, caseId, selection, replyDeadline);
 		const result = streamText({
 			model: createAssistantModel(resolved.config),
 			system:
@@ -102,7 +106,7 @@ export async function POST(
 			tools,
 			stopWhen: stepCountIs(MAX_STEPS),
 			abortSignal: request.signal,
-			timeout: modelTimeoutMs(),
+			timeout: timeoutMs,
 			maxOutputTokens: MAX_OUTPUT_TOKENS,
 			maxRetries: MAX_RETRIES,
 			// Replaces the SDK's default console logging, which prints the whole

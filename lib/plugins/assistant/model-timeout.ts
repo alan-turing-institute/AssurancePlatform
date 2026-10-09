@@ -14,9 +14,9 @@ function boundedMs(raw: string | undefined, fallback: number): number {
 }
 
 /**
- * The wall-time bound on one model call, read from ASSISTANT_MODEL_TIMEOUT_MS
- * on every call. Integer milliseconds, clamped to 5000-600000; an unset, empty
- * or non-numeric value means 60000.
+ * The wall-time bound on the whole reply, tool calls included, read from
+ * ASSISTANT_MODEL_TIMEOUT_MS on every call. Integer milliseconds, clamped to
+ * 5000-600000; an unset, empty or non-numeric value means 60000.
  */
 export function modelTimeoutMs(
 	raw: string | undefined = process.env.ASSISTANT_MODEL_TIMEOUT_MS

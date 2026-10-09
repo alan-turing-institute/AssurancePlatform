@@ -224,15 +224,23 @@ describe("suggest_techniques claim text", () => {
 		expect(sentClaim()).toBe(typed);
 	});
 
-	it("returns the no-claim error, not the placeholder, when the selected element's text is empty", async () => {
+	it("returns an error saying the element has no text, not the placeholder, when the selected element's text is empty", async () => {
 		const out = await createTechniquesTool(element("")).execute?.(
 			{ claimText: "This claim" },
 			options
 		);
 
-		expect(out).toEqual({
-			error: "No claim text was given and no element is selected.",
-		});
+		expect(out).toEqual({ error: "The selected element has no text." });
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("returns the same error when the selected element's text is only whitespace and nothing is supplied", async () => {
+		const out = await createTechniquesTool(element("  \n ")).execute?.(
+			{},
+			options
+		);
+
+		expect(out).toEqual({ error: "The selected element has no text." });
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
@@ -334,6 +342,123 @@ describe("suggest_techniques failure paths", () => {
 		expect(first?.url).toHaveLength(500);
 		expect(first?.goals).toHaveLength(20);
 		expect(first?.goals.every((g) => g.length === 200)).toBe(true);
+	});
+});
+
+/** A fetch that never answers; returns a reader for the signal it was given. */
+function hangingFetch() {
+	let signal: AbortSignal | undefined;
+	fetchMock.mockImplementation((_u: string, init: RequestInit) => {
+		signal = init.signal ?? undefined;
+		return new Promise((_res, rej) =>
+			init.signal?.addEventListener("abort", () => rej(new Error("abort")))
+		);
+	});
+	return () => signal;
+}
+
+describe("suggest_techniques wait inside the reply limit", () => {
+	it("waits for the time left less the answer margin when that is shorter than the setting", async () => {
+		vi.useFakeTimers();
+		const signalOf = hangingFetch();
+
+		const pending = createTechniquesTool(null, Date.now() + 60_000).execute?.(
+			{ claimText: "x" },
+			options
+		);
+		await vi.advanceTimersByTimeAsync(44_999);
+		expect(signalOf()?.aborted).toBe(false);
+		await vi.advanceTimersByTimeAsync(1);
+
+		expect(signalOf()?.aborted).toBe(true);
+		expect(await pending).toEqual({
+			error: "The techniques service is not reachable.",
+		});
+	});
+
+	it("waits for the setting's default of 70 seconds when the reply has far longer left", async () => {
+		vi.useFakeTimers();
+		const signalOf = hangingFetch();
+
+		const pending = createTechniquesTool(null, Date.now() + 600_000).execute?.(
+			{ claimText: "x" },
+			options
+		);
+		await vi.advanceTimersByTimeAsync(69_999);
+		expect(signalOf()?.aborted).toBe(false);
+		await vi.advanceTimersByTimeAsync(1);
+
+		expect(signalOf()?.aborted).toBe(true);
+		expect(await pending).toEqual({
+			error: "The techniques service is not reachable.",
+		});
+	});
+
+	it("waits for a setting that is shorter than the time left", async () => {
+		vi.stubEnv("ASSISTANT_TECHNIQUES_TIMEOUT_MS", "30000");
+		vi.useFakeTimers();
+		const signalOf = hangingFetch();
+
+		const pending = createTechniquesTool(null, Date.now() + 600_000).execute?.(
+			{ claimText: "x" },
+			options
+		);
+		await vi.advanceTimersByTimeAsync(29_999);
+		expect(signalOf()?.aborted).toBe(false);
+		await vi.advanceTimersByTimeAsync(1);
+
+		expect(signalOf()?.aborted).toBe(true);
+		await pending;
+	});
+
+	it("measures the time left when the tool is called, not when it was created", async () => {
+		vi.useFakeTimers();
+		const signalOf = hangingFetch();
+		const tool = createTechniquesTool(null, Date.now() + 60_000);
+
+		await vi.advanceTimersByTimeAsync(20_000);
+		const pending = tool.execute?.({ claimText: "x" }, options);
+		await vi.advanceTimersByTimeAsync(24_999);
+		expect(signalOf()?.aborted).toBe(false);
+		await vi.advanceTimersByTimeAsync(1);
+
+		expect(signalOf()?.aborted).toBe(true);
+		await pending;
+	});
+
+	it("does not call the service, and says so, when under a second would be left to wait", async () => {
+		vi.useFakeTimers();
+
+		const out = await createTechniquesTool(null, Date.now() + 10_000).execute?.(
+			{ claimText: "x" },
+			options
+		);
+
+		expect(out).toEqual({
+			error: "There was not enough time left to ask the techniques service.",
+		});
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("suggest_techniques cancellation", () => {
+	it("aborts the request when the reply's signal aborts, before the timer", async () => {
+		vi.useFakeTimers();
+		const signalOf = hangingFetch();
+		const reply = new AbortController();
+
+		const pending = createTechniquesTool(null).execute?.(
+			{ claimText: "x" },
+			{ ...options, abortSignal: reply.signal }
+		);
+		await vi.advanceTimersByTimeAsync(1000);
+		expect(signalOf()?.aborted).toBe(false);
+		reply.abort();
+
+		expect(signalOf()?.aborted).toBe(true);
+		expect(await pending).toEqual({
+			error: "The techniques service is not reachable.",
+		});
 	});
 });
 

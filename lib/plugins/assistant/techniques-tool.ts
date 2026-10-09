@@ -10,9 +10,16 @@ const MIN_SUPPLIED_CLAIM_CHARS = 40;
 const MAX_FIELD_CHARS = 500;
 const MAX_GOALS = 20;
 const MAX_GOAL_CHARS = 200;
+/** Time kept back from the reply limit for the model to answer after the tool returns. */
+const ANSWER_MARGIN_MS = 15_000;
+/** A wait shorter than this is not worth a request. */
+const MIN_WAIT_MS = 1000;
 const HTTP_PROTOCOL = /^https?$/;
 const UNREACHABLE = {
 	error: "The techniques service is not reachable.",
+} as const;
+const OUT_OF_TIME = {
+	error: "There was not enough time left to ask the techniques service.",
 } as const;
 
 /** Cuts, never rejects, so an oversized field cannot turn a good answer into an error. */
@@ -57,17 +64,43 @@ export function techniquesConfigured(): boolean {
 	return techniquesUrl() !== undefined;
 }
 
-async function callTechniques(claim: string, url: string | undefined) {
+/** The error for an empty claim: the selected element has no text, or nothing was given at all. */
+function noClaimError(selection: SelectedElement | null) {
+	return {
+		error: selection
+			? "The selected element has no text."
+			: "No claim text was given and no element is selected.",
+	};
+}
+
+async function callTechniques({
+	abortSignal,
+	claim,
+	replyDeadline,
+	selection,
+	url,
+}: {
+	abortSignal: AbortSignal | undefined;
+	claim: string;
+	replyDeadline: number;
+	selection: SelectedElement | null;
+	url: string | undefined;
+}) {
 	if (!url) {
 		return UNREACHABLE;
 	}
 	if (!claim) {
-		return {
-			error: "No claim text was given and no element is selected.",
-		};
+		return noClaimError(selection);
+	}
+	const waitMs = Math.min(
+		techniquesTimeoutMs(),
+		replyDeadline - Date.now() - ANSWER_MARGIN_MS
+	);
+	if (waitMs < MIN_WAIT_MS) {
+		return OUT_OF_TIME;
 	}
 	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), techniquesTimeoutMs());
+	const timer = setTimeout(() => controller.abort(), waitMs);
 	try {
 		const response = await fetch(url, {
 			method: "POST",
@@ -85,7 +118,9 @@ async function callTechniques(claim: string, url: string | undefined) {
 				},
 			}),
 			redirect: "error",
-			signal: controller.signal,
+			signal: abortSignal
+				? AbortSignal.any([controller.signal, abortSignal])
+				: controller.signal,
 		});
 		if (!response.ok) {
 			return UNREACHABLE;
@@ -134,8 +169,19 @@ function chooseClaim(
 	return (claim || selected).slice(0, MAX_CLAIM_CHARS);
 }
 
-/** The suggest_techniques tool; defaults the claim to the selected element's text. Never throws. */
-export function createTechniquesTool(selection: SelectedElement | null) {
+/**
+ * The suggest_techniques tool; defaults the claim to the selected element's text. Never throws.
+ *
+ * The wait for the service is the smaller of ASSISTANT_TECHNIQUES_TIMEOUT_MS and
+ * the time left before `replyDeadline` (epoch milliseconds, when the whole
+ * reply is cut off) less a margin for the model to answer; with less than a
+ * second to spare the service is not called. Without a deadline only the setting
+ * applies. The request is also cancelled with the reply.
+ */
+export function createTechniquesTool(
+	selection: SelectedElement | null,
+	replyDeadline = Number.POSITIVE_INFINITY
+) {
 	return tool({
 		description:
 			"Suggest assurance techniques from the TEA techniques library for a claim. Returns ranked techniques with their goals and links. When an element is selected, omit claimText: the selected element's text is used. Supply claimText only when the user typed the claim in the chat.",
@@ -148,8 +194,14 @@ export function createTechniquesTool(selection: SelectedElement | null) {
 					"The claim to find techniques for, at most 2000 characters. Omit it when an element is selected; supply it only when the user typed the claim in the chat."
 				),
 		}),
-		execute: ({ claimText }) =>
-			callTechniques(chooseClaim(claimText, selection), techniquesUrl()),
+		execute: ({ claimText }, { abortSignal }) =>
+			callTechniques({
+				abortSignal,
+				claim: chooseClaim(claimText, selection),
+				replyDeadline,
+				selection,
+				url: techniquesUrl(),
+			}),
 	});
 }
 

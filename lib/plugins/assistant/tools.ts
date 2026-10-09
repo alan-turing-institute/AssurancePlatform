@@ -61,11 +61,15 @@ async function loadExport(
  * `caseId`; the model never supplies either, and an element id is only ever
  * looked up inside that case's own export, so an id from another case is
  * simply not found. Comments are never exported.
+ *
+ * `replyDeadline` is the epoch time in milliseconds at which the whole reply is
+ * cut off; the techniques tool keeps its wait inside it.
  */
 export function createCaseTools(
 	userId: string,
 	caseId: string,
-	selection: SelectedElement | null = null
+	selection: SelectedElement | null = null,
+	replyDeadline?: number
 ) {
 	return {
 		read_case: tool({
@@ -105,7 +109,7 @@ export function createCaseTools(
 			},
 		}),
 		...(techniquesConfigured()
-			? { suggest_techniques: createTechniquesTool(selection) }
+			? { suggest_techniques: createTechniquesTool(selection, replyDeadline) }
 			: {}),
 	};
 }
