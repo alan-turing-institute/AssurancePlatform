@@ -297,28 +297,29 @@ function hasInternalReference(text: string): boolean {
 	return new RegExp(REFERENCE_CHECK.source, REFERENCE_CHECK.flags).test(rest);
 }
 
+/** Every kept text value, with the rule (or family) and field it came from. */
+function keptTexts(
+	rules: GeneratedRule[],
+	families: FamilyData[]
+): ReferenceHit[] {
+	const out: ReferenceHit[] = rules.flatMap((rule) =>
+		Object.entries(rule).flatMap(([field, value]) =>
+			textOf(value).map((text) => ({ ruleId: rule.id, field, text }))
+		)
+	);
+	for (const f of families) {
+		for (const text of [f.name, f.defect]) {
+			out.push({ ruleId: `family ${f.prefix}`, field: "name/defect", text });
+		}
+	}
+	return out;
+}
+
 function referenceHits(
 	rules: GeneratedRule[],
 	families: FamilyData[]
 ): ReferenceHit[] {
-	const hits: ReferenceHit[] = [];
-	for (const rule of rules) {
-		for (const [field, value] of Object.entries(rule)) {
-			for (const text of textOf(value)) {
-				if (hasInternalReference(text)) {
-					hits.push({ ruleId: rule.id, field, text });
-				}
-			}
-		}
-	}
-	for (const f of families) {
-		for (const text of [f.name, f.defect]) {
-			if (hasInternalReference(text)) {
-				hits.push({ ruleId: `family ${f.prefix}`, field: "name/defect", text });
-			}
-		}
-	}
-	return hits;
+	return keptTexts(rules, families).filter((t) => hasInternalReference(t.text));
 }
 
 /** A judgement rule the model applies to the case itself. */

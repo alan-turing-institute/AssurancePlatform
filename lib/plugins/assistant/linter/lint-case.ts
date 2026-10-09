@@ -37,8 +37,8 @@ export interface LintResult {
 	truncated: number;
 }
 
-export const MAX_FINDINGS = 100;
-export const MAX_LABEL_LENGTH = 200;
+const MAX_FINDINGS = 100;
+const MAX_LABEL_LENGTH = 200;
 
 function capLabel(label: string): string {
 	return label.length > MAX_LABEL_LENGTH
