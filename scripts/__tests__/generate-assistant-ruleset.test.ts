@@ -2,7 +2,14 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { generate, main, writeOutputs } from "../assistant/generate-ruleset";
+import {
+	buildNameCheck,
+	generate,
+	main,
+	writeOutputs,
+} from "../assistant/generate-ruleset";
+
+const NAME_CHECK = buildNameCheck("zed|qux");
 
 const MANIFEST = `version: "9.9"
 date: 2026-01-01
@@ -57,7 +64,7 @@ function fixture(rules: string): string {
 
 describe("generate-ruleset", () => {
 	it("keeps only the allow-listed fields and skips retired rules", () => {
-		const out = generate(fixture(rule("")));
+		const out = generate(fixture(rule("")), NAME_CHECK);
 
 		expect(out.hits).toEqual([]);
 		expect(out.ruleCount).toBe(1);
@@ -79,7 +86,7 @@ describe("generate-ruleset", () => {
 	});
 
 	it("lists the dropped field names per rule and writes all three files", () => {
-		const out = generate(fixture(rule("")));
+		const out = generate(fixture(rule("")), NAME_CHECK);
 		const dir = mkdtempSync(join(tmpdir(), "out-"));
 		writeOutputs(out, dir);
 
@@ -97,23 +104,23 @@ describe("generate-ruleset", () => {
 	});
 
 	it("fails the name check on a name in a field the checker reads", () => {
-		const out = generate(fixture(rule("", "Ask Chris to fix it.")));
+		const out = generate(fixture(rule("", "Ask zed to fix it.")), NAME_CHECK);
 
 		expect(out.hits).toEqual([
-			{ ruleId: "TREE01", field: "fix", match: "Chris" },
+			{ ruleId: "TREE01", field: "fix", match: "zed" },
 		]);
 	});
 
 	it("omits a prose field that names someone and keeps the rule out of the prompt", () => {
 		const planted = rule("").replace(
 			"A case has one top goal.",
-			"Funes ruled this."
+			"Qux said this."
 		);
-		const out = generate(fixture(planted));
+		const out = generate(fixture(planted), NAME_CHECK);
 
 		expect(out.hits).toEqual([]);
 		expect(out.judgementExcluded).toEqual(["TREE01"]);
-		expect(out.data.toLowerCase()).not.toContain("funes");
+		expect(out.data.toLowerCase()).not.toContain("qux");
 		expect(out.prompt).not.toContain("TREE01 (warning)");
 		expect(out.dropped).toContain("statement (name check)");
 	});
@@ -122,6 +129,7 @@ describe("generate-ruleset", () => {
 		vi.spyOn(console, "log").mockImplementation(() => undefined);
 		vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
+		vi.stubEnv("RULESET_NAME_CHECK", "zed|qux");
 		const dir = mkdtempSync(join(tmpdir(), "cli-out-"));
 
 		main(["node", "gen", fixture(rule("")), "--out", dir]);
@@ -133,7 +141,7 @@ describe("generate-ruleset", () => {
 		main([
 			"node",
 			"gen",
-			fixture(rule("", "Ask Chris to fix it.")),
+			fixture(rule("", "Ask zed to fix it.")),
 			"--out",
 			blocked,
 		]);
@@ -141,5 +149,108 @@ describe("generate-ruleset", () => {
 		process.exitCode = 0;
 		expect(() => readFileSync(join(blocked, "ruleset-data.ts"))).toThrow();
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+	});
+});
+
+describe("generate-ruleset internal-reference guard", () => {
+	const withStatement = (statement: string) =>
+		rule("").replace("A case has one top goal.", statement);
+
+	it.each([
+		"See the spec for details.",
+		"Recorded in ADR 12.",
+		"Tracked as an issue.",
+		"Described in section § 4.",
+	])("reports %s with the rule, field and text", (statement) => {
+		const out = generate(fixture(withStatement(statement)), NAME_CHECK);
+
+		expect(out.referenceHits).toEqual([
+			{ ruleId: "TREE01", field: "statement", text: statement },
+		]);
+	});
+
+	it("lets the allow-listed standard reference through", () => {
+		const out = generate(
+			fixture(withStatement("As GSN §1:6 requires, one top goal.")),
+			NAME_CHECK
+		);
+
+		expect(out.referenceHits).toEqual([]);
+	});
+
+	it("matches whole words only: specific and issuer are not references", () => {
+		const out = generate(
+			fixture(withStatement("A specific issuer of claims.")),
+			NAME_CHECK
+		);
+
+		expect(out.referenceHits).toEqual([]);
+	});
+
+	it("fails the run and writes nothing when a reference is found", () => {
+		vi.spyOn(console, "error").mockImplementation(() => undefined);
+		vi.stubEnv("RULESET_NAME_CHECK", "zed|qux");
+		const dir = mkdtempSync(join(tmpdir(), "cli-ref-"));
+
+		main([
+			"node",
+			"gen",
+			fixture(withStatement("See the spec.")),
+			"--out",
+			dir,
+		]);
+
+		expect(process.exitCode).toBe(1);
+		process.exitCode = 0;
+		expect(() => readFileSync(join(dir, "ruleset-data.ts"))).toThrow();
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+	});
+});
+
+describe("generate-ruleset consistency checks", () => {
+	it("fails when a question rule has no usable question text", () => {
+		const planted = rule("", "Fix it.").replace(
+			"question: false",
+			"question: true"
+		);
+
+		expect(() => generate(fixture(planted), NAME_CHECK)).toThrow("TREE01");
+	});
+
+	it("fails when question text is present without the question marker", () => {
+		const planted = rule("  question_text: Is it so?\n");
+
+		expect(() => generate(fixture(planted), NAME_CHECK)).toThrow("TREE01");
+	});
+
+	it("fails when ackable disagrees with the manifest's list, either way", () => {
+		const acked = rule("  ackable: true\n");
+		expect(() => generate(fixture(acked), NAME_CHECK)).toThrow("TREE01");
+
+		const dir = fixture(rule(""));
+		writeFileSync(join(dir, "ruleset.yaml"), `${MANIFEST}ackable: [TREE01]\n`);
+		expect(() => generate(dir, NAME_CHECK)).toThrow("TREE01");
+	});
+
+	it("accepts a rule the manifest lists as ackable", () => {
+		const dir = fixture(rule("  ackable: true\n"));
+		writeFileSync(join(dir, "ruleset.yaml"), `${MANIFEST}ackable: [TREE01]\n`);
+
+		expect(generate(dir, NAME_CHECK).data).toContain('"ackable": true');
+	});
+
+	it("drops a non-string fix and records it on the rule's row", () => {
+		const out = generate(fixture(rule("", "[1, 2]")), NAME_CHECK);
+
+		expect(out.data).not.toContain('"fix"');
+		expect(out.dropped).toContain("fix (not a string)");
+	});
+
+	it("rejects a severity outside the allowed set", () => {
+		const planted = rule("").replace("severity: warning", "severity: fatal");
+
+		expect(() => generate(fixture(planted), NAME_CHECK)).toThrow("severity");
 	});
 });

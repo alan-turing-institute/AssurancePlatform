@@ -1,11 +1,18 @@
 /**
  * Generates the assistant's lint ruleset from the assurance-case catalogue.
  *
- * Run with: npx tsx scripts/assistant/generate-ruleset.ts [rulesetDir] [--out dir]
+ * Run with:
+ *   RULESET_NAME_CHECK='<regex>' npx tsx scripts/assistant/generate-ruleset.ts <rulesetDir> [--out dir]
+ *
+ * The ruleset directory is a required argument. RULESET_NAME_CHECK is a
+ * regular expression of names that must not appear in the output; it is
+ * applied case-insensitively and word-bounded, and the run fails when it is
+ * unset or empty.
  *
  * Reads `ruleset.yaml` and `rules/*.yaml` (skipping `RETIRED.yaml`), keeps only
- * an allow-list of fields per rule, runs a name check over what is kept, and
- * writes three files into lib/plugins/assistant/linter/:
+ * an allow-list of fields per rule, runs a name check and an internal-reference
+ * check over what is kept, and writes three files into
+ * lib/plugins/assistant/linter/:
  *
  * - ruleset-data.ts       typed data the structural checker consumes
  * - judgement-prompt.ts   the judgement rules as prompt text
@@ -13,7 +20,9 @@
  *
  * Everything not on the allow-list (provenance, rationale, sources, examples,
  * authorship and similar) never reaches the repo. The name check fails the run
- * when a kept field mentions a name on the deny list.
+ * when a kept field matches the pattern. The reference check fails the run when
+ * a kept field contains a section sign or the words "spec", "ADR" or "issue",
+ * apart from the exact substrings in REFERENCE_ALLOWED.
  */
 
 import {
@@ -26,9 +35,6 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
-
-export const DEFAULT_RULESET_DIR =
-	"/home/chris/Repositories/.claude/skills/assurance-case/ruleset";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_OUT_DIR = resolve(HERE, "../../lib/plugins/assistant/linter");
@@ -50,8 +56,17 @@ const RULE_FIELDS = [
 const APPLY_FIELDS = ["look_for", "not_when", "wording"] as const;
 const FAMILY_FIELDS = ["name", "defect"] as const;
 
-const NAME_CHECK =
-	/\b(nausicaa|funes|chris|cid|quill|toulmin|darter|bluebird|ruled|ruling|dstl|bae)\b/gi;
+const NAME_CHECK_ENV = "RULESET_NAME_CHECK";
+
+/** Matches a section sign, or the whole words spec, ADR and issue. */
+const REFERENCE_CHECK = /§|\b(?:spec|ADR|issue)\b/gi;
+
+/** Exact substrings the reference check lets through (a standard's section reference). */
+const REFERENCE_ALLOWED: readonly string[] = ["GSN §1:6"];
+
+const SCOPES = ["case", "element"] as const;
+const SEVERITIES = ["error", "warning", "style"] as const;
+const MECHANISMS = ["structural", "judgement"] as const;
 
 type Obj = Record<string, unknown>;
 
@@ -59,6 +74,17 @@ export interface NameHit {
 	field: string;
 	match: string;
 	ruleId: string;
+}
+
+export interface ReferenceHit {
+	field: string;
+	ruleId: string;
+	text: string;
+}
+
+/** Compiles the name-check pattern: case-insensitive and word-bounded. */
+export function buildNameCheck(pattern: string): RegExp {
+	return new RegExp(`\\b(?:${pattern})\\b`, "gi");
 }
 
 export interface GeneratedRule {
@@ -89,6 +115,7 @@ export interface GeneratedOutputs {
 	hits: NameHit[];
 	judgementExcluded: string[];
 	prompt: string;
+	referenceHits: ReferenceHit[];
 	ruleCount: number;
 	scrubbed: NameHit[];
 	version: string;
@@ -128,8 +155,44 @@ function pickApply(
 	};
 	if (typeof raw.wording === "string") {
 		out.wording = raw.wording.trim();
+	} else if (raw.wording !== undefined && raw.wording !== null) {
+		dropped.push("apply.wording (not a string)");
 	}
 	return out;
+}
+
+function oneOf<T extends string>(
+	v: unknown,
+	allowed: readonly T[],
+	where: string
+): T {
+	if (typeof v !== "string" || !(allowed as readonly string[]).includes(v)) {
+		throw new Error(
+			`generate-ruleset: ${where} must be one of ${allowed.join(", ")}`
+		);
+	}
+	return v as T;
+}
+
+function strList(v: unknown, where: string): string[] {
+	if (!(Array.isArray(v) && v.every((x) => typeof x === "string"))) {
+		throw new Error(`generate-ruleset: ${where} must be a list of strings`);
+	}
+	return v;
+}
+
+function optionalText(
+	v: unknown,
+	name: string,
+	dropped: string[]
+): string | undefined {
+	if (typeof v === "string") {
+		return v.trim();
+	}
+	if (v !== undefined && v !== null) {
+		dropped.push(`${name} (not a string)`);
+	}
+	return undefined;
 }
 
 function pickRule(entry: Obj, where: string, dropped: string[]): GeneratedRule {
@@ -138,14 +201,21 @@ function pickRule(entry: Obj, where: string, dropped: string[]): GeneratedRule {
 			dropped.push(name);
 		}
 	}
+	if (
+		entry.ackable !== undefined &&
+		entry.ackable !== null &&
+		typeof entry.ackable !== "boolean"
+	) {
+		throw new Error(`generate-ruleset: ${where}.ackable must be a boolean`);
+	}
 	const rule: GeneratedRule = {
 		id: str(entry.id, `${where}.id`),
 		title: str(entry.title, `${where}.title`),
-		applies_to: (entry.applies_to as string[]) ?? [],
-		scope: entry.scope as GeneratedRule["scope"],
-		severity: entry.severity as GeneratedRule["severity"],
-		mechanism: entry.mechanism as GeneratedRule["mechanism"],
-		mode: (entry.mode as string[]) ?? [],
+		applies_to: strList(entry.applies_to ?? [], `${where}.applies_to`),
+		scope: oneOf(entry.scope, SCOPES, `${where}.scope`),
+		severity: oneOf(entry.severity, SEVERITIES, `${where}.severity`),
+		mechanism: oneOf(entry.mechanism, MECHANISMS, `${where}.mechanism`),
+		mode: strList(entry.mode ?? [], `${where}.mode`),
 		statement: str(entry.statement, `${where}.statement`),
 		ackable: entry.ackable === true,
 	};
@@ -153,11 +223,24 @@ function pickRule(entry: Obj, where: string, dropped: string[]): GeneratedRule {
 	if (apply) {
 		rule.apply = apply;
 	}
-	if (typeof entry.fix === "string") {
-		rule.fix = entry.fix.trim();
+	const fix = optionalText(entry.fix, "fix", dropped);
+	if (fix !== undefined) {
+		rule.fix = fix;
 	}
-	if (typeof entry.question_text === "string") {
-		rule.question_text = entry.question_text.trim();
+	const questionText = optionalText(
+		entry.question_text,
+		"question_text",
+		dropped
+	);
+	if (questionText !== undefined) {
+		rule.question_text = questionText;
+	}
+	// A question rule is raised to the author, never applied by the model, so
+	// the emitted question text must exist exactly when the source says so.
+	if ((rule.question_text === undefined) !== (entry.question !== true)) {
+		throw new Error(
+			`generate-ruleset: ${rule.id} question_text does not agree with its question marker`
+		);
 	}
 	return rule;
 }
@@ -175,12 +258,12 @@ function textOf(value: unknown): string[] {
 	return [];
 }
 
-function findHits(rules: GeneratedRule[]): NameHit[] {
+function findHits(rules: GeneratedRule[], nameCheck: RegExp): NameHit[] {
 	const hits: NameHit[] = [];
 	for (const rule of rules) {
 		for (const [field, value] of Object.entries(rule)) {
 			for (const text of textOf(value)) {
-				for (const m of text.matchAll(NAME_CHECK)) {
+				for (const m of text.matchAll(nameCheck)) {
 					hits.push({ ruleId: rule.id, field, match: m[0] });
 				}
 			}
@@ -189,16 +272,49 @@ function findHits(rules: GeneratedRule[]): NameHit[] {
 	return hits;
 }
 
-function familyHits(families: FamilyData[]): NameHit[] {
+function familyHits(families: FamilyData[], nameCheck: RegExp): NameHit[] {
 	const hits: NameHit[] = [];
 	for (const f of families) {
 		for (const text of [f.name, f.defect]) {
-			for (const m of text.matchAll(NAME_CHECK)) {
+			for (const m of text.matchAll(nameCheck)) {
 				hits.push({
 					ruleId: `family ${f.prefix}`,
 					field: "name/defect",
 					match: m[0],
 				});
+			}
+		}
+	}
+	return hits;
+}
+
+/** True when the text holds a reference that is not one of the allowed substrings. */
+function hasInternalReference(text: string): boolean {
+	let rest = text;
+	for (const allowed of REFERENCE_ALLOWED) {
+		rest = rest.split(allowed).join(" ");
+	}
+	return new RegExp(REFERENCE_CHECK.source, REFERENCE_CHECK.flags).test(rest);
+}
+
+function referenceHits(
+	rules: GeneratedRule[],
+	families: FamilyData[]
+): ReferenceHit[] {
+	const hits: ReferenceHit[] = [];
+	for (const rule of rules) {
+		for (const [field, value] of Object.entries(rule)) {
+			for (const text of textOf(value)) {
+				if (hasInternalReference(text)) {
+					hits.push({ ruleId: rule.id, field, text });
+				}
+			}
+		}
+	}
+	for (const f of families) {
+		for (const text of [f.name, f.defect]) {
+			if (hasInternalReference(text)) {
+				hits.push({ ruleId: `family ${f.prefix}`, field: "name/defect", text });
 			}
 		}
 	}
@@ -304,13 +420,14 @@ function readRules(
  */
 function scrubProse(
 	rules: GeneratedRule[],
-	droppedByRule: Map<string, string[]>
+	droppedByRule: Map<string, string[]>,
+	nameCheck: RegExp
 ): NameHit[] {
 	const scrubbed: NameHit[] = [];
 	for (const rule of rules) {
 		for (const field of ["statement", "apply"] as const) {
 			const found = textOf(rule[field]).flatMap((text) =>
-				[...text.matchAll(NAME_CHECK)].map((m) => m[0])
+				[...text.matchAll(nameCheck)].map((m) => m[0])
 			);
 			if (found.length === 0) {
 				continue;
@@ -352,7 +469,34 @@ function droppedMarkdown(
 	return { count, text: lines.join("\n") };
 }
 
-export function generate(rulesetDir: string): GeneratedOutputs {
+/** The manifest's list of acknowledgeable rule ids; every id must name a rule. */
+function readAckable(manifest: Obj, rules: GeneratedRule[]): void {
+	const raw = manifest.ackable ?? [];
+	if (!(Array.isArray(raw) && raw.every((x) => typeof x === "string"))) {
+		throw new Error("generate-ruleset: ruleset.yaml ackable must be a list");
+	}
+	const listed = new Set<string>(raw);
+	const known = new Set(rules.map((r) => r.id));
+	for (const id of listed) {
+		if (!known.has(id)) {
+			throw new Error(
+				`generate-ruleset: ${id} is listed as ackable but is not a rule`
+			);
+		}
+	}
+	for (const rule of rules) {
+		if (rule.ackable !== listed.has(rule.id)) {
+			throw new Error(
+				`generate-ruleset: ${rule.id} ackable does not agree with the manifest's ackable list`
+			);
+		}
+	}
+}
+
+export function generate(
+	rulesetDir: string,
+	nameCheck: RegExp
+): GeneratedOutputs {
 	const manifest = readYaml(join(rulesetDir, "ruleset.yaml"));
 	if (!isObj(manifest)) {
 		throw new Error("generate-ruleset: ruleset.yaml is not a mapping");
@@ -365,10 +509,15 @@ export function generate(rulesetDir: string): GeneratedOutputs {
 	);
 	const families = readFamilies(manifest, droppedByRule);
 	const rules = readRules(rulesetDir, droppedByRule);
+	readAckable(manifest, rules);
 
-	const scrubbed = scrubProse(rules, droppedByRule);
+	const scrubbed = scrubProse(rules, droppedByRule, nameCheck);
 	const scrubbedRules = new Set(scrubbed.map((h) => h.ruleId));
-	const hits = [...findHits(rules), ...familyHits(families)];
+	const hits = [
+		...findHits(rules, nameCheck),
+		...familyHits(families, nameCheck),
+	];
+	const references = referenceHits(rules, families);
 	const judgementRules = rules.filter(isJudgementRule);
 	const judgementIncluded = judgementRules.filter(
 		(r) => !scrubbedRules.has(r.id)
@@ -397,6 +546,7 @@ export const JUDGEMENT_PROMPT: string = ${JSON.stringify(promptText(judgementInc
 		prompt,
 		dropped: dropped.text,
 		hits,
+		referenceHits: references,
 		scrubbed,
 		judgementExcluded,
 		ruleCount: rules.length,
@@ -412,9 +562,12 @@ export function writeOutputs(out: GeneratedOutputs, outDir: string): void {
 	writeFileSync(join(outDir, "ruleset-dropped.md"), out.dropped);
 }
 
-function parseArgs(args: string[]): { outDir: string; rulesetDir: string } {
+function parseArgs(args: string[]): {
+	outDir: string;
+	rulesetDir: string | undefined;
+} {
 	let outDir = DEFAULT_OUT_DIR;
-	let rulesetDir = DEFAULT_RULESET_DIR;
+	let rulesetDir: string | undefined;
 	let expectOut = false;
 	for (const arg of args) {
 		if (arg === "--out") {
@@ -431,10 +584,25 @@ function parseArgs(args: string[]): { outDir: string; rulesetDir: string } {
 
 export function main(argv: string[]): void {
 	const { outDir, rulesetDir } = parseArgs(argv.slice(2));
+	if (!rulesetDir) {
+		console.error(
+			`Usage: ${NAME_CHECK_ENV}='<regex>' tsx scripts/assistant/generate-ruleset.ts <rulesetDir> [--out dir]`
+		);
+		process.exitCode = 2;
+		return;
+	}
+	const pattern = process.env[NAME_CHECK_ENV]?.trim();
+	if (!pattern) {
+		console.error(
+			`generate-ruleset: the ${NAME_CHECK_ENV} environment variable is required (a regular expression of names that must not appear in the output).`
+		);
+		process.exitCode = 1;
+		return;
+	}
 	if (!existsSync(join(rulesetDir, "ruleset.yaml"))) {
 		throw new Error(`generate-ruleset: no ruleset.yaml in ${rulesetDir}`);
 	}
-	const out = generate(rulesetDir);
+	const out = generate(rulesetDir, buildNameCheck(pattern));
 	for (const h of out.scrubbed) {
 		console.warn(
 			`Name check: ${h.ruleId}.${h.field} mentions "${h.match}"; field omitted`
@@ -449,11 +617,22 @@ export function main(argv: string[]): void {
 		const lines = out.hits.map((h) => `  ${h.ruleId}.${h.field}: "${h.match}"`);
 		console.error(`Name check hits (${out.hits.length}):\n${lines.join("\n")}`);
 		process.exitCode = 1;
+	}
+	if (out.referenceHits.length > 0) {
+		const lines = out.referenceHits.map(
+			(h) => `  ${h.ruleId}.${h.field}: ${JSON.stringify(h.text)}`
+		);
+		console.error(
+			`Internal reference hits (${out.referenceHits.length}):\n${lines.join("\n")}`
+		);
+		process.exitCode = 1;
+	}
+	if (process.exitCode === 1) {
 		return;
 	}
 	writeOutputs(out, outDir);
 	console.log(
-		`ruleset v${out.version}: ${out.ruleCount} rules, ${out.droppedFieldCount} dropped fields, name check clean`
+		`ruleset v${out.version}: ${out.ruleCount} rules, ${out.droppedFieldCount} dropped fields, name check and reference check clean`
 	);
 }
 

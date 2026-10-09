@@ -53,6 +53,8 @@ function ruleYaml(id: string, over: RuleOverrides = {}): string {
 	return `${lines.join("\n")}\n`;
 }
 
+const QUX_OR_ZED = /qux|zed/i;
+
 let root: string;
 let out: string;
 
@@ -84,10 +86,12 @@ beforeEach(() => {
 	vi.spyOn(console, "log").mockImplementation(() => undefined);
 	vi.spyOn(console, "warn").mockImplementation(() => undefined);
 	vi.spyOn(console, "error").mockImplementation(() => undefined);
+	vi.stubEnv("RULESET_NAME_CHECK", "zed|qux");
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.unstubAllEnvs();
 	process.exitCode = undefined;
 });
 
@@ -148,9 +152,9 @@ describe("generate-ruleset allow-list", () => {
 
 describe("generate-ruleset name check", () => {
 	it("silently drops a name found only in a non-allow-listed field", () => {
-		fixture([ruleYaml("TREE01", { rationale: "nausicaa decided this" })]);
+		fixture([ruleYaml("TREE01", { rationale: "zed decided this" })]);
 		expect(run().code).toBeUndefined();
-		expect(read("ruleset-data.ts")).not.toMatch(/nausicaa/i);
+		expect(read("ruleset-data.ts")).not.toContain("zed");
 		expect(read("judgement-prompt.ts")).toContain("TREE01");
 	});
 
@@ -160,8 +164,8 @@ describe("generate-ruleset name check", () => {
 	])("reports a name in %s and excludes that rule from the judgement prompt", (field) => {
 		const over =
 			field === "statement"
-				? { statement: "As DARTER required." }
-				: { apply: { look_for: "what Funes wanted", not_when: "never" } };
+				? { statement: "As QUX required." }
+				: { apply: { look_for: "what Zed wanted", not_when: "never" } };
 		fixture([ruleYaml("TREE01", over), ruleYaml("TREE02")]);
 		expect(run().code).toBeUndefined();
 		const warned = vi
@@ -172,32 +176,56 @@ describe("generate-ruleset name check", () => {
 		const prompt = read("judgement-prompt.ts");
 		expect(prompt).not.toContain("Title of TREE01");
 		expect(prompt).toContain("Title of TREE02");
-		expect(read("ruleset-data.ts")).not.toMatch(/darter|funes/i);
+		expect(read("ruleset-data.ts")).not.toMatch(QUX_OR_ZED);
 	});
 
 	it("exits non-zero when a name is in a field that reaches ruleset-data.ts", () => {
-		fixture([ruleYaml("TREE01", { title: "Ruled by Quill" })]);
+		fixture([ruleYaml("TREE01", { title: "Guided by Zed" })]);
 		expect(run().code).toBe(1);
 	});
 
 	it("exits non-zero for a name in fix", () => {
-		fixture([ruleYaml("TREE01", { fix: "Ask bluebird." })]);
+		fixture([ruleYaml("TREE01", { fix: "Ask qux." })]);
 		expect(run().code).toBe(1);
 	});
 
-	it("matches whole words only: Christopher does not trip chris", () => {
-		fixture([ruleYaml("TREE01", { title: "Christopher walks the tree" })]);
+	it("matches whole words only: a trailing letter does not trip the check", () => {
+		fixture([ruleYaml("TREE01", { title: "Zedland walks the tree" })]);
 		expect(run().code).toBeUndefined();
-		expect(read("ruleset-data.ts")).toContain("Christopher");
+		expect(read("ruleset-data.ts")).toContain("Zedland");
 	});
 
-	it("matches whole words only: overruled does not trip ruled", () => {
-		fixture([ruleYaml("TREE01", { title: "Evidence is overruled by Cidney" })]);
+	it("matches whole words only: a leading letter does not trip the check", () => {
+		fixture([ruleYaml("TREE01", { title: "Evidence is unquxed" })]);
 		expect(run().code).toBeUndefined();
 	});
 
-	it("matches case-insensitively: DARTER trips the check", () => {
-		fixture([ruleYaml("TREE01", { title: "DARTER walkthrough" })]);
+	it("matches case-insensitively: QUX trips the check", () => {
+		fixture([ruleYaml("TREE01", { title: "QUX walkthrough" })]);
 		expect(run().code).toBe(1);
+	});
+});
+
+describe("generate-ruleset inputs", () => {
+	it("prints a usage line and exits 2 without a ruleset directory", () => {
+		process.exitCode = undefined;
+		main(["node", "gen"]);
+		expect(process.exitCode).toBe(2);
+		process.exitCode = undefined;
+		expect(vi.mocked(console.error).mock.calls.join("\n")).toContain("Usage:");
+	});
+
+	it.each([
+		undefined,
+		"",
+		"   ",
+	])("fails closed when RULESET_NAME_CHECK is %j, writing nothing", (value) => {
+		vi.stubEnv("RULESET_NAME_CHECK", value);
+		fixture([ruleYaml("TREE01")]);
+		expect(run().code).toBe(1);
+		expect(vi.mocked(console.error).mock.calls.join("\n")).toContain(
+			"RULESET_NAME_CHECK"
+		);
+		expect(() => read("ruleset-data.ts")).toThrow();
 	});
 });
