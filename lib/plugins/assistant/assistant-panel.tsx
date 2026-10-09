@@ -196,6 +196,29 @@ export function AssistantPanel(context: CaseSlotContext) {
 	return <AssistantChat {...context} userId={userId} />;
 }
 
+/**
+ * A function that answers whether a message may go out now. It says yes once
+ * until the chat is idle again: the claim is made as the message goes out,
+ * before the chat reports that it is busy, so a second call in the same task
+ * sends nothing. It is released after any render in which the chat is idle,
+ * whether the reply finished or failed.
+ */
+function useSendClaim(busy: boolean): () => boolean {
+	const claimed = useRef(false);
+	useEffect(() => {
+		if (!busy) {
+			claimed.current = false;
+		}
+	});
+	return () => {
+		if (busy || claimed.current) {
+			return false;
+		}
+		claimed.current = true;
+		return true;
+	};
+}
+
 function AssistantChat({
 	caseId,
 	selectedElementId,
@@ -214,21 +237,12 @@ function AssistantChat({
 		label: selectedElementLabel,
 	});
 	const lastId = messages.at(-1)?.id;
-	// Set as a message goes out, before the chat reports that it is busy, so a
-	// second call in the same task sends nothing. It is cleared after any
-	// render in which the chat is idle, whether the reply finished or failed.
-	const sending = useRef(false);
-	useEffect(() => {
-		if (!busy) {
-			sending.current = false;
-		}
-	});
+	const claimSend = useSendClaim(busy);
 
 	function send(text: string) {
-		if (busy || sending.current) {
+		if (!claimSend()) {
 			return;
 		}
-		sending.current = true;
 		sendMessage({ text }, { body: { selectedElementId } });
 	}
 
