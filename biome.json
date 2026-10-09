@@ -31,6 +31,7 @@
       "!types/*.d.ts",
       "!app/api/cases/*/permissions",
       "!components/ui",
+      "!components/ai-elements",
       "!lib/plugins/assistant/linter/ruleset-data.ts",
       "!lib/plugins/assistant/linter/judgement-prompt.ts",
       "!prisma/scripts",
