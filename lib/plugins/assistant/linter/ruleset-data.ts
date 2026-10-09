@@ -293,7 +293,7 @@ export const RULESET_DATA: RulesetData = {
 			"ackable": false,
 			"apply": {
 				"look_for": "\"Testing shows\", \"Experts judge\", \"The audit found\", \"Validation demonstrates\" as the claim's verb phrase.",
-				"not_when": "Claim and evidence describe the same fact because the step is evidence incorporation (spec §4.2's P1 + E1 pairing). Note it in the hand-back; do not record it.",
+				"not_when": "Claim and evidence describe the same fact because the step is evidence incorporation (a property claim whose only child is the evidence node that establishes it). Mention it in the report's notes; do not record it as a finding.",
 				"wording": "Reason: quote the evidential phrase. Fix: the property kept as the claim, and the evidential phrase named as the Evidence node to add."
 			},
 			"fix": "Move the evidential phrase into an Evidence node; keep the property."
@@ -462,6 +462,7 @@ export const RULESET_DATA: RulesetData = {
 			"mode": [
 				"authoring"
 			],
+			"statement": "Context applies to the entire supporting argument, so it is not restated on descendants. Carve-out — narrowing is not restating: a child context that reduces an inherited constraint is a distinct and legitimate move governed by SCOP04, and must not be reported as a restatement. Compare the constraint, not the string.",
 			"ackable": false
 		},
 		{
@@ -689,7 +690,7 @@ export const RULESET_DATA: RulesetData = {
 			"ackable": false,
 			"apply": {
 				"look_for": "The strategy argues over members of a set (hazards, conditions, constituents, stages, parameters) and none of a context entry, an assumption, a justification, or a supporting claim — on the strategy or inherited from an ancestor — says how that set was arrived at.",
-				"not_when": "Any of the four homes names the method or artefact (\"as identified by the HAZOP of 2026-03\", \"Table 1 of the planning document\", \"the architecture spec's constituent inventory\"); or the strategy does not argue over a set (by attribute, by appeal to a method). When you record an STEP08 finding the checker will usually also have raised the STEP01/STEP10 question on the same strategy; both stand.",
+				"not_when": "Any of the four homes names the method or artefact (\"as identified by the HAZOP of 2026-03\", \"Table 1 of the planning document\", \"the architecture description's constituent inventory\"); or the strategy does not argue over a set (by attribute, by appeal to a method). When you record an STEP08 finding the checker will usually also have raised the STEP01/STEP10 question on the same strategy; both stand.",
 				"wording": "Reason: quote the strategy text and name the missing home. Fix: the exact context line to add, or the claim to promote."
 			},
 			"fix": "Attach the method and its output (the hazard log, the standard's lifecycle-stage list, the requirements baseline) in whichever of the four homes fits its scope — an Assumption if the set is taken as given without support, a supporting claim if its adequacy is itself arguable."
@@ -750,7 +751,7 @@ export const RULESET_DATA: RulesetData = {
 			"ackable": false,
 			"apply": {
 				"look_for": "Applied last, after the whole tree: a claim supported directly by evidence far below it in abstraction with no intermediate claim (a top-level \"the system is safe\" over a unit-test log; an outcome claim on one raw measurement with no aggregation claim between); or children that together sit several levels below their parent with nothing between.",
-				"not_when": "An evidence-incorporation step where claim and artefact describe the same fact. In a case with no evidence the rule cannot fire — say so in the hand-back.",
+				"not_when": "An evidence-incorporation step where claim and artefact describe the same fact. In a case with no evidence the rule cannot fire — say so in the report's notes.",
 				"wording": "Element: \"case\". Reason: name the claim, the evidence and the levels skipped. Fix: the intermediate claim(s) to insert."
 			}
 		},
@@ -843,6 +844,7 @@ export const RULESET_DATA: RulesetData = {
 				"review",
 				"authoring"
 			],
+			"statement": "The top goal is G1, its strategy S1, the first property claim P1, the first evidence node E1, and so on; no element is labelled 0. Children extend the parent's label (P1.1, P1.1.2). Prefixes follow GSN: G goal, P property claim (TEA's name for a sub-goal), S strategy, E evidence, C context, A assumption, J justification (context elements start with C, not X). Element labels are unpadded (C1, C2) and rule IDs in this catalogue are two-digit (WORD01, WORD02), so the two namespaces do not collide. Labels are display names only and are never used to bind evidence (records bind to the element's stable id).",
 			"ackable": false,
 			"fix": "Renumber from 1."
 		},
@@ -862,6 +864,11 @@ export const RULESET_DATA: RulesetData = {
 			],
 			"statement": "A claim states exactly one proposition. Conjunctions (\"X and Y\") are two claims and belong in two nodes beneath a strategy.",
 			"ackable": false,
+			"apply": {
+				"look_for": "An \"and\", \"while also\" or comma-list joining two properties; a sentence that would be two claims if split at the conjunction.\nA conjunction is not the only carrier. Two further forms, both missed by an earlier version of this rule on a real case:\n(a) A trailing participial clause can hide a second condition — \"... is handed into the FIR\", \"... running at the published rate\". Ask whether the clause states a further thing that must be true, or only describes the thing already claimed. If it must be true, it is a second claim.\n(b) An \"or\" between two measures is two candidate claims, not one — \"at most n aircraft (or a complexity score <= c)\". An unresolved alternative means the acceptance criterion has not been chosen, which is worse than a compound claim rather than better.",
+				"not_when": "The conjunction joins a property to its criterion or scope (\"accurate to within 0.5 NM at a 1-minute horizon\"); a list inside a definition (\"complete = a filed flight plan with at least two route fixes, and sector entry and exit levels\") is one proposition defining a term. Where the strategy beneath immediately splits the pair and the author has recorded a waiver, record the finding anyway — the report shows it and the reader decides.",
+				"wording": "Reason: name the two propositions. Fix: give the two split claims and the strategy line."
+			},
 			"fix": "Split at each conjunction; add a strategy naming the decomposition."
 		},
 		{
@@ -926,6 +933,11 @@ export const RULESET_DATA: RulesetData = {
 			],
 			"statement": "Words such as \"good\", \"robust\", \"appropriate\", \"effective\", \"timely\", \"normal\", \"seamless\" and \"useful\" need a Context or Justification that says what they mean here, or a rewrite that names the measurable property.",
 			"ackable": false,
+			"apply": {
+				"look_for": "GSN's list (abnormal, appropriate, approximate, effective, early, easy, envelope, flexible, friendly, generally, late, normal, often, timely) and words of the same kind — good, robust, seamless, useful, trustworthy, faithful, accurate, sufficient, similar, calibrated, buffer — with nothing in scope defining them. Also overstatement (all, any, each, every, typical) with no bounding set.\nInclude the assurance-process participles: validated, verified, approved, qualified, certified, accepted (added after a \"validated\" operating domain went unflagged on a real case). These read as though they name a completed procedure and so escape the vague-word list, but \"validated\" without a stated validation — against what, by whom, to what criterion — is exactly as undefined as \"appropriate\", and more misleading because it implies a record exists.",
+				"not_when": "The word is defined in a context entry or justification on the element or any ancestor (context is inherited), or the sub-claims beneath operationalise it. Check the ancestors before writing.",
+				"wording": "Reason: name the word and say where you looked (\"no context entry on P7 or its ancestors defines it\"). Fix: the rewrite naming the measurable property, or the exact context line to add and on which element."
+			},
 			"fix": "Name the measurable property, or attach a Context node defining the term."
 		},
 		{
@@ -1010,7 +1022,12 @@ export const RULESET_DATA: RulesetData = {
 			],
 			"statement": "An element's text is the claim, scope, rationale or evidence description itself. It does not carry authoring provenance, working notes, rule ids, or statements about how the case was constructed.",
 			"ackable": false,
-			"fix": "Delete the span from the element. If it records real information, rehome it — status to assertionStatus, derivation method to the companion case, provenance to the case description or the issue tracking the work."
+			"apply": {
+				"look_for": "Anything in an element's text that addresses the reader of the project rather than the reader of the argument. Four forms, all found on one real case:\n(a) Authoring provenance — people's names, dates, \"agreed with\", \"the lead decided\", open-question references, evidence-slot placeholders, grammar notes to a co-author.\n(b) Rule ids from this or any other checker (\"rule SCOP01\"), which bleed in when an author edits against a lint report.\n(c) Meta-argumentation — text about how the case is built rather than what it claims: \"every leaf threshold is derived from this criterion\", \"the bounds shown are provisional until derived\", \"each step is a concretion\".\n(d) Platform or tooling behaviour described as though it were argument content.",
+				"not_when": "A date, name or version that is part of the claim's own scope (\"the model released on 2026-03-01\", \"the CAA's published minima\") is case text and stays. A Context entry naming a governing document is scope, not provenance. The test is whether a reader assessing the argument needs it in order to judge the claim.",
+				"wording": "Reason: quote the offending span and name which form it is. Fix: the element text with the span removed, and where the removed content belongs — the case description, the companion case, an assertionStatus, or nowhere."
+			},
+			"fix": "Delete the span from the element. If it records real information, rehome it — status to assertionStatus, derivation method to the companion case, provenance to the case description or the work-tracking record."
 		}
 	]
 };

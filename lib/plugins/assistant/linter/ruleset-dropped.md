@@ -34,7 +34,7 @@ Manifest fields dropped: reviewed, spec, steward, schema, standards, corroborati
 | PLAC05 | lineage, precheck, question, rationale, renamed_from, sources |
 | PLAC06 | lineage, question, renamed_from, sources |
 | SCOP01 | examples, lineage, precheck, question, renamed_from, sources |
-| SCOP02 | lineage, precheck, question, rationale, renamed_from, sources, statement (name check) |
+| SCOP02 | lineage, precheck, question, rationale, renamed_from, sources |
 | SCOP03 | lineage, question, rationale, renamed_from, sources |
 | SCOP04 | added, examples, lineage, question, rationale, renamed_from, sources, triggers_question |
 | SCOP05 | added, examples, lineage, question, rationale, renamed_from, sources |
@@ -54,12 +54,12 @@ Manifest fields dropped: reviewed, spec, steward, schema, standards, corroborati
 | TREE03 | lineage, question, rationale, renamed_from, sources |
 | TREE04 | lineage, question, rationale, renamed_from, sources |
 | TREE05 | lineage, question, rationale, renamed_from, sources |
-| TREE06 | added, examples, institute_reason, institute_rule, lineage, precheck, question, rationale, renamed_from, sources, statement (name check) |
-| WORD01 | examples, lineage, question, rationale, renamed_from, sources, apply (name check) |
+| TREE06 | added, examples, institute_reason, institute_rule, lineage, precheck, question, rationale, renamed_from, sources |
+| WORD01 | examples, lineage, question, rationale, renamed_from, sources |
 | WORD02 | examples, lineage, question, rationale, renamed_from, sources |
 | WORD03 | examples, lineage, question, rationale, renamed_from, sources |
-| WORD04 | examples, lineage, precheck, question, rationale, renamed_from, sources, apply (name check) |
+| WORD04 | examples, lineage, precheck, question, rationale, renamed_from, sources |
 | WORD05 | examples, lineage, question, rationale, renamed_from, sources |
 | WORD06 | examples, lineage, question, renamed_from, sources |
 | WORD07 | examples, lineage, question, renamed_from, sources |
-| WORD08 | added, examples, institute_reason, institute_rule, lineage, question, rationale, sources, apply (name check) |
+| WORD08 | added, examples, institute_reason, institute_rule, lineage, question, rationale, sources |
