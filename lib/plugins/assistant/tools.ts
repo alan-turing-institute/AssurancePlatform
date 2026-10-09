@@ -7,6 +7,7 @@ import {
 } from "@/lib/plugins/assistant/techniques-tool";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
+import { lintCase } from "./linter/lint-case";
 
 interface TreeNode {
 	children?: TreeNode[];
@@ -67,9 +68,6 @@ export function createCaseTools(
 	selection: SelectedElement | null = null
 ) {
 	return {
-		...(techniquesConfigured()
-			? { suggest_techniques: createTechniquesTool(selection) }
-			: {}),
 		read_case: tool({
 			description:
 				"Read the whole open assurance case: its name, description and the full element tree (goals, strategies, property claims, evidence, contexts, assumptions, justifications).",
@@ -97,6 +95,18 @@ export function createCaseTools(
 					: NOT_FOUND;
 			},
 		}),
+		lint_case: tool({
+			description:
+				"Lint the open assurance case against the rule catalogue. Returns structural findings (rule id, element label, severity, reason, fix), gaps the author has acknowledged, questions for the author, prechecks (mechanical facts for the judgement rules), the number of findings left out when there are more than 100 (truncated), and judgementRules: further rules for you to apply to the case yourself.",
+			inputSchema: z.object({}),
+			execute: async () => {
+				const data = await loadExport(userId, caseId);
+				return data ? { found: true, ...lintCase(data) } : NOT_FOUND;
+			},
+		}),
+		...(techniquesConfigured()
+			? { suggest_techniques: createTechniquesTool(selection) }
+			: {}),
 	};
 }
 
@@ -109,5 +119,7 @@ export function buildSystemPrompt(toolNames: readonly string[]): string {
 
 You have these read-only tools: ${toolNames.join(", ")}. read_case returns the whole open case as a tree. read_element returns one element and its direct children by id. You cannot change the case.
 
-Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.`;
+Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.
+
+When the user asks you to lint, check or review the case, call lint_case first and call it once. Your reply must then list the findings it returned, one per line, as "RULEID on ELEMENT: reason", copying the values as returned; if truncated is more than 0, say that many further findings were left out. Then list any prechecks it returned under a heading "Prechecks", one per line, in the same form with detail in place of reason; these are facts for you to weigh against the judgement rules, not findings. Relay the tool's questions to the user, at most six. Next, read the case with read_case if you have not, apply the judgementRules text to it yourself, and list any further findings in the same "RULEID on ELEMENT: reason" form under a heading "Judgement findings". If you find none, say so. Never say whether the case is adequate or good enough.`;
 }

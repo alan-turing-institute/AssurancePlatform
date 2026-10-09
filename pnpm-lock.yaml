@@ -402,6 +402,9 @@ importers:
       vitest-axe:
         specifier: ^0.1.0
         version: 0.1.0(vitest@4.1.11)
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
 
 packages:
 
@@ -8213,11 +8216,6 @@ packages:
   yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
 
-  yaml@2.9.0:
-    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
-    engines: {node: '>= 14.6'}
-    hasBin: true
-
   yaml@2.9.1:
     resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
     engines: {node: '>= 14.6'}
@@ -10962,7 +10960,7 @@ snapshots:
       radix-vue: 1.9.17(vue@3.5.42(typescript@6.0.3))
       set-cookie-parser: 3.1.0
       vue: 3.5.42(typescript@6.0.3)
-      yaml: 2.9.0
+      yaml: 2.9.1
       zod: 4.6.2
     transitivePeerDependencies:
       - '@vue/composition-api'
@@ -11028,7 +11026,7 @@ snapshots:
       microdiff: 1.6.0
       nanoid: 5.1.16
       vue: 3.5.42(typescript@6.0.3)
-      yaml: 2.9.0
+      yaml: 2.9.1
     transitivePeerDependencies:
       - '@vue/composition-api'
       - async-validator
@@ -11125,7 +11123,7 @@ snapshots:
     dependencies:
       '@scalar/helpers': 0.11.3
       pathe: 2.0.3
-      yaml: 2.9.0
+      yaml: 2.9.1
 
   '@scalar/oas-utils@0.19.16(typescript@6.0.3)':
     dependencies:
@@ -11135,7 +11133,7 @@ snapshots:
       '@scalar/workspace-store': 0.60.0(typescript@6.0.3)
       flatted: 3.4.4
       vue: 3.5.42(typescript@6.0.3)
-      yaml: 2.9.0
+      yaml: 2.9.1
     transitivePeerDependencies:
       - typescript
 
@@ -11240,7 +11238,7 @@ snapshots:
       js-base64: 3.9.3
       type-fest: 5.9.0
       vue: 3.5.42(typescript@6.0.3)
-      yaml: 2.9.0
+      yaml: 2.9.1
     transitivePeerDependencies:
       - typescript
 
@@ -12727,7 +12725,7 @@ snapshots:
       loglevel: 1.9.2
       markdown-it: 15.0.2
       shiki: 1.29.2
-      yaml: 2.9.0
+      yaml: 2.9.1
     optionalDependencies:
       '@codemirror/autocomplete': 6.20.3
       '@codemirror/lang-json': 6.0.2
@@ -17115,8 +17113,6 @@ snapshots:
   yallist@3.1.1: {}
 
   yallist@4.0.0: {}
-
-  yaml@2.9.0: {}
 
   yaml@2.9.1: {}
 

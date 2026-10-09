@@ -47,7 +47,8 @@
     "axe-core",
     "conventional-changelog-conventionalcommits",
     "@radix-ui/react-menu",
-    "fumadocs-mdx"
+    "fumadocs-mdx",
+    "yaml"
   ],
   "ignoreExports": [
     { "file": "actions/connected-accounts.ts", "exports": ["unlinkProvider"] },

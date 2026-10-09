@@ -504,6 +504,20 @@ describe("assistant tools read only the URL's case", () => {
 		);
 		expect(JSON.stringify(out)).not.toContain("THEIRS");
 	});
+
+	it("lint_case on a case the user cannot view returns not-found and none of its content", async () => {
+		const { user } = await setup();
+		const stranger = await createTestUser();
+		const theirs = await createTestCase(stranger.id);
+		await createTestElement(theirs.id, stranger.id, { name: "THEIRS" });
+		const { createCaseTools } = await import("@/lib/plugins/assistant/tools");
+		const out = await createCaseTools(user.id, theirs.id).lint_case.execute?.(
+			{},
+			{ toolCallId: "x", messages: [] }
+		);
+		expect(out).toEqual({ found: false, message: "Not found in this case." });
+		expect(JSON.stringify(out)).not.toContain("THEIRS");
+	});
 });
 
 // ============================================

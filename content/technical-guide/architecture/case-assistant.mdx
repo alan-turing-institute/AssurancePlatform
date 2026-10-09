@@ -15,8 +15,10 @@ The plugin must be enabled before an API key can be saved.
 | `TOKEN_ENCRYPTION_KEY` | Saving a provider key | A base64-encoded 32-byte key the server uses to encrypt each user's provider API key before it is stored. Without it a user cannot save a key. |
 | `ASSISTANT_ALLOWED_BASE_URLS` | OpenAI-compatible providers | A comma-separated list of endpoint URLs, for example `http://localhost:11434/v1`. Users choose an endpoint from this list and never type one. An entry that is not a URL is ignored. |
 | `TECHNIQUES_MCP_URL` | Technique suggestions | The address of a techniques service that accepts JSON-RPC 2.0 `tools/call` requests over HTTP. When it is unset, or is not an `http` or `https` URL, the `suggest_techniques` tool is not offered and the assistant says that technique suggestions are unavailable. |
+| `ASSISTANT_MODEL_TIMEOUT_MS` | Optional | How long one model call may run before it is cancelled, in milliseconds. See the section below. |
 
-All three are read when they are used, so a change takes effect on the next request after the server restarts.
+Every variable in this table is read when it is used, on each request, and none is read when the server starts.
+A change takes effect on the next request without a restart.
 
 ## Technique suggestions
 
@@ -34,7 +36,6 @@ In the chat, the tool call shows each technique with a link, its score and its g
 ## `ASSISTANT_MODEL_TIMEOUT_MS`
 
 This variable sets how long one model call may run before it is cancelled, in milliseconds.
-It is read on every request, so a change takes effect without a restart.
 The default is 60000 (one minute).
 Values below 5000 are raised to 5000, values above 600000 are lowered to 600000, and a value that is empty or not a whole number is ignored in favour of the default.
 When a call is cancelled in this way, the chat shows a notice that the model did not answer in time.
