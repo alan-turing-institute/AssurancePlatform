@@ -44,6 +44,7 @@ beforeEach(() => {
 	chat.state.status = "ready";
 	chat.state.error = undefined;
 	chat.state.sendMessage.mockReset();
+	chat.state.stop.mockReset();
 });
 
 describe("AssistantPanel", () => {
@@ -62,6 +63,21 @@ describe("AssistantPanel", () => {
 			{ text: "What does G1 claim?" },
 			{ body: { selectedElementId: "el-1" } }
 		);
+	});
+
+	it("stops the stream without sending or clearing the draft", async () => {
+		chat.state.status = "streaming";
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+		const box = screen.getByLabelText("Message the assistant");
+		await userEvent.type(box, "next question");
+
+		const stop = screen.getByRole("button", { name: "Stop" });
+		expect(stop).toHaveAttribute("type", "button");
+		await userEvent.click(stop);
+
+		expect(chat.state.stop).toHaveBeenCalledTimes(1);
+		expect(chat.state.sendMessage).not.toHaveBeenCalled();
+		expect(box).toHaveValue("next question");
 	});
 
 	it("renders a text reply and a tool call row", () => {

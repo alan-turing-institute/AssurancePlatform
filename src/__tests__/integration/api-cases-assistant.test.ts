@@ -373,6 +373,17 @@ describe("POST /api/cases/[id]/assistant — bounds and roles", () => {
 		});
 	});
 
+	it("bounds the model call by ASSISTANT_MODEL_TIMEOUT_MS when it is set", async () => {
+		vi.stubEnv("ASSISTANT_MODEL_TIMEOUT_MS", "90000");
+		const { owner, testCase } = await setup();
+		await configure(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		await (await post(testCase.id)).text();
+
+		expect(streamTextSpy.calls[0]).toMatchObject({ timeout: 90_000 });
+	});
+
 	it("rejects a client-supplied system message with 400", async () => {
 		const { owner, testCase } = await setup();
 		await configure(owner.id);

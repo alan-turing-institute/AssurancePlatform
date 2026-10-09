@@ -26,19 +26,40 @@ export interface LintPrecheck {
 export interface LintResult {
 	/** Gaps the author has marked NEEDS_SUPPORT; reported, not counted as findings. */
 	acknowledgedGaps: Omit<LintFinding, "fix">[];
+	/** How many acknowledged gaps were dropped to keep to MAX_FINDINGS. */
+	acknowledgedGapsTruncated: number;
 	/** At most MAX_FINDINGS, in the checker's order. */
 	findings: LintFinding[];
 	/** The judgement rules, as text for the model to apply to the case itself. */
 	judgementRules: string;
-	/** Mechanical facts the judgement rules refer to; not verdicts. */
+	/** Mechanical facts the judgement rules refer to; not verdicts. At most MAX_FINDINGS. */
 	prechecks: LintPrecheck[];
+	/** How many prechecks were dropped to keep to MAX_FINDINGS. */
+	prechecksTruncated: number;
+	/** At most MAX_FINDINGS. */
 	questions: LintQuestion[];
+	/** How many questions were dropped to keep to MAX_FINDINGS. */
+	questionsTruncated: number;
 	/** How many findings were dropped to keep to MAX_FINDINGS. */
 	truncated: number;
 }
 
 const MAX_FINDINGS = 100;
 const MAX_LABEL_LENGTH = 200;
+const MAX_TEXT_LENGTH = 500;
+
+function capText(text: string): string {
+	return text.length > MAX_TEXT_LENGTH
+		? `${text.slice(0, MAX_TEXT_LENGTH)}…`
+		: text;
+}
+
+function capList<T>(items: T[]): { dropped: number; kept: T[] } {
+	return {
+		kept: items.slice(0, MAX_FINDINGS),
+		dropped: Math.max(0, items.length - MAX_FINDINGS),
+	};
+}
 
 function capLabel(label: string): string {
 	return label.length > MAX_LABEL_LENGTH
@@ -73,7 +94,7 @@ export function lintCase(doc: LintCase): LintResult {
 			ruleId: f.rule,
 			elementLabel: labelFor(f.element, f.elements),
 			severity: f.severity,
-			reason: f.reason,
+			reason: capText(f.reason),
 		};
 		if (f.acked) {
 			acknowledgedGaps.push(base);
@@ -81,20 +102,30 @@ export function lintCase(doc: LintCase): LintResult {
 			findings.push({ ...base, fix: f.fix });
 		}
 	}
+	const prechecks = capList(
+		report.prechecks.map((p) => ({
+			ruleId: p.id,
+			elementLabel: labelFor(p.element),
+			detail: capText(p.detail),
+		}))
+	);
+	const questions = capList(
+		report.questions.map((q) => ({
+			ruleId: q.rule,
+			elementLabel: labelFor(q.element),
+			question: capText(q.question),
+		}))
+	);
+	const gaps = capList(acknowledgedGaps);
 	return {
 		findings: findings.slice(0, MAX_FINDINGS),
 		truncated: Math.max(0, findings.length - MAX_FINDINGS),
-		prechecks: report.prechecks.map((p) => ({
-			ruleId: p.id,
-			elementLabel: labelFor(p.element),
-			detail: p.detail,
-		})),
-		acknowledgedGaps,
-		questions: report.questions.map((q) => ({
-			ruleId: q.rule,
-			elementLabel: labelFor(q.element),
-			question: q.question,
-		})),
+		prechecks: prechecks.kept,
+		prechecksTruncated: prechecks.dropped,
+		acknowledgedGaps: gaps.kept,
+		acknowledgedGapsTruncated: gaps.dropped,
+		questions: questions.kept,
+		questionsTruncated: questions.dropped,
 		judgementRules: JUDGEMENT_PROMPT,
 	};
 }

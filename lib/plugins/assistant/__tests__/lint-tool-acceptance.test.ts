@@ -62,10 +62,13 @@ describe("lintCase", () => {
 		const result = lintCase(brokenDoc());
 		expect(Object.keys(result).sort()).toEqual([
 			"acknowledgedGaps",
+			"acknowledgedGapsTruncated",
 			"findings",
 			"judgementRules",
 			"prechecks",
+			"prechecksTruncated",
 			"questions",
+			"questionsTruncated",
 			"truncated",
 		]);
 		expect(result.findings.map((f) => f.ruleId).sort()).toEqual([
@@ -182,6 +185,18 @@ describe("ASSISTANT_SYSTEM_PROMPT", () => {
 	it("tells the model to apply judgementRules under a Judgement findings heading", () => {
 		expect(ASSISTANT_SYSTEM_PROMPT).toContain("judgementRules");
 		expect(ASSISTANT_SYSTEM_PROMPT).toContain('"Judgement findings"');
+	});
+
+	it("lists prechecks only when some were returned, and mentions prechecksTruncated", () => {
+		expect(ASSISTANT_SYSTEM_PROMPT).toContain(
+			'only if it returned at least one precheck, list the prechecks it returned under a heading "Prechecks"'
+		);
+		expect(ASSISTANT_SYSTEM_PROMPT).toContain(
+			'print no "Prechecks" heading when it returned none'
+		);
+		expect(ASSISTANT_SYSTEM_PROMPT).toContain(
+			"if prechecksTruncated is more than 0"
+		);
 	});
 
 	it("forbids saying whether the case is adequate", () => {

@@ -113,10 +113,9 @@ function nonEmpty(s: string | null | undefined): boolean {
  * A claim has real downstream development if it has an Evidence or Property Claim child
  * directly, or a Strategy child that is itself non-empty. An empty Strategy child does not
  * rescue the parent — the branch dead-ends there just as surely as if the claim had no
- * child at all. This is the reading that reconciles TREE03/EVID01 with a real captured case
- * (a captured case): a claim whose only child is a Strategy with zero children of
- * its own is an ackable finding alongside that Strategy's own TREE03
- * finding — a literal "children.length === 0" test would miss P1.3 entirely. TREE04
+ * child at all. A claim whose only child is an empty Strategy is therefore still reported,
+ * alongside that Strategy's own TREE03 finding; a literal "children.length === 0" test
+ * would not report it. TREE04
  * ("undeveloped") is deliberately blunter and does not use this helper — see checkTREE04.
  */
 function hasRealSupport(node: TreeNode): boolean {

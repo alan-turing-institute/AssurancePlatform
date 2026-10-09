@@ -41,6 +41,17 @@ describe("TREE01 — one root", () => {
 		expect(findings[0]?.severity).toBe("warning");
 		expect(findings[0]?.element).toBe("case");
 	});
+
+	test("fail: two elements carry role TOP_LEVEL, and the finding names both", () => {
+		const second = goal("G2", "another top", {});
+		const doc = caseDoc("t", goal("G1", "top", { children: [second] }));
+		const findings = findingsFor(doc, "TREE01");
+		expect(findings).toHaveLength(1);
+		expect(findings[0]?.elements).toEqual([doc.tree.id, second.id]);
+		expect(findings[0]?.reason).toContain(
+			"2 elements carry role TOP_LEVEL (G1, G2)"
+		);
+	});
 });
 
 // ---------------------------------------------------------------------------

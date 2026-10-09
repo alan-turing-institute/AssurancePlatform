@@ -116,6 +116,8 @@ async function callTechniques(claim: string, url: string | undefined) {
 /**
  * The claim to send. With an element selected, a supplied claim under 40
  * characters is a placeholder and the element's own text is used instead.
+ * With an element selected whose text is empty, a supplied claim under 40
+ * characters is still a placeholder, and no claim is sent.
  * Cut to what the service accepts.
  */
 function chooseClaim(
@@ -124,6 +126,9 @@ function chooseClaim(
 ): string {
 	const given = (supplied ?? "").trim();
 	const selected = (selection?.text ?? "").trim();
+	if (selection && !selected && given.length < MIN_SUPPLIED_CLAIM_CHARS) {
+		return "";
+	}
 	const claim =
 		selected && given.length < MIN_SUPPLIED_CLAIM_CHARS ? selected : given;
 	return (claim || selected).slice(0, MAX_CLAIM_CHARS);

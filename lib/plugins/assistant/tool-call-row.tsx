@@ -45,7 +45,8 @@ function TechniquesList({ output }: { output: unknown }) {
 	return (
 		<ul className="mt-1 space-y-1" data-testid="assistant-techniques">
 			{parsed.data.results.map((r, index) => (
-				<li key={r.slug ?? `result-${index}`}>
+				// biome-ignore lint/suspicious/noArrayIndexKey: results are a fixed list and two can share a slug
+				<li key={`result-${index}`}>
 					{HTTP_URL.test(r.url) ? (
 						<a
 							className="underline"

@@ -17,8 +17,7 @@ The plugin must be enabled before an API key can be saved.
 | `TECHNIQUES_MCP_URL` | Technique suggestions | The address of a techniques service that accepts JSON-RPC 2.0 `tools/call` requests over HTTP. When it is unset, or is not an `http` or `https` URL, the `suggest_techniques` tool is not offered and the assistant says that technique suggestions are unavailable. |
 | `ASSISTANT_MODEL_TIMEOUT_MS` | Optional | How long one model call may run before it is cancelled, in milliseconds. See the section below. |
 
-Every variable in this table is read when it is used, on each request, and none is read when the server starts.
-A change takes effect on the next request without a restart.
+Every variable is read when it is used, so a change takes effect on the first request after the server restarts with the new value.
 
 ## Technique suggestions
 
@@ -26,8 +25,11 @@ When `TECHNIQUES_MCP_URL` is set, the assistant can call `suggest_techniques` fo
 Without a claim in the request, it uses the text of the element the user has selected.
 The text of the selected claim is case content, and it is sent to the techniques service.
 The server sends one `suggest_techniques_for_claim` request to the service, with no session, and waits up to 20 seconds.
-The service accepts claims of up to 2,000 characters, so the server cuts a longer claim to its first 2,000 characters before it sends it.
+The service accepts claims of up to 2,000 characters.
+The server cuts the selected element's text to its first 2,000 characters before it sends it.
+A claim that the model supplies itself must already be 2,000 characters or fewer: a longer one is rejected, and the tool call fails.
 If a supplied claim is under 40 characters and an element is selected, the server uses the selected element's text instead.
+If the selected element has no text, the tool returns an error and sends nothing.
 The assistant recommends only techniques that the service returned.
 The tool keeps the five best results, and cuts each name and link to 500 characters and each goal to 200 characters, with at most 20 goals.
 If the service does not answer in time, replies with an error status code, redirects the request, or replies in an unexpected shape, the assistant is told that the service is not reachable.

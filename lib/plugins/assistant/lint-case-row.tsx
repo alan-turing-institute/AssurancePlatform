@@ -101,9 +101,12 @@ export function LintCaseResult({ result }: { result: LintOutput }) {
 					</h4>
 					<ul className="ml-4 list-disc">
 						{rows.map((row) => (
-							<li key={`${row.ruleId}-${row.elementLabel}-${row.reason}`}>
+							<li
+								className="break-words"
+								key={`${row.ruleId}-${row.elementLabel}-${row.reason}`}
+							>
 								<span className="font-mono">{row.ruleId}</span> on{" "}
-								<span className="font-mono">{row.elementLabel}</span>:{" "}
+								<span className="break-all font-mono">{row.elementLabel}</span>:{" "}
 								{row.reason}
 							</li>
 						))}
@@ -115,9 +118,12 @@ export function LintCaseResult({ result }: { result: LintOutput }) {
 					<h4 className="font-semibold">Prechecks</h4>
 					<ul className="ml-4 list-disc">
 						{result.prechecks.map((row) => (
-							<li key={`${row.ruleId}-${row.elementLabel}-${row.detail}`}>
+							<li
+								className="break-words"
+								key={`${row.ruleId}-${row.elementLabel}-${row.detail}`}
+							>
 								<span className="font-mono">{row.ruleId}</span> on{" "}
-								<span className="font-mono">{row.elementLabel}</span>:{" "}
+								<span className="break-all font-mono">{row.elementLabel}</span>:{" "}
 								{row.detail}
 							</li>
 						))}

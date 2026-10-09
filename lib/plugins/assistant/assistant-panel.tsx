@@ -208,12 +208,18 @@ function AssistantChat({
 					placeholder="Ask about this case"
 					value={draft}
 				/>
-				{busy ? (
-					<Button onClick={() => stop()} type="button" variant="outline">
+				{busy && (
+					<Button
+						key="stop"
+						onClick={() => stop()}
+						type="button"
+						variant="outline"
+					>
 						Stop
 					</Button>
-				) : (
-					<Button disabled={!draft.trim()} type="submit">
+				)}
+				{!busy && (
+					<Button disabled={!draft.trim()} key="send" type="submit">
 						Send
 					</Button>
 				)}

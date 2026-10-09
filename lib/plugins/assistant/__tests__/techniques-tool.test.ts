@@ -224,6 +224,18 @@ describe("suggest_techniques claim text", () => {
 		expect(sentClaim()).toBe(typed);
 	});
 
+	it("returns the no-claim error, not the placeholder, when the selected element's text is empty", async () => {
+		const out = await createTechniquesTool(element("")).execute?.(
+			{ claimText: "This claim" },
+			options
+		);
+
+		expect(out).toEqual({
+			error: "No claim text was given and no element is selected.",
+		});
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
 	it("keeps a short supplied claim when no element is selected", async () => {
 		reply(EMPTY_REPLY);
 
