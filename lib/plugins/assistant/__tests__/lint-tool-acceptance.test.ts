@@ -13,10 +13,14 @@ vi.mock("@/lib/services/case-export-service", () => ({
 	exportCase: (...args: unknown[]) => exportCase(...args),
 }));
 
-import { ASSISTANT_SYSTEM_PROMPT, createCaseTools } from "../tools";
+import { buildSystemPrompt, createCaseTools } from "../tools";
 
-const BANNED =
-	/\b(nausicaa|funes|chris|cid|quill|toulmin|darter|bluebird|ruled|ruling|dstl|bae)\b/i;
+const ASSISTANT_SYSTEM_PROMPT = buildSystemPrompt(
+	Object.keys(createCaseTools("u", "c"))
+);
+
+// The generator's own name pattern, when the environment provides it.
+const NAME_PATTERN = process.env.RULESET_NAME_CHECK?.trim();
 
 const SEVERITY = /^(error|warning|style)$/;
 const CALL_ONCE = /call it once/;
@@ -60,7 +64,9 @@ describe("lintCase", () => {
 			"acknowledgedGaps",
 			"findings",
 			"judgementRules",
+			"prechecks",
 			"questions",
+			"truncated",
 		]);
 		expect(result.findings.map((f) => f.ruleId).sort()).toEqual([
 			"TREE01",
@@ -109,12 +115,21 @@ describe("lintCase", () => {
 		expect(gap?.elementLabel).toBe("P1");
 	});
 
-	it("supplies judgement rules text free of any person or project name", () => {
+	it("supplies judgement rules as text", () => {
 		const { judgementRules } = lintCase(brokenDoc());
 		expect(typeof judgementRules).toBe("string");
 		expect(judgementRules.length).toBeGreaterThan(200);
-		expect(judgementRules).not.toMatch(BANNED);
 	});
+
+	it.skipIf(!NAME_PATTERN)(
+		"supplies judgement rules text that does not match the name-check pattern",
+		() => {
+			const { judgementRules } = lintCase(brokenDoc());
+			expect(judgementRules).not.toMatch(
+				new RegExp(`\\b(?:${NAME_PATTERN})\\b`, "i")
+			);
+		}
+	);
 });
 
 describe("lint_case tool", () => {

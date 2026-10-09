@@ -6,10 +6,31 @@ interface LintRow {
 	ruleId: string;
 }
 
+interface PrecheckRow {
+	detail: string;
+	elementLabel: string;
+	ruleId: string;
+}
+
 export interface LintOutput {
 	acknowledgedGaps: LintRow[];
 	findings: LintRow[];
+	prechecks: PrecheckRow[];
 	questions: unknown[];
+}
+
+function isPrecheckList(value: unknown): value is PrecheckRow[] {
+	return (
+		Array.isArray(value) &&
+		value.every(
+			(row) =>
+				typeof row === "object" &&
+				row !== null &&
+				typeof row.ruleId === "string" &&
+				typeof row.elementLabel === "string" &&
+				typeof row.detail === "string"
+		)
+	);
 }
 
 const FAMILY_NAMES: Record<string, string> = {
@@ -43,7 +64,7 @@ export function parseLintOutput(output: unknown): LintOutput | null {
 	if (typeof output !== "object" || output === null) {
 		return null;
 	}
-	const { findings, acknowledgedGaps, questions } = output as Record<
+	const { findings, acknowledgedGaps, questions, prechecks } = output as Record<
 		string,
 		unknown
 	>;
@@ -53,6 +74,7 @@ export function parseLintOutput(output: unknown): LintOutput | null {
 	return {
 		findings,
 		acknowledgedGaps,
+		prechecks: isPrecheckList(prechecks) ? prechecks : [],
 		questions: Array.isArray(questions) ? questions : [],
 	};
 }
@@ -88,6 +110,20 @@ export function LintCaseResult({ result }: { result: LintOutput }) {
 					</ul>
 				</section>
 			))}
+			{result.prechecks.length > 0 && (
+				<section>
+					<h4 className="font-semibold">Prechecks</h4>
+					<ul className="ml-4 list-disc">
+						{result.prechecks.map((row) => (
+							<li key={`${row.ruleId}-${row.elementLabel}-${row.detail}`}>
+								<span className="font-mono">{row.ruleId}</span> on{" "}
+								<span className="font-mono">{row.elementLabel}</span>:{" "}
+								{row.detail}
+							</li>
+						))}
+					</ul>
+				</section>
+			)}
 			<p className="text-muted-foreground">
 				{result.acknowledgedGaps.length} acknowledged gaps,{" "}
 				{result.questions.length} questions

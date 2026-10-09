@@ -88,7 +88,7 @@ export function createCaseTools(userId: string, caseId: string) {
 		}),
 		lint_case: tool({
 			description:
-				"Lint the open assurance case against the rule catalogue. Returns structural findings (rule id, element label, severity, reason, fix), gaps the author has acknowledged, questions for the author, and judgementRules: further rules for you to apply to the case yourself.",
+				"Lint the open assurance case against the rule catalogue. Returns structural findings (rule id, element label, severity, reason, fix), gaps the author has acknowledged, questions for the author, prechecks (mechanical facts for the judgement rules), the number of findings left out when there are more than 100 (truncated), and judgementRules: further rules for you to apply to the case yourself.",
 			inputSchema: z.object({}),
 			execute: async () => {
 				const data = await loadExport(userId, caseId);
@@ -98,10 +98,16 @@ export function createCaseTools(userId: string, caseId: string) {
 	};
 }
 
-export const ASSISTANT_SYSTEM_PROMPT = `You are the Case Assistant inside TEA (Trustworthy and Ethical Assurance), a platform for building assurance cases: structured arguments that a goal is met, made of goals, strategies, property claims and the evidence that supports them.
+/**
+ * The system prompt. The sentence naming the tools is built from the names of
+ * the tools actually registered, in registration order.
+ */
+export function buildSystemPrompt(toolNames: readonly string[]): string {
+	return `You are the Case Assistant inside TEA (Trustworthy and Ethical Assurance), a platform for building assurance cases: structured arguments that a goal is met, made of goals, strategies, property claims and the evidence that supports them.
 
-You have two read-only tools. read_case returns the whole open case as a tree. read_element returns one element and its direct children by id. You cannot change the case.
+You have these read-only tools: ${toolNames.join(", ")}. read_case returns the whole open case as a tree. read_element returns one element and its direct children by id. You cannot change the case.
 
 Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.
 
-When the user asks you to lint, check or review the case, call lint_case first and call it once. Your reply must then list every finding from its findings array, one per line, as "RULEID on ELEMENT: reason", copying the values as returned. Next, read the case with read_case if you have not, apply the judgementRules text to it yourself, and list any further findings in the same "RULEID on ELEMENT: reason" form under a heading "Judgement findings". If you find none, say so. Never say whether the case is adequate or good enough.`;
+When the user asks you to lint, check or review the case, call lint_case first and call it once. Your reply must then list the findings it returned, one per line, as "RULEID on ELEMENT: reason", copying the values as returned; if truncated is more than 0, say that many further findings were left out. Then list any prechecks it returned under a heading "Prechecks", one per line, in the same form with detail in place of reason; these are facts for you to weigh against the judgement rules, not findings. Relay the tool's questions to the user, at most six. Next, read the case with read_case if you have not, apply the judgementRules text to it yourself, and list any further findings in the same "RULEID on ELEMENT: reason" form under a heading "Judgement findings". If you find none, say so. Never say whether the case is adequate or good enough.`;
+}

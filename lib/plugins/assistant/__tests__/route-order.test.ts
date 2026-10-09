@@ -20,7 +20,7 @@ vi.mock("@/lib/services/plugin-enablement-service", () => ({
 	assertPluginEnabledForUser: vi.fn(),
 }));
 vi.mock("@/lib/plugins/assistant/tools", () => ({
-	ASSISTANT_SYSTEM_PROMPT: "",
+	buildSystemPrompt: vi.fn(() => ""),
 	createCaseTools: vi.fn(),
 }));
 vi.mock("@/lib/permissions", () => ({ canAccessCase: vi.fn() }));

@@ -9,10 +9,42 @@ function row(ruleId: string, elementLabel: string, reason: string) {
 }
 
 function result(findings: LintOutput["findings"]): LintOutput {
-	return { findings, acknowledgedGaps: [], questions: [] };
+	return { findings, acknowledgedGaps: [], prechecks: [], questions: [] };
 }
 
 describe("LintCaseResult", () => {
+	it("lists prechecks under their own heading, apart from the findings", () => {
+		render(
+			<LintCaseResult
+				result={{
+					...result([row("TREE01", "case", "no single root")]),
+					prechecks: [
+						{
+							ruleId: "SCOP01",
+							elementLabel: "G1",
+							detail: "context list is empty",
+						},
+					],
+				}}
+			/>
+		);
+		const root = screen.getByTestId("assistant-lint-result");
+		const heading = within(root).getByRole("heading", { name: "Prechecks" });
+		const items = within(
+			heading.closest("section") as HTMLElement
+		).getAllByRole("listitem");
+		expect(items).toHaveLength(1);
+		expect(items[0]?.textContent).toContain("SCOP01");
+		expect(items[0]?.textContent).toContain("context list is empty");
+	});
+
+	it("shows no Prechecks heading when there are none", () => {
+		render(<LintCaseResult result={result([])} />);
+		expect(
+			screen.queryByRole("heading", { name: "Prechecks" })
+		).not.toBeInTheDocument();
+	});
+
 	it("groups findings by four-letter family code with rule id, element and reason on each line", () => {
 		render(
 			<LintCaseResult
@@ -50,8 +82,8 @@ describe("LintCaseResult", () => {
 			evid?.closest("section") as HTMLElement
 		).getAllByRole("listitem");
 		expect(evidLines).toHaveLength(1);
-		expect(evidLines[0].textContent).toContain("P1");
-		expect(evidLines[0].textContent).toContain("leaf claim is unsupported");
+		expect(evidLines[0]?.textContent).toContain("P1");
+		expect(evidLines[0]?.textContent).toContain("leaf claim is unsupported");
 	});
 
 	it("renders every family code in the catalogue", () => {

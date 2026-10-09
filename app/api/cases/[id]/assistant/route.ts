@@ -11,12 +11,13 @@ import { AppError, notFound } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { createAssistantModel } from "@/lib/plugins/assistant/model";
+import { modelTimeoutMs } from "@/lib/plugins/assistant/model-timeout";
 import {
 	ASSISTANT_PLUGIN_ID,
 	resolveProviderConfig,
 } from "@/lib/plugins/assistant/provider-config";
 import {
-	ASSISTANT_SYSTEM_PROMPT,
+	buildSystemPrompt,
 	createCaseTools,
 } from "@/lib/plugins/assistant/tools";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
@@ -27,8 +28,7 @@ const log = logger.child({ component: "assistant-route" });
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_MESSAGES = 100;
 const MAX_STEPS = 8;
-/** Bounds on one model call: total wall time, tokens written, and provider retries. */
-const MODEL_TIMEOUT_MS = 60_000;
+/** Bounds on one model call: tokens written and provider retries (wall time: ASSISTANT_MODEL_TIMEOUT_MS). */
 const MAX_OUTPUT_TOKENS = 2048;
 const MAX_RETRIES = 1;
 
@@ -87,14 +87,15 @@ export async function POST(
 			? `\n\nThe user currently has the element with id ${body.selectedElementId} selected on the canvas.`
 			: "";
 
+		const tools = createCaseTools(userId, caseId);
 		const result = streamText({
 			model: createAssistantModel(resolved.config),
-			system: ASSISTANT_SYSTEM_PROMPT + selection,
+			system: buildSystemPrompt(Object.keys(tools)) + selection,
 			messages: await convertToModelMessages(body.messages as UIMessage[]),
-			tools: createCaseTools(userId, caseId),
+			tools,
 			stopWhen: stepCountIs(MAX_STEPS),
 			abortSignal: request.signal,
-			timeout: MODEL_TIMEOUT_MS,
+			timeout: modelTimeoutMs(),
 			maxOutputTokens: MAX_OUTPUT_TOKENS,
 			maxRetries: MAX_RETRIES,
 			// Replaces the SDK's default console logging, which prints the whole

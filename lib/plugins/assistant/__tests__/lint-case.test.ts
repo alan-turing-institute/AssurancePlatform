@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JUDGEMENT_RULE_IDS } from "@/lib/plugins/assistant/linter/judgement-prompt";
 import {
-	ASSISTANT_SYSTEM_PROMPT,
+	buildSystemPrompt,
 	createCaseTools,
 } from "@/lib/plugins/assistant/tools";
 import { exportCase } from "@/lib/services/case-export-service";
@@ -69,6 +69,18 @@ describe("lint_case tool", () => {
 	});
 
 	it("is introduced in the system prompt", () => {
-		expect(ASSISTANT_SYSTEM_PROMPT).toContain("lint_case");
+		expect(buildSystemPrompt(["lint_case"])).toContain("lint_case");
+	});
+
+	it("names the registered tools in registration order in the base prompt", () => {
+		const names = Object.keys(createCaseTools("u", "c"));
+
+		expect(names).toEqual(["read_case", "read_element", "lint_case"]);
+		expect(buildSystemPrompt(names)).toContain(
+			"You have these read-only tools: read_case, read_element, lint_case."
+		);
+		expect(buildSystemPrompt([...names, "extra_tool"])).toContain(
+			"read_case, read_element, lint_case, extra_tool."
+		);
 	});
 });

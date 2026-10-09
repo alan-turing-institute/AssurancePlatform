@@ -420,19 +420,6 @@ function checkTREE02(
 // TREE03 / EVID01 — no orphan or dangling elements
 // ===========================================================================
 
-/**
- * TREE03 covers GOAL claims, Strategy nodes with no children, and Evidence found at the tree
- * root. It deliberately does NOT re-check PROPERTY_CLAIM: EVID01 is that check's element-level
- * twin, and firing both on the same leaf would double-count a single violation (a case of
- * NEEDS_SUPPORT leaves yields one ackable finding per leaf, not two).
- *
- * Case-scope, once per case — but TREE03 is ALSO ack-able, and one finding cannot carry a
- * single `acked` flag for a mixed list. So this emits UP TO TWO case-level records: one surfaced (strategies with no children,
- * orphan evidence, and a childless goal that is not NEEDS_SUPPORT), one acked (a childless
- * goal that IS NEEDS_SUPPORT — the only category acking can ever apply to, since strategies
- * and evidence are not claims). Either list may be empty, in which case that record is
- * omitted rather than emitted empty.
- */
 interface TREE03Scan {
 	ackedId: string | undefined;
 	emptyStrategyCount: number;
@@ -481,6 +468,19 @@ function scanTREE03(
 	return scan;
 }
 
+/**
+ * TREE03 covers GOAL claims, Strategy nodes with no children, and Evidence found at the tree
+ * root. It deliberately does NOT re-check PROPERTY_CLAIM: EVID01 is that check's element-level
+ * twin, and firing both on the same leaf would double-count a single violation (a case of
+ * NEEDS_SUPPORT leaves yields one ackable finding per leaf, not two).
+ *
+ * Case-scope, once per case — but TREE03 is ALSO ack-able, and one finding cannot carry a
+ * single `acked` flag for a mixed list. So this emits UP TO TWO case-level records: one surfaced (strategies with no children,
+ * orphan evidence, and a childless goal that is not NEEDS_SUPPORT), one acked (a childless
+ * goal that IS NEEDS_SUPPORT — the only category acking can ever apply to, since strategies
+ * and evidence are not claims). Either list may be empty, in which case that record is
+ * omitted rather than emitted empty.
+ */
 function checkTREE03(
 	doc: CaseExportNested,
 	occurrences: Occurrence[],
@@ -848,7 +848,7 @@ function checkSCOP02(
 }
 
 // ===========================================================================
-// Prechecks — mechanical facts for the judgement pass (§5), not verdicts.
+// Prechecks — mechanical facts the model reads alongside the judgement rules; not verdicts.
 // ===========================================================================
 
 function precheckSCOP01(doc: CaseExportNested): Precheck[] {
