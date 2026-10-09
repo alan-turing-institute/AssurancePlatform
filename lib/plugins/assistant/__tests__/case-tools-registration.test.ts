@@ -10,9 +10,10 @@ afterEach(() => {
 describe("createCaseTools registration of suggest_techniques", () => {
 	it("registers it alongside the read tools when TECHNIQUES_MCP_URL is a URL", () => {
 		vi.stubEnv("TECHNIQUES_MCP_URL", "https://techniques.example/mcp");
-		expect(Object.keys(createCaseTools("u", "c")).sort()).toEqual([
+		expect(Object.keys(createCaseTools("u", "c"))).toEqual([
 			"read_case",
 			"read_element",
+			"lint_case",
 			"suggest_techniques",
 		]);
 	});
@@ -23,9 +24,10 @@ describe("createCaseTools registration of suggest_techniques", () => {
 		"techniques.example",
 	])("leaves it out when TECHNIQUES_MCP_URL is %j", (value) => {
 		vi.stubEnv("TECHNIQUES_MCP_URL", value);
-		expect(Object.keys(createCaseTools("u", "c")).sort()).toEqual([
+		expect(Object.keys(createCaseTools("u", "c"))).toEqual([
 			"read_case",
 			"read_element",
+			"lint_case",
 		]);
 	});
 
