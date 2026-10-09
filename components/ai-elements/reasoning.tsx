@@ -202,12 +202,21 @@ export type ReasoningContentProps = ComponentProps<
   typeof CollapsibleContent
 > & {
   children: string;
+  // Settings passed to Streamdown for the thinking text, so a caller can limit
+  // what that text may render (raw HTML, images, links). Without them the
+  // text renders with Streamdown's defaults.
+  streamdownProps?: Omit<ComponentProps<typeof Streamdown>, "children">;
 };
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
 export const ReasoningContent = memo(
-  ({ className, children, ...props }: ReasoningContentProps) => (
+  ({
+    className,
+    children,
+    streamdownProps,
+    ...props
+  }: ReasoningContentProps) => (
     <CollapsibleContent
       className={cn(
         "mt-4 text-sm",
@@ -216,7 +225,9 @@ export const ReasoningContent = memo(
       )}
       {...props}
     >
-      <Streamdown plugins={streamdownPlugins}>{children}</Streamdown>
+      <Streamdown plugins={streamdownPlugins} {...streamdownProps}>
+        {children}
+      </Streamdown>
     </CollapsibleContent>
   )
 );
