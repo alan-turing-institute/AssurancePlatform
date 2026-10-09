@@ -14,9 +14,22 @@ interface PrecheckRow {
 
 export interface LintOutput {
 	acknowledgedGaps: LintRow[];
+	/** How many acknowledged gaps the tool left out of `acknowledgedGaps`. */
+	acknowledgedGapsTruncated: number;
 	findings: LintRow[];
 	prechecks: PrecheckRow[];
 	questions: unknown[];
+	/** How many questions the tool left out of `questions`. */
+	questionsTruncated: number;
+	/** How many findings the tool left out of `findings`. */
+	truncated: number;
+}
+
+/** A count the tool reports, or 0 when it is absent or not a positive number. */
+function leftOut(value: unknown): number {
+	return typeof value === "number" && Number.isFinite(value) && value > 0
+		? Math.floor(value)
+		: 0;
 }
 
 function isPrecheckList(value: unknown): value is PrecheckRow[] {
@@ -68,10 +81,15 @@ export function parseLintOutput(output: unknown): LintOutput | null {
 	if (typeof output !== "object" || output === null) {
 		return null;
 	}
-	const { findings, acknowledgedGaps, questions, prechecks } = output as Record<
-		string,
-		unknown
-	>;
+	const {
+		findings,
+		acknowledgedGaps,
+		questions,
+		prechecks,
+		truncated,
+		acknowledgedGapsTruncated,
+		questionsTruncated,
+	} = output as Record<string, unknown>;
 	if (!(isRowList(findings) && isRowList(acknowledgedGaps))) {
 		return null;
 	}
@@ -80,6 +98,9 @@ export function parseLintOutput(output: unknown): LintOutput | null {
 		acknowledgedGaps,
 		prechecks: isPrecheckList(prechecks) ? prechecks : [],
 		questions: Array.isArray(questions) ? questions : [],
+		truncated: leftOut(truncated),
+		acknowledgedGapsTruncated: leftOut(acknowledgedGapsTruncated),
+		questionsTruncated: leftOut(questionsTruncated),
 	};
 }
 
@@ -90,6 +111,36 @@ function groupByFamily(findings: LintRow[]): Map<string, LintRow[]> {
 		groups.set(code, [...(groups.get(code) ?? []), finding]);
 	}
 	return groups;
+}
+
+interface ListedRow {
+	elementLabel: string;
+	ruleId: string;
+	text: string;
+}
+
+/** Lines of "RULE on ELEMENT: text", each keyed by its values and its position so identical rows do not collide. */
+function RowList({ rows }: { rows: ListedRow[] }) {
+	const keyed = rows.map((row, position) => ({
+		key: `${row.ruleId}-${row.elementLabel}-${row.text}-${position}`,
+		row,
+	}));
+	return (
+		<ul className="ml-4 list-disc">
+			{keyed.map(({ key, row }) => (
+				<li className="break-words" key={key}>
+					<span className="font-mono">{row.ruleId}</span> on{" "}
+					<span className="break-all font-mono">{row.elementLabel}</span>:{" "}
+					{row.text}
+				</li>
+			))}
+		</ul>
+	);
+}
+
+/** The note after a count when the tool left some entries out. */
+function notShown(count: number): string {
+	return count > 0 ? ` (${count} more not shown)` : "";
 }
 
 /** A lint_case result as findings grouped by rule family. */
@@ -103,40 +154,37 @@ export function LintCaseResult({ result }: { result: LintOutput }) {
 					<h4 className="font-semibold">
 						{code} {FAMILY_NAMES[code] ?? ""}
 					</h4>
-					<ul className="ml-4 list-disc">
-						{rows.map((row) => (
-							<li
-								className="break-words"
-								key={`${row.ruleId}-${row.elementLabel}-${row.reason}`}
-							>
-								<span className="font-mono">{row.ruleId}</span> on{" "}
-								<span className="break-all font-mono">{row.elementLabel}</span>:{" "}
-								{row.reason}
-							</li>
-						))}
-					</ul>
+					<RowList
+						rows={rows.map((row) => ({
+							ruleId: row.ruleId,
+							elementLabel: row.elementLabel,
+							text: row.reason,
+						}))}
+					/>
 				</section>
 			))}
+			{result.truncated > 0 && (
+				<p className="text-muted-foreground">
+					{result.truncated} more not shown
+				</p>
+			)}
 			{result.prechecks.length > 0 && (
 				<section>
 					<h4 className="font-semibold">Prechecks</h4>
-					<ul className="ml-4 list-disc">
-						{result.prechecks.map((row) => (
-							<li
-								className="break-words"
-								key={`${row.ruleId}-${row.elementLabel}-${row.detail}`}
-							>
-								<span className="font-mono">{row.ruleId}</span> on{" "}
-								<span className="break-all font-mono">{row.elementLabel}</span>:{" "}
-								{row.detail}
-							</li>
-						))}
-					</ul>
+					<RowList
+						rows={result.prechecks.map((row) => ({
+							ruleId: row.ruleId,
+							elementLabel: row.elementLabel,
+							text: row.detail,
+						}))}
+					/>
 				</section>
 			)}
 			<p className="text-muted-foreground">
-				{result.acknowledgedGaps.length} acknowledged gaps,{" "}
-				{result.questions.length} questions
+				{result.acknowledgedGaps.length} acknowledged gaps
+				{notShown(result.acknowledgedGapsTruncated)}, {result.questions.length}{" "}
+				questions
+				{notShown(result.questionsTruncated)}
 			</p>
 		</div>
 	);

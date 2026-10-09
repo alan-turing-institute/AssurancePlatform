@@ -151,6 +151,62 @@ describe("lintCase bounds", () => {
 		expect(tree01?.reason.endsWith("…")).toBe(true);
 	});
 
+	it("keeps the first 100 questions and reports how many were dropped", () => {
+		// Each claim with two evidence children raises one question, and a case with
+		// no defeater raises one more; the assumption keeps the sibling-set question out.
+		const claims = Array.from({ length: MANY }, (_, i) =>
+			claim(`P${i + 1}`, `Claim ${i + 1}.`, {
+				children: [
+					evidence(`E${i + 1}a`, "Audit.", { url: "https://example.org/a" }),
+					evidence(`E${i + 1}b`, "Review.", { url: "https://example.org/b" }),
+				],
+			})
+		);
+		const result = lintCase(
+			caseDoc(
+				"Many questions",
+				goal("G1", "Top.", {
+					context: ["Scope."],
+					children: [
+						strategy("S1", "Argue.", { assumption: "Held.", children: claims }),
+					],
+				})
+			)
+		);
+
+		expect(result.questions).toHaveLength(100);
+		expect(result.questionsTruncated).toBe(MANY + 1 - 100);
+	});
+
+	it("cuts a precheck detail and a question over 500 characters to 500 plus an ellipsis", () => {
+		const inherited = Array.from({ length: MANY }, (_, i) => `w${i}`).join(" ");
+		const result = lintCase(
+			caseDoc(
+				"Long context",
+				goal("G1", "Top.", {
+					context: [inherited],
+					children: [
+						strategy("S1", "Argue.", {
+							context: [`${inherited} extra`],
+							children: [
+								claim("P1", "Claim.", { assertionStatus: "NEEDS_SUPPORT" }),
+							],
+						}),
+					],
+				})
+			)
+		);
+		const precheck = result.prechecks?.find((p) => p.ruleId === "SCOP04");
+		const narrowing = result.questions.find((q) =>
+			q.question.startsWith("This context narrows")
+		);
+
+		expect(precheck?.detail).toHaveLength(501);
+		expect(precheck?.detail.endsWith("…")).toBe(true);
+		expect(narrowing?.question).toHaveLength(501);
+		expect(narrowing?.question.endsWith("…")).toBe(true);
+	});
+
 	it("treats an element whose assertionStatus is null as unacknowledged", () => {
 		const result = lintCase(
 			caseDoc(

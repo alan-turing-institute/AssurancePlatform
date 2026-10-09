@@ -1,15 +1,24 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LintCaseResult, type LintOutput } from "../lint-case-row";
 
 const NO_FINDINGS = /no .*findings/i;
+const MORE_NOT_SHOWN = /more not shown/;
 
 function row(ruleId: string, elementLabel: string, reason: string) {
 	return { ruleId, elementLabel, reason };
 }
 
 function result(findings: LintOutput["findings"]): LintOutput {
-	return { findings, acknowledgedGaps: [], prechecks: [], questions: [] };
+	return {
+		findings,
+		acknowledgedGaps: [],
+		prechecks: [],
+		questions: [],
+		truncated: 0,
+		acknowledgedGapsTruncated: 0,
+		questionsTruncated: 0,
+	};
 }
 
 describe("LintCaseResult", () => {
@@ -103,6 +112,72 @@ describe("LintCaseResult", () => {
 		render(<LintCaseResult result={result([])} />);
 		expect(screen.getByText(NO_FINDINGS)).toBeTruthy();
 		expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+	});
+
+	it("lists rows with identical values separately without a duplicate-key warning", () => {
+		const consoleError = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		render(
+			<LintCaseResult
+				result={{
+					...result([
+						row("EVID01", "P1", "unsupported"),
+						row("EVID01", "P1", "unsupported"),
+					]),
+					prechecks: [
+						{ ruleId: "SCOP04", elementLabel: "S1", detail: "same" },
+						{ ruleId: "SCOP04", elementLabel: "S1", detail: "same" },
+					],
+				}}
+			/>
+		);
+
+		expect(screen.getAllByRole("listitem")).toHaveLength(4);
+		expect(consoleError).not.toHaveBeenCalled();
+		consoleError.mockRestore();
+	});
+
+	it("says how many findings were left out under the findings list", () => {
+		render(
+			<LintCaseResult
+				result={{
+					...result([row("TREE01", "case", "no single root")]),
+					truncated: 20,
+				}}
+			/>
+		);
+
+		expect(screen.getByText("20 more not shown")).toBeInTheDocument();
+	});
+
+	it("says nothing about omissions when no count is above 0", () => {
+		render(<LintCaseResult result={result([])} />);
+
+		expect(screen.queryByText(MORE_NOT_SHOWN)).not.toBeInTheDocument();
+		expect(screen.getByText("0 acknowledged gaps, 0 questions")).toBeTruthy();
+	});
+
+	it("adds how many were left out to the gap and question counts in the footer", () => {
+		render(
+			<LintCaseResult
+				result={{
+					...result([]),
+					acknowledgedGaps: Array.from({ length: 100 }, () =>
+						row("EVID01", "P1", "held")
+					),
+					acknowledgedGapsTruncated: 50,
+					questions: Array.from({ length: 100 }, () => "q"),
+					questionsTruncated: 7,
+				}}
+			/>
+		);
+
+		expect(
+			screen.getByText(
+				"100 acknowledged gaps (50 more not shown), 100 questions (7 more not shown)"
+			)
+		).toBeInTheDocument();
 	});
 
 	it("renders markup in a reason or label as text", () => {
