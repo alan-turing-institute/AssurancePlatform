@@ -147,7 +147,7 @@ function notShown(count: number): string {
 export function LintCaseResult({ result }: { result: LintOutput }) {
 	const groups = groupByFamily(result.findings);
 	return (
-		<div className="mt-1 space-y-2" data-testid="assistant-lint-result">
+		<div className="space-y-2 p-3" data-testid="assistant-lint-result">
 			{groups.size === 0 && <p>No structural findings.</p>}
 			{[...groups].map(([code, rows]) => (
 				<section key={code}>

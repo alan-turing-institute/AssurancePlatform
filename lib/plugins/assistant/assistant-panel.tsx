@@ -1,21 +1,38 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import type { UIMessage } from "ai";
+import { isToolUIPart, type UIMessage } from "ai";
+import { Bot } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { type FormEvent, type KeyboardEvent, useState } from "react";
 import {
-	type FormEvent,
-	type KeyboardEvent,
-	type ReactNode,
-	useState,
-} from "react";
-import ReactMarkdown from "react-markdown";
+	Conversation,
+	ConversationContent,
+	ConversationEmptyState,
+	ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+	Message,
+	MessageContent,
+	MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+	Reasoning,
+	ReasoningContent,
+	ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ABORT_NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
+import { REPLY_MARKDOWN_PROPS } from "@/lib/plugins/assistant/reply-markdown";
+import { suggestedPrompts } from "@/lib/plugins/assistant/suggested-prompts";
 import { ToolCallRow } from "@/lib/plugins/assistant/tool-call-row";
+import { useAssistantTools } from "@/lib/plugins/assistant/use-assistant-tools";
+import { showWaitingLine } from "@/lib/plugins/assistant/waiting-state";
 import type { CaseSlotContext } from "@/lib/plugins/slots/index";
 
 /** The route answers 409 when the provider, model, endpoint or key is not usable; its message says which. */
@@ -45,28 +62,13 @@ function keyedParts(
 	});
 }
 
-const MARKDOWN_COMPONENTS = {
-	a: ({ href, children }: { href?: string; children?: ReactNode }) => (
-		<a
-			className="underline"
-			href={href}
-			rel="noopener noreferrer"
-			target="_blank"
-		>
-			{children}
-		</a>
-	),
-	// Remote images would let a reply make the browser fetch an arbitrary URL.
-	img: ({ alt }: { alt?: string }) => (alt ? <span>{alt}</span> : null),
-};
-
-/** Assistant text as markdown. Raw HTML is never rendered: it appears as text. */
-function AssistantText({ text }: { text: string }) {
-	return (
-		<div className="space-y-2 break-words [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5">
-			<ReactMarkdown components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
-		</div>
-	);
+/** The thinking steps of a reply that have text, joined into one text. Empty when the model sent none or sent them empty. */
+function thinkingText(message: UIMessage): string {
+	return message.parts
+		.flatMap((part) =>
+			part.type === "reasoning" && part.text.trim() !== "" ? [part.text] : []
+		)
+		.join("\n\n");
 }
 
 function MessagePartView({
@@ -83,13 +85,50 @@ function MessagePartView({
 			</p>
 		);
 	}
-	if (part.type !== "text") {
-		return <ToolCallRow part={part} />;
+	if (part.type === "text") {
+		return role === "assistant" ? (
+			<MessageResponse {...REPLY_MARKDOWN_PROPS}>{part.text}</MessageResponse>
+		) : (
+			part.text
+		);
 	}
-	if (role === "assistant") {
-		return <AssistantText text={part.text} />;
-	}
-	return <p className="whitespace-pre-wrap break-words">{part.text}</p>;
+	return isToolUIPart(part) ? <ToolCallRow part={part} /> : null;
+}
+
+function MessageView({
+	message,
+	thinking,
+}: {
+	message: UIMessage;
+	thinking: { text: string; streaming: boolean };
+}) {
+	return (
+		<Message
+			data-testid={`assistant-message-${message.role}`}
+			from={message.role}
+		>
+			<MessageContent
+				className={
+					message.role === "user" ? "whitespace-pre-wrap break-words" : ""
+				}
+			>
+				{thinking.text && (
+					<Reasoning
+						data-testid="assistant-reasoning"
+						isStreaming={thinking.streaming}
+					>
+						<ReasoningTrigger />
+						<ReasoningContent streamdownProps={REPLY_MARKDOWN_PROPS}>
+							{thinking.text}
+						</ReasoningContent>
+					</Reasoning>
+				)}
+				{keyedParts(message.parts).map(({ key, part }) => (
+					<MessagePartView key={key} part={part} role={message.role} />
+				))}
+			</MessageContent>
+		</Message>
+	);
 }
 
 function ErrorNotice({ error }: { error: Error }) {
@@ -116,6 +155,12 @@ function ErrorNotice({ error }: { error: Error }) {
 	);
 }
 
+const INTRO_BASE =
+	"The assistant reads this case to answer your questions and never changes it. It can check the case against the assurance-case rules.";
+const INTRO_TECHNIQUES =
+	" With an element selected, it can suggest techniques from the TEA Techniques library that could produce evidence for it.";
+const INTRO_LIMIT = " It does not judge whether the case is good enough.";
+
 /** The case assistant's chat: messages, tool calls as collapsible rows, and a prompt box. Messages live in a per-user, per-case module store, so closing the sheet keeps them. The chat is built only once the session is known, so no entry is ever keyed to an unknown user. */
 export function AssistantPanel(context: CaseSlotContext) {
 	const { data: session, status } = useSession();
@@ -135,8 +180,22 @@ function AssistantChat({
 	const { messages, sendMessage, status, stop, error } = useChat({
 		chat: getCaseChat(userId, caseId),
 	});
+	const tools = useAssistantTools(caseId);
 	const [draft, setDraft] = useState("");
 	const busy = status === "submitted" || status === "streaming";
+	const { prompts, mentionsTechniques } = suggestedPrompts({
+		tools: tools ?? [],
+		selected: Boolean(selectedElementId),
+		label: selectedElementLabel,
+	});
+	const lastId = messages.at(-1)?.id;
+
+	function send(text: string) {
+		if (busy) {
+			return;
+		}
+		sendMessage({ text }, { body: { selectedElementId } });
+	}
 
 	function submit() {
 		const text = draft.trim();
@@ -144,7 +203,7 @@ function AssistantChat({
 			return;
 		}
 		setDraft("");
-		sendMessage({ text }, { body: { selectedElementId } });
+		send(text);
 	}
 
 	function onSubmit(event: FormEvent) {
@@ -172,33 +231,45 @@ function AssistantChat({
 					? `Selected: ${selectedElementLabel || "an element"}`
 					: "No element selected"}
 			</p>
-			<div
-				className="flex-1 space-y-3 overflow-y-auto"
-				data-testid="assistant-messages"
-			>
-				{messages.length === 0 && (
-					<p className="text-muted-foreground text-sm">
-						Ask a question about this case. The assistant reads it to answer and
-						never changes it.
-					</p>
-				)}
-				{messages.map((message) => (
-					<div
-						className={
-							message.role === "user"
-								? "ml-6 rounded-md bg-primary/10 p-2 text-sm"
-								: "space-y-2 text-sm"
-						}
-						data-testid={`assistant-message-${message.role}`}
-						key={message.id}
-					>
-						{keyedParts(message.parts).map(({ key, part }) => (
-							<MessagePartView key={key} part={part} role={message.role} />
-						))}
-					</div>
-				))}
-				{error && <ErrorNotice error={error} />}
-			</div>
+			<Conversation>
+				<ConversationContent data-testid="assistant-messages">
+					{messages.length === 0 && (
+						<ConversationEmptyState
+							data-testid="assistant-intro"
+							description={`${INTRO_BASE}${mentionsTechniques ? INTRO_TECHNIQUES : ""}${INTRO_LIMIT}`}
+							icon={<Bot className="size-6" />}
+							title="Ask about this case"
+						/>
+					)}
+					{messages.map((message) => (
+						<MessageView
+							key={message.id}
+							message={message}
+							thinking={{
+								text: thinkingText(message),
+								streaming:
+									status === "streaming" &&
+									message.id === lastId &&
+									message.parts.at(-1)?.type === "reasoning",
+							}}
+						/>
+					))}
+					{showWaitingLine(status, messages) && (
+						<output>
+							<Shimmer as="span">Thinking…</Shimmer>
+						</output>
+					)}
+					{error && <ErrorNotice error={error} />}
+				</ConversationContent>
+				<ConversationScrollButton aria-label="Scroll to the latest message" />
+			</Conversation>
+			{messages.length === 0 && prompts.length > 0 && (
+				<Suggestions data-testid="assistant-suggestions">
+					{prompts.map((prompt) => (
+						<Suggestion key={prompt} onClick={send} suggestion={prompt} />
+					))}
+				</Suggestions>
+			)}
 			<form className="flex items-end gap-2" onSubmit={onSubmit}>
 				<Textarea
 					aria-label="Message the assistant"

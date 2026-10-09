@@ -1,5 +1,5 @@
-// biome-ignore-all lint/performance/useTopLevelRegex: inline patterns keep each assertion readable
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	renderWithoutProviders,
 	screen,
@@ -23,6 +23,9 @@ vi.mock("next-auth/react", () => ({
 vi.mock("@/lib/plugins/assistant/chat-store", () => ({
 	getCaseChat: () => ({}),
 }));
+vi.mock("@/lib/plugins/assistant/use-assistant-tools", () => ({
+	useAssistantTools: () => null,
+}));
 
 const CTX = {
 	canEdit: false,
@@ -38,14 +41,19 @@ function show(role: "assistant" | "user", text: string) {
 
 beforeEach(() => {
 	chat.state.messages = [];
+	chat.state.status = "ready";
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
 });
 
 describe("assistant replies as markdown", () => {
-	it("renders **bold** as a strong element", () => {
+	it("renders **bold** as strong text", () => {
 		show("assistant", "This is **important** here");
 		const strong = screen
 			.getByTestId("assistant-message-assistant")
-			.querySelector("strong");
+			.querySelector('[data-streamdown="strong"]');
 		expect(strong?.textContent).toBe("important");
 	});
 
@@ -85,20 +93,42 @@ describe("assistant replies as markdown", () => {
 		expect(container.querySelectorAll("img")).toHaveLength(0);
 	});
 
-	it("opens links in a new tab with noopener noreferrer", () => {
-		show("assistant", "See [the docs](https://example.com/docs)");
-		const a = screen.getByRole("link", { name: "the docs" });
-		expect(a).toHaveAttribute("href", "https://example.com/docs");
-		expect(a).toHaveAttribute("target", "_blank");
-		const rel = a.getAttribute("rel") ?? "";
-		expect(rel).toContain("noopener");
-		expect(rel).toContain("noreferrer");
+	it("shows the alt text of a markdown image in its place", () => {
+		show("assistant", "![the diagram](https://evil.example/p.png)");
+
+		expect(screen.getByTestId("assistant-message-assistant")).toHaveTextContent(
+			"the diagram"
+		);
 	});
 
-	it("does not leave a javascript: link live", () => {
+	it("opens a link in a new tab only after the reader confirms", async () => {
+		const open = vi.spyOn(window, "open").mockReturnValue(null);
+		show("assistant", "See [the docs](https://example.com/docs)");
+
+		await userEvent.click(screen.getByRole("button", { name: "the docs" }));
+
+		expect(open).not.toHaveBeenCalled();
+		expect(screen.getByText("Open external link?")).toBeInTheDocument();
+
+		await userEvent.click(screen.getByRole("button", { name: "Open link" }));
+
+		expect(open).toHaveBeenCalledWith(
+			"https://example.com/docs",
+			"_blank",
+			"noreferrer"
+		);
+	});
+
+	it("does not leave a javascript: link live", async () => {
+		const open = vi.spyOn(window, "open").mockReturnValue(null);
 		const { container } = show("assistant", "[click](javascript:alert(1))");
+
+		await userEvent.click(screen.getByText("click", { exact: false }));
+
+		expect(open).not.toHaveBeenCalled();
+		expect(screen.queryByRole("button", { name: "click" })).toBeNull();
 		for (const a of container.querySelectorAll("a")) {
-			expect(a.getAttribute("href") ?? "").not.toMatch(/^\s*javascript:/i);
+			expect(a.getAttribute("href") ?? "").not.toContain("javascript:");
 		}
 	});
 
@@ -108,8 +138,36 @@ describe("assistant replies as markdown", () => {
 			"I wrote **not bold** and [a link](https://example.com)"
 		);
 		const msg = screen.getByTestId("assistant-message-user");
-		expect(msg.querySelector("strong")).toBeNull();
+		expect(msg.querySelector('[data-streamdown="strong"]')).toBeNull();
 		expect(container.querySelector("a")).toBeNull();
+		expect(screen.queryByRole("button", { name: "a link" })).toBeNull();
 		expect(msg.textContent).toContain("**not bold**");
+	});
+});
+
+describe("assistant thinking as markdown", () => {
+	it("shows HTML and an image in the thinking text as text", () => {
+		chat.state.status = "streaming";
+		chat.state.messages = [
+			{
+				id: "m",
+				role: "assistant",
+				parts: [
+					{
+						type: "reasoning",
+						state: "streaming",
+						text: 'Try <script>alert(1)</script> and <img src=x onerror="alert(1)"> and ![chart](https://evil.example/c.png)',
+					},
+				],
+			},
+		];
+		const { container } = renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		const thinking = screen.getByTestId("assistant-reasoning");
+		expect(thinking).toHaveTextContent("<script>alert(1)</script>");
+		expect(thinking).toHaveTextContent("onerror");
+		expect(thinking).toHaveTextContent("chart");
+		expect(container.querySelectorAll("script, img")).toHaveLength(0);
+		expect(container.querySelector("[onerror]")).toBeNull();
 	});
 });

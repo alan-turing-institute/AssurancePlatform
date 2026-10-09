@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
 	renderWithoutProviders,
@@ -32,6 +33,10 @@ const withoutPrechecks = {
 	judgementRules: "long text",
 };
 
+async function open() {
+	await userEvent.click(screen.getByRole("button"));
+}
+
 const output = {
 	...withoutPrechecks,
 	prechecks: [
@@ -40,7 +45,7 @@ const output = {
 };
 
 describe("lint_case row", () => {
-	it("groups findings by rule family and omits the judgement text", () => {
+	it("groups findings by rule family and omits the judgement text", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={
@@ -54,6 +59,7 @@ describe("lint_case row", () => {
 				}
 			/>
 		);
+		await open();
 
 		expect(
 			screen.getByRole("heading", { name: "TREE Structure" })
@@ -72,7 +78,7 @@ describe("lint_case row", () => {
 		).toBeInTheDocument();
 	});
 
-	it("shows the findings and no Prechecks section for a result with no prechecks field", () => {
+	it("shows the findings and no Prechecks section for a result with no prechecks field", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={
@@ -86,6 +92,7 @@ describe("lint_case row", () => {
 				}
 			/>
 		);
+		await open();
 
 		expect(screen.getByText("TREE03")).toBeInTheDocument();
 		expect(
@@ -93,7 +100,7 @@ describe("lint_case row", () => {
 		).not.toBeInTheDocument();
 	});
 
-	it("reads the left-out counts from the result and shows each", () => {
+	it("reads the left-out counts from the result and shows each", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={
@@ -112,6 +119,7 @@ describe("lint_case row", () => {
 				}
 			/>
 		);
+		await open();
 
 		expect(screen.getByText("12 more not shown")).toBeInTheDocument();
 		expect(
@@ -121,7 +129,7 @@ describe("lint_case row", () => {
 		).toBeInTheDocument();
 	});
 
-	it("treats left-out counts that are not positive numbers as 0", () => {
+	it("treats left-out counts that are not positive numbers as 0", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={
@@ -140,13 +148,14 @@ describe("lint_case row", () => {
 				}
 			/>
 		);
+		await open();
 
 		expect(
 			screen.getByText("0 acknowledged gaps, 0 questions")
 		).toBeInTheDocument();
 	});
 
-	it("ignores a malformed prechecks field and still shows the findings", () => {
+	it("ignores a malformed prechecks field and still shows the findings", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={
@@ -160,6 +169,7 @@ describe("lint_case row", () => {
 				}
 			/>
 		);
+		await open();
 
 		expect(screen.getByText("TREE03")).toBeInTheDocument();
 		expect(

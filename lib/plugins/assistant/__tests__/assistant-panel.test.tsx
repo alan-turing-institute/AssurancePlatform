@@ -24,11 +24,17 @@ const session = vi.hoisted(() => ({
 	},
 }));
 const getCaseChat = vi.hoisted(() => vi.fn(() => ({})));
+const assistantTools = vi.hoisted(() => ({
+	value: null as string[] | null,
+}));
 
 vi.mock("next-auth/react", () => ({
 	useSession: () => session.value,
 }));
 vi.mock("@/lib/plugins/assistant/chat-store", () => ({ getCaseChat }));
+vi.mock("@/lib/plugins/assistant/use-assistant-tools", () => ({
+	useAssistantTools: () => assistantTools.value,
+}));
 
 const CTX = {
 	canEdit: false,
@@ -37,7 +43,10 @@ const CTX = {
 	selectedElementLabel: "G1",
 };
 
+const TOOLS = ["read_case", "read_element", "lint_case"];
+
 beforeEach(() => {
+	assistantTools.value = TOOLS;
 	session.value = { data: { user: { id: "u1" } }, status: "authenticated" };
 	getCaseChat.mockClear();
 	chat.state.messages = [];
@@ -114,7 +123,9 @@ describe("AssistantPanel", () => {
 		];
 		const { container } = renderWithoutProviders(<AssistantPanel {...CTX} />);
 
-		expect(container.querySelector("strong")).toHaveTextContent("bold");
+		expect(
+			container.querySelector('[data-streamdown="strong"]')
+		).toHaveTextContent("bold");
 		expect(container.querySelector("script")).toBeNull();
 		expect(container).toHaveTextContent("<script>alert(1)</script>");
 	});
@@ -161,5 +172,136 @@ describe("AssistantPanel", () => {
 		renderWithoutProviders(<AssistantPanel {...CTX} />);
 
 		expect(getCaseChat).toHaveBeenCalledWith("u1", "case-1");
+	});
+
+	it("introduces the assistant before the first message, and mentions techniques only when that tool exists", () => {
+		const { unmount } = renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		const intro = screen.getByTestId("assistant-intro");
+		expect(intro).toHaveTextContent("Ask about this case");
+		expect(intro).toHaveTextContent("never changes it");
+		expect(intro).not.toHaveTextContent("TEA Techniques library");
+		unmount();
+
+		assistantTools.value = [...TOOLS, "suggest_techniques"];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByTestId("assistant-intro")).toHaveTextContent(
+			"TEA Techniques library"
+		);
+	});
+
+	it("shows the introduction and no prompts while the tools are unknown", () => {
+		assistantTools.value = null;
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByTestId("assistant-intro")).toBeInTheDocument();
+		expect(screen.queryByTestId("assistant-suggestions")).toBeNull();
+	});
+
+	it("sends exactly the text of a clicked prompt, with the selection, and leaves the draft", async () => {
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+		const box = screen.getByLabelText("Message the assistant");
+		await userEvent.type(box, "half-written question");
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "What evidence supports G1?" })
+		);
+
+		expect(chat.state.sendMessage).toHaveBeenCalledTimes(1);
+		expect(chat.state.sendMessage).toHaveBeenCalledWith(
+			{ text: "What evidence supports G1?" },
+			{ body: { selectedElementId: "el-1" } }
+		);
+		expect(box).toHaveValue("half-written question");
+	});
+
+	it("offers the case-wide prompts when nothing is selected", () => {
+		renderWithoutProviders(
+			<AssistantPanel
+				{...CTX}
+				selectedElementId={undefined}
+				selectedElementLabel={undefined}
+			/>
+		);
+
+		expect(
+			screen.getByRole("button", { name: "What is the top-level goal?" })
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Check this case against the rules" })
+		).toBeInTheDocument();
+	});
+
+	it("takes the prompts away once there is a message", () => {
+		chat.state.messages = [
+			{ id: "m1", role: "user", parts: [{ type: "text", text: "Hello" }] },
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.queryByTestId("assistant-suggestions")).toBeNull();
+		expect(screen.queryByTestId("assistant-intro")).toBeNull();
+	});
+
+	it("shows the waiting line while the request is submitted", () => {
+		chat.state.status = "submitted";
+		chat.state.messages = [
+			{ id: "m1", role: "user", parts: [{ type: "text", text: "Hello" }] },
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByRole("status")).toHaveTextContent("Thinking…");
+	});
+
+	it("drops the waiting line once text is streaming", () => {
+		chat.state.status = "streaming";
+		chat.state.messages = [
+			{ id: "m1", role: "user", parts: [{ type: "text", text: "Hello" }] },
+			{
+				id: "m2",
+				role: "assistant",
+				parts: [{ type: "text", text: "G1 claims", state: "streaming" }],
+			},
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.queryByRole("status")).toBeNull();
+	});
+
+	it("shows one thinking block for a reply whose thinking has text", () => {
+		chat.state.status = "streaming";
+		chat.state.messages = [
+			{
+				id: "m1",
+				role: "assistant",
+				parts: [
+					{ type: "reasoning", text: "First I read the case.", state: "done" },
+					{ type: "reasoning", text: "Then I answer.", state: "streaming" },
+				],
+			},
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		const blocks = screen.getAllByTestId("assistant-reasoning");
+		expect(blocks).toHaveLength(1);
+		expect(blocks[0]).toHaveTextContent("First I read the case.");
+		expect(blocks[0]).toHaveTextContent("Then I answer.");
+	});
+
+	it("shows no thinking block when every thinking part is empty", () => {
+		chat.state.messages = [
+			{
+				id: "m1",
+				role: "assistant",
+				parts: [
+					{ type: "reasoning", text: "", state: "done" },
+					{ type: "text", text: "G1 claims safety." },
+				],
+			},
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.queryByTestId("assistant-reasoning")).toBeNull();
+		expect(screen.getByText("G1 claims safety.")).toBeInTheDocument();
 	});
 });

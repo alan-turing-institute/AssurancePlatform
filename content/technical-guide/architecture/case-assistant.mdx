@@ -52,6 +52,43 @@ The default is 60000 (one minute).
 Values below 5000 are raised to 5000, values above 600000 are lowered to 600000, and a value that is empty or not a whole number is ignored in favour of the default.
 When a reply is cancelled in this way, the chat shows a notice that the model did not answer in time.
 
+## The chat panel
+
+The panel shows the conversation, a box for the next question, and a line above them that names the selected element.
+While the assistant is working and nothing on screen is moving, the panel shows a "Thinking…" line.
+That covers the wait before the first output, and the wait after a tool has finished while the model carries on.
+The line is not shown while thinking or text is arriving, while a tool is running, or under a finished reply.
+When the provider sends the model's thinking, the panel shows it as one block at the top of the reply.
+The block opens while the model is thinking, closes a second after it finishes, and then reads "Thought for" and a number of seconds.
+Several thinking steps in one reply are joined into that one block, and a reply whose thinking is empty has no block.
+Thinking text is shown with the same safety settings as the reply.
+Replies are rendered as markdown.
+Raw HTML appears as text, an image appears as its alt text, and only `http`, `https` and `mailto` links are active.
+A link opens in a new tab after the reader confirms it.
+Each tool call is one collapsed row with a plain title and a state label: Pending, Running, Completed or Error.
+Opening a row shows the tool's input when it has one, then its result.
+Technique suggestions and lint results appear as lists, and the other tools show their result as text cut to 4,000 characters.
+
+## Suggested prompts
+
+Before the first message, the panel shows a short introduction to the assistant and a row of prompts the user can click.
+A prompt sends its text at once, with the current selection, and leaves any draft in the box as it was.
+The prompts depend on the tools registered for the case and on the selection.
+With nothing selected, the panel offers "What is the top-level goal?" and "Which claims lack evidence?", both of which need `read_case`.
+With an element selected, it offers "Explain" the element's role and "What evidence supports" the element, both of which need `read_case`.
+With an element selected and `suggest_techniques` registered, it also offers "Suggest techniques for" the element.
+Whenever `lint_case` is registered, it offers "Check this case against the rules".
+An element is named by its label, for example P1, or as "the selected element" when it has none.
+The technique prompt needs a selected element because only then does the server send the claim's exact text.
+The introduction mentions technique suggestions only when `suggest_techniques` is registered.
+
+The panel learns which tools are registered from `GET /api/cases/{id}/assistant`, which returns `{ "tools": ["read_case", ...] }`.
+The names come from the same call that builds the tools for a chat request, so there is no second list to keep up to date.
+The endpoint makes the same checks as the chat route, in the same order.
+It answers 401 without a session, and 404 when the plugin is off, the id is not a UUID, or the user cannot view the case.
+It is not part of the published API description, because it exists for the panel and is not an integration point.
+If the request fails, the introduction appears without prompts.
+
 ## Linting a case
 
 The lint tool checks the open case against the rule catalogue and returns four kinds of result.

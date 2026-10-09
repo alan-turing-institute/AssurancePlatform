@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
 	renderWithoutProviders,
@@ -15,8 +16,12 @@ function part(output: unknown, state = "output-available") {
 	} as never;
 }
 
+async function open() {
+	await userEvent.click(screen.getByRole("button"));
+}
+
 describe("ToolCallRow for suggest_techniques", () => {
-	it("lists two results that share a url without a duplicate-key warning", () => {
+	it("lists two results that share a url without a duplicate-key warning", async () => {
 		const error = vi
 			.spyOn(console, "error")
 			.mockImplementation(() => undefined);
@@ -38,12 +43,14 @@ describe("ToolCallRow for suggest_techniques", () => {
 			/>
 		);
 
+		await open();
+
 		expect(screen.getAllByRole("link")).toHaveLength(2);
 		expect(error).not.toHaveBeenCalled();
 		error.mockRestore();
 	});
 
-	it("links each technique name to its url in a new tab, with score and goals", () => {
+	it("links each technique name to its url in a new tab, with score and goals", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={part({
@@ -69,6 +76,7 @@ describe("ToolCallRow for suggest_techniques", () => {
 				})}
 			/>
 		);
+		await open();
 		const shap = screen.getByRole("link", { name: "SHAP" });
 		expect(shap).toHaveAttribute("href", "https://techniques.example/shap");
 		expect(shap).toHaveAttribute("target", "_blank");
@@ -84,7 +92,7 @@ describe("ToolCallRow for suggest_techniques", () => {
 		expect(list.textContent).toContain("Fairness");
 	});
 
-	it("does not make a link of a non-http url", () => {
+	it("does not make a link of a non-http url", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={part({
@@ -94,18 +102,20 @@ describe("ToolCallRow for suggest_techniques", () => {
 				})}
 			/>
 		);
+		await open();
 		expect(screen.queryByRole("link")).toBeNull();
 		expect(screen.getByTestId("assistant-techniques").textContent).toContain(
 			"Bad"
 		);
 	});
 
-	it("shows no list for the unreachable error", () => {
+	it("shows no list for the unreachable error", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={part({ error: "The techniques service is not reachable." })}
 			/>
 		);
+		await open();
 		expect(screen.queryByTestId("assistant-techniques")).toBeNull();
 		expect(screen.queryByRole("link")).toBeNull();
 	});
