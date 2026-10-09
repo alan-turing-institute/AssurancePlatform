@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { generate, writeOutputs } from "../assistant/generate-ruleset";
+import { describe, expect, it, vi } from "vitest";
+import { generate, main, writeOutputs } from "../assistant/generate-ruleset";
 
 const MANIFEST = `version: "9.9"
 date: 2026-01-01
@@ -116,5 +116,30 @@ describe("generate-ruleset", () => {
 		expect(out.data.toLowerCase()).not.toContain("funes");
 		expect(out.prompt).not.toContain("TREE01 (warning)");
 		expect(out.dropped).toContain("statement (name check)");
+	});
+
+	it("writes the files from the command line and sets a failing exit code on a name hit", () => {
+		vi.spyOn(console, "log").mockImplementation(() => undefined);
+		vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const dir = mkdtempSync(join(tmpdir(), "cli-out-"));
+
+		main(["node", "gen", fixture(rule("")), "--out", dir]);
+		expect(readFileSync(join(dir, "ruleset-data.ts"), "utf8")).toContain(
+			"RULESET_DATA"
+		);
+
+		const blocked = mkdtempSync(join(tmpdir(), "cli-blocked-"));
+		main([
+			"node",
+			"gen",
+			fixture(rule("", "Ask Chris to fix it.")),
+			"--out",
+			blocked,
+		]);
+		expect(process.exitCode).toBe(1);
+		process.exitCode = 0;
+		expect(() => readFileSync(join(blocked, "ruleset-data.ts"))).toThrow();
+		vi.restoreAllMocks();
 	});
 });

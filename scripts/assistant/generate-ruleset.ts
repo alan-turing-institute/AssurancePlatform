@@ -429,7 +429,7 @@ function parseArgs(args: string[]): { outDir: string; rulesetDir: string } {
 	return { outDir, rulesetDir };
 }
 
-function main(argv: string[]): void {
+export function main(argv: string[]): void {
 	const { outDir, rulesetDir } = parseArgs(argv.slice(2));
 	if (!existsSync(join(rulesetDir, "ruleset.yaml"))) {
 		throw new Error(`generate-ruleset: no ruleset.yaml in ${rulesetDir}`);
