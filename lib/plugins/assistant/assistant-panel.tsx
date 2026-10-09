@@ -13,6 +13,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ABORT_NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
 import { ToolCallRow } from "@/lib/plugins/assistant/tool-call-row";
 import type { CaseSlotContext } from "@/lib/plugins/slots/index";
@@ -75,6 +76,13 @@ function MessagePartView({
 	part: MessagePart;
 	role: UIMessage["role"];
 }) {
+	if (part.type === ABORT_NOTICE_PART) {
+		return (
+			<p className="text-destructive text-sm" role="alert">
+				The model did not answer in time. Try again or ask something shorter.
+			</p>
+		);
+	}
 	if (part.type !== "text") {
 		return <ToolCallRow part={part} />;
 	}

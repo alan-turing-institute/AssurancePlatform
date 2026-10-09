@@ -103,6 +103,22 @@ describe("AssistantPanel", () => {
 		expect(container).toHaveTextContent("<script>alert(1)</script>");
 	});
 
+	it("shows a notice, and keeps the input usable, when the model call was cut short", () => {
+		chat.state.messages = [
+			{
+				id: "m1",
+				role: "assistant",
+				parts: [{ type: "data-notice", data: "timeout" }],
+			},
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"The model did not answer in time. Try again or ask something shorter."
+		);
+		expect(screen.getByLabelText("Message the assistant")).toBeEnabled();
+	});
+
 	it("points to settings when the route reports the assistant is not configured", () => {
 		chat.state.error = new Error(
 			JSON.stringify({ code: "CONFLICT", error: "No key set." })

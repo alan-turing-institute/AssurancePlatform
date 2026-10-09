@@ -111,11 +111,11 @@ describe("suggest_techniques request", () => {
 	it("prefers an explicit claimText over the selection", async () => {
 		fetchMock.mockResolvedValue(jsonResponse(mcpBody([technique(1)])));
 		await run(
-			{ claimText: "Explicit" },
+			{ claimText: "An explicit claim typed by the user in the chat." },
 			{ label: "P1", type: "PROPERTY_CLAIM", text: "Selected text" }
 		);
 		expect(JSON.parse(firstCall().init.body).params.arguments.claim).toBe(
-			"Explicit"
+			"An explicit claim typed by the user in the chat."
 		);
 	});
 

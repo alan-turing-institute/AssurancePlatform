@@ -26,6 +26,7 @@ const STATE_WORDS: Record<string, string> = {
 const techniquesOutput = z.object({
 	results: z.array(
 		z.object({
+			slug: z.string().optional(),
 			name: z.string(),
 			url: z.string(),
 			score: z.number(),
@@ -42,8 +43,8 @@ function TechniquesList({ output }: { output: unknown }) {
 	}
 	return (
 		<ul className="mt-1 space-y-1" data-testid="assistant-techniques">
-			{parsed.data.results.map((r) => (
-				<li key={r.url}>
+			{parsed.data.results.map((r, index) => (
+				<li key={r.slug ?? `result-${index}`}>
 					{HTTP_URL.test(r.url) ? (
 						<a
 							className="underline"

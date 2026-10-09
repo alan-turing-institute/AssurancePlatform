@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	renderWithoutProviders,
 	screen,
@@ -16,6 +16,33 @@ function part(output: unknown, state = "output-available") {
 }
 
 describe("ToolCallRow for suggest_techniques", () => {
+	it("lists two results that share a url without a duplicate-key warning", () => {
+		const error = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		const same = {
+			retrievalScore: 0.1,
+			goals: [],
+			score: 0.5,
+			url: "https://techniques.example/same",
+		};
+		renderWithoutProviders(
+			<ToolCallRow
+				part={part({
+					rankingAvailable: true,
+					results: [
+						{ ...same, slug: "a", name: "First" },
+						{ ...same, slug: "b", name: "Second" },
+					],
+				})}
+			/>
+		);
+
+		expect(screen.getAllByRole("link")).toHaveLength(2);
+		expect(error).not.toHaveBeenCalled();
+		error.mockRestore();
+	});
+
 	it("links each technique name to its url in a new tab, with score and goals", () => {
 		renderWithoutProviders(
 			<ToolCallRow

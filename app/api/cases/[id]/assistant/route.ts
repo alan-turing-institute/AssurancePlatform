@@ -21,7 +21,7 @@ import {
 } from "@/lib/plugins/assistant/selected-element";
 import { techniquesPrompt } from "@/lib/plugins/assistant/techniques-tool";
 import {
-	ASSISTANT_SYSTEM_PROMPT,
+	buildSystemPrompt,
 	createCaseTools,
 } from "@/lib/plugins/assistant/tools";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
@@ -83,25 +83,23 @@ export async function POST(
 			maxBytes: MAX_BODY_BYTES,
 		});
 
-		const resolved = await resolveProviderConfig(userId);
+		const [resolved, selection] = await Promise.all([
+			resolveProviderConfig(userId),
+			resolveSelectedElement(userId, caseId, body.selectedElementId),
+		]);
 		if ("error" in resolved) {
 			throw new AppError({ code: "CONFLICT", message: resolved.error });
 		}
 
-		const selection = await resolveSelectedElement(
-			userId,
-			caseId,
-			body.selectedElementId
-		);
-
+		const tools = createCaseTools(userId, caseId, selection);
 		const result = streamText({
 			model: createAssistantModel(resolved.config),
 			system:
-				ASSISTANT_SYSTEM_PROMPT +
+				buildSystemPrompt(Object.keys(tools)) +
 				selectionPrompt(selection) +
 				techniquesPrompt(),
 			messages: await convertToModelMessages(body.messages as UIMessage[]),
-			tools: createCaseTools(userId, caseId, selection),
+			tools,
 			stopWhen: stepCountIs(MAX_STEPS),
 			abortSignal: request.signal,
 			timeout: MODEL_TIMEOUT_MS,

@@ -3,17 +3,31 @@ import { z } from "zod";
 
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESULTS = 5;
+/** The service rejects a longer claim, so anything longer is cut before it is sent. */
+const MAX_CLAIM_CHARS = 2000;
+/** A supplied claim shorter than this is a placeholder, not a claim, when an element is selected. */
+const MIN_SUPPLIED_CLAIM_CHARS = 40;
+const MAX_FIELD_CHARS = 500;
+const MAX_GOALS = 20;
+const MAX_GOAL_CHARS = 200;
+const HTTP_PROTOCOL = /^https?$/;
 const UNREACHABLE = {
 	error: "The techniques service is not reachable.",
 } as const;
 
+/** Cuts, never rejects, so an oversized field cannot turn a good answer into an error. */
+const cut = (max: number) =>
+	z.string().transform((value) => value.slice(0, max));
+
 const resultSchema = z.looseObject({
 	slug: z.string(),
-	name: z.string(),
+	name: cut(MAX_FIELD_CHARS),
 	score: z.number(),
 	retrievalScore: z.number(),
-	goals: z.array(z.string()),
-	url: z.string(),
+	goals: z
+		.array(cut(MAX_GOAL_CHARS))
+		.transform((goals) => goals.slice(0, MAX_GOALS)),
+	url: cut(MAX_FIELD_CHARS),
 });
 
 const responseSchema = z.looseObject({
@@ -31,9 +45,11 @@ export interface SelectedElement {
 	type: string;
 }
 
-/** The techniques service address, read at call time; undefined when unset or not a URL. */
+/** The techniques service address, read at call time; undefined when unset or not an http(s) URL. */
 function techniquesUrl(): string | undefined {
-	const parsed = z.url().safeParse(process.env.TECHNIQUES_MCP_URL);
+	const parsed = z
+		.url({ protocol: HTTP_PROTOCOL })
+		.safeParse(process.env.TECHNIQUES_MCP_URL);
 	return parsed.success ? parsed.data : undefined;
 }
 
@@ -68,6 +84,7 @@ async function callTechniques(claim: string, url: string | undefined) {
 					arguments: { claim },
 				},
 			}),
+			redirect: "error",
 			signal: controller.signal,
 		});
 		if (!response.ok) {
@@ -96,27 +113,43 @@ async function callTechniques(claim: string, url: string | undefined) {
 	}
 }
 
+/**
+ * The claim to send. With an element selected, a supplied claim under 40
+ * characters is a placeholder and the element's own text is used instead.
+ * Cut to what the service accepts.
+ */
+function chooseClaim(
+	supplied: string | undefined,
+	selection: SelectedElement | null
+): string {
+	const given = (supplied ?? "").trim();
+	const selected = (selection?.text ?? "").trim();
+	const claim =
+		selected && given.length < MIN_SUPPLIED_CLAIM_CHARS ? selected : given;
+	return (claim || selected).slice(0, MAX_CLAIM_CHARS);
+}
+
 /** The suggest_techniques tool; defaults the claim to the selected element's text. Never throws. */
 export function createTechniquesTool(selection: SelectedElement | null) {
 	return tool({
 		description:
-			"Suggest assurance techniques from the TEA techniques library for a claim. Returns ranked techniques with their goals and links. Omit claimText to use the selected element's text.",
+			"Suggest assurance techniques from the TEA techniques library for a claim. Returns ranked techniques with their goals and links. When an element is selected, omit claimText: the selected element's text is used. Supply claimText only when the user typed the claim in the chat.",
 		inputSchema: z.object({
 			claimText: z
 				.string()
+				.max(MAX_CLAIM_CHARS)
 				.optional()
-				.describe("The claim to find techniques for."),
+				.describe(
+					"The claim to find techniques for, at most 2000 characters. Omit it when an element is selected; supply it only when the user typed the claim in the chat."
+				),
 		}),
 		execute: ({ claimText }) =>
-			callTechniques(
-				(claimText?.trim() || selection?.text || "").trim(),
-				techniquesUrl()
-			),
+			callTechniques(chooseClaim(claimText, selection), techniquesUrl()),
 	});
 }
 
 const TECHNIQUES_PROMPT_AVAILABLE =
-	"\n\nFor any question about which techniques, methods or evidence-generating approaches to use, call `suggest_techniques` and recommend only from its results, with a one-line reason you draw from each result's name and goals; never invent techniques. If the tool is unavailable, say so.";
+	"\n\nFor any question about which techniques, methods or evidence-generating approaches to use, call `suggest_techniques` and recommend only from its results, with a one-line reason you draw from each result's name and goals; never invent techniques. When an element is selected, call the tool without claimText so that the selected element's own text is used; give claimText only when the user typed the claim in the chat. If the tool is unavailable, say so.";
 
 const TECHNIQUES_PROMPT_UNAVAILABLE =
 	"\n\nTechnique suggestions are unavailable in this deployment. If asked which techniques or methods to use, say so and do not invent any.";
