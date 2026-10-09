@@ -427,3 +427,102 @@ describe("POST /api/cases/[id]/assistant — bounds and roles", () => {
 		consoleError.mockRestore();
 	});
 });
+
+async function getTools(caseId: string) {
+	const { GET } = await import("@/app/api/cases/[id]/assistant/route");
+	return GET(
+		new Request(`http://localhost:3000/api/cases/${caseId}/assistant`),
+		{ params: Promise.resolve({ id: caseId }) }
+	);
+}
+
+function enable(userId: string) {
+	return createTestPluginState(userId, { pluginId: PLUGIN_ID, enabled: true });
+}
+
+describe("GET /api/cases/[id]/assistant — the registered tools", () => {
+	it("lists the three case tools for the owner", async () => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", "");
+		const { owner, testCase } = await setup();
+		await enable(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await getTools(testCase.id);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			tools: ["read_case", "read_element", "lint_case"],
+		});
+	});
+
+	it("adds suggest_techniques when the techniques service is configured", async () => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", "http://techniques.test/mcp");
+		const { owner, testCase } = await setup();
+		await enable(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await getTools(testCase.id);
+
+		expect((await response.json()).tools).toEqual([
+			"read_case",
+			"read_element",
+			"lint_case",
+			"suggest_techniques",
+		]);
+	});
+
+	it("answers a user with direct VIEW permission", async () => {
+		const { owner, testCase } = await setup();
+		const user = await createTestUser();
+		await enable(user.id);
+		await createTestPermission(testCase.id, user.id, owner.id, "VIEW");
+		await mockAuth(user.id, user.username, user.email);
+
+		const response = await getTools(testCase.id);
+
+		expect(response.status).toBe(200);
+	});
+
+	it("returns 404 for a user with no permission, identical to a missing case", async () => {
+		const { testCase } = await setup();
+		const outsider = await createTestUser();
+		await enable(outsider.id);
+		await mockAuth(outsider.id, outsider.username, outsider.email);
+
+		const noAccess = await getTools(testCase.id);
+		const missing = await getTools(NONEXISTENT_ID);
+
+		expect(noAccess.status).toBe(404);
+		expect(missing.status).toBe(404);
+		expect(await missing.json()).toEqual(await noAccess.json());
+	});
+
+	it("returns 401 with no session", async () => {
+		const { testCase } = await setup();
+
+		const response = await getTools(testCase.id);
+
+		expect(response.status).toBe(401);
+	});
+
+	it("returns 404 when the user has turned the plugin off", async () => {
+		const { owner, testCase } = await setup();
+		await enable(owner.id);
+		await setPluginEnabledForUser(PLUGIN_ID, owner.id, { enabled: false });
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await getTools(testCase.id);
+
+		expect(response.status).toBe(404);
+	});
+
+	it("returns 404 for an id that is not a UUID", async () => {
+		const { owner } = await setup();
+		await enable(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await getTools("not-a-uuid");
+
+		expect(response.status).toBe(404);
+	});
+});

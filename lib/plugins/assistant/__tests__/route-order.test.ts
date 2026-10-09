@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/cases/[id]/assistant/route";
+import { GET, POST } from "@/app/api/cases/[id]/assistant/route";
 import { parseJsonBody } from "@/lib/api-request";
 import { unauthorised } from "@/lib/errors";
 import { canAccessCase } from "@/lib/permissions";
+import { createCaseTools } from "@/lib/plugins/assistant/tools";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 
 const requireAuth = vi.hoisted(() => vi.fn());
@@ -95,5 +96,58 @@ describe("assistant route check order", () => {
 		await call();
 
 		expect(parseSpy).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("assistant tools route check order", () => {
+	function callGet() {
+		return GET(new Request("http://localhost/api/cases/x/assistant"), {
+			params: Promise.resolve({ id: CASE_ID }),
+		});
+	}
+
+	it("returns 401 and checks nothing else when unauthenticated", async () => {
+		requireAuth.mockRejectedValue(unauthorised());
+
+		const response = await callGet();
+
+		expect(response.status).toBe(401);
+		expect(assertPluginEnabledForUser).not.toHaveBeenCalled();
+		expect(createCaseTools).not.toHaveBeenCalled();
+	});
+
+	it("returns 404 before checking the case when the plugin is disabled", async () => {
+		vi.mocked(assertPluginEnabledForUser).mockResolvedValue({
+			error: "Plugin 'tea.assistant' is not enabled",
+		});
+
+		const response = await callGet();
+
+		expect(response.status).toBe(404);
+		expect(canAccessCase).not.toHaveBeenCalled();
+		expect(createCaseTools).not.toHaveBeenCalled();
+	});
+
+	it("returns 404 without building the tools when the user lacks VIEW", async () => {
+		vi.mocked(canAccessCase).mockResolvedValue(false);
+
+		const response = await callGet();
+
+		expect(response.status).toBe(404);
+		expect(canAccessCase).toHaveBeenCalledWith(
+			{ userId: "user-1", caseId: CASE_ID },
+			"VIEW"
+		);
+		expect(createCaseTools).not.toHaveBeenCalled();
+	});
+
+	it("lists the tool names after both checks pass", async () => {
+		vi.mocked(createCaseTools).mockReturnValue({ read_case: {} } as never);
+
+		const response = await callGet();
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ tools: ["read_case"] });
+		expect(createCaseTools).toHaveBeenCalledWith("user-1", CASE_ID);
 	});
 });

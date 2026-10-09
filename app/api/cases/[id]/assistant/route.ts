@@ -6,7 +6,11 @@ import {
 } from "ai";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/api-request";
-import { apiErrorFromUnknown, requireAuth } from "@/lib/api-response";
+import {
+	apiErrorFromUnknown,
+	apiSuccess,
+	requireAuth,
+} from "@/lib/api-response";
 import { AppError, notFound } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
@@ -49,6 +53,31 @@ const bodySchema = z.object({
 });
 
 /**
+ * The checks every assistant handler makes before it does anything else, in
+ * this order: session (401), plugin enablement, case id format and VIEW
+ * permission. A disabled plugin, a malformed id, a missing case and a case the
+ * user cannot view all give the same 404.
+ */
+async function authorise(params: Promise<{ id: string }>) {
+	const userId = await requireAuth();
+	const { id: caseId } = await params;
+
+	const enabled = await assertPluginEnabledForUser(ASSISTANT_PLUGIN_ID, userId);
+	if ("error" in enabled) {
+		throw notFound("Case");
+	}
+	if (
+		!(
+			z.uuid().safeParse(caseId).success &&
+			(await canAccessCase({ userId, caseId }, "VIEW"))
+		)
+	) {
+		throw notFound("Case");
+	}
+	return { userId, caseId };
+}
+
+/**
  * POST /api/cases/[id]/assistant
  *
  * Streams the case assistant's reply. Order matters: session, plugin
@@ -60,24 +89,7 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const userId = await requireAuth();
-		const { id: caseId } = await params;
-
-		const enabled = await assertPluginEnabledForUser(
-			ASSISTANT_PLUGIN_ID,
-			userId
-		);
-		if ("error" in enabled) {
-			throw notFound("Case");
-		}
-		if (
-			!(
-				z.uuid().safeParse(caseId).success &&
-				(await canAccessCase({ userId, caseId }, "VIEW"))
-			)
-		) {
-			throw notFound("Case");
-		}
+		const { userId, caseId } = await authorise(params);
 
 		const body = await parseJsonBody(request, bodySchema, {
 			maxBytes: MAX_BODY_BYTES,
@@ -119,6 +131,28 @@ export async function POST(
 		return result.toUIMessageStreamResponse({
 			onError: () => "The model provider returned an error.",
 		});
+	} catch (error) {
+		return apiErrorFromUnknown(error);
+	}
+}
+
+/**
+ * GET /api/cases/[id]/assistant
+ *
+ * The names of the tools the assistant has for this case, so the chat panel can
+ * offer prompts that match them. The checks are the same as for POST, and a
+ * missing case and a case the user cannot view are both 404. It is a helper for
+ * the panel, not an integration point.
+ *
+ * @ignore
+ */
+export async function GET(
+	_request: Request,
+	{ params }: { params: Promise<{ id: string }> }
+) {
+	try {
+		const { userId, caseId } = await authorise(params);
+		return apiSuccess({ tools: Object.keys(createCaseTools(userId, caseId)) });
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
