@@ -407,17 +407,35 @@ describe("assistant tools read only the URL's case", () => {
 		expect(prompts).toHaveLength(0);
 	});
 
-	it("passes a selectedElementId to the model only as a hint in the system prompt", async () => {
-		const { kase } = await setup();
-		const id = crypto.randomUUID();
+	it("puts the selected element's label and text in the system prompt, and ignores an id that is not in the case", async () => {
+		const { kase, user, root } = await setup();
+		const other = await createTestCase(user.id);
+		const mine = await createTestElement(kase.id, user.id, {
+			parentId: root.id,
+			elementType: "PROPERTY_CLAIM",
+			name: "P9",
+			description: "SELECTED-ELEMENT-TEXT",
+		});
+		const foreign = await createTestElement(other.id, user.id, {
+			name: "P8",
+			description: "FOREIGN-ELEMENT-TEXT",
+		});
 		let seen = "";
 		(await modelFactory()).mockImplementation(() =>
 			textModel((options) => {
 				seen = JSON.stringify((options as { prompt: unknown }).prompt);
 			})
 		);
-		await (await post(kase.id, { ...MESSAGES, selectedElementId: id })).text();
-		expect(seen).toContain(id);
+		await (
+			await post(kase.id, { ...MESSAGES, selectedElementId: mine.id })
+		).text();
+		expect(seen).toContain("SELECTED-ELEMENT-TEXT");
+		seen = "";
+		await (
+			await post(kase.id, { ...MESSAGES, selectedElementId: foreign.id })
+		).text();
+		expect(seen).not.toContain("FOREIGN-ELEMENT-TEXT");
+		expect(seen).not.toContain(foreign.id);
 	});
 
 	it("rejects a selectedElementId that is not a UUID with 400", async () => {

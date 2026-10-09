@@ -1,5 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
+import {
+	createTechniquesTool,
+	type SelectedElement,
+	techniquesConfigured,
+} from "@/lib/plugins/assistant/techniques-tool";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 
@@ -56,8 +61,15 @@ async function loadExport(
  * looked up inside that case's own export, so an id from another case is
  * simply not found. Comments are never exported.
  */
-export function createCaseTools(userId: string, caseId: string) {
+export function createCaseTools(
+	userId: string,
+	caseId: string,
+	selection: SelectedElement | null = null
+) {
 	return {
+		...(techniquesConfigured()
+			? { suggest_techniques: createTechniquesTool(selection) }
+			: {}),
 		read_case: tool({
 			description:
 				"Read the whole open assurance case: its name, description and the full element tree (goals, strategies, property claims, evidence, contexts, assumptions, justifications).",
@@ -88,8 +100,14 @@ export function createCaseTools(userId: string, caseId: string) {
 	};
 }
 
-export const ASSISTANT_SYSTEM_PROMPT = `You are the Case Assistant inside TEA (Trustworthy and Ethical Assurance), a platform for building assurance cases: structured arguments that a goal is met, made of goals, strategies, property claims and the evidence that supports them.
+/**
+ * The system prompt. The sentence naming the tools is built from the names of
+ * the tools actually registered, in registration order.
+ */
+export function buildSystemPrompt(toolNames: readonly string[]): string {
+	return `You are the Case Assistant inside TEA (Trustworthy and Ethical Assurance), a platform for building assurance cases: structured arguments that a goal is met, made of goals, strategies, property claims and the evidence that supports them.
 
-You have two read-only tools. read_case returns the whole open case as a tree. read_element returns one element and its direct children by id. You cannot change the case.
+You have these read-only tools: ${toolNames.join(", ")}. read_case returns the whole open case as a tree. read_element returns one element and its direct children by id. You cannot change the case.
 
 Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.`;
+}

@@ -86,6 +86,39 @@ describe("AssistantPanel", () => {
 		expect(screen.getByTestId("assistant-tool-call")).toBeInTheDocument();
 	});
 
+	it("renders markdown, and shows HTML in a reply as text", () => {
+		chat.state.messages = [
+			{
+				id: "m1",
+				role: "assistant",
+				parts: [
+					{ type: "text", text: "This is **bold** <script>alert(1)</script>" },
+				],
+			},
+		];
+		const { container } = renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(container.querySelector("strong")).toHaveTextContent("bold");
+		expect(container.querySelector("script")).toBeNull();
+		expect(container).toHaveTextContent("<script>alert(1)</script>");
+	});
+
+	it("shows a notice, and keeps the input usable, when the model call was cut short", () => {
+		chat.state.messages = [
+			{
+				id: "m1",
+				role: "assistant",
+				parts: [{ type: "data-notice", data: "timeout" }],
+			},
+		];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"The model did not answer in time. Try again or ask something shorter."
+		);
+		expect(screen.getByLabelText("Message the assistant")).toBeEnabled();
+	});
+
 	it("points to settings when the route reports the assistant is not configured", () => {
 		chat.state.error = new Error(
 			JSON.stringify({ code: "CONFLICT", error: "No key set." })

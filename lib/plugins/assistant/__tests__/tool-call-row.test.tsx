@@ -53,4 +53,37 @@ describe("ToolCallRow", () => {
 
 		expect(screen.queryByTestId("assistant-tool-call")).toBeNull();
 	});
+
+	it("lists suggested techniques with a link, a two-decimal score and goals", () => {
+		renderWithoutProviders(
+			<ToolCallRow
+				part={
+					{
+						type: "tool-suggest_techniques",
+						toolCallId: "c2",
+						state: "output-available",
+						input: {},
+						output: {
+							rankingAvailable: true,
+							results: [
+								{
+									name: "SHAP",
+									url: "https://example.org/shap",
+									score: 0.9,
+									goals: ["Explainability"],
+								},
+							],
+						},
+					} as never
+				}
+			/>
+		);
+
+		const link = screen.getByRole("link", { name: "SHAP" });
+		expect(link).toHaveAttribute("href", "https://example.org/shap");
+		expect(link).toHaveAttribute("target", "_blank");
+		expect(screen.getByTestId("assistant-techniques")).toHaveTextContent(
+			"(0.90): Explainability"
+		);
+	});
 });
