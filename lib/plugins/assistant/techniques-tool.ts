@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { techniquesTimeoutMs } from "./model-timeout";
 
-const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESULTS = 5;
 /** The service rejects a longer claim, so anything longer is cut before it is sent. */
 const MAX_CLAIM_CHARS = 2000;
@@ -67,7 +67,7 @@ async function callTechniques(claim: string, url: string | undefined) {
 		};
 	}
 	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+	const timer = setTimeout(() => controller.abort(), techniquesTimeoutMs());
 	try {
 		const response = await fetch(url, {
 			method: "POST",

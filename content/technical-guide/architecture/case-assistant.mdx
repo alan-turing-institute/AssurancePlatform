@@ -16,6 +16,7 @@ The plugin must be enabled before an API key can be saved.
 | `ASSISTANT_ALLOWED_BASE_URLS` | OpenAI-compatible providers | A comma-separated list of endpoint URLs, for example `http://localhost:11434/v1`. Users choose an endpoint from this list and never type one. An entry that is not a URL is ignored. |
 | `TECHNIQUES_MCP_URL` | Technique suggestions | The address of a techniques service that accepts JSON-RPC 2.0 `tools/call` requests over HTTP. When it is unset, or is not an `http` or `https` URL, the `suggest_techniques` tool is not offered and the assistant says that technique suggestions are unavailable. |
 | `ASSISTANT_MODEL_TIMEOUT_MS` | Optional | How long one model call may run before it is cancelled, in milliseconds. See the section below. |
+| `ASSISTANT_TECHNIQUES_TIMEOUT_MS` | Optional | How long the assistant waits for the techniques service before it gives up on the request, in milliseconds. The default is 70000. See the section below. |
 
 Every variable is read when it is used, so a change takes effect on the first request after the server restarts with the new value.
 
@@ -24,7 +25,10 @@ Every variable is read when it is used, so a change takes effect on the first re
 When `TECHNIQUES_MCP_URL` is set, the assistant can call `suggest_techniques` for a claim.
 Without a claim in the request, it uses the text of the element the user has selected.
 The text of the selected claim is case content, and it is sent to the techniques service.
-The server sends one `suggest_techniques_for_claim` request to the service, with no session, and waits up to 20 seconds.
+The server sends one `suggest_techniques_for_claim` request to the service, with no session.
+It waits for the answer for the number of milliseconds in `ASSISTANT_TECHNIQUES_TIMEOUT_MS`, which is 70000 (seventy seconds) when the variable is not set.
+Set it higher than the service's own ranking deadline, so that the service can return its fallback in retrieval order before the assistant gives up.
+Values below 5000 are raised to 5000, values above 600000 are lowered to 600000, and a value that is empty or not a whole number is ignored in favour of the default.
 The service accepts claims of up to 2,000 characters.
 The server cuts the selected element's text to its first 2,000 characters before it sends it.
 A claim that the model supplies itself must already be 2,000 characters or fewer: a longer one is rejected, and the tool call fails.

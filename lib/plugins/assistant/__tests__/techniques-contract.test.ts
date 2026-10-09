@@ -253,7 +253,7 @@ describe("suggest_techniques failure handling", () => {
 		await expect(run({ claimText: "c" })).resolves.toEqual(UNREACHABLE);
 	});
 
-	it("aborts a hung request after 20 seconds and answers unreachable", async () => {
+	it("aborts a hung request after 70 seconds by default and answers unreachable", async () => {
 		vi.useFakeTimers();
 		fetchMock.mockImplementation(
 			(_url: string, init: { signal: AbortSignal }) =>
@@ -268,7 +268,7 @@ describe("suggest_techniques failure handling", () => {
 			settled = true;
 			return r;
 		});
-		await vi.advanceTimersByTimeAsync(19_000);
+		await vi.advanceTimersByTimeAsync(69_000);
 		expect(settled).toBe(false);
 		expect(firstCall().init.signal.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1100);

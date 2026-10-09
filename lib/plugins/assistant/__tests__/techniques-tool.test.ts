@@ -111,7 +111,7 @@ describe("suggest_techniques", () => {
 			{ claimText: "x" },
 			options
 		);
-		await vi.advanceTimersByTimeAsync(20_000);
+		await vi.advanceTimersByTimeAsync(70_000);
 
 		expect(await pending).toEqual({
 			error: "The techniques service is not reachable.",
@@ -282,7 +282,8 @@ describe("suggest_techniques failure paths", () => {
 		expect(out).toEqual({ error: "The techniques service is not reachable." });
 	});
 
-	it("aborts the request at the 20 second limit", async () => {
+	it("aborts the request at ASSISTANT_TECHNIQUES_TIMEOUT_MS", async () => {
+		vi.stubEnv("ASSISTANT_TECHNIQUES_TIMEOUT_MS", "30000");
 		vi.useFakeTimers();
 		let signal: AbortSignal | undefined;
 		fetchMock.mockImplementation((_u: string, init: RequestInit) => {
@@ -296,7 +297,7 @@ describe("suggest_techniques failure paths", () => {
 			{ claimText: "x" },
 			options
 		);
-		await vi.advanceTimersByTimeAsync(19_999);
+		await vi.advanceTimersByTimeAsync(29_999);
 		expect(signal?.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1);
 
