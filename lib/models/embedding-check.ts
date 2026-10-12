@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { embedMany } from "ai";
 import { z } from "zod";
 import { embeddingModelFor } from "@/lib/models/adapters";
+import {
+	readJsonWithin,
+	TECHNIQUES_SERVICE_MAX_BYTES,
+} from "@/lib/models/capped-json";
 import type { ModelConnectionAccess } from "@/lib/models/connection-types";
 
 /**
@@ -16,7 +20,7 @@ import type { ModelConnectionAccess } from "@/lib/models/connection-types";
  * The lowest cosine similarity between a probe's vector from the user's model
  * and the published one for the check to pass.
  */
-export const EMBEDDING_CHECK_THRESHOLD = 0.98;
+export const EMBEDDING_CHECK_THRESHOLD = 0.999;
 
 const SPEC_TIMEOUT_MS = 5000;
 const CHECK_TIMEOUT_MS = 30_000;
@@ -46,14 +50,15 @@ export type EmbeddingSpec = z.infer<typeof embeddingSpecSchema>;
 
 /**
  * What a passed search check is recorded against: the catalogue's model id and
- * a SHA-256 of its probe sentences, in order, joined with newlines. The check
- * is current only while this value equals the one recorded.
+ * a SHA-256 of its probe sentences, in order, written as a JSON array so that
+ * a sentence containing a newline cannot stand in for two. The check is
+ * current only while this value equals the one recorded.
  */
 export function embeddingCheckId(
 	spec: Pick<EmbeddingSpec, "modelId" | "probes">
 ): string {
 	const probeHash = createHash("sha256")
-		.update(spec.probes.map((probe) => probe.text).join("\n"))
+		.update(JSON.stringify(spec.probes.map((probe) => probe.text)))
 		.digest("hex");
 	return `${spec.modelId}#${probeHash}`;
 }
@@ -142,7 +147,8 @@ function techniquesOrigin(): string | null {
  * operator's own, so it is fetched directly rather than through the guard that
  * protects user-chosen addresses. Returns null when the service is not
  * configured, does not answer within five seconds, is cancelled through
- * `signal`, redirects, or answers with anything but a valid spec.
+ * `signal`, redirects, answers with more than 1 MiB, or answers with anything
+ * but a valid spec.
  */
 export async function fetchEmbeddingSpec(
 	signal?: AbortSignal
@@ -160,7 +166,9 @@ export async function fetchEmbeddingSpec(
 		if (!response.ok) {
 			return null;
 		}
-		const parsed = embeddingSpecSchema.safeParse(await response.json());
+		const parsed = embeddingSpecSchema.safeParse(
+			await readJsonWithin(response, TECHNIQUES_SERVICE_MAX_BYTES)
+		);
 		return parsed.success ? parsed.data : null;
 	} catch {
 		return null;

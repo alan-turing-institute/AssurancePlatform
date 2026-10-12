@@ -244,19 +244,28 @@ describe("a key is never logged", () => {
 	it("appears in no log entry when the database refuses the write", async () => {
 		const user = await makeUser();
 		await signInAs(user);
-		// A NUL byte cannot be stored in text, so the insert itself fails.
-		const failed = await api.create({
-			label: "bad\u0000label",
-			type: "OLLAMA",
-			baseUrl: server.origin,
-			apiKey: KEY,
-		});
-		expect(failed.status).toBe(500);
-		expect(failed.text).not.toContain(KEY);
-		expect(logs.text()).not.toContain(KEY);
-		const stored = await connectionRows();
-		expect(stored).toHaveLength(0);
-		expect(logs.text()).not.toMatch(ENVELOPE_IN_TEXT);
+		// The database itself refuses this label, so the insert fails.
+		await prisma.$executeRawUnsafe(
+			"ALTER TABLE user_model_connections ADD CONSTRAINT refuse_probe CHECK (label <> 'refused-label')"
+		);
+		try {
+			const failed = await api.create({
+				label: "refused-label",
+				type: "OLLAMA",
+				baseUrl: server.origin,
+				apiKey: KEY,
+			});
+			expect(failed.status).toBe(500);
+			expect(failed.text).not.toContain(KEY);
+			expect(logs.text()).not.toContain(KEY);
+			const stored = await connectionRows();
+			expect(stored).toHaveLength(0);
+			expect(logs.text()).not.toMatch(ENVELOPE_IN_TEXT);
+		} finally {
+			await prisma.$executeRawUnsafe(
+				"ALTER TABLE user_model_connections DROP CONSTRAINT refuse_probe"
+			);
+		}
 	});
 
 	it("appears in no log entry or answer when the database's error text repeats the failed call", async () => {

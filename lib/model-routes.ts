@@ -10,9 +10,8 @@ import { AppError, validationError } from "@/lib/errors";
 import type { ModelServiceError } from "@/lib/services/model-connection-service";
 import { assertModelPluginEnabled } from "@/lib/services/plugin-enablement-service";
 import {
-	checkRateLimit,
 	RATE_LIMIT_CONFIGS,
-	recordAttempt,
+	takeRateLimitSlot,
 } from "@/lib/services/rate-limit-service";
 
 /**
@@ -78,16 +77,14 @@ export function modelRouteFailureResponse(error: unknown): Response {
 
 /**
  * Spends one of the user's calls to model providers. Connection tests, search
- * checks and quick setup share a budget of 20 every 10 minutes. Returns the
- * 429 to send, which says nothing about the limit, or null when the call may go
- * ahead.
+ * checks and quick setup share a budget of 20 every 10 minutes, counted and
+ * spent together so that requests arriving at once cannot go past it. Returns
+ * the 429 to send, which says nothing about the limit, or null when the call
+ * may go ahead.
  */
 export async function takeModelCall(userId: string): Promise<Response | null> {
-	const config = RATE_LIMIT_CONFIGS.modelCalls;
-	const result = await checkRateLimit(config, { userId });
-	if (!result.allowed) {
-		return apiRateLimited("Too many requests");
-	}
-	await recordAttempt(config, { userId });
-	return null;
+	const result = await takeRateLimitSlot(RATE_LIMIT_CONFIGS.modelCalls, {
+		userId,
+	});
+	return result.allowed ? null : apiRateLimited("Too many requests");
 }

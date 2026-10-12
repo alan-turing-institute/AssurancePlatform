@@ -22,6 +22,10 @@ const labelSchema = z
 	.max(
 		MODEL_FIELD_LIMITS.label,
 		`label must be at most ${MODEL_FIELD_LIMITS.label} characters`
+	)
+	.refine(
+		(label) => !hasControlCharacter(label),
+		"label must not contain control characters"
 	);
 
 const baseUrlSchema = z
@@ -58,6 +62,10 @@ const modelSchema = z
 	.max(
 		MODEL_FIELD_LIMITS.model,
 		`model must be at most ${MODEL_FIELD_LIMITS.model} characters`
+	)
+	.refine(
+		(model) => !hasControlCharacter(model),
+		"model must not contain control characters"
 	);
 
 const connectionIdSchema = z
@@ -90,11 +98,16 @@ const jobSchema = z
 	.strictObject({ connectionId: connectionIdSchema, model: modelSchema })
 	.nullable();
 
-/** Body for `PUT /api/user/models/roles`: all three jobs, `null` switching one off. */
+/**
+ * Body for `PUT /api/user/models/roles`: all three jobs, `null` switching one
+ * off. `recheckSearch` asks for the search check to run again even when the
+ * search job is unchanged.
+ */
 export const setRolesSchema = z.strictObject({
 	chat: jobSchema,
 	ranking: jobSchema,
 	search: jobSchema,
+	recheckSearch: z.boolean().optional(),
 });
 
 /** Body for `POST /api/user/models/quick-setup`. */

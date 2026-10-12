@@ -236,6 +236,9 @@ function checkLabel(raw: string): Checked<string> {
 	if (value.length === 0 || value.length > LABEL_MAX_LENGTH) {
 		return invalid(`Label must be 1 to ${LABEL_MAX_LENGTH} characters`);
 	}
+	if (hasControlCharacter(value)) {
+		return invalid("Label must not contain control characters");
+	}
 	return { value };
 }
 
@@ -284,6 +287,9 @@ function checkModel(raw: string): Checked<string> {
 	const value = raw.trim();
 	if (value.length === 0 || value.length > MODEL_MAX_LENGTH) {
 		return invalid(`Model name must be 1 to ${MODEL_MAX_LENGTH} characters`);
+	}
+	if (hasControlCharacter(value)) {
+		return invalid("Model name must not contain control characters");
 	}
 	return { value };
 }
@@ -412,6 +418,24 @@ export async function listConnections(
 	}
 }
 
+/** A stored row as the server uses it, with its key decrypted. */
+function toConnectionForUse(row: SummaryRow): Result<ConnectionForUse> {
+	const baseUrl = effectiveBaseUrl(row.type, row.baseUrl);
+	if (!baseUrl) {
+		return { error: "Model connection has no address" };
+	}
+	return {
+		data: {
+			id: row.id,
+			label: row.label,
+			type: row.type,
+			baseUrl,
+			apiKey:
+				row.apiKeyEncrypted === null ? null : decryptToken(row.apiKeyEncrypted),
+		},
+	};
+}
+
 /**
  * One of the user's connections with its key decrypted. For server-side use
  * on the user's behalf only; never pass the result to a response or a log.
@@ -425,25 +449,55 @@ export async function getConnectionForUse(
 			where: { id: connectionId, userId },
 			select: SUMMARY_SELECT,
 		});
+		return row ? toConnectionForUse(row) : notFound();
+	} catch (error) {
+		return failure("read the model connection", error);
+	}
+}
+
+/**
+ * A connection's address and key as stored. They change only when the user
+ * edits the connection, so a copy taken before a long call tells afterwards
+ * whether the call ran against what is stored now.
+ */
+export interface StoredConnectionState {
+	apiKeyEncrypted: string | null;
+	baseUrl: string | null;
+}
+
+/**
+ * Like `getConnectionForUse`, and also the stored state the connection was
+ * read in, from the same read. Pass the state to `recordEmbeddingCheck` so a
+ * check that ran against an address or key since changed is not recorded. The
+ * same rules apply: for server-side use only, and never logged.
+ */
+export async function getConnectionWithStoredState(
+	userId: string,
+	connectionId: string
+): ModelResult<{
+	connection: ConnectionForUse;
+	stored: StoredConnectionState;
+}> {
+	try {
+		const row = await prisma.userModelConnection.findFirst({
+			where: { id: connectionId, userId },
+			select: SUMMARY_SELECT,
+		});
 		if (!row) {
 			return notFound();
 		}
-		const baseUrl = effectiveBaseUrl(row.type, row.baseUrl);
-		if (!baseUrl) {
-			return { error: "Model connection has no address" };
-		}
-		return {
-			data: {
-				id: row.id,
-				label: row.label,
-				type: row.type,
-				baseUrl,
-				apiKey:
-					row.apiKeyEncrypted === null
-						? null
-						: decryptToken(row.apiKeyEncrypted),
-			},
-		};
+		const connection = toConnectionForUse(row);
+		return "error" in connection
+			? connection
+			: {
+					data: {
+						connection: connection.data,
+						stored: {
+							baseUrl: row.baseUrl,
+							apiKeyEncrypted: row.apiKeyEncrypted,
+						},
+					},
+				};
 	} catch (error) {
 		return failure("read the model connection", error);
 	}
@@ -878,6 +932,37 @@ async function saveRoles(
 	});
 }
 
+/** The assignments with names trimmed, once every connection is the user's own and can do its job. */
+async function usableAssignments(
+	userId: string,
+	roles: ModelRolesInput
+): Promise<Checked<Record<ModelJob, JobAssignment | null>>> {
+	const assignments = checkAssignments(roles);
+	if ("error" in assignments) {
+		return assignments;
+	}
+	return (
+		(await refuseUnusableConnections(userId, assignments.value)) ?? assignments
+	);
+}
+
+/**
+ * Whether `roles` could be saved for the user, without saving anything: the
+ * model names are acceptable, every connection is the user's own, and its type
+ * can do the job. Refuses with the same errors `setRoles` would give.
+ */
+export async function checkRoles(
+	userId: string,
+	roles: ModelRolesInput
+): ModelResult<true> {
+	try {
+		const usable = await usableAssignments(userId, roles);
+		return "error" in usable ? usable : { data: true };
+	} catch (error) {
+		return failure("check the model jobs", error);
+	}
+}
+
 /**
  * Replaces the user's three jobs. Every assigned connection must be the
  * user's own and its type must be able to do the job. A change to the search
@@ -888,15 +973,11 @@ export async function setRoles(
 	roles: ModelRolesInput
 ): ModelResult<ModelRoles> {
 	try {
-		const assignments = checkAssignments(roles);
-		if ("error" in assignments) {
-			return assignments;
+		const usable = await usableAssignments(userId, roles);
+		if ("error" in usable) {
+			return usable;
 		}
-		const refused = await refuseUnusableConnections(userId, assignments.value);
-		if (refused) {
-			return refused;
-		}
-		await saveRoles(userId, assignments.value);
+		await saveRoles(userId, usable.value);
 		return { data: await readRoles(userId) };
 	} catch (error) {
 		if (isForeignKeyViolation(error)) {
@@ -912,12 +993,15 @@ export async function setRoles(
  * has run the check, and only if the user's search job is still `expected`,
  * the connection and model the check ran against: the write is one conditional
  * update, so a search job changed since the check began is left unmarked.
- * Returns whether the check was recorded.
+ * When `stored` is given, the connection's address and key must also still be
+ * what they were when the check began, so an edit made while the check ran
+ * leaves it unmarked too. Returns whether the check was recorded.
  */
 export async function recordEmbeddingCheck(
 	userId: string,
 	verifiedFor: string,
-	expected: JobAssignment
+	expected: JobAssignment,
+	stored?: StoredConnectionState
 ): ModelResult<boolean> {
 	if (verifiedFor.length === 0) {
 		return invalid("verifiedFor must not be empty");
@@ -928,7 +1012,15 @@ export async function recordEmbeddingCheck(
 				userId,
 				embeddingConnectionId: expected.connectionId,
 				embeddingModel: expected.model,
-				embeddingConnection: { userId },
+				embeddingConnection: {
+					userId,
+					...(stored
+						? {
+								baseUrl: stored.baseUrl,
+								apiKeyEncrypted: stored.apiKeyEncrypted,
+							}
+						: {}),
+				},
 			},
 			data: {
 				embeddingVerifiedFor: verifiedFor,

@@ -1,5 +1,9 @@
 import { tool } from "ai";
 import { z } from "zod";
+import {
+	readJsonWithin,
+	TECHNIQUES_SERVICE_MAX_BYTES,
+} from "@/lib/models/capped-json";
 import type { JobAssignment } from "@/lib/services/model-connection-service";
 import { techniquesTimeoutMs } from "./model-timeout";
 import {
@@ -13,6 +17,7 @@ import {
 	type SkipReason,
 	type TechniquesModelAccess,
 } from "./techniques-models";
+import { type ToolCallLimit, unlimited } from "./tool-call-limit";
 
 const MAX_RESULTS = 5;
 /** The service rejects a longer claim, so anything longer is cut before it is sent. */
@@ -133,7 +138,8 @@ function serviceRequestBody(
 /**
  * Asks the service for candidates. It has at most ten seconds, and at least
  * one even when the lookup is nearly out of time, because the earlier step
- * leaves that second for it. Null when the service cannot be used.
+ * leaves that second for it. Null when the service cannot be used, which
+ * includes an answer larger than 1 MiB.
  */
 async function askService({
 	abortSignal,
@@ -166,7 +172,9 @@ async function askService({
 		if (!response.ok) {
 			return null;
 		}
-		const parsed = responseSchema.safeParse(await response.json());
+		const parsed = responseSchema.safeParse(
+			await readJsonWithin(response, TECHNIQUES_SERVICE_MAX_BYTES)
+		);
 		if (!parsed.success) {
 			return null;
 		}
@@ -392,11 +400,15 @@ function chooseClaim(
  * job that is off, unchecked or failing is left out and reported in the
  * result (`searchUsed`, `rankingUsed` and a reason for each step not used);
  * the lookup still answers with what the service found.
+ *
+ * `limited` is the reply's cap on tool calls, shared with the other tools; on
+ * its own the tool is not capped.
  */
 export function createTechniquesTool(
 	selection: SelectedElement | null,
 	replyDeadline = Number.POSITIVE_INFINITY,
-	models: TechniquesModelAccess = NO_MODELS
+	models: TechniquesModelAccess = NO_MODELS,
+	limited: ToolCallLimit = unlimited
 ) {
 	return tool({
 		description:
@@ -411,14 +423,16 @@ export function createTechniquesTool(
 				),
 		}),
 		execute: ({ claimText }, { abortSignal }) =>
-			callTechniques({
-				abortSignal,
-				claim: chooseClaim(claimText, selection),
-				models,
-				replyDeadline,
-				selection,
-				url: techniquesUrl(),
-			}),
+			limited(() =>
+				callTechniques({
+					abortSignal,
+					claim: chooseClaim(claimText, selection),
+					models,
+					replyDeadline,
+					selection,
+					url: techniquesUrl(),
+				})
+			),
 	});
 }
 

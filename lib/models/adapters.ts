@@ -11,11 +11,24 @@ import { guardedFetch } from "@/lib/models/guarded-fetch";
 /**
  * The AI SDK models for a stored connection. Every request they make goes
  * through the guarded fetch, so the address checks, the redirect refusal and
- * the size and time limits apply to chat and embedding calls alike.
+ * the size and time limits apply to chat and embedding calls alike. A chat
+ * reply is cut off past 4 MiB and an embeddings answer past 2 MiB, well under
+ * the guard's own default.
  */
 
 const TRAILING_SLASHES = /\/+$/;
 const UNDERSCORES = /_/g;
+
+/** The most bytes a chat reply may stream back, tool calls and all. */
+const CHAT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+/** The most bytes an embeddings answer may hold. */
+const EMBEDDING_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+
+/** The guarded fetch with a cap on the response body that suits the job. */
+function guardedFetchCappedAt(maxBytes: number) {
+	return (input: RequestInfo | URL, init?: RequestInit) =>
+		guardedFetch(input, init, { maxBytes });
+}
 
 function requireJob(connection: ModelConnectionAccess, job: ModelJob): void {
 	if (!connectionTypeCanDo(connection.type, job)) {
@@ -40,13 +53,16 @@ function openAiStyleBaseUrl(connection: ModelConnectionAccess): string {
 	}
 }
 
-function openAiStyleProvider(connection: ModelConnectionAccess) {
+function openAiStyleProvider(
+	connection: ModelConnectionAccess,
+	maxResponseBytes: number
+) {
 	return createOpenAICompatible({
 		// Names the provider in the SDK's metadata and keys its provider options.
 		name: connection.type.toLowerCase().replace(UNDERSCORES, "-"),
 		baseURL: openAiStyleBaseUrl(connection),
 		apiKey: connection.apiKey || undefined,
-		fetch: guardedFetch,
+		fetch: guardedFetchCappedAt(maxResponseBytes),
 	});
 }
 
@@ -67,10 +83,12 @@ export function chatModelFor(
 		return createAnthropic({
 			baseURL: `${withoutTrailingSlashes(connection.baseUrl)}/v1`,
 			apiKey: connection.apiKey,
-			fetch: guardedFetch,
+			fetch: guardedFetchCappedAt(CHAT_MAX_RESPONSE_BYTES),
 		})(model);
 	}
-	return openAiStyleProvider(connection).chatModel(model);
+	return openAiStyleProvider(connection, CHAT_MAX_RESPONSE_BYTES).chatModel(
+		model
+	);
 }
 
 /** The model for the search job. Throws when the connection's type cannot embed. */
@@ -79,5 +97,8 @@ export function embeddingModelFor(
 	model: string
 ): EmbeddingModel {
 	requireJob(connection, "search");
-	return openAiStyleProvider(connection).embeddingModel(model);
+	return openAiStyleProvider(
+		connection,
+		EMBEDDING_MAX_RESPONSE_BYTES
+	).embeddingModel(model);
 }

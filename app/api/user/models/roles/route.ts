@@ -6,15 +6,11 @@ import {
 	modelServiceErrorResponse,
 	takeModelCall,
 } from "@/lib/model-routes";
-import {
-	embeddingCheckId,
-	fetchEmbeddingSpec,
-} from "@/lib/models/embedding-check";
 import { setRolesSchema } from "@/lib/schemas/models";
 import {
+	checkRoles,
 	getRoles,
 	type JobAssignment,
-	type ModelRoles,
 	setRoles,
 } from "@/lib/services/model-connection-service";
 import { runSearchCheck } from "@/lib/services/model-search-check-service";
@@ -29,33 +25,19 @@ function sameJob(stored: JobAssignment | null, wanted: JobAssignment): boolean {
 }
 
 /**
- * Whether an unchanged search job has no check that is current: none passed,
- * or the one recorded is for a catalogue model or test sentences the
- * techniques service no longer publishes. When the service does not answer, a
- * recorded pass is left standing.
- */
-async function lacksCurrentCheck(
-	recorded: ModelRoles["searchCheck"]
-): Promise<boolean> {
-	if (!recorded) {
-		return true;
-	}
-	const spec = await fetchEmbeddingSpec();
-	return spec !== null && recorded.verifiedFor !== embeddingCheckId(spec);
-}
-
-/**
- * PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or has no current check.
+ * PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or that the caller asks to have checked again.
  *
- * Takes `{ chat, ranking, search }`, each `{ connectionId, model }` or `null` to switch the job off.
+ * Takes `{ chat, ranking, search, recheckSearch? }`, each job `{ connectionId, model }` or `null` to switch the job off.
  * Every connection must be the user's own and its type must be able to do the job (Anthropic: chat only; OpenAI-compatible: chat and search).
  * Saving a changed search job clears the old check, and the server then runs the search check against the techniques service's published vectors.
- * Saving a search job that is unchanged runs the check again when no check has passed for it, or the one that passed is not for the catalogue's current model and test sentences; this is how a failed check is tried again.
+ * Saving a search job that is unchanged runs no check, so a save of the chat or ranking job never spends a provider call on a search job that is failing.
+ * `recheckSearch: true` runs the check again for the search job as saved, which is how a failed or out-of-date check is tried again.
  * Answers with `{ roles, searchCheck }`.
- * `roles` is the saved jobs, in the shape `GET /api/user/models` gives.
+ * `roles` is the saved jobs and their check, as in `GET /api/user/models` but without `searchCheckCurrent`.
  * `searchCheck` is `null` when no check ran.
  * It is `{ ok, lowestCosine }` when it ran: `ok` is true when the vectors matched and the result was recorded against the job (a search job changed while the check ran is left unrecorded).
  * It is `{ unavailable: true }` when the techniques service did not give its published vectors.
+ * Ownership and job rules are checked before the limit is touched, so a request that would be refused anyway costs nothing.
  * Search checks, connection tests and quick setup share a limit of 20 every 10 minutes per user; over it the answer is a 429 with no detail and nothing is saved.
  * Needs a plugin that uses models to be on.
  *
@@ -71,20 +53,24 @@ export async function PUT(req: Request) {
 		if (typeof userId !== "string") {
 			return userId;
 		}
-		const wanted = await parseJsonBody(req, setRolesSchema, {
-			maxBytes: BODY_MAX_BYTES,
-		});
+		const { recheckSearch, ...wanted } = await parseJsonBody(
+			req,
+			setRolesSchema,
+			{ maxBytes: BODY_MAX_BYTES }
+		);
+
+		const usable = await checkRoles(userId, wanted);
+		if ("error" in usable) {
+			return modelServiceErrorResponse(usable);
+		}
 
 		const before = await getRoles(userId);
 		if ("error" in before) {
 			return modelServiceErrorResponse(before);
 		}
-		const searchChanged =
-			wanted.search !== null && !sameJob(before.data.search, wanted.search);
 		const checkSearch =
-			searchChanged ||
-			(wanted.search !== null &&
-				(await lacksCurrentCheck(before.data.searchCheck)));
+			wanted.search !== null &&
+			(recheckSearch === true || !sameJob(before.data.search, wanted.search));
 		if (checkSearch) {
 			const limited = await takeModelCall(userId);
 			if (limited) {

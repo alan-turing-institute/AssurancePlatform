@@ -39,15 +39,13 @@ const FIXED_MESSAGES = new Set([
 	"The connection works, but a model list could not be read.",
 	"The server did not accept the key.",
 	"The server's answer could not be read.",
-	"The server could not be reached.",
+	"The model address could not be reached or is not allowed.",
 	"The model address is not a valid URL.",
 	"The model address must not contain a user name or password.",
 	"The model address must use https.",
-	"The model address does not resolve to a public network address.",
 	"The model server answered with a redirect, which is not followed.",
 	"The model server's response is larger than the allowed size.",
 	"The model server did not answer in time.",
-	"The request to the model server failed.",
 	"The model server's response could not be used.",
 ]);
 

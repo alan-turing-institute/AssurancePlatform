@@ -270,6 +270,33 @@ describe("suggest_techniques claim text", () => {
 	});
 });
 
+describe("suggest_techniques: the model the service reports", () => {
+	it.each([
+		["a model id", "qwen3-embedding-4b"],
+		["null, when no vectors are loaded", null],
+		["nothing", undefined],
+	])("accepts an embeddingModel of %s", async (_label, embeddingModel) => {
+		reply({
+			result: {
+				structuredContent: {
+					embeddingModel,
+					rankingModel: null,
+					rankingAvailable: false,
+					semanticUsed: false,
+					results: [RESULT],
+				},
+			},
+		});
+
+		const out = await createTechniquesTool(null).execute?.(
+			{ claimText: "robust" },
+			options
+		);
+
+		expect(out).toMatchObject({ results: [{ slug: "shap" }] });
+	});
+});
+
 describe("suggest_techniques failure paths", () => {
 	it("returns the distinct no-claim error without calling the service", async () => {
 		const out = await createTechniquesTool(null).execute?.({}, options);
@@ -292,6 +319,32 @@ describe("suggest_techniques failure paths", () => {
 		);
 
 		expect(out).toEqual({ error: "The techniques service is not reachable." });
+	});
+
+	it("reads an answer just under 1 MiB, and returns not reachable for one over it", async () => {
+		const answer = (bytes: number) =>
+			JSON.stringify({
+				result: {
+					structuredContent: {
+						results: [
+							{ ...RESULT, url: `https://example.org/${"x".repeat(bytes)}` },
+						],
+					},
+				},
+			});
+		const overhead = answer(0).length;
+		const run = () =>
+			createTechniquesTool(null).execute?.({ claimText: "x" }, options);
+
+		fetchMock.mockResolvedValue(new Response(answer(1024 * 1024 - overhead)));
+		expect(await run()).toMatchObject({ results: [{ slug: "shap" }] });
+
+		fetchMock.mockResolvedValue(
+			new Response(answer(1024 * 1024 - overhead + 1))
+		);
+		expect(await run()).toEqual({
+			error: "The techniques service is not reachable.",
+		});
 	});
 
 	it("aborts the request at ASSISTANT_TECHNIQUES_TIMEOUT_MS when that is under ten seconds", async () => {

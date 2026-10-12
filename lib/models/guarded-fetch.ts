@@ -11,19 +11,27 @@ const DEFAULT_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 const MAX_CAUSE_DEPTH = 5;
 const REDIRECT_REASON = "unexpected redirect";
 
+/**
+ * One text for an address that was refused and for one that could not be
+ * reached. A name that resolves to a private address and a name that does not
+ * resolve at all must look the same to the person who typed it, or the
+ * connection test would tell them which internal names exist.
+ */
+export const NOT_REACHABLE_MESSAGE =
+	"The model address could not be reached or is not allowed.";
+
 const REASONS = {
 	"invalid-url": "The model address is not a valid URL.",
 	"unsupported-input": "Only a URL or a string can be fetched.",
 	"credentials-in-url":
 		"The model address must not contain a user name or password.",
 	"insecure-url": "The model address must use https.",
-	"blocked-address":
-		"The model address does not resolve to a public network address.",
+	"blocked-address": NOT_REACHABLE_MESSAGE,
 	redirect: "The model server answered with a redirect, which is not followed.",
 	"response-too-large":
 		"The model server's response is larger than the allowed size.",
 	timeout: "The model server did not answer in time.",
-	"request-failed": "The request to the model server failed.",
+	"request-failed": NOT_REACHABLE_MESSAGE,
 	"invalid-response": "The model server's response could not be used.",
 } as const;
 

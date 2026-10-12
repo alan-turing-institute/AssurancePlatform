@@ -57,7 +57,7 @@ let api: Routes;
 /** The id a passed check is recorded under, worked out here from the published sentences. */
 function checkIdFor(published: SpecFixture): string {
 	const hash = createHash("sha256")
-		.update(published.probes.map((probe) => probe.text).join("\n"))
+		.update(JSON.stringify(published.probes.map((probe) => probe.text)))
 		.digest("hex");
 	return `${published.modelId}#${hash}`;
 }
@@ -73,7 +73,7 @@ beforeEach(async () => {
 	server = await startServer((hit, response, request) => {
 		if (hit.url === "/embedding-spec") {
 			json(response, spec);
-		} else if (hit.url === EMBEDDINGS) {
+		} else if (hit.url === EMBEDDINGS || hit.url === "/api/v1/embeddings") {
 			embeddings(hit, response, request);
 		} else if (hit.url === "/api/tags") {
 			json(response, { models: [{ name: "m" }] });
@@ -318,23 +318,24 @@ describe("a search check is recorded only for the job that was checked", () => {
 		);
 	});
 
-	it("runs again for an unchanged job whose check failed, and records a pass once it passes", async () => {
+	it("runs again, when asked, for an unchanged job whose check failed, and records a pass once it passes", async () => {
 		const { user, connection } = await userWithConnection();
 		embeddings = answerEmbeddings(() => [0, 0, 0, 1]);
 		await api.setRoles(body({ search: searchJob(connection.id) }));
 		expect((await rolesRow(user.id))?.embeddingVerifiedFor).toBeNull();
 
 		embeddings = answerEmbeddings(exactEmbedding(spec));
-		const retry = await api.setRoles(
-			body({ search: searchJob(connection.id) })
-		);
+		const retry = await api.setRoles({
+			...body({ search: searchJob(connection.id) }),
+			recheckSearch: true,
+		});
 		expect(retry.json?.searchCheck).toMatchObject({ ok: true });
 		expect((await rolesRow(user.id))?.embeddingVerifiedFor).toBe(
 			checkIdFor(spec)
 		);
 	});
 
-	it("runs again, and is recorded anew, when the catalogue's model has changed since the pass", async () => {
+	it("runs again when asked, and is recorded anew, when the catalogue's model has changed since the pass", async () => {
 		const { user, connection } = await userWithConnection();
 		await api.setRoles(body({ search: searchJob(connection.id) }));
 		const first = (await rolesRow(user.id))?.embeddingVerifiedFor;
@@ -342,9 +343,10 @@ describe("a search check is recorded only for the job that was checked", () => {
 		spec = makeSpec({ modelId: "a-newer-catalogue-model" });
 		embeddings = answerEmbeddings(exactEmbedding(spec));
 		const before = embeddingHits().length;
-		const outcome = await api.setRoles(
-			body({ search: searchJob(connection.id) })
-		);
+		const outcome = await api.setRoles({
+			...body({ search: searchJob(connection.id) }),
+			recheckSearch: true,
+		});
 		expect(embeddingHits().length).toBeGreaterThan(before);
 		expect(outcome.json?.searchCheck).toMatchObject({ ok: true });
 		const second = (await rolesRow(user.id))?.embeddingVerifiedFor;
@@ -523,7 +525,10 @@ describe("editing or removing a connection takes back what depended on it", () =
 		expect((await rolesRow(user.id))?.embeddingVerifiedFor).toBeNull();
 		expect((await rolesRow(user.id))?.embeddingModel).toBe("embed");
 
-		await api.setRoles(body({ search: searchJob(connection.id) }));
+		await api.setRoles({
+			...body({ search: searchJob(connection.id) }),
+			recheckSearch: true,
+		});
 		expect((await rolesRow(user.id))?.embeddingVerifiedFor).not.toBeNull();
 		expect((await api.patch(connection.id, { apiKey: null })).status).toBe(200);
 		expect((await rolesRow(user.id))?.embeddingVerifiedFor).toBeNull();
@@ -585,6 +590,7 @@ describe("editing or removing a connection takes back what depended on it", () =
 			ranking: null,
 			search: null,
 			searchCheck: null,
+			searchCheckCurrent: false,
 		});
 	});
 
@@ -685,7 +691,7 @@ describe("quick setup with a key OpenRouter does not accept writes nothing", () 
 		expect(await prisma.userModelRoles.count()).toBe(0);
 	});
 
-	it("with a good key adds one connection, points ranking at the recommended model, and leaves the other jobs as they were", async () => {
+	it("with a good key adds one connection and points all three jobs at it with the recommended models, then checks search", async () => {
 		const { user, connection } = await userWithConnection();
 		await api.setRoles(
 			body({
@@ -699,14 +705,17 @@ describe("quick setup with a key OpenRouter does not accept writes nothing", () 
 		const created = outcome.json?.connection as { id: string };
 		const roles = outcome.json?.roles as Record<string, unknown>;
 		expect(roles.chat).toEqual({
-			connectionId: connection.id,
-			model: "chat-m",
+			connectionId: created.id,
+			model: "anthropic/claude-sonnet-5.5",
 		});
 		expect(roles.ranking).toEqual({
 			connectionId: created.id,
 			model: "cloudflare/clef-flash",
 		});
-		expect(roles.search).toEqual(searchJob(connection.id));
+		expect(roles.search).toEqual({
+			connectionId: created.id,
+			model: "qwen/qwen3-embedding-4b",
+		});
 		expect(roles.searchCheck).toMatchObject({
 			verifiedFor: checkIdFor(spec),
 		});
@@ -734,15 +743,25 @@ describe("quick setup with a key OpenRouter does not accept writes nothing", () 
 			body({ chat: { connectionId: existing.id, model: "keep" } })
 		);
 		const before = await rolesRow(user.id);
-		// A NUL byte cannot be stored in text, so the second write fails.
-		const outcome = await createConnectionWithJobs(
-			user.id,
-			{ label: "New", type: "OPENROUTER", apiKey: KEY },
-			{ chat: "bad\u0000name", ranking: "fine" }
+		// The database itself refuses this model name, so the job write fails
+		// after the connection has been inserted.
+		await prisma.$executeRawUnsafe(
+			"ALTER TABLE user_model_roles ADD CONSTRAINT refuse_probe CHECK (chat_model IS DISTINCT FROM 'refused-model')"
 		);
-		expect("error" in outcome).toBe(true);
-		expect(JSON.stringify(outcome)).not.toContain(KEY);
-		expect(await connectionRows(user.id)).toHaveLength(1);
-		expect(await rolesRow(user.id)).toEqual(before);
+		try {
+			const outcome = await createConnectionWithJobs(
+				user.id,
+				{ label: "New", type: "OPENROUTER", apiKey: KEY },
+				{ chat: "refused-model", ranking: "fine" }
+			);
+			expect("error" in outcome).toBe(true);
+			expect(JSON.stringify(outcome)).not.toContain(KEY);
+			expect(await connectionRows(user.id)).toHaveLength(1);
+			expect(await rolesRow(user.id)).toEqual(before);
+		} finally {
+			await prisma.$executeRawUnsafe(
+				"ALTER TABLE user_model_roles DROP CONSTRAINT refuse_probe"
+			);
+		}
 	});
 });

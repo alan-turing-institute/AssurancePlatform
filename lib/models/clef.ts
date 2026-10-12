@@ -22,6 +22,18 @@ const CRITERIA = {
 		"The technique merely concerns a similar topic or model family, without producing evidence about the asserted property, or its assumptions or required architecture conflict with the claim.",
 } as const;
 
+/**
+ * Which provider OpenRouter tries first for Clef-Flash. Two providers serve it
+ * there and their probabilities differ in the second decimal place, so naming
+ * one keeps the order a user sees consistent from one question to the next.
+ * Fallbacks stay on, so an outage at that provider moves the request to the
+ * other instead of turning ranking off.
+ */
+const OPENROUTER_PROVIDER = {
+	order: ["primeintellect"],
+	allow_fallbacks: true,
+} as const;
+
 /** The longest summary sent for a candidate, in characters. */
 export const SUMMARY_MAX_CHARS = 200;
 /** Above this many estimated tokens of state, the candidates are split into batches. */
@@ -125,6 +137,7 @@ function splitIntoBatches(
 }
 
 function buildRequestBody(
+	connection: ModelConnectionAccess,
 	model: string,
 	claim: string,
 	batch: readonly WireCandidate[]
@@ -141,6 +154,9 @@ function buildRequestBody(
 		model,
 		state: { claim, candidates: batch },
 		questions,
+		...(connection.type === "OPENROUTER"
+			? { provider: OPENROUTER_PROVIDER }
+			: {}),
 	});
 }
 
@@ -222,8 +238,9 @@ function reasonFor(error: unknown): string {
 }
 
 /**
- * Ranks the candidates for the claim with the ranking job's model. The
- * request goes through the network guard, in parallel batches when the claim
+ * Ranks the candidates for the claim with the ranking job's model. On
+ * OpenRouter the request names the provider to try first. The request goes
+ * through the network guard, in parallel batches when the claim
  * and candidates together pass about 1,500 tokens, and each batch repeats the
  * claim. Returns the candidates ordered by probability, best first, or `null`
  * when anything went wrong: a connection type that cannot rank, an HTTP error,
@@ -267,7 +284,7 @@ export async function rankCandidates<T extends RankableCandidate>(
 			batches.map((batch) =>
 				rankBatch(
 					{
-						body: buildRequestBody(model, claim, batch),
+						body: buildRequestBody(connection, model, claim, batch),
 						endpoint,
 						headers,
 						signal,

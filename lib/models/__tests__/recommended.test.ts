@@ -17,8 +17,24 @@ describe("recommendedModel", () => {
 		expect(recommendedModel("OLLAMA", "ranking")).toBe("clef-flash");
 	});
 
-	it("recommends nothing yet for chat or search", () => {
-		for (const type of TYPES) {
+	it("recommends a chat and a search model on OpenRouter, so quick setup fills all three jobs", () => {
+		expect(recommendedModel("OPENROUTER", "chat")).toBe(
+			"anthropic/claude-sonnet-5.5"
+		);
+		expect(recommendedModel("OPENROUTER", "search")).toBe(
+			"qwen/qwen3-embedding-4b"
+		);
+	});
+
+	it("recommends the half-precision embedding tag on Ollama, and no chat model", () => {
+		expect(recommendedModel("OLLAMA", "search")).toBe(
+			"qwen3-embedding:4b-fp16"
+		);
+		expect(recommendedModel("OLLAMA", "chat")).toBeNull();
+	});
+
+	it("recommends nothing for chat or search on the types with no fixed model", () => {
+		for (const type of ["OPENAI_COMPATIBLE", "ANTHROPIC"] as const) {
 			expect(recommendedModel(type, "chat")).toBeNull();
 			expect(recommendedModel(type, "search")).toBeNull();
 		}

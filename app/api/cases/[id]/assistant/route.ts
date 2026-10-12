@@ -48,6 +48,25 @@ const MAX_STEPS = 8;
 const MAX_OUTPUT_TOKENS = 2048;
 const MAX_RETRIES = 1;
 
+/**
+ * What is logged about a failed stream: the error's class, and the HTTP status
+ * when the provider answered with one. The error's message is the provider's
+ * own text, which can quote the key or the address, so it is never logged.
+ */
+function describeStreamError(error: unknown): {
+	errorName: string;
+	httpStatus?: number;
+} {
+	const status =
+		typeof error === "object" && error !== null && "statusCode" in error
+			? error.statusCode
+			: undefined;
+	return {
+		errorName: error instanceof Error ? error.name : "unknown",
+		httpStatus: typeof status === "number" ? status : undefined,
+	};
+}
+
 /** Whether a message part is a file part, whatever its role or contents. */
 function isFilePart(part: unknown): boolean {
 	return (
@@ -153,7 +172,7 @@ export async function POST(
 			// Replaces the SDK's default console logging, which prints the whole
 			// request (prompt, history, case trees) with the provider error.
 			onError: ({ error }) => {
-				log.error("Assistant stream failed", { error });
+				log.error("Assistant stream failed", describeStreamError(error));
 			},
 		});
 

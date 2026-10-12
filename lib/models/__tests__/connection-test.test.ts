@@ -25,6 +25,7 @@ import {
 } from "./model-server";
 
 const KEY = "sk-test-secret-key";
+const NAMES_THE_DNS_ANSWER = /public|resolve/i;
 
 let server: ModelServer;
 
@@ -358,7 +359,32 @@ describe("failures", () => {
 		);
 
 		expect(result.ok).toBe(false);
-		expect(result.message).toBe("The request to the model server failed.");
+		expect(result.message).toBe(
+			"The model address could not be reached or is not allowed."
+		);
+	});
+
+	it("gives one message for an address that is refused and one that is not reachable, so a name's DNS answer is not revealed", async () => {
+		const closed = await startModelServer();
+		const origin = closed.origin;
+		await closed.close();
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", "");
+
+		const refused = await testConnection(
+			connection("OPENAI_COMPATIBLE", { baseUrl: "https://10.1.2.3" })
+		);
+		const metadata = await testConnection(
+			connection("OPENAI_COMPATIBLE", { baseUrl: "https://169.254.169.254" })
+		);
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", origin);
+		const unreachable = await testConnection(
+			connection("OLLAMA", { baseUrl: origin })
+		);
+
+		expect(refused.ok).toBe(false);
+		expect(refused.message).toBe(unreachable.message);
+		expect(metadata.message).toBe(unreachable.message);
+		expect(unreachable.message).not.toMatch(NAMES_THE_DNS_ANSWER);
 	});
 
 	it("reports a redirect and does not follow it", async () => {

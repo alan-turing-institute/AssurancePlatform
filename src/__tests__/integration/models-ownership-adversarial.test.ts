@@ -274,6 +274,7 @@ describe("a user cannot reach another user's connection through the services", (
 			ranking: null,
 			search: null,
 			searchCheck: null,
+			searchCheckCurrent: false,
 		});
 		expect(listed.text).not.toContain(ownersConnection.id);
 	});

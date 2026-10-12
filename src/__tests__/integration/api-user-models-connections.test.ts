@@ -230,6 +230,7 @@ describe("GET /api/user/models", () => {
 			ranking: null,
 			search: null,
 			searchCheck: null,
+			searchCheckCurrent: false,
 		});
 		expect(body.recommended.OPENROUTER.ranking).toBe("cloudflare/clef-flash");
 		expect(body.connectionTypes.map((t: { type: string }) => t.type)).toEqual([
@@ -271,6 +272,7 @@ describe("GET /api/user/models", () => {
 			ranking: null,
 			search: null,
 			searchCheck: null,
+			searchCheckCurrent: false,
 		});
 	});
 });
@@ -541,6 +543,7 @@ describe("DELETE /api/user/models/connections/[id]", () => {
 			ranking: null,
 			search: null,
 			searchCheck: null,
+			searchCheckCurrent: false,
 		});
 	});
 });
