@@ -3,6 +3,7 @@ import { GET, POST } from "@/app/api/cases/[id]/assistant/route";
 import { parseJsonBody } from "@/lib/api-request";
 import { unauthorised } from "@/lib/errors";
 import { canAccessCase } from "@/lib/permissions";
+import { resolveChatModel } from "@/lib/plugins/assistant/model-config";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 
@@ -29,9 +30,9 @@ vi.mock("@/lib/plugins/assistant/selected-element", () => ({
 	selectionPrompt: vi.fn(() => ""),
 }));
 vi.mock("@/lib/permissions", () => ({ canAccessCase: vi.fn() }));
-vi.mock("@/lib/plugins/assistant/provider-config", () => ({
-	ASSISTANT_PLUGIN_ID: "tea.assistant",
-	resolveProviderConfig: vi.fn().mockResolvedValue({ error: "stop here" }),
+vi.mock("@/lib/plugins/assistant/model-config", () => ({
+	modelAccessFor: vi.fn(),
+	resolveChatModel: vi.fn().mockResolvedValue({ error: "stop here" }),
 }));
 
 const CASE_ID = "11111111-1111-4111-8111-111111111111";
@@ -65,6 +66,7 @@ describe("assistant route check order", () => {
 		expect(response.status).toBe(401);
 		expect(assertPluginEnabledForUser).not.toHaveBeenCalled();
 		expect(parseSpy).not.toHaveBeenCalled();
+		expect(resolveChatModel).not.toHaveBeenCalled();
 	});
 
 	it("returns 404 before checking the case when the plugin is disabled", async () => {
@@ -77,6 +79,7 @@ describe("assistant route check order", () => {
 		expect(response.status).toBe(404);
 		expect(canAccessCase).not.toHaveBeenCalled();
 		expect(parseSpy).not.toHaveBeenCalled();
+		expect(resolveChatModel).not.toHaveBeenCalled();
 	});
 
 	it("returns 404 without reading the body when the user lacks VIEW", async () => {
@@ -90,12 +93,25 @@ describe("assistant route check order", () => {
 			"VIEW"
 		);
 		expect(parseSpy).not.toHaveBeenCalled();
+		expect(resolveChatModel).not.toHaveBeenCalled();
 	});
 
 	it("reads the body only after both checks pass", async () => {
 		await call();
 
 		expect(parseSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("looks up the chat model only after the body is read, and answers 409 with the reason it gives", async () => {
+		const response = await call();
+
+		expect(parseSpy).toHaveBeenCalledTimes(1);
+		expect(resolveChatModel).toHaveBeenCalledWith("user-1");
+		expect(response.status).toBe(409);
+		expect(await response.json()).toMatchObject({
+			code: "CONFLICT",
+			error: "stop here",
+		});
 	});
 });
 

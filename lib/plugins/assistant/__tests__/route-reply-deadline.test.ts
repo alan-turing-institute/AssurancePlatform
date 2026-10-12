@@ -6,6 +6,8 @@ import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-ser
 
 const requireAuth = vi.hoisted(() => vi.fn());
 const streamText = vi.hoisted(() => vi.fn());
+const CHAT_MODEL = vi.hoisted(() => ({ id: "the-chat-model" }));
+const MODEL_ACCESS = vi.hoisted(() => ({ id: "the-user's-models" }));
 
 vi.mock("ai", async (importOriginal) => ({
 	...(await importOriginal<typeof import("ai")>()),
@@ -27,13 +29,10 @@ vi.mock("@/lib/plugins/assistant/selected-element", () => ({
 	resolveSelectedElement: vi.fn().mockResolvedValue(null),
 	selectionPrompt: vi.fn(() => ""),
 }));
-vi.mock("@/lib/plugins/assistant/model", () => ({
-	createAssistantModel: vi.fn(),
-}));
 vi.mock("@/lib/permissions", () => ({ canAccessCase: vi.fn() }));
-vi.mock("@/lib/plugins/assistant/provider-config", () => ({
-	ASSISTANT_PLUGIN_ID: "tea.assistant",
-	resolveProviderConfig: vi.fn().mockResolvedValue({ config: {} }),
+vi.mock("@/lib/plugins/assistant/model-config", () => ({
+	modelAccessFor: vi.fn(() => MODEL_ACCESS),
+	resolveChatModel: vi.fn(() => Promise.resolve({ model: CHAT_MODEL })),
 }));
 
 const CASE_ID = "11111111-1111-4111-8111-111111111111";
@@ -88,5 +87,12 @@ describe("assistant route reply deadline", () => {
 		expect(vi.mocked(createCaseTools).mock.calls[0]?.[3]).toBe(
 			START.getTime() + 90_000
 		);
+	});
+
+	it("streams from the user's chat model and gives the tools the user's models", async () => {
+		await call();
+
+		expect(streamText.mock.calls[0]?.[0].model).toBe(CHAT_MODEL);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[4]).toBe(MODEL_ACCESS);
 	});
 });

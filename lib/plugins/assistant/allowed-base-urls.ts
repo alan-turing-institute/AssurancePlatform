@@ -7,7 +7,7 @@ const urlSchema = z.url();
 const TRAILING_SLASHES = /\/+$/;
 
 /** Trims an endpoint and drops trailing slashes, so equal endpoints compare equal. */
-export function normaliseBaseUrl(url: string): string {
+function normaliseBaseUrl(url: string): string {
 	return url.trim().replace(TRAILING_SLASHES, "");
 }
 

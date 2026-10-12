@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
 	createTechniquesTool,
 	type SelectedElement,
@@ -63,13 +64,16 @@ async function loadExport(
  * simply not found. Comments are never exported.
  *
  * `replyDeadline` is the epoch time in milliseconds at which the whole reply is
- * cut off; the techniques tool keeps its wait inside it.
+ * cut off; the techniques tool keeps its wait inside it. `models` gives that
+ * tool the user's search and ranking jobs; without it the tool searches by
+ * keyword only.
  */
 export function createCaseTools(
 	userId: string,
 	caseId: string,
 	selection: SelectedElement | null = null,
-	replyDeadline?: number
+	replyDeadline?: number,
+	models?: TechniquesModelAccess
 ) {
 	return {
 		read_case: tool({
@@ -109,7 +113,13 @@ export function createCaseTools(
 			},
 		}),
 		...(techniquesConfigured()
-			? { suggest_techniques: createTechniquesTool(selection, replyDeadline) }
+			? {
+					suggest_techniques: createTechniquesTool(
+						selection,
+						replyDeadline,
+						models
+					),
+				}
 			: {}),
 	};
 }
