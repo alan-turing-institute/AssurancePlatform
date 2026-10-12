@@ -24,7 +24,7 @@ Supply secrets through the deployment environment. These variable names come fro
 | `DATABASE_URL` | PostgreSQL connection used by `lib/prisma.ts` |
 | `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | Session signing and the public application URL |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Compose-managed PostgreSQL; defaults are `tea`, `tea_user` and `tea_password` |
-| `TOKEN_ENCRYPTION_KEY` | Base64 key for stored OAuth tokens; the encryption code requires exactly 32 decoded bytes |
+| `TOKEN_ENCRYPTION_KEY` | Base64 key for stored OAuth tokens and model connection keys; the encryption code requires exactly 32 decoded bytes |
 | `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET` | GitHub sign-in and authorised import |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in and Drive access |
 | `USE_LOCAL_STORAGE` | Selects local file storage; compose defaults to `true` |
@@ -36,6 +36,8 @@ Supply secrets through the deployment environment. These variable names come fro
 | `DB_POOL_TIMEOUT_MS` | Database connection wait limit; defaults to 5000 ms |
 
 The table covers common settings rather than every application variable. `TEA_PLUGINS_DISABLED` disables selected compiled plugins; `SKIP_ELEMENT_VALIDATION` bypasses write-time element validation and must never be set in production. GitHub sign-in also reads `GITHUB_APP_CLIENT_ID_STAGING` and `GITHUB_APP_CLIENT_SECRET_STAGING` fallbacks. The compose file exposes only a subset of the application's optional integrations. Set Google, email and cron variables in the hosting environment if you use those features. A deployment should use its own secret values and a database password rather than the compose development defaults. The [scheduled jobs page](/docs/technical-guide/deployment/scheduled-jobs) explains the cron routes.
+
+`TEA_PLUGINS_DISABLED=tea.assistant` withholds the Case Assistant plugin, and the [Case Assistant page](/docs/technical-guide/architecture/case-assistant) describes the model settings and variables it uses.
 
 ## Security and operations
 
