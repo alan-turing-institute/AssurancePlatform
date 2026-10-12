@@ -61,23 +61,27 @@ No route ever returns it, only whether one is set, and the settings show "key se
 The server encrypts a key with `TOKEN_ENCRYPTION_KEY` before it stores it, and it decrypts the key only to make a call for that user.
 Removing a connection deletes its key and empties every job that used it.
 Deleting a user deletes their connections and keys.
-A message about a model server is fixed text that never quotes the key, the address or the server's reply.
+A message from a connection test or from quick setup is fixed text that never quotes the key, the address or the server's reply.
+If the block cannot load, it shows the message with a Retry button.
 
 ### Quick setup
 
 Quick setup takes one OpenRouter key.
 The server first tests the key against OpenRouter, and it saves nothing if OpenRouter refuses it or cannot be reached.
-It then adds a connection labelled OpenRouter and points each job that has a recommended model at that connection.
-A job with no recommended model keeps what it had, and the block lists those jobs so the user can choose a model for each.
+It then adds a connection labelled OpenRouter and points the chat, ranking and search jobs at that connection, each with its recommended model.
+Last, it runs the search check.
+A job with no recommended model keeps what it had, and the block lists any job that is still unset so the user can choose a model for it.
 
 The recommended models are in the table below.
 
 | Connection type | Chat | Ranking | Search |
 |---|---|---|---|
-| OpenRouter | None | `cloudflare/clef-flash` | None |
-| Ollama | None | `clef-flash` | None |
+| OpenRouter | `anthropic/claude-sonnet-5.5` | `cloudflare/clef-flash` | `qwen/qwen3-embedding-4b` |
+| Ollama | None | `clef-flash` | `qwen3-embedding:4b-fp16` |
 | OpenAI-compatible | None | None | None |
 | Anthropic | None | None | None |
+
+An Ollama connection has no recommended chat model, because the right one depends on what is installed on the server.
 
 Each model picker lists the models the connection reports, with the recommended model first.
 The picker also accepts a name that is not in the list.
@@ -91,6 +95,8 @@ The request carries the claim and, for each candidate, its name, a one-line summ
 It carries no tag lists.
 When the claim and candidates together pass about 1,500 estimated tokens, the candidates are split into batches that run in parallel, and each batch repeats the claim.
 A ranking that does not cover every candidate is discarded, and the results stay in search order.
+On OpenRouter the request also asks for one fixed provider to be tried first, so that the order repeats from one question to the next.
+Fallbacks stay on, so another provider answers if that one cannot.
 
 ### The search check
 
@@ -98,13 +104,17 @@ The catalogue of techniques is embedded with one model, and a claim can be match
 The search job can run on any connection that can search, but its model must be the catalogue's own.
 The techniques service publishes the catalogue's model at `GET /embedding-spec`, with its dimensions, the query prefix, and a few fixed test sentences with the vectors it computed for them.
 The search check embeds the same sentences through the user's search connection, with the same prefix, and compares each vector with the published one by cosine similarity.
-It passes only when every vector has the published length and every similarity is high enough.
-A failed check shows the lowest similarity it found.
+It passes only when every vector has the published length and every similarity is at least 0.999.
+A failed check shows the lowest similarity it found, to three decimals and cut rather than rounded, so that a value just under 0.999 never reads as 0.999.
 
-The check runs when the search job is saved or changed, when quick setup sets the job, and when the user chooses to check again.
-Saving an unchanged search job runs it again when no check has passed for the job, or when the passed check is not for the catalogue's current model and test sentences.
+The check runs when the search job is saved with a different connection or model, when quick setup sets the job, and when the user presses Check again.
+Saving the chat or ranking job, or saving the search job unchanged, runs no check, so it never spends a call on a search job that is failing.
+Check again sends `recheckSearch: true` to `PUT /api/user/models/roles`, which runs the check for the search job as it is saved.
 A pass is recorded against the job together with the catalogue's model id and a hash of the test sentences.
+It is recorded only if the job, and the connection's address and key, are unchanged since the check began.
 A new version of the catalogue's data leaves the pass in place, but a change of model or test sentences makes it out of date, and the assistant then stops using it.
+When the settings load, the server compares the recorded pass with the techniques service's current model and test sentences, and `GET /api/user/models` reports the result as `searchCheckCurrent`.
+When they differ, or the service cannot be asked, the screen shows Check not passed, with a note that the catalogue has changed since the check passed, and it offers Check again.
 Changing the search job, or the address or key of its connection, clears the pass.
 If the techniques service does not give its test sentences, the check cannot run and the job stays unchecked.
 
@@ -153,13 +163,19 @@ The blocked addresses are:
 - IPv6 tunnel addresses (6to4 and Teredo)
 - IPv6 addresses that carry one of the blocked IPv4 addresses, such as an IPv4-mapped or NAT64 address
 
+A name that resolves to a blocked address and an address that cannot be reached get the same message: "The model address could not be reached or is not allowed."
+That keeps a connection test from showing which internal names exist.
+
 The size caps and time limits are:
 
-- A response is cut off after 16 MiB, and a request ends after 10 minutes, unless the caller sets a tighter limit.
-- The assistant sets tighter time limits of its own, described under Time limits below.
+- The guard's default is 16 MiB for a response and 10 minutes for a request, and each caller sets tighter limits where it can.
+- A chat reply is cut off past 4 MiB, tool calls and all.
+- An embeddings answer is cut off past 2 MiB.
 - A connection test allows each request 10 seconds and reads at most 512 KiB, or 4 MiB for OpenRouter's model lists.
 - A connection test keeps at most 2,000 names from a model list.
 - A ranking answer is capped at 256 KiB.
+- A read from the techniques service, of its test sentences or of a search answer, stops at 1 MiB, and a larger answer counts as no answer.
+- The assistant sets tighter time limits of its own, described under Time limits below.
 
 `TEA_MODELS_LOCAL_ADDRESSES` is the operator's way to allow a model server that fails these rules, such as Ollama on the same machine.
 It holds a comma-separated list of origins, for example `http://host.docker.internal:11434`.
@@ -177,12 +193,16 @@ Leave the variable empty on a hosted site.
 - A base URL is an http or https address with no user name, password, query string or fragment.
 - A base URL is at most 500 characters long, and trailing slashes are dropped from it.
 - A label is at most 60 characters long, and a model name is at most 200.
+- A label and a model name hold no control characters.
 - A user can have up to 10 connections, and adding an eleventh is refused.
 
 ### Rate limit
 
 Connection tests, search checks and quick setup share one budget of 20 calls per user in 10 minutes.
 Over the budget, the route answers 429 with a generic message.
+The count and the record of an attempt happen together under a lock held for each user, so requests that arrive at the same moment cannot go past the budget.
+An attempt that is refused is not counted.
+Saving jobs and testing a connection check ownership and job rules before they touch the budget, so a request that would be refused anyway costs nothing.
 The calls the assistant makes while it answers a question are not counted here.
 Their time limits bound them instead.
 
@@ -232,8 +252,30 @@ If the selected element has no text and the model supplies no claim of 40 charac
 The assistant recommends only techniques that the service returned.
 The tool keeps the five best results, and cuts each name and link to 500 characters, each summary to 500 characters and each goal to 200 characters, with at most 20 goals and 10 tags.
 A result's `score` is the ranking model's probability when its `ranked` field is true, and the service's own score when it is false.
-If the service does not answer in time, replies with an error status code, redirects the request, or replies in an unexpected shape, the assistant is told that the service is not reachable.
-In the chat, the tool call shows each technique with a link, its score and its goals.
+If the service does not answer in time, replies with an error status code, redirects the request, answers with more than 1 MiB, or replies in an unexpected shape, the assistant is told that the service is not reachable.
+In the chat, the tool call shows a line for semantic search and a line for ranking, each saying whether the step was used and giving the reason when it was not.
+Below those lines it shows each technique with a link, its score and its goals.
+
+## Replies and errors
+
+A model call in a reply writes at most 8,192 tokens.
+The cap leaves room for a long answer, such as a case lint, and for a reasoning model's thinking before it.
+On an OpenRouter connection the request also bounds reasoning at 3,072 tokens, so that a model that reasons has room left to answer.
+Other connection types get no reasoning setting.
+When a model call stops because it ran out of output room, the reply ends with a notice: "The model ran out of room before answering. Try a narrower question, or a different chat model."
+A reply that ends with no answer text and no notice shows "The assistant stopped without writing an answer. Try asking again, or ask something narrower." unless the user stopped the reply or it failed with an error.
+
+A reply makes at most 24 tool calls, counted across all tools.
+A call past the limit returns the error "Too many tool calls in one reply." and does no work.
+The tools `read_case`, `read_element` and `lint_case` share one read of the case, so a reply reads the case once however many of them it calls.
+The assistant is given the selected element's id, with its label, type and text, so that it can call `read_element` with it.
+
+When a model provider refuses a call, the user sees the provider's own reason.
+The server cleans it first.
+It takes out the key, bearer tokens, tokens that start `sk-` and the connection's address, turns control characters and runs of spaces into single spaces, and cuts the text to 300 characters.
+When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
+The chat shows "The assistant could not answer." followed by the reason.
+The reason is never logged, and the log records only the error's class and the HTTP status.
 
 ## Time limits
 
