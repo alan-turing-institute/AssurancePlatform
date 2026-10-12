@@ -1,8 +1,19 @@
+import { createRequire } from "node:module";
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type MockInstance,
+	vi,
+} from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import { readUserApiKey } from "@/lib/plugins/assistant/key-store";
+import { noDownload } from "@/lib/plugins/assistant/no-download";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
+import { captureLogs } from "../helpers/capture-logs";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	addTeamMember,
@@ -106,9 +117,28 @@ beforeEach(async () => {
 	useModel([textStep("ok")]);
 });
 
+/** The undici module the AI SDK's own file downloader loads. */
+const undici = createRequire(import.meta.url)("undici") as {
+	fetch: typeof fetch;
+};
+let fetchSpies: MockInstance[] = [];
+
+/** Watches both routes by which a server-side download could leave the process. */
+function watchFetches() {
+	fetchSpies = [vi.spyOn(globalThis, "fetch"), vi.spyOn(undici, "fetch")];
+	for (const spy of fetchSpies) {
+		spy.mockRejectedValue(new Error("no request expected"));
+	}
+	return fetchSpies;
+}
+
 afterEach(() => {
 	resetLogSink();
 	vi.unstubAllEnvs();
+	for (const spy of fetchSpies) {
+		spy.mockRestore();
+	}
+	fetchSpies = [];
 });
 
 async function configure(userId: string) {
@@ -425,6 +455,107 @@ describe("POST /api/cases/[id]/assistant — bounds and roles", () => {
 		expect(failures).toHaveLength(1);
 		expect(JSON.stringify(failures)).not.toContain("What does G1 claim?");
 		consoleError.mockRestore();
+	});
+});
+
+describe("POST /api/cases/[id]/assistant — file parts", () => {
+	const FILE_URL = "http://files.invalid/private/report.txt";
+
+	it.each([
+		"user",
+		"assistant",
+	] as const)("rejects a file part in a %s message with 400 and makes no outbound request", async (role) => {
+		const { owner, testCase } = await setup();
+		await configure(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const spies = watchFetches();
+		const logs = captureLogs();
+
+		try {
+			const response = await post(testCase.id, {
+				messages: [
+					...defaultBody().messages,
+					{
+						id: "m2",
+						role,
+						parts: [
+							{ type: "text", text: "see the file" },
+							{ type: "file", mediaType: "text/plain", url: FILE_URL },
+						],
+					},
+				],
+			});
+
+			expect(response.status).toBe(400);
+			expect(JSON.stringify(await response.json())).not.toContain(FILE_URL);
+			expect(JSON.stringify(logs.entries)).not.toContain(FILE_URL);
+		} finally {
+			logs.restore();
+		}
+		expect(streamTextSpy.calls).toHaveLength(0);
+		for (const spy of spies) {
+			expect(spy).not.toHaveBeenCalled();
+		}
+	});
+
+	it("accepts the part types the panel sends back as history", async () => {
+		const { owner, testCase } = await setup();
+		await configure(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await post(testCase.id, {
+			messages: [
+				...defaultBody().messages,
+				{
+					id: "m2",
+					role: "assistant",
+					parts: [
+						{ type: "step-start" },
+						{ type: "reasoning", text: "checking the case", state: "done" },
+						{
+							type: "tool-read_case",
+							toolCallId: "call-1",
+							state: "output-available",
+							input: {},
+							output: { elements: [] },
+						},
+						{ type: "step-start" },
+						{ type: "text", text: "G1 claims safety", state: "done" },
+						{ type: "data-notice", data: "timeout" },
+					],
+				},
+				{
+					id: "m3",
+					role: "user",
+					parts: [{ type: "text", text: "Thanks" }],
+				},
+			],
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("ok");
+	});
+
+	it("gives the model call a downloader that refuses every URL the model cannot take itself", async () => {
+		const { owner, testCase } = await setup();
+		await configure(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const spies = watchFetches();
+
+		await (await post(testCase.id)).text();
+
+		const options = streamTextSpy.calls[0] as {
+			experimental_download?: typeof noDownload;
+		};
+		expect(options.experimental_download).toBe(noDownload);
+		await expect(
+			options.experimental_download?.([
+				{ url: new URL(FILE_URL), isUrlSupportedByModel: false },
+			])
+		).rejects.toThrow();
+		for (const spy of spies) {
+			expect(spy).not.toHaveBeenCalled();
+		}
 	});
 });
 
