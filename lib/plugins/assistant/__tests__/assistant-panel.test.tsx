@@ -158,7 +158,7 @@ describe("AssistantPanel", () => {
 		);
 		expect(
 			screen.getByRole("link", { name: "Open plugin settings" })
-		).toHaveAttribute("href", "/dashboard/settings/plugins");
+		).toHaveAttribute("href", "/dashboard/settings/plugins#ai-models");
 	});
 
 	it("builds no chat until the session is authenticated", () => {

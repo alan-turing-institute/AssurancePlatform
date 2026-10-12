@@ -1,15 +1,15 @@
 /**
  * The `tea.assistant` plugin's UI registration: a case panel (a non-modal
- * chat sheet beside the canvas) and a settings section for the provider, model
- * and API key. Runs once at import time, like the other
- * official plugins; a registration failure degrades to "no panel" rather than
- * taking the bundle down.
+ * chat sheet beside the canvas) and a one-line settings section that points to
+ * the AI models block, where its models are set. Runs once at import time, like
+ * the other official plugins; a registration failure degrades to "no panel"
+ * rather than taking the bundle down.
  */
 
 import { Bot } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { AiModelsPointer } from "@/lib/plugins/assistant/ai-models-pointer";
 import { AssistantPanel } from "@/lib/plugins/assistant/assistant-panel";
-import { AssistantSettings } from "@/lib/plugins/assistant/settings";
 import { casePanelSlot, settingsSectionSlot } from "@/lib/plugins/slots/index";
 
 const PLUGIN_ID = "tea.assistant";
@@ -26,7 +26,7 @@ function registerAssistantPlugin(): void {
 		});
 		settingsSectionSlot.register({
 			pluginId: PLUGIN_ID,
-			Component: AssistantSettings,
+			Component: AiModelsPointer,
 		});
 	} catch (error) {
 		logger.error(

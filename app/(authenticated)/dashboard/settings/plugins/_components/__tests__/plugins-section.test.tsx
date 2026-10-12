@@ -7,7 +7,20 @@ import {
 	renderWithoutProviders,
 	screen,
 } from "@/src/__tests__/utils/test-utils";
+import { installModelRoutes } from "../ai-models/__tests__/model-routes-fake";
 import { PluginsSection } from "../plugins-section";
+
+const ASSISTANT_PLUGIN = {
+	pluginId: "tea.assistant",
+	name: "Case Assistant",
+	version: "0.1.0",
+	description: "A chat panel beside the case canvas.",
+	surfaces: ["case-panel", "settings-section"],
+	available: true,
+	enabled: true,
+	pinnedAt: null,
+	settings: null,
+};
 
 const HEALTH_PLUGIN = {
 	pluginId: "tea.health",
@@ -88,6 +101,67 @@ describe("PluginsSection", () => {
 				screen.getByText("No plugins are registered for this deployment.")
 			).toBeInTheDocument()
 		);
+	});
+
+	it("shows the AI models block after the cards when a plugin that uses models is on", async () => {
+		installModelRoutes();
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({ plugins: [HEALTH_PLUGIN, ASSISTANT_PLUGIN] })
+			)
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+
+		const heading = await screen.findByRole("heading", { name: "AI models" });
+		const section = heading.closest("section");
+		expect(section).toHaveAttribute("id", "ai-models");
+		// The block follows the column that holds the plugin cards.
+		expect(section?.previousElementSibling).toContainElement(
+			screen.getByText("Case Assistant")
+		);
+	});
+
+	it("shows no AI models block, and asks for no models, when no plugin that uses models is on", async () => {
+		const modelRoutes = installModelRoutes();
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({
+					plugins: [HEALTH_PLUGIN, { ...ASSISTANT_PLUGIN, enabled: false }],
+				})
+			)
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+
+		await waitFor(() =>
+			expect(screen.getByText("Claim/Evidence Health")).toBeInTheDocument()
+		);
+		expect(
+			screen.queryByRole("heading", { name: "AI models" })
+		).not.toBeInTheDocument();
+		expect(modelRoutes.requests).toEqual([]);
+	});
+
+	it("leaves the Claim/Evidence Health card as it was, with no AI models block, when it is the only plugin", async () => {
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({ plugins: [HEALTH_PLUGIN] })
+			)
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+
+		await waitFor(() =>
+			expect(screen.getByText(HEALTH_PLUGIN.description)).toBeInTheDocument()
+		);
+		expect(screen.getAllByRole("switch")).toHaveLength(1);
+		expect(
+			screen.queryByRole("heading", { name: "AI models" })
+		).not.toBeInTheDocument();
+		expect(
+			screen.getByText("This plugin has no settings.")
+		).toBeInTheDocument();
 	});
 
 	it("turns a plugin off through the confirmation dialog, sends the PATCH, and reflects the refetched state", async () => {

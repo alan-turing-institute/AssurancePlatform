@@ -99,7 +99,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		usesModels: true,
 		surfaces: ["case-panel", "settings-section"],
 		description:
-			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You supply your own model provider and API key in this plugin's settings.",
+			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You choose the models it uses in the AI models section further down this page.",
 	},
 ];
 
