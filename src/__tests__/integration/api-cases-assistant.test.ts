@@ -516,7 +516,7 @@ describe("POST /api/cases/[id]/assistant — bounds and roles", () => {
 
 		expect(streamTextSpy.calls[0]).toMatchObject({
 			timeout: 60_000,
-			maxOutputTokens: 2048,
+			maxOutputTokens: 8192,
 			maxRetries: 1,
 		});
 	});

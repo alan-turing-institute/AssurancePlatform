@@ -3883,7 +3883,7 @@
     "/user/models/quick-setup": {
       "post": {
         "operationId": "post-user-models-quick-setup",
-        "summary": "POST /api/user/models/quick-setup — one OpenRouter key adds a connection and fills the jobs that have a recommended model.",
+        "summary": "POST /api/user/models/quick-setup — one OpenRouter key adds a connection and fills all three jobs with the recommended models.",
         "description": "Tests an OpenRouter key, then adds the connection and its recommended jobs; a refused key writes nothing.",
         "tags": [
           "User"
@@ -3934,7 +3934,7 @@
     "/user/models/roles": {
       "put": {
         "operationId": "put-user-models-roles",
-        "summary": "PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or has no current check.",
+        "summary": "PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or that the caller asks to have checked again.",
         "description": "Saves the three jobs and returns them with the outcome of the search check, if one ran.",
         "tags": [
           "User"

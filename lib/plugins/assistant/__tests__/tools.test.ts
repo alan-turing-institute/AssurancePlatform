@@ -66,6 +66,45 @@ describe("assistant tools", () => {
 		});
 	});
 
+	it("accepts an element's label when no id matches, as a model often passes the name it sees", async () => {
+		const result = await createCaseTools("u", "c").read_element.execute?.(
+			{ elementId: " p1 " },
+			options
+		);
+
+		expect(result).toMatchObject({
+			found: true,
+			element: { id: "p1", children: [{ id: "e1" }] },
+		});
+	});
+
+	it("prefers an id to a label, and does not guess when two elements share a label", async () => {
+		const twin = {
+			...TREE,
+			children: [
+				{ id: "p1", type: "PROPERTY_CLAIM", name: "P2", children: [] },
+				{ id: "p2", type: "PROPERTY_CLAIM", name: "P1", children: [] },
+				{ id: "p3", type: "PROPERTY_CLAIM", name: "P1", children: [] },
+			],
+		};
+		vi.mocked(exportCase).mockResolvedValue({
+			data: {
+				version: "1.0",
+				exportedAt: new Date().toISOString(),
+				case: { name: "Case", description: "d" },
+				tree: twin as never,
+			},
+		});
+		const tools = createCaseTools("u", "c");
+
+		expect(
+			await tools.read_element.execute?.({ elementId: "p2" }, options)
+		).toMatchObject({ found: true, element: { id: "p2" } });
+		expect(
+			await tools.read_element.execute?.({ elementId: "P1" }, options)
+		).toMatchObject({ found: false });
+	});
+
 	it("reports an unknown id as not found", async () => {
 		const result = await createCaseTools("u", "c").read_element.execute?.(
 			{ elementId: "elsewhere" },

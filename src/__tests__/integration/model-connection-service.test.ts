@@ -9,11 +9,13 @@ import {
 	createConnectionWithJobs,
 	deleteConnection,
 	getConnectionForUse,
+	getConnectionWithStoredState,
 	getRoles,
 	listConnections,
 	MAX_CONNECTIONS_PER_USER,
 	type ModelServiceErrorCode,
 	recordEmbeddingCheck,
+	type StoredConnectionState,
 	setRoles,
 	updateConnection,
 } from "@/lib/services/model-connection-service";
@@ -326,6 +328,25 @@ describe("model connection service: connections", () => {
 		);
 	});
 
+	it("refuses a control character in a label, on create and on update", async () => {
+		const user = await createTestUser();
+		const created = expectSuccess(await addOllama(user.id));
+
+		for (const label of ["a\u0000b", "a\tb", "a\nb", "a\u001bb", "a\u007fb"]) {
+			expectRefused(await add(user.id, { label }), "control characters");
+			expectRefused(
+				await updateConnection(user.id, created.id, { label }),
+				"control characters"
+			);
+		}
+		expect(
+			await prisma.userModelConnection.count({ where: { userId: user.id } })
+		).toBe(1);
+		expect(expectSuccess(await listConnections(user.id))[0]?.label).toBe(
+			"Local"
+		);
+	});
+
 	it("refuses a base URL with a query string or fragment, even an empty one", async () => {
 		const user = await createTestUser();
 		const ollama = (baseUrl: string) =>
@@ -596,6 +617,57 @@ describe("model connection service: the search check", () => {
 		expect(await checked(user.id)).toBe("catalogue-v1");
 	});
 
+	it("records the check only while the connection's address and key are what they were when the check began", async () => {
+		const user = await createTestUser();
+		const router = expectSuccess(await add(user.id));
+		const local = expectSuccess(await addOllama(user.id));
+		const job = (id: string) => ({ connectionId: id, model: "embed" });
+		const pointSearchAt = async (id: string) =>
+			expectSuccess(
+				await setRoles(user.id, { chat: null, ranking: null, search: job(id) })
+			);
+		const began = async (id: string) =>
+			expectSuccess(await getConnectionWithStoredState(user.id, id)).stored;
+		const recordFor = async (id: string, stored: StoredConnectionState) =>
+			expectSuccess(
+				await recordEmbeddingCheck(user.id, "catalogue-v1", job(id), stored)
+			);
+
+		await pointSearchAt(local.id);
+		const beforeEdit = await began(local.id);
+		expectSuccess(
+			await updateConnection(user.id, local.id, {
+				baseUrl: "http://other:11434",
+			})
+		);
+		await pointSearchAt(local.id);
+		expect(await recordFor(local.id, beforeEdit)).toBe(false);
+		expect(await recordFor(local.id, await began(local.id))).toBe(true);
+
+		expectSuccess(await clearEmbeddingCheck(user.id));
+		const beforeKey = await began(local.id);
+		expectSuccess(
+			await updateConnection(user.id, local.id, { apiKey: "a-new-key-1" })
+		);
+		expect(await recordFor(local.id, beforeKey)).toBe(false);
+
+		// A new label changes neither the address nor the key.
+		const beforeLabel = await began(local.id);
+		expectSuccess(
+			await updateConnection(user.id, local.id, { label: "Renamed" })
+		);
+		expect(await recordFor(local.id, beforeLabel)).toBe(true);
+
+		// A connection whose address is fixed has none stored; its key still counts.
+		await pointSearchAt(router.id);
+		const routerBefore = await began(router.id);
+		expect(routerBefore.baseUrl).toBeNull();
+		expectSuccess(
+			await updateConnection(user.id, router.id, { apiKey: "a-new-key-2" })
+		);
+		expect(await recordFor(router.id, routerBefore)).toBe(false);
+	});
+
 	it("can be recorded and cleared only through its own functions", async () => {
 		const user = await createTestUser();
 		expect(await record(user.id, randomUUID(), "embed")).toBe(false);
@@ -698,6 +770,41 @@ describe("model connection service: jobs", () => {
 		expectRefused(await setRoles(user.id, jobs("m".repeat(201))), "Model name");
 		const saved = expectSuccess(await setRoles(user.id, jobs(" llama3 ")));
 		expect(saved.chat?.model).toBe("llama3");
+	});
+});
+
+describe("model connection service: model names", () => {
+	it("refuses a control character in a model name, for every job, and saves nothing", async () => {
+		const user = await createTestUser();
+		const local = expectSuccess(await addOllama(user.id));
+
+		for (const model of ["bad\u0000name", "bad\tname", "bad\nname"]) {
+			for (const job of ["chat", "ranking", "search"] as const) {
+				expectRefused(
+					await setRoles(user.id, {
+						chat: null,
+						ranking: null,
+						search: null,
+						[job]: { connectionId: local.id, model },
+					}),
+					"control characters"
+				);
+			}
+			expectRefused(
+				await createConnectionWithJobs(
+					user.id,
+					{ label: "New", type: "OLLAMA", baseUrl: OLLAMA_URL },
+					{ chat: model }
+				),
+				"control characters"
+			);
+		}
+		expect(
+			await prisma.userModelRoles.count({ where: { userId: user.id } })
+		).toBe(0);
+		expect(
+			await prisma.userModelConnection.count({ where: { userId: user.id } })
+		).toBe(1);
 	});
 });
 

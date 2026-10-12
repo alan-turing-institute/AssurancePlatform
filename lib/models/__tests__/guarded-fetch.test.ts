@@ -22,6 +22,7 @@ import {
 } from "../guarded-fetch";
 
 const KEY = "sk-test-secret-key";
+const NAMES_THE_DNS_ANSWER = /public|resolve/i;
 
 let server: Server;
 let port: number;
@@ -112,6 +113,34 @@ describe("refusals before any connection", () => {
 			guardedFetch("https://models.example.test/v1", undefined, { lookup })
 		).rejects.toMatchObject({ code: "blocked-address" });
 		expect(lookup).toHaveBeenCalledTimes(1);
+	});
+
+	it("words a refused address and a name that does not resolve the same way, while keeping their codes apart", async () => {
+		const notFound = vi.fn<LookupFunction>((_hostname, _options, callback) => {
+			callback(
+				Object.assign(new Error("getaddrinfo ENOTFOUND"), {
+					code: "ENOTFOUND",
+				}),
+				[]
+			);
+		});
+		const lookup = resolverFor({ "internal.example.test": ["10.0.0.5"] });
+
+		const refused = await guardedFetch(
+			"https://internal.example.test/v1",
+			undefined,
+			{ lookup }
+		).catch((error: unknown) => error);
+		const missing = await guardedFetch(
+			"https://nowhere.example.test/v1",
+			undefined,
+			{ lookup: notFound }
+		).catch((error: unknown) => error);
+
+		expect(refused).toMatchObject({ code: "blocked-address" });
+		expect(missing).toMatchObject({ code: "request-failed" });
+		expect((refused as Error).message).toBe((missing as Error).message);
+		expect((refused as Error).message).not.toMatch(NAMES_THE_DNS_ANSWER);
 	});
 
 	it("refuses a mixed answer when any address is private", async () => {

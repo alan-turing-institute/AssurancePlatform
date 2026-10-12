@@ -76,7 +76,7 @@ vi.mock("@/lib/models/recommended", () => ({
 }));
 
 const CHECKED_FOR = `${SPEC.modelId}#${createHash("sha256")
-	.update(SPEC.probes.map((probe) => probe.text).join("\n"))
+	.update(JSON.stringify(SPEC.probes.map((probe) => probe.text)))
 	.digest("hex")}`;
 const ENVELOPE = /^v\d+:/;
 
