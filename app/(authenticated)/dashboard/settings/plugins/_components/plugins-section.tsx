@@ -2,8 +2,27 @@
 
 import { AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePluginSettings } from "@/hooks/use-plugin-settings";
+import {
+	type PluginSettingsListItem,
+	usePluginSettings,
+} from "@/hooks/use-plugin-settings";
+import { getManifestEntry } from "@/lib/plugins/manifest";
+import { AiModelsBlock } from "./ai-models/ai-models-block";
 import { PluginCard } from "./plugin-card";
+
+/**
+ * Whether any plugin that is on for the user calls the models they connect.
+ * `GET /api/user/plugins` does not say, so the manifest, which the browser
+ * bundle carries, is asked.
+ */
+function usesModels(plugins: readonly PluginSettingsListItem[]): boolean {
+	return plugins.some(
+		(plugin) =>
+			plugin.available &&
+			plugin.enabled &&
+			getManifestEntry(plugin.pluginId)?.usesModels === true
+	);
+}
 
 /**
  * The Plugins page's content (TEA — Plugin management surface D1/D2):
@@ -14,7 +33,8 @@ import { PluginCard } from "./plugin-card";
  * see `PluginsLinkSection`) and extended from a name+version+switch row
  * (`PluginToggleRow`, retired the same commit) to a full card
  * (`PluginCard`): description, what it adds, a docs link, and the D3
- * off-switch confirmation.
+ * off-switch confirmation. When a plugin that uses models is on, the
+ * "AI models" block follows the cards.
  */
 export function PluginsSection() {
 	const { plugins, loading, error, togglingId, togglePlugin } =
@@ -64,6 +84,8 @@ export function PluginsSection() {
 						/>
 					))}
 			</div>
+
+			{!(loading || error) && usesModels(plugins) && <AiModelsBlock />}
 		</div>
 	);
 }

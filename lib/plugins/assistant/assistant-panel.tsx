@@ -42,7 +42,7 @@ import { useAssistantTools } from "@/lib/plugins/assistant/use-assistant-tools";
 import { showWaitingLine } from "@/lib/plugins/assistant/waiting-state";
 import type { CaseSlotContext } from "@/lib/plugins/slots/index";
 
-/** The route answers 409 when the provider, model, endpoint or key is not usable; its message says which. */
+/** The route answers 409 when the user's chat job is missing or its connection cannot be used; its message says which. */
 function notConfiguredMessage(error: Error): string | null {
 	try {
 		const body = JSON.parse(error.message) as { code?: string; error?: string };
@@ -166,7 +166,10 @@ function ErrorNotice({ error }: { error: Error }) {
 			>
 				<p>{notConfigured}</p>
 				<p className="mt-1">
-					<Link className="underline" href="/dashboard/settings/plugins">
+					<Link
+						className="underline"
+						href="/dashboard/settings/plugins#ai-models"
+					>
 						Open plugin settings
 					</Link>
 				</p>

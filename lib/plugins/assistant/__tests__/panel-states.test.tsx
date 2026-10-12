@@ -723,7 +723,7 @@ describe("the selection line and the notices", () => {
 		);
 		expect(
 			screen.getByRole("link", { name: "Open plugin settings" })
-		).toHaveAttribute("href", "/dashboard/settings/plugins");
+		).toHaveAttribute("href", "/dashboard/settings/plugins#ai-models");
 	});
 
 	it("shows a plain alert, not the error's own text, for any other failure", async () => {
