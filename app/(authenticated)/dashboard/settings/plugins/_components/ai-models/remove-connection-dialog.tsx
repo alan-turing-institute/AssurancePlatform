@@ -18,6 +18,8 @@ export interface RemoveConnectionDialogProps {
 	connection: ModelConnection | null;
 	/** The jobs that run on the connection, which removing it empties. */
 	jobs: readonly ModelJob[];
+	/** Called as the dialog closes; the page decides where focus goes. */
+	onCloseAutoFocus: (event: Event) => void;
 	onConfirm: (connection: ModelConnection) => void;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
@@ -39,13 +41,14 @@ function listJobs(jobs: readonly ModelJob[]): string {
 export function RemoveConnectionDialog({
 	connection,
 	jobs,
+	onCloseAutoFocus,
 	onConfirm,
 	onOpenChange,
 	open,
 }: RemoveConnectionDialogProps) {
 	return (
 		<AlertDialog onOpenChange={onOpenChange} open={open}>
-			<AlertDialogContent>
+			<AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>
 						{connection ? `Remove ${connection.label}?` : "Remove connection?"}

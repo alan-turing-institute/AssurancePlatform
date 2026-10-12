@@ -40,6 +40,8 @@ export interface ConnectionDialogProps {
 	connection?: ModelConnection;
 	connectionTypes: readonly ConnectionTypeSpec[];
 	onAdd: (input: NewConnectionInput) => Promise<ActionResult>;
+	/** Called as the dialog closes; the page decides where focus goes. */
+	onCloseAutoFocus: (event: Event) => void;
 	onOpenChange: (open: boolean) => void;
 	onUpdate: (id: string, patch: ConnectionPatch) => Promise<ActionResult>;
 	open: boolean;
@@ -233,7 +235,7 @@ function ConnectionForm({
 	onAdd,
 	onClose,
 	onUpdate,
-}: Omit<ConnectionDialogProps, "open" | "onOpenChange"> & {
+}: Omit<ConnectionDialogProps, "onCloseAutoFocus" | "onOpenChange" | "open"> & {
 	onClose: () => void;
 }) {
 	const labelId = useId();
@@ -373,13 +375,14 @@ function ConnectionForm({
 export function ConnectionDialog({
 	connection,
 	open,
+	onCloseAutoFocus,
 	onOpenChange,
 	...form
 }: ConnectionDialogProps) {
 	const editing = connection !== undefined;
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent>
+			<DialogContent onCloseAutoFocus={onCloseAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>
 						{editing ? `Edit ${connection.label}` : "Add a connection"}

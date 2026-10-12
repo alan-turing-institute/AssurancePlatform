@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Plus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type {
@@ -47,8 +47,9 @@ function ConnectionRow({
 }: {
 	connection: ModelConnection;
 	notice: Notice | null;
-	onEdit: () => void;
-	onRemove: () => void;
+	/** Called with the button that was pressed, so focus can return to it. */
+	onEdit: (opener: HTMLElement) => void;
+	onRemove: (opener: HTMLElement) => void;
 	onTest: () => void;
 	testing: boolean;
 }) {
@@ -80,10 +81,20 @@ function ConnectionRow({
 						{testing && <Loader2 aria-hidden="true" className="animate-spin" />}
 						{testing ? "Testing…" : "Test"}
 					</Button>
-					<Button onClick={onEdit} size="sm" type="button" variant="outline">
+					<Button
+						onClick={(event) => onEdit(event.currentTarget)}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
 						Edit
 					</Button>
-					<Button onClick={onRemove} size="sm" type="button" variant="outline">
+					<Button
+						onClick={(event) => onRemove(event.currentTarget)}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
 						Remove
 					</Button>
 				</div>
@@ -133,6 +144,19 @@ export function ConnectionsList({
 		open: boolean;
 	}>({ connection: null, open: false });
 	const [failures, setFailures] = useState<Record<string, string>>({});
+	// The dialogs are opened by buttons that are not their triggers, so each
+	// returns focus itself: to the button that opened it, or to Add connection
+	// when that button is gone (a removed connection's row).
+	const opener = useRef<HTMLElement | null>(null);
+	const addButton = useRef<HTMLButtonElement>(null);
+
+	function returnFocus(event: Event) {
+		event.preventDefault();
+		const target = opener.current?.isConnected
+			? opener.current
+			: addButton.current;
+		target?.focus();
+	}
 
 	function setFailure(id: string, message: string | null) {
 		setFailures((current) => {
@@ -169,7 +193,11 @@ export function ConnectionsList({
 			<div className="flex items-center justify-between gap-3">
 				<h3 className="font-medium text-foreground text-sm">Connections</h3>
 				<Button
-					onClick={() => setForm({ open: true })}
+					onClick={(event) => {
+						opener.current = event.currentTarget;
+						setForm({ open: true });
+					}}
+					ref={addButton}
 					size="sm"
 					type="button"
 					variant="outline"
@@ -191,8 +219,14 @@ export function ConnectionsList({
 							connection={connection}
 							key={connection.id}
 							notice={noticeFor(connection.id)}
-							onEdit={() => setForm({ connection, open: true })}
-							onRemove={() => setRemoval({ connection, open: true })}
+							onEdit={(button) => {
+								opener.current = button;
+								setForm({ connection, open: true });
+							}}
+							onRemove={(button) => {
+								opener.current = button;
+								setRemoval({ connection, open: true });
+							}}
 							onTest={() => test(connection.id)}
 							testing={testing.includes(connection.id)}
 						/>
@@ -204,6 +238,7 @@ export function ConnectionsList({
 				connection={form.connection}
 				connectionTypes={connectionTypes}
 				onAdd={onAdd}
+				onCloseAutoFocus={returnFocus}
 				onOpenChange={(open) => setForm((current) => ({ ...current, open }))}
 				onUpdate={onUpdate}
 				open={form.open}
@@ -211,6 +246,7 @@ export function ConnectionsList({
 			<RemoveConnectionDialog
 				connection={removal.connection}
 				jobs={removal.connection ? jobsUsing(roles, removal.connection.id) : []}
+				onCloseAutoFocus={returnFocus}
 				onConfirm={remove}
 				onOpenChange={(open) => setRemoval((current) => ({ ...current, open }))}
 				open={removal.open}
