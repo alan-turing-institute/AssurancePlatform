@@ -31,6 +31,17 @@ export interface ConnectionTypeSpec {
 	readonly keyRequired: boolean;
 }
 
+/**
+ * What the server needs to call a connection: its type, the address in use
+ * and the decrypted key. The connection service's `ConnectionForUse` has this
+ * shape.
+ */
+export interface ModelConnectionAccess {
+	readonly apiKey: string | null;
+	readonly baseUrl: string;
+	readonly type: ModelConnectionType;
+}
+
 export const CONNECTION_TYPES: Readonly<
 	Record<ModelConnectionType, ConnectionTypeSpec>
 > = {
