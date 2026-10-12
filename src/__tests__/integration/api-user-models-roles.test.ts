@@ -340,6 +340,43 @@ describe("PUT /api/user/models/roles: the search check", () => {
 		expect(await storedCheck(user.id)).toBeNull();
 		expect(expectSuccess(await getRoles(user.id)).search).toBeNull();
 	});
+
+	it("runs the check again for an unchanged search job that has no passed check", async () => {
+		const { user, body } = await withSearchRequest();
+		behaviour.vectorFor = wrongVectors;
+		expect((await (await put(body)).json()).searchCheck.ok).toBe(false);
+		expect(embeddingRequests()).toHaveLength(1);
+
+		behaviour.vectorFor = stubBehaviour().vectorFor;
+		const again = await put(body);
+		const answer = await again.json();
+
+		expect(answer.searchCheck.ok).toBe(true);
+		expect(answer.roles.searchCheck.verifiedFor).toBe(CHECKED_FOR);
+		expect(embeddingRequests()).toHaveLength(2);
+		expect(await storedCheck(user.id)).toBe(CHECKED_FOR);
+	});
+
+	it("runs the check again when the recorded check is for another catalogue model, and leaves a recorded pass alone when the techniques service gives no spec", async () => {
+		const { user, body } = await withSearchRequest();
+		expect((await (await put(body)).json()).searchCheck.ok).toBe(true);
+		await prisma.userModelRoles.update({
+			where: { userId: user.id },
+			data: { embeddingVerifiedFor: "an-earlier-model#hash" },
+		});
+
+		vi.stubEnv("TECHNIQUES_MCP_URL", "");
+		const unreachable = await put(body);
+		expect((await unreachable.json()).searchCheck).toBeNull();
+		expect(await storedCheck(user.id)).toBe("an-earlier-model#hash");
+		expect(embeddingRequests()).toHaveLength(1);
+
+		vi.stubEnv("TECHNIQUES_MCP_URL", `${techniques.origin}/mcp`);
+		const current = await put(body);
+		expect((await current.json()).searchCheck.ok).toBe(true);
+		expect(await storedCheck(user.id)).toBe(CHECKED_FOR);
+		expect(embeddingRequests()).toHaveLength(2);
+	});
 });
 
 describe("PUT /api/user/models/roles: the limit on provider calls", () => {
@@ -372,6 +409,22 @@ describe("PUT /api/user/models/roles: the limit on provider calls", () => {
 			await prisma.userModelRoles.count({ where: { userId: user.id } })
 		).toBe(0);
 		expect(models.requests).toEqual([]);
+	});
+
+	it("answers 429 when an unchanged search job with no passed check is saved after the budget is spent", async () => {
+		const user = await signedInUserWithModels();
+		const local = expectSuccess(await addOllama(user.id));
+		const body = { chat: null, ranking: null, search: job(local.id, "embed") };
+		behaviour.vectorFor = wrongVectors;
+		expect((await put(body)).status).toBe(200);
+		await spendCalls(user.id, 20);
+		models.requests.length = 0;
+
+		const res = await put({ ...body, chat: job(local.id, "llama3") });
+
+		expect(res.status).toBe(429);
+		expect(expectSuccess(await getRoles(user.id)).chat).toBeNull();
+		expect(embeddingRequests()).toEqual([]);
 	});
 
 	it("does not count a save that makes no provider call", async () => {
