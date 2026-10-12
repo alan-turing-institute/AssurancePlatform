@@ -229,6 +229,58 @@ function changesTo(
 	return Object.keys(patch).length > 0 ? patch : null;
 }
 
+/** The body for adding a connection: an address only for types where the user enters one, a key only when one was typed. */
+function newConnectionFrom(
+	state: FormState,
+	addressIsEntered: boolean
+): NewConnectionInput {
+	const apiKey = state.apiKey.trim();
+	return {
+		type: state.type,
+		label: state.label.trim(),
+		...(addressIsEntered ? { baseUrl: state.baseUrl.trim() } : {}),
+		...(apiKey ? { apiKey } : {}),
+	};
+}
+
+/** Whether every field the type needs has a value; a stored key counts as the key. */
+function isFilledIn(
+	state: FormState,
+	needs: { addressIsEntered: boolean; keyRequired: boolean; keyStored: boolean }
+): boolean {
+	const addressMissing = needs.addressIsEntered && state.baseUrl.trim() === "";
+	const keyMissing =
+		needs.keyRequired && state.apiKey.trim() === "" && !needs.keyStored;
+	return state.label.trim() !== "" && !addressMissing && !keyMissing;
+}
+
+function AddressField({
+	onChange,
+	type,
+	value,
+}: {
+	onChange: (value: string) => void;
+	type: ModelConnectionType;
+	value: string;
+}) {
+	const id = useId();
+	return (
+		<div className="space-y-2">
+			<Label htmlFor={id}>Address</Label>
+			<Input
+				autoComplete="off"
+				id={id}
+				maxLength={MODEL_FIELD_LIMITS.baseUrl}
+				onChange={(event) => onChange(event.target.value)}
+				placeholder={ADDRESS_PLACEHOLDERS[type]}
+				type="url"
+				value={value}
+			/>
+			<p className="text-muted-foreground text-sm">{ADDRESS_HINTS[type]}</p>
+		</div>
+	);
+}
+
 function ConnectionForm({
 	connection,
 	connectionTypes,
@@ -239,7 +291,6 @@ function ConnectionForm({
 	onClose: () => void;
 }) {
 	const labelId = useId();
-	const addressId = useId();
 	const [state, setState] = useState(() =>
 		initialState(connection, connectionTypes[0]?.type ?? "OPENROUTER")
 	);
@@ -254,13 +305,12 @@ function ConnectionForm({
 	const patch = connection
 		? changesTo(connection, state, addressIsEntered)
 		: null;
-	const keyMissing =
-		keyRequired && state.apiKey.trim() === "" && !(editing && hasKey);
-	const complete =
-		state.label.trim() !== "" &&
-		!(addressIsEntered && state.baseUrl.trim() === "") &&
-		!keyMissing;
-	const canSave = complete && !busy && (editing ? patch !== null : true);
+	const complete = isFilledIn(state, {
+		addressIsEntered,
+		keyRequired,
+		keyStored: hasKey,
+	});
+	const canSave = complete && !busy && (!editing || patch !== null);
 
 	function changeType(type: ModelConnectionType) {
 		setState((current) => ({
@@ -282,12 +332,7 @@ function ConnectionForm({
 		setFailure(null);
 		const result = connection
 			? await onUpdate(connection.id, patch ?? {})
-			: await onAdd({
-					type: state.type,
-					label: state.label.trim(),
-					...(addressIsEntered ? { baseUrl: state.baseUrl.trim() } : {}),
-					...(state.apiKey.trim() ? { apiKey: state.apiKey.trim() } : {}),
-				});
+			: await onAdd(newConnectionFrom(state, addressIsEntered));
 		setBusy(false);
 		if (result.ok) {
 			onClose();
@@ -326,23 +371,11 @@ function ConnectionForm({
 				/>
 			</div>
 			{addressIsEntered && (
-				<div className="space-y-2">
-					<Label htmlFor={addressId}>Address</Label>
-					<Input
-						autoComplete="off"
-						id={addressId}
-						maxLength={MODEL_FIELD_LIMITS.baseUrl}
-						onChange={(event) =>
-							setState({ ...state, baseUrl: event.target.value })
-						}
-						placeholder={ADDRESS_PLACEHOLDERS[state.type]}
-						type="url"
-						value={state.baseUrl}
-					/>
-					<p className="text-muted-foreground text-sm">
-						{ADDRESS_HINTS[state.type]}
-					</p>
-				</div>
+				<AddressField
+					onChange={(baseUrl) => setState({ ...state, baseUrl })}
+					type={state.type}
+					value={state.baseUrl}
+				/>
 			)}
 			<KeyField
 				hasKey={hasKey}

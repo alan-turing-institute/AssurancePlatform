@@ -1,16 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import type {
 	ActionResult,
 	JobAssignment,
@@ -19,11 +9,9 @@ import type {
 	TestOutcome,
 } from "@/hooks/use-model-settings";
 import type { ModelJob } from "@/lib/models/connection-types";
-import { CONNECTION_TYPE_LABELS, JOB_COPY } from "./ai-models-copy";
+import { JOB_COPY } from "./ai-models-copy";
+import { ConnectionPicker, JobActions, ModelField, OFF } from "./job-fields";
 import { JobStatus, type SearchStatus } from "./job-status";
-import { ModelCombobox } from "./model-combobox";
-
-const OFF = "off";
 
 export interface JobRowProps {
 	/** The connections whose type can do this job. */
@@ -77,25 +65,27 @@ function isSavable(job: ModelJob, draft: JobAssignment | null): boolean {
 	return draft.model !== "";
 }
 
-function saveLabel(saving: boolean, job: ModelJob): string {
-	if (!saving) {
-		return "Save";
+/**
+ * The draft of one job: the connection and model chosen but not yet saved. It
+ * starts from the saved job and starts again whenever the saved job changes,
+ * so a save, a removal or a refetch is reflected without a stale draft.
+ */
+function useJobDraft(job: ModelJob, saved: JobAssignment | null) {
+	const savedKey = `${saved?.connectionId ?? ""}\n${saved?.model ?? ""}`;
+	const [seenKey, setSeenKey] = useState(savedKey);
+	const [choice, setChoice] = useState(() => choiceFrom(job, saved));
+	if (seenKey !== savedKey) {
+		setSeenKey(savedKey);
+		setChoice(choiceFrom(job, saved));
 	}
-	return job === "search" ? "Saving and checking…" : "Saving…";
-}
-
-/** What the model list says about the connection: still loading, or why it is empty. */
-function listNote(
-	outcome: TestOutcome | undefined,
-	loading: boolean
-): string | null {
-	if (loading) {
-		return "Loading models…";
-	}
-	if (outcome && !outcome.ok) {
-		return `${outcome.message} You can still type a model name.`;
-	}
-	return null;
+	const draft = assignmentOf(choice);
+	return {
+		choice,
+		draft,
+		dirty: !sameAssignment(draft, saved),
+		savable: isSavable(job, draft),
+		setChoice,
+	};
 }
 
 /**
@@ -118,40 +108,30 @@ export function JobRow({
 }: JobRowProps) {
 	const copy = JOB_COPY[job];
 	const headingId = useId();
-	const connectionId = useId();
-	const modelLabelId = useId();
-	const modelId = useId();
 	const savedJob = saved[job];
-	const savedKey = `${savedJob?.connectionId ?? ""}\n${savedJob?.model ?? ""}`;
-	const [seenKey, setSeenKey] = useState(savedKey);
-	const [choice, setChoice] = useState(() => choiceFrom(job, savedJob));
+	const { choice, draft, dirty, savable, setChoice } = useJobDraft(
+		job,
+		savedJob
+	);
 	const [busy, setBusy] = useState<"checking" | "saving" | null>(null);
 	const [failure, setFailure] = useState<string | null>(null);
-	const [loadFailure, setLoadFailure] = useState<string | null>(null);
-	if (seenKey !== savedKey) {
-		setSeenKey(savedKey);
-		setChoice(choiceFrom(job, savedJob));
-	}
 
 	const chosen = connections.find((item) => item.id === choice.connectionId);
-	const draft = assignmentOf(choice);
-	const canSave =
-		busy === null && isSavable(job, draft) && !sameAssignment(draft, savedJob);
 	const savedConnection = connections.find(
 		(item) => item.id === savedJob?.connectionId
 	);
 
 	function selectConnection(value: string) {
 		const next = connections.find((item) => item.id === value);
-		setLoadFailure(null);
-		if (value === savedJob?.connectionId && savedJob) {
-			setChoice(choiceFrom(job, savedJob));
-		} else {
-			setChoice({
-				connectionId: value,
-				model: next ? (recommendedFor(next) ?? "") : "",
-			});
-		}
+		const keepsSaved = savedJob && value === savedJob.connectionId;
+		setChoice(
+			keepsSaved
+				? choiceFrom(job, savedJob)
+				: {
+						connectionId: value,
+						model: next ? (recommendedFor(next) ?? "") : "",
+					}
+		);
 	}
 
 	async function run(roles: RolesInput, kind: "checking" | "saving") {
@@ -163,21 +143,6 @@ export function JobRow({
 			setFailure(result.message);
 		}
 	}
-
-	async function loadModels(id: string) {
-		const result = await onLoadModels(id);
-		if (result) {
-			setLoadFailure(result.ok ? null : result.message);
-		}
-	}
-
-	const save = () => run({ ...saved, [job]: draft }, "saving");
-	const checkAgain = () => run(saved, "checking");
-
-	const outcome = chosen ? tests[chosen.id] : undefined;
-	const loading = chosen ? testing.includes(chosen.id) : false;
-	const note = loadFailure ?? listNote(outcome, loading);
-	const listed = outcome?.models[job] ?? [];
 
 	return (
 		<fieldset
@@ -193,49 +158,24 @@ export function JobRow({
 			</div>
 
 			<div className="grid gap-3">
-				<div className="space-y-2">
-					<Label htmlFor={connectionId}>Connection</Label>
-					<Select onValueChange={selectConnection} value={choice.connectionId}>
-						<SelectTrigger id={connectionId}>
-							<SelectValue
-								placeholder={
-									connections.length === 0
-										? "No connection can do this job"
-										: "Choose a connection"
-								}
-							/>
-						</SelectTrigger>
-						<SelectContent>
-							{copy.off !== null && <SelectItem value={OFF}>Off</SelectItem>}
-							{connections.map((item) => (
-								<SelectItem key={item.id} value={item.id}>
-									{`${item.label} (${CONNECTION_TYPE_LABELS[item.type]})`}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
+				<ConnectionPicker
+					connections={connections}
+					offAllowed={copy.off !== null}
+					onChange={selectConnection}
+					value={choice.connectionId}
+				/>
 				{chosen && (
-					<div className="space-y-2">
-						<Label htmlFor={modelId} id={modelLabelId}>
-							Model
-						</Label>
-						<ModelCombobox
-							id={modelId}
-							labelledBy={modelLabelId}
-							loading={loading}
-							models={listed}
-							onChange={(model) => setChoice({ ...choice, model })}
-							onOpen={() => loadModels(chosen.id)}
-							recommended={recommendedFor(chosen)}
-							value={choice.model}
-						/>
-						{note && (
-							<output className="block text-muted-foreground text-sm">
-								{note}
-							</output>
-						)}
-					</div>
+					<ModelField
+						connection={chosen}
+						job={job}
+						key={chosen.id}
+						onChange={(model) => setChoice({ ...choice, model })}
+						onLoadModels={onLoadModels}
+						recommended={recommendedFor(chosen)}
+						test={tests[chosen.id]}
+						testing={testing.includes(chosen.id)}
+						value={choice.model}
+					/>
 				)}
 			</div>
 
@@ -246,28 +186,14 @@ export function JobRow({
 				search={searchStatus}
 			/>
 
-			<div className="flex flex-wrap items-center gap-2">
-				<Button disabled={!canSave} onClick={save} size="sm" type="button">
-					{busy === "saving" && (
-						<Loader2 aria-hidden="true" className="animate-spin" />
-					)}
-					{saveLabel(busy === "saving", job)}
-				</Button>
-				{searchStatus?.kind === "failed" && (
-					<Button
-						disabled={busy !== null}
-						onClick={checkAgain}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						{busy === "checking" && (
-							<Loader2 aria-hidden="true" className="animate-spin" />
-						)}
-						{busy === "checking" ? "Checking…" : "Check again"}
-					</Button>
-				)}
-			</div>
+			<JobActions
+				busy={busy}
+				canSave={busy === null && savable && dirty}
+				job={job}
+				onCheckAgain={() => run(saved, "checking")}
+				onSave={() => run({ ...saved, [job]: draft }, "saving")}
+				showCheckAgain={searchStatus?.kind === "failed"}
+			/>
 			{failure && (
 				<p className="text-destructive text-sm" role="alert">
 					{failure}

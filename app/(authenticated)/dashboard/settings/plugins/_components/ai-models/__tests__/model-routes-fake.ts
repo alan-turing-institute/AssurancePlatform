@@ -60,7 +60,7 @@ export interface FakeModels {
 	testAnswers: Record<string, FakeTestAnswer>;
 }
 
-export const RECOMMENDED = {
+const RECOMMENDED = {
 	OPENROUTER: {
 		chat: null,
 		ranking: "cloudflare/clef-flash",
@@ -71,7 +71,7 @@ export const RECOMMENDED = {
 	ANTHROPIC: { chat: null, ranking: null, search: null },
 } as const;
 
-export const DEFAULT_TEST_ANSWER: FakeTestAnswer = {
+const DEFAULT_TEST_ANSWER: FakeTestAnswer = {
 	ok: true,
 	message: "The connection works.",
 	models: {
