@@ -170,7 +170,7 @@ function ErrorNotice({ error }: { error: Error }) {
 						className="underline"
 						href="/dashboard/settings/plugins#ai-models"
 					>
-						Open plugin settings
+						Set up AI models
 					</Link>
 				</p>
 			</div>

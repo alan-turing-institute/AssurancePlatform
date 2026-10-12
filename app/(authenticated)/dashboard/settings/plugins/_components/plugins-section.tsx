@@ -1,13 +1,14 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	type PluginSettingsListItem,
 	usePluginSettings,
 } from "@/hooks/use-plugin-settings";
 import { getManifestEntry } from "@/lib/plugins/manifest";
-import { AiModelsBlock } from "./ai-models/ai-models-block";
+import { AI_MODELS_ANCHOR, AiModelsBlock } from "./ai-models/ai-models-block";
 import { PluginCard } from "./plugin-card";
 
 /**
@@ -25,6 +26,25 @@ function usesModels(plugins: readonly PluginSettingsListItem[]): boolean {
 }
 
 /**
+ * Scrolls to the AI models block the first time it shows, when the page was
+ * opened at its anchor: the block is built after the plugin list loads, so the
+ * browser's own jump to the anchor finds nothing. Showing it again later (a
+ * plugin turned off and on) leaves the scroll position alone.
+ */
+function useScrollToAiModelsOnce(shown: boolean) {
+	const done = useRef(false);
+	useEffect(() => {
+		if (!shown || done.current) {
+			return;
+		}
+		done.current = true;
+		if (window.location.hash === `#${AI_MODELS_ANCHOR}`) {
+			document.getElementById(AI_MODELS_ANCHOR)?.scrollIntoView();
+		}
+	}, [shown]);
+}
+
+/**
  * The Plugins page's content (TEA — Plugin management surface D1/D2):
  * heading, intro, and a card per plugin. Fetches and toggles entirely
  * through `usePluginSettings` (`/api/user/plugins`) — no other data source,
@@ -39,6 +59,8 @@ function usesModels(plugins: readonly PluginSettingsListItem[]): boolean {
 export function PluginsSection() {
 	const { plugins, loading, error, togglingId, togglePlugin } =
 		usePluginSettings();
+	const showModels = !(loading || error) && usesModels(plugins);
+	useScrollToAiModelsOnce(showModels);
 
 	return (
 		<div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -85,7 +107,7 @@ export function PluginsSection() {
 					))}
 			</div>
 
-			{!(loading || error) && usesModels(plugins) && <AiModelsBlock />}
+			{showModels && <AiModelsBlock />}
 		</div>
 	);
 }

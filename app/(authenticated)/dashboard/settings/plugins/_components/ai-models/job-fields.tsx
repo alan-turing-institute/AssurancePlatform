@@ -19,6 +19,7 @@ import type {
 import type { ModelJob } from "@/lib/models/connection-types";
 import { CONNECTION_TYPE_LABELS } from "./ai-models-copy";
 import { ModelCombobox } from "./model-combobox";
+import { StatusRegion } from "./status-region";
 
 /** The value the connection picker uses for "Off". */
 export const OFF = "off";
@@ -125,23 +126,25 @@ export function ModelField({
 
 	const note = loadFailure ?? listNote(test, testing);
 	return (
-		<div className="space-y-2">
-			<Label htmlFor={id} id={labelId}>
-				Model
-			</Label>
-			<ModelCombobox
-				id={id}
-				labelledBy={labelId}
-				loading={testing}
-				models={test?.models[job] ?? []}
-				onChange={onChange}
-				onOpen={loadModels}
-				recommended={recommended}
-				value={value}
-			/>
-			{note && (
-				<output className="block text-muted-foreground text-sm">{note}</output>
-			)}
+		<div className="min-w-0">
+			<div className="space-y-2">
+				<Label htmlFor={id} id={labelId}>
+					Model
+				</Label>
+				<ModelCombobox
+					id={id}
+					labelledBy={labelId}
+					loading={testing}
+					models={test?.models[job] ?? []}
+					onChange={onChange}
+					onOpen={loadModels}
+					recommended={recommended}
+					value={value}
+				/>
+			</div>
+			<StatusRegion className="not-empty:mt-2 text-muted-foreground text-sm">
+				{note}
+			</StatusRegion>
 		</div>
 	);
 }

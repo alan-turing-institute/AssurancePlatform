@@ -1,39 +1,66 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useModelSettings } from "@/hooks/use-model-settings";
 import { ConnectionsList } from "./connections-list";
 import { JobsList } from "./jobs-list";
 import { QuickSetup } from "./quick-setup";
 
-const AI_MODELS_ANCHOR = "ai-models";
+/** The id of the block, which links and the page's own scroll-to-anchor point at. */
+export const AI_MODELS_ANCHOR = "ai-models";
+
+/** The message of a failed load or refetch, with a button that fetches again. */
+function LoadFailure({
+	message,
+	onRetry,
+}: {
+	message: string;
+	onRetry: () => Promise<void>;
+}) {
+	const [retrying, setRetrying] = useState(false);
+
+	async function retry() {
+		setRetrying(true);
+		await onRetry();
+		setRetrying(false);
+	}
+
+	return (
+		<div className="space-y-3">
+			<Alert variant="destructive">
+				<AlertDescription>{message}</AlertDescription>
+			</Alert>
+			<Button
+				disabled={retrying}
+				onClick={retry}
+				size="sm"
+				type="button"
+				variant="outline"
+			>
+				{retrying ? "Retrying…" : "Retry"}
+			</Button>
+		</div>
+	);
+}
 
 /**
  * The "AI models" block on the Plugins tab: quick setup, the user's model
  * connections, and which connection and model does each of the three jobs.
- * It appears only while a plugin that uses models is on, and it is mounted
- * after the plugin list has loaded, so it scrolls itself into view when the
- * page was opened at `#ai-models`.
+ * It appears only while a plugin that uses models is on. A failed load or
+ * refetch shows its message with a Retry button in place of the content.
  */
 export function AiModelsBlock() {
 	const models = useModelSettings();
-	const section = useRef<HTMLElement>(null);
 	const { settings } = models;
-
-	useEffect(() => {
-		if (window.location.hash === `#${AI_MODELS_ANCHOR}`) {
-			section.current?.scrollIntoView();
-		}
-	}, []);
 
 	return (
 		<section
 			aria-labelledby="ai-models-heading"
 			className="grid grid-cols-1 gap-x-8 gap-y-10 md:col-span-3 md:grid-cols-3"
 			id={AI_MODELS_ANCHOR}
-			ref={section}
 		>
 			<div>
 				<h2
@@ -56,10 +83,7 @@ export function AiModelsBlock() {
 				)}
 
 				{!models.loading && models.error && (
-					<div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive text-sm">
-						<AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
-						<span>{models.error}</span>
-					</div>
+					<LoadFailure message={models.error} onRetry={models.reload} />
 				)}
 
 				{!(models.loading || models.error) && settings && (

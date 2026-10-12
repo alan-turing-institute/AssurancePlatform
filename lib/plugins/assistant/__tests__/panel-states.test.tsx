@@ -722,7 +722,7 @@ describe("the selection line and the notices", () => {
 			"No key set."
 		);
 		expect(
-			screen.getByRole("link", { name: "Open plugin settings" })
+			screen.getByRole("link", { name: "Set up AI models" })
 		).toHaveAttribute("href", "/dashboard/settings/plugins#ai-models");
 	});
 

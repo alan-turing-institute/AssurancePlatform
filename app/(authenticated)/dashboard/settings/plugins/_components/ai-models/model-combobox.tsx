@@ -88,7 +88,9 @@ export function ModelCombobox({
 					role="combobox"
 					variant="outline"
 				>
-					<span className="truncate">{value || "Choose a model"}</span>
+					<span className="truncate" title={value || undefined}>
+						{value || "Choose a model"}
+					</span>
 					{value && isRecommendedModel(value, recommended) && (
 						<Badge variant="secondary">Recommended</Badge>
 					)}
@@ -97,6 +99,7 @@ export function ModelCombobox({
 			</PopoverTrigger>
 			<PopoverContent
 				align="start"
+				aria-label="Choose a model"
 				className="w-(--radix-popover-trigger-width) p-0"
 			>
 				<Command>
@@ -105,7 +108,7 @@ export function ModelCombobox({
 						placeholder="Search, or type a model name"
 						value={search}
 					/>
-					<CommandList>
+					<CommandList aria-busy={loading}>
 						<CommandEmpty>
 							{loading ? "Loading models…" : "No listed model matches."}
 						</CommandEmpty>
@@ -119,11 +122,13 @@ export function ModelCombobox({
 									<Check
 										className={cn("opacity-0", name === value && "opacity-100")}
 									/>
-									{name}
+									<span className="min-w-0 truncate" title={name}>
+										{name}
+									</span>
 									{isRecommendedModel(name, recommended) && (
-										<Badge className="ml-auto" variant="secondary">
-											Recommended
-										</Badge>
+										<span className="ml-auto">
+											<Badge variant="secondary">Recommended</Badge>
+										</span>
 									)}
 								</CommandItem>
 							))}
@@ -134,7 +139,9 @@ export function ModelCombobox({
 								onSelect={() => choose(typed)}
 								value={`use ${typed}`}
 							>
-								{`Use "${typed}"`}
+								<span className="min-w-0 truncate" title={typed}>
+									{`Use "${typed}"`}
+								</span>
 							</CommandItem>
 						)}
 					</CommandList>

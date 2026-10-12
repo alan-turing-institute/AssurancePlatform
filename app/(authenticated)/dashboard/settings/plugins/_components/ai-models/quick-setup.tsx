@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
 	type ModelJob,
 } from "@/lib/models/connection-types";
 import { JOB_COPY } from "./ai-models-copy";
+import { StatusRegion } from "./status-region";
 
 export interface QuickSetupProps {
 	onQuickSetup: (
@@ -29,9 +31,9 @@ function StillToChoose({ jobs }: { jobs: readonly ModelJob[] }) {
 			<ul className="list-disc pl-5">
 				{jobs.map((job) => (
 					<li key={job}>
-						<Button asChild className="h-auto p-0" variant="link">
-							<a href={`#ai-models-job-${job}`}>{JOB_COPY[job].title}</a>
-						</Button>
+						<Link className="underline" href={`#ai-models-job-${job}`}>
+							{JOB_COPY[job].title}
+						</Link>
 					</li>
 				))}
 			</ul>
@@ -71,41 +73,45 @@ export function QuickSetup({ onQuickSetup }: QuickSetupProps) {
 	}
 
 	return (
-		<form className="space-y-3" onSubmit={submit}>
-			<div className="space-y-1">
-				<h3 className="font-medium text-foreground text-sm">Quick setup</h3>
-				<p className="text-muted-foreground text-sm">
-					Paste one OpenRouter key to add the connection and fill in the
-					recommended models.
-				</p>
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor={keyId}>OpenRouter key</Label>
-				<div className="flex gap-2">
-					<Input
-						autoComplete="off"
-						id={keyId}
-						maxLength={MODEL_FIELD_LIMITS.apiKey}
-						onChange={(event) => setKey(event.target.value)}
-						type="password"
-						value={key}
-					/>
-					<Button disabled={busy || key.trim() === ""} type="submit">
-						{busy ? "Setting up…" : "Set up"}
-					</Button>
+		<div>
+			<form className="space-y-3" onSubmit={submit}>
+				<div className="space-y-1">
+					<h3 className="font-medium text-foreground text-sm">Quick setup</h3>
+					<p className="text-muted-foreground text-sm">
+						Paste one OpenRouter key to add the connection and fill in the
+						recommended models.
+					</p>
 				</div>
-			</div>
-			{failure && (
-				<Alert variant="destructive">
-					<AlertDescription>{failure}</AlertDescription>
-				</Alert>
-			)}
-			{unsetJobs && (
-				<output className="block text-sm">
-					<p>The OpenRouter connection is added.</p>
-					<StillToChoose jobs={unsetJobs} />
-				</output>
-			)}
-		</form>
+				<div className="space-y-2">
+					<Label htmlFor={keyId}>OpenRouter key</Label>
+					<div className="flex gap-2">
+						<Input
+							autoComplete="off"
+							id={keyId}
+							maxLength={MODEL_FIELD_LIMITS.apiKey}
+							onChange={(event) => setKey(event.target.value)}
+							type="password"
+							value={key}
+						/>
+						<Button disabled={busy || key.trim() === ""} type="submit">
+							{busy ? "Setting up…" : "Set up"}
+						</Button>
+					</div>
+				</div>
+				{failure && (
+					<Alert variant="destructive">
+						<AlertDescription>{failure}</AlertDescription>
+					</Alert>
+				)}
+			</form>
+			<StatusRegion className="not-empty:mt-3 text-sm">
+				{unsetJobs && (
+					<>
+						<p>The OpenRouter connection is added.</p>
+						<StillToChoose jobs={unsetJobs} />
+					</>
+				)}
+			</StatusRegion>
+		</div>
 	);
 }

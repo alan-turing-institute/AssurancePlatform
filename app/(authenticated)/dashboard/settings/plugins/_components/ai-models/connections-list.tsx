@@ -2,7 +2,6 @@
 
 import { Loader2, Plus } from "lucide-react";
 import { useRef, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type {
 	ActionResult,
@@ -16,6 +15,7 @@ import { CONNECTION_TYPES, MODEL_JOBS } from "@/lib/models/connection-types";
 import { CONNECTION_TYPE_LABELS } from "./ai-models-copy";
 import { ConnectionDialog } from "./connection-dialog";
 import { RemoveConnectionDialog } from "./remove-connection-dialog";
+import { StatusRegion } from "./status-region";
 
 export interface ConnectionsListProps {
 	connections: readonly ModelConnection[];
@@ -54,20 +54,26 @@ function ConnectionRow({
 	testing: boolean;
 }) {
 	const addressIsEntered = CONNECTION_TYPES[connection.type].baseUrl === null;
+	const summary = [
+		CONNECTION_TYPE_LABELS[connection.type],
+		...(addressIsEntered && connection.baseUrl ? [connection.baseUrl] : []),
+		connection.hasKey ? "key set" : "no key",
+	].join(", ");
 	return (
-		<li className="space-y-2 rounded-lg border border-border bg-card p-4">
+		<li className="rounded-lg border border-border bg-card p-4">
 			<div className="flex flex-wrap items-start justify-between gap-3">
-				<div className="space-y-1">
-					<p className="font-medium text-foreground text-sm">
+				<div className="min-w-0 space-y-1">
+					<p
+						className="break-all font-medium text-foreground text-sm"
+						title={connection.label}
+					>
 						{connection.label}
 					</p>
-					<p className="text-muted-foreground text-sm">
-						{CONNECTION_TYPE_LABELS[connection.type]}
-						{addressIsEntered && connection.baseUrl
-							? `, ${connection.baseUrl}`
-							: ""}
-						{", "}
-						{connection.hasKey ? "key set" : "no key"}
+					<p
+						className="break-all text-muted-foreground text-sm"
+						title={summary}
+					>
+						{summary}
 					</p>
 				</div>
 				<div className="flex gap-2">
@@ -100,15 +106,13 @@ function ConnectionRow({
 				</div>
 			</div>
 			{notice?.tone === "error" && (
-				<p className="text-destructive text-sm" role="alert">
+				<p className="mt-2 text-destructive text-sm" role="alert">
 					{notice.message}
 				</p>
 			)}
-			{notice?.tone === "info" && (
-				<output className="block text-muted-foreground text-sm">
-					{notice.message}
-				</output>
-			)}
+			<StatusRegion className="not-empty:mt-2 text-muted-foreground text-sm">
+				{notice?.tone === "info" ? notice.message : null}
+			</StatusRegion>
 		</li>
 	);
 }
@@ -171,6 +175,8 @@ export function ConnectionsList({
 	}
 
 	async function remove(connection: ModelConnection) {
+		// The row's own Remove button is gone by the time the dialog finishes closing.
+		opener.current = addButton.current;
 		setRemoval({ connection, open: false });
 		const result = await onRemove(connection.id);
 		setFailure(connection.id, result.ok ? null : result.message);
@@ -207,11 +213,9 @@ export function ConnectionsList({
 				</Button>
 			</div>
 			{connections.length === 0 ? (
-				<Alert>
-					<AlertDescription>
-						No connections yet. Add one, or use quick setup above.
-					</AlertDescription>
-				</Alert>
+				<p className="text-muted-foreground text-sm">
+					No connections yet. Add one, or use quick setup above.
+				</p>
 			) : (
 				<ul className="space-y-3">
 					{connections.map((connection) => (

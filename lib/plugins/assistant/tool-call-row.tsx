@@ -32,7 +32,15 @@ const TOOL_TITLES: Record<string, string> = {
 	suggest_techniques: "Suggest techniques",
 };
 
+/** A flag the tool may leave out or get wrong is dropped rather than turning the whole list into raw text. */
+const loosely = <T extends z.ZodType>(schema: T) =>
+	schema.optional().catch(undefined);
+
 const techniquesOutput = z.object({
+	searchUsed: loosely(z.boolean()),
+	searchReason: loosely(z.string()),
+	rankingUsed: loosely(z.boolean()),
+	rankingReason: loosely(z.string()),
 	results: z.array(
 		z.object({
 			slug: z.string().optional(),
@@ -44,34 +52,65 @@ const techniquesOutput = z.object({
 	),
 });
 
-type Technique = z.infer<typeof techniquesOutput>["results"][number];
+type TechniquesOutput = z.infer<typeof techniquesOutput>;
 
-/** The suggest_techniques result as a list. */
-function TechniquesList({ results }: { results: Technique[] }) {
+/** Whether a step of the lookup ran, and why not when it did not. Null when the tool did not say. */
+function stepLine(
+	name: string,
+	used: boolean | undefined,
+	reason: string | undefined
+): string | null {
+	if (used === undefined) {
+		return null;
+	}
+	if (used) {
+		return `${name}: used.`;
+	}
+	return reason ? `${name}: not used (${reason}).` : `${name}: not used.`;
+}
+
+/** The suggest_techniques result as a list, under a line for each step of the lookup that the tool reported on. */
+function TechniquesList({ output }: { output: TechniquesOutput }) {
+	const steps = [
+		stepLine("Semantic search", output.searchUsed, output.searchReason),
+		stepLine("Ranking", output.rankingUsed, output.rankingReason),
+	].filter((line) => line !== null);
 	return (
-		<ul className="space-y-1 p-3" data-testid="assistant-techniques">
-			{results.map((r, index) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: results are a fixed list and two can share a slug
-				<li key={`result-${index}`}>
-					{HTTP_URL.test(r.url) ? (
-						<a
-							className="underline"
-							href={r.url}
-							rel="noopener noreferrer"
-							target="_blank"
-						>
-							{r.name}
-						</a>
-					) : (
-						r.name
-					)}{" "}
-					<span className="text-muted-foreground">
-						({r.score.toFixed(2)})
-						{r.goals.length > 0 && `: ${r.goals.join(", ")}`}
-					</span>
-				</li>
-			))}
-		</ul>
+		<>
+			{steps.length > 0 && (
+				<div
+					className="space-y-1 px-3 pt-3 text-muted-foreground"
+					data-testid="assistant-technique-steps"
+				>
+					{steps.map((line) => (
+						<p key={line}>{line}</p>
+					))}
+				</div>
+			)}
+			<ul className="space-y-1 p-3" data-testid="assistant-techniques">
+				{output.results.map((r, index) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: results are a fixed list and two can share a slug
+					<li key={`result-${index}`}>
+						{HTTP_URL.test(r.url) ? (
+							<a
+								className="underline"
+								href={r.url}
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								{r.name}
+							</a>
+						) : (
+							r.name
+						)}{" "}
+						<span className="text-muted-foreground">
+							({r.score.toFixed(2)})
+							{r.goals.length > 0 && `: ${r.goals.join(", ")}`}
+						</span>
+					</li>
+				))}
+			</ul>
+		</>
 	);
 }
 
@@ -80,7 +119,7 @@ function resultView(name: string, output: unknown): ReactNode {
 	if (name === "suggest_techniques") {
 		const parsed = techniquesOutput.safeParse(output);
 		if (parsed.success) {
-			return <TechniquesList results={parsed.data.results} />;
+			return <TechniquesList output={parsed.data} />;
 		}
 	}
 	if (name === "lint_case") {
