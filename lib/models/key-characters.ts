@@ -1,3 +1,15 @@
+const PRINTABLE_ASCII = /^[!-~]+$/;
+
+/**
+ * Whether a string is one or more printable ASCII characters (U+0021 to
+ * U+007E): no space, no control character and nothing above ASCII. Provider
+ * keys are ASCII. The HTTP client refuses a header value with a character
+ * above U+00FF, and its error message names the character.
+ */
+export function isPrintableAscii(value: string): boolean {
+	return PRINTABLE_ASCII.test(value);
+}
+
 /**
  * Whether a string holds a control character (U+0000 to U+001F, or U+007F).
  * Trimming removes whitespace at the ends only, so a key can still carry NUL,

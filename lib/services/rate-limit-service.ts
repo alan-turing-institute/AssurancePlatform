@@ -80,6 +80,20 @@ export const RATE_LIMIT_CONFIGS = {
 			},
 		],
 	},
+	/**
+	 * Calls the server makes to a model provider on a user's behalf: a
+	 * connection test, a search check and quick setup share one budget per user.
+	 */
+	modelCalls: {
+		endpoint: "model_calls",
+		limits: [
+			{
+				identifierType: "user_id" as const,
+				maxAttempts: 20,
+				windowMs: 10 * 60 * 1000,
+			},
+		],
+	},
 } as const;
 
 // ============================================

@@ -8,14 +8,17 @@ import {
 	CONNECTION_TYPES,
 	connectionTypeCanDo,
 	isModelConnectionType,
+	MODEL_FIELD_LIMITS,
 	MODEL_JOBS,
 	type ModelConnectionType,
 	type ModelJob,
 } from "@/lib/models/connection-types";
-import { hasControlCharacter } from "@/lib/models/key-characters";
+import {
+	hasControlCharacter,
+	isPrintableAscii,
+} from "@/lib/models/key-characters";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/src/generated/prisma";
-import type { ServiceResult } from "@/types/service";
 
 /**
  * A user's stored model connections, and which connection and model does each
@@ -30,21 +33,57 @@ import type { ServiceResult } from "@/types/service";
  * Writes that need a key throw `TokenEncryptionUnavailableError` when
  * `TOKEN_ENCRYPTION_KEY` is missing or malformed, before anything is stored;
  * the caller maps it to a 503 as the single-key route does.
+ *
+ * Every refusal carries a `code` beside its message, so a caller can choose a
+ * response without reading the message. A failure the user did not cause (the
+ * database, say) has a message and no code.
  */
 
 const log = logger.child({ component: "model-connection-service" });
 
-type Result<T> = Awaited<ServiceResult<T>>;
-type Checked<T> = { value: T } | { error: string };
+/** Why the service refused a request. */
+export type ModelServiceErrorCode =
+	| "VALIDATION"
+	| "NOT_FOUND"
+	| "LIMIT_REACHED"
+	| "JOB_NOT_SUPPORTED";
+
+interface Refusal {
+	code: ModelServiceErrorCode;
+	error: string;
+}
+
+/** A refusal (with its code) or an unexpected failure (without one). */
+export interface ModelServiceError {
+	code?: ModelServiceErrorCode;
+	error: string;
+}
+
+/** The client a `prisma.$transaction` callback receives. */
+type TransactionClient = Parameters<
+	Parameters<typeof prisma.$transaction>[0]
+>[0];
+
+type ModelResult<T> = Promise<{ data: T } | ModelServiceError>;
+type Result<T> = Awaited<ModelResult<T>>;
+type Checked<T> = { value: T } | Refusal;
+
+function invalid(error: string): Refusal {
+	return { error, code: "VALIDATION" };
+}
 
 export const MAX_CONNECTIONS_PER_USER = 10;
-const LABEL_MAX_LENGTH = 60;
-const BASE_URL_MAX_LENGTH = 500;
-const API_KEY_MAX_LENGTH = 2048;
-const MODEL_MAX_LENGTH = 200;
+const LABEL_MAX_LENGTH = MODEL_FIELD_LIMITS.label;
+const BASE_URL_MAX_LENGTH = MODEL_FIELD_LIMITS.baseUrl;
+const API_KEY_MAX_LENGTH = MODEL_FIELD_LIMITS.apiKey;
+const MODEL_MAX_LENGTH = MODEL_FIELD_LIMITS.model;
 const TRAILING_SLASHES = /\/+$/;
 
 const NOT_FOUND = "Model connection not found";
+
+function notFound(): Refusal {
+	return { error: NOT_FOUND, code: "NOT_FOUND" };
+}
 
 // ============================================
 // Types
@@ -101,6 +140,21 @@ export interface ModelRoles {
 /** All three jobs; null switches a job off. */
 export type ModelRolesInput = Pick<ModelRoles, "chat" | "ranking" | "search">;
 
+/** The model to give each job a new connection is to do; a job left out is not touched. */
+export type NewJobModels = Partial<Record<ModelJob, string>>;
+
+/** The stored columns `createConnectionWithJobs` can write. */
+interface NewJobColumns {
+	chatConnectionId?: string;
+	chatModel?: string;
+	decisionConnectionId?: string;
+	decisionModel?: string;
+	embeddingConnectionId?: string;
+	embeddingModel?: string;
+	embeddingVerifiedAt?: null;
+	embeddingVerifiedFor?: null;
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -144,7 +198,7 @@ function toSummary(row: SummaryRow): ConnectionSummary {
  * code are logged: a Prisma error message can echo the arguments of the failed
  * call, which include the encrypted key.
  */
-function failure(action: string, error: unknown): { error: string } {
+function failure(action: string, error: unknown): ModelServiceError {
 	if (error instanceof TokenEncryptionUnavailableError) {
 		throw error;
 	}
@@ -180,7 +234,7 @@ function parseUrl(value: string): URL | null {
 function checkLabel(raw: string): Checked<string> {
 	const value = raw.trim();
 	if (value.length === 0 || value.length > LABEL_MAX_LENGTH) {
-		return { error: `Label must be 1 to ${LABEL_MAX_LENGTH} characters` };
+		return invalid(`Label must be 1 to ${LABEL_MAX_LENGTH} characters`);
 	}
 	return { value };
 }
@@ -188,25 +242,23 @@ function checkLabel(raw: string): Checked<string> {
 function checkBaseUrl(raw: string): Checked<string> {
 	const value = raw.trim().replace(TRAILING_SLASHES, "");
 	if (value.length === 0 || value.length > BASE_URL_MAX_LENGTH) {
-		return {
-			error: `Base URL must be 1 to ${BASE_URL_MAX_LENGTH} characters`,
-		};
+		return invalid(`Base URL must be 1 to ${BASE_URL_MAX_LENGTH} characters`);
 	}
 	const parsed = parseUrl(value);
 	if (
 		!parsed ||
 		(parsed.protocol !== "http:" && parsed.protocol !== "https:")
 	) {
-		return { error: "Base URL must be a valid http or https address" };
+		return invalid("Base URL must be a valid http or https address");
 	}
 	if (parsed.username || parsed.password) {
-		return { error: "Base URL must not contain a user name or password" };
+		return invalid("Base URL must not contain a user name or password");
 	}
 	// Checked on the text, not the parsed URL: a lone "?" or "#" parses to an
 	// empty query or fragment, yet it still lets the path the SDK appends be
 	// read as part of the query or fragment instead.
 	if (value.includes("?") || value.includes("#")) {
-		return { error: "Base URL must not contain a query string or fragment" };
+		return invalid("Base URL must not contain a query string or fragment");
 	}
 	return { value };
 }
@@ -214,15 +266,16 @@ function checkBaseUrl(raw: string): Checked<string> {
 function checkApiKey(raw: string): Checked<string> {
 	const value = raw.trim();
 	if (value.length === 0) {
-		return { error: "API key must not be empty" };
+		return invalid("API key must not be empty");
 	}
 	if (value.length > API_KEY_MAX_LENGTH) {
-		return {
-			error: `API key must be at most ${API_KEY_MAX_LENGTH} characters`,
-		};
+		return invalid(`API key must be at most ${API_KEY_MAX_LENGTH} characters`);
 	}
 	if (hasControlCharacter(value)) {
-		return { error: "API key must not contain control characters" };
+		return invalid("API key must not contain control characters");
+	}
+	if (!isPrintableAscii(value)) {
+		return invalid("API key must contain only printable ASCII characters");
 	}
 	return { value };
 }
@@ -230,7 +283,7 @@ function checkApiKey(raw: string): Checked<string> {
 function checkModel(raw: string): Checked<string> {
 	const value = raw.trim();
 	if (value.length === 0 || value.length > MODEL_MAX_LENGTH) {
-		return { error: `Model name must be 1 to ${MODEL_MAX_LENGTH} characters` };
+		return invalid(`Model name must be 1 to ${MODEL_MAX_LENGTH} characters`);
 	}
 	return { value };
 }
@@ -247,7 +300,7 @@ function prepareNewConnection(
 	input: CreateConnectionInput
 ): Checked<NewConnectionFields> {
 	if (!isModelConnectionType(input.type)) {
-		return { error: "Unknown connection type" };
+		return invalid("Unknown connection type");
 	}
 	const spec = CONNECTION_TYPES[input.type];
 
@@ -259,7 +312,7 @@ function prepareNewConnection(
 	let baseUrl: string | null = null;
 	if (spec.baseUrl === null) {
 		if (!input.baseUrl) {
-			return { error: "A base URL is required for this connection type" };
+			return invalid("A base URL is required for this connection type");
 		}
 		const checked = checkBaseUrl(input.baseUrl);
 		if ("error" in checked) {
@@ -276,7 +329,7 @@ function prepareNewConnection(
 		}
 		apiKeyEncrypted = encryptToken(checked.value);
 	} else if (spec.keyRequired) {
-		return { error: "An API key is required for this connection type" };
+		return invalid("An API key is required for this connection type");
 	}
 
 	return {
@@ -323,7 +376,7 @@ function planUpdate(
 
 	if (input.apiKey === null) {
 		if (spec.keyRequired) {
-			return { error: "A key is required for this connection type" };
+			return invalid("A key is required for this connection type");
 		}
 		data.apiKeyEncrypted = null;
 		invalidatesCheck = true;
@@ -346,7 +399,7 @@ function planUpdate(
 /** The user's connections, oldest first. No key is returned, only whether one is set. */
 export async function listConnections(
 	userId: string
-): ServiceResult<ConnectionSummary[]> {
+): ModelResult<ConnectionSummary[]> {
 	try {
 		const rows = await prisma.userModelConnection.findMany({
 			where: { userId },
@@ -366,14 +419,14 @@ export async function listConnections(
 export async function getConnectionForUse(
 	userId: string,
 	connectionId: string
-): ServiceResult<ConnectionForUse> {
+): ModelResult<ConnectionForUse> {
 	try {
 		const row = await prisma.userModelConnection.findFirst({
 			where: { id: connectionId, userId },
 			select: SUMMARY_SELECT,
 		});
 		if (!row) {
-			return { error: NOT_FOUND };
+			return notFound();
 		}
 		const baseUrl = effectiveBaseUrl(row.type, row.baseUrl);
 		if (!baseUrl) {
@@ -397,14 +450,34 @@ export async function getConnectionForUse(
 }
 
 /**
- * Adds a connection. At most `MAX_CONNECTIONS_PER_USER` per user; the count
- * and the insert run under a lock on the user's row so concurrent requests
- * cannot pass the limit together.
+ * Inserts a connection, within a transaction, under a lock on the user's row
+ * so concurrent requests cannot pass `MAX_CONNECTIONS_PER_USER` together.
  */
+async function insertConnection(
+	tx: TransactionClient,
+	userId: string,
+	value: NewConnectionFields
+): Promise<{ data: SummaryRow } | Refusal> {
+	await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+	const count = await tx.userModelConnection.count({ where: { userId } });
+	if (count >= MAX_CONNECTIONS_PER_USER) {
+		return {
+			error: `You can have at most ${MAX_CONNECTIONS_PER_USER} model connections`,
+			code: "LIMIT_REACHED",
+		};
+	}
+	const row = await tx.userModelConnection.create({
+		data: { ...value, userId },
+		select: SUMMARY_SELECT,
+	});
+	return { data: row };
+}
+
+/** Adds a connection. At most `MAX_CONNECTIONS_PER_USER` per user. */
 export async function createConnection(
 	userId: string,
 	input: CreateConnectionInput
-): ServiceResult<ConnectionSummary> {
+): ModelResult<ConnectionSummary> {
 	try {
 		const prepared = prepareNewConnection(input);
 		if ("error" in prepared) {
@@ -414,20 +487,116 @@ export async function createConnection(
 
 		return await prisma.$transaction(
 			async (tx): Promise<Result<ConnectionSummary>> => {
-				await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
-				const count = await tx.userModelConnection.count({ where: { userId } });
-				if (count >= MAX_CONNECTIONS_PER_USER) {
-					return {
-						error: `You can have at most ${MAX_CONNECTIONS_PER_USER} model connections`,
-					};
-				}
-				const row = await tx.userModelConnection.create({
-					data: { ...value, userId },
-					select: SUMMARY_SELECT,
-				});
-				return { data: toSummary(row) };
+				const added = await insertConnection(tx, userId, value);
+				return "error" in added ? added : { data: toSummary(added.data) };
 			}
 		);
+	} catch (error) {
+		return failure("create the model connection", error);
+	}
+}
+
+/**
+ * Checks the model names to assign alongside a new connection: each job named
+ * must be one the connection's type can do.
+ */
+function checkNewJobs(
+	type: ModelConnectionType,
+	models: NewJobModels
+): Checked<NewJobModels> {
+	const checked: NewJobModels = {};
+	for (const job of MODEL_JOBS) {
+		const requested = models[job];
+		if (requested === undefined) {
+			continue;
+		}
+		const model = checkModel(requested);
+		if ("error" in model) {
+			return model;
+		}
+		if (!connectionTypeCanDo(type, job)) {
+			return {
+				error: `This connection type cannot be used for ${job}`,
+				code: "JOB_NOT_SUPPORTED",
+			};
+		}
+		checked[job] = model.value;
+	}
+	return { value: checked };
+}
+
+/** Points the named jobs at a new connection, within a transaction; other jobs are left as they are. */
+async function assignNewJobs(
+	tx: TransactionClient,
+	userId: string,
+	connectionId: string,
+	models: NewJobModels
+): Promise<void> {
+	const data: NewJobColumns = {};
+	if (models.chat) {
+		data.chatConnectionId = connectionId;
+		data.chatModel = models.chat;
+	}
+	if (models.ranking) {
+		data.decisionConnectionId = connectionId;
+		data.decisionModel = models.ranking;
+	}
+	if (models.search) {
+		data.embeddingConnectionId = connectionId;
+		data.embeddingModel = models.search;
+		data.embeddingVerifiedFor = null;
+		data.embeddingVerifiedAt = null;
+	}
+	if (Object.keys(data).length === 0) {
+		return;
+	}
+	await tx.userModelRoles.upsert({
+		where: { userId },
+		create: { userId, ...data },
+		update: data,
+	});
+}
+
+/**
+ * Adds a connection and points the named jobs at it, in one transaction: if
+ * either step fails, neither is stored. A job that is not named keeps what it
+ * had. Naming the search job clears any search check, because the job now
+ * points at a new connection.
+ */
+export async function createConnectionWithJobs(
+	userId: string,
+	input: CreateConnectionInput,
+	models: NewJobModels
+): ModelResult<{ connection: ConnectionSummary; roles: ModelRoles }> {
+	try {
+		const prepared = prepareNewConnection(input);
+		if ("error" in prepared) {
+			return prepared;
+		}
+		const jobs = checkNewJobs(prepared.value.type, models);
+		if ("error" in jobs) {
+			return jobs;
+		}
+
+		const added = await prisma.$transaction(
+			async (tx): Promise<Awaited<ReturnType<typeof insertConnection>>> => {
+				const inserted = await insertConnection(tx, userId, prepared.value);
+				if ("error" in inserted) {
+					return inserted;
+				}
+				await assignNewJobs(tx, userId, inserted.data.id, jobs.value);
+				return inserted;
+			}
+		);
+		if ("error" in added) {
+			return added;
+		}
+		return {
+			data: {
+				connection: toSummary(added.data),
+				roles: await readRoles(userId),
+			},
+		};
 	} catch (error) {
 		return failure("create the model connection", error);
 	}
@@ -442,14 +611,14 @@ export async function updateConnection(
 	userId: string,
 	connectionId: string,
 	input: UpdateConnectionInput
-): ServiceResult<ConnectionSummary> {
+): ModelResult<ConnectionSummary> {
 	try {
 		const existing = await prisma.userModelConnection.findFirst({
 			where: { id: connectionId, userId },
 			select: { baseUrl: true, type: true },
 		});
 		if (!existing) {
-			return { error: NOT_FOUND };
+			return notFound();
 		}
 		const planned = planUpdate(existing, input);
 		if ("error" in planned) {
@@ -464,7 +633,7 @@ export async function updateConnection(
 					data,
 				});
 				if (updated.count === 0) {
-					return { error: NOT_FOUND };
+					return notFound();
 				}
 				if (invalidatesCheck) {
 					await tx.userModelRoles.updateMany({
@@ -491,7 +660,7 @@ export async function updateConnection(
 export async function deleteConnection(
 	userId: string,
 	connectionId: string
-): ServiceResult<true> {
+): ModelResult<true> {
 	try {
 		return await prisma.$transaction(async (tx): Promise<Result<true>> => {
 			const owned = await tx.userModelConnection.findFirst({
@@ -499,7 +668,7 @@ export async function deleteConnection(
 				select: { id: true },
 			});
 			if (!owned) {
-				return { error: NOT_FOUND };
+				return notFound();
 			}
 			await tx.userModelRoles.updateMany({
 				where: { chatConnectionId: connectionId },
@@ -607,7 +776,7 @@ async function readRoles(userId: string): Promise<ModelRoles> {
  * The user's three jobs. A job whose connection belongs to someone else, or
  * that lacks a connection or model, reads as unset.
  */
-export async function getRoles(userId: string): ServiceResult<ModelRoles> {
+export async function getRoles(userId: string): ModelResult<ModelRoles> {
 	try {
 		return { data: await readRoles(userId) };
 	} catch (error) {
@@ -648,7 +817,7 @@ function checkAssignments(
 async function refuseUnusableConnections(
 	userId: string,
 	assignments: Record<ModelJob, JobAssignment | null>
-): Promise<{ error: string } | null> {
+): Promise<Refusal | null> {
 	const wanted = MODEL_JOBS.flatMap((job) => {
 		const assigned = assignments[job];
 		return assigned ? [assigned.connectionId] : [];
@@ -665,10 +834,13 @@ async function refuseUnusableConnections(
 		}
 		const type = typeById.get(assigned.connectionId);
 		if (!type) {
-			return { error: NOT_FOUND };
+			return notFound();
 		}
 		if (!connectionTypeCanDo(type, job)) {
-			return { error: `This connection type cannot be used for ${job}` };
+			return {
+				error: `This connection type cannot be used for ${job}`,
+				code: "JOB_NOT_SUPPORTED",
+			};
 		}
 	}
 	return null;
@@ -714,7 +886,7 @@ async function saveRoles(
 export async function setRoles(
 	userId: string,
 	roles: ModelRolesInput
-): ServiceResult<ModelRoles> {
+): ModelResult<ModelRoles> {
 	try {
 		const assignments = checkAssignments(roles);
 		if ("error" in assignments) {
@@ -728,7 +900,7 @@ export async function setRoles(
 		return { data: await readRoles(userId) };
 	} catch (error) {
 		if (isForeignKeyViolation(error)) {
-			return { error: NOT_FOUND };
+			return notFound();
 		}
 		return failure("save the model jobs", error);
 	}
@@ -737,38 +909,40 @@ export async function setRoles(
 /**
  * Records that the search check passed for `verifiedFor` (the catalogue model
  * and test sentences it was run against). Written only by the server after it
- * has run the check; refused when no search job is set.
+ * has run the check, and only if the user's search job is still `expected`,
+ * the connection and model the check ran against: the write is one conditional
+ * update, so a search job changed since the check began is left unmarked.
+ * Returns whether the check was recorded.
  */
 export async function recordEmbeddingCheck(
 	userId: string,
-	verifiedFor: string
-): ServiceResult<true> {
+	verifiedFor: string,
+	expected: JobAssignment
+): ModelResult<boolean> {
 	if (verifiedFor.length === 0) {
-		return { error: "verifiedFor must not be empty" };
+		return invalid("verifiedFor must not be empty");
 	}
 	try {
 		const updated = await prisma.userModelRoles.updateMany({
 			where: {
 				userId,
-				embeddingConnectionId: { not: null },
-				embeddingModel: { not: null },
+				embeddingConnectionId: expected.connectionId,
+				embeddingModel: expected.model,
+				embeddingConnection: { userId },
 			},
 			data: {
 				embeddingVerifiedFor: verifiedFor,
 				embeddingVerifiedAt: new Date(),
 			},
 		});
-		if (updated.count === 0) {
-			return { error: "No search model is set" };
-		}
-		return { data: true };
+		return { data: updated.count > 0 };
 	} catch (error) {
 		return failure("record the search check", error);
 	}
 }
 
 /** Clears the search check; a no-op when none is recorded. */
-export async function clearEmbeddingCheck(userId: string): ServiceResult<true> {
+export async function clearEmbeddingCheck(userId: string): ModelResult<true> {
 	try {
 		await prisma.userModelRoles.updateMany({
 			where: { userId },

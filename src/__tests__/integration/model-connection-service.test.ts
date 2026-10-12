@@ -6,11 +6,13 @@ import {
 	type CreateConnectionInput,
 	clearEmbeddingCheck,
 	createConnection,
+	createConnectionWithJobs,
 	deleteConnection,
 	getConnectionForUse,
 	getRoles,
 	listConnections,
 	MAX_CONNECTIONS_PER_USER,
+	type ModelServiceErrorCode,
 	recordEmbeddingCheck,
 	setRoles,
 	updateConnection,
@@ -202,6 +204,49 @@ describe("model connection service: keys", () => {
 		).toBe(SECRET);
 	});
 
+	it("accepts only printable ASCII in a key, on create and on update, without echoing it", async () => {
+		const user = await createTestUser();
+		const router = expectSuccess(await add(user.id));
+
+		for (const bad of [
+			"sk-leakĀtail",
+			"sk-leakétail",
+			"sk-leak☃tail",
+			"sk-leak\u{1f511}tail",
+			"sk-leak tail",
+			"sk-leak tail",
+			"sk-leak​tail",
+		]) {
+			const created = await add(user.id, { label: "Second", apiKey: bad });
+			expectRefused(created, "printable ASCII");
+			expect(JSON.stringify(created)).not.toContain("sk-leak");
+
+			const updated = await updateConnection(user.id, router.id, {
+				apiKey: bad,
+			});
+			expectRefused(updated, "printable ASCII");
+			expect(JSON.stringify(updated)).not.toContain("sk-leak");
+		}
+
+		expect(
+			await prisma.userModelConnection.count({ where: { userId: user.id } })
+		).toBe(1);
+		expect(
+			expectSuccess(await getConnectionForUse(user.id, router.id)).apiKey
+		).toBe(SECRET);
+
+		// Every printable ASCII character is allowed, and the ends are still trimmed.
+		const printable = Array.from({ length: 0x7e - 0x21 + 1 }, (_, i) =>
+			String.fromCodePoint(0x21 + i)
+		).join("");
+		const stored = expectSuccess(
+			await add(user.id, { label: "Printable", apiKey: `  ${printable}\n` })
+		);
+		expect(
+			expectSuccess(await getConnectionForUse(user.id, stored.id)).apiKey
+		).toBe(printable);
+	});
+
 	it("does not log a key or its ciphertext when a write fails", async () => {
 		const logs = captureLogs();
 		try {
@@ -379,7 +424,14 @@ describe("model connection service: connections", () => {
 				search: { connectionId: doomed.id, model: "embed-model" },
 			})
 		);
-		expectSuccess(await recordEmbeddingCheck(user.id, "catalogue-v1"));
+		expect(
+			expectSuccess(
+				await recordEmbeddingCheck(user.id, "catalogue-v1", {
+					connectionId: doomed.id,
+					model: "embed-model",
+				})
+			)
+		).toBe(true);
 
 		expectSuccess(await deleteConnection(user.id, doomed.id));
 
@@ -420,6 +472,16 @@ describe("model connection service: connections", () => {
 });
 
 describe("model connection service: the search check", () => {
+	/** Records the check for the search job as `connectionId` and `model`. */
+	async function record(userId: string, connectionId: string, model: string) {
+		return expectSuccess(
+			await recordEmbeddingCheck(userId, "catalogue-v1", {
+				connectionId,
+				model,
+			})
+		);
+	}
+
 	async function withSearchChecked() {
 		const user = await createTestUser();
 		const a = expectSuccess(await addOllama(user.id));
@@ -431,7 +493,7 @@ describe("model connection service: the search check", () => {
 				search: { connectionId: a.id, model: "embed" },
 			})
 		);
-		expectSuccess(await recordEmbeddingCheck(user.id, "catalogue-v1"));
+		await record(user.id, a.id, "embed");
 		return { user, a, b };
 	}
 
@@ -462,7 +524,7 @@ describe("model connection service: the search check", () => {
 		});
 		expect(afterAddress.embeddingVerifiedAt).toBeNull();
 
-		expectSuccess(await recordEmbeddingCheck(user.id, "catalogue-v1"));
+		expect(await record(user.id, a.id, "embed")).toBe(true);
 		expectSuccess(await updateConnection(user.id, a.id, { apiKey: "new-key" }));
 		expect(await checked(user.id)).toBeNull();
 	});
@@ -493,7 +555,7 @@ describe("model connection service: the search check", () => {
 		);
 		expect(await checked(user.id)).toBeNull();
 
-		expectSuccess(await recordEmbeddingCheck(user.id, "catalogue-v1"));
+		expect(await record(user.id, a.id, "another-embed")).toBe(true);
 		expectSuccess(
 			await setRoles(user.id, {
 				...jobs,
@@ -502,20 +564,47 @@ describe("model connection service: the search check", () => {
 		);
 		expect(await checked(user.id)).toBeNull();
 
-		expectSuccess(await recordEmbeddingCheck(user.id, "catalogue-v1"));
+		expect(await record(user.id, b.id, "another-embed")).toBe(true);
 		expectSuccess(await setRoles(user.id, { ...jobs, search: null }));
 		expect(await checked(user.id)).toBeNull();
-		expectError(
-			await recordEmbeddingCheck(user.id, "catalogue-v1"),
-			"No search model is set"
-		);
+		expect(await record(user.id, b.id, "another-embed")).toBe(false);
+	});
+
+	it("records the check only while the search job is still the one that was checked", async () => {
+		const { user, a, b } = await withSearchChecked();
+		const jobs = (search: { connectionId: string; model: string }) => ({
+			chat: null,
+			ranking: null,
+			search,
+		});
+		const sameConnection = { connectionId: a.id, model: "other-model" };
+		const otherConnection = { connectionId: b.id, model: "embed" };
+		expectSuccess(await setRoles(user.id, jobs(sameConnection)));
+		expect(await checked(user.id)).toBeNull();
+
+		// The check ran against a/embed, which is no longer the search job.
+		expect(await record(user.id, a.id, "embed")).toBe(false);
+		expect(await checked(user.id)).toBeNull();
+		expectSuccess(await setRoles(user.id, jobs(otherConnection)));
+		expect(await record(user.id, a.id, "other-model")).toBe(false);
+		expect(await checked(user.id)).toBeNull();
+
+		// Another user's search job is never marked.
+		const bystander = await createTestUser();
+		expect(await record(bystander.id, b.id, "embed")).toBe(false);
+		expect(await record(user.id, b.id, "embed")).toBe(true);
+		expect(await checked(user.id)).toBe("catalogue-v1");
 	});
 
 	it("can be recorded and cleared only through its own functions", async () => {
 		const user = await createTestUser();
+		expect(await record(user.id, randomUUID(), "embed")).toBe(false);
 		expectError(
-			await recordEmbeddingCheck(user.id, "catalogue-v1"),
-			"No search model is set"
+			await recordEmbeddingCheck(user.id, "", {
+				connectionId: randomUUID(),
+				model: "embed",
+			}),
+			"verifiedFor must not be empty"
 		);
 		expect(
 			await prisma.userModelRoles.count({ where: { userId: user.id } })
@@ -531,7 +620,7 @@ describe("model connection service: the search check", () => {
 		);
 		expect(roles.searchCheck).toBeNull();
 
-		expectSuccess(await recordEmbeddingCheck(user.id, "catalogue-v1"));
+		expect(await record(user.id, a.id, "embed")).toBe(true);
 		const recorded = expectSuccess(await getRoles(user.id)).searchCheck;
 		expect(recorded?.verifiedFor).toBe("catalogue-v1");
 		expect(recorded?.verifiedAt).toBeInstanceOf(Date);
@@ -690,5 +779,202 @@ describe("model connection service: other users' connections", () => {
 			search: null,
 			searchCheck: null,
 		});
+	});
+});
+
+describe("model connection service: error codes", () => {
+	/** Asserts a refusal carrying `code`. */
+	function expectCode(
+		result: { data?: unknown; code?: ModelServiceErrorCode; error?: string },
+		code: ModelServiceErrorCode
+	): void {
+		// biome-ignore lint/suspicious/noMisplacedAssertion: Called from within test blocks
+		expect(result.error).toBeDefined();
+		// biome-ignore lint/suspicious/noMisplacedAssertion: Called from within test blocks
+		expect(result.code).toBe(code);
+	}
+
+	it("gives every refusal a code", async () => {
+		const user = await createTestUser();
+		const router = expectSuccess(await add(user.id));
+		const claude = expectSuccess(
+			await add(user.id, { type: "ANTHROPIC", label: "Claude" })
+		);
+		const missing = randomUUID();
+		const none = { chat: null, ranking: null, search: null };
+
+		expectCode(await add(user.id, { label: " " }), "VALIDATION");
+		expectCode(await add(user.id, { apiKey: "k".repeat(2049) }), "VALIDATION");
+		expectCode(await add(user.id, { apiKey: null }), "VALIDATION");
+		expectCode(
+			await add(user.id, { type: "NOT_A_TYPE" as "OLLAMA" }),
+			"VALIDATION"
+		);
+		expectCode(await addOllama(user.id, "ftp://host"), "VALIDATION");
+		expectCode(await addOllama(user.id, "http://host?x=1"), "VALIDATION");
+		expectCode(
+			await updateConnection(user.id, router.id, { apiKey: null }),
+			"VALIDATION"
+		);
+		expectCode(
+			await setRoles(user.id, {
+				...none,
+				chat: { connectionId: router.id, model: " " },
+			}),
+			"VALIDATION"
+		);
+		expectCode(
+			await recordEmbeddingCheck(user.id, "", {
+				connectionId: router.id,
+				model: "m",
+			}),
+			"VALIDATION"
+		);
+
+		expectCode(await getConnectionForUse(user.id, missing), "NOT_FOUND");
+		expectCode(
+			await updateConnection(user.id, missing, { label: "x" }),
+			"NOT_FOUND"
+		);
+		expectCode(await deleteConnection(user.id, missing), "NOT_FOUND");
+		expectCode(
+			await setRoles(user.id, {
+				...none,
+				chat: { connectionId: missing, model: "m" },
+			}),
+			"NOT_FOUND"
+		);
+
+		expectCode(
+			await setRoles(user.id, {
+				...none,
+				search: { connectionId: claude.id, model: "m" },
+			}),
+			"JOB_NOT_SUPPORTED"
+		);
+
+		for (let i = 0; i < MAX_CONNECTIONS_PER_USER - 2; i++) {
+			expectSuccess(await addOllama(user.id, `http://host-${i}:11434`));
+		}
+		expectCode(await addOllama(user.id), "LIMIT_REACHED");
+	});
+
+	it("gives an unexpected failure a message and no code", async () => {
+		const result = await add(randomUUID());
+		expectError(result, "Failed to create the model connection");
+		expect(result).not.toHaveProperty("code");
+	});
+});
+
+describe("model connection service: a connection and its jobs together", () => {
+	it("adds the connection and points the named jobs at it, leaving the others as they were", async () => {
+		const user = await createTestUser();
+		const local = expectSuccess(await addOllama(user.id));
+		expectSuccess(
+			await setRoles(user.id, {
+				chat: { connectionId: local.id, model: "kept-chat" },
+				ranking: { connectionId: local.id, model: "old-ranking" },
+				search: { connectionId: local.id, model: "old-embed" },
+			})
+		);
+
+		const { connection, roles } = expectSuccess(
+			await createConnectionWithJobs(
+				user.id,
+				{ label: "Router", type: "OPENROUTER", apiKey: SECRET },
+				{ ranking: " new-ranking ", search: "new-embed" }
+			)
+		);
+
+		expect(connection).toMatchObject({ label: "Router", hasKey: true });
+		expect(roles).toEqual({
+			chat: { connectionId: local.id, model: "kept-chat" },
+			ranking: { connectionId: connection.id, model: "new-ranking" },
+			search: { connectionId: connection.id, model: "new-embed" },
+			searchCheck: null,
+		});
+		expect(JSON.stringify([connection, roles])).not.toContain(SECRET);
+	});
+
+	it("clears a search check the new search job replaces, and keeps one it does not touch", async () => {
+		const user = await createTestUser();
+		const local = expectSuccess(await addOllama(user.id));
+		expectSuccess(
+			await setRoles(user.id, {
+				chat: null,
+				ranking: null,
+				search: { connectionId: local.id, model: "embed" },
+			})
+		);
+		expectSuccess(
+			await recordEmbeddingCheck(user.id, "catalogue-v1", {
+				connectionId: local.id,
+				model: "embed",
+			})
+		);
+
+		const untouched = expectSuccess(
+			await createConnectionWithJobs(
+				user.id,
+				{ label: "One", type: "OPENROUTER", apiKey: SECRET },
+				{ ranking: "r" }
+			)
+		);
+		expect(untouched.roles.searchCheck?.verifiedFor).toBe("catalogue-v1");
+
+		const replaced = expectSuccess(
+			await createConnectionWithJobs(
+				user.id,
+				{ label: "Two", type: "OPENROUTER", apiKey: SECRET },
+				{ search: "embed" }
+			)
+		);
+		expect(replaced.roles.search?.connectionId).toBe(replaced.connection.id);
+		expect(replaced.roles.searchCheck).toBeNull();
+	});
+
+	it("stores nothing when the connection or a job is refused", async () => {
+		const user = await createTestUser();
+		const attempt = (
+			input: Partial<CreateConnectionInput>,
+			models: Parameters<typeof createConnectionWithJobs>[2]
+		) =>
+			createConnectionWithJobs(
+				user.id,
+				{ label: "Router", type: "OPENROUTER", apiKey: SECRET, ...input },
+				models
+			);
+
+		const unsupported = await attempt(
+			{ type: "ANTHROPIC", label: "Claude" },
+			{ chat: "c", ranking: "r" }
+		);
+		expectRefused(unsupported, "cannot be used for ranking");
+		expect(unsupported).toMatchObject({ code: "JOB_NOT_SUPPORTED" });
+		expectRefused(await attempt({}, { chat: " " }), "Model name");
+		expectRefused(await attempt({ apiKey: "é" }, { chat: "c" }), "ASCII");
+
+		expect(
+			await prisma.userModelConnection.count({ where: { userId: user.id } })
+		).toBe(0);
+		expect(
+			await prisma.userModelRoles.count({ where: { userId: user.id } })
+		).toBe(0);
+	});
+
+	it("refuses an eleventh connection and leaves the jobs alone", async () => {
+		const user = await createTestUser();
+		for (let i = 0; i < MAX_CONNECTIONS_PER_USER; i++) {
+			expectSuccess(await addOllama(user.id, `http://host-${i}:11434`));
+		}
+		const refused = await createConnectionWithJobs(
+			user.id,
+			{ label: "Router", type: "OPENROUTER", apiKey: SECRET },
+			{ chat: "c" }
+		);
+		expect(refused).toMatchObject({ code: "LIMIT_REACHED" });
+		expect(
+			await prisma.userModelRoles.count({ where: { userId: user.id } })
+		).toBe(0);
 	});
 });

@@ -5,12 +5,20 @@
  * given, whether its address is fixed, and whether it needs a key.
  */
 
-const MODEL_CONNECTION_TYPES = [
+export const MODEL_CONNECTION_TYPES = [
 	"OPENROUTER",
 	"OLLAMA",
 	"OPENAI_COMPATIBLE",
 	"ANTHROPIC",
 ] as const;
+
+/** The most characters stored for each value a user enters. */
+export const MODEL_FIELD_LIMITS = {
+	label: 60,
+	baseUrl: 500,
+	apiKey: 2048,
+	model: 200,
+} as const;
 
 export type ModelConnectionType = (typeof MODEL_CONNECTION_TYPES)[number];
 
