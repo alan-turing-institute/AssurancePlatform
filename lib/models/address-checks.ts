@@ -47,6 +47,8 @@ const BLOCKED_IPV4_RANGES: readonly (readonly [number, number])[] = [
 	[ipv4Number(127, 0, 0, 0), 8],
 	// Link-local, which includes the 169.254.169.254 cloud metadata address.
 	[ipv4Number(169, 254, 0, 0), 16],
+	// Azure's platform address, which serves DNS, health probes and the host agent.
+	[ipv4Number(168, 63, 129, 16), 32],
 	// Private use.
 	[ipv4Number(172, 16, 0, 0), 12],
 	// Protocol assignments.
@@ -165,12 +167,16 @@ function isBlockedIPv6(address: string): boolean {
 	if (groups === null) {
 		return true;
 	}
-	const [g0 = 0, , , , , , , g7 = 0] = groups;
+	const [g0 = 0, g1 = 0, , , , , , g7 = 0] = groups;
 	// :: (unspecified) and ::1 (loopback).
 	if (groups.slice(0, 7).every((group) => group === 0) && g7 <= 1) {
 		return true;
 	}
 	if (
+		// 2002::/16 6to4 and 2001::/32 Teredo, which tunnel to an IPv4 address
+		// the name's owner chooses.
+		g0 === 0x20_02 ||
+		(g0 === 0x20_01 && g1 === 0) ||
 		// fc00::/7 unique local.
 		groupHasPrefix(g0, 0xfc_00, 7) ||
 		// fe80::/10 link-local.
@@ -189,7 +195,8 @@ function isBlockedIPv6(address: string): boolean {
 /**
  * True when a connection to this address must be refused: a loopback, private,
  * link-local, shared, unspecified, multicast or reserved address of either
- * family, an IPv6 address that carries one of those IPv4 addresses, or text
+ * family, Azure's platform address, an IPv6 6to4 or Teredo tunnel address, an
+ * IPv6 address that carries one of those IPv4 addresses, or text
  * that is not an address at all. A bracketed IPv6 host is accepted as written
  * in a URL.
  */

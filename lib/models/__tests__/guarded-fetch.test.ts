@@ -1,5 +1,9 @@
 import { createServer, type Server } from "node:http";
-import type { AddressInfo, LookupFunction } from "node:net";
+import {
+	type AddressInfo,
+	type LookupFunction,
+	setDefaultAutoSelectFamily,
+} from "node:net";
 import { fetch as undiciFetch } from "undici";
 import {
 	afterAll,
@@ -49,6 +53,10 @@ beforeAll(async () => {
 			case "/stalls-after-headers":
 				res.writeHead(200);
 				res.write("first");
+				break;
+			case "/status-999":
+				res.writeHead(999);
+				res.write("unfinished");
 				break;
 			default:
 				// Never answers.
@@ -244,6 +252,82 @@ describe("the connection", () => {
 		expect(hits).toEqual(["/ok"]);
 		expect(resolve).toHaveBeenCalledTimes(1);
 		expect(resolve.mock.calls[0]?.[1]).toMatchObject({ all: true });
+	});
+
+	describe("when the socket asks for one address", () => {
+		beforeEach(() => {
+			setDefaultAutoSelectFamily(false);
+		});
+
+		afterEach(() => {
+			setDefaultAutoSelectFamily(true);
+		});
+
+		it("connects to the first checked address", async () => {
+			const resolve = resolverFor({
+				"pinned.example.test": ["127.0.0.1", "10.0.0.9"],
+			});
+			const response = await undiciFetch(
+				`http://pinned.example.test:${port}/ok`,
+				{ dispatcher: createGuardedAgent(resolve, () => false) }
+			);
+			expect(response.status).toBe(200);
+			expect(hits).toEqual(["/ok"]);
+			expect(resolve).toHaveBeenCalledTimes(1);
+			expect(resolve.mock.calls[0]?.[1]).toMatchObject({ all: true });
+		});
+
+		it("refuses when any resolved address is blocked", async () => {
+			const resolve = resolverFor({
+				"pinned.example.test": ["127.0.0.1", "10.0.0.9"],
+			});
+			await expect(
+				undiciFetch(`http://pinned.example.test:${port}/ok`, {
+					dispatcher: createGuardedAgent(resolve),
+				})
+			).rejects.toMatchObject({ cause: { code: "blocked-address" } });
+			expect(hits).toEqual([]);
+		});
+	});
+});
+
+describe("failures the guard does not recognise", () => {
+	it("replaces a header error that would quote the key with fixed text", async () => {
+		listLocalServer();
+		const error = await guardedFetch(`http://127.0.0.1:${port}/ok`, {
+			headers: { authorization: `Bearer ${KEY}\nx-injected: 1` },
+		}).catch((caught: unknown) => caught);
+		expect(error).toBeInstanceOf(GuardedFetchError);
+		expect(error).toMatchObject({ code: "request-failed" });
+		expect((error as Error).cause).toBeUndefined();
+		expect(String(error)).not.toContain(KEY);
+		expect(JSON.stringify(error)).not.toContain(KEY);
+		expect(hits).toEqual([]);
+	});
+
+	it("replaces a connection failure with fixed text that does not name the address", async () => {
+		const closed = createServer();
+		await new Promise<void>((resolve) =>
+			closed.listen(0, "127.0.0.1", resolve)
+		);
+		const closedPort = (closed.address() as AddressInfo).port;
+		await new Promise<void>((resolve) => closed.close(() => resolve()));
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", `http://127.0.0.1:${closedPort}`);
+
+		const error = await guardedFetch(`http://127.0.0.1:${closedPort}/ok`).catch(
+			(caught: unknown) => caught
+		);
+		expect(error).toMatchObject({ code: "request-failed" });
+		expect(String(error)).not.toContain("127.0.0.1");
+		expect(String(error)).not.toContain(String(closedPort));
+		expect((error as Error).cause).toBeUndefined();
+	});
+
+	it("refuses a response whose status code a Response cannot hold", async () => {
+		listLocalServer();
+		await expect(
+			guardedFetch(`http://127.0.0.1:${port}/status-999`)
+		).rejects.toMatchObject({ code: "invalid-response" });
 	});
 });
 

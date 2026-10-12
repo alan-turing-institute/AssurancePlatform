@@ -1,5 +1,5 @@
 import { lookup as systemLookup } from "node:dns";
-import type { LookupFunction } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
 import { isBlockedAddress } from "@/lib/models/address-checks";
 import { listLocalOrigins } from "@/lib/models/local-addresses";
@@ -23,6 +23,8 @@ const REASONS = {
 	"response-too-large":
 		"The model server's response is larger than the allowed size.",
 	timeout: "The model server did not answer in time.",
+	"request-failed": "The request to the model server failed.",
+	"invalid-response": "The model server's response could not be used.",
 } as const;
 
 export type GuardedFetchErrorCode = keyof typeof REASONS;
@@ -160,11 +162,17 @@ function requirePublicTarget(url: URL): void {
 	}
 }
 
-const IPV4_LITERAL = /^\d+\.\d+\.\d+\.\d+$/;
-
-/** True for a host that the URL parser left as an IP address: dotted IPv4, or IPv6 in brackets. */
+/**
+ * True for a host that is an IP address, which the connection step connects to
+ * without resolving a name. It is the same test Node applies before it skips
+ * the lookup; the URL parser writes an IPv6 host in brackets.
+ */
 function isLiteralAddress(hostname: string): boolean {
-	return IPV4_LITERAL.test(hostname) || hostname.startsWith("[");
+	const bare =
+		hostname.startsWith("[") && hostname.endsWith("]")
+			? hostname.slice(1, -1)
+			: hostname;
+	return isIP(bare) !== 0;
 }
 
 /** The guard's own refusal inside a failed request, a redirect reported by undici, or a timeout. */
@@ -249,8 +257,16 @@ export async function guardedFetch(
 	const timeout = AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 	const caller = init?.signal;
 	const signal = caller ? AbortSignal.any([caller, timeout]) : timeout;
-	const translate = (error: unknown) =>
-		refusalFrom(error, timeout, caller) ?? error;
+	// A failure the guard did not cause is replaced by fixed text, because the
+	// original can quote a header value or the address. Only the caller's own
+	// abort is passed on as it was raised.
+	const translate = (error: unknown): unknown => {
+		const refusal = refusalFrom(error, timeout, caller);
+		if (refusal) {
+			return refusal;
+		}
+		return caller?.aborted ? error : new GuardedFetchError("request-failed");
+	};
 
 	let response: Response;
 	try {
@@ -273,9 +289,16 @@ export async function guardedFetch(
 		await body.cancel().catch(() => undefined);
 		throw new GuardedFetchError("response-too-large");
 	}
-	return new Response(limitBody(body, maxBytes, translate), {
-		status: response.status,
-		statusText: response.statusText,
-		headers: Array.from(response.headers.entries()),
-	});
+	const limited = limitBody(body, maxBytes, translate);
+	try {
+		return new Response(limited, {
+			status: response.status,
+			statusText: response.statusText,
+			headers: Array.from(response.headers.entries()),
+		});
+	} catch {
+		// A status code or reason phrase that a Response cannot hold.
+		await limited.cancel().catch(() => undefined);
+		throw new GuardedFetchError("invalid-response");
+	}
 }
