@@ -43,8 +43,9 @@ describe("resolveSelectedElement", () => {
 		});
 	});
 
-	it("finds a nested element and returns its label, type and text", async () => {
+	it("finds a nested element and returns its id, label, type and text", async () => {
 		expect(await resolveSelectedElement("u1", "c1", "deep")).toEqual({
+			id: "deep",
 			label: "P1",
 			type: "PROPERTY_CLAIM",
 			text: "Deep text",
@@ -70,7 +71,7 @@ describe("resolveSelectedElement", () => {
 		const prompt = selectionPrompt(selection);
 		expect(prompt).not.toMatch(/null|undefined/);
 		expect(prompt).toContain(
-			'{"label":"an element","type":"EVIDENCE","text":""}'
+			'{"id":"nodesc","label":"an element","type":"EVIDENCE","text":""}'
 		);
 	});
 });

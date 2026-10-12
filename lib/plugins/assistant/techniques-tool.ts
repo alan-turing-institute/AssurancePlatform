@@ -81,6 +81,8 @@ interface ServiceAnswer {
 }
 
 export interface SelectedElement {
+	/** The element's id in the case, which `read_element` takes; absent when not known. */
+	id?: string;
 	label: string;
 	text: string;
 	type: string;

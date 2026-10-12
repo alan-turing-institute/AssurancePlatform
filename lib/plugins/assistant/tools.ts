@@ -35,6 +35,29 @@ function findNode(node: TreeNode, id: string): TreeNode | null {
 	return null;
 }
 
+/** Every element whose label is `label`, ignoring case and surrounding space. */
+function findByLabel(node: TreeNode, label: string): TreeNode[] {
+	const wanted = label.trim().toLowerCase();
+	const hits = node.name?.trim().toLowerCase() === wanted ? [node] : [];
+	return hits.concat(
+		(node.children ?? []).flatMap((child) => findByLabel(child, label))
+	);
+}
+
+/**
+ * The element with this id; failing that, the one element with this label,
+ * since a model often passes the name it sees ("P1") rather than the id. A
+ * label shared by more than one element names none of them.
+ */
+function findElement(tree: TreeNode, idOrLabel: string): TreeNode | null {
+	const byId = findNode(tree, idOrLabel);
+	if (byId) {
+		return byId;
+	}
+	const [only, ...others] = findByLabel(tree, idOrLabel);
+	return only && others.length === 0 ? only : null;
+}
+
 /** One level of children only, so a single element's answer stays small. */
 function withShallowChildren(node: TreeNode) {
 	const { children = [], ...rest } = node;
@@ -117,16 +140,20 @@ export function createCaseTools(
 		}),
 		read_element: tool({
 			description:
-				"Read one element of the open case by its id, with its direct children. Use an id taken from read_case.",
+				"Read one element of the open case by its id, with its direct children. Use an id taken from read_case or from the selected element. An element's label, such as P1, is accepted when no id matches and only one element has that label.",
 			inputSchema: z.object({
 				elementId: z
 					.string()
-					.describe("The element id, as shown by read_case."),
+					.describe(
+						"The element id, as shown by read_case; failing that, its label."
+					),
 			}),
 			execute: ({ elementId }) =>
 				limited(async () => {
 					const data = await caseExport();
-					const node = data ? findNode(data.tree as TreeNode, elementId) : null;
+					const node = data
+						? findElement(data.tree as TreeNode, elementId)
+						: null;
 					return node
 						? { found: true, element: withShallowChildren(node) }
 						: NOT_FOUND;
