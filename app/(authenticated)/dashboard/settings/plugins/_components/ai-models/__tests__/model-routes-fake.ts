@@ -54,22 +54,30 @@ export interface FakeModels {
 		| { lowestCosine: number | null; ok: boolean }
 		| { unavailable: true }
 		| null;
+	/** The recommended model per connection type and job, as production lists them; a test may empty one. */
+	recommended: Record<ModelConnectionType, Record<ModelJob, string | null>>;
 	requests: FakeRequest[];
 	roles: FakeRoles;
+	/** What `GET` answers for `roles.searchCheckCurrent`: whether the stored check is for the catalogue's current spec. */
+	searchCheckCurrent: boolean;
 	/** The test answer for each connection id; the default lists a few models. */
 	testAnswers: Record<string, FakeTestAnswer>;
 }
 
-const RECOMMENDED = {
+const RECOMMENDED: FakeModels["recommended"] = {
 	OPENROUTER: {
-		chat: null,
+		chat: "anthropic/claude-sonnet-5.5",
 		ranking: "cloudflare/clef-flash",
-		search: "baai/bge-m3",
+		search: "qwen/qwen3-embedding-4b",
 	},
-	OLLAMA: { chat: null, ranking: "clef-flash", search: null },
+	OLLAMA: {
+		chat: null,
+		ranking: "clef-flash",
+		search: "qwen3-embedding:4b-fp16",
+	},
 	OPENAI_COMPATIBLE: { chat: null, ranking: null, search: null },
 	ANTHROPIC: { chat: null, ranking: null, search: null },
-} as const;
+};
 
 const DEFAULT_TEST_ANSWER: FakeTestAnswer = {
 	ok: true,
@@ -113,7 +121,9 @@ export function installModelRoutes(
 		roles: initial.roles ?? emptyRoles(),
 		testAnswers: {},
 		nextSearchCheck: null,
+		recommended: structuredClone(RECOMMENDED),
 		requests: [],
+		searchCheckCurrent: true,
 	};
 	let counter = 0;
 	const record = async (request: Request) => {
@@ -124,6 +134,16 @@ export function installModelRoutes(
 			path,
 			body: text ? JSON.parse(text) : undefined,
 		});
+	};
+	/** Records a passed check as current, and leaves a failed one unrecorded. */
+	const recordCheck = (outcome: FakeModels["nextSearchCheck"]) => {
+		if (outcome && "ok" in outcome && outcome.ok) {
+			state.roles.searchCheck = {
+				verifiedAt: "2026-01-01T00:00:00.000Z",
+				verifiedFor: "catalogue",
+			};
+			state.searchCheckCurrent = true;
+		}
 	};
 	const emptyJobsOf = (connectionId: string) => {
 		for (const job of MODEL_JOBS) {
@@ -141,8 +161,11 @@ export function installModelRoutes(
 			await record(request);
 			return HttpResponse.json({
 				connections: state.connections,
-				roles: state.roles,
-				recommended: RECOMMENDED,
+				roles: {
+					...state.roles,
+					searchCheckCurrent: state.searchCheckCurrent,
+				},
+				recommended: state.recommended,
 				connectionTypes: connectionTypes(),
 			});
 		}),
@@ -181,10 +204,19 @@ export function installModelRoutes(
 						{ status: 404 }
 					);
 				}
+				const movesAddress =
+					body.baseUrl !== undefined && body.baseUrl !== found.baseUrl;
 				found.label = body.label ?? found.label;
 				found.baseUrl = body.baseUrl ?? found.baseUrl;
 				if (body.apiKey !== undefined) {
 					found.hasKey = body.apiKey !== null;
+				}
+				// A new address or key clears the check of a search job that runs on the connection.
+				if (
+					state.roles.search?.connectionId === found.id &&
+					(movesAddress || body.apiKey !== undefined)
+				) {
+					state.roles.searchCheck = null;
 				}
 				return HttpResponse.json(found);
 			}
@@ -210,10 +242,10 @@ export function installModelRoutes(
 		),
 		http.put("/api/user/models/roles", async ({ request }) => {
 			await record(request);
-			const body = (await request.clone().json()) as Omit<
+			const { recheckSearch, ...body } = (await request.clone().json()) as Omit<
 				FakeRoles,
 				"searchCheck"
-			>;
+			> & { recheckSearch?: boolean };
 			const searchChanged =
 				body.search?.connectionId !== state.roles.search?.connectionId ||
 				body.search?.model !== state.roles.search?.model;
@@ -221,14 +253,13 @@ export function installModelRoutes(
 			if (searchChanged) {
 				state.roles.searchCheck = null;
 			}
-			const ran = body.search !== null && state.nextSearchCheck !== null;
+			// The check runs for a changed search job, or when asked for.
+			const ran =
+				body.search !== null &&
+				(searchChanged || recheckSearch === true) &&
+				state.nextSearchCheck !== null;
 			const searchCheck = ran ? state.nextSearchCheck : null;
-			if (searchCheck && "ok" in searchCheck && searchCheck.ok) {
-				state.roles.searchCheck = {
-					verifiedAt: "2026-01-01T00:00:00.000Z",
-					verifiedFor: "catalogue",
-				};
-			}
+			recordCheck(searchCheck);
 			return HttpResponse.json({ roles: state.roles, searchCheck });
 		}),
 		http.post("/api/user/models/quick-setup", async ({ request }) => {
@@ -242,7 +273,7 @@ export function installModelRoutes(
 			});
 			state.connections.push(created);
 			const fill = (job: ModelJob) => {
-				const model = RECOMMENDED.OPENROUTER[job];
+				const model = state.recommended.OPENROUTER[job];
 				return model ? { connectionId: created.id, model } : state.roles[job];
 			};
 			state.roles = {
@@ -251,11 +282,13 @@ export function installModelRoutes(
 				search: fill("search"),
 				searchCheck: null,
 			};
+			const searchCheck = state.roles.search ? state.nextSearchCheck : null;
+			recordCheck(searchCheck);
 			return HttpResponse.json(
 				{
 					connection: created,
 					roles: state.roles,
-					searchCheck: null,
+					searchCheck,
 					unsetJobs: MODEL_JOBS.filter((job) => !state.roles[job]),
 				},
 				{ status: 201 }

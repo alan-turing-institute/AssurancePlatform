@@ -6,6 +6,7 @@ import type {
 	ModelSettings,
 	RecordedSearchCheck,
 	RolesInput,
+	SaveJobsOptions,
 	TestOutcome,
 } from "@/hooks/use-model-settings";
 import { MODEL_JOBS, type ModelJob } from "@/lib/models/connection-types";
@@ -21,7 +22,10 @@ export interface JobsListProps {
 	onLoadModels: (
 		connectionId: string
 	) => Promise<ActionResult<TestOutcome> | null>;
-	onSave: (roles: RolesInput) => Promise<ActionResult>;
+	onSave: (
+		roles: RolesInput,
+		options?: SaveJobsOptions
+	) => Promise<ActionResult>;
 	recommended: ModelSettings["recommended"];
 	roles: ModelSettings["roles"];
 	testing: readonly string[];
@@ -29,9 +33,11 @@ export interface JobsListProps {
 }
 
 /**
- * What to say about the search job. A pass is recorded by the server; a
+ * What to say about the search job. A recorded pass stands only while it is
+ * for the catalogue's current model and test sentences. With no pass, a
  * failure shows what this session's last check found for the same connection
- * and model, or says that no check has passed when the page was opened after it.
+ * and model; a passed or absent outcome there says only that no check has
+ * passed, as does a page opened after the failure.
  */
 function searchStatusOf(
 	roles: ModelSettings["roles"],
@@ -41,7 +47,9 @@ function searchStatusOf(
 		return { kind: "unset" };
 	}
 	if (roles.searchCheck) {
-		return { kind: "passed" };
+		return roles.searchCheckCurrent
+			? { kind: "passed" }
+			: { kind: "failed", reason: "stale" };
 	}
 	const outcome =
 		last &&
@@ -54,6 +62,9 @@ function searchStatusOf(
 	}
 	if ("unavailable" in outcome) {
 		return { kind: "failed", reason: "unavailable" };
+	}
+	if (outcome.ok) {
+		return { kind: "failed", reason: "unknown" };
 	}
 	return outcome.lowestCosine === null
 		? { kind: "failed", reason: "not-compared" }

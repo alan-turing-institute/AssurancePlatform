@@ -213,3 +213,85 @@ describe("PluginsSection", () => {
 		expect(currentlyEnabled).toBe(false);
 	});
 });
+
+describe("PluginsSection: opening at the AI models anchor", () => {
+	const withAssistant = (enabled: () => boolean) =>
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({
+					plugins: [{ ...ASSISTANT_PLUGIN, enabled: enabled() }],
+				})
+			)
+		);
+
+	afterEach(() => {
+		window.location.hash = "";
+	});
+
+	it("scrolls to the block once it shows when the page was opened at #ai-models", async () => {
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+		scroll.mockClear();
+		window.location.hash = "#ai-models";
+		installModelRoutes();
+		withAssistant(() => true);
+
+		renderWithoutProviders(<PluginsSection />);
+		await screen.findByRole("heading", { name: "AI models" });
+
+		await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+		expect(scroll.mock.contexts[0]).toHaveAttribute("id", "ai-models");
+	});
+
+	it("does not scroll without the anchor", async () => {
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+		scroll.mockClear();
+		window.location.hash = "";
+		installModelRoutes();
+		withAssistant(() => true);
+
+		renderWithoutProviders(<PluginsSection />);
+		await screen.findByRole("heading", { name: "AI models" });
+
+		expect(scroll).not.toHaveBeenCalled();
+	});
+
+	it("does not scroll again when the block comes back after the plugin is turned off and on", async () => {
+		const user = userEvent.setup();
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+		scroll.mockClear();
+		window.location.hash = "#ai-models";
+		installModelRoutes();
+		let enabled = true;
+		withAssistant(() => enabled);
+		server.use(
+			http.get("/api/user/plugins/tea.assistant/consequences", () =>
+				HttpResponse.json(EMPTY_CONSEQUENCES)
+			),
+			http.patch("/api/user/plugins", async ({ request }) => {
+				const body = (await request.json()) as { enabled: boolean };
+				enabled = body.enabled;
+				return HttpResponse.json({
+					pluginId: "tea.assistant",
+					enabled,
+					settings: null,
+				});
+			})
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+		await screen.findByRole("heading", { name: "AI models" });
+		await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+
+		await user.click(screen.getByRole("switch"));
+		await user.click(await screen.findByRole("button", { name: "Turn off" }));
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("heading", { name: "AI models" })
+			).not.toBeInTheDocument()
+		);
+		await user.click(screen.getByRole("switch"));
+		await screen.findByRole("heading", { name: "AI models" });
+
+		expect(scroll).toHaveBeenCalledTimes(1);
+	});
+});

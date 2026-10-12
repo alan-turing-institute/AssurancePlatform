@@ -7,18 +7,31 @@ export type SearchStatus =
 	| { kind: "unset" }
 	| { kind: "passed" }
 	| { kind: "failed"; lowestCosine: number; reason: "similarity" }
-	| { kind: "failed"; reason: "not-compared" | "unavailable" | "unknown" };
+	| {
+			kind: "failed";
+			reason: "not-compared" | "stale" | "unavailable" | "unknown";
+	  };
+
+/** Long model names and labels wrap inside the card; the whole value is in the tooltip. */
+const WRAPPING_TEXT = "min-w-0 break-all text-muted-foreground text-sm";
 
 const FALLBACK = "Until a check passes, techniques are found by keyword only.";
+
+/** The similarity to three decimals, cut rather than rounded, so a value just under the threshold never reads as the threshold. */
+function similarity(value: number): string {
+	return value.toFixed(6).slice(0, -3);
+}
 
 function failureDetail(
 	status: Extract<SearchStatus, { kind: "failed" }>
 ): string {
 	switch (status.reason) {
 		case "similarity":
-			return `Lowest similarity ${status.lowestCosine.toFixed(2)}. ${FALLBACK}`;
+			return `Lowest similarity ${similarity(status.lowestCosine)}. ${FALLBACK}`;
 		case "not-compared":
 			return `The model's answers could not be compared with the catalogue's. ${FALLBACK}`;
+		case "stale":
+			return `The catalogue has changed since the check passed, so it no longer counts. ${FALLBACK}`;
 		case "unavailable":
 			return `The search service did not give its test sentences, so the check could not run. ${FALLBACK}`;
 		default:
@@ -59,7 +72,9 @@ export function JobStatus({
 		return (
 			<div className="flex flex-wrap items-center gap-2">
 				<Badge variant="secondary">Set</Badge>
-				<span className="text-muted-foreground text-sm">{where}</span>
+				<span className={WRAPPING_TEXT} title={where}>
+					{where}
+				</span>
 			</div>
 		);
 	}
@@ -67,7 +82,9 @@ export function JobStatus({
 		return (
 			<div className="flex flex-wrap items-center gap-2">
 				<Badge>Check passed</Badge>
-				<span className="text-muted-foreground text-sm">{where}</span>
+				<span className={WRAPPING_TEXT} title={where}>
+					{where}
+				</span>
 			</div>
 		);
 	}
@@ -75,7 +92,9 @@ export function JobStatus({
 		<div className="space-y-1">
 			<div className="flex flex-wrap items-center gap-2">
 				<Badge variant="destructive">Check not passed</Badge>
-				<span className="text-muted-foreground text-sm">{where}</span>
+				<span className={WRAPPING_TEXT} title={where}>
+					{where}
+				</span>
 			</div>
 			<p className="text-muted-foreground text-sm">{failureDetail(search)}</p>
 		</div>

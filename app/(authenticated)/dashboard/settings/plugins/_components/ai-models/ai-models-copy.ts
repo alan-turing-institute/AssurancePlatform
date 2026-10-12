@@ -19,6 +19,15 @@ export const CONNECTION_TYPE_HINTS: Record<ModelConnectionType, string> = {
 	ANTHROPIC: "Claude models, for chat only.",
 };
 
+/** What an edit can change, which differs by type: only some types have an address or an optional key. */
+export const EDIT_HINTS: Record<ModelConnectionType, string> = {
+	OPENROUTER: "Change the label, or replace the key.",
+	ANTHROPIC: "Change the label, or replace the key.",
+	OLLAMA: "Change the label or address, or replace or remove the key.",
+	OPENAI_COMPATIBLE:
+		"Change the label or address, or replace or remove the key.",
+};
+
 export const ADDRESS_HINTS: Partial<Record<ModelConnectionType, string>> = {
 	OLLAMA: "The address of the Ollama server, with no path after it.",
 	OPENAI_COMPATIBLE:
