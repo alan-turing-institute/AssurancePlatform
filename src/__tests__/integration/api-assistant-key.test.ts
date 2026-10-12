@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { captureLogs } from "../helpers/capture-logs";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestPluginState,
@@ -90,6 +91,38 @@ describe("/api/user/plugins/assistant/key", () => {
 		const route = await import("@/app/api/user/plugins/assistant/key/route");
 		expect((await route.PUT(put({ key: "  " }))).status).toBe(400);
 		expect((await route.PUT(put({ other: 1 }))).status).toBe(400);
+	});
+
+	it("refuses a key with a control character in it, without echoing it or storing it", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			enabled: true,
+		});
+		await mockAuth(user.id, user.username, user.email);
+		const route = await import("@/app/api/user/plugins/assistant/key/route");
+
+		const logs = captureLogs();
+		try {
+			for (const bad of [
+				"sk-leak\u0000tail",
+				"sk-leak\r\nX-Injected: 1",
+				"sk-leak\tinner",
+				"sk-leak\u001ftail",
+				"sk-leak\u007ftail",
+			]) {
+				const res = await route.PUT(put({ key: bad }));
+				expect(res.status).toBe(400);
+				expect(JSON.stringify(await res.json())).not.toContain("sk-leak");
+			}
+			expect(JSON.stringify(logs.entries)).not.toContain("sk-leak");
+		} finally {
+			logs.restore();
+		}
+		expect(await prisma.pluginAssistantKey.count()).toBe(0);
+
+		// Whitespace at the ends is still trimmed away, not refused.
+		expect((await route.PUT(put({ key: `  ${SECRET}\n` }))).status).toBe(200);
 	});
 
 	it("refuses with 403 when the plugin is switched off for the user", async () => {

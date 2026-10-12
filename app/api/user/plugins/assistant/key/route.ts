@@ -9,6 +9,7 @@ import {
 } from "@/lib/api-response";
 import { TokenEncryptionUnavailableError } from "@/lib/auth/token-encryption";
 import { AppError } from "@/lib/errors";
+import { hasControlCharacter } from "@/lib/models/key-characters";
 import {
 	deleteUserApiKey,
 	hasUserApiKey,
@@ -24,7 +25,11 @@ const putKeySchema = z.strictObject({
 		.string({ message: "key must be a string" })
 		.trim()
 		.min(1, "key is required")
-		.max(2048, "key must be less than 2048 characters"),
+		.max(2048, "key must be less than 2048 characters")
+		.refine(
+			(key) => !hasControlCharacter(key),
+			"key must not contain control characters"
+		),
 });
 
 const ENCRYPTION_UNAVAILABLE_MESSAGE =
