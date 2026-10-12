@@ -9,6 +9,11 @@ const devAllowedOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	output: process.env.NODE_ENV === "development" ? undefined : "standalone",
+	// undici is loaded at run time from node_modules instead of being bundled,
+	// so the address-checking connection in lib/models/guarded-fetch.ts uses the
+	// installed package and the standalone output traces it into its own
+	// node_modules.
+	serverExternalPackages: ["undici"],
 	// Next 16 blocks cross-origin dev requests (HMR, /_next/static chunks) by
 	// default. Set NEXT_DEV_ALLOWED_ORIGINS (comma-separated hosts, no
 	// protocol) when running `next dev` for LAN review; leave it unset for a

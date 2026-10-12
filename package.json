@@ -116,6 +116,7 @@
     "streamdown": "^2.7.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "undici": "^6.28.1",
     "use-stick-to-bottom": "^1.1.6",
     "zod": "^4.6.2",
     "zustand": "^5.0.15"
