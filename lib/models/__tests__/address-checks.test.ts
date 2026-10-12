@@ -12,6 +12,7 @@ describe("isBlockedAddress", () => {
 		["127.0.0.1", "127/8"],
 		["127.255.255.254", "127/8"],
 		["169.254.169.254", "link-local and cloud metadata"],
+		["168.63.129.16", "Azure platform address"],
 		["172.16.0.1", "172.16/12"],
 		["172.31.255.255", "172.16/12"],
 		["192.0.0.9", "protocol assignments"],
@@ -32,6 +33,9 @@ describe("isBlockedAddress", () => {
 		"100.63.255.255",
 		"100.128.0.0",
 		"169.253.255.255",
+		"168.63.129.15",
+		"168.63.129.17",
+		"168.63.128.16",
 		"172.15.255.255",
 		"172.32.0.0",
 		"192.169.0.1",
@@ -66,6 +70,13 @@ describe("isBlockedAddress", () => {
 		["64:ff9b::7f00:1", "NAT64 loopback"],
 		["64:ff9b::169.254.169.254", "NAT64 metadata"],
 		["64:ff9b:1::a00:1", "local-use NAT64 private"],
+		["::ffff:a83f:8110", "mapped Azure platform address"],
+		["2002::", "6to4"],
+		["2002:808:808::1", "6to4 carrying a public IPv4 address"],
+		["2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "6to4 upper bound"],
+		["2001::", "Teredo"],
+		["2001:0:4136:e378:8000:63bf:3fff:fdd2", "Teredo with a client address"],
+		["2001:0:ffff:ffff:ffff:ffff:ffff:ffff", "Teredo upper bound"],
 	])("blocks the IPv6 address %s (%s)", (address) => {
 		expect(isBlockedAddress(address)).toBe(true);
 	});
@@ -73,6 +84,9 @@ describe("isBlockedAddress", () => {
 	it.each([
 		"2606:4700:4700::1111",
 		"2001:4860:4860::8888",
+		"2001:1::1",
+		"2003::1",
+		"2001:db9::1",
 		"fbff::1",
 		"::ffff:8.8.8.8",
 		"::ffff:808:808",
