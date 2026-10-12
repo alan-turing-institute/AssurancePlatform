@@ -9,7 +9,11 @@ import {
 	it,
 	vi,
 } from "vitest";
-import { chatModelFor, embeddingModelFor } from "../adapters";
+import {
+	chatModelFor,
+	chatProviderOptions,
+	embeddingModelFor,
+} from "../adapters";
 import type {
 	ModelConnectionAccess,
 	ModelConnectionType,
@@ -311,5 +315,34 @@ describe("the size of a response", () => {
 		server.respond = (_request, response) =>
 			sendJson(response, embeddingBody(600_000));
 		await expect(embedOnce()).rejects.toThrow();
+	});
+});
+
+describe("chatProviderOptions", () => {
+	it("bounds a reasoning model's thinking on OpenRouter, well under the reply's token cap", () => {
+		expect(chatProviderOptions(connection("OPENROUTER"))).toEqual({
+			openrouter: { reasoning: { max_tokens: 3072 } },
+		});
+	});
+
+	it.each([
+		"OLLAMA",
+		"OPENAI_COMPATIBLE",
+		"ANTHROPIC",
+	] as const)("sends nothing extra to a %s server", (type) => {
+		expect(chatProviderOptions(connection(type))).toBeUndefined();
+	});
+
+	it("reaches the request as a reasoning bound when passed with a chat call", async () => {
+		await generateText({
+			model: chatModelFor(connection("OPENROUTER"), "m"),
+			prompt: "hi",
+			maxRetries: 0,
+			providerOptions: chatProviderOptions(connection("OPENROUTER")),
+		});
+
+		expect(JSON.parse(lastRequest().body)).toMatchObject({
+			reasoning: { max_tokens: 3072 },
+		});
 	});
 });

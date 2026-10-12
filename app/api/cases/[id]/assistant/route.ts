@@ -1,5 +1,6 @@
 import {
 	convertToModelMessages,
+	createUIMessageStreamResponse,
 	stepCountIs,
 	streamText,
 	type UIMessage,
@@ -15,12 +16,14 @@ import { AppError, notFound } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { ASSISTANT_PLUGIN_ID } from "@/lib/plugins/assistant/constants";
+import { noticeWhenCutShort } from "@/lib/plugins/assistant/length-notice";
 import {
 	modelAccessFor,
 	resolveChatModel,
 } from "@/lib/plugins/assistant/model-config";
 import { modelTimeoutMs } from "@/lib/plugins/assistant/model-timeout";
 import { noDownload } from "@/lib/plugins/assistant/no-download";
+import { providerErrorMessage } from "@/lib/plugins/assistant/provider-message";
 import {
 	resolveSelectedElement,
 	selectionPrompt,
@@ -39,13 +42,17 @@ const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_MESSAGES = 100;
 const MAX_STEPS = 8;
 /**
- * Bounds on one model call: tokens written and provider retries. The wall time
- * of the whole reply is ASSISTANT_MODEL_TIMEOUT_MS. The SDK retries only
+ * Bounds on one model call: tokens written and provider retries. The cap on
+ * tokens is room for the answer to a request such as a case lint, which has
+ * the model apply a long list of rules, and for a reasoning model's thinking
+ * before it; it is a request to the model server, and the cap on the size of
+ * the response in `lib/models/adapters.ts` is what holds regardless. The wall
+ * time of the whole reply is ASSISTANT_MODEL_TIMEOUT_MS. The SDK retries only
  * errors the provider marks retryable; a failure the network guard reports as
  * `request-failed` reaches it as a plain error and is not retried, so one
  * retry is the most a reply makes.
  */
-const MAX_OUTPUT_TOKENS = 2048;
+const MAX_OUTPUT_TOKENS = 8192;
 const MAX_RETRIES = 1;
 
 /**
@@ -168,6 +175,7 @@ export async function POST(
 			abortSignal: request.signal,
 			timeout: timeoutMs,
 			maxOutputTokens: MAX_OUTPUT_TOKENS,
+			providerOptions: resolved.providerOptions,
 			maxRetries: MAX_RETRIES,
 			// Replaces the SDK's default console logging, which prints the whole
 			// request (prompt, history, case trees) with the provider error.
@@ -176,8 +184,14 @@ export async function POST(
 			},
 		});
 
-		return result.toUIMessageStreamResponse({
-			onError: () => "The model provider returned an error.",
+		// The provider's own message is shown to the user, cleaned of the key and
+		// address; it is not logged (see `onError` above).
+		return createUIMessageStreamResponse({
+			stream: result
+				.toUIMessageStream({
+					onError: (error) => providerErrorMessage(error, resolved.secrets),
+				})
+				.pipeThrough(noticeWhenCutShort()),
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

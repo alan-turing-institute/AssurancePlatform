@@ -22,8 +22,8 @@ import { createTestCaseWithGoal } from "../utils/prisma-factories";
 
 /**
  * What the assistant's reply route does about a model that misbehaves: a model
- * that answers with far more tool calls than a reply should make, and a
- * provider whose error text quotes the key.
+ * that answers with far more tool calls than a reply should make, a model that
+ * runs out of output room, and a provider whose error text quotes the key.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -47,6 +47,7 @@ const { exportCase } = await import("@/lib/services/case-export-service");
 
 const KEY = "sk-reply-SECRET-6642";
 const CHAT = "/v1/chat/completions";
+const OPENROUTER_CHAT = "/api/v1/chat/completions";
 const TOO_MANY = "Too many tool calls in one reply.";
 
 let server: CountingServer;
@@ -58,7 +59,7 @@ beforeEach(async () => {
 	vi.mocked(exportCase).mockClear();
 	chatAnswer = (_hit, response) => streamChat(response, "Done.");
 	server = await startServer((hit, response) => {
-		if (hit.url === CHAT) {
+		if (hit.url === CHAT || hit.url === OPENROUTER_CHAT) {
 			chatAnswer(hit, response);
 		} else {
 			json(response, {}, 404);
@@ -77,13 +78,14 @@ afterEach(async () => {
 	assertNoLeaks();
 });
 
-async function setup() {
+async function setup(type: "OLLAMA" | "OPENROUTER" = "OLLAMA") {
 	const user = await makeUser();
 	const testCase = await createTestCaseWithGoal(user.id);
 	await signInAs(user);
 	const connection = await addConnection(user.id, {
 		label: "Chat host",
-		baseUrl: server.origin,
+		type,
+		baseUrl: type === "OLLAMA" ? server.origin : undefined,
 		apiKey: KEY,
 	});
 	const saved = await setRoles(user.id, {
@@ -233,5 +235,119 @@ describe("what the route logs when the provider fails", () => {
 			"ts",
 		]);
 		expect(logs.text()).not.toContain(KEY);
+	});
+});
+
+/** A reply that is cut off by the model's output limit after some text. */
+function answerCutShort() {
+	chatAnswer = (_hit, response) => {
+		response.writeHead(200, { "content-type": "text/event-stream" });
+		const chunk = (delta: object, finish: string | null) =>
+			`data: ${JSON.stringify({
+				id: "1",
+				object: "chat.completion.chunk",
+				created: 1,
+				model: "stub",
+				choices: [{ index: 0, delta, finish_reason: finish }],
+			})}\n\n`;
+		response.write(chunk({ role: "assistant", content: "Half an ans" }, null));
+		response.write(chunk({}, "length"));
+		response.end("data: [DONE]\n\n");
+	};
+}
+
+describe("a model that runs out of output room", () => {
+	it("is asked for up to 8192 tokens, and the reply carries a notice when it is cut short", async () => {
+		answerCutShort();
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		const sent = JSON.parse(
+			server.hits.find((hit) => hit.url === CHAT)?.body ?? "{}"
+		) as { max_tokens?: number };
+		expect(sent.max_tokens).toBe(8192);
+		expect(outcome.text).toContain("Half an ans");
+		expect(outcome.text).toContain('"type":"data-notice","data":"length"');
+	});
+
+	it("carries no notice when the model finished its answer", async () => {
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		expect(outcome.text).toContain("Done.");
+		expect(outcome.text).not.toContain("data-notice");
+	});
+
+	it("bounds a reasoning model's thinking on OpenRouter, and sends no such parameter to Ollama", async () => {
+		const openRouter = await setup("OPENROUTER");
+		await chat(openRouter.testCase.id);
+		const routed = JSON.parse(
+			server.hits.find((hit) => hit.url === OPENROUTER_CHAT)?.body ?? "{}"
+		) as { max_tokens?: number; reasoning?: unknown };
+		expect(routed.max_tokens).toBe(8192);
+		expect(routed.reasoning).toEqual({ max_tokens: 3072 });
+
+		server.hits.length = 0;
+		const ollama = await setup("OLLAMA");
+		await chat(ollama.testCase.id);
+		const local = JSON.parse(
+			server.hits.find((hit) => hit.url === CHAT)?.body ?? "{}"
+		) as Record<string, unknown>;
+		expect(local.max_tokens).toBe(8192);
+		expect(local).not.toHaveProperty("reasoning");
+	});
+});
+
+describe("what the user is told when the provider refuses", () => {
+	const REASON =
+		"This model requires you to complete the following before use: 18+ age confirmation";
+
+	it("shows the provider's own reason and status, and logs none of it", async () => {
+		chatAnswer = (_hit, response) =>
+			json(response, { error: { message: REASON } }, 403);
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		expect(outcome.text).toContain("The model provider returned an error.");
+		expect(outcome.text).toContain(`It said (HTTP 403): ${REASON}`);
+		expect(logs.text()).not.toContain("18+ age");
+		expect(logs.text()).not.toContain(REASON);
+	});
+
+	it("removes the key and the address from what it shows, and cuts it to 300 characters", async () => {
+		chatAnswer = (_hit, response) =>
+			json(
+				response,
+				{
+					error: {
+						message: `Invalid key ${KEY} for ${server.origin}/v1; Bearer ${KEY}. ${"More. ".repeat(100)}`,
+					},
+				},
+				401
+			);
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		expect(outcome.text).toContain("Invalid key [key removed] for");
+		for (const secret of [KEY, String(server.port), "127.0.0.1"]) {
+			expect(outcome.text).not.toContain(secret);
+			expect(logs.text()).not.toContain(secret);
+		}
+		const said = outcome.text.split("It said (HTTP 401): ")[1] ?? "";
+		expect(said.split('"')[0]?.length).toBeLessThanOrEqual(300);
+	});
+
+	it("gives only the fixed sentence when the address is refused", async () => {
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", "");
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		expect(outcome.text).toContain("The model provider returned an error.");
+		expect(outcome.text).not.toContain("It said");
 	});
 });

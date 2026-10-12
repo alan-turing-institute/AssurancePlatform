@@ -1,6 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import type { EmbeddingModel, LanguageModel } from "ai";
+import type { EmbeddingModel, JSONValue, LanguageModel } from "ai";
 import {
 	connectionTypeCanDo,
 	type ModelConnectionAccess,
@@ -23,6 +23,13 @@ const UNDERSCORES = /_/g;
 const CHAT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 /** The most bytes an embeddings answer may hold. */
 const EMBEDDING_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+
+/**
+ * The most tokens OpenRouter lets a model spend reasoning before it answers.
+ * Some models reason until the reply's whole token cap is used and then stop
+ * with no answer at all, so the bound leaves most of the cap for the answer.
+ */
+const OPENROUTER_REASONING_MAX_TOKENS = 3072;
 
 /** The guarded fetch with a cap on the response body that suits the job. */
 function guardedFetchCappedAt(maxBytes: number) {
@@ -101,4 +108,22 @@ export function embeddingModelFor(
 		connection,
 		EMBEDDING_MAX_RESPONSE_BYTES
 	).embeddingModel(model);
+}
+
+/**
+ * Provider options to pass with each chat request on this connection, or
+ * undefined when there are none. OpenRouter is asked to bound the reasoning of
+ * models that reason. Other servers get nothing, since they may refuse a
+ * parameter they do not know; Anthropic's extended thinking is off unless it
+ * is asked for, so there is nothing to bound there.
+ */
+export function chatProviderOptions(
+	connection: ModelConnectionAccess
+): Record<string, Record<string, JSONValue>> | undefined {
+	if (connection.type !== "OPENROUTER") {
+		return undefined;
+	}
+	return {
+		openrouter: { reasoning: { max_tokens: OPENROUTER_REASONING_MAX_TOKENS } },
+	};
 }
