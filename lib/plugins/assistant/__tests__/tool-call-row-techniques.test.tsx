@@ -127,3 +127,78 @@ describe("ToolCallRow for suggest_techniques", () => {
 		expect(screen.queryByTestId("assistant-techniques")).toBeNull();
 	});
 });
+
+describe("ToolCallRow for suggest_techniques: the steps of the lookup", () => {
+	const result = {
+		slug: "a",
+		name: "SHAP",
+		score: 0.9,
+		retrievalScore: 0.1,
+		goals: [],
+		url: "https://techniques.example/shap",
+	};
+
+	it("says that semantic search and ranking were used", async () => {
+		renderWithoutProviders(
+			<ToolCallRow
+				part={part({
+					searchUsed: true,
+					rankingUsed: true,
+					results: [result],
+				})}
+			/>
+		);
+		await open();
+
+		const steps = screen.getByTestId("assistant-technique-steps");
+		expect(steps).toHaveTextContent("Semantic search: used.");
+		expect(steps).toHaveTextContent("Ranking: used.");
+		expect(screen.getByRole("link", { name: "SHAP" })).toBeInTheDocument();
+	});
+
+	it("says which step was not used, with the reason for each", async () => {
+		renderWithoutProviders(
+			<ToolCallRow
+				part={part({
+					searchUsed: false,
+					searchReason: "check not passed",
+					rankingUsed: false,
+					rankingReason: "timed out",
+					results: [result],
+				})}
+			/>
+		);
+		await open();
+
+		const steps = screen.getByTestId("assistant-technique-steps");
+		expect(steps).toHaveTextContent(
+			"Semantic search: not used (check not passed)."
+		);
+		expect(steps).toHaveTextContent("Ranking: not used (timed out).");
+	});
+
+	it("says only what the tool reported, and shows no steps line when it reported nothing", async () => {
+		renderWithoutProviders(
+			<ToolCallRow
+				part={part({
+					searchUsed: true,
+					rankingUsed: "yes",
+					results: [result],
+				})}
+			/>
+		);
+		await open();
+
+		const steps = screen.getByTestId("assistant-technique-steps");
+		expect(steps).toHaveTextContent("Semantic search: used.");
+		expect(steps).not.toHaveTextContent("Ranking");
+		expect(screen.getByTestId("assistant-techniques")).toBeInTheDocument();
+	});
+
+	it("shows no steps line for a result from before the tool reported them", async () => {
+		renderWithoutProviders(<ToolCallRow part={part({ results: [result] })} />);
+		await open();
+
+		expect(screen.queryByTestId("assistant-technique-steps")).toBeNull();
+	});
+});

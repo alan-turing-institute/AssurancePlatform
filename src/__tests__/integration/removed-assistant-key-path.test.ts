@@ -37,12 +37,17 @@ describe("the removed assistant key path", () => {
 		expect(fs.existsSync(path.join(routeDir, "route.ts"))).toBe(false);
 	});
 
-	it("is absent from the published API description", () => {
-		const description = fs.readFileSync(
-			path.join(PROJECT_ROOT, "public/openapi.json"),
-			"utf8"
-		);
-		expect(description).not.toContain("/api/user/plugins/assistant");
+	it("is absent from the published API description's paths", () => {
+		// Path keys are relative to the description's `/api` server address.
+		const description = JSON.parse(
+			fs.readFileSync(path.join(PROJECT_ROOT, "public/openapi.json"), "utf8")
+		) as { paths: Record<string, unknown> };
+		const routes = Object.keys(description.paths);
+
+		expect(routes).toContain("/user/models");
+		expect(
+			routes.filter((route) => route.startsWith("/user/plugins/assistant"))
+		).toEqual([]);
 	});
 
 	it("is removed by a migration that sorts after the model connections migration", () => {

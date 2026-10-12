@@ -4,7 +4,7 @@ import {
 	fetchEmbeddingSpec,
 } from "@/lib/models/embedding-check";
 import {
-	getConnectionForUse,
+	getConnectionWithStoredState,
 	type JobAssignment,
 	recordEmbeddingCheck,
 } from "@/lib/services/model-connection-service";
@@ -23,8 +23,9 @@ export type SearchCheckOutcome =
  * Runs the search check for `search` and records a pass. The network calls
  * (the spec, then the embedding request) run here, outside any database
  * transaction. The pass is recorded only if the user's search job is still
- * `search` when the comparison finishes; a job changed in the meantime is left
- * unmarked, and `ok` is false.
+ * `search` when the comparison finishes, and the connection's address and key
+ * are still the ones the check used; a job or connection changed in the
+ * meantime is left unmarked, and `ok` is false.
  */
 export async function runSearchCheck(
 	userId: string,
@@ -34,12 +35,12 @@ export async function runSearchCheck(
 	if (!spec) {
 		return { unavailable: true };
 	}
-	const connection = await getConnectionForUse(userId, search.connectionId);
-	if ("error" in connection) {
+	const read = await getConnectionWithStoredState(userId, search.connectionId);
+	if ("error" in read) {
 		return { ok: false, lowestCosine: null };
 	}
 	const result = await checkEmbedding({
-		connection: connection.data,
+		connection: read.data.connection,
 		model: search.model,
 		spec,
 	});
@@ -49,7 +50,8 @@ export async function runSearchCheck(
 	const recorded = await recordEmbeddingCheck(
 		userId,
 		embeddingCheckId(spec),
-		search
+		search,
+		read.data.stored
 	);
 	return {
 		ok: "data" in recorded && recorded.data,

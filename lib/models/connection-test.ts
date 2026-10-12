@@ -3,7 +3,11 @@ import type {
 	ModelConnectionAccess,
 	ModelJob,
 } from "@/lib/models/connection-types";
-import { GuardedFetchError, guardedFetch } from "@/lib/models/guarded-fetch";
+import {
+	GuardedFetchError,
+	guardedFetch,
+	NOT_REACHABLE_MESSAGE,
+} from "@/lib/models/guarded-fetch";
 
 /**
  * The Test button's work: checks that a connection's address answers and its
@@ -38,7 +42,7 @@ const WORKS_WITHOUT_LIST =
 	"The connection works, but a model list could not be read.";
 const KEY_REFUSED = "The server did not accept the key.";
 const UNREADABLE = "The server's answer could not be read.";
-const UNREACHABLE = "The server could not be reached.";
+const UNREACHABLE = NOT_REACHABLE_MESSAGE;
 
 type Fetched = { ok: true; text: string } | { message: string; ok: false };
 type Listed = { ids: string[]; ok: true } | { message: string; ok: false };

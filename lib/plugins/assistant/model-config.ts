@@ -1,5 +1,6 @@
-import type { LanguageModel } from "ai";
-import { chatModelFor } from "@/lib/models/adapters";
+import type { JSONValue, LanguageModel } from "ai";
+import { chatModelFor, chatProviderOptions } from "@/lib/models/adapters";
+import type { ProviderSecrets } from "@/lib/plugins/assistant/provider-message";
 import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
 	getConnectionForUse,
@@ -12,7 +13,18 @@ import {
  * settings applies to the next request.
  */
 
-type ChatModelResult = { model: LanguageModel } | { error: string };
+/**
+ * The chat model with what a request to it also needs: the provider options
+ * to send with each call, and the key and address, which an error message
+ * from the provider must not be shown with.
+ */
+interface ChatModel {
+	model: LanguageModel;
+	providerOptions: Record<string, Record<string, JSONValue>> | undefined;
+	secrets: ProviderSecrets;
+}
+
+type ChatModelResult = ChatModel | { error: string };
 
 const SETUP_HINT = "Set up AI models in Settings, Plugins.";
 
@@ -44,7 +56,14 @@ export async function resolveChatModel(
 		};
 	}
 	try {
-		return { model: chatModelFor(connection.data, job.model) };
+		return {
+			model: chatModelFor(connection.data, job.model),
+			providerOptions: chatProviderOptions(connection.data),
+			secrets: {
+				apiKey: connection.data.apiKey,
+				baseUrl: connection.data.baseUrl,
+			},
+		};
 	} catch {
 		return {
 			error: `The chat model cannot be used with its connection. ${SETUP_HINT}`,

@@ -9,13 +9,22 @@ import {
 	it,
 	vi,
 } from "vitest";
-import { chatModelFor, embeddingModelFor } from "../adapters";
+import {
+	chatModelFor,
+	chatProviderOptions,
+	embeddingModelFor,
+} from "../adapters";
 import type {
 	ModelConnectionAccess,
 	ModelConnectionType,
 } from "../connection-types";
 import { GuardedFetchError } from "../guarded-fetch";
-import { type ModelServer, sendJson, startModelServer } from "./model-server";
+import {
+	type ModelServer,
+	type Responder,
+	sendJson,
+	startModelServer,
+} from "./model-server";
 
 const KEY = "sk-test-secret-key";
 
@@ -210,5 +219,130 @@ describe("a job the type cannot do", () => {
 		}
 		expect(message).toContain("cannot do the search job");
 		expect(message).not.toContain(KEY);
+	});
+});
+
+describe("the size of a response", () => {
+	const MIB = 1024 * 1024;
+	let answeredBefore: Responder;
+
+	beforeEach(() => {
+		answeredBefore = server.respond;
+	});
+
+	afterEach(() => {
+		server.respond = answeredBefore;
+	});
+
+	/** A chat answer whose reply text is `bytes` long. */
+	function chatBody(bytes: number) {
+		return {
+			id: "chatcmpl-1",
+			object: "chat.completion",
+			created: 1,
+			model: "m",
+			choices: [
+				{
+					index: 0,
+					message: { role: "assistant", content: "x".repeat(bytes) },
+					finish_reason: "stop",
+				},
+			],
+			usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+		};
+	}
+
+	/** An embeddings answer whose vector has `length` numbers, about four bytes each. */
+	function embeddingBody(length: number) {
+		return {
+			object: "list",
+			data: [
+				{
+					object: "embedding",
+					index: 0,
+					embedding: Array.from({ length }, () => 0.5),
+				},
+			],
+			model: "m",
+			usage: { prompt_tokens: 1, total_tokens: 1 },
+		};
+	}
+
+	const chat = (type: ModelConnectionType) =>
+		generateText({
+			model: chatModelFor(connection(type), "m"),
+			prompt: "hi",
+			maxRetries: 0,
+		});
+
+	it("reads a chat answer of 3 MiB and refuses one of 5 MiB", async () => {
+		server.respond = (_request, response) =>
+			sendJson(response, chatBody(3 * MIB));
+		expect((await chat("OLLAMA")).text).toHaveLength(3 * MIB);
+
+		server.respond = (_request, response) =>
+			sendJson(response, chatBody(5 * MIB));
+		await expect(chat("OLLAMA")).rejects.toThrow();
+	});
+
+	it("applies the same chat cap to an Anthropic connection", async () => {
+		server.respond = (_request, response) =>
+			sendJson(response, {
+				id: "msg_1",
+				type: "message",
+				role: "assistant",
+				model: "m",
+				content: [{ type: "text", text: "x".repeat(5 * MIB) }],
+				stop_reason: "end_turn",
+				stop_sequence: null,
+				usage: { input_tokens: 1, output_tokens: 1 },
+			});
+		await expect(chat("ANTHROPIC")).rejects.toThrow();
+	});
+
+	it("reads an embeddings answer of 1.8 MiB and refuses one of 2.4 MiB", async () => {
+		const embedOnce = () =>
+			embed({
+				model: embeddingModelFor(connection("OLLAMA"), "m"),
+				value: "a claim",
+				maxRetries: 0,
+			});
+
+		server.respond = (_request, response) =>
+			sendJson(response, embeddingBody(450_000));
+		expect((await embedOnce()).embedding).toHaveLength(450_000);
+
+		server.respond = (_request, response) =>
+			sendJson(response, embeddingBody(600_000));
+		await expect(embedOnce()).rejects.toThrow();
+	});
+});
+
+describe("chatProviderOptions", () => {
+	it("bounds a reasoning model's thinking on OpenRouter, well under the reply's token cap", () => {
+		expect(chatProviderOptions(connection("OPENROUTER"))).toEqual({
+			openrouter: { reasoning: { max_tokens: 3072 } },
+		});
+	});
+
+	it.each([
+		"OLLAMA",
+		"OPENAI_COMPATIBLE",
+		"ANTHROPIC",
+	] as const)("sends nothing extra to a %s server", (type) => {
+		expect(chatProviderOptions(connection(type))).toBeUndefined();
+	});
+
+	it("reaches the request as a reasoning bound when passed with a chat call", async () => {
+		await generateText({
+			model: chatModelFor(connection("OPENROUTER"), "m"),
+			prompt: "hi",
+			maxRetries: 0,
+			providerOptions: chatProviderOptions(connection("OPENROUTER")),
+		});
+
+		expect(JSON.parse(lastRequest().body)).toMatchObject({
+			reasoning: { max_tokens: 3072 },
+		});
 	});
 });

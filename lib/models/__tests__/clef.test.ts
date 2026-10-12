@@ -36,6 +36,7 @@ let server: ModelServer;
 
 interface RequestBody {
 	model: string;
+	provider?: { allow_fallbacks: boolean; order: string[] };
 	questions: Record<
 		string,
 		{
@@ -183,6 +184,24 @@ describe("the request", () => {
 				goals: ["Explainability", "Fairness"],
 			},
 		]);
+	});
+
+	it("names the provider to try first on OpenRouter, with fallbacks allowed, in every batch", async () => {
+		await rank({ candidates: candidates(70) });
+
+		expect(server.requests.length).toBeGreaterThan(1);
+		for (const index of server.requests.keys()) {
+			expect(bodyOf(index).provider).toEqual({
+				order: ["primeintellect"],
+				allow_fallbacks: true,
+			});
+		}
+	});
+
+	it("names no provider to an Ollama server", async () => {
+		await rank({ connection: connection("OLLAMA") });
+
+		expect(bodyOf(0)).not.toHaveProperty("provider");
 	});
 
 	it("asks one noul question per candidate, each with both criteria", async () => {

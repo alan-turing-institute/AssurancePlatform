@@ -38,13 +38,13 @@ function recommendedJobs(): NewJobModels {
 }
 
 /**
- * POST /api/user/models/quick-setup — one OpenRouter key adds a connection and fills the jobs that have a recommended model.
+ * POST /api/user/models/quick-setup — one OpenRouter key adds a connection and fills all three jobs with the recommended models.
  *
  * Takes `{ openRouterKey }`.
  * The server first tests the key against OpenRouter without saving anything; a key OpenRouter refuses, or an OpenRouter that cannot be reached, is a 422 and nothing is written.
- * Then, in one short step, it adds a connection labelled "OpenRouter" and points each job that has a recommended model at it.
+ * Then, in one short step, it adds a connection labelled "OpenRouter" and points the chat, ranking and search jobs at it, each with its recommended model.
  * A job with no recommended model keeps what it had.
- * If the search job was set, the search check runs as it does for `PUT /api/user/models/roles`.
+ * The search check then runs, as it does for `PUT /api/user/models/roles`.
  * Answers 201 with `{ connection, roles, searchCheck, unsetJobs }`: the new connection, the saved jobs, the outcome of the search check (`null` when none ran) and the jobs that are still unset and need a choice.
  * Quick setup, connection tests and search checks share a limit of 20 every 10 minutes per user; over it the answer is a 429 with no detail.
  * Needs a plugin that uses models to be on.

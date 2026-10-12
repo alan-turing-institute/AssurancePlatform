@@ -6,12 +6,14 @@ import type {
 	JobAssignment,
 	ModelConnection,
 	RolesInput,
+	SaveJobsOptions,
 	TestOutcome,
 } from "@/hooks/use-model-settings";
 import type { ModelJob } from "@/lib/models/connection-types";
 import { JOB_COPY } from "./ai-models-copy";
 import { ConnectionPicker, JobActions, ModelField, OFF } from "./job-fields";
 import { JobStatus, type SearchStatus } from "./job-status";
+import { StatusRegion } from "./status-region";
 
 export interface JobRowProps {
 	/** The connections whose type can do this job. */
@@ -22,7 +24,10 @@ export interface JobRowProps {
 		connectionId: string
 	) => Promise<ActionResult<TestOutcome> | null>;
 	/** Saves all three jobs; this row's draft is already in `roles`. */
-	onSave: (roles: RolesInput) => Promise<ActionResult>;
+	onSave: (
+		roles: RolesInput,
+		options?: SaveJobsOptions
+	) => Promise<ActionResult>;
 	/** The recommended model for this job on a connection of the given type. */
 	recommendedFor: (connection: ModelConnection) => string | null;
 	/** The jobs as saved, from which a save is built. */
@@ -134,10 +139,14 @@ export function JobRow({
 		);
 	}
 
-	async function run(roles: RolesInput, kind: "checking" | "saving") {
+	async function run(
+		roles: RolesInput,
+		kind: "checking" | "saving",
+		options?: SaveJobsOptions
+	) {
 		setBusy(kind);
 		setFailure(null);
-		const result = await onSave(roles);
+		const result = await onSave(roles, options);
 		setBusy(null);
 		if (!result.ok) {
 			setFailure(result.message);
@@ -147,7 +156,7 @@ export function JobRow({
 	return (
 		<fieldset
 			aria-labelledby={headingId}
-			className="space-y-3 rounded-lg border border-border bg-card p-4"
+			className="min-w-0 space-y-3 rounded-lg border border-border bg-card p-4"
 			id={`ai-models-job-${job}`}
 		>
 			<div className="space-y-1">
@@ -157,7 +166,7 @@ export function JobRow({
 				<p className="text-muted-foreground text-sm">{copy.hint}</p>
 			</div>
 
-			<div className="grid gap-3">
+			<div className="grid grid-cols-1 gap-3">
 				<ConnectionPicker
 					connections={connections}
 					offAllowed={copy.off !== null}
@@ -179,18 +188,20 @@ export function JobRow({
 				)}
 			</div>
 
-			<JobStatus
-				connectionLabel={savedConnection?.label}
-				job={job}
-				model={savedJob?.model ?? null}
-				search={searchStatus}
-			/>
+			<StatusRegion>
+				<JobStatus
+					connectionLabel={savedConnection?.label}
+					job={job}
+					model={savedJob?.model ?? null}
+					search={searchStatus}
+				/>
+			</StatusRegion>
 
 			<JobActions
 				busy={busy}
 				canSave={busy === null && savable && dirty}
 				job={job}
-				onCheckAgain={() => run(saved, "checking")}
+				onCheckAgain={() => run(saved, "checking", { recheckSearch: true })}
 				onSave={() => run({ ...saved, [job]: draft }, "saving")}
 				showCheckAgain={searchStatus?.kind === "failed"}
 			/>

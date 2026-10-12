@@ -9,6 +9,7 @@ import {
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 import { lintCase } from "./linter/lint-case";
+import { createToolCallLimit } from "./tool-call-limit";
 
 interface TreeNode {
 	children?: TreeNode[];
@@ -32,6 +33,29 @@ function findNode(node: TreeNode, id: string): TreeNode | null {
 		}
 	}
 	return null;
+}
+
+/** Every element whose label is `label`, ignoring case and surrounding space. */
+function findByLabel(node: TreeNode, label: string): TreeNode[] {
+	const wanted = label.trim().toLowerCase();
+	const hits = node.name?.trim().toLowerCase() === wanted ? [node] : [];
+	return hits.concat(
+		(node.children ?? []).flatMap((child) => findByLabel(child, label))
+	);
+}
+
+/**
+ * The element with this id; failing that, the one element with this label,
+ * since a model often passes the name it sees ("P1") rather than the id. A
+ * label shared by more than one element names none of them.
+ */
+function findElement(tree: TreeNode, idOrLabel: string): TreeNode | null {
+	const byId = findNode(tree, idOrLabel);
+	if (byId) {
+		return byId;
+	}
+	const [only, ...others] = findByLabel(tree, idOrLabel);
+	return only && others.length === 0 ? only : null;
 }
 
 /** One level of children only, so a single element's answer stays small. */
@@ -58,10 +82,34 @@ async function loadExport(
 }
 
 /**
- * The assistant's read-only tools. Both close over the route's `userId` and
+ * Reads the case on the first call and gives every later call the same
+ * export, so however many tools run in a reply the case is exported once. A
+ * read that throws is not kept, and the next call reads again.
+ */
+function sharedCaseExport(
+	userId: string,
+	caseId: string
+): () => Promise<CaseExportNested | null> {
+	let pending: Promise<CaseExportNested | null> | null = null;
+	return () => {
+		pending ??= loadExport(userId, caseId).catch((error: unknown) => {
+			pending = null;
+			throw error;
+		});
+		return pending;
+	};
+}
+
+/**
+ * The assistant's read-only tools. They close over the route's `userId` and
  * `caseId`; the model never supplies either, and an element id is only ever
  * looked up inside that case's own export, so an id from another case is
  * simply not found. Comments are never exported.
+ *
+ * The tools are made for one reply. They share a cap on tool calls
+ * (`MAX_TOOL_CALLS_PER_REPLY`): a call past it returns a fixed error and does
+ * no work. `read_case`, `read_element` and `lint_case` share one export of the
+ * case, so a reply reads it once however many of them are called.
  *
  * `replyDeadline` is the epoch time in milliseconds at which the whole reply is
  * cut off; the techniques tool keeps its wait inside it. `models` gives that
@@ -75,49 +123,59 @@ export function createCaseTools(
 	replyDeadline?: number,
 	models?: TechniquesModelAccess
 ) {
+	const limited = createToolCallLimit();
+	const caseExport = sharedCaseExport(userId, caseId);
 	return {
 		read_case: tool({
 			description:
 				"Read the whole open assurance case: its name, description and the full element tree (goals, strategies, property claims, evidence, contexts, assumptions, justifications).",
 			inputSchema: z.object({}),
-			execute: async () => {
-				const data = await loadExport(userId, caseId);
-				return data
-					? { found: true, case: data.case, tree: data.tree }
-					: NOT_FOUND;
-			},
+			execute: () =>
+				limited(async () => {
+					const data = await caseExport();
+					return data
+						? { found: true, case: data.case, tree: data.tree }
+						: NOT_FOUND;
+				}),
 		}),
 		read_element: tool({
 			description:
-				"Read one element of the open case by its id, with its direct children. Use an id taken from read_case.",
+				"Read one element of the open case by its id, with its direct children. Use an id taken from read_case or from the selected element. An element's label, such as P1, is accepted when no id matches and only one element has that label.",
 			inputSchema: z.object({
 				elementId: z
 					.string()
-					.describe("The element id, as shown by read_case."),
+					.describe(
+						"The element id, as shown by read_case; failing that, its label."
+					),
 			}),
-			execute: async ({ elementId }) => {
-				const data = await loadExport(userId, caseId);
-				const node = data ? findNode(data.tree as TreeNode, elementId) : null;
-				return node
-					? { found: true, element: withShallowChildren(node) }
-					: NOT_FOUND;
-			},
+			execute: ({ elementId }) =>
+				limited(async () => {
+					const data = await caseExport();
+					const node = data
+						? findElement(data.tree as TreeNode, elementId)
+						: null;
+					return node
+						? { found: true, element: withShallowChildren(node) }
+						: NOT_FOUND;
+				}),
 		}),
 		lint_case: tool({
 			description:
 				"Lint the open assurance case against the rule catalogue. Returns structural findings (rule id, element label, severity, reason, fix), gaps the author has acknowledged, questions for the author, the number of findings left out when there are more than 100 (truncated), and judgementRules: further rules for you to apply to the case yourself. When the case has prechecks (mechanical facts for the judgement rules) it also returns them as prechecks, with prechecksTruncated giving the number left out; when it has none, neither field is present. Prechecks, acknowledged gaps and questions are limited to 100 each, with acknowledgedGapsTruncated and questionsTruncated giving the number of gaps and questions left out.",
 			inputSchema: z.object({}),
-			execute: async () => {
-				const data = await loadExport(userId, caseId);
-				return data ? { found: true, ...lintCase(data) } : NOT_FOUND;
-			},
+			execute: () =>
+				limited(async () => {
+					const data = await caseExport();
+					return data ? { found: true, ...lintCase(data) } : NOT_FOUND;
+				}),
 		}),
 		...(techniquesConfigured()
 			? {
 					suggest_techniques: createTechniquesTool(
 						selection,
 						replyDeadline,
-						models
+						models,
+						limited
 					),
 				}
 			: {}),

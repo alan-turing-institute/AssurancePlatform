@@ -37,6 +37,8 @@ const rolesSchema = z.object({
 	searchCheck: z
 		.object({ verifiedAt: z.string(), verifiedFor: z.string() })
 		.nullable(),
+	/** Whether the stored check is for the catalogue's current model and test sentences; a response without it is read as current. */
+	searchCheckCurrent: z.boolean().default(true),
 });
 
 const settingsSchema = z.object({
@@ -93,6 +95,11 @@ export type SearchOutcome = z.infer<typeof searchOutcomeSchema>;
 /** The three jobs as `PUT /api/user/models/roles` takes them: `null` switches a job off. */
 export type RolesInput = Record<ModelJob, JobAssignment | null>;
 
+export interface SaveJobsOptions {
+	/** Run the search check again even though the search job is unchanged. */
+	recheckSearch?: boolean;
+}
+
 export interface NewConnectionInput {
 	apiKey?: string;
 	baseUrl?: string;
@@ -127,8 +134,13 @@ export interface UseModelSettingsResult {
 	quickSetup: (
 		openRouterKey: string
 	) => Promise<ActionResult<{ unsetJobs: ModelJob[] }>>;
+	/** Fetches the settings again, which is how a failed load or refetch is retried. */
+	reload: () => Promise<void>;
 	removeConnection: (id: string) => Promise<ActionResult>;
-	saveJobs: (roles: RolesInput) => Promise<ActionResult>;
+	saveJobs: (
+		roles: RolesInput,
+		options?: SaveJobsOptions
+	) => Promise<ActionResult>;
 	settings: ModelSettings | null;
 	testConnection: (id: string) => Promise<ActionResult<TestOutcome>>;
 	/** Connection ids with a test in flight. */
@@ -203,9 +215,13 @@ export function useModelSettings(): UseModelSettingsResult {
 	const [lastSearchCheck, setLastSearchCheck] =
 		useState<RecordedSearchCheck | null>(null);
 
-	const forgetTest = useCallback((id: string) => {
+	// What was seen about a connection stops describing it once it is edited or removed.
+	const forgetConnection = useCallback((id: string) => {
 		setTests((current) =>
 			Object.fromEntries(Object.entries(current).filter(([key]) => key !== id))
+		);
+		setLastSearchCheck((current) =>
+			current?.job.connectionId === id ? null : current
 		);
 	}, []);
 
@@ -247,11 +263,11 @@ export function useModelSettings(): UseModelSettingsResult {
 			if (!result.ok) {
 				return result;
 			}
-			forgetTest(id);
+			forgetConnection(id);
 			await reload();
 			return { ok: true, value: undefined } as const;
 		},
-		[forgetTest, reload]
+		[forgetConnection, reload]
 	);
 
 	const removeConnection = useCallback(
@@ -262,17 +278,20 @@ export function useModelSettings(): UseModelSettingsResult {
 			if (!result.ok) {
 				return result;
 			}
-			forgetTest(id);
+			forgetConnection(id);
 			await reload();
 			return { ok: true, value: undefined } as const;
 		},
-		[forgetTest, reload]
+		[forgetConnection, reload]
 	);
 
 	const saveJobs = useCallback(
-		async (roles: RolesInput) => {
+		async (roles: RolesInput, options?: SaveJobsOptions) => {
+			const body = options?.recheckSearch
+				? { ...roles, recheckSearch: true }
+				: roles;
 			const result = await attempt(() =>
-				request(`${MODELS_URL}/roles`, savedRolesSchema, jsonInit("PUT", roles))
+				request(`${MODELS_URL}/roles`, savedRolesSchema, jsonInit("PUT", body))
 			);
 			if (!result.ok) {
 				return result;
@@ -315,6 +334,7 @@ export function useModelSettings(): UseModelSettingsResult {
 		settings: data,
 		loading,
 		error,
+		reload,
 		tests,
 		testing,
 		lastSearchCheck,

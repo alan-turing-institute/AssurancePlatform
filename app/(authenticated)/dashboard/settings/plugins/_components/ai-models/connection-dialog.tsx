@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ import {
 	ADDRESS_PLACEHOLDERS,
 	CONNECTION_TYPE_HINTS,
 	CONNECTION_TYPE_LABELS,
+	EDIT_HINTS,
 } from "./ai-models-copy";
 
 type ConnectionTypeSpec = ModelSettings["connectionTypes"][number];
@@ -54,6 +55,9 @@ function isModelConnectionType(value: string): value is ModelConnectionType {
 	return (MODEL_CONNECTION_TYPES as readonly string[]).includes(value);
 }
 
+/** The control that takes focus once a key button has swapped itself for another. */
+type KeyFocus = "input" | "keep" | "remove" | "replace";
+
 function KeyField({
 	hasKey,
 	keyRequired,
@@ -70,6 +74,24 @@ function KeyField({
 	value: string;
 }) {
 	const inputId = useId();
+	// The pressed button leaves the page when the mode changes, which would drop
+	// focus to the dialog; the control that replaces it takes focus instead.
+	const controls = useRef<Partial<Record<KeyFocus, HTMLElement | null>>>({});
+	const [focusNext, setFocusNext] = useState<KeyFocus | null>(null);
+	useEffect(() => {
+		if (focusNext) {
+			controls.current[focusNext]?.focus();
+			setFocusNext(null);
+		}
+	}, [focusNext]);
+	const register = (name: KeyFocus) => (element: HTMLElement | null) => {
+		controls.current[name] = element;
+	};
+	const switchTo = (next: KeyMode, focus: KeyFocus) => {
+		onModeChange(next);
+		setFocusNext(focus);
+	};
+
 	if (hasKey && mode === "keep") {
 		return (
 			<div className="space-y-2">
@@ -79,7 +101,8 @@ function KeyField({
 				</p>
 				<div className="flex gap-2">
 					<Button
-						onClick={() => onModeChange("replace")}
+						onClick={() => switchTo("replace", "input")}
+						ref={register("replace")}
 						size="sm"
 						type="button"
 						variant="outline"
@@ -88,7 +111,8 @@ function KeyField({
 					</Button>
 					{!keyRequired && (
 						<Button
-							onClick={() => onModeChange("remove")}
+							onClick={() => switchTo("remove", "keep")}
+							ref={register("remove")}
 							size="sm"
 							type="button"
 							variant="outline"
@@ -108,7 +132,8 @@ function KeyField({
 					The key will be removed when you save.
 				</p>
 				<Button
-					onClick={() => onModeChange("keep")}
+					onClick={() => switchTo("keep", "remove")}
+					ref={register("keep")}
 					size="sm"
 					type="button"
 					variant="outline"
@@ -127,12 +152,13 @@ function KeyField({
 				id={inputId}
 				maxLength={MODEL_FIELD_LIMITS.apiKey}
 				onChange={(event) => onValueChange(event.target.value)}
+				ref={register("input")}
 				type="password"
 				value={value}
 			/>
 			{hasKey && (
 				<Button
-					onClick={() => onModeChange("keep")}
+					onClick={() => switchTo("keep", "replace")}
 					size="sm"
 					type="button"
 					variant="outline"
@@ -170,13 +196,22 @@ function TypeChoice({
 			>
 				{types.map(({ type }) => (
 					<div className="flex items-start gap-2" key={type}>
-						<RadioGroupItem id={`${groupId}-${type}`} value={type} />
-						<Label className="space-y-1" htmlFor={`${groupId}-${type}`}>
-							<span className="block">{CONNECTION_TYPE_LABELS[type]}</span>
-							<span className="block font-normal text-muted-foreground">
+						<RadioGroupItem
+							aria-describedby={`${groupId}-${type}-hint`}
+							id={`${groupId}-${type}`}
+							value={type}
+						/>
+						<div className="space-y-1">
+							<Label htmlFor={`${groupId}-${type}`}>
+								{CONNECTION_TYPE_LABELS[type]}
+							</Label>
+							<p
+								className="text-muted-foreground text-sm"
+								id={`${groupId}-${type}-hint`}
+							>
 								{CONNECTION_TYPE_HINTS[type]}
-							</span>
-						</Label>
+							</p>
+						</div>
 					</div>
 				))}
 			</RadioGroup>
@@ -418,11 +453,17 @@ export function ConnectionDialog({
 			<DialogContent onCloseAutoFocus={onCloseAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>
-						{editing ? `Edit ${connection.label}` : "Add a connection"}
+						{editing ? (
+							<>
+								Edit <span className="break-all">{connection.label}</span>
+							</>
+						) : (
+							"Add a connection"
+						)}
 					</DialogTitle>
 					<DialogDescription>
 						{editing
-							? "Change the label or address, or replace the key."
+							? EDIT_HINTS[connection.type]
 							: "Choose the kind of server, then say how to reach it."}
 					</DialogDescription>
 				</DialogHeader>

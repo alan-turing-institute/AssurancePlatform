@@ -36,6 +36,7 @@ import {
 	stubBehaviour,
 	wrongVectors,
 } from "../utils/model-routes-kit";
+import { createTestUser } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -43,7 +44,7 @@ vi.mock("@/lib/auth/validate-session", () => ({
 
 /** What a passed check is stored against: the catalogue's model, then the hash of the probe sentences. */
 const CHECKED_FOR = `${SPEC.modelId}#${createHash("sha256")
-	.update(SPEC.probes.map((probe) => probe.text).join("\n"))
+	.update(JSON.stringify(SPEC.probes.map((probe) => probe.text)))
 	.digest("hex")}`;
 
 let models: ModelServer;
@@ -341,14 +342,22 @@ describe("PUT /api/user/models/roles: the search check", () => {
 		expect(expectSuccess(await getRoles(user.id)).search).toBeNull();
 	});
 
-	it("runs the check again for an unchanged search job that has no passed check", async () => {
+	it("runs no check for an unchanged search job unless asked, so saving the other jobs never retries a failing one", async () => {
 		const { user, body } = await withSearchRequest();
 		behaviour.vectorFor = wrongVectors;
 		expect((await (await put(body)).json()).searchCheck.ok).toBe(false);
 		expect(embeddingRequests()).toHaveLength(1);
 
+		const saved = await put({
+			...body,
+			chat: job(body.search.connectionId, "m"),
+		});
+		expect((await saved.json()).searchCheck).toBeNull();
+		expect(embeddingRequests()).toHaveLength(1);
+		expect(await storedCheck(user.id)).toBeNull();
+
 		behaviour.vectorFor = stubBehaviour().vectorFor;
-		const again = await put(body);
+		const again = await put({ ...body, recheckSearch: true });
 		const answer = await again.json();
 
 		expect(answer.searchCheck.ok).toBe(true);
@@ -357,7 +366,7 @@ describe("PUT /api/user/models/roles: the search check", () => {
 		expect(await storedCheck(user.id)).toBe(CHECKED_FOR);
 	});
 
-	it("runs the check again when the recorded check is for another catalogue model, and leaves a recorded pass alone when the techniques service gives no spec", async () => {
+	it("runs the check again on request when the recorded check is for another catalogue model, and leaves a recorded pass alone when the techniques service gives no spec", async () => {
 		const { user, body } = await withSearchRequest();
 		expect((await (await put(body)).json()).searchCheck.ok).toBe(true);
 		await prisma.userModelRoles.update({
@@ -365,17 +374,40 @@ describe("PUT /api/user/models/roles: the search check", () => {
 			data: { embeddingVerifiedFor: "an-earlier-model#hash" },
 		});
 
+		const unasked = await put(body);
+		expect((await unasked.json()).searchCheck).toBeNull();
+		expect(embeddingRequests()).toHaveLength(1);
+
 		vi.stubEnv("TECHNIQUES_MCP_URL", "");
-		const unreachable = await put(body);
-		expect((await unreachable.json()).searchCheck).toBeNull();
+		const unreachable = await put({ ...body, recheckSearch: true });
+		expect((await unreachable.json()).searchCheck).toEqual({
+			unavailable: true,
+		});
 		expect(await storedCheck(user.id)).toBe("an-earlier-model#hash");
 		expect(embeddingRequests()).toHaveLength(1);
 
 		vi.stubEnv("TECHNIQUES_MCP_URL", `${techniques.origin}/mcp`);
-		const current = await put(body);
+		const current = await put({ ...body, recheckSearch: true });
 		expect((await current.json()).searchCheck.ok).toBe(true);
 		expect(await storedCheck(user.id)).toBe(CHECKED_FOR);
 		expect(embeddingRequests()).toHaveLength(2);
+	});
+
+	it("takes recheckSearch only as a boolean, and runs no check for it when search is off", async () => {
+		const { body } = await withSearchRequest();
+		for (const bad of ["yes", 1, null, []]) {
+			expect((await put({ ...body, recheckSearch: bad })).status).toBe(400);
+		}
+
+		const off = await put({
+			chat: null,
+			ranking: null,
+			search: null,
+			recheckSearch: true,
+		});
+		expect(off.status).toBe(200);
+		expect((await off.json()).searchCheck).toBeNull();
+		expect(embeddingRequests()).toEqual([]);
 	});
 });
 
@@ -411,7 +443,27 @@ describe("PUT /api/user/models/roles: the limit on provider calls", () => {
 		expect(models.requests).toEqual([]);
 	});
 
-	it("answers 429 when an unchanged search job with no passed check is saved after the budget is spent", async () => {
+	it("answers 429 when a recheck of an unchanged search job is asked for after the budget is spent", async () => {
+		const user = await signedInUserWithModels();
+		const local = expectSuccess(await addOllama(user.id));
+		const body = { chat: null, ranking: null, search: job(local.id, "embed") };
+		behaviour.vectorFor = wrongVectors;
+		expect((await put(body)).status).toBe(200);
+		await spendCalls(user.id, 20);
+		models.requests.length = 0;
+
+		const res = await put({
+			...body,
+			chat: job(local.id, "llama3"),
+			recheckSearch: true,
+		});
+
+		expect(res.status).toBe(429);
+		expect(expectSuccess(await getRoles(user.id)).chat).toBeNull();
+		expect(embeddingRequests()).toEqual([]);
+	});
+
+	it("saves the chat job of a failing, unchanged search job after the budget is spent, because it asks for no check", async () => {
 		const user = await signedInUserWithModels();
 		const local = expectSuccess(await addOllama(user.id));
 		const body = { chat: null, ranking: null, search: job(local.id, "embed") };
@@ -422,9 +474,37 @@ describe("PUT /api/user/models/roles: the limit on provider calls", () => {
 
 		const res = await put({ ...body, chat: job(local.id, "llama3") });
 
-		expect(res.status).toBe(429);
-		expect(expectSuccess(await getRoles(user.id)).chat).toBeNull();
-		expect(embeddingRequests()).toEqual([]);
+		expect(res.status).toBe(200);
+		expect(expectSuccess(await getRoles(user.id)).chat?.model).toBe("llama3");
+		expect(models.requests).toEqual([]);
+	});
+
+	it("spends no budget on a request that names a connection that is not the user's, or a job its type cannot do", async () => {
+		const stranger = await createTestUser();
+		const theirs = expectSuccess(await addOllama(stranger.id));
+		const user = await signedInUserWithModels();
+		const claude = expectSuccess(
+			await createConnection(user.id, {
+				label: "Claude",
+				type: "ANTHROPIC",
+				apiKey: SECRET,
+			})
+		);
+		const none = { chat: null, ranking: null, search: null };
+		const spent = () =>
+			prisma.rateLimitAttempt.count({
+				where: { endpoint: "model_calls", identifier: user.id },
+			});
+
+		const foreign = await put({ ...none, search: job(theirs.id, "embed") });
+		const unsupported = await put({ ...none, search: job(claude.id, "embed") });
+		const missing = await put({ ...none, search: job("no-such-id", "embed") });
+
+		expect(foreign.status).toBe(404);
+		expect(unsupported.status).toBe(400);
+		expect(missing.status).toBe(404);
+		expect(await spent()).toBe(0);
+		expect(models.requests).toEqual([]);
 	});
 
 	it("does not count a save that makes no provider call", async () => {
@@ -476,5 +556,55 @@ describe("PUT /api/user/models/roles: the limit on provider calls", () => {
 			search: job(theirs.id, "embed"),
 		});
 		expect(allowed.status).toBe(200);
+	});
+});
+
+describe("GET /api/user/models: whether the search check is current", () => {
+	const currentFlag = async () =>
+		(await (await GET()).json()).roles.searchCheckCurrent;
+
+	async function withPassedCheck() {
+		const user = await signedInUserWithModels();
+		const local = expectSuccess(await addOllama(user.id));
+		const body = { chat: null, ranking: null, search: job(local.id, "embed") };
+		return { user, passed: (await (await put(body)).json()).searchCheck.ok };
+	}
+
+	it("is false when no check has passed", async () => {
+		const user = await signedInUserWithModels();
+		const local = expectSuccess(await addOllama(user.id));
+		expect(await currentFlag()).toBe(false);
+
+		behaviour.vectorFor = wrongVectors;
+		await put({ chat: null, ranking: null, search: job(local.id, "embed") });
+		expect(await currentFlag()).toBe(false);
+	});
+
+	it("is true while the check matches the catalogue the service publishes now", async () => {
+		expect((await withPassedCheck()).passed).toBe(true);
+		expect(await currentFlag()).toBe(true);
+	});
+
+	it("is false once the catalogue's model or test sentences differ from what was checked", async () => {
+		const { user } = await withPassedCheck();
+		await prisma.userModelRoles.update({
+			where: { userId: user.id },
+			data: { embeddingVerifiedFor: "an-earlier-model#hash" },
+		});
+
+		const body = await (await GET()).json();
+
+		expect(body.roles.searchCheckCurrent).toBe(false);
+		expect(body.roles.searchCheck.verifiedFor).toBe("an-earlier-model#hash");
+	});
+
+	it("is false when the techniques service cannot be asked", async () => {
+		await withPassedCheck();
+		vi.stubEnv("TECHNIQUES_MCP_URL", "");
+
+		const body = await (await GET()).json();
+
+		expect(body.roles.searchCheckCurrent).toBe(false);
+		expect(body.roles.searchCheck).not.toBeNull();
 	});
 });

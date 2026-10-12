@@ -141,13 +141,25 @@ describe("checkEmbedding", () => {
 
 	it("passes when every similarity is above the threshold, and reports the lowest", async () => {
 		server.respond = embedding((index) =>
-			atCosine(index, index === 1 ? 0.99 : 0.999)
+			atCosine(index, index === 1 ? 0.9995 : 0.9999)
 		);
 
 		const result = await check();
 
 		expect(result.ok).toBe(true);
-		expect(result.lowestCosine).toBeCloseTo(0.99, 6);
+		expect(result.lowestCosine).toBeCloseTo(0.9995, 6);
+	});
+
+	it("fails vectors that agree to 0.998, as a quantised copy of the model would", async () => {
+		expect(EMBEDDING_CHECK_THRESHOLD).toBe(0.999);
+		server.respond = embedding((index) =>
+			atCosine(index, index === 1 ? 0.998 : 1)
+		);
+
+		const result = await check();
+
+		expect(result.ok).toBe(false);
+		expect(result.lowestCosine).toBeCloseTo(0.998, 6);
 	});
 
 	it("fails when one probe's similarity is below the threshold", async () => {
@@ -233,14 +245,26 @@ describe("checkEmbedding", () => {
 });
 
 describe("embeddingCheckId", () => {
-	it("is the catalogue model id, a hash sign and the SHA-256 of the probe sentences joined by newlines", () => {
+	it("is the catalogue model id, a hash sign and the SHA-256 of the probe sentences as a JSON array", () => {
 		const digest = createHash("sha256")
 			.update(
-				"explain the model\ncheck the fairness of the outputs\na long probe sentence"
+				JSON.stringify([
+					"explain the model",
+					"check the fairness of the outputs",
+					"a long probe sentence",
+				])
 			)
 			.digest("hex");
 
 		expect(embeddingCheckId(SPEC)).toBe(`catalogue-model#${digest}`);
+	});
+
+	it("tells apart sentence lists that differ only in where a newline falls", () => {
+		const probe = (text: string) => ({ text, vector: [1, 0, 0, 0] });
+		const two = { ...SPEC, probes: [probe("first"), probe("second")] };
+		const one = { ...SPEC, probes: [probe("first\nsecond")] };
+
+		expect(embeddingCheckId(one)).not.toBe(embeddingCheckId(two));
 	});
 
 	it("changes with the model id or the sentences, and not with the vectors or the data version", () => {
@@ -318,6 +342,38 @@ describe("fetchEmbeddingSpec", () => {
 		vi.stubEnv("TECHNIQUES_MCP_URL", value);
 		expect(await fetchEmbeddingSpec()).toBeNull();
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("reads a spec just under 1 MiB, and returns null for one over it", async () => {
+		const padded = (bytes: number) =>
+			JSON.stringify({ ...SPEC, documentFormat: "x".repeat(bytes) });
+		const overhead = padded(0).length;
+
+		fetchMock.mockResolvedValue(
+			new Response(padded(1024 * 1024 - overhead), { status: 200 })
+		);
+		expect(await fetchEmbeddingSpec()).not.toBeNull();
+
+		fetchMock.mockResolvedValue(
+			new Response(padded(1024 * 1024 - overhead + 1), { status: 200 })
+		);
+		expect(await fetchEmbeddingSpec()).toBeNull();
+	});
+
+	it("stops reading a spec that never ends", async () => {
+		let cancelled = false;
+		const endless = new ReadableStream<Uint8Array>({
+			pull(controller) {
+				controller.enqueue(new Uint8Array(64 * 1024));
+			},
+			cancel() {
+				cancelled = true;
+			},
+		});
+		fetchMock.mockResolvedValue(new Response(endless, { status: 200 }));
+
+		expect(await fetchEmbeddingSpec()).toBeNull();
+		expect(cancelled).toBe(true);
 	});
 
 	it("returns null for an error status", async () => {

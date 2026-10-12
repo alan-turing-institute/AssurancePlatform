@@ -722,19 +722,169 @@ describe("the selection line and the notices", () => {
 			"No key set."
 		);
 		expect(
-			screen.getByRole("link", { name: "Open plugin settings" })
+			screen.getByRole("link", { name: "Set up AI models" })
 		).toHaveAttribute("href", "/dashboard/settings/plugins#ai-models");
 	});
 
-	it("shows a plain alert, not the error's own text, for any other failure", async () => {
-		chat.state.error = new Error("ECONNRESET secret-host:5432");
+	it("shows the reason the route gives under the heading, as plain text, in place of Try again", async () => {
+		chat.state.error = new Error(
+			"The provider refused the call: confirm <img src=x onerror=alert(1)> in your account settings."
+		);
+
+		const { container } = await renderPanel();
+
+		const alert = screen.getByRole("alert");
+		expect(alert).toHaveTextContent("The assistant could not answer.");
+		expect(screen.getByTestId("assistant-error-reason")).toHaveTextContent(
+			"confirm <img src=x onerror=alert(1)> in your account settings."
+		);
+		expect(alert).not.toHaveTextContent("Try again");
+		expect(container.querySelector("img")).toBeNull();
+	});
+
+	it("cuts a long reason", async () => {
+		chat.state.error = new Error("x".repeat(1000));
+
+		await renderPanel();
+
+		const reason = screen.getByTestId("assistant-error-reason");
+		expect((reason.textContent ?? "").length).toBeLessThan(400);
+		expect(reason).toHaveTextContent("…");
+	});
+
+	it.each([
+		["the SDK's placeholder text", new Error("An error occurred.")],
+		[
+			"a JSON response body",
+			new Error('{"error":"Too many requests","code":"RATE_LIMITED"}'),
+		],
+	])("shows only the plain alert when the error carries %s", async (_name, error) => {
+		chat.state.error = error;
 
 		await renderPanel();
 
 		expect(screen.getByRole("alert")).toHaveTextContent(
 			"The assistant could not answer. Try again."
 		);
-		expect(document.body).not.toHaveTextContent("secret-host");
+		expect(screen.queryByTestId("assistant-error-reason")).toBeNull();
+		expect(document.body).not.toHaveTextContent("RATE_LIMITED");
+	});
+});
+
+describe("a reply with nothing to read", () => {
+	const SILENT = /stopped without writing an answer/;
+
+	it("shows the length notice under the tool rows when the model ran out of room", async () => {
+		chat.state.messages = [
+			user("hi"),
+			assistant(
+				tool("t1", "output-available", { output: {} }),
+				tool("t2", "output-available", { output: {} }),
+				{ type: "data-notice", data: "length" }
+			),
+		];
+
+		await renderPanel();
+
+		expect(screen.getAllByTestId("assistant-tool-call")).toHaveLength(2);
+		const alerts = screen.getAllByRole("alert");
+		expect(alerts).toHaveLength(1);
+		expect(alerts[0]).toHaveTextContent(
+			"The model ran out of room before answering. Try a narrower question, or a different chat model."
+		);
+		expect(document.body).not.toHaveTextContent("did not answer in time");
+	});
+
+	it("shows a notice when a finished reply has tool rows and no text", async () => {
+		chat.state.messages = [
+			user("hi"),
+			assistant(tool("t1", "output-available", { output: {} })),
+		];
+
+		await renderPanel();
+
+		expect(screen.getByRole("alert")).toHaveTextContent(SILENT);
+		expect(screen.getByLabelText("Message the assistant")).toBeEnabled();
+	});
+
+	it.each([
+		[
+			"the reply has text",
+			"ready",
+			[
+				user("hi"),
+				assistant(
+					tool("t1", "output-available", { output: {} }),
+					text("Done.")
+				),
+			],
+		],
+		[
+			"the reply is still streaming",
+			"streaming",
+			[user("hi"), assistant(tool("t1", "output-available", { output: {} }))],
+		],
+		[
+			"the reply ended with a notice",
+			"ready",
+			[
+				user("hi"),
+				assistant(tool("t1", "output-available", { output: {} }), {
+					type: "data-notice",
+					data: "timeout",
+				}),
+			],
+		],
+		["the last question has no reply yet", "ready", [user("hi")]],
+	])("shows no silent-reply notice when %s", async (_name, status, messages) => {
+		chat.state.status = status;
+		chat.state.messages = messages;
+
+		await renderPanel();
+
+		expect(document.body).not.toHaveTextContent(SILENT);
+	});
+
+	it("keeps the notice under an earlier silent reply once another question is asked", async () => {
+		chat.state.status = "streaming";
+		chat.state.messages = [
+			user("hi"),
+			assistant(tool("t1", "output-available", { output: {} })),
+			user("again"),
+		];
+
+		await renderPanel();
+
+		expect(screen.getByRole("alert")).toHaveTextContent(SILENT);
+	});
+
+	it("shows only the error, not the silent-reply notice, after a failed request", async () => {
+		chat.state.status = "error";
+		chat.state.error = new Error("An error occurred.");
+		chat.state.messages = [
+			user("hi"),
+			assistant(tool("t1", "output-available", { output: {} })),
+		];
+
+		await renderPanel();
+
+		expect(screen.getAllByRole("alert")).toHaveLength(1);
+		expect(document.body).not.toHaveTextContent(SILENT);
+	});
+
+	it("does not call a reply the user stopped a silent one", async () => {
+		chat.state.status = "streaming";
+		chat.state.messages = [
+			user("hi"),
+			assistant(tool("t1", "input-available")),
+		];
+		const view = await renderPanel();
+
+		await userEvent.click(screen.getByRole("button", { name: "Stop" }));
+		chat.state.status = "ready";
+		view.again();
+
+		expect(document.body).not.toHaveTextContent(SILENT);
 	});
 });
 

@@ -7,13 +7,22 @@ import type {
  * The model to suggest for each job on each connection type. Plain data with no
  * server imports, so screens can read it. A null entry means the type has no
  * recommendation for that job, either because it cannot do the job or because
- * none has been settled; a screen then marks nothing in that picker.
+ * the right model depends on what the user has installed; a screen then marks
+ * nothing in that picker.
  */
 export const RECOMMENDED_MODELS: Readonly<
 	Record<ModelConnectionType, Readonly<Record<ModelJob, string | null>>>
 > = {
-	OPENROUTER: { chat: null, ranking: "cloudflare/clef-flash", search: null },
-	OLLAMA: { chat: null, ranking: "clef-flash", search: null },
+	OPENROUTER: {
+		chat: "anthropic/claude-sonnet-5.5",
+		ranking: "cloudflare/clef-flash",
+		search: "qwen/qwen3-embedding-4b",
+	},
+	OLLAMA: {
+		chat: null,
+		ranking: "clef-flash",
+		search: "qwen3-embedding:4b-fp16",
+	},
 	OPENAI_COMPATIBLE: { chat: null, ranking: null, search: null },
 	ANTHROPIC: { chat: null, ranking: null, search: null },
 };

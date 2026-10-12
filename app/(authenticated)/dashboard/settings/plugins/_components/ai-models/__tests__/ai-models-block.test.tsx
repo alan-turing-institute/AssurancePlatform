@@ -32,7 +32,7 @@ const MODEL_PICKER = /^Model/;
 const CLEF_FLASH_LATEST = /clef-flash:latest/;
 const OTHER_MODEL_LATEST = /other-model:latest/;
 const OPENROUTER_CLEF_FLASH = /cloudflare\/clef-flash/;
-const BGE_M3 = /baai\/bge-m3/;
+const QWEN_EMBEDDING = /qwen\/qwen3-embedding-4b/;
 
 const rateLimited = () =>
 	HttpResponse.json(
@@ -55,7 +55,9 @@ afterEach(() => {
 
 describe("AiModelsBlock: quick setup", () => {
 	it("sends the key, empties the field, lists the jobs still to choose with links, and fills the recommended models", async () => {
-		const { user, state } = await renderBlock();
+		const state = installModelRoutes();
+		state.recommended.OPENROUTER.chat = null;
+		const { user } = await renderBlock(state);
 
 		const field = screen.getByLabelText("OpenRouter key");
 		await user.type(field, KEY);
@@ -82,6 +84,26 @@ describe("AiModelsBlock: quick setup", () => {
 			)
 		);
 		expect(job("Chat")).toHaveTextContent("Not set");
+	});
+
+	it("fills all three jobs with the recommended models and says so", async () => {
+		const { user } = await renderBlock();
+
+		await user.type(screen.getByLabelText("OpenRouter key"), KEY);
+		await user.click(screen.getByRole("button", { name: "Set up" }));
+
+		expect(await screen.findByText("All three jobs are set.")).toBeVisible();
+		await waitFor(() =>
+			expect(job("Chat")).toHaveTextContent(
+				"anthropic/claude-sonnet-5.5 on OpenRouter"
+			)
+		);
+		expect(job("Ranking")).toHaveTextContent(
+			"cloudflare/clef-flash on OpenRouter"
+		);
+		expect(job("Search")).toHaveTextContent(
+			"qwen/qwen3-embedding-4b on OpenRouter"
+		);
 	});
 
 	it("shows the route's message when the key is refused, and keeps the field for another try", async () => {
@@ -545,7 +567,7 @@ describe("AiModelsBlock: the three jobs", () => {
 });
 
 describe("AiModelsBlock: the search job's status", () => {
-	const searchJob = { connectionId: "or", model: "baai/bge-m3" };
+	const searchJob = { connectionId: "or", model: "qwen/qwen3-embedding-4b" };
 	const withSearch = (
 		searchCheck: { verifiedAt: string; verifiedFor: string } | null
 	) =>
@@ -619,13 +641,15 @@ describe("AiModelsBlock: the search job's status", () => {
 			await screen.findByRole("option", { name: "Hosted (OpenRouter)" })
 		);
 		await user.click(search.getByRole("combobox", { name: MODEL_PICKER }));
-		await user.click(await screen.findByRole("option", { name: BGE_M3 }));
+		await user.click(
+			await screen.findByRole("option", { name: QWEN_EMBEDDING })
+		);
 		await user.click(search.getByRole("button", { name: "Save" }));
 
 		await waitFor(() =>
 			expect(job("Search")).toHaveTextContent("Check not passed")
 		);
-		expect(job("Search")).toHaveTextContent("Lowest similarity 0.62");
+		expect(job("Search")).toHaveTextContent("Lowest similarity 0.623.");
 
 		state.nextSearchCheck = { ok: true, lowestCosine: 0.999 };
 		await user.click(search.getByRole("button", { name: "Check again" }));
@@ -633,14 +657,58 @@ describe("AiModelsBlock: the search job's status", () => {
 		await waitFor(() =>
 			expect(job("Search")).toHaveTextContent("Check passed")
 		);
-		// Check again saves the jobs as they are: the search job is sent unchanged.
+		// Check again saves the jobs as they are, with the search job unchanged and a request to check it.
 		const sent = requestsTo(state, "PUT", "/roles");
 		expect(sent).toHaveLength(2);
+		expect(sent[0]?.body).not.toHaveProperty("recheckSearch");
 		expect(sent[1]?.body).toEqual({
 			chat: null,
 			ranking: null,
 			search: searchJob,
+			recheckSearch: true,
 		});
+	});
+
+	it("shows the similarity to three decimals without rounding it up to the threshold", async () => {
+		const state = withSearch(null);
+		state.nextSearchCheck = { ok: false, lowestCosine: 0.9988 };
+		const { user } = await renderBlock(state);
+
+		await user.click(
+			within(job("Search")).getByRole("button", { name: "Check again" })
+		);
+
+		await waitFor(() =>
+			expect(job("Search")).toHaveTextContent("Lowest similarity 0.998.")
+		);
+	});
+
+	it("does not ask for a new check when the Chat or Ranking job is saved", async () => {
+		const state = withSearch(null);
+		state.nextSearchCheck = { ok: false, lowestCosine: 0.5 };
+		const { user } = await renderBlock(state);
+
+		for (const [name, model] of [
+			["Chat", "chat-alpha"],
+			["Ranking", "rank-alpha"],
+		] as const) {
+			const row = within(job(name));
+			await user.click(row.getByRole("combobox", { name: "Connection" }));
+			await user.click(
+				await screen.findByRole("option", { name: "Hosted (OpenRouter)" })
+			);
+			await user.click(row.getByRole("combobox", { name: MODEL_PICKER }));
+			await user.click(await screen.findByRole("option", { name: model }));
+			await user.click(row.getByRole("button", { name: "Save" }));
+			await waitFor(() => expect(job(name)).toHaveTextContent(`${model} on`));
+		}
+
+		const sent = requestsTo(state, "PUT", "/roles");
+		expect(sent).toHaveLength(2);
+		for (const request of sent) {
+			expect(request.body).not.toHaveProperty("recheckSearch");
+		}
+		expect(job("Search")).toHaveTextContent("No check has passed");
 	});
 
 	it("says the check could not run when the search service gave no test sentences", async () => {
@@ -682,27 +750,181 @@ describe("AiModelsBlock: the search job's status", () => {
 
 		expect(await screen.findByText(RATE_LIMIT_MESSAGE)).toBeInTheDocument();
 	});
-});
 
-describe("AiModelsBlock: opening at its anchor", () => {
-	it("scrolls into view when the page was opened at #ai-models", async () => {
-		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
-		scroll.mockClear();
-		window.location.hash = "#ai-models";
+	it("does not describe a passed check as a failure when no check stands", async () => {
+		const state = withSearch(null);
+		const { user } = await renderBlock(state);
+		// The check passed, but nothing was recorded (the connection changed while it ran).
+		server.use(
+			http.put("/api/user/models/roles", () =>
+				HttpResponse.json({
+					roles: { ...state.roles, searchCheckCurrent: true },
+					searchCheck: { ok: true, lowestCosine: 0.9995 },
+				})
+			)
+		);
 
-		await renderBlock();
+		await user.click(
+			within(job("Search")).getByRole("button", { name: "Check again" })
+		);
 
-		expect(scroll).toHaveBeenCalledTimes(1);
-		window.location.hash = "";
+		await waitFor(() =>
+			expect(requestsTo(state, "GET", "/api/user/models")).toHaveLength(2)
+		);
+		expect(job("Search")).toHaveTextContent(
+			"No check has passed for this model yet."
+		);
+		expect(job("Search")).not.toHaveTextContent("Lowest similarity");
 	});
 
-	it("does not scroll without the anchor", async () => {
-		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
-		scroll.mockClear();
-		window.location.hash = "";
+	it("says no check has passed after the connection's key is replaced, not that the old one failed", async () => {
+		const state = withSearch({
+			verifiedAt: "2026-01-01T00:00:00.000Z",
+			verifiedFor: "x",
+		});
+		const { user } = await renderBlock(state);
+		expect(job("Search")).toHaveTextContent("Check passed");
 
+		await user.click(screen.getByRole("button", { name: "Edit" }));
+		const dialog = within(await screen.findByRole("dialog"));
+		await user.click(dialog.getByRole("button", { name: "Replace key" }));
+		await user.type(dialog.getByLabelText("New key"), "replacement-key");
+		await user.click(dialog.getByRole("button", { name: "Save changes" }));
+
+		await waitFor(() =>
+			expect(job("Search")).toHaveTextContent("Check not passed")
+		);
+		expect(job("Search")).toHaveTextContent(
+			"No check has passed for this model yet."
+		);
+		expect(job("Search")).not.toHaveTextContent("Lowest similarity");
+	});
+
+	it("forgets a failed check's similarity once its connection is edited", async () => {
+		const state = withSearch(null);
+		state.nextSearchCheck = { ok: false, lowestCosine: 0.6234 };
+		const { user } = await renderBlock(state);
+		await user.click(
+			within(job("Search")).getByRole("button", { name: "Check again" })
+		);
+		await waitFor(() =>
+			expect(job("Search")).toHaveTextContent("Lowest similarity 0.623.")
+		);
+
+		await user.click(screen.getByRole("button", { name: "Edit" }));
+		const dialog = within(await screen.findByRole("dialog"));
+		await user.clear(dialog.getByLabelText("Label"));
+		await user.type(dialog.getByLabelText("Label"), "Renamed");
+		await user.click(dialog.getByRole("button", { name: "Save changes" }));
+
+		await waitFor(() =>
+			expect(job("Search")).toHaveTextContent(
+				"No check has passed for this model yet."
+			)
+		);
+		expect(job("Search")).not.toHaveTextContent("Lowest similarity");
+	});
+
+	it("says the catalogue has changed when the recorded check is no longer current, and passes after Check again", async () => {
+		const state = withSearch({
+			verifiedAt: "2026-01-01T00:00:00.000Z",
+			verifiedFor: "old",
+		});
+		state.searchCheckCurrent = false;
+		const { user } = await renderBlock(state);
+
+		expect(job("Search")).toHaveTextContent("Check not passed");
+		expect(job("Search")).toHaveTextContent("The catalogue has changed");
+
+		state.nextSearchCheck = { ok: true, lowestCosine: 0.9999 };
+		await user.click(
+			within(job("Search")).getByRole("button", { name: "Check again" })
+		);
+
+		await waitFor(() =>
+			expect(job("Search")).toHaveTextContent("Check passed")
+		);
+		expect(requestsTo(state, "PUT", "/roles")[0]?.body).toMatchObject({
+			recheckSearch: true,
+		});
+		expect(job("Search")).not.toHaveTextContent("catalogue has changed");
+	});
+});
+
+describe("AiModelsBlock: a failed load", () => {
+	const failing = () =>
+		HttpResponse.json({ error: "Something went wrong" }, { status: 500 });
+
+	it("shows the error with a Retry button instead of hiding the block, and loads on Retry", async () => {
+		const user = userEvent.setup();
+		server.use(http.get("/api/user/models", failing));
+		renderWithoutProviders(<AiModelsBlock />);
+
+		expect(await screen.findByText("Something went wrong")).toBeVisible();
+		expect(
+			screen.queryByRole("heading", { name: "Quick setup" })
+		).not.toBeInTheDocument();
+
+		installModelRoutes();
+		await user.click(screen.getByRole("button", { name: "Retry" }));
+
+		expect(
+			await screen.findByRole("heading", { name: "Quick setup" })
+		).toBeVisible();
+		expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+	});
+
+	it("shows the error with Retry when the fetch after a change fails, and shows the block again on Retry", async () => {
+		const state = installModelRoutes({
+			connections: [connection({ id: "local", label: "Local" })],
+		});
+		const { user } = await renderBlock(state);
+		server.use(http.get("/api/user/models", failing));
+
+		await user.click(screen.getByRole("button", { name: "Remove" }));
+		await user.click(
+			within(await screen.findByRole("alertdialog")).getByRole("button", {
+				name: "Remove",
+			})
+		);
+
+		expect(await screen.findByRole("button", { name: "Retry" })).toBeVisible();
+		installModelRoutes(state);
+		await user.click(screen.getByRole("button", { name: "Retry" }));
+
+		expect(
+			await screen.findByText(
+				"No connections yet. Add one, or use quick setup above."
+			)
+		).toBeVisible();
+	});
+});
+
+describe("AiModelsBlock: how results are announced", () => {
+	it("shows a plain sentence, not an alert, when there are no connections", async () => {
 		await renderBlock();
 
-		expect(scroll).not.toHaveBeenCalled();
+		const empty = screen.getByText(
+			"No connections yet. Add one, or use quick setup above."
+		);
+		expect(empty.tagName).toBe("P");
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+	});
+
+	it("announces a connection's test result in a status region that was already on the page", async () => {
+		const state = installModelRoutes({
+			connections: [connection({ id: "local", label: "Local" })],
+		});
+		const { user } = await renderBlock(state);
+		const row = within(screen.getByRole("listitem"));
+		const region = row.getByRole("status");
+		expect(region).toBeEmptyDOMElement();
+
+		await user.click(row.getByRole("button", { name: "Test" }));
+
+		await waitFor(() =>
+			expect(region).toHaveTextContent("The connection works.")
+		);
+		expect(row.getByRole("status")).toBe(region);
 	});
 });

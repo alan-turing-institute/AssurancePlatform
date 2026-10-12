@@ -10,6 +10,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import type { ModelConnection } from "@/hooks/use-model-settings";
 import type { ModelJob } from "@/lib/models/connection-types";
 import { JOB_COPY } from "./ai-models-copy";
@@ -51,7 +52,13 @@ export function RemoveConnectionDialog({
 			<AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>
-						{connection ? `Remove ${connection.label}?` : "Remove connection?"}
+						{connection ? (
+							<>
+								Remove <span className="break-all">{connection.label}</span>?
+							</>
+						) : (
+							"Remove connection?"
+						)}
 					</AlertDialogTitle>
 					<AlertDialogDescription>
 						{jobs.length > 0
@@ -62,7 +69,7 @@ export function RemoveConnectionDialog({
 				<AlertDialogFooter>
 					<AlertDialogCancel>Keep it</AlertDialogCancel>
 					<AlertDialogAction
-						className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						className={buttonVariants({ variant: "destructive" })}
 						onClick={() => connection && onConfirm(connection)}
 					>
 						Remove
