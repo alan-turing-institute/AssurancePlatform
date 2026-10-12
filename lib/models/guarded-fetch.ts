@@ -111,21 +111,33 @@ export function createGuardedAgent(
 	});
 }
 
-const checkedAgents = new WeakMap<LookupFunction, Agent>();
-const openAgents = new WeakMap<LookupFunction, Agent>();
+/**
+ * Ends an agent once, either by letting it finish what it has (`close`) or by
+ * dropping its sockets at once (`destroy`). Calling it again does nothing.
+ */
+type ReleaseAgent = (how: "close" | "destroy") => void;
 
-/** The shared agent for a resolver: one that refuses blocked addresses, or one for origins the operator listed. */
-function agentFor(resolve: LookupFunction, enforce: boolean): Agent {
-	const cache = enforce ? checkedAgents : openAgents;
-	let agent = cache.get(resolve);
-	if (!agent) {
-		agent = createGuardedAgent(
-			resolve,
-			enforce ? isBlockedAddress : allowEverything
-		);
-		cache.set(resolve, agent);
-	}
-	return agent;
+/**
+ * An agent for one request, and the function that ends it. undici keeps one
+ * connection pool per origin in an agent and never removes it, so a shared
+ * agent would collect a pool for every address a user ever entered. One agent
+ * per call goes away with the call, and costs one new connection per request.
+ */
+function agentForOneCall(
+	resolve: LookupFunction,
+	isBlocked: BlockCheck
+): { agent: Agent; release: ReleaseAgent } {
+	const agent = createGuardedAgent(resolve, isBlocked);
+	let released = false;
+	const release: ReleaseAgent = (how) => {
+		if (released) {
+			return;
+		}
+		released = true;
+		const ending = how === "close" ? agent.close() : agent.destroy();
+		ending.catch(() => undefined);
+	};
+	return { agent, release };
 }
 
 function parseUrl(input: RequestInfo | URL): URL {
@@ -201,11 +213,16 @@ function refusalFrom(
 	return undefined;
 }
 
-/** Passes the body through until it exceeds `maxBytes`, then errors the stream and cancels the request. */
+/**
+ * Passes the body through until it exceeds `maxBytes`, then errors the stream
+ * and cancels the request. The request's agent is ended when the body ends,
+ * fails or is cancelled.
+ */
 function limitBody(
 	body: ReadableStream<Uint8Array>,
 	maxBytes: number,
-	translate: (error: unknown) => unknown
+	translate: (error: unknown) => unknown,
+	release: ReleaseAgent
 ): ReadableStream<Uint8Array> {
 	const reader = body.getReader();
 	let received = 0;
@@ -215,6 +232,7 @@ function limitBody(
 				const { done, value } = await reader.read();
 				if (done) {
 					controller.close();
+					release("close");
 					return;
 				}
 				received += value.byteLength;
@@ -222,14 +240,22 @@ function limitBody(
 					const refusal = new GuardedFetchError("response-too-large");
 					controller.error(refusal);
 					await reader.cancel(refusal).catch(() => undefined);
+					release("destroy");
 					return;
 				}
 				controller.enqueue(value);
 			} catch (error) {
 				controller.error(translate(error));
+				release("destroy");
 			}
 		},
-		cancel: (reason) => reader.cancel(reason),
+		async cancel(reason) {
+			try {
+				await reader.cancel(reason);
+			} finally {
+				release("destroy");
+			}
+		},
 	});
 }
 
@@ -240,7 +266,9 @@ function limitBody(
  * to any loopback, private, link-local, shared, unspecified, multicast or
  * reserved address. A redirect is never followed. The caller's `signal` and a
  * timeout both end the request, and a response body larger than the byte cap
- * is cut off. Every refusal is a `GuardedFetchError`.
+ * is cut off. Every refusal is a `GuardedFetchError`. Each call connects with
+ * its own agent, which is closed when the response body ends and dropped when
+ * the call fails, the body is cancelled or errors, or the time limit passes.
  */
 export async function guardedFetch(
 	input: RequestInfo | URL,
@@ -252,11 +280,22 @@ export async function guardedFetch(
 	if (!isListed) {
 		requirePublicTarget(url);
 	}
-	const dispatcher = agentFor(options.lookup ?? systemLookup, !isListed);
+	const { agent: dispatcher, release: releaseAgent } = agentForOneCall(
+		options.lookup ?? systemLookup,
+		isListed ? allowEverything : isBlockedAddress
+	);
 
 	const timeout = AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 	const caller = init?.signal;
 	const signal = caller ? AbortSignal.any([caller, timeout]) : timeout;
+	// The timeout and the caller's abort also end the agent, so a body that is
+	// never read does not keep its connection past the time limit.
+	const onAbort = () => releaseAgent("destroy");
+	signal.addEventListener("abort", onAbort, { once: true });
+	const release: ReleaseAgent = (how) => {
+		signal.removeEventListener("abort", onAbort);
+		releaseAgent(how);
+	};
 	// A failure the guard did not cause is replaced by fixed text, because the
 	// original can quote a header value or the address. Only the caller's own
 	// abort is passed on as it was raised.
@@ -277,19 +316,22 @@ export async function guardedFetch(
 			signal,
 		});
 	} catch (error) {
+		release("destroy");
 		throw translate(error);
 	}
 
 	const maxBytes = options.maxBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
 	const { body } = response;
 	if (!body) {
+		release("close");
 		return response;
 	}
 	if (Number(response.headers.get("content-length")) > maxBytes) {
 		await body.cancel().catch(() => undefined);
+		release("destroy");
 		throw new GuardedFetchError("response-too-large");
 	}
-	const limited = limitBody(body, maxBytes, translate);
+	const limited = limitBody(body, maxBytes, translate, release);
 	try {
 		return new Response(limited, {
 			status: response.status,
