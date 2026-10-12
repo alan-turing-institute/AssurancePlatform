@@ -531,7 +531,10 @@
     "components/ai-elements/reasoning.tsx:useReasoning",
     "components/ai-elements/tool.tsx:getStatusBadge",
     "components/ui/button-group.tsx:ButtonGroupSeparator",
-    "components/ui/button-group.tsx:buttonGroupVariants"
+    "components/ui/button-group.tsx:buttonGroupVariants",
+    "components/ui/command.tsx:CommandDialog",
+    "components/ui/command.tsx:CommandShortcut",
+    "components/ui/command.tsx:CommandSeparator"
   ],
   "unused_types": [
     "components/docs/curriculum/task-registry.ts:TaskStatusValue",
