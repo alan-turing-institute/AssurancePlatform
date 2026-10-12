@@ -3,9 +3,10 @@ import { APICallError, RetryError } from "ai";
 /**
  * What the user is told when the model provider fails. The provider's own
  * words are shown to the user whose account they concern (for example, a model
- * that needs an age confirmation before use), cleaned first: the user's key
- * and any bearer token are replaced, the connection's address is removed, and
- * the text is cut to a short line. They are never written to a log.
+ * that needs an age confirmation before use), cleaned first: the user's key,
+ * any bearer token and any `sk-` token are replaced, the connection's address
+ * is removed, and the text is cut to a short line. They are never written to a
+ * log.
  */
 
 /** What is said when the provider gave no usable reason. */
@@ -23,6 +24,7 @@ export interface ProviderSecrets {
 /** A key shorter than this is not replaced, since it would also match ordinary words. */
 const MIN_KEY_CHARS_TO_REPLACE = 4;
 const BEARER_TOKEN = /\bBearer\s+[^\s"',;]+/gi;
+const SK_TOKEN = /\bsk-[\w-]{4,}/gi;
 const SPECIAL_REGEX_CHARACTERS = /[.*+?^${}()|[\]\\]/g;
 const SPACE_RUNS = / {2,}/g;
 const REDACTED_KEY = "[key removed]";
@@ -69,8 +71,8 @@ function withoutControlCharacters(text: string): string {
 }
 
 /**
- * The provider's message made fit to show: the key, bearer tokens and the
- * address removed, control characters and runs of space collapsed to single
+ * The provider's message made fit to show: the key, bearer tokens, tokens that
+ * start `sk-` and the address removed, control characters and runs of space collapsed to single
  * spaces, and the result cut to `MAX_PROVIDER_MESSAGE_CHARS` characters.
  * Empty when nothing readable is left.
  */
@@ -82,7 +84,9 @@ export function cleanProviderMessage(
 	if (secrets.apiKey && secrets.apiKey.length >= MIN_KEY_CHARS_TO_REPLACE) {
 		text = removeAll(text, [secrets.apiKey], REDACTED_KEY);
 	}
-	text = text.replace(BEARER_TOKEN, `Bearer ${REDACTED_KEY}`);
+	text = text
+		.replace(BEARER_TOKEN, `Bearer ${REDACTED_KEY}`)
+		.replace(SK_TOKEN, REDACTED_KEY);
 	text = removeAll(text, addressForms(secrets.baseUrl), REDACTED_ADDRESS);
 	text = withoutControlCharacters(text).replace(SPACE_RUNS, " ").trim();
 	return text.length > MAX_PROVIDER_MESSAGE_CHARS
@@ -96,10 +100,11 @@ function underlying(error: unknown): unknown {
 }
 
 /**
- * The text for the user when a reply fails. A provider's HTTP answer gives
- * its own message and status, cleaned; anything else (a refused address, a
- * dropped connection, a failure inside the SDK) gives the fixed text alone,
- * since its message was not written by the provider.
+ * The text for the user when a reply fails: nothing but the provider's own
+ * message, cleaned, when the provider answered with an error. Anything else (a
+ * refused address, a dropped connection, a failure inside the SDK), and a
+ * provider message with nothing readable in it, gives the fixed text, since
+ * that message was not written for the user.
  */
 export function providerErrorMessage(
 	error: unknown,
@@ -109,13 +114,5 @@ export function providerErrorMessage(
 	if (!APICallError.isInstance(failure)) {
 		return PROVIDER_ERROR_TEXT;
 	}
-	const said = cleanProviderMessage(failure.message, secrets);
-	if (said.length === 0) {
-		return PROVIDER_ERROR_TEXT;
-	}
-	const status =
-		typeof failure.statusCode === "number"
-			? ` (HTTP ${failure.statusCode})`
-			: "";
-	return `${PROVIDER_ERROR_TEXT} It said${status}: ${said}`;
+	return cleanProviderMessage(failure.message, secrets) || PROVIDER_ERROR_TEXT;
 }

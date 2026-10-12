@@ -300,19 +300,34 @@ describe("a model that runs out of output room", () => {
 	});
 });
 
+/** The text of the error the reply's stream ends with. */
+function errorTextOf(stream: string): string {
+	for (const line of stream.split("\n")) {
+		if (line.startsWith("data: ")) {
+			const chunk = JSON.parse(line.slice("data: ".length)) as {
+				errorText?: string;
+				type?: string;
+			};
+			if (chunk.type === "error") {
+				return chunk.errorText ?? "";
+			}
+		}
+	}
+	return "";
+}
+
 describe("what the user is told when the provider refuses", () => {
 	const REASON =
 		"This model requires you to complete the following before use: 18+ age confirmation";
 
-	it("shows the provider's own reason and status, and logs none of it", async () => {
+	it("shows the provider's own reason and nothing else, and logs none of it", async () => {
 		chatAnswer = (_hit, response) =>
 			json(response, { error: { message: REASON } }, 403);
 		const { testCase } = await setup();
 
 		const outcome = await chat(testCase.id);
 
-		expect(outcome.text).toContain("The model provider returned an error.");
-		expect(outcome.text).toContain(`It said (HTTP 403): ${REASON}`);
+		expect(errorTextOf(outcome.text)).toBe(REASON);
 		expect(logs.text()).not.toContain("18+ age");
 		expect(logs.text()).not.toContain(REASON);
 	});
@@ -337,8 +352,9 @@ describe("what the user is told when the provider refuses", () => {
 			expect(outcome.text).not.toContain(secret);
 			expect(logs.text()).not.toContain(secret);
 		}
-		const said = outcome.text.split("It said (HTTP 401): ")[1] ?? "";
-		expect(said.split('"')[0]?.length).toBeLessThanOrEqual(300);
+		const shown = errorTextOf(outcome.text);
+		expect(shown.length).toBeLessThanOrEqual(300);
+		expect(shown.startsWith("Invalid key [key removed] for")).toBe(true);
 	});
 
 	it("gives only the fixed sentence when the address is refused", async () => {
@@ -347,7 +363,8 @@ describe("what the user is told when the provider refuses", () => {
 
 		const outcome = await chat(testCase.id);
 
-		expect(outcome.text).toContain("The model provider returned an error.");
-		expect(outcome.text).not.toContain("It said");
+		expect(errorTextOf(outcome.text)).toBe(
+			"The model provider returned an error."
+		);
 	});
 });

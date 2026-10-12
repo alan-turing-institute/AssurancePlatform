@@ -21,23 +21,13 @@ function apiError(message: string, statusCode?: number) {
 }
 
 describe("providerErrorMessage", () => {
-	it("shows the provider's own reason and the HTTP status after the fixed sentence", () => {
-		const text = providerErrorMessage(
-			apiError(
-				"This model requires you to complete the following before use: 18+ age confirmation",
-				403
-			),
-			SECRETS
-		);
+	it("returns the provider's own reason and nothing else", () => {
+		const reason =
+			"This model requires you to complete the following before use: 18+ age confirmation";
 
-		expect(text).toBe(
-			`${PROVIDER_ERROR_TEXT} It said (HTTP 403): This model requires you to complete the following before use: 18+ age confirmation`
-		);
-	});
-
-	it("leaves the status out when the error has none", () => {
+		expect(providerErrorMessage(apiError(reason, 403), SECRETS)).toBe(reason);
 		expect(providerErrorMessage(apiError("Rate limited"), SECRETS)).toBe(
-			`${PROVIDER_ERROR_TEXT} It said: Rate limited`
+			"Rate limited"
 		);
 	});
 
@@ -48,9 +38,7 @@ describe("providerErrorMessage", () => {
 			errors: [apiError("first", 500), apiError("Upstream overloaded", 503)],
 		});
 
-		expect(providerErrorMessage(wrapped, SECRETS)).toContain(
-			"(HTTP 503): Upstream overloaded"
-		);
+		expect(providerErrorMessage(wrapped, SECRETS)).toBe("Upstream overloaded");
 	});
 
 	it.each([
@@ -65,7 +53,7 @@ describe("providerErrorMessage", () => {
 		expect(providerErrorMessage(apiError(" \n\t ", 500), SECRETS)).toBe(
 			PROVIDER_ERROR_TEXT
 		);
-		expect(providerErrorMessage(apiError(ADDRESS, 500), SECRETS)).toContain(
+		expect(providerErrorMessage(apiError(ADDRESS, 500), SECRETS)).toBe(
 			"[address removed]"
 		);
 	});
@@ -81,6 +69,21 @@ describe("cleanProviderMessage", () => {
 		expect(text).not.toContain(KEY);
 		expect(text.toLowerCase()).not.toContain(KEY.toLowerCase());
 		expect(text).toBe("Invalid key [key removed]; again [key removed]");
+	});
+
+	it("replaces any token that starts sk-, not only the user's own", () => {
+		const text = cleanProviderMessage(
+			"Keys sk-proj-AbC123_xyz and SK-live-0000 were refused",
+			SECRETS
+		);
+
+		expect(text).toBe("Keys [key removed] and [key removed] were refused");
+	});
+
+	it("keeps words that only begin like a key", () => {
+		expect(cleanProviderMessage("Ask-me and sk-1 are fine", SECRETS)).toBe(
+			"Ask-me and sk-1 are fine"
+		);
 	});
 
 	it("replaces any bearer token, not only the user's own", () => {
