@@ -3934,7 +3934,7 @@
     "/user/models/roles": {
       "put": {
         "operationId": "put-user-models-roles",
-        "summary": "PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a changed search job.",
+        "summary": "PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or has no current check.",
         "description": "Saves the three jobs and returns them with the outcome of the search check, if one ran.",
         "tags": [
           "User"
@@ -4059,105 +4059,6 @@
       "get": {
         "operationId": "get-user-plugins-{pluginId}-consequences",
         "summary": "GET /api/user/plugins/[pluginId]/consequences",
-        "description": "",
-        "tags": [
-          "User"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
-    },
-    "/user/plugins/assistant/key": {
-      "get": {
-        "operationId": "get-user-plugins-assistant-key",
-        "summary": "GET /api/user/plugins/assistant/key — whether a key is stored; never the key.",
-        "description": "",
-        "tags": [
-          "User"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      },
-      "put": {
-        "operationId": "put-user-plugins-assistant-key",
-        "summary": "PUT /api/user/plugins/assistant/key — stores or replaces the key (write-only).",
-        "description": "",
-        "tags": [
-          "User"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "delete-user-plugins-assistant-key",
-        "summary": "DELETE /api/user/plugins/assistant/key — removes the stored key.",
-        "description": "",
-        "tags": [
-          "User"
-        ],
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
-    },
-    "/user/plugins/assistant/options": {
-      "get": {
-        "operationId": "get-user-plugins-assistant-options",
-        "summary": "GET /api/user/plugins/assistant/options — the base URLs the deployment allows.",
         "description": "",
         "tags": [
           "User"

@@ -21,22 +21,6 @@ vi.mock("@/lib/models/adapters", async (importOriginal) => ({
 	chatModelFor: vi.fn(),
 }));
 
-const decryptSpy = vi.hoisted(() => ({ throwOnDecrypt: false, calls: 0 }));
-vi.mock("@/lib/auth/token-encryption", async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import("@/lib/auth/token-encryption")>();
-	return {
-		...actual,
-		decryptToken: (stored: string) => {
-			decryptSpy.calls += 1;
-			if (decryptSpy.throwOnDecrypt) {
-				throw new Error("decrypt must not be called");
-			}
-			return actual.decryptToken(stored);
-		},
-	};
-});
-
 const PLUGIN = "tea.assistant";
 const SECRET = "sk-test-SECRET-value-123";
 const MODEL_ADDRESS = "https://llm.example/v1";
@@ -160,8 +144,6 @@ async function setup({ job = true, enabled = true } = {}) {
 
 beforeEach(async () => {
 	await mockNoAuth();
-	decryptSpy.throwOnDecrypt = false;
-	decryptSpy.calls = 0;
 	(await modelFactory()).mockReset();
 	(await modelFactory()).mockImplementation(() => textModel());
 });
@@ -253,7 +235,7 @@ describe("POST /api/cases/[id]/assistant chat job configuration", () => {
 		expect((await modelFactory()).mock.calls).toHaveLength(0);
 	});
 
-	it("is 409 when the stored provider settings and key of the old screen are all the user has", async () => {
+	it("is 409 when the stored provider settings of the old screen are all the user has", async () => {
 		const { user, kase } = await setup({ job: false });
 		await prisma.pluginState.updateMany({
 			where: { scopeId: user.id, pluginId: PLUGIN },
@@ -265,10 +247,6 @@ describe("POST /api/cases/[id]/assistant chat job configuration", () => {
 				},
 			},
 		});
-		const { writeUserApiKey } = await import(
-			"@/lib/plugins/assistant/key-store"
-		);
-		await writeUserApiKey(user.id, SECRET);
 
 		expect((await post(kase.id, MESSAGES)).status).toBe(409);
 		expect((await modelFactory()).mock.calls).toHaveLength(0);
@@ -480,230 +458,5 @@ describe("assistant tools read only the URL's case", () => {
 		);
 		expect(out).toEqual({ found: false, message: "Not found in this case." });
 		expect(JSON.stringify(out)).not.toContain("THEIRS");
-	});
-});
-
-// ============================================
-// Key routes
-// ============================================
-
-function rawBody(body: unknown, raw: boolean): string | undefined {
-	if (body === undefined) {
-		return undefined;
-	}
-	return raw ? (body as string) : JSON.stringify(body);
-}
-
-async function enabledUser() {
-	const user = await createTestUser();
-	await createTestPluginState(user.id, { pluginId: PLUGIN, enabled: true });
-	return user;
-}
-
-function keyRequest(method: string, body?: unknown, raw = false) {
-	return new Request("http://localhost:3000/api/user/plugins/assistant/key", {
-		method,
-		body: rawBody(body, raw),
-	});
-}
-
-describe("assistant key routes", () => {
-	it("are 401 unauthenticated for GET, PUT and DELETE", async () => {
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		expect((await route.GET()).status).toBe(401);
-		expect((await route.PUT(keyRequest("PUT", { key: "k" }))).status).toBe(401);
-		expect((await route.DELETE()).status).toBe(401);
-		const options = await import(
-			"@/app/api/user/plugins/assistant/options/route"
-		);
-		expect((await options.GET()).status).toBe(401);
-	});
-
-	it("are 403 when the plugin is disabled except DELETE, and write nothing", async () => {
-		const user = await createTestUser();
-		await createTestPluginState(user.id, { pluginId: PLUGIN, enabled: false });
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		expect((await route.GET()).status).toBe(403);
-		expect((await route.PUT(keyRequest("PUT", { key: SECRET }))).status).toBe(
-			403
-		);
-		expect((await route.DELETE()).status).toBe(200);
-		const options = await import(
-			"@/app/api/user/plugins/assistant/options/route"
-		);
-		expect((await options.GET()).status).toBe(403);
-		expect(
-			await prisma.pluginAssistantKey.count({ where: { userId: user.id } })
-		).toBe(0);
-	});
-
-	it("stores the key encrypted and never returns it from any route", async () => {
-		const user = await createTestUser();
-		await createTestPluginState(user.id, {
-			pluginId: PLUGIN,
-			settings: { provider: "anthropic", model: "m" },
-		});
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-
-		const put = await route.PUT(keyRequest("PUT", { key: SECRET }));
-		expect(put.status).toBe(200);
-		expect(await put.json()).toEqual({ hasKey: true });
-
-		const row = await prisma.pluginAssistantKey.findUnique({
-			where: { userId: user.id },
-		});
-		expect(row?.apiKeyEncrypted).toBeTruthy();
-		expect(row?.apiKeyEncrypted).not.toContain(SECRET);
-		expect(row?.apiKeyEncrypted).not.toBe(SECRET);
-
-		const get = await route.GET();
-		expect(await get.json()).toEqual({ hasKey: true });
-
-		const plugins = await import("@/app/api/user/plugins/route");
-		expect(await (await plugins.GET()).text()).not.toContain(SECRET);
-		const options = await import(
-			"@/app/api/user/plugins/assistant/options/route"
-		);
-		expect(await (await options.GET()).text()).not.toContain(SECRET);
-
-		const del = await route.DELETE();
-		expect(await del.json()).toEqual({ hasKey: false });
-		expect(await (await route.GET()).json()).toEqual({ hasKey: false });
-	});
-
-	it("replaces an existing key rather than adding a second row", async () => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		await route.PUT(keyRequest("PUT", { key: "first-key" }));
-		await route.PUT(keyRequest("PUT", { key: "second-key" }));
-		expect(
-			await prisma.pluginAssistantKey.count({ where: { userId: user.id } })
-		).toBe(1);
-		const { readUserApiKey } = await import(
-			"@/lib/plugins/assistant/key-store"
-		);
-		expect(await readUserApiKey(user.id)).toBe("second-key");
-	});
-
-	it("keeps one user's key invisible to another", async () => {
-		const a = await enabledUser();
-		const b = await enabledUser();
-		await mockAuth(a.id, a.username, a.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		await route.PUT(keyRequest("PUT", { key: SECRET }));
-		await mockAuth(b.id, b.username, b.email);
-		expect(await (await route.GET()).json()).toEqual({ hasKey: false });
-	});
-
-	it.each([
-		["empty", { key: "" }],
-		["whitespace only", { key: "  \t\n " }],
-		["oversize", { key: "k".repeat(2049) }],
-		["a number", { key: 12_345 }],
-		["null", { key: null }],
-		["an array", { key: ["a"] }],
-		["missing", {}],
-		["with an extra field", { key: "ok", other: 1 }],
-	])("PUT rejects a key that is %s with 400 and stores nothing", async (_n, body) => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		const res = await route.PUT(keyRequest("PUT", body));
-		expect(res.status).toBe(400);
-		expect(
-			await prisma.pluginAssistantKey.count({ where: { userId: user.id } })
-		).toBe(0);
-	});
-
-	it("PUT rejects a body that is not JSON with 400", async () => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		expect((await route.PUT(keyRequest("PUT", "{nope", true))).status).toBe(
-			400
-		);
-	});
-
-	it("PUT accepts a key of exactly 2048 characters and trims surrounding whitespace", async () => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		expect(
-			(await route.PUT(keyRequest("PUT", { key: "k".repeat(2048) }))).status
-		).toBe(200);
-		await route.PUT(keyRequest("PUT", { key: `  ${SECRET}\n` }));
-		const { readUserApiKey } = await import(
-			"@/lib/plugins/assistant/key-store"
-		);
-		expect(await readUserApiKey(user.id)).toBe(SECRET);
-	});
-
-	it("PUT rejects a body over the small cap with 413", async () => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		const res = await route.PUT(keyRequest("PUT", { key: "k".repeat(10_000) }));
-		expect([400, 413]).toContain(res.status);
-	});
-
-	it("GET answers hasKey without decrypting the stored value", async () => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		await route.PUT(keyRequest("PUT", { key: SECRET }));
-		decryptSpy.throwOnDecrypt = true;
-		decryptSpy.calls = 0;
-		const res = await route.GET();
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ hasKey: true });
-		expect(decryptSpy.calls).toBe(0);
-	});
-
-	it("deleting the user removes the key row", async () => {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import("@/app/api/user/plugins/assistant/key/route");
-		await route.PUT(keyRequest("PUT", { key: SECRET }));
-		await prisma.user.delete({ where: { id: user.id } });
-		expect(
-			await prisma.pluginAssistantKey.count({ where: { userId: user.id } })
-		).toBe(0);
-	});
-});
-
-// ============================================
-// Options route
-// ============================================
-
-describe("assistant options route", () => {
-	const ALLOWED = "https://llm.example/v1";
-
-	async function options() {
-		const user = await enabledUser();
-		await mockAuth(user.id, user.username, user.email);
-		const route = await import(
-			"@/app/api/user/plugins/assistant/options/route"
-		);
-		return route.GET();
-	}
-
-	it("lists the configured base URLs", async () => {
-		vi.stubEnv(
-			"ASSISTANT_ALLOWED_BASE_URLS",
-			`${ALLOWED}, https://b.example/v1`
-		);
-		expect(await (await options()).json()).toEqual({
-			baseUrls: [ALLOWED, "https://b.example/v1"],
-		});
-	});
-
-	it("returns an empty list when the variable is unset", async () => {
-		vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", "");
-		const res = await options();
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ baseUrls: [] });
 	});
 });
