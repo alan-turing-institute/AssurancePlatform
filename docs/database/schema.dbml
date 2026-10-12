@@ -56,6 +56,8 @@ Table users {
   integrationPrincipal integrations
   archivedPublishedCases published_assurance_cases [not null]
   pluginAssistantKey plugin_assistant_keys
+  modelConnections user_model_connections [not null]
+  modelRoles user_model_roles
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -820,6 +822,48 @@ the same AES-256-GCM envelope as the OAuth tokens (lib/auth/token-encryption.ts)
 Write-only from the API: no route returns the value. Removed with the user.'
 }
 
+Table user_model_connections {
+  id String [pk]
+  userId String [not null]
+  label String [not null]
+  type ModelConnectionType [not null]
+  baseUrl String
+  apiKeyEncrypted String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user users [not null]
+  chatRoles user_model_roles [not null]
+  decisionRoles user_model_roles [not null]
+  embeddingRoles user_model_roles [not null]
+
+  Note: 'One model connection a user has added: a label, a type, an address (null for
+types whose address is fixed) and an optional key, encrypted at rest with the
+same AES-256-GCM envelope as the OAuth tokens (lib/auth/token-encryption.ts).
+Only lib/services/model-connection-service.ts reads or writes it, and no read
+returns the key except the server-side use path. Removed with the user.'
+}
+
+Table user_model_roles {
+  userId String [pk]
+  chatConnectionId String
+  chatModel String
+  decisionConnectionId String
+  decisionModel String
+  embeddingConnectionId String
+  embeddingModel String
+  embeddingVerifiedFor String [note: 'The catalogue model and test sentences the search check passed for']
+  embeddingVerifiedAt DateTime
+  user users [not null]
+  chatConnection user_model_connections
+  decisionConnection user_model_connections
+  embeddingConnection user_model_connections
+
+  Note: 'Which connection and model does each of a user\'s three jobs: chat, decision
+(ranking) and embedding (search). Deleting a connection empties the jobs that
+used it. The search check result is written only by the server after it has
+embedded the catalogue\'s test sentences through the chosen connection.'
+}
+
 Enum AuthProvider {
   LOCAL
   GITHUB
@@ -964,6 +1008,13 @@ Enum PluginHealthCriteriaAction {
   DISCARDED
 }
 
+Enum ModelConnectionType {
+  OPENROUTER
+  OLLAMA
+  OPENAI_COMPATIBLE
+  ANTHROPIC
+}
+
 Ref: teams.createdById > users.id
 
 Ref: team_members.teamId > teams.id [delete: Cascade]
@@ -1085,3 +1136,13 @@ Ref: plugin_health_criteria_revisions.claimId > assurance_elements.id [delete: C
 Ref: plugin_health_check_catalogues.integrationId - integrations.id [delete: Cascade]
 
 Ref: plugin_assistant_keys.userId - users.id [delete: Cascade]
+
+Ref: user_model_connections.userId > users.id [delete: Cascade]
+
+Ref: user_model_roles.userId - users.id [delete: Cascade]
+
+Ref: user_model_roles.chatConnectionId > user_model_connections.id [delete: Set Null]
+
+Ref: user_model_roles.decisionConnectionId > user_model_connections.id [delete: Set Null]
+
+Ref: user_model_roles.embeddingConnectionId > user_model_connections.id [delete: Set Null]
