@@ -12,6 +12,7 @@ import {
 	type ModelConnectionType,
 	type ModelJob,
 } from "@/lib/models/connection-types";
+import { hasControlCharacter } from "@/lib/models/key-characters";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -201,6 +202,12 @@ function checkBaseUrl(raw: string): Checked<string> {
 	if (parsed.username || parsed.password) {
 		return { error: "Base URL must not contain a user name or password" };
 	}
+	// Checked on the text, not the parsed URL: a lone "?" or "#" parses to an
+	// empty query or fragment, yet it still lets the path the SDK appends be
+	// read as part of the query or fragment instead.
+	if (value.includes("?") || value.includes("#")) {
+		return { error: "Base URL must not contain a query string or fragment" };
+	}
 	return { value };
 }
 
@@ -213,6 +220,9 @@ function checkApiKey(raw: string): Checked<string> {
 		return {
 			error: `API key must be at most ${API_KEY_MAX_LENGTH} characters`,
 		};
+	}
+	if (hasControlCharacter(value)) {
+		return { error: "API key must not contain control characters" };
 	}
 	return { value };
 }

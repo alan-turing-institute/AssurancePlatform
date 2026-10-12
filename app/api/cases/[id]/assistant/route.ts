@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { createAssistantModel } from "@/lib/plugins/assistant/model";
 import { modelTimeoutMs } from "@/lib/plugins/assistant/model-timeout";
+import { noDownload } from "@/lib/plugins/assistant/no-download";
 import {
 	ASSISTANT_PLUGIN_ID,
 	resolveProviderConfig,
@@ -41,10 +42,23 @@ const MAX_STEPS = 8;
 const MAX_OUTPUT_TOKENS = 2048;
 const MAX_RETRIES = 1;
 
+/** Whether a message part is a file part, whatever its role or contents. */
+function isFilePart(part: unknown): boolean {
+	return (
+		typeof part === "object" &&
+		part !== null &&
+		"type" in part &&
+		part.type === "file"
+	);
+}
+
 const messageSchema = z.looseObject({
 	id: z.string().max(200),
 	role: z.enum(["user", "assistant"]),
-	parts: z.array(z.unknown()).max(200),
+	parts: z
+		.array(z.unknown())
+		.max(200)
+		.refine((parts) => !parts.some(isFilePart), "File parts are not accepted"),
 });
 
 const bodySchema = z.object({
@@ -116,6 +130,9 @@ export async function POST(
 				techniquesPrompt(),
 			messages: await convertToModelMessages(body.messages as UIMessage[]),
 			tools,
+			// Files never reach the model call through the schema above; this
+			// keeps the SDK from fetching a URL itself should one get through.
+			experimental_download: noDownload,
 			stopWhen: stepCountIs(MAX_STEPS),
 			abortSignal: request.signal,
 			timeout: timeoutMs,

@@ -172,6 +172,36 @@ describe("model connection service: keys", () => {
 		expectSuccess(await addOllama(user.id));
 	});
 
+	it("refuses a key with a control character in it, on create and on update, without echoing it", async () => {
+		const user = await createTestUser();
+		const router = expectSuccess(await add(user.id));
+
+		for (const bad of [
+			"sk-leak\u0000tail",
+			"sk-leak\r\nX-Injected: 1",
+			"sk-leak\tinner",
+			"sk-leak\u001ftail",
+			"sk-leak\u007ftail",
+		]) {
+			const created = await add(user.id, { label: "Second", apiKey: bad });
+			expectRefused(created, "control characters");
+			expect(JSON.stringify(created)).not.toContain("sk-leak");
+
+			const updated = await updateConnection(user.id, router.id, {
+				apiKey: bad,
+			});
+			expectRefused(updated, "control characters");
+			expect(JSON.stringify(updated)).not.toContain("sk-leak");
+		}
+
+		expect(
+			await prisma.userModelConnection.count({ where: { userId: user.id } })
+		).toBe(1);
+		expect(
+			expectSuccess(await getConnectionForUse(user.id, router.id)).apiKey
+		).toBe(SECRET);
+	});
+
 	it("does not log a key or its ciphertext when a write fails", async () => {
 		const logs = captureLogs();
 		try {
@@ -249,6 +279,33 @@ describe("model connection service: connections", () => {
 			await updateConnection(user.id, created.id, { apiKey: "" }),
 			"API key"
 		);
+	});
+
+	it("refuses a base URL with a query string or fragment, even an empty one", async () => {
+		const user = await createTestUser();
+		const ollama = (baseUrl: string) =>
+			add(user.id, { type: "OLLAMA", baseUrl, apiKey: null });
+
+		for (const bad of [
+			"http://host:11434?",
+			"http://host:11434#",
+			"http://host:11434/v1/#",
+			"http://host:11434/v1?x=1",
+			"http://host:11434/v1#section",
+		]) {
+			expectRefused(await ollama(bad), "query string or fragment");
+		}
+
+		const created = expectSuccess(await ollama("http://host:11434/v1"));
+		expectRefused(
+			await updateConnection(user.id, created.id, {
+				baseUrl: "http://host:11434/v1#",
+			}),
+			"query string or fragment"
+		);
+		expect(
+			expectSuccess(await listConnections(user.id)).map((c) => c.baseUrl)
+		).toEqual(["http://host:11434/v1"]);
 	});
 
 	it("stores no address for types whose address is fixed, and uses the fixed one", async () => {
