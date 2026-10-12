@@ -9,7 +9,7 @@
 export const TECHNIQUES_SERVICE_MAX_BYTES = 1024 * 1024;
 
 /** The answer was larger than the cap. */
-export class ResponseTooLargeError extends Error {
+class ResponseTooLargeError extends Error {
 	constructor() {
 		super("The response is larger than the allowed size.");
 		this.name = "ResponseTooLargeError";

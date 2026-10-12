@@ -141,6 +141,44 @@ function getIdentifierLabel(
 // CORE RATE LIMITING FUNCTIONS
 // ============================================
 
+/** The part of the Prisma client the rate limit reads, so a transaction's client serves as well. */
+type AttemptsClient = Pick<typeof prisma, "rateLimitAttempt">;
+
+/**
+ * The refusal for one limit when its window is full, or null while there is
+ * room for another attempt.
+ */
+async function refusalIfFull(
+	client: AttemptsClient,
+	config: RateLimitConfig,
+	limit: RateLimitConfig["limits"][number],
+	identifier: string
+): Promise<RateLimitCheckResult | null> {
+	const within = {
+		endpoint: config.endpoint,
+		identifier,
+		identifierType: limit.identifierType,
+		attemptedAt: { gte: new Date(Date.now() - limit.windowMs) },
+	};
+	const attemptCount = await client.rateLimitAttempt.count({ where: within });
+	if (attemptCount < limit.maxAttempts) {
+		return null;
+	}
+	// Find oldest attempt to calculate retry time
+	const oldestAttempt = await client.rateLimitAttempt.findFirst({
+		where: within,
+		orderBy: { attemptedAt: "asc" },
+	});
+	const retryAfterMs = oldestAttempt
+		? limit.windowMs - (Date.now() - oldestAttempt.attemptedAt.getTime())
+		: limit.windowMs;
+	return {
+		allowed: false,
+		reason: `Too many attempts from ${getIdentifierLabel(limit.identifierType)}. Please try again later.`,
+		retryAfterMs: Math.max(0, retryAfterMs),
+	};
+}
+
 /**
  * Check if a request is rate limited based on the configuration.
  */
@@ -155,38 +193,9 @@ export async function checkRateLimit(
 			continue;
 		}
 
-		const windowStart = new Date(Date.now() - limit.windowMs);
-
-		const attemptCount = await prisma.rateLimitAttempt.count({
-			where: {
-				endpoint: config.endpoint,
-				identifier,
-				identifierType: limit.identifierType,
-				attemptedAt: { gte: windowStart },
-			},
-		});
-
-		if (attemptCount >= limit.maxAttempts) {
-			// Find oldest attempt to calculate retry time
-			const oldestAttempt = await prisma.rateLimitAttempt.findFirst({
-				where: {
-					endpoint: config.endpoint,
-					identifier,
-					identifierType: limit.identifierType,
-					attemptedAt: { gte: windowStart },
-				},
-				orderBy: { attemptedAt: "asc" },
-			});
-
-			const retryAfterMs = oldestAttempt
-				? limit.windowMs - (Date.now() - oldestAttempt.attemptedAt.getTime())
-				: limit.windowMs;
-
-			return {
-				allowed: false,
-				reason: `Too many attempts from ${getIdentifierLabel(limit.identifierType)}. Please try again later.`,
-				retryAfterMs: Math.max(0, retryAfterMs),
-			};
+		const refusal = await refusalIfFull(prisma, config, limit, identifier);
+		if (refusal) {
+			return refusal;
 		}
 	}
 
@@ -265,27 +274,9 @@ export async function takeRateLimitSlot(
 			await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
 		}
 		for (const { limit, identifier } of applicable) {
-			const windowStart = new Date(Date.now() - limit.windowMs);
-			const within = {
-				endpoint: config.endpoint,
-				identifier,
-				identifierType: limit.identifierType,
-				attemptedAt: { gte: windowStart },
-			};
-			const attemptCount = await tx.rateLimitAttempt.count({ where: within });
-			if (attemptCount >= limit.maxAttempts) {
-				const oldestAttempt = await tx.rateLimitAttempt.findFirst({
-					where: within,
-					orderBy: { attemptedAt: "asc" },
-				});
-				const retryAfterMs = oldestAttempt
-					? limit.windowMs - (Date.now() - oldestAttempt.attemptedAt.getTime())
-					: limit.windowMs;
-				return {
-					allowed: false,
-					reason: `Too many attempts from ${getIdentifierLabel(limit.identifierType)}. Please try again later.`,
-					retryAfterMs: Math.max(0, retryAfterMs),
-				};
+			const refusal = await refusalIfFull(tx, config, limit, identifier);
+			if (refusal) {
+				return refusal;
 			}
 		}
 		await tx.rateLimitAttempt.createMany({

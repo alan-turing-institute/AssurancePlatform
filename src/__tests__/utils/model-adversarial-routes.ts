@@ -13,7 +13,7 @@ import { createTestPluginState, createTestUser } from "./prisma-factories";
  * mocked; the database is real.
  */
 
-export const ASSISTANT_PLUGIN = "tea.assistant";
+const ASSISTANT_PLUGIN = "tea.assistant";
 const BASE = "http://localhost:3000/api/user/models";
 
 export interface Answer {

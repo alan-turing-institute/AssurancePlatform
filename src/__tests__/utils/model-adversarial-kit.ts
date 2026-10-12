@@ -323,7 +323,7 @@ export function wrapGuardedFetch<
 
 export const SPEC_DIMENSIONS = 4;
 export const QUERY_PREFIX = "Instruct: test query\nQuery:";
-export const SPEC_MODEL_ID = "catalogue-model";
+const SPEC_MODEL_ID = "catalogue-model";
 const PROBES = [
 	{ text: "A model must be fair across groups", vector: [1, 0, 0, 0] },
 	{ text: "The system must resist adversarial inputs", vector: [0, 1, 0, 0] },
