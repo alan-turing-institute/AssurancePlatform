@@ -133,14 +133,12 @@ describe("suggest_techniques request", () => {
 });
 
 describe("suggest_techniques result", () => {
-	it("returns the top five of more, in order, with rankingAvailable", async () => {
+	it("returns the top five of more, in the service's order", async () => {
 		const many = Array.from({ length: 8 }, (_, i) => technique(i));
 		fetchMock.mockResolvedValue(jsonResponse(mcpBody(many)));
 		const out = (await run({ claimText: "c" })) as {
-			rankingAvailable: boolean;
 			results: { slug: string }[];
 		};
-		expect(out.rankingAvailable).toBe(true);
 		expect(out.results.map((r) => r.slug)).toEqual([
 			"t-0",
 			"t-1",
@@ -186,14 +184,56 @@ describe("suggest_techniques result", () => {
 		expect(out.results[0]?.slug).toBe("t-1");
 	});
 
-	it("reports rankingAvailable false as given", async () => {
+	it("reports ranking from the tool's own step, not the service's rankingAvailable", async () => {
+		fetchMock.mockResolvedValue(jsonResponse(mcpBody([technique(1)])));
+		const out = (await run({ claimText: "c" })) as Record<string, unknown>;
+		expect(out).not.toHaveProperty("rankingAvailable");
+		expect(out.rankingUsed).toBe(false);
+	});
+
+	it("accepts an answer with none of the newer fields or rankingAvailable", async () => {
 		fetchMock.mockResolvedValue(
-			jsonResponse(mcpBody([technique(1)], { rankingAvailable: false }))
+			jsonResponse({
+				result: { structuredContent: { results: [technique(1)] } },
+			})
+		);
+		const out = (await run({ claimText: "c" })) as { results: unknown[] };
+		expect(out.results).toHaveLength(1);
+	});
+
+	it("passes summary and tags on, cut to their bounds", async () => {
+		fetchMock.mockResolvedValue(
+			jsonResponse(
+				mcpBody([
+					technique(1, {
+						summary: "s".repeat(900),
+						tags: Array.from({ length: 30 }, () => "t".repeat(300)),
+					}),
+				])
+			)
 		);
 		const out = (await run({ claimText: "c" })) as {
-			rankingAvailable: boolean;
+			results: { summary: string; tags: string[] }[];
 		};
-		expect(out.rankingAvailable).toBe(false);
+		expect(out.results[0]?.summary).toHaveLength(500);
+		expect(out.results[0]?.tags).toHaveLength(10);
+		expect(out.results[0]?.tags.every((t) => t.length === 100)).toBe(true);
+	});
+
+	it("drops a summary, tags or semanticUsed of the wrong type and keeps the rest", async () => {
+		fetchMock.mockResolvedValue(
+			jsonResponse(
+				mcpBody([technique(1, { summary: 7, tags: "x" })], {
+					semanticUsed: "yes",
+				})
+			)
+		);
+		const out = (await run({ claimText: "c" })) as {
+			results: Record<string, unknown>[];
+		};
+		expect(out.results[0]).toMatchObject({ slug: "t-1", name: "Technique 1" });
+		expect(out.results[0]?.summary).toBeUndefined();
+		expect(out.results[0]?.tags).toBeUndefined();
 	});
 });
 
@@ -234,10 +274,6 @@ describe("suggest_techniques failure handling", () => {
 				result: { structuredContent: { rankingAvailable: true, results: "x" } },
 			},
 		],
-		[
-			"rankingAvailable missing",
-			{ result: { structuredContent: { results: [] } } },
-		],
 		["a result without a url", mcpBody([{ ...technique(1), url: undefined }])],
 		["goals not strings", mcpBody([technique(1, { goals: [1, 2] })])],
 		["score as a string", mcpBody([technique(1, { score: "high" })])],
@@ -253,7 +289,7 @@ describe("suggest_techniques failure handling", () => {
 		await expect(run({ claimText: "c" })).resolves.toEqual(UNREACHABLE);
 	});
 
-	it("aborts a hung request after 70 seconds by default and answers unreachable", async () => {
+	it("aborts a hung request after 10 seconds and answers unreachable", async () => {
 		vi.useFakeTimers();
 		fetchMock.mockImplementation(
 			(_url: string, init: { signal: AbortSignal }) =>
@@ -268,7 +304,7 @@ describe("suggest_techniques failure handling", () => {
 			settled = true;
 			return r;
 		});
-		await vi.advanceTimersByTimeAsync(69_000);
+		await vi.advanceTimersByTimeAsync(9000);
 		expect(settled).toBe(false);
 		expect(firstCall().init.signal.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1100);

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readUserApiKey } from "@/lib/plugins/assistant/key-store";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
+import {
+	getConnectionForUse,
+	getRoles,
+} from "@/lib/services/model-connection-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
@@ -17,9 +20,17 @@ import {
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
-vi.mock("@/lib/plugins/assistant/key-store", () => ({
-	readUserApiKey: vi.fn().mockResolvedValue("ollama"),
-}));
+vi.mock("@/lib/services/model-connection-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import("@/lib/services/model-connection-service")
+		>();
+	return {
+		...actual,
+		getConnectionForUse: vi.fn(actual.getConnectionForUse),
+		getRoles: vi.fn(actual.getRoles),
+	};
+});
 vi.mock("@/lib/plugins/assistant/tools", async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import("@/lib/plugins/assistant/tools")>();
@@ -33,7 +44,8 @@ const CASE_TEXT = "The system is acceptably safe";
 
 beforeEach(async () => {
 	vi.mocked(createCaseTools).mockClear();
-	vi.mocked(readUserApiKey).mockClear();
+	vi.mocked(getRoles).mockClear();
+	vi.mocked(getConnectionForUse).mockClear();
 	await mockNoAuth();
 	vi.stubEnv("TECHNIQUES_MCP_URL", "");
 });
@@ -103,13 +115,15 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 		expect(network).not.toHaveBeenCalled();
 	});
 
-	it("does not read the user's API key", async () => {
+	it("does not read the user's model jobs or connections", async () => {
 		const { owner, testCase } = await setup();
+		vi.stubEnv("TECHNIQUES_MCP_URL", TECHNIQUES_URL);
 		await as(owner);
 
 		await get(testCase.id);
 
-		expect(readUserApiKey).not.toHaveBeenCalled();
+		expect(getRoles).not.toHaveBeenCalled();
+		expect(getConnectionForUse).not.toHaveBeenCalled();
 	});
 
 	it.each([

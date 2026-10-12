@@ -23,9 +23,9 @@ vi.mock("@/lib/plugins/assistant/selected-element", () => ({
 	selectionPrompt: vi.fn(() => ""),
 }));
 vi.mock("@/lib/permissions", () => ({ canAccessCase: vi.fn() }));
-vi.mock("@/lib/plugins/assistant/provider-config", () => ({
-	ASSISTANT_PLUGIN_ID: "tea.assistant",
-	resolveProviderConfig: vi.fn(),
+vi.mock("@/lib/plugins/assistant/model-config", () => ({
+	modelAccessFor: vi.fn(),
+	resolveChatModel: vi.fn(),
 }));
 
 const CASE_ID = "11111111-1111-4111-8111-111111111111";

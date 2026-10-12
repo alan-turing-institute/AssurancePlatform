@@ -68,13 +68,17 @@ describe("suggest_techniques", () => {
 			},
 		});
 		expect(out).toEqual({
-			rankingAvailable: true,
+			searchUsed: false,
+			searchReason: "not set up",
+			rankingUsed: false,
+			rankingReason: "not set up",
 			results: [
 				{
 					slug: "shap",
 					name: "SHAP",
 					score: 0.91,
 					retrievalScore: 0.8,
+					ranked: false,
 					goals: ["Explainability"],
 					url: "https://example.org/shap",
 				},
@@ -111,7 +115,7 @@ describe("suggest_techniques", () => {
 			{ claimText: "x" },
 			options
 		);
-		await vi.advanceTimersByTimeAsync(70_000);
+		await vi.advanceTimersByTimeAsync(10_000);
 
 		expect(await pending).toEqual({
 			error: "The techniques service is not reachable.",
@@ -290,8 +294,8 @@ describe("suggest_techniques failure paths", () => {
 		expect(out).toEqual({ error: "The techniques service is not reachable." });
 	});
 
-	it("aborts the request at ASSISTANT_TECHNIQUES_TIMEOUT_MS", async () => {
-		vi.stubEnv("ASSISTANT_TECHNIQUES_TIMEOUT_MS", "30000");
+	it("aborts the request at ASSISTANT_TECHNIQUES_TIMEOUT_MS when that is under ten seconds", async () => {
+		vi.stubEnv("ASSISTANT_TECHNIQUES_TIMEOUT_MS", "5000");
 		vi.useFakeTimers();
 		let signal: AbortSignal | undefined;
 		fetchMock.mockImplementation((_u: string, init: RequestInit) => {
@@ -305,7 +309,7 @@ describe("suggest_techniques failure paths", () => {
 			{ claimText: "x" },
 			options
 		);
-		await vi.advanceTimersByTimeAsync(29_999);
+		await vi.advanceTimersByTimeAsync(4999);
 		expect(signal?.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1);
 
@@ -358,15 +362,15 @@ function hangingFetch() {
 }
 
 describe("suggest_techniques wait inside the reply limit", () => {
-	it("waits for the time left less the answer margin when that is shorter than the setting", async () => {
+	it("waits for the time left less the answer margin when that is shorter than the service's ten seconds", async () => {
 		vi.useFakeTimers();
 		const signalOf = hangingFetch();
 
-		const pending = createTechniquesTool(null, Date.now() + 60_000).execute?.(
+		const pending = createTechniquesTool(null, Date.now() + 20_000).execute?.(
 			{ claimText: "x" },
 			options
 		);
-		await vi.advanceTimersByTimeAsync(44_999);
+		await vi.advanceTimersByTimeAsync(4999);
 		expect(signalOf()?.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1);
 
@@ -376,7 +380,7 @@ describe("suggest_techniques wait inside the reply limit", () => {
 		});
 	});
 
-	it("waits for the setting's default of 70 seconds when the reply has far longer left", async () => {
+	it("waits at most ten seconds for the service, however much time the reply has left", async () => {
 		vi.useFakeTimers();
 		const signalOf = hangingFetch();
 
@@ -384,7 +388,7 @@ describe("suggest_techniques wait inside the reply limit", () => {
 			{ claimText: "x" },
 			options
 		);
-		await vi.advanceTimersByTimeAsync(69_999);
+		await vi.advanceTimersByTimeAsync(9999);
 		expect(signalOf()?.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1);
 
@@ -392,33 +396,16 @@ describe("suggest_techniques wait inside the reply limit", () => {
 		expect(await pending).toEqual({
 			error: "The techniques service is not reachable.",
 		});
-	});
-
-	it("waits for a setting that is shorter than the time left", async () => {
-		vi.stubEnv("ASSISTANT_TECHNIQUES_TIMEOUT_MS", "30000");
-		vi.useFakeTimers();
-		const signalOf = hangingFetch();
-
-		const pending = createTechniquesTool(null, Date.now() + 600_000).execute?.(
-			{ claimText: "x" },
-			options
-		);
-		await vi.advanceTimersByTimeAsync(29_999);
-		expect(signalOf()?.aborted).toBe(false);
-		await vi.advanceTimersByTimeAsync(1);
-
-		expect(signalOf()?.aborted).toBe(true);
-		await pending;
 	});
 
 	it("measures the time left when the tool is called, not when it was created", async () => {
 		vi.useFakeTimers();
 		const signalOf = hangingFetch();
-		const tool = createTechniquesTool(null, Date.now() + 60_000);
+		const tool = createTechniquesTool(null, Date.now() + 40_000);
 
 		await vi.advanceTimersByTimeAsync(20_000);
 		const pending = tool.execute?.({ claimText: "x" }, options);
-		await vi.advanceTimersByTimeAsync(24_999);
+		await vi.advanceTimersByTimeAsync(4999);
 		expect(signalOf()?.aborted).toBe(false);
 		await vi.advanceTimersByTimeAsync(1);
 

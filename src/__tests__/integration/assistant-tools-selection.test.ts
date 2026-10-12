@@ -2,6 +2,7 @@
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
+import { giveChatJob } from "../utils/model-jobs";
 import {
 	createTestCase,
 	createTestElement,
@@ -13,8 +14,9 @@ vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("@/lib/plugins/assistant/model", () => ({
-	createAssistantModel: vi.fn(),
+vi.mock("@/lib/models/adapters", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/models/adapters")>()),
+	chatModelFor: vi.fn(),
 }));
 
 const decryptSpy = vi.hoisted(() => ({ throwOnDecrypt: false, calls: 0 }));
@@ -34,8 +36,6 @@ vi.mock("@/lib/auth/token-encryption", async (importOriginal) => {
 });
 
 const PLUGIN = "tea.assistant";
-const SECRET = "sk-test-SECRET-value-123";
-const ALLOWED = "https://llm.example/v1";
 
 const USAGE = {
 	inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
@@ -106,9 +106,10 @@ function toolThenTextModel(tool: string, input: unknown) {
 	});
 }
 
+/** The chat model builder, which the route calls with the user's connection and the chat job's model. */
 async function modelFactory() {
-	const mod = await import("@/lib/plugins/assistant/model");
-	return vi.mocked(mod.createAssistantModel);
+	const mod = await import("@/lib/models/adapters");
+	return vi.mocked(mod.chatModelFor);
 }
 
 function post(caseId: string, body: unknown, raw = false) {
@@ -127,43 +128,22 @@ const MESSAGES = {
 	messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] }],
 };
 
-async function setup(
-	settings: Record<string, unknown> | null = {
-		provider: "openai-compatible",
-		baseUrl: ALLOWED,
-		model: "m",
-	},
-	withKey = true,
-	enabled = true
-) {
+/** A signed-in user with the assistant on, a chat job on a stored connection, and a case. */
+async function setup() {
 	const user = await createTestUser();
 	const kase = await createTestCase(user.id);
 	const root = await createTestElement(kase.id, user.id, {
 		name: "G1",
 		description: "The model is robust",
 	});
-	// The assistant is off until the user turns it on, so an enabling row is
-	// always written unless the test asks for the user to have switched it off.
-	if (enabled) {
-		await createTestPluginState(user.id, {
-			pluginId: PLUGIN,
-			settings: settings ?? undefined,
-			enabled: true,
-		});
-	}
-	if (withKey) {
-		const { writeUserApiKey } = await import(
-			"@/lib/plugins/assistant/key-store"
-		);
-		await writeUserApiKey(user.id, SECRET);
-	}
+	await createTestPluginState(user.id, { pluginId: PLUGIN, enabled: true });
+	await giveChatJob(user.id, { model: "m" });
 	await mockAuth(user.id, user.username, user.email);
 	return { user, kase, root };
 }
 
 beforeEach(async () => {
 	await mockNoAuth();
-	vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", ALLOWED);
 	(await modelFactory()).mockReset();
 });
 

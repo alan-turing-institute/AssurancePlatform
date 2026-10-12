@@ -1,8 +1,8 @@
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
-import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
+import { giveChatJob } from "../utils/model-jobs";
 import {
 	createTestCase,
 	createTestComment,
@@ -16,8 +16,9 @@ vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("@/lib/plugins/assistant/model", () => ({
-	createAssistantModel: vi.fn(),
+vi.mock("@/lib/models/adapters", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/models/adapters")>()),
+	chatModelFor: vi.fn(),
 }));
 
 const decryptSpy = vi.hoisted(() => ({ throwOnDecrypt: false, calls: 0 }));
@@ -38,7 +39,7 @@ vi.mock("@/lib/auth/token-encryption", async (importOriginal) => {
 
 const PLUGIN = "tea.assistant";
 const SECRET = "sk-test-SECRET-value-123";
-const ALLOWED = "https://llm.example/v1";
+const MODEL_ADDRESS = "https://llm.example/v1";
 
 const USAGE = {
 	inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
@@ -109,9 +110,10 @@ function toolThenTextModel(tool: string, input: unknown) {
 	});
 }
 
+/** The chat model builder, which the route calls with the user's connection and the chat job's model. */
 async function modelFactory() {
-	const mod = await import("@/lib/plugins/assistant/model");
-	return vi.mocked(mod.createAssistantModel);
+	const mod = await import("@/lib/models/adapters");
+	return vi.mocked(mod.chatModelFor);
 }
 
 function post(caseId: string, body: unknown, raw = false) {
@@ -130,32 +132,27 @@ const MESSAGES = {
 	messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] }],
 };
 
-async function setup(
-	settings: Record<string, unknown> | null = {
-		provider: "openai-compatible",
-		baseUrl: ALLOWED,
+/** Gives the user an OpenAI-compatible connection holding SECRET and puts the chat job on it. */
+function giveJob(userId: string) {
+	return giveChatJob(userId, {
+		type: "OPENAI_COMPATIBLE",
+		baseUrl: MODEL_ADDRESS,
+		apiKey: SECRET,
 		model: "m",
-	},
-	withKey = true,
-	enabled = true
-) {
+	});
+}
+
+async function setup({ job = true, enabled = true } = {}) {
 	const user = await createTestUser();
 	const kase = await createTestCase(user.id);
 	const root = await createTestElement(kase.id, user.id, { name: "G1" });
 	// The assistant is off until the user turns it on, so an enabling row is
 	// always written unless the test asks for the user to have switched it off.
 	if (enabled) {
-		await createTestPluginState(user.id, {
-			pluginId: PLUGIN,
-			settings: settings ?? undefined,
-			enabled: true,
-		});
+		await createTestPluginState(user.id, { pluginId: PLUGIN, enabled: true });
 	}
-	if (withKey) {
-		const { writeUserApiKey } = await import(
-			"@/lib/plugins/assistant/key-store"
-		);
-		await writeUserApiKey(user.id, SECRET);
+	if (job) {
+		await giveJob(user.id);
 	}
 	await mockAuth(user.id, user.username, user.email);
 	return { user, kase, root };
@@ -165,7 +162,6 @@ beforeEach(async () => {
 	await mockNoAuth();
 	decryptSpy.throwOnDecrypt = false;
 	decryptSpy.calls = 0;
-	vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", ALLOWED);
 	(await modelFactory()).mockReset();
 	(await modelFactory()).mockImplementation(() => textModel());
 });
@@ -187,7 +183,7 @@ describe("POST /api/cases/[id]/assistant check order", () => {
 	});
 
 	it("is 404 when the plugin is disabled, even for the case owner with a valid body", async () => {
-		const { kase } = await setup(null, true, false);
+		const { kase } = await setup({ enabled: false });
 		const res = await post(kase.id, MESSAGES);
 		expect(res.status).toBe(404);
 		expect((await modelFactory()).mock.calls).toHaveLength(0);
@@ -224,14 +220,8 @@ describe("POST /api/cases/[id]/assistant check order", () => {
 		const { user: owner, kase } = await setup();
 		const viewer = await createTestUser();
 		await createTestPermission(kase.id, viewer.id, owner.id, "VIEW");
-		await createTestPluginState(viewer.id, {
-			pluginId: PLUGIN,
-			settings: { provider: "openai-compatible", baseUrl: ALLOWED, model: "m" },
-		});
-		const { writeUserApiKey } = await import(
-			"@/lib/plugins/assistant/key-store"
-		);
-		await writeUserApiKey(viewer.id, SECRET);
+		await createTestPluginState(viewer.id, { pluginId: PLUGIN });
+		await giveJob(viewer.id);
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 		expect((await post(kase.id, MESSAGES)).status).toBe(200);
 	});
@@ -253,114 +243,87 @@ describe("POST /api/cases/[id]/assistant check order", () => {
 });
 
 // ============================================
-// Provider config
+// The chat job
 // ============================================
 
-describe("POST /api/cases/[id]/assistant provider configuration", () => {
-	it("is 409 with no provider or model stored", async () => {
-		const { kase } = await setup(null);
-		expect((await post(kase.id, MESSAGES)).status).toBe(409);
-	});
-
-	it("is 409 when the model is blank", async () => {
-		const { kase } = await setup({
-			provider: "openai-compatible",
-			baseUrl: ALLOWED,
-			model: "   ",
-		});
-		expect((await post(kase.id, MESSAGES)).status).toBe(409);
-	});
-
-	it("is 409 when no key is stored, and never builds a model", async () => {
-		const { kase } = await setup(undefined, false);
+describe("POST /api/cases/[id]/assistant chat job configuration", () => {
+	it("is 409 with no chat job, and never builds a model", async () => {
+		const { kase } = await setup({ job: false });
 		expect((await post(kase.id, MESSAGES)).status).toBe(409);
 		expect((await modelFactory()).mock.calls).toHaveLength(0);
 	});
 
-	it("refuses a stored base URL once it has left the allow-list", async () => {
-		const { kase } = await setup();
-		expect((await post(kase.id, MESSAGES)).status).toBe(200);
-		vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", "https://other.example/v1");
-		const res = await post(kase.id, MESSAGES);
-		expect(res.status).toBe(409);
-	});
-
-	it("refuses every base URL when the allow-list is unset", async () => {
-		const { kase } = await setup();
-		vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", "");
-		expect((await post(kase.id, MESSAGES)).status).toBe(409);
-	});
-
-	it("refuses a URL that merely extends an allowed one", async () => {
-		const { kase } = await setup({
-			provider: "openai-compatible",
-			baseUrl: `${ALLOWED}/evil`,
-			model: "m",
+	it("is 409 when the stored provider settings and key of the old screen are all the user has", async () => {
+		const { user, kase } = await setup({ job: false });
+		await prisma.pluginState.updateMany({
+			where: { scopeId: user.id, pluginId: PLUGIN },
+			data: {
+				settings: {
+					provider: "openai-compatible",
+					baseUrl: MODEL_ADDRESS,
+					model: "m",
+				},
+			},
 		});
+		const { writeUserApiKey } = await import(
+			"@/lib/plugins/assistant/key-store"
+		);
+		await writeUserApiKey(user.id, SECRET);
+
 		expect((await post(kase.id, MESSAGES)).status).toBe(409);
-		const { kase: k2 } = await setup({
-			provider: "openai-compatible",
-			baseUrl: "https://llm.example.evil.test/v1",
-			model: "m",
-		});
-		expect((await post(k2.id, MESSAGES)).status).toBe(409);
 		expect((await modelFactory()).mock.calls).toHaveLength(0);
 	});
 
-	it("accepts the allowed URL with a trailing slash and passes the normalised form on", async () => {
-		const { kase } = await setup({
-			provider: "openai-compatible",
-			baseUrl: `${ALLOWED}/`,
-			model: "m",
+	it("builds the model from the connection's stored address and key and the job's model", async () => {
+		const { user, kase } = await setup({ job: false });
+		await giveChatJob(user.id, {
+			type: "OPENAI_COMPATIBLE",
+			baseUrl: `${MODEL_ADDRESS}/`,
+			apiKey: SECRET,
+			model: "the-model",
 		});
+
 		expect((await post(kase.id, MESSAGES)).status).toBe(200);
-		const calls = (await modelFactory()).mock.calls;
-		expect(calls[0]?.[0]).toMatchObject({ baseUrl: ALLOWED, apiKey: SECRET });
+
+		const [connection, model] = (await modelFactory()).mock.calls[0] ?? [];
+		expect(connection).toMatchObject({
+			type: "OPENAI_COMPATIBLE",
+			baseUrl: MODEL_ADDRESS,
+			apiKey: SECRET,
+		});
+		expect(model).toBe("the-model");
 	});
 
-	it("ignores baseUrl for the anthropic provider, even an arbitrary one", async () => {
-		const { kase } = await setup({
-			provider: "anthropic",
+	it("uses an Anthropic connection's fixed address whatever address was supplied", async () => {
+		const { user, kase } = await setup({ job: false });
+		await giveChatJob(user.id, {
+			type: "ANTHROPIC",
 			baseUrl: "https://evil.example/v1",
+			apiKey: SECRET,
 			model: "claude-x",
 		});
+
 		expect((await post(kase.id, MESSAGES)).status).toBe(200);
-		const arg = (await modelFactory()).mock.calls[0]?.[0];
-		expect(arg).toMatchObject({ provider: "anthropic", model: "claude-x" });
-		expect(arg?.baseUrl).toBeUndefined();
-	});
 
-	it("saves an arbitrary baseUrl through PATCH /api/user/plugins but refuses it at chat time", async () => {
-		const { user, kase } = await setup(null);
-		const { PATCH } = await import("@/app/api/user/plugins/route");
-		const patch = await PATCH(
-			new NextRequest("http://localhost:3000/api/user/plugins", {
-				method: "PATCH",
-				body: JSON.stringify({
-					pluginId: PLUGIN,
-					enabled: true,
-					settings: {
-						provider: "openai-compatible",
-						baseUrl: "https://attacker.example/v1",
-						model: "m",
-					},
-				}),
-			})
-		);
-		expect(patch.status).toBe(200);
-		expect(user.id).toBeTruthy();
-		const res = await post(kase.id, MESSAGES);
-		expect(res.status).toBe(409);
-		expect((await modelFactory()).mock.calls).toHaveLength(0);
-	});
-
-	it("does not leak the key into any 409 body", async () => {
-		const { kase } = await setup({
-			provider: "openai-compatible",
-			baseUrl: "https://attacker.example/v1",
-			model: "m",
+		const [connection, model] = (await modelFactory()).mock.calls[0] ?? [];
+		expect(connection).toMatchObject({
+			type: "ANTHROPIC",
+			baseUrl: "https://api.anthropic.com",
 		});
+		expect(model).toBe("claude-x");
+	});
+
+	it("does not leak a connection's key into any 409 body", async () => {
+		const { user, kase } = await setup({ job: false });
+		await giveChatJob(user.id, { type: "OPENROUTER", apiKey: SECRET });
+		await prisma.userModelRoles.update({
+			where: { userId: user.id },
+			data: { chatModel: null },
+		});
+
 		const res = await post(kase.id, MESSAGES);
+
+		expect(res.status).toBe(409);
 		expect(await res.text()).not.toContain(SECRET);
 	});
 });
@@ -716,6 +679,8 @@ describe("assistant key routes", () => {
 // ============================================
 
 describe("assistant options route", () => {
+	const ALLOWED = "https://llm.example/v1";
+
 	async function options() {
 		const user = await enabledUser();
 		await mockAuth(user.id, user.username, user.email);
@@ -740,21 +705,5 @@ describe("assistant options route", () => {
 		const res = await options();
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({ baseUrls: [] });
-	});
-
-	it("never offers a base URL that chat would then refuse", async () => {
-		vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", `not a url, ${ALLOWED}`);
-		const offered: string[] = (await (await options()).json()).baseUrls;
-		for (const url of offered) {
-			const { user, kase } = await setup({
-				provider: "openai-compatible",
-				baseUrl: url,
-				model: "m",
-			});
-			expect(user.id).toBeTruthy();
-			expect((await post(kase.id, MESSAGES)).status, `offered ${url}`).toBe(
-				200
-			);
-		}
 	});
 });

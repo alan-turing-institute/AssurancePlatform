@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { embedMany } from "ai";
 import { z } from "zod";
 import { embeddingModelFor } from "@/lib/models/adapters";
@@ -42,6 +43,20 @@ const embeddingSpecSchema = z
 	);
 
 export type EmbeddingSpec = z.infer<typeof embeddingSpecSchema>;
+
+/**
+ * What a passed search check is recorded against: the catalogue's model id and
+ * a SHA-256 of its probe sentences, in order, joined with newlines. The check
+ * is current only while this value equals the one recorded.
+ */
+export function embeddingCheckId(
+	spec: Pick<EmbeddingSpec, "modelId" | "probes">
+): string {
+	const probeHash = createHash("sha256")
+		.update(spec.probes.map((probe) => probe.text).join("\n"))
+		.digest("hex");
+	return `${spec.modelId}#${probeHash}`;
+}
 
 export interface EmbeddingCheckInput {
 	connection: ModelConnectionAccess;
@@ -126,18 +141,21 @@ function techniquesOrigin(): string | null {
  * `/embedding-spec` on the origin of `TECHNIQUES_MCP_URL`. That address is the
  * operator's own, so it is fetched directly rather than through the guard that
  * protects user-chosen addresses. Returns null when the service is not
- * configured, does not answer within five seconds, redirects, or answers with
- * anything but a valid spec.
+ * configured, does not answer within five seconds, is cancelled through
+ * `signal`, redirects, or answers with anything but a valid spec.
  */
-export async function fetchEmbeddingSpec(): Promise<EmbeddingSpec | null> {
+export async function fetchEmbeddingSpec(
+	signal?: AbortSignal
+): Promise<EmbeddingSpec | null> {
 	const origin = techniquesOrigin();
 	if (!origin) {
 		return null;
 	}
+	const timeout = AbortSignal.timeout(SPEC_TIMEOUT_MS);
 	try {
 		const response = await fetch(`${origin}/embedding-spec`, {
 			redirect: "error",
-			signal: AbortSignal.timeout(SPEC_TIMEOUT_MS),
+			signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
 		});
 		if (!response.ok) {
 			return null;

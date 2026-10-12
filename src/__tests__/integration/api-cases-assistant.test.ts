@@ -1,3 +1,4 @@
+import type { ServerResponse } from "node:http";
 import { createRequire } from "node:module";
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
 import {
@@ -10,11 +11,21 @@ import {
 	vi,
 } from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
-import { readUserApiKey } from "@/lib/plugins/assistant/key-store";
+import {
+	type ModelServer,
+	startModelServer,
+} from "@/lib/models/__tests__/model-server";
 import { noDownload } from "@/lib/plugins/assistant/no-download";
+import prisma from "@/lib/prisma";
+import {
+	createConnection,
+	deleteConnection,
+	setRoles,
+} from "@/lib/services/model-connection-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { captureLogs } from "../helpers/capture-logs";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
+import { giveChatJob } from "../utils/model-jobs";
 import {
 	addTeamMember,
 	createTestCase,
@@ -31,11 +42,6 @@ vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
 
-// The model provider is replaced: no test here may reach a real model.
-vi.mock("@/lib/plugins/assistant/key-store", () => ({
-	readUserApiKey: vi.fn().mockResolvedValue("ollama"),
-}));
-
 const streamTextSpy = vi.hoisted(() => ({ calls: [] as unknown[] }));
 vi.mock("ai", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("ai")>();
@@ -48,13 +54,22 @@ vi.mock("ai", async (importOriginal) => {
 	};
 });
 
+// The chat model is replaced unless a test sets it to null: no test here may
+// reach a real model, and the ones that use the real one call a local stub.
 const mockModel = vi.hoisted(() => ({ current: null as unknown }));
-vi.mock("@/lib/plugins/assistant/model", () => ({
-	createAssistantModel: () => mockModel.current,
-}));
+vi.mock("@/lib/models/adapters", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/models/adapters")>();
+	return {
+		...actual,
+		chatModelFor: (...args: Parameters<typeof actual.chatModelFor>) =>
+			(mockModel.current ?? actual.chatModelFor(...args)) as ReturnType<
+				typeof actual.chatModelFor
+			>,
+	};
+});
 
 const PLUGIN_ID = "tea.assistant";
-const BASE_URL = "http://localhost:11434/v1";
+const SECRET = "sk-test-SECRET-value-123";
 const NONEXISTENT_ID = "00000000-0000-0000-0000-000000000000";
 const COMMENT_TEXT = "private reviewer remark";
 
@@ -113,7 +128,6 @@ function useModel(
 beforeEach(async () => {
 	streamTextSpy.calls = [];
 	await mockNoAuth();
-	vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", BASE_URL);
 	useModel([textStep("ok")]);
 });
 
@@ -141,15 +155,10 @@ afterEach(() => {
 	fetchSpies = [];
 });
 
+/** Turns the assistant on for the user and gives them a chat job on a stored connection. */
 async function configure(userId: string) {
-	await createTestPluginState(userId, {
-		pluginId: PLUGIN_ID,
-		settings: {
-			provider: "openai-compatible",
-			baseUrl: BASE_URL,
-			model: "small-model",
-		},
-	});
+	await createTestPluginState(userId, { pluginId: PLUGIN_ID });
+	await giveChatJob(userId);
 }
 
 async function setup() {
@@ -302,24 +311,63 @@ describe("POST /api/cases/[id]/assistant — plugin and configuration", () => {
 		expect((await post(testCase.id)).status).toBe(404);
 	});
 
-	it("returns 409 with a reason when no provider is configured", async () => {
+	it("returns 409 telling the user to set up AI models, and no key, when there is no chat job", async () => {
 		const { owner, testCase } = await setup();
-		await createTestPluginState(owner.id, {
-			pluginId: PLUGIN_ID,
-			enabled: true,
+		await createTestPluginState(owner.id, { pluginId: PLUGIN_ID });
+		const connection = await createConnection(owner.id, {
+			label: "Router",
+			type: "OPENROUTER",
+			apiKey: SECRET,
+		});
+		await setRoles(owner.id, {
+			chat: null,
+			ranking: null,
+			search: null,
+		});
+		expect(connection).toHaveProperty("data");
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await post(testCase.id);
+		const text = await response.text();
+
+		expect(response.status).toBe(409);
+		expect(JSON.parse(text).code).toBe("CONFLICT");
+		expect(text).toContain("Set up AI models");
+		expect(text).not.toContain(SECRET);
+		expect(streamTextSpy.calls).toHaveLength(0);
+	});
+
+	it("returns 409, and uses neither the connection nor its key, for a chat job on another user's connection", async () => {
+		const { owner, testCase } = await setup();
+		const other = await createTestUser();
+		const theirConnection = await giveChatJob(other.id, {
+			type: "OPENROUTER",
+			apiKey: SECRET,
+		});
+		await createTestPluginState(owner.id, { pluginId: PLUGIN_ID });
+		// The service refuses to save this; it is written to the table directly.
+		await prisma.userModelRoles.create({
+			data: {
+				userId: owner.id,
+				chatConnectionId: theirConnection,
+				chatModel: "small-model",
+			},
 		});
 		await mockAuth(owner.id, owner.username, owner.email);
 
 		const response = await post(testCase.id);
+		const text = await response.text();
 
 		expect(response.status).toBe(409);
-		expect((await response.json()).code).toBe("CONFLICT");
+		expect(text).not.toContain(SECRET);
+		expect(streamTextSpy.calls).toHaveLength(0);
 	});
 
-	it("returns 409 when the stored base URL is not on the allow-list", async () => {
+	it("returns 409 once the chat job's connection has been deleted", async () => {
 		const { owner, testCase } = await setup();
-		await configure(owner.id);
-		vi.stubEnv("ASSISTANT_ALLOWED_BASE_URLS", "http://other.example/v1");
+		await createTestPluginState(owner.id, { pluginId: PLUGIN_ID });
+		const connectionId = await giveChatJob(owner.id);
+		await deleteConnection(owner.id, connectionId);
 		await mockAuth(owner.id, owner.username, owner.email);
 
 		const response = await post(testCase.id);
@@ -327,15 +375,13 @@ describe("POST /api/cases/[id]/assistant — plugin and configuration", () => {
 		expect(response.status).toBe(409);
 	});
 
-	it("returns 409 when no API key is available", async () => {
-		const { owner, testCase } = await setup();
-		await configure(owner.id);
-		vi.mocked(readUserApiKey).mockResolvedValueOnce(null);
-		await mockAuth(owner.id, owner.username, owner.email);
+	it("answers 404, not 409, for a user without access to the case who has no chat job", async () => {
+		const { testCase } = await setup();
+		const outsider = await createTestUser();
+		await createTestPluginState(outsider.id, { pluginId: PLUGIN_ID });
+		await mockAuth(outsider.id, outsider.username, outsider.email);
 
-		const response = await post(testCase.id);
-
-		expect(response.status).toBe(409);
+		expect((await post(testCase.id)).status).toBe(404);
 	});
 
 	it("returns 400 for a malformed body", async () => {
@@ -346,6 +392,78 @@ describe("POST /api/cases/[id]/assistant — plugin and configuration", () => {
 		const response = await post(testCase.id, { messages: [] });
 
 		expect(response.status).toBe(400);
+	});
+});
+
+/** Answers a streaming chat completion request with `text`, as an OpenAI-compatible server does. */
+function streamChatReply(text: string) {
+	return (_request: unknown, response: ServerResponse) => {
+		const chunk = (delta: object, finish: string | null, extra = {}) =>
+			`data: ${JSON.stringify({
+				id: "chatcmpl-1",
+				object: "chat.completion.chunk",
+				created: 1,
+				model: "stub",
+				choices: [{ index: 0, delta, finish_reason: finish }],
+				...extra,
+			})}\n\n`;
+		response.writeHead(200, { "content-type": "text/event-stream" });
+		response.end(
+			chunk({ role: "assistant", content: text }, null) +
+				chunk({}, "stop", {
+					usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+				}) +
+				"data: [DONE]\n\n"
+		);
+	};
+}
+
+describe("POST /api/cases/[id]/assistant — the chat job on a model server", () => {
+	let server: ModelServer;
+
+	beforeEach(async () => {
+		mockModel.current = null;
+		server = await startModelServer(streamChatReply("hello from the stub"));
+	});
+
+	afterEach(() => server.close());
+
+	it("streams a reply from the chat job's model on the stored connection, with the stored key", async () => {
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", server.origin);
+		const { owner, testCase } = await setup();
+		await createTestPluginState(owner.id, { pluginId: PLUGIN_ID });
+		await giveChatJob(owner.id, {
+			baseUrl: server.origin,
+			apiKey: SECRET,
+			model: "the-chat-model",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await post(testCase.id);
+		const text = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(text).toContain("hello from the stub");
+		const request = server.requests[0];
+		expect(request?.url).toBe("/v1/chat/completions");
+		expect(request?.headers.authorization).toBe(`Bearer ${SECRET}`);
+		expect(JSON.parse(request?.body ?? "{}").model).toBe("the-chat-model");
+		expect(text).not.toContain(SECRET);
+	});
+
+	it("sends nothing to an address the operator has not listed, and the reply carries the provider-error text only", async () => {
+		const { owner, testCase } = await setup();
+		await createTestPluginState(owner.id, { pluginId: PLUGIN_ID });
+		await giveChatJob(owner.id, { baseUrl: server.origin, apiKey: SECRET });
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await post(testCase.id);
+		const text = await response.text();
+
+		expect(server.requests).toHaveLength(0);
+		expect(text).toContain("The model provider returned an error.");
+		expect(text).not.toContain(SECRET);
+		expect(text).not.toContain(server.origin);
 	});
 });
 
