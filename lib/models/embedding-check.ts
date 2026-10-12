@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { embedMany } from "ai";
 import { z } from "zod";
 import { embeddingModelFor } from "@/lib/models/adapters";
@@ -111,6 +112,22 @@ export async function checkEmbedding({
 	} catch {
 		return NOT_COMPARED;
 	}
+}
+
+/**
+ * The text stored beside a passed search check, naming what it was checked
+ * against: the catalogue's model id, then the SHA-256 (hex) of the probe
+ * sentences joined with a newline, in order. It changes when the catalogue
+ * changes its embedding model or its probe sentences, and not when it only
+ * updates its data.
+ */
+export function embeddingCheckId(
+	spec: Pick<EmbeddingSpec, "modelId" | "probes">
+): string {
+	const digest = createHash("sha256")
+		.update(spec.probes.map((probe) => probe.text).join("\n"))
+		.digest("hex");
+	return `${spec.modelId}#${digest}`;
 }
 
 /** The origin of the techniques service, or null when `TECHNIQUES_MCP_URL` is unset or not an http(s) URL. */

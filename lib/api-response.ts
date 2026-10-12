@@ -174,6 +174,12 @@ const ERROR_MAPPINGS: Array<{
 	// error that happens to contain that phrase for a different reason isn't
 	// misclassified as a plugin-disabled 403.
 	{ pattern: /^Plugin '.+' is not enabled$/, factory: () => forbidden() },
+	// `assertModelPluginEnabled` (`plugin-enablement-service.ts`): none of the
+	// plugins that use models is on for the user — the same refusal (403).
+	{
+		pattern: /^No plugin that uses models is enabled$/,
+		factory: () => forbidden(),
+	},
 	// `integration-registry-service.ts` / `lib/schemas/integration.ts`
 	// (integration management API, work item 7): an unknown scope is a
 	// validation failure (400), not an unmapped 500.

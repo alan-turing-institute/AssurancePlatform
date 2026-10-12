@@ -166,6 +166,31 @@ export async function assertPluginEnabledForUser(
 	return { data: true };
 }
 
+/**
+ * Passes when at least one plugin that uses models (`usesModels` in the
+ * manifest) is on for `userId`; this is the gate on the model connection
+ * routes. When every such plugin is off, the answer is the refusal below;
+ * when the state of a plugin could not be read and none is on, that failure
+ * is returned instead, so a database fault is not reported as a refusal.
+ */
+export async function assertModelPluginEnabled(
+	userId: string
+): ServiceResult<true> {
+	const states = await Promise.all(
+		listManifestPluginIds()
+			.filter((pluginId) => getManifestEntry(pluginId)?.usesModels)
+			.map((pluginId) => resolveEffectivePluginState(pluginId, { userId }))
+	);
+	if (states.some((state) => "data" in state && state.data.enabled)) {
+		return { data: true };
+	}
+	const unreadable = states.find((state) => "error" in state);
+	if (unreadable && "error" in unreadable) {
+		return unreadable;
+	}
+	return { error: "No plugin that uses models is enabled" };
+}
+
 /** Boolean convenience form of `assertPluginEnabledForUser` for non-`ServiceResult` call sites (e.g. UI slot rendering). */
 export async function isPluginEnabledForUser(
 	pluginId: string,

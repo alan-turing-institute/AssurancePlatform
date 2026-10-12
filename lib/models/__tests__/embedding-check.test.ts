@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
 	afterAll,
 	afterEach,
@@ -16,6 +17,7 @@ import {
 	checkEmbedding,
 	EMBEDDING_CHECK_THRESHOLD,
 	type EmbeddingSpec,
+	embeddingCheckId,
 	fetchEmbeddingSpec,
 } from "../embedding-check";
 import {
@@ -227,6 +229,45 @@ describe("checkEmbedding", () => {
 		const result = await check();
 		expect(JSON.stringify(result)).not.toContain(KEY);
 		expect(Object.keys(result).sort()).toEqual(["lowestCosine", "ok"]);
+	});
+});
+
+describe("embeddingCheckId", () => {
+	it("is the catalogue model id, a hash sign and the SHA-256 of the probe sentences joined by newlines", () => {
+		const digest = createHash("sha256")
+			.update(
+				"explain the model\ncheck the fairness of the outputs\na long probe sentence"
+			)
+			.digest("hex");
+
+		expect(embeddingCheckId(SPEC)).toBe(`catalogue-model#${digest}`);
+	});
+
+	it("changes with the model id or the sentences, and not with the vectors or the data version", () => {
+		const base = embeddingCheckId(SPEC);
+		const [first, ...rest] = SPEC.probes;
+
+		expect(embeddingCheckId({ ...SPEC, modelId: "other-model" })).not.toBe(
+			base
+		);
+		expect(
+			embeddingCheckId({
+				...SPEC,
+				probes: [{ text: "changed", vector: first?.vector ?? [] }, ...rest],
+			})
+		).not.toBe(base);
+		expect(
+			embeddingCheckId({
+				...SPEC,
+				probes: [...rest, ...(first ? [first] : [])],
+			})
+		).not.toBe(base);
+		const republished: EmbeddingSpec = {
+			...SPEC,
+			dataVersion: "2",
+			probes: SPEC.probes.map((probe) => ({ ...probe, vector: [9, 9, 9, 9] })),
+		};
+		expect(embeddingCheckId(republished)).toBe(base);
 	});
 });
 

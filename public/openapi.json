@@ -36,6 +36,43 @@
       "GitHubImportSchema": {
         "type": "string",
         "description": "GitHub import request parameters"
+      },
+      "updateConnectionSchema": {
+        "type": "string"
+      },
+      "createConnectionSchema": {
+        "type": "string"
+      },
+      "quickSetupSchema": {
+        "type": "string"
+      },
+      "setRolesSchema": {
+        "type": "string"
+      },
+      "labelSchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "baseUrlSchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "apiKeySchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "modelSchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "connectionIdSchema": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "jobSchema": {
+        "type": "string",
+        "nullable": true
       }
     },
     "responses": {
@@ -103,6 +140,54 @@
           }
         }
       },
+      "409": {
+        "description": "Conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "The request conflicts with the current state"
+                }
+              }
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Unprocessable Entity",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "The request could not be processed"
+                }
+              }
+            }
+          }
+        }
+      },
+      "429": {
+        "description": "Too Many Requests",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Too many requests"
+                }
+              }
+            }
+          }
+        }
+      },
       "500": {
         "description": "Internal Server Error",
         "content": {
@@ -113,6 +198,22 @@
                 "error": {
                   "type": "string",
                   "example": "An unexpected error occurred"
+                }
+              }
+            }
+          }
+        }
+      },
+      "503": {
+        "description": "Service Unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "The service is temporarily unavailable"
                 }
               }
             }
@@ -3608,6 +3709,36 @@
         }
       }
     },
+    "/user/models": {
+      "get": {
+        "operationId": "get-user-models",
+        "summary": "GET /api/user/models — the session user's connections, jobs, recommended models and connection types.",
+        "description": "Connections (never with their keys), the three jobs, the recommended model per connection type and job, and the connection types on offer.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/user/plugins": {
       "get": {
         "operationId": "get-user-plugins",
@@ -3697,6 +3828,226 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/models/connections": {
+      "post": {
+        "operationId": "post-user-models-connections",
+        "summary": "POST /api/user/models/connections — adds a model connection for the session user (up to 10 each).",
+        "description": "Adds a connection and returns it without its key; a refused value is a 400, the limit of 10 a 409.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createConnectionSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/user/models/quick-setup": {
+      "post": {
+        "operationId": "post-user-models-quick-setup",
+        "summary": "POST /api/user/models/quick-setup — one OpenRouter key adds a connection and fills the jobs that have a recommended model.",
+        "description": "Tests an OpenRouter key, then adds the connection and its recommended jobs; a refused key writes nothing.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/quickSetupSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/user/models/roles": {
+      "put": {
+        "operationId": "put-user-models-roles",
+        "summary": "PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a changed search job.",
+        "description": "Saves the three jobs and returns them with the outcome of the search check, if one ran.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/setRolesSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/user/models/connections/{id}": {
+      "patch": {
+        "operationId": "patch-user-models-connections-{id}",
+        "summary": "PATCH /api/user/models/connections/[id] — changes the label, address or key of one of the session user's connections.",
+        "description": "Changes a connection and returns it without its key; another user's connection is a 404.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/updateConnectionSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-user-models-connections-{id}",
+        "summary": "DELETE /api/user/models/connections/[id] — removes one of the session user's connections and empties every job that used it.",
+        "description": "Removes a connection, its stored key and its jobs; works while the plugins are off.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -3824,6 +4175,45 @@
           },
           "500": {
             "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/models/connections/{id}/test": {
+      "post": {
+        "operationId": "post-user-models-connections-{id}-test",
+        "summary": "POST /api/user/models/connections/[id]/test — checks that one of the session user's connections answers and accepts its key, and lists its models.",
+        "description": "Calls the connection with its stored key and returns whether it works and the models it offers for each job.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
           }
         }
       }

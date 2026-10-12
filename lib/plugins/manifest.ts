@@ -55,6 +55,12 @@ export interface PluginManifestEntry {
 	readonly id: string;
 	readonly name: string;
 	readonly surfaces: readonly PluginSurface[];
+	/**
+	 * Whether the plugin calls the model providers a user connects in their
+	 * settings. The model routes under `/api/user/models` work for a user who
+	 * has at least one such plugin on, and for no one else. Absent means no.
+	 */
+	readonly usesModels?: boolean;
 	readonly version: string;
 }
 
@@ -90,6 +96,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		name: "Case Assistant",
 		version: "0.1.0",
 		defaultEnabled: false,
+		usesModels: true,
 		surfaces: ["case-panel", "settings-section"],
 		description:
 			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You supply your own model provider and API key in this plugin's settings.",
