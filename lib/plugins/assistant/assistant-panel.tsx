@@ -33,9 +33,17 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Textarea } from "@/components/ui/textarea";
-import { ABORT_NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
+import {
+	ABORT_NOTICE_PART,
+	noticeText,
+} from "@/lib/plugins/assistant/abort-notice";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
 import { REPLY_MARKDOWN_PROPS } from "@/lib/plugins/assistant/reply-markdown";
+import {
+	markReplyStopped,
+	SILENT_REPLY_NOTICE,
+	silentReplyIds,
+} from "@/lib/plugins/assistant/silent-reply";
 import { suggestedPrompts } from "@/lib/plugins/assistant/suggested-prompts";
 import { ToolCallRow } from "@/lib/plugins/assistant/tool-call-row";
 import { useAssistantTools } from "@/lib/plugins/assistant/use-assistant-tools";
@@ -50,6 +58,25 @@ function notConfiguredMessage(error: Error): string | null {
 	} catch {
 		return null;
 	}
+}
+
+/** What the SDK reports for a stream error whose text was withheld. */
+const WITHHELD_ERROR_TEXT = "An error occurred.";
+const MAX_REASON_CHARS = 300;
+
+/**
+ * The provider's reason that the route put in a stream error, to show as
+ * plain text. None when the error has no reason worth showing: no text, the
+ * SDK's placeholder, or a JSON response body.
+ */
+function providerReason(error: Error): string | null {
+	const text = error.message.trim();
+	if (text === "" || text === WITHHELD_ERROR_TEXT || text.startsWith("{")) {
+		return null;
+	}
+	return text.length > MAX_REASON_CHARS
+		? `${text.slice(0, MAX_REASON_CHARS)}…`
+		: text;
 }
 
 type MessagePart = UIMessage["parts"][number];
@@ -93,7 +120,7 @@ function MessagePartView({
 	if (part.type === ABORT_NOTICE_PART) {
 		return (
 			<p className="text-destructive text-sm" role="alert">
-				The model did not answer in time. Try again or ask something shorter.
+				{noticeText(part.data)}
 			</p>
 		);
 	}
@@ -109,9 +136,12 @@ function MessagePartView({
 
 function MessageView({
 	message,
+	silent,
 	thinking,
 }: {
 	message: UIMessage;
+	/** The reply finished with nothing to read. */
+	silent: boolean;
 	thinking: { steps: number; streaming: boolean; text: string };
 }) {
 	return (
@@ -150,6 +180,11 @@ function MessageView({
 					{keyedParts(message.parts).map(({ key, part }) => (
 						<MessagePartView key={key} part={part} role={message.role} />
 					))}
+					{silent && (
+						<p className="text-destructive text-sm" role="alert">
+							{SILENT_REPLY_NOTICE}
+						</p>
+					)}
 				</MessageContent>
 			</Message>
 		</ErrorBoundary>
@@ -176,10 +211,16 @@ function ErrorNotice({ error }: { error: Error }) {
 			</div>
 		);
 	}
+	const reason = providerReason(error);
 	return (
-		<p className="text-destructive text-sm" role="alert">
-			The assistant could not answer. Try again.
-		</p>
+		<div className="text-destructive text-sm" role="alert">
+			<p>The assistant could not answer.{reason ? "" : " Try again."}</p>
+			{reason && (
+				<p className="mt-1 break-words" data-testid="assistant-error-reason">
+					{reason}
+				</p>
+			)}
+		</div>
 	);
 }
 
@@ -241,6 +282,7 @@ function AssistantChat({
 	});
 	const lastId = messages.at(-1)?.id;
 	const claimSend = useSendClaim(busy);
+	const silentIds = silentReplyIds(messages, status, error);
 
 	function send(text: string) {
 		if (!claimSend()) {
@@ -297,6 +339,7 @@ function AssistantChat({
 						<MessageView
 							key={message.id}
 							message={message}
+							silent={silentIds.has(message.id)}
 							thinking={{
 								steps: thinkingSteps(message),
 								streaming:
@@ -343,7 +386,10 @@ function AssistantChat({
 				{busy && (
 					<Button
 						key="stop"
-						onClick={() => stop()}
+						onClick={() => {
+							markReplyStopped(lastId);
+							stop();
+						}}
 						type="button"
 						variant="outline"
 					>
