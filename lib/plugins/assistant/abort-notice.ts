@@ -1,6 +1,14 @@
 /** The message part type of a notice the panel shows under a reply. The route adds some, and the browser adds the timeout one. */
 export const NOTICE_PART = "data-notice";
 
+/** The message part type that carries the provider's reason for a reply that failed. Its data is the reason as text, already cleaned of the key and the address. */
+export const ERROR_REASON_PART = "data-error-reason";
+
+/** Whether a message part is a notice or a failure's reason: something for the user to read that the model did not write. */
+export function isNoticePart(part: { type: string }): boolean {
+	return part.type === NOTICE_PART || part.type === ERROR_REASON_PART;
+}
+
 /** What a notice part's data says happened to the reply. */
 export const NOTICE_REASON = {
 	/** The model call was cancelled when it ran past its time limit. */

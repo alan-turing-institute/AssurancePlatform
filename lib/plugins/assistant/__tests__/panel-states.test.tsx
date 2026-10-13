@@ -726,24 +726,32 @@ describe("the selection line and the notices", () => {
 		).toHaveAttribute("href", "/dashboard/settings/plugins#ai-models");
 	});
 
-	it("shows the reason the route gives under the heading, as plain text, in place of Try again", async () => {
-		chat.state.error = new Error(
-			"The provider refused the call: confirm <img src=x onerror=alert(1)> in your account settings."
-		);
+	it("shows the reason a failed reply carries under that reply, once, as plain text, in place of Try again", async () => {
+		const reason =
+			"The provider refused the call: confirm <img src=x onerror=alert(1)> in your account settings.";
+		chat.state.status = "error";
+		chat.state.error = new Error(reason);
+		chat.state.messages = [
+			user("hi"),
+			assistant({ type: "data-error-reason", data: reason }),
+		];
 
 		const { container } = await renderPanel();
 
 		const alert = screen.getByRole("alert");
 		expect(alert).toHaveTextContent("The assistant could not answer.");
-		expect(screen.getByTestId("assistant-error-reason")).toHaveTextContent(
-			"confirm <img src=x onerror=alert(1)> in your account settings."
-		);
 		expect(alert).not.toHaveTextContent("Try again");
+		const shown = screen.getAllByTestId("assistant-error-reason");
+		expect(shown).toHaveLength(1);
+		expect(shown[0]).toHaveTextContent(reason);
 		expect(container.querySelector("img")).toBeNull();
 	});
 
 	it("cuts a long reason", async () => {
-		chat.state.error = new Error("x".repeat(1000));
+		chat.state.messages = [
+			user("hi"),
+			assistant({ type: "data-error-reason", data: "x".repeat(1000) }),
+		];
 
 		await renderPanel();
 
@@ -752,14 +760,58 @@ describe("the selection line and the notices", () => {
 		expect(reason).toHaveTextContent("…");
 	});
 
+	it("keeps the reason under its reply once another question is asked", async () => {
+		chat.state.status = "submitted";
+		chat.state.messages = [
+			user("hi"),
+			assistant({
+				type: "data-error-reason",
+				data: "Rate limited by the provider.",
+			}),
+			user("again"),
+		];
+
+		await renderPanel();
+
+		expect(screen.getByTestId("assistant-error-reason")).toHaveTextContent(
+			"Rate limited by the provider."
+		);
+	});
+
+	it("keeps that reason, and adds only the fixed sentence, when the next question cannot be sent", async () => {
+		chat.state.status = "error";
+		chat.state.error = new TypeError("Failed to fetch");
+		chat.state.messages = [
+			user("hi"),
+			assistant({
+				type: "data-error-reason",
+				data: "Rate limited by the provider.",
+			}),
+			user("again"),
+		];
+
+		await renderPanel();
+
+		expect(screen.getAllByRole("alert")).toHaveLength(2);
+		expect(screen.getAllByTestId("assistant-error-reason")).toHaveLength(1);
+		expect(document.body).toHaveTextContent(
+			"The assistant could not answer. Try again."
+		);
+		expect(document.body).not.toHaveTextContent("Failed to fetch");
+	});
+
 	it.each([
-		["the SDK's placeholder text", new Error("An error occurred.")],
+		["a network failure", new TypeError("Failed to fetch"), "Failed to fetch"],
 		[
-			"a JSON response body",
-			new Error('{"error":"Too many requests","code":"RATE_LIMITED"}'),
+			"a host's HTML error page",
+			new Error("<html><body><h1>502 Bad Gateway</h1></body></html>"),
+			"502 Bad Gateway",
 		],
-	])("shows only the plain alert when the error carries %s", async (_name, error) => {
+		["the SDK's placeholder text", new Error("An error occurred."), "An error"],
+	])("shows only the fixed sentence for %s, never its text", async (_name, error, shown) => {
+		chat.state.status = "error";
 		chat.state.error = error;
+		chat.state.messages = [user("hi")];
 
 		await renderPanel();
 
@@ -767,6 +819,21 @@ describe("the selection line and the notices", () => {
 			"The assistant could not answer. Try again."
 		);
 		expect(screen.queryByTestId("assistant-error-reason")).toBeNull();
+		expect(document.body).not.toHaveTextContent(shown);
+	});
+
+	it("adds the route's own message when the answer was TEA's JSON error, without the rest of the JSON", async () => {
+		chat.state.status = "error";
+		chat.state.error = new Error(
+			'{"error":"Too many requests","code":"RATE_LIMITED"}'
+		);
+		chat.state.messages = [user("hi")];
+
+		await renderPanel();
+
+		expect(screen.getByTestId("assistant-error-reason")).toHaveTextContent(
+			"Too many requests"
+		);
 		expect(document.body).not.toHaveTextContent("RATE_LIMITED");
 	});
 });
@@ -885,6 +952,24 @@ describe("a reply with nothing to read", () => {
 		await renderPanel();
 
 		expect(screen.getByRole("alert")).toHaveTextContent(SILENT);
+	});
+
+	it("does not call a failed reply with tool rows a silent one, even after the chat's error is cleared", async () => {
+		chat.state.messages = [
+			user("hi"),
+			assistant(tool("t1", "output-available", { output: {} }), {
+				type: "data-error-reason",
+				data: "The provider refused the call.",
+			}),
+			user("again"),
+		];
+
+		await renderPanel();
+
+		expect(document.body).not.toHaveTextContent(SILENT);
+		expect(screen.getByTestId("assistant-error-reason")).toHaveTextContent(
+			"The provider refused the call."
+		);
 	});
 
 	it("shows only the error, not the silent-reply notice, after a failed request", async () => {

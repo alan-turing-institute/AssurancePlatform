@@ -1,5 +1,5 @@
 import { type ChatStatus, isToolUIPart, type UIMessage } from "ai";
-import { NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
+import { isNoticePart } from "@/lib/plugins/assistant/abort-notice";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -12,7 +12,7 @@ function hasText(part: MessagePart): boolean {
 
 /** A tool call that has not produced a result, or text or thinking that is still arriving. */
 function isMoving(part: MessagePart): boolean {
-	if (part.type === NOTICE_PART) {
+	if (isNoticePart(part)) {
 		return true;
 	}
 	if (isToolUIPart(part)) {

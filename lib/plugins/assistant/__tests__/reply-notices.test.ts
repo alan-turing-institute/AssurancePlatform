@@ -1,6 +1,8 @@
 import {
+	convertToModelMessages,
 	type FinishReason,
 	readUIMessageStream,
+	type UIMessage,
 	type UIMessageChunk,
 } from "ai";
 import { describe, expect, it } from "vitest";
@@ -148,5 +150,61 @@ describe("replyNotices", () => {
 			role: "assistant",
 			parts: expect.arrayContaining([notice(NOTICE_REASON.empty)]),
 		});
+	});
+
+	it("puts the text of a stream error in a part of the reply just before the error chunk", async () => {
+		const started: UIMessageChunk[] = [
+			{ type: "start" },
+			{ type: "start-step" },
+		];
+		const error: UIMessageChunk = { type: "error", errorText: "Rate limited." };
+
+		const out = await through([...started, error]);
+
+		expect(out).toEqual([
+			...started,
+			{ type: "data-error-reason", data: "Rate limited." },
+			error,
+		]);
+	});
+
+	it("adds no empty notice to a reply that failed", async () => {
+		const out = await through([
+			{ type: "error", errorText: "Rate limited." },
+			finish("error"),
+		]);
+
+		expect(out.map((chunk) => chunk.type)).toEqual([
+			"data-error-reason",
+			"error",
+			"finish",
+		]);
+	});
+
+	it("leaves its notices and a failure's reason out of what the model is sent on the next question", async () => {
+		const asked = (id: string): UIMessage => ({
+			id,
+			role: "user",
+			parts: [{ type: "text", text: `Question ${id}` }],
+		});
+		const history: UIMessage[] = [
+			asked("1"),
+			{
+				id: "a1",
+				role: "assistant",
+				parts: [
+					{ type: "text", text: "A partial answer." },
+					{ type: "data-notice", data: NOTICE_REASON.steps },
+					{ type: "data-error-reason", data: "The provider's reason." },
+				],
+			},
+			asked("2"),
+		];
+
+		const sent = JSON.stringify(await convertToModelMessages(history));
+
+		expect(sent).toContain("A partial answer.");
+		expect(sent).not.toContain("The provider's reason.");
+		expect(sent).not.toContain(NOTICE_REASON.steps);
 	});
 });

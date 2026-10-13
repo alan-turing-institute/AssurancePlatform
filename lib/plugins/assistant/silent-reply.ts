@@ -1,5 +1,5 @@
 import type { ChatStatus, UIMessage } from "ai";
-import { NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
+import { isNoticePart } from "@/lib/plugins/assistant/abort-notice";
 
 /** Replies the user stopped, which are never reported as silent. Held here so closing the panel does not forget them. */
 const stoppedReplies = new Set<string>();
@@ -12,16 +12,15 @@ export function markReplyStopped(id: string | undefined): void {
 }
 
 /**
- * Whether a reply has nothing to read: no answer text and no notice. Tool
- * calls and thinking do not count as an answer.
+ * Whether a reply has nothing to read: no answer text, no notice and no
+ * failure's reason. Tool calls and thinking do not count as an answer.
  */
 function hasNoAnswer(message: UIMessage): boolean {
 	return (
 		message.role === "assistant" &&
 		!message.parts.some(
 			(part) =>
-				part.type === NOTICE_PART ||
-				(part.type === "text" && part.text.trim() !== "")
+				isNoticePart(part) || (part.type === "text" && part.text.trim() !== "")
 		)
 	);
 }

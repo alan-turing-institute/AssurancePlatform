@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Textarea } from "@/components/ui/textarea";
 import {
+	ERROR_REASON_PART,
 	NOTICE_PART,
 	noticeText,
 	SILENT_REPLY_NOTICE,
@@ -60,23 +61,56 @@ function notConfiguredMessage(error: Error): string | null {
 	}
 }
 
-/** What the SDK reports for a stream error whose text was withheld. */
-const WITHHELD_ERROR_TEXT = "An error occurred.";
 const MAX_REASON_CHARS = 300;
 
-/**
- * The provider's reason that the route put in a stream error, to show as
- * plain text. None when the error has no reason worth showing: no text, the
- * SDK's placeholder, or a JSON response body.
- */
-function providerReason(error: Error): string | null {
-	const text = error.message.trim();
-	if (text === "" || text === WITHHELD_ERROR_TEXT || text.startsWith("{")) {
+/** A reason as plain text of a short length; null when it is not text or says nothing. */
+function shortReason(reason: unknown): string | null {
+	if (typeof reason !== "string" || reason.trim() === "") {
 		return null;
 	}
+	const text = reason.trim();
 	return text.length > MAX_REASON_CHARS
 		? `${text.slice(0, MAX_REASON_CHARS)}…`
 		: text;
+}
+
+/**
+ * The route's own message when the failed answer was TEA's JSON error. None
+ * for anything else that can come back instead of a reply: a host's error
+ * page, response text of another shape, or a network failure's message.
+ */
+function routeMessage(error: Error): string | null {
+	try {
+		const body: unknown = JSON.parse(error.message);
+		return typeof body === "object" && body !== null && "error" in body
+			? shortReason(body.error)
+			: null;
+	} catch {
+		return null;
+	}
+}
+
+/** The sentence for a reply that could not be answered, with its reason as plain text when there is one. */
+function FailureNotice({ reason }: { reason: string | null }) {
+	return (
+		<div className="text-destructive text-sm" role="alert">
+			<p>The assistant could not answer.{reason ? "" : " Try again."}</p>
+			{reason && (
+				<p className="mt-1 break-words" data-testid="assistant-error-reason">
+					{reason}
+				</p>
+			)}
+		</div>
+	);
+}
+
+/** Whether the last message is a reply that carries the reason it failed, which is where that failure is shown. */
+function endsWithFailedReply(messages: readonly UIMessage[]): boolean {
+	const last = messages.at(-1);
+	return (
+		last?.role === "assistant" &&
+		last.parts.some((part) => part.type === ERROR_REASON_PART)
+	);
 }
 
 type MessagePart = UIMessage["parts"][number];
@@ -123,6 +157,9 @@ function MessagePartView({
 				{noticeText(part.data)}
 			</p>
 		);
+	}
+	if (part.type === ERROR_REASON_PART) {
+		return <FailureNotice reason={shortReason(part.data)} />;
 	}
 	if (part.type === "text") {
 		return role === "assistant" ? (
@@ -191,7 +228,17 @@ function MessageView({
 	);
 }
 
-function ErrorNotice({ error }: { error: Error }) {
+/** The notice for a failed request at the foot of the chat. A reply that failed shows its own reason, so nothing is added for it here. */
+function ErrorNotice({
+	error,
+	messages,
+}: {
+	error: Error;
+	messages: readonly UIMessage[];
+}) {
+	if (endsWithFailedReply(messages)) {
+		return null;
+	}
 	const notConfigured = notConfiguredMessage(error);
 	if (notConfigured) {
 		return (
@@ -211,17 +258,7 @@ function ErrorNotice({ error }: { error: Error }) {
 			</div>
 		);
 	}
-	const reason = providerReason(error);
-	return (
-		<div className="text-destructive text-sm" role="alert">
-			<p>The assistant could not answer.{reason ? "" : " Try again."}</p>
-			{reason && (
-				<p className="mt-1 break-words" data-testid="assistant-error-reason">
-					{reason}
-				</p>
-			)}
-		</div>
-	);
+	return <FailureNotice reason={routeMessage(error)} />;
 }
 
 const INTRO_BASE =
@@ -355,7 +392,7 @@ function AssistantChat({
 							<Shimmer as="span">Thinking…</Shimmer>
 						</output>
 					)}
-					{error && <ErrorNotice error={error} />}
+					{error && <ErrorNotice error={error} messages={messages} />}
 				</ConversationContent>
 				<ConversationScrollButton aria-label="Scroll to the latest message" />
 			</Conversation>

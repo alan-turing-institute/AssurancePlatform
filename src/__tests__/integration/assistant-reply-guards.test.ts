@@ -394,6 +394,12 @@ describe("what the user is told when the provider refuses", () => {
 		const outcome = await chat(testCase.id);
 
 		expect(errorTextOf(outcome.text)).toBe(REASON);
+		// The same text is kept with the reply, ahead of the error.
+		const kept = outcome.text.indexOf(
+			JSON.stringify({ type: "data-error-reason", data: REASON })
+		);
+		expect(kept).toBeGreaterThan(-1);
+		expect(outcome.text.indexOf('"type":"error"')).toBeGreaterThan(kept);
 		expect(logs.text()).not.toContain("18+ age");
 		expect(logs.text()).not.toContain(REASON);
 	});

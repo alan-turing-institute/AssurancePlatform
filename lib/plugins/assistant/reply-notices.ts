@@ -1,5 +1,6 @@
 import type { FinishReason, UIMessageChunk } from "ai";
 import {
+	ERROR_REASON_PART,
 	NOTICE_PART,
 	NOTICE_REASON,
 } from "@/lib/plugins/assistant/abort-notice";
@@ -42,8 +43,11 @@ function noticeAtFinish(
  * it was still calling tools (`NOTICE_REASON.steps`), or it finished having
  * sent no text, thinking or tool call at all (`NOTICE_REASON.empty`). Writing
  * the part is what creates the assistant's message, so the notice belongs to
- * that reply. The part goes in just before the stream's `finish` chunk; every
- * other chunk passes through as it came.
+ * that reply. The part goes in just before the stream's `finish` chunk. A
+ * stream `error` chunk is preceded by a `data-error-reason` part holding its
+ * text, so that the reason stays with the reply that failed; the route has
+ * already cleaned that text of the key and the address. Every other chunk
+ * passes through as it came.
  */
 export function replyNotices(): TransformStream<
 	UIMessageChunk,
@@ -53,6 +57,10 @@ export function replyNotices(): TransformStream<
 	return new TransformStream({
 		transform(chunk, controller) {
 			hasContent ||= carriesContent(chunk);
+			if (chunk.type === "error") {
+				hasContent = true;
+				controller.enqueue({ type: ERROR_REASON_PART, data: chunk.errorText });
+			}
 			if (chunk.type === "finish") {
 				const reason = noticeAtFinish(chunk.finishReason, hasContent);
 				if (reason) {
