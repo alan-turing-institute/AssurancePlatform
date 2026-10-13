@@ -1,5 +1,4 @@
 import {
-	convertToModelMessages,
 	createUIMessageStreamResponse,
 	stepCountIs,
 	streamText,
@@ -20,6 +19,7 @@ import {
 	modelAccessFor,
 	resolveChatModel,
 } from "@/lib/plugins/assistant/model-config";
+import { modelHistory } from "@/lib/plugins/assistant/model-history";
 import { modelTimeoutMs } from "@/lib/plugins/assistant/model-timeout";
 import { noDownload } from "@/lib/plugins/assistant/no-download";
 import { providerErrorMessage } from "@/lib/plugins/assistant/provider-message";
@@ -166,7 +166,7 @@ export async function POST(
 				buildSystemPrompt(Object.keys(tools)) +
 				selectionPrompt(selection) +
 				techniquesPrompt(),
-			messages: await convertToModelMessages(body.messages as UIMessage[]),
+			messages: await modelHistory(body.messages as UIMessage[]),
 			tools,
 			// Files never reach the model call through the schema above; this
 			// keeps the SDK from fetching a URL itself should one get through.

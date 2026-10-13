@@ -99,21 +99,19 @@ async function setup(type: "OLLAMA" | "OPENROUTER" = "OLLAMA") {
 	return { testCase };
 }
 
-async function chat(caseId: string) {
+const FIRST_QUESTION = {
+	id: "m1",
+	role: "user",
+	parts: [{ type: "text", text: "What does the case claim?" }],
+};
+
+async function chat(caseId: string, messages: object[] = [FIRST_QUESTION]) {
 	const { POST } = await import("@/app/api/cases/[id]/assistant/route");
 	const response = await POST(
 		new Request(`http://localhost:3000/api/cases/${caseId}/assistant`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({
-				messages: [
-					{
-						id: "m1",
-						role: "user",
-						parts: [{ type: "text", text: "What does the case claim?" }],
-					},
-				],
-			}),
+			body: JSON.stringify({ messages }),
 		}),
 		{ params: Promise.resolve({ id: caseId }) }
 	);
@@ -363,6 +361,102 @@ describe("a model that keeps calling tools", () => {
 		expect(server.hits.filter((hit) => hit.url === CHAT)).toHaveLength(8);
 		expect(outcome.text).toContain("I'll read the case.");
 		expect(outcome.text).toContain('"type":"data-notice","data":"steps"');
+	});
+});
+
+/** The messages the reply's first model call was sent. */
+function messagesSentToModel(): { role: string }[] {
+	const first = server.hits.find((hit) => hit.url === CHAT);
+	const { messages } = JSON.parse(first?.body ?? "{}") as {
+		messages: { role: string }[];
+	};
+	return messages;
+}
+
+const asked = (id: string, text: string) => ({
+	id,
+	role: "user",
+	parts: [{ type: "text", text }],
+});
+
+const unfinishedCall = {
+	type: "tool-read_case",
+	toolCallId: "call_unfinished",
+	state: "input-available",
+	input: {},
+};
+
+describe("a conversation whose last reply was stopped inside a tool call", () => {
+	/** Each case is the assistant's stopped reply as the browser holds it, and the question that follows. */
+	const stopped = {
+		"thinking, then the call": [
+			{ type: "step-start" },
+			{ type: "reasoning", text: "I should read the case.", state: "done" },
+			unfinishedCall,
+		],
+		"the call alone": [{ type: "step-start" }, unfinishedCall],
+	};
+
+	it.each(
+		Object.entries(stopped)
+	)("answers the next question normally when the reply was %s", async (_name, parts) => {
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id, [
+			asked("m1", "What does the case claim?"),
+			{ id: "a1", role: "assistant", parts },
+			asked("m2", "What is the top-level goal?"),
+		]);
+
+		expect(outcome.status).toBe(200);
+		expect(outcome.text).toContain("Done.");
+		expect(outcome.text).not.toContain('"type":"error"');
+		const sent = messagesSentToModel();
+		expect(sent.map((message) => message.role)).not.toContain("assistant");
+		expect(sent.map((message) => message.role)).not.toContain("tool");
+		expect(JSON.stringify(sent)).not.toContain("call_unfinished");
+		expect(JSON.stringify(sent)).not.toContain("tool_calls");
+		expect(JSON.stringify(sent)).toContain("What is the top-level goal?");
+	});
+
+	it("keeps the calls that finished earlier in that reply and leaves out only the one that did not", async () => {
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id, [
+			asked("m1", "What does the case claim?"),
+			{
+				id: "a1",
+				role: "assistant",
+				parts: [
+					{ type: "step-start" },
+					{ type: "text", text: "I'll look at the case." },
+					{
+						type: "tool-read_case",
+						toolCallId: "call_finished",
+						state: "output-available",
+						input: {},
+						output: { found: true },
+					},
+					{ type: "step-start" },
+					{ type: "reasoning", text: "Now an element.", state: "done" },
+					unfinishedCall,
+				],
+			},
+			asked("m2", "What is the top-level goal?"),
+		]);
+
+		expect(outcome.text).toContain("Done.");
+		expect(outcome.text).not.toContain('"type":"error"');
+		const sent = messagesSentToModel();
+		expect(sent.map((message) => message.role)).toEqual([
+			"system",
+			"user",
+			"assistant",
+			"tool",
+			"user",
+		]);
+		expect(JSON.stringify(sent)).toContain("call_finished");
+		expect(JSON.stringify(sent)).not.toContain("call_unfinished");
 	});
 });
 
