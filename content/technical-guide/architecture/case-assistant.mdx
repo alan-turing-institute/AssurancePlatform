@@ -271,6 +271,12 @@ Writing the notice is what creates the assistant's message when the model sent n
 A reply that has tool calls or thinking but ends with no answer text and no notice shows the same "stopped without writing an answer" wording, unless the user stopped the reply or it failed with an error.
 Stopping a reply before any part of it has arrived adds nothing, and no notice is shown.
 
+A tool call that was still running when the user stopped the reply, or when the whole-reply time limit ended it, has no result.
+The chat keeps that call and shows it as an error row once the reply has ended, and opening the row reads "Did not finish."
+The model is sent the conversation without the call, because a model server refuses a tool call that has no result after it.
+It is also sent without an assistant message that the cut leaves holding only thinking, because some providers refuse an empty assistant message.
+Calls that finished earlier in the same reply stay in what the model is sent, and the next question is answered normally.
+
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
 The tools `read_case`, `read_element` and `lint_case` share one read of the case, so a reply reads the case once however many of them it calls.
