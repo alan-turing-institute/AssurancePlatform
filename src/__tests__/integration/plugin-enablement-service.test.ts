@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getManifestEntry } from "@/lib/plugins/manifest";
 import prisma from "@/lib/prisma";
 import {
+	assertModelPluginEnabled,
 	assertPluginEnabledForUser,
 	getUserPluginSettings,
 	isPluginEnabledForUser,
@@ -16,6 +18,7 @@ import {
 const KNOWN_PLUGIN_ID = "tea.health";
 const UNKNOWN_PLUGIN_ID = "tea.does-not-exist";
 const NOT_ENABLED_PATTERN = /is not enabled/;
+const NO_MODEL_PLUGIN_PATTERN = /No plugin that uses models is enabled/;
 const UNKNOWN_PLUGIN_PATTERN = /Unknown plugin/;
 
 afterEach(() => {
@@ -320,6 +323,60 @@ describe("assertPluginEnabledForUser", () => {
 			await assertPluginEnabledForUser(UNKNOWN_PLUGIN_ID, user.id),
 			UNKNOWN_PLUGIN_PATTERN
 		);
+	});
+});
+
+describe("assertModelPluginEnabled", () => {
+	it("passes when a plugin that uses models is on for the user", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			scopeType: "USER",
+			enabled: true,
+		});
+
+		expectSuccess(await assertModelPluginEnabled(user.id));
+	});
+
+	it("refuses while every plugin that uses models is off, however many others are on", async () => {
+		const user = await createTestUser();
+		expectSuccess(await assertPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id));
+
+		// The assistant is off until the user turns it on.
+		expectError(
+			await assertModelPluginEnabled(user.id),
+			NO_MODEL_PLUGIN_PATTERN
+		);
+
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			scopeType: "USER",
+			enabled: false,
+		});
+		expectError(
+			await assertModelPluginEnabled(user.id),
+			NO_MODEL_PLUGIN_PATTERN
+		);
+	});
+
+	it("refuses when the deployment withholds the plugin, whatever the user chose", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			scopeType: "USER",
+			enabled: true,
+		});
+		vi.stubEnv("TEA_PLUGINS_DISABLED", "tea.assistant");
+
+		expectError(
+			await assertModelPluginEnabled(user.id),
+			NO_MODEL_PLUGIN_PATTERN
+		);
+	});
+
+	it("leaves tea.health out: it does not use models", () => {
+		expect(getManifestEntry(KNOWN_PLUGIN_ID)?.usesModels).toBeUndefined();
+		expect(getManifestEntry("tea.assistant")?.usesModels).toBe(true);
 	});
 });
 

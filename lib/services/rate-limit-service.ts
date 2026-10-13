@@ -80,6 +80,20 @@ export const RATE_LIMIT_CONFIGS = {
 			},
 		],
 	},
+	/**
+	 * Calls the server makes to a model provider on a user's behalf: a
+	 * connection test, a search check and quick setup share one budget per user.
+	 */
+	modelCalls: {
+		endpoint: "model_calls",
+		limits: [
+			{
+				identifierType: "user_id" as const,
+				maxAttempts: 20,
+				windowMs: 10 * 60 * 1000,
+			},
+		],
+	},
 } as const;
 
 // ============================================
@@ -127,6 +141,44 @@ function getIdentifierLabel(
 // CORE RATE LIMITING FUNCTIONS
 // ============================================
 
+/** The part of the Prisma client the rate limit reads, so a transaction's client serves as well. */
+type AttemptsClient = Pick<typeof prisma, "rateLimitAttempt">;
+
+/**
+ * The refusal for one limit when its window is full, or null while there is
+ * room for another attempt.
+ */
+async function refusalIfFull(
+	client: AttemptsClient,
+	config: RateLimitConfig,
+	limit: RateLimitConfig["limits"][number],
+	identifier: string
+): Promise<RateLimitCheckResult | null> {
+	const within = {
+		endpoint: config.endpoint,
+		identifier,
+		identifierType: limit.identifierType,
+		attemptedAt: { gte: new Date(Date.now() - limit.windowMs) },
+	};
+	const attemptCount = await client.rateLimitAttempt.count({ where: within });
+	if (attemptCount < limit.maxAttempts) {
+		return null;
+	}
+	// Find oldest attempt to calculate retry time
+	const oldestAttempt = await client.rateLimitAttempt.findFirst({
+		where: within,
+		orderBy: { attemptedAt: "asc" },
+	});
+	const retryAfterMs = oldestAttempt
+		? limit.windowMs - (Date.now() - oldestAttempt.attemptedAt.getTime())
+		: limit.windowMs;
+	return {
+		allowed: false,
+		reason: `Too many attempts from ${getIdentifierLabel(limit.identifierType)}. Please try again later.`,
+		retryAfterMs: Math.max(0, retryAfterMs),
+	};
+}
+
 /**
  * Check if a request is rate limited based on the configuration.
  */
@@ -141,38 +193,9 @@ export async function checkRateLimit(
 			continue;
 		}
 
-		const windowStart = new Date(Date.now() - limit.windowMs);
-
-		const attemptCount = await prisma.rateLimitAttempt.count({
-			where: {
-				endpoint: config.endpoint,
-				identifier,
-				identifierType: limit.identifierType,
-				attemptedAt: { gte: windowStart },
-			},
-		});
-
-		if (attemptCount >= limit.maxAttempts) {
-			// Find oldest attempt to calculate retry time
-			const oldestAttempt = await prisma.rateLimitAttempt.findFirst({
-				where: {
-					endpoint: config.endpoint,
-					identifier,
-					identifierType: limit.identifierType,
-					attemptedAt: { gte: windowStart },
-				},
-				orderBy: { attemptedAt: "asc" },
-			});
-
-			const retryAfterMs = oldestAttempt
-				? limit.windowMs - (Date.now() - oldestAttempt.attemptedAt.getTime())
-				: limit.windowMs;
-
-			return {
-				allowed: false,
-				reason: `Too many attempts from ${getIdentifierLabel(limit.identifierType)}. Please try again later.`,
-				retryAfterMs: Math.max(0, retryAfterMs),
-			};
+		const refusal = await refusalIfFull(prisma, config, limit, identifier);
+		if (refusal) {
+			return refusal;
 		}
 	}
 
@@ -217,6 +240,55 @@ export async function recordAttempt(
 	if (records.length > 0) {
 		await prisma.rateLimitAttempt.createMany({ data: records });
 	}
+}
+
+/**
+ * Spends one attempt of the budget if there is one left. Unlike `checkRateLimit`
+ * followed by `recordAttempt`, the count and the record happen together under a
+ * lock held for each identifier, so requests that arrive at the same moment
+ * cannot all see room and all go ahead. An attempt that is refused is not
+ * recorded.
+ */
+export async function takeRateLimitSlot(
+	config: RateLimitConfig,
+	identifiers: RateLimitIdentifiers
+): Promise<RateLimitCheckResult> {
+	const applicable = config.limits.flatMap((limit) => {
+		const identifier = getIdentifierValue(limit.identifierType, identifiers);
+		return identifier ? [{ limit, identifier }] : [];
+	});
+	if (applicable.length === 0) {
+		return { allowed: true };
+	}
+	// Locks are taken in one order, so two requests that share identifiers
+	// cannot wait on each other.
+	const lockKeys = applicable
+		.map(
+			({ limit, identifier }) =>
+				`${config.endpoint}:${limit.identifierType}:${identifier}`
+		)
+		.sort();
+
+	return await prisma.$transaction(async (tx) => {
+		for (const key of lockKeys) {
+			await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
+		}
+		for (const { limit, identifier } of applicable) {
+			const refusal = await refusalIfFull(tx, config, limit, identifier);
+			if (refusal) {
+				return refusal;
+			}
+		}
+		await tx.rateLimitAttempt.createMany({
+			data: applicable.map(({ limit, identifier }) => ({
+				endpoint: config.endpoint,
+				identifier,
+				identifierType: limit.identifierType,
+				blocked: false,
+			})),
+		});
+		return { allowed: true };
+	});
 }
 
 /**

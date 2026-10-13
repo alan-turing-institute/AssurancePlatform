@@ -30,6 +30,12 @@ export type PluginSurface =
 
 export interface PluginManifestEntry {
 	/**
+	 * Whether a user who has never set this plugin gets it on. Absent means
+	 * on. When `false`, the plugin is off until the user's own USER-scope row
+	 * turns it on; an off row at any higher scope still wins.
+	 */
+	readonly defaultEnabled?: boolean;
+	/**
 	 * Two or three plain sentences for the Plugins page card (TEA — Plugin
 	 * management surface D2). Written for the person deciding whether to turn
 	 * the plugin on or off, not for a developer.
@@ -49,6 +55,12 @@ export interface PluginManifestEntry {
 	readonly id: string;
 	readonly name: string;
 	readonly surfaces: readonly PluginSurface[];
+	/**
+	 * Whether the plugin calls the model providers a user connects in their
+	 * settings. The model routes under `/api/user/models` work for a user who
+	 * has at least one such plugin on, and for no one else. Absent means no.
+	 */
+	readonly usesModels?: boolean;
 	readonly version: string;
 }
 
@@ -78,6 +90,16 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		],
 		description:
 			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
+	},
+	{
+		id: "tea.assistant",
+		name: "Case Assistant",
+		version: "0.1.0",
+		defaultEnabled: false,
+		usesModels: true,
+		surfaces: ["case-panel", "settings-section"],
+		description:
+			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You choose the models it uses in the AI models section of these settings.",
 	},
 ];
 

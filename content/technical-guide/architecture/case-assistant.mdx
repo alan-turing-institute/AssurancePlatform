@@ -1,0 +1,401 @@
+---
+title: "Case Assistant"
+description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, and how technique suggestions find and rank techniques."
+---
+
+The `tea.assistant` plugin adds a chat panel to the case editor.
+The assistant reads the open case to answer questions about it and never changes it.
+The plugin is off until a user turns it on in Settings → Plugins.
+An operator can withhold it from a whole deployment by listing `tea.assistant` in `TEA_PLUGINS_DISABLED`.
+The assistant runs on models that each user connects, so a deployment needs no model of its own.
+
+## Models
+
+Each user sets up their own model connections.
+A connection is a model server and, where the server needs one, a key.
+The user then chooses which connection and which model does each of three jobs.
+The server makes every model call with the signed-in user's own connection.
+
+### The three jobs
+
+| Job | What it does | When it is off |
+|---|---|---|
+| Chat | The model the assistant talks with. | The assistant cannot answer. Chat is the one job that must be set. |
+| Ranking | Puts the techniques that the search finds in order, best first, using the Clef-Flash model. | Techniques stay in the order the search found them. |
+| Search | Turns a claim into numbers, so that techniques are found by meaning as well as by keyword. | Techniques are found by keyword only. |
+
+If no chat model is set up, the chat route answers with a message that says so, and the panel shows that message with a link to the AI models settings.
+
+### Connection types
+
+A connection has a type.
+The type decides whether the address is fixed, whether a key is needed, and which jobs the connection can do.
+The server refuses to give a connection a job that its type cannot do.
+
+| Type | Address | Key | Chat | Ranking | Search |
+|---|---|---|---|---|---|
+| OpenRouter | Fixed (`https://openrouter.ai`) | Required | Yes | Yes | Yes |
+| Ollama | Entered by the user | Optional | Yes | Yes | Yes |
+| OpenAI-compatible | Entered by the user | Optional | Yes | No | Yes |
+| Anthropic | Fixed (`https://api.anthropic.com`) | Required | Yes | No | No |
+
+An OpenAI-compatible connection fits any server that follows the OpenAI API, such as vLLM.
+Its address is entered up to and including `/v1` where the server has one.
+An Ollama address has no path after it.
+Ranking runs only on OpenRouter and Ollama connections, the two types that have a Clef-Flash endpoint.
+A user can have up to 10 connections.
+
+### Where the settings live
+
+The settings are in Settings → Plugins → AI models, below the plugin cards.
+The block appears while a plugin that uses models is on for the user.
+The Case Assistant's own card has one line that points to it.
+The block holds quick setup, the list of connections and the three jobs.
+Each connection has Test, Edit and Remove.
+Test checks that the address answers and the key is accepted, and it lists the models the server offers for each job, which fills the model pickers.
+Each job has a connection picker, a model picker with the recommended model marked, and a status line.
+Ranking and search also have an Off choice.
+
+A key is write-only.
+No route ever returns it, only whether one is set, and the settings show "key set" or "no key".
+The server encrypts a key with `TOKEN_ENCRYPTION_KEY` before it stores it, and it decrypts the key only to make a call for that user.
+Removing a connection deletes its key and empties every job that used it.
+Deleting a user deletes their connections and keys.
+A message from a connection test or from quick setup is fixed text that never quotes the key, the address or the server's reply.
+If the block cannot load, it shows the message with a Retry button.
+
+### Quick setup
+
+Quick setup takes one OpenRouter key.
+The server first tests the key against OpenRouter, and it saves nothing if OpenRouter refuses it or cannot be reached.
+It then adds a connection labelled OpenRouter and points the chat, ranking and search jobs at that connection, each with its recommended model.
+Last, it runs the search check.
+A job with no recommended model keeps what it had, and the block lists any job that is still unset so the user can choose a model for it.
+
+The recommended models are in the table below.
+
+| Connection type | Chat | Ranking | Search |
+|---|---|---|---|
+| OpenRouter | `anthropic/claude-sonnet-5.5` | `cloudflare/clef-flash` | `qwen/qwen3-embedding-4b` |
+| Ollama | None | `clef-flash` | `qwen3-embedding:4b-fp16` |
+| OpenAI-compatible | None | None | None |
+| Anthropic | None | None | None |
+
+An Ollama connection has no recommended chat model, because the right one depends on what is installed on the server.
+
+Each model picker lists the models the connection reports, with the recommended model first.
+The picker also accepts a name that is not in the list.
+
+### Ranking with Clef-Flash
+
+The ranking job uses Clef-Flash.
+The server asks it one yes or no question for each candidate technique, whether applying the technique could produce evidence that supports or tests the claim, and the model answers with a probability.
+The server sends the questions to `/api/alpha/decisions` on an OpenRouter connection and to `/v1/systemone` on an Ollama connection.
+The request carries the claim and, for each candidate, its name, a one-line summary cut to 200 characters, and its goals.
+It carries no tag lists.
+When the claim and candidates together pass about 1,500 estimated tokens, the candidates are split into batches that run in parallel, and each batch repeats the claim.
+A ranking that does not cover every candidate is discarded, and the results stay in search order.
+On OpenRouter the request also asks for one fixed provider to be tried first, so that the order repeats from one question to the next.
+Fallbacks stay on, so another provider answers if that one cannot.
+
+### The search check
+
+The catalogue of techniques is embedded with one model, and a claim can be matched against it only if the claim is embedded with that same model.
+The search job can run on any connection that can search, but its model must be the catalogue's own.
+The techniques service publishes the catalogue's model at `GET /embedding-spec`, with its dimensions, the query prefix, and a few fixed test sentences with the vectors it computed for them.
+The search check embeds the same sentences through the user's search connection, with the same prefix, and compares each vector with the published one by cosine similarity.
+It passes only when every vector has the published length and every similarity is at least 0.999.
+A failed check shows the lowest similarity it found, to three decimals and cut rather than rounded, so that a value just under 0.999 never reads as 0.999.
+
+The check runs when the search job is saved with a different connection or model, when quick setup sets the job, and when the user presses Check again.
+Saving the chat or ranking job, or saving the search job unchanged, runs no check, so it never spends a call on a search job that is failing.
+Check again sends `recheckSearch: true` to `PUT /api/user/models/roles`, which runs the check for the search job as it is saved.
+A pass is recorded against the job together with the catalogue's model id and a hash of the test sentences.
+It is recorded only if the job, and the connection's address and key, are unchanged since the check began.
+A new version of the catalogue's data leaves the pass in place, but a change of model or test sentences makes it out of date, and the assistant then stops using it.
+When the settings load, the server compares the recorded pass with the techniques service's current model and test sentences, and `GET /api/user/models` reports the result as `searchCheckCurrent`.
+When they differ, or the service cannot be asked, the screen shows Check not passed, with a note that the catalogue has changed since the check passed, and it offers Check again.
+Changing the search job, or the address or key of its connection, clears the pass.
+If the techniques service does not give its test sentences, the check cannot run and the job stays unchecked.
+
+Until a check has passed, the assistant does not embed claims, and technique search is by keyword only.
+
+### Reduced answers
+
+A job that is off, unchecked or failing reduces an answer and does not fail it.
+Without search, the techniques service matches by keyword only.
+Without ranking, or when ranking fails or runs out of time, results stay in the service's order.
+The `suggest_techniques` tool reports what ran.
+Its result has `searchUsed` and `rankingUsed`, and each step that did not run has a reason in `searchReason` or `rankingReason`.
+The reason is one of four fixed values.
+
+| Reason | Meaning |
+|---|---|
+| `not set up` | The job is off. |
+| `check not passed` | Search only. No check has passed, the passed check is not for the catalogue's current model and test sentences, or the model returned a vector that cannot be used. |
+| `timed out` | The step ran out of time. |
+| `unavailable` | The step failed. For search it also covers a vector that the techniques service did not use. |
+
+The assistant is told to say plainly when search or ranking was not used, and to give the reason, because the results are then less well matched or ordered.
+
+## Addresses and limits
+
+Every request the server makes to a model address goes through one guarded connection.
+That covers chat, embedding, ranking, connection tests and model lists.
+The techniques service is the exception, because its address is the operator's own and is set in `TECHNIQUES_MCP_URL`.
+
+### The network guard
+
+- The address must use https, unless its origin is listed in `TEA_MODELS_LOCAL_ADDRESSES`.
+- An address that contains a user name or password is refused.
+- The server resolves the name and refuses the request if any address it resolves to is blocked.
+- A literal IP address in the URL is checked in the same way.
+- The connection is made to the addresses that were checked, so a second DNS answer cannot redirect it.
+- A redirect is never followed.
+- A response that grows past its size cap is cut off, and the request fails.
+- A request that runs past its time limit is ended.
+
+The blocked addresses are:
+
+- loopback, unspecified, private, link-local, shared (carrier-grade NAT), multicast and reserved ranges, in IPv4 and IPv6
+- the cloud metadata address `169.254.169.254`, which sits in the link-local range
+- Azure's platform address `168.63.129.16`
+- IPv6 tunnel addresses (6to4 and Teredo)
+- IPv6 addresses that carry one of the blocked IPv4 addresses, such as an IPv4-mapped or NAT64 address
+
+A name that resolves to a blocked address and an address that cannot be reached get the same message: "The model address could not be reached or is not allowed."
+That keeps a connection test from showing which internal names exist.
+
+The size caps and time limits are:
+
+- The guard's default is 16 MiB for a response and 10 minutes for a request, and each caller sets tighter limits where it can.
+- A chat reply is cut off past 4 MiB, tool calls and all.
+- An embeddings answer is cut off past 2 MiB.
+- A connection test allows each request 10 seconds and reads at most 512 KiB, or 4 MiB for OpenRouter's model lists.
+- A connection test keeps at most 2,000 names from a model list.
+- A ranking answer is capped at 256 KiB.
+- A read from the techniques service, of its test sentences or of a search answer, stops at 1 MiB, and a larger answer counts as no answer.
+- The assistant sets tighter time limits of its own, described under Time limits below.
+
+`TEA_MODELS_LOCAL_ADDRESSES` is the operator's way to allow a model server that fails these rules, such as Ollama on the same machine.
+It holds a comma-separated list of origins, for example `http://host.docker.internal:11434`.
+Each entry is trimmed and reduced to its origin, so a path or trailing slash is dropped.
+An entry that is not an http or https URL, or that carries a user name or password, is ignored.
+A request to a listed origin skips the https and address checks, and a request to any other origin keeps them.
+The refusal of redirects and the size and time limits apply to a listed origin as well.
+A private or plain-http address therefore works only when its origin is listed.
+Leave the variable empty on a hosted site.
+
+### Request rules
+
+- A chat request that contains a `file` part is refused, so the assistant takes text only.
+- A key holds printable ASCII characters only, with no space or control character, and is at most 2,048 characters long.
+- A base URL is an http or https address with no user name, password, query string or fragment.
+- A base URL is at most 500 characters long, and trailing slashes are dropped from it.
+- A label is at most 60 characters long, and a model name is at most 200.
+- A label and a model name hold no control characters.
+- A user can have up to 10 connections, and adding an eleventh is refused.
+
+### Rate limit
+
+Connection tests, search checks and quick setup share one budget of 20 calls per user in 10 minutes.
+Over the budget, the route answers 429 with a generic message.
+The count and the record of an attempt happen together under a lock held for each user, so requests that arrive at the same moment cannot go past the budget.
+An attempt that is refused is not counted.
+Saving jobs and testing a connection check ownership and job rules before they touch the budget, so a request that would be refused anyway costs nothing.
+The calls the assistant makes while it answers a question are not counted here.
+Their time limits bound them instead.
+
+## Environment variables
+
+| Variable | Needed for | Meaning |
+|---|---|---|
+| `TOKEN_ENCRYPTION_KEY` | Saving a connection key | A base64-encoded 32-byte key the server uses to encrypt each connection's key before it is stored. It also encrypts stored OAuth tokens. Without it a user cannot save a key. |
+| `TEA_MODELS_LOCAL_ADDRESSES` | Model servers on a private address or plain http | A comma-separated list of origins that the server may reach over plain http or on a private, loopback or link-local address. Only the operator sets it. See Addresses and limits above. |
+| `TECHNIQUES_MCP_URL` | Technique suggestions | The address of a techniques service that accepts JSON-RPC 2.0 `tools/call` requests over HTTP. The service's `/embedding-spec` is read from the same origin. When the variable is unset, or is not an `http` or `https` URL, the `suggest_techniques` tool is not offered, the search check cannot run, and the assistant says that technique suggestions are unavailable. |
+| `ASSISTANT_MODEL_TIMEOUT_MS` | Optional | How long a whole reply may run, including the time the tools take, before it is cancelled, in milliseconds. The default is 60000. See Time limits below. |
+| `ASSISTANT_TECHNIQUES_TIMEOUT_MS` | Optional | The longest one technique lookup may take, in milliseconds. The default is 45000. The lookup can have less when little of the reply's time is left. See Time limits below. |
+| `ASSISTANT_RANKING_TIMEOUT_MS` | Optional | The longest the ranking step may take, in milliseconds. The default is 30000. It is also limited by what remains of the lookup. |
+| `ASSISTANT_RANKING_CANDIDATES` | Optional | How many of the service's results go to the ranking model. The default is 8. The value is a whole number from 1 to 20, and a value outside that range is moved to the nearest end of it. A value that is empty or not a whole number is ignored in favour of the default. |
+
+Every variable is read when it is used, so a change takes effect on the first request after the server restarts with the new value.
+
+## Technique suggestions
+
+When `TECHNIQUES_MCP_URL` is set, the assistant can call `suggest_techniques` for a claim.
+Without a claim in the request, it uses the text of the element the user has selected.
+One lookup has three steps.
+The first uses the user's search job, and the third uses the ranking job.
+
+1. **Embed the claim.**
+   When the search job is set and its check is current, the server adds the catalogue's query prefix to the claim and embeds it through the search connection.
+2. **Ask the techniques service.**
+   The server sends one `suggest_techniques_for_claim` request, with no session.
+   It carries the claim and, when the first step made a vector, a `queryEmbedding` holding that vector and the catalogue's model id.
+3. **Rank the best results.**
+   The first `ASSISTANT_RANKING_CANDIDATES` results go to the ranking job.
+   The ranked results come first, highest probability first, and any results beyond them follow in the service's order.
+
+The service runs no model.
+It holds the catalogue and its vectors, and it answers with keyword search plus, when it is sent a usable vector, a search by meaning over the catalogue vectors.
+A vector with the wrong model id, the wrong length or values that are not numbers is ignored, and the service answers from keyword search alone.
+The response says whether the vector was used, and the tool reports that as `searchUsed`.
+
+The text of the selected claim is case content.
+It is sent to the techniques service and, when those steps run, to the connections chosen for search and ranking.
+The request to the service is cancelled when the reply is stopped or the connection closes.
+The service accepts claims of up to 2,000 characters.
+The server cuts the selected element's text to its first 2,000 characters before it sends it.
+A claim that the model supplies itself must already be 2,000 characters or fewer: a longer one is rejected, and the tool call fails.
+If a supplied claim is under 40 characters and an element is selected, the server uses the selected element's text instead.
+If the selected element has no text and the model supplies no claim of 40 characters or more, the tool returns an error and sends nothing.
+The assistant recommends only techniques that the service returned.
+The tool keeps the five best results, and cuts each name and link to 500 characters, each summary to 500 characters and each goal to 200 characters, with at most 20 goals and 10 tags.
+A result's `score` is the ranking model's probability when its `ranked` field is true, and the service's own score when it is false.
+If the service does not answer in time, replies with an error status code, redirects the request, answers with more than 1 MiB, or replies in an unexpected shape, the assistant is told that the service is not reachable.
+In the chat, the tool call shows a line for semantic search and a line for ranking, each saying whether the step was used and giving the reason when it was not.
+Below those lines it shows each technique with a link, its score and its goals.
+
+## Replies and errors
+
+A model call in a reply writes at most 8,192 tokens.
+The cap leaves room for a long answer, such as a case lint, and for a reasoning model's thinking before it.
+On an OpenRouter connection the request also bounds reasoning at 3,072 tokens, so that a model that reasons has room left to answer.
+Other connection types get no reasoning setting.
+When a model call stops because it ran out of output room, the reply ends with a notice: "The model ran out of room before answering. Try a narrower question, or a different chat model."
+A reply makes at most 8 steps, where a step is one model call and the tool calls it asks for.
+When the reply is stopped at that limit while the model is still calling tools, it ends with a notice: "The assistant reached its step limit for one reply before it finished answering."
+The server decides this from the steps it counted, not from the reason the provider gives for finishing: the reply made 8 steps and the last one called a tool.
+When the model's first step sends no text, no thinking and no tool call, as an empty completion or a provider's content filter can do, the reply ends with a notice: "The assistant stopped without writing an answer. Try asking again, or ask something narrower."
+The server adds these notices to the reply's stream just before its last chunk.
+Writing the notice is what creates the assistant's message when the model sent nothing else, so every notice belongs to its own reply and stays under it when the user asks another question.
+A reply that has tool calls or thinking but ends with no answer text and no notice shows the same "stopped without writing an answer" wording, unless the user stopped the reply or it failed with an error.
+Stopping a reply before any part of it has arrived adds nothing, and no notice is shown.
+
+A tool call that was still running when the user stopped the reply, or when the whole-reply time limit ended it, has no result.
+The chat keeps that call and shows it as an error row once the reply has ended, and opening the row reads "Did not finish."
+The model is sent that call together with an error result that says it did not finish: the user stopped the reply, or its time ran out, and the call is not to be repeated unless the user asks again.
+Without that result the model would take the question that began the reply as still waiting for an answer, and would call the tool again.
+A call that was cut off while its arguments were still arriving cannot be sent as a call, so it is left out.
+An assistant message that this leaves holding only thinking is left out too, because some providers refuse an empty assistant message.
+Calls that finished earlier in the same reply stay in what the model is sent as they were, and the next question is answered normally.
+Only what is sent to the model changes.
+The chat and its stored messages keep the call as it was.
+
+A reply makes at most 24 tool calls, counted across all tools.
+A call past the limit returns the error "Too many tool calls in one reply." and does no work.
+The tools `read_case`, `read_element` and `lint_case` share one read of the case, so a reply reads the case once however many of them it calls.
+The assistant is given the selected element's id, with its label, type and text, so that it can call `read_element` with it.
+
+When a model provider refuses a call, the user sees the provider's own reason.
+The server cleans it first.
+It first removes the characters that show nothing: format characters such as soft hyphens, direction marks, zero-width characters and tag characters, and other default-ignorable characters such as the variation selectors and the Hangul fillers.
+It turns control characters and the line and paragraph separators into spaces.
+It then takes out the key and the connection's address, matching each even when whitespace has been put between its characters, and takes out bearer tokens and tokens that start `sk-`.
+The address is matched only as a whole word, with no letter or digit touching it, and a form of it shorter than 3 characters, such as a two-letter host name, is not matched on its own.
+It turns runs of spaces into single spaces and cuts the text to 300 characters.
+When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
+The cleaned text is written into the reply as its own message part, just before the stream's error, so that the reason belongs to the reply that failed.
+The chat shows "The assistant could not answer." under that reply, followed by the reason as plain text, and the reason stays there when the user asks another question.
+A failure that never reached a reply shows at the foot of the chat instead: an error answer from the route itself, a host's error page or a network failure.
+The chat shows "The assistant could not answer. Try again."
+When the answer was the route's own JSON error, the chat shows its message in place of "Try again."
+When it was the route's error for a missing or unusable chat model, the chat shows that message and a link to the AI models settings instead.
+Nothing else from the answer is shown, whatever its text: not a host's error page and not a network failure's message.
+The reason and the notices are not part of the conversation that is sent back to the model.
+The reason is never logged, and the log records only the error's class and the HTTP status.
+
+## Time limits
+
+A reply, a technique lookup and each step of the lookup have their own time limits, and each limit sits inside the one before it.
+
+The outer limit is `ASSISTANT_MODEL_TIMEOUT_MS`, which sets how long a whole reply may run before it is cancelled.
+It covers every model call and every tool call in the reply, not one model call, so a slow tool leaves the model less time to answer.
+The default is 60000 (one minute).
+When a reply is cancelled in this way, the chat shows a notice that the model did not answer in time.
+
+The next limit is `ASSISTANT_TECHNIQUES_TIMEOUT_MS`, which sets how long one technique lookup may take.
+The default is 45000 (forty-five seconds).
+A lookup waits for the smaller of that value and the time left in the reply less 15 seconds, so that the model always has time to answer once the tool returns.
+The model's own time before it calls the tool counts against the reply limit.
+With the defaults, a model that takes 5 seconds to call the tool leaves a lookup 40 seconds, which is 60 less 5 less 15.
+If less than one second would be left to wait, the tool sends nothing and returns an error saying that there was not enough time.
+
+The steps of the lookup then share that time, in order:
+
+- **Embedding the claim** has at most 10 seconds, and that time includes reading the catalogue's test sentences. The read has its own limit of 5 seconds, and the server keeps what it read for ten minutes. The step never uses the last second of the lookup.
+- **The techniques service** has at most 10 seconds, and at least one second.
+- **Ranking** has what remains of the lookup, up to `ASSISTANT_RANKING_TIMEOUT_MS`, which is 30000 by default. With less than a second left, ranking is skipped.
+
+A search or ranking step that runs out of time is reported as `timed out`, and the lookup carries on with what it has.
+Every step is cancelled when the reply is stopped.
+To give every step its full time, set `ASSISTANT_MODEL_TIMEOUT_MS` to the model's time before it calls the tool plus at least 65 seconds.
+That is the 10, 10 and 30 seconds of the three steps and the 15 seconds the model needs to answer.
+Set `ASSISTANT_TECHNIQUES_TIMEOUT_MS` to at least 50000 as well, because the three steps can use up to 50 seconds in all.
+Each of the three variables takes whole milliseconds.
+Values below 5000 are raised to 5000, values above 600000 are lowered to 600000, and a value that is empty or not a whole number is ignored in favour of the default.
+
+## The chat panel
+
+The panel shows the conversation, a box for the next question, and a line above them that names the selected element.
+While the assistant is working and nothing on screen is moving, the panel shows a "Thinking…" line.
+That covers the wait before the first output, and the wait after a tool has finished while the model carries on.
+The line is not shown while thinking or text is arriving, while a tool is running, or under a finished reply.
+When the provider sends the model's thinking, the panel shows it as one block at the top of the reply.
+The block opens while the model is thinking, closes a second after it finishes, and then reads "Thought for" and a number of seconds.
+Several thinking steps in one reply are joined into that one block, and a reply whose thinking is empty has no block.
+When the model thinks again after a tool has finished, the block opens again and closes a second after that step ends.
+Thinking text is shown with the same safety settings as the reply.
+Replies are rendered as markdown.
+Raw HTML appears as text, an image appears as its alt text, and only `http`, `https` and `mailto` links are active.
+Any other link, such as an `irc` or `xmpp` link, appears as plain text.
+A diagram written in markdown appears as code and is not drawn, because a drawn diagram can fetch from other sites.
+A link opens in a new tab after the reader confirms it in a dialog that shows the address.
+The dialog takes keyboard focus and keeps it until it closes, the Escape key closes only the dialog, and focus then returns to the link.
+Text nested more than 50 levels deep, such as a long run of nested quotations, is shown without the extra nesting.
+If a message cannot be drawn at all, a short notice takes its place and the rest of the panel keeps working.
+Each tool call is one collapsed row with a plain title and a state label: Pending, Running, Completed or Error.
+Opening a row shows the tool's input when it has one, then its result.
+Technique suggestions and lint results appear as lists, and the other tools show their result as text cut to 4,000 characters.
+
+## Suggested prompts
+
+Before the first message, the panel shows a short introduction to the assistant and prompts the user can click, which wrap onto further lines to fit the panel.
+A prompt sends its text at once, with the current selection, and leaves any draft in the box as it was.
+The prompts depend on the tools registered for the case and on the selection.
+With nothing selected, the panel offers "What is the top-level goal?" and "Which claims lack evidence?", both of which need `read_case`.
+With an element selected, it offers "Explain" the element's role and "What evidence supports" the element, both of which need `read_case`.
+With an element selected and `suggest_techniques` registered, it also offers "Suggest techniques for" the element.
+Whenever `lint_case` is registered, it offers "Check this case against the rules".
+An element is named by its label, for example P1, or as "the selected element" when it has none.
+The technique prompt needs a selected element because only then does the server send the claim's exact text.
+The introduction mentions technique suggestions only when `suggest_techniques` is registered.
+
+The panel learns which tools are registered from `GET /api/cases/{id}/assistant`, which returns `{ "tools": ["read_case", ...] }`.
+The names come from the same call that builds the tools for a chat request, so there is no second list to keep up to date.
+The endpoint makes the same checks as the chat route, in the same order.
+It answers 401 without a session, and 404 when the plugin is off, the id is not a UUID, or the user cannot view the case.
+It is not part of the published API description, because it exists for the panel and is not an integration point.
+If the request fails, the introduction appears without prompts.
+
+## Linting a case
+
+The lint tool checks the open case against the rule catalogue and returns four kinds of result.
+Structural findings (rule, element, severity, reason and a suggested fix) come from code that reads the case export alone.
+Gaps the author has already marked as needing support are listed separately and are not counted as findings.
+Questions are put to the author, and prechecks are mechanical facts that the judgement rules refer to.
+The tool returns at most 100 findings and reports how many were left out; element labels are cut to 200 characters.
+Prechecks, acknowledged gaps and questions are each limited to 100 in the same way, and the reason, detail and question text is cut to 500 characters.
+Prechecks are left out of the result when there are none.
+The chat shows how many findings, acknowledged gaps and questions were left out.
+It also returns the judgement rules as text.
+Findings under those rules are not computed by the tool.
+The model applies the rules to the case and reports what it finds under its own heading, and the result depends on the model used.
+The tool is named `lint_case`.
+
+## Generating the ruleset
+
+The ruleset is generated from a catalogue kept outside this repository.
+Run the generator with the catalogue's directory as its one required argument, and set `RULESET_NAME_CHECK` to a regular expression of names that must not appear in the output; it is matched without regard to case and on whole words.
+The run fails, and writes nothing, if the variable is missing or empty, if any kept text matches the pattern, or if any kept text contains a section sign or the words spec, ADR or issue, apart from a short list of permitted standard references.
+It also fails when a rule's question text or acknowledgement flag disagrees with the catalogue's own records.

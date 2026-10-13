@@ -4,7 +4,7 @@ import { PanelRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCasePanelSlot } from "@/hooks/use-case-panel-slot";
-import type { CasePanelRegistration } from "@/lib/plugins/slots";
+import type { CasePanelRegistration } from "@/lib/plugins/slots/index";
 import useStore from "@/store/store";
 import ActionTooltip from "../ui/action-tooltip";
 import { CasePanelSheet } from "./case-panel-sheet";
@@ -13,6 +13,8 @@ interface CasePanelEntryProps {
 	canEdit: boolean;
 	caseId: string;
 	registration: CasePanelRegistration;
+	selectedElementId?: string;
+	selectedElementLabel?: string;
 }
 
 /** One panel's toolbar button and its side sheet; focus returns to the button when the sheet closes. */
@@ -20,6 +22,8 @@ function CasePanelEntry({
 	canEdit,
 	caseId,
 	registration,
+	selectedElementId,
+	selectedElementLabel,
 }: CasePanelEntryProps) {
 	const { icon: Icon = PanelRight, label, panelId } = registration;
 	const [open, setOpen] = useState(false);
@@ -46,6 +50,8 @@ function CasePanelEntry({
 				onClose={() => setOpen(false)}
 				registration={registration}
 				returnFocusTo={button}
+				selectedElementId={selectedElementId}
+				selectedElementLabel={selectedElementLabel}
 			/>
 		</>
 	);
@@ -59,6 +65,13 @@ function CasePanelEntry({
 export function CasePanelButtons() {
 	const { registrations } = useCasePanelSlot();
 	const assuranceCase = useStore((state) => state.assuranceCase);
+	const selectedId = useStore((state) => {
+		const id = state.nodes.find((node) => node.selected)?.data?.id;
+		return id === undefined ? undefined : String(id);
+	});
+	const selectedName = useStore(
+		(state) => state.nodes.find((node) => node.selected)?.data?.name
+	);
 	if (!assuranceCase) {
 		return null;
 	}
@@ -73,6 +86,8 @@ export function CasePanelButtons() {
 					caseId={assuranceCase.id?.toString() ?? ""}
 					key={`${registration.pluginId}:${registration.panelId}`}
 					registration={registration}
+					selectedElementId={selectedId}
+					selectedElementLabel={selectedName || undefined}
 				/>
 			))}
 		</>

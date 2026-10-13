@@ -1113,6 +1113,11 @@
       "crap_moderate": {
         "count": 1
       }
+    },
+    "components/ai-elements/code-block.tsx": {
+      "crap_high": {
+        "count": 1
+      }
     }
   },
   "identity_finding_counts": {
@@ -2963,6 +2968,11 @@
     },
     "src/__tests__/utils/env-test-utils.ts\u0000withEnvVars": {
       "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/ai-elements/code-block.tsx\u0000copyToClipboard": {
+      "crap_high": {
         "count": 1
       }
     }

@@ -19,6 +19,8 @@ const log = logger.child({ component: "plugin-enablement-service" });
  * for a user iff it is available at the deployment level AND no
  * `PluginState` row with `enabled: false` exists at any scope at-or-above
  * the user in the ORGANISATION -> TEAM -> USER chain ("off wins downward").
+ * A manifest entry with `defaultEnabled: false` additionally needs the
+ * user's own USER-scope row to be on.
  *
  * 1.0 activates only the USER tier for writes (`setPluginEnabledForUser`
  * below) — there is no Organisation model yet, and mapping a user to their
@@ -119,6 +121,21 @@ export async function resolveEffectivePluginState(
 			}
 		}
 
+		if (getManifestEntry(pluginId)?.defaultEnabled === false) {
+			const userRow = rows.find(
+				(r) => r.scopeType === "USER" && r.scopeId === scopeIds.userId
+			);
+			if (!userRow?.enabled) {
+				return {
+					data: {
+						enabled: false,
+						availableAtDeployment: true,
+						disabledAt: "USER",
+					},
+				};
+			}
+		}
+
 		return {
 			data: { enabled: true, availableAtDeployment: true, disabledAt: null },
 		};
@@ -147,6 +164,31 @@ export async function assertPluginEnabledForUser(
 		return { error: `Plugin '${pluginId}' is not enabled` };
 	}
 	return { data: true };
+}
+
+/**
+ * Passes when at least one plugin that uses models (`usesModels` in the
+ * manifest) is on for `userId`; this is the gate on the model connection
+ * routes. When every such plugin is off, the answer is the refusal below;
+ * when the state of a plugin could not be read and none is on, that failure
+ * is returned instead, so a database fault is not reported as a refusal.
+ */
+export async function assertModelPluginEnabled(
+	userId: string
+): ServiceResult<true> {
+	const states = await Promise.all(
+		listManifestPluginIds()
+			.filter((pluginId) => getManifestEntry(pluginId)?.usesModels)
+			.map((pluginId) => resolveEffectivePluginState(pluginId, { userId }))
+	);
+	if (states.some((state) => "data" in state && state.data.enabled)) {
+		return { data: true };
+	}
+	const unreadable = states.find((state) => "error" in state);
+	if (unreadable && "error" in unreadable) {
+		return unreadable;
+	}
+	return { error: "No plugin that uses models is enabled" };
 }
 
 /** Boolean convenience form of `assertPluginEnabledForUser` for non-`ServiceResult` call sites (e.g. UI slot rendering). */

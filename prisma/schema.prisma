@@ -94,6 +94,8 @@ model User {
   ownedIntegrations    Integration[]      @relation("IntegrationOwner")
   integrationPrincipal Integration?       @relation("IntegrationPrincipal")
   archivedPublishedCases PublishedAssuranceCase[] @relation("PublishedCaseArchivedOwner")
+  modelConnections     UserModelConnection[]
+  modelRoles           UserModelRoles?
 
   @@map("users")
 }
@@ -1363,4 +1365,63 @@ model PluginHealthCheckCatalogue {
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
   @@map("plugin_health_check_catalogues")
+}
+
+/// The kinds of model connection a user can add. Which jobs each can do, and
+/// whether its address is fixed, live in lib/models/connection-types.ts.
+enum ModelConnectionType {
+  OPENROUTER
+  OLLAMA
+  OPENAI_COMPATIBLE
+  ANTHROPIC
+}
+
+/// One model connection a user has added: a label, a type, an address (null for
+/// types whose address is fixed) and an optional key, encrypted at rest with the
+/// same AES-256-GCM envelope as the OAuth tokens (lib/auth/token-encryption.ts).
+/// Only lib/services/model-connection-service.ts reads or writes it, and no read
+/// returns the key except the server-side use path. Removed with the user.
+model UserModelConnection {
+  id              String              @id @default(uuid())
+  userId          String              @map("user_id")
+  label           String              @db.VarChar(60)
+  type            ModelConnectionType
+  baseUrl         String?             @map("base_url")
+  apiKeyEncrypted String?             @map("api_key_encrypted")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoles      UserModelRoles[] @relation("UserModelRolesChat")
+  decisionRoles  UserModelRoles[] @relation("UserModelRolesDecision")
+  embeddingRoles UserModelRoles[] @relation("UserModelRolesEmbedding")
+
+  @@index([userId])
+  @@map("user_model_connections")
+}
+
+/// Which connection and model does each of a user's three jobs: chat, decision
+/// (ranking) and embedding (search). Deleting a connection empties the jobs that
+/// used it. The search check result is written only by the server after it has
+/// embedded the catalogue's test sentences through the chosen connection.
+model UserModelRoles {
+  userId                String    @id @map("user_id")
+  chatConnectionId      String?   @map("chat_connection_id")
+  chatModel             String?   @map("chat_model") @db.VarChar(200)
+  decisionConnectionId  String?   @map("decision_connection_id")
+  decisionModel         String?   @map("decision_model") @db.VarChar(200)
+  embeddingConnectionId String?   @map("embedding_connection_id")
+  embeddingModel        String?   @map("embedding_model") @db.VarChar(200)
+  embeddingVerifiedFor  String?   @map("embedding_verified_for") /// The catalogue model and test sentences the search check passed for
+  embeddingVerifiedAt   DateTime? @map("embedding_verified_at")
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatConnection      UserModelConnection? @relation("UserModelRolesChat", fields: [chatConnectionId], references: [id], onDelete: SetNull)
+  decisionConnection  UserModelConnection? @relation("UserModelRolesDecision", fields: [decisionConnectionId], references: [id], onDelete: SetNull)
+  embeddingConnection UserModelConnection? @relation("UserModelRolesEmbedding", fields: [embeddingConnectionId], references: [id], onDelete: SetNull)
+
+  @@index([chatConnectionId])
+  @@index([decisionConnectionId])
+  @@index([embeddingConnectionId])
+  @@map("user_model_roles")
 }
