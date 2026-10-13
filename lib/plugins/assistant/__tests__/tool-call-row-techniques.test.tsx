@@ -109,6 +109,19 @@ describe("ToolCallRow for suggest_techniques", () => {
 		);
 	});
 
+	it("lists a technique that has no url, as a name without a link", async () => {
+		renderWithoutProviders(
+			<ToolCallRow
+				part={part({ results: [{ name: "Bare", score: 1, goals: [] }] })}
+			/>
+		);
+		await open();
+		expect(screen.queryByRole("link")).toBeNull();
+		expect(screen.getByTestId("assistant-techniques").textContent).toContain(
+			"Bare"
+		);
+	});
+
 	it("shows no list for the unreachable error", async () => {
 		renderWithoutProviders(
 			<ToolCallRow

@@ -169,6 +169,44 @@ describe("suggest_techniques result", () => {
 		});
 	});
 
+	it("passes a normal https url on unchanged, up to 500 characters", async () => {
+		const longest = `https://techniques.example/${"u".repeat(500 - 27)}`;
+		fetchMock.mockResolvedValue(
+			jsonResponse(mcpBody([technique(1), technique(2, { url: longest })]))
+		);
+		const out = (await run({ claimText: "c" })) as {
+			results: { url?: string }[];
+		};
+		expect(out.results[0]?.url).toBe("https://techniques.example/t-1");
+		expect(out.results[1]?.url).toBe(longest);
+	});
+
+	it.each([
+		["http", "http://techniques.example/t-1"],
+		["a script", "javascript:alert(1)"],
+		["not an address", "t-1"],
+		["over 500 characters", `https://techniques.example/${"u".repeat(500)}`],
+		["not a string", 7],
+	])("drops a url that is %s and keeps the result, uncut", async (_name, url) => {
+		fetchMock.mockResolvedValue(jsonResponse(mcpBody([technique(1, { url })])));
+		const out = (await run({ claimText: "c" })) as {
+			results: Record<string, unknown>[];
+		};
+		expect(out.results[0]).toMatchObject({ slug: "t-1", name: "Technique 1" });
+		expect(out.results[0]?.url).toBeUndefined();
+	});
+
+	it("keeps a result that has no url, without one", async () => {
+		fetchMock.mockResolvedValue(
+			jsonResponse(mcpBody([{ ...technique(1), url: undefined }]))
+		);
+		const out = (await run({ claimText: "c" })) as {
+			results: Record<string, unknown>[];
+		};
+		expect(out.results[0]).toMatchObject({ slug: "t-1", name: "Technique 1" });
+		expect(out.results[0]?.url).toBeUndefined();
+	});
+
 	it("tolerates extra fields on the envelope, the content and each result", async () => {
 		const body = mcpBody(
 			[technique(1, { extra: { deep: 1 }, description: "d" })],
@@ -274,7 +312,6 @@ describe("suggest_techniques failure handling", () => {
 				result: { structuredContent: { rankingAvailable: true, results: "x" } },
 			},
 		],
-		["a result without a url", mcpBody([{ ...technique(1), url: undefined }])],
 		["goals not strings", mcpBody([technique(1, { goals: [1, 2] })])],
 		["score as a string", mcpBody([technique(1, { score: "high" })])],
 	])("answers unreachable for a malformed body: %s", async (_name, body) => {
@@ -358,6 +395,14 @@ describe("techniquesPrompt", () => {
 		expect(p).toMatch(/only from its results/i);
 		expect(p).toMatch(/never invent/i);
 		expect(p).not.toMatch(/unavailable in this deployment/i);
+	});
+
+	it("tells the model to link each name to the result's url, copied exactly, and never to build an address", () => {
+		const p = techniquesPrompt();
+		expect(p).toMatch(/Markdown link to that result's `url`/);
+		expect(p).toMatch(/copying the `url` exactly as returned/);
+		expect(p).toMatch(/never build, guess or change an address/);
+		expect(p).toMatch(/no `url`, write its name without a link/);
 	});
 
 	it("says suggestions are unavailable when not configured, without naming the tool as callable", () => {

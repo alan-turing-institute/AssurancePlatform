@@ -250,11 +250,15 @@ A claim that the model supplies itself must already be 2,000 characters or fewer
 If a supplied claim is under 40 characters and an element is selected, the server uses the selected element's text instead.
 If the selected element has no text and the model supplies no claim of 40 characters or more, the tool returns an error and sends nothing.
 The assistant recommends only techniques that the service returned.
-The tool keeps the five best results, and cuts each name and link to 500 characters, each summary to 500 characters and each goal to 200 characters, with at most 20 goals and 10 tags.
+The tool keeps the five best results, and cuts each name to 500 characters, each summary to 500 characters and each goal to 200 characters, with at most 20 goals and 10 tags.
+A result's `url` reaches the model only when it is an `https` address of 500 characters or fewer.
+Any other `url` is dropped whole rather than cut, because a cut address would be a broken link.
+The system prompt tells the model to write each technique's name as a Markdown link to its result's `url`, copied exactly as returned, and never to build, guess or change an address.
+A result with no `url` is named without a link.
 A result's `score` is the ranking model's probability when its `ranked` field is true, and the service's own score when it is false.
 If the service does not answer in time, replies with an error status code, redirects the request, answers with more than 1 MiB, or replies in an unexpected shape, the assistant is told that the service is not reachable.
 In the chat, the tool call shows a line for semantic search and a line for ranking, each saying whether the step was used and giving the reason when it was not.
-Below those lines it shows each technique with a link, its score and its goals.
+Below those lines it shows each technique, with a link when the result has a `url`, and its score and its goals.
 
 ## Replies and errors
 
