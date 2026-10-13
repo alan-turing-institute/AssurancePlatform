@@ -37,9 +37,10 @@ type CodePointRange = readonly [first: number, last: number];
  * Characters that show nothing but can sit inside a key to stop it matching:
  * every format character (soft hyphens, direction marks, zero-width characters,
  * invisible operators, tag characters and the byte order mark among them) and
- * the variation selectors.
+ * every other default-ignorable character, which adds the variation selectors,
+ * the combining grapheme joiner and the Hangul fillers.
  */
-const INVISIBLE_CHARACTERS = /\p{Cf}|[\uFE00-\uFE0F]|[\u{E0100}-\u{E01EF}]/gu;
+const INVISIBLE_CHARACTERS = /\p{Cf}|\p{Default_Ignorable_Code_Point}/gu;
 
 /** Control characters (line breaks and tabs among them) and the Unicode line and paragraph separators. */
 const SPACED_RANGES: readonly CodePointRange[] = [
@@ -53,31 +54,45 @@ const WHITESPACE = /\s/;
 const isWithin = (code: number, ranges: readonly CodePointRange[]): boolean =>
 	ranges.some(([first, last]) => code >= first && code <= last);
 
-/** A pattern for the needle that allows any whitespace between its characters, ignoring case. */
-function spacedPattern(needle: string): RegExp | null {
+/** A letter or digit of any script is not allowed next to a whole-word match. */
+const NOT_AFTER_WORD_CHARACTER = String.raw`(?<![\p{L}\p{N}])`;
+const NOT_BEFORE_WORD_CHARACTER = String.raw`(?![\p{L}\p{N}])`;
+
+/**
+ * A pattern for the needle that allows any whitespace between its characters,
+ * ignoring case. With `wholeWord`, a letter or digit next to the match on
+ * either side means it is not one.
+ */
+function spacedPattern(needle: string, wholeWord: boolean): RegExp | null {
 	const characters = [...needle].filter((char) => !WHITESPACE.test(char));
-	return characters.length > 0
+	if (characters.length === 0) {
+		return null;
+	}
+	const body = characters
+		.map((char) => char.replace(SPECIAL_REGEX_CHARACTERS, "\\$&"))
+		.join("\\s*");
+	return wholeWord
 		? new RegExp(
-				characters
-					.map((char) => char.replace(SPECIAL_REGEX_CHARACTERS, "\\$&"))
-					.join("\\s*"),
-				"gi"
+				`${NOT_AFTER_WORD_CHARACTER}${body}${NOT_BEFORE_WORD_CHARACTER}`,
+				"giu"
 			)
-		: null;
+		: new RegExp(body, "gi");
 }
 
 /**
  * Replaces every occurrence of each needle, longest first, ignoring case and
- * whatever whitespace has been put between its characters.
+ * whatever whitespace has been put between its characters. With `wholeWord`,
+ * only where no letter or digit touches the match.
  */
 function removeAll(
 	text: string,
 	needles: readonly string[],
-	replacement: string
+	replacement: string,
+	wholeWord: boolean
 ): string {
 	let cleaned = text;
 	for (const needle of [...needles].sort((a, b) => b.length - a.length)) {
-		const pattern = spacedPattern(needle);
+		const pattern = spacedPattern(needle, wholeWord);
 		if (pattern) {
 			cleaned = cleaned.replace(pattern, replacement);
 		}
@@ -85,7 +100,13 @@ function removeAll(
 	return cleaned;
 }
 
-/** The forms in which the connection's address can appear in a message. */
+/**
+ * The forms in which the connection's address can appear in a message. A form
+ * shorter than this is left out, because it would match ordinary text: a host
+ * called `ai` is two letters.
+ */
+const MIN_ADDRESS_FORM_CHARS = 3;
+
 function addressForms(baseUrl: string): string[] {
 	const forms = new Set<string>([baseUrl]);
 	if (URL.canParse(baseUrl)) {
@@ -94,7 +115,7 @@ function addressForms(baseUrl: string): string[] {
 		forms.add(url.host);
 		forms.add(url.hostname);
 	}
-	return [...forms];
+	return [...forms].filter((form) => form.length >= MIN_ADDRESS_FORM_CHARS);
 }
 
 /** The text without invisible characters, and with each control or separator character as a space. */
@@ -111,8 +132,9 @@ function withoutHiddenCharacters(text: string): string {
  * control characters made spaces first, so that nothing hidden can split the
  * key or the address; then the key, bearer tokens, tokens that start `sk-` and
  * the address removed, the key and address wherever whitespace has been put
- * between their characters; then runs of space collapsed to single spaces, and
- * the result cut to `MAX_PROVIDER_MESSAGE_CHARS` characters.
+ * between their characters, and the address only as a whole word, so that no
+ * letter or digit touches it; then runs of space collapsed to single spaces,
+ * and the result cut to `MAX_PROVIDER_MESSAGE_CHARS` characters.
  * Empty when nothing readable is left.
  */
 export function cleanProviderMessage(
@@ -121,12 +143,12 @@ export function cleanProviderMessage(
 ): string {
 	let text = withoutHiddenCharacters(message);
 	if (secrets.apiKey && secrets.apiKey.length >= MIN_KEY_CHARS_TO_REPLACE) {
-		text = removeAll(text, [secrets.apiKey], REDACTED_KEY);
+		text = removeAll(text, [secrets.apiKey], REDACTED_KEY, false);
 	}
 	text = text
 		.replace(BEARER_TOKEN, `Bearer ${REDACTED_KEY}`)
 		.replace(SK_TOKEN, REDACTED_KEY);
-	text = removeAll(text, addressForms(secrets.baseUrl), REDACTED_ADDRESS)
+	text = removeAll(text, addressForms(secrets.baseUrl), REDACTED_ADDRESS, true)
 		.replace(SPACE_RUNS, " ")
 		.trim();
 	return text.length > MAX_PROVIDER_MESSAGE_CHARS

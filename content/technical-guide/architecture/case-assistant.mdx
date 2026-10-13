@@ -288,9 +288,10 @@ The assistant is given the selected element's id, with its label, type and text,
 
 When a model provider refuses a call, the user sees the provider's own reason.
 The server cleans it first.
-It first removes the characters that show nothing, which are format characters such as soft hyphens, direction marks, zero-width characters and tag characters, and the variation selectors.
+It first removes the characters that show nothing: format characters such as soft hyphens, direction marks, zero-width characters and tag characters, and other default-ignorable characters such as the variation selectors and the Hangul fillers.
 It turns control characters and the line and paragraph separators into spaces.
 It then takes out the key and the connection's address, matching each even when whitespace has been put between its characters, and takes out bearer tokens and tokens that start `sk-`.
+The address is matched only as a whole word, with no letter or digit touching it, and a form of it shorter than 3 characters, such as a two-letter host name, is not matched on its own.
 It turns runs of spaces into single spaces and cuts the text to 300 characters.
 When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
 The cleaned text is written into the reply as its own message part, just before the stream's error, so that the reason belongs to the reply that failed.

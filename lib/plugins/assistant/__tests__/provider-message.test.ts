@@ -135,6 +135,8 @@ describe("cleanProviderMessage", () => {
 		["an invisible times sign", at(0x20_62)],
 		["a tag character", at(0xe_00_41)],
 		["a variation selector", at(0xfe_0f)],
+		["a combining grapheme joiner", at(0x3_4f)],
+		["a Hangul filler", at(0x31_64)],
 	])("replaces a key split by %s", (_label, hidden) => {
 		const key = "opaque-7f3a9c2e51d8";
 		const split = `${key.slice(0, 9)}${hidden}${key.slice(9)}`;
@@ -153,6 +155,44 @@ describe("cleanProviderMessage", () => {
 		expect(text).not.toContain("models.internal");
 		expect(text).not.toContain("8443");
 		expect(text).toContain("is down");
+	});
+
+	it("leaves ordinary words alone when the host name is two letters", () => {
+		expect(
+			cleanProviderMessage("data is", {
+				apiKey: null,
+				baseUrl: "http://ai:8000/v1",
+			})
+		).toBe("data is");
+	});
+
+	it("removes the address when a full stop follows it", () => {
+		expect(
+			cleanProviderMessage("could not reach ai.example.org.", {
+				apiKey: null,
+				baseUrl: "https://ai.example.org",
+			})
+		).toBe("could not reach [address removed].");
+	});
+
+	it.each([
+		[
+			"followed by a full stop",
+			"Invalid key opaque-7f3a9c2e51d8.",
+			"Invalid key [key removed].",
+		],
+		[
+			"in a query string",
+			"GET /v1?key=opaque-7f3a9c2e51d8&model=m",
+			"GET /v1?key=[key removed]&model=m",
+		],
+	])("removes the key when it is %s", (_label, message, expected) => {
+		expect(
+			cleanProviderMessage(message, {
+				...SECRETS,
+				apiKey: "opaque-7f3a9c2e51d8",
+			})
+		).toBe(expected);
 	});
 
 	it("keeps the spaces of an ordinary message", () => {
