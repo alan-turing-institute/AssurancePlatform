@@ -874,6 +874,36 @@ describe("AiModelsBlock: a failed load", () => {
 		expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 	});
 
+	it("does not read a settings answer without searchCheckCurrent as a current check", async () => {
+		installModelRoutes({
+			connections: [connection({ id: "embed", label: "Embeddings" })],
+			roles: {
+				chat: null,
+				ranking: null,
+				search: { connectionId: "embed", model: "embed-m" },
+				searchCheck: {
+					verifiedAt: "2026-01-01T00:00:00.000Z",
+					verifiedFor: "x",
+				},
+			},
+		});
+		const answer = await (await fetch("/api/user/models")).json();
+		// An undefined field is left out when the answer is serialised.
+		server.use(
+			http.get("/api/user/models", () =>
+				HttpResponse.json({
+					...answer,
+					roles: { ...answer.roles, searchCheckCurrent: undefined },
+				})
+			)
+		);
+		renderWithoutProviders(<AiModelsBlock />);
+
+		expect(await screen.findByText("Something went wrong")).toBeVisible();
+		expect(screen.getByRole("button", { name: "Retry" })).toBeVisible();
+		expect(screen.queryByText("Check passed")).not.toBeInTheDocument();
+	});
+
 	it("shows the error with Retry when the fetch after a change fails, and shows the block again on Retry", async () => {
 		const state = installModelRoutes({
 			connections: [connection({ id: "local", label: "Local" })],

@@ -37,13 +37,21 @@ const rolesSchema = z.object({
 	searchCheck: z
 		.object({ verifiedAt: z.string(), verifiedFor: z.string() })
 		.nullable(),
-	/** Whether the stored check is for the catalogue's current model and test sentences; a response without it is read as current. */
-	searchCheckCurrent: z.boolean().default(true),
+});
+
+/**
+ * The jobs as `GET /api/user/models` answers them. Only that route reports
+ * whether the stored check is for the catalogue's current model and test
+ * sentences, so only this schema requires the field: an answer without it is
+ * refused rather than read as current.
+ */
+const settingsRolesSchema = rolesSchema.extend({
+	searchCheckCurrent: z.boolean(),
 });
 
 const settingsSchema = z.object({
 	connections: z.array(connectionSchema),
-	roles: rolesSchema,
+	roles: settingsRolesSchema,
 	recommended: z.record(
 		connectionTypeSchema,
 		z.record(jobSchema, z.string().nullable())
