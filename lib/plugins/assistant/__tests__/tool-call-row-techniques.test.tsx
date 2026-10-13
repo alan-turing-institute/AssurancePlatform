@@ -177,7 +177,7 @@ describe("ToolCallRow for suggest_techniques: the steps of the lookup", () => {
 		expect(steps).toHaveTextContent("Ranking: not used (timed out).");
 	});
 
-	it("says only what the tool reported, and shows no steps line when it reported nothing", async () => {
+	it("shows the semantic search step the tool reported and leaves out a ranking value that is not a boolean", async () => {
 		renderWithoutProviders(
 			<ToolCallRow
 				part={part({
