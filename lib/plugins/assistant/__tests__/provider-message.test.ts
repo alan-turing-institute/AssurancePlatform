@@ -11,6 +11,9 @@ const KEY = "sk-or-v1-0123456789abcdef";
 const ADDRESS = "https://models.internal.example:8443/v1";
 const SECRETS = { apiKey: KEY, baseUrl: ADDRESS };
 
+/** The character with this code point, written as a number so the file holds no invisible character. */
+const at = (codePoint: number) => String.fromCodePoint(codePoint);
+
 function apiError(message: string, statusCode?: number) {
 	return new APICallError({
 		message,
@@ -123,8 +126,8 @@ describe("cleanProviderMessage", () => {
 	});
 
 	it.each([
-		["a zero-width space", "​"],
-		["a right-to-left override", "‮"],
+		["a zero-width space", at(0x20_0b)],
+		["a right-to-left override", at(0x20_2e)],
 	])("replaces a key split by %s", (_label, hidden) => {
 		const key = "opaque-7f3a9c2e51d8";
 		const split = `${key.slice(0, 9)}${hidden}${key.slice(9)}`;
@@ -135,9 +138,12 @@ describe("cleanProviderMessage", () => {
 	});
 
 	it("puts a message with a Unicode line separator on one line", () => {
-		expect(cleanProviderMessage("first second third", SECRETS)).toBe(
-			"first second third"
-		);
+		expect(
+			cleanProviderMessage(
+				`first${at(0x20_28)}second${at(0x20_29)}third`,
+				SECRETS
+			)
+		).toBe("first second third");
 	});
 
 	it("cuts a long message to 300 characters, ending in an ellipsis", () => {
