@@ -22,7 +22,7 @@ const UNDERSCORES = /_/g;
 /** The most bytes a chat reply may stream back, tool calls and all. */
 const CHAT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 /** The most bytes an embeddings answer may hold. */
-const EMBEDDING_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const EMBEDDING_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 /**
  * The most tokens OpenRouter lets a model spend reasoning before it answers.

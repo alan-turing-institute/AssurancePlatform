@@ -24,8 +24,27 @@ export const EMBEDDING_CHECK_THRESHOLD = 0.999;
 
 const SPEC_TIMEOUT_MS = 5000;
 const CHECK_TIMEOUT_MS = 30_000;
-const MAX_DIMENSIONS = 8192;
-const MAX_PROBES = 32;
+/** The most bytes a number takes in the spec's JSON: a sign, `0.`, three zeros, 17 digits and a comma. */
+const MAX_BYTES_PER_NUMBER = 24;
+/** Bytes allowed for each probe's text and field names, and for its wrapper in an embeddings answer. */
+const PROBE_ALLOWANCE_BYTES = 4096;
+
+/** The most dimensions a spec may state; the catalogue's model has 2,560. */
+export const MAX_DIMENSIONS = 4096;
+
+/**
+ * The most probes a spec may hold. A spec at both limits has to fit the 1 MiB
+ * read of the techniques service's answer, so the count is that cap divided by
+ * what one full-size probe takes: 1,048,576 / (4,096 * 24 + 4,096) is 10, which
+ * leaves 24,576 bytes for the spec's other fields. The connection's answer for
+ * 10 probes is at most 10 * 4,096 * 24 bytes, under 1 MiB and so well under the
+ * 2 MiB read of an embeddings answer.
+ */
+export const MAX_PROBES = Math.floor(
+	TECHNIQUES_SERVICE_MAX_BYTES /
+		(MAX_DIMENSIONS * MAX_BYTES_PER_NUMBER + PROBE_ALLOWANCE_BYTES)
+);
+
 const HTTP_PROTOCOL = /^https?$/;
 
 const embeddingSpecSchema = z

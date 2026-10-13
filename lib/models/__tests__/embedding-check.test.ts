@@ -9,6 +9,8 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { EMBEDDING_MAX_RESPONSE_BYTES } from "../adapters";
+import { TECHNIQUES_SERVICE_MAX_BYTES } from "../capped-json";
 import type {
 	ModelConnectionAccess,
 	ModelConnectionType,
@@ -19,6 +21,8 @@ import {
 	type EmbeddingSpec,
 	embeddingCheckId,
 	fetchEmbeddingSpec,
+	MAX_DIMENSIONS,
+	MAX_PROBES,
 } from "../embedding-check";
 import {
 	type ModelServer,
@@ -358,6 +362,34 @@ describe("fetchEmbeddingSpec", () => {
 			new Response(padded(1024 * 1024 - overhead + 1), { status: 200 })
 		);
 		expect(await fetchEmbeddingSpec()).toBeNull();
+	});
+
+	it("reads a spec at both size limits, and the answer for its probes fits the embeddings cap", async () => {
+		// Full-precision negative numbers, with a long sentence for each probe.
+		const vector = Array.from(
+			{ length: MAX_DIMENSIONS },
+			(_, index) => -Math.sqrt(index + 2) / 100
+		);
+		const probes = Array.from({ length: MAX_PROBES }, (_, index) => ({
+			text: `${index} ${"sentence ".repeat(250)}`,
+			vector,
+		}));
+		const spec = { ...SPEC, dimensions: MAX_DIMENSIONS, probes };
+		const body = JSON.stringify(spec);
+		const answer = JSON.stringify({
+			object: "list",
+			data: probes.map((probe, index) => ({
+				object: "embedding",
+				index,
+				embedding: probe.vector,
+			})),
+		});
+
+		fetchMock.mockResolvedValue(new Response(body, { status: 200 }));
+
+		expect(await fetchEmbeddingSpec()).toEqual(spec);
+		expect(body.length).toBeLessThan(TECHNIQUES_SERVICE_MAX_BYTES);
+		expect(answer.length).toBeLessThan(EMBEDDING_MAX_RESPONSE_BYTES);
 	});
 
 	it("stops reading a spec that never ends", async () => {
