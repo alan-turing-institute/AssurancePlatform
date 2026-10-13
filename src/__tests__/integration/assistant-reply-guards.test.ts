@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { UNFINISHED_CALL_RESULT } from "@/lib/plugins/assistant/model-history";
 import { setRoles } from "@/lib/services/model-connection-service";
 import {
 	assertNoLeaks,
@@ -364,11 +365,18 @@ describe("a model that keeps calling tools", () => {
 	});
 });
 
+interface SentMessage {
+	content?: unknown;
+	role: string;
+	tool_call_id?: string;
+	tool_calls?: { id: string }[];
+}
+
 /** The messages the reply's first model call was sent. */
-function messagesSentToModel(): { role: string }[] {
+function messagesSentToModel(): SentMessage[] {
 	const first = server.hits.find((hit) => hit.url === CHAT);
 	const { messages } = JSON.parse(first?.body ?? "{}") as {
-		messages: { role: string }[];
+		messages: SentMessage[];
 	};
 	return messages;
 }
@@ -387,64 +395,30 @@ const unfinishedCall = {
 };
 
 describe("a conversation whose last reply was stopped inside a tool call", () => {
-	/** Each case is the assistant's stopped reply as the browser holds it, and the question that follows. */
-	const stopped = {
-		"thinking, then the call": [
-			{ type: "step-start" },
-			{ type: "reasoning", text: "I should read the case.", state: "done" },
-			unfinishedCall,
-		],
-		"the call alone": [{ type: "step-start" }, unfinishedCall],
-	};
-
-	it.each(
-		Object.entries(stopped)
-	)("answers the next question normally when the reply was %s", async (_name, parts) => {
-		const { testCase } = await setup();
-
-		const outcome = await chat(testCase.id, [
+	/** The assistant's stopped reply as the browser holds it, and the question that follows. */
+	const askAgain = (caseId: string, parts: object[]) =>
+		chat(caseId, [
 			asked("m1", "What does the case claim?"),
 			{ id: "a1", role: "assistant", parts },
 			asked("m2", "What is the top-level goal?"),
 		]);
 
-		expect(outcome.status).toBe(200);
-		expect(outcome.text).toContain("Done.");
-		expect(outcome.text).not.toContain('"type":"error"');
-		const sent = messagesSentToModel();
-		expect(sent.map((message) => message.role)).not.toContain("assistant");
-		expect(sent.map((message) => message.role)).not.toContain("tool");
-		expect(JSON.stringify(sent)).not.toContain("call_unfinished");
-		expect(JSON.stringify(sent)).not.toContain("tool_calls");
-		expect(JSON.stringify(sent)).toContain("What is the top-level goal?");
-	});
-
-	it("keeps the calls that finished earlier in that reply and leaves out only the one that did not", async () => {
+	it.each([
+		[
+			"thinking, then the call",
+			[
+				{ type: "step-start" },
+				{ type: "reasoning", text: "I should read the case.", state: "done" },
+				unfinishedCall,
+			],
+		],
+		["the call alone", [{ type: "step-start" }, unfinishedCall]],
+	])("tells the model the call did not finish, and answers the next question normally, when the reply was %s", async (_name, parts) => {
 		const { testCase } = await setup();
 
-		const outcome = await chat(testCase.id, [
-			asked("m1", "What does the case claim?"),
-			{
-				id: "a1",
-				role: "assistant",
-				parts: [
-					{ type: "step-start" },
-					{ type: "text", text: "I'll look at the case." },
-					{
-						type: "tool-read_case",
-						toolCallId: "call_finished",
-						state: "output-available",
-						input: {},
-						output: { found: true },
-					},
-					{ type: "step-start" },
-					{ type: "reasoning", text: "Now an element.", state: "done" },
-					unfinishedCall,
-				],
-			},
-			asked("m2", "What is the top-level goal?"),
-		]);
+		const outcome = await askAgain(testCase.id, parts);
 
+		expect(outcome.status).toBe(200);
 		expect(outcome.text).toContain("Done.");
 		expect(outcome.text).not.toContain('"type":"error"');
 		const sent = messagesSentToModel();
@@ -455,8 +429,82 @@ describe("a conversation whose last reply was stopped inside a tool call", () =>
 			"tool",
 			"user",
 		]);
-		expect(JSON.stringify(sent)).toContain("call_finished");
+		expect(sent[2]?.tool_calls?.map((call) => call.id)).toEqual([
+			"call_unfinished",
+		]);
+		expect(sent[3]?.tool_call_id).toBe("call_unfinished");
+		expect(JSON.stringify(sent[3]?.content)).toContain(UNFINISHED_CALL_RESULT);
+		expect(JSON.stringify(sent[4]?.content)).toContain(
+			"What is the top-level goal?"
+		);
+	});
+
+	it.each([
+		[
+			"a call whose arguments never arrived",
+			[{ type: "step-start" }, { ...unfinishedCall, state: "input-streaming" }],
+		],
+		[
+			"thinking, then a call whose arguments never arrived",
+			[
+				{ type: "step-start" },
+				{ type: "reasoning", text: "I should read the case.", state: "done" },
+				{ ...unfinishedCall, state: "input-streaming" },
+			],
+		],
+	])("leaves out %s, and sends no empty assistant message", async (_name, parts) => {
+		const { testCase } = await setup();
+
+		const outcome = await askAgain(testCase.id, parts);
+
+		expect(outcome.text).toContain("Done.");
+		expect(outcome.text).not.toContain('"type":"error"');
+		const sent = messagesSentToModel();
+		expect(sent.map((message) => message.role)).toEqual([
+			"system",
+			"user",
+			"user",
+		]);
 		expect(JSON.stringify(sent)).not.toContain("call_unfinished");
+		expect(JSON.stringify(sent)).not.toContain("tool_calls");
+	});
+
+	it("keeps a call that finished earlier in that reply as it was, and reports only the one that did not", async () => {
+		const { testCase } = await setup();
+
+		const outcome = await askAgain(testCase.id, [
+			{ type: "step-start" },
+			{ type: "text", text: "I'll look at the case." },
+			{
+				type: "tool-read_case",
+				toolCallId: "call_finished",
+				state: "output-available",
+				input: {},
+				output: { found: true },
+			},
+			{ type: "step-start" },
+			{ type: "reasoning", text: "Now an element.", state: "done" },
+			unfinishedCall,
+		]);
+
+		expect(outcome.text).toContain("Done.");
+		expect(outcome.text).not.toContain('"type":"error"');
+		const sent = messagesSentToModel();
+		expect(sent.map((message) => message.role)).toEqual([
+			"system",
+			"user",
+			"assistant",
+			"tool",
+			"assistant",
+			"tool",
+			"user",
+		]);
+		expect(sent[3]?.tool_call_id).toBe("call_finished");
+		expect(JSON.stringify(sent[3]?.content)).not.toContain(
+			UNFINISHED_CALL_RESULT
+		);
+		expect(sent[5]?.tool_call_id).toBe("call_unfinished");
+		expect(JSON.stringify(sent[5]?.content)).toContain(UNFINISHED_CALL_RESULT);
 	});
 });
 
