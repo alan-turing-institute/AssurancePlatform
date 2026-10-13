@@ -265,6 +265,7 @@ Other connection types get no reasoning setting.
 When a model call stops because it ran out of output room, the reply ends with a notice: "The model ran out of room before answering. Try a narrower question, or a different chat model."
 A reply makes at most 8 steps, where a step is one model call and the tool calls it asks for.
 When the reply is stopped at that limit while the model is still calling tools, it ends with a notice: "The assistant reached its step limit for one reply before it finished answering."
+The server decides this from the steps it counted, not from the reason the provider gives for finishing: the reply made 8 steps and the last one called a tool.
 When the model's first step sends no text, no thinking and no tool call, as an empty completion or a provider's content filter can do, the reply ends with a notice: "The assistant stopped without writing an answer. Try asking again, or ask something narrower."
 The server adds these notices to the reply's stream just before its last chunk.
 Writing the notice is what creates the assistant's message when the model sent nothing else, so every notice belongs to its own reply and stays under it when the user asks another question.
@@ -284,7 +285,10 @@ The assistant is given the selected element's id, with its label, type and text,
 
 When a model provider refuses a call, the user sees the provider's own reason.
 The server cleans it first.
-It takes out the key, bearer tokens, tokens that start `sk-` and the connection's address, turns control characters and runs of spaces into single spaces, and cuts the text to 300 characters.
+It first removes the characters that show nothing, which are format characters such as soft hyphens, direction marks, zero-width characters and tag characters, and the variation selectors.
+It turns control characters and the line and paragraph separators into spaces.
+It then takes out the key and the connection's address, matching each even when whitespace has been put between its characters, and takes out bearer tokens and tokens that start `sk-`.
+It turns runs of spaces into single spaces and cuts the text to 300 characters.
 When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
 The cleaned text is written into the reply as its own message part, just before the stream's error, so that the reason belongs to the reply that failed.
 The chat shows "The assistant could not answer." under that reply, followed by the reason as plain text, and the reason stays there when the user asks another question.
