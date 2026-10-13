@@ -1,9 +1,7 @@
 import type { UIMessageChunk } from "ai";
 import { describe, expect, it } from "vitest";
-import {
-	LENGTH_NOTICE_DATA,
-	noticeWhenCutShort,
-} from "@/lib/plugins/assistant/length-notice";
+import { NOTICE_REASON } from "@/lib/plugins/assistant/abort-notice";
+import { noticeWhenCutShort } from "@/lib/plugins/assistant/length-notice";
 
 async function through(chunks: UIMessageChunk[]): Promise<UIMessageChunk[]> {
 	const out: UIMessageChunk[] = [];
@@ -37,8 +35,8 @@ describe("noticeWhenCutShort", () => {
 			"data-notice",
 			"finish",
 		]);
-		expect(out[2]).toEqual({ type: "data-notice", data: LENGTH_NOTICE_DATA });
-		expect(LENGTH_NOTICE_DATA).toBe("length");
+		expect(out[2]).toEqual({ type: "data-notice", data: NOTICE_REASON.length });
+		expect(NOTICE_REASON.length).toBe("length");
 	});
 
 	it.each([

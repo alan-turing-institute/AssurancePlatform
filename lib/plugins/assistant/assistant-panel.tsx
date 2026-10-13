@@ -33,10 +33,7 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	ABORT_NOTICE_PART,
-	noticeText,
-} from "@/lib/plugins/assistant/abort-notice";
+import { NOTICE_PART, noticeText } from "@/lib/plugins/assistant/abort-notice";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
 import { REPLY_MARKDOWN_PROPS } from "@/lib/plugins/assistant/reply-markdown";
 import {
@@ -117,7 +114,7 @@ function MessagePartView({
 	part: MessagePart;
 	role: UIMessage["role"];
 }) {
-	if (part.type === ABORT_NOTICE_PART) {
+	if (part.type === NOTICE_PART) {
 		return (
 			<p className="text-destructive text-sm" role="alert">
 				{noticeText(part.data)}

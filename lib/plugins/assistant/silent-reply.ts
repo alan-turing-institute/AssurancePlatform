@@ -1,5 +1,5 @@
 import type { ChatStatus, UIMessage } from "ai";
-import { ABORT_NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
+import { NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
 
 /** Shown under a reply that finished with no answer text and no other notice. */
 export const SILENT_REPLY_NOTICE =
@@ -24,7 +24,7 @@ function hasNoAnswer(message: UIMessage): boolean {
 		message.role === "assistant" &&
 		!message.parts.some(
 			(part) =>
-				part.type === ABORT_NOTICE_PART ||
+				part.type === NOTICE_PART ||
 				(part.type === "text" && part.text.trim() !== "")
 		)
 	);

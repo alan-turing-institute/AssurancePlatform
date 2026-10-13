@@ -1,7 +1,10 @@
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage, type UIMessageChunk } from "ai";
 
-import { ABORT_NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
+import {
+	NOTICE_PART,
+	NOTICE_REASON,
+} from "@/lib/plugins/assistant/abort-notice";
 
 const chats = new Map<string, Chat<UIMessage>>();
 
@@ -19,8 +22,8 @@ class AssistantChatTransport extends DefaultChatTransport<UIMessage> {
 				transform(chunk, controller) {
 					if (chunk.type === "abort") {
 						controller.enqueue({
-							type: ABORT_NOTICE_PART,
-							data: "timeout",
+							type: NOTICE_PART,
+							data: NOTICE_REASON.timeout,
 						} as UIMessageChunk);
 					}
 					controller.enqueue(chunk);
