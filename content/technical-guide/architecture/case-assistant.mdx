@@ -288,8 +288,10 @@ It takes out the key, bearer tokens, tokens that start `sk-` and the connection'
 When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
 The cleaned text is written into the reply as its own message part, just before the stream's error, so that the reason belongs to the reply that failed.
 The chat shows "The assistant could not answer." under that reply, followed by the reason as plain text, and the reason stays there when the user asks another question.
-A failure that never reached a reply, such as an error answer from the route itself, a host's error page or a network failure, shows "The assistant could not answer. Try again." at the foot of the chat instead.
-When that answer was the route's own JSON error, its message is shown as well, and nothing else from the answer is.
+A failure that never reached a reply shows at the foot of the chat instead: an error answer from the route itself, a host's error page or a network failure.
+The chat shows "The assistant could not answer. Try again." and nothing from the answer, whatever its text.
+When the answer was the route's own JSON error, the chat shows its message in place of "Try again."
+When it was the route's error for a missing or unusable chat model, the chat shows that message and a link to the AI models settings instead.
 The reason and the notices are not part of the conversation that is sent back to the model.
 The reason is never logged, and the log records only the error's class and the HTTP status.
 
