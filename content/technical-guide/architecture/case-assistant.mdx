@@ -279,7 +279,8 @@ Without that result the model would take the question that began the reply as st
 A call that was cut off while its arguments were still arriving cannot be sent as a call, so it is left out.
 An assistant message that this leaves holding only thinking is left out too, because some providers refuse an empty assistant message.
 Calls that finished earlier in the same reply stay in what the model is sent as they were, and the next question is answered normally.
-Only what is sent to the model changes. The chat and its stored messages keep the call as it was.
+Only what is sent to the model changes.
+The chat and its stored messages keep the call as it was.
 
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
@@ -297,9 +298,10 @@ When the failure is not an error answer from the provider, or nothing readable i
 The cleaned text is written into the reply as its own message part, just before the stream's error, so that the reason belongs to the reply that failed.
 The chat shows "The assistant could not answer." under that reply, followed by the reason as plain text, and the reason stays there when the user asks another question.
 A failure that never reached a reply shows at the foot of the chat instead: an error answer from the route itself, a host's error page or a network failure.
-The chat shows "The assistant could not answer. Try again." and nothing from the answer, whatever its text.
+The chat shows "The assistant could not answer. Try again."
 When the answer was the route's own JSON error, the chat shows its message in place of "Try again."
 When it was the route's error for a missing or unusable chat model, the chat shows that message and a link to the AI models settings instead.
+Nothing else from the answer is shown, whatever its text: not a host's error page and not a network failure's message.
 The reason and the notices are not part of the conversation that is sent back to the model.
 The reason is never logged, and the log records only the error's class and the HTTP status.
 

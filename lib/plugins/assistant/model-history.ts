@@ -28,6 +28,12 @@ function holdsTextOrToolCall(message: AssistantModelMessage): boolean {
  * by Stop or by the time limit while it ran. A model that is sent nothing in
  * its place takes the question that began that reply as still pending and
  * answers it, calling the tool again.
+ *
+ * Every such call in the history counts as cut off. That holds because each
+ * tool runs on the server within the reply and none waits for an approval, so
+ * a call with its input and no result cannot still be pending when the next
+ * question arrives. A tool that ran in the browser, or that needed an approval,
+ * would leave such calls legitimately pending and would need another rule.
  */
 function withUnfinishedCallsReported(messages: UIMessage[]): UIMessage[] {
 	return messages.map((message) => ({
