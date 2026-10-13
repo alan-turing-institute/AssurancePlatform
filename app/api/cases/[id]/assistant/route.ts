@@ -16,7 +16,6 @@ import { AppError, notFound } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { ASSISTANT_PLUGIN_ID } from "@/lib/plugins/assistant/constants";
-import { noticeWhenCutShort } from "@/lib/plugins/assistant/length-notice";
 import {
 	modelAccessFor,
 	resolveChatModel,
@@ -24,6 +23,7 @@ import {
 import { modelTimeoutMs } from "@/lib/plugins/assistant/model-timeout";
 import { noDownload } from "@/lib/plugins/assistant/no-download";
 import { providerErrorMessage } from "@/lib/plugins/assistant/provider-message";
+import { replyNotices } from "@/lib/plugins/assistant/reply-notices";
 import {
 	resolveSelectedElement,
 	selectionPrompt,
@@ -191,7 +191,7 @@ export async function POST(
 				.toUIMessageStream({
 					onError: (error) => providerErrorMessage(error, resolved.secrets),
 				})
-				.pipeThrough(noticeWhenCutShort()),
+				.pipeThrough(replyNotices()),
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);

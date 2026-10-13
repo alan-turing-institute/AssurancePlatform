@@ -795,6 +795,35 @@ describe("a reply with nothing to read", () => {
 		expect(document.body).not.toHaveTextContent("did not answer in time");
 	});
 
+	it.each([
+		[
+			"empty",
+			[],
+			"The assistant stopped without writing an answer. Try asking again, or ask something narrower.",
+		],
+		[
+			"steps",
+			[
+				text("I'll read the case."),
+				tool("t1", "output-available", { output: {} }),
+			],
+			"The assistant reached its step limit for one reply before it finished answering.",
+		],
+	])("shows the %s notice the route added once, under that reply", async (reason, parts, wording) => {
+		chat.state.messages = [
+			user("hi"),
+			assistant(...parts, { type: "data-notice", data: reason }),
+		];
+
+		await renderPanel();
+
+		const alerts = screen.getAllByRole("alert");
+		expect(alerts).toHaveLength(1);
+		expect(alerts[0]).toHaveTextContent(wording);
+		const replies = screen.getAllByTestId("assistant-message-assistant");
+		expect(replies).toHaveLength(1);
+	});
+
 	it("shows a notice when a finished reply has tool rows and no text", async () => {
 		chat.state.messages = [
 			user("hi"),
@@ -835,7 +864,7 @@ describe("a reply with nothing to read", () => {
 				}),
 			],
 		],
-		["the last question has no reply yet", "ready", [user("hi")]],
+		["the user stopped before any reply began", "ready", [user("hi")]],
 	])("shows no silent-reply notice when %s", async (_name, status, messages) => {
 		chat.state.status = status;
 		chat.state.messages = messages;

@@ -1,10 +1,6 @@
 import type { ChatStatus, UIMessage } from "ai";
 import { NOTICE_PART } from "@/lib/plugins/assistant/abort-notice";
 
-/** Shown under a reply that finished with no answer text and no other notice. */
-export const SILENT_REPLY_NOTICE =
-	"The assistant stopped without writing an answer. Try asking again, or ask something narrower.";
-
 /** Replies the user stopped, which are never reported as silent. Held here so closing the panel does not forget them. */
 const stoppedReplies = new Set<string>();
 

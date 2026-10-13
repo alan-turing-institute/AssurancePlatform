@@ -33,12 +33,15 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Textarea } from "@/components/ui/textarea";
-import { NOTICE_PART, noticeText } from "@/lib/plugins/assistant/abort-notice";
+import {
+	NOTICE_PART,
+	noticeText,
+	SILENT_REPLY_NOTICE,
+} from "@/lib/plugins/assistant/abort-notice";
 import { getCaseChat } from "@/lib/plugins/assistant/chat-store";
 import { REPLY_MARKDOWN_PROPS } from "@/lib/plugins/assistant/reply-markdown";
 import {
 	markReplyStopped,
-	SILENT_REPLY_NOTICE,
 	silentReplyIds,
 } from "@/lib/plugins/assistant/silent-reply";
 import { suggestedPrompts } from "@/lib/plugins/assistant/suggested-prompts";

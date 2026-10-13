@@ -120,6 +120,16 @@ async function chat(caseId: string) {
 	return { status: response.status, text: await response.text() };
 }
 
+/** One server-sent chunk of a streamed chat completion. */
+const completionChunk = (delta: object, finish: string | null) =>
+	`data: ${JSON.stringify({
+		id: "1",
+		object: "chat.completion.chunk",
+		created: 1,
+		model: "stub",
+		choices: [{ index: 0, delta, finish_reason: finish }],
+	})}\n\n`;
+
 /** The first model call answers with `count` calls of `read_case`; the next answers in words. */
 function answerWithToolCalls(count: number) {
 	let turn = 0;
@@ -130,16 +140,8 @@ function answerWithToolCalls(count: number) {
 			return;
 		}
 		response.writeHead(200, { "content-type": "text/event-stream" });
-		const chunk = (delta: object, finish: string | null) =>
-			`data: ${JSON.stringify({
-				id: "1",
-				object: "chat.completion.chunk",
-				created: 1,
-				model: "stub",
-				choices: [{ index: 0, delta, finish_reason: finish }],
-			})}\n\n`;
 		response.write(
-			chunk(
+			completionChunk(
 				{
 					role: "assistant",
 					content: null,
@@ -153,7 +155,7 @@ function answerWithToolCalls(count: number) {
 				null
 			)
 		);
-		response.write(chunk({}, "tool_calls"));
+		response.write(completionChunk({}, "tool_calls"));
 		response.end("data: [DONE]\n\n");
 	};
 }
@@ -242,16 +244,10 @@ describe("what the route logs when the provider fails", () => {
 function answerCutShort() {
 	chatAnswer = (_hit, response) => {
 		response.writeHead(200, { "content-type": "text/event-stream" });
-		const chunk = (delta: object, finish: string | null) =>
-			`data: ${JSON.stringify({
-				id: "1",
-				object: "chat.completion.chunk",
-				created: 1,
-				model: "stub",
-				choices: [{ index: 0, delta, finish_reason: finish }],
-			})}\n\n`;
-		response.write(chunk({ role: "assistant", content: "Half an ans" }, null));
-		response.write(chunk({}, "length"));
+		response.write(
+			completionChunk({ role: "assistant", content: "Half an ans" }, null)
+		);
+		response.write(completionChunk({}, "length"));
 		response.end("data: [DONE]\n\n");
 	};
 }
@@ -297,6 +293,76 @@ describe("a model that runs out of output room", () => {
 		) as Record<string, unknown>;
 		expect(local.max_tokens).toBe(8192);
 		expect(local).not.toHaveProperty("reasoning");
+	});
+});
+
+/** A reply whose first step sends no text, no thinking and no tool call, and ends for `reason`. */
+function answerWithNothing(reason: string) {
+	chatAnswer = (_hit, response) => {
+		response.writeHead(200, { "content-type": "text/event-stream" });
+		// The SDK drops empty content, so nothing of it reaches the stream.
+		response.write(completionChunk({ role: "assistant", content: "" }, null));
+		response.write(completionChunk({}, reason));
+		response.end("data: [DONE]\n\n");
+	};
+}
+
+describe("a model that answers with nothing", () => {
+	it.each([
+		["stop", "stop"],
+		["content_filter", "content-filter"],
+	])("ends the reply with a notice before the finish chunk when the model finishes with %s", async (providerReason, sdkReason) => {
+		answerWithNothing(providerReason);
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		const notice = outcome.text.indexOf('"type":"data-notice","data":"empty"');
+		const finish = outcome.text.indexOf(`"finishReason":"${sdkReason}"`);
+		expect(notice).toBeGreaterThan(-1);
+		expect(finish).toBeGreaterThan(notice);
+		expect(outcome.text).not.toContain("text-delta");
+	});
+});
+
+/** Every model call answers with a short preamble and a call of `read_case`, so the reply never reaches an answer. */
+function answerWithToolCallsEveryStep() {
+	let turn = 0;
+	chatAnswer = (_hit, response) => {
+		turn += 1;
+		response.writeHead(200, { "content-type": "text/event-stream" });
+		response.write(
+			completionChunk(
+				{
+					role: "assistant",
+					content: "I'll read the case.",
+					tool_calls: [
+						{
+							index: 0,
+							id: `call_${turn}`,
+							type: "function",
+							function: { name: "read_case", arguments: "{}" },
+						},
+					],
+				},
+				null
+			)
+		);
+		response.write(completionChunk({}, "tool_calls"));
+		response.end("data: [DONE]\n\n");
+	};
+}
+
+describe("a model that keeps calling tools", () => {
+	it("is stopped after 8 steps, and the reply carries a notice that it hit the step limit", async () => {
+		answerWithToolCallsEveryStep();
+		const { testCase } = await setup();
+
+		const outcome = await chat(testCase.id);
+
+		expect(server.hits.filter((hit) => hit.url === CHAT)).toHaveLength(8);
+		expect(outcome.text).toContain("I'll read the case.");
+		expect(outcome.text).toContain('"type":"data-notice","data":"steps"');
 	});
 });
 
