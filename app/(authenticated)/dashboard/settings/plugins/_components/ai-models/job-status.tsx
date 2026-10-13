@@ -19,7 +19,7 @@ const FALLBACK = "Until a check passes, techniques are found by keyword only.";
 
 /** The similarity to three decimals, cut rather than rounded, so a value just under the threshold never reads as the threshold. */
 function similarity(value: number): string {
-	return value.toFixed(6).slice(0, -3);
+	return (Math.floor(value * 1000) / 1000).toFixed(3);
 }
 
 function failureDetail(
