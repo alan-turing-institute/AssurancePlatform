@@ -126,8 +126,15 @@ describe("cleanProviderMessage", () => {
 	});
 
 	it.each([
+		["a line feed", "\n"],
+		["a tab", "\t"],
 		["a zero-width space", at(0x20_0b)],
 		["a right-to-left override", at(0x20_2e)],
+		["a soft hyphen", at(0xad)],
+		["an Arabic letter mark", at(0x6_1c)],
+		["an invisible times sign", at(0x20_62)],
+		["a tag character", at(0xe_00_41)],
+		["a variation selector", at(0xfe_0f)],
 	])("replaces a key split by %s", (_label, hidden) => {
 		const key = "opaque-7f3a9c2e51d8";
 		const split = `${key.slice(0, 9)}${hidden}${key.slice(9)}`;
@@ -135,6 +142,26 @@ describe("cleanProviderMessage", () => {
 		expect(
 			cleanProviderMessage(`Invalid key ${split}`, { ...SECRETS, apiKey: key })
 		).toBe("Invalid key [key removed]");
+	});
+
+	it("removes the connection's address when whitespace has been put inside it", () => {
+		const text = cleanProviderMessage(
+			"Cannot reach https://models.internal.example:8443/v1/chat/completions; host models.internal.\nexample is down",
+			SECRETS
+		);
+
+		expect(text).not.toContain("models.internal");
+		expect(text).not.toContain("8443");
+		expect(text).toContain("is down");
+	});
+
+	it("keeps the spaces of an ordinary message", () => {
+		expect(
+			cleanProviderMessage(
+				"The model is not available for this account; try another one",
+				SECRETS
+			)
+		).toBe("The model is not available for this account; try another one");
 	});
 
 	it("puts a message with a Unicode line separator on one line", () => {

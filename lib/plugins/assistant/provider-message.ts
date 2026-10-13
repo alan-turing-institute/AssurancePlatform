@@ -35,16 +35,11 @@ type CodePointRange = readonly [first: number, last: number];
 
 /**
  * Characters that show nothing but can sit inside a key to stop it matching:
- * direction marks, embeddings and isolates, zero-width characters, and the
- * byte order mark.
+ * every format character (soft hyphens, direction marks, zero-width characters,
+ * invisible operators, tag characters and the byte order mark among them) and
+ * the variation selectors.
  */
-const INVISIBLE_RANGES: readonly CodePointRange[] = [
-	[0x20_0b, 0x20_0f],
-	[0x20_2a, 0x20_2e],
-	[0x20_60, 0x20_60],
-	[0x20_66, 0x20_69],
-	[0xfe_ff, 0xfe_ff],
-];
+const INVISIBLE_CHARACTERS = /\p{Cf}|[\uFE00-\uFE0F]|[\u{E0100}-\u{E01EF}]/gu;
 
 /** Control characters (line breaks and tabs among them) and the Unicode line and paragraph separators. */
 const SPACED_RANGES: readonly CodePointRange[] = [
@@ -53,10 +48,28 @@ const SPACED_RANGES: readonly CodePointRange[] = [
 	[0x20_28, 0x20_29],
 ];
 
+const WHITESPACE = /\s/;
+
 const isWithin = (code: number, ranges: readonly CodePointRange[]): boolean =>
 	ranges.some(([first, last]) => code >= first && code <= last);
 
-/** Replaces every occurrence of each needle, longest first, ignoring case. */
+/** A pattern for the needle that allows any whitespace between its characters, ignoring case. */
+function spacedPattern(needle: string): RegExp | null {
+	const characters = [...needle].filter((char) => !WHITESPACE.test(char));
+	return characters.length > 0
+		? new RegExp(
+				characters
+					.map((char) => char.replace(SPECIAL_REGEX_CHARACTERS, "\\$&"))
+					.join("\\s*"),
+				"gi"
+			)
+		: null;
+}
+
+/**
+ * Replaces every occurrence of each needle, longest first, ignoring case and
+ * whatever whitespace has been put between its characters.
+ */
 function removeAll(
 	text: string,
 	needles: readonly string[],
@@ -64,11 +77,9 @@ function removeAll(
 ): string {
 	let cleaned = text;
 	for (const needle of [...needles].sort((a, b) => b.length - a.length)) {
-		if (needle.length > 0) {
-			cleaned = cleaned.replace(
-				new RegExp(needle.replace(SPECIAL_REGEX_CHARACTERS, "\\$&"), "gi"),
-				replacement
-			);
+		const pattern = spacedPattern(needle);
+		if (pattern) {
+			cleaned = cleaned.replace(pattern, replacement);
 		}
 	}
 	return cleaned;
@@ -89,11 +100,8 @@ function addressForms(baseUrl: string): string[] {
 /** The text without invisible characters, and with each control or separator character as a space. */
 function withoutHiddenCharacters(text: string): string {
 	let cleaned = "";
-	for (const char of text) {
-		const code = char.codePointAt(0) ?? 0;
-		if (!isWithin(code, INVISIBLE_RANGES)) {
-			cleaned += isWithin(code, SPACED_RANGES) ? " " : char;
-		}
+	for (const char of text.replace(INVISIBLE_CHARACTERS, "")) {
+		cleaned += isWithin(char.codePointAt(0) ?? 0, SPACED_RANGES) ? " " : char;
 	}
 	return cleaned;
 }
@@ -102,8 +110,9 @@ function withoutHiddenCharacters(text: string): string {
  * The provider's message made fit to show: invisible characters removed and
  * control characters made spaces first, so that nothing hidden can split the
  * key or the address; then the key, bearer tokens, tokens that start `sk-` and
- * the address removed, runs of space collapsed to single spaces, and the result
- * cut to `MAX_PROVIDER_MESSAGE_CHARS` characters.
+ * the address removed, the key and address wherever whitespace has been put
+ * between their characters; then runs of space collapsed to single spaces, and
+ * the result cut to `MAX_PROVIDER_MESSAGE_CHARS` characters.
  * Empty when nothing readable is left.
  */
 export function cleanProviderMessage(
