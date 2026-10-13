@@ -274,9 +274,12 @@ Stopping a reply before any part of it has arrived adds nothing, and no notice i
 
 A tool call that was still running when the user stopped the reply, or when the whole-reply time limit ended it, has no result.
 The chat keeps that call and shows it as an error row once the reply has ended, and opening the row reads "Did not finish."
-The model is sent the conversation without the call, because a model server refuses a tool call that has no result after it.
-It is also sent without an assistant message that the cut leaves holding only thinking, because some providers refuse an empty assistant message.
-Calls that finished earlier in the same reply stay in what the model is sent, and the next question is answered normally.
+The model is sent that call together with an error result that says it did not finish: the user stopped the reply, or its time ran out, and the call is not to be repeated unless the user asks again.
+Without that result the model would take the question that began the reply as still waiting for an answer, and would call the tool again.
+A call that was cut off while its arguments were still arriving cannot be sent as a call, so it is left out.
+An assistant message that this leaves holding only thinking is left out too, because some providers refuse an empty assistant message.
+Calls that finished earlier in the same reply stay in what the model is sent as they were, and the next question is answered normally.
+Only what is sent to the model changes. The chat and its stored messages keep the call as it was.
 
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
