@@ -6,6 +6,7 @@ import {
 	type ModelConnectionType,
 	type ModelJob,
 } from "@/lib/models/connection-types";
+import { RECOMMENDED_MODELS } from "@/lib/models/recommended";
 import { server } from "@/src/__tests__/mocks/server";
 
 /**
@@ -64,21 +65,6 @@ export interface FakeModels {
 	testAnswers: Record<string, FakeTestAnswer>;
 }
 
-const RECOMMENDED: FakeModels["recommended"] = {
-	OPENROUTER: {
-		chat: "anthropic/claude-sonnet-5.5",
-		ranking: "cloudflare/clef-flash",
-		search: "qwen/qwen3-embedding-4b",
-	},
-	OLLAMA: {
-		chat: null,
-		ranking: "clef-flash",
-		search: "qwen3-embedding:4b-fp16",
-	},
-	OPENAI_COMPATIBLE: { chat: null, ranking: null, search: null },
-	ANTHROPIC: { chat: null, ranking: null, search: null },
-};
-
 const DEFAULT_TEST_ANSWER: FakeTestAnswer = {
 	ok: true,
 	message: "The connection works.",
@@ -121,7 +107,7 @@ export function installModelRoutes(
 		roles: initial.roles ?? emptyRoles(),
 		testAnswers: {},
 		nextSearchCheck: null,
-		recommended: structuredClone(RECOMMENDED),
+		recommended: structuredClone(RECOMMENDED_MODELS),
 		requests: [],
 		searchCheckCurrent: true,
 	};
