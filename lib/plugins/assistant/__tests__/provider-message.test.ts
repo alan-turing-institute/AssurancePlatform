@@ -122,6 +122,24 @@ describe("cleanProviderMessage", () => {
 		).toBe("one two three four five");
 	});
 
+	it.each([
+		["a zero-width space", "​"],
+		["a right-to-left override", "‮"],
+	])("replaces a key split by %s", (_label, hidden) => {
+		const key = "opaque-7f3a9c2e51d8";
+		const split = `${key.slice(0, 9)}${hidden}${key.slice(9)}`;
+
+		expect(
+			cleanProviderMessage(`Invalid key ${split}`, { ...SECRETS, apiKey: key })
+		).toBe("Invalid key [key removed]");
+	});
+
+	it("puts a message with a Unicode line separator on one line", () => {
+		expect(cleanProviderMessage("first second third", SECRETS)).toBe(
+			"first second third"
+		);
+	});
+
 	it("cuts a long message to 300 characters, ending in an ellipsis", () => {
 		const text = cleanProviderMessage("word ".repeat(200), SECRETS);
 
