@@ -23,7 +23,7 @@ export function noticeWhenCutShort(): TransformStream<
 				controller.enqueue({
 					type: NOTICE_PART,
 					data: LENGTH_NOTICE_DATA,
-				} as UIMessageChunk);
+				});
 			}
 			controller.enqueue(chunk);
 		},
