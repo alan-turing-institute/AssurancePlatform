@@ -137,29 +137,43 @@ function hasInput(input: unknown): boolean {
 	);
 }
 
+/** What a call that never got a result says once its reply has ended. */
+const DID_NOT_FINISH = "Did not finish.";
+
+export interface ToolCallRowProps {
+	part: MessagePart;
+	/** The reply the call belongs to is over. A call with no result by then was cut off, and is shown as an error, not as running. */
+	replyEnded?: boolean;
+}
+
 /** One tool call as a collapsed row that opens to its input and result. Renders nothing for parts that are not tool calls. */
-export function ToolCallRow({ part }: { part: MessagePart }) {
+export function ToolCallRow({ part, replyEnded = false }: ToolCallRowProps) {
 	if (!isToolUIPart(part)) {
 		return null;
 	}
 	const name = getToolName(part);
 	const title = TOOL_TITLES[name] ?? name;
+	const cutOff =
+		replyEnded &&
+		(part.state === "input-streaming" || part.state === "input-available");
+	const state = cutOff ? "output-error" : part.state;
+	const failure = part.state === "output-error" ? part.errorText : undefined;
 	return (
 		<Tool data-testid="assistant-tool-call">
 			{part.type === "dynamic-tool" ? (
 				<ToolHeader
-					state={part.state}
+					state={state}
 					title={title}
 					toolName={part.toolName}
 					type={part.type}
 				/>
 			) : (
-				<ToolHeader state={part.state} title={title} type={part.type} />
+				<ToolHeader state={state} title={title} type={part.type} />
 			)}
 			<ToolContent>
 				{hasInput(part.input) && <ToolInput input={part.input} />}
 				<ToolOutput
-					errorText={part.state === "output-error" ? part.errorText : undefined}
+					errorText={cutOff ? DID_NOT_FINISH : failure}
 					output={
 						part.state === "output-available"
 							? resultView(name, part.output)

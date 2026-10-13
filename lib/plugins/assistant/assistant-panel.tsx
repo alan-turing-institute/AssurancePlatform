@@ -146,9 +146,11 @@ function thinkingSteps(message: UIMessage): number {
 
 function MessagePartView({
 	part,
+	replyEnded,
 	role,
 }: {
 	part: MessagePart;
+	replyEnded: boolean;
 	role: UIMessage["role"];
 }) {
 	if (part.type === NOTICE_PART) {
@@ -168,15 +170,20 @@ function MessagePartView({
 			part.text
 		);
 	}
-	return isToolUIPart(part) ? <ToolCallRow part={part} /> : null;
+	return isToolUIPart(part) ? (
+		<ToolCallRow part={part} replyEnded={replyEnded} />
+	) : null;
 }
 
 function MessageView({
 	message,
+	replyEnded,
 	silent,
 	thinking,
 }: {
 	message: UIMessage;
+	/** The message is not the reply that is still arriving. */
+	replyEnded: boolean;
 	/** The reply finished with nothing to read. */
 	silent: boolean;
 	thinking: { steps: number; streaming: boolean; text: string };
@@ -215,7 +222,12 @@ function MessageView({
 						</Reasoning>
 					)}
 					{keyedParts(message.parts).map(({ key, part }) => (
-						<MessagePartView key={key} part={part} role={message.role} />
+						<MessagePartView
+							key={key}
+							part={part}
+							replyEnded={replyEnded}
+							role={message.role}
+						/>
 					))}
 					{silent && (
 						<p className="text-destructive text-sm" role="alert">
@@ -376,6 +388,7 @@ function AssistantChat({
 						<MessageView
 							key={message.id}
 							message={message}
+							replyEnded={!busy || message.id !== lastId}
 							silent={silentIds.has(message.id)}
 							thinking={{
 								steps: thinkingSteps(message),

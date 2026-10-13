@@ -1003,6 +1003,27 @@ describe("a reply with nothing to read", () => {
 	});
 });
 
+describe("a tool call that never got a result", () => {
+	it("reads as running while its reply goes on, and as not finished once the reply has ended", async () => {
+		chat.state.status = "streaming";
+		chat.state.messages = [
+			user("hi"),
+			{ ...assistant(tool("t1", "input-available")), id: "a-cut-off" },
+		];
+		const view = await renderPanel();
+		const row = screen.getByTestId("assistant-tool-call");
+		expect(row).toHaveTextContent("Running");
+
+		chat.state.status = "ready";
+		view.again();
+
+		expect(row).not.toHaveTextContent("Running");
+		expect(row).toHaveTextContent("Error");
+		await userEvent.click(within(row).getByRole("button"));
+		expect(row).toHaveTextContent("Did not finish.");
+	});
+});
+
 describe("Send and Stop", () => {
 	it("Stop ends the reply without sending and keeps the draft", async () => {
 		chat.state.status = "streaming";
