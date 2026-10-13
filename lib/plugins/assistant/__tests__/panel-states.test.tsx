@@ -988,9 +988,10 @@ describe("a reply with nothing to read", () => {
 
 	it("does not call a reply the user stopped a silent one", async () => {
 		chat.state.status = "streaming";
+		// Its own id: the panel remembers stopped replies by id for the life of the module.
 		chat.state.messages = [
 			user("hi"),
-			assistant(tool("t1", "input-available")),
+			{ ...assistant(tool("t1", "input-available")), id: "a-stopped" },
 		];
 		const view = await renderPanel();
 
