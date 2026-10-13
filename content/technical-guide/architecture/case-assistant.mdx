@@ -263,7 +263,13 @@ The cap leaves room for a long answer, such as a case lint, and for a reasoning 
 On an OpenRouter connection the request also bounds reasoning at 3,072 tokens, so that a model that reasons has room left to answer.
 Other connection types get no reasoning setting.
 When a model call stops because it ran out of output room, the reply ends with a notice: "The model ran out of room before answering. Try a narrower question, or a different chat model."
-A reply that ends with no answer text and no notice shows "The assistant stopped without writing an answer. Try asking again, or ask something narrower." unless the user stopped the reply or it failed with an error.
+A reply makes at most 8 steps, where a step is one model call and the tool calls it asks for.
+When the reply is stopped at that limit while the model is still calling tools, it ends with a notice: "The assistant reached its step limit for one reply before it finished answering."
+When the model's first step sends no text, no thinking and no tool call, as an empty completion or a provider's content filter can do, the reply ends with a notice: "The assistant stopped without writing an answer. Try asking again, or ask something narrower."
+The server adds these notices to the reply's stream just before its last chunk.
+Writing the notice is what creates the assistant's message when the model sent nothing else, so every notice belongs to its own reply and stays under it when the user asks another question.
+A reply that has tool calls or thinking but ends with no answer text and no notice shows the same "stopped without writing an answer" wording, unless the user stopped the reply or it failed with an error.
+Stopping a reply before any part of it has arrived adds nothing, and no notice is shown.
 
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
@@ -274,7 +280,11 @@ When a model provider refuses a call, the user sees the provider's own reason.
 The server cleans it first.
 It takes out the key, bearer tokens, tokens that start `sk-` and the connection's address, turns control characters and runs of spaces into single spaces, and cuts the text to 300 characters.
 When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
-The chat shows "The assistant could not answer." followed by the reason.
+The cleaned text is written into the reply as its own message part, just before the stream's error, so that the reason belongs to the reply that failed.
+The chat shows "The assistant could not answer." under that reply, followed by the reason as plain text, and the reason stays there when the user asks another question.
+A failure that never reached a reply, such as an error answer from the route itself, a host's error page or a network failure, shows "The assistant could not answer. Try again." at the foot of the chat instead.
+When that answer was the route's own JSON error, its message is shown as well, and nothing else from the answer is.
+The reason and the notices are not part of the conversation that is sent back to the model.
 The reason is never logged, and the log records only the error's class and the HTTP status.
 
 ## Time limits
