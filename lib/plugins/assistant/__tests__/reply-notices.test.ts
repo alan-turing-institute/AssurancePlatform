@@ -9,7 +9,12 @@ import { describe, expect, it } from "vitest";
 import { NOTICE_REASON } from "@/lib/plugins/assistant/abort-notice";
 import { replyNotices } from "@/lib/plugins/assistant/reply-notices";
 
-async function through(chunks: UIMessageChunk[]): Promise<UIMessageChunk[]> {
+const MAX_STEPS = 2;
+
+async function through(
+	chunks: UIMessageChunk[],
+	maxSteps = MAX_STEPS
+): Promise<UIMessageChunk[]> {
 	const out: UIMessageChunk[] = [];
 	const source = new ReadableStream<UIMessageChunk>({
 		start(controller) {
@@ -19,7 +24,7 @@ async function through(chunks: UIMessageChunk[]): Promise<UIMessageChunk[]> {
 			controller.close();
 		},
 	});
-	for await (const chunk of source.pipeThrough(replyNotices())) {
+	for await (const chunk of source.pipeThrough(replyNotices(maxSteps))) {
 		out.push(chunk);
 	}
 	return out;
@@ -34,6 +39,26 @@ const notice = (data: string): UIMessageChunk => ({
 	type: "data-notice",
 	data,
 });
+
+const call: UIMessageChunk = {
+	type: "tool-input-start",
+	toolCallId: "c1",
+	toolName: "read_case",
+};
+
+/** The chunks of one step: it may say something, and it may call a tool. */
+const step = ({
+	calls = false,
+	says = false,
+}: {
+	calls?: boolean;
+	says?: boolean;
+}): UIMessageChunk[] => [
+	{ type: "start-step" },
+	...(says ? [text] : []),
+	...(calls ? [call] : []),
+	{ type: "finish-step" },
+];
 
 describe("replyNotices", () => {
 	it("adds a notice part just before the finish chunk when the model ran out of room", async () => {
@@ -53,20 +78,47 @@ describe("replyNotices", () => {
 		expect(NOTICE_REASON.length).toBe("length");
 	});
 
-	it("adds the step-limit notice when the reply ends on tool calls", async () => {
-		const out = await through([
-			{ type: "tool-input-start", toolCallId: "c1", toolName: "read_case" },
-			{ type: "finish-step" },
+	it.each([
+		["tool-calls"],
+		["stop"],
+	] as const)("adds the step-limit notice when the last step the reply may make calls a tool, whatever the provider says (%s)", async (reason) => {
+		const chunks = [...step({ calls: true }), ...step({ calls: true })];
+
+		const out = await through([...chunks, finish(reason)]);
+
+		expect(out).toEqual([
+			...chunks,
+			notice(NOTICE_REASON.steps),
+			finish(reason),
+		]);
+	});
+
+	it("adds no step-limit notice when the reply stopped short of the limit, even if the provider reports tool calls", async () => {
+		const chunks = [...step({ calls: true }), finish("tool-calls")];
+
+		expect(await through(chunks)).toEqual(chunks);
+	});
+
+	it("falls through to the empty-reply rule when the provider reports tool calls and none were made", async () => {
+		const none = [...step({}), finish("tool-calls")];
+		const said = [...step({ says: true }), finish("tool-calls")];
+
+		expect(await through(none, 1)).toEqual([
+			...step({}),
+			notice(NOTICE_REASON.empty),
 			finish("tool-calls"),
 		]);
+		expect(await through(said, 1)).toEqual(said);
+	});
 
-		expect(out.map((chunk) => chunk.type)).toEqual([
-			"tool-input-start",
-			"finish-step",
-			"data-notice",
-			"finish",
-		]);
-		expect(out[2]).toEqual(notice(NOTICE_REASON.steps));
+	it("adds no step-limit notice when the last step the reply may make ends in an answer", async () => {
+		const chunks = [
+			...step({ calls: true }),
+			...step({ says: true }),
+			finish("stop"),
+		];
+
+		expect(await through(chunks)).toEqual(chunks);
 	});
 
 	it.each([

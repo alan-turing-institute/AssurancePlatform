@@ -191,7 +191,7 @@ export async function POST(
 				.toUIMessageStream({
 					onError: (error) => providerErrorMessage(error, resolved.secrets),
 				})
-				.pipeThrough(replyNotices()),
+				.pipeThrough(replyNotices(MAX_STEPS)),
 		});
 	} catch (error) {
 		return apiErrorFromUnknown(error);
