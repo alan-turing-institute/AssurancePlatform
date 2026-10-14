@@ -54,6 +54,19 @@ const sensorReduction = {
 
 const sensorAggregation = {
 	kind: "proportion",
+	params: { avail_floor: 0.8, use_verdict: true },
+	rule: {
+		kind: "threshold",
+		direction: "maximize",
+		params: { pass_values: 0.95 },
+		version: "a1",
+	},
+	version: "a1",
+};
+
+/** The share as a record written before the aggregation carried its own rule: the pass mark sits in `params`. */
+export const OLDER_FORM_AGGREGATION = {
+	kind: "proportion",
 	params: { threshold: 0.95, avail_floor: 0.8, use_verdict: true },
 	version: "a1",
 };

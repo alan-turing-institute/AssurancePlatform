@@ -67,7 +67,12 @@ const HOSTILE_CHECK: HealthCheck = {
 		},
 		aggregation: {
 			kind: "proportion",
-			params: { threshold: 0.9, use_verdict: true },
+			params: { use_verdict: true },
+			rule: {
+				kind: "threshold",
+				direction: "maximize",
+				params: { pass_values: 0.9 },
+			},
 		},
 		window: "PT5M",
 		valid_for: "PT5M",
@@ -101,7 +106,13 @@ function hostileView(
 			reduction: undefined,
 			aggregation: {
 				kind: "proportion",
-				params: { threshold: 0.9, use_verdict: true },
+				params: { use_verdict: true },
+				rule: {
+					kind: "threshold",
+					direction: "maximize",
+					params: { pass_values: 0.9 },
+					version: "a1",
+				},
 				version: "a1",
 			},
 		},
@@ -241,6 +252,7 @@ describe("text from a pipeline in the accepted settings form", () => {
 			last_change: null,
 			pipeline_read: null,
 			check_offer: null,
+			offered_version: null,
 			latest_result: null,
 		};
 		serveHealth({ lists: [list, second], view: none });

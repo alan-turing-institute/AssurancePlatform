@@ -298,6 +298,8 @@ function isFraction(value: unknown): boolean {
 export interface AggregationInput {
 	kind: (typeof AGGREGATION_KINDS)[number];
 	params: ParamsBag;
+	/** Only whether the aggregation has its own rule matters here; the rule is checked where it is parsed. */
+	rule?: unknown;
 }
 
 /** What `aggregation` has wrong in its `params` for its kind, as issues relative to the aggregation. */
@@ -319,8 +321,15 @@ export function aggregationParamIssues(
 		fail("use_verdict", "must be true or false");
 	}
 	if (aggregation.kind === "proportion") {
-		if (!isFraction(params.threshold)) {
-			fail("threshold", "must be a number from 0 to 1");
+		if (params.threshold !== undefined) {
+			if (!isFraction(params.threshold)) {
+				fail("threshold", "must be a number from 0 to 1");
+			}
+		} else if (aggregation.rule === undefined) {
+			issues.push({
+				path: ["rule"],
+				message: "is required when params.threshold is absent",
+			});
 		}
 		if (
 			params.marginal_threshold !== undefined &&
@@ -347,14 +356,93 @@ function checkAggregationParams(
 	}
 }
 
-/** An aggregation without its version label and without the per-kind parameter checks. */
+/**
+ * An aggregation without its version label and without the per-kind parameter
+ * checks. Its rule, when it has one, judges the combined result.
+ */
 export const aggregationBaseSchema = z.strictObject({
 	kind: z.enum(AGGREGATION_KINDS, {
 		message: `must be one of ${AGGREGATION_KINDS.join(", ")}`,
 	}),
 	params: paramsBagSchema,
+	rule: ruleBaseSchema.optional(),
 });
 
 export const aggregationSchema = aggregationBaseSchema
-	.extend({ version: versionSchema })
+	.extend({ rule: ruleSchema.optional(), version: versionSchema })
 	.superRefine(checkAggregationParams);
+
+// ---------------------------------------------------------------------------
+// Older forms
+// ---------------------------------------------------------------------------
+
+export function isPlainObject(
+	value: unknown
+): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A share's pass mark `params.threshold`, as the aggregation's own threshold rule. */
+function shareWithRule(aggregation: unknown): unknown {
+	if (
+		!(
+			isPlainObject(aggregation) &&
+			aggregation.kind === "proportion" &&
+			aggregation.rule === undefined &&
+			isPlainObject(aggregation.params) &&
+			Object.hasOwn(aggregation.params, "threshold")
+		)
+	) {
+		return aggregation;
+	}
+	const { threshold, ...params } = aggregation.params;
+	return {
+		...aggregation,
+		params,
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: threshold },
+		},
+	};
+}
+
+/** A reduction's percentile given as `params.p`, under its current name `params.percentile`. */
+function percentileNamed(reduction: unknown): unknown {
+	if (
+		!(
+			isPlainObject(reduction) &&
+			reduction.kind === "percentile" &&
+			isPlainObject(reduction.params) &&
+			Object.hasOwn(reduction.params, "p") &&
+			!Object.hasOwn(reduction.params, "percentile")
+		)
+	) {
+		return reduction;
+	}
+	const { p, ...params } = reduction.params;
+	return { ...reduction, params: { ...params, percentile: p } };
+}
+
+/**
+ * The blocks of settings or of a recommendation with the older ways of
+ * writing the combining steps brought up to date: a share's pass mark becomes
+ * the aggregation's own rule, and a reduction's `p` becomes `percentile`.
+ * Anything that is not recognised is returned as it came, so this is safe to
+ * apply to stored data of any shape. Applying it twice changes nothing more.
+ */
+export function normaliseCombiningBlocks(blocks: unknown): unknown {
+	if (!isPlainObject(blocks)) {
+		return blocks;
+	}
+	const reduction = percentileNamed(blocks.reduction);
+	const aggregation = shareWithRule(blocks.aggregation);
+	if (reduction === blocks.reduction && aggregation === blocks.aggregation) {
+		return blocks;
+	}
+	return {
+		...blocks,
+		...(blocks.reduction !== undefined && { reduction }),
+		...(blocks.aggregation !== undefined && { aggregation }),
+	};
+}

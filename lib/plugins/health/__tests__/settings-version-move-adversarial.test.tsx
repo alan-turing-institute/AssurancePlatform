@@ -41,7 +41,12 @@ const NEW_ENTRY: HealthCheck = {
 		...OLD_ENTRY.recommended,
 		aggregation: {
 			kind: "proportion",
-			params: { threshold: 0.99, avail_floor: 0.8, use_verdict: true },
+			params: { avail_floor: 0.8, use_verdict: true },
+			rule: {
+				kind: "threshold",
+				direction: "maximize",
+				params: { pass_values: 0.99 },
+			},
 		},
 		window: "PT2M",
 		valid_for: "PT10M",
@@ -178,7 +183,7 @@ describe("moving accepted settings to another version of the check", () => {
 		expect(body.settings.check.version).toBe("0.4");
 		expect(body.settings.window).toBe("PT2M");
 		expect(body.settings.valid_for).toBe("PT10M");
-		expect(body.settings.aggregation.params.threshold).toBe(0.95);
+		expect(body.settings.aggregation.rule.params.pass_values).toBe(0.95);
 		expect(body.settings.rule).toEqual({ kind: "identity" });
 	});
 
@@ -197,7 +202,7 @@ describe("moving accepted settings to another version of the check", () => {
 		);
 		await waitFor(() => expect(served.saves).toHaveLength(1));
 		const body = served.saves[0] as Record<string, any>;
-		expect(body.settings.aggregation.params.threshold).toBe(0.99);
+		expect(body.settings.aggregation.rule.params.pass_values).toBe(0.99);
 		expect(body.settings.window).toBe("PT1M");
 	});
 

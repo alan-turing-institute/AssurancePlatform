@@ -162,4 +162,33 @@ describe("reductionSchema and aggregationSchema", () => {
 		});
 		expect(badPercentile.success).toBe(false);
 	});
+
+	it("takes a share that carries a rule, a share that carries a pass mark in its params, and no share that carries neither", () => {
+		const share = (extra: Record<string, unknown>) =>
+			aggregationSchema.safeParse({
+				kind: "proportion",
+				params: { use_verdict: true },
+				version: "a1",
+				...extra,
+			});
+		const rule = {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.9 },
+			version: "a1",
+		};
+		expect(share({ rule }).success).toBe(true);
+		expect(share({ params: { threshold: 0.9 } }).success).toBe(true);
+		expect(share({}).success).toBe(false);
+		expect(share({ params: { threshold: 2 }, rule }).success).toBe(false);
+		expect(
+			share({
+				rule: {
+					kind: "threshold",
+					params: { pass_values: 0.9 },
+					version: "a1",
+				},
+			}).success
+		).toBe(false);
+	});
 });

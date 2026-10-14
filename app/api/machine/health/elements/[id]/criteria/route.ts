@@ -17,7 +17,9 @@ import { readClaimCriteriaForPipeline } from "@/lib/services/health-criteria-ser
  * @description Machine-only (`requireApiToken("health:criteria:read")`); the
  * token's system user needs VIEW on the claim's case. Returns the claim's
  * accepted settings when their check came from the calling integration's own
- * check list, in the item shape of the case route. Suggested, inactive and
+ * check list, in the item shape of the case route (the aggregation carries
+ * its own `rule`, and a percentile reduction names it `params.percentile`).
+ * Suggested, inactive and
  * another pipeline's settings give the same 404 as no settings at all.
  * Reading records when and which revision was read, without changing
  * `updated_at`.

@@ -23,7 +23,7 @@ export function ShortViewBody({
 				{!isWholeSystem(check) && (
 					<TextField
 						disabled={disabled}
-						error={analysis.errors["aggregation.params.threshold"]}
+						error={analysis.errors["aggregation.rule.params.pass_values"]}
 						inputMode="decimal"
 						label={`The claim passes when this share of ${subjects.many} pass`}
 						onChange={(threshold) =>

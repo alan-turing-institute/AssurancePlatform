@@ -413,7 +413,12 @@ describe("picking a check", () => {
 				},
 				aggregation: {
 					kind: "proportion",
-					params: { threshold: 0.9, use_verdict: true },
+					params: { use_verdict: true },
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.9 },
+					},
 				},
 				window: "PT5M",
 				valid_for: "PT5M",
@@ -472,7 +477,12 @@ describe("picking a check", () => {
 			},
 			aggregation: {
 				kind: "proportion",
-				params: { threshold: 0.95, avail_floor: 0.8, use_verdict: true },
+				params: { avail_floor: 0.8, use_verdict: true },
+				rule: {
+					kind: "threshold",
+					direction: "maximize",
+					params: { pass_values: 0.95 },
+				},
 			},
 			window: "PT1M",
 			valid_for: "PT5M",
@@ -497,7 +507,9 @@ describe("picking a check", () => {
 			within(panel).getByRole("button", { name: "Accept settings" })
 		);
 		await waitFor(() => expect(served.saves).toHaveLength(1));
-		expect(savedSettings(served).aggregation.params.threshold).toBe(0.285);
+		expect(savedSettings(served).aggregation.rule.params.pass_values).toBe(
+			0.285
+		);
 	});
 
 	it("keeps what was typed when Show all settings opens the full form", async () => {
@@ -698,7 +710,13 @@ describe("saving accepted settings", () => {
 			view: changed(view, {
 				aggregation: {
 					kind: "proportion",
-					params: { threshold: 0.285, avail_floor: 0.07, use_verdict: true },
+					params: { avail_floor: 0.07, use_verdict: true },
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.285 },
+						version: "a1",
+					},
 					version: "a1",
 				},
 				reduction: {
@@ -724,10 +742,10 @@ describe("saving accepted settings", () => {
 		await waitFor(() => expect(served.saves).toHaveLength(1));
 		const settings = savedSettings(served);
 		expect(settings.aggregation.params).toEqual({
-			threshold: 0.285,
 			avail_floor: 0.07,
 			use_verdict: true,
 		});
+		expect(settings.aggregation.rule.params).toEqual({ pass_values: 0.285 });
 		expect(settings.reduction.params.avail_floor).toBe(0.58);
 		expect(settings.window).toBe("PT91M");
 		expect(settings.valid_for).toBe("P1D");
@@ -778,7 +796,13 @@ describe("saving accepted settings", () => {
 				revision: 2,
 				aggregation: {
 					kind: "proportion",
-					params: { threshold: 0.85, avail_floor: 0.8, use_verdict: true },
+					params: { avail_floor: 0.8, use_verdict: true },
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.85 },
+						version: "a2",
+					},
 					version: "a2",
 				},
 			},
@@ -894,7 +918,8 @@ describe("what the server refuses", () => {
 					error: "Invalid evidence settings",
 					fieldErrors: {
 						"settings.window": "the window is wrong for this pipeline",
-						"settings.aggregation.params.threshold": "the threshold is too low",
+						"settings.aggregation.rule.params.pass_values":
+							"the threshold is too low",
 						"settings.check.name": "Check not offered for this case",
 					},
 				},

@@ -122,7 +122,11 @@ export async function GET(
  *
  * @description Machine-only (`requireApiToken("health:evidence:write")`).
  * Body must be a format 1.1 record exactly — unknown top-level fields are
- * rejected, extra `provenance` keys are preserved verbatim. `claim_ref` in
+ * rejected, extra `provenance` keys are preserved verbatim. An `aggregation`
+ * may carry a `rule` (with its own `version`) that judges the combined
+ * result, and a `proportion` needs either that `rule` or a `params.threshold`
+ * from 0 to 1. A reduction names its percentile `params.percentile`, or `p`.
+ * `claim_ref` in
  * the body MUST equal the path `[id]`; a mismatch is a 400 (never a silent
  * re-target). The first record accepted for a claim binds the claim to its
  * check; a record naming another check is refused with 422. A repeated

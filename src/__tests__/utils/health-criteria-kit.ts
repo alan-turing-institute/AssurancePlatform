@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { healthCheckListSchema } from "@/lib/schemas/health-checks";
 import { publishHealthCheckList } from "@/lib/services/health-check-catalogue-service";
 import {
 	issueToken,
@@ -60,8 +61,9 @@ export async function addPipeline(
 		expectSuccess(
 			await publishHealthCheckList(
 				{ integrationId: integration.id, systemUserId },
-				// The fixture is plain data; the route parses the same shape.
-				buildHealthCheckList() as never
+				// Stored through the schema, as the route does, so the tests see what
+				// production stores.
+				healthCheckListSchema.parse(buildHealthCheckList())
 			)
 		);
 	}

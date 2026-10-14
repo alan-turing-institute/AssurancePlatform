@@ -54,7 +54,12 @@ const BOOLEAN_FULL: HealthCriteriaSettings = {
 	},
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 0.07, avail_floor: 0.58, use_verdict: true },
+		params: { avail_floor: 0.58, use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.07 },
+		},
 	},
 	window: "PT5M",
 	valid_for: "P2D",
@@ -69,7 +74,7 @@ const NUMBER_AT_MOST: HealthCriteriaSettings = {
 	},
 	reduction: {
 		kind: "percentile",
-		params: { p: 95, avail_floor: 0.145 },
+		params: { percentile: 95, avail_floor: 0.145 },
 		rule: {
 			kind: "band",
 			params: { pass_values: [0.1, 0.9], marginal_values: [0, 1.5] },
@@ -77,7 +82,12 @@ const NUMBER_AT_MOST: HealthCriteriaSettings = {
 	},
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 0.285, use_verdict: true },
+		params: { use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.285 },
+		},
 	},
 	window: "PT10S",
 	valid_for: "indefinite",
@@ -91,7 +101,12 @@ const NUMBER_BAND_NO_REDUCTION: HealthCriteriaSettings = {
 	},
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 0.9, use_verdict: true },
+		params: { use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.9 },
+		},
 	},
 	window: "PT1H",
 	valid_for: "P7D",
@@ -105,7 +120,12 @@ const NUMBER_MEMBERSHIP: HealthCriteriaSettings = {
 	},
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 1, use_verdict: true },
+		params: { use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 1 },
+		},
 	},
 	window: "PT1M",
 	valid_for: "PT30M",
@@ -119,7 +139,12 @@ const TEXT_MEMBERSHIP: HealthCriteriaSettings = {
 	},
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 0.5, avail_floor: 0.1, use_verdict: true },
+		params: { avail_floor: 0.1, use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.5 },
+		},
 	},
 	window: "PT15M",
 	valid_for: "PT1H",
@@ -201,7 +226,12 @@ describe("percentages", () => {
 		...NUMBER_BAND_NO_REDUCTION,
 		aggregation: {
 			kind: "proportion",
-			params: { threshold: fraction, avail_floor: fraction, use_verdict: true },
+			params: { avail_floor: fraction, use_verdict: true },
+			rule: {
+				kind: "threshold",
+				direction: "maximize",
+				params: { pass_values: fraction },
+			},
 		},
 	});
 
@@ -211,7 +241,9 @@ describe("percentages", () => {
 			const settings = aggregationOf(fraction);
 			const analysis = roundTrip(settings, NUMBER_CHECK);
 			expect(analysis.errors).toEqual({});
-			expect(analysis.complete?.aggregation?.params.threshold).toBe(fraction);
+			expect(analysis.complete?.aggregation?.rule?.params?.pass_values).toBe(
+				fraction
+			);
 			expect(analysis.complete?.aggregation?.params.avail_floor).toBe(fraction);
 		}
 	});
@@ -220,7 +252,9 @@ describe("percentages", () => {
 		for (let k = 0; k <= 10_000; k++) {
 			const fraction = Number((k / 10_000).toFixed(4));
 			const analysis = roundTrip(aggregationOf(fraction), NUMBER_CHECK);
-			expect(analysis.complete?.aggregation?.params.threshold).toBe(fraction);
+			expect(analysis.complete?.aggregation?.rule?.params?.pass_values).toBe(
+				fraction
+			);
 		}
 	});
 
@@ -300,7 +334,9 @@ describe("percentages", () => {
 		);
 		expect(analysis.complete !== null).toBe(accepted);
 		if (!accepted) {
-			expect(analysis.errors["aggregation.params.threshold"]).toBeTruthy();
+			expect(
+				analysis.errors["aggregation.rule.params.pass_values"]
+			).toBeTruthy();
 		}
 	});
 
@@ -317,7 +353,9 @@ describe("percentages", () => {
 			},
 			NUMBER_CHECK
 		);
-		expect(analysis.complete?.aggregation?.params.threshold).toBe(0.625);
+		expect(analysis.complete?.aggregation?.rule?.params?.pass_values).toBe(
+			0.625
+		);
 	});
 });
 
@@ -725,7 +763,7 @@ describe("shape and combining rules", () => {
 				{ ...base, reduction: { ...base.reduction, percentile: typed } },
 				NUMBER_CHECK
 			);
-			expect(analysis.errors["reduction.params.p"]).toBeTruthy();
+			expect(analysis.errors["reduction.params.percentile"]).toBeTruthy();
 		}
 	});
 });

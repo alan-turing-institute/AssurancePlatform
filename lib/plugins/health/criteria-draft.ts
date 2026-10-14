@@ -512,12 +512,13 @@ function buildRule(
 // Reduction and aggregation
 // ---------------------------------------------------------------------------
 
-const REDUCTION_KNOWN_PARAMS = new Set(["avail_floor", "p"]);
+const REDUCTION_KNOWN_PARAMS = new Set(["avail_floor", "percentile"]);
 const AGGREGATION_KNOWN_PARAMS = new Set([
 	"threshold",
 	"avail_floor",
 	"use_verdict",
 	"marginal_threshold",
+	"percentile",
 ]);
 
 type ReductionBlock = NonNullable<PartialSettings["reduction"]>;
@@ -548,7 +549,7 @@ function reductionToDraft(
 	const own = ruleToDraft(reduction.rule, share);
 	return {
 		kind,
-		percentile: numberText(reduction.params?.p),
+		percentile: numberText(reduction.params?.percentile),
 		readingsNeeded: fractionToPercent(reduction.params?.avail_floor),
 		ownRule: own !== null,
 		rule: own ?? blankRule(),
@@ -560,7 +561,7 @@ function aggregationToDraft(
 	aggregation: AggregationBlock | undefined
 ): AggregationDraft {
 	return {
-		threshold: fractionToPercent(aggregation?.params.threshold),
+		threshold: fractionToPercent(aggregation?.rule?.params?.pass_values),
 		answersNeeded: fractionToPercent(aggregation?.params.avail_floor),
 		extra: extraParams(aggregation?.params, AGGREGATION_KNOWN_PARAMS),
 	};
@@ -775,9 +776,9 @@ function reductionBlock(
 	if (reduction.kind === "percentile") {
 		const value = parseNumber(reduction.percentile);
 		if (value === null) {
-			problems["reduction.params.p"] = NOT_A_NUMBER;
+			problems["reduction.params.percentile"] = NOT_A_NUMBER;
 		} else {
-			params.p = value;
+			params.percentile = value;
 		}
 	}
 	const own =
@@ -821,24 +822,25 @@ function aggregationBlock(
 	const { aggregation } = draft;
 	const params: ParamsBag = { ...aggregation.extra };
 	if (aggregation.threshold.trim() === "") {
-		problems["aggregation.params.threshold"] = "is required";
+		problems["aggregation.rule.params.pass_values"] = "is required";
 	}
-	for (const [text, key] of [
-		[aggregation.threshold, "threshold"],
-		[aggregation.answersNeeded, "avail_floor"],
-	] as const) {
-		if (text.trim() === "") {
-			continue;
-		}
-		const value = percentToFraction(text);
+	const answersNeeded = aggregation.answersNeeded.trim();
+	if (answersNeeded !== "") {
+		const value = percentToFraction(answersNeeded);
 		if (value === null) {
-			problems[`aggregation.params.${key}`] = NOT_A_NUMBER;
+			problems["aggregation.params.avail_floor"] = NOT_A_NUMBER;
 		} else {
-			params[key] = value;
+			params.avail_floor = value;
 		}
 	}
 	params.use_verdict = true;
-	return { kind: "proportion", params };
+	const rule = buildRule(
+		{ ...blankRule("at-least"), pass: aggregation.threshold },
+		{ share: true, numeric: true },
+		"aggregation.rule",
+		problems
+	);
+	return { kind: "proportion", params, rule };
 }
 
 function durationProblem(draft: DurationDraft): string {
@@ -940,8 +942,13 @@ export function recommendationIsUsable(
 	check: HealthCheck,
 	integrationId: string
 ): boolean {
+	const { recommended } = check;
 	return (
-		check.recommended !== undefined &&
+		recommended !== undefined &&
+		// The form holds only the share, so a combining step it cannot hold as
+		// recommended is not usable even though the form could build another.
+		(recommended.aggregation === undefined ||
+			blockIssues({ aggregation: recommended.aggregation }).length === 0) &&
 		analyseDraft(draftFromCheck(check, integrationId), check).complete !== null
 	);
 }
@@ -961,7 +968,8 @@ const FRIENDLY_NAMES: [string, string][] = [
 	["avail_floor", "the share needed"],
 ];
 
-const SHARE_PATH = /(threshold|avail_floor)$/;
+const SHARE_PATH =
+	/(threshold|avail_floor|^aggregation\.rule\.params\.pass_values)$/;
 
 /** A message from the shared checks in the form's own words; shares read as percentages. */
 export function friendlyMessage(path: string, message: string): string {

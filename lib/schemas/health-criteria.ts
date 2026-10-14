@@ -16,6 +16,7 @@ import {
 	aggregationParamIssues,
 	durationSchema,
 	INDEFINITE,
+	normaliseCombiningBlocks,
 	paramsBagSchema,
 	parseDurationSeconds,
 	reductionBaseSchema,
@@ -32,6 +33,11 @@ import {
  * tell it what to do, so only combinations the pipeline can carry out are
  * accepted. Version labels are never part of the request; the server builds
  * them from counters (`servedSettings`).
+ *
+ * Settings stored or sent in an older form (a share's pass mark in
+ * `aggregation.params.threshold`, a reduction's percentile in `params.p`) are
+ * brought to the current form by `normaliseSettings` before they are checked
+ * or served.
  */
 
 // ---------------------------------------------------------------------------
@@ -165,10 +171,10 @@ function reductionIssues(reduction: ReductionBlock): SettingsIssue[] {
 	const issues: SettingsIssue[] = [];
 	const { params } = reduction;
 	if (reduction.kind === "percentile") {
-		const p = params?.p;
-		if (!isNumber(p) || p < 0 || p > 100) {
+		const percentile = params?.percentile;
+		if (!isNumber(percentile) || percentile < 0 || percentile > 100) {
 			issues.push({
-				path: ["params", "p"],
+				path: ["params", "percentile"],
 				message: "must be a number from 0 to 100 for a percentile",
 			});
 		}
@@ -192,20 +198,56 @@ function reductionIssues(reduction: ReductionBlock): SettingsIssue[] {
 	return issues;
 }
 
+/** The aggregation fields that the share's own rule replaces, which the shared parameter checks must not judge here. */
+const SHARE_RULE_FIELDS = new Set(["threshold", "marginal_threshold", "rule"]);
+
+function isFractionValue(value: unknown): boolean {
+	return isNumber(value) && value >= 0 && value <= 1;
+}
+
+/** What is wrong with the rule that judges the share of subjects passing, relative to the aggregation. */
+function shareRuleIssues(rule: RuleBlock | undefined): SettingsIssue[] {
+	if (!rule) {
+		return [{ path: ["rule"], message: "is required" }];
+	}
+	const issues: SettingsIssue[] = [];
+	if (rule.kind !== "threshold") {
+		issues.push({ path: ["rule", "kind"], message: "must be threshold" });
+	} else if (rule.direction !== "maximize") {
+		issues.push({
+			path: ["rule", "direction"],
+			message:
+				rule.direction === undefined ? "is required" : "must be maximize",
+		});
+	}
+	if (!isFractionValue(rule.params?.pass_values)) {
+		issues.push({
+			path: ["rule", "params", "pass_values"],
+			message: "must be a number from 0 to 1",
+		});
+	}
+	if (rule.params?.marginal_values !== undefined) {
+		issues.push({
+			path: ["rule", "params", "marginal_values"],
+			message: FIELD_NOT_AVAILABLE,
+		});
+	}
+	return issues;
+}
+
 function aggregationIssues(aggregation: AggregationBlock): SettingsIssue[] {
 	if (aggregation.kind !== "proportion") {
 		return [{ path: ["kind"], message: "must be proportion" }];
 	}
 	const issues: SettingsIssue[] = [];
 	const { params } = aggregation;
-	if (params.marginal_threshold !== undefined) {
-		issues.push({
-			path: ["params", "marginal_threshold"],
-			message: FIELD_NOT_AVAILABLE,
-		});
+	for (const key of ["threshold", "marginal_threshold"]) {
+		if (params[key] !== undefined) {
+			issues.push({ path: ["params", key], message: FIELD_NOT_AVAILABLE });
+		}
 	}
 	for (const issue of aggregationParamIssues(aggregation)) {
-		if (issue.path.at(-1) !== "marginal_threshold") {
+		if (!SHARE_RULE_FIELDS.has(String(issue.path.at(-1)))) {
 			issues.push(issue);
 		}
 	}
@@ -217,6 +259,7 @@ function aggregationIssues(aggregation: AggregationBlock): SettingsIssue[] {
 	} else if (params.use_verdict === false) {
 		issues.push({ path: ["params", "use_verdict"], message: "must be true" });
 	}
+	issues.push(...shareRuleIssues(aggregation.rule));
 	return issues;
 }
 
@@ -276,10 +319,28 @@ export type HealthCriteriaSettings = z.output<
 	typeof healthCriteriaSettingsSchema
 >;
 
+/**
+ * Settings with the older ways of writing the combining steps brought up to
+ * date: a share's `aggregation.params.threshold` becomes the aggregation's own
+ * threshold rule, and a percentile reduction's `params.p` becomes
+ * `params.percentile`. Settings of any other shape are returned as they came,
+ * so stored settings of an unexpected shape never make this throw.
+ */
+export function normaliseSettings(
+	settings: HealthCriteriaSettings
+): HealthCriteriaSettings;
+export function normaliseSettings(settings: unknown): unknown;
+export function normaliseSettings(settings: unknown): unknown {
+	return normaliseCombiningBlocks(settings);
+}
+
 /** The body of `PUT /api/elements/[id]/health/criteria`. */
 export const criteriaSaveRequestSchema = z.strictObject({
 	integration_id: uuidSchema.transform((id) => id.toLowerCase()),
-	settings: healthCriteriaSettingsSchema,
+	settings: z.preprocess(
+		(settings) => normaliseSettings(settings),
+		healthCriteriaSettingsSchema
+	),
 	accept: z.boolean({ error: "must be true or false" }),
 	/** The revision the person's form was read at, null when no settings were stored; a different stored revision refuses the save. */
 	expected_revision: z.number().int().nullable().optional(),
@@ -534,7 +595,10 @@ const reductionLabel = (n: number) => `d${n}`;
 const aggregationLabel = (n: number) => `a${n}`;
 
 export interface ServedSettings {
-	aggregation?: AggregationBlock & { version: string };
+	aggregation?: Omit<AggregationBlock, "rule"> & {
+		rule?: RuleBlock & { version: string };
+		version: string;
+	};
 	check: {
 		name: string;
 		params?: Record<string, unknown>;
@@ -548,6 +612,15 @@ export interface ServedSettings {
 	rule: RuleBlock & { version: string };
 	valid_for: string;
 	window: string;
+}
+
+/** The aggregation and its rule, both carrying the aggregation's label. */
+function servedAggregation(
+	aggregation: AggregationBlock,
+	version: string
+): NonNullable<ServedSettings["aggregation"]> {
+	const { rule, ...rest } = aggregation;
+	return { ...rest, ...(rule && { rule: { ...rule, version } }), version };
 }
 
 /** The settings as they are handed to a pipeline and recorded in the history: the stored blocks with their version labels in place. */
@@ -571,10 +644,10 @@ export function servedSettings(
 			},
 		}),
 		...(settings.aggregation && {
-			aggregation: {
-				...settings.aggregation,
-				version: aggregationLabel(counters.aggregation),
-			},
+			aggregation: servedAggregation(
+				settings.aggregation,
+				aggregationLabel(counters.aggregation)
+			),
 		}),
 		window: settings.window,
 		valid_for: settings.valid_for,
@@ -881,10 +954,10 @@ export function countersOf(row: StoredCriteria): VersionCounters {
 	};
 }
 
-/** A stored row's settings, with version labels in place. */
+/** A stored row's settings, in the current form and with version labels in place. */
 export function servedFromStored(row: StoredCriteria): ServedSettings {
 	return servedSettings(
-		row.settings as HealthCriteriaSettings,
+		normaliseSettings(row.settings as HealthCriteriaSettings),
 		countersOf(row)
 	);
 }

@@ -43,6 +43,7 @@ export const NO_CRITERIA: HealthCriteriaResponse = {
 	last_change: null,
 	pipeline_read: null,
 	check_offer: null,
+	offered_version: null,
 	latest_result: null,
 };
 
@@ -98,6 +99,7 @@ export function storedCriteria({
 		},
 		pipeline_read: null,
 		check_offer: "current",
+		offered_version: check.version,
 		latest_result: null,
 		...overrides,
 	};

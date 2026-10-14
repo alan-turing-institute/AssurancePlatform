@@ -231,7 +231,10 @@ describe("Settings: picking a check and accepting", () => {
 			accept: true,
 			settings: {
 				check: { name: ITEM_CHECK_NAME, version: "0.3" },
-				aggregation: { params: { threshold: 0.9, use_verdict: true } },
+				aggregation: {
+					params: { use_verdict: true },
+					rule: { params: { pass_values: 0.9 } },
+				},
 				window: "PT1M",
 				valid_for: "PT5M",
 			},
@@ -1067,10 +1070,11 @@ describe("Settings: moving to a newer version of the check", () => {
 									...check.recommended,
 									aggregation: {
 										kind: "proportion" as const,
-										params: {
-											threshold: 0.9,
-											avail_floor: 0.8,
-											use_verdict: true,
+										params: { avail_floor: 0.8, use_verdict: true },
+										rule: {
+											kind: "threshold" as const,
+											direction: "maximize" as const,
+											params: { pass_values: 0.9 },
 										},
 									},
 									valid_for: "PT10M",
@@ -1147,7 +1151,7 @@ describe("Settings: moving to a newer version of the check", () => {
 			accept: true,
 			settings: {
 				check: { name: ITEM_CHECK_NAME, version: "0.4" },
-				aggregation: { params: { threshold: 0.9 } },
+				aggregation: { rule: { params: { pass_values: 0.9 } } },
 				valid_for: "PT5M",
 			},
 		});
@@ -1168,7 +1172,7 @@ describe("Settings: moving to a newer version of the check", () => {
 		expect(served.puts[0]).toMatchObject({
 			settings: {
 				check: { version: "0.4" },
-				aggregation: { params: { threshold: 0.95 } },
+				aggregation: { rule: { params: { pass_values: 0.95 } } },
 			},
 		});
 	});
