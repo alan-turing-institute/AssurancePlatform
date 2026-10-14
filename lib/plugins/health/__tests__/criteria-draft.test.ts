@@ -486,6 +486,25 @@ describe("numbers as typed", () => {
 		).toBe(0.333_333_333_333_333);
 	});
 
+	it("sends the parameters of the combining rule that the form does not show back unchanged", () => {
+		const base = analyseDraft(draftFromCheck(item, "i"), item).complete;
+		if (!base?.aggregation) {
+			throw new Error("the demo recommendation is not complete");
+		}
+		const rule = {
+			kind: "threshold" as const,
+			direction: "maximize" as const,
+			params: { pass_values: 0.95, tolerance: 0.01 },
+		};
+		const stored = servedSettings(
+			{ ...base, aggregation: { ...base.aggregation, rule } },
+			{ rule: 1, reduction: 1, aggregation: 1 }
+		);
+		const draft = draftFromStored(stored, item, "i");
+		expect(draft.aggregation.threshold).toBe("95");
+		expect(analyseDraft(draft, item).complete?.aggregation?.rule).toEqual(rule);
+	});
+
 	it.each([
 		["33.3", 0.333],
 		["7", 0.07],

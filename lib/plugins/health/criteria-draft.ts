@@ -123,6 +123,8 @@ export interface ReductionDraft {
 export interface AggregationDraft {
 	answersNeeded: string;
 	extra: ParamsBag;
+	/** Parameters of the step's own rule other than the pass limit, which the form does not show but keeps. */
+	ruleExtra: ParamsBag;
 	threshold: string;
 }
 
@@ -564,6 +566,7 @@ function aggregationToDraft(
 		threshold: fractionToPercent(aggregation?.rule?.params?.pass_values),
 		answersNeeded: fractionToPercent(aggregation?.params.avail_floor),
 		extra: extraParams(aggregation?.params, AGGREGATION_KNOWN_PARAMS),
+		ruleExtra: ruleToDraft(aggregation?.rule, true)?.extra ?? {},
 	};
 }
 
@@ -804,7 +807,8 @@ export function aggregationIsHeld(aggregation: AggregationDraft): boolean {
 	return (
 		aggregation.threshold.trim() !== "" ||
 		aggregation.answersNeeded.trim() !== "" ||
-		Object.keys(aggregation.extra).length > 0
+		Object.keys(aggregation.extra).length > 0 ||
+		Object.keys(aggregation.ruleExtra).length > 0
 	);
 }
 
@@ -812,6 +816,7 @@ export function aggregationIsHeld(aggregation: AggregationDraft): boolean {
 export const BLANK_AGGREGATION: AggregationDraft = {
 	answersNeeded: "",
 	extra: {},
+	ruleExtra: {},
 	threshold: "",
 };
 
@@ -835,7 +840,11 @@ function aggregationBlock(
 	}
 	params.use_verdict = true;
 	const rule = buildRule(
-		{ ...blankRule("at-least"), pass: aggregation.threshold },
+		{
+			...blankRule("at-least"),
+			pass: aggregation.threshold,
+			extra: aggregation.ruleExtra,
+		},
 		{ share: true, numeric: true },
 		"aggregation.rule",
 		problems
