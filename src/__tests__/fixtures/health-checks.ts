@@ -126,7 +126,7 @@ export const WORST_OF_CHECK_NAME = "Joint Fit Check";
  * A check list written the way a pipeline writes its own case file rather than
  * TEA's fuller form: settings as a plain object of name to default, `scalar`
  * for a number-valued check, version labels inside the recommendations, and
- * combining steps that carry a rule. Three of its recommendations need
+ * combining steps that carry a rule. Two of its recommendations need
  * attention when it is published: a combining step with no rule, and one that
  * takes the worst item of a yes-or-no check.
  */

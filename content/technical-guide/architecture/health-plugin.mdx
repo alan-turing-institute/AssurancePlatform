@@ -186,6 +186,7 @@ The rule is required, and a marginal mark on it is not available.
 `params.threshold` and `params.marginal_threshold` are not available either, because the pass mark is the rule's.
 A refused field is reported by its path, for example `settings.aggregation.rule.params.pass_values`.
 - A request that gives the pass mark as `aggregation.params.threshold`, or a percentile reduction's percentile as `params.p`, is converted to the current form before it is checked, and stored in the current form.
+A percentile reduction that gives both `params.percentile` and `params.p` is refused on `params.p`, so a stored row never carries both.
 - `window` and `valid_for` are durations of at most 100 years; `valid_for` may be `indefinite`.
 `window` is required for every check, because every record carries one.
 
@@ -228,7 +229,8 @@ This form can describe a setting with no default or with a fixed set of choices.
 - A plain object of setting name to default value, for example `{ "max_dt": "PT12S", "strict": false }`.
 Each setting's type comes from its value: `true` or `false` is `boolean`, a finite number is `number`, text that is a duration TEA accepts is `duration`, and any other text is `string`.
 Its label is the name with every underscore replaced by a space, the first character in upper case and the rest in lower case, so `max_dt` is shown as "Max dt".
-A value that is `null`, a list or an object, a non-finite number, an empty name, or a name whose label would be longer than 200 characters is refused, naming the setting.
+A value that is `null`, a list or an object, a non-finite number, an empty name, the name `__proto__`, or a name whose label would be longer than 200 characters is refused, naming the setting.
+The list form refuses a `key` of `__proto__` in the same way.
 A setting written this way has no unit label and no fixed choices, so TEA cannot catch a misspelt value; use the list form with `type: enum` for that.
 
 A recommendation may carry a `version` label on its rule, reduction, the reduction's rule, aggregation and the aggregation's rule.
