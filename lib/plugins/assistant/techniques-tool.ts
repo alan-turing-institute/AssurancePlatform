@@ -34,6 +34,7 @@ const ANSWER_MARGIN_MS = 15_000;
 /** The most time the call to the techniques service may take. */
 const SERVICE_STEP_MS = 10_000;
 const HTTP_PROTOCOL = /^https?$/;
+const HTTPS_PROTOCOL = /^https$/;
 const UNREACHABLE = {
 	error: "The techniques service is not reachable.",
 } as const;
@@ -49,6 +50,9 @@ const cut = (max: number) =>
 const loosely = <T extends z.ZodType>(schema: T) =>
 	schema.optional().catch(undefined);
 
+/** A link target: an https address within the field limit. A cut address would be a broken link, so a longer one is dropped whole. */
+const linkable = z.url({ protocol: HTTPS_PROTOCOL }).max(MAX_FIELD_CHARS);
+
 const resultSchema = z.looseObject({
 	slug: z.string(),
 	name: cut(MAX_FIELD_CHARS),
@@ -57,7 +61,7 @@ const resultSchema = z.looseObject({
 	goals: z
 		.array(cut(MAX_GOAL_CHARS))
 		.transform((goals) => goals.slice(0, MAX_GOALS)),
-	url: cut(MAX_FIELD_CHARS),
+	url: loosely(linkable),
 	summary: loosely(cut(MAX_FIELD_CHARS)),
 	tags: loosely(
 		z.array(cut(MAX_TAG_CHARS)).transform((tags) => tags.slice(0, MAX_TAGS))
@@ -439,7 +443,7 @@ export function createTechniquesTool(
 }
 
 const TECHNIQUES_PROMPT_AVAILABLE =
-	"\n\nFor any question about which techniques, methods or evidence-generating approaches to use, call `suggest_techniques` and recommend only from its results, with a one-line reason you draw from each result's name and goals; never invent techniques. When an element is selected, call the tool without claimText so that the selected element's own text is used; give claimText only when the user typed the claim in the chat. If the result has searchUsed or rankingUsed false, tell the user plainly that semantic search or ranking was not used, giving its searchReason or rankingReason, because the results are then less well matched or ordered. If the tool is unavailable, say so.";
+	"\n\nFor any question about which techniques, methods or evidence-generating approaches to use, call `suggest_techniques` and recommend only from its results, with a one-line reason you draw from each result's name and goals; never invent techniques. Write each technique's name as a Markdown link to that result's `url`, in the form [name](url), copying the `url` exactly as returned; never build, guess or change an address, and when a result has no `url`, write its name without a link. When an element is selected, call the tool without claimText so that the selected element's own text is used; give claimText only when the user typed the claim in the chat. If the result has searchUsed or rankingUsed false, tell the user plainly that semantic search or ranking was not used, giving its searchReason or rankingReason, because the results are then less well matched or ordered. If the tool is unavailable, say so.";
 
 const TECHNIQUES_PROMPT_UNAVAILABLE =
 	"\n\nTechnique suggestions are unavailable in this deployment. If asked which techniques or methods to use, say so and do not invent any.";

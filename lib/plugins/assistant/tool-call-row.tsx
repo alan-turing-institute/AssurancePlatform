@@ -45,7 +45,7 @@ const techniquesOutput = z.object({
 		z.object({
 			slug: z.string().optional(),
 			name: z.string(),
-			url: z.string(),
+			url: loosely(z.string()),
 			score: z.number(),
 			goals: z.array(z.string()),
 		})
@@ -91,7 +91,7 @@ function TechniquesList({ output }: { output: TechniquesOutput }) {
 				{output.results.map((r, index) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: results are a fixed list and two can share a slug
 					<li key={`result-${index}`}>
-						{HTTP_URL.test(r.url) ? (
+						{r.url !== undefined && HTTP_URL.test(r.url) ? (
 							<a
 								className="underline"
 								href={r.url}

@@ -381,7 +381,6 @@ describe("suggest_techniques failure paths", () => {
 						{
 							...RESULT,
 							name: "n".repeat(900),
-							url: `https://example.org/${"u".repeat(900)}`,
 							goals: Array.from({ length: 30 }, () => "g".repeat(400)),
 						},
 					],
@@ -396,7 +395,6 @@ describe("suggest_techniques failure paths", () => {
 
 		const [first] = out.results;
 		expect(first?.name).toHaveLength(500);
-		expect(first?.url).toHaveLength(500);
 		expect(first?.goals).toHaveLength(20);
 		expect(first?.goals.every((g) => g.length === 200)).toBe(true);
 	});
