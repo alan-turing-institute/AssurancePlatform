@@ -567,6 +567,35 @@ describe("the version the pipeline offers", () => {
 		expect(gone.check_offer).toBe("not-offered");
 		expect(gone.offered_version).toBeNull();
 	});
+
+	it("is absent while the integration is suspended or its system user cannot edit the case", async () => {
+		const context = await setup(buildHealthCheckList());
+		const { claim, integration, systemUserId, testCase } = context;
+		const check = await offeredCheck(testCase.id, ITEM_CHECK_NAME);
+		await put(claim.id, integration.id, settingsFrom(check));
+		expect((await readView(claim.id)).offered_version).toBe("0.3");
+
+		const asUser = { userId: systemUserId, caseId: testCase.id };
+		await prisma.casePermission.updateMany({
+			where: asUser,
+			data: { permission: "VIEW" },
+		});
+		const viewOnly = await readView(claim.id);
+		expect(viewOnly.check_offer).toBe("not-offered");
+		expect(viewOnly.offered_version).toBeNull();
+
+		await prisma.casePermission.updateMany({
+			where: asUser,
+			data: { permission: "EDIT" },
+		});
+		await prisma.integration.update({
+			where: { id: integration.id },
+			data: { status: "SUSPENDED" },
+		});
+		const suspended = await readView(claim.id);
+		expect(suspended.check_offer).toBe("not-offered");
+		expect(suspended.offered_version).toBeNull();
+	});
 });
 
 /** A served block without its version label, as a form would send it back. */
