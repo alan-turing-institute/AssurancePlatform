@@ -8,11 +8,11 @@ import { setupCriteriaCase } from "./health-criteria-kit";
  * invented and domain-neutral.
  */
 
-export const FORMS_CHECK = "Panel Flatness Check";
+const FORMS_CHECK = "Panel Flatness Check";
 export const FORMS_VERSION = "2.1";
-export const FORMS_SCOPE = "panel";
+const FORMS_SCOPE = "panel";
 
-export const STORED_COUNTERS = { rule: 4, reduction: 2, aggregation: 3 };
+const STORED_COUNTERS = { rule: 4, reduction: 2, aggregation: 3 };
 
 type Json = Record<string, any>;
 
