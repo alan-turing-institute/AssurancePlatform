@@ -81,7 +81,8 @@ export const validForSchema = z
 // Parameter bags
 // ---------------------------------------------------------------------------
 
-const PROTOTYPE_KEY = "__proto__";
+export const PROTOTYPE_KEY = "__proto__";
+export const PROTOTYPE_KEY_MESSAGE = `${PROTOTYPE_KEY} is not an allowed name`;
 
 /**
  * Refuses a key named `__proto__` at any depth. A record schema drops such a
@@ -101,7 +102,7 @@ const noPrototypeKeys = z.unknown().superRefine((value, ctx) => {
 			ctx.addIssue({
 				code: "custom",
 				path: [...item.path, PROTOTYPE_KEY],
-				message: `${PROTOTYPE_KEY} is not an allowed name`,
+				message: PROTOTYPE_KEY_MESSAGE,
 			});
 		}
 		for (const [key, child] of Object.entries(item.value)) {

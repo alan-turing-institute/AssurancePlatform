@@ -8,6 +8,8 @@ import {
 	aggregationBaseSchema,
 	isPlainObject,
 	normaliseCombiningBlocks,
+	PROTOTYPE_KEY,
+	PROTOTYPE_KEY_MESSAGE,
 	parseDurationSeconds,
 	reductionBaseSchema,
 	ruleBaseSchema,
@@ -86,7 +88,9 @@ function scalarAsNumber(value: unknown): unknown {
 
 const paramSpecSchema = z
 	.strictObject({
-		key: checkTextString("key"),
+		key: checkTextString("key").refine((key) => key !== PROTOTYPE_KEY, {
+			message: PROTOTYPE_KEY_MESSAGE,
+		}),
 		label: label("label"),
 		type: z.enum(PARAM_TYPES, {
 			message: `must be one of ${PARAM_TYPES.join(", ")}`,
