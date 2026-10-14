@@ -302,47 +302,62 @@ export interface AggregationInput {
 	rule?: unknown;
 }
 
+const FRACTION_MESSAGE = "must be a number from 0 to 1";
+
+const paramIssueAt = (key: string, message: string): ParamIssue => ({
+	path: ["params", key],
+	message,
+});
+
+/** A share's pass mark: its aggregation's own rule, or `params.threshold`. */
+function shareParamIssues(params: ParamsBag, hasRule: boolean): ParamIssue[] {
+	const issues: ParamIssue[] = [];
+	if (params.threshold !== undefined) {
+		if (!isFraction(params.threshold)) {
+			issues.push(paramIssueAt("threshold", FRACTION_MESSAGE));
+		}
+	} else if (!hasRule) {
+		issues.push({
+			path: ["rule"],
+			message: "is required when params.threshold is absent",
+		});
+	}
+	if (
+		params.marginal_threshold !== undefined &&
+		!isFraction(params.marginal_threshold)
+	) {
+		issues.push(paramIssueAt("marginal_threshold", FRACTION_MESSAGE));
+	}
+	return issues;
+}
+
+function percentileParamIssues(params: ParamsBag): ParamIssue[] {
+	const { percentile } = params;
+	return typeof percentile === "number" && percentile >= 0 && percentile <= 100
+		? []
+		: [paramIssueAt("percentile", "must be a number from 0 to 100")];
+}
+
 /** What `aggregation` has wrong in its `params` for its kind, as issues relative to the aggregation. */
 export function aggregationParamIssues(
 	aggregation: AggregationInput
 ): ParamIssue[] {
 	const { params } = aggregation;
 	const issues: ParamIssue[] = [];
-	const fail = (key: string, message: string) =>
-		issues.push({ path: ["params", key], message });
-
 	if (params.avail_floor !== undefined && !isFraction(params.avail_floor)) {
-		fail("avail_floor", "must be a number from 0 to 1");
+		issues.push(paramIssueAt("avail_floor", FRACTION_MESSAGE));
 	}
 	if (
 		params.use_verdict !== undefined &&
 		typeof params.use_verdict !== "boolean"
 	) {
-		fail("use_verdict", "must be true or false");
+		issues.push(paramIssueAt("use_verdict", "must be true or false"));
 	}
 	if (aggregation.kind === "proportion") {
-		if (params.threshold !== undefined) {
-			if (!isFraction(params.threshold)) {
-				fail("threshold", "must be a number from 0 to 1");
-			}
-		} else if (aggregation.rule === undefined) {
-			issues.push({
-				path: ["rule"],
-				message: "is required when params.threshold is absent",
-			});
-		}
-		if (
-			params.marginal_threshold !== undefined &&
-			!isFraction(params.marginal_threshold)
-		) {
-			fail("marginal_threshold", "must be a number from 0 to 1");
-		}
+		issues.push(...shareParamIssues(params, aggregation.rule !== undefined));
 	}
 	if (aggregation.kind === "percentile") {
-		const percentile = params.percentile;
-		if (typeof percentile !== "number" || percentile < 0 || percentile > 100) {
-			fail("percentile", "must be a number from 0 to 100");
-		}
+		issues.push(...percentileParamIssues(params));
 	}
 	return issues;
 }
