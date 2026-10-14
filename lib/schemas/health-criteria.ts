@@ -167,17 +167,28 @@ function ruleIssues(rule: RuleBlock): SettingsIssue[] {
 	return issues;
 }
 
+function percentileIssues(params: ReductionBlock["params"]): SettingsIssue[] {
+	const issues: SettingsIssue[] = [];
+	const percentile = params?.percentile;
+	if (!isNumber(percentile) || percentile < 0 || percentile > 100) {
+		issues.push({
+			path: ["params", "percentile"],
+			message: "must be a number from 0 to 100 for a percentile",
+		});
+	}
+	// The older name is converted when it stands alone; beside the current
+	// name it would be a second percentile, so it is refused.
+	if (percentile !== undefined && params?.p !== undefined) {
+		issues.push({ path: ["params", "p"], message: FIELD_NOT_AVAILABLE });
+	}
+	return issues;
+}
+
 function reductionIssues(reduction: ReductionBlock): SettingsIssue[] {
 	const issues: SettingsIssue[] = [];
 	const { params } = reduction;
 	if (reduction.kind === "percentile") {
-		const percentile = params?.percentile;
-		if (!isNumber(percentile) || percentile < 0 || percentile > 100) {
-			issues.push({
-				path: ["params", "percentile"],
-				message: "must be a number from 0 to 100 for a percentile",
-			});
-		}
+		issues.push(...percentileIssues(params));
 	}
 	const floor = params?.avail_floor;
 	if (floor !== undefined && !(isNumber(floor) && floor >= 0 && floor <= 1)) {

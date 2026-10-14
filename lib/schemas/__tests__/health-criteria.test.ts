@@ -204,6 +204,19 @@ describe("settings schema", () => {
 		).toContain("0 to 100");
 	});
 
+	it("refuses a p beside the percentile, so a row never carries both", () => {
+		const settings = itemSettings({
+			reduction: {
+				kind: "percentile",
+				params: { percentile: 95, p: 90 },
+				rule: itemSettings().rule,
+			},
+		});
+		expect(fieldErrorsFor(settings)["reduction.params.p"]).toBe(
+			"is not available in evidence settings"
+		);
+	});
+
 	it("refuses fields the server owns and durations in months, years or over 100 years", () => {
 		expect(parse(itemSettings({ source: { kind: "hand" } })).success).toBe(
 			false
