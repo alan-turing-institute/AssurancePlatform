@@ -238,10 +238,17 @@ describe("GET /api/user/models", () => {
 			"OLLAMA",
 			"OPENAI_COMPATIBLE",
 			"ANTHROPIC",
+			"OPENAI",
 		]);
 		expect(body.connectionTypes[3]).toEqual({
 			type: "ANTHROPIC",
 			baseUrl: "https://api.anthropic.com",
+			jobs: ["chat"],
+			keyRequired: true,
+		});
+		expect(body.connectionTypes[4]).toEqual({
+			type: "OPENAI",
+			baseUrl: "https://api.openai.com/v1",
 			jobs: ["chat"],
 			keyRequired: true,
 		});
@@ -307,6 +314,33 @@ describe("POST /api/user/models/connections", () => {
 		expect(row.userId).toBe(user.id);
 		expect(row.apiKeyEncrypted).toMatch(ENVELOPE);
 		expect(text).not.toContain(row.apiKeyEncrypted as string);
+	});
+
+	it("adds an OpenAI connection from a label and a key, shows the fixed address and ignores one that is sent", async () => {
+		await signedInUserWithModels();
+
+		const res = await POST(
+			modelRequest("POST", "/connections", {
+				label: "OpenAI",
+				type: "OPENAI",
+				baseUrl: "http://attacker.example",
+				apiKey: SECRET,
+			})
+		);
+		const body = await res.json();
+
+		expect(res.status).toBe(201);
+		expect(body).toEqual({
+			id: expect.any(String),
+			label: "OpenAI",
+			type: "OPENAI",
+			baseUrl: "https://api.openai.com/v1",
+			hasKey: true,
+		});
+		const row = await prisma.userModelConnection.findUniqueOrThrow({
+			where: { id: body.id },
+		});
+		expect(row.baseUrl).toBeNull();
 	});
 
 	it("takes the owner from the session, never from the body", async () => {
@@ -388,6 +422,11 @@ describe("POST /api/user/models/connections", () => {
 		expect((await refused.json()).code).toBe("VALIDATION");
 		expect((await post({ label: "L", type: "OLLAMA" })).status).toBe(400);
 		expect((await post({ label: "L", type: "OPENROUTER" })).status).toBe(400);
+		const keyless = await post({ label: "L", type: "OPENAI" });
+		expect(keyless.status).toBe(400);
+		expect((await keyless.json()).error).toBe(
+			"An API key is required for this connection type"
+		);
 
 		// LIMIT_REACHED
 		for (let i = 0; i < MAX_CONNECTIONS_PER_USER; i++) {

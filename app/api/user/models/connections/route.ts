@@ -14,9 +14,9 @@ const BODY_MAX_BYTES = 8 * 1024;
  * POST /api/user/models/connections — adds a model connection for the session user (up to 10 each).
  *
  * Takes `{ label, type, baseUrl?, apiKey? }`.
- * `type` is `OPENROUTER`, `OLLAMA`, `OPENAI_COMPATIBLE` or `ANTHROPIC`.
+ * `type` is `OPENROUTER`, `OLLAMA`, `OPENAI_COMPATIBLE`, `ANTHROPIC` or `OPENAI`.
  * `baseUrl` is required for Ollama and OpenAI-compatible servers and is ignored for types with a fixed address.
- * `apiKey` is required for OpenRouter and Anthropic, may hold printable ASCII only, and is stored encrypted.
+ * `apiKey` is required for OpenRouter, Anthropic and OpenAI, may hold printable ASCII only, and is stored encrypted.
  * Returns the new connection as `{ id, label, type, baseUrl, hasKey }` with status 201; the key is never returned.
  * The connection is checked only when its test route is called.
  * A refused value is a 400, the eleventh connection a 409, and a server without token encryption a 503.

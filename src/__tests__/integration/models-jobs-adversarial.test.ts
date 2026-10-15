@@ -137,6 +137,7 @@ describe("a connection can take only the jobs its type can do", () => {
 		OLLAMA: { chat: true, ranking: true, search: true },
 		OPENAI_COMPATIBLE: { chat: true, ranking: false, search: true },
 		ANTHROPIC: { chat: true, ranking: false, search: false },
+		OPENAI: { chat: true, ranking: false, search: false },
 	} as const;
 
 	for (const [type, jobs] of Object.entries(table)) {
@@ -144,7 +145,8 @@ describe("a connection can take only the jobs its type can do", () => {
 			it(`${allowed ? "accepts" : "refuses"} the ${job} job on ${type}`, async () => {
 				vi.stubEnv("TECHNIQUES_MCP_URL", "");
 				const user = await makeUser();
-				const needsKey = type === "OPENROUTER" || type === "ANTHROPIC";
+				const needsKey =
+					type === "OPENROUTER" || type === "ANTHROPIC" || type === "OPENAI";
 				const connection = await addConnection(user.id, {
 					type: type as keyof typeof table,
 					baseUrl: needsKey ? undefined : server.origin,

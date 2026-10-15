@@ -10,6 +10,7 @@ export const MODEL_CONNECTION_TYPES = [
 	"OLLAMA",
 	"OPENAI_COMPATIBLE",
 	"ANTHROPIC",
+	"OPENAI",
 ] as const;
 
 /** The most characters stored for each value a user enters. */
@@ -71,6 +72,11 @@ export const CONNECTION_TYPES: Readonly<
 	ANTHROPIC: {
 		jobs: ["chat"],
 		baseUrl: "https://api.anthropic.com",
+		keyRequired: true,
+	},
+	OPENAI: {
+		jobs: ["chat"],
+		baseUrl: "https://api.openai.com/v1",
 		keyRequired: true,
 	},
 };

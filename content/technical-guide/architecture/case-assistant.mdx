@@ -38,11 +38,16 @@ The server refuses to give a connection a job that its type cannot do.
 | Ollama | Entered by the user | Optional | Yes | Yes | Yes |
 | OpenAI-compatible | Entered by the user | Optional | Yes | No | Yes |
 | Anthropic | Fixed (`https://api.anthropic.com`) | Required | Yes | No | No |
+| OpenAI | Fixed (`https://api.openai.com/v1`) | Required | Yes | No | No |
 
 An OpenAI-compatible connection fits any server that follows the OpenAI API, such as vLLM.
 Its address is entered up to and including `/v1` where the server has one.
 An Ollama address has no path after it.
+An OpenAI connection is for OpenAI's own service, so the user enters only a label and a key.
+It sends a reply's length limit in the `max_completion_tokens` field, which OpenAI's newer models require.
+An OpenAI-compatible connection sends the older `max_tokens` field, which most other servers expect.
 Ranking runs only on OpenRouter and Ollama connections, the two types that have a Clef-Flash endpoint.
+A user whose chat model is on OpenAI keeps ranking on OpenRouter or Ollama, and search on a connection type that can do it, because OpenAI serves neither Clef-Flash nor the catalogue's embedding model.
 A user can have up to 10 connections.
 
 ### Where the settings live
@@ -80,6 +85,7 @@ The recommended models are in the table below.
 | Ollama | None | `clef-flash` | `qwen3-embedding:4b-fp16` |
 | OpenAI-compatible | None | None | None |
 | Anthropic | None | None | None |
+| OpenAI | None | None | None |
 
 An Ollama connection has no recommended chat model, because the right one depends on what is installed on the server.
 

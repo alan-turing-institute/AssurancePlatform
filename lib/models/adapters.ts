@@ -60,6 +60,21 @@ function openAiStyleBaseUrl(connection: ModelConnectionAccess): string {
 	}
 }
 
+/**
+ * Sends a chat request's reply length limit in the field OpenAI requires.
+ * OpenAI's reasoning models refuse `max_tokens`; all its chat models accept
+ * `max_completion_tokens`. A body with no limit is returned unchanged.
+ */
+function withCompletionTokenLimit(
+	body: Record<string, unknown>
+): Record<string, unknown> {
+	if (body.max_tokens === undefined) {
+		return body;
+	}
+	const { max_tokens: limit, ...rest } = body;
+	return { ...rest, max_completion_tokens: limit };
+}
+
 function openAiStyleProvider(
 	connection: ModelConnectionAccess,
 	maxResponseBytes: number
@@ -70,6 +85,9 @@ function openAiStyleProvider(
 		baseURL: openAiStyleBaseUrl(connection),
 		apiKey: connection.apiKey || undefined,
 		fetch: guardedFetchCappedAt(maxResponseBytes),
+		// Applies to chat requests only; the SDK does not pass it to embeddings.
+		transformRequestBody:
+			connection.type === "OPENAI" ? withCompletionTokenLimit : undefined,
 	});
 }
 

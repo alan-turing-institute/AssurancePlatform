@@ -1374,6 +1374,7 @@ enum ModelConnectionType {
   OLLAMA
   OPENAI_COMPATIBLE
   ANTHROPIC
+  OPENAI
 }
 
 /// One model connection a user has added: a label, a type, an address (null for

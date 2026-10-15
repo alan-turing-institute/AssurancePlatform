@@ -284,6 +284,7 @@ describe("the result", () => {
 	it.each([
 		"OPENAI_COMPATIBLE",
 		"ANTHROPIC",
+		"OPENAI",
 	] as const)("returns null without a request for a %s connection, which cannot rank", async (type) => {
 		expect(await rank({ connection: connection(type) })).toBeNull();
 		expect(server.requests).toEqual([]);

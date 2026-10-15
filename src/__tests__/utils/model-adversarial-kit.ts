@@ -221,7 +221,7 @@ interface HarnessState {
 	requests: string[];
 }
 
-const FIXED_HOSTS = ["openrouter.ai", "api.anthropic.com"];
+const FIXED_HOSTS = ["openrouter.ai", "api.anthropic.com", "api.openai.com"];
 
 export const harness: HarnessState = {
 	dns: new Map(),
@@ -273,7 +273,7 @@ function hostOf(url: URL): string {
 
 /**
  * Wraps the real `guardedFetch` for tests that go through a route. The fixed
- * provider addresses (OpenRouter, Anthropic) are rewritten to a local stub,
+ * provider addresses (OpenRouter, Anthropic, OpenAI) are rewritten to a local stub,
  * names resolve only through `harness.dns`, and a request that would leave the
  * machine is turned into an error that names a test leak. Everything else
  * reaches the real guard, so its refusals are the real ones.
