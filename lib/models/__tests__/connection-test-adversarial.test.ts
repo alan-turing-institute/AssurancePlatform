@@ -289,6 +289,7 @@ describe("testConnection: every message is fixed text, and it never throws", () 
 		"OPENAI_COMPATIBLE",
 		"ANTHROPIC",
 		"OPENROUTER",
+		"OPENAI",
 	] as const) {
 		it.each(
 			replies

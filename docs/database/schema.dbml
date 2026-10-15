@@ -1001,6 +1001,7 @@ Enum ModelConnectionType {
   OLLAMA
   OPENAI_COMPATIBLE
   ANTHROPIC
+  OPENAI
 }
 
 Ref: teams.createdById > users.id

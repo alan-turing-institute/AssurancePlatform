@@ -434,7 +434,7 @@ function ConnectionForm({
 
 /**
  * The Add and Edit dialog for a model connection. Adding starts with a choice
- * of type; OpenRouter and Anthropic ask for a label and a key, Ollama and
+ * of type; OpenRouter, Anthropic and OpenAI ask for a label and a key, Ollama and
  * OpenAI-compatible servers for a label, an address and an optional key.
  * Editing keeps the type, and the stored key is write-only: it can be
  * replaced, or removed where the type allows. The form is built only while

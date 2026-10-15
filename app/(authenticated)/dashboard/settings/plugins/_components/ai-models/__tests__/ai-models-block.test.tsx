@@ -22,6 +22,7 @@ const RATE_LIMIT_MESSAGE = "Too many checks; try again in a few minutes.";
 const RADIO_NAMES: Record<string, RegExp> = {
 	OpenRouter: /OpenRouter/,
 	Anthropic: /Anthropic/,
+	OpenAI: /^OpenAI$/,
 	Ollama: /Ollama/,
 	"OpenAI-compatible": /OpenAI-compatible/,
 };
@@ -167,6 +168,12 @@ describe("AiModelsBlock: connections", () => {
 			keyOptional: false,
 		});
 		expect(await fieldsFor("Anthropic")).toEqual({
+			label: true,
+			address: false,
+			key: true,
+			keyOptional: false,
+		});
+		expect(await fieldsFor("OpenAI")).toEqual({
 			label: true,
 			address: false,
 			key: true,
@@ -420,6 +427,12 @@ describe("AiModelsBlock: the three jobs", () => {
 					type: "ANTHROPIC",
 					hasKey: true,
 				}),
+				connection({
+					id: "ai",
+					label: "GPT",
+					type: "OPENAI",
+					hasKey: true,
+				}),
 			],
 		});
 
@@ -449,6 +462,7 @@ describe("AiModelsBlock: the three jobs", () => {
 			"Local (Ollama)",
 			"Vllm (OpenAI-compatible)",
 			"Claude (Anthropic)",
+			"GPT (OpenAI)",
 		]);
 		expect(await optionsOf(user, "Ranking")).toEqual([
 			"Off",

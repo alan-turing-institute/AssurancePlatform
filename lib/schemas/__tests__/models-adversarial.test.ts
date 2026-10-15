@@ -164,7 +164,8 @@ describe("request bodies take only the fields they name", () => {
 		for (const type of [
 			"openrouter",
 			"Ollama",
-			"OPENAI",
+			"openai",
+			"GEMINI",
 			"",
 			"OLLAMA ",
 			1,
