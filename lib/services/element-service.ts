@@ -21,6 +21,7 @@ import {
 import type {
 	AssertionStatus,
 	PermissionLevel,
+	Prisma,
 	ElementType as PrismaElementType,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -1625,8 +1626,9 @@ async function applyRegeneratedNameOnDefeaterFlip(
 
 /**
  * Writes `data` (already validated and mapped to columns) onto an element
- * inside the caller's transaction and bumps the case's `updatedAt`. The
- * health plugin uses it to rewrite a node's description.
+ * inside the caller's transaction and bumps the case's `updatedAt`. It is for
+ * a caller that has already decided what to write and runs the update as one
+ * step of a larger transaction of its own.
  *
  * Makes no permission decision: the caller must already have checked EDIT on
  * `caseId`.
@@ -1635,7 +1637,7 @@ export async function updateElementWithin(
 	tx: TxClient,
 	elementId: string,
 	caseId: string,
-	data: Record<string, unknown>
+	data: Prisma.AssuranceElementUpdateInput
 ): Promise<ElementResponse> {
 	const updated = await tx.assuranceElement.update({
 		where: { id: elementId },
