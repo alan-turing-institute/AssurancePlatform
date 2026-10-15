@@ -2,6 +2,7 @@ import { canonicalJSON } from "@/lib/health-canonical-json";
 import { evidenceNodeText } from "@/lib/health-evidence-node-text";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { isWriteConflict } from "@/lib/prisma-errors";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import {
 	checkListIssues,
@@ -136,43 +137,20 @@ export interface CriteriaChange {
 /** Retry message for every failure that means another change to the case got in first. */
 const CASE_CHANGED = "The case changed while you were saving. Try again.";
 
-/** Prisma codes for: unique index, foreign key, record not found, write conflict or deadlock. */
-const COLLISION_CODES = new Set(["P2002", "P2003", "P2025", "P2034"]);
-
 /** A row this transaction read was removed by another writer before it could be locked. */
 class RowVanishedError extends Error {}
 
-/** What the database driver reported underneath a Prisma error, when it reported anything. */
-function driverCauseOf(
-	error: Prisma.PrismaClientKnownRequestError
-): { kind?: string; originalCode?: string } | undefined {
-	const meta = error.meta as
-		| {
-				driverAdapterError?: {
-					cause?: { kind?: string; originalCode?: string };
-				};
-		  }
-		| undefined;
-	return meta?.driverAdapterError?.cause;
-}
-
 /**
  * Whether a failure inside a health transaction means a concurrent change to
- * the case got in first: a deadlock (Postgres 40P01, which a raw query such as
- * the row lock reports as P2010 with the driver's code underneath), a record
- * that went missing, or a unique index (the node pointer or the evidence link)
- * taken by another writer. Retrying the request is the right response to each.
+ * the case got in first: a deadlock or write conflict (see `isWriteConflict`),
+ * or a row that was read a moment ago and had gone by the time its lock was
+ * granted. Retrying the request is the right response to each. Any other
+ * database error, including a unique-index or foreign-key violation, means a
+ * defect, because the locks these transactions hold keep other writers out of
+ * the rows they touch.
  */
 export function isConcurrentChange(error: unknown): boolean {
-	if (error instanceof Prisma.PrismaClientKnownRequestError) {
-		const cause = driverCauseOf(error);
-		return (
-			COLLISION_CODES.has(error.code) ||
-			cause?.originalCode === "40P01" ||
-			cause?.kind === "TransactionWriteConflict"
-		);
-	}
-	return error instanceof RowVanishedError;
+	return isWriteConflict(error) || error instanceof RowVanishedError;
 }
 
 /**
@@ -690,7 +668,9 @@ function checkChanges(
 /**
  * The 400 for a node option the save cannot use: `add_evidence_node` needs a
  * save that moves settings to accepted from not accepted, and
- * `update_evidence_node_text` needs accepted settings whose check changes.
+ * `update_evidence_node_text` needs a change of check on settings that are
+ * accepted, or are being accepted again after being stopped (the kept node
+ * still names the check they had).
  */
 function nodeOptionRefusal(
 	input: SaveCriteriaInput,
@@ -705,13 +685,16 @@ function nodeOptionRefusal(
 			"can only be used when accepting settings that are not yet accepted"
 		);
 	}
+	const hadCheck =
+		previous?.state === "ACCEPTED" ||
+		(previous?.state === "INACTIVE" && input.accept);
 	if (
 		input.update_evidence_node_text &&
-		!(previous?.state === "ACCEPTED" && checkChanges(input, previous))
+		!(hadCheck && checkChanges(input, previous))
 	) {
 		return invalid(
 			"update_evidence_node_text",
-			"can only be used when the check of accepted settings changes"
+			"can only be used when the check of accepted settings changes, or when stopped settings are accepted again with a different check"
 		);
 	}
 	return null;
@@ -723,11 +706,35 @@ type NodeStep =
 	| { kind: "refused"; error: string }
 	| { kind: "done"; change?: ElementEvent; nodeId?: string };
 
+/** Rewrites the description of the claim's node, which the caller has locked and found in place, to name the new check. */
+async function writeNodeText(
+	tx: HealthTransaction,
+	nodeId: string,
+	context: SaveContext,
+	check: HealthCheck
+): Promise<NodeStep> {
+	const updated = await updateElementWithin(tx, nodeId, context.caseId, {
+		description: evidenceNodeText(check, context.pipeline),
+	});
+	return {
+		kind: "done",
+		change: {
+			kind: "updated",
+			element: updated,
+			elementId: updated.id,
+			elementName: updated.name,
+		},
+	};
+}
+
 /**
  * Adds the evidence node for settings being accepted, or reuses the claim's
- * live one. A pointer to a node that is not live is replaced by the new node.
- * Runs under the claim lock; the existing node's row is locked next and read
- * again before it is trusted.
+ * live one (rewriting its text when asked to, for a check that has changed
+ * since the node was last written). A pointer to a node that is not live is
+ * replaced by the new node. Runs under the claim lock; the existing node's row
+ * is locked next and read again before it is trusted. The settings are about
+ * to be accepted by this save, so a node that is in place under the claim
+ * counts as live even while the stored settings are still stopped.
  */
 async function addNodeOnAccept(
 	tx: HealthTransaction,
@@ -740,7 +747,9 @@ async function addNodeOnAccept(
 		await lockEvidenceNode(tx, previous.evidenceElementId);
 		const current = await readClaimEvidenceNode(claimId, tx);
 		if (current?.node.state === "live") {
-			return { kind: "done" };
+			return context.input.update_evidence_node_text
+				? writeNodeText(tx, previous.evidenceElementId, context, check)
+				: { kind: "done" };
 		}
 	}
 	const created = await createElementWithin(tx, context.userId, {
@@ -764,7 +773,11 @@ async function addNodeOnAccept(
 	};
 }
 
-/** Rewrites the live node's description to name the new check. Refused (400) when the node is not live. */
+/**
+ * Rewrites the live node's description to name the new check. Refused (400)
+ * when the node is not live. As in `addNodeOnAccept`, a node in place under
+ * the claim counts as live when this save is accepting stopped settings again.
+ */
 async function rewriteNodeText(
 	tx: HealthTransaction,
 	claimId: string,
@@ -781,24 +794,10 @@ async function rewriteNodeText(
 	}
 	await lockEvidenceNode(tx, previous.evidenceElementId);
 	const current = await readClaimEvidenceNode(claimId, tx);
-	if (!current?.live) {
+	if (current?.node.state !== "live") {
 		return { kind: "invalid", invalid: notLive.invalid };
 	}
-	const updated = await updateElementWithin(
-		tx,
-		previous.evidenceElementId,
-		context.caseId,
-		{ description: evidenceNodeText(check, context.pipeline) }
-	);
-	return {
-		kind: "done",
-		change: {
-			kind: "updated",
-			element: updated,
-			elementId: updated.id,
-			elementName: updated.name,
-		},
-	};
+	return writeNodeText(tx, previous.evidenceElementId, context, check);
 }
 
 /** Does what the save asked for with the claim's evidence node, if anything. */
@@ -1003,10 +1002,10 @@ type RetireOutcome =
 
 /**
  * Takes a live node off the claim being retired: trashes it, or only removes
- * this claim's evidence link when the node supports another claim too.
- * Returns what happened, or null when the node is not live for the claim, in
- * which case nothing is touched. Runs under the claim lock; the node's row is
- * locked next and read again before it is acted on.
+ * this claim's evidence link when the node supports another claim that is not
+ * in the trash. Returns what happened, or null when the node is not live for
+ * the claim, in which case nothing is touched. Runs under the claim lock; the
+ * node's row is locked next and read again before it is acted on.
  */
 async function removeLiveNode(
 	tx: HealthTransaction,
@@ -1021,7 +1020,11 @@ async function removeLiveNode(
 		return null;
 	}
 	const sharedWith = await tx.evidenceLink.count({
-		where: { evidenceId: nodeId, claimId: { not: claimId } },
+		where: {
+			evidenceId: nodeId,
+			claimId: { not: claimId },
+			claim: { deletedAt: null },
+		},
 	});
 	if (sharedWith > 0) {
 		await unlinkEvidenceWithin(tx, nodeId, claimId, caseId);
@@ -1041,8 +1044,9 @@ async function removeLiveNode(
  * the state to inactive and add a history row. `evidence_node` says what
  * happens to the claim's live evidence node: `keep` (the default) leaves it as
  * ordinary evidence, `remove` trashes it and forgets it, or only removes this
- * claim's link to it when it supports another claim too. The choice does
- * nothing when the claim has no live node. Requires EDIT.
+ * claim's link to it when it supports another claim that is not in the
+ * trash. The choice does nothing when the claim has no live node. Requires
+ * EDIT.
  */
 export async function retireCriteria(
 	actingUserId: string,

@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
@@ -186,6 +187,19 @@ async function nodeStateOf(claimId: string) {
 	return (await response.json()).evidence_node;
 }
 
+/** POST /api/cases/[id]/batch, the JSON editor's save. */
+async function postBatch(caseId: string, changes: unknown[]) {
+	const { POST } = await import("@/app/api/cases/[id]/batch/route");
+	return await POST(
+		new NextRequest(`http://localhost:3000/api/cases/${caseId}/batch`, {
+			method: "POST",
+			body: JSON.stringify({ changes }),
+			headers: { "Content-Type": "application/json" },
+		}),
+		{ params: Promise.resolve({ id: caseId }) }
+	);
+}
+
 describe("accepting settings adds the evidence node", () => {
 	it("adds one evidence node under the claim, created by the accepting person, in the same save", async () => {
 		const context = await setup();
@@ -310,6 +324,60 @@ describe("a claim has at most one live node", () => {
 		expect((await liveNodes(context.testCase.id)).map((n) => n.id)).toEqual([
 			first.evidence_node.id,
 		]);
+	});
+
+	it.each([
+		["with the node option", { add_evidence_node: true }],
+		["without the node option", {}],
+	])("rewrites the kept node's text when stopped settings are accepted again with a different check, %s", async (_label, node) => {
+		const context = await setup();
+		const first = await acceptWithNode(context);
+		await retire(context, "keep");
+		vi.mocked(emitSSEEvent).mockClear();
+
+		const again = await put(context, {
+			settings: NUMERIC_SETTINGS,
+			extra: { ...node, update_evidence_node_text: true },
+		});
+
+		expect(again.status).toBe(200);
+		expect(again.body.evidence_node).toEqual(first.evidence_node);
+		const nodes = await evidenceIn(context.testCase.id);
+		expect(nodes).toHaveLength(1);
+		expect(nodes[0]).toMatchObject({
+			id: first.evidence_node.id,
+			description: NUMERIC_TEXT,
+		});
+		expect((await criteriaOf(context.claim.id)).checkName).toBe(
+			NUMERIC_CHECK_NAME
+		);
+		expect(vi.mocked(emitSSEEvent).mock.calls.map((call) => call[0])).toEqual([
+			"element:updated",
+			"tea.health/state-changed",
+		]);
+	});
+
+	it("refuses to rewrite the kept node's text when stopped settings are accepted again with the same check, and stores nothing", async () => {
+		const context = await setup();
+		const first = await acceptWithNode(context);
+		await retire(context, "keep");
+		const before = await criteriaOf(context.claim.id);
+
+		const refused = await put(context, {
+			extra: { add_evidence_node: true, update_evidence_node_text: true },
+		});
+
+		expect(refused.status).toBe(400);
+		expect(refused.body.fieldErrors).toHaveProperty(
+			"update_evidence_node_text"
+		);
+		const after = await criteriaOf(context.claim.id);
+		expect(after.state).toBe("INACTIVE");
+		expect(after.revision).toBe(before.revision);
+		const node = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: first.evidence_node.id },
+		});
+		expect(node.description).toBe(ITEM_TEXT);
 	});
 
 	it("replaces the pointer with a new node when the kept node was trashed or moved", async () => {
@@ -491,6 +559,29 @@ describe("retiring settings that have a node", () => {
 			where: { evidenceId: first.evidence_node.id },
 		});
 		expect(links.map((link) => link.claimId)).toEqual([other.id]);
+		expect((await criteriaOf(context.claim.id)).evidenceElementId).toBeNull();
+	});
+
+	it("trashes a node whose only other link is to a claim in the trash", async () => {
+		const context = await setup();
+		const first = await acceptWithNode(context);
+		const other = await addClaim(context.testCase.id, context.owner.id);
+		await prisma.evidenceLink.create({
+			data: { evidenceId: first.evidence_node.id, claimId: other.id },
+		});
+		await prisma.assuranceElement.update({
+			where: { id: other.id },
+			data: { deletedAt: new Date() },
+		});
+
+		const retired = await retire(context, "remove");
+
+		expect(retired.status).toBe(200);
+		expect(retired.body.evidence_node).toBeNull();
+		const node = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: first.evidence_node.id },
+		});
+		expect(node.deletedAt).not.toBeNull();
 		expect((await criteriaOf(context.claim.id)).evidenceElementId).toBeNull();
 	});
 
@@ -1122,9 +1213,6 @@ describe("collisions with another writer", () => {
 	});
 
 	it.each([
-		["a unique index taken by another writer", { code: "P2002" }],
-		["a foreign key whose row has gone", { code: "P2003" }],
-		["a record that is not found", { code: "P2025" }],
 		["a write conflict or deadlock", { code: "P2034" }],
 		[
 			"a deadlock reported by a raw query",
@@ -1150,6 +1238,78 @@ describe("collisions with another writer", () => {
 		expect(isConcurrentChange(collision)).toBe(true);
 		expect(isConcurrentChange(unrelated)).toBe(false);
 		expect(isConcurrentChange(new Error("connection reset"))).toBe(false);
+	});
+
+	it.each([
+		["a unique index violation", "P2002"],
+		["a foreign key violation", "P2003"],
+		["a record that is not found", "P2025"],
+	])("does not treat %s as a concurrent change", (_what, code) => {
+		const failure = new Prisma.PrismaClientKnownRequestError("failed", {
+			code,
+			clientVersion: "test",
+		});
+
+		expect(isConcurrentChange(failure)).toBe(false);
+	});
+
+	it("tells a JSON editor save the case changed when a deadlock with a health save aborts its batch", async () => {
+		const context = await setup();
+		const first = await acceptWithNode(context);
+		const nodeId = first.evidence_node.id;
+		const claimId = context.claim.id;
+
+		// The health save holds the claim and then wants the node; the editor's
+		// batch updates the node and then wants the claim.
+		let held!: () => void;
+		const saveHoldsClaim = new Promise<void>((resolve) => {
+			held = resolve;
+		});
+		let proceed!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			proceed = resolve;
+		});
+		const healthSave = prisma
+			.$transaction(
+				async (tx) => {
+					await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+					held();
+					await gate;
+					await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${nodeId} FOR UPDATE`;
+				},
+				{ timeout: 30_000 }
+			)
+			.then(
+				() => "committed",
+				() => "aborted"
+			);
+		await saveHoldsClaim;
+		const batching = postBatch(context.testCase.id, [
+			{
+				type: "update",
+				elementId: nodeId,
+				data: { description: "Reworded in the editor" },
+			},
+			{
+				type: "update",
+				elementId: claimId,
+				data: { description: "Claim reworded in the editor" },
+			},
+		]);
+		await waitForLockWait();
+		proceed();
+
+		const response = await batching;
+
+		expect(response.status).toBe(409);
+		expect((await response.json()).error).toBe(
+			"Case has been modified by another user"
+		);
+		expect(await healthSave).toBe("committed");
+		const node = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: nodeId },
+		});
+		expect(node.description).toBe(ITEM_TEXT);
 	});
 });
 

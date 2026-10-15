@@ -497,7 +497,7 @@ export async function readClaimEvidenceNodes(
 				},
 			},
 		},
-		orderBy: { claim: { createdAt: "asc" } },
+		orderBy: [{ claim: { createdAt: "asc" } }, { claimId: "asc" }],
 	});
 	const nodeIds = rows.flatMap((row) => row.evidenceElementId ?? []);
 	const links =

@@ -73,8 +73,9 @@ export async function GET(
  * the save moves the settings to accepted from not accepted, and the claim's
  * live node is reused when it has one. `update_evidence_node_text: true`
  * rewrites the live node's text to name the new check; it is allowed only when
- * accepted settings change their check and the node is live. Both are
- * refused with a 400 otherwise. `evidence_node` in the response says where the
+ * accepted settings change their check, or stopped settings are accepted
+ * again with a different check, and the node is live. Both are refused with a
+ * 400 otherwise. `evidence_node` in the response says where the
  * claim's node is: `live`, `trashed`, `moved` or `missing`.
  * @body { integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }
  * @response 200 - The same body as the GET, after the save

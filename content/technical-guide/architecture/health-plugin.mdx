@@ -277,10 +277,11 @@ When the claim already has a live element it is reused and no second one is made
 When the column points at an element that is not live, the new element replaces the pointer and the old one is left as it is.
 - `update_evidence_node_text: true` rewrites the live element's description to the text for the new check.
 It is allowed only when accepted settings change their check (or the pipeline it comes from) and the element is live; otherwise it is refused with 400.
+It is also allowed when settings that were stopped with the element kept are accepted again with a different check than the stopped settings had, in which case the kept element is reused and rewritten in the same save.
 Without it a change of check leaves the text alone.
 - `evidence_node` on the retirement is `keep` or `remove`, and `keep` is the default.
 The choice is acted on only when the element is live for the claim.
-`remove` trashes the element and clears the column in the same transaction, or, when the element also supports another claim, removes only this claim's evidence link and clears the column, leaving the element in the case.
+`remove` trashes the element and clears the column in the same transaction, or, when the element also supports another claim that is not in the trash, removes only this claim's evidence link and clears the column, leaving the element in the case.
 With `keep`, with no choice, or when the element is not live, the element is untouched.
 - `POST /api/elements/[id]/health/evidence-node` adds an element to a claim whose settings were accepted without one.
 It is refused with 409 when the settings are not accepted or the claim already has a live element, and it replaces a pointer to an element that is not live.
@@ -296,8 +297,11 @@ After the transaction commits, the route emits the element's own event (`element
 The plugin's saves lock the claim's row and then the element's row, and check the element again once it is locked.
 The JSON editor can lock the same two rows in the other order.
 When two such steps collide, Postgres stops one of them.
-The same message is returned when the element disappears between being read and being locked, and when the unique index on the pointer or the evidence link's uniqueness is taken by another writer.
-Each of these gives 409 with "The case changed while you were saving. Try again.", never a generic failure, and nothing from the failed step is stored.
+When it stops the plugin's step, the answer is 409 with "The case changed while you were saving. Try again.", and nothing from the step is stored.
+When it stops the JSON editor's save, the batch route answers 409 with "Case has been modified by another user", the message the editor already shows when the case has changed under it.
+The same retry message is returned to the plugin's step when the element disappears between being read and being locked.
+No other database failure is read as a collision.
+A unique-index or foreign-key violation inside these steps answers 500 and is logged as an error.
 
 ### Exports, publishing and the assistant
 

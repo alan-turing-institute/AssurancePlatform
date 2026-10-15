@@ -21,8 +21,8 @@ import { retireCriteria } from "@/lib/services/health-criteria-service";
  * arrives that was judged with accepted settings. `evidence_node` says what
  * happens to the claim's live evidence node: `keep` (the default) leaves it as
  * ordinary evidence, so accepting again reuses it; `remove` trashes it, or
- * only removes this claim's link to it when it supports another claim too.
- * The choice does nothing when the claim has no live node.
+ * only removes this claim's link to it when it supports another claim that is
+ * not in the trash. The choice does nothing when the claim has no live node.
  * @body { reason, evidence_node? }
  * @response 200 - The same body as `GET /api/elements/[id]/health/criteria`, after the change
  * @response 400 - Invalid body, or no reason for accepted settings
