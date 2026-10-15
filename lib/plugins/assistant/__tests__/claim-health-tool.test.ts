@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import { exportCase } from "@/lib/services/case-export-service";
 import {
 	caseHasHealthStatus,
@@ -28,6 +29,7 @@ const UNAVAILABLE = {
 	message: "Claim health is not available for this case.",
 };
 const CUT = 200;
+const UTC_TIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$/;
 
 function node(
 	id: string,
@@ -100,7 +102,7 @@ describe("read_claim_health: what a claim reports", () => {
 					text: "Text of p1",
 					check: "Sensor Range Checker",
 					result: "pass",
-					resultAt: "2030-01-01T10:00:00.000Z",
+					resultAt: "2030-01-01 10:00:00 UTC",
 					validUntil: null,
 					outOfDate: false,
 					outOfDateReason: null,
@@ -115,12 +117,14 @@ describe("read_claim_health: what a claim reports", () => {
 		expect(JSON.stringify(result)).not.toContain("record-1");
 	});
 
-	it("gives the time of the read as an ISO time", async () => {
-		const before = Date.now();
+	it("gives the time of the read as YYYY-MM-DD HH:MM:SS UTC", async () => {
+		const before = Math.floor(Date.now() / 1000) * 1000;
 		const result = (await read()) as { checkedAt: string };
 
-		expect(new Date(result.checkedAt).toISOString()).toBe(result.checkedAt);
-		expect(new Date(result.checkedAt).getTime()).toBeGreaterThanOrEqual(before);
+		expect(result.checkedAt).toMatch(UTC_TIME);
+		expect(
+			Date.parse(result.checkedAt.replace(" UTC", "Z"))
+		).toBeGreaterThanOrEqual(before);
 	});
 
 	it.each([
@@ -137,9 +141,9 @@ describe("read_claim_health: what a claim reports", () => {
 	});
 
 	it.each([
-		["expired", "2030-01-01T11:00:00.000Z"],
-		["condition", "2030-01-01T09:30:00.000Z"],
-	] as const)("keeps the result of a claim that is out of date because of %s", async (reason, since) => {
+		["expired", "2030-01-01T11:00:00.000Z", "2030-01-01 11:00:00 UTC"],
+		["condition", "2030-01-01T09:30:00.000Z", "2030-01-01 09:30:00 UTC"],
+	] as const)("keeps the result of a claim that is out of date because of %s", async (reason, since, shown) => {
 		showStatuses([
 			[
 				"p1",
@@ -156,10 +160,10 @@ describe("read_claim_health: what a claim reports", () => {
 			claims: [
 				{
 					result: "pass",
-					validUntil: "2030-01-01T11:00:00.000Z",
+					validUntil: "2030-01-01 11:00:00 UTC",
 					outOfDate: true,
 					outOfDateReason: reason,
-					outOfDateSince: since,
+					outOfDateSince: shown,
 				},
 			],
 		});
@@ -186,7 +190,7 @@ describe("read_claim_health: what a claim reports", () => {
 					resultAt: null,
 					outOfDate: true,
 					outOfDateReason: "all-revoked",
-					outOfDateSince: "2030-01-01T12:00:00.000Z",
+					outOfDateSince: "2030-01-01 12:00:00 UTC",
 					settings: null,
 				},
 			],
@@ -225,6 +229,12 @@ describe("read_claim_health: what a claim reports", () => {
 
 	it("gives a null label as null", async () => {
 		showTree(goal([node("p1", null)]));
+
+		expect(await read()).toMatchObject({ claims: [{ id: "p1", label: null }] });
+	});
+
+	it("gives an empty label as null", async () => {
+		showTree(goal([node("p1", "")]));
 
 		expect(await read()).toMatchObject({ claims: [{ id: "p1", label: null }] });
 	});
@@ -352,6 +362,13 @@ describe("read_claim_health: which claims, in what order", () => {
 		expect(await read()).toMatchObject({ claimsWithoutResults: ["p1"] });
 	});
 
+	it("names a claim without a status by its id when its label is empty", async () => {
+		showTree(goal([node("p1", "")]));
+		showStatuses([]);
+
+		expect(await read()).toMatchObject({ claimsWithoutResults: ["p1"] });
+	});
+
 	it("counts a claim with a status that is not in the tree, and leaves it out of the list", async () => {
 		showStatuses([
 			["p1", status()],
@@ -428,6 +445,20 @@ describe("read_claim_health: freshness", () => {
 	});
 });
 
+describe("read_claim_health: calls at the same time", () => {
+	it("makes one read for calls that overlap, and gives each the same result", async () => {
+		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+
+		const [first, second] = await Promise.all([
+			tools.read_claim_health?.execute?.({}, options),
+			tools.read_claim_health?.execute?.({}, options),
+		]);
+
+		expect(readHealthStatusesForCase).toHaveBeenCalledTimes(1);
+		expect(second).toEqual(first);
+	});
+});
+
 describe("claimHealthAvailability", () => {
 	it("is plugin-off, and queries no claims, when the health plugin is off for the user", async () => {
 		vi.mocked(assertPluginEnabledForUser).mockResolvedValue({
@@ -445,6 +476,31 @@ describe("claimHealthAvailability", () => {
 
 		expect(await claimHealthAvailability("u", "c")).toBe("available");
 		expect(caseHasHealthStatus).toHaveBeenCalledWith("c");
+	});
+
+	it("is available, and logs the error's class but not its message, when the claim query fails", async () => {
+		const logged: LogEntry[] = [];
+		setLogSink((entry) => logged.push(entry));
+		vi.stubEnv("LOG_LEVEL", "debug");
+		vi.mocked(assertPluginEnabledForUser).mockResolvedValue({ data: true });
+		vi.mocked(caseHasHealthStatus).mockRejectedValue(
+			new TypeError("connection to db.internal refused")
+		);
+
+		try {
+			expect(await claimHealthAvailability("u", "c")).toBe("available");
+		} finally {
+			resetLogSink();
+			vi.unstubAllEnvs();
+		}
+
+		expect(logged).toHaveLength(1);
+		expect(logged[0]).toMatchObject({
+			level: "warn",
+			component: "claim-health-availability",
+			errorName: "TypeError",
+		});
+		expect(JSON.stringify(logged)).not.toContain("db.internal");
 	});
 
 	it("is no-results when the plugin is on and no claim in the case has a status", async () => {

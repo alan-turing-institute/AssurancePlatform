@@ -84,7 +84,7 @@ describe("read_claim_health — the fields the model receives", () => {
 			"validUntil",
 		]);
 		expect(result.found).toBe(true);
-		expect(result.checkedAt).toBe(NOW.toISOString());
+		expect(result.checkedAt).toBe("2026-10-15 12:00:00 UTC");
 	});
 
 	it("does not pass on a field the status service adds later, or its own record details", async () => {
@@ -124,8 +124,9 @@ describe("read_claim_health — the fields the model receives", () => {
 		}
 	});
 
-	it("maps a passing result with its check, time and validity", async () => {
+	it("maps a passing result with its check, time and validity, each time cut to the whole second", async () => {
 		const entry = await onlyClaim({
+			timestamp: "2026-10-15T11:00:00.999Z",
 			expires_at: "2026-10-15T13:00:00.000Z",
 		});
 
@@ -135,8 +136,8 @@ describe("read_claim_health — the fields the model receives", () => {
 			text: "Text of c1",
 			check: "Sensor Range Checker",
 			result: "pass",
-			resultAt: "2026-10-15T11:00:00.000Z",
-			validUntil: "2026-10-15T13:00:00.000Z",
+			resultAt: "2026-10-15 11:00:00 UTC",
+			validUntil: "2026-10-15 13:00:00 UTC",
 			outOfDate: false,
 			outOfDateReason: null,
 			outOfDateSince: null,
@@ -164,8 +165,8 @@ describe("read_claim_health — the fields the model receives", () => {
 			result: "pass",
 			outOfDate: true,
 			outOfDateReason: "expired",
-			outOfDateSince: "2026-10-15T10:30:00.000Z",
-			validUntil: "2026-10-15T10:30:00.000Z",
+			outOfDateSince: "2026-10-15 10:30:00 UTC",
+			validUntil: "2026-10-15 10:30:00 UTC",
 		});
 	});
 
@@ -179,7 +180,7 @@ describe("read_claim_health — the fields the model receives", () => {
 		expect(entry).toMatchObject({
 			outOfDate: true,
 			outOfDateReason: "condition",
-			outOfDateSince: "2026-10-15T10:45:00.000Z",
+			outOfDateSince: "2026-10-15 10:45:00 UTC",
 		});
 	});
 
@@ -197,7 +198,7 @@ describe("read_claim_health — the fields the model receives", () => {
 			resultAt: null,
 			outOfDate: true,
 			outOfDateReason: "all-revoked",
-			outOfDateSince: "2026-10-15T10:00:00.000Z",
+			outOfDateSince: "2026-10-15 10:00:00 UTC",
 			settings: null,
 			check: "Sensor Range Checker",
 		});

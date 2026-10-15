@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/health-evidence-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { expectSuccess } from "../utils/assertion-helpers";
+import { shownTime } from "../utils/assistant-claim-health-kit";
 import { appendRecord, isoAgo, MINUTE } from "../utils/health-adversarial-kit";
 import {
 	addTeamMember,
@@ -171,7 +172,7 @@ describe("read_claim_health: reads the current state", () => {
 
 		expect(first.claims[0]?.result).toBe("pass");
 		expect(second.claims[0]?.result).toBe("fail");
-		expect(second.claims[0]?.resultAt).toBe(failing.timestamp);
+		expect(second.claims[0]?.resultAt).toBe(shownTime(failing.timestamp));
 		expect(second.checkedAt >= first.checkedAt).toBe(true);
 	});
 
@@ -207,12 +208,10 @@ describe("read_claim_health: reads the current state", () => {
 
 		expect(result.claims[0]).toMatchObject({
 			result: "pass",
-			resultAt: record.timestamp,
+			resultAt: shownTime(record.timestamp),
 			outOfDate: true,
 			outOfDateReason: "expired",
-			validUntil: new Date(
-				new Date(record.timestamp).getTime() + MINUTE
-			).toISOString(),
+			validUntil: shownTime(new Date(record.timestamp).getTime() + MINUTE),
 		});
 	});
 

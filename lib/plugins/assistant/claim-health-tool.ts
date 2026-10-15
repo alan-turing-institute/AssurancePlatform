@@ -12,6 +12,8 @@ import type { ToolCallLimit } from "./tool-call-limit";
 const MAX_LISTED = 100;
 /** A claim's text, and each value of a settings difference, is cut to this many characters. */
 const MAX_FIELD_CHARS = 200;
+/** The first half of a character outside the basic plane, when nothing follows it. */
+const TRAILING_HIGH_SURROGATE = /[\uD800-\uDBFF]$/u;
 
 const UNAVAILABLE = {
 	found: false,
@@ -32,9 +34,27 @@ function propertyClaims(node: ClaimNode): ClaimNode[] {
 	return own.concat((node.children ?? []).flatMap(propertyClaims));
 }
 
+/**
+ * `text` cut to the field limit, counted in UTF-16 units. A cut that falls
+ * between the two halves of a character outside the basic plane would leave
+ * the first half alone, which is not valid text, so that half is dropped.
+ */
+function cutField(text: string): string {
+	return text.slice(0, MAX_FIELD_CHARS).replace(TRAILING_HIGH_SURROGATE, "");
+}
+
 /** A value as JSON text, cut to the field limit. */
 function jsonCut(value: unknown): string {
-	return (JSON.stringify(value) ?? "null").slice(0, MAX_FIELD_CHARS);
+	return cutField(JSON.stringify(value) ?? "null");
+}
+
+/** A time as `YYYY-MM-DD HH:MM:SS UTC`: whole seconds, a space in place of the T and UTC in place of the Z. Null stays null. */
+function utcTime(time: Date | string): string;
+function utcTime(time: Date | string | null): string | null;
+function utcTime(time: Date | string | null): string | null {
+	return time === null
+		? null
+		: `${new Date(time).toISOString().slice(0, 19).replace("T", " ")} UTC`;
 }
 
 /** How the result was judged compared with the settings accepted now. Null when there is no result to compare. */
@@ -52,20 +72,24 @@ function settingsOf(status: HealthStatus): string | null {
 
 /** One claim as the model sees it, from named fields only. */
 function claimEntry(claim: ClaimNode, status: HealthStatus) {
+	const settings = settingsOf(status);
 	const differences =
-		status.mismatch?.state === "mismatch" ? status.mismatch.differences : [];
+		settings === "different from accepted" &&
+		status.mismatch?.state === "mismatch"
+			? status.mismatch.differences
+			: [];
 	return {
 		id: claim.id,
-		label: claim.name ?? null,
-		text: (claim.description ?? "").slice(0, MAX_FIELD_CHARS),
+		label: claim.name || null,
+		text: cutField(claim.description ?? ""),
 		check: status.bound_check,
 		result: status.verdict,
-		resultAt: status.timestamp,
-		validUntil: status.expires_at,
+		resultAt: utcTime(status.timestamp),
+		validUntil: utcTime(status.expires_at),
 		outOfDate: status.stale,
 		outOfDateReason: status.stale_reason,
-		outOfDateSince: status.stale_since,
-		settings: settingsOf(status),
+		outOfDateSince: utcTime(status.stale_since),
+		settings,
 		...(differences.length > 0
 			? {
 					settingsDifferences: differences.map((difference) => ({
@@ -101,7 +125,7 @@ function summarise(
 		if (status) {
 			withStatus.push([claim, status]);
 		} else {
-			without.push(claim.name ?? claim.id);
+			without.push(claim.name || claim.id);
 		}
 	}
 	const treeIds = new Set(claims.map((claim) => claim.id));
@@ -134,7 +158,7 @@ async function readClaimHealth(
 	}
 	return {
 		found: true,
-		checkedAt: new Date().toISOString(),
+		checkedAt: utcTime(new Date()),
 		...summarise(data.tree as ClaimNode, statuses.data),
 	};
 }
@@ -142,9 +166,12 @@ async function readClaimHealth(
 /**
  * The read_claim_health tool. It closes over the route's `userId` and
  * `caseId`. The case export is the reply's shared one, which gives the labels,
- * text and order of the claims; the statuses are read again on every call,
+ * text and order of the claims; the statuses are read again for every call,
  * through the health plugin's own service, because they change while the
- * user talks. `limited` is the reply's cap on tool calls.
+ * user talks. Calls made while a read is still running share it, so the
+ * several calls a model can make in one step cost one read; a call made after
+ * it has finished starts a new one. `limited` is the reply's cap on tool
+ * calls, and every call counts towards it.
  */
 export function createClaimHealthTool(
 	userId: string,
@@ -152,11 +179,18 @@ export function createClaimHealthTool(
 	caseExport: () => Promise<CaseExportNested | null>,
 	limited: ToolCallLimit
 ) {
+	let inFlight: ReturnType<typeof readClaimHealth> | null = null;
 	return tool({
 		description:
-			"Read the latest result each property claim of the open case has received from automated checks, as of now. Takes no input. Returns checkedAt, the time of this read, and claims: for each claim that has a status, in the order the case shows them, its id, label (null when it has none), text, check (the check the claim is bound to now), result (pass, marginal, fail, indeterminate, or null when it has a check but no result, or every result was withdrawn), resultAt (when the reading was taken), validUntil (null when it does not expire), outOfDate with outOfDateReason (expired, condition or all-revoked) and outOfDateSince, and settings (as accepted, different from accepted, none accepted, or null when there is no result). When the settings differ it also returns settingsDifferences, each with the field, the declared value and the value used; when results from another check were refused since the last accepted one, it returns refusedSinceLastAccepted. claimsTruncated is the number of claims left out when there are more than 100. claimsWithoutResults lists the labels of the property claims that receive no automated results, with claimsWithoutResultsTruncated for those left out past 100. claimsNotInTree, present only when more than 0, counts claims with a status that are detached from the case tree.",
+			"Read the latest result each property claim of the open case has received from automated checks, as of now. Takes no input. Returns checkedAt, the time of this read, and claims: for each claim that has a status, in the order the case shows them, its id, label (null when it has none), text, check (the check the claim is bound to now), result (pass, marginal, fail, indeterminate, or null when it has a check but no result, or every result was withdrawn), resultAt (when the reading was taken), validUntil (null when it does not expire), outOfDate with outOfDateReason (expired, condition or all-revoked) and outOfDateSince, and settings (as accepted, different from accepted, none accepted, or null when there is no result). When the settings differ it also returns settingsDifferences, each with the field, the declared value and the value used; when results from another check were refused since the last accepted one, it returns refusedSinceLastAccepted. claimsTruncated is the number of claims left out when there are more than 100. claimsWithoutResults lists the labels of the property claims that receive no automated results, naming a claim by its id when it has no label, with claimsWithoutResultsTruncated for those left out past 100. claimsNotInTree, present only when more than 0, counts claims with a status that are detached from the case tree.",
 		inputSchema: z.object({}),
-		execute: () => limited(() => readClaimHealth(userId, caseId, caseExport)),
+		execute: () =>
+			limited(() => {
+				inFlight ??= readClaimHealth(userId, caseId, caseExport).finally(() => {
+					inFlight = null;
+				});
+				return inFlight;
+			}),
 	});
 }
 

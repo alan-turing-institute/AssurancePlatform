@@ -1,6 +1,6 @@
 ---
 title: "Case Assistant"
-description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, and how technique suggestions find and rank techniques."
+description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, how technique suggestions find and rank techniques, and how the assistant reads the automated check results of a case's claims."
 ---
 
 The `tea.assistant` plugin adds a chat panel to the case editor.
@@ -280,7 +280,8 @@ The tool is registered only when both of these hold:
 - The deployment offers `tea.health` (it is not listed in `TEA_PLUGINS_DISABLED`) and the user has not switched it off.
 - The case has at least one property claim that is not deleted and has a bound check or a record.
 
-One helper answers this for both the chat route and `GET /api/cases/{id}/assistant`, so the tool list the panel reads and the tools the model receives never disagree.
+One helper answers this for both the chat route and `GET /api/cases/{id}/assistant`, so the panel's list of tools and the model's tools are decided by the same rule.
+The panel reads its list when it opens, and the route decides again for each reply, so the two can differ for a while.
 The helper checks the plugin first and queries the claims only when the plugin is on.
 The claim query uses the same filter as the health plugin's own case status read, in `lib/services/health-status-service.ts`.
 
@@ -294,7 +295,7 @@ The result holds:
 | Field | Meaning |
 |---|---|
 | `found` | `true`, or `false` when the case export or the health service refuses. A `false` result has the message "Claim health is not available for this case." |
-| `checkedAt` | The time of this read, as an ISO time. |
+| `checkedAt` | The time of this read. |
 | `claims` | The property claims that have a status, at most 100, in the order the case shows them. |
 | `claimsTruncated` | The number of claims left out past 100. |
 | `claimsWithoutResults` | The labels of property claims in the tree that have no status, at most 100. A claim with no label is named by its id. |
@@ -305,7 +306,7 @@ Each entry in `claims` has:
 
 | Field | Meaning |
 |---|---|
-| `id`, `label` | The claim's id and its label, such as P4. The label is `null` when the claim has none. |
+| `id`, `label` | The claim's id and its label, such as P4. The label is `null` when the claim has none, and an empty label counts as none. |
 | `text` | The claim's text, cut to 200 characters. |
 | `check` | The check the claim is bound to now. A change of the bound check after the result arrived changes this and not the result. |
 | `result` | `pass`, `marginal`, `fail`, `indeterminate`, or `null` when the claim has a check but no result yet, or every result was withdrawn. |
@@ -316,10 +317,15 @@ Each entry in `claims` has:
 | `settingsDifferences` | Present only when the settings differ: each difference as `field`, `declared` and `used`, with each value as JSON text cut to 200 characters. |
 | `refusedSinceLastAccepted` | Present only when more than 0: the number of results refused since the last accepted one. |
 
+Every time in the result, `checkedAt` included, is written as `YYYY-MM-DD HH:MM:SS UTC`, to the whole second, so that the model can copy it into an answer as it stands.
+A time that does not apply is `null`.
+
 The order of claims comes from the shared case export, which the reply reads once, and labels and text come from it too.
 The statuses are not kept between calls.
 Each call reads them again, so a record that arrives between two questions in one chat shows in the second answer.
+Calls made while a read is still running share that read, so several calls in one step make one read.
 A call counts towards the reply's cap on tool calls.
+When the assistant sends a chat's earlier messages back to the model, it replaces the output of each earlier `read_claim_health` call with a notice that the result is out of date and that the tool should be called again, so the model does not repeat a result from earlier in the conversation.
 
 ### What leaves TEA
 

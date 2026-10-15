@@ -162,14 +162,14 @@ describe("read_claim_health — a reply with more than one call", () => {
 		expect(mocks.readStatuses).toHaveBeenNthCalledWith(2, "u", "c");
 		expect((first.claims as Record<string, unknown>[])[0]).toMatchObject({
 			result: "pass",
-			resultAt: "2026-10-15T11:00:00.000Z",
+			resultAt: "2026-10-15 11:00:00 UTC",
 		});
 		expect((second.claims as Record<string, unknown>[])[0]).toMatchObject({
 			result: "fail",
-			resultAt: "2026-10-15T11:59:00.000Z",
+			resultAt: "2026-10-15 11:59:00 UTC",
 		});
-		expect(first.checkedAt).toBe("2026-10-15T12:00:00.000Z");
-		expect(second.checkedAt).toBe("2026-10-15T12:05:00.000Z");
+		expect(first.checkedAt).toBe("2026-10-15 12:00:00 UTC");
+		expect(second.checkedAt).toBe("2026-10-15 12:05:00 UTC");
 	});
 
 	it("does not serve an earlier result when a later read returns an error", async () => {
@@ -272,6 +272,14 @@ describe("read_claim_health — what the model is told about the tool", () => {
 		).inputSchema;
 
 		expect(schema.safeParse({}).success).toBe(true);
+	});
+
+	it("says that claimsWithoutResults names a claim by its id when it has no label", () => {
+		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+
+		expect(tools.read_claim_health?.description).toContain(
+			"naming a claim by its id when it has no label"
+		);
 	});
 
 	it("describes every field the tool can return", () => {

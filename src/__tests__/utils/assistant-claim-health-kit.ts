@@ -16,6 +16,11 @@ export const DEFAULT_CHECK = "Sensor Range Checker";
 
 export type User = Awaited<ReturnType<typeof createTestUser>>;
 
+/** A time as the tool shows it: `YYYY-MM-DD HH:MM:SS UTC`, to the whole second. */
+export function shownTime(time: Date | number | string): string {
+	return `${new Date(time).toISOString().slice(0, 19).replace("T", " ")} UTC`;
+}
+
 /** An owner with the assistant on, and a case with a top-level goal. */
 export async function healthWorld() {
 	const owner = await createTestUser();

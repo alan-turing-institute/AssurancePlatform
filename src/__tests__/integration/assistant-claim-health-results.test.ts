@@ -16,6 +16,7 @@ import {
 	HEALTH_PLUGIN_ID,
 	healthWorld,
 	replyTools,
+	shownTime,
 	softDeleteClaim,
 	TOOL_OPTIONS,
 } from "../utils/assistant-claim-health-kit";
@@ -106,10 +107,10 @@ describe("read_claim_health — a claim's result as the model sees it", () => {
 				text: "Text of P1",
 				check: DEFAULT_CHECK,
 				result: verdict,
-				resultAt: record.timestamp,
-				validUntil: new Date(
+				resultAt: shownTime(record.timestamp),
+				validUntil: shownTime(
 					new Date(record.timestamp).getTime() + 120 * MINUTE
-				).toISOString(),
+				),
 				outOfDate: false,
 				outOfDateReason: null,
 				outOfDateSince: null,
@@ -147,9 +148,9 @@ describe("read_claim_health — a claim's result as the model sees it", () => {
 			result: "pass",
 			outOfDate: true,
 			outOfDateReason: "expired",
-			outOfDateSince: new Date(
+			outOfDateSince: shownTime(
 				new Date(record.timestamp).getTime() + 5 * MINUTE
-			).toISOString(),
+			),
 		});
 	});
 
