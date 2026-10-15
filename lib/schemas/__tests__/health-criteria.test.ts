@@ -16,6 +16,8 @@ import {
 	healthCriteriaSettingsSchema,
 	issuesToFieldErrors,
 	nextCounters,
+	normaliseSettings,
+	servedFromStored,
 	servedSettings,
 } from "../health-criteria";
 
@@ -45,6 +47,22 @@ function itemSettings(
 		},
 		...recommended,
 		...overrides,
+	};
+}
+
+/** A share-of-subjects aggregation in the current form, with its pass mark as a rule. */
+function shareAggregation(
+	passMark: unknown,
+	params: Record<string, unknown> = { use_verdict: true }
+) {
+	return {
+		kind: "proportion",
+		params,
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: passMark },
+		},
 	};
 }
 
@@ -96,26 +114,107 @@ describe("settings schema", () => {
 		const aggregation = (
 			params: Record<string, unknown>,
 			kind = "proportion"
-		) => itemSettings({ aggregation: { kind, params } });
+		) =>
+			itemSettings({
+				aggregation: { ...shareAggregation(0.9, params), kind },
+			});
 		expect(
 			fieldErrorsFor(aggregation({ percentile: 90 }, "percentile"))[
 				"aggregation.kind"
 			]
 		).toBe("must be proportion");
 		expect(
-			fieldErrorsFor(aggregation({ threshold: 0.9, use_verdict: false }))[
+			fieldErrorsFor(aggregation({ use_verdict: false }))[
 				"aggregation.params.use_verdict"
 			]
 		).toBe("must be true");
 		expect(
 			fieldErrorsFor(
-				aggregation({
-					threshold: 0.9,
-					use_verdict: true,
-					marginal_threshold: 0.8,
-				})
+				aggregation({ use_verdict: true, marginal_threshold: 0.8 })
 			)["aggregation.params.marginal_threshold"]
 		).toContain("not available");
+	});
+
+	it("judges the share by its own threshold rule: present, a maximize threshold, a pass mark from 0 to 1, no marginal mark yet", () => {
+		const errors = (aggregation: unknown) =>
+			fieldErrorsFor(itemSettings({ aggregation }));
+		const noRule = { kind: "proportion", params: { use_verdict: true } };
+		expect(errors(noRule)["aggregation.rule"]).toBe("is required");
+		const withRule = (rule: unknown) => ({ ...noRule, rule });
+		expect(
+			errors(withRule({ kind: "band", params: { pass_values: [0, 1] } }))[
+				"aggregation.rule.kind"
+			]
+		).toBe("must be threshold");
+		expect(
+			errors(
+				withRule({
+					kind: "threshold",
+					direction: "minimize",
+					params: { pass_values: 0.5 },
+				})
+			)["aggregation.rule.direction"]
+		).toBe("must be maximize");
+		for (const passMark of [1.01, -0.01, "0.9"]) {
+			expect(
+				errors(shareAggregation(passMark))[
+					"aggregation.rule.params.pass_values"
+				],
+				String(passMark)
+			).toBe("must be a number from 0 to 1");
+		}
+		for (const passMark of [0, 0.5, 1]) {
+			expect(errors(shareAggregation(passMark)), String(passMark)).toEqual({});
+		}
+		expect(
+			errors({
+				...noRule,
+				rule: {
+					kind: "threshold",
+					direction: "maximize",
+					params: { pass_values: 0.9, marginal_values: 0.8 },
+				},
+			})["aggregation.rule.params.marginal_values"]
+		).toContain("not available");
+		expect(
+			errors({
+				...shareAggregation(0.9),
+				params: { threshold: 0.9, use_verdict: true },
+			})["aggregation.params.threshold"]
+		).toContain("not available");
+	});
+
+	it("reads a percentile reduction's percentile from percentile", () => {
+		const reduction = (params: Record<string, unknown>) =>
+			itemSettings({
+				reduction: { kind: "percentile", params, rule: itemSettings().rule },
+			});
+		expect(
+			fieldErrorsFor(reduction({ percentile: 95 }))[
+				"reduction.params.percentile"
+			]
+		).toBeUndefined();
+		expect(
+			fieldErrorsFor(reduction({ percentile: 101 }))[
+				"reduction.params.percentile"
+			]
+		).toContain("0 to 100");
+		expect(
+			fieldErrorsFor(reduction({}))["reduction.params.percentile"]
+		).toContain("0 to 100");
+	});
+
+	it("refuses a p beside the percentile, so a row never carries both", () => {
+		const settings = itemSettings({
+			reduction: {
+				kind: "percentile",
+				params: { percentile: 95, p: 90 },
+				rule: itemSettings().rule,
+			},
+		});
+		expect(fieldErrorsFor(settings)["reduction.params.p"]).toBe(
+			"is not available in evidence settings"
+		);
 	});
 
 	it("refuses fields the server owns and durations in months, years or over 100 years", () => {
@@ -210,10 +309,7 @@ describe("settings against a check", () => {
 				check: { name: systemCheck.name, version: systemCheck.version },
 				...systemCheck.recommended,
 				reduction: { kind: "last" },
-				aggregation: {
-					kind: "proportion",
-					params: { threshold: 0.9, use_verdict: true },
-				},
+				aggregation: shareAggregation(0.9),
 			},
 			systemCheck
 		);
@@ -368,10 +464,7 @@ describe("settings against a check", () => {
 			check: { name: textCheck.name, version: textCheck.version },
 			rule: { kind: "membership", params: { pass_values: ["ok"] } },
 			reduction: { kind: "last" },
-			aggregation: {
-				kind: "proportion",
-				params: { threshold: 0.9, use_verdict: true },
-			},
+			aggregation: shareAggregation(0.9),
 			window: "PT1M",
 			valid_for: "PT5M",
 		};
@@ -501,6 +594,16 @@ describe("version counters", () => {
 		expect(served.reduction?.version).toBe("d2");
 		expect(served.reduction?.rule?.version).toBe("d2");
 		expect(served.aggregation?.version).toBe("a5");
+	});
+
+	it("gives the aggregation's rule the aggregation's label", () => {
+		const served = servedSettings(settings(), {
+			rule: 3,
+			reduction: 2,
+			aggregation: 5,
+		});
+		expect(served.aggregation?.rule?.version).toBe("a5");
+		expect(served.aggregation?.rule?.params?.pass_values).toBe(0.95);
 	});
 });
 
@@ -663,6 +766,120 @@ describe("echo check", () => {
 		expect(compareEcho(echoed(), bare)).toEqual([
 			{ field: "check.params", declared: {}, used: { camera_line: "ALL" } },
 		]);
+	});
+});
+
+describe("settings in an older form", () => {
+	const olderReduction = {
+		kind: "percentile",
+		params: { p: 95, avail_floor: 0.8 },
+		rule: (itemSettings().reduction as { rule: unknown }).rule,
+	};
+	const older = (overrides: Record<string, unknown> = {}) => ({
+		...itemSettings(),
+		reduction: olderReduction,
+		aggregation: {
+			kind: "proportion",
+			params: { threshold: 0.9, avail_floor: 0.8, use_verdict: true },
+		},
+		...overrides,
+	});
+
+	it("turns a share's params.threshold into the aggregation's own rule and p into percentile", () => {
+		const converted = normaliseSettings(older()) as Record<string, any>;
+		expect(converted.aggregation).toEqual({
+			kind: "proportion",
+			params: { avail_floor: 0.8, use_verdict: true },
+			rule: {
+				kind: "threshold",
+				direction: "maximize",
+				params: { pass_values: 0.9 },
+			},
+		});
+		expect(converted.reduction.params).toEqual({
+			percentile: 95,
+			avail_floor: 0.8,
+		});
+		expect(normaliseSettings(converted)).toEqual(converted);
+	});
+
+	it("leaves alone what it does not recognise, whatever the shape", () => {
+		const odd: unknown[] = [
+			null,
+			5,
+			"text",
+			[],
+			{},
+			{ aggregation: null, reduction: 3 },
+			{ aggregation: { kind: "proportion", params: "x" } },
+			{ aggregation: { kind: "worst-of", params: { threshold: 0.9 } } },
+			{ reduction: { kind: "mean", params: { p: 95 } } },
+			{ reduction: { kind: "percentile", params: { p: 95, percentile: 90 } } },
+			{
+				aggregation: {
+					kind: "proportion",
+					params: { threshold: 0.9 },
+					rule: { kind: "threshold", direction: "maximize" },
+				},
+			},
+		];
+		for (const value of odd) {
+			expect(normaliseSettings(value), JSON.stringify(value)).toBe(value);
+		}
+	});
+
+	it("converts a save request before checking it, and reports a bad pass mark at its new field", () => {
+		const body = (settings: unknown) => ({
+			integration_id: "7acd824e-0000-4000-8000-000000000001",
+			settings,
+			accept: true,
+		});
+		const parsed = criteriaSaveRequestSchema.parse(body(older()));
+		expect(parsed.settings.aggregation?.rule?.params?.pass_values).toBe(0.9);
+		expect(parsed.settings.aggregation?.params).not.toHaveProperty("threshold");
+		expect(parsed.settings.reduction?.params?.percentile).toBe(95);
+		const refused = criteriaSaveRequestSchema.safeParse(
+			body(
+				older({
+					aggregation: {
+						kind: "proportion",
+						params: { threshold: 1.5, use_verdict: true },
+					},
+				})
+			)
+		);
+		expect(refused.success).toBe(false);
+		expect(
+			refused.error?.issues.map((issue) => issue.path.join("."))
+		).toContain("settings.aggregation.rule.params.pass_values");
+	});
+
+	it("serves a stored older row in the current form with its labels unchanged, and a re-save of it moves no label", () => {
+		const row = {
+			settings: older(),
+			ruleVersion: 2,
+			reductionVersion: 3,
+			aggregationVersion: 4,
+			revision: 5,
+			state: "ACCEPTED" as const,
+		};
+		const served = servedFromStored(row);
+		expect(served.rule.version).toBe("r2");
+		expect(served.reduction?.version).toBe("d3");
+		expect(served.reduction?.params?.percentile).toBe(95);
+		expect(served.aggregation?.version).toBe("a4");
+		expect(served.aggregation?.rule?.version).toBe("a4");
+		expect(served.aggregation?.params).not.toHaveProperty("threshold");
+		const previous = {
+			counters: { rule: 2, reduction: 3, aggregation: 4 },
+			settings: normaliseSettings(row.settings as never),
+		};
+		const resaved = criteriaSaveRequestSchema.parse({
+			integration_id: "7acd824e-0000-4000-8000-000000000001",
+			settings: row.settings,
+			accept: true,
+		}).settings;
+		expect(nextCounters(previous, resaved)).toEqual(previous.counters);
 	});
 });
 

@@ -70,7 +70,7 @@ export interface CriteriaFormProps {
 const CHANGED_MESSAGE = "These settings were changed by someone else";
 
 const PLACED_PATH =
-	/^(check\.params\.[^.]+|rule\.(kind|params\.(pass_values|marginal_values))|reduction\.(kind|params\.(p|avail_floor)|rule\.(kind|params\.(pass_values|marginal_values)))|aggregation\.params\.(threshold|avail_floor)|window|valid_for|reduction|aggregation)$/;
+	/^(check\.params\.[^.]+|rule\.(kind|params\.(pass_values|marginal_values))|reduction\.(kind|params\.(percentile|avail_floor)|rule\.(kind|params\.(pass_values|marginal_values)))|aggregation\.(rule\.params\.pass_values|params\.avail_floor)|window|valid_for|reduction|aggregation)$/;
 
 /** What Cancel does: leave a form for a check not yet saved, leave a move to another version, or put the stored values back. */
 function cancelOf(

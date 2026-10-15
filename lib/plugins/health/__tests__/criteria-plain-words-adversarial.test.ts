@@ -166,7 +166,12 @@ describe("plain words state each number with its direction", () => {
 				reduction: { kind: "mean", params: { avail_floor: 0.285 } },
 				aggregation: {
 					kind: "proportion",
-					params: { threshold: 0.07, avail_floor: 0.58, use_verdict: true },
+					params: { avail_floor: 0.58, use_verdict: true },
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.07 },
+					},
 				},
 			},
 			NUMBER_CHECK
@@ -189,7 +194,7 @@ describe("plain words state each number with its direction", () => {
 				},
 				reduction: {
 					kind: "percentile",
-					params: { p: 95 },
+					params: { percentile: 95 },
 					rule: {
 						kind: "threshold",
 						direction: "minimize",
@@ -198,7 +203,12 @@ describe("plain words state each number with its direction", () => {
 				},
 				aggregation: {
 					kind: "proportion",
-					params: { threshold: 0.9, use_verdict: true },
+					params: { use_verdict: true },
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.9 },
+					},
 				},
 			},
 			NUMBER_CHECK,
@@ -234,7 +244,7 @@ describe("plain words state each number with its direction", () => {
 					direction: "maximize",
 					params: { pass_values: 1 },
 				},
-				reduction: { kind: "percentile", params: { p } },
+				reduction: { kind: "percentile", params: { percentile: p } },
 			},
 			NUMBER_CHECK,
 			"reduction"
@@ -411,7 +421,12 @@ describe("subject words", () => {
 						reduction: { kind: "median", params: { avail_floor: 0.5 } },
 						aggregation: {
 							kind: "proportion",
-							params: { threshold: 0.9, avail_floor: 0.5, use_verdict: true },
+							params: { avail_floor: 0.5, use_verdict: true },
+							rule: {
+								kind: "threshold",
+								direction: "maximize",
+								params: { pass_values: 0.9 },
+							},
 						},
 						window: "PT5M",
 						valid_for: "PT5M",
@@ -446,7 +461,12 @@ describe("subject words", () => {
 				reduction: { kind: "mean" },
 				aggregation: {
 					kind: "proportion",
-					params: { threshold: 0.9, avail_floor: 0.5, use_verdict: true },
+					params: { avail_floor: 0.5, use_verdict: true },
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.9 },
+					},
 				},
 			},
 			check

@@ -47,7 +47,13 @@ function record(overrides: Partial<Record1> = {}): Record1 {
 		},
 		aggregation: {
 			kind: "proportion",
-			params: { threshold: 0.95 },
+			params: { avail_floor: 0.8, use_verdict: true },
+			rule: {
+				kind: "threshold",
+				direction: "maximize",
+				params: { pass_values: 0.95 },
+				version: "a1",
+			},
 			version: "a1",
 		},
 		verdict: "pass",

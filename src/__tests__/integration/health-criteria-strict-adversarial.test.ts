@@ -115,6 +115,15 @@ const AGG = {
 	params: { threshold: 0.9, avail_floor: 0.8, use_verdict: true },
 };
 
+/** A share of subjects passing, in the current form: its pass mark is the aggregation's own rule. */
+function shareAggregation(ruleParams: Json, direction = "maximize") {
+	return {
+		kind: "proportion",
+		params: { use_verdict: true },
+		rule: { kind: "threshold", direction, params: ruleParams },
+	};
+}
+
 function typed(overrides: Json = {}, params: Json = {}) {
 	return {
 		check: {
@@ -283,7 +292,7 @@ describe("strict settings: every refusal names its field and stores nothing", ()
 			"settings.aggregation.params.marginal_threshold",
 		],
 		[
-			"a claim-level threshold above 1",
+			"a claim-level threshold above 1, sent in the older form",
 			() =>
 				numberReader({
 					aggregation: {
@@ -291,15 +300,65 @@ describe("strict settings: every refusal names its field and stores nothing", ()
 						params: { threshold: 1.01, use_verdict: true },
 					},
 				}),
-			"settings.aggregation.params.threshold",
+			"settings.aggregation.rule.params.pass_values",
 		],
 		[
-			"a claim-level threshold below 0",
+			"a claim-level threshold below 0, sent in the older form",
 			() =>
 				numberReader({
 					aggregation: {
 						kind: "proportion",
 						params: { threshold: -0.01, use_verdict: true },
+					},
+				}),
+			"settings.aggregation.rule.params.pass_values",
+		],
+		[
+			"a share with no rule",
+			() =>
+				numberReader({
+					aggregation: { kind: "proportion", params: { use_verdict: true } },
+				}),
+			"settings.aggregation.rule",
+		],
+		[
+			"a share's pass mark above 1",
+			() =>
+				numberReader({ aggregation: shareAggregation({ pass_values: 1.01 }) }),
+			"settings.aggregation.rule.params.pass_values",
+		],
+		[
+			"a share's pass mark that is not a number",
+			() =>
+				numberReader({ aggregation: shareAggregation({ pass_values: "0.9" }) }),
+			"settings.aggregation.rule.params.pass_values",
+		],
+		[
+			"a marginal mark on the share",
+			() =>
+				numberReader({
+					aggregation: shareAggregation({
+						pass_values: 0.9,
+						marginal_values: 0.8,
+					}),
+				}),
+			"settings.aggregation.rule.params.marginal_values",
+		],
+		[
+			"a share judged by a minimize threshold",
+			() =>
+				numberReader({
+					aggregation: shareAggregation({ pass_values: 0.9 }, "minimize"),
+				}),
+			"settings.aggregation.rule.direction",
+		],
+		[
+			"a pass mark left in params beside the rule",
+			() =>
+				numberReader({
+					aggregation: {
+						...shareAggregation({ pass_values: 0.9 }),
+						params: { threshold: 0.9, use_verdict: true },
 					},
 				}),
 			"settings.aggregation.params.threshold",

@@ -280,7 +280,7 @@ function reductionName(
 	reduction: NonNullable<PartialSettings["reduction"]>
 ): string {
 	if (reduction.kind === "percentile") {
-		return `the ${ordinal(reduction.params?.p)} percentile`;
+		return `the ${ordinal(reduction.params?.percentile)} percentile`;
 	}
 	return REDUCTION_WORDS[reduction.kind];
 }
@@ -378,7 +378,7 @@ function claimSentences(
 	const sentences: PlainSentence[] = [
 		{
 			key: "claim",
-			text: `The claim passes when at least ${writeShare(aggregation.params.threshold)} of the ${subjects.many} pass, and fails otherwise.`,
+			text: `The claim passes when at least ${writeShare(aggregation.rule?.params?.pass_values)} of the ${subjects.many} pass, and fails otherwise.`,
 		},
 	];
 	if (hasValue(aggregation.params.avail_floor)) {

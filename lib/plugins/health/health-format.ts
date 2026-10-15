@@ -180,7 +180,7 @@ function describeRuleWords(rule: Rule1): string {
 function describeReduction(
 	reduction: NonNullable<Record1["reduction"]>
 ): string {
-	const p = reduction.params?.p;
+	const p = reduction.params?.percentile ?? reduction.params?.p;
 	const kind =
 		reduction.kind === "percentile" && p !== undefined
 			? `percentile ${scalarText(p)}`
@@ -191,16 +191,24 @@ function describeReduction(
 	return `${kind}, ${judged} \u00b7 ${reduction.version}`;
 }
 
+/** A share written before the aggregation carried its own rule: the pass mark sits in `params`. */
+function describeOlderShare(params: Record<string, unknown>): string {
+	const marginal =
+		params.marginal_threshold === undefined
+			? ""
+			: ` (marginal from ${scalarText(params.marginal_threshold)})`;
+	return `share passing at least ${scalarText(params.threshold)}${marginal}`;
+}
+
 function describeAggregation(
 	aggregation: NonNullable<Record1["aggregation"]>
 ): string {
 	const { params } = aggregation;
 	let text: string = aggregation.kind;
 	if (aggregation.kind === "proportion") {
-		text = `share passing at least ${scalarText(params.threshold)}`;
-		if (params.marginal_threshold !== undefined) {
-			text += ` (marginal from ${scalarText(params.marginal_threshold)})`;
-		}
+		text = aggregation.rule
+			? `share passing ${describeRuleWords(aggregation.rule)}`
+			: describeOlderShare(params);
 	} else if (aggregation.kind === "percentile") {
 		text = `the ${scalarText(params.percentile)}th percentile, judged by the rule above`;
 	} else if (aggregation.kind === "worst-of") {

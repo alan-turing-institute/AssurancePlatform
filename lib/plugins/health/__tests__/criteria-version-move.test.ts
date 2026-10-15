@@ -42,7 +42,12 @@ function newVersion(overrides: Partial<HealthCheck> = {}): HealthCheck {
 			},
 			aggregation: {
 				kind: "proportion",
-				params: { threshold: 0.9, avail_floor: 0.8, use_verdict: true },
+				params: { avail_floor: 0.8, use_verdict: true },
+				rule: {
+					kind: "threshold",
+					direction: "maximize",
+					params: { pass_values: 0.9 },
+				},
 			},
 			valid_for: "PT10M",
 		},

@@ -1,7 +1,11 @@
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import type { HealthCheck, HealthCheckList } from "@/lib/schemas/health-checks";
+import {
+	type HealthCheck,
+	type HealthCheckList,
+	normaliseRecommendation,
+} from "@/lib/schemas/health-checks";
 import {
 	blockIssues,
 	checkListIssues,
@@ -31,7 +35,7 @@ export interface CheckListWarning {
 	problem: string;
 }
 
-/** What `recommended` would be as settings, judged only for the blocks it names. */
+/** What `recommended` would be as settings, judged only for the blocks it names; an older form of the combining steps is judged as it reads now. */
 function recommendationWarnings(check: HealthCheck): CheckListWarning[] {
 	const { recommended } = check;
 	if (!recommended) {
@@ -91,7 +95,9 @@ export async function publishHealthCheckList(
 		return {
 			data: {
 				checks: list.checks.length,
-				warnings: list.checks.flatMap(recommendationWarnings),
+				warnings: list.checks.flatMap((check) =>
+					recommendationWarnings(normaliseRecommendation(check))
+				),
 			},
 		};
 	} catch (error) {
@@ -107,7 +113,11 @@ export interface CaseCheckList {
 	published_at: string;
 }
 
-/** An active integration's check list, when its system user may edit `caseId`; otherwise null. */
+/**
+ * An active integration's check list, when its system user may edit `caseId`;
+ * otherwise null. Each recommendation is in the current form, whichever form
+ * it was published in.
+ */
 export async function loadOfferedChecks(
 	integrationId: string,
 	caseId: string
@@ -141,8 +151,11 @@ export async function loadOfferedChecks(
 	if (!canEdit) {
 		return null;
 	}
+	const stored = Array.isArray(catalogue.checks)
+		? (catalogue.checks as unknown as HealthCheck[])
+		: [];
 	return {
-		checks: catalogue.checks as unknown as HealthCheck[],
+		checks: stored.map((check) => normaliseRecommendation(check)),
 		integration: {
 			id: catalogue.integration.id,
 			name: catalogue.integration.name,

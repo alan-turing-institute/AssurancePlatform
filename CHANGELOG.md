@@ -732,6 +732,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The anonymous `/uploads/*` route is removed; case images are now served
   through access-checked routes, and the public Discover `featureImageUrl`
   field holds the public image route address rather than a storage address.
+- The health plugin's served evidence settings no longer carry a share's pass
+  mark in `aggregation.params.threshold` or a percentile reduction's
+  percentile in `reduction.params.p`, on
+  `GET /api/machine/health/cases/[id]/criteria`,
+  `GET /api/machine/health/elements/[id]/criteria` and
+  `GET /api/elements/[id]/health/criteria`. The aggregation now carries its
+  own `rule`, with the pass mark in `rule.params.pass_values` and the
+  aggregation's version label on both, and the percentile is
+  `reduction.params.percentile`. Settings stored earlier are served in the new
+  form with the same version labels. Save requests and published
+  recommendations in the older form are still accepted and converted.
 
 ## [0.2.0] - TBD
 

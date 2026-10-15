@@ -42,7 +42,12 @@ const ACCEPTED: HealthCriteriaSettings = {
 	reduction: { kind: "median", params: { avail_floor: 0.8 } },
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 0.95, avail_floor: 0.8, use_verdict: true },
+		params: { avail_floor: 0.8, use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.95 },
+		},
 	},
 	window: "PT1M",
 	valid_for: "PT5M",
@@ -57,7 +62,12 @@ const NEW_RECOMMENDED = {
 	reduction: { kind: "max", params: { avail_floor: 0.9 } },
 	aggregation: {
 		kind: "proportion",
-		params: { threshold: 0.99, avail_floor: 0.9, use_verdict: true },
+		params: { avail_floor: 0.9, use_verdict: true },
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.99 },
+		},
 	},
 	window: "PT2M",
 	valid_for: "PT10M",

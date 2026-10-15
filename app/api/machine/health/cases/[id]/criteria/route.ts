@@ -21,8 +21,12 @@ import { readCaseCriteriaForPipeline } from "@/lib/services/health-criteria-serv
  * case gets only its own. Suggested and inactive settings are never returned.
  * Each item is `{ claim_ref, state, revision, check, rule, reduction?,
  * aggregation?, window, valid_for, source, accepted_at, updated_at }` with
- * version labels in place. Reading records when and which revision was read,
- * without changing `updated_at`.
+ * version labels in place. The `aggregation` is `{ kind, params, rule,
+ * version }`: its pass mark is `rule.params.pass_values`, and both the
+ * aggregation and its rule carry the aggregation's label. A percentile
+ * reduction's percentile is `reduction.params.percentile`. Settings stored
+ * in an earlier form are served in this form with the same labels. Reading
+ * records when and which revision was read, without changing `updated_at`.
  * @response 200 - `{ case_id, criteria: Item[] }`
  * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
  * @response 403 - The `tea.health` plugin is not enabled for this integration

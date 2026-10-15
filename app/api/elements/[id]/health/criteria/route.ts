@@ -33,11 +33,21 @@ import {
  * who accepted them and whether that person owned the integration at the
  * time. `last_change` is the newest history entry. `pipeline_read` says when
  * the pipeline last fetched the settings and which revision it got.
- * `check_offer` is `current`, `newer-version` or `not-offered`. `latest_result`
- * compares the claim's current result with the accepted settings.
+ * `check_offer` is `current`, `newer-version` or `not-offered`, and
+ * `offered_version` is the version of the check the pipeline lists now (null
+ * when it does not list it). The `aggregation` carries its own `rule`, with
+ * the pass mark in `rule.params.pass_values` and the aggregation's label on
+ * both, and a percentile reduction's percentile is `reduction.params.percentile`.
+ * A share of subjects passing is an `aggregation` of kind `proportion` with
+ * `use_verdict` true and a `rule` that is a `threshold` with direction
+ * `maximize` and a `pass_values` from 0 to 1. The `PUT` takes `settings` in
+ * this form, and converts a request that gives the pass mark as
+ * `aggregation.params.threshold` or the percentile as `params.p`.
+ * `latest_result` compares the claim's current result with the accepted
+ * settings.
  * `check_description` is the check's entry in the check list as it was when
  * the check was last found there, and is null when the claim has no settings.
- * @response 200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`
+ * @response 200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, offered_version, latest_result }`
  * @response 400 - `id` is not a UUID
  * @response 401 - No session
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/user
