@@ -128,61 +128,52 @@ The same token can already read the claim's evidence records, which carry the sa
 
 ## 9. A collapsed claim expands again when the case reloads
 
-Any change to an element makes every open canvas load the case again, and
-loading the case expands claims that were collapsed. Adding or rewriting a
-claim's evidence node is an element change, so it does this too. The same
-happens for every other element change; the evidence node does not make it
-more frequent than ordinary editing.
+Any change to an element makes every open canvas load the case again.
+Loading the case expands claims that were collapsed.
+Adding or rewriting a claim's evidence node is an element change, so it does this too.
+The same happens for every other element change.
+The evidence node does not make it more frequent than ordinary editing.
 
 **Revisit trigger:** the canvas keeping collapse state across a reload.
 
 ## 10. Evidence linked to two claims is drawn twice with one id
 
-Evidence can support more than one claim, but only the JSON editor and import
-can make the second link. The canvas then draws two nodes that share one id.
-The evidence node is one such element when it is linked to a second claim
-that way: only the claim it reports on counts it as live.
+Evidence can support more than one claim, but only the JSON editor and import can make the second link.
+The canvas then draws two nodes that share one id.
+The evidence node is one such element when it is linked to a second claim that way.
+Only the claim it reports on counts it as live.
 
-**Revisit trigger:** a way to link evidence to a second claim from the
-canvas, or any report of the duplicate id causing a fault.
+**Revisit trigger:** a way to link evidence to a second claim from the canvas, or any report of the duplicate id causing a fault.
 
 ## 11. Deleting a claim leaves its evidence in the case
 
-Evidence linked to a claim is not moved to the trash with the claim. A claim's
-evidence node is left as ordinary evidence and is not live while the claim is
-in the trash. Restoring the claim makes it live again.
+Evidence linked to a claim is not moved to the trash with the claim.
+A claim's evidence node is left as ordinary evidence and is not live while the claim is in the trash.
+Restoring the claim makes it live again.
 
-**Revisit trigger:** a decision about what should happen to evidence when the
-last claim it supports is deleted.
+**Revisit trigger:** a decision about what should happen to evidence when the last claim it supports is deleted.
 
 ## 12. Evidence identifiers can repeat
 
-An evidence element's identifier is the number of undeleted evidence elements
-in the case, plus one, when it is written. Deleting evidence and then adding
-more can give a new element the identifier of an older one. A claim's evidence
-node takes its identifier the same way. Elements are referred to by id
-internally, so nothing is mis-linked, but two elements can read the same.
+An evidence element's identifier is the number of undeleted evidence elements in the case, plus one, when it is written.
+Deleting evidence and then adding more can give a new element the identifier of an older one.
+A claim's evidence node takes its identifier the same way.
+Elements are referred to by id internally, so nothing is mis-linked, but two elements can read the same.
 
-**Revisit trigger:** a requirement that identifiers are never reused, or an
-export format that treats them as keys.
+**Revisit trigger:** a requirement that identifiers are never reused, or an export format that treats them as keys.
 
 ## 13. An open JSON editor refuses a save after any change to the case
 
-The JSON editor records the case's last-changed time when it opens and
-refuses to save once the case has changed, whoever changed it. Adding an
-evidence node changes the case, as does every other element write, so an
-editor that was open when an author accepted a check's settings must be
-reloaded before it can save.
+The JSON editor records the case's last-changed time when it opens and refuses to save once the case has changed, whoever changed it.
+Adding an evidence node changes the case, as does every other element write.
+An editor that was open when an author accepted a check's settings must be reloaded before it can save.
 
-**Revisit trigger:** a merge of the editor's changes with the case, in place
-of the refusal.
+**Revisit trigger:** a merge of the editor's changes with the case, in place of the refusal.
 
 ## 14. A result with no expiry keeps its look
 
 A result whose time limit is `indefinite` never goes out of date by the clock.
-If the pipeline stops sending, the claim keeps showing the status of its last
-result, wherever the status is drawn, until a person revokes that result.
+If the pipeline stops sending, the claim keeps showing the status of its last result, wherever the status is drawn, until a person revokes that result.
 The evidence node, whose look follows the claim's status, does the same.
 
-**Revisit trigger:** a requirement that a claim must show silence from its
-pipeline even when its last result never expires.
+**Revisit trigger:** a requirement that a claim must show silence from its pipeline even when its last result never expires.
