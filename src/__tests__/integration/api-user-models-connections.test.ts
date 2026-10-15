@@ -422,7 +422,11 @@ describe("POST /api/user/models/connections", () => {
 		expect((await refused.json()).code).toBe("VALIDATION");
 		expect((await post({ label: "L", type: "OLLAMA" })).status).toBe(400);
 		expect((await post({ label: "L", type: "OPENROUTER" })).status).toBe(400);
-		expect((await post({ label: "L", type: "OPENAI" })).status).toBe(400);
+		const keyless = await post({ label: "L", type: "OPENAI" });
+		expect(keyless.status).toBe(400);
+		expect((await keyless.json()).error).toBe(
+			"An API key is required for this connection type"
+		);
 
 		// LIMIT_REACHED
 		for (let i = 0; i < MAX_CONNECTIONS_PER_USER; i++) {

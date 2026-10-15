@@ -47,7 +47,7 @@ An OpenAI connection is for OpenAI's own service, so the user enters only a labe
 It sends a reply's length limit in the `max_completion_tokens` field, which OpenAI's newer models require.
 An OpenAI-compatible connection sends the older `max_tokens` field, which most other servers expect.
 Ranking runs only on OpenRouter and Ollama connections, the two types that have a Clef-Flash endpoint.
-Search and ranking stay on OpenRouter or Ollama for a user whose chat model is on OpenAI, because OpenAI serves neither Clef-Flash nor the catalogue's embedding model.
+A user whose chat model is on OpenAI keeps ranking on OpenRouter or Ollama, and search on a connection type that can do it, because OpenAI serves neither Clef-Flash nor the catalogue's embedding model.
 A user can have up to 10 connections.
 
 ### Where the settings live
