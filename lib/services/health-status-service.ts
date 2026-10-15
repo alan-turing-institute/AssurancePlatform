@@ -11,7 +11,10 @@ import type {
 } from "@/lib/schemas/health-evidence";
 import { guardCaseAccess } from "@/lib/services/health-claim-access";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
-import type { PluginHealthEvidenceVerdict } from "@/src/generated/prisma";
+import type {
+	PluginHealthEvidenceVerdict,
+	Prisma,
+} from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "health-status-service" });
@@ -323,6 +326,32 @@ export interface HealthCaseStatus {
 }
 
 /**
+ * The claims of a case that can have a status: property claims that are not
+ * deleted and have a bound check or at least one record. Every read that asks
+ * which claims have a status uses this one filter, so the answers agree.
+ */
+const CLAIMS_WITH_STATUS: Prisma.AssuranceElementWhereInput = {
+	deletedAt: null,
+	elementType: "PROPERTY_CLAIM",
+	OR: [
+		{ pluginHealthClaimState: { isNot: null } },
+		{ pluginHealthEvidence: { some: {} } },
+	],
+};
+
+/**
+ * Whether any claim in `caseId` has a status. Performs no access check:
+ * callers have already established that the person can view the case.
+ */
+export async function caseHasHealthStatus(caseId: string): Promise<boolean> {
+	const claim = await prisma.assuranceElement.findFirst({
+		where: { caseId, ...CLAIMS_WITH_STATUS },
+		select: { id: true },
+	});
+	return claim !== null;
+}
+
+/**
  * The status of every claim in `caseId` that has one (a bound check or at
  * least one record), for a signed-in person or a machine principal. Requires
  * VIEW-level case access; a missing case and an inaccessible one give the
@@ -338,15 +367,7 @@ export async function readHealthStatusesForCase(
 	}
 	try {
 		const claims = await prisma.assuranceElement.findMany({
-			where: {
-				caseId,
-				deletedAt: null,
-				elementType: "PROPERTY_CLAIM",
-				OR: [
-					{ pluginHealthClaimState: { isNot: null } },
-					{ pluginHealthEvidence: { some: {} } },
-				],
-			},
+			where: { caseId, ...CLAIMS_WITH_STATUS },
 			select: { id: true },
 			orderBy: { createdAt: "asc" },
 		});

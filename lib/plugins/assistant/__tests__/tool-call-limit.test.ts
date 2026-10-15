@@ -6,9 +6,13 @@ import {
 } from "@/lib/plugins/assistant/tool-call-limit";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
 import { exportCase } from "@/lib/services/case-export-service";
+import { readHealthStatusesForCase } from "@/lib/services/health-status-service";
 
 vi.mock("@/lib/services/case-export-service", () => ({
 	exportCase: vi.fn(),
+}));
+vi.mock("@/lib/services/health-status-service", () => ({
+	readHealthStatusesForCase: vi.fn(),
 }));
 
 const TREE = {
@@ -146,6 +150,19 @@ describe("createCaseTools: the cap on one reply's tool calls", () => {
 
 		expect(answer).toEqual(TOO_MANY);
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("counts read_claim_health in the same cap, and does not read statuses past it", async () => {
+		vi.mocked(readHealthStatusesForCase).mockResolvedValue({ data: [] });
+		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		for (let index = 0; index < MAX_TOOL_CALLS_PER_REPLY; index += 1) {
+			await tools.read_case.execute?.({}, options);
+		}
+
+		const answer = await tools.read_claim_health?.execute?.({}, options);
+
+		expect(answer).toEqual(TOO_MANY);
+		expect(readHealthStatusesForCase).not.toHaveBeenCalled();
 	});
 
 	it("gives each reply its own cap and its own export", async () => {

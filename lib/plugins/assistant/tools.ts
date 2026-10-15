@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { createClaimHealthTool } from "@/lib/plugins/assistant/claim-health-tool";
 import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
 	createTechniquesTool,
@@ -115,13 +116,19 @@ function sharedCaseExport(
  * cut off; the techniques tool keeps its wait inside it. `models` gives that
  * tool the user's search and ranking jobs; without it the tool searches by
  * keyword only.
+ *
+ * `claimHealth` adds `read_claim_health`, which the caller sets only when the
+ * health plugin is on for the user and the case has claims with automated
+ * checks. It takes the claims' order and labels from the shared export and
+ * reads their statuses again on every call.
  */
 export function createCaseTools(
 	userId: string,
 	caseId: string,
 	selection: SelectedElement | null = null,
 	replyDeadline?: number,
-	models?: TechniquesModelAccess
+	models?: TechniquesModelAccess,
+	claimHealth = false
 ) {
 	const limited = createToolCallLimit();
 	const caseExport = sharedCaseExport(userId, caseId);
@@ -175,6 +182,16 @@ export function createCaseTools(
 						selection,
 						replyDeadline,
 						models,
+						limited
+					),
+				}
+			: {}),
+		...(claimHealth
+			? {
+					read_claim_health: createClaimHealthTool(
+						userId,
+						caseId,
+						caseExport,
 						limited
 					),
 				}

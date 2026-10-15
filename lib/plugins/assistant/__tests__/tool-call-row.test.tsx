@@ -43,6 +43,7 @@ describe("ToolCallRow", () => {
 		["tool-read_element", "Read an element"],
 		["tool-lint_case", "Check against the rules"],
 		["tool-suggest_techniques", "Suggest techniques"],
+		["tool-read_claim_health", "Read claim health"],
 		["tool-something_else", "something_else"],
 	])("titles %s as %s", (type, title) => {
 		renderWithoutProviders(<ToolCallRow part={part({ type })} />);

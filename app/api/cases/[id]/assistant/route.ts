@@ -14,6 +14,8 @@ import {
 import { AppError, notFound } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
+import { claimHealthAvailability } from "@/lib/plugins/assistant/claim-health-availability";
+import { claimHealthPrompt } from "@/lib/plugins/assistant/claim-health-tool";
 import { ASSISTANT_PLUGIN_ID } from "@/lib/plugins/assistant/constants";
 import {
 	modelAccessFor,
@@ -141,9 +143,10 @@ export async function POST(
 			maxBytes: MAX_BODY_BYTES,
 		});
 
-		const [resolved, selection] = await Promise.all([
+		const [resolved, selection, claimHealth] = await Promise.all([
 			resolveChatModel(userId),
 			resolveSelectedElement(userId, caseId, body.selectedElementId),
+			claimHealthAvailability(userId, caseId),
 		]);
 		if ("error" in resolved) {
 			throw new AppError({ code: "CONFLICT", message: resolved.error });
@@ -158,14 +161,16 @@ export async function POST(
 			caseId,
 			selection,
 			replyDeadline,
-			modelAccessFor(userId)
+			modelAccessFor(userId),
+			claimHealth === "available"
 		);
 		const result = streamText({
 			model: resolved.model,
 			system:
 				buildSystemPrompt(Object.keys(tools)) +
 				selectionPrompt(selection) +
-				techniquesPrompt(),
+				techniquesPrompt() +
+				claimHealthPrompt(claimHealth),
 			messages: await modelHistory(body.messages as UIMessage[]),
 			tools,
 			// Files never reach the model call through the schema above; this
@@ -214,7 +219,16 @@ export async function GET(
 ) {
 	try {
 		const { userId, caseId } = await authorise(params);
-		return apiSuccess({ tools: Object.keys(createCaseTools(userId, caseId)) });
+		const claimHealth = await claimHealthAvailability(userId, caseId);
+		const tools = createCaseTools(
+			userId,
+			caseId,
+			null,
+			undefined,
+			undefined,
+			claimHealth === "available"
+		);
+		return apiSuccess({ tools: Object.keys(tools) });
 	} catch (error) {
 		return apiErrorFromUnknown(error);
 	}
