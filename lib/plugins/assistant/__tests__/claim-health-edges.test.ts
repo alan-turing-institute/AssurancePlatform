@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const service = vi.hoisted(() => ({ readStatuses: vi.fn() }));
+const service = vi.hoisted(() => ({
+	readStatuses: vi.fn(),
+	readNodes: vi.fn(),
+}));
 
 vi.mock("@/lib/services/health-status-service", () => ({
 	readHealthStatusesForCase: service.readStatuses,
+	readClaimEvidenceNodes: service.readNodes,
 }));
 
 import {
@@ -47,6 +51,8 @@ beforeEach(() => {
 	vi.useFakeTimers({ toFake: ["Date"] });
 	vi.setSystemTime(NOW);
 	service.readStatuses.mockReset();
+	service.readNodes.mockReset();
+	service.readNodes.mockResolvedValue([]);
 });
 
 afterEach(() => {

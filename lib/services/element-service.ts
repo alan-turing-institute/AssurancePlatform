@@ -122,10 +122,11 @@ async function validateCaseAccess(
  */
 async function guardAssertionStatusWrite(
 	userId: string,
-	knownIsSystemUser?: boolean
+	knownIsSystemUser?: boolean,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	const isSystemUser =
-		knownIsSystemUser ?? (await isSystemUserPrincipal(userId));
+		knownIsSystemUser ?? (await isSystemUserPrincipal(userId, db));
 	if (isSystemUser) {
 		return "Permission denied: assertionStatus can only be set by a case author, not a machine or integration principal";
 	}
@@ -139,8 +140,11 @@ async function guardAssertionStatusWrite(
  * batch and pass it into `enforceAssertionStatusRules` via
  * `knownIsSystemUser`, instead of re-querying it once per changed element.
  */
-export async function isSystemUserPrincipal(userId: string): Promise<boolean> {
-	const actor = await prisma.user.findUnique({
+export async function isSystemUserPrincipal(
+	userId: string,
+	db: TxClient = prisma
+): Promise<boolean> {
+	const actor = await db.user.findUnique({
 		where: { id: userId },
 		select: { isSystemUser: true },
 	});
@@ -230,7 +234,8 @@ function rejectDeclaredAsCited(
 export async function validateCitedElementId(
 	citedElementId: string | null | undefined,
 	moduleReferenceId: string | null | undefined,
-	ownElementId?: string
+	ownElementId?: string,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	if (!citedElementId) {
 		return;
@@ -241,7 +246,7 @@ export async function validateCitedElementId(
 	if (!moduleReferenceId) {
 		return "citedElementId must reference an existing element";
 	}
-	const target = await prisma.assuranceElement.findFirst({
+	const target = await db.assuranceElement.findFirst({
 		where: { id: citedElementId, deletedAt: null },
 		select: { id: true, caseId: true },
 	});
@@ -265,7 +270,8 @@ async function enforceCitedElementIdRules(
 	elementType: string,
 	citedElementId: string | null | undefined,
 	moduleReferenceId: string | null | undefined,
-	ownElementId?: string
+	ownElementId?: string,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	if (citedElementId === undefined) {
 		return;
@@ -280,7 +286,8 @@ async function enforceCitedElementIdRules(
 	return await validateCitedElementId(
 		citedElementId,
 		moduleReferenceId,
-		ownElementId
+		ownElementId,
+		db
 	);
 }
 
@@ -301,7 +308,8 @@ async function enforceCitedElementIdRules(
 async function validateDefeatsElementId(
 	caseId: string,
 	defeatsElementId: string | null | undefined,
-	ownElementId?: string
+	ownElementId?: string,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	if (!defeatsElementId) {
 		return;
@@ -309,7 +317,7 @@ async function validateDefeatsElementId(
 	if (ownElementId && defeatsElementId === ownElementId) {
 		return "defeatsElementId cannot reference the element itself";
 	}
-	const target = await prisma.assuranceElement.findFirst({
+	const target = await db.assuranceElement.findFirst({
 		where: { id: defeatsElementId, deletedAt: null, caseId },
 		select: { id: true },
 	});
@@ -330,12 +338,18 @@ async function validateDefeatsElementId(
 async function enforceDefeatsElementIdRules(
 	caseId: string,
 	defeatsElementId: string | null | undefined,
-	ownElementId?: string
+	ownElementId?: string,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	if (defeatsElementId === undefined) {
 		return;
 	}
-	return await validateDefeatsElementId(caseId, defeatsElementId, ownElementId);
+	return await validateDefeatsElementId(
+		caseId,
+		defeatsElementId,
+		ownElementId,
+		db
+	);
 }
 
 /**
@@ -353,9 +367,10 @@ async function enforceDefeatsElementIdRules(
  */
 async function validateParentIdInCase(
 	caseId: string,
-	parentId: string
+	parentId: string,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
-	const parent = await prisma.assuranceElement.findFirst({
+	const parent = await db.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null, caseId },
 		select: { id: true },
 	});
@@ -416,12 +431,13 @@ function rejectMissingModuleReferenceId(
  * stricter, already-established precedent instead.
  */
 async function validateModuleReferenceId(
-	moduleReferenceId: string | null | undefined
+	moduleReferenceId: string | null | undefined,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	if (!moduleReferenceId) {
 		return;
 	}
-	const target = await prisma.assuranceCase.findFirst({
+	const target = await db.assuranceCase.findFirst({
 		where: { id: moduleReferenceId, deletedAt: null },
 		select: { id: true },
 	});
@@ -439,7 +455,8 @@ async function validateModuleReferenceId(
 async function enforceModuleReferenceIdRules(
 	elementType: string,
 	moduleReferenceId: string | null | undefined,
-	options: { requireOnCreate: boolean }
+	options: { requireOnCreate: boolean },
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	const applicabilityError = rejectModuleReferenceIdIfNotApplicable(
 		elementType,
@@ -457,7 +474,7 @@ async function enforceModuleReferenceIdRules(
 			return requiredError;
 		}
 	}
-	return await validateModuleReferenceId(moduleReferenceId);
+	return await validateModuleReferenceId(moduleReferenceId, db);
 }
 
 /**
@@ -478,7 +495,8 @@ async function enforceModuleReferenceIdRules(
 export async function enforceAssertionStatusRules(
 	assertionStatus: AssertionStatus | null | undefined,
 	userId: string,
-	knownIsSystemUser?: boolean
+	knownIsSystemUser?: boolean,
+	db: TxClient = prisma
 ): Promise<string | undefined> {
 	if (assertionStatus === undefined) {
 		return;
@@ -487,7 +505,7 @@ export async function enforceAssertionStatusRules(
 	if (citedError) {
 		return citedError;
 	}
-	return await guardAssertionStatusWrite(userId, knownIsSystemUser);
+	return await guardAssertionStatusWrite(userId, knownIsSystemUser, db);
 }
 
 /**
@@ -569,14 +587,15 @@ async function generateDefeaterPropertyClaimName(
 	caseId: string,
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
-	prefix: string
+	prefix: string,
+	db: TxClient
 ): Promise<string> {
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
 		parentInfo.isDefeater &&
 		parentInfo.name
 	) {
-		const siblingCount = await prisma.assuranceElement.count({
+		const siblingCount = await db.assuranceElement.count({
 			where: {
 				parentId,
 				elementType: "PROPERTY_CLAIM",
@@ -587,7 +606,7 @@ async function generateDefeaterPropertyClaimName(
 		return `${parentInfo.name}.${siblingCount + 1}`;
 	}
 
-	const caseWideCount = await prisma.assuranceElement.count({
+	const caseWideCount = await db.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: "PROPERTY_CLAIM",
@@ -623,14 +642,15 @@ async function generatePlainPropertyClaimName(
 	caseId: string,
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
-	prefix: string
+	prefix: string,
+	db: TxClient
 ): Promise<string> {
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
 		!parentInfo.isDefeater &&
 		parentInfo.name
 	) {
-		const siblingCount = await prisma.assuranceElement.count({
+		const siblingCount = await db.assuranceElement.count({
 			where: {
 				parentId,
 				elementType: "PROPERTY_CLAIM",
@@ -643,13 +663,13 @@ async function generatePlainPropertyClaimName(
 
 	if (parentId && parentInfo?.elementType === "STRATEGY") {
 		// Look up the strategy's parent (one hop — strategies can't be under other strategies)
-		const grandparent = await prisma.assuranceElement.findFirst({
+		const grandparent = await db.assuranceElement.findFirst({
 			where: { id: parentId, deletedAt: null },
 			select: { parentId: true },
 		});
 
 		if (grandparent?.parentId) {
-			const ancestor = await prisma.assuranceElement.findFirst({
+			const ancestor = await db.assuranceElement.findFirst({
 				where: { id: grandparent.parentId, deletedAt: null },
 				select: {
 					elementType: true,
@@ -664,7 +684,7 @@ async function generatePlainPropertyClaimName(
 				!ancestor.isDefeater &&
 				ancestor.name
 			) {
-				const strategyChildren = await prisma.assuranceElement.findMany({
+				const strategyChildren = await db.assuranceElement.findMany({
 					where: {
 						parentId: grandparent.parentId,
 						elementType: "STRATEGY",
@@ -677,7 +697,7 @@ async function generatePlainPropertyClaimName(
 					...strategyChildren.map((s) => s.id),
 				];
 
-				const siblingCount = await prisma.assuranceElement.count({
+				const siblingCount = await db.assuranceElement.count({
 					where: {
 						parentId: { in: effectiveParentIds },
 						elementType: "PROPERTY_CLAIM",
@@ -706,7 +726,7 @@ async function generatePlainPropertyClaimName(
 	// branch decision one hop further, via a nested self-relation filter,
 	// instead of `level` — see the round-1 note on why `level` can't be
 	// used here once a defeater can sit in the parent chain.
-	const caseWideCount = await prisma.assuranceElement.count({
+	const caseWideCount = await db.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: "PROPERTY_CLAIM",
@@ -749,7 +769,8 @@ async function generateElementName(
 	caseId: string,
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
-	isDefeater: boolean
+	isDefeater: boolean,
+	db: TxClient = prisma
 ): Promise<string> {
 	const prefix = toPrefix(elementType, isDefeater);
 
@@ -759,13 +780,15 @@ async function generateElementName(
 					caseId,
 					parentId,
 					parentInfo,
-					prefix
+					prefix,
+					db
 				)
 			: await generatePlainPropertyClaimName(
 					caseId,
 					parentId,
 					parentInfo,
-					prefix
+					prefix,
+					db
 				);
 	}
 
@@ -773,7 +796,7 @@ async function generateElementName(
 	// case-wide within the (type, isDefeater) class. This ensures unique
 	// identifiers across the entire case (S1, S2, E1, E2, C1, C2... and,
 	// independently, CS1, CE1, CC1...).
-	const caseWideCount = await prisma.assuranceElement.count({
+	const caseWideCount = await db.assuranceElement.count({
 		where: {
 			caseId,
 			elementType: elementType as PrismaElementType,
@@ -829,11 +852,14 @@ export function calculateLevelFromParentChain(
  * The rule itself lives in `calculateLevelFromParentChain`; this function
  * only owns the fetching (parent, then grandparent if needed).
  */
-async function calculatePropertyClaimLevel(parentId: string): Promise<{
+async function calculatePropertyClaimLevel(
+	parentId: string,
+	db: TxClient = prisma
+): Promise<{
 	level: number;
 	parentInfo: { name: string | null; elementType: string; isDefeater: boolean };
 }> {
-	const parent = await prisma.assuranceElement.findFirst({
+	const parent = await db.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null },
 		select: {
 			level: true,
@@ -854,7 +880,7 @@ async function calculatePropertyClaimLevel(parentId: string): Promise<{
 
 	let grandparentInfo: LevelRuleParentInfo | undefined;
 	if (parentInfo?.elementType === "STRATEGY" && parentInfo.parentId) {
-		const grandparent = await prisma.assuranceElement.findFirst({
+		const grandparent = await db.assuranceElement.findFirst({
 			where: { id: parentInfo.parentId, deletedAt: null },
 			select: { level: true, elementType: true, name: true },
 		});
@@ -908,8 +934,11 @@ export async function regenerateNameForIsDefeaterChange(
  * Checks if a case already has a goal element.
  * Returns true if a goal exists, false otherwise.
  */
-async function caseHasGoal(caseId: string): Promise<boolean> {
-	const existingGoal = await prisma.assuranceElement.findFirst({
+async function caseHasGoal(
+	caseId: string,
+	db: TxClient = prisma
+): Promise<boolean> {
+	const existingGoal = await db.assuranceElement.findFirst({
 		where: {
 			caseId,
 			elementType: "GOAL",
@@ -946,9 +975,11 @@ function resolveDescription(input: CreateElementInput): string {
 }
 
 /**
- * Creates the element in the database and handles evidence linking.
+ * Writes the element, its evidence link when it has one, and the case's
+ * `updatedAt`, all through the caller's transaction.
  */
 async function createElementInDatabase(
+	tx: TxClient,
 	input: CreateElementInput,
 	caseId: string,
 	elementType: string,
@@ -958,57 +989,53 @@ async function createElementInDatabase(
 	userId: string,
 	intendedParentId: string | null
 ): Promise<{ data: ElementResponse } | { error: string }> {
-	const element = await prisma.$transaction(async (tx) => {
-		const created = await tx.assuranceElement.create({
-			data: {
-				caseId,
-				elementType: elementType as
-					| "GOAL"
-					| "STRATEGY"
-					| "PROPERTY_CLAIM"
-					| "EVIDENCE",
-				name: elementName,
-				description: resolveDescription(input),
-				parentId: effectiveParentId,
-				...resolveUrls(input),
-				assumption: input.assumption,
-				justification: input.justification,
-				context: input.context ?? [],
-				level,
-				assertionStatus: input.assertionStatus,
-				// Element-level citation (ADR 0004 D5) — applicability, existence,
-				// and self-citation are validated in createElement before this
-				// function is called.
-				citedElementId: input.citedElementId,
-				// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
-				// and existence are validated in createElement before this function
-				// is called.
-				moduleReferenceId: input.moduleReferenceId,
-				// Required for MODULE at the Prisma validation layer
-				// (element-validation.ts's REQUIRED_FIELDS); harmless for every
-				// other type, which doesn't declare the field applicable.
-				moduleEmbedType: input.moduleEmbedType,
-				// Dialogical reasoning (defeaters) — same-case existence and
-				// self-reference are validated in createElement before this
-				// function is called.
-				isDefeater: input.isDefeater ?? false,
-				defeatsElementId: input.defeatsElementId,
-				createdById: userId,
-			},
-			include: {
-				parent: { select: { id: true, elementType: true } },
-			},
-		});
-
-		// Create EvidenceLink for evidence elements with an intended parent claim
-		if (intendedParentId) {
-			await createEvidenceLink(tx, created.id, intendedParentId);
-		}
-
-		await touchCase(tx, caseId);
-
-		return created;
+	const element = await tx.assuranceElement.create({
+		data: {
+			caseId,
+			elementType: elementType as
+				| "GOAL"
+				| "STRATEGY"
+				| "PROPERTY_CLAIM"
+				| "EVIDENCE",
+			name: elementName,
+			description: resolveDescription(input),
+			parentId: effectiveParentId,
+			...resolveUrls(input),
+			assumption: input.assumption,
+			justification: input.justification,
+			context: input.context ?? [],
+			level,
+			assertionStatus: input.assertionStatus,
+			// Element-level citation (ADR 0004 D5) — applicability, existence,
+			// and self-citation are validated in createElementWithin before this
+			// function is called.
+			citedElementId: input.citedElementId,
+			// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
+			// and existence are validated in createElementWithin before this
+			// function is called.
+			moduleReferenceId: input.moduleReferenceId,
+			// Required for MODULE at the Prisma validation layer
+			// (element-validation.ts's REQUIRED_FIELDS); harmless for every
+			// other type, which doesn't declare the field applicable.
+			moduleEmbedType: input.moduleEmbedType,
+			// Dialogical reasoning (defeaters) — same-case existence and
+			// self-reference are validated in createElementWithin before this
+			// function is called.
+			isDefeater: input.isDefeater ?? false,
+			defeatsElementId: input.defeatsElementId,
+			createdById: userId,
+		},
+		include: {
+			parent: { select: { id: true, elementType: true } },
+		},
 	});
+
+	// Create EvidenceLink for evidence elements with an intended parent claim
+	if (intendedParentId) {
+		await createEvidenceLink(tx, element.id, intendedParentId);
+	}
+
+	await touchCase(tx, caseId);
 
 	const response = transformToResponse(element);
 
@@ -1034,23 +1061,25 @@ async function validateElementReferences(
 	caseId: string,
 	elementType: PrismaElementType,
 	parentId: string | null | undefined,
-	input: CreateElementInput
+	input: CreateElementInput,
+	db: TxClient
 ): Promise<{ error: string } | undefined> {
 	if (parentId) {
-		const parentError = await validateParentIdInCase(caseId, parentId);
+		const parentError = await validateParentIdInCase(caseId, parentId, db);
 		if (parentError) {
 			return { error: parentError };
 		}
 	}
 
-	if (elementType === "GOAL" && (await caseHasGoal(caseId))) {
+	if (elementType === "GOAL" && (await caseHasGoal(caseId, db))) {
 		return { error: "A case can only have one goal claim" };
 	}
 
 	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
 		elementType,
 		input.moduleReferenceId,
-		{ requireOnCreate: true }
+		{ requireOnCreate: true },
+		db
 	);
 	if (moduleReferenceIdError) {
 		return { error: moduleReferenceIdError };
@@ -1059,7 +1088,9 @@ async function validateElementReferences(
 	const citedElementIdError = await enforceCitedElementIdRules(
 		elementType,
 		input.citedElementId,
-		input.moduleReferenceId
+		input.moduleReferenceId,
+		undefined,
+		db
 	);
 	if (citedElementIdError) {
 		return { error: citedElementIdError };
@@ -1067,7 +1098,9 @@ async function validateElementReferences(
 
 	const defeatsElementIdError = await enforceDefeatsElementIdRules(
 		caseId,
-		input.defeatsElementId
+		input.defeatsElementId,
+		undefined,
+		db
 	);
 	if (defeatsElementIdError) {
 		return { error: defeatsElementIdError };
@@ -1092,12 +1125,13 @@ async function enforceElementNameFormat(
 	elementType: string,
 	name: string | null | undefined,
 	userId: string,
-	isDefeater = false
+	isDefeater = false,
+	db: TxClient = prisma
 ): Promise<{ error: string } | undefined> {
 	if (!name) {
 		return;
 	}
-	const enabledPluginIds = await getEnabledPluginIdsForUser(userId);
+	const enabledPluginIds = await getEnabledPluginIdsForUser(userId, db);
 	const nameValidation = validateElementName(
 		elementType,
 		name,
@@ -1111,25 +1145,29 @@ async function enforceElementNameFormat(
 }
 
 /**
- * Creates a new element in a case
+ * Everything `createElementWithin` does before it writes: the guards, the
+ * property-claim level and the name, with every read going through `tx`.
  */
-export async function createElement(
+async function prepareElementCreate(
+	tx: TxClient,
 	userId: string,
 	input: CreateElementInput
-): ServiceResult<ElementResponse> {
+): Promise<
+	| { error: string }
+	| {
+			elementType: PrismaElementType;
+			elementName: string;
+			intendedParentId: string | null;
+			effectiveParentId: string | null | undefined;
+			level: number | undefined;
+	  }
+> {
 	const caseId = input.caseId;
-	if (!caseId) {
-		return { error: "Case ID is required" };
-	}
-
-	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
-	if (!hasAccess) {
-		return { error: "Permission denied" };
-	}
-
 	const assertionStatusError = await enforceAssertionStatusRules(
 		input.assertionStatus,
-		userId
+		userId,
+		undefined,
+		tx
 	);
 	if (assertionStatusError) {
 		return { error: assertionStatusError };
@@ -1154,7 +1192,8 @@ export async function createElement(
 		caseId,
 		elementType,
 		parentId,
-		input
+		input,
+		tx
 	);
 	if (referenceError) {
 		return referenceError;
@@ -1162,14 +1201,15 @@ export async function createElement(
 
 	const { level, parentInfo } =
 		elementType === "PROPERTY_CLAIM" && parentId
-			? await calculatePropertyClaimLevel(parentId)
+			? await calculatePropertyClaimLevel(parentId, tx)
 			: { level: undefined, parentInfo: null };
 
 	const nameFormatError = await enforceElementNameFormat(
 		elementType,
 		input.name,
 		userId,
-		isDefeater
+		isDefeater,
+		tx
 	);
 	if (nameFormatError) {
 		return nameFormatError;
@@ -1182,24 +1222,73 @@ export async function createElement(
 			caseId,
 			parentId ?? null,
 			parentInfo,
-			isDefeater
+			isDefeater,
+			tx
 		));
 
 	// Evidence uses evidence_links instead of parentId
 	const isEvidence = elementType === "EVIDENCE";
-	const intendedParentId = isEvidence ? (parentId ?? null) : null;
-	const effectiveParentId = isEvidence ? null : parentId;
+	return {
+		elementType,
+		elementName,
+		level,
+		intendedParentId: isEvidence ? (parentId ?? null) : null,
+		effectiveParentId: isEvidence ? null : parentId,
+	};
+}
+
+/**
+ * Creates an element inside the caller's transaction: validates the input
+ * (the same rules as `createElement`), names the element, writes it and its
+ * evidence link, and bumps the case's `updatedAt`. Every read goes through
+ * `tx`, including the count that picks the next `E<n>` name and the
+ * enabled-plugin lookup behind the name check.
+ *
+ * Makes no permission decision: the caller must already have checked EDIT on
+ * `input.caseId` for `userId`.
+ */
+export async function createElementWithin(
+	tx: TxClient,
+	userId: string,
+	input: CreateElementInput
+): Promise<{ data: ElementResponse } | { error: string }> {
+	const prepared = await prepareElementCreate(tx, userId, input);
+	if ("error" in prepared) {
+		return prepared;
+	}
+	return await createElementInDatabase(
+		tx,
+		input,
+		input.caseId,
+		prepared.elementType,
+		prepared.elementName,
+		prepared.effectiveParentId,
+		prepared.level,
+		userId,
+		prepared.intendedParentId
+	);
+}
+
+/**
+ * Creates a new element in a case
+ */
+export async function createElement(
+	userId: string,
+	input: CreateElementInput
+): ServiceResult<ElementResponse> {
+	const caseId = input.caseId;
+	if (!caseId) {
+		return { error: "Case ID is required" };
+	}
+
+	const hasAccess = await validateCaseAccess(userId, caseId, "EDIT");
+	if (!hasAccess) {
+		return { error: "Permission denied" };
+	}
 
 	try {
-		return await createElementInDatabase(
-			input,
-			caseId,
-			elementType,
-			elementName,
-			effectiveParentId,
-			level,
-			userId,
-			intendedParentId
+		return await prisma.$transaction((tx) =>
+			createElementWithin(tx, userId, input)
 		);
 	} catch (error) {
 		log.error("Failed to create element", { error });
@@ -1535,6 +1624,33 @@ async function applyRegeneratedNameOnDefeaterFlip(
 }
 
 /**
+ * Writes `data` (already validated and mapped to columns) onto an element
+ * inside the caller's transaction and bumps the case's `updatedAt`. The
+ * health plugin uses it to rewrite a node's description.
+ *
+ * Makes no permission decision: the caller must already have checked EDIT on
+ * `caseId`.
+ */
+export async function updateElementWithin(
+	tx: TxClient,
+	elementId: string,
+	caseId: string,
+	data: Record<string, unknown>
+): Promise<ElementResponse> {
+	const updated = await tx.assuranceElement.update({
+		where: { id: elementId },
+		data,
+		include: {
+			parent: {
+				select: { id: true, elementType: true },
+			},
+		},
+	});
+	await touchCase(tx, caseId);
+	return transformToResponse(updated);
+}
+
+/**
  * Updates an existing element
  */
 export async function updateElement(
@@ -1613,21 +1729,11 @@ export async function updateElement(
 			updateData
 		);
 
-		const element = await prisma.$transaction(async (tx) => {
-			const updated = await tx.assuranceElement.update({
-				where: { id: elementId },
-				data: updateData,
-				include: {
-					parent: {
-						select: { id: true, elementType: true },
-					},
-				},
-			});
-			await touchCase(tx, existing.caseId);
-			return updated;
-		});
-
-		return { data: transformToResponse(element) };
+		return {
+			data: await prisma.$transaction((tx) =>
+				updateElementWithin(tx, elementId, existing.caseId, updateData)
+			),
+		};
 	} catch (error) {
 		log.error("Failed to update element", { error });
 		return { error: "Failed to update element" };
@@ -1655,6 +1761,52 @@ async function nullifyDanglingCitations(
 		where: { citedElementId: { in: citedElementIds } },
 		data: { citedElementId: null, citationDangling: true },
 	});
+}
+
+/**
+ * Removes the evidence link between `evidenceId` and `claimId` inside the
+ * caller's transaction and bumps the case's `updatedAt`. The evidence element
+ * itself is untouched.
+ *
+ * Makes no permission decision: the caller must already have checked EDIT on
+ * `caseId`.
+ */
+export async function unlinkEvidenceWithin(
+	tx: TxClient,
+	evidenceId: string,
+	claimId: string,
+	caseId: string
+): Promise<void> {
+	await tx.evidenceLink.deleteMany({ where: { evidenceId, claimId } });
+	await touchCase(tx, caseId);
+}
+
+/**
+ * Soft-deletes an element and all its descendants inside the caller's
+ * transaction, nullifies and flags any citations of them (ADR 0004 D5) and
+ * bumps the case's `updatedAt`.
+ *
+ * Makes no permission decision: the caller must already have checked EDIT on
+ * `caseId`.
+ */
+export async function deleteElementWithin(
+	tx: TxClient,
+	userId: string,
+	elementId: string,
+	caseId: string
+): Promise<void> {
+	const descendantIds = await getDescendantIds(elementId, tx);
+	const allIds = [elementId, ...descendantIds];
+	await tx.assuranceElement.updateMany({
+		where: { id: { in: allIds } },
+		data: { deletedAt: new Date(), deletedById: userId },
+	});
+	// Citations are cross-case by design (an AWAY_GOAL cites an element
+	// in a DIFFERENT case), so this deliberately isn't scoped to
+	// `caseId` — every deleted id (the element and its
+	// descendants) may be cited from anywhere.
+	await nullifyDanglingCitations(tx, allIds);
+	await touchCase(tx, caseId);
 }
 
 /**
@@ -1687,20 +1839,9 @@ export async function deleteElement(
 
 		// Gather descendants, soft-delete, and nullify+flag any dangling
 		// citations (ADR 0004 D5) atomically
-		await prisma.$transaction(async (tx) => {
-			const descendantIds = await getDescendantIds(elementId, tx);
-			const allIds = [elementId, ...descendantIds];
-			await tx.assuranceElement.updateMany({
-				where: { id: { in: allIds } },
-				data: { deletedAt: new Date(), deletedById: userId },
-			});
-			// Citations are cross-case by design (an AWAY_GOAL cites an element
-			// in a DIFFERENT case), so this deliberately isn't scoped to
-			// `existing.caseId` — every deleted id (the element and its
-			// descendants) may be cited from anywhere.
-			await nullifyDanglingCitations(tx, allIds);
-			await touchCase(tx, existing.caseId);
-		});
+		await prisma.$transaction((tx) =>
+			deleteElementWithin(tx, userId, elementId, existing.caseId)
+		);
 
 		return { data: true };
 	} catch (error) {

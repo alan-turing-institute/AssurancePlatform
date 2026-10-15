@@ -4,13 +4,19 @@ import { parseJsonBody, readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
+	apiSuccess,
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { validationError } from "@/lib/errors";
 import { uuidSchema } from "@/lib/schemas/base";
 import { describeEvidenceIssues } from "@/lib/schemas/health-evidence";
-import type { InvalidSettings } from "@/lib/services/health-criteria-service";
+import type {
+	CriteriaChange,
+	CriteriaView,
+	ElementEvent,
+	InvalidSettings,
+} from "@/lib/services/health-criteria-service";
 import {
 	computeHealthStatus,
 	type HealthStatus,
@@ -41,6 +47,57 @@ export async function announceHealthChange(
 		...extraPayload,
 	});
 	return status;
+}
+
+/**
+ * Tells open browsers that an element changed along with the claim's
+ * settings, as a core `element:*` event, so the canvas reloads the case. Call
+ * it after the change has committed and before `announceHealthChange`, whose
+ * recomputation can throw: the case must reload even if that fails.
+ */
+function announceElementEvent(
+	change: ElementEvent | undefined,
+	caseId: string,
+	who: { userId: string; username: string }
+): void {
+	if (!change) {
+		return;
+	}
+	emitSSEEvent(`element:${change.kind}`, caseId, {
+		...(change.element ? { element: change.element } : {}),
+		elementId: change.elementId,
+		elementName: change.elementName,
+		username: who.username,
+		userId: who.userId,
+	});
+}
+
+/** The response to a read of a claim's evidence settings: the settings, or the failure. */
+export function answerCriteriaRead(
+	result: { data: CriteriaView } | { error: string }
+): NextResponse {
+	return "error" in result ? criteriaFailure(result) : apiSuccess(result.data);
+}
+
+/**
+ * The response to a change of a claim's evidence settings: the failure, or,
+ * after announcing the element change and then the health change, the
+ * settings as read after the change.
+ */
+export async function answerCriteriaChange(
+	result:
+		| { data: CriteriaChange }
+		| { error: string }
+		| { invalid: InvalidSettings },
+	claimId: string,
+	who: { userId: string; username: string }
+): Promise<NextResponse> {
+	if ("error" in result || "invalid" in result) {
+		return criteriaFailure(result);
+	}
+	announceElementEvent(result.data.elementEvent, result.data.caseId, who);
+	await announceHealthChange(claimId, result.data.caseId);
+	return apiSuccess(result.data.view);
 }
 
 /**
@@ -110,7 +167,7 @@ export async function parseHealthBody<S extends z.ZodType>(
 }
 
 /** The response for a failed save: a 400 naming the fields, or the mapped service error. */
-export function criteriaFailure(
+function criteriaFailure(
 	failure: { error: string } | { invalid: InvalidSettings }
 ): NextResponse {
 	if ("invalid" in failure) {
@@ -123,15 +180,20 @@ export function criteriaFailure(
 
 /**
  * The first steps of a session-only route addressed to one claim: the
- * signed-in user and the claim id from the path (a 400 when it is not a UUID).
+ * signed-in user (with the name other people see in announcements) and the
+ * claim id from the path (a 400 when it is not a UUID).
  */
 export async function requireClaimRequest(
 	params: Promise<{ id: string }>
-): Promise<{ claimId: string; userId: string }> {
+): Promise<{ claimId: string; userId: string; username: string }> {
 	const session = await requireAuthSession();
 	const claimId = uuidSchema.safeParse((await params).id.toLowerCase());
 	if (!claimId.success) {
 		throw validationError("Invalid element id");
 	}
-	return { userId: session.userId, claimId: claimId.data };
+	return {
+		userId: session.userId,
+		username: session.username || session.email || "Someone",
+		claimId: claimId.data,
+	};
 }

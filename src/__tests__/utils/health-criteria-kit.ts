@@ -160,6 +160,36 @@ export async function callRetirement(
 	);
 }
 
+export async function callAddEvidenceNode(claimId: string, token?: string) {
+	const { POST } = await import(
+		"@/app/api/elements/[id]/health/evidence-node/route"
+	);
+	return await POST(
+		jsonRequest(
+			`${BASE}/elements/${claimId}/health/evidence-node`,
+			"POST",
+			undefined,
+			bearer(token)
+		),
+		{ params: Promise.resolve({ id: claimId }) }
+	);
+}
+
+export async function callEvidenceNodes(caseId: string, token?: string) {
+	const { GET } = await import(
+		"@/app/api/cases/[id]/health/evidence-nodes/route"
+	);
+	return await GET(
+		jsonRequest(
+			`${BASE}/cases/${caseId}/health/evidence-nodes`,
+			"GET",
+			undefined,
+			bearer(token)
+		),
+		{ params: Promise.resolve({ id: caseId }) }
+	);
+}
+
 export async function callCaseChecks(caseId: string) {
 	const { GET } = await import("@/app/api/cases/[id]/health/checks/route");
 	return await GET(

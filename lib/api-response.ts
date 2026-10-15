@@ -151,6 +151,20 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^These settings were changed by someone else$/,
 		factory: conflict,
 	},
+	// `health-criteria-service.ts`: adding an evidence node to settings that are
+	// not accepted, or to a claim that already has a live node, is a state
+	// conflict (409). So is any failure that means another change to the case
+	// got in first (a deadlock, a record that went missing, a unique index
+	// taken by another writer): the person is told to try again.
+	{ pattern: /^These settings are not accepted$/, factory: conflict },
+	{
+		pattern: /^This claim already has a live evidence node$/,
+		factory: conflict,
+	},
+	{
+		pattern: /^The case changed while you were saving\. Try again\.$/,
+		factory: conflict,
+	},
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
 	// outside the allowed set, or one whose content signature doesn't match
 	// what was declared (AP-QA-007), is a validation failure (400), not the

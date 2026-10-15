@@ -37,6 +37,7 @@ export function checkLists(): HealthCheckListOffer[] {
 
 export const NO_CRITERIA: HealthCriteriaResponse = {
 	criteria: null,
+	evidence_node: null,
 	check_description: null,
 	integration: null,
 	accepted_by: null,
@@ -88,6 +89,7 @@ export function storedCriteria({
 			updated_at: "2026-10-02T09:00:00.000Z",
 		},
 		check_description: check,
+		evidence_node: null,
 		integration: INTEGRATION,
 		accepted_by: accepted ? { name: "Alice", owns_integration: false } : null,
 		last_change: {

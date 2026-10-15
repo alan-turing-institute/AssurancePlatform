@@ -4,7 +4,9 @@ description: "Understand the evidence record format, the settings declared for a
 ---
 
 The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim.
-It shows a health badge and evidence panel without changing the claim's authored argument.
+It shows a health badge and evidence panel.
+A result never changes the claim's authored argument.
+The one element the plugin adds to a case is a single ordinary evidence node under a claim, added by the person who accepts that claim's evidence settings (see [The evidence node](#the-evidence-node)).
 A status is a signal for review, not an automatic decision that a claim is true.
 
 ## Send evidence
@@ -148,10 +150,12 @@ A person with edit access sets them up; a machine token cannot.
 
 | Route | Purpose |
 |---|---|
-| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, and the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings). Needs view access. |
-| `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept, expected_revision? }`. Needs edit access. |
-| `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason }`. Needs edit access. |
+| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings), and where the claim's evidence node is (`evidence_node`, null when it has none). Needs view access. |
+| `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }`. Needs edit access. |
+| `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason, evidence_node? }`. Needs edit access. |
+| `POST /api/elements/[id]/health/evidence-node` | Adds the evidence node to a claim whose settings are accepted and that has no live node. Takes no body. Needs edit access. |
 | `GET /api/cases/[id]/health/checks` | The check lists of the active integrations whose system user can edit the case. Needs view access. |
+| `GET /api/cases/[id]/health/evidence-nodes` | The case's live evidence nodes, each with its claim and the claim's current status. Needs view access. |
 | `GET /api/cases/[id]/health/hygiene` | Three counts for the case (see below). Needs view access. |
 
 `settings` holds `check` (`name`, `version`, optional `scope` and `params`), `rule`, optional `reduction` and `aggregation`, `window` and `valid_for`.
@@ -162,6 +166,7 @@ A later save on accepted settings keeps them accepted; saving accepted settings 
 The body may also carry `expected_revision`, the stored revision the person's form was read at (null when no settings were stored); when it differs from the stored revision the save is refused with 409 and nothing changes.
 Retiring accepted settings needs a reason; a suggestion can be discarded without one.
 Retired and discarded settings stay in the table as inactive, so the revision number and the version counters carry on if settings are set up again.
+The save, the retirement and the other routes in the table above answer 409 with "The case changed while you were saving. Try again." when another change to the case got in first (see [Concurrent changes](#concurrent-changes)).
 
 Settings are checked on every save, whether suggested or accepted, so nothing invalid is stored:
 
@@ -208,6 +213,99 @@ A claim's current result is the one that colours its badge.
 The first figure counts claims whose current result has no time limit, out of claims with a current result.
 The second counts checks with at least one such claim, out of the checks in use.
 The third counts accepted settings that are exactly what the check recommends, out of all accepted settings.
+
+## The evidence node
+
+A claim that a pipeline monitors has no evidence of its own in the case: the results live in the plugin's log, and the argument shows the claim as unsupported.
+So that exports, the rules check and the Case Assistant read such a claim as supported, the person who accepts a check's settings can add one ordinary evidence element under the claim, in the same save.
+Results never change the element; they change only how a client may draw it.
+
+The element is plain evidence.
+Its name is the next `E<n>` identifier from the case's usual numbering, its creator is the person who accepted the settings, and it has no URL.
+Its description is generated once:
+
+> Results from the ‹check name› check, run by ‹pipeline name›. It measures: ‹check description›.
+
+The pipeline name is the display name in the check list.
+The second sentence is left out when the check has no description, and a description that already ends a sentence gets no second full stop.
+The text names the check and never states a result, so it stays true in an export, a report or a published copy, where nothing is live.
+The check's name and description are the pipeline owner's words, so once copied into the element they are case text that everyone who can see the case, and every export and published copy, can read.
+Nobody, including the author, is told the identifier before the save, because the number is chosen when the element is written.
+An author may edit the element's text like any other evidence.
+
+### Which element belongs to which claim
+
+`plugin_health_criteria.evidence_element_id` holds it: a nullable, unique column that points at the evidence element and is cleared by the database if the element is ever hard-deleted.
+The column is on the plugin's own table, so nothing in core points at the plugin, and nothing about it reaches the case export, the published snapshot or the generic plugin data.
+Only the plugin's service writes it, with an element it created, or confirmed in place, in the same locked transaction.
+A request never supplies it.
+Retiring settings and keeping the element leaves the column set, so accepting again brings the same element back to life; removing the element clears it.
+
+### When the element is live
+
+An element is live for a claim when all of these hold:
+
+1. The claim's settings are accepted.
+2. The element exists, is in the claim's case, is not in the trash, is not in the sandbox and is not a defeater.
+3. The element is still linked to the claim.
+4. The claim exists, is a property claim and is not in the trash.
+5. The reader can see the case and has the plugin on.
+
+One function, `readClaimEvidenceNodes` in `lib/services/health-status-service.ts`, decides the first four.
+The case's live-node list, the settings read, the saves and retirements, and the Case Assistant's claim health tool all use it, so none of them can disagree.
+The routes that serve a person check the fifth before they call it.
+Nothing is deleted or rewritten when a condition fails: the element is plain evidence until the condition holds again.
+
+The settings read reports `evidence_node` as `null`, or as `{ id, name, state }`.
+`state` says where the element is, whatever state the settings are in:
+
+| State | Meaning |
+|---|---|
+| `live` | In place under the claim. It is drawn as live only while the settings are also accepted. |
+| `trashed` | In the trash. Restoring it brings it back. |
+| `moved` | Linked to another claim and not this one, detached to the sandbox, or made a defeater. |
+| `missing` | Gone, not evidence, or not in the claim's case. |
+
+`GET /api/cases/[id]/health/evidence-nodes` returns the live elements as `[{ id, name, claim_id, claim_name, status }]`, where `status` is the claim's status exactly as `GET /api/elements/[id]/health` returns it.
+Both are computed in the same service, so the element and the claim's badge cannot tell different stories.
+
+### Adding, rewriting and removing it
+
+- `add_evidence_node: true` on `PUT .../criteria` adds the element in the same transaction as the acceptance.
+It is allowed only when the save moves the settings to accepted from not accepted (a suggestion, inactive settings or none); on `accept: false` and on an edit of settings that are already accepted it is refused with 400 and nothing is stored.
+When the claim already has a live element it is reused and no second one is made.
+When the column points at an element that is not live, the new element replaces the pointer and the old one is left as it is.
+- `update_evidence_node_text: true` rewrites the live element's description to the text for the new check.
+It is allowed only when accepted settings change their check (or the pipeline it comes from) and the element is live; otherwise it is refused with 400.
+Without it a change of check leaves the text alone.
+- `evidence_node` on the retirement is `keep` or `remove`, and `keep` is the default.
+The choice is acted on only when the element is live for the claim.
+`remove` trashes the element and clears the column in the same transaction, or, when the element also supports another claim, removes only this claim's evidence link and clears the column, leaving the element in the case.
+With `keep`, with no choice, or when the element is not live, the element is untouched.
+- `POST /api/elements/[id]/health/evidence-node` adds an element to a claim whose settings were accepted without one.
+It is refused with 409 when the settings are not accepted or the claim already has a live element, and it replaces a pointer to an element that is not live.
+It changes neither the settings nor their history.
+A migration never adds elements: a claim accepted before this existed has no element until someone asks.
+
+Each of these writes the element through the core element service's transaction forms (`createElementWithin`, `updateElementWithin`, `deleteElementWithin`, `unlinkEvidenceWithin`), which update the case's `updatedAt` so an open JSON editor sees the change.
+The forms make no permission decision; the plugin's service has already checked edit access.
+After the transaction commits, the route emits the element's own event (`element:created`, `element:updated` or `element:deleted`), and then `tea.health/state-changed`, so the case reloads even if the second step fails.
+
+### Concurrent changes
+
+The plugin's saves lock the claim's row and then the element's row, and check the element again once it is locked.
+The JSON editor can lock the same two rows in the other order.
+When two such steps collide, Postgres stops one of them.
+The same message is returned when the element disappears between being read and being locked, and when the unique index on the pointer or the evidence link's uniqueness is taken by another writer.
+Each of these gives 409 with "The case changed while you were saving. Try again.", never a generic failure, and nothing from the failed step is stored.
+
+### Exports, publishing and the assistant
+
+The element is ordinary evidence everywhere outside the plugin.
+The case export (format version 1.0, with no new field), reports, the published snapshot and the public Discover JSON carry it as plain evidence and carry no health data, because the pointer is not part of what they read.
+The rules check counts it as support for its claim whatever the claim's current result is, because that check looks at the shape of the argument.
+`read_case` is unchanged.
+`read_claim_health` reports `evidenceNode`, the element's identifier, for a claim that has a live element (see [Claim health](/docs/technical-guide/architecture/case-assistant#claim-health) on the Case Assistant page).
 
 ## Publish a check list
 
@@ -269,7 +367,7 @@ The chain detects edits that do not also recompute later hashes.
 It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs.
 It does not prove that a source system's measurement was correct.
 The evidence service is `lib/services/health-evidence-service.ts`, the only code that writes the evidence tables.
-Status is computed in `lib/services/health-status-service.ts` and the sweep is in `lib/services/health-staleness-sweep-service.ts`.
+Status, and the decision about which evidence element is live for a claim, are in `lib/services/health-status-service.ts`, and the sweep is in `lib/services/health-staleness-sweep-service.ts`.
 The record schema is `lib/schemas/health-evidence.ts`, with the rule, reduction, aggregation and duration shapes in `lib/schemas/health-rules.ts`.
 Settings are in `lib/services/health-criteria-service.ts` and `lib/schemas/health-criteria.ts`, which also holds the version labels and the echo comparison.
 Check lists are in `lib/services/health-check-catalogue-service.ts` and `lib/schemas/health-checks.ts`.

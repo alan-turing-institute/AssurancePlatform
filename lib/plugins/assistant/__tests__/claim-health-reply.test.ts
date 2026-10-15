@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	exportCase: vi.fn(),
 	readStatuses: vi.fn(),
+	readNodes: vi.fn(),
 }));
 
 vi.mock("@/lib/services/case-export-service", () => ({
@@ -10,6 +11,7 @@ vi.mock("@/lib/services/case-export-service", () => ({
 }));
 vi.mock("@/lib/services/health-status-service", () => ({
 	readHealthStatusesForCase: mocks.readStatuses,
+	readClaimEvidenceNodes: mocks.readNodes,
 }));
 
 import {
@@ -63,6 +65,8 @@ beforeEach(() => {
 	vi.setSystemTime(new Date("2026-10-15T12:00:00.000Z"));
 	mocks.exportCase.mockReset();
 	mocks.readStatuses.mockReset();
+	mocks.readNodes.mockReset();
+	mocks.readNodes.mockResolvedValue([]);
 	mocks.exportCase.mockResolvedValue(exported(["P1"]));
 	mocks.readStatuses.mockResolvedValue({
 		data: [
@@ -306,6 +310,7 @@ describe("read_claim_health — what the model is told about the tool", () => {
 			"settings",
 			"settingsDifferences",
 			"refusedSinceLastAccepted",
+			"evidenceNode",
 		]) {
 			expect(description).toContain(field);
 		}

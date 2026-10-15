@@ -102,13 +102,30 @@ export type HealthCriteriaAction =
 	| "retired"
 	| "suggested";
 
-/** The body of `GET` and `PUT /api/elements/[id]/health/criteria`. */
+/**
+ * Where a claim's evidence node is. `live`: in place under the claim.
+ * `trashed`: in the trash. `moved`: not linked to the claim, in the sandbox or
+ * a defeater. `missing`: gone, not evidence, or not in the claim's case.
+ */
+export type HealthEvidenceNodeState = "live" | "missing" | "moved" | "trashed";
+
+/** The evidence element added under a claim when its settings were accepted. */
+export interface HealthEvidenceNode {
+	id: string;
+	/** The node's identifier, such as E4; null when it has none or cannot be read. */
+	name: string | null;
+	state: HealthEvidenceNodeState;
+}
+
+/** The body of `GET` and `PUT /api/elements/[id]/health/criteria`, of the retirement and of `POST /api/elements/[id]/health/evidence-node`. */
 export interface HealthCriteriaResponse {
 	accepted_by: { name: string; owns_integration: boolean } | null;
 	/** The check's entry in the check list when the check was last found there. */
 	check_description: HealthCheck | null;
 	check_offer: HealthCheckOffer | null;
 	criteria: HealthCriteriaView | null;
+	/** The claim's evidence node and where it is; null when the claim has none. */
+	evidence_node: HealthEvidenceNode | null;
 	integration: { id: string; name: string } | null;
 	last_change: {
 		action: HealthCriteriaAction;
