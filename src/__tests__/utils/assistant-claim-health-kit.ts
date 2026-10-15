@@ -79,7 +79,7 @@ export function softDeleteClaim(claimId: string) {
 	});
 }
 
-export interface ClaimHealthResult {
+interface ClaimHealthResult {
 	checkedAt?: string;
 	claims: Record<string, unknown>[];
 	claimsNotInTree?: number;
