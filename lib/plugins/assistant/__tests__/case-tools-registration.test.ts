@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCaseTools } from "../tools";
 
 vi.mock("@/lib/services/case-export-service", () => ({ exportCase: vi.fn() }));
+vi.mock("@/lib/services/health-status-service", () => ({
+	readHealthStatusesForCase: vi.fn(),
+}));
 
 afterEach(() => {
 	vi.unstubAllEnvs();
@@ -64,5 +67,27 @@ describe("createCaseTools registration of suggest_techniques", () => {
 				.arguments.claim
 		).toBe("From selection");
 		vi.unstubAllGlobals();
+	});
+});
+
+describe("createCaseTools registration of read_claim_health", () => {
+	it("registers it after the other tools when the caller turns claim health on", () => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", "https://techniques.example/mcp");
+		expect(
+			Object.keys(createCaseTools("u", "c", null, undefined, undefined, true))
+		).toEqual([
+			"read_case",
+			"read_element",
+			"lint_case",
+			"suggest_techniques",
+			"read_claim_health",
+		]);
+	});
+
+	it("leaves it out by default and when claim health is off", () => {
+		expect(createCaseTools("u", "c")).not.toHaveProperty("read_claim_health");
+		expect(
+			createCaseTools("u", "c", null, undefined, undefined, false)
+		).not.toHaveProperty("read_claim_health");
 	});
 });

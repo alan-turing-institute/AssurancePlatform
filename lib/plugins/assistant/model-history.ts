@@ -10,6 +10,13 @@ import {
 export const UNFINISHED_CALL_RESULT =
 	"This call did not finish: the user stopped the reply, or its time ran out. Do not repeat it unless the user asks again.";
 
+/** What the model is sent in place of an earlier `read_claim_health` result. */
+export const OUT_OF_DATE_CLAIM_HEALTH_RESULT = {
+	outOfDate: true,
+	message:
+		"This result is from earlier in the conversation and is out of date. Call read_claim_health again for the current results; if that tool is not available, say that current results are not available.",
+} as const;
+
 /** Whether an assistant message in the model's history says or does anything: it has text, or a call of a tool. */
 function holdsTextOrToolCall(message: AssistantModelMessage): boolean {
 	if (typeof message.content === "string") {
@@ -47,18 +54,45 @@ function withUnfinishedCallsReported(messages: UIMessage[]): UIMessage[] {
 }
 
 /**
+ * The messages with the output of each `read_claim_health` call that has a
+ * result replaced by `OUT_OF_DATE_CLAIM_HEALTH_RESULT`. Automated check
+ * results change while the user talks, and a model that is shown an earlier
+ * result in the conversation repeats it instead of calling the tool again,
+ * including after the plugin has been switched off.
+ *
+ * Every such call in the history is out of date. That holds because the
+ * history is the earlier replies the browser sends back, and the current
+ * reply's own calls are made by the SDK inside that reply and never pass
+ * through here. A call that ended in an error keeps its error result, and
+ * other tools' results are left as they are.
+ */
+function withClaimHealthResultsOutOfDate(messages: UIMessage[]): UIMessage[] {
+	return messages.map((message) => ({
+		...message,
+		parts: message.parts.map((part) =>
+			part.type === "tool-read_claim_health" &&
+			part.state === "output-available"
+				? { ...part, output: OUT_OF_DATE_CLAIM_HEALTH_RESULT }
+				: part
+		),
+	}));
+}
+
+/**
  * The conversation as the model is sent it. A tool call cut off before it had
  * a result is sent with an error result saying so, because a model server
  * refuses a call with no result after it. A call cut off while its arguments
  * were still arriving cannot be sent as a call and is left out. An assistant
  * message that this leaves with only thinking, or with nothing to say, is left
- * out too, because some providers refuse an empty assistant message.
+ * out too, because some providers refuse an empty assistant message. The
+ * output of an earlier `read_claim_health` call is replaced by a notice that it
+ * is out of date, so that the model calls the tool again.
  */
 export async function modelHistory(
 	messages: UIMessage[]
 ): Promise<ModelMessage[]> {
 	const converted = await convertToModelMessages(
-		withUnfinishedCallsReported(messages),
+		withClaimHealthResultsOutOfDate(withUnfinishedCallsReported(messages)),
 		{ ignoreIncompleteToolCalls: true }
 	);
 	return converted.filter(

@@ -9,6 +9,9 @@ import {
 } from "@/lib/plugins/assistant/tools";
 
 vi.mock("@/lib/services/case-export-service", () => ({ exportCase: vi.fn() }));
+vi.mock("@/lib/services/health-status-service", () => ({
+	readHealthStatusesForCase: vi.fn(),
+}));
 
 const URL_ = "http://techniques.test/mcp";
 const options = { toolCallId: "t", messages: [] };

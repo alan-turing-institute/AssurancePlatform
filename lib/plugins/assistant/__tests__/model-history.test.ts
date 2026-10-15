@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 import { describe, expect, it } from "vitest";
 import {
 	modelHistory,
+	OUT_OF_DATE_CLAIM_HEALTH_RESULT,
 	UNFINISHED_CALL_RESULT,
 } from "@/lib/plugins/assistant/model-history";
 
@@ -23,6 +24,19 @@ const call = (state: "input-available" | "input-streaming") =>
 		toolCallId: "c1",
 		state,
 		input: state === "input-available" ? {} : undefined,
+	}) as UIMessage["parts"][number];
+
+const finishedCall = (
+	tool: "read_case" | "read_claim_health",
+	outcome: { output: unknown } | { errorText: string }
+) =>
+	({
+		type: `tool-${tool}`,
+		toolCallId: "c2",
+		input: {},
+		...("output" in outcome
+			? { state: "output-available", output: outcome.output }
+			: { state: "output-error", errorText: outcome.errorText }),
 	}) as UIMessage["parts"][number];
 
 describe("modelHistory", () => {
@@ -77,5 +91,67 @@ describe("modelHistory", () => {
 		await modelHistory(messages);
 
 		expect(messages[1]?.parts[1]).toMatchObject({ state: "input-available" });
+	});
+
+	it("replaces the result of an earlier read_claim_health call with a notice that it is out of date", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply(
+				{ type: "step-start" },
+				finishedCall("read_claim_health", { output: { found: true } })
+			),
+			asked("two"),
+		]);
+
+		expect(sent[2]).toMatchObject({
+			content: [
+				{
+					type: "tool-result",
+					toolCallId: "c2",
+					toolName: "read_claim_health",
+					output: { type: "json", value: OUT_OF_DATE_CLAIM_HEALTH_RESULT },
+				},
+			],
+		});
+	});
+
+	it("leaves the result of another tool as it was", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply(
+				{ type: "step-start" },
+				finishedCall("read_case", { output: { found: true } })
+			),
+			asked("two"),
+		]);
+
+		expect(sent[2]).toMatchObject({
+			content: [
+				{
+					type: "tool-result",
+					output: { type: "json", value: { found: true } },
+				},
+			],
+		});
+	});
+
+	it("leaves an error result of a read_claim_health call as it was", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply(
+				{ type: "step-start" },
+				finishedCall("read_claim_health", { errorText: "The read failed." })
+			),
+			asked("two"),
+		]);
+
+		expect(sent[2]).toMatchObject({
+			content: [
+				{
+					type: "tool-result",
+					output: { type: "error-text", value: "The read failed." },
+				},
+			],
+		});
 	});
 });

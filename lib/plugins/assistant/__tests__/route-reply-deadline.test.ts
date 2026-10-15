@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/cases/[id]/assistant/route";
 import { canAccessCase } from "@/lib/permissions";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
+import { caseHasHealthStatus } from "@/lib/services/health-status-service";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 
 const requireAuth = vi.hoisted(() => vi.fn());
@@ -20,6 +21,12 @@ vi.mock("@/lib/api-response", async (importOriginal) => ({
 }));
 vi.mock("@/lib/services/plugin-enablement-service", () => ({
 	assertPluginEnabledForUser: vi.fn(),
+}));
+vi.mock("@/lib/services/health-status-service", () => ({
+	caseHasHealthStatus: vi.fn(),
+}));
+vi.mock("@/lib/services/health-claim-access", () => ({
+	HEALTH_PLUGIN_ID: "tea.health",
 }));
 vi.mock("@/lib/plugins/assistant/tools", () => ({
 	buildSystemPrompt: vi.fn(() => ""),
@@ -57,6 +64,7 @@ beforeEach(() => {
 	requireAuth.mockResolvedValue("user-1");
 	vi.mocked(assertPluginEnabledForUser).mockResolvedValue({ data: true });
 	vi.mocked(canAccessCase).mockResolvedValue(true);
+	vi.mocked(caseHasHealthStatus).mockResolvedValue(false);
 	streamText.mockReturnValue({
 		toUIMessageStreamResponse: () => new Response("ok"),
 	});
@@ -94,5 +102,55 @@ describe("assistant route reply deadline", () => {
 
 		expect(streamText.mock.calls[0]?.[0].model).toBe(CHAT_MODEL);
 		expect(vi.mocked(createCaseTools).mock.calls[0]?.[4]).toBe(MODEL_ACCESS);
+	});
+});
+
+describe("assistant route claim health", () => {
+	const TECHNIQUES_URL = "https://techniques.example/mcp";
+
+	function systemPrompt() {
+		return streamText.mock.calls[0]?.[0].system as string;
+	}
+
+	it("gives the tools the claim-health flag and appends its paragraph after the techniques paragraph", async () => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", TECHNIQUES_URL);
+		vi.mocked(caseHasHealthStatus).mockResolvedValue(true);
+
+		await call();
+
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(true);
+		const techniques = systemPrompt().indexOf("call `suggest_techniques`");
+		const claimHealth = systemPrompt().indexOf("read_claim_health returns");
+		expect(techniques).toBeGreaterThanOrEqual(0);
+		expect(claimHealth).toBeGreaterThan(techniques);
+	});
+
+	it("says the case has no results when the plugin is on and no claim has a status", async () => {
+		await call();
+
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(false);
+		expect(systemPrompt()).toContain(
+			"This case has no claims with automated check results."
+		);
+		expect(systemPrompt()).not.toContain("read_claim_health returns");
+	});
+
+	it("says the plugin is off, and looks at no claims, when the user has switched it off", async () => {
+		vi.mocked(caseHasHealthStatus).mockResolvedValue(true);
+		vi.mocked(assertPluginEnabledForUser).mockImplementation((pluginId) =>
+			Promise.resolve(
+				pluginId === "tea.health"
+					? { error: "Plugin 'tea.health' is not enabled" }
+					: { data: true }
+			)
+		);
+
+		await call();
+
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(false);
+		expect(systemPrompt()).toContain(
+			"because the Claim/Evidence Health plugin is off."
+		);
+		expect(caseHasHealthStatus).not.toHaveBeenCalled();
 	});
 });

@@ -5,6 +5,9 @@ import { exportCase } from "@/lib/services/case-export-service";
 vi.mock("@/lib/services/case-export-service", () => ({
 	exportCase: vi.fn(),
 }));
+vi.mock("@/lib/services/health-status-service", () => ({
+	readHealthStatusesForCase: vi.fn(),
+}));
 
 const TREE = {
 	id: "g1",

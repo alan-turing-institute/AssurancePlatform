@@ -75,6 +75,8 @@ A `valid_while` condition is not evaluated per record in a list; the claim's sta
 `GET /api/machine/health/elements/[id]/status` and `GET /api/machine/health/cases/[id]/status` return the status object described below for one claim, or for every claim in a case that has one.
 Both need the `health:evidence:read` scope and view access to the case.
 A status belongs to the claim, so these routes are not limited to the checks of one integration.
+The Case Assistant reads status through the same service when the assistant and this plugin are both on.
+It computes the status again on each tool call, and only when the case has a claim with a check or a record.
 
 ## The hash chain
 
