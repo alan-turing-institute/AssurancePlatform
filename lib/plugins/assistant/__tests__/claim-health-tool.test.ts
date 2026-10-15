@@ -146,6 +146,38 @@ describe("read_claim_health: what a claim reports", () => {
 		});
 	});
 
+	it("answers without evidence node fields, and logs only the error's class, when the node read fails", async () => {
+		const logged: LogEntry[] = [];
+		setLogSink((entry) => logged.push(entry));
+		vi.stubEnv("LOG_LEVEL", "debug");
+		vi.mocked(readClaimEvidenceNodes).mockRejectedValue(
+			new TypeError("connection to db.internal refused")
+		);
+
+		let result: unknown;
+		try {
+			result = await read();
+		} finally {
+			resetLogSink();
+			vi.unstubAllEnvs();
+		}
+
+		expect(result).toMatchObject({
+			found: true,
+			claims: [{ id: "p1", result: "pass" }],
+		});
+		expect((result as { claims: object[] }).claims[0]).not.toHaveProperty(
+			"evidenceNode"
+		);
+		expect(logged).toHaveLength(1);
+		expect(logged[0]).toMatchObject({
+			level: "warn",
+			component: "claim-health-tool",
+			errorName: "TypeError",
+		});
+		expect(JSON.stringify(logged)).not.toContain("db.internal");
+	});
+
 	it("gives the time of the read as YYYY-MM-DD HH:MM:SS UTC", async () => {
 		const before = Math.floor(Date.now() / 1000) * 1000;
 		const result = (await read()) as { checkedAt: string };

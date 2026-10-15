@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import {
 	type HealthStatus,
@@ -8,6 +9,8 @@ import {
 } from "@/lib/services/health-status-service";
 import type { ClaimHealthAvailability } from "./claim-health-availability";
 import type { ToolCallLimit } from "./tool-call-limit";
+
+const log = logger.child({ component: "claim-health-tool" });
 
 /** The most claims listed, and the most labels of claims without results listed; each is counted past it separately. */
 const MAX_LISTED = 100;
@@ -153,6 +156,28 @@ function summarise(
 	};
 }
 
+/**
+ * The identifier of each claim's live evidence node, by claim id. A failed
+ * read gives none and does not fail the call: the identifiers only add to an
+ * answer whose results do not depend on them. Only the error's class is
+ * logged, never its message.
+ */
+async function liveEvidenceNodes(caseId: string): Promise<Map<string, string>> {
+	try {
+		const nodes = await readClaimEvidenceNodes({ caseId });
+		return new Map(
+			nodes
+				.filter((entry) => entry.live)
+				.map((entry) => [entry.claimId, entry.node.name ?? entry.node.id])
+		);
+	} catch (error) {
+		log.warn("Claim health could not read evidence nodes; answering without", {
+			errorName: error instanceof Error ? error.name : "unknown",
+		});
+		return new Map();
+	}
+}
+
 async function readClaimHealth(
 	userId: string,
 	caseId: string,
@@ -166,12 +191,7 @@ async function readClaimHealth(
 	if ("error" in statuses) {
 		return UNAVAILABLE;
 	}
-	const nodes = await readClaimEvidenceNodes({ caseId });
-	const evidenceNodes = new Map(
-		nodes
-			.filter((entry) => entry.live)
-			.map((entry) => [entry.claimId, entry.node.name ?? entry.node.id])
-	);
+	const evidenceNodes = await liveEvidenceNodes(caseId);
 	return {
 		found: true,
 		checkedAt: utcTime(new Date()),
