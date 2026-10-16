@@ -348,7 +348,8 @@ The node's border is not used, because a red border marks a defeater, and a dash
 When the claim or the node is selected, the selection highlight replaces the colour on that edge.
 
 The claim's own dot is left out while the claim has a live node and its children are not collapsed, because the node then carries the result.
-It shows when the claim is collapsed, when the claim has no live node, and until the case's live nodes have been read.
+It shows when the claim is collapsed and when the claim has no live node.
+It waits until the case's live nodes have been read, so it does not appear and then vanish.
 
 The canvas reads the case's live nodes with one request, `GET /api/cases/[id]/health/evidence-nodes`, and keeps the list once per case for every node, edge and badge.
 It reads the list again after every event that makes the canvas reload the case (element, case, comment and permission events) and after every `tea.health/state-changed`, so moving, trashing or restoring the node changes its look at once.
