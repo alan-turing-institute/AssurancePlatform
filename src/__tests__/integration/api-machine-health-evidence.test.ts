@@ -17,6 +17,12 @@ import {
 import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
+	appendSeries,
+	markMatched,
+	OLD,
+	thin,
+} from "../utils/health-thinning-kit";
+import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
@@ -438,6 +444,38 @@ describe("GET /api/machine/health/elements/[id]/evidence — paged list", () => 
 		expect(olderBody.evidence).toHaveLength(1);
 		expect(olderBody.evidence[0].record.record_id).toBe(sent[0]?.record_id);
 		expect(olderBody.next_before).toBeNull();
+	});
+
+	it("carries thinned_before on the item after a thinned stretch and null on the others", async () => {
+		const { owner, claim } = await setup();
+		const fiveMinutes = 5 * 60_000;
+		const ids = await appendSeries(owner.id, claim.id, OLD, 4, fiveMinutes);
+		await markMatched(claim.id);
+		await thin();
+		await mockAuth(owner.id, owner.username, owner.email);
+		const { GET } = await importRoute();
+
+		const response = await GET(getRequest(claim.id), {
+			params: Promise.resolve({ id: claim.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const body = await response.json();
+		expect(
+			body.evidence.map(
+				(item: { record: { record_id: string } }) => item.record.record_id
+			)
+		).toEqual([ids[3], ids[0]]);
+		expect(body.evidence[0].thinned_before).toEqual({
+			removed_count: 2,
+			first_removed_at: new Date(OLD.getTime() + fiveMinutes).toISOString(),
+			first_removed_sequence: expect.any(Number),
+			last_removed_at: new Date(OLD.getTime() + 2 * fiveMinutes).toISOString(),
+			last_removed_sequence: expect.any(Number),
+			rule_version: 1,
+			thinned_at: expect.any(String),
+		});
+		expect(body.evidence[1].thinned_before).toBeNull();
 	});
 
 	it("refuses an invalid limit or before with 400", async () => {

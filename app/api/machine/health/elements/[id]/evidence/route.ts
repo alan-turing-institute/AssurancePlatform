@@ -59,7 +59,7 @@ async function resolveReadPrincipalUserId(
  * access and the `tea.health` plugin must be enabled for them. Each item is
  * `{ id, record, chain_sequence, record_hash, previous_record_hash,
  * created_by_id, created_at, expires_at, revocation, echo_state,
- * echo_differences, criteria_revision }`, where `revocation`
+ * echo_differences, criteria_revision, thinned_before }`, where `revocation`
  * is the record's open revocation (`cause`, `reason`, `revoked_at`,
  * `revoked_by_name`) or null. `limit` (default 50, at most 200) sets the page
  * size; `before` is a `chain_sequence`, returning only older records.
@@ -68,7 +68,16 @@ async function resolveReadPrincipalUserId(
  * or `undeclared`), `echo_differences` and `criteria_revision`: the
  * comparison with the claim's accepted evidence settings made when the record
  * arrived. With `live=true`, only records that are not revoked and whose
- * validity has not run out are returned.
+ * validity has not run out are returned. `thinned_before` is null, or the
+ * note the nightly thinning job left where it removed passing results that
+ * repeated their neighbours exactly: `{ removed_count, first_removed_at,
+ * first_removed_sequence, last_removed_at, last_removed_sequence,
+ * rule_version, thinned_at }`. The removed records sit between this one and
+ * the next older kept record, so that record's hash is not this one's
+ * `previous_record_hash` there: the note accounts for the break, and
+ * `previous_record_hash` still names the last removed record's hash. Every
+ * other link in the list matches. In the `live=true` list a note can be
+ * missing when the kept record it belongs to is not live.
  * @query limit - Page size, 1 to 200 (default 50)
  * @query before - Return only records with a lower chain_sequence
  * @query live - `true` to return only records that are not revoked and not expired

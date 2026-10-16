@@ -1869,6 +1869,41 @@
         }
       }
     },
+    "/cron/health-evidence-thinning": {
+      "post": {
+        "operationId": "post-cron-health-evidence-thinning",
+        "summary": "Thin the health plugin's evidence log (cron job)",
+        "description": "Removes repeated passing results older than a day from the evidence log.",
+        "tags": [
+          "Cron"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true, dryRun: boolean, busy: boolean, claimsProcessed: number, recordsRemoved: number, runsRecorded: number, more: boolean }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cron/health-staleness-sweep": {
       "post": {
         "operationId": "post-cron-health-staleness-sweep",

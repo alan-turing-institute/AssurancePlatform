@@ -268,6 +268,7 @@ Table assurance_elements {
   releaseComments release_comments [not null]
   pluginData plugin_data [not null]
   pluginHealthEvidence plugin_health_evidence [not null]
+  pluginHealthThinnedRuns plugin_health_thinned_runs [not null]
   pluginHealthClaimState plugin_health_claim_states
   pluginHealthBindingChanges plugin_health_binding_changes [not null]
   pluginHealthCriteria plugin_health_criteria
@@ -701,6 +702,8 @@ order" ambiguous. An autoincrementing column has no such ambiguity.']
   createdAt DateTime [default: `now()`, not null]
   claim assurance_elements [not null]
   revocations plugin_health_revocations [not null]
+  thinnedAfter plugin_health_thinned_runs [note: 'The note for the stretch removed straight after this record, if any']
+  thinnedBefore plugin_health_thinned_runs [note: 'The note for the stretch removed straight before this record, if any']
 
   Note: 'One accepted evidence record (format 1.1) bearing on a PROPERTY_CLAIM.'
 }
@@ -710,9 +713,36 @@ Table plugin_health_claim_states {
   boundCheckName String [not null, note: 'The one check this claim accepts evidence from']
   rejectedSinceLastAccept Int [not null, default: 0, note: 'Records refused for naming a different check since the last accepted one']
   staleNotifiedAt DateTime [note: 'Set when the sweep has told open browsers the claim is stale; cleared when it is fresh again']
+  thinnedThroughSequence Int [note: 'The chain_sequence the nightly thinning job last examined up to for this claim; null before its first pass. Written only by the job.']
   claim assurance_elements [not null]
 
   Note: 'Per-claim bookkeeping, one row per claim that has ever had an accepted record.'
+}
+
+Table plugin_health_thinned_runs {
+  id String [pk]
+  claimId String [not null]
+  keptBeforeId String [unique, not null, note: 'The evidence row kept just before the removed stretch']
+  keptAfterId String [unique, not null, note: 'The evidence row kept just after it']
+  removedCount Int [not null]
+  firstRemovedSequence Int [not null, note: 'chain_sequence of the first removed record']
+  lastRemovedSequence Int [not null, note: 'chain_sequence of the last removed record']
+  firstRemovedAt DateTime [not null, note: 'record timestamp of the first removed record']
+  lastRemovedAt DateTime [not null, note: 'record timestamp of the last removed record']
+  ruleVersion Int [not null, note: 'Which version of the thinning rule removed them']
+  thinnedAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+  keptBefore plugin_health_evidence [not null]
+  keptAfter plugin_health_evidence [not null]
+
+  Note: 'A note of one stretch of repeated passing results removed from a claim\'s
+log by the nightly thinning job. It names the kept record before the
+stretch and the kept record after it, so a verifier walking the chain can
+account for the break in the links between them. Written only by the job.
+The two foreign keys to the evidence table refuse to let a kept record be
+removed while its note exists. Postgres checks them once the whole delete
+statement has run, so deleting a claim or case, whose cascade removes the
+evidence and the notes together, is not blocked.'
 }
 
 Table plugin_health_binding_changes {
@@ -1114,6 +1144,12 @@ Ref: api_tokens.integrationId > integrations.id [delete: Cascade]
 Ref: plugin_health_evidence.claimId > assurance_elements.id [delete: Cascade]
 
 Ref: plugin_health_claim_states.claimId - assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_thinned_runs.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_thinned_runs.keptBeforeId - plugin_health_evidence.id [delete: No Action]
+
+Ref: plugin_health_thinned_runs.keptAfterId - plugin_health_evidence.id [delete: No Action]
 
 Ref: plugin_health_binding_changes.claimId > assurance_elements.id [delete: Cascade]
 
