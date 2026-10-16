@@ -23,7 +23,7 @@ function TextBlock({
 				<p className="font-medium text-muted-foreground text-xs">{label}</p>
 			)}
 			<p
-				className="wrap-anywhere max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border bg-background p-2 text-sm"
+				className="wrap-anywhere whitespace-pre-wrap rounded-md border bg-background p-2 text-sm"
 				data-testid={testId}
 				id={id}
 			>
