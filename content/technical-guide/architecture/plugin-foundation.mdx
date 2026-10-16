@@ -41,6 +41,7 @@ With no plugin registered, the canvas is drawn exactly as it is without the slot
 
 Every registered plugin's hook runs on every draw of every node and edge, with `enabled` set from the viewer's effective enablement, because React needs the same hooks in the same order each time.
 A plugin that is off, or is still loading its enablement, is told so and must make no request and answer `null`.
+While a node or edge waits for its own answer about which plugins are on, it uses the last answer any component received, so an edge that the canvas creates again after a case reload is drawn at once; its own answer replaces that guess when it arrives.
 The read-only canvas in the documentation tells every plugin it is off, so it fetches nothing.
 A plugin should answer from state it already holds for the case rather than asking the server once per node or edge.
 The health plugin keeps one list of live evidence nodes per case, read again after every event that makes the canvas reload the case and every health status change.

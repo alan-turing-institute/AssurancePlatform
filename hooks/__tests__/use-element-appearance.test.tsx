@@ -27,10 +27,11 @@ function useFakeProvider(subject: AppearanceSubject, enabled: boolean) {
 	return POSITIVE;
 }
 
-function mockPlugins(enabled: boolean) {
+function mockPlugins(enabled: boolean, gate?: Promise<void>) {
 	server.use(
-		http.get("/api/user/plugins", () =>
-			HttpResponse.json({
+		http.get("/api/user/plugins", async () => {
+			await gate;
+			return HttpResponse.json({
 				plugins: [
 					{
 						pluginId: "tea.health",
@@ -45,8 +46,8 @@ function mockPlugins(enabled: boolean) {
 						settings: null,
 					},
 				] satisfies PluginSettingsListItem[],
-			})
-		)
+			});
+		})
 	);
 }
 
@@ -172,6 +173,96 @@ describe("the element-appearance hooks", () => {
 		expect(calls.length).toBeGreaterThan(0);
 		expect(calls.every((call) => !call.enabled)).toBe(true);
 		expect(listRequests).toBe(0);
+	});
+
+	describe("for an edge that mounts again after the plugin list has been answered once", () => {
+		function register() {
+			elementAppearanceSlot.register({
+				pluginId: "tea.health",
+				useAppearance: useFakeProvider,
+			});
+		}
+
+		async function answeredOnce(enabled: boolean) {
+			mockPlugins(enabled);
+			const first = render(<EdgeHost />, { withProviders: false });
+			await waitFor(() =>
+				expect(screen.getByTestId("edge-answer")).toHaveTextContent(
+					enabled ? "positive" : "none"
+				)
+			);
+			await waitFor(() => expect(calls.at(-1)?.enabled).toBe(enabled));
+			first.unmount();
+		}
+
+		it("answers from the last known list at once, before its own request comes back", async () => {
+			register();
+			await answeredOnce(true);
+			let release: () => void = () => undefined;
+			mockPlugins(
+				true,
+				new Promise<void>((resolve) => {
+					release = resolve;
+				})
+			);
+			calls.length = 0;
+
+			render(<EdgeHost />, { withProviders: false });
+
+			expect(screen.getByTestId("edge-answer")).toHaveTextContent("positive");
+			expect(calls.every((call) => call.enabled)).toBe(true);
+
+			release();
+			await waitFor(() =>
+				expect(screen.getByTestId("edge-answer")).toHaveTextContent("positive")
+			);
+			expect(calls.every((call) => call.enabled)).toBe(true);
+		});
+
+		it("lets its own answer replace the last known list when the plugin has since been turned off", async () => {
+			register();
+			await answeredOnce(true);
+			let release: () => void = () => undefined;
+			mockPlugins(
+				false,
+				new Promise<void>((resolve) => {
+					release = resolve;
+				})
+			);
+
+			render(<EdgeHost />, { withProviders: false });
+			expect(screen.getByTestId("edge-answer")).toHaveTextContent("positive");
+
+			release();
+			await waitFor(() =>
+				expect(screen.getByTestId("edge-answer")).toHaveTextContent("none")
+			);
+		});
+
+		it("still waits for its own answer when no list has been answered before", () => {
+			register();
+			mockPlugins(true, new Promise<void>(() => undefined));
+
+			render(<EdgeHost />, { withProviders: false });
+
+			expect(screen.getByTestId("edge-answer")).toHaveTextContent("none");
+			expect(calls.every((call) => !call.enabled)).toBe(true);
+		});
+
+		it("is never told a plugin is on, on the read-only documentation canvas", async () => {
+			register();
+			await answeredOnce(true);
+			useStore.setState({ readOnlyCanvas: true });
+			calls.length = 0;
+
+			render(<EdgeHost />, { withProviders: false });
+
+			await waitFor(() =>
+				expect(screen.getByTestId("edge-answer")).toHaveTextContent("none")
+			);
+			expect(calls.length).toBeGreaterThan(0);
+			expect(calls.every((call) => !call.enabled)).toBe(true);
+		});
 	});
 
 	it("take the first enabled plugin that answers", async () => {
