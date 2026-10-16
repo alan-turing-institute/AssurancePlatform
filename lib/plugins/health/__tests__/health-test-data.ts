@@ -1,4 +1,8 @@
-import type { HealthEvidenceLogItem, HealthStatus } from "../health-types";
+import type {
+	HealthEvidenceLogItem,
+	HealthLiveEvidenceNode,
+	HealthStatus,
+} from "../health-types";
 
 const CLAIM_ID = "7acd824e-0000-4000-8000-000000000001";
 
@@ -62,6 +66,20 @@ function record(overrides: Partial<Record1> = {}): Record1 {
 		},
 		comment: "PASS: 206, MARGINAL: 3, FAIL: 3",
 		value: { number: 0.97, unit: "ratio" },
+		...overrides,
+	};
+}
+
+/** One item of the case's live-node list: node E1 reporting on claim P1. */
+export function liveNode(
+	overrides: Partial<HealthLiveEvidenceNode> = {}
+): HealthLiveEvidenceNode {
+	return {
+		id: "node-1",
+		name: "E1",
+		claim_id: "claim-42",
+		claim_name: "P1",
+		status: status(),
 		...overrides,
 	};
 }

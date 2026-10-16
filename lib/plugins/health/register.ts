@@ -1,7 +1,8 @@
 /**
  * The `tea.health` plugin's UI registration (ADR 0002 v2 §2.3/§3): registers
- * `HealthBadge` into `elementBadgeSlot` and `HealthPanel` into
- * `elementPanelSlot`. The registry's contract (`lib/plugins/slots/
+ * `HealthBadge` into `elementBadgeSlot`, `HealthPanel` into
+ * `elementPanelSlot` and the appearance provider into `elementAppearanceSlot`.
+ * The registry's contract (`lib/plugins/slots/
  * registry.ts`) requires this to happen once, at import time — never
  * per-request — which is why `registerHealthPlugin()` both runs immediately
  * below AND is exported: a real bootstrap import gets the module-load side
@@ -29,16 +30,38 @@
 import { logger } from "@/lib/logger";
 import {
 	casePanelSlot,
+	elementAppearanceSlot,
 	elementBadgeSlot,
 	elementPanelSlot,
 } from "@/lib/plugins/slots";
 import { EvidenceHealthPanel } from "./evidence-health-panel";
+import { useHealthAppearance } from "./health-appearance";
 import { HealthBadge } from "./health-badge";
 import { HealthPanel } from "./health-panel";
 
 const PLUGIN_ID = "tea.health";
 
+/**
+ * The appearance slot is registered on its own, so a failure here cannot take
+ * the badge and the panels with it: without it the canvas draws a live node as
+ * plain evidence and everything else keeps working.
+ */
+function registerAppearance(): void {
+	try {
+		elementAppearanceSlot.register({
+			pluginId: PLUGIN_ID,
+			useAppearance: useHealthAppearance,
+		});
+	} catch (error) {
+		logger.error(
+			"[tea.health] UI slot registration failed — live evidence nodes will draw as plain evidence",
+			{ error }
+		);
+	}
+}
+
 export function registerHealthPlugin(): void {
+	registerAppearance();
 	try {
 		elementBadgeSlot.register({
 			pluginId: PLUGIN_ID,

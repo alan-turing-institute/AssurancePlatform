@@ -68,7 +68,9 @@ describe("PluginCard", () => {
 
 		expect(screen.getByText("What it adds")).toBeInTheDocument();
 		expect(
-			screen.getByText("A health badge on property claims on the canvas")
+			screen.getByText(
+				"A health badge on property claims and on the evidence nodes that show a claim's result"
+			)
 		).toBeInTheDocument();
 		expect(
 			screen.getByText("Live updates when new evidence arrives")

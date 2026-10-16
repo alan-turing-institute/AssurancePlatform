@@ -25,11 +25,13 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { ElementAppearance } from "@/lib/plugins/slots";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
 import { type DiagramNodeType, getNodeConfig } from "./node-config";
 import {
+	buildAppearanceFillClasses,
 	buildDescriptionClasses,
 	buildFooterIdClasses,
 	buildFooterLabelClasses,
@@ -43,6 +45,8 @@ import {
 } from "./node-styles";
 
 export interface BaseNodeProps {
+	/** How a plugin wants the card drawn: a tint under the content, faded or not. Absent draws the card as usual. */
+	appearance?: ElementAppearance | null;
 	/** Assumption text */
 	assumption?: string;
 	/** Actions to display in the bottom-left (e.g., toggle children button) */
@@ -142,6 +146,7 @@ export default function BaseNode({
 	nodeType,
 	name,
 	description,
+	appearance = null,
 	selected = false,
 	context,
 	assumption,
@@ -211,11 +216,24 @@ export default function BaseNode({
 		nodeType,
 		isSelected: selected,
 		isDefeater,
+		appearance,
 		className,
 	});
 
 	return (
-		<div className={containerClasses} data-tour={dataTour}>
+		<div
+			className={containerClasses}
+			data-appearance={appearance?.tone}
+			data-faded={appearance?.faded ? "" : undefined}
+			data-tour={dataTour}
+		>
+			{appearance && (
+				<span
+					aria-hidden="true"
+					className={buildAppearanceFillClasses(appearance)}
+					data-plugin-display=""
+				/>
+			)}
 			{/* Target Handle (top) */}
 			{config.showTargetHandle && (
 				<Handle id="target" position={targetPosition} type="target" />

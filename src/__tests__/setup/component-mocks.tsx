@@ -92,6 +92,7 @@ vi.mock("reactflow", () => {
 				viewport: { x: 0, y: 0, zoom: 1 },
 			})),
 		}),
+		useNodeId: () => null,
 		useStore: () => mockReactFlowStore.getState(),
 		useStoreApi: () => mockReactFlowStore,
 		addEdge: vi.fn((params, edges) => [...edges, params]),

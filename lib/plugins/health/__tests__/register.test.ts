@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	casePanelSlot,
+	elementAppearanceSlot,
 	elementBadgeSlot,
 	elementPanelSlot,
 } from "@/lib/plugins/slots";
 import { captureLogs } from "@/src/__tests__/helpers/capture-logs";
 import { EvidenceHealthPanel } from "../evidence-health-panel";
+import { useHealthAppearance } from "../health-appearance";
 import { HealthBadge } from "../health-badge";
 import { HealthPanel } from "../health-panel";
 import { registerHealthPlugin } from "../register";
@@ -66,6 +68,64 @@ describe("registerHealthPlugin — case panel", () => {
 			},
 		]);
 		casePanelSlot.resetForTests();
+	});
+});
+
+describe("registerHealthPlugin — appearance", () => {
+	it("registers the appearance provider into elementAppearanceSlot", () => {
+		elementAppearanceSlot.resetForTests();
+
+		registerHealthPlugin();
+
+		expect(elementAppearanceSlot.list()).toEqual([
+			{ pluginId: PLUGIN_ID, useAppearance: useHealthAppearance },
+		]);
+		elementAppearanceSlot.resetForTests();
+	});
+
+	it("keeps the badge and the panels when the appearance registration fails", () => {
+		elementAppearanceSlot.resetForTests();
+		elementBadgeSlot.resetForTests();
+		elementPanelSlot.resetForTests();
+		const logs = captureLogs();
+		vi.spyOn(elementAppearanceSlot, "register").mockImplementation(() => {
+			throw new Error("simulated appearance failure");
+		});
+
+		try {
+			expect(() => registerHealthPlugin()).not.toThrow();
+
+			expect(
+				logs.entries.some(
+					(entry) =>
+						entry.level === "error" && entry.msg.includes("plain evidence")
+				)
+			).toBe(true);
+			expect(elementAppearanceSlot.list()).toEqual([]);
+			expect(elementBadgeSlot.list()).toHaveLength(1);
+			expect(elementPanelSlot.list()).toHaveLength(1);
+		} finally {
+			logs.restore();
+		}
+	});
+
+	it("keeps the appearance provider when the badge registration fails", () => {
+		elementAppearanceSlot.resetForTests();
+		elementBadgeSlot.resetForTests();
+		elementPanelSlot.resetForTests();
+		const logs = captureLogs();
+		vi.spyOn(elementBadgeSlot, "register").mockImplementation(() => {
+			throw new Error("simulated badge failure");
+		});
+
+		try {
+			registerHealthPlugin();
+
+			expect(elementAppearanceSlot.list()).toHaveLength(1);
+		} finally {
+			logs.restore();
+			elementAppearanceSlot.resetForTests();
+		}
 	});
 });
 

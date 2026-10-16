@@ -140,6 +140,15 @@ export interface HealthCriteriaResponse {
 	pipeline_read: { at: string; revision: number | null } | null;
 }
 
+/** One item of `GET /api/cases/[id]/health/evidence-nodes`: a live evidence node, the claim it reports on, and that claim's current status. */
+export interface HealthLiveEvidenceNode {
+	claim_id: string;
+	claim_name: string | null;
+	id: string;
+	name: string | null;
+	status: HealthStatus | null;
+}
+
 /** One item of `GET /api/cases/[id]/health/checks`: the checks a pipeline offers for the case. */
 export interface HealthCheckListOffer {
 	checks: HealthCheck[];

@@ -12,13 +12,18 @@
 
 export {
 	casePanelSlot,
+	elementAppearanceSlot,
 	elementBadgeSlot,
 	elementPanelSlot,
 	settingsSectionSlot,
 } from "./registry";
 export type {
+	AppearanceSubject,
+	AppearanceTone,
 	CasePanelRegistration,
 	CaseSlotContext,
+	ElementAppearance,
+	ElementAppearanceRegistration,
 	// No consumer imports the three marked types from here: they describe the
 	// `element-badge` and `settings-section` registrations and the id space
 	// that every slot shares, and stay exported so the barrel covers each

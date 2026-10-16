@@ -72,6 +72,26 @@ export const CASE_EVENT_TYPES: SSEEventType[] = [
 	"tea.health/state-changed",
 ];
 
+/**
+ * The events after which the canvas reads the case again. Anything drawn from
+ * the case's elements and links, such as a plugin's display of which
+ * evidence nodes are live, is read again on the same list.
+ */
+export const CASE_RELOAD_EVENT_TYPES: readonly SSEEventType[] = [
+	"case:updated",
+	"element:created",
+	"element:updated",
+	"element:deleted",
+	"element:restored",
+	"element:attached",
+	"element:detached",
+	"element:moved",
+	"comment:created",
+	"comment:updated",
+	"comment:deleted",
+	"permission:changed",
+];
+
 interface Subscriber {
 	onEvent: (event: SSEEvent) => void;
 	onStatus: (status: ConnectionStatus) => void;
@@ -253,6 +273,24 @@ function subscribe(
 			}
 		}, 0);
 	};
+}
+
+/**
+ * Listens to a case's events from outside React, on the same shared stream
+ * `useCaseEvents` uses. For state that many components read together, such as
+ * a plugin's per-case store, where one listener should serve them all.
+ * Returns the function that stops listening.
+ */
+export function subscribeToCaseEvents(
+	caseId: string,
+	onEvent: (event: SSEEvent) => void
+): () => void {
+	return subscribe(
+		caseId,
+		{ onEvent, onStatus: () => undefined },
+		DEFAULT_MAX_RECONNECT_ATTEMPTS,
+		DEFAULT_RECONNECT_DELAY
+	);
 }
 
 /**

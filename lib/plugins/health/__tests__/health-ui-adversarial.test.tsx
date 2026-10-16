@@ -13,7 +13,11 @@ import { HealthPanel } from "../health-panel";
 import type { HealthEvidenceLogItem, HealthStatus } from "../health-types";
 import { item, status } from "./health-test-data";
 
-vi.mock("@/hooks/use-case-events", () => ({ useCaseEvents: vi.fn() }));
+vi.mock("@/hooks/use-case-events", () => ({
+	CASE_RELOAD_EVENT_TYPES: [],
+	subscribeToCaseEvents: vi.fn(() => () => undefined),
+	useCaseEvents: vi.fn(),
+}));
 vi.mock("@/lib/toast", () => ({ toast: vi.fn() }));
 
 const STALE_SINCE = /stale since/;

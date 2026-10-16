@@ -11,6 +11,8 @@ import type { HealthStatus } from "../health-types";
 import { status } from "./health-test-data";
 
 vi.mock("@/hooks/use-case-events", () => ({
+	CASE_RELOAD_EVENT_TYPES: [],
+	subscribeToCaseEvents: vi.fn(() => () => undefined),
 	useCaseEvents: vi.fn(),
 }));
 

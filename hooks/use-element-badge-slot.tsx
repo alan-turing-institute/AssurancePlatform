@@ -37,7 +37,11 @@ export function useElementBadgeSlot(
 	}
 
 	return (
-		<div className="flex items-center gap-1" data-testid="element-badge-slot">
+		<div
+			className="flex items-center gap-1"
+			data-plugin-display=""
+			data-testid="element-badge-slot"
+		>
 			{registrations.map(({ pluginId, Component }) => (
 				// `key` after the spread so it can't be clobbered if `context`
 				// ever gained a same-named field.

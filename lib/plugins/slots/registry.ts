@@ -26,6 +26,7 @@
 import { getManifestEntry } from "@/lib/plugins/manifest";
 import type {
 	CasePanelRegistration,
+	ElementAppearanceRegistration,
 	ElementBadgeRegistration,
 	ElementPanelRegistration,
 	SettingsSectionRegistration,
@@ -146,6 +147,8 @@ export class SlotRegistry<TRegistration extends { pluginId: string }> {
 export const casePanelSlot = new SlotRegistry<CasePanelRegistration>(
 	"case-panel"
 );
+export const elementAppearanceSlot =
+	new SlotRegistry<ElementAppearanceRegistration>("element-appearance");
 export const elementBadgeSlot = new SlotRegistry<ElementBadgeRegistration>(
 	"element-badge"
 );

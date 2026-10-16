@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
 	Tooltip,
 	TooltipContent,
@@ -14,7 +13,10 @@ import {
 	isStatusStale,
 	VERDICT_DOT_CLASSES,
 } from "./health-format";
+import { LiveNodeBadge } from "./live-node-badge";
 import { useHealthState } from "./use-health-state";
+import { useLiveEvidenceNodes } from "./use-live-evidence-nodes";
+import { useRerenderAtExpiry } from "./use-rerender-at-expiry";
 
 /**
  * Stale marker: health and freshness are separate, so staleness never
@@ -26,42 +28,15 @@ import { useHealthState } from "./use-health-state";
 const STALE_RING_CLASSES =
 	"ring-2 ring-muted-foreground/70 ring-offset-1 ring-offset-background";
 
-/** Largest delay `setTimeout` accepts; a longer wait is taken in steps. */
-const MAX_TIMER_MS = 2_147_483_647;
-
 /**
- * Re-renders the caller once `expiresAt` has passed on this device's clock,
- * so the dot gains its ring without waiting for the next server push.
- */
-function useRerenderAtExpiry(expiresAt: string | null): void {
-	const [tick, setTick] = useState(0);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `tick` re-arms the timer after each step of a long wait.
-	useEffect(() => {
-		if (expiresAt === null) {
-			return;
-		}
-		const remaining = Date.parse(expiresAt) - Date.now();
-		if (Number.isNaN(remaining) || remaining <= 0) {
-			return;
-		}
-		const timer = setTimeout(
-			() => setTick((value) => value + 1),
-			Math.min(remaining + 50, MAX_TIMER_MS)
-		);
-		return () => clearTimeout(timer);
-	}, [expiresAt, tick]);
-}
-
-/**
- * The `element-badge` slot's health dot. The colour comes from the status's
- * verdict alone: green, amber, red or grey. A stale status keeps its colour
- * and gains a ring; a claim whose records have all been withdrawn shows an
- * unfilled dot with the ring. A claim with no status, or bound to a check
- * but without a record yet, shows nothing, as does a failed fetch.
+ * A property claim's health dot. The colour comes from the status's verdict
+ * alone: green, amber, red or grey. A stale status keeps its colour and gains
+ * a ring; a claim whose records have all been withdrawn shows an unfilled dot
+ * with the ring. A claim with no status, or bound to a check but without a
+ * record yet, shows nothing, as does a failed fetch.
  *
  * A claim whose current result was judged with other settings than the ones
- * accepted, or which has no accepted settings, also shows a small "\u2260"
+ * accepted, or which has no accepted settings, also shows a small "≠"
  * beside the dot. The mark is hidden from assistive technology; the dot's
  * label says the same in words.
  *
@@ -69,9 +44,15 @@ function useRerenderAtExpiry(expiresAt: string | null): void {
  * implicit live region, apt since the state updates over SSE) whose
  * `aria-label` says the verdict, any staleness and any settings mismatch in
  * words.
+ *
+ * While the claim has a live evidence node that is drawn (its children are not
+ * collapsed), the node carries the result and the dot is left out. Until the
+ * case's live nodes have been read the dot waits, so it does not appear and
+ * then vanish. A claim without a live node shows its dot as before.
  */
-export function HealthBadge({
+function ClaimHealthBadge({
 	caseId,
+	childrenHidden,
 	elementId,
 	elementType,
 }: ElementSlotContext) {
@@ -81,8 +62,15 @@ export function HealthBadge({
 		elementType,
 	});
 	useRerenderAtExpiry(healthStatus?.expires_at ?? null);
+	const liveNodes = useLiveEvidenceNodes(caseId, elementType === "property");
 
 	if (status !== "ready" || !healthStatus) {
+		return null;
+	}
+	if (!liveNodes.loaded) {
+		return null;
+	}
+	if (liveNodes.byClaimId.has(elementId) && !childrenHidden) {
 		return null;
 	}
 
@@ -118,7 +106,7 @@ export function HealthBadge({
 								className="font-semibold text-muted-foreground text-xs leading-none"
 								data-testid="health-badge-mismatch-mark"
 							>
-								{"\u2260"}
+								{"≠"}
 							</span>
 						)}
 					</span>
@@ -127,4 +115,15 @@ export function HealthBadge({
 			</Tooltip>
 		</TooltipProvider>
 	);
+}
+
+/**
+ * The `element-badge` slot's health display: the dot on a property claim, the
+ * result badge on a live evidence node, nothing on any other element.
+ */
+export function HealthBadge(context: ElementSlotContext) {
+	if (context.elementType === "evidence") {
+		return <LiveNodeBadge {...context} />;
+	}
+	return <ClaimHealthBadge {...context} />;
 }

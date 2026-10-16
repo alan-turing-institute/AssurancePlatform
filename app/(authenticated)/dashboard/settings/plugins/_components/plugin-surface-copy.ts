@@ -8,7 +8,10 @@ import type { PluginSurface } from "@/lib/plugins/manifest";
  * are deliberately absent from this map rather than mapped to `undefined`.
  */
 const SURFACE_COPY: Partial<Record<PluginSurface, string>> = {
-	"element-badge": "A health badge on property claims on the canvas",
+	"element-badge":
+		"A health badge on property claims and on the evidence nodes that show a claim's result",
+	"element-appearance":
+		"A tint on those evidence nodes, and a colour on the line from the claim to each one",
 	"element-panel": "An Evidence tab in the element dialog",
 	"case-panel": "A panel on the case page",
 	"canvas-decorator": "Extra markings on the canvas",
