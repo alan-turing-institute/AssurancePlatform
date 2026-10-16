@@ -4,9 +4,10 @@ description: "Understand the evidence record format, the settings declared for a
 ---
 
 The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim.
-It shows a health badge and evidence panel.
+It shows a health dot on each claim with a result, an Evidence tab for the claim, and a result badge, a tint and a coloured line on the evidence node described below.
 A result never changes the claim's authored argument.
 The one element the plugin adds to a case is a single ordinary evidence node under a claim, added by the person who accepts that claim's evidence settings (see [The evidence node](#the-evidence-node)).
+The plugin draws that node and its line from the claim to show the claim's current result, and nothing else in the case changes when a result arrives.
 A status is a signal for review, not an automatic decision that a claim is true.
 
 ## Send evidence
@@ -62,6 +63,8 @@ The next accepted record returns the count to zero.
 A person with edit access can change the bound check from the Evidence tab, giving a reason.
 Each change is kept in a history table with who made it and why.
 While a claim has accepted evidence settings, its check is the one those settings name, and changing the bound check by hand is refused with 409 (see [Declare evidence settings](#declare-evidence-settings)).
+The claim's evidence node, when it has one, has text that names the check.
+Changing the check of accepted settings in the Settings view therefore offers to rewrite that text (see [The settings form](#the-settings-form)).
 
 ## Read evidence
 
@@ -150,7 +153,7 @@ A person with edit access sets them up; a machine token cannot.
 
 | Route | Purpose |
 |---|---|
-| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings), and where the claim's evidence node is (`evidence_node`, null when it has none). Needs view access. |
+| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings), where the claim's evidence node is (`evidence_node`, null when it has none), and for a live node its text and the check that text names (`evidence_node_text`, null otherwise). Needs view access. |
 | `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }`. Needs edit access. |
 | `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason, evidence_node? }`. Needs edit access. |
 | `POST /api/elements/[id]/health/evidence-node` | Adds the evidence node to a claim whose settings are accepted and that has no live node. Takes no body. Needs edit access. |
@@ -277,7 +280,10 @@ When the claim already has a live element it is reused and no second one is made
 When the column points at an element that is not live, the new element replaces the pointer and the old one is left as it is.
 - `update_evidence_node_text: true` rewrites the live element's description to the text for the new check.
 It is allowed only when accepted settings change their check (or the pipeline it comes from) and the element is live; otherwise it is refused with 400.
-It is also allowed when settings that were stopped with the element kept are accepted again with a different check than the stopped settings had, in which case the kept element is reused and rewritten in the same save.
+It is also allowed when settings that were stopped or only suggested are accepted while the claim has a kept live element, if the check being accepted differs from the check the element's text was last written for.
+That check is the one in the newest history row made while the settings were accepted, which is an acceptance or an edit of accepted settings.
+The settings row does not decide it, because a suggestion saved over stopped settings replaces the check the row holds, and an edit of a suggestion does not count.
+In that case the kept element is reused and rewritten in the same save.
 Without it a change of check leaves the text alone.
 - `evidence_node` on the retirement is `keep` or `remove`, and `keep` is the default.
 The choice is acted on only when the element is live for the claim.
@@ -291,6 +297,67 @@ A migration never adds elements: a claim accepted before this existed has no ele
 Each of these writes the element through the core element service's transaction forms (`createElementWithin`, `updateElementWithin`, `deleteElementWithin`, `unlinkEvidenceWithin`), which update the case's `updatedAt` so an open JSON editor sees the change.
 The forms make no permission decision; the plugin's service has already checked edit access.
 After the transaction commits, the route emits the element's own event (`element:created`, `element:updated` or `element:deleted`), and then `tea.health/state-changed`, so the case reloads even if the second step fails.
+
+### The settings form
+
+The Settings view of the claim's Evidence tab carries the node's choices, for people who can edit.
+View-only users read the same lines and see no buttons.
+
+- **Accepting with no node in place.**
+The form offers "Add an evidence node under this claim", ticked, and shows the whole text the node will carry and no identifier.
+Ticked, the request carries `add_evidence_node`; unticked, it does not.
+The same offer is made when the earlier node has since been moved, trashed or deleted.
+Saving as a suggestion never carries a node option.
+- **Accepting with a live node in place.**
+The form says "Results will show on evidence node ‹identifier›" and adds no second node.
+It offers "Update ‹identifier›'s text to name the new check", ticked, only when the check differs from the one the node's text was last written for, which is the case the server accepts.
+The offer shows the node's text now and the text after, side by side, and carries `update_evidence_node_text` when ticked.
+It is left out when the text it would write is already the node's text, because accepting it would change nothing; the server still accepts such a request.
+- **Changing the check of accepted settings.**
+The same update is offered when the node is live, and not otherwise, and it is left out in the same case.
+- **Stopping accepted settings.**
+When the node is live, the dialog asks whether to remove it or keep it as ordinary evidence, with neither chosen, and always sends `evidence_node`.
+A claim whose node has moved, is in the trash or is gone is not asked, and the dialog sends only the reason.
+- **Where the node is.**
+For accepted settings the view says "Results show on evidence node ‹identifier›" or, for a node that is not in place, that results are not shown as evidence in the case, with where the node is when it has moved or is in the trash.
+A person who can edit is offered "Add evidence node", which calls `POST /api/elements/[id]/health/evidence-node`.
+
+The Evidence tab of the node itself names the claim it reports on and the claim's current result, in the words the node's badge uses.
+
+### On the canvas
+
+The plugin draws a live evidence node and the edge into it from the claim it reports on.
+It uses the status the claim's dot uses, so the node and the dot cannot tell different stories.
+
+| State | Badge | Fill | Edge from the claim |
+|---|---|---|---|
+| No result yet | "No result yet" | plain | plain |
+| Passing | tick, "Passing" | green tint | green |
+| Marginal | warning mark, "Marginal" | amber tint | amber |
+| Failing | cross, "Failing" | red tint | red |
+| Could not judge | question mark, "Could not judge" | grey tint | grey |
+| Out of date, with any verdict | the verdict's badge, a clock and "Out of date" | the verdict's tint at about a third of its strength | the verdict's colour at about a third of its strength |
+| Every result withdrawn | clock, "No current result" | plain, at about a third of its strength | plain, at about a third of its strength |
+
+The badge always carries an icon and a word, and a small icon marks the node as live, including before any result arrives, so the state reads without colour.
+A result judged with other settings than the accepted ones also shows the "≠" mark the claim's dot shows.
+The badge's accessible label names the claim the node reports on, then gives the same words as the claim's dot.
+A hidden comma on either side of the badge keeps that label a phrase of its own in the name of the node's button, which joins the node's name, the badge's label and the node's text.
+Out of date is a fade, not a colour: the fill and the edge fade, the text stays at full contrast, and the verdict's colour stays visible under the fade.
+The fade happens at the moment the result expires on the viewer's clock, at the same time as the badge changes.
+Only the edge from the claim the node reports on is coloured.
+The node's border is not used, because a red border marks a defeater, and a dashed edge is not used, because it marks a defeater's edge.
+When the claim or the node is selected, the selection highlight replaces the colour on that edge.
+
+The claim's own dot is left out while the claim has a live node and its children are not collapsed, because the node then carries the result.
+It shows when the claim is collapsed and when the claim has no live node.
+It waits until the case's live nodes have been read, so it does not appear and then vanish.
+
+The canvas reads the case's live nodes with one request, `GET /api/cases/[id]/health/evidence-nodes`, and keeps the list once per case for every node, edge and badge.
+It reads the list again after every event that makes the canvas reload the case (element, case, comment and permission events) and after every `tea.health/state-changed`, so moving, trashing or restoring the node changes its look at once.
+A read that fails on the network or with a server error leaves the list as it was and is tried once more after a few seconds; a read answered with 403 or 404 (the plugin is off, or the viewer cannot see the case) clears it.
+An evidence node that is not in the list, a viewer with the plugin off, and the read-only canvas in the documentation draw plain evidence and make no request for it.
+Images, report diagrams and the dashboard thumbnail leave out the tint, the badge, the colour on the edge and the claim's dot.
 
 ### Concurrent changes
 

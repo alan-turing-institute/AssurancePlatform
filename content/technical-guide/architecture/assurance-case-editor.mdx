@@ -13,6 +13,12 @@ The editor at `/case/[caseId]` turns a stored assurance case into an interactive
 
 `lib/case/convert-case.ts` walks the nested goal tree and creates the diagram nodes. It creates support edges from parent-child relationships. Where a defeater cites a target present in the case, it adds a challenge edge, or replaces the support edge when the cited target is also the tree parent. The layout helper positions these nodes, and the toolbar's Focus control can run layout again.
 
+Each support edge carries the element ids of the two elements it joins in its data.
+A plugin can use them, through the `element-appearance` slot, to tint an evidence node and colour the edge into it, and a node or edge the plugin has no answer for is drawn exactly as it is without the slot.
+The selection highlight on an edge replaces a plugin's colour.
+The slot is described on the [Plugin foundation](/docs/technical-guide/architecture/plugin-foundation#colour-an-element-or-an-edge) page.
+Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and image export, report diagrams and the dashboard thumbnail leave them out, so a picture shows the authored case only.
+
 ## Editing
 
 Element controls sit on the nodes. The Add Element popover offers choices according to the parent kind. A goal can add a strategy, property claim, defeater, away goal or module. A property claim can also add evidence. Choosing a kind opens its add dialog. Away goals and modules use a cited-element picker; other kinds use the element form. The edit dialog handles descriptions, applicable attributes, evidence URLs and assertion status. An element's options menu provides further actions.

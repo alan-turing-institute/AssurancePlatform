@@ -21,6 +21,7 @@ export type PluginSurface =
 	| "extension-data" // tier-1 PluginData
 	| "plugin-tables" // tier-2 plugin-owned tables
 	| "machine-endpoints" // /api/machine/* routes this plugin exposes
+	| "element-appearance"
 	| "element-badge"
 	| "element-panel"
 	| "case-panel"
@@ -83,13 +84,14 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 			"plugin-tables",
 			"machine-endpoints",
 			"element-badge",
+			"element-appearance",
 			"element-panel",
 			"case-panel",
 			"settings-section",
 			"events",
 		],
 		description:
-			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
+			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Results never change your case: it changes only when you accept a check for a claim, which can add one evidence node under the claim that shows its current result.",
 	},
 	{
 		id: "tea.assistant",

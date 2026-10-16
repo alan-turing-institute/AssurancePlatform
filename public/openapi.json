@@ -2411,7 +2411,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`"
+                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, evidence_node, evidence_node_text, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`"
                 }
               }
             }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PLUGIN_MANIFEST } from "@/lib/plugins/manifest";
+import { getManifestEntry, PLUGIN_MANIFEST } from "@/lib/plugins/manifest";
 
 /**
  * No dedicated manifest test file existed before TEA — Plugin management
@@ -19,5 +19,19 @@ describe("PLUGIN_MANIFEST — card data contract", () => {
 				expect(entry.docsPath.startsWith("/docs/")).toBe(true);
 			}
 		}
+	});
+});
+
+describe("PLUGIN_MANIFEST — tea.health surfaces", () => {
+	it("declares element-appearance, without which its registration into that slot throws", () => {
+		expect(getManifestEntry("tea.health")?.surfaces).toContain(
+			"element-appearance"
+		);
+	});
+
+	it("does not declare element-appearance for the assistant", () => {
+		expect(getManifestEntry("tea.assistant")?.surfaces).not.toContain(
+			"element-appearance"
+		);
 	});
 });

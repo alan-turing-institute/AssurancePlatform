@@ -14,6 +14,7 @@ import {
 import { EvidenceLogEntry } from "./evidence-log-entry";
 import { ChangeCheckDialog } from "./health-record-dialogs";
 import type { HealthStatus } from "./health-types";
+import { LiveNodePanel } from "./live-node-panel";
 import { SettingsView } from "./settings-view";
 import { useCriteria } from "./use-criteria";
 import { useHealthEvidence } from "./use-health-evidence";
@@ -230,8 +231,9 @@ const VIEW_TRIGGER_CLASSES =
  * switch to Results and back.
  *
  * The slot has no per-element-type filtering of its own, so this component
- * shows a "not applicable" state for anything but a property claim; no hook
- * makes a request for one. The panel is marked `nokey` as a whole: the
+ * shows the live node's own tab for evidence, and a "not applicable" state for
+ * any other type that is not a property claim; no hook makes a request for
+ * one of those. The panel is marked `nokey` as a whole: the
  * element dialog is part of the canvas node's React tree, and the canvas
  * would otherwise take arrow keys and Space typed in the form.
  */
@@ -245,6 +247,10 @@ export function HealthPanel({
 	const context = { caseId, elementId, elementType, canEdit };
 	const [view, setView] = useState<PanelView>("results");
 	const criteria = useCriteria(context);
+
+	if (elementType === "evidence") {
+		return <LiveNodePanel {...context} />;
+	}
 
 	if (elementType !== "property") {
 		return (

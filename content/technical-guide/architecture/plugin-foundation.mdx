@@ -12,8 +12,8 @@ An operator can withhold a manifest plugin from a deployment with `TEA_PLUGINS_D
 
 The manifest in `lib/plugins/manifest.ts` lists the health plugin's ID, version, description and surfaces.
 A plugin registers browser UI in typed slots.
-Current live registries cover an element badge, an element panel, a case panel and a settings section.
-Health uses these for its node badge, evidence panel, case-level evidence health panel and settings.
+Current live registries cover an element appearance, an element badge, an element panel, a case panel and a settings section.
+Health uses these for the look of its evidence node, its badges, evidence panel, case-level evidence health panel and settings.
 A case panel appears as one button in the case toolbar, after Notes, and opens in a side sheet; the toolbar renders whatever enabled plugins have registered.
 `lib/plugins/bootstrap.ts` imports the plugin's registration module at the client boundary.
 A registration must name a known plugin and a surface declared by its manifest entry.
@@ -22,6 +22,45 @@ The editor then filters registered components by effective plugin enablement.
 The slot types also name canvas decorators as an extension point, but the current registry has no live instance for that future surface.
 Do not assume that declaring one in a manifest makes it render.
 Server features such as machine routes and plugin-owned tables are separate from browser slots.
+
+## Colour an element or an edge
+
+The `element-appearance` slot lets a plugin say how one canvas element, or the edge between two elements, is drawn.
+Its registration is a React hook, `useAppearance(subject, enabled)`.
+The subject is either an element (`{ kind: "node", caseId, elementId, elementType }`) or an edge (`{ kind: "edge", caseId, sourceElementId, targetElementId }`).
+The answer is `null`, meaning no opinion, or a tone and whether the element is faded.
+The tones are `positive`, `caution`, `negative` and `neutral`, or `null`, which keeps the element's own colours.
+Core knows tones and never what they mean to a plugin: it turns a tone into a tint under the node's content and a colour on the edge, and a faded answer draws both at about a third of their strength with the text at full contrast.
+A faded answer with a `null` tone draws the node as a plain card and the edge in its own colour, both at about a third of their strength.
+While any answer is drawn on a node, the node's text uses the theme's drawn-text colour, which keeps its identifier, description and labels at a contrast of at least 4.5:1 against every tint, faded or not, in every theme preset, light and dark.
+The drawn-text colour is the `--node-drawn-foreground` token, which is the main text colour unless a theme preset sets another for a mode where the main text colour is too close to the tinted or faded card.
+Retro Arcade sets it in dark mode.
+A stylesheet rule on the `data-drawn-content` attribute, which the node sets on each wrapper that holds its content, applies the token, and it also draws the footer identifier at full strength rather than faded.
+The first enabled plugin that answers wins.
+
+Evidence nodes and the support edges into them ask the slot, and the slot accepts any element type for later plugins.
+Support edges carry the element ids of both ends in their data, so a plugin can colour one edge without working out ids from node ids.
+The selection highlight replaces a plugin's colour on the edges it marks.
+With no plugin registered, the canvas is drawn exactly as it is without the slot.
+
+Every registered plugin's hook runs on every draw of every node and edge, with `enabled` set from the viewer's effective enablement, because React needs the same hooks in the same order each time.
+A plugin that is off, or is still loading its enablement, is told so and must make no request and answer `null`.
+While a node or edge waits for its own answer about which plugins are on, it uses the last answer any component received, so an edge that the canvas creates again after a case reload is drawn at once; its own answer replaces that guess when it arrives.
+The read-only canvas in the documentation tells every plugin it is off, so it fetches nothing.
+A plugin should answer from state it already holds for the case rather than asking the server once per node or edge.
+The health plugin keeps one list of live evidence nodes per case, read again after every event that makes the canvas reload the case and every health status change.
+
+The element badge slot's context also carries `childrenHidden`, which says whether the element's children are collapsed on the canvas.
+It is read from the `hidden` flag the canvas writes on a collapsed element's descendants, not from the state of the collapse button.
+The health plugin uses it to show a claim's own dot only while the claim's evidence node is not drawn.
+
+Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and an appearance sets `data-appearance` on the element or edge it draws, to its tone, or to `plain` when it has none.
+Images of the canvas, report diagrams and the dashboard thumbnail drop the marked elements and take the colour off edges, so a picture shows the authored case only.
+The picture library copies each element's computed style into its copy of the page, so a drawn card's text colour would otherwise show in the picture.
+For the length of a capture the canvas root carries a `data-capturing` attribute, and the rule for `data-drawn-content` does not apply while it is there, so the picture shows the text and the footer identifier as they are on a card no plugin drew.
+The attribute is removed once the picture is taken, whether or not it succeeded.
+An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display`, `data-drawn-content` and `data-capturing` taken out of it.
+The export is refused, with a message that offers a PNG instead, if the image comes back in a form that cannot be cleaned.
 
 ## Store plugin state
 

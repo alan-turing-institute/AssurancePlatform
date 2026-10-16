@@ -13,7 +13,7 @@ describe("buildPluginOffCopy", () => {
 
 		expect(copy.title).toBe("Turn off Claim/Evidence Health for your account?");
 		expect(copy.introLine).toBe(
-			"Health badges, the Evidence tab and the Evidence health panel will disappear for you."
+			"Health badges, the Evidence tab and the Evidence health panel will disappear for you. Evidence nodes that show a claim's result stay in your case as ordinary evidence."
 		);
 		expect(copy.closingLine).toBe("Other collaborators are not affected.");
 		expect(copy.variableLines).toEqual([]);

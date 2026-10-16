@@ -242,6 +242,14 @@ function servedCriteria(row: PluginHealthCriteria): ServedCriteria {
 
 export type CheckOffer = "current" | "newer-version" | "not-offered";
 
+/** What a live evidence node says now, and the check its text was last written for. */
+export interface CriteriaNodeText {
+	/** The node's text as it reads now; null when it cannot be read. */
+	description: string | null;
+	/** The check and pipeline the node's text was last written for; null when the history holds no acceptance. */
+	written_for: NodeTextCheck | null;
+}
+
 export interface CriteriaView {
 	accepted_by: { name: string; owns_integration: boolean } | null;
 	/** The check's entry in the check list as it was when the check was last found there; null when the claim has no settings. */
@@ -250,6 +258,8 @@ export interface CriteriaView {
 	criteria: ServedCriteria | null;
 	/** The evidence element added under the claim when its settings were accepted, and where it is now; null when the claim has none. */
 	evidence_node: EvidenceNodeView | null;
+	/** The text of the claim's evidence node and the check that text names, for the form that offers to update it; null unless the node is live. */
+	evidence_node_text: CriteriaNodeText | null;
 	integration: { id: string; name: string } | null;
 	last_change: {
 		action: ActionWire;
@@ -264,6 +274,7 @@ export interface CriteriaView {
 const NO_CRITERIA: CriteriaView = {
 	criteria: null,
 	evidence_node: null,
+	evidence_node_text: null,
 	check_description: null,
 	integration: null,
 	accepted_by: null,
@@ -316,6 +327,27 @@ async function latestResultOf(
 	return { record_id: current.recordId, differences: echo.differences ?? [] };
 }
 
+/** A live node's text and the check that text names; null for a node that is not live. */
+async function criteriaNodeText(
+	claimId: string,
+	node: EvidenceNodeView | undefined
+): Promise<CriteriaNodeText | null> {
+	if (node?.state !== "live") {
+		return null;
+	}
+	const [element, writtenFor] = await Promise.all([
+		prisma.assuranceElement.findUnique({
+			where: { id: node.id },
+			select: { description: true },
+		}),
+		nodeTextCheckOf(prisma, claimId),
+	]);
+	return {
+		description: element?.description ?? null,
+		written_for: writtenFor,
+	};
+}
+
 async function buildCriteriaView(
 	claimId: string,
 	caseId: string
@@ -350,6 +382,7 @@ async function buildCriteriaView(
 	return {
 		criteria: servedCriteria(row),
 		evidence_node: node?.node ?? null,
+		evidence_node_text: await criteriaNodeText(claimId, node?.node),
 		check_description: row.checkDescription as unknown as HealthCheck,
 		integration,
 		accepted_by:
@@ -665,17 +698,85 @@ function checkChanges(
 	);
 }
 
+/** The check and pipeline a claim's evidence node text was last written for. */
+export interface NodeTextCheck {
+	check: string;
+	pipeline: string | null;
+}
+
+/**
+ * The check and pipeline the claim's node text was last written for: those of
+ * the newest history row made while the settings were accepted, which is an
+ * acceptance or an edit of accepted settings. An edit of a suggestion does not
+ * count, and nor does the settings row itself, because a suggestion saved over
+ * stopped settings replaces the check it holds. Null when the history holds no
+ * such row.
+ */
+async function nodeTextCheckOf(
+	db: Pick<HealthTransaction, "pluginHealthCriteriaRevision">,
+	claimId: string
+): Promise<NodeTextCheck | null> {
+	const rows = await db.pluginHealthCriteriaRevision.findMany({
+		where: { claimId },
+		orderBy: { revision: "asc" },
+		select: { action: true, declaration: true, pipelineName: true },
+	});
+	let accepted = false;
+	let written: NodeTextCheck | null = null;
+	for (const row of rows) {
+		if (row.action === "ACCEPTED") {
+			accepted = true;
+		} else if (row.action !== "EDITED") {
+			accepted = false;
+		}
+		if (accepted) {
+			const { check } = row.declaration as unknown as ServedSettings;
+			written = { check: check.name, pipeline: row.pipelineName };
+		}
+	}
+	return written;
+}
+
+/**
+ * Whether a save may rewrite the claim's node text. On accepted settings that
+ * is a change of check. When settings that were stopped or only suggested are
+ * being accepted, the kept node still names the check its text was last
+ * written for, so the new check is compared with that one, whatever the
+ * stopped or suggested settings hold.
+ */
+async function mayRewriteNodeText(
+	tx: HealthTransaction,
+	context: SaveBase,
+	previous: PluginHealthCriteria | null
+): Promise<boolean> {
+	const { input } = context;
+	if (previous?.state === "ACCEPTED") {
+		return checkChanges(input, previous);
+	}
+	if (!(previous && input.accept)) {
+		return false;
+	}
+	const written = await nodeTextCheckOf(tx, previous.claimId);
+	return (
+		written !== null &&
+		(written.check !== input.settings.check.name ||
+			(written.pipeline !== null && written.pipeline !== context.pipeline))
+	);
+}
+
 /**
  * The 400 for a node option the save cannot use: `add_evidence_node` needs a
  * save that moves settings to accepted from not accepted, and
  * `update_evidence_node_text` needs a change of check on settings that are
- * accepted, or are being accepted again after being stopped (the kept node
- * still names the check they had).
+ * accepted, or an acceptance of stopped or suggested settings whose check
+ * differs from the one the kept node's text was last written for.
  */
-function nodeOptionRefusal(
-	input: SaveCriteriaInput,
+async function nodeOptionRefusal(
+	tx: HealthTransaction,
+	context: SaveBase,
 	previous: PluginHealthCriteria | null
-): { invalid: InvalidSettings } | null {
+): Promise<{ invalid: InvalidSettings } | null> {
+	const { input } = context;
 	if (
 		input.add_evidence_node &&
 		!(input.accept && previous?.state !== "ACCEPTED")
@@ -685,16 +786,13 @@ function nodeOptionRefusal(
 			"can only be used when accepting settings that are not yet accepted"
 		);
 	}
-	const hadCheck =
-		previous?.state === "ACCEPTED" ||
-		(previous?.state === "INACTIVE" && input.accept);
 	if (
 		input.update_evidence_node_text &&
-		!(hadCheck && checkChanges(input, previous))
+		!(await mayRewriteNodeText(tx, context, previous))
 	) {
 		return invalid(
 			"update_evidence_node_text",
-			"can only be used when the check of accepted settings changes, or when stopped settings are accepted again with a different check"
+			"can only be used when the check of accepted settings changes, or when stopped or suggested settings are accepted with a different check from the one the evidence node's text names"
 		);
 	}
 	return null;
@@ -836,7 +934,7 @@ async function refuseBeforeList(
 	if (previous?.state === "ACCEPTED" && !input.accept) {
 		return { kind: "refused", error: ACCEPTED_CANNOT_SUGGEST };
 	}
-	const optionRefusal = nodeOptionRefusal(input, previous);
+	const optionRefusal = await nodeOptionRefusal(tx, context, previous);
 	return optionRefusal
 		? { kind: "invalid", invalid: optionRefusal.invalid }
 		: null;

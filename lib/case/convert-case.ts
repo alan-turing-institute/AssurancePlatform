@@ -324,16 +324,28 @@ const applyDefeaterAttachments = (nodes: Node[]): Node[] => {
  * for a cell's outgoing children edges, so the bend clears the whole cell
  * rather than the target's own midpoint. Edges outside a cell get no
  * `centerY` and render identically to the old plain `smoothstep`.
+ *
+ * `data` carries the ids of the two elements the edge joins, so a plugin can
+ * be asked about the edge (the `element-appearance` slot) without working
+ * them out from node ids.
  */
-function buildSupportEdge(node: Node): Edge {
+function buildSupportEdge(
+	node: Node,
+	elementIdByNodeId: Map<string, string>
+): Edge {
+	const source = node.data.parentId as string;
 	return {
 		id: `e${generateUuid()}`,
-		source: node.data.parentId as string,
+		source,
 		target: node.id,
 		type: "support",
 		animated: false,
 		sourceHandle: "c",
 		hidden: false,
+		data: {
+			sourceElementId: elementIdByNodeId.get(source),
+			targetElementId: elementIdByNodeId.get(node.id),
+		},
 	};
 }
 
@@ -376,6 +388,12 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 
 	// Create a set of all node IDs for validation
 	const nodeIds = new Set(nodes.map((node) => node.id));
+	const elementIdByNodeId = new Map<string, string>();
+	for (const node of nodes) {
+		if (node.data?.id !== undefined) {
+			elementIdByNodeId.set(node.id, String(node.data.id));
+		}
+	}
 
 	for (const node of nodes) {
 		const attachedTo = node.data.attachedTo as string | undefined;
@@ -392,7 +410,7 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 			nodeIds.has(node.data.parentId) &&
 			!replacesSupport
 		) {
-			edges.push(buildSupportEdge(node));
+			edges.push(buildSupportEdge(node, elementIdByNodeId));
 		}
 
 		if (isChallenge && attachedTo) {

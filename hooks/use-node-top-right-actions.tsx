@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { getAssertionStatusIndicator } from "@/components/shared/nodes";
 import type { ElementType } from "@/lib/plugins/slots";
 import useStore from "@/store/store";
+import { useChildrenHidden } from "./use-children-hidden";
 import { useElementBadgeSlot } from "./use-element-badge-slot";
 
 /**
@@ -22,12 +23,15 @@ import { useElementBadgeSlot } from "./use-element-badge-slot";
  */
 export function useNodeTopRightActions(
 	data: Record<string, unknown>,
-	elementType: ElementType
+	elementType: ElementType,
+	nodeId: string
 ): ReactNode | null {
 	const { assuranceCase } = useStore();
+	const childrenHidden = useChildrenHidden(nodeId);
 
 	const badgeSlot = useElementBadgeSlot({
 		caseId: assuranceCase?.id?.toString() ?? "",
+		childrenHidden,
 		elementId: String(data.id),
 		elementType,
 	});

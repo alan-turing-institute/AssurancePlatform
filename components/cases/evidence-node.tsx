@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
 import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import { useNodeAppearance } from "@/hooks/use-element-appearance";
 import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
 import useStore from "@/store/store";
 import NodeEditDialog from "./node-edit-dialog";
@@ -22,6 +23,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 		elementId: String(data.id),
 		elementType: "evidence",
 	});
+	const appearance = useNodeAppearance(String(data.id), "evidence");
 
 	const dataTour =
 		data.isDemo && data.name === "E1" ? "demo-evidence-1" : undefined;
@@ -29,6 +31,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 	return (
 		<>
 			<BaseNode
+				appearance={appearance}
 				bottomLeftActions={
 					<NodeActionGroup
 						commentCount={

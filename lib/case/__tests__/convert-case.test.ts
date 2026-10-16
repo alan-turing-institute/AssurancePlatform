@@ -446,6 +446,31 @@ describe("convert-case utilities", () => {
 			expect(claimToEvidenceEdge).toBeDefined();
 		});
 
+		it("carries the element ids of both ends on a support edge, so a plugin can be asked about the edge", () => {
+			const nodes: Node[] = [
+				{
+					id: "property-claim-uuid",
+					type: "property",
+					position: { x: 0, y: 0 },
+					data: { id: "claim-uuid", parentId: null },
+				},
+				{
+					id: "evidence-evidence-uuid",
+					type: "evidence",
+					position: { x: 0, y: 0 },
+					data: { id: "evidence-uuid", parentId: "property-claim-uuid" },
+				},
+			];
+
+			const [edge] = createEdgesFromNodes(nodes);
+
+			expect(edge?.type).toBe("support");
+			expect(edge?.data).toEqual({
+				sourceElementId: "claim-uuid",
+				targetElementId: "evidence-uuid",
+			});
+		});
+
 		it("should create unique edge IDs", () => {
 			const edges = createEdgesFromNodes(mockNodes);
 

@@ -123,10 +123,14 @@ async function send(
 
 export interface SaveCriteriaRequest {
 	accept: boolean;
+	/** Add an evidence node under the claim; only sent with an acceptance that has no live node to reuse. */
+	addEvidenceNode?: boolean;
 	/** The stored revision the form was read at, null when no settings were stored; the server refuses the save when it has moved. */
 	expectedRevision: number | null;
 	integrationId: string;
 	settings: HealthCriteriaSettings;
+	/** Rewrite the live node's text to name the new check; only sent when the check changes and the node is live. */
+	updateEvidenceNodeText?: boolean;
 }
 
 /** Saves a claim's settings, as accepted or as a suggestion. */
@@ -139,7 +143,20 @@ export function saveCriteria(
 		settings: request.settings,
 		accept: request.accept,
 		expected_revision: request.expectedRevision,
+		...(request.addEvidenceNode ? { add_evidence_node: true } : {}),
+		...(request.updateEvidenceNodeText
+			? { update_evidence_node_text: true }
+			: {}),
 	});
+}
+
+/** Adds the evidence node for a claim whose settings were accepted without one. */
+export function addEvidenceNode(claimId: string): Promise<CriteriaOutcome> {
+	return send(
+		`/api/elements/${claimId}/health/evidence-node`,
+		"POST",
+		undefined
+	);
 }
 
 /** Stops the use of a claim's settings, or discards a suggestion when no reason is given. */

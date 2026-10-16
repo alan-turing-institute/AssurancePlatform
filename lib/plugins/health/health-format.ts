@@ -314,6 +314,62 @@ export function isStatusStale(status: HealthStatus, now: number): boolean {
 	);
 }
 
+/** What a claim's status looks like on its live evidence node. */
+export type LiveNodeKind =
+	| HealthVerdict
+	| "none" // bound to a check, no result yet
+	| "withdrawn"; // every result withdrawn
+
+export interface LiveNodeState {
+	kind: LiveNodeKind;
+	/** The result has expired, or a condition it was valid under no longer holds. Withdrawn results count as out of date. */
+	stale: boolean;
+}
+
+/** Reads a claim's status as the live node shows it, with the age judged at `now`. */
+export function liveNodeStateOf(
+	status: HealthStatus | null,
+	now: number
+): LiveNodeState {
+	if (!status) {
+		return { kind: "none", stale: false };
+	}
+	if (status.verdict === null) {
+		return status.stale_reason === "all-revoked"
+			? { kind: "withdrawn", stale: true }
+			: { kind: "none", stale: false };
+	}
+	return { kind: status.verdict, stale: isStatusStale(status, now) };
+}
+
+/** The word on a live node's badge for each state. */
+export const LIVE_NODE_WORDS: Record<LiveNodeKind, string> = {
+	none: "No result yet",
+	pass: "Passing",
+	marginal: "Marginal",
+	fail: "Failing",
+	indeterminate: "Could not judge",
+	withdrawn: "No current result",
+};
+
+/**
+ * The live node badge's accessible label: the claim it reports on, then the
+ * claim badge's own label (`describeBadge`) for the same status.
+ */
+export function describeLiveNode(
+	status: HealthStatus | null,
+	state: LiveNodeState,
+	claimName: string | null
+): string {
+	const subject = claimName
+		? `Live results for ${claimName}`
+		: "Live results for its claim";
+	if (!status || state.kind === "none") {
+		return `${subject}. Health: no result yet`;
+	}
+	return `${subject}. ${describeBadge(status, state.stale)}`;
+}
+
 const MISMATCH_WORDS = {
 	mismatch: "judged with different settings",
 	undeclared: "no accepted settings",

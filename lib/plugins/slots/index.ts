@@ -12,18 +12,23 @@
 
 export {
 	casePanelSlot,
+	elementAppearanceSlot,
 	elementBadgeSlot,
 	elementPanelSlot,
 	settingsSectionSlot,
 } from "./registry";
 export type {
+	AppearanceSubject,
+	AppearanceTone,
 	CasePanelRegistration,
 	CaseSlotContext,
+	ElementAppearance,
 	// No consumer imports the three marked types from here: they describe the
 	// `element-badge` and `settings-section` registrations and the id space
-	// that every slot shares, and stay exported so the barrel covers each
-	// slot. The other types have importers, so they carry no marker; the
-	// three marked ones are unused by fallow's count alone.
+	// that every slot shares, and stay exported so the barrel covers each slot.
+	// The other types have importers, so they carry no marker; the three marked
+	// ones are unused by fallow's count alone.
+	ElementAppearanceRegistration,
 	// fallow-ignore-next-line unused-type
 	ElementBadgeRegistration,
 	ElementPanelRegistration,
