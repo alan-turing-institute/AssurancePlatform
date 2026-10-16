@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ import {
 	describeDifferences,
 	NO_ACCEPTED_SETTINGS,
 } from "./echo-difference-words";
-import { EvidenceLogEntry } from "./evidence-log-entry";
+import { EvidenceLogEntry, ThinnedRunLine } from "./evidence-log-entry";
 import { ChangeCheckDialog } from "./health-record-dialogs";
 import type { HealthStatus } from "./health-types";
 import { LiveNodePanel } from "./live-node-panel";
@@ -129,7 +129,8 @@ interface ResultsViewProps {
 
 /**
  * The Results view: the claim's bound check, then its evidence log newest
- * first, 50 at a time with "Load older". A person who can edit also gets
+ * first, 50 at a time with "Load older", with a line under each record that
+ * has identical passing results thinned out before it. A person who can edit also gets
  * Change (or "Set in Settings" while the claim has accepted settings) on the
  * header and Revoke or Reinstate on each record; the server enforces
  * permission regardless.
@@ -192,13 +193,15 @@ function ResultsView({
 		>
 			{header}
 			{evidence.evidence.map((item) => (
-				<EvidenceLogEntry
-					canEdit={canEdit}
-					claimId={elementId}
-					item={item}
-					key={item.id}
-					onChanged={onChanged}
-				/>
+				<Fragment key={item.id}>
+					<EvidenceLogEntry
+						canEdit={canEdit}
+						claimId={elementId}
+						item={item}
+						onChanged={onChanged}
+					/>
+					{item.thinned_before && <ThinnedRunLine run={item.thinned_before} />}
+				</Fragment>
 			))}
 			{evidence.olderFailed && (
 				<p className="text-destructive text-sm" role="alert">

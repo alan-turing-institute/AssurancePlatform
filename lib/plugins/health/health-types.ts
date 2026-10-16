@@ -61,6 +61,20 @@ export interface HealthRevocation {
 	revoked_by_name: string | null;
 }
 
+/**
+ * A stretch of repeated passing results removed from the log straight before
+ * a kept record: the note the nightly thinning job leaves.
+ */
+export interface HealthThinnedRun {
+	first_removed_at: string;
+	first_removed_sequence: number;
+	last_removed_at: string;
+	last_removed_sequence: number;
+	removed_count: number;
+	rule_version: number;
+	thinned_at: string;
+}
+
 /** One item of `GET /api/machine/health/elements/[id]/evidence`, newest first. */
 export interface HealthEvidenceLogItem {
 	chain_sequence: number;
@@ -75,6 +89,8 @@ export interface HealthEvidenceLogItem {
 	record: HealthEvidenceRecord;
 	record_hash: string;
 	revocation: HealthRevocation | null;
+	/** The records removed between this one and the next older kept record; null when none were. */
+	thinned_before: HealthThinnedRun | null;
 }
 
 export interface HealthEvidencePage {
