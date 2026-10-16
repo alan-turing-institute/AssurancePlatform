@@ -32,7 +32,13 @@ import {
  * compares the claim's current result with the accepted settings.
  * `check_description` is the check's entry in the check list as it was when
  * the check was last found there, and is null when the claim has no settings.
- * @response 200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`
+ * `evidence_node` says where the claim's evidence node is (`live`, `trashed`,
+ * `moved` or `missing`) and is null when the claim has none.
+ * `evidence_node_text` is null unless the node is live; then it holds the
+ * node's text as it reads now (`description`) and the check and pipeline that
+ * text was last written for (`written_for`), which a form uses to offer
+ * updating it.
+ * @response 200 - `{ criteria, check_description, evidence_node, evidence_node_text, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`
  * @response 400 - `id` is not a UUID
  * @response 401 - No session
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/user
@@ -73,10 +79,12 @@ export async function GET(
  * the save moves the settings to accepted from not accepted, and the claim's
  * live node is reused when it has one. `update_evidence_node_text: true`
  * rewrites the live node's text to name the new check; it is allowed only when
- * accepted settings change their check, or stopped settings are accepted
- * again with a different check, and the node is live. Both are refused with a
- * 400 otherwise. `evidence_node` in the response says where the
- * claim's node is: `live`, `trashed`, `moved` or `missing`.
+ * accepted settings change their check, or stopped or suggested settings are
+ * accepted with a check that differs from the one the node's text was last
+ * written for (the check of the newest acceptance or edit of accepted
+ * settings), and the node is live. Both are refused with a 400 otherwise.
+ * `evidence_node` in the response says where the claim's node is: `live`,
+ * `trashed`, `moved` or `missing`.
  * @body { integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }
  * @response 200 - The same body as the GET, after the save
  * @response 400 - Invalid body, or a node option the save cannot use; the field is named and nothing is stored

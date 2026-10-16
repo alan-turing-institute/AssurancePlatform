@@ -12,8 +12,8 @@ An operator can withhold a manifest plugin from a deployment with `TEA_PLUGINS_D
 
 The manifest in `lib/plugins/manifest.ts` lists the health plugin's ID, version, description and surfaces.
 A plugin registers browser UI in typed slots.
-Current live registries cover an element badge, an element panel, a case panel and a settings section.
-Health uses these for its node badge, evidence panel, case-level evidence health panel and settings.
+Current live registries cover an element appearance, an element badge, an element panel, a case panel and a settings section.
+Health uses these for the look of its evidence node, its badges, evidence panel, case-level evidence health panel and settings.
 A case panel appears as one button in the case toolbar, after Notes, and opens in a side sheet; the toolbar renders whatever enabled plugins have registered.
 `lib/plugins/bootstrap.ts` imports the plugin's registration module at the client boundary.
 A registration must name a known plugin and a surface declared by its manifest entry.
@@ -22,6 +22,34 @@ The editor then filters registered components by effective plugin enablement.
 The slot types also name canvas decorators as an extension point, but the current registry has no live instance for that future surface.
 Do not assume that declaring one in a manifest makes it render.
 Server features such as machine routes and plugin-owned tables are separate from browser slots.
+
+## Colour an element or an edge
+
+The `element-appearance` slot lets a plugin say how one canvas element, or the edge between two elements, is drawn.
+Its registration is a React hook, `useAppearance(subject, enabled)`.
+The subject is either an element (`{ kind: "node", caseId, elementId, elementType }`) or an edge (`{ kind: "edge", caseId, sourceElementId, targetElementId }`).
+The answer is `null`, meaning no opinion, or a tone and whether the element is faded.
+The tones are `positive`, `caution`, `negative` and `neutral`.
+Core knows tones and never what they mean to a plugin: it turns a tone into a tint under the node's content and a colour on the edge, and a faded answer draws both at about a third of their strength with the text at full contrast.
+The first enabled plugin that answers wins.
+
+Evidence nodes and the support edges into them ask the slot, and the slot accepts any element type for later plugins.
+Support edges carry the element ids of both ends in their data, so a plugin can colour one edge without working out ids from node ids.
+The selection highlight replaces a plugin's colour on the edges it marks.
+With no plugin registered, the canvas is drawn exactly as it is without the slot.
+
+Every registered plugin's hook runs on every draw of every node and edge, with `enabled` set from the viewer's effective enablement, because React needs the same hooks in the same order each time.
+A plugin that is off, or is still loading its enablement, is told so and must make no request and answer `null`.
+The read-only canvas in the documentation tells every plugin it is off, so it fetches nothing.
+A plugin should answer from state it already holds for the case rather than asking the server once per node or edge.
+The health plugin keeps one list of live evidence nodes per case, read again after every event that makes the canvas reload the case and every health status change.
+
+The element badge slot's context also carries `childrenHidden`, which says whether the element's children are collapsed on the canvas.
+It is read from the `hidden` flag the canvas writes on a collapsed element's descendants, not from the state of the collapse button.
+The health plugin uses it to show a claim's own dot only while the claim's evidence node is not drawn.
+
+Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and an appearance sets `data-appearance` on the element or edge it colours.
+Images of the canvas, report diagrams and the dashboard thumbnail drop the marked elements and take the colour off edges, so a picture shows the authored case only.
 
 ## Store plugin state
 
