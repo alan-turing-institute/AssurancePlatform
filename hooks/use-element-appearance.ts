@@ -10,8 +10,8 @@ import useStore from "@/store/store";
 import { useEnabledPluginIds } from "./use-plugin-enablement";
 
 /**
- * The `element-appearance` slot (ADR 0002 v2 §2.3) for one subject: how the
- * first enabled plugin that has an opinion wants it drawn, or `null`.
+ * The `element-appearance` slot for one subject: how the first enabled plugin
+ * that has an opinion wants it drawn, or `null`.
  *
  * Every registered plugin's hook runs on every render, whether or not the
  * plugin is on, because React needs the same hooks in the same order each
