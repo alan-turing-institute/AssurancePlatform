@@ -25,6 +25,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { appearanceAttribute } from "@/lib/case/plugin-display-capture";
 import type { ElementAppearance } from "@/lib/plugins/slots";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
@@ -223,7 +224,7 @@ export default function BaseNode({
 	return (
 		<div
 			className={containerClasses}
-			data-appearance={appearance?.tone}
+			data-appearance={appearanceAttribute(appearance)}
 			data-faded={appearance?.faded ? "" : undefined}
 			data-tour={dataTour}
 		>

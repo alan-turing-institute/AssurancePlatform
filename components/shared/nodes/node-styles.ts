@@ -92,15 +92,19 @@ const APPEARANCE_TINTS: Record<
  * Classes for the layer that carries a plugin's fill. The layer sits under the
  * card's content, so the text keeps its full contrast; a faded card is veiled
  * with the canvas's colour, which leaves the card about a third as solid, and
- * its tint is drawn at about a third of its strength.
+ * its tint is drawn at about a third of its strength. With no tone the layer
+ * has no tint of its own, so a faded card is only the veil and an unfaded one
+ * is left as it is.
  */
 export function buildAppearanceFillClasses(
 	appearance: ElementAppearance
 ): string {
-	const tint = APPEARANCE_TINTS[appearance.tone];
+	const tint = appearance.tone ? APPEARANCE_TINTS[appearance.tone] : null;
 	return cn(
-		"pointer-events-none absolute inset-0 -z-10 rounded-[inherit] bg-linear-to-b",
-		appearance.faded ? ["bg-muted/65", tint.faded] : tint.full
+		"pointer-events-none absolute inset-0 -z-10 rounded-[inherit]",
+		tint && "bg-linear-to-b",
+		appearance.faded && "bg-muted/65",
+		tint && (appearance.faded ? tint.faded : tint.full)
 	);
 }
 

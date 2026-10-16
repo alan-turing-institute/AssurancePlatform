@@ -11,14 +11,14 @@ import { useRerenderAtExpiry } from "./use-rerender-at-expiry";
  * How a live node and its edge are drawn for a state: the verdict's tone, and
  * faded once the result is out of date. A claim with no result yet is drawn as
  * plain evidence, and so is one whose results have all been withdrawn, except
- * that it is faded.
+ * that it is faded: a null tone keeps the node's and the edge's own colours.
  */
 export function appearanceOf(state: LiveNodeState): ElementAppearance | null {
 	switch (state.kind) {
 		case "none":
 			return null;
 		case "withdrawn":
-			return { tone: "neutral", faded: true };
+			return { tone: null, faded: true };
 		case "pass":
 			return { tone: "positive", faded: state.stale };
 		case "marginal":

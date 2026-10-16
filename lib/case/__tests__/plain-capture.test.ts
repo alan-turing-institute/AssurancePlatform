@@ -148,6 +148,22 @@ describe("what a capture leaves out", () => {
 
 		expect(canvas.edge.getAttribute("style")).toBe(EDGE_STYLE);
 	});
+
+	it("removes the fade from a line that has no tone, and puts it back", () => {
+		const fadedOnly = edgePath({
+			"data-appearance": "plain",
+			style: "stroke-opacity: 0.35;",
+		});
+		canvas.viewport.append(fadedOnly);
+
+		const restore = stripPluginAppearance(canvas.viewport);
+
+		expect(fadedOnly.style.getPropertyValue("stroke-opacity")).toBe("");
+
+		restore();
+
+		expect(fadedOnly.getAttribute("style")).toBe("stroke-opacity: 0.35;");
+	});
 });
 
 describe("an image export", () => {

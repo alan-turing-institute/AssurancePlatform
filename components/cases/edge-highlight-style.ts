@@ -15,15 +15,21 @@ const FADED_STROKE_OPACITY = 0.35;
  * Inline style for a `support` edge's connector `<path>` that a plugin has
  * given an appearance: the tone's theme colour, a little heavier than an
  * ordinary edge so the colour reads, and at about a third of its strength when
- * faded. Image capture removes these three properties (`plugin-display-capture.ts`).
+ * faded. With no tone the edge keeps its own colour and width, so only the
+ * fade is set. Image capture removes these three properties
+ * (`plugin-display-capture.ts`).
  */
 export function buildAppearanceEdgeStyle(
 	appearance: ElementAppearance
 ): CSSProperties {
+	const strokeOpacity = appearance.faded ? FADED_STROKE_OPACITY : 1;
+	if (!appearance.tone) {
+		return { strokeOpacity };
+	}
 	return {
 		stroke: APPEARANCE_STROKES[appearance.tone],
 		strokeWidth: 3,
-		strokeOpacity: appearance.faded ? FADED_STROKE_OPACITY : 1,
+		strokeOpacity,
 	};
 }
 

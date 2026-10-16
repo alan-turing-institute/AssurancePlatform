@@ -29,8 +29,9 @@ The `element-appearance` slot lets a plugin say how one canvas element, or the e
 Its registration is a React hook, `useAppearance(subject, enabled)`.
 The subject is either an element (`{ kind: "node", caseId, elementId, elementType }`) or an edge (`{ kind: "edge", caseId, sourceElementId, targetElementId }`).
 The answer is `null`, meaning no opinion, or a tone and whether the element is faded.
-The tones are `positive`, `caution`, `negative` and `neutral`.
+The tones are `positive`, `caution`, `negative` and `neutral`, or `null`, which keeps the element's own colours.
 Core knows tones and never what they mean to a plugin: it turns a tone into a tint under the node's content and a colour on the edge, and a faded answer draws both at about a third of their strength with the text at full contrast.
+A faded answer with a `null` tone draws the node as a plain card and the edge in its own colour, both at about a third of their strength.
 The first enabled plugin that answers wins.
 
 Evidence nodes and the support edges into them ask the slot, and the slot accepts any element type for later plugins.
@@ -48,7 +49,7 @@ The element badge slot's context also carries `childrenHidden`, which says wheth
 It is read from the `hidden` flag the canvas writes on a collapsed element's descendants, not from the state of the collapse button.
 The health plugin uses it to show a claim's own dot only while the claim's evidence node is not drawn.
 
-Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and an appearance sets `data-appearance` on the element or edge it colours.
+Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and an appearance sets `data-appearance` on the element or edge it draws, to its tone, or to `plain` when it has none.
 Images of the canvas, report diagrams and the dashboard thumbnail drop the marked elements and take the colour off edges, so a picture shows the authored case only.
 
 ## Store plugin state

@@ -7,6 +7,7 @@ import {
 	HIGHLIGHTED_EDGE_STYLE,
 } from "@/components/cases/edge-highlight-style";
 import { useEdgeAppearance } from "@/hooks/use-element-appearance";
+import { appearanceAttribute } from "@/lib/case/plugin-display-capture";
 import { cn } from "@/lib/utils";
 
 /**
@@ -92,7 +93,7 @@ export default function SupportEdge({
 					highlighted && HIGHLIGHTED_EDGE_PATH_CLASS
 				)}
 				d={edgePath}
-				data-appearance={drawn?.tone}
+				data-appearance={appearanceAttribute(drawn)}
 				data-faded={drawn?.faded ? "" : undefined}
 				fill="none"
 				id={id}

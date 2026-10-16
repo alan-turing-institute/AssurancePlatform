@@ -93,7 +93,8 @@ export type AppearanceTone = "caution" | "negative" | "neutral" | "positive";
 export interface ElementAppearance {
 	/** Fills and lines are drawn at about a third of their strength. Text stays at full contrast. */
 	faded: boolean;
-	tone: AppearanceTone;
+	/** `null` keeps the element's own colours: a faded card or line with no tint or stroke colour of its own. */
+	tone: AppearanceTone | null;
 }
 
 /** What an appearance is asked about: one element, or the line from one element to another. */

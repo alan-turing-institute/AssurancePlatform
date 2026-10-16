@@ -14,6 +14,18 @@
 /** The attribute on every element that exists only to show a plugin's display. */
 const PLUGIN_DISPLAY_ATTRIBUTE = "data-plugin-display";
 
+/**
+ * The value of `data-appearance` for an element or edge a plugin has drawn:
+ * the tone, or "plain" for an appearance with no tone, so the attribute is
+ * present for every appearance and the capture's `[data-appearance]` selector
+ * finds them all. Absent for an element no plugin has drawn.
+ */
+export function appearanceAttribute(
+	appearance: { tone: string | null } | null | undefined
+): string | undefined {
+	return appearance ? (appearance.tone ?? "plain") : undefined;
+}
+
 /** The properties a plugin's edge colour sets inline. */
 const EDGE_APPEARANCE_PROPERTIES = [
 	"stroke",

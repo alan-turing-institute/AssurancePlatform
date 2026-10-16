@@ -128,6 +128,26 @@ describe("a node drawn with a plugin's appearance", () => {
 		}
 	});
 
+	it("fades a card that has no tone without tinting it, leaving its border and fill colours alone", () => {
+		const plain = draw(null);
+		const plainClasses = [...card(plain.container).classList];
+		plain.unmount();
+
+		const { container } = draw({ tone: null, faded: true });
+		const element = card(container);
+		const layer = element.querySelector("[data-plugin-display]");
+		const classes = layer?.getAttribute("class") ?? "";
+
+		expect(element).toHaveAttribute("data-appearance", "plain");
+		expect(element).toHaveAttribute("data-faded");
+		expect(classes).toContain("bg-muted/65");
+		expect(classes).not.toContain("from-");
+		expect(classes).not.toContain("to-");
+		expect([...element.classList].filter((name) => name !== "isolate")).toEqual(
+			plainClasses
+		);
+	});
+
 	it("keeps the text at full contrast when the node is faded", () => {
 		const { container } = draw({ tone: "negative", faded: true });
 		const element = card(container);
@@ -298,6 +318,19 @@ describe("a support edge drawn with a plugin's appearance", () => {
 		expect(fadedOpacity).toBeLessThan(0.5);
 		expect(faded).toHaveAttribute("data-faded");
 		expect(full).not.toHaveAttribute("data-faded");
+	});
+
+	it("fades a line that has no tone without changing its colour or width", () => {
+		answer({ tone: null, faded: true });
+
+		const path = drawEdge({}, { strokeWidth: 5 });
+
+		expect(path.style.stroke).toBe("");
+		expect(path.style.strokeWidth).toBe("5");
+		expect(Number(path.style.strokeOpacity)).toBeGreaterThan(0.2);
+		expect(Number(path.style.strokeOpacity)).toBeLessThan(0.5);
+		expect(path).toHaveAttribute("data-appearance", "plain");
+		expect(path).toHaveAttribute("data-faded");
 	});
 
 	it("lets the selection highlight replace the colour on the edges it marks", () => {
