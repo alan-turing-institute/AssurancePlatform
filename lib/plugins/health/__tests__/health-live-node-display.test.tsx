@@ -111,9 +111,9 @@ describe("appearanceOf — the node's and the edge's look for each state", () =>
 			{ tone: "negative", faded: true },
 		],
 		[
-			"every result withdrawn, which fades",
+			"every result withdrawn, which fades and keeps the node's own colours",
 			WITHDRAWN(),
-			{ tone: "neutral", faded: true },
+			{ tone: null, faded: true },
 		],
 		["no result yet, which stays plain", NO_RESULT(), null],
 		["no status at all, which stays plain", null, null],
