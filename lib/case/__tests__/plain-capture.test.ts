@@ -188,6 +188,18 @@ describe("what a capture leaves out", () => {
 		expect(canvas.viewport).not.toHaveAttribute("data-capturing");
 	});
 
+	it("does nothing when a capture is restored a second time, so it cannot clear an overlapping capture's mark", () => {
+		const first = stripPluginAppearance(canvas.viewport);
+		const second = stripPluginAppearance(canvas.viewport);
+
+		first();
+		first();
+		expect(canvas.viewport).toHaveAttribute("data-capturing");
+
+		second();
+		expect(canvas.viewport).not.toHaveAttribute("data-capturing");
+	});
+
 	it("removes the fade from a line that has no tone, and puts it back", () => {
 		const fadedOnly = edgePath({
 			"data-appearance": "plain",

@@ -96,7 +96,8 @@ const capturesUnderWay = new WeakMap<Element, number>();
  * the authored case: it removes the plugin's colour from every edge, and marks
  * `root` as being captured so a drawn card's secondary text returns to the
  * colour of a plain card. Returns the function that undoes both, to call once
- * the picture is taken, whether or not it succeeded. A property that has been
+ * the picture is taken, whether or not it succeeded. Called again, it does
+ * nothing, so it cannot end another capture's mark. A property that has been
  * given a value since it was removed (the canvas redrew the edge while the
  * picture was being taken) is left as that newer value, not overwritten with
  * the old one.
@@ -121,7 +122,12 @@ export function stripPluginAppearance(root: Element): () => void {
 			}
 		}
 	}
+	let restored = false;
 	return () => {
+		if (restored) {
+			return;
+		}
+		restored = true;
 		for (const { path, property, value, priority } of saved) {
 			if (path.style.getPropertyValue(property) === "") {
 				path.style.setProperty(property, value, priority);
