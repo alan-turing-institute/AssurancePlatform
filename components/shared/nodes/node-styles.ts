@@ -120,10 +120,11 @@ export function buildNodeHeaderClasses(): string {
 }
 
 /**
- * Build node title classes (ID badge like G1, S1, etc.)
+ * Build node title classes (ID badge like G1, S1, etc.). The identifier is
+ * short and never shrinks: whatever shares the header gives way to it.
  */
 export function buildNodeTitleClasses(): string {
-	return cn("font-semibold", "text-foreground", "text-sm", "truncate");
+	return cn("font-semibold", "text-foreground", "text-sm", "shrink-0");
 }
 
 /**

@@ -68,7 +68,7 @@ function LiveNodeBadgeView({ node }: { node: HealthLiveEvidenceNode }) {
 				<TooltipTrigger asChild>
 					<output
 						aria-label={label}
-						className="inline-flex items-center gap-1 rounded-full border bg-card px-2 py-0.5 font-medium text-foreground text-xs leading-none"
+						className="inline-flex flex-wrap items-center justify-end gap-1 rounded-xl border bg-card px-2 py-0.5 font-medium text-foreground text-xs leading-none"
 						data-kind={state.kind}
 						data-stale={state.stale ? "" : undefined}
 						data-testid="live-node-badge"

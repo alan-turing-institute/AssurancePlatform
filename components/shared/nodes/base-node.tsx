@@ -252,7 +252,7 @@ export default function BaseNode({
 			<LazyMotion features={domAnimation} strict>
 				{/* Header: Icon + Name + Top-right Actions */}
 				<div className={buildNodeHeaderClasses()}>
-					<div className="flex min-w-0 flex-1 items-center gap-2">
+					<div className="flex flex-1 items-center gap-2">
 						<Icon
 							aria-hidden="true"
 							className={buildNodeIconClasses(nodeType)}
@@ -269,7 +269,7 @@ export default function BaseNode({
 						)}
 					</div>
 					{topRightActions && (
-						<div className="flex items-center">{topRightActions}</div>
+						<div className="flex min-w-0 items-center">{topRightActions}</div>
 					)}
 				</div>
 
