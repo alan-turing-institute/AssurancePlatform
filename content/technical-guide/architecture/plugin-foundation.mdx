@@ -58,7 +58,7 @@ The picture library copies each element's computed style into its copy of the pa
 For the length of a capture the canvas root carries a `data-capturing` attribute, and the rule for `data-drawn-content` does not apply while it is there, so the picture shows the secondary text and the footer identifier as they are on a card no plugin drew.
 The attribute is removed once the picture is taken, whether or not it succeeded.
 An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display`, `data-drawn-content` and `data-capturing` taken out of it.
-The export is refused if the image comes back in a form that cannot be cleaned.
+The export is refused, with a message that offers a PNG instead, if the image comes back in a form that cannot be cleaned.
 
 ## Store plugin state
 

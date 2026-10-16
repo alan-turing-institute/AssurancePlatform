@@ -296,12 +296,17 @@ describe("an SVG image export's file", () => {
 		expect(file).toContain('d="M0 0L5 5"');
 	});
 
-	it("is not saved when the image comes back in a form that cannot be cleaned", async () => {
-		toSvgMock.mockResolvedValue("data:image/png;base64,AAAA");
+	it.each([
+		["in a form that cannot be cleaned", "data:image/png;base64,AAAA"],
+		["that cannot be read", `${SVG_HEAD}${encodeURIComponent("<svg")}`],
+	])("is not saved, and the person is told in plain words, when the image comes back %s", async (_form, dataUrl) => {
+		toSvgMock.mockResolvedValue(dataUrl);
 
 		await expect(
 			exportDiagramImage({ caseName: "A case", format: "svg", nodes: [NODE] })
-		).rejects.toThrow("not in a form the export can clean");
+		).rejects.toThrow(
+			"The SVG image could not be prepared. Try again, or export a PNG."
+		);
 		expect(saveAs).not.toHaveBeenCalled();
 	});
 });

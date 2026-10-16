@@ -37,6 +37,10 @@ const PLUGIN_DISPLAY_MARKERS = [
 	CAPTURING_ATTRIBUTE,
 ] as const;
 
+/** The message when an SVG image cannot be cleaned, for the person exporting it. */
+const SVG_NOT_PREPARED_MESSAGE =
+	"The SVG image could not be prepared. Try again, or export a PNG.";
+
 /** The start of the data URL the capture library returns for an SVG image; the markup follows, percent-encoded. */
 const SVG_DATA_URL_HEAD = "data:image/svg+xml;charset=utf-8,";
 
@@ -146,12 +150,12 @@ export function stripPluginAppearance(root: Element): () => void {
  */
 export function removePluginDisplayMarkers(svgDataUrl: string): string {
 	if (!svgDataUrl.startsWith(SVG_DATA_URL_HEAD)) {
-		throw new Error("The SVG image is not in a form the export can clean.");
+		throw new Error(SVG_NOT_PREPARED_MESSAGE);
 	}
 	const markup = decodeURIComponent(svgDataUrl.slice(SVG_DATA_URL_HEAD.length));
 	const image = new DOMParser().parseFromString(markup, "image/svg+xml");
 	if (image.getElementsByTagName("parsererror").length > 0) {
-		throw new Error("The SVG image could not be read to clean it.");
+		throw new Error(SVG_NOT_PREPARED_MESSAGE);
 	}
 	const marked = image.querySelectorAll(
 		PLUGIN_DISPLAY_MARKERS.map((name) => `[${name}]`).join(",")
