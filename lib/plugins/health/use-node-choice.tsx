@@ -4,17 +4,20 @@ import { useState } from "react";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { type NodeEvidence, nodeOfferFor } from "./criteria-node-offer";
 import { NodeOptions } from "./criteria-node-options";
+import type { CheckChoice } from "./criteria-sections";
 
 interface UseNodeChoiceInput {
 	/** The check chosen in the form. */
 	check: HealthCheck;
-	/** For accepted settings: the chosen check is not the one stored. */
-	checkChanged: boolean;
+	/** Every check the form can choose from. */
+	choices: CheckChoice[];
+	/** The key of the check chosen in the form. */
+	chosenKey: string;
 	/** True while a request is in flight, which turns the boxes off. */
 	disabled: boolean;
 	evidence: NodeEvidence;
-	/** The display name of the pipeline that runs the chosen check. */
-	pipeline: string;
+	/** The key of the check the form was opened on. */
+	initialChoiceKey: string;
 	state: "accepted" | "new" | "suggested";
 }
 
@@ -27,19 +30,21 @@ interface UseNodeChoiceInput {
  */
 export function useNodeChoice({
 	check,
-	checkChanged,
+	chosenKey,
+	choices,
 	disabled,
 	evidence,
-	pipeline,
+	initialChoiceKey,
 	state,
 }: UseNodeChoiceInput) {
 	const [addTicked, setAddTicked] = useState(true);
 	const [updateTicked, setUpdateTicked] = useState(true);
 	const offer = nodeOfferFor({
 		check,
-		checkChanged,
+		checkChanged: chosenKey !== initialChoiceKey,
 		evidence,
-		pipeline,
+		pipeline:
+			choices.find((choice) => choice.key === chosenKey)?.pipeline ?? "",
 		state,
 	});
 	const liveNode =

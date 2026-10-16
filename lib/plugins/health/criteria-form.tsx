@@ -660,11 +660,11 @@ export function CriteriaForm({
 	const change = changeFlags(form, actions, superseded);
 	const { liveNode, node, nodeOptions } = useNodeChoice({
 		check: form.check,
-		checkChanged: form.draftKey !== initialChoiceKey,
+		chosenKey: form.draftKey,
+		choices,
 		disabled: actions.pending,
 		evidence,
-		pipeline:
-			choices.find((choice) => choice.key === form.draftKey)?.pipeline ?? "",
+		initialChoiceKey,
 		state,
 	});
 
