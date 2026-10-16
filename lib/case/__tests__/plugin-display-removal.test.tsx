@@ -99,8 +99,12 @@ const CASE = {
 
 /** What one call to the picture-taking library saw. */
 interface Capture {
+	/** Whether the capture's root was marked as being captured. */
+	capturing: boolean;
 	/** The structure and words of everything the picture would contain. */
 	contents: string[];
+	/** For each content wrapper of a drawn card, whether it sits under the marked root. */
+	drawnContentUnderMark: boolean[];
 	/** The colour a plugin gave each edge's connector, as the library would copy it. */
 	edgeColours: { opacity: string; stroke: string; width: string }[];
 }
@@ -136,7 +140,11 @@ function contentsOf(
 function recordCapture(root: Element, filter: unknown): Capture {
 	const accepts = filter as ((node: HTMLElement) => boolean) | undefined;
 	return {
+		capturing: root.hasAttribute("data-capturing"),
 		contents: contentsOf(root, accepts),
+		drawnContentUnderMark: [
+			...root.querySelectorAll("[data-drawn-content]"),
+		].map((element) => element.closest("[data-capturing]") !== null),
 		edgeColours: [
 			...root.querySelectorAll<SVGElement>(".react-flow__edge-path"),
 		].map((path) => ({
@@ -428,6 +436,33 @@ describe.each(WAYS)("taking %s", (_name, takePicture) => {
 
 		expect(edgePath().style.cssText).toBe(before);
 	});
+
+	it("marks the root as being captured above every drawn card's content while the picture is taken, and not afterwards", async () => {
+		await drawLiveCanvas();
+		expect(
+			document.querySelectorAll("[data-drawn-content]").length
+		).toBeGreaterThan(0);
+
+		await takePicture();
+
+		expect(captures.length).toBeGreaterThan(0);
+		for (const capture of captures) {
+			expect(capture.capturing).toBe(true);
+			expect(capture.drawnContentUnderMark.length).toBeGreaterThan(0);
+			expect(capture.drawnContentUnderMark).not.toContain(false);
+		}
+		expect(document.querySelector("[data-capturing]")).toBeNull();
+	});
+
+	it("clears the mark when the picture cannot be taken", async () => {
+		await drawLiveCanvas();
+		vi.mocked(toPng).mockRejectedValue(new Error("not drawn"));
+		vi.mocked(toSvg).mockRejectedValue(new Error("not drawn"));
+
+		await takePicture().catch(() => undefined);
+
+		expect(document.querySelector("[data-capturing]")).toBeNull();
+	});
 });
 
 describe("the thumbnail taken when the page is left", () => {
@@ -463,9 +498,11 @@ describe("the thumbnail taken when the page is left", () => {
 			authored.map((capture) => capture.contents)
 		);
 		for (const capture of leaving) {
+			expect(capture.capturing).toBe(true);
 			for (const colours of capture.edgeColours) {
 				expect(colours.stroke).toBe("");
 			}
 		}
+		expect(document.querySelector("[data-capturing]")).toBeNull();
 	});
 });

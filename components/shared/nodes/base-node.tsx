@@ -25,9 +25,11 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { appearanceAttribute } from "@/lib/case/plugin-display-capture";
+import {
+	appearanceAttribute,
+	drawnContentAttribute,
+} from "@/lib/case/plugin-display-capture";
 import type { ElementAppearance } from "@/lib/plugins/slots";
-import { cn } from "@/lib/utils";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
@@ -35,7 +37,6 @@ import { type DiagramNodeType, getNodeConfig } from "./node-config";
 import {
 	buildAppearanceFillClasses,
 	buildDescriptionClasses,
-	buildDrawnContentClasses,
 	buildFooterIdClasses,
 	buildFooterLabelClasses,
 	buildNodeContainerClasses,
@@ -102,7 +103,6 @@ function ExpandedContent({
 	children,
 	name,
 	config,
-	isDrawn,
 }: {
 	descriptionText: string;
 	hasAttributes: boolean;
@@ -113,8 +113,6 @@ function ExpandedContent({
 	children?: ReactNode;
 	name: string;
 	config: ReturnType<typeof getNodeConfig>;
-	/** A plugin tints or fades the card. */
-	isDrawn: boolean;
 }) {
 	return (
 		<div className={buildNodeContentClasses(true)}>
@@ -142,7 +140,7 @@ function ExpandedContent({
 			<div className={buildSeparatorClasses()} />
 			<div className="flex items-center justify-between">
 				<span className={buildFooterLabelClasses()}>{config.label}</span>
-				<span className={buildFooterIdClasses(isDrawn)}>{name}</span>
+				<span className={buildFooterIdClasses()}>{name}</span>
 			</div>
 		</div>
 	);
@@ -218,7 +216,7 @@ export default function BaseNode({
 		});
 	};
 
-	const drawnContent = buildDrawnContentClasses(appearance);
+	const drawnContent = drawnContentAttribute(appearance);
 
 	const containerClasses = buildNodeContainerClasses({
 		nodeType,
@@ -255,7 +253,10 @@ export default function BaseNode({
 
 			<LazyMotion features={domAnimation} strict>
 				{/* Header: Icon + Name + Top-right Actions */}
-				<div className={buildNodeHeaderClasses(drawnContent)}>
+				<div
+					className={buildNodeHeaderClasses()}
+					data-drawn-content={drawnContent}
+				>
 					<div className="flex flex-1 items-center gap-2">
 						<Icon
 							aria-hidden="true"
@@ -281,7 +282,8 @@ export default function BaseNode({
 				{!isExpanded && (
 					<m.div
 						animate={{ opacity: 1 }}
-						className={cn("px-4 pb-3", drawnContent)}
+						className="px-4 pb-3"
+						data-drawn-content={drawnContent}
 						exit={{ opacity: 0 }}
 						initial={{ opacity: 0 }}
 						onAnimationComplete={handleAnimationComplete}
@@ -311,7 +313,8 @@ export default function BaseNode({
 					{isExpanded && (
 						<m.div
 							animate="expanded"
-							className={cn("overflow-hidden", drawnContent)}
+							className="overflow-hidden"
+							data-drawn-content={drawnContent}
 							exit="collapsed"
 							initial="collapsed"
 							onAnimationComplete={handleAnimationComplete}
@@ -323,7 +326,6 @@ export default function BaseNode({
 								context={context}
 								descriptionText={descriptionText}
 								hasAttributes={hasAttributes}
-								isDrawn={!!appearance}
 								justification={justification}
 								name={name}
 								nodeType={nodeType}
@@ -336,10 +338,8 @@ export default function BaseNode({
 
 				{/* Bottom row: Actions left, Expand/Collapse right */}
 				<div
-					className={cn(
-						"flex items-center justify-between px-2 pb-2",
-						drawnContent
-					)}
+					className="flex items-center justify-between px-2 pb-2"
+					data-drawn-content={drawnContent}
 				>
 					{/* Bottom-left actions (e.g., toggle children) */}
 					<div className="flex items-center">{bottomLeftActions}</div>

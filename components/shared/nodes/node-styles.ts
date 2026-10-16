@@ -5,7 +5,6 @@
  * the curriculum design system with tinted backgrounds and colored borders.
  */
 
-import { DRAWN_CONTENT_CLASS } from "@/lib/case/plugin-display-capture";
 import type { AppearanceTone, ElementAppearance } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
@@ -110,32 +109,10 @@ export function buildAppearanceFillClasses(
 }
 
 /**
- * Classes for each wrapper that holds a card's content. While a plugin tints or
- * fades the card, the content's secondary text is drawn in the full text colour,
- * because the muted text colour measures under 4.5:1 on some of the tints and on
- * the fade in some themes. The content wrappers set this, not the card, because
- * the neutral tint layer reads the same colour: set on the card it would turn
- * from the theme's muted grey to the text colour.
- */
-export function buildDrawnContentClasses(
-	appearance: ElementAppearance | null
-): string {
-	return appearance ? DRAWN_CONTENT_CLASS : "";
-}
-
-/**
  * Build node header classes
  */
-export function buildNodeHeaderClasses(drawnContent = ""): string {
-	return cn(
-		"px-4",
-		"py-3",
-		"flex",
-		"items-center",
-		"justify-between",
-		"gap-2",
-		drawnContent
-	);
+export function buildNodeHeaderClasses(): string {
+	return cn("px-4", "py-3", "flex", "items-center", "justify-between", "gap-2");
 }
 
 /**
@@ -202,14 +179,16 @@ export function buildFooterLabelClasses(): string {
 }
 
 /**
- * Build footer ID classes (e.g., "G1", "S1"). The identifier is drawn at 70%
- * of the secondary text colour, except on a card a plugin tints or fades,
- * where it takes the whole of it so it keeps its contrast against the tint.
+ * Build footer ID classes (e.g., "G1", "S1"). The identifier is drawn at a
+ * share of the secondary text colour, 70% unless the stylesheet sets
+ * `--node-footer-id-share` higher: on a card a plugin tints or fades, inside
+ * its drawn content, it takes the whole of it so it keeps its contrast against
+ * the tint.
  */
-export function buildFooterIdClasses(onDrawnCard = false): string {
+export function buildFooterIdClasses(): string {
 	return cn(
 		"font-mono",
-		onDrawnCard ? "text-muted-foreground" : "text-muted-foreground/70",
+		"text-muted-foreground/(--node-footer-id-share)",
 		"text-xs"
 	);
 }

@@ -33,6 +33,7 @@ The tones are `positive`, `caution`, `negative` and `neutral`, or `null`, which 
 Core knows tones and never what they mean to a plugin: it turns a tone into a tint under the node's content and a colour on the edge, and a faded answer draws both at about a third of their strength with the text at full contrast.
 A faded answer with a `null` tone draws the node as a plain card and the edge in its own colour, both at about a third of their strength.
 While any answer is drawn on a node, the node's secondary text uses the main text colour, which keeps its description and labels at a contrast of at least 4.5:1 against every tint, faded or not, in every theme preset, light and dark.
+A stylesheet rule on the `data-drawn-content` attribute, which the node sets on each wrapper that holds its content, does this, and it also draws the footer identifier at full strength rather than faded.
 The first enabled plugin that answers wins.
 
 Evidence nodes and the support edges into them ask the slot, and the slot accepts any element type for later plugins.
@@ -53,7 +54,10 @@ The health plugin uses it to show a claim's own dot only while the claim's evide
 
 Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and an appearance sets `data-appearance` on the element or edge it draws, to its tone, or to `plain` when it has none.
 Images of the canvas, report diagrams and the dashboard thumbnail drop the marked elements and take the colour off edges, so a picture shows the authored case only.
-An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display` and the class that sets a drawn card's text colour taken out of it.
+The picture library copies each element's computed style into its copy of the page, so a drawn card's text colour would otherwise show in the picture.
+For the length of a capture the canvas root carries a `data-capturing` attribute, and the rule for `data-drawn-content` does not apply while it is there, so the picture shows the secondary text and the footer identifier as they are on a card no plugin drew.
+The attribute is removed once the picture is taken, whether or not it succeeded.
+An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display`, `data-drawn-content` and `data-capturing` taken out of it.
 The export is refused if the image comes back in a form that cannot be cleaned.
 
 ## Store plugin state

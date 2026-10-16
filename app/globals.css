@@ -578,6 +578,29 @@
 }
 
 /* ========================================================================
+   Cards a plugin draws
+   ======================================================================== */
+
+/* The content of a card a plugin tints or fades carries `data-drawn-content`.
+   Its secondary text takes the full text colour, because the muted colour
+   measures under 4.5:1 on some tints and on the fade in some themes, and its
+   footer identifier drops its usual fade. The tint layer is not content, so it
+   keeps the theme's muted grey.
+
+   The rule stops applying while the element being captured carries
+   `data-capturing`. The capture library copies each element's computed style
+   into its copy of the page, so a picture would otherwise show full-colour
+   secondary text on exactly the cards a plugin drew. */
+:root {
+	--node-footer-id-share: 70%;
+}
+
+[data-drawn-content]:not([data-capturing] *) {
+	--muted-foreground: var(--foreground);
+	--node-footer-id-share: 100%;
+}
+
+/* ========================================================================
    Controls - Theme-aware
    ======================================================================== */
 .react-flow__controls {

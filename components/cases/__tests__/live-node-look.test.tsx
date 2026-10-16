@@ -160,7 +160,7 @@ describe("a node drawn with a plugin's appearance", () => {
 	});
 
 	it("draws the card's secondary text in the full text colour, on its content and not on the tint, only while an appearance is set", () => {
-		const FULL_TEXT = '[class~="[--muted-foreground:var(--foreground)]"]';
+		const FULL_TEXT = "[data-drawn-content]";
 		const plain = draw(null);
 		expect(plain.container.querySelector(FULL_TEXT)).toBeNull();
 		plain.unmount();
@@ -190,7 +190,7 @@ describe("a node drawn with a plugin's appearance", () => {
 		}
 	});
 
-	it("draws the expanded footer's identifier in the whole secondary text colour only while an appearance is set", () => {
+	it("puts the expanded footer's identifier inside the drawn content, where the stylesheet draws it in the whole secondary text colour, only while an appearance is set", () => {
 		function footerIdentifier(appearance: ElementAppearance | null) {
 			const { container, unmount } = render(
 				<BaseNode
@@ -201,18 +201,29 @@ describe("a node drawn with a plugin's appearance", () => {
 					nodeType="evidence"
 				/>
 			);
-			const classes = container.querySelector("span.font-mono")?.className;
+			const identifier = container.querySelector("span.font-mono");
+			const found = {
+				fade: identifier?.className.includes(
+					"text-muted-foreground/(--node-footer-id-share)"
+				),
+				inDrawnContent: identifier?.closest("[data-drawn-content]") !== null,
+			};
 			unmount();
-			return classes ?? "";
+			return found;
 		}
 
-		expect(footerIdentifier(null)).toContain("text-muted-foreground/70");
-		expect(footerIdentifier({ tone: "caution", faded: true })).not.toContain(
-			"/70"
-		);
-		expect(footerIdentifier({ tone: null, faded: true })).toContain(
-			"text-muted-foreground"
-		);
+		expect(footerIdentifier(null)).toEqual({
+			fade: true,
+			inDrawnContent: false,
+		});
+		expect(footerIdentifier({ tone: "caution", faded: true })).toEqual({
+			fade: true,
+			inDrawnContent: true,
+		});
+		expect(footerIdentifier({ tone: null, faded: true })).toEqual({
+			fade: true,
+			inDrawnContent: true,
+		});
 	});
 
 	it("keeps the text at full contrast when the node is faded", () => {

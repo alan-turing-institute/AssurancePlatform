@@ -167,6 +167,27 @@ describe("what a capture leaves out", () => {
 		expect(canvas.edge.style.getPropertyValue("stroke-opacity")).toBe("0.35");
 	});
 
+	it("marks the root as being captured until restored", () => {
+		const restore = stripPluginAppearance(canvas.viewport);
+
+		expect(canvas.viewport).toHaveAttribute("data-capturing");
+
+		restore();
+
+		expect(canvas.viewport).not.toHaveAttribute("data-capturing");
+	});
+
+	it("keeps the root marked until the last of two overlapping captures is restored", () => {
+		const first = stripPluginAppearance(canvas.viewport);
+		const second = stripPluginAppearance(canvas.viewport);
+
+		first();
+		expect(canvas.viewport).toHaveAttribute("data-capturing");
+
+		second();
+		expect(canvas.viewport).not.toHaveAttribute("data-capturing");
+	});
+
 	it("removes the fade from a line that has no tone, and puts it back", () => {
 		const fadedOnly = edgePath({
 			"data-appearance": "plain",
@@ -226,10 +247,10 @@ describe("an SVG image export's file", () => {
 	/** The markup the capture library hands back: the kept elements, still carrying the canvas's own attributes. */
 	const MARKUP =
 		'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" viewBox="0 0 100 50">' +
-		'<foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="viewport">' +
+		'<foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="viewport" data-capturing="">' +
 		'<div class="card" data-appearance="negative" data-faded="">E6</div>' +
-		'<div class="px-4 [--muted-foreground:var(--foreground)] pb-3">words</div>' +
-		'<div class="[--muted-foreground:var(--foreground)]">more</div>' +
+		'<div class="px-4 pb-3" data-drawn-content="">words</div>' +
+		'<div data-drawn-content="">more</div>' +
 		'<svg><path class="react-flow__edge-path" d="M0 0L5 5" data-appearance="plain" data-faded=""/></svg>' +
 		"</div></foreignObject></svg>";
 
@@ -250,7 +271,7 @@ describe("an SVG image export's file", () => {
 		return decodeURIComponent(url.slice(SVG_HEAD.length));
 	}
 
-	it("carries none of the attributes or classes that record a plugin's display, and keeps the rest", async () => {
+	it("carries none of the attributes that record a plugin's display or a capture, and keeps the rest", async () => {
 		toSvgMock.mockResolvedValue(`${SVG_HEAD}${encodeURIComponent(MARKUP)}`);
 
 		await exportDiagramImage({
@@ -264,10 +285,11 @@ describe("an SVG image export's file", () => {
 			"data-appearance",
 			"data-faded",
 			"data-plugin-display",
+			"data-drawn-content",
+			"data-capturing",
 		]) {
 			expect(file).not.toContain(marker);
 		}
-		expect(file).not.toContain("--muted-foreground");
 		expect(file).toContain('class="card"');
 		expect(file).toContain('class="px-4 pb-3"');
 		expect(file).toContain(">E6<");
