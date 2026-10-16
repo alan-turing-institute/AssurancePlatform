@@ -921,68 +921,103 @@ const VARIANTS: Variant[] = [
 	},
 ];
 
+interface VariantBlock {
+	claimIndex: number;
+	ids: string[];
+	variant: Variant;
+}
+
+/** Six records, the later three changed as the variant says, apart from every other block by `payload.block`. */
+async function putVariantBlock(
+	world: World,
+	claimIndex: number,
+	block: number,
+	variant: Variant
+): Promise<string[]> {
+	const ids: string[] = [];
+	for (let k = 0; k < 6; k++) {
+		const later = k >= 3;
+		ids.push(
+			await put(world, claimIndex, {
+				ts: blockStart(block) + k * 10 * SECOND,
+				arrived: blockStart(block) + k * 10 * SECOND,
+				verdict: later ? variant.verdict : undefined,
+				mutate: (record) => {
+					record.payload = { block };
+					variant.base?.(record);
+					if (later) {
+						variant.change(record);
+					}
+				},
+			})
+		);
+	}
+	return ids;
+}
+
+async function putVariantBlocks(
+	world: World,
+	systemIndex: number
+): Promise<VariantBlock[]> {
+	const blocks: VariantBlock[] = [];
+	for (const [block, variant] of VARIANTS.entries()) {
+		const claimIndex = variant.claim === "system" ? systemIndex : 0;
+		const ids = await putVariantBlock(world, claimIndex, block, variant);
+		blocks.push({ claimIndex, ids, variant });
+	}
+	return blocks;
+}
+
+const EXPECTED_SURVIVORS = {
+	split: [0, 2, 3, 5],
+	merge: [0, 5],
+	kept: [0, 2, 3, 4, 5],
+};
+
+/** Whether every record of the block was stored as a passing match for the settings. */
+async function allPassingMatches(
+	claimId: string,
+	ids: string[]
+): Promise<boolean> {
+	const stored = (await readRows(claimId)).filter((row) =>
+		ids.includes(row.recordId)
+	);
+	return stored.every((row) => row.echo === "MATCH" && row.verdict === "PASS");
+}
+
+/** What is wrong with the survivors of one block after the call. */
+async function variantProblems(
+	world: World,
+	{ claimIndex, ids, variant }: VariantBlock
+): Promise<string[]> {
+	const claimId = world.claims[claimIndex]?.id ?? "";
+	const problems: string[] = [];
+	// A variant only tests the comparison of results if every record of the
+	// block was a passing match for the settings.
+	if (variant.expect !== "kept" && !(await allPassingMatches(claimId, ids))) {
+		problems.push(
+			`${variant.name}: the premise fails, a record is not a passing match`
+		);
+	}
+	const got = await survivingPositions(claimId, ids);
+	const want = EXPECTED_SURVIVORS[variant.expect];
+	if (got.join() !== want.join()) {
+		problems.push(`${variant.name}: kept [${got}], expected [${want}]`);
+	}
+	return problems;
+}
+
 describe("what counts as the same result", () => {
 	it("splits a run at every field that must match, keeps what is never removable, and ignores what may differ", async () => {
 		const world = await setupWorld();
 		const systemIndex = await addClaim(world, { system: true });
-		const blocks: Array<{
-			claimIndex: number;
-			ids: string[];
-			variant: Variant;
-		}> = [];
-
-		for (const [block, variant] of VARIANTS.entries()) {
-			const claimIndex = variant.claim === "system" ? systemIndex : 0;
-			const ids: string[] = [];
-			for (let k = 0; k < 6; k++) {
-				const later = k >= 3;
-				ids.push(
-					await put(world, claimIndex, {
-						ts: blockStart(block) + k * 10 * SECOND,
-						arrived: blockStart(block) + k * 10 * SECOND,
-						verdict: later ? variant.verdict : undefined,
-						mutate: (record) => {
-							record.payload = { block };
-							variant.base?.(record);
-							if (later) {
-								variant.change(record);
-							}
-						},
-					})
-				);
-			}
-			blocks.push({ claimIndex, ids, variant });
-		}
+		const blocks = await putVariantBlocks(world, systemIndex);
 
 		await thin(NOW);
 
-		const expectedSurvivors = {
-			split: [0, 2, 3, 5],
-			merge: [0, 5],
-			kept: [0, 2, 3, 4, 5],
-		};
 		const wrong: string[] = [];
-		for (const { claimIndex, ids, variant } of blocks) {
-			const claimId = world.claims[claimIndex]?.id ?? "";
-			if (variant.expect !== "kept") {
-				// A variant only tests the comparison of results if every record of the
-				// block was a passing match for the settings.
-				const stored = (await readRows(claimId)).filter((row) =>
-					ids.includes(row.recordId)
-				);
-				if (
-					!stored.every((row) => row.echo === "MATCH" && row.verdict === "PASS")
-				) {
-					wrong.push(
-						`${variant.name}: the premise fails, a record is not a passing match`
-					);
-				}
-			}
-			const got = await survivingPositions(claimId, ids);
-			const want = expectedSurvivors[variant.expect];
-			if (got.join() !== want.join()) {
-				wrong.push(`${variant.name}: kept [${got}], expected [${want}]`);
-			}
+		for (const block of blocks) {
+			wrong.push(...(await variantProblems(world, block)));
 		}
 		expect(wrong).toEqual([]);
 	}, 120_000);

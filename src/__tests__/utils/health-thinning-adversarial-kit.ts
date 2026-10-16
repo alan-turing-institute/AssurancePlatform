@@ -215,18 +215,8 @@ interface RecordSpec {
 
 let counter = 0;
 
-function buildWire(
-	claim: Claim,
-	spec: RecordSpec,
-	fallback: Json | null = null
-): Json {
-	counter += 1;
-	const n = counter;
-	const served = claim.served ?? fallback;
-	if (!served) {
-		throw new Error("claim has no served settings to echo");
-	}
-	const verdict = spec.verdict ?? "pass";
+/** The provenance of the `n`th record built: the four named values, readings and extra values. */
+function provenanceFor(claim: Claim, spec: RecordSpec, n: number): Json {
 	const provenance: Json = {
 		session: spec.session ?? "S1",
 		pipeline_version: "0.4.0",
@@ -240,34 +230,64 @@ function buildWire(
 	if (spec.extraProvenance !== null) {
 		Object.assign(provenance, spec.extraProvenance ?? { sim_time: n * 7 });
 	}
-	const record: Json = {
-		format_version: "1.1",
-		record_id: randomUUID(),
-		timestamp: new Date(spec.ts).toISOString(),
-		claim_ref: claim.id,
+	return provenance;
+}
+
+/** The settings a record echoes from what the pipeline reads back. */
+function echoedSettings(served: Json): Json {
+	return {
 		check: served.check,
 		rule: served.rule,
 		...(served.reduction ? { reduction: served.reduction } : {}),
 		...(served.aggregation ? { aggregation: served.aggregation } : {}),
 		window: served.window,
 		valid_for: served.valid_for,
-		value: spec.value ?? { number: 1, unit: "ratio" },
-		verdict,
-		provenance,
 	};
+}
+
+/** The comment (and, for an indeterminate record, the missing value) of the `n`th record built. */
+function setCommentAndValue(record: Json, spec: RecordSpec, n: number) {
 	if (spec.comment !== null) {
 		record.comment = spec.comment ?? `check ${n}`;
 	}
-	if (verdict === "indeterminate") {
+	if (record.verdict === "indeterminate") {
 		record.value = undefined;
 		record.comment = spec.comment ?? "Inapplicable: nothing to judge.";
 	}
-	spec.mutate?.(record);
+}
+
+function dropUndefinedKeys(record: Json) {
 	for (const key of Object.keys(record)) {
 		if (record[key] === undefined) {
 			delete record[key];
 		}
 	}
+}
+
+function buildWire(
+	claim: Claim,
+	spec: RecordSpec,
+	fallback: Json | null = null
+): Json {
+	counter += 1;
+	const n = counter;
+	const served = claim.served ?? fallback;
+	if (!served) {
+		throw new Error("claim has no served settings to echo");
+	}
+	const record: Json = {
+		format_version: "1.1",
+		record_id: randomUUID(),
+		timestamp: new Date(spec.ts).toISOString(),
+		claim_ref: claim.id,
+		...echoedSettings(served),
+		value: spec.value ?? { number: 1, unit: "ratio" },
+		verdict: spec.verdict ?? "pass",
+		provenance: provenanceFor(claim, spec, n),
+	};
+	setCommentAndValue(record, spec, n);
+	spec.mutate?.(record);
+	dropUndefinedKeys(record);
 	return record;
 }
 
@@ -516,6 +536,26 @@ function oracle(
 	protectedSessions: Set<string>,
 	contextSeq: number | null = null
 ): OracleResult {
+	const prefix = examinedPrefix(rows, cutoffMs, contextSeq);
+	const keys = prefix.map((row) => keyIfRemovable(row, protectedSessions));
+	const removed = new Set<string>();
+	let first = 0;
+	while (first < prefix.length) {
+		const last = runEnd(prefix, keys, first);
+		for (const id of removedFromRun(prefix, first, last)) {
+			removed.add(id);
+		}
+		first = last + 1;
+	}
+	return { removed, lastSeq: prefix.at(-1)?.seq ?? null };
+}
+
+/** The rows a call examines: from the context record (if any) up to the first row that arrived at or after the cut-off. */
+function examinedPrefix(
+	rows: Row[],
+	cutoffMs: number,
+	contextSeq: number | null
+): Row[] {
 	let start = 0;
 	if (contextSeq !== null) {
 		start = rows.findIndex((row) => row.seq === contextSeq);
@@ -532,40 +572,50 @@ function oracle(
 		}
 		prefix.push(row);
 	}
-	const keys = prefix.map((row) =>
+	return prefix;
+}
+
+/** The result key of a row the rule may remove; null for one it never removes. */
+function keyIfRemovable(
+	row: Row,
+	protectedSessions: Set<string>
+): string | null {
+	const plain =
 		row.verdict === "PASS" &&
 		row.echo === "MATCH" &&
 		!row.everWithdrawn &&
-		!protectedSessions.has(row.session)
-			? resultKey(row)
-			: null
-	);
-	const removed = new Set<string>();
-	let i = 0;
-	while (i < prefix.length) {
-		let j = i;
-		while (
-			j + 1 < prefix.length &&
-			keys[i] !== null &&
-			keys[j + 1] === keys[i] &&
-			(prefix[j + 1] as Row).ts >= (prefix[j] as Row).ts
-		) {
-			j++;
-		}
-		// prefix[i..j] is one run (a single record when j === i).
-		let lastKept = (prefix[i] as Row).ts;
-		for (let m = i + 1; m < j; m++) {
-			const row = prefix[m] as Row;
-			const next = prefix[m + 1] as Row;
-			if (row.ts - lastKept >= HOUR || next.ts - row.ts >= HOUR) {
-				lastKept = row.ts;
-			} else {
-				removed.add(row.id);
-			}
-		}
-		i = j + 1;
+		!protectedSessions.has(row.session);
+	return plain ? resultKey(row) : null;
+}
+
+/** Where the run that starts at `first` ends (`first` itself for a single record). */
+function runEnd(prefix: Row[], keys: (string | null)[], first: number): number {
+	let last = first;
+	while (
+		last + 1 < prefix.length &&
+		keys[first] !== null &&
+		keys[last + 1] === keys[first] &&
+		(prefix[last + 1] as Row).ts >= (prefix[last] as Row).ts
+	) {
+		last++;
 	}
-	return { removed, lastSeq: prefix.at(-1)?.seq ?? null };
+	return last;
+}
+
+/** The ids the rule removes from the run `prefix[first..last]`: everything but its ends, the hourly records and either side of a pause. */
+function removedFromRun(prefix: Row[], first: number, last: number): string[] {
+	const removed: string[] = [];
+	let lastKept = (prefix[first] as Row).ts;
+	for (let m = first + 1; m < last; m++) {
+		const row = prefix[m] as Row;
+		const next = prefix[m + 1] as Row;
+		if (row.ts - lastKept >= HOUR || next.ts - row.ts >= HOUR) {
+			lastKept = row.ts;
+		} else {
+			removed.push(row.id);
+		}
+	}
+	return removed;
 }
 
 interface Stretch {
@@ -644,67 +694,114 @@ export function verifyFromItems(items: HealthEvidenceListItem[]): string[] {
 	);
 	let previous: HealthEvidenceListItem | undefined;
 	for (const item of ascending) {
-		const recomputed = computeRecordHash(
-			{
-				record: item.record,
-				createdById: item.created_by_id,
-				createdAt: item.created_at,
-			},
-			item.previous_record_hash
-		);
-		if (recomputed !== item.record_hash) {
-			problems.push(`seq ${item.chain_sequence}: hash does not recompute`);
-		}
-		if (item.thinned_before === undefined) {
-			problems.push(`seq ${item.chain_sequence}: thinned_before is missing`);
-		}
-		if (previous === undefined) {
-			if (item.previous_record_hash !== null) {
-				problems.push(
-					`seq ${item.chain_sequence}: first record has a previous hash`
-				);
-			}
-			if (item.thinned_before) {
-				problems.push(`seq ${item.chain_sequence}: first record has a note`);
-			}
-		} else if (item.previous_record_hash === previous.record_hash) {
-			if (item.thinned_before) {
-				problems.push(`seq ${item.chain_sequence}: note on an unbroken link`);
-			}
-		} else if (item.thinned_before) {
-			const note = item.thinned_before;
-			if (
-				!(
-					note.first_removed_sequence > previous.chain_sequence &&
-					note.last_removed_sequence < item.chain_sequence &&
-					note.first_removed_sequence <= note.last_removed_sequence &&
-					note.removed_count >= 1 &&
-					note.removed_count <=
-						note.last_removed_sequence - note.first_removed_sequence + 1
-				)
-			) {
-				problems.push(`seq ${item.chain_sequence}: note does not fit the gap`);
-			}
-			// Both kept records are passes that said the same thing, and the removed
-			// stretch lies between them in time.
-			if (!sameResult(previous, item)) {
-				problems.push(
-					`seq ${item.chain_sequence}: the kept records either side of the gap differ`
-				);
-			}
-			const first = Date.parse(note.first_removed_at);
-			const last = Date.parse(note.last_removed_at);
-			const lower = Date.parse(previous.record.timestamp);
-			const upper = Date.parse(item.record.timestamp);
-			if (!(lower <= first && first <= last && last <= upper)) {
-				problems.push(
-					`seq ${item.chain_sequence}: the note's times do not lie between the kept records`
-				);
-			}
-		} else {
-			problems.push(`seq ${item.chain_sequence}: broken link without a note`);
-		}
+		problems.push(...hashProblems(item), ...linkProblems(item, previous));
 		previous = item;
+	}
+	return problems;
+}
+
+/** The item's own hash recomputed from the item alone, and the field every item must carry. */
+function hashProblems(item: HealthEvidenceListItem): string[] {
+	const label = `seq ${item.chain_sequence}`;
+	const problems: string[] = [];
+	const recomputed = computeRecordHash(
+		{
+			record: item.record,
+			createdById: item.created_by_id,
+			createdAt: item.created_at,
+		},
+		item.previous_record_hash
+	);
+	if (recomputed !== item.record_hash) {
+		problems.push(`${label}: hash does not recompute`);
+	}
+	if (item.thinned_before === undefined) {
+		problems.push(`${label}: thinned_before is missing`);
+	}
+	return problems;
+}
+
+/** What is wrong with the link from `item` to the next older item, if there is one. */
+function linkProblems(
+	item: HealthEvidenceListItem,
+	previous: HealthEvidenceListItem | undefined
+): string[] {
+	const label = `seq ${item.chain_sequence}`;
+	if (previous === undefined) {
+		return firstItemProblems(item, label);
+	}
+	if (item.previous_record_hash === previous.record_hash) {
+		return item.thinned_before ? [`${label}: note on an unbroken link`] : [];
+	}
+	if (item.thinned_before) {
+		return gapProblems(item, previous, item.thinned_before, label);
+	}
+	return [`${label}: broken link without a note`];
+}
+
+function firstItemProblems(
+	item: HealthEvidenceListItem,
+	label: string
+): string[] {
+	const problems: string[] = [];
+	if (item.previous_record_hash !== null) {
+		problems.push(`${label}: first record has a previous hash`);
+	}
+	if (item.thinned_before) {
+		problems.push(`${label}: first record has a note`);
+	}
+	return problems;
+}
+
+type ThinnedNote = NonNullable<HealthEvidenceListItem["thinned_before"]>;
+
+/** Whether a note's counts and chain positions fit between the two kept records. */
+function noteFitsGap(
+	note: ThinnedNote,
+	previous: HealthEvidenceListItem,
+	item: HealthEvidenceListItem
+): boolean {
+	const span = note.last_removed_sequence - note.first_removed_sequence + 1;
+	return (
+		note.first_removed_sequence > previous.chain_sequence &&
+		note.last_removed_sequence < item.chain_sequence &&
+		note.first_removed_sequence <= note.last_removed_sequence &&
+		note.removed_count >= 1 &&
+		note.removed_count <= span
+	);
+}
+
+/** Whether the removed stretch lies between the kept records in time. */
+function noteTimesFit(
+	note: ThinnedNote,
+	previous: HealthEvidenceListItem,
+	item: HealthEvidenceListItem
+): boolean {
+	const first = Date.parse(note.first_removed_at);
+	const last = Date.parse(note.last_removed_at);
+	const lower = Date.parse(previous.record.timestamp);
+	const upper = Date.parse(item.record.timestamp);
+	return lower <= first && first <= last && last <= upper;
+}
+
+/** A broken link that carries a note: the note must fit, and both kept records must say the same thing. */
+function gapProblems(
+	item: HealthEvidenceListItem,
+	previous: HealthEvidenceListItem,
+	note: ThinnedNote,
+	label: string
+): string[] {
+	const problems: string[] = [];
+	if (!noteFitsGap(note, previous, item)) {
+		problems.push(`${label}: note does not fit the gap`);
+	}
+	if (!sameResult(previous, item)) {
+		problems.push(`${label}: the kept records either side of the gap differ`);
+	}
+	if (!noteTimesFit(note, previous, item)) {
+		problems.push(
+			`${label}: the note's times do not lie between the kept records`
+		);
 	}
 	return problems;
 }
@@ -816,90 +913,151 @@ export async function fillRandomly(
 	options: RandomLogOptions
 ): Promise<void> {
 	const random = rng(seed);
-	for (let claimIndex = 0; claimIndex < world.claims.length; claimIndex++) {
-		const claim = world.claims[claimIndex] as Claim;
-		if (!claim.served) {
-			continue;
+	for (const [claimIndex, claim] of world.claims.entries()) {
+		if (claim.served) {
+			await fillClaimRandomly(world, claimIndex, random, options);
 		}
-		let arrival = options.start + between(random, 0, 10 * MINUTE);
-		let previousTs = arrival;
-		let value: unknown = { number: 1, unit: "ratio" };
-		let session = "S1";
-		let account = 0;
-		let payload: Json | undefined;
-		for (let i = 0; i < options.count; i++) {
-			const pick = random();
-			let gap: number;
-			if (pick < 0.75) {
-				gap = between(random, 6 * SECOND, 90 * SECOND);
-			} else if (pick < 0.87) {
-				gap = between(random, 5 * MINUTE, 50 * MINUTE);
-			} else if (pick < 0.95) {
-				gap = between(random, 55 * MINUTE, 3 * HOUR);
-			} else {
-				gap = between(random, 4 * HOUR, 8 * HOUR);
-			}
-			arrival += gap;
-			if (arrival > (options.end ?? NOW - MINUTE)) {
-				break;
-			}
-			let ts = arrival - between(random, 0, 2 * SECOND);
-			const oddity = random();
-			if (oddity < 0.05) {
-				ts = previousTs;
-			} else if (oddity < 0.1) {
-				ts = arrival - between(random, MINUTE, 90 * MINUTE);
-			}
-			previousTs = ts;
+	}
+}
 
-			if (random() < 0.08) {
-				value = { number: between(random, 0, 4), unit: "ratio" };
-			}
-			if (random() < 0.03) {
-				account =
-					world.pipelines.length > 1
-						? (account + 1) % world.pipelines.length
-						: 0;
-			}
-			if (random() < 0.03) {
-				session = pickSession(random());
-			}
-			if (random() < 0.04) {
-				payload = random() < 0.5 ? undefined : { phase: between(random, 0, 3) };
-			}
-			const verdict = pickVerdict(random());
-			const mismatching = random() < 0.03;
-			const equivalentWindow = random() < 0.03;
-			const useSession = session;
-			const conditional = useSession === "SV" && random() < 0.12;
-			const recordId = await put(world, claimIndex, {
-				ts,
-				arrived: Math.max(arrival, ts),
-				account,
-				verdict,
-				value,
-				session: useSession,
-				mutate: (record) => {
-					if (payload) {
-						record.payload = payload;
-					}
-					if (mismatching) {
-						record.window = "PT2M";
-					}
-					if (equivalentWindow) {
-						record.window = "PT60S";
-					}
-					if (conditional) {
-						record.valid_while = { twin_version: "2.3" };
-					}
-				},
-			});
-			if (random() < 0.04) {
-				await withdraw(world, claimIndex, recordId);
-				if (random() < 0.3) {
-					await reinstate(world, claimIndex, recordId);
-				}
-			}
+/** What drifts from one random record to the next in a claim's log. */
+interface Drift {
+	account: number;
+	arrival: number;
+	payload: Json | undefined;
+	previousTs: number;
+	session: string;
+	value: unknown;
+}
+
+/** The wait before the next record: mostly seconds, sometimes minutes, hours or most of a working day. */
+function pickGap(random: () => number): number {
+	const pick = random();
+	if (pick < 0.75) {
+		return between(random, 6 * SECOND, 90 * SECOND);
+	}
+	if (pick < 0.87) {
+		return between(random, 5 * MINUTE, 50 * MINUTE);
+	}
+	if (pick < 0.95) {
+		return between(random, 55 * MINUTE, 3 * HOUR);
+	}
+	return between(random, 4 * HOUR, 8 * HOUR);
+}
+
+/** The record's own timestamp: just before its arrival, or now and then a repeat of the last or an earlier one. */
+function pickTimestamp(random: () => number, drift: Drift): number {
+	const ts = drift.arrival - between(random, 0, 2 * SECOND);
+	const oddity = random();
+	if (oddity < 0.05) {
+		return drift.previousTs;
+	}
+	if (oddity < 0.1) {
+		return drift.arrival - between(random, MINUTE, 90 * MINUTE);
+	}
+	return ts;
+}
+
+/** Now and then changes the value, account, session or payload that later records carry. */
+function driftState(
+	random: () => number,
+	drift: Drift,
+	accounts: number
+): void {
+	if (random() < 0.08) {
+		drift.value = { number: between(random, 0, 4), unit: "ratio" };
+	}
+	if (random() < 0.03) {
+		drift.account = accounts > 1 ? (drift.account + 1) % accounts : 0;
+	}
+	if (random() < 0.03) {
+		drift.session = pickSession(random());
+	}
+	if (random() < 0.04) {
+		drift.payload =
+			random() < 0.5 ? undefined : { phase: between(random, 0, 3) };
+	}
+}
+
+/** The odd features a random record may carry. */
+interface Oddities {
+	conditional: boolean;
+	equivalentWindow: boolean;
+	mismatching: boolean;
+	verdict: "pass" | "marginal" | "fail" | "indeterminate";
+}
+
+function pickOddities(random: () => number, session: string): Oddities {
+	const verdict = pickVerdict(random());
+	const mismatching = random() < 0.03;
+	const equivalentWindow = random() < 0.03;
+	const conditional = session === "SV" && random() < 0.12;
+	return { verdict, mismatching, equivalentWindow, conditional };
+}
+
+function applyOddities(record: Json, drift: Drift, oddities: Oddities) {
+	if (drift.payload) {
+		record.payload = drift.payload;
+	}
+	if (oddities.mismatching) {
+		record.window = "PT2M";
+	}
+	if (oddities.equivalentWindow) {
+		record.window = "PT60S";
+	}
+	if (oddities.conditional) {
+		record.valid_while = { twin_version: "2.3" };
+	}
+}
+
+async function fillClaimRandomly(
+	world: World,
+	claimIndex: number,
+	random: () => number,
+	options: RandomLogOptions
+): Promise<void> {
+	const arrival = options.start + between(random, 0, 10 * MINUTE);
+	const drift: Drift = {
+		arrival,
+		previousTs: arrival,
+		value: { number: 1, unit: "ratio" },
+		session: "S1",
+		account: 0,
+		payload: undefined,
+	};
+	for (let i = 0; i < options.count; i++) {
+		drift.arrival += pickGap(random);
+		if (drift.arrival > (options.end ?? NOW - MINUTE)) {
+			break;
+		}
+		const ts = pickTimestamp(random, drift);
+		drift.previousTs = ts;
+		driftState(random, drift, world.pipelines.length);
+		const oddities = pickOddities(random, drift.session);
+		const recordId = await put(world, claimIndex, {
+			ts,
+			arrived: Math.max(drift.arrival, ts),
+			account: drift.account,
+			verdict: oddities.verdict,
+			value: drift.value,
+			session: drift.session,
+			mutate: (record) => applyOddities(record, drift, oddities),
+		});
+		await maybeWithdraw(world, claimIndex, random, recordId);
+	}
+}
+
+/** Now and then withdraws the record just stored, and sometimes reinstates it. */
+async function maybeWithdraw(
+	world: World,
+	claimIndex: number,
+	random: () => number,
+	recordId: string
+): Promise<void> {
+	if (random() < 0.04) {
+		await withdraw(world, claimIndex, recordId);
+		if (random() < 0.3) {
+			await reinstate(world, claimIndex, recordId);
 		}
 	}
 }
@@ -1102,45 +1260,79 @@ export function rulebookProblems(
 	for (const [claimId, rows] of before) {
 		const survivors = now.get(claimId) ?? new Set<string>();
 		for (const [index, row] of rows.entries()) {
-			if (survivors.has(row.id)) {
-				continue;
-			}
-			const label = `claim ${claimId.slice(0, 4)} #${index}`;
-			const previous = rows[index - 1];
-			const next = rows[index + 1];
-			if (
-				!(row.verdict === "PASS" && row.echo === "MATCH") ||
-				row.everWithdrawn ||
-				protectedSessions.has(row.session)
-			) {
-				problems.push(`${label}: removed although it is never removable`);
-			}
-			if (!(previous && next)) {
-				problems.push(`${label}: removed at the edge of the log`);
-				continue;
-			}
-			if (
-				resultKey(previous) !== resultKey(row) ||
-				resultKey(next) !== resultKey(row)
-			) {
-				problems.push(`${label}: removed beside a different result`);
-			}
-			if (previous.ts > row.ts || next.ts < row.ts) {
-				problems.push(`${label}: removed beside a record out of order`);
-			}
-			const earlier = rows
-				.slice(0, index)
-				.reverse()
-				.find((candidate) => survivors.has(candidate.id));
-			if (!earlier || row.ts - earlier.ts >= HOUR) {
+			if (!survivors.has(row.id)) {
+				const label = `claim ${claimId.slice(0, 4)} #${index}`;
 				problems.push(
-					`${label}: removed although an hour had passed since the last kept`
+					...removedProblems(label, rows, index, survivors, protectedSessions)
 				);
 			}
-			if (next.ts - row.ts >= HOUR) {
-				problems.push(`${label}: removed before a pause`);
-			}
 		}
+	}
+	return problems;
+}
+
+/** What is wrong with the rule having removed `rows[index]`, given the records that survived. */
+function removedProblems(
+	label: string,
+	rows: Row[],
+	index: number,
+	survivors: Set<string>,
+	protectedSessions: Set<string>
+): string[] {
+	const row = rows[index] as Row;
+	const problems: string[] = [];
+	if (isNeverRemovable(row, protectedSessions)) {
+		problems.push(`${label}: removed although it is never removable`);
+	}
+	const previous = rows[index - 1];
+	const next = rows[index + 1];
+	if (!(previous && next)) {
+		problems.push(`${label}: removed at the edge of the log`);
+		return problems;
+	}
+	if (
+		resultKey(previous) !== resultKey(row) ||
+		resultKey(next) !== resultKey(row)
+	) {
+		problems.push(`${label}: removed beside a different result`);
+	}
+	if (previous.ts > row.ts || next.ts < row.ts) {
+		problems.push(`${label}: removed beside a record out of order`);
+	}
+	problems.push(...timingProblems(label, rows, index, survivors));
+	return problems;
+}
+
+/** Not a passing match, ever withdrawn, or in a session where a condition is carried. */
+function isNeverRemovable(row: Row, protectedSessions: Set<string>): boolean {
+	return (
+		!(row.verdict === "PASS" && row.echo === "MATCH") ||
+		row.everWithdrawn ||
+		protectedSessions.has(row.session)
+	);
+}
+
+/** A removed record is less than an hour after the last kept one and not before a pause. */
+function timingProblems(
+	label: string,
+	rows: Row[],
+	index: number,
+	survivors: Set<string>
+): string[] {
+	const row = rows[index] as Row;
+	const next = rows[index + 1] as Row;
+	const problems: string[] = [];
+	const earlier = rows
+		.slice(0, index)
+		.reverse()
+		.find((candidate) => survivors.has(candidate.id));
+	if (!earlier || row.ts - earlier.ts >= HOUR) {
+		problems.push(
+			`${label}: removed although an hour had passed since the last kept`
+		);
+	}
+	if (next.ts - row.ts >= HOUR) {
+		problems.push(`${label}: removed before a pause`);
 	}
 	return problems;
 }

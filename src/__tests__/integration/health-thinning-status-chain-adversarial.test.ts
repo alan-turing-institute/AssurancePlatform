@@ -100,6 +100,75 @@ async function withdrawSome(
 const latestTimestamp = (log: Log) =>
 	Math.max(...[...log.values()].flatMap((rows) => rows.map((row) => row.ts)));
 
+/** The ids of the records in a log, for each claim. */
+const survivorIds = (log: Log) =>
+	new Map(
+		[...log].map(([claimId, rows]) => [claimId, new Set(rows.map((r) => r.id))])
+	);
+
+/** Every record id now stored, across claims. */
+async function presentIds(world: World): Promise<Set<string>> {
+	const log = await captureLog(world);
+	return new Set([...log.values()].flatMap((rows) => rows.map((r) => r.id)));
+}
+
+/** For each claim, the records at or before where the last call stopped. */
+async function keptUpToMark(world: World): Promise<Map<string, string[]>> {
+	const kept = new Map<string, string[]>();
+	for (const claim of world.claims) {
+		const mark = await markOf(claim.id);
+		kept.set(
+			claim.id,
+			(await readRows(claim.id))
+				.filter((row) => mark !== null && row.seq <= mark)
+				.map((row) => row.id)
+		);
+	}
+	return kept;
+}
+
+/**
+ * What lands between two nights: withdrawals, some in the part already thinned
+ * and some in the part not yet examined, then more records.
+ */
+async function interveneBetweenNights(
+	world: World,
+	random: () => number,
+	seed: number,
+	night: number
+) {
+	const present = await captureLog(world);
+	await withdrawSome(world, random, present, 2, () => true);
+	await fillRandomly(world, seed + night, {
+		count: 25,
+		start: CUTOFF + (night === 1 ? 3 : 9) * HOUR,
+		end: CUTOFF + (night === 1 ? 9 : 16) * HOUR,
+	});
+}
+
+/** Withdraws, now and then, a record chosen at random in each claim, noting the ones that were accepted. */
+async function withdrawAtRandom(
+	world: World,
+	random: () => number,
+	withdrawn: { claimIndex: number; recordId: string }[]
+) {
+	const present = await captureLog(world);
+	for (const [claimIndex, claim] of world.claims.entries()) {
+		const candidates = (present.get(claim.id) ?? []).filter(
+			(row) => !row.everWithdrawn
+		);
+		if (candidates.length > 0 && random() < 0.7) {
+			const pick = candidates[Math.floor(random() * candidates.length)];
+			if (pick) {
+				const result = await withdraw(world, claimIndex, pick.recordId);
+				if (!result.error) {
+					withdrawn.push({ claimIndex, recordId: pick.recordId });
+				}
+			}
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // A run that spans several nights
 // ---------------------------------------------------------------------------
@@ -123,15 +192,7 @@ describe("a log thinned over several nights", () => {
 
 		for (const [night, now] of nights.entries()) {
 			if (night > 0) {
-				// Withdrawals land between calls: some in the part already thinned, some
-				// in the part not yet examined. Then more records arrive.
-				const present = await captureLog(world);
-				await withdrawSome(world, random, present, 2, () => true);
-				await fillRandomly(world, seed + night, {
-					count: 25,
-					start: CUTOFF + (night === 1 ? 3 : 9) * HOUR,
-					end: CUTOFF + (night === 1 ? 9 : 16) * HOUR,
-				});
+				await interveneBetweenNights(world, random, seed, night);
 			}
 			const current = await captureLog(world);
 			everything = unionLog(everything, current);
@@ -154,11 +215,7 @@ describe("a log thinned over several nights", () => {
 			expect(await statusPicture(world, instants)).toEqual(picture);
 
 			// Everything kept on earlier nights is still there.
-			const nowPresent = new Set(
-				[...(await captureLog(world)).values()].flatMap((rows) =>
-					rows.map((r) => r.id)
-				)
-			);
+			const nowPresent = await presentIds(world);
 			for (const [claimId, ids] of keptByNight) {
 				for (const id of ids) {
 					expect(nowPresent.has(id), `kept record ${id} of ${claimId}`).toBe(
@@ -166,16 +223,7 @@ describe("a log thinned over several nights", () => {
 					);
 				}
 			}
-			keptByNight = new Map();
-			for (const claim of world.claims) {
-				const mark = await markOf(claim.id);
-				keptByNight.set(
-					claim.id,
-					(await readRows(claim.id))
-						.filter((row) => mark !== null && row.seq <= mark)
-						.map((row) => row.id)
-				);
-			}
+			keptByNight = await keptUpToMark(world);
 			contexts = nextContexts(expected, contexts);
 			totalAcrossNights += result.recordsRemoved;
 		}
@@ -218,13 +266,7 @@ describe("a call of limited size", () => {
 		expect(calls.every((call) => call.recordsRemoved <= 7)).toBe(true);
 		expect(calls.every((call) => call.busy === false)).toBe(true);
 
-		const after = await captureLog(world);
-		const survivors = new Map(
-			[...after].map(([claimId, rows]) => [
-				claimId,
-				new Set(rows.map((r) => r.id)),
-			])
-		);
+		const survivors = survivorIds(await captureLog(world));
 		expect(rulebookProblems(before, protectedSessions, survivors)).toEqual([]);
 		expect(await noteProblems(world, before)).toEqual([]);
 		expect(await chainProblems(world)).toEqual([]);
@@ -284,21 +326,7 @@ describe("a call of limited size", () => {
 		const withdrawn: Array<{ claimIndex: number; recordId: string }> = [];
 
 		for (let call = 0; call < 500; call++) {
-			const present = await captureLog(world);
-			for (const [claimIndex, claim] of world.claims.entries()) {
-				const candidates = (present.get(claim.id) ?? []).filter(
-					(row) => !row.everWithdrawn
-				);
-				if (candidates.length > 0 && random() < 0.7) {
-					const pick = candidates[Math.floor(random() * candidates.length)];
-					if (pick) {
-						const result = await withdraw(world, claimIndex, pick.recordId);
-						if (!result.error) {
-							withdrawn.push({ claimIndex, recordId: pick.recordId });
-						}
-					}
-				}
-			}
+			await withdrawAtRandom(world, random, withdrawn);
 			const result = await thin(NOW, { batchSize: 6, timeBudgetMs: 0 });
 			if (!result.more) {
 				break;
@@ -314,10 +342,7 @@ describe("a call of limited size", () => {
 		expect(await prisma.pluginHealthRevocation.count()).toBe(
 			withdrawnAlready + withdrawn.length
 		);
-		const after = await captureLog(world);
-		const survivors = new Map(
-			[...after].map(([id, rows]) => [id, new Set(rows.map((r) => r.id))])
-		);
+		const survivors = survivorIds(await captureLog(world));
 		expect(rulebookProblems(before, protectedSessions, survivors)).toEqual([]);
 		expect(await noteProblems(world, before)).toEqual([]);
 		expect(await chainProblems(world)).toEqual([]);
