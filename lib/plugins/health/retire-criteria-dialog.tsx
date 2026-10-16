@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useState } from "react";
+import { type RefObject, useId, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { HealthActionDialog } from "./health-action-dialog";
@@ -35,6 +35,9 @@ function NodeQuestion({
 	name: string;
 	onChange: (choice: NodeChoice) => void;
 }) {
+	const idPrefix = useId();
+	const removeId = `${idPrefix}-remove`;
+	const keepId = `${idPrefix}-keep`;
 	return (
 		<fieldset className="space-y-2" data-testid="health-retire-node-choice">
 			<legend className="font-medium text-sm">
@@ -48,15 +51,8 @@ function NodeQuestion({
 				value={choice}
 			>
 				<div className="flex items-start gap-2">
-					<RadioGroupItem
-						className="mt-0.5"
-						id="health-retire-node-remove"
-						value="remove"
-					/>
-					<Label
-						className="wrap-anywhere leading-snug"
-						htmlFor="health-retire-node-remove"
-					>
+					<RadioGroupItem className="mt-0.5" id={removeId} value="remove" />
+					<Label className="wrap-anywhere leading-snug" htmlFor={removeId}>
 						{`Remove ${name}`}
 						<span className="block font-normal text-muted-foreground text-xs">
 							It is taken off this claim and moved to the trash, unless it also
@@ -66,15 +62,8 @@ function NodeQuestion({
 					</Label>
 				</div>
 				<div className="flex items-start gap-2">
-					<RadioGroupItem
-						className="mt-0.5"
-						id="health-retire-node-keep"
-						value="keep"
-					/>
-					<Label
-						className="wrap-anywhere leading-snug"
-						htmlFor="health-retire-node-keep"
-					>
+					<RadioGroupItem className="mt-0.5" id={keepId} value="keep" />
+					<Label className="wrap-anywhere leading-snug" htmlFor={keepId}>
 						{`Keep ${name} as ordinary evidence`}
 						<span className="block font-normal text-muted-foreground text-xs">
 							It stays under this claim and no longer shows results. If the
