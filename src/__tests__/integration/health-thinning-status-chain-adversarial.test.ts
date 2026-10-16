@@ -155,9 +155,9 @@ describe("a log thinned over several nights", () => {
 
 			// Everything kept on earlier nights is still there.
 			const nowPresent = new Set(
-				(await captureLog(world))
-					.values()
-					.flatMap((rows) => rows.map((r) => r.id))
+				[...(await captureLog(world)).values()].flatMap((rows) =>
+					rows.map((r) => r.id)
+				)
 			);
 			for (const [claimId, ids] of keptByNight) {
 				for (const id of ids) {
