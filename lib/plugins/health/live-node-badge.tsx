@@ -52,7 +52,8 @@ const KIND_ICON_CLASSES: Record<LiveNodeKind, string> = {
  * the "≠" the claim's dot shows when the result was judged with other
  * settings. The icons and words carry the state, so it reads in greyscale; the
  * element is an `<output>` (an implicit live region) whose label says the same
- * in words, prefixed with the claim it reports on.
+ * in words, prefixed with the claim it reports on. Where the header has too
+ * little room the badge wraps, and an icon always stays with its words.
  */
 function LiveNodeBadgeView({ node }: { node: HealthLiveEvidenceNode }) {
 	const { status } = node;
@@ -78,21 +79,26 @@ function LiveNodeBadgeView({ node }: { node: HealthLiveEvidenceNode }) {
 							className="size-3 shrink-0 text-muted-foreground"
 							data-testid="live-node-icon"
 						/>
-						{KindIcon && (
-							<KindIcon
-								aria-hidden="true"
-								className={cn("size-3 shrink-0", KIND_ICON_CLASSES[state.kind])}
-							/>
-						)}
-						<span>{LIVE_NODE_WORDS[state.kind]}</span>
+						<span className="inline-flex items-center gap-1 whitespace-nowrap">
+							{KindIcon && (
+								<KindIcon
+									aria-hidden="true"
+									className={cn(
+										"size-3 shrink-0",
+										KIND_ICON_CLASSES[state.kind]
+									)}
+								/>
+							)}
+							{LIVE_NODE_WORDS[state.kind]}
+						</span>
 						{showsAge && (
-							<>
+							<span className="inline-flex items-center gap-1 whitespace-nowrap">
 								<Clock
 									aria-hidden="true"
 									className="size-3 shrink-0 text-muted-foreground"
 								/>
-								<span>Out of date</span>
-							</>
+								Out of date
+							</span>
 						)}
 						{status?.mismatch && (
 							<span
