@@ -1,3 +1,4 @@
+import { saveAs } from "file-saver";
 import type { Node } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -33,6 +34,9 @@ vi.mock("@/lib/export", () => ({
 
 const { exportDiagramImage } = await import("../image-export");
 const { exportDocument } = await import("../document-export");
+
+const SVG_HEAD = "data:image/svg+xml;charset=utf-8,";
+const EMPTY_SVG = `${SVG_HEAD}${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}`;
 
 const EDGE_STYLE =
 	"stroke: var(--destructive); stroke-width: 3; stroke-opacity: 0.35;";
@@ -94,6 +98,7 @@ beforeEach(() => {
 	document.body.append(viewport);
 	canvas = { viewport, card, fill, badge, controls, edge, plainEdge };
 
+	vi.mocked(saveAs).mockClear();
 	seen = undefined;
 	const record = (
 		_target: HTMLElement,
@@ -111,7 +116,9 @@ beforeEach(() => {
 		return Promise.resolve("data:image/png;base64,AAAA");
 	};
 	toPngMock.mockImplementation(record);
-	toSvgMock.mockImplementation(record);
+	toSvgMock.mockImplementation((target, options) =>
+		record(target, options).then(() => EMPTY_SVG)
+	);
 });
 
 afterEach(() => {
@@ -212,6 +219,68 @@ describe("an image export", () => {
 			exportDiagramImage({ caseName: "A case", format: "png", nodes: [NODE] })
 		).rejects.toThrow("capture failed");
 		expect(canvas.edge.getAttribute("style")).toBe(EDGE_STYLE);
+	});
+});
+
+describe("an SVG image export's file", () => {
+	/** The markup the capture library hands back: the kept elements, still carrying the canvas's own attributes. */
+	const MARKUP =
+		'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" viewBox="0 0 100 50">' +
+		'<foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="viewport">' +
+		'<div class="card" data-appearance="negative" data-faded="">E6</div>' +
+		'<div class="px-4 [--muted-foreground:var(--foreground)] pb-3">words</div>' +
+		'<div class="[--muted-foreground:var(--foreground)]">more</div>' +
+		'<svg><path class="react-flow__edge-path" d="M0 0L5 5" data-appearance="plain" data-faded=""/></svg>' +
+		"</div></foreignObject></svg>";
+
+	const fetchMock = vi.fn(() => Promise.resolve(new Response("")));
+
+	beforeEach(() => {
+		fetchMock.mockClear();
+		vi.stubGlobal("fetch", fetchMock);
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	/** The markup the export turned into the file: it reads the cleaned data URL back into a blob. */
+	function savedMarkup() {
+		const [url] = fetchMock.mock.calls[0] as unknown as [string];
+		return decodeURIComponent(url.slice(SVG_HEAD.length));
+	}
+
+	it("carries none of the attributes or classes that record a plugin's display, and keeps the rest", async () => {
+		toSvgMock.mockResolvedValue(`${SVG_HEAD}${encodeURIComponent(MARKUP)}`);
+
+		await exportDiagramImage({
+			caseName: "A case",
+			format: "svg",
+			nodes: [NODE],
+		});
+		const file = savedMarkup();
+
+		for (const marker of [
+			"data-appearance",
+			"data-faded",
+			"data-plugin-display",
+		]) {
+			expect(file).not.toContain(marker);
+		}
+		expect(file).not.toContain("--muted-foreground");
+		expect(file).toContain('class="card"');
+		expect(file).toContain('class="px-4 pb-3"');
+		expect(file).toContain(">E6<");
+		expect(file).toContain('d="M0 0L5 5"');
+	});
+
+	it("is not saved when the image comes back in a form that cannot be cleaned", async () => {
+		toSvgMock.mockResolvedValue("data:image/png;base64,AAAA");
+
+		await expect(
+			exportDiagramImage({ caseName: "A case", format: "svg", nodes: [NODE] })
+		).rejects.toThrow("not in a form the export can clean");
+		expect(saveAs).not.toHaveBeenCalled();
 	});
 });
 

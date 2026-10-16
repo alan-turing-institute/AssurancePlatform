@@ -73,6 +73,7 @@ vi.mock("reactflow", async () => {
 });
 
 const DATA_URL = "data:image/png;base64,AAAA";
+const SVG_DATA_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>')}`;
 const CLAIM_NODE_ID = "property-claim-42";
 
 /** G1 supports P1 (element id `claim-42`), which holds the evidence node. */
@@ -227,7 +228,7 @@ beforeEach(() => {
 	});
 	vi.mocked(toSvg).mockImplementation((root, options) => {
 		captures.push(recordCapture(root, options?.filter));
-		return Promise.resolve(DATA_URL);
+		return Promise.resolve(SVG_DATA_URL);
 	});
 	Object.defineProperty(navigator, "sendBeacon", {
 		configurable: true,

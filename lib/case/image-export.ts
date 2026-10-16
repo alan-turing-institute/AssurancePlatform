@@ -16,6 +16,7 @@ import {
 import type { LayoutDirection } from "@/lib/case/layout-helper";
 import {
 	isAuthoredContent,
+	removePluginDisplayMarkers,
 	stripPluginAppearance,
 } from "@/lib/case/plugin-display-capture";
 import { logger } from "@/lib/logger";
@@ -204,7 +205,9 @@ async function captureAndDownload(
 
 	try {
 		if (format === "svg") {
-			const dataUrl = await toSvg(viewport, exportOptions);
+			const dataUrl = removePluginDisplayMarkers(
+				await toSvg(viewport, exportOptions)
+			);
 			const blob = await dataUrlToBlob(dataUrl);
 			saveAs(blob, filename);
 		} else {

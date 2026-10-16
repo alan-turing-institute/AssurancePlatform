@@ -53,6 +53,8 @@ The health plugin uses it to show a claim's own dot only while the claim's evide
 
 Elements that exist only to show a plugin's display carry a `data-plugin-display` attribute, and an appearance sets `data-appearance` on the element or edge it draws, to its tone, or to `plain` when it has none.
 Images of the canvas, report diagrams and the dashboard thumbnail drop the marked elements and take the colour off edges, so a picture shows the authored case only.
+An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display` and the class that sets a drawn card's text colour taken out of it.
+The export is refused if the image comes back in a form that cannot be cleaned.
 
 ## Store plugin state
 
