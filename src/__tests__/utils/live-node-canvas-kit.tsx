@@ -34,10 +34,15 @@ export const CASE_ID = "case-1";
 export const CLAIM_ID = "claim-42";
 export const NODE_ID = "node-1";
 
+// The fake stands in for the browser's `EventSource`, which the code under
+// test reaches through the global, so the members below are used by code that
+// fallow does not follow back to this class.
 export class FakeEventSource {
 	static all: FakeEventSource[] = [];
 	closed = false;
+	// fallow-ignore-next-line unused-class-member
 	onerror: (() => void) | null = null;
+	// fallow-ignore-next-line unused-class-member
 	onopen: (() => void) | null = null;
 	readonly url: string;
 	private readonly listeners = new Map<string, ((e: MessageEvent) => void)[]>();
@@ -47,14 +52,17 @@ export class FakeEventSource {
 		FakeEventSource.all.push(this);
 	}
 
+	// fallow-ignore-next-line unused-class-member
 	addEventListener(type: string, listener: (e: MessageEvent) => void) {
 		this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
 	}
 
+	// fallow-ignore-next-line unused-class-member
 	close() {
 		this.closed = true;
 	}
 
+	// fallow-ignore-next-line unused-class-member
 	emit(type: string) {
 		const body = { type, caseId: CASE_ID, payload: {}, timestamp: "now" };
 		for (const listener of this.listeners.get(type) ?? []) {
