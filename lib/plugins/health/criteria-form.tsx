@@ -664,6 +664,8 @@ export function CriteriaForm({
 		state,
 	});
 	const change = changeFlags(form, actions, superseded);
+	// A fresh pick is not the stored settings, so none of their lines belong on it.
+	const stored = state === "new" ? null : view;
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
@@ -674,7 +676,7 @@ export function CriteriaForm({
 				onReload={reload}
 				recommends={hasRecommendation(form.check)}
 				state={state}
-				view={view}
+				view={stored}
 			/>
 			<PlainWordsSummary sentences={form.sentences} />
 			<FormSections
@@ -684,10 +686,10 @@ export function CriteriaForm({
 				onPick={form.onPick}
 				sectionProps={sectionPropsOf(form, actions, canEdit)}
 				state={state}
-				versions={versionsOf(view, move)}
+				versions={versionsOf(stored, move)}
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
-			<PipelineFooter view={view} />
+			<PipelineFooter view={stored} />
 			<EditControls
 				actions={actions}
 				cancel={cancel}
