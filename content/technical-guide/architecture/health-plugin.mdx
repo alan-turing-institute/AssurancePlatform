@@ -203,6 +203,7 @@ From each run the job keeps:
 An unbroken day of passing results every six seconds becomes about 26 records.
 The cut-off is the start of the current UTC hour minus 24 hours, fixed for a night's calls, and the job never touches a record that arrived at or after it.
 Each night carries on from where the last one stopped, so a run that goes on across several nights keeps one extra record at each night's edge and two gaps are never merged.
+Where a batch within a call ends inside a run, the next batch starts from the record the last one ended on, so the run carries on in the same way.
 A record kept once is never removed later.
 
 When the job runs, each claim's verdict, current record, expiry, out-of-date flag and settings mismatch are exactly what they were: the current record is always the last record of a run or one the job never removes.

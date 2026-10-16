@@ -1031,7 +1031,11 @@ async function applyRemovals(
 
 /**
  * Thins one claim, batch by batch from where the last pass stopped, until its
- * records run out, reach the cut-off or the call's time budget ends.
+ * records run out, reach the cut-off or the call's time budget ends. After the
+ * first pass the record the last batch stopped at is read again as the first
+ * row of the next. It is already kept and is never removed; reading it lets a
+ * run carry on across a batch edge, with its hourly spacing, so an edge costs
+ * one extra kept record and not two.
  */
 async function thinClaim(
 	run: ThinningRun,
@@ -1040,9 +1044,10 @@ async function thinClaim(
 	let mark = claim.mark;
 	let moved = false;
 	for (;;) {
+		const contextRows = mark === null ? 0 : 1;
 		const fetched = await readChainRows(
 			claim.claimId,
-			mark ?? 0,
+			mark === null ? 0 : mark - 1,
 			run.batchSize
 		);
 		const firstRecent = fetched.findIndex(
@@ -1050,7 +1055,7 @@ async function thinClaim(
 		);
 		const rows = firstRecent === -1 ? fetched : fetched.slice(0, firstRecent);
 		const lastRow = rows.at(-1);
-		if (!lastRow) {
+		if (!lastRow || rows.length <= contextRows) {
 			break;
 		}
 

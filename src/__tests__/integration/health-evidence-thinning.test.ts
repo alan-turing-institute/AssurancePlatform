@@ -563,21 +563,27 @@ describe("thinHealthEvidence — repeated and later calls", () => {
 		// First night: up to 11:45 on the 14th; second: from 12:00 on to 08:00.
 		expect(firstNight).toMatchObject({ recordsRemoved: 35, runsRecorded: 12 });
 		expect(secondNight).toMatchObject({ recordsRemoved: 60, runsRecorded: 20 });
-		const stored = await storedRecordIds(claim.id);
-		expect(stored).toContain(ids[47]);
-		expect(stored).toContain(ids[48]);
+		expect(await storedRecordIds(claim.id)).toContain(ids[47]);
 		const notes = await prisma.pluginHealthThinnedRun.findMany({
 			where: { claimId: claim.id },
-			select: { id: true, keptBefore: { select: { recordId: true } } },
+			select: {
+				id: true,
+				removedCount: true,
+				keptBefore: { select: { recordId: true } },
+			},
 			orderBy: { firstRemovedSequence: "asc" },
 		});
 		expect(notes).toHaveLength(32);
+		// The first night's notes stand as they were, and the second night's
+		// first note starts at the record the first night ended on: the run
+		// carries on, and no note spans the night's edge.
 		expect(notes.slice(0, 12).map((note) => note.id)).toEqual(
 			afterFirst.map((note) => note.id)
 		);
-		expect(notes.map((note) => note.keptBefore.recordId)).not.toContain(
-			ids[47]
-		);
+		expect(notes[12]).toMatchObject({
+			removedCount: 3,
+			keptBefore: { recordId: ids[47] },
+		});
 	});
 
 	it("works one batch at a time within its time budget, reports more, and finishes on later calls", async () => {
@@ -602,12 +608,12 @@ describe("thinHealthEvidence — repeated and later calls", () => {
 		});
 		expect(third).toMatchObject({
 			more: false,
-			recordsRemoved: 3,
+			recordsRemoved: 5,
 			runsRecorded: 1,
 		});
-		expect(await storedRecordIds(claim.id)).toEqual(
-			pick(ids, [0, 9, 10, 19, 20, 24])
-		);
+		// Each batch edge keeps the one record it ends on; the run carries on
+		// past it, so the next batch's first record is not kept as well.
+		expect(await storedRecordIds(claim.id)).toEqual(pick(ids, [0, 9, 18, 24]));
 	});
 
 	it("returns busy, doing nothing, while another call holds the lock", async () => {
