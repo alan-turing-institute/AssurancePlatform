@@ -11,7 +11,7 @@ import { z } from "zod";
  * - `now`: an ISO 8601 date-time the cut-off is measured from. The route
  *   holds it to no later than the server's own time.
  */
-export const healthEvidenceThinningQuerySchema = z.strictObject({
+const healthEvidenceThinningQuerySchema = z.strictObject({
 	dryRun: z
 		.enum(["1", "true", "0", "false"], {
 			message: "must be one of 1, true, 0 or false",
