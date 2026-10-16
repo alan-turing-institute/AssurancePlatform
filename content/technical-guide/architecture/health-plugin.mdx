@@ -1,6 +1,6 @@
 ---
 title: "Health plugin and evidence chain"
-description: "Understand the evidence record format, the settings declared for a claim, how a claim's status is computed, and how records are revoked."
+description: "Understand the evidence record format, the settings declared for a claim, how a claim's status is computed, how records are revoked, and how repeated passing results are thinned."
 ---
 
 The `tea.health` plugin records machine-supplied runtime check results that bear on a property claim.
@@ -74,6 +74,7 @@ It accepts a token with `health:evidence:read` or a signed-in user with view acc
 The response carries `next_before`, the value to pass as `before` for the next page, or `null` on the last page.
 Each item has the stored `record`, its hash fields, `created_by_id`, `created_at`, `expires_at`, and `revocation`, which is the record's open revocation or `null`.
 Each item also carries `echo_state`, `echo_differences` and `criteria_revision`, described under [The echo check](#the-echo-check).
+It carries `thinned_before` too: `null`, or the note left where passing results were removed from the log just before this record, with `removed_count`, `first_removed_at`, `first_removed_sequence`, `last_removed_at`, `last_removed_sequence`, `rule_version` and `thinned_at` (see [Retention of repeated passes](#retention-of-repeated-passes)).
 With `live=true` the list holds only records that are not revoked and whose validity has not run out by the clock.
 A `valid_while` condition is not evaluated per record in a list; the claim's status is where that is answered.
 
@@ -85,8 +86,8 @@ It computes the status again on each tool call, and only when the case has a cla
 
 ## The hash chain
 
-The service only appends.
-It has no update or delete operation for an existing evidence row.
+The service only appends, apart from one removal path: the nightly thinning of repeated passing results described under [Retention of repeated passes](#retention-of-repeated-passes).
+It has no update operation for an existing evidence row, and no operation that deletes one other than that job.
 The chain is separate for each property claim.
 Each row stores `previous_record_hash` and a `record_hash` calculated as `SHA-256(previous_record_hash + "\u0000" + canonicalJSON(content))`.
 `canonicalJSON` sorts keys at every level.
@@ -94,6 +95,27 @@ The content is `{record, createdById, createdAt}`: the record as stored, the int
 The next append locks the claim row and links to the latest record within a transaction, so two writers cannot branch the chain.
 A verifier can recompute any hash from a list item using `computeRecordHash` and `canonicalJSON` in `lib/services/health-evidence-service.ts` and compare each previous link.
 No scheduled whole-chain verifier runs in this build.
+
+### Walking the chain across a gap
+
+Where the thinning job has removed records, the links in the list are not all contiguous.
+Every kept record still recomputes to its own hash, because nothing in it changes.
+The kept record after a gap still names, as its `previous_record_hash`, the hash of the last record removed.
+That hash depends on every removed record and on the kept record before them, because each link covers the one before.
+
+A verifier that walks the list newest first compares each item's `previous_record_hash` with the `record_hash` of the next older item.
+Where they differ, the newer item's `thinned_before` accounts for the break.
+A break with no `thinned_before` is not explained by the rule and is a sign of tampering.
+A verifier that treats every non-matching link as tampering will report legitimate gaps.
+The verifier can also check that the two kept records either side of a gap are passes with the same result, as the rule requires.
+Anyone holding an earlier copy of the removed records can rebuild them from the kept record before the gap and check that they arrive at exactly the hash the kept record after it names.
+To show that only repeated passes went, they apply the rule named by `rule_version` to that copy.
+
+The notes themselves are not covered by any hash.
+Someone with write access to the database could delete a record that lies between two identical passes and add a note, and the break would then look like thinning.
+Without thinning, deleting a record leaves a broken link that only recomputing every later hash could hide.
+The application itself removes only what the rule allows.
+The chain's hashes are not published outside TEA.
 
 ## How status is computed
 
@@ -144,6 +166,68 @@ Revoking the record again adds a new row.
 `PUT /api/elements/[id]/health/bound-check` takes a `name` and a `reason` and changes the claim's bound check.
 
 Each of these changes emits `tea.health/state-changed` after it commits.
+
+## Retention of repeated passes
+
+A pipeline that reports every few seconds adds thousands of results to a claim each day, and almost all of them say the same thing as the one before.
+A nightly job thins them.
+It removes a passing result only when the result is more than a day old and repeats its neighbours exactly.
+Everything else stays: every fail, marginal and could-not-judge result, every result that differed from the accepted settings, every withdrawn result, every change of value, and everything from the last day.
+A deployment that must keep every result does not schedule the job; nothing else removes records except deleting a claim or its case for good.
+
+### What counts as the same result
+
+Two records are the same result when everything in them matches except these fields, which may differ:
+
+- `record_id` and `timestamp`.
+- `comment`.
+- `provenance.members` and `provenance.failed_subjects`.
+- Every `provenance` value other than `session`, `pipeline_version`, `run` and `twin_version`, such as a simulated clock.
+
+So the `value`, all of `uncertainty`, all of `judged`, the `payload`, the check, the settings the record states (rule, reduction, aggregation, window, `valid_for` and `valid_while`), the `subject` and the four named provenance values must match exactly.
+Both records must also be passes whose comparison with the accepted settings said `match` against the same settings revision, must come from the same integration account, and must never have been withdrawn (an open or a closed revocation both count).
+No record is removed from a session in which any record of the same case carries a `valid_while` condition, because such a condition reads provenance values that this rule treats as readings.
+
+A run is an unbroken sequence of same-result records in one claim's chain, in arrival order, whose own timestamps never go backwards.
+A record with an earlier timestamp than the record before it ends the run, as does any record the job never removes; a tie in timestamps does not.
+If a pipeline puts a value that changes with every result into its provenance, its records never match and nothing is thinned.
+
+### What a run keeps
+
+From each run the job keeps:
+
+- its first record and its last;
+- the first record at least an hour after the previous one kept;
+- each record whose next record in the run is an hour or more later, and that next record.
+
+An unbroken day of passing results every six seconds becomes about 26 records.
+The cut-off is the start of the current UTC hour minus 24 hours, fixed for a night's calls, and the job never touches a record that arrived at or after it.
+Each night carries on from where the last one stopped, so a run that goes on across several nights keeps one extra record at each night's edge and two gaps are never merged.
+A record kept once is never removed later.
+
+When the job runs, each claim's verdict, current record, expiry, out-of-date flag and settings mismatch are exactly what they were: the current record is always the last record of a run or one the job never removes.
+Withdrawing a record older than a day afterwards leaves the claim on the nearest kept record, since the neighbours the withdrawn record resembled are gone.
+A `valid_while` condition that first arrives in a session after the session was thinned is judged against the thinned history.
+
+### The note each removal leaves
+
+Each removed stretch gets one row in `plugin_health_thinned_runs`.
+It names the kept record before the stretch and the kept record after it, how many records were removed, their first and last chain positions and timestamps, when the thinning happened and the version of the rule.
+Notes are never removed, except with their claim.
+The database refuses to remove a kept record while a note names it.
+The list shows a note as `thinned_before` on the kept record after the stretch, and the Evidence tab draws one line there, such as "1,437 identical passing results from 10:00 to 11:00 on 14 Oct are not kept."
+
+### How a call runs
+
+`POST /api/cron/health-evidence-thinning` takes the cron secret and is scheduled daily by `.github/workflows/health-evidence-thinning.yml`.
+A call takes a database-wide advisory lock first and returns `busy` when another call holds it.
+For each claim it reads forward in chain order from `plugin_health_claim_states.thinned_through_sequence`, in batches of up to 2,000 records, and decides each batch from narrow rows outside any lock.
+The database computes a fingerprint of the fields that must match, so no record body is read into the application.
+It then removes the batch in one short transaction that holds the claim row lock.
+The transaction gives up, and the batch is retried on a later call, if the claim has moved on or a record in the batch has been withdrawn since it was read.
+Withdrawing and reinstating a record take the same claim row lock, so a withdrawal can never land between the job's check and its removal.
+A call works for about a minute and returns `more: true` when records remain, and the workflow calls again, up to 30 times a night.
+`dryRun=1` makes a single call that counts what would be removed and writes nothing.
 
 ## Declare evidence settings
 
@@ -435,9 +519,9 @@ Editing or retiring settings therefore flags the claim at once, and the flag sta
 ## Limits and code location
 
 The chain detects edits that do not also recompute later hashes.
-It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs.
+It is not tamper-proof against someone with database write access, because hashes and records are stored together and no verifier or external anchor runs, and a deleted record between two identical passes can be given a note.
 It does not prove that a source system's measurement was correct.
-The evidence service is `lib/services/health-evidence-service.ts`, the only code that writes the evidence tables.
+The evidence service is `lib/services/health-evidence-service.ts`, the only code that writes the evidence tables, with the thinning rule's keep logic in `lib/health-thinning-rule.ts`.
 Status, and the decision about which evidence element is live for a claim, are in `lib/services/health-status-service.ts`, and the sweep is in `lib/services/health-staleness-sweep-service.ts`.
 The record schema is `lib/schemas/health-evidence.ts`, with the rule, reduction, aggregation and duration shapes in `lib/schemas/health-rules.ts`.
 Settings are in `lib/services/health-criteria-service.ts` and `lib/schemas/health-criteria.ts`, which also holds the version labels and the echo comparison.

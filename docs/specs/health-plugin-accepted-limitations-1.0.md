@@ -62,22 +62,30 @@ underlying connection rather than each opening its own. This softens the
 concern considerably — the trigger above still applies for very large
 canvases, but it is no longer a near-term one.
 
-## 4. The evidence log has no retention rule
+## 4. The evidence log thins only repeated passes
 
-Every accepted evidence record is kept for as long as its case exists. A
-check that reports once a minute adds about 1,440 records to its claim each
-day, and a record can carry several kilobytes (its member list, provenance
-and payload), so a busy claim's log grows without limit. Nothing archives,
-thins or deletes records other than the case purge described in limitation
-1. Reads are paged, so a long log does not slow the evidence tab, but the
-storage it occupies keeps growing.
+A nightly job removes passing results that repeat their neighbours exactly
+once they are more than a day old, keeping the first and last of each run,
+one for each hour and both sides of any pause, and leaves a note of each
+removed stretch (the technical guide's health plugin page gives the rule).
+Everything else is kept for as long as its case exists: every fail,
+marginal and could-not-judge result, every result that differed from the
+accepted settings, every withdrawn result, every change of value, and
+everything from the last day. A check that reports once a minute adds about
+1,440 records to its claim each day, and a record can carry several
+kilobytes (its member list, provenance and payload), so a claim whose
+pipeline reports a value that changes with every result, or that fails for
+long periods, keeps all of those records and its log keeps growing. Removed
+records are not archived anywhere. Reads are paged, so a long log does not
+slow the evidence tab.
 
-This is acceptable while a small number of claims receive evidence from one
-pipeline and the deployment's database is sized for it.
+A deployment that must keep every record does not schedule the job; nothing
+else removes records except the case purge described in limitation 1.
 
-**Revisit trigger:** the evidence table's size becoming a storage or backup
-concern, or any deployment where claims receive evidence at a high rate for
-months at a time.
+**Revisit trigger:** a deployment where removed results must remain
+available (which would need an archive of them), or claims whose results
+change with every report and whose logs grow large enough to become a
+storage or backup concern.
 
 ## 5. The echo shows a pipeline that is behind, not one that misreports
 
