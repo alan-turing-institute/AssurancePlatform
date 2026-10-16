@@ -14,6 +14,7 @@ import {
 import { EvidenceLogEntry } from "./evidence-log-entry";
 import { ChangeCheckDialog } from "./health-record-dialogs";
 import type { HealthStatus } from "./health-types";
+import { LiveNodePanel } from "./live-node-panel";
 import { SettingsView } from "./settings-view";
 import { useCriteria } from "./use-criteria";
 import { useHealthEvidence } from "./use-health-evidence";
@@ -245,6 +246,10 @@ export function HealthPanel({
 	const context = { caseId, elementId, elementType, canEdit };
 	const [view, setView] = useState<PanelView>("results");
 	const criteria = useCriteria(context);
+
+	if (elementType === "evidence") {
+		return <LiveNodePanel {...context} />;
+	}
 
 	if (elementType !== "property") {
 		return (

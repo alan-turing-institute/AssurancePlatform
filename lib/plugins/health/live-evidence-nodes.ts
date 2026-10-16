@@ -20,10 +20,13 @@ import type { HealthLiveEvidenceNode } from "./health-types";
 
 const HEALTH_STATE_EVENT_TYPE = "tea.health/state-changed";
 
-const REFRESH_EVENT_TYPES: ReadonlySet<string> = new Set([
-	...CASE_RELOAD_EVENT_TYPES,
-	HEALTH_STATE_EVENT_TYPE,
-]);
+/** Whether the event can change which nodes are live or what their claims' statuses are. */
+function changesLiveNodes(event: SSEEvent): boolean {
+	return (
+		event.type === HEALTH_STATE_EVENT_TYPE ||
+		CASE_RELOAD_EVENT_TYPES.includes(event.type)
+	);
+}
 
 /** The live nodes of a case, looked up by the node's id and by the claim's. */
 export interface LiveNodeIndex {
@@ -127,7 +130,7 @@ function openStore(caseId: string): CaseStore {
 	};
 	stores.set(caseId, store);
 	store.stopListening = subscribeToCaseEvents(caseId, (event: SSEEvent) => {
-		if (REFRESH_EVENT_TYPES.has(event.type)) {
+		if (changesLiveNodes(event)) {
 			readNodes(caseId);
 		}
 	});

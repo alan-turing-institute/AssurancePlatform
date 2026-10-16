@@ -109,6 +109,20 @@ export type HealthCriteriaAction =
  */
 export type HealthEvidenceNodeState = "live" | "missing" | "moved" | "trashed";
 
+/** The check and pipeline a node's text was last written for. */
+export interface HealthNodeTextCheck {
+	check: string;
+	pipeline: string | null;
+}
+
+/** A live evidence node's text now, and the check that text names. */
+export interface HealthEvidenceNodeText {
+	/** The node's text as it reads now; null when it cannot be read. */
+	description: string | null;
+	/** The check and pipeline the text was last written for; null when the history holds no acceptance. */
+	written_for: HealthNodeTextCheck | null;
+}
+
 /** The evidence element added under a claim when its settings were accepted. */
 export interface HealthEvidenceNode {
 	id: string;
@@ -126,6 +140,8 @@ export interface HealthCriteriaResponse {
 	criteria: HealthCriteriaView | null;
 	/** The claim's evidence node and where it is; null when the claim has none. */
 	evidence_node: HealthEvidenceNode | null;
+	/** The text of the claim's evidence node and the check that text names; null unless the node is live. */
+	evidence_node_text: HealthEvidenceNodeText | null;
 	integration: { id: string; name: string } | null;
 	last_change: {
 		action: HealthCriteriaAction;

@@ -1,7 +1,6 @@
 "use client";
 
 import type { Node } from "reactflow";
-import { useNodeId } from "reactflow";
 import useStore from "@/store/store";
 
 /**
@@ -25,10 +24,7 @@ function childrenAreHidden(nodes: Node[], nodeId: string): boolean {
 	return hasChild;
 }
 
-/** Whether the canvas node being rendered is collapsed, so none of its children is drawn. */
-export function useChildrenHidden(): boolean {
-	const nodeId = useNodeId();
-	return useStore((state) =>
-		nodeId === null ? false : childrenAreHidden(state.nodes, nodeId)
-	);
+/** Whether the canvas node with this id is collapsed, so none of its children is drawn. */
+export function useChildrenHidden(nodeId: string): boolean {
+	return useStore((state) => childrenAreHidden(state.nodes, nodeId));
 }

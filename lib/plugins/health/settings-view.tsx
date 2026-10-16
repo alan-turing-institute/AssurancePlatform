@@ -15,13 +15,14 @@ import type { ServedSettings } from "@/lib/schemas/health-criteria";
 import { VersionCompare } from "./criteria-compare";
 import { draftFromCheck, draftFromStored } from "./criteria-draft";
 import { CriteriaForm, type CriteriaFormProps } from "./criteria-form";
-import { StoppedNotice } from "./criteria-notices";
+import { NodeLine, StoppedNotice } from "./criteria-notices";
 import { type CheckChoice, CheckSelect } from "./criteria-sections";
 import { compareBlocks, mergeVersionMove } from "./criteria-version-move";
 import type {
 	HealthCheckListOffer,
 	HealthCriteriaResponse,
 } from "./health-types";
+import { useAddEvidenceNode } from "./use-add-evidence-node";
 import type { ClaimScopedFetchResult } from "./use-claim-scoped-fetch";
 import { type CaseChecksState, useCaseChecks } from "./use-criteria";
 import { useVersionMove, type VersionMove } from "./use-version-move";
@@ -129,6 +130,7 @@ function PickedForm({
 			<StoppedNotice view={view} />
 			<CriteriaForm
 				{...host}
+				evidence={view}
 				initialCheck={picked.check}
 				initialChoiceKey={picked.key}
 				initialDraft={draftFromCheck(picked.check, picked.integrationId)}
@@ -282,6 +284,7 @@ function StoredForm({
 								}
 							: null
 					}
+					evidence={view}
 					initialCheck={moved?.check ?? stored.check}
 					initialChoiceKey={stored.key}
 					initialDraft={
@@ -580,11 +583,19 @@ function SettingsContent({
 }: SettingsContentProps) {
 	const [picked, setPicked] = useState<CheckChoice | null>(null);
 	const { held, shown, stored } = useShownSettings(view, picked, unsaved);
+	const addNode = useAddEvidenceNode(claimId, criteria);
 	const choices = useMemo(() => {
 		const live = choicesFrom(checks.lists);
-		return stored
-			? [stored, ...live.filter((choice) => choice.key !== stored.key)]
-			: live;
+		if (!stored) {
+			return live;
+		}
+		// The stored settings name their pipeline by the integration; the list
+		// gives the pipeline's own name, which is the one the node's text carries.
+		const listed = live.find((choice) => choice.key === stored.key);
+		return [
+			listed ? { ...stored, pipeline: listed.pipeline } : stored,
+			...live.filter((choice) => choice.key !== stored.key),
+		];
 	}, [checks.lists, stored]);
 	const focusAfterStop = useFocusAfterStop(stored === null && held === null);
 
@@ -602,6 +613,12 @@ function SettingsContent({
 		<div className="space-y-4">
 			<RefreshFailedNote show={refreshFailed} />
 			<ClaimText text={claimText} />
+			<NodeLine
+				canEdit={canEdit}
+				onAdd={addNode.add}
+				pending={addNode.pending}
+				view={view}
+			/>
 			{picked && <PickedForm host={host} picked={picked} view={view} />}
 			{!picked && shown && (
 				<StoredBranch

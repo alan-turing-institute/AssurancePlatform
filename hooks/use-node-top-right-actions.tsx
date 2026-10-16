@@ -23,10 +23,11 @@ import { useElementBadgeSlot } from "./use-element-badge-slot";
  */
 export function useNodeTopRightActions(
 	data: Record<string, unknown>,
-	elementType: ElementType
+	elementType: ElementType,
+	nodeId: string
 ): ReactNode | null {
 	const { assuranceCase } = useStore();
-	const childrenHidden = useChildrenHidden();
+	const childrenHidden = useChildrenHidden(nodeId);
 
 	const badgeSlot = useElementBadgeSlot({
 		caseId: assuranceCase?.id?.toString() ?? "",

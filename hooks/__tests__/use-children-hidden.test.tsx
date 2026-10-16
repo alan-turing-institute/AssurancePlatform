@@ -1,13 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import type { Node } from "reactflow";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import useStore from "@/store/store";
 import { useChildrenHidden } from "../use-children-hidden";
-
-vi.mock("reactflow", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("reactflow")>();
-	return { ...actual, useNodeId: () => "property-claim" };
-});
 
 function node(id: string, parentId: string | null, hidden?: boolean): Node {
 	return {
@@ -26,7 +21,7 @@ describe("useChildrenHidden", () => {
 	it("is false for a node with no children", () => {
 		useStore.setState({ nodes: [node("property-claim", "goal-g")] });
 
-		const { result } = renderHook(() => useChildrenHidden());
+		const { result } = renderHook(() => useChildrenHidden("property-claim"));
 
 		expect(result.current).toBe(false);
 	});
@@ -40,7 +35,7 @@ describe("useChildrenHidden", () => {
 			],
 		});
 
-		const { result } = renderHook(() => useChildrenHidden());
+		const { result } = renderHook(() => useChildrenHidden("property-claim"));
 
 		expect(result.current).toBe(false);
 	});
@@ -54,7 +49,7 @@ describe("useChildrenHidden", () => {
 			],
 		});
 
-		const { result } = renderHook(() => useChildrenHidden());
+		const { result } = renderHook(() => useChildrenHidden("property-claim"));
 
 		expect(result.current).toBe(true);
 	});
@@ -66,7 +61,7 @@ describe("useChildrenHidden", () => {
 				node("evidence-e1", "property-claim", false),
 			],
 		});
-		const { result } = renderHook(() => useChildrenHidden());
+		const { result } = renderHook(() => useChildrenHidden("property-claim"));
 		expect(result.current).toBe(false);
 
 		act(() => {

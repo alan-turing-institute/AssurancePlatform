@@ -1,10 +1,18 @@
 "use client";
 
-import { type RefObject, useMemo, useRef, useState } from "react";
+import {
+	type ReactNode,
+	type RefObject,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
 import { type CriteriaDraft, recommendationIsUsable } from "./criteria-draft";
+import { type NodeEvidence, nodeOfferFor } from "./criteria-node-offer";
+import { NodeOptions } from "./criteria-node-options";
 import {
 	type CompareOffer,
 	FreshPickNotice,
@@ -43,6 +51,8 @@ export interface CriteriaFormProps {
 	claimId: string;
 	/** Offers the move to a newer version of the check, from the notice that says there is one. */
 	compare?: CompareOffer | null;
+	/** The claim's evidence node and its text, which decide what the accept and save step offers about the node. */
+	evidence: NodeEvidence;
 	initialCheck: HealthCheck;
 	initialChoiceKey: string;
 	initialDraft: CriteriaDraft;
@@ -229,6 +239,12 @@ function ProblemList({
 	) : null;
 }
 
+/** What a person chose about the evidence node when saving. */
+interface NodeChoice {
+	add: boolean;
+	update: boolean;
+}
+
 /** Saving, accepting and discarding, with the request in flight and the server's refusal. */
 function useCriteriaActions(
 	claimId: string,
@@ -271,7 +287,7 @@ function useCriteriaActions(
 		},
 		message,
 		pending,
-		save: async (accept: boolean) => {
+		save: async (accept: boolean, node: NodeChoice) => {
 			if (!analysis.complete) {
 				return;
 			}
@@ -279,9 +295,11 @@ function useCriteriaActions(
 			const view = await run(() =>
 				saveCriteria(claimId, {
 					accept,
+					addEvidenceNode: accept && node.add,
 					expectedRevision: form.baseRevision,
 					integrationId: draft.integrationId,
 					settings,
+					updateEvidenceNodeText: accept && node.update,
 				})
 			);
 			if (view) {
@@ -347,6 +365,8 @@ interface FormFooterProps
 	extends Omit<ButtonRowProps, "onStop" | "stopButton"> {
 	claimId: string;
 	hasProblems: boolean;
+	/** The claim's live evidence node, asked about when the use of accepted settings is stopped. */
+	liveNode: { name: string | null } | null;
 	onChanged: () => void;
 }
 
@@ -354,6 +374,7 @@ interface FormFooterProps
 function FormFooter({
 	claimId,
 	hasProblems,
+	liveNode,
 	onChanged,
 	...buttons
 }: FormFooterProps) {
@@ -374,6 +395,7 @@ function FormFooter({
 			{buttons.state === "accepted" && (
 				<RetireCriteriaDialog
 					claimId={claimId}
+					liveNode={liveNode}
 					onDone={onChanged}
 					onOpenChange={setStopping}
 					open={stopping}
@@ -495,8 +517,12 @@ interface FooterInput {
 	cancel: () => void;
 	claimId: string;
 	form: CriteriaDraftState;
+	/** The claim's live evidence node, if it has one. */
+	liveNode: { name: string | null } | null;
 	/** True while a change made elsewhere has turned saving off. */
 	locked: boolean;
+	/** What the person chose about the evidence node. */
+	node: NodeChoice;
 	onChanged: () => void;
 	state: FormState;
 }
@@ -507,7 +533,9 @@ function footerOf({
 	cancel,
 	claimId,
 	form,
+	liveNode,
 	locked,
+	node,
 	onChanged,
 	state,
 }: FooterInput): FormFooterProps {
@@ -516,11 +544,12 @@ function footerOf({
 		changedElsewhere: locked,
 		claimId,
 		hasProblems: form.hasProblems,
-		onAccept: () => actions.save(true),
+		liveNode,
+		onAccept: () => actions.save(true, node),
 		onCancel: cancel,
 		onChanged,
 		onDiscard: actions.discard,
-		onSuggest: () => actions.save(false),
+		onSuggest: () => actions.save(false, node),
 		pending: actions.pending,
 		state,
 	};
@@ -529,12 +558,19 @@ function footerOf({
 interface EditControlsProps {
 	canEdit: boolean;
 	footer: FormFooterProps;
+	/** The evidence node's choices, shown above the buttons when there is something to choose. */
+	nodeOptions: ReactNode;
 	/** True when the pipeline the settings were set up for no longer exists. */
 	pipelineGone: boolean;
 }
 
-/** What a person who can edit sees below the form: the reason saving is off for a deleted pipeline, and the buttons. */
-function EditControls({ canEdit, footer, pipelineGone }: EditControlsProps) {
+/** What a person who can edit sees below the form: the reason saving is off for a deleted pipeline, the evidence node's choices, and the buttons. */
+function EditControls({
+	canEdit,
+	footer,
+	nodeOptions,
+	pipelineGone,
+}: EditControlsProps) {
 	if (!canEdit) {
 		return null;
 	}
@@ -547,6 +583,7 @@ function EditControls({ canEdit, footer, pipelineGone }: EditControlsProps) {
 					these settings.
 				</p>
 			)}
+			{nodeOptions}
 			<FormFooter {...footer} />
 		</>
 	);
@@ -586,6 +623,7 @@ export function CriteriaForm({
 	choices,
 	claimId,
 	compare,
+	evidence,
 	initialCheck,
 	initialChoiceKey,
 	initialDraft,
@@ -620,6 +658,18 @@ export function CriteriaForm({
 		state,
 	});
 	const change = changeFlags(form, actions, superseded);
+	const [addTicked, setAddTicked] = useState(true);
+	const [updateTicked, setUpdateTicked] = useState(true);
+	const offer = nodeOfferFor({
+		check: form.check,
+		checkChanged: form.draftKey !== initialChoiceKey,
+		evidence,
+		pipeline:
+			choices.find((choice) => choice.key === form.draftKey)?.pipeline ?? "",
+		state,
+	});
+	const liveNode =
+		evidence.evidence_node?.state === "live" ? evidence.evidence_node : null;
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
@@ -651,10 +701,27 @@ export function CriteriaForm({
 					cancel,
 					claimId,
 					form,
+					liveNode,
 					locked: change.locked,
+					node: {
+						add: Boolean(offer?.add) && addTicked,
+						update: Boolean(offer?.update) && updateTicked,
+					},
 					onChanged,
 					state,
 				})}
+				nodeOptions={
+					offer && (
+						<NodeOptions
+							addTicked={addTicked}
+							disabled={actions.pending}
+							offer={offer}
+							onAddChange={setAddTicked}
+							onUpdateChange={setUpdateTicked}
+							updateTicked={updateTicked}
+						/>
+					)
+				}
 				pipelineGone={form.draft.integrationId === ""}
 			/>
 		</div>
