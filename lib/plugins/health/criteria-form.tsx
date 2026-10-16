@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	type ReactNode,
-	type RefObject,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { type RefObject, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
@@ -555,25 +549,39 @@ function footerOf({
 	};
 }
 
-interface EditControlsProps {
+interface EditControlsProps extends Omit<FooterInput, "liveNode" | "node"> {
 	canEdit: boolean;
-	footer: FormFooterProps;
-	/** The evidence node's choices, shown above the buttons when there is something to choose. */
-	nodeOptions: ReactNode;
-	/** True when the pipeline the settings were set up for no longer exists. */
-	pipelineGone: boolean;
+	choices: CheckChoice[];
+	/** The claim's evidence node and its text, which decide what is offered about the node. */
+	evidence: NodeEvidence;
+	/** The key of the check the form was opened on. */
+	initialChoiceKey: string;
 }
 
-/** What a person who can edit sees below the form: the reason saving is off for a deleted pipeline, the evidence node's choices, and the buttons. */
+/**
+ * What a person who can edit sees below the form: the reason saving is off for
+ * a deleted pipeline, the evidence node's choices, and the buttons.
+ */
 function EditControls({
 	canEdit,
-	footer,
-	nodeOptions,
-	pipelineGone,
+	choices,
+	evidence,
+	initialChoiceKey,
+	...footerInput
 }: EditControlsProps) {
+	const { liveNode, node, nodeOptions } = useNodeChoice({
+		check: footerInput.form.check,
+		chosenKey: footerInput.form.draftKey,
+		choices,
+		disabled: footerInput.actions.pending,
+		evidence,
+		initialChoiceKey,
+		state: footerInput.state,
+	});
 	if (!canEdit) {
 		return null;
 	}
+	const pipelineGone = footerInput.form.draft.integrationId === "";
 	return (
 		<>
 			{pipelineGone && (
@@ -584,7 +592,7 @@ function EditControls({
 				</p>
 			)}
 			{nodeOptions}
-			<FormFooter {...footer} />
+			<FormFooter {...footerOf({ ...footerInput, liveNode, node })} />
 		</>
 	);
 }
@@ -658,15 +666,6 @@ export function CriteriaForm({
 		state,
 	});
 	const change = changeFlags(form, actions, superseded);
-	const { liveNode, node, nodeOptions } = useNodeChoice({
-		check: form.check,
-		chosenKey: form.draftKey,
-		choices,
-		disabled: actions.pending,
-		evidence,
-		initialChoiceKey,
-		state,
-	});
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
@@ -692,20 +691,17 @@ export function CriteriaForm({
 			<ProblemList errors={form.errors} message={actions.message} />
 			<PipelineFooter view={view} />
 			<EditControls
+				actions={actions}
+				cancel={cancel}
 				canEdit={canEdit}
-				footer={footerOf({
-					actions,
-					cancel,
-					claimId,
-					form,
-					liveNode,
-					locked: change.locked,
-					node,
-					onChanged,
-					state,
-				})}
-				nodeOptions={nodeOptions}
-				pipelineGone={form.draft.integrationId === ""}
+				choices={choices}
+				claimId={claimId}
+				evidence={evidence}
+				form={form}
+				initialChoiceKey={initialChoiceKey}
+				locked={change.locked}
+				onChanged={onChanged}
+				state={state}
 			/>
 		</div>
 	);
