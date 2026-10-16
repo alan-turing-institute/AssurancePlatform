@@ -116,11 +116,22 @@ export function buildNodeHeaderClasses(): string {
 }
 
 /**
- * Build node title classes (ID badge like G1, S1, etc.). The identifier is
- * short and never shrinks: whatever shares the header gives way to it.
+ * Build node title classes (ID badge like G1, S1, etc.). The identifier never
+ * shrinks, so whatever shares the header gives way to it, up to a width that
+ * shows a name of about 24 characters of dotted numbering in full. A longer
+ * name (digits, deep sub-numbering, or a name restored from before the name
+ * format) ends in an ellipsis, and the width leaves the live badge in its
+ * narrowest wrapped form room inside the card beside it.
  */
 export function buildNodeTitleClasses(): string {
-	return cn("font-semibold", "text-foreground", "text-sm", "shrink-0");
+	return cn(
+		"font-semibold",
+		"text-foreground",
+		"text-sm",
+		"shrink-0",
+		"truncate",
+		"max-w-32"
+	);
 }
 
 /**
