@@ -142,7 +142,14 @@ describe.skipIf(!jqAvailable)("the thinning workflow (needs jq)", () => {
 			expect(call).not.toContain("dryRun");
 			expect(call).toContain(`Authorization: Bearer ${SECRET}`);
 			// The secret travels in the header, never in the address.
-			const address = call.split(" ").find((part) => part.startsWith(APP_URL));
+			const address = call
+				.split(" ")
+				.find(
+					(part) =>
+						URL.canParse(part) &&
+						new URL(part).origin === new URL(APP_URL).origin
+				);
+			expect(address).toBeDefined();
 			expect(address).not.toContain(SECRET);
 		}
 	});

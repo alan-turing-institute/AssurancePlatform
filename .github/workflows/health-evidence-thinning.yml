@@ -17,6 +17,9 @@ concurrency:
   group: health-evidence-thinning
   cancel-in-progress: false
 
+# The job calls the app with curl and the cron secret; it needs no token permissions.
+permissions: {}
+
 jobs:
   thin:
     runs-on: ubuntu-latest
