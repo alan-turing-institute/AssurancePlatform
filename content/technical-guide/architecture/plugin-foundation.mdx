@@ -32,6 +32,7 @@ The answer is `null`, meaning no opinion, or a tone and whether the element is f
 The tones are `positive`, `caution`, `negative` and `neutral`, or `null`, which keeps the element's own colours.
 Core knows tones and never what they mean to a plugin: it turns a tone into a tint under the node's content and a colour on the edge, and a faded answer draws both at about a third of their strength with the text at full contrast.
 A faded answer with a `null` tone draws the node as a plain card and the edge in its own colour, both at about a third of their strength.
+While any answer is drawn on a node, the node's secondary text uses the main text colour, which keeps its description and labels at a contrast of at least 4.5:1 against every tint, faded or not, in every theme preset, light and dark.
 The first enabled plugin that answers wins.
 
 Evidence nodes and the support edges into them ask the slot, and the slot accepts any element type for later plugins.
