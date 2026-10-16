@@ -38,6 +38,10 @@ export function buildNodeContainerClasses({
 		// A stacking context of its own keeps the appearance layer (z-index -10)
 		// above the card's fill and below its content, whatever sits around it.
 		appearance ? "isolate" : "",
+		// The card's secondary text is drawn in the full text colour while a
+		// plugin tints or fades the fill, because the muted text colour measures
+		// under 4.5:1 on some of the tints and on the fade in some themes.
+		appearance ? "[--muted-foreground:var(--foreground)]" : "",
 		"w-[320px]", // Fixed width - only height changes on expand
 		colours.bgLight, // Light tinted background
 		"rounded-xl",

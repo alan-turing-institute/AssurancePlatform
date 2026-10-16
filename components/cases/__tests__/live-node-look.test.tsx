@@ -130,7 +130,14 @@ describe("a node drawn with a plugin's appearance", () => {
 
 	it("fades a card that has no tone without tinting it, leaving its border and fill colours alone", () => {
 		const plain = draw(null);
-		const plainClasses = [...card(plain.container).classList];
+		const colourClasses = (element: Element) =>
+			[...element.classList].filter(
+				(name) =>
+					name.startsWith("bg-") ||
+					name.startsWith("border") ||
+					name.startsWith("ring")
+			);
+		const plainColours = colourClasses(card(plain.container));
 		plain.unmount();
 
 		const { container } = draw({ tone: null, faded: true });
@@ -143,9 +150,23 @@ describe("a node drawn with a plugin's appearance", () => {
 		expect(classes).toContain("bg-muted/65");
 		expect(classes).not.toContain("from-");
 		expect(classes).not.toContain("to-");
-		expect([...element.classList].filter((name) => name !== "isolate")).toEqual(
-			plainClasses
-		);
+		expect(colourClasses(element)).toEqual(plainColours);
+	});
+
+	it("draws the card's secondary text in the full text colour only while an appearance is set", () => {
+		const SECONDARY_TEXT = "[--muted-foreground:var(--foreground)]";
+		const plain = draw(null);
+		expect(card(plain.container)).not.toHaveClass(SECONDARY_TEXT);
+		plain.unmount();
+
+		for (const appearance of [
+			{ tone: "positive", faded: false },
+			{ tone: null, faded: true },
+		] as const) {
+			const drawn = draw(appearance);
+			expect(card(drawn.container)).toHaveClass(SECONDARY_TEXT);
+			drawn.unmount();
+		}
 	});
 
 	it("keeps the text at full contrast when the node is faded", () => {
