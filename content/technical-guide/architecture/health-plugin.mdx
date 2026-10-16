@@ -353,6 +353,7 @@ It waits until the case's live nodes have been read, so it does not appear and t
 
 The canvas reads the case's live nodes with one request, `GET /api/cases/[id]/health/evidence-nodes`, and keeps the list once per case for every node, edge and badge.
 It reads the list again after every event that makes the canvas reload the case (element, case, comment and permission events) and after every `tea.health/state-changed`, so moving, trashing or restoring the node changes its look at once.
+A read that fails on the network or with a server error leaves the list as it was and is tried once more after a few seconds; a read answered with 403 or 404 (the plugin is off, or the viewer cannot see the case) clears it.
 An evidence node that is not in the list, a viewer with the plugin off, and the read-only canvas in the documentation draw plain evidence and make no request for it.
 Images, report diagrams and the dashboard thumbnail leave out the tint, the badge, the colour on the edge and the claim's dot.
 

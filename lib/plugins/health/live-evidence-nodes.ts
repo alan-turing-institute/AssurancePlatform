@@ -55,6 +55,9 @@ function indexOf(nodes: HealthLiveEvidenceNode[]): LiveNodeIndex {
 	};
 }
 
+/** How long after a failed read the one retry waits. */
+const RETRY_DELAY_MS = 5000;
+
 interface CaseStore {
 	/** A read was asked for while another was running. */
 	again: boolean;
@@ -63,19 +66,23 @@ interface CaseStore {
 	lastBody: string;
 	listeners: Set<() => void>;
 	reading: boolean;
+	/** The timer of a retry that is waiting to run, if there is one. */
+	retryTimer: ReturnType<typeof setTimeout> | null;
 	stopListening: () => void;
 }
 
 const stores = new Map<string, CaseStore>();
 
-async function fetchLiveNodes(caseId: string): Promise<string | null> {
-	try {
-		const response = await fetch(`/api/cases/${caseId}/health/evidence-nodes`);
-		return response.ok ? await response.text() : null;
-	} catch {
-		return null;
-	}
-}
+/**
+ * What one read of the list came to: the answer, nothing live for this viewer
+ * (the plugin is off, the case is gone or the viewer cannot see it), or a
+ * failure that says nothing about what is live (no network, a server error,
+ * an answer that is not a list).
+ */
+type ReadOutcome =
+	| { kind: "answer"; body: string; nodes: HealthLiveEvidenceNode[] }
+	| { kind: "failed" }
+	| { kind: "none" };
 
 function parseNodes(body: string): HealthLiveEvidenceNode[] | null {
 	try {
@@ -86,12 +93,82 @@ function parseNodes(body: string): HealthLiveEvidenceNode[] | null {
 	}
 }
 
+async function fetchLiveNodes(caseId: string): Promise<ReadOutcome> {
+	try {
+		const response = await fetch(`/api/cases/${caseId}/health/evidence-nodes`);
+		if (response.status === 403 || response.status === 404) {
+			return { kind: "none" };
+		}
+		if (!response.ok) {
+			return { kind: "failed" };
+		}
+		const body = await response.text();
+		const nodes = parseNodes(body);
+		return nodes ? { kind: "answer", body, nodes } : { kind: "failed" };
+	} catch {
+		return { kind: "failed" };
+	}
+}
+
+function cancelRetry(store: CaseStore): void {
+	if (store.retryTimer !== null) {
+		clearTimeout(store.retryTimer);
+		store.retryTimer = null;
+	}
+}
+
+function notify(store: CaseStore): void {
+	for (const listener of [...store.listeners]) {
+		listener();
+	}
+}
+
+/** Shows `nodes` as the list, waking the listeners only when it differs from what is held. */
+function showNodes(
+	store: CaseStore,
+	body: string,
+	nodes: HealthLiveEvidenceNode[]
+): void {
+	if (body === store.lastBody) {
+		return;
+	}
+	store.lastBody = body;
+	store.index = indexOf(nodes);
+	notify(store);
+}
+
+/**
+ * Handles a failed read: the list read last stays as it is, so one failed
+ * request does not turn every live node plain. Until a read has succeeded
+ * there is nothing to keep, so the list is marked as read with no live nodes
+ * (a claim's dot would otherwise wait for it for good). One retry is
+ * scheduled; a retry that fails waits for the next event.
+ */
+function keepAfterFailure(
+	store: CaseStore,
+	caseId: string,
+	isRetry: boolean
+): void {
+	if (store.index === NO_LIVE_NODES) {
+		store.index = NONE_FOUND;
+		notify(store);
+	}
+	if (isRetry || store.retryTimer !== null) {
+		return;
+	}
+	store.retryTimer = setTimeout(() => {
+		store.retryTimer = null;
+		readNodes(caseId, true);
+	}, RETRY_DELAY_MS);
+}
+
 /**
  * Reads the case's live nodes now; a read asked for while one is running runs
  * again when it ends, so the last answer is always from after the last ask. A
- * failed read leaves no live nodes, so nothing is drawn that was not confirmed.
+ * viewer who cannot have live nodes (a 403 or a 404) is shown none; any other
+ * failure keeps what was read last and tries once more after a delay.
  */
-async function readNodes(caseId: string): Promise<void> {
+async function readNodes(caseId: string, isRetry = false): Promise<void> {
 	const store = stores.get(caseId);
 	if (!store) {
 		return;
@@ -101,16 +178,19 @@ async function readNodes(caseId: string): Promise<void> {
 		return;
 	}
 	store.reading = true;
-	const body = (await fetchLiveNodes(caseId)) ?? "[]";
+	const outcome = await fetchLiveNodes(caseId);
 	store.reading = false;
 	if (stores.get(caseId) !== store) {
 		return;
 	}
-	if (body !== store.lastBody) {
-		store.lastBody = body;
-		store.index = indexOf(parseNodes(body) ?? []);
-		for (const listener of [...store.listeners]) {
-			listener();
+	if (outcome.kind === "failed") {
+		keepAfterFailure(store, caseId, isRetry);
+	} else {
+		cancelRetry(store);
+		if (outcome.kind === "none") {
+			showNodes(store, "[]", []);
+		} else {
+			showNodes(store, outcome.body, outcome.nodes);
 		}
 	}
 	if (store.again) {
@@ -126,6 +206,7 @@ function openStore(caseId: string): CaseStore {
 		lastBody: "",
 		listeners: new Set(),
 		reading: false,
+		retryTimer: null,
 		stopListening: () => undefined,
 	};
 	stores.set(caseId, store);
@@ -158,6 +239,7 @@ export function subscribeToLiveNodes(
 		store.listeners.delete(listener);
 		if (store.listeners.size === 0 && stores.get(caseId) === store) {
 			store.stopListening();
+			cancelRetry(store);
 			stores.delete(caseId);
 		}
 	};
@@ -167,6 +249,7 @@ export function subscribeToLiveNodes(
 export function resetLiveNodesForTests(): void {
 	for (const store of stores.values()) {
 		store.stopListening();
+		cancelRetry(store);
 	}
 	stores.clear();
 }

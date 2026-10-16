@@ -294,17 +294,167 @@ describe("the case's live evidence nodes: a read that fails", () => {
 		expect(result.current.byNodeId.has("n1")).toBe(true);
 	});
 
-	it("leaves no node drawn as live when a later read fails", async () => {
+	it.each([
+		["the request cannot be made", () => Promise.reject(new Error("offline"))],
+		["the server answers with an error", () => listResponse([], 500)],
+		["the server is unavailable", () => listResponse([], 503)],
+		["the answer is not a list", () => new Response('{"nodes": 1}')],
+		["the answer is not JSON", () => new Response("<html>")],
+	])("keeps the nodes it had when a later read fails because %s", async (_name, failure) => {
+		answers = () => listResponse([liveNode({ id: "n1" })]);
+		const { result } = renderHook(() => useLiveEvidenceNodes("case-1", true));
+		await settle();
+		const before = result.current;
+		expect(before.byNodeId.has("n1")).toBe(true);
+
+		answers = failure;
+		act(() => open()[0]?.emit("element:deleted"));
+		await settle();
+
+		expect(requests).toHaveLength(2);
+		expect(result.current).toBe(before);
+		expect(result.current.byNodeId.has("n1")).toBe(true);
+	});
+
+	it.each([
+		403, 404,
+	])("shows no live nodes when a later read is answered with %s", async (status) => {
 		answers = () => listResponse([liveNode({ id: "n1" })]);
 		const { result } = renderHook(() => useLiveEvidenceNodes("case-1", true));
 		await settle();
 		expect(result.current.byNodeId.has("n1")).toBe(true);
 
-		answers = () => listResponse([], 500);
-		act(() => open()[0]?.emit("element:deleted"));
+		answers = () => listResponse([], status);
+		act(() => open()[0]?.emit("tea.health/state-changed"));
 		await settle();
 
+		expect(result.current.loaded).toBe(true);
 		expect(result.current.byNodeId.size).toBe(0);
+		expect(result.current.byClaimId.size).toBe(0);
+	});
+});
+
+describe("the case's live evidence nodes: the retry after a failed read", () => {
+	const RETRY_AFTER = 5000;
+
+	/** Runs the clock on by `ms`, letting every promise the store is waiting on run. */
+	async function wait(ms: number) {
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(ms);
+		});
+	}
+
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	/** Shows n1, then makes the next read fail and delivers an event that asks for one. */
+	async function showThenFail(failure: () => Promise<Response> | Response) {
+		answers = () => listResponse([liveNode({ id: "n1" })]);
+		const hook = renderHook(() => useLiveEvidenceNodes("case-1", true));
+		await wait(0);
+
+		answers = failure;
+		act(() => open()[0]?.emit("element:moved"));
+		await wait(0);
+		return hook;
+	}
+
+	it("reads once more after a delay, and shows what that read finds", async () => {
+		const { result } = await showThenFail(() => listResponse([], 502));
+		expect(requests).toHaveLength(2);
+
+		await wait(RETRY_AFTER - 1);
+		expect(requests).toHaveLength(2);
+
+		answers = () => listResponse([liveNode({ id: "n2" })]);
+		await wait(1);
+
+		expect(requests).toHaveLength(3);
+		expect([...result.current.byNodeId.keys()]).toEqual(["n2"]);
+	});
+
+	it("keeps the nodes it had while the retry waits, and when the retry fails too", async () => {
+		const { result } = await showThenFail(() =>
+			Promise.reject(new Error("offline"))
+		);
+		expect(result.current.byNodeId.has("n1")).toBe(true);
+
+		await wait(RETRY_AFTER);
+		expect(requests).toHaveLength(3);
+		expect(result.current.byNodeId.has("n1")).toBe(true);
+	});
+
+	it("retries only once: a retry that fails waits for the next event", async () => {
+		await showThenFail(() => listResponse([], 500));
+
+		await wait(RETRY_AFTER);
+		expect(requests).toHaveLength(3);
+		await wait(10 * RETRY_AFTER);
+
+		expect(requests).toHaveLength(3);
+	});
+
+	it("retries a first read that failed, and shows what the retry finds", async () => {
+		answers = () => listResponse([], 503);
+		const { result } = renderHook(() => useLiveEvidenceNodes("case-1", true));
+		await wait(0);
+		expect(result.current.loaded).toBe(true);
+		expect(result.current.byNodeId.size).toBe(0);
+
+		answers = () => listResponse([liveNode({ id: "n1" })]);
+		await wait(RETRY_AFTER);
+
+		expect(requests).toHaveLength(2);
+		expect(result.current.byNodeId.has("n1")).toBe(true);
+	});
+
+	it("does not retry when an event's read succeeds first", async () => {
+		await showThenFail(() => listResponse([], 500));
+
+		answers = () => listResponse([liveNode({ id: "n3" })]);
+		act(() => open()[0]?.emit("element:updated"));
+		await wait(0);
+		expect(requests).toHaveLength(3);
+		await wait(2 * RETRY_AFTER);
+
+		expect(requests).toHaveLength(3);
+	});
+
+	it("does not stack retries when several reads fail in a row", async () => {
+		await showThenFail(() => listResponse([], 500));
+		act(() => open()[0]?.emit("element:updated"));
+		await wait(0);
+		act(() => open()[0]?.emit("element:updated"));
+		await wait(0);
+		expect(requests).toHaveLength(4);
+
+		await wait(RETRY_AFTER);
+
+		expect(requests).toHaveLength(5);
+	});
+
+	it.each([
+		403, 404,
+	])("does not retry a read that was answered with %s", async (status) => {
+		await showThenFail(() => listResponse([], status));
+
+		await wait(10 * RETRY_AFTER);
+
+		expect(requests).toHaveLength(2);
+	});
+
+	it("does not retry once the last subscriber has left", async () => {
+		const { unmount } = await showThenFail(() => listResponse([], 500));
+
+		unmount();
+		await wait(10 * RETRY_AFTER);
+
+		expect(requests).toHaveLength(2);
 	});
 });
 
