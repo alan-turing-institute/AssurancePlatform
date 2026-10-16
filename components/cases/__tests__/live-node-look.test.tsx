@@ -78,7 +78,11 @@ function borderClasses(element: Element) {
 describe("a node drawn with a plugin's appearance", () => {
 	function draw(
 		appearance: ElementAppearance | null | undefined,
-		extra: { isDefeater?: boolean; selected?: boolean } = {}
+		extra: {
+			initialExpanded?: boolean;
+			isDefeater?: boolean;
+			selected?: boolean;
+		} = {}
 	) {
 		return render(
 			<BaseNode
@@ -155,19 +159,34 @@ describe("a node drawn with a plugin's appearance", () => {
 		expect(colourClasses(element)).toEqual(plainColours);
 	});
 
-	it("draws the card's secondary text in the full text colour only while an appearance is set", () => {
-		const SECONDARY_TEXT = "[--muted-foreground:var(--foreground)]";
+	it("draws the card's secondary text in the full text colour, on its content and not on the tint, only while an appearance is set", () => {
+		const FULL_TEXT = '[class~="[--muted-foreground:var(--foreground)]"]';
 		const plain = draw(null);
-		expect(card(plain.container)).not.toHaveClass(SECONDARY_TEXT);
+		expect(plain.container.querySelector(FULL_TEXT)).toBeNull();
 		plain.unmount();
 
-		for (const appearance of [
-			{ tone: "positive", faded: false },
-			{ tone: null, faded: true },
-		] as const) {
-			const drawn = draw(appearance);
-			expect(card(drawn.container)).toHaveClass(SECONDARY_TEXT);
-			drawn.unmount();
+		for (const initialExpanded of [false, true]) {
+			for (const appearance of [
+				{ tone: "neutral", faded: false },
+				{ tone: null, faded: true },
+			] as const) {
+				const drawn = draw(appearance, { initialExpanded });
+				const element = card(drawn.container);
+				const layer = element.querySelector("[data-plugin-display]");
+
+				expect(element.matches(FULL_TEXT)).toBe(false);
+				expect(layer?.closest(FULL_TEXT)).toBeNull();
+				for (const content of [
+					...screen.getAllByText("E4"),
+					screen.getByText("Results from the check"),
+					screen.getByRole("button", {
+						name: initialExpanded ? "Collapse node" : "Expand node",
+					}),
+				]) {
+					expect(content.closest(FULL_TEXT)).not.toBeNull();
+				}
+				drawn.unmount();
+			}
 		}
 	});
 

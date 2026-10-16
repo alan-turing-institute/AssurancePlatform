@@ -5,6 +5,7 @@
  * the curriculum design system with tinted backgrounds and colored borders.
  */
 
+import { DRAWN_CONTENT_CLASS } from "@/lib/case/plugin-display-capture";
 import type { AppearanceTone, ElementAppearance } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
@@ -38,10 +39,6 @@ export function buildNodeContainerClasses({
 		// A stacking context of its own keeps the appearance layer (z-index -10)
 		// above the card's fill and below its content, whatever sits around it.
 		appearance ? "isolate" : "",
-		// The card's secondary text is drawn in the full text colour while a
-		// plugin tints or fades the fill, because the muted text colour measures
-		// under 4.5:1 on some of the tints and on the fade in some themes.
-		appearance ? "[--muted-foreground:var(--foreground)]" : "",
 		"w-[320px]", // Fixed width - only height changes on expand
 		colours.bgLight, // Light tinted background
 		"rounded-xl",
@@ -113,10 +110,32 @@ export function buildAppearanceFillClasses(
 }
 
 /**
+ * Classes for each wrapper that holds a card's content. While a plugin tints or
+ * fades the card, the content's secondary text is drawn in the full text colour,
+ * because the muted text colour measures under 4.5:1 on some of the tints and on
+ * the fade in some themes. The content wrappers set this, not the card, because
+ * the neutral tint layer reads the same colour: set on the card it would turn
+ * from the theme's muted grey to the text colour.
+ */
+export function buildDrawnContentClasses(
+	appearance: ElementAppearance | null
+): string {
+	return appearance ? DRAWN_CONTENT_CLASS : "";
+}
+
+/**
  * Build node header classes
  */
-export function buildNodeHeaderClasses(): string {
-	return cn("px-4", "py-3", "flex", "items-center", "justify-between", "gap-2");
+export function buildNodeHeaderClasses(drawnContent = ""): string {
+	return cn(
+		"px-4",
+		"py-3",
+		"flex",
+		"items-center",
+		"justify-between",
+		"gap-2",
+		drawnContent
+	);
 }
 
 /**
