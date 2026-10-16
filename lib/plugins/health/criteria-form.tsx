@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
 import { type CriteriaDraft, recommendationIsUsable } from "./criteria-draft";
-import { type NodeEvidence, nodeOfferFor } from "./criteria-node-offer";
-import { NodeOptions } from "./criteria-node-options";
+import type { NodeEvidence } from "./criteria-node-offer";
 import {
 	type CompareOffer,
 	FreshPickNotice,
@@ -34,6 +33,7 @@ import type { HealthCriteriaResponse } from "./health-types";
 import { RetireCriteriaDialog } from "./retire-criteria-dialog";
 import { retireCriteria, saveCriteria } from "./use-criteria";
 import { useCriteriaDraft } from "./use-criteria-draft";
+import { useNodeChoice } from "./use-node-choice";
 
 export type FormState = "accepted" | "new" | "suggested";
 
@@ -658,18 +658,15 @@ export function CriteriaForm({
 		state,
 	});
 	const change = changeFlags(form, actions, superseded);
-	const [addTicked, setAddTicked] = useState(true);
-	const [updateTicked, setUpdateTicked] = useState(true);
-	const offer = nodeOfferFor({
+	const { liveNode, node, nodeOptions } = useNodeChoice({
 		check: form.check,
 		checkChanged: form.draftKey !== initialChoiceKey,
+		disabled: actions.pending,
 		evidence,
 		pipeline:
 			choices.find((choice) => choice.key === form.draftKey)?.pipeline ?? "",
 		state,
 	});
-	const liveNode =
-		evidence.evidence_node?.state === "live" ? evidence.evidence_node : null;
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
@@ -703,25 +700,11 @@ export function CriteriaForm({
 					form,
 					liveNode,
 					locked: change.locked,
-					node: {
-						add: Boolean(offer?.add) && addTicked,
-						update: Boolean(offer?.update) && updateTicked,
-					},
+					node,
 					onChanged,
 					state,
 				})}
-				nodeOptions={
-					offer && (
-						<NodeOptions
-							addTicked={addTicked}
-							disabled={actions.pending}
-							offer={offer}
-							onAddChange={setAddTicked}
-							onUpdateChange={setUpdateTicked}
-							updateTicked={updateTicked}
-						/>
-					)
-				}
+				nodeOptions={nodeOptions}
 				pipelineGone={form.draft.integrationId === ""}
 			/>
 		</div>

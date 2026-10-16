@@ -12,7 +12,7 @@
  */
 
 /** The attribute on every element that exists only to show a plugin's display. */
-export const PLUGIN_DISPLAY_ATTRIBUTE = "data-plugin-display";
+const PLUGIN_DISPLAY_ATTRIBUTE = "data-plugin-display";
 
 /** The properties a plugin's edge colour sets inline. */
 const EDGE_APPEARANCE_PROPERTIES = [

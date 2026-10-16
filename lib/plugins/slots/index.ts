@@ -23,12 +23,13 @@ export type {
 	CasePanelRegistration,
 	CaseSlotContext,
 	ElementAppearance,
+	// No consumer imports the four marked types from here: they describe the
+	// `element-appearance`, `element-badge` and `settings-section`
+	// registrations and the id space that every slot shares, and stay exported
+	// so the barrel covers each slot. The other types have importers, so they
+	// carry no marker; the four marked ones are unused by fallow's count alone.
+	// fallow-ignore-next-line unused-type
 	ElementAppearanceRegistration,
-	// No consumer imports the three marked types from here: they describe the
-	// `element-badge` and `settings-section` registrations and the id space
-	// that every slot shares, and stay exported so the barrel covers each
-	// slot. The other types have importers, so they carry no marker; the
-	// three marked ones are unused by fallow's count alone.
 	// fallow-ignore-next-line unused-type
 	ElementBadgeRegistration,
 	ElementPanelRegistration,

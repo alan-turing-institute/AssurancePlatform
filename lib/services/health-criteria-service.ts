@@ -712,7 +712,7 @@ export interface NodeTextCheck {
  * stopped settings replaces the check it holds. Null when the history holds no
  * such row.
  */
-export async function nodeTextCheckOf(
+async function nodeTextCheckOf(
 	db: Pick<HealthTransaction, "pluginHealthCriteriaRevision">,
 	claimId: string
 ): Promise<NodeTextCheck | null> {
