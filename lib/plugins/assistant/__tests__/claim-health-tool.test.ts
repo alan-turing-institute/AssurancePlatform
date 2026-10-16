@@ -4,6 +4,7 @@ import { exportCase } from "@/lib/services/case-export-service";
 import {
 	caseHasHealthStatus,
 	type HealthStatus,
+	readClaimEvidenceNodes,
 	readHealthStatusesForCase,
 } from "@/lib/services/health-status-service";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
@@ -14,6 +15,7 @@ import { createCaseTools } from "../tools";
 vi.mock("@/lib/services/case-export-service", () => ({ exportCase: vi.fn() }));
 vi.mock("@/lib/services/health-status-service", () => ({
 	caseHasHealthStatus: vi.fn(),
+	readClaimEvidenceNodes: vi.fn(),
 	readHealthStatusesForCase: vi.fn(),
 }));
 vi.mock("@/lib/services/health-claim-access", () => ({
@@ -86,6 +88,7 @@ beforeEach(() => {
 	vi.resetAllMocks();
 	showTree(goal([node("p1", "P1")]));
 	showStatuses([["p1", status()]]);
+	vi.mocked(readClaimEvidenceNodes).mockResolvedValue([]);
 });
 
 describe("read_claim_health: what a claim reports", () => {
@@ -115,6 +118,64 @@ describe("read_claim_health: what a claim reports", () => {
 			claimsWithoutResultsTruncated: 0,
 		});
 		expect(JSON.stringify(result)).not.toContain("record-1");
+	});
+
+	it("gives the identifier of a claim's live evidence node, and none for a node that is not live", async () => {
+		showTree(goal([node("p1", "P1"), node("p2", "P2")]));
+		showStatuses([
+			["p1", status()],
+			["p2", status()],
+		]);
+		const entry = (claimId: string, live: boolean, name: string | null) => ({
+			claimId,
+			claimName: null,
+			live,
+			node: { id: `node-of-${claimId}`, name, state: "live" as const },
+		});
+		vi.mocked(readClaimEvidenceNodes).mockResolvedValue([
+			entry("p1", true, "E4"),
+			entry("p2", false, "E5"),
+		]);
+
+		const result = (await read()) as { claims: Record<string, unknown>[] };
+
+		expect(result.claims[0]).toMatchObject({ id: "p1", evidenceNode: "E4" });
+		expect(result.claims[1]).not.toHaveProperty("evidenceNode");
+		expect(vi.mocked(readClaimEvidenceNodes)).toHaveBeenCalledWith({
+			caseId: "c",
+		});
+	});
+
+	it("answers without evidence node fields, and logs only the error's class, when the node read fails", async () => {
+		const logged: LogEntry[] = [];
+		setLogSink((entry) => logged.push(entry));
+		vi.stubEnv("LOG_LEVEL", "debug");
+		vi.mocked(readClaimEvidenceNodes).mockRejectedValue(
+			new TypeError("connection to db.internal refused")
+		);
+
+		let result: unknown;
+		try {
+			result = await read();
+		} finally {
+			resetLogSink();
+			vi.unstubAllEnvs();
+		}
+
+		expect(result).toMatchObject({
+			found: true,
+			claims: [{ id: "p1", result: "pass" }],
+		});
+		expect((result as { claims: object[] }).claims[0]).not.toHaveProperty(
+			"evidenceNode"
+		);
+		expect(logged).toHaveLength(1);
+		expect(logged[0]).toMatchObject({
+			level: "warn",
+			component: "claim-health-tool",
+			errorName: "TypeError",
+		});
+		expect(JSON.stringify(logged)).not.toContain("db.internal");
 	});
 
 	it("gives the time of the read as YYYY-MM-DD HH:MM:SS UTC", async () => {

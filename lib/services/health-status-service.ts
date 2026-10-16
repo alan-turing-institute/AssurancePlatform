@@ -11,6 +11,7 @@ import type {
 } from "@/lib/schemas/health-evidence";
 import { guardCaseAccess } from "@/lib/services/health-claim-access";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
+import type { TxClient } from "@/lib/utils/tree-traversal";
 import type {
 	PluginHealthEvidenceVerdict,
 	Prisma,
@@ -382,5 +383,216 @@ export async function readHealthStatusesForCase(
 	} catch (error) {
 		log.error("Failed to read health statuses", { error });
 		return { error: "Failed to read health status" };
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Evidence nodes
+// ---------------------------------------------------------------------------
+
+/**
+ * The evidence element the health plugin adds under a claim when its settings
+ * are accepted (`plugin_health_criteria.evidence_element_id`), and the one
+ * place that decides whether it is live. A node is live for a claim when all
+ * of these hold:
+ *
+ * 1. The claim's settings are accepted.
+ * 2. The node exists, is in the claim's case, is not in the trash, is not in
+ *    the sandbox and is not a defeater.
+ * 3. The node is still linked to that claim.
+ * 4. The claim exists, is a property claim and is not in the trash.
+ * 5. The reader can see the case and has the plugin on (checked by the
+ *    callers that serve a person, before they come here).
+ *
+ * Nothing here changes a node when a condition fails: the node is plain
+ * evidence until the condition holds again.
+ */
+
+/** Where a claim's node is, whatever state the claim's settings are in. */
+type EvidenceNodeState = "live" | "missing" | "moved" | "trashed";
+
+export interface EvidenceNodeView {
+	id: string;
+	/** The node's identifier (such as E4); null when it has none or is not readable here. */
+	name: string | null;
+	/**
+	 * `live`: in place under the claim. `trashed`: in the trash. `moved`: not
+	 * linked to the claim, in the sandbox or a defeater. `missing`: gone, not
+	 * evidence, or not in the claim's case.
+	 */
+	state: EvidenceNodeState;
+}
+
+interface ClaimEvidenceNode {
+	claimId: string;
+	claimName: string | null;
+	/** Whether the node is live for the claim now: conditions 1 to 4. */
+	live: boolean;
+	node: EvidenceNodeView;
+}
+
+interface NodeRow {
+	caseId: string;
+	deletedAt: Date | null;
+	elementType: string;
+	id: string;
+	inSandbox: boolean;
+	isDefeater: boolean;
+	name: string | null;
+}
+
+function nodeState(
+	claimCaseId: string,
+	node: NodeRow | null,
+	linked: boolean
+): EvidenceNodeState {
+	if (!node || node.caseId !== claimCaseId || node.elementType !== "EVIDENCE") {
+		return "missing";
+	}
+	if (node.deletedAt) {
+		return "trashed";
+	}
+	return linked && !node.inSandbox && !node.isDefeater ? "live" : "moved";
+}
+
+/**
+ * The node of each claim that has one, for one claim or every claim of a
+ * case. This is the function the settings read, the case's live-node list and
+ * the assistant all use. Performs no access check: callers have already
+ * established it. Pass the transaction as `db` to read inside one, after
+ * locking the rows being decided on.
+ */
+export async function readClaimEvidenceNodes(
+	scope: { caseId: string } | { claimId: string },
+	db: TxClient = prisma
+): Promise<ClaimEvidenceNode[]> {
+	const rows = await db.pluginHealthCriteria.findMany({
+		where: {
+			evidenceElementId: { not: null },
+			...("caseId" in scope
+				? { claim: { caseId: scope.caseId } }
+				: { claimId: scope.claimId }),
+		},
+		select: {
+			claimId: true,
+			state: true,
+			evidenceElementId: true,
+			claim: {
+				select: {
+					name: true,
+					caseId: true,
+					deletedAt: true,
+					elementType: true,
+				},
+			},
+			evidenceElement: {
+				select: {
+					id: true,
+					name: true,
+					caseId: true,
+					elementType: true,
+					deletedAt: true,
+					inSandbox: true,
+					isDefeater: true,
+				},
+			},
+		},
+		orderBy: [{ claim: { createdAt: "asc" } }, { claimId: "asc" }],
+	});
+	const nodeIds = rows.flatMap((row) => row.evidenceElementId ?? []);
+	const links =
+		nodeIds.length === 0
+			? []
+			: await db.evidenceLink.findMany({
+					where: {
+						evidenceId: { in: nodeIds },
+						claimId: { in: rows.map((row) => row.claimId) },
+					},
+					select: { evidenceId: true, claimId: true },
+				});
+	const linked = new Set(links.map((l) => `${l.evidenceId}:${l.claimId}`));
+	return rows.flatMap((row) => {
+		if (!row.evidenceElementId) {
+			return [];
+		}
+		const state = nodeState(
+			row.claim.caseId,
+			row.evidenceElement,
+			linked.has(`${row.evidenceElementId}:${row.claimId}`)
+		);
+		const claimInPlace =
+			row.claim.deletedAt === null &&
+			row.claim.elementType === "PROPERTY_CLAIM";
+		return [
+			{
+				claimId: row.claimId,
+				claimName: row.claim.name,
+				live: row.state === "ACCEPTED" && claimInPlace && state === "live",
+				node: {
+					id: row.evidenceElementId,
+					name:
+						state === "missing" ? null : (row.evidenceElement?.name ?? null),
+					state,
+				},
+			},
+		];
+	});
+}
+
+/** One claim's node, or null when it has none. */
+export async function readClaimEvidenceNode(
+	claimId: string,
+	db: TxClient = prisma
+): Promise<ClaimEvidenceNode | null> {
+	const [found] = await readClaimEvidenceNodes({ claimId }, db);
+	return found ?? null;
+}
+
+/** The live nodes of a case, each with its claim and the claim's current status. */
+interface LiveEvidenceNode {
+	claim_id: string;
+	claim_name: string | null;
+	id: string;
+	name: string | null;
+	status: HealthStatus | null;
+}
+
+/**
+ * The case's live evidence nodes with each claim's current status, which is
+ * the status the claim's own badge shows. Requires VIEW and the plugin on.
+ */
+export async function readLiveEvidenceNodesForCase(
+	actingUserId: string,
+	caseId: string
+): ServiceResult<LiveEvidenceNode[]> {
+	const guard = await guardCaseAccess(actingUserId, caseId, "VIEW");
+	if ("error" in guard) {
+		return { error: guard.error };
+	}
+	try {
+		const [nodes, statuses] = await Promise.all([
+			readClaimEvidenceNodes({ caseId }),
+			readHealthStatusesForCase(actingUserId, caseId),
+		]);
+		if ("error" in statuses) {
+			return { error: statuses.error };
+		}
+		const statusOf = new Map(
+			statuses.data.map(({ claim_ref, status }) => [claim_ref, status])
+		);
+		return {
+			data: nodes
+				.filter((entry) => entry.live)
+				.map((entry) => ({
+					id: entry.node.id,
+					name: entry.node.name,
+					claim_id: entry.claimId,
+					claim_name: entry.claimName,
+					status: statusOf.get(entry.claimId) ?? null,
+				})),
+		};
+	} catch (error) {
+		log.error("Failed to read live evidence nodes", { error });
+		return { error: "Failed to read the case's evidence nodes" };
 	}
 }

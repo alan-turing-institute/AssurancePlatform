@@ -12,6 +12,7 @@ import type {
 } from "@/lib/case/tree-diff";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { isWriteConflict } from "@/lib/prisma-errors";
 import { validateElementName } from "@/lib/schemas/element-validation";
 import {
 	calculateLevelFromParentChain,
@@ -29,6 +30,9 @@ import type {
 } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-batch-update-service" });
+
+/** The answer, flagged as a conflict, when another person's change to the case got in first. */
+const CASE_MODIFIED = "Case has been modified by another user";
 
 /**
  * ADR 0004 D3 write rule (author-declared, machine-proposable, never
@@ -1260,10 +1264,7 @@ export async function applyBatchUpdate(
 	if (options.expectedVersion) {
 		const hasConflict = await checkForConflict(caseId, options.expectedVersion);
 		if (hasConflict) {
-			return {
-				error: "Case has been modified by another user",
-				conflictDetected: true,
-			};
+			return { error: CASE_MODIFIED, conflictDetected: true };
 		}
 	}
 
@@ -1359,6 +1360,12 @@ export async function applyBatchUpdate(
 			},
 		};
 	} catch (error) {
+		if (isWriteConflict(error)) {
+			// Another transaction holds rows this one needs while waiting for rows
+			// this one holds, and the database ended this one. Nothing was written.
+			log.warn("Batch update ended by a write conflict", { error });
+			return { error: CASE_MODIFIED, conflictDetected: true };
+		}
 		log.error("Batch update failed", { error });
 		return {
 			error:

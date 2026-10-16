@@ -1,6 +1,8 @@
 import { canonicalJSON } from "@/lib/health-canonical-json";
+import { evidenceNodeText } from "@/lib/health-evidence-node-text";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { isWriteConflict } from "@/lib/prisma-errors";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import {
 	checkListIssues,
@@ -17,6 +19,13 @@ import {
 	servedSettings,
 } from "@/lib/schemas/health-criteria";
 import type { HealthEvidenceRecord } from "@/lib/schemas/health-evidence";
+import {
+	createElementWithin,
+	deleteElementWithin,
+	type ElementResponse,
+	unlinkEvidenceWithin,
+	updateElementWithin,
+} from "@/lib/services/element-service";
 import { loadOfferedChecks } from "@/lib/services/health-check-catalogue-service";
 import {
 	DELETED_USER_NAME,
@@ -28,6 +37,10 @@ import {
 	applyBoundCheck,
 	type HealthTransaction,
 } from "@/lib/services/health-evidence-service";
+import {
+	type EvidenceNodeView,
+	readClaimEvidenceNode,
+} from "@/lib/services/health-status-service";
 import {
 	type PluginHealthCriteria,
 	type PluginHealthCriteriaAction,
@@ -56,6 +69,21 @@ const CHANGED_BY_SOMEONE_ELSE = "These settings were changed by someone else";
 const ALREADY_INACTIVE = "These settings are already inactive";
 const SETTINGS_NOT_FOUND = "Settings not found";
 const CLAIM_NOT_FOUND = "Claim not found";
+const SETTINGS_NOT_ACCEPTED = "These settings are not accepted";
+const LIVE_NODE_EXISTS = "This claim already has a live evidence node";
+
+/**
+ * A change to an element that a request made as well as the settings change,
+ * for the route to announce to open browsers after the transaction commits.
+ * `element` is absent when the element itself did not change (a node taken off
+ * one claim but kept for another).
+ */
+export interface ElementEvent {
+	element?: ElementResponse;
+	elementId: string;
+	elementName: string | null;
+	kind: "created" | "deleted" | "updated";
+}
 
 /** A failed validation that names the offending fields. */
 export interface InvalidSettings {
@@ -97,6 +125,85 @@ function lockClaim(tx: HealthTransaction, claimId: string) {
 	return tx.$queryRaw<
 		{ deleted_at: Date | null; id: string }[]
 	>`SELECT id, deleted_at FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+}
+
+/** What a change to a claim's settings gives back: the settings as read after it, and the element change to announce. */
+export interface CriteriaChange {
+	caseId: string;
+	elementEvent?: ElementEvent;
+	view: CriteriaView;
+}
+
+/** Retry message for every failure that means another change to the case got in first. */
+const CASE_CHANGED = "The case changed while you were saving. Try again.";
+
+/** A row this transaction read was removed by another writer before it could be locked. */
+class RowVanishedError extends Error {}
+
+/**
+ * Whether a failure inside a health transaction means a concurrent change to
+ * the case got in first: a deadlock or write conflict (see `isWriteConflict`),
+ * or a row that was read a moment ago and had gone by the time its lock was
+ * granted. Retrying the request is the right response to each. Any other
+ * database error, including a unique-index or foreign-key violation, means a
+ * defect, because the locks these transactions hold keep other writers out of
+ * the rows they touch.
+ */
+export function isConcurrentChange(error: unknown): boolean {
+	return isWriteConflict(error) || error instanceof RowVanishedError;
+}
+
+/**
+ * Takes the evidence node's row lock. Every write that needs it takes the
+ * claim's lock first, so the order is always claim and then node. The node
+ * was read as the claim's a moment ago, so a row that is gone by the time the
+ * lock is granted was removed by a concurrent change, which ends the
+ * transaction with the retry message.
+ */
+async function lockEvidenceNode(
+	tx: HealthTransaction,
+	nodeId: string
+): Promise<void> {
+	const rows = await tx.$queryRaw<
+		{ id: string }[]
+	>`SELECT id FROM assurance_elements WHERE id = ${nodeId} FOR UPDATE`;
+	if (rows.length === 0) {
+		throw new RowVanishedError(nodeId);
+	}
+}
+
+/**
+ * The error a failed transaction gives back: the retry message when another
+ * change to the case got in first, otherwise `fallback`.
+ */
+function failedWith(
+	error: unknown,
+	logMessage: string,
+	fallback: string
+): { error: string } {
+	if (isConcurrentChange(error)) {
+		log.warn(`${logMessage}: another change to the case got in first`, {
+			error,
+		});
+		return { error: CASE_CHANGED };
+	}
+	log.error(logMessage, { error });
+	return { error: fallback };
+}
+
+/** The success a change to a claim's settings gives back. */
+async function changed(
+	claimId: string,
+	caseId: string,
+	elementEvent: ElementEvent | undefined
+): Promise<{ data: CriteriaChange }> {
+	return {
+		data: {
+			caseId,
+			view: await buildCriteriaView(claimId, caseId),
+			elementEvent,
+		},
+	};
 }
 
 /** Whether `integrationId` still names an active integration; the row cannot be deleted until the transaction ends. */
@@ -141,6 +248,8 @@ export interface CriteriaView {
 	check_description: HealthCheck | null;
 	check_offer: CheckOffer | null;
 	criteria: ServedCriteria | null;
+	/** The evidence element added under the claim when its settings were accepted, and where it is now; null when the claim has none. */
+	evidence_node: EvidenceNodeView | null;
 	integration: { id: string; name: string } | null;
 	last_change: {
 		action: ActionWire;
@@ -154,6 +263,7 @@ export interface CriteriaView {
 
 const NO_CRITERIA: CriteriaView = {
 	criteria: null,
+	evidence_node: null,
 	check_description: null,
 	integration: null,
 	accepted_by: null,
@@ -216,7 +326,7 @@ async function buildCriteriaView(
 	if (!row) {
 		return NO_CRITERIA;
 	}
-	const [integration, newest, offer, latest] = await Promise.all([
+	const [integration, newest, offer, latest, node] = await Promise.all([
 		row.integrationId
 			? prisma.integration.findUnique({
 					where: { id: row.integrationId },
@@ -229,6 +339,7 @@ async function buildCriteriaView(
 		}),
 		row.state === "INACTIVE" ? null : checkOfferOf(row, caseId),
 		latestResultOf(row),
+		readClaimEvidenceNode(claimId),
 	]);
 	const names = await usernamesById(
 		[row.acceptedById, newest?.actorId].filter(
@@ -238,6 +349,7 @@ async function buildCriteriaView(
 	const nameOf = (id: string) => names.get(id) ?? DELETED_USER_NAME;
 	return {
 		criteria: servedCriteria(row),
+		evidence_node: node?.node ?? null,
 		check_description: row.checkDescription as unknown as HealthCheck,
 		integration,
 		accepted_by:
@@ -291,18 +403,23 @@ export async function readCriteria(
 
 export interface SaveCriteriaInput {
 	accept: boolean;
+	/** Add an evidence node under the claim; only when the save moves settings to accepted from not accepted. */
+	add_evidence_node?: boolean;
 	/** When present, the stored revision (null for none) the save is allowed to replace. */
 	expected_revision?: number | null;
 	integration_id: string;
 	settings: HealthCriteriaSettings;
+	/** Rewrite the live node's text to name the new check; only when the check changes and the node is live. */
+	update_evidence_node_text?: boolean;
 }
 
 type SaveOutcome =
-	| { kind: "saved" }
+	| { kind: "saved"; change?: ElementEvent }
 	| { kind: "refused"; error: string }
 	| { kind: "invalid"; invalid: InvalidSettings };
 
 interface SaveContext {
+	caseId: string;
 	/** The check's entry in the list as published now, or null when the check is no longer listed. */
 	check: HealthCheck | null;
 	/** The entry the save is judged against and stores: the listed one, or the stored copy. */
@@ -379,7 +496,8 @@ async function writeSave(
 	claimId: string,
 	context: SaveContext,
 	previous: PluginHealthCriteria | null,
-	settings: HealthCriteriaSettings
+	settings: HealthCriteriaSettings,
+	nodeId?: string
 ): Promise<void> {
 	const { input, userId } = context;
 	const previousSettings = previous
@@ -428,6 +546,7 @@ async function writeSave(
 		updatedById: userId,
 		updatedAt: now,
 		...acceptance,
+		...(nodeId ? { evidenceElementId: nodeId } : {}),
 	};
 	if (previous) {
 		await tx.pluginHealthCriteria.update({ where: { claimId }, data });
@@ -534,6 +653,240 @@ function isStaleSave(
 	);
 }
 
+/** Whether the save changes which check, or whose pipeline, the settings name. */
+function checkChanges(
+	input: SaveCriteriaInput,
+	previous: PluginHealthCriteria | null
+): boolean {
+	return (
+		previous !== null &&
+		(previous.checkName !== input.settings.check.name ||
+			previous.integrationId !== input.integration_id)
+	);
+}
+
+/**
+ * The 400 for a node option the save cannot use: `add_evidence_node` needs a
+ * save that moves settings to accepted from not accepted, and
+ * `update_evidence_node_text` needs a change of check on settings that are
+ * accepted, or are being accepted again after being stopped (the kept node
+ * still names the check they had).
+ */
+function nodeOptionRefusal(
+	input: SaveCriteriaInput,
+	previous: PluginHealthCriteria | null
+): { invalid: InvalidSettings } | null {
+	if (
+		input.add_evidence_node &&
+		!(input.accept && previous?.state !== "ACCEPTED")
+	) {
+		return invalid(
+			"add_evidence_node",
+			"can only be used when accepting settings that are not yet accepted"
+		);
+	}
+	const hadCheck =
+		previous?.state === "ACCEPTED" ||
+		(previous?.state === "INACTIVE" && input.accept);
+	if (
+		input.update_evidence_node_text &&
+		!(hadCheck && checkChanges(input, previous))
+	) {
+		return invalid(
+			"update_evidence_node_text",
+			"can only be used when the check of accepted settings changes, or when stopped settings are accepted again with a different check"
+		);
+	}
+	return null;
+}
+
+type NodeStep =
+	| { kind: "none" }
+	| { kind: "invalid"; invalid: InvalidSettings }
+	| { kind: "refused"; error: string }
+	| { kind: "done"; change?: ElementEvent; nodeId?: string };
+
+/** Rewrites the description of the claim's node, which the caller has locked and found in place, to name the new check. */
+async function writeNodeText(
+	tx: HealthTransaction,
+	nodeId: string,
+	context: SaveContext,
+	check: HealthCheck
+): Promise<NodeStep> {
+	const updated = await updateElementWithin(tx, nodeId, context.caseId, {
+		description: evidenceNodeText(check, context.pipeline),
+	});
+	return {
+		kind: "done",
+		change: {
+			kind: "updated",
+			element: updated,
+			elementId: updated.id,
+			elementName: updated.name,
+		},
+	};
+}
+
+/**
+ * Adds the evidence node for settings being accepted, or reuses the claim's
+ * live one (rewriting its text when asked to, for a check that has changed
+ * since the node was last written). A pointer to a node that is not live is
+ * replaced by the new node. Runs under the claim lock; the existing node's row
+ * is locked next and read again before it is trusted. The settings are about
+ * to be accepted by this save, so a node that is in place under the claim
+ * counts as live even while the stored settings are still stopped.
+ */
+async function addNodeOnAccept(
+	tx: HealthTransaction,
+	claimId: string,
+	context: SaveContext,
+	previous: PluginHealthCriteria | null,
+	check: HealthCheck
+): Promise<NodeStep> {
+	if (previous?.evidenceElementId) {
+		await lockEvidenceNode(tx, previous.evidenceElementId);
+		const current = await readClaimEvidenceNode(claimId, tx);
+		if (current?.node.state === "live") {
+			return context.input.update_evidence_node_text
+				? writeNodeText(tx, previous.evidenceElementId, context, check)
+				: { kind: "done" };
+		}
+	}
+	const created = await createElementWithin(tx, context.userId, {
+		caseId: context.caseId,
+		elementType: "EVIDENCE",
+		parentId: claimId,
+		description: evidenceNodeText(check, context.pipeline),
+	});
+	if ("error" in created) {
+		return { kind: "refused", error: created.error };
+	}
+	return {
+		kind: "done",
+		nodeId: created.data.id,
+		change: {
+			kind: "created",
+			element: created.data,
+			elementId: created.data.id,
+			elementName: created.data.name,
+		},
+	};
+}
+
+/**
+ * Rewrites the live node's description to name the new check. Refused (400)
+ * when the node is not live. As in `addNodeOnAccept`, a node in place under
+ * the claim counts as live when this save is accepting stopped settings again.
+ */
+async function rewriteNodeText(
+	tx: HealthTransaction,
+	claimId: string,
+	context: SaveContext,
+	previous: PluginHealthCriteria | null,
+	check: HealthCheck
+): Promise<NodeStep> {
+	const notLive = invalid(
+		"update_evidence_node_text",
+		"needs a live evidence node under this claim"
+	);
+	if (!previous?.evidenceElementId) {
+		return { kind: "invalid", invalid: notLive.invalid };
+	}
+	await lockEvidenceNode(tx, previous.evidenceElementId);
+	const current = await readClaimEvidenceNode(claimId, tx);
+	if (current?.node.state !== "live") {
+		return { kind: "invalid", invalid: notLive.invalid };
+	}
+	return writeNodeText(tx, previous.evidenceElementId, context, check);
+}
+
+/** Does what the save asked for with the claim's evidence node, if anything. */
+function evidenceNodeStep(
+	tx: HealthTransaction,
+	claimId: string,
+	context: SaveContext,
+	previous: PluginHealthCriteria | null,
+	check: HealthCheck
+): Promise<NodeStep> {
+	if (context.input.add_evidence_node) {
+		return addNodeOnAccept(tx, claimId, context, previous, check);
+	}
+	if (context.input.update_evidence_node_text) {
+		return rewriteNodeText(tx, claimId, context, previous, check);
+	}
+	return Promise.resolve({ kind: "none" });
+}
+
+/** The refusals that come before the check list is consulted; null when the save may go on. */
+async function refuseBeforeList(
+	tx: HealthTransaction,
+	context: SaveBase,
+	previous: PluginHealthCriteria | null
+): Promise<SaveOutcome | null> {
+	const { input } = context;
+	if (isStaleSave(input, previous)) {
+		return { kind: "refused", error: CHANGED_BY_SOMEONE_ELSE };
+	}
+	if (!(await integrationIsActive(tx, input.integration_id))) {
+		return {
+			kind: "invalid",
+			invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
+		};
+	}
+	if (previous?.state === "ACCEPTED" && !input.accept) {
+		return { kind: "refused", error: ACCEPTED_CANNOT_SUGGEST };
+	}
+	const optionRefusal = nodeOptionRefusal(input, previous);
+	return optionRefusal
+		? { kind: "invalid", invalid: optionRefusal.invalid }
+		: null;
+}
+
+/**
+ * Finds the check's entry the save is judged against (the listed one, or the
+ * stored copy) and refuses a save the check list does not allow.
+ */
+function judgeAgainstList(
+	input: SaveCriteriaInput,
+	previous: PluginHealthCriteria | null,
+	offered: HealthCheck[]
+):
+	| { check: HealthCheck | null; description: HealthCheck }
+	| { refusal: SaveOutcome } {
+	const check = findOffered(offered, input.settings);
+	const description = check ?? storedCheckCopy(input, previous);
+	const notOffered = {
+		refusal: {
+			kind: "invalid",
+			invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
+		},
+	} as const;
+	// Starting to accept settings needs the check in the live list; the stored
+	// copy only stands in for later edits of settings that are already accepted.
+	if (
+		!description ||
+		(!check && input.accept && previous?.state !== "ACCEPTED")
+	) {
+		return notOffered;
+	}
+	const refusal = settingsRefusal(input, description);
+	if (refusal) {
+		return { refusal: { kind: "invalid", invalid: refusal } };
+	}
+	// Without the list, the check's own settings must be exactly the saved ones.
+	if (
+		!check &&
+		previous &&
+		!sameCheck(
+			previous.settings as unknown as HealthCriteriaSettings,
+			input.settings
+		)
+	) {
+		return notOffered;
+	}
+	return { check, description };
+}
+
 /** Validates and stores one save under the claim lock; see `saveCriteria`. */
 async function saveUnderLock(
 	tx: HealthTransaction,
@@ -549,56 +902,39 @@ async function saveUnderLock(
 	const previous = await tx.pluginHealthCriteria.findUnique({
 		where: { claimId },
 	});
-	if (isStaleSave(input, previous)) {
-		return { kind: "refused", error: CHANGED_BY_SOMEONE_ELSE };
+	const early = await refuseBeforeList(tx, context, previous);
+	if (early) {
+		return early;
 	}
-	if (!(await integrationIsActive(tx, input.integration_id))) {
-		return {
-			kind: "invalid",
-			invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
-		};
+	const judged = judgeAgainstList(input, previous, offered);
+	if ("refusal" in judged) {
+		return judged.refusal;
 	}
-	if (previous?.state === "ACCEPTED" && !input.accept) {
-		return { kind: "refused", error: ACCEPTED_CANNOT_SUGGEST };
-	}
-	const check = findOffered(offered, input.settings);
-	const description = check ?? storedCheckCopy(input, previous);
-	const notOffered = {
-		kind: "invalid",
-		invalid: invalid("settings.check.name", CHECK_NOT_OFFERED).invalid,
-	} as const;
-	if (!description) {
-		return notOffered;
-	}
-	// Starting to accept settings needs the check in the live list; the stored
-	// copy only stands in for later edits of settings that are already accepted.
-	if (!check && input.accept && previous?.state !== "ACCEPTED") {
-		return notOffered;
-	}
-	const refusal = settingsRefusal(input, description);
-	if (refusal) {
-		return { kind: "invalid", invalid: refusal };
-	}
-	// Without the list, the check's own settings must be exactly the saved ones.
-	if (
-		!check &&
-		previous &&
-		!sameCheck(
-			previous.settings as unknown as HealthCriteriaSettings,
-			input.settings
-		)
-	) {
-		return notOffered;
-	}
+	const { check, description } = judged;
 	const settings = withScope(input.settings, description.scope);
+	const saveContext = { ...context, check, description };
+	const step = await evidenceNodeStep(
+		tx,
+		claimId,
+		saveContext,
+		previous,
+		description
+	);
+	if (step.kind === "invalid" || step.kind === "refused") {
+		return step;
+	}
 	await writeSave(
 		tx,
 		claimId,
-		{ ...context, check, description },
+		saveContext,
 		previous,
-		settings
+		settings,
+		step.kind === "done" ? step.nodeId : undefined
 	);
-	return { kind: "saved" };
+	return {
+		kind: "saved",
+		change: step.kind === "done" ? step.change : undefined,
+	};
 }
 
 /**
@@ -616,7 +952,7 @@ export async function saveCriteria(
 	actingUserId: string,
 	claimId: string,
 	input: SaveCriteriaInput
-): CriteriaResult<{ caseId: string; view: CriteriaView }> {
+): CriteriaResult<CriteriaChange> {
 	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
 	if ("error" in guard) {
 		return { error: guard.error };
@@ -629,6 +965,7 @@ export async function saveCriteria(
 			return invalid("settings.check.name", CHECK_NOT_OFFERED);
 		}
 		const context: SaveBase = {
+			caseId,
 			input,
 			integrationName: offered.integration.name,
 			ownerId: offered.integration.ownerId,
@@ -644,10 +981,13 @@ export async function saveCriteria(
 		if (outcome.kind === "invalid") {
 			return { invalid: outcome.invalid };
 		}
-		return { data: { caseId, view: await buildCriteriaView(claimId, caseId) } };
+		return await changed(claimId, caseId, outcome.change);
 	} catch (error) {
-		log.error("Failed to save health criteria", { error });
-		return { error: "Failed to save evidence settings" };
+		return failedWith(
+			error,
+			"Failed to save health criteria",
+			"Failed to save evidence settings"
+		);
 	}
 }
 
@@ -658,18 +998,61 @@ export async function saveCriteria(
 type RetireOutcome =
 	| { error: string }
 	| { invalid: InvalidSettings }
-	| { ok: true };
+	| { change?: ElementEvent; ok: true };
+
+/**
+ * Takes a live node off the claim being retired: trashes it, or only removes
+ * this claim's evidence link when the node supports another claim that is not
+ * in the trash. Returns what happened, or null when the node is not live for
+ * the claim, in which case nothing is touched. Runs under the claim lock; the
+ * node's row is locked next and read again before it is acted on.
+ */
+async function removeLiveNode(
+	tx: HealthTransaction,
+	claimId: string,
+	caseId: string,
+	nodeId: string,
+	actingUserId: string
+): Promise<ElementEvent | null> {
+	await lockEvidenceNode(tx, nodeId);
+	const current = await readClaimEvidenceNode(claimId, tx);
+	if (!current?.live) {
+		return null;
+	}
+	const sharedWith = await tx.evidenceLink.count({
+		where: {
+			evidenceId: nodeId,
+			claimId: { not: claimId },
+			claim: { deletedAt: null },
+		},
+	});
+	if (sharedWith > 0) {
+		await unlinkEvidenceWithin(tx, nodeId, claimId, caseId);
+		return {
+			kind: "updated",
+			elementId: nodeId,
+			elementName: current.node.name,
+		};
+	}
+	await deleteElementWithin(tx, actingUserId, nodeId, caseId);
+	return { kind: "deleted", elementId: nodeId, elementName: current.node.name };
+}
 
 /**
  * Stops the use of a claim's settings: accepted settings are retired (a reason
  * is required) and a suggestion is discarded (a reason is optional). Both set
- * the state to inactive and add a history row. Requires EDIT.
+ * the state to inactive and add a history row. `evidence_node` says what
+ * happens to the claim's live evidence node: `keep` (the default) leaves it as
+ * ordinary evidence, `remove` trashes it and forgets it, or only removes this
+ * claim's link to it when it supports another claim that is not in the
+ * trash. The choice does nothing when the claim has no live node. Requires
+ * EDIT.
  */
 export async function retireCriteria(
 	actingUserId: string,
 	claimId: string,
-	input: { reason?: string }
-): CriteriaResult<{ caseId: string; view: CriteriaView }> {
+	input: { evidence_node?: "keep" | "remove"; reason?: string }
+): CriteriaResult<CriteriaChange> {
 	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
 	if ("error" in guard) {
 		return { error: guard.error };
@@ -695,6 +1078,18 @@ export async function retireCriteria(
 						"is required to stop using accepted settings"
 					);
 				}
+				const removed =
+					input.evidence_node === "remove" &&
+					row.state === "ACCEPTED" &&
+					row.evidenceElementId
+						? await removeLiveNode(
+								tx,
+								claimId,
+								caseId,
+								row.evidenceElementId,
+								actingUserId
+							)
+						: null;
 				const integration = row.integrationId
 					? await tx.integration.findUnique({
 							where: { id: row.integrationId },
@@ -712,6 +1107,7 @@ export async function retireCriteria(
 						revision,
 						updatedById: actingUserId,
 						updatedAt: new Date(),
+						...(removed ? { evidenceElementId: null } : {}),
 					},
 				});
 				await tx.pluginHealthCriteriaRevision.create({
@@ -728,7 +1124,7 @@ export async function retireCriteria(
 						actorId: actingUserId,
 					},
 				});
-				return { ok: true };
+				return { ok: true, change: removed ?? undefined };
 			}
 		);
 		if ("error" in outcome) {
@@ -737,10 +1133,112 @@ export async function retireCriteria(
 		if ("invalid" in outcome) {
 			return { invalid: outcome.invalid };
 		}
-		return { data: { caseId, view: await buildCriteriaView(claimId, caseId) } };
+		return await changed(claimId, caseId, outcome.change);
 	} catch (error) {
-		log.error("Failed to retire health criteria", { error });
-		return { error: "Failed to stop using the evidence settings" };
+		return failedWith(
+			error,
+			"Failed to retire health criteria",
+			"Failed to stop using the evidence settings"
+		);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Adding the evidence node afterwards
+// ---------------------------------------------------------------------------
+
+/** The pipeline's display name for the node's text: the check list's own, or the one recorded when the settings were last saved. */
+async function pipelineNameOf(
+	tx: HealthTransaction,
+	row: PluginHealthCriteria
+): Promise<string> {
+	const catalogue = row.integrationId
+		? await tx.pluginHealthCheckCatalogue.findUnique({
+				where: { integrationId: row.integrationId },
+				select: { pipeline: true },
+			})
+		: null;
+	if (catalogue) {
+		return catalogue.pipeline;
+	}
+	const recorded = await tx.pluginHealthCriteriaRevision.findFirst({
+		where: { claimId: row.claimId, pipelineName: { not: null } },
+		orderBy: { revision: "desc" },
+		select: { pipelineName: true },
+	});
+	return recorded?.pipelineName ?? "its pipeline";
+}
+
+/**
+ * Adds the evidence node for a claim whose settings were accepted without
+ * one: refused (409) when the settings are not accepted or the claim already
+ * has a live node. A pointer to a node that is not live is replaced. The
+ * settings and their history are not changed. Requires EDIT.
+ */
+export async function addEvidenceNode(
+	actingUserId: string,
+	claimId: string
+): CriteriaResult<CriteriaChange> {
+	const guard = await guardClaimAccess(actingUserId, claimId, "EDIT");
+	if ("error" in guard) {
+		return { error: guard.error };
+	}
+	const { caseId } = guard;
+
+	try {
+		const outcome = await prisma.$transaction(
+			async (tx): Promise<{ error: string } | { change: ElementEvent }> => {
+				const [claimRow] = await lockClaim(tx, claimId);
+				if (!claimRow || claimRow.deleted_at) {
+					return { error: CLAIM_NOT_FOUND };
+				}
+				const row = await tx.pluginHealthCriteria.findUnique({
+					where: { claimId },
+				});
+				if (!row || row.state !== "ACCEPTED") {
+					return { error: SETTINGS_NOT_ACCEPTED };
+				}
+				if (row.evidenceElementId) {
+					await lockEvidenceNode(tx, row.evidenceElementId);
+					const current = await readClaimEvidenceNode(claimId, tx);
+					if (current?.live) {
+						return { error: LIVE_NODE_EXISTS };
+					}
+				}
+				const check = row.checkDescription as unknown as HealthCheck;
+				const created = await createElementWithin(tx, actingUserId, {
+					caseId,
+					elementType: "EVIDENCE",
+					parentId: claimId,
+					description: evidenceNodeText(check, await pipelineNameOf(tx, row)),
+				});
+				if ("error" in created) {
+					return { error: created.error };
+				}
+				await tx.pluginHealthCriteria.update({
+					where: { claimId },
+					data: { evidenceElementId: created.data.id },
+				});
+				return {
+					change: {
+						kind: "created",
+						element: created.data,
+						elementId: created.data.id,
+						elementName: created.data.name,
+					},
+				};
+			}
+		);
+		if ("error" in outcome) {
+			return { error: outcome.error };
+		}
+		return await changed(claimId, caseId, outcome.change);
+	} catch (error) {
+		return failedWith(
+			error,
+			"Failed to add the evidence node",
+			"Failed to add the evidence node"
+		);
 	}
 }
 

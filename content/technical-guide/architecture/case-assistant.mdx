@@ -316,6 +316,12 @@ Each entry in `claims` has:
 | `settings` | How the result was judged compared with the settings accepted now: `as accepted`, `different from accepted`, or `none accepted` when the claim has no accepted settings. `null` when there is no result. |
 | `settingsDifferences` | Present only when the settings differ: each difference as `field`, `declared` and `used`, with each value as JSON text cut to 200 characters. |
 | `refusedSinceLastAccepted` | Present only when more than 0: the number of results refused since the last accepted one. |
+| `evidenceNode` | Present only when the claim has a live evidence node: the node's identifier, such as E4. |
+
+A live evidence node is the evidence element the health plugin adds under a claim when a person accepts its evidence settings.
+The tool decides which nodes are live with the health plugin's own function, the one the settings read and the case's live-node list use, so the three agree.
+The node's text names the check and the pipeline and never states a result, and the tool's description says so, so the model takes the result from this tool and not from the node.
+`read_case` is unchanged: the node appears there as ordinary evidence under its claim, and counts as support for the rules check.
 
 Every time in the result, `checkedAt` included, is written as `YYYY-MM-DD HH:MM:SS UTC`, to the whole second, so that the model can copy it into an answer as it stands.
 A time that does not apply is `null`.
@@ -330,7 +336,7 @@ When the assistant sends a chat's earlier messages back to the model, it replace
 ### What leaves TEA
 
 The result goes to the model provider the user chose, as the case text does.
-It carries the claims' labels and text, check names, results and times.
+It carries the claims' labels and text, check names, results and times, and the identifier of a claim's live evidence node.
 Where a result was judged with settings different from the accepted ones, it also carries those settings as the record states them: versions, window, time limit and the check's own parameters, each value cut to 200 characters.
 It carries no record payload, provenance, comments, integration names or people's names.
 

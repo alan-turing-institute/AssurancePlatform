@@ -498,6 +498,7 @@ model AssuranceElement {
   pluginHealthBindingChanges PluginHealthBindingChange[]
   pluginHealthCriteria PluginHealthCriteria?
   pluginHealthCriteriaRevisions PluginHealthCriteriaRevision[]
+  pluginHealthCriteriaAsEvidenceNode PluginHealthCriteria? @relation("HealthCriteriaEvidenceNode")
 
   @@index([caseId])
   @@index([caseId, elementType])
@@ -1328,8 +1329,11 @@ model PluginHealthCriteria {
   lastReadAt       DateTime? @map("last_read_at") /// When the pipeline last fetched these settings
   lastReadRevision Int?      @map("last_read_revision")
 
-  claim       AssuranceElement @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  integration Integration?     @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  evidenceElementId String? @unique @map("evidence_element_id") /// The ordinary evidence element added under the claim when the settings were accepted; written only by the health service, cleared by the database if that element is ever hard-deleted
+
+  claim           AssuranceElement  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  integration     Integration?      @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  evidenceElement AssuranceElement? @relation("HealthCriteriaEvidenceNode", fields: [evidenceElementId], references: [id], onDelete: SetNull)
 
   @@index([integrationId])
   @@map("plugin_health_criteria")

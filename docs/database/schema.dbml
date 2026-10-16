@@ -272,6 +272,7 @@ Table assurance_elements {
   pluginHealthBindingChanges plugin_health_binding_changes [not null]
   pluginHealthCriteria plugin_health_criteria
   pluginHealthCriteriaRevisions plugin_health_criteria_revisions [not null]
+  pluginHealthCriteriaAsEvidenceNode plugin_health_criteria
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
@@ -768,8 +769,10 @@ Table plugin_health_criteria {
   createdAt DateTime [default: `now()`, not null]
   lastReadAt DateTime [note: 'When the pipeline last fetched these settings']
   lastReadRevision Int
+  evidenceElementId String [unique, note: 'The ordinary evidence element added under the claim when the settings were accepted; written only by the health service, cleared by the database if that element is ever hard-deleted']
   claim assurance_elements [not null]
   integration integrations
+  evidenceElement assurance_elements
 
   Note: 'One claim\'s evidence settings: which check to run, how each reading is
 judged, how readings are combined, and how long a result counts. The row
@@ -1119,6 +1122,8 @@ Ref: plugin_health_revocations.evidenceId > plugin_health_evidence.id [delete: C
 Ref: plugin_health_criteria.claimId - assurance_elements.id [delete: Cascade]
 
 Ref: plugin_health_criteria.integrationId > integrations.id [delete: Set Null]
+
+Ref: plugin_health_criteria.evidenceElementId - assurance_elements.id [delete: Cascade]
 
 Ref: plugin_health_criteria_revisions.claimId > assurance_elements.id [delete: Cascade]
 

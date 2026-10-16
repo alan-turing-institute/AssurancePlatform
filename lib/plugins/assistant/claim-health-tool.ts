@@ -1,12 +1,16 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import {
 	type HealthStatus,
+	readClaimEvidenceNodes,
 	readHealthStatusesForCase,
 } from "@/lib/services/health-status-service";
 import type { ClaimHealthAvailability } from "./claim-health-availability";
 import type { ToolCallLimit } from "./tool-call-limit";
+
+const log = logger.child({ component: "claim-health-tool" });
 
 /** The most claims listed, and the most labels of claims without results listed; each is counted past it separately. */
 const MAX_LISTED = 100;
@@ -71,7 +75,11 @@ function settingsOf(status: HealthStatus): string | null {
 }
 
 /** One claim as the model sees it, from named fields only. */
-function claimEntry(claim: ClaimNode, status: HealthStatus) {
+function claimEntry(
+	claim: ClaimNode,
+	status: HealthStatus,
+	evidenceNode: string | undefined
+) {
 	const settings = settingsOf(status);
 	const differences =
 		settings === "different from accepted" &&
@@ -102,6 +110,7 @@ function claimEntry(claim: ClaimNode, status: HealthStatus) {
 		...(status.rejected_since_last_accept > 0
 			? { refusedSinceLastAccepted: status.rejected_since_last_accept }
 			: {}),
+		...(evidenceNode ? { evidenceNode } : {}),
 	};
 }
 
@@ -109,10 +118,12 @@ function claimEntry(claim: ClaimNode, status: HealthStatus) {
  * The tool's result for the claims in the tree, each attached to its status by
  * id. A claim in the tree with no status is named by its label (its id when it
  * has none); a status for a claim that is not in the tree is only counted.
+ * `evidenceNodes` maps a claim's id to the identifier of its live evidence node.
  */
 function summarise(
 	tree: ClaimNode,
-	statuses: { claim_ref: string; status: HealthStatus }[]
+	statuses: { claim_ref: string; status: HealthStatus }[],
+	evidenceNodes: Map<string, string>
 ) {
 	const claims = propertyClaims(tree);
 	const statusById = new Map(
@@ -135,12 +146,36 @@ function summarise(
 	return {
 		claims: withStatus
 			.slice(0, MAX_LISTED)
-			.map(([claim, status]) => claimEntry(claim, status)),
+			.map(([claim, status]) =>
+				claimEntry(claim, status, evidenceNodes.get(claim.id))
+			),
 		claimsTruncated: Math.max(0, withStatus.length - MAX_LISTED),
 		claimsWithoutResults: without.slice(0, MAX_LISTED),
 		claimsWithoutResultsTruncated: Math.max(0, without.length - MAX_LISTED),
 		...(notInTree > 0 ? { claimsNotInTree: notInTree } : {}),
 	};
+}
+
+/**
+ * The identifier of each claim's live evidence node, by claim id. A failed
+ * read gives none and does not fail the call: the identifiers only add to an
+ * answer whose results do not depend on them. Only the error's class is
+ * logged, never its message.
+ */
+async function liveEvidenceNodes(caseId: string): Promise<Map<string, string>> {
+	try {
+		const nodes = await readClaimEvidenceNodes({ caseId });
+		return new Map(
+			nodes
+				.filter((entry) => entry.live)
+				.map((entry) => [entry.claimId, entry.node.name ?? entry.node.id])
+		);
+	} catch (error) {
+		log.warn("Claim health could not read evidence nodes; answering without", {
+			errorName: error instanceof Error ? error.name : "unknown",
+		});
+		return new Map();
+	}
 }
 
 async function readClaimHealth(
@@ -156,10 +191,11 @@ async function readClaimHealth(
 	if ("error" in statuses) {
 		return UNAVAILABLE;
 	}
+	const evidenceNodes = await liveEvidenceNodes(caseId);
 	return {
 		found: true,
 		checkedAt: utcTime(new Date()),
-		...summarise(data.tree as ClaimNode, statuses.data),
+		...summarise(data.tree as ClaimNode, statuses.data, evidenceNodes),
 	};
 }
 
@@ -182,7 +218,7 @@ export function createClaimHealthTool(
 	let inFlight: ReturnType<typeof readClaimHealth> | null = null;
 	return tool({
 		description:
-			"Read the latest result each property claim of the open case has received from automated checks, as of now. Takes no input. Returns checkedAt, the time of this read, and claims: for each claim that has a status, in the order the case shows them, its id, label (null when it has none), text, check (the check the claim is bound to now), result (pass, marginal, fail, indeterminate, or null when it has a check but no result, or every result was withdrawn), resultAt (when the reading was taken), validUntil (null when it does not expire), outOfDate with outOfDateReason (expired, condition or all-revoked) and outOfDateSince, and settings (as accepted, different from accepted, none accepted, or null when there is no result). When the settings differ it also returns settingsDifferences, each with the field, the declared value and the value used; when results from another check were refused since the last accepted one, it returns refusedSinceLastAccepted. claimsTruncated is the number of claims left out when there are more than 100. claimsWithoutResults lists the labels of the property claims that receive no automated results, naming a claim by its id when it has no label, with claimsWithoutResultsTruncated for those left out past 100. claimsNotInTree, present only when more than 0, counts claims with a status that are detached from the case tree.",
+			"Read the latest result each property claim of the open case has received from automated checks, as of now. Takes no input. Returns checkedAt, the time of this read, and claims: for each claim that has a status, in the order the case shows them, its id, label (null when it has none), text, check (the check the claim is bound to now), result (pass, marginal, fail, indeterminate, or null when it has a check but no result, or every result was withdrawn), resultAt (when the reading was taken), validUntil (null when it does not expire), outOfDate with outOfDateReason (expired, condition or all-revoked) and outOfDateSince, and settings (as accepted, different from accepted, none accepted, or null when there is no result). When the settings differ it also returns settingsDifferences, each with the field, the declared value and the value used; when results from another check were refused since the last accepted one, it returns refusedSinceLastAccepted. claimsTruncated is the number of claims left out when there are more than 100. claimsWithoutResults lists the labels of the property claims that receive no automated results, naming a claim by its id when it has no label, with claimsWithoutResultsTruncated for those left out past 100. claimsNotInTree, present only when more than 0, counts claims with a status that are detached from the case tree. evidenceNode, present only on a claim that has a live evidence node in the case, is that node's identifier (such as E4); the node's text describes the check and never states a result, so take the result from this tool.",
 		inputSchema: z.object({}),
 		execute: () =>
 			limited(() => {
