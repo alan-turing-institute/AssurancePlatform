@@ -111,9 +111,23 @@ function LiveNodeBadgeView({ node }: { node: HealthLiveEvidenceNode }) {
 	);
 }
 
-/** The badge for an evidence element: shown only while the element is a live node. */
+/**
+ * The badge for an evidence element: shown only while the element is a live
+ * node. A comma on either side, hidden from sight, keeps the badge's spoken
+ * label a phrase of its own in the name of the node's button, which joins the
+ * node's name, the badge's label and the node's text.
+ */
 export function LiveNodeBadge({ caseId, elementId }: ElementSlotContext) {
 	const index = useLiveEvidenceNodes(caseId, true);
 	const node = index.byNodeId.get(elementId);
-	return node ? <LiveNodeBadgeView node={node} /> : null;
+	if (!node) {
+		return null;
+	}
+	return (
+		<>
+			<span className="sr-only">,</span>
+			<LiveNodeBadgeView node={node} />
+			<span className="sr-only">,</span>
+		</>
+	);
 }

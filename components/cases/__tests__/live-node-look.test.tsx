@@ -57,6 +57,8 @@ vi.mock("@/hooks/use-element-appearance", async (importOriginal) => {
 });
 
 const TONES = ["positive", "caution", "negative", "neutral"] as const;
+const NODE_NAME_WITH_BADGE_PHRASE =
+	/^E4\s*,\s*Live results for P1\. Health: failing\s*,\s*Results from the check/;
 const OPACITY_CLASS = /(^|\s)opacity-/;
 
 function card(container: HTMLElement) {
@@ -419,6 +421,24 @@ describe("an evidence node on the canvas", () => {
 
 		expect(card(container)).toHaveAttribute("data-appearance", "negative");
 		expect(screen.getByTestId("live-node-badge")).toHaveTextContent("Failing");
+	});
+
+	it("reads its badge's label as a phrase of its own in the name of the node's button", async () => {
+		world.list = [
+			liveNodeItem({ id: NODE_ID, status: healthStatus({ verdict: "fail" }) }),
+		];
+
+		render(
+			// biome-ignore lint/a11y/useSemanticElements: React Flow gives its node wrapper, a div, this role, and the wrapper is what carries the name
+			<div role="button" tabIndex={0}>
+				<EvidenceNode {...props(NODE_ID)} />
+			</div>
+		);
+		await settle();
+
+		expect(
+			screen.getByRole("button", { name: NODE_NAME_WITH_BADGE_PHRASE })
+		).toBeInTheDocument();
 	});
 
 	it("fades the tint of a live node whose result is out of date", async () => {
