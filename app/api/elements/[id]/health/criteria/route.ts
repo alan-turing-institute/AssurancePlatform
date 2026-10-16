@@ -85,7 +85,7 @@ export async function GET(
  * settings), and the node is live. Both are refused with a 400 otherwise,
  * except that a request which sets both while the claim has no live node to
  * reuse adds a new node, ignores `update_evidence_node_text` and answers 200,
- * provided the update would have been allowed.
+ * provided the check differs as above.
  * `evidence_node` in the response says where the claim's node is: `live`,
  * `trashed`, `moved` or `missing`.
  * @body { integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }
