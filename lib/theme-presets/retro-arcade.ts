@@ -90,6 +90,7 @@ export const retroArcadePreset: ThemePreset = {
 		"--sidebar-accent-foreground": "oklch(1.0000 0 0)",
 		"--sidebar-border": "oklch(0.5230 0.0283 219.1365)",
 		"--sidebar-ring": "oklch(0.5924 0.2025 355.8943)",
+		"--node-drawn-foreground": "oklch(1.0000 0 0)",
 		"--font-sans": "Outfit, sans-serif",
 		"--font-serif":
 			'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
