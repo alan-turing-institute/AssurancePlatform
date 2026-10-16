@@ -62,6 +62,10 @@ function namesAnotherCheck(
  * - Settings about to be accepted with a live node: it is reused, and its text
  *   can be rewritten when it names another check.
  *
+ * A rewrite is never offered when the words it would write are the words the
+ * node already has, since accepting it would change nothing. The server still
+ * accepts such a request; only the offer is left out.
+ *
  * Null when there is nothing to offer.
  */
 export function nodeOfferFor(input: NodeOfferInput): NodeOffer | null {
@@ -70,9 +74,10 @@ export function nodeOfferFor(input: NodeOfferInput): NodeOffer | null {
 	const live = node?.state === "live" ? node : null;
 	const after = evidenceNodeText(check, pipeline);
 	const before = evidence.evidence_node_text?.description ?? null;
+	const wouldChange = before !== after;
 
 	if (state === "accepted") {
-		return live && checkChanged
+		return live && checkChanged && wouldChange
 			? { add: null, node: null, update: { name: live.name, before, after } }
 			: null;
 	}
@@ -82,8 +87,9 @@ export function nodeOfferFor(input: NodeOfferInput): NodeOffer | null {
 	return {
 		add: null,
 		node: { name: live.name },
-		update: namesAnotherCheck(evidence, check, pipeline)
-			? { name: live.name, before, after }
-			: null,
+		update:
+			wouldChange && namesAnotherCheck(evidence, check, pipeline)
+				? { name: live.name, before, after }
+				: null,
 	};
 }

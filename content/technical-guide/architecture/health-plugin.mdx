@@ -312,8 +312,9 @@ Saving as a suggestion never carries a node option.
 The form says "Results will show on evidence node ‹identifier›" and adds no second node.
 It offers "Update ‹identifier›'s text to name the new check", ticked, only when the check differs from the one the node's text was last written for, which is the case the server accepts.
 The offer shows the node's text now and the text after, side by side, and carries `update_evidence_node_text` when ticked.
+It is left out when the text it would write is already the node's text, because accepting it would change nothing; the server still accepts such a request.
 - **Changing the check of accepted settings.**
-The same update is offered when the node is live, and not otherwise.
+The same update is offered when the node is live, and not otherwise, and it is left out in the same case.
 - **Stopping accepted settings.**
 When the node is live, the dialog asks whether to remove it or keep it as ordinary evidence, with neither chosen, and always sends `evidence_node`.
 A claim whose node has moved, is in the trash or is gone is not asked, and the dialog sends only the reason.

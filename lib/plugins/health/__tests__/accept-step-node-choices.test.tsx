@@ -357,13 +357,37 @@ describe("the accept step: a node kept when the settings were stopped", () => {
 		serve(
 			stoppedWithNode(
 				LIVE_E4,
-				textNamingCheck(ITEM_TEXT, ITEM_CHECK_NAME, "Previous pipeline name")
+				textNamingCheck(
+					ITEM_TEXT.replace(HEALTH_CHECK_PIPELINE, "Previous pipeline name"),
+					ITEM_CHECK_NAME,
+					"Previous pipeline name"
+				)
 			)
 		);
 		const user = await openSettings();
 		await pick(user, ITEM_CHECK_NAME);
 
 		expect(await updateBox()).toBeChecked();
+	});
+
+	it("offers no update when the node's text already reads as the text the new check would give it", async () => {
+		const served = serve(
+			stoppedWithNode(LIVE_E4, textNamingCheck(NUMERIC_TEXT, ITEM_CHECK_NAME))
+		);
+		const user = await openSettings();
+		await pick(user, NUMERIC_CHECK_NAME);
+
+		await screen.findByText("Results will show on evidence node E4.");
+		expect(nodeBoxes()).toHaveLength(0);
+
+		served.criteria = withNode(
+			storedCriteria({ checkName: NUMERIC_CHECK_NAME, revision: 3 }),
+			LIVE_E4,
+			textNamingCheck(NUMERIC_TEXT, NUMERIC_CHECK_NAME)
+		);
+		await user.click(screen.getByRole("button", { name: "Accept settings" }));
+		await waitFor(() => expect(served.puts).toHaveLength(1));
+		expect(served.puts[0]?.update_evidence_node_text ?? false).toBe(false);
 	});
 
 	it("offers no update for the same check when the node's text does not record a pipeline", async () => {
@@ -520,6 +544,23 @@ describe("changing the check of accepted settings", () => {
 
 		await waitFor(() => expect(served.puts).toHaveLength(1));
 		expect(served.puts[0]?.update_evidence_node_text ?? false).toBe(false);
+	});
+
+	it("offers nothing when the node's text already reads as the text the new check would give it", async () => {
+		serve(
+			withNode(
+				storedCriteria(),
+				LIVE_E4,
+				textNamingCheck(NUMERIC_TEXT, ITEM_CHECK_NAME)
+			)
+		);
+		const user = await openSettings();
+		await screen.findByText("1. Judge each reading");
+
+		await pick(user, NUMERIC_CHECK_NAME);
+
+		expect(screen.queryByRole("region", { name: "Evidence node" })).toBeNull();
+		expect(screen.queryByRole("checkbox", { name: UPDATE_LABEL })).toBeNull();
 	});
 
 	it("offers nothing when only a number is changed and the check stays", async () => {
