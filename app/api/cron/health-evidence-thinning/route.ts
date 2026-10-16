@@ -21,8 +21,8 @@ import { thinHealthEvidence } from "@/lib/services/health-evidence-service";
  * does nothing. Protected by CRON_SECRET environment variable.
  *
  * @header Authorization - Bearer token matching CRON_SECRET env var
- * @query dryRun - "1" or "true" counts what would be removed without removing or writing anything; "0", "false" or absent does the work; any other value is refused with 400 and nothing is done
- * @query now - An ISO 8601 date-time the one-day cut-off is measured from (the start of that UTC hour, a day back), so a caller making several calls in one night can pass the same value on each; a time later than the server's is treated as the server's time; a malformed value is refused with 400 and nothing is done
+ * @queryParam dryRun - "1" or "true" counts what would be removed without removing or writing anything; "0", "false" or absent does the work; any other value is refused with 400 and nothing is done
+ * @queryParam now - An ISO 8601 date-time the one-day cut-off is measured from (the start of that UTC hour, a day back), so a caller making several calls in one night can pass the same value on each; a time later than the server's is treated as the server's time; a malformed value is refused with 400 and nothing is done
  * @response 200 - { success: true, dryRun: boolean, busy: boolean, claimsProcessed: number, recordsRemoved: number, runsRecorded: number, more: boolean }
  * @response 400 - Invalid query (an unknown or repeated parameter, or a malformed dryRun or now)
  * @response 401 - Unauthorised (invalid or missing token)

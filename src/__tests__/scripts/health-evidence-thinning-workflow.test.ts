@@ -44,6 +44,10 @@ interface Workflow {
 	};
 }
 
+// The workflow script and the stand-in `curl` both call `jq`. GitHub's runners
+// have it; the local-CI coverage container does not, so the suite skips there.
+const jqAvailable = spawnSync("jq", ["--version"]).status === 0;
+
 const workflow = parse(readFileSync(WORKFLOW, "utf8")) as Workflow;
 const job = Object.values(workflow.jobs)[0];
 const step = job?.steps.find((candidate) => candidate.run);
@@ -105,7 +109,7 @@ const MORE = answer({ success: true, busy: false, more: true });
 const DONE = answer({ success: true, busy: false, more: false });
 const BUSY = answer({ success: true, busy: true, more: false });
 
-describe("the thinning workflow", () => {
+describe.skipIf(!jqAvailable)("the thinning workflow (needs jq)", () => {
 	it("is scheduled daily and can be run by hand as a trial by default", () => {
 		const cron = workflow.on.schedule?.[0]?.cron ?? "";
 		expect(cron.split(" ")).toHaveLength(5);
