@@ -182,8 +182,14 @@ export function buildFooterLabelClasses(): string {
 }
 
 /**
- * Build footer ID classes (e.g., "G1", "S1")
+ * Build footer ID classes (e.g., "G1", "S1"). The identifier is drawn at 70%
+ * of the secondary text colour, except on a card a plugin tints or fades,
+ * where it takes the whole of it so it keeps its contrast against the tint.
  */
-export function buildFooterIdClasses(): string {
-	return cn("font-mono", "text-muted-foreground/70", "text-xs");
+export function buildFooterIdClasses(onDrawnCard = false): string {
+	return cn(
+		"font-mono",
+		onDrawnCard ? "text-muted-foreground" : "text-muted-foreground/70",
+		"text-xs"
+	);
 }

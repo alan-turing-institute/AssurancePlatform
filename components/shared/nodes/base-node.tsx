@@ -100,6 +100,7 @@ function ExpandedContent({
 	children,
 	name,
 	config,
+	isDrawn,
 }: {
 	descriptionText: string;
 	hasAttributes: boolean;
@@ -110,6 +111,8 @@ function ExpandedContent({
 	children?: ReactNode;
 	name: string;
 	config: ReturnType<typeof getNodeConfig>;
+	/** A plugin tints or fades the card. */
+	isDrawn: boolean;
 }) {
 	return (
 		<div className={buildNodeContentClasses(true)}>
@@ -137,7 +140,7 @@ function ExpandedContent({
 			<div className={buildSeparatorClasses()} />
 			<div className="flex items-center justify-between">
 				<span className={buildFooterLabelClasses()}>{config.label}</span>
-				<span className={buildFooterIdClasses()}>{name}</span>
+				<span className={buildFooterIdClasses(isDrawn)}>{name}</span>
 			</div>
 		</div>
 	);
@@ -316,6 +319,7 @@ export default function BaseNode({
 								context={context}
 								descriptionText={descriptionText}
 								hasAttributes={hasAttributes}
+								isDrawn={!!appearance}
 								justification={justification}
 								name={name}
 								nodeType={nodeType}

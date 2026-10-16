@@ -171,6 +171,31 @@ describe("a node drawn with a plugin's appearance", () => {
 		}
 	});
 
+	it("draws the expanded footer's identifier in the whole secondary text colour only while an appearance is set", () => {
+		function footerIdentifier(appearance: ElementAppearance | null) {
+			const { container, unmount } = render(
+				<BaseNode
+					appearance={appearance}
+					description="Results from the check"
+					initialExpanded
+					name="E4"
+					nodeType="evidence"
+				/>
+			);
+			const classes = container.querySelector("span.font-mono")?.className;
+			unmount();
+			return classes ?? "";
+		}
+
+		expect(footerIdentifier(null)).toContain("text-muted-foreground/70");
+		expect(footerIdentifier({ tone: "caution", faded: true })).not.toContain(
+			"/70"
+		);
+		expect(footerIdentifier({ tone: null, faded: true })).toContain(
+			"text-muted-foreground"
+		);
+	});
+
 	it("keeps the text at full contrast when the node is faded", () => {
 		const { container } = draw({ tone: "negative", faded: true });
 		const element = card(container);
