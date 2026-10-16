@@ -1,5 +1,9 @@
 import { toPng } from "html-to-image";
 import { useCallback, useEffect, useRef } from "react";
+import {
+	isAuthoredContent,
+	stripPluginAppearance,
+} from "@/lib/case/plugin-display-capture";
 import { logger } from "@/lib/logger";
 
 const log = logger.child({ component: "use-auto-screenshot" });
@@ -15,6 +19,20 @@ function isUsableDataUrl(dataUrl: string): boolean {
 		dataUrl.startsWith("data:image/") &&
 		dataUrl.length > "data:image/png;base64,".length
 	);
+}
+
+/**
+ * Takes the picture of the canvas as the authored case: without the tints,
+ * edge colours, badges and dots that plugins draw on it. The picture becomes
+ * the case's thumbnail, which people who have the plugin off also see.
+ */
+function captureAuthoredCase(target: HTMLElement): Promise<string> {
+	const restoreAppearance = stripPluginAppearance(target);
+	return toPng(target, {
+		backgroundColor: "#ffffff",
+		filter: isAuthoredContent,
+		pixelRatio: 1,
+	}).finally(restoreAppearance);
 }
 
 interface UseAutoScreenshotOptions {
@@ -61,10 +79,7 @@ export function useAutoScreenshot({
 		isCapturingRef.current = true;
 
 		try {
-			const base64Image = await toPng(target as HTMLElement, {
-				backgroundColor: "#ffffff",
-				pixelRatio: 1,
-			});
+			const base64Image = await captureAuthoredCase(target as HTMLElement);
 
 			if (!isUsableDataUrl(base64Image)) {
 				log.warn("Skipped upload of a degenerate screenshot capture", {
@@ -127,10 +142,7 @@ export function useAutoScreenshot({
 				// Use sendBeacon for reliable delivery during page unload
 				const target = document.querySelector(selector);
 				if (target) {
-					toPng(target as HTMLElement, {
-						backgroundColor: "#ffffff",
-						pixelRatio: 1,
-					})
+					captureAuthoredCase(target as HTMLElement)
 						.then((base64Image) => {
 							if (!isUsableDataUrl(base64Image)) {
 								log.warn(

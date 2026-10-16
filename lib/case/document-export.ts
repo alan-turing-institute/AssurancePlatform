@@ -21,6 +21,10 @@ import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { extractBranches } from "./branch-utils";
 import type { LayoutDirection } from "./layout-helper";
 import { getLayoutedElements } from "./layout-helper";
+import {
+	isAuthoredContent,
+	stripPluginAppearance,
+} from "./plugin-display-capture";
 
 const DATA_URL_PREFIX_REGEX = /^data:image\/png;base64,/;
 const MARKDOWN_EXTENSION_REGEX = /\.md$/;
@@ -107,6 +111,9 @@ export interface DocumentExportOptions {
 function shouldIncludeInDiagram(domNode: HTMLElement): boolean {
 	if (!(domNode instanceof Element)) {
 		return true;
+	}
+	if (!isAuthoredContent(domNode)) {
+		return false;
 	}
 	const classList = domNode.classList;
 	if (!classList) {
@@ -387,12 +394,14 @@ async function captureDiagramImage(
 	};
 
 	const restoreStyles = applyExportStyles(viewport);
+	const restoreAppearance = stripPluginAppearance(viewport);
 
 	try {
 		const dataUrl = await toPng(viewport, exportOptions);
 		const base64Data = dataUrl.replace(DATA_URL_PREFIX_REGEX, "");
 		return { data: base64Data, format: "png" };
 	} finally {
+		restoreAppearance();
 		restoreStyles();
 	}
 }
