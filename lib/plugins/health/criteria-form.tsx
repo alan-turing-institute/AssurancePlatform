@@ -45,8 +45,6 @@ export interface CriteriaFormProps {
 	claimId: string;
 	/** Offers the move to a newer version of the check, from the notice that says there is one. */
 	compare?: CompareOffer | null;
-	/** The claim's evidence node and its text, which decide what the accept and save step offers about the node. */
-	evidence: NodeEvidence;
 	initialCheck: HealthCheck;
 	initialChoiceKey: string;
 	initialDraft: CriteriaDraft;
@@ -67,7 +65,8 @@ export interface CriteriaFormProps {
 	state: FormState;
 	/** True when the settings the form was opened on have since been stopped or discarded by someone else. */
 	superseded?: boolean;
-	view: HealthCriteriaResponse | null;
+	/** The claim's settings read, which also says where its evidence node is and what the node's text names. A fresh pick holds no stored settings in use, so nothing of the read shows beyond the node. */
+	view: HealthCriteriaResponse;
 }
 
 /** The server's refusal of a save made from settings that were replaced since the form read them. */
@@ -631,7 +630,6 @@ export function CriteriaForm({
 	choices,
 	claimId,
 	compare,
-	evidence,
 	initialCheck,
 	initialChoiceKey,
 	initialDraft,
@@ -696,7 +694,7 @@ export function CriteriaForm({
 				canEdit={canEdit}
 				choices={choices}
 				claimId={claimId}
-				evidence={evidence}
+				evidence={view}
 				form={form}
 				initialChoiceKey={initialChoiceKey}
 				locked={change.locked}

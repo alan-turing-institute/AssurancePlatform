@@ -130,14 +130,13 @@ function PickedForm({
 			<StoppedNotice view={view} />
 			<CriteriaForm
 				{...host}
-				evidence={view}
 				initialCheck={picked.check}
 				initialChoiceKey={picked.key}
 				initialDraft={draftFromCheck(picked.check, picked.integrationId)}
 				key={`new:${picked.key}`}
 				revision={view.criteria?.revision ?? null}
 				state="new"
-				view={null}
+				view={view}
 			/>
 		</div>
 	);
@@ -284,7 +283,6 @@ function StoredForm({
 								}
 							: null
 					}
-					evidence={view}
 					initialCheck={moved?.check ?? stored.check}
 					initialChoiceKey={stored.key}
 					initialDraft={
