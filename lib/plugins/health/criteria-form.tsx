@@ -88,6 +88,14 @@ function cancelOf(
 	return move ? move.onCancel : resetToStored;
 }
 
+/** The settings read for the lines that describe stored settings. A fresh pick is not the stored settings, so none of their lines belong on it. */
+function storedViewOf(
+	state: FormState,
+	view: HealthCriteriaResponse
+): HealthCriteriaResponse | null {
+	return state === "new" ? null : view;
+}
+
 /** Whether the check's entry recommends anything at all. */
 function hasRecommendation(check: HealthCheck): boolean {
 	return (
@@ -664,8 +672,7 @@ export function CriteriaForm({
 		state,
 	});
 	const change = changeFlags(form, actions, superseded);
-	// A fresh pick is not the stored settings, so none of their lines belong on it.
-	const stored = state === "new" ? null : view;
+	const stored = storedViewOf(state, view);
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
