@@ -82,7 +82,10 @@ export async function GET(
  * accepted settings change their check, or stopped or suggested settings are
  * accepted with a check that differs from the one the node's text was last
  * written for (the check of the newest acceptance or edit of accepted
- * settings), and the node is live. Both are refused with a 400 otherwise.
+ * settings), and the node is live. Both are refused with a 400 otherwise,
+ * except that a request which sets both while the claim has no live node to
+ * reuse adds a new node, ignores `update_evidence_node_text` and answers 200,
+ * provided the update would have been allowed.
  * `evidence_node` in the response says where the claim's node is: `live`,
  * `trashed`, `moved` or `missing`.
  * @body { integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }

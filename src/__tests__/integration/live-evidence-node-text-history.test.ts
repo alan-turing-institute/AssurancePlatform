@@ -356,6 +356,44 @@ describe("when the kept node is gone", () => {
 		expect(await pointerOf(world.claim.id)).toBe(fresh?.id);
 	});
 
+	it("refuses a text update on its own when a suggestion of another check is accepted after the node was removed, and stores nothing", async () => {
+		const world = await nodeWorld();
+		await acceptWithNode(world);
+		must(
+			await retire(world.claim.id, {
+				reason: "Superseded",
+				evidence_node: "remove",
+			})
+		);
+		must(await save(world, world.claim.id, {}, numericSettings(), false));
+
+		await expectRefusedWithoutWriting(world, numericSettings());
+		expect(await pointerOf(world.claim.id)).toBeNull();
+	});
+
+	it("adds a new node, ignores the text update and answers 200 when both are asked for and the kept node was removed", async () => {
+		const world = await nodeWorld();
+		await acceptWithNode(world);
+		must(
+			await retire(world.claim.id, {
+				reason: "Superseded",
+				evidence_node: "remove",
+			})
+		);
+
+		const result = await save(
+			world,
+			world.claim.id,
+			{ add_evidence_node: true, ...UPDATE },
+			numericSettings()
+		);
+
+		expect(result.status).toBe(200);
+		const nodes = await evidenceIn(world.kase.id);
+		expect(nodes).toHaveLength(2);
+		expect(nodes[1]?.description).toBe(NUMERIC_NODE_TEXT);
+	});
+
 	it("refuses the update when the kept node has since been put in the trash", async () => {
 		const { world, node } = await keptNode();
 		const trashed = await deleteElement(world.owner.id, node.id);
