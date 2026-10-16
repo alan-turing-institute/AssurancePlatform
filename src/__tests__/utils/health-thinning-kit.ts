@@ -11,10 +11,10 @@ import { expectSuccess } from "./assertion-helpers";
 
 /**
  * The job's clock in the thinning tests: the cut-off is the start of this
- * hour, a day back, so a record stamped before `CUTOFF` is old enough to thin.
+ * hour, a day back (noon on the 15th), so a record stamped before that is old
+ * enough to thin.
  */
 export const NOW = new Date("2026-10-16T12:30:00.000Z");
-export const CUTOFF = new Date("2026-10-15T12:00:00.000Z");
 /** A start time two days before `NOW`, well inside the thinnable part of the log. */
 export const OLD = new Date("2026-10-14T00:00:00.000Z");
 
@@ -29,7 +29,7 @@ type Overrides = Record<string, unknown> & {
  * subject, a comment, a simulated clock). `index` makes those details differ
  * from one record to the next.
  */
-export function thinningRecord(
+function thinningRecord(
 	claimId: string,
 	at: Date,
 	index: number,

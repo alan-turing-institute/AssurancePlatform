@@ -1030,12 +1030,62 @@ async function applyRemovals(
 }
 
 /**
- * Thins one claim, batch by batch from where the last pass stopped, until its
- * records run out, reach the cut-off or the call's time budget ends. After the
- * first pass the record the last batch stopped at is read again as the first
- * row of the next. It is already kept and is never removed; reading it lets a
+ * The next batch of `claimId`'s chain after `mark`, up to the first record that
+ * arrived at or after the cut-off; empty when there is nothing new to examine.
+ * After the first pass the record the last batch stopped at is read again as
+ * the first row. It is already kept and is never removed; reading it lets a
  * run carry on across a batch edge, with its hourly spacing, so an edge costs
  * one extra kept record and not two.
+ */
+async function readBatch(
+	run: ThinningRun,
+	claimId: string,
+	mark: number | null
+): Promise<ChainRow[]> {
+	const contextRows = mark === null ? 0 : 1;
+	const fetched = await readChainRows(
+		claimId,
+		mark === null ? 0 : mark - 1,
+		run.batchSize
+	);
+	const firstRecent = fetched.findIndex(
+		(row) => row.created_at.getTime() >= run.cutoff.getTime()
+	);
+	const rows = firstRecent === -1 ? fetched : fetched.slice(0, firstRecent);
+	return rows.length > contextRows ? rows : [];
+}
+
+/**
+ * Removes one batch's repeats (or, on a dry run, only counts them) and adds the
+ * counts to the call's totals. False when the batch was given up.
+ */
+async function thinBatch(
+	run: ThinningRun,
+	claim: { caseId: string; claimId: string },
+	mark: number | null,
+	rows: ChainRow[]
+): Promise<boolean> {
+	const stretches = await planRemovals(run, claim.caseId, rows);
+	if (
+		!run.dryRun &&
+		(await applyRemovals(claim.claimId, mark, rows, stretches)) === "given-up"
+	) {
+		log.info("Gave up thinning a batch: the claim changed while it was read", {
+			claimId: claim.claimId,
+		});
+		return false;
+	}
+	run.recordsRemoved += stretches.reduce(
+		(total, stretch) => total + stretch.removed.length,
+		0
+	);
+	run.runsRecorded += stretches.length;
+	return true;
+}
+
+/**
+ * Thins one claim, batch by batch from where the last pass stopped, until its
+ * records run out, reach the cut-off or the call's time budget ends.
  */
 async function thinClaim(
 	run: ThinningRun,
@@ -1044,43 +1094,17 @@ async function thinClaim(
 	let mark = claim.mark;
 	let moved = false;
 	for (;;) {
-		const contextRows = mark === null ? 0 : 1;
-		const fetched = await readChainRows(
-			claim.claimId,
-			mark === null ? 0 : mark - 1,
-			run.batchSize
-		);
-		const firstRecent = fetched.findIndex(
-			(row) => row.created_at.getTime() >= run.cutoff.getTime()
-		);
-		const rows = firstRecent === -1 ? fetched : fetched.slice(0, firstRecent);
+		const rows = await readBatch(run, claim.claimId, mark);
 		const lastRow = rows.at(-1);
-		if (!lastRow || rows.length <= contextRows) {
+		if (!lastRow) {
 			break;
 		}
-
 		run.batches++;
-		const stretches = await planRemovals(run, claim.caseId, rows);
-		if (!run.dryRun) {
-			const outcome = await applyRemovals(claim.claimId, mark, rows, stretches);
-			if (outcome === "given-up") {
-				log.info(
-					"Gave up thinning a batch: the claim changed while it was read",
-					{
-						claimId: claim.claimId,
-					}
-				);
-				break;
-			}
+		if (!(await thinBatch(run, claim, mark, rows))) {
+			break;
 		}
 		mark = lastRow.chain_sequence;
 		moved = true;
-		run.recordsRemoved += stretches.reduce(
-			(total, stretch) => total + stretch.removed.length,
-			0
-		);
-		run.runsRecorded += stretches.length;
-
 		if (rows.length < run.batchSize) {
 			break;
 		}
