@@ -50,7 +50,9 @@ interface SavedStyle {
 /**
  * Removes the plugin's colour from every edge under `root` so the picture
  * shows the edges as authored. Returns the function that puts the colours
- * back, to call once the picture is taken.
+ * back, to call once the picture is taken. A property that has been given a
+ * value since it was removed (the canvas redrew the edge while the picture was
+ * being taken) is left as that newer value, not overwritten with the old one.
  */
 export function stripPluginAppearance(root: ParentNode): () => void {
 	const saved: SavedStyle[] = [];
@@ -72,7 +74,9 @@ export function stripPluginAppearance(root: ParentNode): () => void {
 	}
 	return () => {
 		for (const { path, property, value, priority } of saved) {
-			path.style.setProperty(property, value, priority);
+			if (path.style.getPropertyValue(property) === "") {
+				path.style.setProperty(property, value, priority);
+			}
 		}
 	};
 }

@@ -149,6 +149,17 @@ describe("what a capture leaves out", () => {
 		expect(canvas.edge.getAttribute("style")).toBe(EDGE_STYLE);
 	});
 
+	it("leaves a colour the canvas set while the picture was taken, and puts back the rest", () => {
+		const restore = stripPluginAppearance(canvas.viewport);
+		canvas.edge.style.stroke = "var(--success)";
+
+		restore();
+
+		expect(canvas.edge.style.stroke).toBe("var(--success)");
+		expect(canvas.edge.style.strokeWidth).toBe("3");
+		expect(canvas.edge.style.getPropertyValue("stroke-opacity")).toBe("0.35");
+	});
+
 	it("removes the fade from a line that has no tone, and puts it back", () => {
 		const fadedOnly = edgePath({
 			"data-appearance": "plain",
