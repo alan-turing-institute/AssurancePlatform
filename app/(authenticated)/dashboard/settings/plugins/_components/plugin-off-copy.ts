@@ -53,12 +53,11 @@ export function buildPluginOffCopy({
 	if (consequences && consequences.evidenceRecordCount > 0) {
 		const { evidenceRecordCount, caseCount } = consequences;
 		const stayVerb = evidenceRecordCount === 1 ? "stays" : "stay";
-		const isVerb = evidenceRecordCount === 1 ? "is" : "are";
 		// "N of your cases" is a partitive phrase — "cases" stays plural
 		// regardless of N, the same way "1 of your friends" never becomes
 		// "1 of your friend". Only the evidence-record noun pluralises.
 		variableLines.push(
-			`The ${evidenceRecordCount} evidence ${pluralise("record", evidenceRecordCount)} on ${caseCount} of your cases ${stayVerb} stored and ${isVerb} never deleted.`
+			`The ${evidenceRecordCount} evidence ${pluralise("record", evidenceRecordCount)} on ${caseCount} of your cases ${stayVerb} stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on.`
 		);
 	}
 

@@ -58,7 +58,7 @@ describe("PluginOffConfirmDialog", () => {
 		// (vincent, review round 2026-09-22: passed alone, failed under the
 		// full-suite coverage run).
 		await screen.findByText(
-			"The 2 evidence records on 1 of your cases stay stored and are never deleted."
+			"The 2 evidence records on 1 of your cases stay stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on."
 		);
 		expect(
 			screen.getByText(
@@ -91,7 +91,7 @@ describe("PluginOffConfirmDialog", () => {
 		// the integration line is absent — otherwise this assertion could pass
 		// for the wrong reason, mid-loading, before the real content renders.
 		await screen.findByText(
-			"The 5 evidence records on 2 of your cases stay stored and are never deleted."
+			"The 5 evidence records on 2 of your cases stay stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on."
 		);
 		expect(dialog).not.toHaveTextContent(CURRENTLY_WRITE_REGEX);
 	});

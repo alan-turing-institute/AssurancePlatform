@@ -875,6 +875,11 @@ async function readResultKeys(ids: string[]): Promise<Map<string, string>> {
  * Whether any record of `caseId` in `session` carries a `valid_while`
  * condition. Conditions read provenance values the same-result key ignores,
  * so records in such a session are never thinned.
+ *
+ * The two `valid_while` tests below are written exactly as the partial index
+ * `plugin_health_evidence_session_conditions_idx` states its predicate, which
+ * lets the planner answer from that index alone: a session with no conditions
+ * finds nothing there and no record in the session is read.
  */
 async function sessionCarriesConditions(
 	caseId: string,
@@ -1177,6 +1182,13 @@ export async function thinHealthEvidence(
 ): ServiceResult<HealthThinningResult> {
 	const timeBudgetMs = options.timeBudgetMs ?? DEFAULT_THINNING_TIME_BUDGET_MS;
 	try {
+		// This transaction exists only to hold the advisory lock, which Postgres
+		// releases when the transaction ends. The work deliberately runs on other
+		// connections, each batch committing on its own, so none of it goes
+		// through `lockTx`; at its peak a call therefore holds two pool
+		// connections. If the transaction's timeout fires, the lock is released
+		// and the call reports an error; a batch still running is guarded by its
+		// own position check, so it either applies cleanly or gives up.
 		const result = await prisma.$transaction(
 			async (lockTx): Promise<HealthThinningResult> => {
 				const lock = await lockTx.$queryRaw<Array<{ locked: boolean }>>`

@@ -1211,6 +1211,13 @@ model PluginHealthEvidence {
   @@index([claimId, chainSequence])
   @@index([claimId, recordTimestamp])
   @@index([session])
+  // A second, partial index on (session) holds only the records whose
+  // `valid_while` is a non-empty object; the thinning job reads it to see
+  // whether a session carries conditions. It is hand-written in the
+  // 20261016130000 migration because Prisma's schema DSL cannot express
+  // partial indexes, and `prisma migrate diff` ignores them, so the schema
+  // needs no line for it. Keep its predicate identical to the one in
+  // `sessionCarriesConditions`.
   @@map("plugin_health_evidence")
 }
 

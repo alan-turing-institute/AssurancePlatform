@@ -172,7 +172,7 @@ Each of these changes emits `tea.health/state-changed` after it commits.
 A pipeline that reports every few seconds adds thousands of results to a claim each day, and almost all of them say the same thing as the one before.
 A nightly job thins them.
 It removes a passing result only when the result is more than a day old and repeats its neighbours exactly.
-Everything else stays: every fail, marginal and could-not-judge result, every result that differed from the accepted settings, every withdrawn result, every change of value, and everything from the last day.
+Everything else stays: every fail, marginal and could-not-judge result, every result that differed from the accepted settings, every result stored while the claim had no accepted settings (comparison `undeclared`), every withdrawn result, every change of value, and everything from the last day.
 A deployment that must keep every result does not schedule the job; nothing else removes records except deleting a claim or its case for good.
 
 ### What counts as the same result
@@ -190,7 +190,7 @@ No record is removed from a session in which any record of the same case carries
 
 A run is an unbroken sequence of same-result records in one claim's chain, in arrival order, whose own timestamps never go backwards.
 A record with an earlier timestamp than the record before it ends the run, as does any record the job never removes; a tie in timestamps does not.
-If a pipeline puts a value that changes with every result into its provenance, its records never match and nothing is thinned.
+If a pipeline puts a value that changes with every result into its `value`, its `payload` or one of the four named provenance values, its records never match and nothing is thinned; other provenance values are treated as readings and do not stop thinning.
 
 ### What a run keeps
 
@@ -200,8 +200,10 @@ From each run the job keeps:
 - the first record at least an hour after the previous one kept;
 - each record whose next record in the run is an hour or more later, and that next record.
 
-An unbroken day of passing results every six seconds becomes about 26 records.
-The cut-off is the start of the current UTC hour minus 24 hours, fixed for a night's calls, and the job never touches a record that arrived at or after it.
+An unbroken day of passing results every six seconds becomes about 26 records, plus one for each batch of about 2,000 records the job examines.
+The cut-off is the start of a UTC hour minus 24 hours, and the job never touches a record that arrived at or after it.
+The workflow works out that hour once, when a run starts, and sends it as `now` on every call, so the cut-off is fixed for a night's calls.
+A call without `now` uses the server's time.
 Each night carries on from where the last one stopped, so a run that goes on across several nights keeps one extra record at each night's edge and two gaps are never merged.
 Where a batch within a call ends inside a run, the next batch starts from the record the last one ended on, so the run carries on in the same way.
 A record kept once is never removed later.
@@ -228,7 +230,9 @@ It then removes the batch in one short transaction that holds the claim row lock
 The transaction gives up, and the batch is retried on a later call, if the claim has moved on or a record in the batch has been withdrawn since it was read.
 Withdrawing and reinstating a record take the same claim row lock, so a withdrawal can never land between the job's check and its removal.
 A call works for about a minute and returns `more: true` when records remain, and the workflow calls again, up to 30 times a night.
-`dryRun=1` makes a single call that counts what would be removed and writes nothing.
+`dryRun=1` or `dryRun=true` makes a single call that counts what would be removed and writes nothing; `0`, `false` or no `dryRun` does the work.
+A call is refused with a 400 and does nothing if `dryRun` has any other value, if `now` is not an ISO 8601 date-time, or if the query has an unknown or repeated parameter.
+A `now` later than the server's time is treated as the server's time, because a later cut-off could only remove more.
 
 ## Declare evidence settings
 

@@ -1,5 +1,6 @@
 import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
-import { AppError } from "@/lib/errors";
+import { AppError, validationError } from "@/lib/errors";
+import { parseHealthEvidenceThinningQuery } from "@/lib/schemas/health-evidence-thinning";
 import { requireCronSecret } from "@/lib/services/cron-auth";
 import { thinHealthEvidence } from "@/lib/services/health-evidence-service";
 
@@ -20,8 +21,10 @@ import { thinHealthEvidence } from "@/lib/services/health-evidence-service";
  * does nothing. Protected by CRON_SECRET environment variable.
  *
  * @header Authorization - Bearer token matching CRON_SECRET env var
- * @query dryRun - Set to "1" to count what would be removed without removing or writing anything
+ * @query dryRun - "1" or "true" counts what would be removed without removing or writing anything; "0", "false" or absent does the work; any other value is refused with 400 and nothing is done
+ * @query now - An ISO 8601 date-time the one-day cut-off is measured from (the start of that UTC hour, a day back), so a caller making several calls in one night can pass the same value on each; a time later than the server's is treated as the server's time; a malformed value is refused with 400 and nothing is done
  * @response 200 - { success: true, dryRun: boolean, busy: boolean, claimsProcessed: number, recordsRemoved: number, runsRecorded: number, more: boolean }
+ * @response 400 - Invalid query (an unknown or repeated parameter, or a malformed dryRun or now)
  * @response 401 - Unauthorised (invalid or missing token)
  * @response 500 - Server error
  * @tag Cron
@@ -30,8 +33,6 @@ export async function POST(request: Request) {
 	try {
 		const authHeader = request.headers.get("authorization");
 		const token = authHeader?.replace("Bearer ", "") ?? null;
-		const { searchParams } = new URL(request.url);
-		const dryRun = searchParams.get("dryRun") === "1";
 
 		const auth = requireCronSecret(token);
 		if (!auth.authorised) {
@@ -43,7 +44,29 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const result = await thinHealthEvidence({ dryRun });
+		const query = parseHealthEvidenceThinningQuery(
+			new URL(request.url).searchParams
+		);
+		if (!query.success) {
+			const issue = query.error.issues[0];
+			const field = issue?.path.join(".");
+			return apiError(
+				validationError(
+					field
+						? `${field} ${issue?.message}`
+						: (issue?.message ?? "Invalid query")
+				)
+			);
+		}
+		const { dryRun } = query.data;
+
+		// A cut-off measured from a later time can only thin more, so the
+		// caller's time counts only when it is not ahead of the server's.
+		const serverNow = new Date();
+		const now =
+			query.data.now && query.data.now < serverNow ? query.data.now : serverNow;
+
+		const result = await thinHealthEvidence({ dryRun, now });
 		if ("error" in result) {
 			return apiError(
 				new AppError({ code: "INTERNAL", message: result.error })

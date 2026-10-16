@@ -398,6 +398,29 @@ describe("thinHealthEvidence — what makes two results the same", () => {
 			...pick(free, [0, 3]),
 		]);
 	});
+
+	it("thins a session whose only valid_while is an empty object, since that sets no condition", async () => {
+		const { owner, claim } = await setupClaim();
+		const ids = await appendSeries(
+			owner.id,
+			claim.id,
+			at(0, 0),
+			4,
+			EVERY_FIVE_MINUTES,
+			{ overrides: { valid_while: {} } }
+		);
+		await markMatched(claim.id);
+		const stored = await prisma.pluginHealthEvidence.findFirst({
+			where: { claimId: claim.id },
+			select: { record: true },
+		});
+		expect(stored?.record).toMatchObject({ valid_while: {} });
+
+		const result = await thin();
+
+		expect(result.recordsRemoved).toBe(2);
+		expect(await storedRecordIds(claim.id)).toEqual(pick(ids, [0, 3]));
+	});
 });
 
 describe("thinHealthEvidence — the claim's status does not change", () => {

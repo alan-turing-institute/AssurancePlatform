@@ -70,14 +70,15 @@ one for each hour and both sides of any pause, and leaves a note of each
 removed stretch (the technical guide's health plugin page gives the rule).
 Everything else is kept for as long as its case exists: every fail,
 marginal and could-not-judge result, every result that differed from the
-accepted settings, every withdrawn result, every change of value, and
-everything from the last day. A check that reports once a minute adds about
-1,440 records to its claim each day, and a record can carry several
-kilobytes (its member list, provenance and payload), so a claim whose
-pipeline reports a value that changes with every result, or that fails for
-long periods, keeps all of those records and its log keeps growing. Removed
-records are not archived anywhere. Reads are paged, so a long log does not
-slow the evidence tab.
+accepted settings, every result stored while the claim had no accepted
+settings (comparison `undeclared`), every withdrawn result, every change of
+value, and everything from the last day. A check that reports once a
+minute adds about 1,440 records to its claim each day, and a record can
+carry several kilobytes (its member list, provenance and payload), so a
+claim whose pipeline reports a value that changes with every result, or
+that fails for long periods, keeps all of those records and its log keeps
+growing. Removed records are not archived anywhere. Reads are paged, so a
+long log does not slow the evidence tab.
 
 A deployment that must keep every record does not schedule the job; nothing
 else removes records except the case purge described in limitation 1.
