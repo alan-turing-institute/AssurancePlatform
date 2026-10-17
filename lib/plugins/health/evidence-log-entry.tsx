@@ -11,6 +11,7 @@ import {
 	CAUSE_LABELS,
 	describeDuration,
 	describeLevels,
+	describeThinnedRun,
 	describeUncertainty,
 	describeValue,
 	formatDateTime,
@@ -24,7 +25,7 @@ import {
 	ReinstateRecordDialog,
 	RevokeRecordDialog,
 } from "./health-record-dialogs";
-import type { HealthEvidenceLogItem } from "./health-types";
+import type { HealthEvidenceLogItem, HealthThinnedRun } from "./health-types";
 
 const FAILED_SUBJECTS_SHOWN = 20;
 
@@ -222,6 +223,18 @@ function RecordActions({
 				returnFocusTo={button}
 			/>
 		</div>
+	);
+}
+
+/** The line between two kept records where identical passing results were removed. */
+export function ThinnedRunLine({ run }: { run: HealthThinnedRun }) {
+	return (
+		<p
+			className="border-y border-dashed py-1 text-center text-muted-foreground text-sm"
+			data-testid="health-evidence-thinned"
+		>
+			{describeThinnedRun(run)}
+		</p>
 	);
 }
 

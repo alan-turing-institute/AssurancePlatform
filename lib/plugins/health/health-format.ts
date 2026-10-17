@@ -2,7 +2,11 @@ import type {
 	HealthEvidenceRecord,
 	HealthVerdict,
 } from "@/lib/schemas/health-evidence";
-import type { HealthRevocationCause, HealthStatus } from "./health-types";
+import type {
+	HealthRevocationCause,
+	HealthStatus,
+	HealthThinnedRun,
+} from "./health-types";
 
 export const VERDICT_DOT_CLASSES: Record<HealthVerdict, string> = {
 	pass: "bg-success",
@@ -42,6 +46,46 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
 export function formatDateTime(iso: string): string {
 	const date = new Date(iso);
 	return Number.isFinite(date.getTime()) ? dateTimeFormat.format(date) : iso;
+}
+
+const timeOfDayFormat = new Intl.DateTimeFormat("en-GB", {
+	hour: "2-digit",
+	minute: "2-digit",
+});
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
+	day: "numeric",
+	month: "short",
+});
+
+/**
+ * The line shown where passing results were removed from the log: how many,
+ * and from when to when, in the viewer's time zone. "1,437 identical passing
+ * results from 10:00 to 11:00 on 14 Oct are not kept."
+ */
+export function describeThinnedRun(run: HealthThinnedRun): string {
+	const count = run.removed_count;
+	const subject = `${count.toLocaleString("en-GB")} identical passing ${
+		count === 1 ? "result" : "results"
+	}`;
+	const verb = count === 1 ? "is" : "are";
+	const first = new Date(run.first_removed_at);
+	const last = new Date(run.last_removed_at);
+	if (!(Number.isFinite(first.getTime()) && Number.isFinite(last.getTime()))) {
+		return `${subject} ${verb} not kept.`;
+	}
+	const startTime = timeOfDayFormat.format(first);
+	const endTime = timeOfDayFormat.format(last);
+	const startDay = dayFormat.format(first);
+	const endDay = dayFormat.format(last);
+	let when = `from ${startTime} on ${startDay} to ${endTime} on ${endDay}`;
+	if (startDay === endDay) {
+		when =
+			startTime === endTime
+				? `at ${startTime} on ${startDay}`
+				: `from ${startTime} to ${endTime} on ${startDay}`;
+	}
+	return `${subject} ${when} ${verb} not kept.`;
 }
 
 const DURATION_PATTERN =

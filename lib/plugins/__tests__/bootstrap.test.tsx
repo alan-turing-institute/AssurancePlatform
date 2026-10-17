@@ -128,6 +128,7 @@ function mockEvidenceLog() {
 						created_at: new Date().toISOString(),
 						expires_at: null,
 						revocation: null,
+						thinned_before: null,
 					},
 				],
 				next_before: null,

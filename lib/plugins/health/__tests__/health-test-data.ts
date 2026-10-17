@@ -99,6 +99,7 @@ export function item(
 		created_at: "2026-10-02T08:08:01.000Z",
 		expires_at: "2026-10-02T09:08:00.000Z",
 		revocation: null,
+		thinned_before: null,
 		echo_state: "undeclared",
 		echo_differences: null,
 		criteria_revision: null,

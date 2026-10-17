@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
 import { canonicalJSON as canonical } from "@/lib/health-canonical-json";
+import {
+	chooseRecordsToKeep,
+	THINNING_RULE_VERSION,
+} from "@/lib/health-thinning-rule";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import {
@@ -21,6 +25,7 @@ import {
 	type PluginHealthBindingSource,
 	type PluginHealthEchoState,
 	type PluginHealthEvidenceVerdict,
+	type PluginHealthRevocation,
 	type PluginHealthRevocationCause,
 	Prisma,
 } from "@/src/generated/prisma";
@@ -29,17 +34,23 @@ import type { ServiceResult } from "@/types/service";
 const log = logger.child({ component: "health-evidence-service" });
 
 /**
- * The health plugin's append-only evidence log (`plugin_health_evidence`).
- * This module is the ONLY code path allowed to write to the evidence table
- * and to the tables that qualify it (claim bound-check state, binding
- * history, revocations). Its operations on those tables are: append a
- * record, revoke one, reinstate one, and change a claim's bound check, which
+ * The health plugin's evidence log (`plugin_health_evidence`). This module is
+ * the ONLY code path allowed to write to the evidence table and to the tables
+ * that qualify it (claim bound-check state, binding history, revocations,
+ * thinned-run notes). Its operations on those tables are: append a record,
+ * revoke one, reinstate one, change a claim's bound check, which
  * `applyBoundCheck` also does for the evidence settings service inside that
- * service's own transaction.
- * There is no function anywhere in this file that updates or deletes an
- * evidence row — append-only is a structural property of the service
- * surface — and revoking a record adds a separate revocation row, so the
- * record and its place in the hash chain never change.
+ * service's own transaction, and thin the log.
+ * No function in this file updates an evidence row, and revoking a record adds
+ * a separate revocation row, so a record and its place in the hash chain never
+ * change.
+ * The one function that deletes evidence rows is `thinHealthEvidence`. It
+ * removes only passing results that repeat their neighbours exactly, once they
+ * are more than a day old, and leaves a thinned-run note for each stretch it
+ * removes, naming the kept records either side so the hash chain can still be
+ * walked across the gap. The only other removal is the cascade that follows
+ * deleting a claim or its case for good, which takes the evidence and the
+ * notes together.
  * `src/__tests__/integration/health-evidence-service.test.ts` asserts the
  * module's exports directly to prove it.
  *
@@ -50,7 +61,9 @@ const log = logger.child({ component: "health-evidence-service" });
  * critical section, inside one Prisma interactive transaction. The claim
  * row always exists, so this works identically for a claim's first record
  * and its hundredth. Writers for DIFFERENT claims lock different rows and
- * never block each other.
+ * never block each other. Revoking and reinstating a record take the same
+ * lock, and so does each batch of the thinning job, so a withdrawal can never
+ * land between the job's check for withdrawals and its removal.
  */
 
 const RECORD_NOT_FOUND = "Record not found";
@@ -320,6 +333,23 @@ const ECHO_FROM_DB: Record<PluginHealthEchoState, EchoWire> = {
 	UNDECLARED: "undeclared",
 };
 
+/**
+ * A stretch of repeated passing results removed from the log straight before
+ * a kept record (see `thinHealthEvidence`).
+ */
+export interface HealthThinnedRunView {
+	/** The record timestamps and chain positions of the first and last removed record. */
+	first_removed_at: string;
+	first_removed_sequence: number;
+	last_removed_at: string;
+	last_removed_sequence: number;
+	/** How many records were removed. */
+	removed_count: number;
+	/** Which version of the thinning rule removed them. */
+	rule_version: number;
+	thinned_at: string;
+}
+
 export interface HealthEvidenceListItem {
 	chain_sequence: number;
 	created_at: string;
@@ -335,12 +365,34 @@ export interface HealthEvidenceListItem {
 	record: HealthEvidenceRecord;
 	record_hash: string;
 	revocation: HealthRevocationView | null;
+	/** The records removed from the log between this one and the next older kept record; null when none were. */
+	thinned_before: HealthThinnedRunView | null;
 }
 
 export interface HealthEvidencePage {
 	items: HealthEvidenceListItem[];
 	/** Pass as `before` to read the next (older) page; null when there is none. */
 	nextBefore: number | null;
+}
+
+function toThinnedRunView(run: {
+	firstRemovedAt: Date;
+	firstRemovedSequence: number;
+	lastRemovedAt: Date;
+	lastRemovedSequence: number;
+	removedCount: number;
+	ruleVersion: number;
+	thinnedAt: Date;
+}): HealthThinnedRunView {
+	return {
+		removed_count: run.removedCount,
+		first_removed_at: run.firstRemovedAt.toISOString(),
+		first_removed_sequence: run.firstRemovedSequence,
+		last_removed_at: run.lastRemovedAt.toISOString(),
+		last_removed_sequence: run.lastRemovedSequence,
+		rule_version: run.ruleVersion,
+		thinned_at: run.thinnedAt.toISOString(),
+	};
 }
 
 function toRevocationView(
@@ -362,7 +414,8 @@ function toRevocationView(
 
 /**
  * One page of `claimId`'s evidence log, newest first, each item carrying
- * its open revocation (or null). `before` is a `chain_sequence`: only
+ * its open revocation (or null) and the note of any records thinned out
+ * straight before it (or null). `before` is a `chain_sequence`: only
  * records older than it are returned. With `live`, only records that are
  * not revoked and whose validity has not run out are returned. Requires
  * VIEW-level case access.
@@ -399,6 +452,7 @@ export async function listHealthEvidence(
 			take: limit + 1,
 			include: {
 				revocations: { where: { reinstatedAt: null }, take: 1 },
+				thinnedBefore: true,
 			},
 		});
 		const hasMore = rows.length > limit;
@@ -428,6 +482,9 @@ export async function listHealthEvidence(
 				revocation: row.revocations[0]
 					? toRevocationView(row.revocations[0], names)
 					: null,
+				thinned_before: row.thinnedBefore
+					? toThinnedRunView(row.thinnedBefore)
+					: null,
 			})
 		);
 		return {
@@ -454,7 +511,9 @@ export interface RevokedHealthEvidence {
 /**
  * Withdraws one record from its claim's status. The evidence row is not
  * touched: the revocation is a separate row, so the record stays in the log
- * (marked revoked) and keeps its place in the hash chain. Requires EDIT.
+ * (marked revoked) and keeps its place in the hash chain. Runs under the
+ * claim-row lock, so the thinning job cannot remove the record while this
+ * withdrawal is being written. Requires EDIT.
  */
 export async function revokeHealthEvidence(
 	actingUserId: string,
@@ -468,34 +527,44 @@ export async function revokeHealthEvidence(
 	}
 
 	try {
-		const evidence = await prisma.pluginHealthEvidence.findFirst({
-			where: { recordId, claimId },
-			select: { id: true },
-		});
-		if (!evidence) {
-			return { error: RECORD_NOT_FOUND };
+		const outcome = await prisma.$transaction(
+			async (
+				tx
+			): Promise<{ error: string } | { created: PluginHealthRevocation }> => {
+				await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+				const evidence = await tx.pluginHealthEvidence.findFirst({
+					where: { recordId, claimId },
+					select: { id: true },
+				});
+				if (!evidence) {
+					return { error: RECORD_NOT_FOUND };
+				}
+				const open = await tx.pluginHealthRevocation.findFirst({
+					where: { evidenceId: evidence.id, reinstatedAt: null },
+					select: { id: true },
+				});
+				if (open) {
+					return { error: ALREADY_REVOKED };
+				}
+				const created = await tx.pluginHealthRevocation.create({
+					data: {
+						evidenceId: evidence.id,
+						cause: CAUSE_TO_DB[input.cause],
+						reason: input.reason,
+						revokedById: actingUserId,
+					},
+				});
+				return { created };
+			}
+		);
+		if ("error" in outcome) {
+			return { error: outcome.error };
 		}
-		const open = await prisma.pluginHealthRevocation.findFirst({
-			where: { evidenceId: evidence.id, reinstatedAt: null },
-			select: { id: true },
-		});
-		if (open) {
-			return { error: ALREADY_REVOKED };
-		}
-
-		const created = await prisma.pluginHealthRevocation.create({
-			data: {
-				evidenceId: evidence.id,
-				cause: CAUSE_TO_DB[input.cause],
-				reason: input.reason,
-				revokedById: actingUserId,
-			},
-		});
 		const names = await usernamesById([actingUserId]);
 		return {
 			data: {
 				caseId: guard.caseId,
-				revocation: toRevocationView(created, names),
+				revocation: toRevocationView(outcome.created, names),
 			},
 		};
 	} catch (error) {
@@ -514,7 +583,7 @@ export async function revokeHealthEvidence(
 /**
  * Puts a revoked record back. The revocation row stays, now closed with who
  * reinstated it, when and why; revoking the record again adds a new row.
- * Requires EDIT.
+ * Takes the same claim-row lock as a withdrawal. Requires EDIT.
  */
 export async function reinstateHealthEvidence(
 	actingUserId: string,
@@ -528,23 +597,29 @@ export async function reinstateHealthEvidence(
 	}
 
 	try {
-		const evidence = await prisma.pluginHealthEvidence.findFirst({
-			where: { recordId, claimId },
-			select: { id: true },
-		});
-		if (!evidence) {
-			return { error: RECORD_NOT_FOUND };
-		}
-		const closed = await prisma.pluginHealthRevocation.updateMany({
-			where: { evidenceId: evidence.id, reinstatedAt: null },
-			data: {
-				reinstatedAt: new Date(),
-				reinstatedById: actingUserId,
-				reinstatementReason: input.reason,
-			},
-		});
-		if (closed.count === 0) {
-			return { error: NOT_REVOKED };
+		const outcome = await prisma.$transaction(
+			async (tx): Promise<{ error: string } | { ok: true }> => {
+				await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+				const evidence = await tx.pluginHealthEvidence.findFirst({
+					where: { recordId, claimId },
+					select: { id: true },
+				});
+				if (!evidence) {
+					return { error: RECORD_NOT_FOUND };
+				}
+				const closed = await tx.pluginHealthRevocation.updateMany({
+					where: { evidenceId: evidence.id, reinstatedAt: null },
+					data: {
+						reinstatedAt: new Date(),
+						reinstatedById: actingUserId,
+						reinstatementReason: input.reason,
+					},
+				});
+				return closed.count === 0 ? { error: NOT_REVOKED } : { ok: true };
+			}
+		);
+		if ("error" in outcome) {
+			return { error: outcome.error };
 		}
 		return { data: { caseId: guard.caseId } };
 	} catch (error) {
@@ -658,5 +733,510 @@ export async function changeBoundCheck(
 	} catch (error) {
 		log.error("Failed to change health bound check", { error });
 		return { error: "Failed to change the bound check" };
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Thinning
+// ---------------------------------------------------------------------------
+
+/** Names the database-wide advisory lock that lets one thinning call run at a time. */
+export const THINNING_LOCK_NAME = "plugin_health_evidence_thinning";
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+const DEFAULT_THINNING_BATCH_SIZE = 2000;
+const DEFAULT_THINNING_TIME_BUDGET_MS = 60_000;
+/** How far a call may overrun its time budget while its last batch finishes. */
+const THINNING_OVERRUN_ALLOWANCE_MS = 300_000;
+const BATCH_TRANSACTION_TIMEOUT_MS = 30_000;
+const POOL_WAIT_MS = 5000;
+
+export interface ThinHealthEvidenceOptions {
+	/** How many records a batch examines (default 2,000). */
+	batchSize?: number;
+	/** Work out what would be removed and write nothing. */
+	dryRun?: boolean;
+	/** The time the cut-off is measured from (default now). */
+	now?: Date;
+	/** Stop starting batches after this long (default 60 seconds); a call always finishes one batch. */
+	timeBudgetMs?: number;
+}
+
+interface HealthThinningResult {
+	/** Another call holds the lock; nothing was done. */
+	busy: boolean;
+	/** Claims whose position moved on in this call. */
+	claimsProcessed: number;
+	/** Records may remain to be examined, so the caller should call again. */
+	more: boolean;
+	recordsRemoved: number;
+	/** Thinned-run notes written. */
+	runsRecorded: number;
+}
+
+/** One record of a claim's chain, as the thinning job reads it: no record JSON. */
+interface ChainRow {
+	chain_sequence: number;
+	created_at: Date;
+	ever_withdrawn: boolean;
+	id: string;
+	/** A pass whose comparison with the settings said match. */
+	plain_pass: boolean;
+	record_timestamp: Date;
+	session: string;
+}
+
+/** A stretch of removed records and the kept records either side of it. */
+interface RemovedStretch {
+	after: ChainRow;
+	before: ChainRow;
+	removed: ChainRow[];
+}
+
+interface ThinningRun {
+	/** Batches examined so far, whether written or only counted. */
+	batches: number;
+	batchSize: number;
+	claimsProcessed: number;
+	cutoff: Date;
+	dryRun: boolean;
+	more: boolean;
+	recordsRemoved: number;
+	runsRecorded: number;
+	sessionsWithConditions: Map<string, Promise<boolean>>;
+	startedAt: number;
+	timeBudgetMs: number;
+}
+
+/** The start of the current UTC hour, a day back: nothing newer is touched. */
+function thinningCutoff(now: Date): Date {
+	return new Date(Math.floor(now.getTime() / HOUR_MS) * HOUR_MS - DAY_MS);
+}
+
+function overBudget(run: ThinningRun): boolean {
+	return Date.now() - run.startedAt >= run.timeBudgetMs;
+}
+
+/** The next records of `claimId`'s chain after `after`, in chain order, with no record JSON. */
+async function readChainRows(
+	claimId: string,
+	after: number,
+	limit: number
+): Promise<ChainRow[]> {
+	return await prisma.$queryRaw<ChainRow[]>`
+		SELECT e.id, e.chain_sequence, e.created_at, e.record_timestamp, e.session,
+			(e.verdict = 'PASS' AND e.echo_state = 'MATCH') AS plain_pass,
+			EXISTS (
+				SELECT 1 FROM plugin_health_revocations r WHERE r.evidence_id = e.id
+			) AS ever_withdrawn
+		FROM plugin_health_evidence e
+		WHERE e.claim_id = ${claimId} AND e.chain_sequence > ${after}
+		ORDER BY e.chain_sequence
+		LIMIT ${limit}
+	`;
+}
+
+/**
+ * The same-result key of each record: a hash computed by the database from
+ * the record with these taken out: `record_id`, `timestamp`, `comment`, and
+ * every `provenance` value except `session`, `pipeline_version`, `run` and
+ * `twin_version` (so `members` and `failed_subjects` go too). The value,
+ * uncertainty, judged value, payload, check, settings, subject and the rest
+ * stay in. The settings revision and the recording account are added, so two
+ * records have the same key only when they say the same thing under the same
+ * settings from the same pipeline.
+ */
+async function readResultKeys(ids: string[]): Promise<Map<string, string>> {
+	if (ids.length === 0) {
+		return new Map();
+	}
+	const rows = await prisma.$queryRaw<
+		Array<{ id: string; result_key: string }>
+	>`
+		SELECT e.id,
+			encode(sha256(convert_to(jsonb_build_array(
+				(e.record - 'record_id' - 'timestamp' - 'comment' - 'provenance')
+					|| jsonb_build_object('provenance', COALESCE(
+						(SELECT jsonb_object_agg(p.name, p.val)
+							FROM jsonb_each(e.record -> 'provenance') AS p(name, val)
+							WHERE p.name IN ('session', 'pipeline_version', 'run', 'twin_version')),
+						'{}'::jsonb)),
+				e.criteria_revision,
+				e.created_by_id
+			)::text, 'UTF8')), 'hex') AS result_key
+		FROM plugin_health_evidence e
+		WHERE e.id = ANY(${ids})
+	`;
+	return new Map(rows.map((row) => [row.id, row.result_key]));
+}
+
+/**
+ * Whether any record of `caseId` in `session` carries a `valid_while`
+ * condition. Conditions read provenance values the same-result key ignores,
+ * so records in such a session are never thinned.
+ *
+ * The two `valid_while` tests below are written exactly as the partial index
+ * `plugin_health_evidence_session_conditions_idx` states its predicate, which
+ * lets the planner answer from that index alone: a session with no conditions
+ * finds nothing there and no record in the session is read.
+ */
+async function sessionCarriesConditions(
+	caseId: string,
+	session: string
+): Promise<boolean> {
+	const rows = await prisma.$queryRaw<Array<{ found: boolean }>>`
+		SELECT EXISTS (
+			SELECT 1
+			FROM plugin_health_evidence v
+			JOIN assurance_elements a ON a.id = v.claim_id
+			WHERE a.case_id = ${caseId}
+				AND v.session = ${session}
+				AND jsonb_typeof(v.record -> 'valid_while') = 'object'
+				AND v.record -> 'valid_while' <> '{}'::jsonb
+		) AS found
+	`;
+	return rows[0]?.found === true;
+}
+
+/** Answers `sessionCarriesConditions` once per case and session in a call. */
+function protectedSession(
+	run: ThinningRun,
+	caseId: string,
+	session: string
+): Promise<boolean> {
+	const cacheKey = `${caseId}\u0000${session}`;
+	let answer = run.sessionsWithConditions.get(cacheKey);
+	if (!answer) {
+		answer = sessionCarriesConditions(caseId, session);
+		run.sessionsWithConditions.set(cacheKey, answer);
+	}
+	return answer;
+}
+
+/** Which of `rows` the keep rule removes, as the stretches between kept records. */
+async function planRemovals(
+	run: ThinningRun,
+	caseId: string,
+	rows: ChainRow[]
+): Promise<RemovedStretch[]> {
+	const candidates: ChainRow[] = [];
+	for (const row of rows) {
+		if (
+			row.plain_pass &&
+			!row.ever_withdrawn &&
+			!(await protectedSession(run, caseId, row.session))
+		) {
+			candidates.push(row);
+		}
+	}
+	const keys = await readResultKeys(candidates.map((row) => row.id));
+	const kept = chooseRecordsToKeep(
+		rows.map((row) => ({
+			resultKey: keys.get(row.id) ?? null,
+			timestampMs: row.record_timestamp.getTime(),
+		}))
+	);
+
+	const stretches: RemovedStretch[] = [];
+	let index = 0;
+	while (index < rows.length) {
+		if (kept[index]) {
+			index++;
+			continue;
+		}
+		const start = index;
+		while (index < rows.length && !kept[index]) {
+			index++;
+		}
+		const before = rows[start - 1];
+		const after = rows[index];
+		if (!(before && after)) {
+			// The rule keeps the first and last record of every batch.
+			throw new Error("Thinning plan removes a batch edge");
+		}
+		stretches.push({ before, after, removed: rows.slice(start, index) });
+	}
+	return stretches;
+}
+
+/**
+ * Removes the planned stretches, writes their notes and moves the claim's
+ * position on, in one short transaction under the claim-row lock. Gives up,
+ * writing nothing, when the position has moved since the batch was read or
+ * a record in the batch has been withdrawn since.
+ */
+async function applyRemovals(
+	claimId: string,
+	mark: number | null,
+	rows: ChainRow[],
+	stretches: RemovedStretch[]
+): Promise<"written" | "given-up"> {
+	const first = rows[0]?.chain_sequence ?? 0;
+	const last = rows.at(-1)?.chain_sequence ?? 0;
+	const withdrawnWhenRead = rows.filter((row) => row.ever_withdrawn).length;
+	const removedIds = stretches.flatMap((stretch) =>
+		stretch.removed.map((row) => row.id)
+	);
+
+	return await prisma.$transaction(
+		async (tx) => {
+			await tx.$executeRaw`SET LOCAL lock_timeout = '5s'`;
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE`;
+
+			const state = await tx.pluginHealthClaimState.findUnique({
+				where: { claimId },
+				select: { thinnedThroughSequence: true },
+			});
+			if (state?.thinnedThroughSequence !== mark) {
+				return "given-up";
+			}
+			const withdrawnNow = await tx.$queryRaw<Array<{ count: bigint }>>`
+				SELECT count(DISTINCT r.evidence_id) AS count
+				FROM plugin_health_revocations r
+				JOIN plugin_health_evidence e ON e.id = r.evidence_id
+				WHERE e.claim_id = ${claimId}
+					AND e.chain_sequence BETWEEN ${first} AND ${last}
+			`;
+			if (Number(withdrawnNow[0]?.count ?? 0) !== withdrawnWhenRead) {
+				return "given-up";
+			}
+
+			if (removedIds.length > 0) {
+				const deleted = await tx.pluginHealthEvidence.deleteMany({
+					where: { id: { in: removedIds }, claimId },
+				});
+				if (deleted.count !== removedIds.length) {
+					throw new Error("Thinning removed a different number of records");
+				}
+				await tx.pluginHealthThinnedRun.createMany({
+					data: stretches.map((stretch) => ({
+						claimId,
+						keptBeforeId: stretch.before.id,
+						keptAfterId: stretch.after.id,
+						removedCount: stretch.removed.length,
+						firstRemovedSequence: stretch.removed[0]?.chain_sequence ?? 0,
+						lastRemovedSequence: stretch.removed.at(-1)?.chain_sequence ?? 0,
+						firstRemovedAt: stretch.removed[0]?.record_timestamp ?? new Date(0),
+						lastRemovedAt:
+							stretch.removed.at(-1)?.record_timestamp ?? new Date(0),
+						ruleVersion: THINNING_RULE_VERSION,
+					})),
+				});
+			}
+			await tx.pluginHealthClaimState.update({
+				where: { claimId },
+				data: { thinnedThroughSequence: last },
+			});
+			return "written";
+		},
+		{ maxWait: POOL_WAIT_MS, timeout: BATCH_TRANSACTION_TIMEOUT_MS }
+	);
+}
+
+/**
+ * The next batch of `claimId`'s chain after `mark`, up to the first record that
+ * arrived at or after the cut-off; empty when there is nothing new to examine.
+ * After the first pass the record the last batch stopped at is read again as
+ * the first row. It is already kept and is never removed; reading it lets a
+ * run carry on across a batch edge, with its hourly spacing, so an edge costs
+ * one extra kept record and not two.
+ */
+async function readBatch(
+	run: ThinningRun,
+	claimId: string,
+	mark: number | null
+): Promise<ChainRow[]> {
+	const contextRows = mark === null ? 0 : 1;
+	const fetched = await readChainRows(
+		claimId,
+		mark === null ? 0 : mark - 1,
+		run.batchSize
+	);
+	const firstRecent = fetched.findIndex(
+		(row) => row.created_at.getTime() >= run.cutoff.getTime()
+	);
+	const rows = firstRecent === -1 ? fetched : fetched.slice(0, firstRecent);
+	return rows.length > contextRows ? rows : [];
+}
+
+/**
+ * Removes one batch's repeats (or, on a dry run, only counts them) and adds the
+ * counts to the call's totals. False when the batch was given up.
+ */
+async function thinBatch(
+	run: ThinningRun,
+	claim: { caseId: string; claimId: string },
+	mark: number | null,
+	rows: ChainRow[]
+): Promise<boolean> {
+	const stretches = await planRemovals(run, claim.caseId, rows);
+	if (
+		!run.dryRun &&
+		(await applyRemovals(claim.claimId, mark, rows, stretches)) === "given-up"
+	) {
+		log.info("Gave up thinning a batch: the claim changed while it was read", {
+			claimId: claim.claimId,
+		});
+		return false;
+	}
+	run.recordsRemoved += stretches.reduce(
+		(total, stretch) => total + stretch.removed.length,
+		0
+	);
+	run.runsRecorded += stretches.length;
+	return true;
+}
+
+/**
+ * Thins one claim, batch by batch from where the last pass stopped, until its
+ * records run out, reach the cut-off or the call's time budget ends.
+ */
+async function thinClaim(
+	run: ThinningRun,
+	claim: { caseId: string; claimId: string; mark: number | null }
+): Promise<void> {
+	let mark = claim.mark;
+	let moved = false;
+	for (;;) {
+		const rows = await readBatch(run, claim.claimId, mark);
+		const lastRow = rows.at(-1);
+		if (!lastRow) {
+			break;
+		}
+		run.batches++;
+		if (!(await thinBatch(run, claim, mark, rows))) {
+			break;
+		}
+		mark = lastRow.chain_sequence;
+		moved = true;
+		if (rows.length < run.batchSize) {
+			break;
+		}
+		if (overBudget(run)) {
+			run.more = true;
+			break;
+		}
+	}
+	if (moved) {
+		run.claimsProcessed++;
+	}
+}
+
+async function thinClaims(run: ThinningRun): Promise<void> {
+	const states = await prisma.pluginHealthClaimState.findMany({
+		select: {
+			claimId: true,
+			thinnedThroughSequence: true,
+			claim: { select: { caseId: true } },
+		},
+		orderBy: { claimId: "asc" },
+	});
+	for (const state of states) {
+		if (run.batches > 0 && overBudget(run)) {
+			run.more = true;
+			return;
+		}
+		try {
+			await thinClaim(run, {
+				claimId: state.claimId,
+				caseId: state.claim.caseId,
+				mark: state.thinnedThroughSequence,
+			});
+		} catch (error) {
+			log.error("Failed to thin one claim's health evidence", {
+				error,
+				claimId: state.claimId,
+			});
+		}
+		if (run.more) {
+			return;
+		}
+	}
+}
+
+/**
+ * Thins the evidence log: removes the passing results that repeat their
+ * neighbours exactly, once they are more than a day old, and writes a note for
+ * each stretch it removes. The rule is `chooseRecordsToKeep`; the same-result
+ * key it works from is `readResultKeys`.
+ *
+ * The cut-off is the start of the current UTC hour minus 24 hours, fixed for
+ * the call. Each claim is read forward in chain order from where the last pass
+ * stopped (`thinnedThroughSequence`), up to the first record that arrived at or
+ * after the cut-off, so only records that are neighbours in the chain are ever
+ * judged to be a run. A batch is decided from narrow rows outside any lock,
+ * then written in one short transaction under the claim-row lock, which gives
+ * up if the claim has moved on or a record in the batch has been withdrawn
+ * since it was read.
+ *
+ * One call runs at a time: it holds a database-wide advisory lock for its
+ * whole length and returns `busy` when another call holds it. It stops
+ * starting batches after `timeBudgetMs` and reports `more` so the caller can
+ * call again. With `dryRun` it writes nothing and reports what a real call
+ * would do. Not tied to a person or a case: callers authenticate with the cron
+ * secret.
+ */
+export async function thinHealthEvidence(
+	options: ThinHealthEvidenceOptions = {}
+): ServiceResult<HealthThinningResult> {
+	const timeBudgetMs = options.timeBudgetMs ?? DEFAULT_THINNING_TIME_BUDGET_MS;
+	try {
+		// This transaction exists only to hold the advisory lock, which Postgres
+		// releases when the transaction ends. The work deliberately runs on other
+		// connections, each batch committing on its own, so none of it goes
+		// through `lockTx`; at its peak a call therefore holds two pool
+		// connections. If the transaction's timeout fires, the lock is released
+		// and the call reports an error; a batch still running is guarded by its
+		// own position check, so it either applies cleanly or gives up.
+		const result = await prisma.$transaction(
+			async (lockTx): Promise<HealthThinningResult> => {
+				const lock = await lockTx.$queryRaw<Array<{ locked: boolean }>>`
+					SELECT pg_try_advisory_xact_lock(hashtext(${THINNING_LOCK_NAME}::text)) AS locked
+				`;
+				if (lock[0]?.locked !== true) {
+					return {
+						busy: true,
+						claimsProcessed: 0,
+						more: false,
+						recordsRemoved: 0,
+						runsRecorded: 0,
+					};
+				}
+				const run: ThinningRun = {
+					batchSize: options.batchSize ?? DEFAULT_THINNING_BATCH_SIZE,
+					batches: 0,
+					claimsProcessed: 0,
+					cutoff: thinningCutoff(options.now ?? new Date()),
+					dryRun: options.dryRun === true,
+					more: false,
+					recordsRemoved: 0,
+					runsRecorded: 0,
+					sessionsWithConditions: new Map(),
+					startedAt: Date.now(),
+					timeBudgetMs,
+				};
+				await thinClaims(run);
+				return {
+					busy: false,
+					claimsProcessed: run.claimsProcessed,
+					more: run.more,
+					recordsRemoved: run.recordsRemoved,
+					runsRecorded: run.runsRecorded,
+				};
+			},
+			{
+				maxWait: POOL_WAIT_MS,
+				timeout: timeBudgetMs + THINNING_OVERRUN_ALLOWANCE_MS,
+			}
+		);
+		log.info("Health evidence thinning finished", {
+			...result,
+			dryRun: options.dryRun === true,
+		});
+		return { data: result };
+	} catch (error) {
+		log.error("Failed to thin health evidence", { error });
+		return { error: "Failed to thin health evidence" };
 	}
 }

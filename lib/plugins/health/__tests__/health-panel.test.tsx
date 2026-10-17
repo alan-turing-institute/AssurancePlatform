@@ -342,6 +342,127 @@ describe("HealthPanel — paging", () => {
 	});
 });
 
+/** A stretch of results thinned out between the two kept records of a log. */
+function thinnedRun(
+	overrides: Partial<NonNullable<HealthEvidenceLogItem["thinned_before"]>> = {}
+): NonNullable<HealthEvidenceLogItem["thinned_before"]> {
+	return {
+		removed_count: 1437,
+		first_removed_at: "2026-10-14T10:00:00.000Z",
+		first_removed_sequence: 11,
+		last_removed_at: "2026-10-14T10:10:00.000Z",
+		last_removed_sequence: 1447,
+		rule_version: 1,
+		thinned_at: "2026-10-16T03:47:00.000Z",
+		...overrides,
+	};
+}
+
+/** "10:00" in the viewer's time zone, the form the gap line uses. */
+function localTime(iso: string): string {
+	const date = new Date(iso);
+	return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+describe("HealthPanel — thinned stretches", () => {
+	it("draws one line under the record that follows a gap, with the count and the times, and none under the others", async () => {
+		const run = thinnedRun();
+		mockLog([
+			item(
+				{ id: "new", chain_sequence: 1448, thinned_before: run },
+				{ comment: "newer one" }
+			),
+			item({ id: "old", chain_sequence: 10 }, { comment: "older one" }),
+		]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		await screen.findByText("newer one");
+
+		const lines = screen.getAllByTestId("health-evidence-thinned");
+		expect(lines).toHaveLength(1);
+		expect(lines[0]).toHaveTextContent(
+			`1,437 identical passing results from ${localTime(run.first_removed_at)} to ${localTime(run.last_removed_at)} on 14 Oct are not kept.`
+		);
+		const order = Array.from(
+			screen
+				.getByTestId("health-evidence-log")
+				.querySelectorAll(
+					'[data-testid="health-evidence-entry"], [data-testid="health-evidence-thinned"]'
+				)
+		).map((element) => element.getAttribute("data-testid"));
+		expect(order).toEqual([
+			"health-evidence-entry",
+			"health-evidence-thinned",
+			"health-evidence-entry",
+		]);
+	});
+
+	it("says 'result' and 'is' for a single removed result", async () => {
+		const run = thinnedRun({
+			removed_count: 1,
+			last_removed_at: "2026-10-14T10:00:00.000Z",
+			last_removed_sequence: 11,
+		});
+		mockLog([item({ chain_sequence: 12, thinned_before: run })]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		const line = await screen.findByTestId("health-evidence-thinned");
+
+		expect(line).toHaveTextContent(
+			`1 identical passing result at ${localTime(run.first_removed_at)} on 14 Oct is not kept.`
+		);
+	});
+
+	it("shows no line when nothing was thinned", async () => {
+		mockLog([item()]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+
+		await screen.findByTestId("health-evidence-entry");
+
+		expect(screen.queryByTestId("health-evidence-thinned")).toBeNull();
+	});
+
+	it("keeps the line under the last record of a page while 'Load older' brings in the records beyond the gap", async () => {
+		server.use(
+			http.get(STATUS_URL, () => HttpResponse.json({ status: status() })),
+			http.get(EVIDENCE_URL, ({ request }) =>
+				new URL(request.url).searchParams.get("before")
+					? HttpResponse.json({
+							evidence: [
+								item(
+									{ id: "old", chain_sequence: 10 },
+									{ comment: "older one" }
+								),
+							],
+							next_before: null,
+						})
+					: HttpResponse.json({
+							evidence: [
+								item(
+									{
+										id: "new",
+										chain_sequence: 1448,
+										thinned_before: thinnedRun(),
+									},
+									{ comment: "newer one" }
+								),
+							],
+							next_before: 1448,
+						})
+			)
+		);
+		const user = userEvent.setup();
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+		await screen.findByText("newer one");
+		expect(screen.getAllByTestId("health-evidence-thinned")).toHaveLength(1);
+
+		await user.click(screen.getByRole("button", { name: "Load older" }));
+
+		await screen.findByText("older one");
+		expect(screen.getAllByTestId("health-evidence-thinned")).toHaveLength(1);
+	});
+});
+
 describe("HealthPanel — controls", () => {
 	it("shows no Revoke, Reinstate or Change control without canEdit", async () => {
 		mockLog([item()]);
