@@ -12,21 +12,21 @@ import { revokeIntegrationCaseAccess } from "@/lib/services/integration-registry
 /**
  * DELETE /api/integrations/[id]/case-grants/[caseId]
  *
- * Revokes the integration's system user's access to a case, if any is
- * currently granted. Idempotent — revoking a case that was never granted
- * (or already revoked) is a 200 success, not an error. Requires the caller
- * both own the integration and hold ADMIN on the case. Deliberately NOT
- * gated on integration status — revoking a suspended or revoked
- * integration's case access must keep working, since it is the operator's
- * cleanup path (see `revokeIntegrationCaseAccess`'s doc comment in
- * `integration-registry-service.ts`).
+ * Removes the integration's account access to a case.
+ * Removing a grant that does not exist succeeds, so the call can be repeated.
+ * The signed-in user must own the integration and hold Admin access to the
+ * case.
+ * It works for a suspended or revoked integration, so an owner can still clean
+ * up its access.
  *
+ * @description Removes the integration's access to a case; removing a grant that does not exist succeeds, and it works for a suspended or revoked integration.
  * @pathParam id - Integration ID (UUID)
  * @pathParam caseId - Case ID (UUID)
  * @response 200 - `{ success: true }`
  * @response 400 - Validation error
  * @response 401 - Unauthorised
- * @response 404 - Integration not found, OR case not found, OR caller lacks case ADMIN (identical message/status for all three — no enumeration oracle)
+ * @response 404 - Integration not found, case not found, or the signed-in user lacks Admin on the case, all with the same message
+ * @add 404
  * @auth SessionAuth
  * @tag Integrations
  */

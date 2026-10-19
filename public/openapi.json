@@ -2693,7 +2693,7 @@
       "get": {
         "operationId": "get-integrations",
         "summary": "GET /api/integrations",
-        "description": "Owner-only listing — the caller's own integrations only.",
+        "description": "Lists the integrations the signed-in user owns, each with a summary of its tokens and never a secret.",
         "tags": [
           "Integrations"
         ],
@@ -2731,7 +2731,7 @@
       "post": {
         "operationId": "post-integrations",
         "summary": "POST /api/integrations",
-        "description": "Any authenticated user may register an integration; the",
+        "description": "Registers an integration owned by the signed-in user and returns it without a token; any signed-in user may register one, and an unknown scope is a 400.",
         "tags": [
           "Integrations"
         ],
@@ -2761,6 +2761,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2771,7 +2774,7 @@
       "patch": {
         "operationId": "patch-integrations-{id}",
         "summary": "PATCH /api/integrations/[id]",
-        "description": "At least one of `description`/`scopes` must be present.",
+        "description": "Updates an integration's description and/or scopes (at least one is required); the scopes sent replace the existing list, and an unknown scope is a 400.",
         "tags": [
           "Integrations"
         ],
@@ -2801,6 +2804,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2809,7 +2815,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}",
         "summary": "DELETE /api/integrations/[id]",
-        "description": "Prefer `POST .../revoke` when the integration's own",
+        "description": "Deletes an integration with its account and tokens; revoke it instead when the record of who sent its evidence must stay resolvable.",
         "tags": [
           "Integrations"
         ],
@@ -2832,6 +2838,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2842,7 +2851,7 @@
       "get": {
         "operationId": "get-integrations-{id}-case-grants",
         "summary": "GET /api/integrations/[id]/case-grants",
-        "description": "",
+        "description": "Lists the cases the integration can reach and the permission level on each, limited to cases the signed-in user can view; it works for a suspended or revoked integration.",
         "tags": [
           "Integrations"
         ],
@@ -2872,6 +2881,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2880,7 +2892,7 @@
       "post": {
         "operationId": "post-integrations-{id}-case-grants",
         "summary": "POST /api/integrations/[id]/case-grants",
-        "description": "Never errors on a repeat call for a case the system user",
+        "description": "Grants the integration's account View, Comment or Edit access to a case (Admin is refused); the integration must be active, and the signed-in user must own it and hold Admin on the case.",
         "tags": [
           "Integrations"
         ],
@@ -2896,7 +2908,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` — new grant, or an existing grant's permission level changed"
+                  "$ref": "#/components/schemas/201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` for a new grant, or an existing grant whose permission level changed"
                 }
               }
             }
@@ -2910,6 +2922,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2920,7 +2938,7 @@
       "post": {
         "operationId": "post-integrations-{id}-reactivate",
         "summary": "POST /api/integrations/[id]/reactivate",
-        "description": "REVOKED stays terminal — reactivating a revoked integration",
+        "description": "Reactivates a suspended integration; a revoked integration cannot be reactivated, and reactivating one that is already active is a 409.",
         "tags": [
           "Integrations"
         ],
@@ -2950,6 +2968,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2960,7 +2984,7 @@
       "post": {
         "operationId": "post-integrations-{id}-revoke",
         "summary": "POST /api/integrations/[id]/revoke",
-        "description": "",
+        "description": "Revokes an integration permanently, together with all of its tokens that are still valid; a revoked integration cannot be reactivated.",
         "tags": [
           "Integrations"
         ],
@@ -2990,6 +3014,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3000,7 +3027,7 @@
       "post": {
         "operationId": "post-integrations-{id}-suspend",
         "summary": "POST /api/integrations/[id]/suspend",
-        "description": "A REVOKED integration cannot be suspended (REVOKED is",
+        "description": "Suspends an active integration so that none of its tokens authenticate until it is reactivated; a revoked integration cannot be suspended (409).",
         "tags": [
           "Integrations"
         ],
@@ -3030,6 +3057,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3040,7 +3073,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens",
         "summary": "POST /api/integrations/[id]/tokens",
-        "description": "`expiresAt` is optional — omitted means the token never",
+        "description": "Issues a bearer token for an active integration and returns its secret once; the token does not expire unless `expiresAt` is given.",
         "tags": [
           "Integrations"
         ],
@@ -3070,6 +3103,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3080,7 +3119,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}-case-grants-{caseId}",
         "summary": "DELETE /api/integrations/[id]/case-grants/[caseId]",
-        "description": "",
+        "description": "Removes the integration's access to a case; removing a grant that does not exist succeeds, and it works for a suspended or revoked integration.",
         "tags": [
           "Integrations"
         ],
@@ -3102,6 +3141,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -3113,7 +3155,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}-tokens-{tokenId}",
         "summary": "DELETE /api/integrations/[id]/tokens/[tokenId]",
-        "description": "",
+        "description": "Revokes a single token immediately; revoking a token that is already revoked is a 409.",
         "tags": [
           "Integrations"
         ],
@@ -3136,6 +3178,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3146,7 +3194,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens-{tokenId}-rotate",
         "summary": "POST /api/integrations/[id]/tokens/[tokenId]/rotate",
-        "description": "Refuses a token that is already revoked, or whose",
+        "description": "Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked token, or a token of an integration that is not active, is refused with 409.",
         "tags": [
           "Integrations"
         ],
@@ -3175,6 +3223,12 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -3411,7 +3465,7 @@
       "get": {
         "operationId": "get-machine-health-elements-{id}-evidence",
         "summary": "GET /api/machine/health/elements/[id]/evidence",
-        "description": "Auth is EITHER a bearer token scoped `health:evidence:read`",
+        "description": "Returns a page of a claim's evidence log, newest first, for a bearer token with the `health:evidence:read` scope or a signed-in person with view access to the case; the caller also needs the Claim/Evidence Health plugin on, which an integration's account counts as unless the deployment withholds the plugin. `limit` (default 50, at most 200) sets the page size and `before` (a `chain_sequence`) returns only older records; `next_before` in the response is the value to pass as `before` for the next page, or null on the last page. With `live=true`, only records that are not revoked and not expired are returned.",
         "tags": [
           "Machine"
         ],
@@ -3444,6 +3498,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3452,7 +3509,7 @@
       "post": {
         "operationId": "post-machine-health-elements-{id}-evidence",
         "summary": "POST /api/machine/health/elements/[id]/evidence",
-        "description": "Machine-only (`requireApiToken(\"health:evidence:write\")`).",
+        "description": "Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.",
         "tags": [
           "Machine"
         ],
@@ -3481,6 +3538,15 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"

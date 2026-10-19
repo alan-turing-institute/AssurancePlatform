@@ -12,16 +12,16 @@ import { reactivateIntegration } from "@/lib/services/integration-registry-servi
 /**
  * POST /api/integrations/[id]/reactivate
  *
- * Reverses `suspend` (SUSPENDED → ACTIVE). Owner-only, audited.
+ * Reverses a suspension, so the integration's tokens authenticate again.
+ * Only the owner can reactivate an integration.
  *
- * @description REVOKED stays terminal — reactivating a revoked integration
- * is a 409, never a resurrection. Reactivating an already-ACTIVE
- * integration is also a 409 (no-op success would hide a caller mistake).
+ * @description Reactivates a suspended integration; a revoked integration cannot be reactivated, and reactivating one that is already active is a 409.
  * @pathParam id - Integration ID (UUID)
  * @response 200 - The reactivated integration
  * @response 401 - Unauthorised
- * @response 404 - Integration not found (covers non-existent and not-owned — same message)
- * @response 409 - The integration is REVOKED, or already ACTIVE
+ * @response 404 - Integration not found (covers non-existent and not-owned, with the same message)
+ * @response 409 - The integration is revoked, or already active
+ * @add 404,409
  * @auth SessionAuth
  * @tag Integrations
  */
