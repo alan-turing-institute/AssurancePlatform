@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, PlusIcon, Tag, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,6 +108,8 @@ function PlainEntryRow({
 }
 
 interface EntryInputProps {
+	/** The id of a message elsewhere on the page that also describes this box. */
+	describedBy?: string;
 	error?: string;
 	inputRef?: (element: HTMLInputElement | null) => void;
 	label: string;
@@ -119,6 +121,7 @@ interface EntryInputProps {
 
 /** One box of a named entry, with the message for what is wrong with it. */
 function EntryInput({
+	describedBy,
 	error,
 	inputRef,
 	label,
@@ -127,9 +130,14 @@ function EntryInput({
 	readOnly,
 	value,
 }: EntryInputProps) {
+	const errorId = useId();
+	const described = [error ? errorId : undefined, describedBy]
+		.filter(Boolean)
+		.join(" ");
 	return (
 		<div className="space-y-1">
 			<Input
+				aria-describedby={described || undefined}
 				aria-invalid={!!error}
 				aria-label={label}
 				onChange={(event) => onChange(event.target.value)}
@@ -140,7 +148,11 @@ function EntryInput({
 				value={value}
 			/>
 			{error && (
-				<p className="font-medium text-destructive text-sm" role="alert">
+				<p
+					className="font-medium text-destructive text-sm"
+					id={errorId}
+					role="alert"
+				>
 					{error}
 				</p>
 			)}
@@ -157,13 +169,19 @@ interface EntryProblems {
 /**
  * What the form's validation says is wrong with each part of the entry at
  * `idx`. The schema reports it at `context.<idx>.name` and so on, below the
- * one field this row is registered as.
+ * one field this row is registered as. `live` reads the errors as they stand
+ * now, which is what the form needs when it moves focus as a submit fails.
  */
 function entryProblems(
 	form: UseFormReturn<FormValues>,
-	idx: number
+	idx: number,
+	live = false
 ): EntryProblems {
-	const reported = form.formState.errors.context?.[idx] as
+	const reported = (
+		live
+			? form.getFieldState(`context.${idx}`).error
+			: form.formState.errors.context?.[idx]
+	) as
 		| Record<keyof EntryProblems, { message?: string } | undefined>
 		| undefined;
 	return {
@@ -172,6 +190,9 @@ function entryProblems(
 		value: reported?.value?.message,
 	};
 }
+
+type EntryPart = keyof EntryProblems;
+const ENTRY_PARTS: readonly EntryPart[] = ["name", "text", "value"];
 
 function UnnameWarning({
 	entry,
@@ -209,16 +230,38 @@ function NamedEntryRow({
 	form,
 	onRemove,
 	onUnname,
+	problemId,
 	readOnly,
-}: RowProps & { entry: NamedContextEntry; onUnname: () => void }) {
+}: RowProps & {
+	entry: NamedContextEntry;
+	onUnname: () => void;
+	/** The id of the message about the list as a whole, when there is one. */
+	problemId?: string;
+}) {
 	const [confirming, setConfirming] = useState(false);
-	const nameBox = useRef<HTMLInputElement | null>(null);
+	const boxes = useRef<Record<EntryPart, HTMLInputElement | null>>({
+		name: null,
+		text: null,
+		value: null,
+	});
 	const startedWithoutName = useRef(entry.name === "");
 	useEffect(() => {
 		if (startedWithoutName.current) {
-			nameBox.current?.focus();
+			boxes.current.name?.focus();
 		}
 	}, []);
+	// The form moves focus to the field it finds an error in. This row is one
+	// field, so it passes the form a stand-in that sends focus to the box the
+	// error is about, or to the name when none is.
+	const boxWithProblem = () => {
+		const problems = entryProblems(form, idx, true);
+		const part = ENTRY_PARTS.find((candidate) => problems[candidate]);
+		return boxes.current[part ?? "name"];
+	};
+	const focusTarget = {
+		focus: () => boxWithProblem()?.focus(),
+		select: () => boxWithProblem()?.select(),
+	};
 	const hasValue = !!entry.value?.trim();
 	const label = `Context entry ${idx + 1}`;
 	const problems = entryProblems(form, idx);
@@ -237,10 +280,11 @@ function NamedEntryRow({
 						<div className="flex items-start gap-2">
 							<div className="flex-1">
 								<EntryInput
+									describedBy={problemId}
 									error={problems.name}
 									inputRef={(element) => {
-										nameBox.current = element;
-										field.ref(element);
+										boxes.current.name = element;
+										field.ref(element ? focusTarget : null);
 									}}
 									label={`${label} name`}
 									onChange={(name) => update({ name })}
@@ -252,6 +296,7 @@ function NamedEntryRow({
 							{!readOnly && (
 								<>
 									<Button
+										aria-label={`Remove name of ${label.toLowerCase()}`}
 										onClick={() =>
 											hasValue ? setConfirming(true) : onUnname()
 										}
@@ -274,6 +319,9 @@ function NamedEntryRow({
 						)}
 						<EntryInput
 							error={problems.text}
+							inputRef={(element) => {
+								boxes.current.text = element;
+							}}
 							label={label}
 							onChange={(text) => update({ text })}
 							placeholder="What the name means"
@@ -282,6 +330,9 @@ function NamedEntryRow({
 						/>
 						<EntryInput
 							error={problems.value}
+							inputRef={(element) => {
+								boxes.current.value = element;
+							}}
 							label={`${label} value`}
 							onChange={(value) => update({ value })}
 							placeholder="Value (optional), such as 5 minutes"
@@ -312,6 +363,7 @@ export default function ContextEntriesSection({
 	problem,
 	readOnly,
 }: ContextEntriesSectionProps) {
+	const problemId = useId();
 	return (
 		<div className="space-y-3">
 			<FormLabel className="flex items-center gap-2">
@@ -333,6 +385,7 @@ export default function ContextEntriesSection({
 								key={item.id}
 								onRemove={() => onRemoveContext(idx)}
 								onUnname={() => onUnnameContext(idx)}
+								problemId={problem ? problemId : undefined}
 								readOnly={readOnly}
 							/>
 						) : (
@@ -349,7 +402,11 @@ export default function ContextEntriesSection({
 				</div>
 			)}
 			{problem && (
-				<p className="font-medium text-destructive text-sm" role="alert">
+				<p
+					className="font-medium text-destructive text-sm"
+					id={problemId}
+					role="alert"
+				>
 					{problem}
 				</p>
 			)}

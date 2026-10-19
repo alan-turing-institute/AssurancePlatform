@@ -1234,7 +1234,9 @@ describe("NodeEditDialog — defined terms", () => {
 		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
 
 		await user.click(
-			await screen.findByRole("button", { name: "Remove name" })
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
 		);
 		expect(screen.getByRole("alert")).toHaveTextContent(
 			"loses its value (5 minutes)"
@@ -1244,7 +1246,9 @@ describe("NodeEditDialog — defined terms", () => {
 		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 		expect(screen.getByLabelText("Context entry 1 name")).toHaveValue("window");
 
-		await user.click(screen.getByRole("button", { name: "Remove name" }));
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
 		await user.click(
 			screen.getByRole("button", { name: "Remove name and value" })
 		);
@@ -1259,7 +1263,9 @@ describe("NodeEditDialog — defined terms", () => {
 		renderClaim(claimWith({ context: [{ ...NAMED_ENTRY, value: undefined }] }));
 
 		await user.click(
-			await screen.findByRole("button", { name: "Remove name" })
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
 		);
 
 		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -1326,6 +1332,63 @@ describe("NodeEditDialog — defined terms", () => {
 		expect(captured.body).toBeUndefined();
 	});
 
+	it("ties the message about a box to that box", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: ["the moving interval"] }));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		const message = await screen.findByText(
+			"Context entry names must not be empty"
+		);
+		const nameBox = screen.getByLabelText("Context entry 1 name");
+		expect(nameBox).toHaveAttribute("aria-invalid", "true");
+		expect(nameBox).toHaveAttribute("aria-describedby", message.id);
+		expect(message.id).not.toBe("");
+	});
+
+	it("moves focus to the box a problem is in, not always the name", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(
+			claimWith({
+				context: [{ ...NAMED_ENTRY, value: "v".repeat(501) }],
+			})
+		);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Update Property" })
+		);
+
+		await waitFor(() =>
+			expect(screen.getByLabelText("Context entry 1 value")).toHaveFocus()
+		);
+		expect(captured.body).toBeUndefined();
+	});
+
+	it("gives each Remove name button the name of its own entry", async () => {
+		renderClaim(
+			claimWith({
+				context: [
+					NAMED_ENTRY,
+					{ id: "b2c3d4e5f6", name: "rate", text: "events per second" },
+				],
+			})
+		);
+
+		expect(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Remove name of context entry 2" })
+		).toBeInTheDocument();
+	});
+
 	it("does not save two entries with the same name, ignoring case, and says why", async () => {
 		const user = userEvent.setup();
 		const captured = captureUpdate();
@@ -1338,8 +1401,11 @@ describe("NodeEditDialog — defined terms", () => {
 			})
 		);
 
-		expect(await screen.findByRole("alert")).toHaveTextContent(
-			"names must be unique within an element"
+		const problem = await screen.findByRole("alert");
+		expect(problem).toHaveTextContent("names must be unique within an element");
+		expect(screen.getByLabelText("Context entry 1 name")).toHaveAttribute(
+			"aria-describedby",
+			problem.id
 		);
 		await user.click(screen.getByRole("button", { name: "Update Property" }));
 
