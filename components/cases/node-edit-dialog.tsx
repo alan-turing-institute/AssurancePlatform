@@ -56,7 +56,10 @@ import {
 	getNodeMutationErrorMessage,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
-import { parseContextEntries } from "@/lib/case/defined-terms";
+import {
+	parseContextEntries,
+	plainReferenceText,
+} from "@/lib/case/defined-terms";
 import type { ElementPanelRegistration } from "@/lib/plugins/slots";
 import {
 	type NodeEditFormInput,
@@ -751,7 +754,7 @@ export default function NodeEditDialog({
 		canEdit: !readOnly,
 		caseId: assuranceCase?.id?.toString() ?? "",
 		elementId: String(node.data?.id ?? ""),
-		elementText: form.watch("description"),
+		elementText: plainReferenceText(form.watch("description"), terms),
 		elementType: nodeType,
 	};
 

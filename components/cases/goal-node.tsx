@@ -51,6 +51,7 @@ function GoalNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="goal"
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 

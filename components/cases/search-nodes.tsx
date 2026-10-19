@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Node } from "reactflow";
+import { plainDescription } from "@/components/shared/nodes/reference-text-utils";
 import {
 	Dialog,
 	DialogContent,
@@ -29,9 +30,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 			return nodes;
 		}
 		return nodes.filter((node) =>
-			String(node.data.description ?? "")
-				.toLowerCase()
-				.includes(value.toLowerCase())
+			plainDescription(node.data).toLowerCase().includes(value.toLowerCase())
 		);
 	}, [nodes, value]);
 
@@ -102,7 +101,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 											Identifier: {node.data.name}
 										</span>
 										<span className="line-clamp-2 w-full text-sm">
-											{node.data.description as string}
+											{plainDescription(node.data)}
 										</span>
 									</div>
 								</button>

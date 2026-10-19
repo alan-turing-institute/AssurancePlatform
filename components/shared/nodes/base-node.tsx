@@ -25,6 +25,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { type DefinedTerm, plainReferenceText } from "@/lib/case/defined-terms";
 import {
 	appearanceAttribute,
 	drawnContentAttribute,
@@ -48,6 +49,11 @@ import {
 	buildPreviewTextClasses,
 	buildSeparatorClasses,
 } from "./node-styles";
+import ReferenceText from "./reference-text";
+import { previewParts } from "./reference-text-utils";
+
+/** How many visible characters of the description a collapsed card shows. */
+const PREVIEW_LENGTH = 180;
 
 export interface BaseNodeProps {
 	/** How a plugin wants the card drawn: a tint under the content, faded or not. Absent draws the card as usual. */
@@ -80,18 +86,10 @@ export interface BaseNodeProps {
 	nodeType: DiagramNodeType;
 	/** Whether the node is currently selected */
 	selected?: boolean;
+	/** The defined terms the card's text can refer to, nearest definition first. */
+	terms?: readonly DefinedTerm[];
 	/** Actions to display in the top-right (e.g., comment indicators) */
 	topRightActions?: ReactNode;
-}
-
-/**
- * Truncate text to a maximum number of lines worth of characters
- */
-function truncateText(text: string, maxLength = 180): string {
-	if (text.length <= maxLength) {
-		return text;
-	}
-	return `${text.slice(0, maxLength).trim()}...`;
 }
 
 function ExpandedContent({
@@ -104,6 +102,7 @@ function ExpandedContent({
 	children,
 	name,
 	config,
+	terms,
 }: {
 	descriptionText: string;
 	hasAttributes: boolean;
@@ -114,10 +113,13 @@ function ExpandedContent({
 	children?: ReactNode;
 	name: string;
 	config: ReturnType<typeof getNodeConfig>;
+	terms: readonly DefinedTerm[];
 }) {
 	return (
 		<div className={buildNodeContentClasses(true)}>
-			<p className={buildDescriptionClasses()}>{descriptionText}</p>
+			<p className={buildDescriptionClasses()}>
+				<ReferenceText terms={terms} text={descriptionText} withTooltips />
+			</p>
 
 			{hasAttributes && (
 				<>
@@ -127,6 +129,7 @@ function ExpandedContent({
 						context={context}
 						justification={justification}
 						nodeType={nodeType}
+						terms={terms}
 					/>
 				</>
 			)}
@@ -147,6 +150,8 @@ function ExpandedContent({
 	);
 }
 
+const NO_TERMS: readonly DefinedTerm[] = [];
+
 export default function BaseNode({
 	nodeType,
 	name,
@@ -164,6 +169,7 @@ export default function BaseNode({
 	className,
 	dataTour,
 	expandTour,
+	terms = NO_TERMS,
 }: BaseNodeProps) {
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { layoutNodes, layoutDirection } = useStore();
@@ -196,7 +202,11 @@ export default function BaseNode({
 	);
 
 	const descriptionText = description || "No description available";
-	const isTruncated = descriptionText.length > 180;
+	const isTruncated = previewParts(
+		descriptionText,
+		terms,
+		PREVIEW_LENGTH
+	).truncated;
 
 	const handleExpandToggle = (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -295,16 +305,22 @@ export default function BaseNode({
 								<Tooltip delayDuration={400}>
 									<TooltipTrigger asChild>
 										<p className={buildPreviewTextClasses()}>
-											{truncateText(descriptionText)}
+											<ReferenceText
+												maxLength={PREVIEW_LENGTH}
+												terms={terms}
+												text={descriptionText}
+											/>
 										</p>
 									</TooltipTrigger>
 									<TooltipContent className="max-w-xs">
-										<p>{descriptionText}</p>
+										<p>{plainReferenceText(descriptionText, terms)}</p>
 									</TooltipContent>
 								</Tooltip>
 							</TooltipProvider>
 						) : (
-							<p className={buildPreviewTextClasses()}>{descriptionText}</p>
+							<p className={buildPreviewTextClasses()}>
+								<ReferenceText terms={terms} text={descriptionText} />
+							</p>
 						)}
 					</m.div>
 				)}
@@ -330,6 +346,7 @@ export default function BaseNode({
 								justification={justification}
 								name={name}
 								nodeType={nodeType}
+								terms={terms}
 							>
 								{children}
 							</ExpandedContent>

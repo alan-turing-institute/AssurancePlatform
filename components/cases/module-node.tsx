@@ -45,6 +45,7 @@ function ModuleNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="module"
 				selected={props.selected}
+				terms={data.termsInReach}
 			>
 				<div className="space-y-1">
 					<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">

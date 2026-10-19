@@ -9,8 +9,11 @@
 
 import { BookmarkCheck, Layers, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
-import { plainContextEntry } from "@/lib/case/defined-terms";
-import type { ContextEntry } from "@/lib/schemas/context-entry";
+import { type DefinedTerm, plainReferenceText } from "@/lib/case/defined-terms";
+import {
+	type ContextEntry,
+	isNamedContextEntry,
+} from "@/lib/schemas/context-entry";
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
 
@@ -63,17 +66,43 @@ interface AttributeSectionProps {
 	context?: ContextEntry[];
 	justification?: string;
 	nodeType: DiagramNodeType;
+	/** The defined terms the text can refer to, for writing a reference as the name it shows. */
+	terms?: readonly DefinedTerm[];
+}
+
+/**
+ * One context entry as a line of text. A named entry reads
+ * `window — meaning (value)`, which is how a keyboard or screen-reader user
+ * reads the meaning the diagram shows on hover.
+ */
+function describeContextEntry(
+	entry: ContextEntry,
+	terms: readonly DefinedTerm[]
+): string {
+	if (!isNamedContextEntry(entry)) {
+		return plainReferenceText(entry, terms);
+	}
+	const meaning = plainReferenceText(entry.text, terms).trim();
+	const head = meaning ? `${entry.name} — ${meaning}` : entry.name;
+	return entry.value?.trim() ? `${head} (${entry.value})` : head;
 }
 
 export default function AttributeSection({
 	nodeType,
 	context: contextEntries,
-	assumption,
-	justification,
+	assumption: assumptionText,
+	justification: justificationText,
 	className,
+	terms = [],
 }: AttributeSectionProps) {
-	const context = contextEntries?.map((entry) => plainContextEntry(entry));
+	const context = contextEntries?.map((entry) =>
+		describeContextEntry(entry, terms)
+	);
 	const hasContext = context && context.length > 0;
+	const assumption =
+		assumptionText && plainReferenceText(assumptionText, terms);
+	const justification =
+		justificationText && plainReferenceText(justificationText, terms);
 	const hasAssumption = assumption && assumption.trim() !== "";
 	const hasJustification = justification && justification.trim() !== "";
 

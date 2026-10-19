@@ -92,6 +92,7 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="awayGoal"
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			>
 				<div className="space-y-1">
