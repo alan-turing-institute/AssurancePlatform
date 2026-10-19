@@ -23,7 +23,7 @@ export type PreviewPart =
 			term: DefinedTerm | undefined;
 	  };
 
-export interface TextPreview {
+interface TextPreview {
 	parts: PreviewPart[];
 	/** Whether text was left out. */
 	truncated: boolean;

@@ -15,7 +15,7 @@ import {
 } from "@/lib/case/defined-terms";
 
 /** The `char` the suggestion is started with, kept on each reference word. */
-export const REFERENCE_TRIGGER = "{";
+const REFERENCE_TRIGGER = "{";
 
 interface TextNodeJson {
 	text: string;
@@ -38,7 +38,7 @@ export interface ReferenceDocumentJson {
 }
 
 /** The part of the editor's JSON that `documentToText` reads. */
-export interface ReferenceDocumentInput {
+interface ReferenceDocumentInput {
 	content?: Array<{
 		attrs?: Record<string, unknown>;
 		content?: ReferenceDocumentInput["content"];
