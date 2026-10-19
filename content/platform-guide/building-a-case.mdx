@@ -42,6 +42,65 @@ The pencil icon on a node, labelled **Edit element** (or **View details** if you
 The dialog's fields depend on the element type — a description for every type, plus **Context** entries and an **Assertion status** selector on goals and property claims, and an optional assumption or justification field where relevant.
 Saving calls the dialog's submit button, labelled **Update** followed by the element type — **Update Goal**, **Update Strategy**, **Update Property**, **Update Evidence** and so on.
 
+## Defined terms
+
+A context entry can be given a name, so that the description of the element it sits on, and of every element below it, can refer to it.
+This lets you define a word once, for example `window` as "the moving 5-minute interval over which separation is measured", and use it in the claims beneath.
+
+### Name a context entry
+
+In the edit dialog of a goal, strategy or property claim, each context entry has a tag button, labelled **Name context entry 1**, **Name context entry 2** and so on.
+Choose it, then type the name.
+The entry's own text becomes the name's meaning.
+You can also give the entry a value, such as `5 minutes`, in the box beneath its text.
+The value is optional.
+
+A name is 1 to 40 characters.
+It starts with a letter and uses letters, digits, spaces, hyphens and underscores.
+A value is at most 500 characters.
+One element cannot have two names that differ only in capital letters, such as `Window` and `window`.
+
+**Remove name** turns the entry back into ordinary text.
+If the entry has a value, the dialog warns that the value goes with the name, and asks you to confirm.
+Text that referred to the name then shows it as not found.
+
+### Use a name in a description
+
+In the description of a goal, strategy or property claim, type `{`.
+A list opens beside the cursor with the names the element can use.
+Each name is labelled with the element it is defined on, and the nearest definition comes first.
+Keep typing to narrow the list.
+Press the arrow keys and **Enter**, or click a name, to insert it as a highlighted word.
+Press **Escape** to close the list; the `{` stays in the text, and the dialog and anything you have typed stay as they are.
+
+The description box takes paragraphs and references.
+It has no other formatting.
+Pressing **Enter** starts a new paragraph.
+
+A name reaches the element that defines it and every element below it on the same branch.
+It does not reach an element on another branch.
+If two names in reach are the same, the list shows both, with the nearer one first.
+
+Under the description, **Terms you can use here** lists every name in reach with its meaning, its value and the element it is defined on.
+Use it to read a meaning without a mouse.
+
+### See a name on the diagram
+
+On a card, a reference appears as a highlighted word that shows the entry's current name.
+Rename the entry and every reference follows.
+Hover over the word on an expanded card to see its meaning, its value and the element that defines it.
+On a collapsed card the word is highlighted without its own tooltip, and hovering a description that is cut short shows its full text, with each reference written `{name}`.
+An expanded card's **Context** section lists each named entry as the name, its meaning and its value in brackets.
+
+If the definition is no longer in reach, the word stays but is underlined with a dashed line, and its tooltip says that no definition was found above the element.
+This happens when the entry is deleted or has its name removed, or when the element moves to another branch.
+Screen readers announce the word followed by "(definition not found)".
+
+### Where else you see a reference
+
+Search, the move and attach lists, document exports, the Case Assistant and the rules check show a reference as `{name}`.
+Raw JSON exports keep the stored form, `{name#id}`, where the id is what ties the reference to its entry.
+
 ## Assertion status
 
 Goals and property claims carry an assertion status, set from the edit dialog.
