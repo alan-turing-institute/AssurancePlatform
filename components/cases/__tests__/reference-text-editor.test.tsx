@@ -166,6 +166,30 @@ describe("ReferenceTextEditor", () => {
 		expect(options()[1]).toContain("rate");
 	});
 
+	it("lists two terms that share an id without a repeated key", async () => {
+		const consoleError = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		const sameId: DefinedTerm = {
+			...RATE,
+			id: WINDOW.id,
+			definedOn: { elementId: "s2", elementName: "S2" },
+		};
+		renderEditor({ terms: [WINDOW, sameId], value: "" });
+		const box = await screen.findByRole("textbox", { name: "Description" });
+
+		act(() => {
+			editorOf(box).chain().focus("end").insertContent("{").run();
+		});
+
+		const list = await screen.findByRole("listbox", {
+			name: "Terms you can insert",
+		});
+		expect(list.querySelectorAll('[role="option"]')).toHaveLength(2);
+		expect(consoleError).not.toHaveBeenCalled();
+		consoleError.mockRestore();
+	});
+
 	it("tells the author there is nothing to insert when no term is in reach", async () => {
 		renderEditor({ terms: [], value: "" });
 		const box = await screen.findByRole("textbox", { name: "Description" });

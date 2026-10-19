@@ -123,7 +123,7 @@ export default function ReferenceSuggestionList({
 							<TermOption
 								active={index === activeIndex}
 								id={referenceOptionId(listId, index)}
-								key={term.id}
+								key={`${term.definedOn.elementId}:${term.id}`}
 								onHover={() => onHover(index)}
 								onSelect={() => list.select(term)}
 								term={term}
