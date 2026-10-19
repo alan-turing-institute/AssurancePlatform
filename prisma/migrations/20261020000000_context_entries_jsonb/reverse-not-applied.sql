@@ -8,6 +8,17 @@
 -- Lossless only while no entry has a name. A named entry has no text form, so
 -- it would be copied as its JSON text and lose its meaning as a record. The
 -- column ends up last in the table, not in its original position.
+--
+-- The statements run in one transaction, so a failure part-way leaves the
+-- column as it was.
+--
+-- Prisma keeps a row for this migration in "_prisma_migrations". Remove that
+-- row when this script is run, or Prisma will treat the migration as applied
+-- and will not apply it again:
+--   DELETE FROM "_prisma_migrations"
+--   WHERE "migration_name" = '20261020000000_context_entries_jsonb';
+
+BEGIN;
 
 ALTER TABLE "assurance_elements" ADD COLUMN "context_text" TEXT[] NOT NULL DEFAULT '{}';
 
@@ -21,3 +32,5 @@ SET "context_text" = ARRAY(
 ALTER TABLE "assurance_elements" DROP COLUMN "context";
 
 ALTER TABLE "assurance_elements" RENAME COLUMN "context_text" TO "context";
+
+COMMIT;
