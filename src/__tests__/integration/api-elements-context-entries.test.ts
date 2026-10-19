@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -399,5 +400,94 @@ describe("GET /api/cases/[id] — named context entries", () => {
 		const body = await response.json();
 		expect(body.goals[0].context).toEqual(["plain", WINDOW]);
 		expect(body.goals[0].propertyClaims[0].context).toEqual([RANGE]);
+	});
+});
+
+describe("activity notices for an element with no label", () => {
+	async function setupUnlabelled() {
+		const { owner, testCase, goal } = await setup();
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+			parentId: goal.id,
+		});
+		await prisma.assuranceElement.update({
+			where: { id: claim.id },
+			data: {
+				name: null,
+				description: `Separation holds within the {win#${WINDOW.id}}.`,
+			},
+		});
+		vi.mocked(emitSSEEvent).mockClear();
+		return { testCase, claim };
+	}
+
+	const PLAIN_NAME = "Separation holds within the {win}.";
+
+	it("writes the references in the description as {name} when an element is deleted", async () => {
+		const { testCase, claim } = await setupUnlabelled();
+		const { DELETE } = await import("@/app/api/elements/[id]/route");
+
+		const response = await DELETE(
+			new NextRequest(`http://localhost:3000/api/elements/${claim.id}`, {
+				method: "DELETE",
+			}),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+
+		expect(response.status).toBe(200);
+		expect(emitSSEEvent).toHaveBeenCalledWith(
+			"element:deleted",
+			testCase.id,
+			expect.objectContaining({ elementName: PLAIN_NAME })
+		);
+	});
+
+	it("writes the references in the description as {name} when an element is restored", async () => {
+		const { testCase, claim } = await setupUnlabelled();
+		await prisma.assuranceElement.update({
+			where: { id: claim.id },
+			data: { deletedAt: new Date() },
+		});
+		const { POST } = await import("@/app/api/elements/[id]/restore/route");
+
+		const response = await POST(
+			new NextRequest(
+				`http://localhost:3000/api/elements/${claim.id}/restore`,
+				{ method: "POST" }
+			),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+
+		expect(response.status).toBe(200);
+		expect(emitSSEEvent).toHaveBeenCalledWith(
+			"element:restored",
+			testCase.id,
+			expect.objectContaining({ elementName: PLAIN_NAME })
+		);
+	});
+
+	it("writes the references in the description as {name} when a comment is added", async () => {
+		const { testCase, claim } = await setupUnlabelled();
+		const { POST } = await import("@/app/api/elements/[id]/comments/route");
+
+		const response = await POST(
+			new NextRequest(
+				`http://localhost:3000/api/elements/${claim.id}/comments`,
+				{
+					method: "POST",
+					body: JSON.stringify({ content: "Looks right" }),
+					headers: { "Content-Type": "application/json" },
+				}
+			),
+			{ params: Promise.resolve({ id: claim.id }) }
+		);
+
+		expect(response.status).toBe(201);
+		expect(emitSSEEvent).toHaveBeenCalledWith(
+			"comment:created",
+			testCase.id,
+			expect.objectContaining({ elementName: PLAIN_NAME })
+		);
 	});
 });

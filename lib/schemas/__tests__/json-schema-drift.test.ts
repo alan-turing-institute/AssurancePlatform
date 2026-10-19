@@ -15,6 +15,16 @@ describe("json-schema-v1.1.json drift", () => {
 		expect(committedSchema).toEqual(fresh);
 	});
 
+	it("lets a context entry be a string or a named entry that requires an id, a name and a text", () => {
+		const entry = committedSchema.definitions.TreeNode.properties.context.items;
+		const [text, named] = entry.anyOf ?? [];
+
+		expect(entry.anyOf).toHaveLength(2);
+		expect(text).toEqual({ type: "string" });
+		expect(named?.required).toEqual(["id", "name", "text"]);
+		expect(named?.additionalProperties).toBe(false);
+	});
+
 	it("targets draft-07, the dialect the JSON editor's resolver supports", () => {
 		// codemirror-json-schema -> json-schema-library only ships draft-04/06/07
 		// resolvers; draft 2020-12 ($defs, prefixItems) would break $ref

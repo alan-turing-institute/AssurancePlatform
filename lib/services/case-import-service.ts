@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
 import { validateElementName } from "@/lib/schemas/element-validation";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
+import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import { resetIdentifiers } from "@/lib/services/identifier-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { Prisma } from "@/src/generated/prisma";
@@ -119,6 +120,12 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
 /**
  * Validates and transforms imported JSON data.
  * Returns v2 format data regardless of input version.
+ *
+ * Named context entries are checked here, on the whole file: the row builder
+ * writes context as it finds it and does not go through the checks the element
+ * routes make, so a repeated name or id has to be caught before anything is
+ * written. An import makes a new case, so the ids only have to be unique
+ * within the file.
  */
 async function processImportData(data: unknown): Promise<{
 	success: boolean;
@@ -136,25 +143,25 @@ async function processImportData(data: unknown): Promise<{
 		};
 	}
 
-	// If nested, flatten to flat format
+	// If nested, flatten to flat format; otherwise it is already v2
+	let v2Data: CaseExportV2;
 	if (result.version === "nested") {
 		const { flattenNestedToFlat } = await import(
 			"@/lib/transforms/nested-to-flat"
 		);
-		const v2Data = flattenNestedToFlat(result.data);
-		return {
-			success: true,
-			data: v2Data,
-			warnings: [],
-		};
+		v2Data = flattenNestedToFlat(result.data);
+	} else {
+		v2Data = result.data as CaseExportV2;
 	}
 
-	// Already v2
-	return {
-		success: true,
-		data: result.data as CaseExportV2,
-		warnings: [],
-	};
+	const contextProblem = checkContextEntriesForCase(
+		v2Data.elements.map((element) => element.context ?? [])
+	);
+	if (contextProblem) {
+		return { success: false, warnings: [], errors: [contextProblem] };
+	}
+
+	return { success: true, data: v2Data, warnings: [] };
 }
 
 /**
@@ -926,7 +933,7 @@ async function renumberIfDefeaterNamesNonConforming(
 /**
  * Imports a case from JSON data.
  *
- * Accepts nested (v1.0) and flat (v2.0) formats.
+ * Accepts nested (v1.0 and v1.1) and flat (v2.0) formats.
  * The importing user becomes the owner with ADMIN permission.
  */
 export async function importCase(

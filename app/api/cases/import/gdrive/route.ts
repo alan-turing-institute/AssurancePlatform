@@ -2,6 +2,7 @@ import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
+	apiImportValidationError,
 	apiSuccess,
 	requireAuth,
 	serviceErrorToAppError,
@@ -65,6 +66,12 @@ export async function POST(request: Request) {
 		// Import the case
 		const importResult = await importCase(userId, jsonData);
 		if ("error" in importResult) {
+			if (importResult.validationErrors?.length) {
+				return apiImportValidationError(
+					importResult.error,
+					importResult.validationErrors
+				);
+			}
 			return apiError(serviceErrorToAppError(importResult.error));
 		}
 
