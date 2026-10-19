@@ -13,14 +13,16 @@ import { readHealthStatusesForCase } from "@/lib/services/health-status-service"
  *
  * The health status of every claim in a case that has one, for a pipeline.
  *
- * @description Machine-only (`requireApiToken("health:evidence:read")`); the
- * token's system user needs VIEW on the case. Each entry is
- * `{ claim_ref, status }` with the status object of the element route,
- * including `mismatch`. Claims with no bound check and no record are left out.
+ * Each entry is `{ claim_ref, status }`, where `status` is the object the
+ * element status route returns, including `mismatch`.
+ * Claims with no bound check and no record are left out.
+ *
+ * @description Returns the health status of every property claim in a case that has a bound check or at least one record, as `{ claim_ref, status }` entries; claims with neither are left out. Needs a bearer token with the `health:evidence:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.
  * @response 200 - `{ case_id, statuses: [{ claim_ref, status }] }`
- * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
- * @response 403 - The `tea.health` plugin is not enabled for this integration
+ * @response 401 - Unauthorised (missing, invalid or wrong-scope token)
+ * @response 403 - The `tea.health` plugin is not on for the integration's account: the deployment withholds it
  * @response 404 - Case not found (a missing case and no access give the same message)
+ * @add 404
  * @auth bearer
  * @tag Machine
  */

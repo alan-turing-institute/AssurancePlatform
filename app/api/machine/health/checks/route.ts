@@ -18,20 +18,24 @@ import { publishHealthCheckList } from "@/lib/services/health-check-catalogue-se
  *
  * Publishes the list of checks a pipeline can run.
  *
- * @description Machine-only (`requireApiToken("health:checks:write")`). The
- * body is `{ pipeline, checks }` with at most 200 checks, one entry per check
- * name, and at most 256 KB. Each check has `name`, `version`, `scope`,
- * `value` (`boolean`, `number`, `string` or `datetime`), and optionally
+ * The body is `{ pipeline, checks }` with at most 200 checks, one entry per
+ * check name, and at most 256 KB.
+ * Each check has `name`, `version`, `scope` and `value` (an object whose
+ * `type` is `boolean`, `number`, `string` or `datetime`), and optionally
  * `description`, `scope_label`, `params` (the settings the check describes)
- * and `recommended` (settings the check suggests). Unknown keys are refused.
- * The list replaces the integration's previous one. Publishing never changes
- * any claim's settings. A recommendation that would not pass as evidence
- * settings is stored all the same and named in `warnings`.
+ * and `recommended` (settings the check suggests).
+ * Unknown keys are refused.
+ * The list replaces the integration's previous one, and publishing never
+ * changes any claim's settings.
+ * A recommendation that would not pass as evidence settings is stored all the
+ * same and named in `warnings`.
+ *
+ * @description Publishes the list of checks a pipeline can run, replacing the integration's previous list, and returns how many checks it holds with a warning for each recommendation that would not pass as evidence settings. Needs a bearer token with the `health:checks:write` scope and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin; it addresses no case, so the integration needs no case grant. The body is `{ pipeline, checks }` with at most 200 checks, one per check name, in at most 256 KB, and unknown keys are refused.
  * @body { pipeline, checks }
  * @response 200 - `{ checks: number, warnings: [{ check, problem }] }`
  * @response 400 - Invalid body; the field is named
- * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
- * @response 403 - The `tea.health` plugin is not enabled for this integration
+ * @response 401 - Unauthorised (missing, invalid or wrong-scope token)
+ * @response 403 - The `tea.health` plugin is not on for the integration's account: the deployment withholds it
  * @response 413 - Payload too large
  * @auth bearer
  * @tag Machine

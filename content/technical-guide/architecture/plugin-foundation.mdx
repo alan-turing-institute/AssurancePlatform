@@ -5,6 +5,7 @@ description: "Locate the official plugin manifest, UI slots and plugin data stor
 
 The plugin foundation lets first-party features add data and selected interface surfaces without placing every feature's code in the case editor.
 The checked build has two official plugins, `tea.health` and `tea.assistant`.
+The [Plugin ecosystem](/docs/technical-guide/architecture/plugin-ecosystem) page describes what each one does, how people and operators control them, and how plugins differ from machine integrations.
 The manifest defines which plugin IDs and surfaces the build knows about.
 An operator can withhold a manifest plugin from a deployment with `TEA_PLUGINS_DISABLED`, while a user's effective enablement determines whether its UI appears.
 
@@ -65,10 +66,10 @@ The export is refused, with a message that offers a PNG instead, if the image co
 
 ## Store plugin state
 
-`PluginState` supports organisation, team and user scoped enablement and settings.
-A disabled higher scope wins over a lower scope; this build writes only user scoped state.
+`PluginState` stores a plugin's enablement and settings for each account.
+Plugin settings are per account: this build reads and writes no organisation or team state.
 `PluginData` stores namespaced extension data related to a case or element.
-The health plugin uses that data for the derived claim score, while its append-only evidence lives in a dedicated plugin table.
+The health plugin does not write to it: its append-only evidence lives in a dedicated plugin table, and a claim's status is worked out from that evidence each time it is read.
 Access to plugin data and to health routes is still checked against case permissions; a namespace is not an alternative authorisation system.
 Before adding a new official plugin, register its identity and permitted surfaces, add any needed UI registration, and use the shared enablement and data services.
 The manifest and slot types define the current extension contract.
