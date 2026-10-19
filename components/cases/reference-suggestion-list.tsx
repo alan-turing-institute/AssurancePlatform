@@ -131,12 +131,11 @@ export default function ReferenceSuggestionList({
 						))}
 					</div>
 				) : (
-					!hasTerms && (
-						<p className="px-2 py-1.5 text-muted-foreground text-sm">
-							No terms to insert yet. Name a context entry on this element or
-							one above it to define one.
-						</p>
-					)
+					<p className="px-2 py-1.5 text-muted-foreground text-sm">
+						{hasTerms
+							? "No matching terms."
+							: "No terms to insert yet. Name a context entry on this element or one above it to define one."}
+					</p>
 				)}
 			</PopoverContent>
 		</Popover>

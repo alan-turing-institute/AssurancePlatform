@@ -4,8 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { DefinedTerm } from "@/lib/case/defined-terms";
 import {
 	filterTerms,
-	isListVisible,
-	type ReferenceListState,
 	useReferenceSuggestion,
 } from "../use-reference-suggestion";
 
@@ -21,10 +19,6 @@ function term(name: string, elementName: string): DefinedTerm {
 const WINDOW = term("window", "S2");
 const OUTER_WINDOW = term("Window", "G1");
 const RATE = term("rate", "G1");
-
-function listOf(items: DefinedTerm[], query: string): ReferenceListState {
-	return { items, position: null, query, select: () => undefined };
-}
 
 describe("filterTerms", () => {
 	it("returns every term, in the order given, when nothing has been typed", () => {
@@ -54,25 +48,6 @@ describe("filterTerms", () => {
 	});
 });
 
-describe("isListVisible", () => {
-	it("is hidden when no suggestion is active", () => {
-		expect(isListVisible(null, 3)).toBe(false);
-	});
-
-	it("is shown when there are terms to pick", () => {
-		expect(isListVisible(listOf([WINDOW], "w"), 3)).toBe(true);
-	});
-
-	it("is hidden when what was typed matches nothing, so Escape then closes the dialog", () => {
-		expect(isListVisible(listOf([], "zzz"), 3)).toBe(false);
-	});
-
-	it("is shown with a hint when there are no terms at all", () => {
-		expect(isListVisible(listOf([], ""), 0)).toBe(true);
-		expect(isListVisible(listOf([], "x"), 0)).toBe(false);
-	});
-});
-
 describe("useReferenceSuggestion", () => {
 	function keydown(key: string, init: KeyboardEventInit = {}) {
 		return { event: new KeyboardEvent("keydown", { key, ...init }) };
@@ -85,7 +60,7 @@ describe("useReferenceSuggestion", () => {
 		const show = (query = "", loading = false) =>
 			act(() =>
 				handlers.onUpdate({
-					items,
+					items: filterTerms(items, query),
 					command,
 					query,
 					loading,
@@ -110,7 +85,24 @@ describe("useReferenceSuggestion", () => {
 
 		show("");
 		expect(hook.result.current.list?.items).toEqual([WINDOW, RATE]);
-		expect(hook.result.current.visible).toBe(true);
+	});
+
+	it("keeps the list drawn while nothing matches, so Escape has the list to close and not the dialog", () => {
+		const { hook, show } = setup([WINDOW, RATE]);
+
+		show("zzz");
+
+		expect(hook.result.current.list).not.toBeNull();
+		expect(hook.result.current.list?.items).toEqual([]);
+	});
+
+	it("ends the suggestion once what was typed holds a closing brace", () => {
+		const { hook } = setup([WINDOW]);
+		const { shouldShow } = hook.result.current.suggestion;
+
+		expect(shouldShow({ query: "like this" })).toBe(true);
+		expect(shouldShow({ query: "like this} and more" })).toBe(false);
+		expect(shouldShow({ query: "}" })).toBe(false);
 	});
 
 	it("moves the highlight with the arrow keys, wrapping at both ends", () => {
@@ -178,6 +170,5 @@ describe("useReferenceSuggestion", () => {
 		act(() => handlers.onExit());
 
 		expect(hook.result.current.list).toBeNull();
-		expect(hook.result.current.visible).toBe(false);
 	});
 });

@@ -23,6 +23,7 @@ const RATE: DefinedTerm = {
 };
 
 const NOTHING_TO_INSERT = /No terms to insert yet/;
+const NO_MATCH = /No matching terms/;
 
 /** The editor instance Tiptap hangs on its editable element. */
 function editorOf(box: HTMLElement): Editor {
@@ -174,5 +175,36 @@ describe("ReferenceTextEditor", () => {
 		});
 
 		expect(await screen.findByText(NOTHING_TO_INSERT)).toBeInTheDocument();
+	});
+
+	it("keeps the list open with a note while what was typed matches no term", async () => {
+		renderEditor({ value: "" });
+		const box = await screen.findByRole("textbox", { name: "Description" });
+
+		act(() => {
+			editorOf(box).chain().focus("end").insertContent("{zzz").run();
+		});
+
+		expect(await screen.findByText(NO_MATCH)).toBeInTheDocument();
+		expect(screen.queryByRole("option")).not.toBeInTheDocument();
+	});
+
+	it("closes the list when a closing brace is typed, because the braces are then plain text", async () => {
+		renderEditor({ value: "" });
+		const box = await screen.findByRole("textbox", { name: "Description" });
+
+		act(() => {
+			editorOf(box).chain().focus("end").insertContent("{like").run();
+		});
+		expect(await screen.findByText(NO_MATCH)).toBeInTheDocument();
+
+		act(() => {
+			editorOf(box).chain().focus("end").insertContent(" this} and more").run();
+		});
+
+		await waitFor(() =>
+			expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument()
+		);
+		expect(box).toHaveTextContent("{like this} and more");
 	});
 });

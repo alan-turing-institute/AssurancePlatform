@@ -323,10 +323,8 @@ type ReferenceTextEditorBodyProps = Required<
 function ReferenceTextEditorBody(props: ReferenceTextEditorBodyProps) {
 	const { autoFocus, handleRef, placeholder, readOnly, terms } = props;
 	const listId = useId();
-	const suggestionState = useReferenceSuggestion(terms);
-	const { activeIndex, list, setActiveIndex, suggestion, visible } =
-		suggestionState;
-	const shownList = visible ? list : null;
+	const { activeIndex, list, setActiveIndex, suggestion } =
+		useReferenceSuggestion(terms);
 	const extensions = useMemo(
 		() => buildExtensions(suggestion, placeholder),
 		[suggestion, placeholder]
@@ -338,7 +336,7 @@ function ReferenceTextEditorBody(props: ReferenceTextEditorBodyProps) {
 		invalid: props["aria-invalid"],
 		placeholder,
 		readOnly,
-		...listAttributes(shownList, listId, activeIndex),
+		...listAttributes(list, listId, activeIndex),
 	});
 	const editor = useReferenceEditor({
 		attributes,
@@ -355,11 +353,11 @@ function ReferenceTextEditorBody(props: ReferenceTextEditorBodyProps) {
 	return (
 		<>
 			<EditorContent editor={editor} />
-			{shownList && (
+			{list && (
 				<ReferenceSuggestionList
 					activeIndex={activeIndex}
 					hasTerms={terms.length > 0}
-					list={shownList}
+					list={list}
 					listId={listId}
 					onClose={closeList}
 					onHover={setActiveIndex}

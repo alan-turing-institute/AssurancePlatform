@@ -26,17 +26,6 @@ export function filterTerms(
 	return terms.filter((term) => term.name.toLowerCase().includes(wanted));
 }
 
-/** Whether the list has something to say: choices, or a hint that there are none. */
-export function isListVisible(
-	list: ReferenceListState | null,
-	termCount: number
-): boolean {
-	if (!list) {
-		return false;
-	}
-	return list.items.length > 0 || (list.query === "" && termCount === 0);
-}
-
 /**
  * The pick-list behind typing `{` in an element's text. It supplies the
  * options for the mention add-on and the state the list is drawn from, so the
@@ -44,6 +33,11 @@ export function isListVisible(
  *
  * `terms` is read when a query changes, so the list always reflects the
  * entries as they stand in the form.
+ *
+ * The list is drawn for as long as a suggestion is active, even when nothing
+ * matches, so that Escape always has the list to close and never reaches the
+ * dialog behind it. A `}` ends the suggestion, because text like `{this}` is
+ * braces the author wrote, not a reference being typed.
  */
 export function useReferenceSuggestion(terms: readonly DefinedTerm[]) {
 	const termsRef = useRef(terms);
@@ -104,6 +98,7 @@ export function useReferenceSuggestion(terms: readonly DefinedTerm[]) {
 			// Names may contain spaces, and a `{` can follow any character.
 			allowSpaces: true,
 			allowedPrefixes: null,
+			shouldShow: ({ query }: { query: string }) => !query.includes("}"),
 			decorationClass: "rounded-sm bg-primary/10",
 			items: ({ query }: { query: string }) =>
 				filterTerms(termsRef.current, query),
@@ -134,6 +129,5 @@ export function useReferenceSuggestion(terms: readonly DefinedTerm[]) {
 		list,
 		setActiveIndex,
 		suggestion,
-		visible: isListVisible(list, terms.length),
 	};
 }
