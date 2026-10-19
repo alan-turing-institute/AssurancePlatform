@@ -7,6 +7,7 @@
  */
 
 import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
+import type { CaseExportNested } from "@/lib/schemas/case-export";
 import type { BrandingConfig } from "../../schemas/branding-config";
 import { DEFAULT_SECTIONS_SUMMARY } from "../../schemas/section-config";
 import type { TemplateConfig } from "../../schemas/template-config";
@@ -45,7 +46,7 @@ export class SummaryTemplate extends BaseTemplate {
 	}
 
 	protected renderSections(
-		caseData: PlainCase,
+		caseData: CaseExportNested,
 		diagramImage?: DiagramImage,
 		branchDiagrams?: LabelledDiagramImage[]
 	): RenderedSection[] {
@@ -98,7 +99,7 @@ export class SummaryTemplate extends BaseTemplate {
 		return sections;
 	}
 
-	private renderTitlePage(caseData: PlainCase): RenderedSection {
+	private renderTitlePage(caseData: CaseExportNested): RenderedSection {
 		const blocks: ContentBlock[] = [
 			this.heading(1, caseData.case.name),
 			this.paragraph(caseData.case.description),
@@ -120,7 +121,7 @@ export class SummaryTemplate extends BaseTemplate {
 	}
 
 	private renderDiagram(
-		caseData: PlainCase,
+		caseData: CaseExportNested,
 		diagramImage: DiagramImage
 	): RenderedSection {
 		return {

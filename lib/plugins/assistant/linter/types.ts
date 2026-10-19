@@ -76,6 +76,7 @@ export interface Report {
 	};
 	findings: Finding[];
 	incomplete: { acked_claims: number };
+	/** The label is fixed at "1.0": the checker only ever reads the plain-text form of a case (`toPlainCase`), which has the shape of a 1.0 file. */
 	input: { schema: "tea-nested"; version: "1.0" };
 	/** Rules a reader must apply, computed from the ruleset. */
 	judgement_rules: string[];

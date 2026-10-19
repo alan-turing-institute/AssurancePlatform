@@ -3,7 +3,7 @@
  *
  * Detects whether an imported JSON is:
  * - "flat" (internal V2 format with elements array)
- * - "nested" (tree format with version "1.0")
+ * - "nested" (tree format with version "1.0" or "1.1")
  *
  * Also provides validation against the appropriate schema.
  */
@@ -26,11 +26,12 @@ export type VersionDetectionResult =
 	| { version: null; isValid: false; errors: ValidationError[] };
 
 /**
- * Check if data matches nested format (tree structure with version "1.0").
+ * Check if data matches nested format (tree structure with version "1.0" or
+ * "1.1").
  */
 function isNestedFormat(obj: Record<string, unknown>): boolean {
 	// Explicit version field
-	if (obj.version === "1.0") {
+	if (obj.version === "1.0" || obj.version === "1.1") {
 		return true;
 	}
 	// Tree structure with children array
@@ -59,7 +60,7 @@ function isFlatFormat(obj: Record<string, unknown>): boolean {
  * Detects the format version of an imported case JSON.
  *
  * Detection strategy:
- * 1. Check for nested format (version: "1.0" or tree structure)
+ * 1. Check for nested format (version: "1.0" or "1.1", or tree structure)
  * 2. Check for flat format (version: "2.0" or elements + evidenceLinks)
  */
 export function detectVersion(data: unknown): CaseFormatVersion | null {

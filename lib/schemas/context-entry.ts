@@ -10,14 +10,14 @@
 
 import { z } from "zod";
 
-export const CONTEXT_ENTRY_NAME_MAX_LENGTH = 40;
-export const CONTEXT_ENTRY_VALUE_MAX_LENGTH = 500;
+const CONTEXT_ENTRY_NAME_MAX_LENGTH = 40;
+const CONTEXT_ENTRY_VALUE_MAX_LENGTH = 500;
 
 /** Ten lowercase letters or digits. */
-export const CONTEXT_ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
+const CONTEXT_ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
 
 /** A letter first, then letters, digits, spaces, hyphens and underscores. */
-export const CONTEXT_ENTRY_NAME_PATTERN = /^\p{L}[\p{L}\p{Nd} _-]*$/u;
+const CONTEXT_ENTRY_NAME_PATTERN = /^\p{L}[\p{L}\p{Nd} _-]*$/u;
 
 const NAMED_ENTRY_REQUIRED_KEYS = ["id", "name", "text"] as const;
 
@@ -94,7 +94,7 @@ export function isNamedContextEntry(
 }
 
 /** The form in which two names are compared: trimmed, without regard to case. */
-export function comparableContextEntryName(name: string): string {
+function comparableContextEntryName(name: string): string {
 	return name.trim().toLowerCase();
 }
 

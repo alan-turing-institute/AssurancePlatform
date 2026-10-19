@@ -198,6 +198,19 @@ export function plainReferenceText(
 		.join("");
 }
 
+/**
+ * The name an activity notice shows for one element: its label, or, when it
+ * has none, its description with references written as `{name}`. A notice is
+ * made from a single element read on its own, so a reference shows the name
+ * stored in its token, which is out of date if the entry was renamed since.
+ */
+export function noticeElementName(element: {
+	description: string;
+	name: string | null;
+}): string {
+	return element.name || plainReferenceText(element.description);
+}
+
 /** A context entry as one string: `window: meaning (value: 5 minutes)`. */
 export function plainContextEntry(
 	entry: ContextEntry,

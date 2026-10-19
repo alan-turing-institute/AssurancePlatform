@@ -1299,6 +1299,8 @@ export function checkStructure(
 
 	return {
 		ruleset: { version: ruleset.version, date: ruleset.date },
+		// The checker reads the plain-text form of a case, which has the shape
+		// of a 1.0 file whatever version the stored export is.
 		input: { schema: "tea-nested", version: "1.0" },
 		case: { name: doc.case.name, exportedAt: doc.exportedAt },
 		findings,

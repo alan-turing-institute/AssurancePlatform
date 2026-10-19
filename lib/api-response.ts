@@ -50,6 +50,22 @@ export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
 }
 
 /**
+ * The 400 answer for an import file that failed validation. The "path:
+ * message" strings reach the client as their own top-level array, because the
+ * import dialog reads `validationErrors` specifically; the shared envelope
+ * carries only `fieldErrors`, a record of strings, which cannot hold a list.
+ */
+export function apiImportValidationError(
+	error: string,
+	validationErrors: string[]
+): NextResponse {
+	return NextResponse.json(
+		{ error, code: "VALIDATION", validationErrors },
+		{ status: 400 }
+	);
+}
+
+/**
  * Create a 429 Too Many Requests response.
  * Optionally sets the `Retry-After` header in seconds.
  */
@@ -309,4 +325,19 @@ export function serviceErrorToAppError(error: string): AppError {
 	}
 
 	return new AppError({ code: "INTERNAL", message: error });
+}
+
+/**
+ * The answer for a case import that failed. A file that failed validation gets
+ * the list of validation messages (`apiImportValidationError`); any other
+ * failure is mapped from its service error message.
+ */
+export function apiImportFailure(failure: {
+	error: string;
+	validationErrors?: string[];
+}): NextResponse {
+	if (failure.validationErrors?.length) {
+		return apiImportValidationError(failure.error, failure.validationErrors);
+	}
+	return apiError(serviceErrorToAppError(failure.error));
 }

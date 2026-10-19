@@ -11,7 +11,7 @@ import { exportCase } from "@/lib/services/case-export-service";
 /**
  * Export an assurance case as JSON
  *
- * @description Exports the specified case in nested JSON format (v1.0).
+ * @description Exports the specified case in nested JSON format (v1.1 when the case uses named context entries, v1.0 otherwise).
  * Returns a downloadable JSON file with the full case structure.
  * Requires VIEW permission on the case.
  *
