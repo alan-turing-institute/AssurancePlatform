@@ -230,7 +230,7 @@ Table assurance_elements {
   description String [not null, note: 'Main content/description of the element']
   assumption String [note: 'Assumptions upon which this element depends']
   justification String [note: 'Rationale for strategies explaining the decomposition approach']
-  context String[] [not null, note: 'Contextual information strings (replaces legacy CONTEXT element type)']
+  context Json [not null, default: '[]', note: 'Context entries (replaces legacy CONTEXT element type): plain text, or a named entry {id, name, text, value?}']
   url String [note: 'Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]']
   urls String[] [not null, note: 'Multiple evidence URLs. Must be valid http/https URLs']
   moduleReferenceId String [note: 'For MODULE type: the referenced case ID']

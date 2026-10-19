@@ -42,7 +42,7 @@ export const createElementSchema = z.strictObject({
 	// GSN-specific
 	assumption: optionalString(5000),
 	justification: optionalString(5000),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 
 	// Per-assertion status (ADR 0004 D3)
 	assertionStatus: assertionStatusInputSchema,
@@ -91,7 +91,7 @@ export const updateElementSchema = z.strictObject({
 	// GSN-specific
 	assumption: optionalString(5000),
 	justification: optionalString(5000),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 
 	// Per-assertion status (ADR 0004 D3)
 	assertionStatus: assertionStatusInputSchema,

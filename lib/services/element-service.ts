@@ -2,6 +2,7 @@ import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import type {
 	CreateElementSchemaOutput,
 	UpdateElementSchemaOutput,
@@ -11,6 +12,7 @@ import {
 	fieldRequiredFor,
 	validateElementName,
 } from "@/lib/schemas/element-validation";
+import { checkContextEntriesForElement } from "@/lib/services/context-entry-rules";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { transformToResponse } from "@/lib/transforms/element-response";
 import {
@@ -63,7 +65,7 @@ export interface ElementResponse {
 	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
 	citedElementId?: string | null;
 	comments?: unknown[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate: string;
 	// Dangling-defeat indicator: true when defeatsElementId was blanked
 	// because the imported target wasn't part of the same import (see
@@ -1200,6 +1202,16 @@ async function prepareElementCreate(
 		return referenceError;
 	}
 
+	const contextError = await checkContextEntriesForElement(
+		tx,
+		caseId,
+		undefined,
+		input.context
+	);
+	if (contextError) {
+		return { error: contextError };
+	}
+
 	const { level, parentInfo } =
 		elementType === "PROPERTY_CLAIM" && parentId
 			? await calculatePropertyClaimLevel(parentId, tx)
@@ -1570,6 +1582,18 @@ async function validateUpdateElementFields(
 	);
 	if (defeatsElementIdError) {
 		return { error: defeatsElementIdError };
+	}
+
+	// Named context entries: unique names on this element, and ids unique in
+	// the case. A no-op when the request leaves `context` alone.
+	const contextError = await checkContextEntriesForElement(
+		prisma,
+		existing.caseId,
+		elementId,
+		input.context
+	);
+	if (contextError) {
+		return { error: contextError };
 	}
 
 	// Name-format validation (TEA-syntax prefix). `enforceElementNameFormat`

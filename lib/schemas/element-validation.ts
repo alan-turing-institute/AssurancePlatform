@@ -11,6 +11,7 @@ import {
 	isValidElementName,
 } from "@/lib/element-names/prefix-registry";
 import { AssertionStatusSchema } from "./case-export";
+import { ContextEntrySchema } from "./context-entry";
 
 // ============================================
 // ELEMENT TYPE DEFINITIONS
@@ -195,14 +196,14 @@ const GoalSchema = BaseElementSchema.extend({
 	role: ElementRoleSchema.nullable().optional(),
 	assumption: z.string().nullable().optional(),
 	justification: z.string().nullable().optional(),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 });
 
 const StrategySchema = BaseElementSchema.extend({
 	elementType: z.literal("STRATEGY"),
 	assumption: z.string().nullable().optional(),
 	justification: z.string().nullable().optional(),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 });
 
 const PropertyClaimSchema = BaseElementSchema.extend({
@@ -210,7 +211,7 @@ const PropertyClaimSchema = BaseElementSchema.extend({
 	assumption: z.string().nullable().optional(),
 	justification: z.string().nullable().optional(),
 	level: z.number().int().min(1).nullable().optional(),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 });
 
 const EvidenceSchema = BaseElementSchema.extend({

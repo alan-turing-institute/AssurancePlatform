@@ -122,6 +122,11 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^This claim is bound to check /,
 		factory: () => unprocessable(""),
 	},
+	// `context-entry-rules.ts` and `lib/schemas/context-entry.ts`: a named
+	// context entry that breaks a rule (a repeated name or id) is a validation
+	// failure (400). Anchored and listed before the substring patterns below
+	// because the message embeds an author-chosen name.
+	{ pattern: /^Context entry /, factory: () => validationError("") },
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
