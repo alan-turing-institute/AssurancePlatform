@@ -267,6 +267,20 @@ describe("read_claim_health — who is offered it", () => {
 		expect(viewerTools).toContain("read_claim_health");
 	});
 
+	it("is not listed to a user with the assistant on who has no health row at all", async () => {
+		const w = await caseWithRecord();
+		const viewer = await createTestUser();
+		await createTestPluginState(viewer.id, { pluginId: ASSISTANT });
+		await createTestPermission(w.kase.id, viewer.id, w.owner.id, "VIEW");
+		await signedInAs(viewer);
+
+		const tools = await listedTools(w.kase.id);
+
+		expect(tools).toContain("read_case");
+		expect(tools).not.toContain("read_claim_health");
+		expect(caseHasHealthStatus).not.toHaveBeenCalled();
+	});
+
 	it("asks about the case's claims once per request when the plugin is on", async () => {
 		const w = await caseWithRecord();
 		await signedInAs(w.owner);

@@ -15,7 +15,7 @@ A status is a signal for review, not an automatic decision that a claim is true.
 Claim/Evidence Health is off by default.
 Each person turns it on in Settings → Plugins, and can turn it off again there.
 Integrations are unaffected: an integration's own account counts as having the plugin on, so a pipeline keeps sending and reading results whatever its owner chose.
-A setting that turns the plugin off for that account still applies, and so does the deployment withholding the plugin, which turns it off for everyone.
+An owner stops a pipeline by suspending or revoking its integration, and the deployment withholding the plugin turns it off for everyone.
 A machine integration needs the `health:evidence:write` scope and a case grant with edit access to send a record.
 It posts one record per request to `/api/machine/health/elements/[id]/evidence`, where `[id]` is the property claim's id.
 The generated `/api-docs` reference gives the request and response shapes.

@@ -33,10 +33,11 @@ export interface PluginManifestEntry {
 	/**
 	 * Whether a user who has never set this plugin gets it on. Absent means
 	 * on. When `false`, the plugin is off until the user's own USER-scope row
-	 * turns it on; an off row at any higher scope still wins. An integration's
-	 * machine account is treated as having turned it on, so pipelines keep
-	 * working; a row turning it off, or the deployment withholding it, still
-	 * applies to that account.
+	 * turns it on; an off row at any higher scope still wins. For a plugin
+	 * that lists the `machine-endpoints` surface, an integration's machine
+	 * account is treated as having turned it on, so pipelines keep working; a
+	 * row turning it off, or the deployment withholding it, still applies to
+	 * that account. A plugin without that surface gets no such exception.
 	 */
 	readonly defaultEnabled?: boolean;
 	/**

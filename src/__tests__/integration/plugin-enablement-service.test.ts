@@ -560,14 +560,23 @@ describe("setPluginEnabledForUser", () => {
 		const user = await createTestUser();
 		expectSuccess(
 			await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
+				enabled: true,
+			})
+		);
+		const on = expectSuccess(
+			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
+		);
+		expect(on.enabled).toBe(true);
+
+		expectSuccess(
+			await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
 				enabled: false,
 			})
 		);
-
-		const state = expectSuccess(
+		const off = expectSuccess(
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
-		expect(state.enabled).toBe(false);
+		expect(off.enabled).toBe(false);
 	});
 });
 

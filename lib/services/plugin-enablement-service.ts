@@ -21,8 +21,11 @@ const log = logger.child({ component: "plugin-enablement-service" });
  * `PluginState` row with `enabled: false` exists at any scope at-or-above
  * the user in the ORGANISATION -> TEAM -> USER chain ("off wins downward").
  * A manifest entry with `defaultEnabled: false` additionally needs the
- * user's own USER-scope row to be on, except for an integration's machine
- * account, which counts as opted in (see `isIntegrationMachineAccount`).
+ * user's own USER-scope row to be on. The exception is an integration's
+ * machine account for a plugin whose manifest lists the `machine-endpoints`
+ * surface: that account counts as opted in (see
+ * `isIntegrationMachineAccount`). For any other plugin it needs its own row
+ * like everyone else.
  *
  * 1.0 activates only the USER tier for writes (`setPluginEnabledForUser`
  * below) — there is no Organisation model yet, and mapping a user to their
@@ -86,6 +89,8 @@ function buildScopeLookups(scopeIds: PluginScopeChain): ScopeLookup[] {
  * user's cases carries that flag too and is not an integration's principal.
  * Only the integration registry creates such a row, in the same transaction
  * that creates the account, so a person cannot attach one to their own.
+ * The caller asks only for plugins that expose machine endpoints, so the
+ * lookup never runs for the others.
  */
 async function isIntegrationMachineAccount(
 	userId: string,
@@ -143,17 +148,21 @@ export async function resolveEffectivePluginState(
 			}
 		}
 
-		if (getManifestEntry(pluginId)?.defaultEnabled === false) {
+		const entry = getManifestEntry(pluginId);
+		if (entry?.defaultEnabled === false) {
 			const userRow = rows.find(
 				(r) => r.scopeType === "USER" && r.scopeId === scopeIds.userId
 			);
 			// A machine account never chooses plugins; its token's scopes and
-			// case grants already say what it is for. The lookup runs only on
-			// this path, and the off rows and deployment check above still win.
+			// case grants already say what it is for. That holds only for a
+			// plugin that machines call, so the surface is checked first and the
+			// lookup runs for no other plugin. The off rows and deployment check
+			// above still win.
 			if (
 				!(
 					userRow?.enabled ||
-					(await isIntegrationMachineAccount(scopeIds.userId, db))
+					(entry.surfaces.includes("machine-endpoints") &&
+						(await isIntegrationMachineAccount(scopeIds.userId, db)))
 				)
 			) {
 				return {
