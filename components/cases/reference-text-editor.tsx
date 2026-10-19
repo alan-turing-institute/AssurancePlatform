@@ -23,6 +23,7 @@ import {
 import StarterKit from "@tiptap/starter-kit";
 import { exitSuggestion, SuggestionPluginKey } from "@tiptap/suggestion";
 import {
+	type ForwardedRef,
 	forwardRef,
 	type MutableRefObject,
 	useEffect,
@@ -179,13 +180,6 @@ function focusIsFree(): boolean {
 	);
 }
 
-function openList(
-	list: ReferenceListState | null,
-	visible: boolean
-): ReferenceListState | null {
-	return visible && list ? list : null;
-}
-
 /**
  * The form can replace the text under the editor (when the dialog is reloaded
  * for the element). Only a value the editor did not just send itself is
@@ -243,53 +237,45 @@ function useEditorMode(
 	}, [autoFocus, editor, readOnly]);
 }
 
-const ReferenceTextEditor = forwardRef<
-	ReferenceTextEditorHandle,
-	ReferenceTextEditorProps
->(function ReferenceTextEditor(
-	{
-		"aria-describedby": describedBy,
-		"aria-invalid": invalid,
-		"aria-labelledby": labelledBy,
-		autoFocus = false,
-		id,
-		onBlur,
-		onChange,
-		placeholder = "",
-		readOnly = false,
-		terms,
-		value,
-	},
-	ref
-) {
-	const listId = useId();
-	const { suggestion, list, activeIndex, setActiveIndex, visible } =
-		useReferenceSuggestion(terms);
-	const shownList = openList(list, visible);
+/** The attributes that tie the editable region to the pick-list while it is open. */
+function listAttributes(
+	list: ReferenceListState | null,
+	listId: string,
+	activeIndex: number
+): Pick<AttributeInput, "activeOptionId" | "listId"> {
+	if (!list?.items.length) {
+		return {};
+	}
+	return {
+		listId,
+		activeOptionId: referenceOptionId(listId, activeIndex),
+	};
+}
 
+interface ReferenceEditorOptions {
+	attributes: Record<string, string>;
+	extensions: ReturnType<typeof buildExtensions>;
+	onBlur?: () => void;
+	onChange: (text: string) => void;
+	readOnly: boolean;
+	value: string;
+}
+
+/** The editor instance, reporting changes as the stored string and keeping the form's text in step. */
+function useReferenceEditor({
+	attributes,
+	extensions,
+	onBlur,
+	onChange,
+	readOnly,
+	value,
+}: ReferenceEditorOptions) {
 	const lastTextRef = useRef(value);
 	const onChangeRef = useRef(onChange);
 	onChangeRef.current = onChange;
 	const onBlurRef = useRef(onBlur);
 	onBlurRef.current = onBlur;
-
 	const [initialContent] = useState(() => textToDocument(value));
-	const extensions = useMemo(
-		() => buildExtensions(suggestion, placeholder),
-		[suggestion, placeholder]
-	);
-	const attributes = buildEditorAttributes({
-		id,
-		labelledBy,
-		describedBy,
-		invalid,
-		placeholder,
-		readOnly,
-		listId: shownList?.items.length ? listId : undefined,
-		activeOptionId: shownList?.items.length
-			? referenceOptionId(listId, activeIndex)
-			: undefined,
-	});
 
 	const editor = useEditor({
 		extensions,
@@ -305,14 +291,57 @@ const ReferenceTextEditor = forwardRef<
 		},
 		onBlur: () => onBlurRef.current?.(),
 	});
+	useLoadReplacedText(editor, value, lastTextRef);
+	return editor;
+}
+
+function ReferenceTextEditorBody({
+	"aria-describedby": describedBy,
+	"aria-invalid": invalid,
+	"aria-labelledby": labelledBy,
+	autoFocus = false,
+	handleRef,
+	id,
+	onBlur,
+	onChange,
+	placeholder = "",
+	readOnly = false,
+	terms,
+	value,
+}: ReferenceTextEditorProps & {
+	handleRef: ForwardedRef<ReferenceTextEditorHandle>;
+}) {
+	const listId = useId();
+	const { suggestion, list, activeIndex, setActiveIndex, visible } =
+		useReferenceSuggestion(terms);
+	const shownList = visible ? list : null;
+	const extensions = useMemo(
+		() => buildExtensions(suggestion, placeholder),
+		[suggestion, placeholder]
+	);
+	const attributes = buildEditorAttributes({
+		id,
+		labelledBy,
+		describedBy,
+		invalid,
+		placeholder,
+		readOnly,
+		...listAttributes(shownList, listId, activeIndex),
+	});
+	const editor = useReferenceEditor({
+		attributes,
+		extensions,
+		onBlur,
+		onChange,
+		readOnly,
+		value,
+	});
 
 	useImperativeHandle(
-		ref,
+		handleRef,
 		() => ({ focus: () => editor?.commands.focus("end") }),
 		[editor]
 	);
-
-	useLoadReplacedText(editor, value, lastTextRef);
 	useEditorAttributes(editor, attributes);
 	useEditorMode(editor, readOnly, autoFocus);
 
@@ -337,6 +366,12 @@ const ReferenceTextEditor = forwardRef<
 			)}
 		</>
 	);
-});
+}
+
+const ReferenceTextEditor = forwardRef<
+	ReferenceTextEditorHandle,
+	ReferenceTextEditorProps
+>((props, ref) => <ReferenceTextEditorBody {...props} handleRef={ref} />);
+ReferenceTextEditor.displayName = "ReferenceTextEditor";
 
 export default ReferenceTextEditor;
