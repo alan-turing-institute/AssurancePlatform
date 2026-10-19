@@ -21,6 +21,7 @@ import {
 	createTestCase,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 const GOAL_NAME_PATTERN = /^G\d+$/;
@@ -1374,9 +1375,10 @@ describe("element-service", () => {
 				resetPluginNamePatternsForTests();
 			});
 
-			it("honours a plugin-registered pattern for a user with the plugin enabled (the default)", async () => {
+			it("honours a plugin-registered pattern for a user who turned the plugin on", async () => {
 				registerPluginNamePatterns("tea.health", "GOAL", GSN_PATTERN);
 				const user = await createTestUser();
+				await enableTestPlugin(user.id, "tea.health");
 				const testCase = await createTestCase(user.id);
 
 				const data = expectSuccess(
@@ -1413,6 +1415,7 @@ describe("element-service", () => {
 			it("honours the plugin pattern through updateElement too, when enabled", async () => {
 				registerPluginNamePatterns("tea.health", "GOAL", GSN_PATTERN);
 				const user = await createTestUser();
+				await enableTestPlugin(user.id, "tea.health");
 				const testCase = await createTestCase(user.id);
 				const goal = expectSuccess(
 					await createElement(user.id, {

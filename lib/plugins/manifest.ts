@@ -33,7 +33,10 @@ export interface PluginManifestEntry {
 	/**
 	 * Whether a user who has never set this plugin gets it on. Absent means
 	 * on. When `false`, the plugin is off until the user's own USER-scope row
-	 * turns it on; an off row at any higher scope still wins.
+	 * turns it on; an off row at any higher scope still wins. An integration's
+	 * machine account is treated as having turned it on, so pipelines keep
+	 * working; a row turning it off, or the deployment withholding it, still
+	 * applies to that account.
 	 */
 	readonly defaultEnabled?: boolean;
 	/**
@@ -79,6 +82,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		id: "tea.health",
 		name: "Claim/Evidence Health",
 		version: "0.1.0",
+		defaultEnabled: false,
 		surfaces: [
 			"extension-data",
 			"plugin-tables",

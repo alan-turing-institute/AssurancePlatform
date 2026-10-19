@@ -10,6 +10,7 @@ import {
 	createTestElement,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -133,6 +134,7 @@ const MESSAGES = {
 /** A signed-in user with the assistant on, a chat job on a stored connection, and a case. */
 async function setup() {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	const kase = await createTestCase(user.id);
 	const root = await createTestElement(kase.id, user.id, {
 		name: "G1",

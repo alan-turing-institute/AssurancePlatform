@@ -7,6 +7,7 @@ import {
 	createTestElement,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "./prisma-factories";
 
 export const ASSISTANT_PLUGIN_ID = "tea.assistant";
@@ -25,6 +26,7 @@ export function shownTime(time: Date | number | string): string {
 export async function healthWorld() {
 	const owner = await createTestUser();
 	await createTestPluginState(owner.id, { pluginId: ASSISTANT_PLUGIN_ID });
+	await enableTestPlugin(owner.id, HEALTH_PLUGIN_ID);
 	const kase = await createTestCase(owner.id);
 	const root = await createTestElement(kase.id, owner.id, {
 		elementType: "GOAL",

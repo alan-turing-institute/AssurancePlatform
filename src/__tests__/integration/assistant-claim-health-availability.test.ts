@@ -25,6 +25,7 @@ import {
 	createTestPermission,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -235,6 +236,7 @@ describe("read_claim_health — who is offered it", () => {
 		const w = await caseWithRecord();
 		for (const level of ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const) {
 			const user = await createTestUser();
+			await enableTestPlugin(user.id, "tea.health");
 			await createTestPluginState(user.id, { pluginId: ASSISTANT });
 			await createTestPermission(w.kase.id, user.id, w.owner.id, level);
 			await signedInAs(user);
@@ -248,6 +250,7 @@ describe("read_claim_health — who is offered it", () => {
 	it("is not listed to a user who switched the health plugin off, while others still get it", async () => {
 		const w = await caseWithRecord();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPluginState(viewer.id, { pluginId: ASSISTANT });
 		await createTestPermission(w.kase.id, viewer.id, w.owner.id, "VIEW");
 		expectSuccess(

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import { mockNoAuth } from "../utils/auth-helpers";
 import { callCriteriaPut } from "../utils/health-criteria-kit";
@@ -32,10 +33,10 @@ import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
-	createTestPluginState,
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -83,11 +84,14 @@ async function actAs(who: Who, world: NodeWorld) {
 		return;
 	}
 	if (who === "stranger") {
-		await signIn(await createTestUser());
+		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, "tea.health");
+		await signIn(stranger);
 		return;
 	}
 	if (who === "team VIEW" || who === "team EDIT") {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, "tea.health");
 		const team = await createTestTeam(world.owner.id);
 		await addTeamMember(team.id, user.id, "MEMBER");
 		await createTestTeamPermission(
@@ -149,8 +153,7 @@ describe("POST …/health/evidence-node: who may add a node", () => {
 
 	it("refuses a person who has the health plugin switched off", async () => {
 		const world = await acceptedWithoutNode();
-		await createTestPluginState(world.owner.id, {
-			pluginId: "tea.health",
+		await setPluginEnabledForUser("tea.health", world.owner.id, {
 			enabled: false,
 		});
 		const result = await postNode(world.claim.id);
@@ -247,10 +250,7 @@ describe("GET …/health/evidence-nodes: who may read the list", () => {
 		const world = await nodeWorld();
 		await acceptWithNode(world);
 		const viewer = await collaborator(world, "VIEW");
-		await createTestPluginState(viewer.id, {
-			pluginId: "tea.health",
-			enabled: false,
-		});
+		await setPluginEnabledForUser("tea.health", viewer.id, { enabled: false });
 		await signIn(viewer);
 		const refused = await listNodes(world.kase.id);
 		expect(refused.status).toBe(403);
@@ -334,10 +334,7 @@ describe("write routes refuse people who may not edit", () => {
 		const world = await nodeWorld();
 		await acceptWithNode(world);
 		const editor = await collaborator(world, "EDIT");
-		await createTestPluginState(editor.id, {
-			pluginId: "tea.health",
-			enabled: false,
-		});
+		await setPluginEnabledForUser("tea.health", editor.id, { enabled: false });
 		await signIn(editor);
 		const result = await retire(world.claim.id, {
 			reason: "x",

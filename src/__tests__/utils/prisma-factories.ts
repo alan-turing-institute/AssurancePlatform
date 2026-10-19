@@ -334,6 +334,29 @@ export function createTestPluginState(
 	});
 }
 
+/**
+ * Switches a plugin on for one person with a USER-scope row, as the Plugins
+ * page does. Plugins that are off by default (`tea.health`, `tea.assistant`)
+ * stay off for a fresh person until this runs. Replaces any row the person
+ * already has for that plugin.
+ */
+export function enableTestPlugin(
+	userId: string,
+	pluginId: string
+): Promise<PluginState> {
+	return prisma.pluginState.upsert({
+		where: {
+			pluginId_scopeType_scopeId: {
+				pluginId,
+				scopeType: "USER",
+				scopeId: userId,
+			},
+		},
+		create: { pluginId, scopeType: "USER", scopeId: userId, enabled: true },
+		update: { enabled: true },
+	});
+}
+
 // ============================================
 // INTEGRATION (external machine clients)
 // ============================================

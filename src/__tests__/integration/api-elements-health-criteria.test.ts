@@ -5,6 +5,7 @@ import {
 	deleteIntegrationRegistration,
 	registerIntegration,
 } from "@/lib/services/integration-registry-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import { buildHealthCheckList } from "../fixtures/health-checks";
 import { expectSuccess } from "../utils/assertion-helpers";
@@ -24,10 +25,10 @@ import {
 import {
 	addTeamMember,
 	createTestPermission,
-	createTestPluginState,
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -63,6 +64,7 @@ async function signedInWith(
 	permission: "VIEW" | "COMMENT" | "EDIT"
 ) {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	await createTestPermission(caseId, user.id, grantedById, permission);
 	await asUser(user);
 	return user;
@@ -74,6 +76,7 @@ async function signedInThroughTeam(
 	permission: "VIEW" | "EDIT"
 ) {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	const team = await createTestTeam(grantedById);
 	await addTeamMember(team.id, user.id, "MEMBER");
 	await createTestTeamPermission(caseId, team.id, grantedById, permission);
@@ -83,6 +86,7 @@ async function signedInThroughTeam(
 
 async function signedInStranger() {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	await asUser(user);
 	return user;
 }
@@ -213,8 +217,7 @@ describe("access to the settings routes", () => {
 
 	it("refuses every settings route to a person who has switched the plugin off", async () => {
 		const context = await setup();
-		await createTestPluginState(context.owner.id, {
-			pluginId: "tea.health",
+		await setPluginEnabledForUser("tea.health", context.owner.id, {
 			enabled: false,
 		});
 		const notEnabled = "Plugin 'tea.health' is not enabled";
@@ -525,6 +528,7 @@ describe("saving, accepting and reading settings", () => {
 		const context = await setup();
 		await save(context.claim.id, context.integration.id, itemSettings(), true);
 		const newOwner = await createTestUser();
+		await enableTestPlugin(newOwner.id, "tea.health");
 		await prisma.integration.update({
 			where: { id: context.integration.id },
 			data: { ownerId: newOwner.id },
@@ -1356,6 +1360,7 @@ describe("saving with an upper-case integration id and a moved integration", () 
 		const context = await setup();
 		await save(context.claim.id, context.integration.id, itemSettings(), true);
 		const other = await createTestUser();
+		await enableTestPlugin(other.id, "tea.health");
 		const second = await addPipeline(other.id, context.testCase.id);
 
 		const moved = await save(

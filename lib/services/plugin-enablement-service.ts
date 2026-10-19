@@ -21,7 +21,8 @@ const log = logger.child({ component: "plugin-enablement-service" });
  * `PluginState` row with `enabled: false` exists at any scope at-or-above
  * the user in the ORGANISATION -> TEAM -> USER chain ("off wins downward").
  * A manifest entry with `defaultEnabled: false` additionally needs the
- * user's own USER-scope row to be on.
+ * user's own USER-scope row to be on, except for an integration's machine
+ * account, which counts as opted in (see `isIntegrationMachineAccount`).
  *
  * 1.0 activates only the USER tier for writes (`setPluginEnabledForUser`
  * below) — there is no Organisation model yet, and mapping a user to their
@@ -78,6 +79,25 @@ function buildScopeLookups(scopeIds: PluginScopeChain): ScopeLookup[] {
 	return lookups;
 }
 
+/**
+ * True when `userId` is the machine account of an integration. The test is
+ * that an `Integration` row names the account as its `systemUserId`, not the
+ * bare `isSystemUser` flag: the fallback account that inherits a deleted
+ * user's cases carries that flag too and is not an integration's principal.
+ * Only the integration registry creates such a row, in the same transaction
+ * that creates the account, so a person cannot attach one to their own.
+ */
+async function isIntegrationMachineAccount(
+	userId: string,
+	db: TxClient
+): Promise<boolean> {
+	const integration = await db.integration.findUnique({
+		where: { systemUserId: userId },
+		select: { id: true },
+	});
+	return integration !== null;
+}
+
 export async function resolveEffectivePluginState(
 	pluginId: string,
 	scopeIds: PluginScopeChain,
@@ -127,7 +147,15 @@ export async function resolveEffectivePluginState(
 			const userRow = rows.find(
 				(r) => r.scopeType === "USER" && r.scopeId === scopeIds.userId
 			);
-			if (!userRow?.enabled) {
+			// A machine account never chooses plugins; its token's scopes and
+			// case grants already say what it is for. The lookup runs only on
+			// this path, and the off rows and deployment check above still win.
+			if (
+				!(
+					userRow?.enabled ||
+					(await isIntegrationMachineAccount(scopeIds.userId, db))
+				)
+			) {
 				return {
 					data: {
 						enabled: false,

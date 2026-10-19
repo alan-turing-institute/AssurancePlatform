@@ -27,6 +27,7 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -61,6 +62,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -743,6 +745,7 @@ describe("GET /api/machine/health/elements/[id]/evidence — dual auth", () => {
 	it("reads the log via a human session with case VIEW access", async () => {
 		const { owner, testCase, claim } = await setup();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
 
@@ -757,6 +760,7 @@ describe("GET /api/machine/health/elements/[id]/evidence — dual auth", () => {
 	it("returns 404 (not a redirect) for a human session with no case access and no token", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await mockAuth(outsider.id, outsider.username, outsider.email);
 
 		const { GET } = await importRoute();

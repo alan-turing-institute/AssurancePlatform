@@ -6,6 +6,7 @@ import { getPublishedItemBySlug } from "@/lib/services/discover-service";
 import { deleteElement } from "@/lib/services/element-service";
 import { isConcurrentChange } from "@/lib/services/health-criteria-service";
 import { readHealthStatus } from "@/lib/services/health-status-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { publishAssuranceCase } from "@/lib/services/publish-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import { Prisma } from "@/src/generated/prisma";
@@ -32,10 +33,10 @@ import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
-	createTestPluginState,
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
@@ -90,6 +91,7 @@ async function signedInWith(
 	permission: "VIEW" | "COMMENT" | "EDIT"
 ) {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	await createTestPermission(caseId, user.id, grantedById, permission);
 	await asUser(user);
 	return user;
@@ -101,6 +103,7 @@ async function signedInThroughTeam(
 	permission: "VIEW" | "EDIT"
 ) {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	const team = await createTestTeam(grantedById);
 	await addTeamMember(team.id, user.id, "MEMBER");
 	await createTestTeamPermission(caseId, team.id, grantedById, permission);
@@ -860,7 +863,9 @@ describe("GET /api/cases/[id]/health/evidence-nodes", () => {
 	it("gives a person without access the same answer as for a missing case", async () => {
 		const context = await setup();
 		await acceptWithNode(context);
-		await asUser(await createTestUser());
+		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, "tea.health");
+		await asUser(stranger);
 		const missing = "7acd824e-0000-4000-8000-0000000000cc";
 
 		for (const caseId of [context.testCase.id, missing]) {
@@ -881,8 +886,7 @@ describe("GET /api/cases/[id]/health/evidence-nodes", () => {
 		).toBe(401);
 
 		await asUser(context.owner);
-		await createTestPluginState(context.owner.id, {
-			pluginId: "tea.health",
+		await setPluginEnabledForUser("tea.health", context.owner.id, {
 			enabled: false,
 		});
 		const off = await callEvidenceNodes(context.testCase.id);
@@ -927,7 +931,9 @@ describe("POST /api/elements/[id]/health/evidence-node", () => {
 
 	it("gives a person without access the same answer as for a missing claim", async () => {
 		const context = await acceptedWithoutNode();
-		await asUser(await createTestUser());
+		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, "tea.health");
+		await asUser(stranger);
 		const missing = "7acd824e-0000-4000-8000-0000000000dd";
 
 		for (const claimId of [context.claim.id, missing]) {
@@ -948,8 +954,7 @@ describe("POST /api/elements/[id]/health/evidence-node", () => {
 		).toBe(401);
 
 		await asUser(context.owner);
-		await createTestPluginState(context.owner.id, {
-			pluginId: "tea.health",
+		await setPluginEnabledForUser("tea.health", context.owner.id, {
 			enabled: false,
 		});
 		const off = await callAddEvidenceNode(context.claim.id);

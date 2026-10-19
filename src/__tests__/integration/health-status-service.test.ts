@@ -14,6 +14,7 @@ import {
 	readHealthStatus,
 	readHealthStatusesForCase,
 } from "@/lib/services/health-status-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
 	buildHealthRecords,
 	type HealthRecordName,
@@ -24,8 +25,8 @@ import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
-	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 const PLUGIN_ID = "tea.health";
@@ -39,6 +40,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -393,13 +395,11 @@ describe("computeHealthStatus — the same for everyone", () => {
 		const { owner, testCase, claim } = await setup();
 		const collaborator = await createTestUser();
 		await createTestPermission(testCase.id, collaborator.id, owner.id, "VIEW");
-		await createTestPluginState(owner.id, {
-			pluginId: PLUGIN_ID,
+		await setPluginEnabledForUser(PLUGIN_ID, owner.id, {
 			enabled: true,
 			settings: { validityWindowSeconds: 1, verdictScores: { PASS: 0 } },
 		});
-		await createTestPluginState(collaborator.id, {
-			pluginId: PLUGIN_ID,
+		await setPluginEnabledForUser(PLUGIN_ID, collaborator.id, {
 			enabled: true,
 			settings: { validityWindowSeconds: 999_999 },
 		});
@@ -429,6 +429,7 @@ describe("readHealthStatus — access", () => {
 			elementType: "GOAL",
 		});
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		const deleted = await addClaim(testCase.id, owner.id);
 		await prisma.assuranceElement.update({
 			where: { id: deleted.id },

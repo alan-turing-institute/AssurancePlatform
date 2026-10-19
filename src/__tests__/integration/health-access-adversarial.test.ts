@@ -23,6 +23,7 @@ import {
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -64,6 +65,9 @@ async function world() {
 		view: await createTestUser(),
 		none: await createTestUser(),
 	};
+	for (const person of Object.values(actors)) {
+		await enableTestPlugin(person.id, "tea.health");
+	}
 	await createTestPermission(
 		testCase.id,
 		actors.directEdit.id,
@@ -180,6 +184,7 @@ describe("revocation route: who may revoke", () => {
 	it("does not reveal a record in a case the caller cannot see: same answer as an unknown record id", async () => {
 		const { owner, claim } = await setupClaim();
 		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, "tea.health");
 		const strangerCase = await createTestCase(stranger.id);
 		const strangerClaim = await createTestElement(
 			strangerCase.id,
@@ -303,6 +308,7 @@ describe("bound-check route: who may change the check", () => {
 			elementType: "GOAL",
 		});
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await mockAuth(outsider.id);
 		const hidden = await callBoundCheck(claim.id);
 		await mockAuth(owner.id);
@@ -356,6 +362,7 @@ describe("the two reads: who may read", () => {
 		const { owner, claim } = await setupClaim();
 		await appendRecord(owner.id, claim.id);
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await mockAuth(outsider.id);
 		const { GET } = await importMachineRoute();
 

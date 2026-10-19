@@ -9,8 +9,8 @@ const log = logger.child({ component: "claim-health-availability" });
  * What the assistant can do with claim health for one user and case:
  * `available` when the health plugin is on and a claim in the case has a bound
  * check or a record, `no-results` when the plugin is on and none does, and
- * `plugin-off` when the deployment withholds the plugin or the user has
- * switched it off.
+ * `plugin-off` when the deployment withholds the plugin or the user has not
+ * turned it on.
  */
 export type ClaimHealthAvailability = "available" | "no-results" | "plugin-off";
 
