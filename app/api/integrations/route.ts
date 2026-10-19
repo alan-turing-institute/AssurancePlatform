@@ -15,13 +15,13 @@ import {
 /**
  * GET /api/integrations
  *
- * Lists every integration the SESSION USER owns — never anyone else's
- * (ADR 0002 v2 §2.4, work item 7). Each entry carries a token SUMMARY per
- * issued token (prefix, timestamps, expiry/revocation state); the
- * plaintext secret and hash are never part of this response — issuance
- * (`POST .../tokens`) is the only moment a secret is ever shown.
+ * Lists the integrations the signed-in user owns, never anyone else's.
+ * Each entry carries a summary of every token issued for it: prefix,
+ * timestamps, expiry and revocation state.
+ * A token's secret and hash are never returned; the secret is shown once,
+ * when the token is issued.
  *
- * @description Owner-only listing — the caller's own integrations only.
+ * @description Lists the integrations the signed-in user owns, each with a summary of its tokens and never a secret.
  * @response 200 - `{ integrations: IntegrationListItem[] }`
  * @response 401 - Unauthorised
  * @auth SessionAuth
@@ -45,22 +45,20 @@ export async function GET() {
 /**
  * POST /api/integrations
  *
- * Registers a new integration owned by the SESSION USER. `ownerId` is not
- * an accepted field — it is always derived from the session, never from
- * the request body (vincent's session-derived-identity trust statement,
- * 2026-07-03), so a caller cannot register on someone else's behalf.
- * Returns the integration only — no token. Issuing a token is a separate,
- * explicit step (`POST /api/integrations/[id]/tokens`).
+ * Registers an integration. The signed-in user becomes its owner, so the body
+ * has no owner field.
+ * The response is the integration without a token; issue one with
+ * `POST /api/integrations/[id]/tokens`.
+ * Every scope must be one the platform defines, and at least one is required.
  *
- * @description Any authenticated user may register an integration; the
- * registrant becomes its owner. `scopes` is validated against the closed
- * vocabulary in `lib/auth/scopes.ts` — an unknown scope is a 400.
+ * @description Registers an integration owned by the signed-in user and returns it without a token; any signed-in user may register one, and an unknown scope is a 400.
  * @body { name: string, description?: string, scopes: string[] }
  * @response 201 - The created integration (no token)
  * @response 400 - Validation error (including an unknown scope)
  * @response 401 - Unauthorised
  * @response 409 - An integration with this name already exists
  * @response 413 - Payload too large
+ * @add 409
  * @auth SessionAuth
  * @tag Integrations
  */

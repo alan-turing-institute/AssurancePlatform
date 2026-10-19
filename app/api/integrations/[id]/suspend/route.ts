@@ -12,17 +12,18 @@ import { suspendIntegration } from "@/lib/services/integration-registry-service"
 /**
  * POST /api/integrations/[id]/suspend
  *
- * Suspends an ACTIVE integration (ACTIVE → SUSPENDED) — every token it has
- * issued stops authenticating for as long as it stays suspended, but
- * nothing is destroyed; `POST .../reactivate` reverses this. Owner-only.
+ * Suspends an active integration.
+ * Every token it has issued stops authenticating while it stays suspended.
+ * Nothing is deleted, and `POST .../reactivate` reverses the suspension.
+ * Only the owner can suspend an integration.
  *
- * @description A REVOKED integration cannot be suspended (REVOKED is
- * terminal) — that request is a 409, not a silent status flip.
+ * @description Suspends an active integration so that none of its tokens authenticate until it is reactivated; a revoked integration cannot be suspended (409).
  * @pathParam id - Integration ID (UUID)
  * @response 200 - The suspended integration
  * @response 401 - Unauthorised
- * @response 404 - Integration not found (covers non-existent and not-owned — same message)
- * @response 409 - The integration is REVOKED (terminal — cannot be suspended)
+ * @response 404 - Integration not found (covers non-existent and not-owned, with the same message)
+ * @response 409 - The integration is revoked, which is final, so it cannot be suspended
+ * @add 404,409
  * @auth SessionAuth
  * @tag Integrations
  */

@@ -14,24 +14,25 @@ import { issueToken } from "@/lib/services/integration-registry-service";
 /**
  * POST /api/integrations/[id]/tokens
  *
- * Issues a new bearer token for an ACTIVE integration. The plaintext
- * secret is returned EXACTLY ONCE, here, in this response — it is never
- * persisted anywhere, never shown again, and never appears in
- * `GET /api/integrations` (which shows only the token's prefix and
- * timestamps). Owner-only.
+ * Issues a bearer token for an active integration.
+ * The secret is returned once, in this response; it is never stored or shown
+ * again, and listings show only the token's prefix and timestamps.
+ * `expiresAt` is optional.
+ * Without it the token does not expire on its own and stays valid until it is
+ * revoked or rotated.
+ * With it, the time must be in the future.
+ * Only the owner can issue a token.
  *
- * @description `expiresAt` is optional — omitted means the token never
- * expires on its own (revocation is the primary kill switch; see
- * `issueToken`'s doc comment in `integration-registry-service.ts`). When
- * provided it must be in the future.
+ * @description Issues a bearer token for an active integration and returns its secret once; the token does not expire unless `expiresAt` is given.
  * @pathParam id - Integration ID (UUID)
  * @body { expiresAt?: string }
  * @response 201 - `{ secret: string, token: { id, tokenPrefix, createdAt, expiresAt } }`
  * @response 400 - Validation error
  * @response 401 - Unauthorised
- * @response 404 - Integration not found (covers non-existent and not-owned — same message)
- * @response 409 - The integration is not ACTIVE
+ * @response 404 - Integration not found (covers non-existent and not-owned, with the same message)
+ * @response 409 - The integration is not active
  * @response 413 - Payload too large
+ * @add 404,409
  * @auth SessionAuth
  * @tag Integrations
  */
