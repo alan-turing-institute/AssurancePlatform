@@ -131,7 +131,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 40,
-                    "pattern": "^\\p{L}[\\p{L}\\p{Nd} _-]*$",
+                    "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
                     "description": "Name other text can refer to"
                   },
                   "text": {

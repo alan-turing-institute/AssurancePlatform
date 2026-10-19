@@ -16,8 +16,13 @@ const CONTEXT_ENTRY_VALUE_MAX_LENGTH = 500;
 /** Ten lowercase letters or digits. */
 const CONTEXT_ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
 
-/** A letter first, then letters, digits, spaces, hyphens and underscores. */
-const CONTEXT_ENTRY_NAME_PATTERN = /^\p{L}[\p{L}\p{Nd} _-]*$/u;
+/**
+ * A letter first, then letters, combining marks, digits, spaces, hyphens and
+ * underscores. Combining marks are allowed after the first letter so that
+ * accents typed as separate characters, and scripts that build a letter from
+ * marks, are accepted.
+ */
+const CONTEXT_ENTRY_NAME_PATTERN = /^\p{L}[\p{L}\p{M}\p{Nd} _-]*$/u;
 
 const NAMED_ENTRY_REQUIRED_KEYS = ["id", "name", "text"] as const;
 
@@ -37,6 +42,7 @@ export const NamedContextEntrySchema = z
 		name: z
 			.string()
 			.trim()
+			.normalize("NFC")
 			.min(1, "Context entry names must not be empty")
 			.max(
 				CONTEXT_ENTRY_NAME_MAX_LENGTH,
@@ -93,9 +99,12 @@ export function isNamedContextEntry(
 	return typeof entry !== "string";
 }
 
-/** The form in which two names are compared: trimmed, without regard to case. */
+/**
+ * The form in which two names are compared: trimmed, with accents composed
+ * the same way, without regard to case.
+ */
 function comparableContextEntryName(name: string): string {
-	return name.trim().toLowerCase();
+	return name.trim().normalize("NFC").toLowerCase();
 }
 
 /**
