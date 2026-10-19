@@ -23,7 +23,8 @@ The `/api/machine` surface currently offers a client identity check, health evid
 | `health:criteria:read` | Reading the evidence settings accepted for claims, at `/api/machine/health/cases/[id]/criteria` and `/api/machine/health/elements/[id]/criteria`. |
 
 Each route that addresses a case or a claim also needs the integration's system user to hold the case permission it requires: view access to read, edit access to post evidence.
-Publishing a check list addresses no case, so it needs only the `health:checks:write` scope and the health plugin to be enabled for the integration.
+Publishing a check list addresses no case, so it needs only the `health:checks:write` scope.
+The integration's account counts as opted in to the health plugin, so the owner's own setting for the plugin does not matter.
 Settings accepted by a person are returned only to the integration whose check list the check came from.
 An integration registered before `health:checks:write` and `health:criteria:read` existed does not hold them.
 Its owner adds them with one `PATCH /api/integrations/[id]` request that lists every scope the integration should hold, because no screen edits the scopes of an existing integration.

@@ -4,18 +4,19 @@ description: "Locate the official plugin manifest, UI slots and plugin data stor
 ---
 
 The plugin foundation lets first-party features add data and selected interface surfaces without placing every feature's code in the case editor.
-The checked build has one official plugin, `tea.health`.
+The checked build has two official plugins, `tea.health` and `tea.assistant`.
 The manifest defines which plugin IDs and surfaces the build knows about.
 An operator can withhold a manifest plugin from a deployment with `TEA_PLUGINS_DISABLED`, while a user's effective enablement determines whether its UI appears.
 
 ## Add a registered surface
 
-The manifest in `lib/plugins/manifest.ts` lists the health plugin's ID, version, description and surfaces.
+The manifest in `lib/plugins/manifest.ts` lists each official plugin's ID, version, description and surfaces.
 A plugin registers browser UI in typed slots.
 Current live registries cover an element appearance, an element badge, an element panel, a case panel and a settings section.
-Health uses these for the look of its evidence node, its badges, evidence panel, case-level evidence health panel and settings.
+Health uses them for the look of its evidence node, its badges, evidence panel and case-level evidence health panel.
+The Case Assistant uses a case panel for its chat and a settings section that points to its model settings.
 A case panel appears as one button in the case toolbar, after Notes, and opens in a side sheet; the toolbar renders whatever enabled plugins have registered.
-`lib/plugins/bootstrap.ts` imports the plugin's registration module at the client boundary.
+`lib/plugins/bootstrap.ts` imports each plugin's registration module at the client boundary.
 A registration must name a known plugin and a surface declared by its manifest entry.
 The editor then filters registered components by effective plugin enablement.
 

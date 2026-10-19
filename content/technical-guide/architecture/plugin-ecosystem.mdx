@@ -1,70 +1,143 @@
 ---
-title: Plugin Ecosystem
-sidebar_position: 4
-sidebar_label: 'Plugin Ecosystem'
-draft: true
+title: "Plugin Ecosystem"
+description: "Understand how official plugins and machine integrations differ, which plugins ship, how people and operators control them, and how an outside system sends health evidence."
 ---
 
-<Callout type="warn">
-**Coming Soon**
+A TEA plugin adds behaviour inside the app for a signed-in person.
+Official plugins are part of the platform build and are listed in the manifest, `lib/plugins/manifest.ts`.
+A plugin can add badges, panels and settings to the editor, and can expose routes for outside systems.
+Whether a plugin is active for you depends on what your deployment offers and on your own switch in Settings → Plugins, and case permissions still decide which cases you can see.
+The [Plugin foundation](/docs/technical-guide/architecture/plugin-foundation) page describes how a plugin is registered, which interface slots it can use and where it keeps its data.
 
-The plugin ecosystem is planned for a future release. This page outlines the vision for extensibility in the TEA Platform.
-</Callout>
+An integration is a registered outside system that calls TEA with a bearer token.
+Its scopes limit the kind of action it can take, and its case grants limit which cases it can reach.
+Plugins and integrations meet where an outside system sends results that a plugin stores and shows.
+Claim/Evidence Health is the example in this build.
+Registering an integration does not install or turn on a plugin.
 
-## Vision
+| Aspect | Plugin | Integration |
+|---|---|---|
+| What it is | First-party code compiled into TEA | An outside system registered by a person |
+| Where it runs | Inside the application, for signed-in people | Outside TEA, calling `/api/machine` routes |
+| What identifies it | Its ID in the manifest, such as `tea.health` | An integration record with its own account and tokens |
+| What controls it | The deployment's `TEA_PLUGINS_DISABLED` list and each person's switch in Settings → Plugins | Its owner's scopes, case grants, tokens, and the suspend and revoke controls in Settings → Integrations |
+| Who adds it | A release of TEA | Any signed-in person who registers one |
 
-The TEA Platform aims to support a plugin architecture that allows the community to extend functionality without modifying the core codebase. This will enable:
+## Official plugins
 
-- **Custom element types** - Domain-specific argument elements
-- **Import/export formats** - Support for various assurance case standards
-- **Analysis tools** - Automated checking and validation
-- **Integrations** - Connections to external tools and data sources
+### Claim/Evidence Health (`tea.health`)
 
-## Planned Plugin Types
+This plugin shows the results of automated checks on property claims.
+It adds a result badge to each claim that has one, an Evidence tab in the claim's dialog and an Evidence health panel for the case.
+A person who accepts a check's settings for a claim can also add one evidence node under the claim, which the plugin draws with a tint and a coloured line that follow the claim's current result.
+Results never change the authored argument.
+A status is a signal for review, not a decision that the claim is true.
 
-### Element Type Plugins
+It starts off for every person, new and existing, until they turn it on in Settings → Plugins.
+It does not need a model connection.
+A pipeline sends it results through an integration, and nobody has to turn the plugin on for the pipeline to work (see [Connect an outside system](#connect-an-outside-system)).
+The [Health plugin and evidence chain](/docs/technical-guide/architecture/health-plugin) page explains evidence settings, the evidence format, status and revocation.
 
-Allow definition of custom element types beyond the standard GSN notation:
+### Case Assistant (`tea.assistant`)
 
-- Custom shapes and styling
-- Additional metadata fields
-- Validation rules
+This plugin adds a chat panel beside the case canvas.
+It reads the open case to answer questions and can check the case against the rules, and it never changes the case.
+Technique suggestions need a techniques service that the operator has set up.
+Reading automated claim results needs Claim/Evidence Health to be on for the person asking, and a case with at least one property claim that has a check or a record.
 
-### Format Plugins
+It starts off for every person.
+A person turns it on, then sets up a model connection of their own with a Chat job under Settings → Plugins → AI models.
+Chat is the one job that must be set.
+Search and Ranking are optional jobs that technique suggestions use.
+The deployment does not need a model of its own.
 
-Support for importing and exporting assurance cases in various formats:
+Operators provide these settings where they are needed:
 
-- GSN Community Standard XML
-- SACM (Structured Assurance Case Metamodel)
-- Arm's SCSC format
-- Custom organisational formats
+| Setting | Needed for |
+|---|---|
+| `TOKEN_ENCRYPTION_KEY` | Encrypting model connection keys before they are stored. Without it, a person cannot save a connection key. |
+| `TEA_MODELS_LOCAL_ADDRESSES` | Allowing named model server origins on private addresses or plain HTTP. |
+| `TECHNIQUES_MCP_URL` | Connecting the techniques service that suggestions use. Without a valid HTTP or HTTPS address, the suggestion tool is not offered. |
 
-### Analysis Plugins
+The [Case Assistant](/docs/technical-guide/architecture/case-assistant) page describes connection types, model jobs and these settings in full.
 
-Tools for analysing and validating assurance cases:
+## Turn plugins on and off for your account
 
-- Completeness checking
-- Pattern matching
-- Confidence assessment
-- Regulatory compliance checking
+Open **Settings → Plugins** at `/dashboard/settings/plugins`.
+Each card shows the plugin's name, version, description, what it adds and its current status.
+Turning a plugin on takes effect at once.
+Turning it off asks you to confirm, and says what will disappear for you.
 
-### Integration Plugins
+Turning Health off removes its badges, Evidence tab and Evidence health panel for you.
+An evidence node that shows a claim's result stays in your case as ordinary evidence.
+Turning the Case Assistant off removes its panel.
+Either switch changes your account only, never other collaborators' accounts.
 
-Connections to external systems:
+Turning a plugin off does not delete what it has stored, such as evidence records or your model connections.
+The nightly thinning of repeated passing results carries on whether or not the plugin is on for you (see [Retention of repeated passes](/docs/technical-guide/architecture/health-plugin#retention-of-repeated-passes)).
+Integrations keep sending results while your own Health switch is off, and those results are there when you turn it back on.
 
-- Version control integration
-- Requirements management tools
-- Test management systems
-- Document repositories
+A card shows a settings section only when its plugin registers one.
+The Health card says that the plugin has no settings, because evidence settings belong to individual claims.
+The Case Assistant card points to the **AI models** section below the cards, where you manage your connections and choose the model for each job.
+That section appears while a plugin that uses models is on.
 
-## Contributing
+## Withhold a plugin from a deployment
 
-If you're interested in contributing to the plugin architecture design, please:
+Set `TEA_PLUGINS_DISABLED` in the server environment to a comma-separated list of official plugin IDs, for example `tea.health,tea.assistant`.
+With the variable unset or empty, both official plugins are available, and each still starts off until a person turns it on.
+An ID that is not in the manifest is ignored, so the setting can only withhold a plugin that the build already contains.
 
-1. Join the discussion on [GitHub Discussions](https://github.com/alan-turing-institute/AssurancePlatform/discussions)
-2. Review open issues tagged with `plugin-system`
-3. Share your use cases and requirements
+A withheld plugin stays on the Plugins page as **Unavailable on this deployment**, with its switch disabled.
+Its additions do not appear in the editor, and it is off for everyone whatever their own setting says.
+Withholding Health also stops integrations using it: its machine routes refuse every integration with 403, and only the identity check at `/api/machine/whoami` still answers.
 
-## Timeline
+## Connect an outside system
 
-The plugin ecosystem is planned for development after the core platform reaches v1.0 stability. Check the [changelog](/technical-guide/ci-cd-pipeline/changelog) for updates on progress.
+This is the sequence for a system that supplies health evidence.
+[Machine integrations and API tokens](/docs/platform-guide/integrations-and-api-tokens) describes the account controls in more detail, and the [API reference](/api-docs) gives the request and response shapes.
+
+1. **Register the integration.**
+   Open **Settings → Integrations** at `/dashboard/settings/integrations`, choose **Register integration**, and select the scopes its work needs.
+2. **Issue a token.**
+   Issue it from the integration card and store the secret when it is shown, because it is shown only once.
+   The client sends it in an `Authorization: Bearer` header.
+   `GET /api/machine/whoami` returns the integration's name, scopes and token prefix, which is a quick way to check the token.
+3. **Grant case access.**
+   As the integration's owner with Admin access to the case, grant it Edit access to post evidence, or View access to read only.
+   A scope does not grant access to a case.
+4. **Publish checks, and read accepted settings if the pipeline uses them.**
+   Publish the list of checks with `PUT /api/machine/health/checks` and the `health:checks:write` scope.
+   A person with edit access declares and accepts the settings for each claim in TEA.
+   The pipeline reads them with the `health:criteria:read` scope, at `GET /api/machine/health/cases/[id]/criteria` or `GET /api/machine/health/elements/[id]/criteria`.
+5. **Send results.**
+   With the `health:evidence:write` scope, call `POST /api/machine/health/elements/[id]/evidence`, where `[id]` is the property claim's ID.
+6. **Read results back when needed.**
+   With the `health:evidence:read` scope, use `GET` on that evidence route, on `/api/machine/health/elements/[id]/status`, or on `/api/machine/health/cases/[id]/status`.
+
+The [health plugin page](/docs/technical-guide/architecture/health-plugin) gives the evidence format and what each response contains.
+
+### Who needs the plugin on
+
+Nobody has to turn Health on for an integration to work.
+An integration's account counts as opted in for any plugin that declares the `machine-endpoints` surface, which in this build is only Claim/Evidence Health.
+A person's own setting therefore never affects their pipelines.
+The Case Assistant has no machine routes, so this does not reach it.
+
+An owner stops a pipeline by suspending or revoking its integration, and a suspended or revoked integration is refused with 401 on every machine route.
+Removing a case grant blocks that case for the integration.
+The deployment withholding Health turns it off for every integration and every person.
+
+The people who read the results, and who declare and accept claim settings, do need Health on for their own account.
+
+## Limits
+
+Plugins are compiled into TEA.
+There is no marketplace and no way to install a plugin package from outside the build.
+A plugin uses only the surfaces its manifest entry lists, and none of them lets a plugin add an element type or an import or export format.
+
+Plugin management covers deployment availability and each person's own switch.
+The enablement check honours an off setting stored for an organisation or a team, but this build has no screen or route that writes one.
+
+The [accepted limitations of the Health plugin](https://github.com/alan-turing-institute/AssurancePlatform/blob/main/docs/specs/health-plugin-accepted-limitations-1.0.md) are kept in the public repository.
+That file covers how long evidence is kept, a timing difference in access checks, what the settings comparison can and cannot detect, what one pipeline can read of another's settings, and how evidence nodes behave on the canvas and in the JSON editor.
