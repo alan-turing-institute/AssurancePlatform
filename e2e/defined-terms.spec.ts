@@ -33,14 +33,20 @@ test.describe("Defined terms", () => {
 		await editButton.click();
 
 		const dialog = page.getByRole("dialog");
-		const description = dialog.getByRole("textbox", { name: "Description" });
+		const description = dialog.getByRole("textbox", {
+			name: "Description",
+			exact: true,
+		});
 		await expect(description).toBeVisible();
 		await description.click();
 		await page.keyboard.press("ControlOrMeta+End");
 		await page.keyboard.type(" and {");
 
 		// The list names the entry and the element it is defined on.
-		const list = page.getByRole("listbox", { name: "Terms you can insert" });
+		const list = page.getByRole("listbox", {
+			name: "Terms you can insert",
+			exact: true,
+		});
 		await expect(list).toBeVisible();
 		await expect(
 			list.getByRole("option", { name: INPUTS_OPTION })
@@ -63,7 +69,7 @@ test.describe("Defined terms", () => {
 			2
 		);
 
-		await dialog.getByRole("button", { name: "Cancel" }).click();
+		await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 		await expect(dialog).not.toBeVisible();
 	});
 
