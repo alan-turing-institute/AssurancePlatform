@@ -326,3 +326,18 @@ export function serviceErrorToAppError(error: string): AppError {
 
 	return new AppError({ code: "INTERNAL", message: error });
 }
+
+/**
+ * The answer for a case import that failed. A file that failed validation gets
+ * the list of validation messages (`apiImportValidationError`); any other
+ * failure is mapped from its service error message.
+ */
+export function apiImportFailure(failure: {
+	error: string;
+	validationErrors?: string[];
+}): NextResponse {
+	if (failure.validationErrors?.length) {
+		return apiImportValidationError(failure.error, failure.validationErrors);
+	}
+	return apiError(serviceErrorToAppError(failure.error));
+}

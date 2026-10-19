@@ -318,6 +318,23 @@ async function validateContextEntries(
 }
 
 /**
+ * Every check of the values a batch writes into element fields: the element
+ * names, then the named context entries.
+ */
+async function validateElementFields(
+	userId: string,
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	return (
+		(await validateElementNames(userId, creates, updates)) ??
+		(await validateContextEntries(caseId, creates, updates, deletes))
+	);
+}
+
+/**
  * Validates user has EDIT permission on the case
  */
 async function validateEditAccess(
@@ -1377,19 +1394,15 @@ export async function applyBatchUpdate(
 	// point shape as the single-element route (element-service.ts's
 	// createElement/updateElement), applied here so a rename or create
 	// through the JSON editor can't bypass it.
-	const nameFormatError = await validateElementNames(userId, creates, updates);
-	if (nameFormatError) {
-		return { error: nameFormatError };
-	}
-
-	const contextError = await validateContextEntries(
+	const fieldError = await validateElementFields(
+		userId,
 		caseId,
 		creates,
 		updates,
 		deletes
 	);
-	if (contextError) {
-		return { error: contextError };
+	if (fieldError) {
+		return { error: fieldError };
 	}
 
 	try {
