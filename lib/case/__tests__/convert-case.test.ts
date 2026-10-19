@@ -1118,3 +1118,118 @@ describe("ADR 0005 — defeaters and the challenges edge", () => {
 		});
 	});
 });
+
+describe("terms in reach on each card's data", () => {
+	const WINDOW = {
+		id: "k3f9x2m7qa",
+		name: "window",
+		text: "the moving interval",
+		value: "5 minutes",
+	};
+	const RATE = { id: "a1b2c3d4e5", name: "rate", text: "events per second" };
+
+	function item(
+		id: string,
+		name: string,
+		extra: Record<string, unknown> = {}
+	): ConvertibleItem {
+		return { id, name, type: "goal", description: name, ...extra };
+	}
+
+	function termsOf(nodes: Node[], elementId: string): string[] {
+		const node = nodes.find((candidate) => candidate.data.id === elementId);
+		const terms = node?.data.termsInReach as Array<{ name: string }>;
+		return terms.map((term) => term.name);
+	}
+
+	function tree() {
+		const s1 = item("s1", "S1", {
+			context: [WINDOW],
+			propertyClaims: [item("p1", "P1")],
+		});
+		const s2 = item("s2", "S2", {
+			context: [RATE, "a plain entry"],
+			propertyClaims: [item("p2", "P2")],
+		});
+		return item("g1", "G1", { strategies: [s1, s2] });
+	}
+
+	it("gives a card the named entries on itself and on every element above it, nearest first", () => {
+		const nodes = createNodesRecursively([tree()], "goal");
+
+		expect(termsOf(nodes, "p1")).toEqual(["window"]);
+		expect(termsOf(nodes, "s1")).toEqual(["window"]);
+	});
+
+	it("does not reach into a sibling branch", () => {
+		const nodes = createNodesRecursively([tree()], "goal");
+
+		expect(termsOf(nodes, "p2")).toEqual(["rate"]);
+		expect(termsOf(nodes, "g1")).toEqual([]);
+	});
+
+	it("lists a nearer entry before one of the same name higher up", () => {
+		const narrower = { ...WINDOW, id: "z9y8x7w6v5", text: "a shorter one" };
+		const nodes = createNodesRecursively(
+			[
+				item("g1", "G1", {
+					context: [WINDOW],
+					strategies: [item("s1", "S1", { context: [narrower] })],
+				}),
+			],
+			"goal"
+		);
+
+		const s1 = nodes.find((node) => node.data.id === "s1");
+		const terms = s1?.data.termsInReach as Array<{
+			id: string;
+			definedOn: { elementName: string };
+		}>;
+		expect(terms.map((term) => [term.id, term.definedOn.elementName])).toEqual([
+			["z9y8x7w6v5", "S1"],
+			["k3f9x2m7qa", "G1"],
+		]);
+	});
+
+	it("carries the entry's meaning and value, and where it is defined", () => {
+		const nodes = createNodesRecursively([tree()], "goal");
+
+		const p1 = nodes.find((node) => node.data.id === "p1");
+		expect(p1?.data.termsInReach).toEqual([
+			{
+				id: WINDOW.id,
+				name: "window",
+				text: "the moving interval",
+				value: "5 minutes",
+				definedOn: { elementId: "s1", elementName: "S1" },
+			},
+		]);
+	});
+
+	it("works the terms out again from the data it is given, so a moved element reaches different entries", () => {
+		const claim = item("p1", "P1");
+		const underS1 = item("s1", "S1", {
+			context: [WINDOW],
+			propertyClaims: [claim],
+		});
+		const underS2 = item("s2", "S2", { context: [RATE] });
+		const before = createNodesRecursively(
+			[item("g1", "G1", { strategies: [underS1, underS2] })],
+			"goal"
+		);
+		const after = createNodesRecursively(
+			[
+				item("g1", "G1", {
+					strategies: [
+						{ ...underS1, propertyClaims: [] },
+						{ ...underS2, propertyClaims: [claim] },
+					],
+				}),
+			],
+			"goal"
+		);
+
+		expect(termsOf(before, "p1")).toEqual(["window"]);
+		expect(termsOf(after, "p1")).toEqual(["rate"]);
+	});
+});

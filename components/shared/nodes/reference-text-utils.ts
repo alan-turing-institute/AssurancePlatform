@@ -29,6 +29,15 @@ export interface TextPreview {
 	truncated: boolean;
 }
 
+/** Ends a cut-short preview at its last word, not at a space before the ellipsis. */
+function cutShort(parts: PreviewPart[]): TextPreview {
+	const last = parts.at(-1);
+	if (last?.type === "text") {
+		parts[parts.length - 1] = { type: "text", text: last.text.trimEnd() };
+	}
+	return { parts, truncated: true };
+}
+
 /** The pieces of `text` that fit in `maxLength` visible characters. */
 export function previewParts(
 	text: string,
@@ -39,15 +48,12 @@ export function previewParts(
 	let remaining = maxLength;
 	for (const segment of parseReferences(text)) {
 		if (remaining <= 0) {
-			return { parts, truncated: true };
+			return cutShort(parts);
 		}
 		if (segment.type === "text") {
 			if (segment.text.length > remaining) {
-				parts.push({
-					type: "text",
-					text: segment.text.slice(0, remaining).trimEnd(),
-				});
-				return { parts, truncated: true };
+				parts.push({ type: "text", text: segment.text.slice(0, remaining) });
+				return cutShort(parts);
 			}
 			parts.push({ type: "text", text: segment.text });
 			remaining -= segment.text.length;
@@ -56,7 +62,7 @@ export function previewParts(
 		const term = findTermById(terms, segment.id);
 		const name = term?.name ?? segment.name;
 		if (name.length > remaining) {
-			return { parts, truncated: true };
+			return cutShort(parts);
 		}
 		parts.push({ type: "reference", id: segment.id, name, term });
 		remaining -= name.length;

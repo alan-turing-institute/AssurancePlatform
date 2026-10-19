@@ -51,7 +51,7 @@ describe("previewParts", () => {
 			[WINDOW],
 			5
 		);
-		expect(parts).toEqual([{ type: "text", text: "xx " }]);
+		expect(parts).toEqual([{ type: "text", text: "xx" }]);
 		expect(truncated).toBe(true);
 	});
 });

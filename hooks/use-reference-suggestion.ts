@@ -61,6 +61,12 @@ export function useReferenceSuggestion(terms: readonly DefinedTerm[]) {
 
 	const suggestion = useMemo(() => {
 		const show = (props: SuggestionProps<DefinedTerm>) => {
+			// The add-on reports each change twice: once at once with no items while it
+			// looks them up, then again with them. Only the second is drawn, so the
+			// list does not close and reopen on every key.
+			if (props.loading) {
+				return;
+			}
 			const previous = listRef.current;
 			const next: ReferenceListState = {
 				items: props.items,
