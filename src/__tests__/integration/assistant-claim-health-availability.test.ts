@@ -25,6 +25,7 @@ import {
 	createTestPermission,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -235,6 +236,7 @@ describe("read_claim_health — who is offered it", () => {
 		const w = await caseWithRecord();
 		for (const level of ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const) {
 			const user = await createTestUser();
+			await enableTestPlugin(user.id, "tea.health");
 			await createTestPluginState(user.id, { pluginId: ASSISTANT });
 			await createTestPermission(w.kase.id, user.id, w.owner.id, level);
 			await signedInAs(user);
@@ -248,6 +250,7 @@ describe("read_claim_health — who is offered it", () => {
 	it("is not listed to a user who switched the health plugin off, while others still get it", async () => {
 		const w = await caseWithRecord();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPluginState(viewer.id, { pluginId: ASSISTANT });
 		await createTestPermission(w.kase.id, viewer.id, w.owner.id, "VIEW");
 		expectSuccess(
@@ -262,6 +265,20 @@ describe("read_claim_health — who is offered it", () => {
 		expect(ownerTools).not.toContain("read_claim_health");
 		expect(ownerTools).toContain("read_case");
 		expect(viewerTools).toContain("read_claim_health");
+	});
+
+	it("is not listed to a user with the assistant on who has no health row at all", async () => {
+		const w = await caseWithRecord();
+		const viewer = await createTestUser();
+		await createTestPluginState(viewer.id, { pluginId: ASSISTANT });
+		await createTestPermission(w.kase.id, viewer.id, w.owner.id, "VIEW");
+		await signedInAs(viewer);
+
+		const tools = await listedTools(w.kase.id);
+
+		expect(tools).toContain("read_case");
+		expect(tools).not.toContain("read_claim_health");
+		expect(caseHasHealthStatus).not.toHaveBeenCalled();
 	});
 
 	it("asks about the case's claims once per request when the plugin is on", async () => {

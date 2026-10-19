@@ -8,6 +8,7 @@ import {
 	computeHealthStatus,
 	readHealthStatus,
 } from "@/lib/services/health-status-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import {
 	addClaim,
@@ -174,9 +175,8 @@ describe("status: which record is current", () => {
 	it("gives two users with different stored plugin settings the same status", async () => {
 		const { owner, testCase, claim } = await setupClaim();
 		const other = await createTestUser();
-		await createTestPluginState(owner.id, {
-			pluginId: "tea.health",
-			scopeType: "USER",
+		await setPluginEnabledForUser("tea.health", owner.id, {
+			enabled: true,
 			settings: {
 				validityWindowSeconds: 1,
 				verdictScores: { PASS: 0, FAIL: 1, DEGRADED: 1 },

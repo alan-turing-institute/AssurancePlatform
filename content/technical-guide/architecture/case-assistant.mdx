@@ -277,7 +277,7 @@ The tool call appears in the chat as "Read claim health".
 
 The tool is registered only when both of these hold:
 
-- The deployment offers `tea.health` (it is not listed in `TEA_PLUGINS_DISABLED`) and the user has not switched it off.
+- The deployment offers `tea.health` (it is not listed in `TEA_PLUGINS_DISABLED`) and the user has turned it on.
 - The case has at least one property claim that is not deleted and has a bound check or a record.
 
 One helper answers this for both the chat route and `GET /api/cases/{id}/assistant`, so the panel's list of tools and the model's tools are decided by the same rule.

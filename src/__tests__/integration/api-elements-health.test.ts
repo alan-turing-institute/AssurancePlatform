@@ -18,6 +18,7 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -40,6 +41,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -112,6 +114,7 @@ describe("GET /api/elements/[id]/health — happy path", () => {
 	it("reads via a viewer's session with only VIEW access", async () => {
 		const { owner, testCase, claim } = await setup();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await append(owner.id, claim.id, "failingSummary");
 		await mockAuth(viewer.id, viewer.username, viewer.email);
@@ -196,6 +199,7 @@ describe("GET /api/elements/[id]/health — permission matrix", () => {
 	it("returns 404 'Claim not found' for a session with no case access", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await mockAuth(outsider.id, outsider.username, outsider.email);
 		const { GET } = await importRoute();
 
@@ -211,6 +215,7 @@ describe("GET /api/elements/[id]/health — permission matrix", () => {
 	it("returns byte-identical 404s for a non-existent claim vs. one an outsider can't access (no enumeration oracle)", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await mockAuth(outsider.id, outsider.username, outsider.email);
 		const { GET } = await importRoute();
 
@@ -271,6 +276,7 @@ describe("GET /api/elements/[id]/health — enablement-ordering side channel (vi
 	it("returns byte-identical 403s for a real claim in an inaccessible case vs. a nonexistent id, once tea.health is self-disabled", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		// Self-disable via the SAME unprivileged path a real user has
 		// (PATCH /api/user/plugins) — `outsider` has no access whatsoever to
 		// the case `claim` lives in.

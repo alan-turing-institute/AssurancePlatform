@@ -16,6 +16,7 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -46,6 +47,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -168,6 +170,7 @@ describe("POST .../health/records/[recordId]/revocation", () => {
 		const { owner, testCase, claim } = await setup();
 		const record = await append(owner.id, claim.id);
 		const editor = await createTestUser();
+		await enableTestPlugin(editor.id, "tea.health");
 		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 		await mockAuth(editor.id, editor.username, editor.email);
 
@@ -178,8 +181,10 @@ describe("POST .../health/records/[recordId]/revocation", () => {
 		const { owner, testCase, claim } = await setup();
 		const record = await append(owner.id, claim.id);
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 
 		for (const person of [viewer, outsider]) {
 			await mockAuth(person.id, person.username, person.email);
@@ -267,6 +272,7 @@ describe("POST .../health/records/[recordId]/reinstatement", () => {
 		const { owner, testCase, claim } = await setup();
 		const record = await append(owner.id, claim.id);
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		await mockAuth(owner.id, owner.username, owner.email);
@@ -327,6 +333,7 @@ describe("PUT .../health/bound-check", () => {
 		const { owner, testCase, claim } = await setup();
 		await append(owner.id, claim.id);
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		expect((await changeCheck(claim.id)).status).toBe(401);

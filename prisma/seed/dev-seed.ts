@@ -210,6 +210,18 @@ async function main() {
 
 			console.log("Created users: chris, alice, bob, charlie");
 
+			// Claim/Evidence Health is off by default; the test accounts opt in
+			// so a reseeded environment has it on for testing.
+			await tx.pluginState.createMany({
+				data: [chris, alice, bob, charlie].map((person) => ({
+					pluginId: "tea.health",
+					scopeType: "USER" as const,
+					scopeId: person.id,
+					enabled: true,
+				})),
+			});
+			console.log("Turned on tea.health for: chris, alice, bob, charlie");
+
 			// ============================================
 			// 2. CREATE TEAM
 			// ============================================

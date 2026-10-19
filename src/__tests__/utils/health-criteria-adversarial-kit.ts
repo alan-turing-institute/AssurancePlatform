@@ -24,6 +24,7 @@ import {
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "./prisma-factories";
 
 export const NONEXISTENT = "00000000-0000-4000-8000-000000000999";
@@ -49,6 +50,9 @@ export async function criteriaWorld() {
 		view: await createTestUser(),
 		none: await createTestUser(),
 	};
+	for (const person of Object.values(actors)) {
+		await enableTestPlugin(person.id, "tea.health");
+	}
 	await createTestPermission(
 		testCase.id,
 		actors.directEdit.id,

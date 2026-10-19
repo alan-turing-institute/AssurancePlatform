@@ -35,6 +35,7 @@ import {
 import {
 	createTestComment,
 	createTestElement,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -475,6 +476,7 @@ describe("read_claim_health — nothing beyond the named fields reaches the mode
 		await appendRecord(w.owner.id, claim.id);
 		const stranger = (await import("../utils/prisma-factories")).createTestUser;
 		const outsider = await stranger();
+		await enableTestPlugin(outsider.id, "tea.health");
 
 		const result = await claimHealthCaller(outsider.id, w.kase.id)();
 
@@ -804,6 +806,7 @@ describe("read_claim_health — access at the time of the call", () => {
 		const claim = await claimIn(w, "P1", { description: "VISIBLE-TO-VIEWERS" });
 		await appendRecord(w.owner.id, claim.id);
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		const permission = await createTestPermission(
 			w.kase.id,
 			viewer.id,
@@ -826,6 +829,7 @@ describe("read_claim_health — access at the time of the call", () => {
 		const claim = await claimIn(w);
 		await appendRecord(w.owner.id, claim.id);
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, "tea.health");
 		await createTestPermission(w.kase.id, user.id, w.owner.id, level);
 
 		const result = await claimHealthCaller(user.id, w.kase.id)();
@@ -844,6 +848,7 @@ describe("read_claim_health — access at the time of the call", () => {
 		const w = await healthWorld();
 		await appendRecord(w.owner.id, (await claimIn(w)).id);
 		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
 		const team = await createTestTeam(w.owner.id);
 		await addTeamMember(team.id, member.id);
 		await createTestTeamPermission(w.kase.id, team.id, w.owner.id, "VIEW");
@@ -862,6 +867,7 @@ describe("read_claim_health — access at the time of the call", () => {
 			(await claimIn(w, "P1", { description: "PRIVATE-TEXT" })).id
 		);
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 
 		const result = await claimHealthCaller(outsider.id, w.kase.id)();
 
@@ -923,6 +929,7 @@ describe("read_claim_health — access at the time of the call", () => {
 		const w = await healthWorld();
 		await appendRecord(w.owner.id, (await claimIn(w)).id);
 		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
 		const team = await createTestTeam(w.owner.id);
 		await addTeamMember(team.id, member.id);
 		const grant = await createTestTeamPermission(

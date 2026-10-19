@@ -14,6 +14,7 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "./prisma-factories";
 
 const HEALTH_SCOPES = [
@@ -31,6 +32,7 @@ export async function setupCriteriaCase(
 	options: { publish?: boolean; scopes?: string[] } = {}
 ) {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",

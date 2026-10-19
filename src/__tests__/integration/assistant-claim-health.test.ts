@@ -16,6 +16,7 @@ import {
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
@@ -55,6 +56,7 @@ interface ClaimHealthResult {
 /** An owner, a case with a top goal, and two property claims under it, P1 and P2. */
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const root = await createTestElement(testCase.id, owner.id, {
 		elementType: "GOAL",
@@ -103,6 +105,7 @@ describe("read_claim_health: who can read a case's claim health", () => {
 		const { owner, testCase, p1 } = await setup();
 		await appendRecord(owner.id, p1.id);
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, "tea.health");
 		await createTestPermission(testCase.id, user.id, owner.id, level);
 
 		const result = (await readAs(user.id, testCase.id)) as ClaimHealthResult;
@@ -115,6 +118,7 @@ describe("read_claim_health: who can read a case's claim health", () => {
 		const { owner, testCase, p1 } = await setup();
 		await appendRecord(owner.id, p1.id);
 		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
 		const team = await createTestTeam(owner.id);
 		await addTeamMember(team.id, member.id);
 		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
@@ -129,6 +133,7 @@ describe("read_claim_health: who can read a case's claim health", () => {
 		const { owner, testCase, p1 } = await setup();
 		await appendRecord(owner.id, p1.id);
 		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, "tea.health");
 
 		const result = await readAs(stranger.id, testCase.id);
 

@@ -20,7 +20,7 @@ Two accounts, both practice accounts with no real cases:
   - One case of its own with a few elements, shared with a colleague's account with "Can view".
   - Membership of a team with at least one other member.
   - One case published to Discover, with its description, authors and sector filled in.
-  - The Claim/Evidence Health plugin on (it is on by default), and one case where a property claim has accepted settings, with the evidence node added at the accept step, and a recent result from a pipeline, so the node's badge, the Evidence tab and the Evidence health panel have content.
+  - The Claim/Evidence Health plugin on (it is off by default: choose the user block at the foot of the sidebar, open the **Plugins** tab and turn on the **Claim/Evidence Health** card), and one case where a property claim has accepted settings, with the evidence node added at the accept step, and a recent result from a pipeline, so the node's badge, the Evidence tab and the Evidence health panel have content.
     Pipeline results count for a limited time, so send a fresh result a few minutes before recording.
   - The feedback strip at the foot of the page dismissed, every tour run to its end, and the first-arrival notice dismissed.
   - Mode set to **Light** in the case Settings popover (the default is System).

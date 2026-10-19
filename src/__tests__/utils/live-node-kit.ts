@@ -24,6 +24,7 @@ import {
 	createTestPermission,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "./prisma-factories";
 
 const BASE = "http://localhost:3000/api";
@@ -76,6 +77,7 @@ export async function nodeWorld(
 ): Promise<NodeWorld> {
 	const owner = await createTestUser();
 	await createTestPluginState(owner.id, { pluginId: "tea.assistant" });
+	await enableTestPlugin(owner.id, "tea.health");
 	const kase = await createTestCase(owner.id);
 	const goal = await createTestElement(kase.id, owner.id, {
 		elementType: "GOAL",
@@ -128,6 +130,7 @@ export async function collaborator(
 	permission: "VIEW" | "COMMENT" | "EDIT" | "ADMIN"
 ) {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	await createTestPermission(
 		world.kase.id,
 		user.id,

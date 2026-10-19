@@ -19,6 +19,7 @@ import {
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -61,6 +62,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	await createTestElement(testCase.id, owner.id, {
 		elementType: "GOAL",
@@ -138,6 +140,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	] as const)("answers a user with direct %s permission", async (level) => {
 		const { owner, testCase } = await setup();
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, "tea.health");
 		await createTestPluginState(user.id, { pluginId: PLUGIN_ID });
 		await createTestPermission(testCase.id, user.id, owner.id, level);
 		await as(user);
@@ -151,6 +154,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("answers a member of a team that can view the case", async () => {
 		const { owner, testCase } = await setup();
 		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
 		await createTestPluginState(member.id, { pluginId: PLUGIN_ID });
 		const team = await createTestTeam(owner.id);
 		await addTeamMember(team.id, member.id);
@@ -171,6 +175,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("answers one and the same 404 for no permission, a missing case, a malformed id and the plugin being off", async () => {
 		const { owner, testCase } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await createTestPluginState(outsider.id, { pluginId: PLUGIN_ID });
 		await as(outsider);
 		const noAccess = await get(testCase.id);
@@ -191,6 +196,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("answers 404 when the deployment withholds the plugin, and when the user never turned it on", async () => {
 		const { owner, testCase } = await setup();
 		const newcomer = await createTestUser();
+		await enableTestPlugin(newcomer.id, "tea.health");
 		await as(newcomer);
 		const neverOn = await get(testCase.id);
 		await as(owner);
@@ -204,6 +210,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("builds no tools for any request that fails", async () => {
 		const { owner, testCase } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await createTestPluginState(outsider.id, { pluginId: PLUGIN_ID });
 		await as(outsider);
 		await get(testCase.id);
@@ -271,6 +278,7 @@ describe("GET /api/cases/[id]/assistant — claim health", () => {
 		const { owner, testCase } = await setup();
 		await addClaim(owner, testCase, "a record");
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPluginState(viewer.id, { pluginId: PLUGIN_ID });
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
