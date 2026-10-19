@@ -26,6 +26,7 @@ import {
 	type ForwardedRef,
 	forwardRef,
 	type MutableRefObject,
+	useCallback,
 	useEffect,
 	useId,
 	useImperativeHandle,
@@ -295,22 +296,44 @@ function useReferenceEditor({
 	return editor;
 }
 
+/** What the form's field gets: the caret in the text, and the list closed without inserting anything. */
+function useEditorControls(
+	editor: Editor | null,
+	handleRef: ForwardedRef<ReferenceTextEditorHandle>
+) {
+	useImperativeHandle(
+		handleRef,
+		() => ({ focus: () => editor?.commands.focus("end") }),
+		[editor]
+	);
+	return useCallback(() => {
+		if (editor && !editor.isDestroyed) {
+			exitSuggestion(editor.view, SuggestionPluginKey);
+		}
+	}, [editor]);
+}
+
+type ReferenceTextEditorBodyProps = Required<
+	Pick<ReferenceTextEditorProps, "autoFocus" | "placeholder" | "readOnly">
+> &
+	Omit<ReferenceTextEditorProps, "autoFocus" | "placeholder" | "readOnly"> & {
+		handleRef: ForwardedRef<ReferenceTextEditorHandle>;
+	};
+
 function ReferenceTextEditorBody({
 	"aria-describedby": describedBy,
 	"aria-invalid": invalid,
 	"aria-labelledby": labelledBy,
-	autoFocus = false,
+	autoFocus,
 	handleRef,
 	id,
 	onBlur,
 	onChange,
-	placeholder = "",
-	readOnly = false,
+	placeholder,
+	readOnly,
 	terms,
 	value,
-}: ReferenceTextEditorProps & {
-	handleRef: ForwardedRef<ReferenceTextEditorHandle>;
-}) {
+}: ReferenceTextEditorBodyProps) {
 	const listId = useId();
 	const { suggestion, list, activeIndex, setActiveIndex, visible } =
 		useReferenceSuggestion(terms);
@@ -337,19 +360,9 @@ function ReferenceTextEditorBody({
 		value,
 	});
 
-	useImperativeHandle(
-		handleRef,
-		() => ({ focus: () => editor?.commands.focus("end") }),
-		[editor]
-	);
+	const closeList = useEditorControls(editor, handleRef);
 	useEditorAttributes(editor, attributes);
 	useEditorMode(editor, readOnly, autoFocus);
-
-	const closeList = () => {
-		if (editor && !editor.isDestroyed) {
-			exitSuggestion(editor.view, SuggestionPluginKey);
-		}
-	};
 
 	return (
 		<>
@@ -371,7 +384,15 @@ function ReferenceTextEditorBody({
 const ReferenceTextEditor = forwardRef<
 	ReferenceTextEditorHandle,
 	ReferenceTextEditorProps
->((props, ref) => <ReferenceTextEditorBody {...props} handleRef={ref} />);
+>(({ autoFocus = false, placeholder = "", readOnly = false, ...rest }, ref) => (
+	<ReferenceTextEditorBody
+		{...rest}
+		autoFocus={autoFocus}
+		handleRef={ref}
+		placeholder={placeholder}
+		readOnly={readOnly}
+	/>
+));
 ReferenceTextEditor.displayName = "ReferenceTextEditor";
 
 export default ReferenceTextEditor;
