@@ -264,7 +264,7 @@ export interface ExportComment {
  *   the field, unlike the type-specific fields above.
  */
 export interface TreeNode {
-	assertionStatus?: AssertionStatus;
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
 	children: TreeNode[];
 	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
@@ -304,8 +304,7 @@ export const ExportCommentSchema = z
 	})
 	.describe("A comment attached to an element");
 
-// biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing
-export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
+export const TreeNodeSchema: z.ZodType<TreeNode> = z.lazy(() =>
 	// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 	z.object({
 		id: z.string().uuid().describe("Unique identifier for the element"),

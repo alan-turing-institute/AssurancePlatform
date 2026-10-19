@@ -66,13 +66,11 @@ function plainCase(): CaseExportNested {
 		tree: {
 			...stored.tree,
 			context: [PLAIN_ENTRY],
-			children: [
-				{
-					...stored.tree.children[0],
-					description: "Separation holds within the {window}.",
-					context: [PLAIN_ENTRY],
-				},
-			],
+			children: stored.tree.children.map((child) => ({
+				...child,
+				description: "Separation holds within the {window}.",
+				context: [PLAIN_ENTRY],
+			})),
 		},
 	};
 }
@@ -89,7 +87,7 @@ describe("the Case Assistant's tools on a case with named entries", () => {
 		)) as { tree: CaseExportNested["tree"] };
 
 		expect(result.tree.context).toEqual([PLAIN_ENTRY]);
-		expect(result.tree.children[0].description).toBe(
+		expect(result.tree.children[0]?.description).toBe(
 			"Separation holds within the {window}."
 		);
 	});

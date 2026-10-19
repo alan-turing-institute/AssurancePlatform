@@ -5,6 +5,7 @@ import {
 	findTermById,
 	formatReference,
 	hasReference,
+	type PlainCase,
 	parseContextEntries,
 	parseReferences,
 	plainContextEntry,
@@ -240,6 +241,14 @@ describe("toPlainCase", () => {
 		expect(branch?.children[0]?.description).toBe(
 			"Measured over the {window}."
 		);
+	});
+
+	it("is the only way from the stored case to the plain case", () => {
+		const stored = buildCase();
+		// @ts-expect-error a stored case holds named entries, so it is not a PlainCase
+		const asPlain: PlainCase = stored;
+		expect(asPlain).toBe(stored);
+		expect(toPlainCase(stored)).not.toBe(stored);
 	});
 
 	it("does not change the case it is given", () => {

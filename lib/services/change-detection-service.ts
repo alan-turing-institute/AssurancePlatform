@@ -99,7 +99,8 @@ export async function detectChanges(
 	}
 
 	// Parse the published content (stored as JSON)
-	const publishedContent = latestPublished.content as CaseExportNested;
+	const publishedContent =
+		latestPublished.content as unknown as CaseExportNested;
 
 	const changeSummary = compareTreeStructures(
 		exportResult.data.tree,

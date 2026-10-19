@@ -1,4 +1,4 @@
-import type { CaseExportNested } from "@/lib/schemas/case-export";
+import type { PlainCase } from "@/lib/case/defined-terms";
 
 export const NOW = new Date("2026-10-15T12:00:00.000Z");
 
@@ -29,16 +29,14 @@ export function goal(children: NodeInput[], id = "goal-1"): NodeInput {
 	};
 }
 
-export function exportOf(
-	tree: NodeInput
-): () => Promise<CaseExportNested | null> {
+export function exportOf(tree: NodeInput): () => Promise<PlainCase | null> {
 	return () =>
 		Promise.resolve({
 			version: "1.0",
 			exportedAt: NOW.toISOString(),
 			case: { name: "Case", description: "A case" },
 			tree,
-		} as unknown as CaseExportNested);
+		} as unknown as PlainCase);
 }
 
 export function status(overrides: Record<string, unknown> = {}) {
