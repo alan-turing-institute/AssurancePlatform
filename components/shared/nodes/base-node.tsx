@@ -86,7 +86,11 @@ export interface BaseNodeProps {
 	nodeType: DiagramNodeType;
 	/** Whether the node is currently selected */
 	selected?: boolean;
-	/** The defined terms the card's text can refer to, nearest definition first. */
+	/**
+	 * The defined terms the card's text can refer to, nearest definition first.
+	 * A card given none does not resolve references: any it holds shows as
+	 * `{name}` with no highlight.
+	 */
 	terms?: readonly DefinedTerm[];
 	/** Actions to display in the top-right (e.g., comment indicators) */
 	topRightActions?: ReactNode;
@@ -152,6 +156,21 @@ function ExpandedContent({
 
 const NO_TERMS: readonly DefinedTerm[] = [];
 
+/**
+ * The text a card draws and the terms it resolves references with. A card
+ * given terms leaves its references for the text component to resolve; one
+ * given none writes each as `{name}`, so no word is highlighted.
+ */
+function cardText(
+	description: string | undefined,
+	termsInReach: readonly DefinedTerm[] | undefined
+) {
+	const stored = description || "No description available";
+	return termsInReach
+		? { descriptionText: stored, terms: termsInReach }
+		: { descriptionText: plainReferenceText(stored), terms: NO_TERMS };
+}
+
 export default function BaseNode({
 	nodeType,
 	name,
@@ -169,8 +188,9 @@ export default function BaseNode({
 	className,
 	dataTour,
 	expandTour,
-	terms = NO_TERMS,
+	terms: termsInReach,
 }: BaseNodeProps) {
+	const { descriptionText, terms } = cardText(description, termsInReach);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { layoutNodes, layoutDirection } = useStore();
 	const { fitView, getNodes, getEdges } = useReactFlow();
@@ -201,7 +221,6 @@ export default function BaseNode({
 		(justification && justification.trim() !== "")
 	);
 
-	const descriptionText = description || "No description available";
 	const isTruncated = previewParts(
 		descriptionText,
 		terms,

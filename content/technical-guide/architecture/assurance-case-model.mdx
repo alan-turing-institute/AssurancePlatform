@@ -59,7 +59,8 @@ Text that merely contains braces, such as `{like this}`, is ordinary text.
 
 Which entries a reference can reach is worked out when the case is read and is never stored.
 An element's text can refer to the named entries on that element and on every element above it in the parent chain, nearest first.
-`convertAssuranceCase` puts the result on each card's data as `termsInReach`, and the card components read it from there.
+`convertAssuranceCase` puts the result on each card's data as `termsInReach`, and the goal, strategy and property claim cards read it from there.
+Evidence, away goal and module cards are given no terms, so they resolve nothing and show any reference they hold as `{name}`.
 Moving an element or deleting an entry therefore changes what a reference resolves to without any stored flag to update.
 A reference with no definition in reach is shown as not found.
 

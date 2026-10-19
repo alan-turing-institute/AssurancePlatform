@@ -50,7 +50,6 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="evidence"
 				selected={props.selected}
-				terms={data.termsInReach}
 				topRightActions={badgeSlot}
 			>
 				{urls.length > 0 && (
