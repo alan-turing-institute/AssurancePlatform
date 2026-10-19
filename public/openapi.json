@@ -434,7 +434,7 @@
       "get": {
         "operationId": "get-cases-export",
         "summary": "Export an assurance case as JSON",
-        "description": "Exports the specified case in nested JSON format (v1.0).",
+        "description": "Exports the specified case in nested JSON format (v1.1 when the case uses named context entries, v1.0 otherwise).",
         "tags": [
           "Cases"
         ],

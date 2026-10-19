@@ -11,6 +11,7 @@ import {
 } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { plainReferenceText } from "@/lib/case/defined-terms";
 import type { ServedSettings } from "@/lib/schemas/health-criteria";
 import { VersionCompare } from "./criteria-compare";
 import { draftFromCheck, draftFromStored } from "./criteria-draft";
@@ -400,7 +401,7 @@ function ClaimText({ text }: { text: string | undefined }) {
 				Claim
 			</h3>
 			<p className="wrap-anywhere max-h-40 overflow-y-auto whitespace-pre-wrap text-muted-foreground text-sm">
-				{text}
+				{plainReferenceText(text)}
 			</p>
 		</section>
 	);

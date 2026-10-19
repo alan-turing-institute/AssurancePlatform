@@ -71,6 +71,32 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 		).toHaveAttribute("href", "/case/case-2");
 	});
 
+	it("shows a stored reference as {name} without resolving or highlighting it, even when terms are in reach", () => {
+		const { container } = renderWithReactFlow(
+			<ModuleNode
+				{...nodeProps({
+					id: "el-1",
+					name: "M1",
+					description: "Within the {win#k3f9x2m7qa}",
+					termsInReach: [
+						{
+							id: "k3f9x2m7qa",
+							name: "window",
+							text: "the moving interval",
+							definedOn: { elementId: "g1", elementName: "G1" },
+						},
+					],
+					moduleCaseName: "Referenced Case",
+					moduleCaseAccessible: true,
+					moduleReferenceId: "case-2",
+				})}
+			/>
+		);
+
+		expect(screen.getByText("Within the {win}")).toBeInTheDocument();
+		expect(container.querySelector("[data-reference-id]")).toBeNull();
+	});
+
 	it("hides the link when the viewer cannot access the referenced case", () => {
 		renderWithReactFlow(
 			<ModuleNode

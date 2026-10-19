@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tea-platform.org/schemas/case-export-v1.0.json",
-  "title": "TEA Platform Assurance Case Export Schema v1.0",
+  "$id": "https://tea-platform.org/schemas/case-export-v1.1.json",
+  "title": "TEA Platform Assurance Case Export Schema v1.1",
   "type": "object",
   "properties": {
     "version": {
       "type": "string",
-      "const": "1.0",
-      "description": "Schema version identifier"
+      "enum": ["1.0", "1.1"],
+      "description": "Schema version identifier. \"1.1\" adds named context entries and references in element text"
     },
     "exportedAt": {
       "type": "string",
@@ -43,7 +43,7 @@
   },
   "required": ["version", "exportedAt", "case", "tree"],
   "additionalProperties": false,
-  "description": "Assurance case export in nested tree format (v1.0)",
+  "description": "Assurance case export in nested tree format (v1.0 and v1.1)",
   "definitions": {
     "TreeNode": {
       "type": "object",
@@ -115,7 +115,41 @@
         "context": {
           "type": "array",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]{10}$",
+                    "description": "Identifier of the entry, unique within the case"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40,
+                    "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
+                    "description": "Name other text can refer to"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "What the name means"
+                  },
+                  "value": {
+                    "description": "Optional value for the name, such as a threshold",
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": ["id", "name", "text"],
+                "additionalProperties": false,
+                "description": "A context entry with a name, a meaning and an optional value"
+              }
+            ],
+            "description": "A piece of context: plain text, or a named entry"
           }
         },
         "url": {

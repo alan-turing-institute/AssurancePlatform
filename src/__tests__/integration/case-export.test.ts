@@ -163,7 +163,7 @@ describe("exportCase", () => {
 		const rootNode = data.tree;
 		expect(rootNode.comments).toBeDefined();
 		expect(rootNode.comments?.length).toBeGreaterThanOrEqual(1);
-		expect(rootNode.comments?.[0].content).toBe("Important comment");
+		expect(rootNode.comments?.[0]?.content).toBe("Important comment");
 	});
 
 	it("excludes comment data when includeComments is false", async () => {

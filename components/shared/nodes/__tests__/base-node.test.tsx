@@ -57,6 +57,21 @@ describe("BaseNode — defeater decoration (ADR 0005 D2)", () => {
  * under the content, faded or not. A card with no appearance is drawn exactly
  * as before.
  */
+describe("BaseNode — a card given no terms", () => {
+	it("writes a stored reference as {name} and highlights nothing", () => {
+		const { container } = renderWithReactFlow(
+			<BaseNode
+				description="Within the {win#k3f9x2m7qa}"
+				name="E1"
+				nodeType="evidence"
+			/>
+		);
+
+		expect(screen.getByText("Within the {win}")).toBeInTheDocument();
+		expect(container.querySelector("[data-reference-id]")).toBeNull();
+	});
+});
+
 describe("BaseNode — plugin appearance", () => {
 	it("draws no appearance layer and no marker by default", () => {
 		const { container } = renderWithReactFlow(

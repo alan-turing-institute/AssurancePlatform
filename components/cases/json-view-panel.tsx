@@ -35,7 +35,7 @@ import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 // a parallel change regenerates this file from CaseExportNestedSchema via
 // zod's z.toJSONSchema(). codemirror-json-schema drives inline hints only;
 // Apply always re-validates with the Zod schema above, unchanged.
-import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.0.json";
+import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.1.json";
 import { createSnapshot } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";

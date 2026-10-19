@@ -13,6 +13,7 @@ import type {
 	ModuleEmbedType,
 	TreeNode,
 } from "../schemas/case-export";
+import type { ContextEntry } from "../schemas/context-entry";
 import { fieldAppliesTo } from "../schemas/element-validation";
 
 /**
@@ -28,7 +29,7 @@ export interface ElementWithLinks {
 	citedElementId: string | null;
 	// Comments (optional - only included when export includes comments)
 	comments?: ExportComment[];
-	context: string[];
+	context: ContextEntry[];
 	defeatsElementId: string | null;
 	description: string;
 	elementType: ElementType;

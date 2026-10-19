@@ -17,8 +17,8 @@ import {
 	type TemplatePreset,
 } from "@/lib/export";
 import type { LabelledDiagramImage, TemplateInput } from "@/lib/export/types";
-import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { extractBranches } from "./branch-utils";
+import type { PlainCase } from "./defined-terms";
 import type { LayoutDirection } from "./layout-helper";
 import { getLayoutedElements } from "./layout-helper";
 import {
@@ -91,7 +91,7 @@ export type LayoutApplyFn = (
 
 export interface DocumentExportOptions {
 	applyLayout: LayoutApplyFn;
-	caseData: CaseExportNested;
+	caseData: PlainCase;
 	caseName: string;
 	diagramMode?: DiagramMode;
 	edges: Edge[];

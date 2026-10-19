@@ -47,6 +47,7 @@ import useStore from "@/store/store";
 import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
+import { plainDescription } from "./reference-text-utils";
 
 const MORE_OPTIONS_LABEL = "More options";
 
@@ -63,7 +64,7 @@ function createOrphanElement(node: Node) {
 		id: node.data.id as string,
 		type: REACTFLOW_TO_CANONICAL[node.type ?? ""] ?? (node.data.type as string),
 		name: node.data.name as string,
-		description: (node.data.description as string) ?? "",
+		description: plainDescription(node.data),
 	};
 }
 

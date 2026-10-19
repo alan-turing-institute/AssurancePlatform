@@ -1,3 +1,7 @@
+import {
+	caseUsesDefinedTerms,
+	parseContextEntries,
+} from "@/lib/case/defined-terms";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -225,7 +229,7 @@ export async function exportCase(
 			role: el.role as ElementRole | null,
 			assumption: el.assumption,
 			justification: el.justification,
-			context: el.context,
+			context: parseContextEntries(el.context),
 			url: el.url,
 			level: el.level,
 			// Module fields
@@ -256,7 +260,7 @@ export async function exportCase(
 					role: link.evidence.role as ElementRole | null,
 					assumption: link.evidence.assumption,
 					justification: link.evidence.justification,
-					context: link.evidence.context,
+					context: parseContextEntries(link.evidence.context),
 					url: link.evidence.url,
 					level: link.evidence.level,
 					// Module fields
@@ -286,10 +290,13 @@ export async function exportCase(
 		// Build nested tree from flat elements
 		const tree = buildTreeFromElements(elements);
 
-		// Build the nested export (uses "1.0" as first officially versioned format)
+		// Build the nested export. Version "1.1" is written only for a case that
+		// holds a named context entry or a reference to one; any other case is
+		// still written as "1.0", so its file stays readable by a TEA that
+		// predates named entries.
 		// exportedAt uses the case's updatedAt for conflict detection during batch updates
 		const exportData: CaseExportNested = {
-			version: "1.0",
+			version: caseUsesDefinedTerms(tree) ? "1.1" : "1.0",
 			exportedAt: caseData.updatedAt.toISOString(),
 			case: {
 				name: caseData.name,

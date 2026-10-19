@@ -5,7 +5,8 @@
  * and template rendering support.
  */
 
-import type { ElementType, TreeNode } from "@/lib/schemas/case-export";
+import type { PlainTreeNode } from "@/lib/case/defined-terms";
+import type { ElementType } from "@/lib/schemas/case-export";
 import { ELEMENT_TYPE_LABELS } from "../types";
 
 /**
@@ -38,7 +39,7 @@ function getElementTypeLabel(type: ElementType): string {
  * @param node - Tree node
  * @returns Title string like "Goal: G1" or "Evidence" if no name
  */
-export function getElementTitle(node: TreeNode): string {
+export function getElementTitle(node: PlainTreeNode): string {
 	const typeLabel = getElementTypeLabel(node.type);
 	return node.name ? `${typeLabel}: ${node.name}` : typeLabel;
 }

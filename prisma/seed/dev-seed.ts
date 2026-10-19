@@ -36,6 +36,9 @@ if (!HEALTH_AND_SOCIAL_CARE_SECTOR_ID) {
 	);
 }
 
+/** The id of the named context entry on Simple Case's G1, which P1 refers to. */
+const SIMPLE_CASE_INPUTS_ENTRY_ID = "w4n8q2h6xc";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -282,6 +285,15 @@ async function main() {
 					role: "TOP_LEVEL",
 					name: "G1",
 					description: "The system is safe to use",
+					// A named entry that P1 below refers to, so the pages that check this
+					// case exercise defined terms.
+					context: [
+						{
+							id: SIMPLE_CASE_INPUTS_ENTRY_ID,
+							name: "inputs",
+							text: "all data that users or other systems send to the system",
+						},
+					],
 					createdById: chris.id,
 				},
 			});
@@ -293,7 +305,7 @@ async function main() {
 					role: "SUPPORTING",
 					parentId: simpleGoal.id,
 					name: "P1",
-					description: "All inputs are validated",
+					description: `All {inputs#${SIMPLE_CASE_INPUTS_ENTRY_ID}} are validated`,
 					createdById: chris.id,
 				},
 			});

@@ -42,6 +42,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="strategy"
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 

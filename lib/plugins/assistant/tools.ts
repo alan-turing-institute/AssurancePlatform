@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { type PlainCase, toPlainCase } from "@/lib/case/defined-terms";
 import { createClaimHealthTool } from "@/lib/plugins/assistant/claim-health-tool";
 import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
@@ -7,7 +8,6 @@ import {
 	type SelectedElement,
 	techniquesConfigured,
 } from "@/lib/plugins/assistant/techniques-tool";
-import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 import { lintCase } from "./linter/lint-case";
 import { createToolCallLimit } from "./tool-call-limit";
@@ -77,9 +77,9 @@ function withShallowChildren(node: TreeNode) {
 async function loadExport(
 	userId: string,
 	caseId: string
-): Promise<CaseExportNested | null> {
+): Promise<PlainCase | null> {
 	const result = await exportCase(userId, caseId, { includeComments: false });
-	return "data" in result ? result.data : null;
+	return "data" in result ? toPlainCase(result.data) : null;
 }
 
 /**
@@ -90,8 +90,8 @@ async function loadExport(
 function sharedCaseExport(
 	userId: string,
 	caseId: string
-): () => Promise<CaseExportNested | null> {
-	let pending: Promise<CaseExportNested | null> | null = null;
+): () => Promise<PlainCase | null> {
+	let pending: Promise<PlainCase | null> | null = null;
 	return () => {
 		pending ??= loadExport(userId, caseId).catch((error: unknown) => {
 			pending = null;

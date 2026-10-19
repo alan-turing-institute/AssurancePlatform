@@ -1,3 +1,9 @@
+import {
+	parseContextEntries,
+	plainReferenceText,
+	type TermSource,
+	termsInReach,
+} from "@/lib/case/defined-terms";
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { logger } from "@/lib/logger";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
@@ -297,7 +303,7 @@ function buildGoalStructure(
 		keywords: "",
 		createdDate: goal.createdAt.toISOString(),
 		assuranceCaseId: goal.caseId ?? "",
-		context: goal.context || [],
+		context: parseContextEntries(goal.context),
 		strategies,
 		propertyClaims,
 		awayGoals,
@@ -359,7 +365,7 @@ function buildStrategyStructure(
 		comments: [],
 		assumption: strategy.assumption ?? "",
 		justification: strategy.justification ?? "",
-		context: strategy.context || [],
+		context: parseContextEntries(strategy.context),
 		inSandbox: strategy.inSandbox,
 		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
 		assertionStatus: strategy.assertionStatus ?? undefined,
@@ -438,7 +444,7 @@ function buildPropertyClaimStructure(
 		comments: [],
 		assumption: claim.assumption ?? "",
 		justification: claim.justification ?? "",
-		context: claim.context || [],
+		context: parseContextEntries(claim.context),
 		inSandbox: claim.inSandbox,
 		// Dialogical reasoning (defeaters, ADR 0005 D2) — decoration on the
 		// existing card, not a new node kind.
@@ -732,12 +738,46 @@ export interface CaseGoalSummary {
 	name: string;
 }
 
+interface TermElementRow {
+	context: unknown;
+	id: string;
+	name: string | null;
+	parentId: string | null;
+}
+
+/** The element and the elements above it, as sources of defined terms. */
+function termSourceChain(
+	element: TermElementRow,
+	byId: ReadonlyMap<string, TermElementRow>
+): TermSource[] {
+	const chain: TermSource[] = [];
+	const seen = new Set<string>();
+	for (
+		let current: TermElementRow | undefined = element;
+		current && !seen.has(current.id);
+		current = current.parentId ? byId.get(current.parentId) : undefined
+	) {
+		seen.add(current.id);
+		chain.push({
+			id: current.id,
+			name: current.name,
+			context: parseContextEntries(current.context),
+		});
+	}
+	return chain;
+}
+
 /**
  * Lists the GOAL elements of a case, for the "Add away goal" picker's
  * second step (ADR 0005 D7). Requires at least VIEW access on the cited
  * case — citing a goal is a read, so the same bar as opening the case.
  * Same not-found-vs-forbidden error as `fetchCaseFromPrisma` to avoid case
  * enumeration.
+ *
+ * The picker copies a goal's description into an element of another case,
+ * where a reference to a name defined here could not be resolved, so the
+ * description is returned in plain form: each reference written as `{name}`,
+ * with the name the entry has now.
  */
 export async function listCaseGoalElements(
 	userId: string,
@@ -749,17 +789,29 @@ export async function listCaseGoalElements(
 	}
 
 	try {
-		const goals = await prisma.assuranceElement.findMany({
-			where: { caseId, elementType: "GOAL", deletedAt: null },
-			select: { id: true, name: true, description: true },
+		const elements = await prisma.assuranceElement.findMany({
+			where: { caseId, deletedAt: null },
+			select: {
+				id: true,
+				name: true,
+				description: true,
+				elementType: true,
+				parentId: true,
+				context: true,
+			},
 		});
+		const byId = new Map(elements.map((element) => [element.id, element]));
 
 		return {
-			data: goals
-				.map((g) => ({
-					id: g.id,
-					name: g.name ?? "",
-					description: g.description ?? "",
+			data: elements
+				.filter((element) => element.elementType === "GOAL")
+				.map((goal) => ({
+					id: goal.id,
+					name: goal.name ?? "",
+					description: plainReferenceText(
+						goal.description ?? "",
+						termsInReach(termSourceChain(goal, byId))
+					),
 				}))
 				.sort((a, b) => compareIdentifiers(a.name, b.name)),
 		};

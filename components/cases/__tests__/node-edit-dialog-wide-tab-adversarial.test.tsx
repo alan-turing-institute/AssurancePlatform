@@ -11,6 +11,12 @@ import { render, screen } from "@/src/__tests__/utils/test-utils";
 import useStore from "@/store/store";
 import NodeEditDialog from "../node-edit-dialog";
 
+vi.mock("../reference-text-editor", async () => ({
+	default: (
+		await import("@/src/__tests__/utils/reference-text-editor-stand-in")
+	).default,
+}));
+
 vi.mock("@/lib/services/history-service", async (importOriginal) => {
 	const actual =
 		await importOriginal<typeof import("@/lib/services/history-service")>();

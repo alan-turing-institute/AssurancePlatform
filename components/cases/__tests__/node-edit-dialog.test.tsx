@@ -1,4 +1,4 @@
-import { waitFor } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { useState } from "react";
@@ -36,6 +36,12 @@ vi.mock("@/lib/services/history-service", async (importOriginal) => {
 	return { ...actual, recordUpdate: vi.fn() };
 });
 
+vi.mock("../reference-text-editor", async () => ({
+	default: (
+		await import("@/src/__tests__/utils/reference-text-editor-stand-in")
+	).default,
+}));
+
 vi.mock("@/lib/toast", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/toast")>();
 	return { ...actual, toast: vi.fn() };
@@ -53,6 +59,8 @@ const NODE: Node = {
 };
 
 const CONTEXT_ENTRY_LABEL_PATTERN = /^Context entry \d+$/;
+const ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
+const NO_TERMS_PATTERN = /^None yet\./;
 
 function FakePanel({ elementId }: ElementSlotContext) {
 	return <div data-testid="fake-panel-content">{`panel for ${elementId}`}</div>;
@@ -1098,5 +1106,313 @@ describe("NodeEditDialog — read-only mode by case permission", () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(updateRequestCount).toBe(0);
 		expect(toast).not.toHaveBeenCalled();
+	});
+});
+
+describe("NodeEditDialog — defined terms", () => {
+	const NAMED_ENTRY = {
+		id: "k3f9x2m7qa",
+		name: "window",
+		text: "the moving interval",
+		value: "5 minutes",
+	};
+
+	function claimWith(data: Record<string, unknown>): Node {
+		return {
+			id: "7",
+			type: "property",
+			position: { x: 0, y: 0 },
+			data: { id: 7, name: "P1", description: "Separation holds", ...data },
+		};
+	}
+
+	function captureUpdate() {
+		const captured: { body?: Record<string, unknown> } = {};
+		server.use(
+			http.put("/api/elements/7", async ({ request }) => {
+				captured.body = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+		return captured;
+	}
+
+	function renderClaim(node: Node, onOpenChange = vi.fn()) {
+		mockPluginsResponse(true);
+		render(
+			<NodeEditDialog
+				node={node}
+				nodeType="property"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+		return onOpenChange;
+	}
+
+	it("leaves the description out of the update when it has not changed", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(
+			claimWith({ description: "all {window#k3f9x2m7qa} hold" })
+		);
+
+		await user.type(
+			await screen.findByLabelText("Assumption"),
+			"The window is fixed"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).not.toHaveProperty("description");
+		expect(captured.body).toHaveProperty("assumption", "The window is fixed");
+	});
+
+	it("sends the description when it has changed", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({}));
+
+		const description = await screen.findByLabelText("Description");
+		await user.clear(description);
+		await user.type(description, "Separation holds under load");
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).toHaveProperty(
+			"description",
+			"Separation holds under load"
+		);
+	});
+
+	it("names a plain entry, gives it a value, and sends the named entry", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(
+			claimWith({ context: ["the moving interval"] })
+		);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.type(screen.getByLabelText("Context entry 1 name"), "window");
+		await user.type(
+			screen.getByLabelText("Context entry 1 value"),
+			"5 minutes"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([
+			{
+				id: expect.stringMatching(ENTRY_ID_PATTERN),
+				name: "window",
+				text: "the moving interval",
+				value: "5 minutes",
+			},
+		]);
+	});
+
+	it("keeps a named entry as it was on an untouched save", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		expect(await screen.findByLabelText("Context entry 1 name")).toHaveValue(
+			"window"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([NAMED_ENTRY]);
+	});
+
+	it("warns that the value will go before a name with a value is removed, and keeps it on cancel", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		await user.click(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		);
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"loses its value (5 minutes)"
+		);
+
+		await user.click(screen.getByRole("button", { name: "Keep name" }));
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1 name")).toHaveValue("window");
+
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
+		await user.click(
+			screen.getByRole("button", { name: "Remove name and value" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual(["the moving interval"]);
+	});
+
+	it("removes a name that has no value without asking", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: [{ ...NAMED_ENTRY, value: undefined }] }));
+
+		await user.click(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		);
+
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1")).toHaveValue(
+			"the moving interval"
+		);
+	});
+
+	it("lists the terms the description can use, those above as well as the entries in the form", async () => {
+		renderClaim(
+			claimWith({
+				context: [NAMED_ENTRY],
+				termsInReach: [
+					{
+						id: NAMED_ENTRY.id,
+						name: NAMED_ENTRY.name,
+						text: NAMED_ENTRY.text,
+						definedOn: { elementId: "7", elementName: "P1" },
+					},
+					{
+						id: "a1b2c3d4e5",
+						name: "rate",
+						text: "events per second",
+						value: "10",
+						definedOn: { elementId: "1", elementName: "G1" },
+					},
+				],
+			})
+		);
+
+		const list = (await screen.findByText("Terms you can use here")).closest(
+			"section"
+		);
+		if (!list) {
+			throw new Error("Expected the terms list to sit in a section");
+		}
+		const items = within(list).getAllByRole("listitem");
+		expect(items).toHaveLength(2);
+		expect(items[0]).toHaveTextContent("window defined on P1");
+		expect(items[1]).toHaveTextContent("rate defined on G1");
+		expect(items[1]).toHaveTextContent("events per second");
+		expect(items[1]).toHaveTextContent("Value: 10");
+	});
+
+	it("says what is missing when no term is in reach", async () => {
+		renderClaim(claimWith({}));
+
+		expect(await screen.findByText(NO_TERMS_PATTERN)).toBeInTheDocument();
+	});
+
+	it("does not save a named entry whose name is empty, and says so beside it", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(claimWith({ context: ["the moving interval"] }));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		expect(
+			await screen.findByText("Context entry names must not be empty")
+		).toBeInTheDocument();
+		expect(captured.body).toBeUndefined();
+	});
+
+	it("ties the message about a box to that box", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: ["the moving interval"] }));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		const message = await screen.findByText(
+			"Context entry names must not be empty"
+		);
+		const nameBox = screen.getByLabelText("Context entry 1 name");
+		expect(nameBox).toHaveAttribute("aria-invalid", "true");
+		expect(nameBox).toHaveAttribute("aria-describedby", message.id);
+		expect(message.id).not.toBe("");
+	});
+
+	it("moves focus to the box a problem is in, not always the name", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(
+			claimWith({
+				context: [{ ...NAMED_ENTRY, value: "v".repeat(501) }],
+			})
+		);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Update Property" })
+		);
+
+		await waitFor(() =>
+			expect(screen.getByLabelText("Context entry 1 value")).toHaveFocus()
+		);
+		expect(captured.body).toBeUndefined();
+	});
+
+	it("gives each Remove name button the name of its own entry", async () => {
+		renderClaim(
+			claimWith({
+				context: [
+					NAMED_ENTRY,
+					{ id: "b2c3d4e5f6", name: "rate", text: "events per second" },
+				],
+			})
+		);
+
+		expect(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Remove name of context entry 2" })
+		).toBeInTheDocument();
+	});
+
+	it("does not save two entries with the same name, ignoring case, and says why", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(
+			claimWith({
+				context: [
+					NAMED_ENTRY,
+					{ id: "b2c3d4e5f6", name: "Window", text: "another meaning" },
+				],
+			})
+		);
+
+		const problem = await screen.findByRole("alert");
+		expect(problem).toHaveTextContent("names must be unique within an element");
+		expect(screen.getByLabelText("Context entry 1 name")).toHaveAttribute(
+			"aria-describedby",
+			problem.id
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(toast).toHaveBeenCalled());
+		expect(toast).toHaveBeenCalledWith(
+			expect.objectContaining({ title: "Check the context entries" })
+		);
+		expect(captured.body).toBeUndefined();
 	});
 });

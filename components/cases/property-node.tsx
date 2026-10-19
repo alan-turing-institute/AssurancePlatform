@@ -42,6 +42,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="property"
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 
