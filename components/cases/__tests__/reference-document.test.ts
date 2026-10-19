@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Editor } from "@tiptap/react";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { DefinedTerm } from "@/lib/case/defined-terms";
 import {
 	documentToText,
 	type ReferenceDocumentJson,
@@ -151,6 +152,43 @@ describe("textToDocument and documentToText", () => {
 	it("keeps the name stored in a reference, so an untouched text is not rewritten", () => {
 		expect(throughEditor("a {Old name#k3f9x2m7qa} b")).toBe(
 			"a {Old name#k3f9x2m7qa} b"
+		);
+	});
+
+	it("shows and writes the name an entry has now, and keeps the stored name when the entry is out of reach", () => {
+		const terms: DefinedTerm[] = [
+			{
+				id: "k3f9x2m7qa",
+				name: "interval",
+				text: "the moving interval",
+				definedOn: { elementId: "g1", elementName: "G1" },
+			},
+		];
+		const text = "a {window#k3f9x2m7qa} and {gone#a1b2c3d4e5}";
+
+		const document = textToDocument(text, terms);
+		const labels = (document.content[0]?.content ?? []).flatMap((node) =>
+			node.type === "mention" ? [node.attrs.label] : []
+		);
+
+		expect(labels).toEqual(["interval", "gone"]);
+		expect(documentToText(document, terms)).toBe(
+			"a {interval#k3f9x2m7qa} and {gone#a1b2c3d4e5}"
+		);
+	});
+
+	it("writes the current name even for a word that still shows an old one", () => {
+		const terms: DefinedTerm[] = [
+			{
+				id: "k3f9x2m7qa",
+				name: "interval",
+				text: "",
+				definedOn: { elementId: "g1", elementName: "G1" },
+			},
+		];
+
+		expect(documentToText(textToDocument("{window#k3f9x2m7qa}"), terms)).toBe(
+			"{interval#k3f9x2m7qa}"
 		);
 	});
 });

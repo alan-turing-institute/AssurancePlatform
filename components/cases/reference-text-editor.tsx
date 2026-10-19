@@ -39,7 +39,11 @@ import {
 	type ReferenceListState,
 	useReferenceSuggestion,
 } from "@/hooks/use-reference-suggestion";
-import { type DefinedTerm, formatReference } from "@/lib/case/defined-terms";
+import {
+	type DefinedTerm,
+	findTermById,
+	formatReference,
+} from "@/lib/case/defined-terms";
 import { cn } from "@/lib/utils";
 import { documentToText, textToDocument } from "./reference-document";
 import ReferenceSuggestionList, {
@@ -189,7 +193,8 @@ function focusIsFree(): boolean {
 function useLoadReplacedText(
 	editor: Editor | null,
 	value: string,
-	lastTextRef: MutableRefObject<string>
+	lastTextRef: MutableRefObject<string>,
+	termsRef: MutableRefObject<readonly DefinedTerm[]>
 ) {
 	useEffect(() => {
 		if (!editor || editor.isDestroyed || value === lastTextRef.current) {
@@ -199,9 +204,45 @@ function useLoadReplacedText(
 		editor
 			.chain()
 			.setMeta("addToHistory", false)
-			.setContent(textToDocument(value), { emitUpdate: false })
+			.setContent(textToDocument(value, termsRef.current), {
+				emitUpdate: false,
+			})
 			.run();
-	}, [editor, value, lastTextRef]);
+	}, [editor, value, lastTextRef, termsRef]);
+}
+
+/** Gives each reference word the name its entry has now; one whose entry is out of reach keeps its name. */
+function relabelReferences(editor: Editor, terms: readonly DefinedTerm[]) {
+	const { doc, tr } = editor.state;
+	doc.descendants((node, position) => {
+		if (node.type.name !== "mention") {
+			return;
+		}
+		const current = findTermById(terms, String(node.attrs.id))?.name;
+		if (current && current !== node.attrs.label) {
+			tr.setNodeAttribute(position, "label", current);
+		}
+	});
+	if (tr.docChanged) {
+		editor.view.dispatch(
+			tr.setMeta("addToHistory", false).setMeta("preventUpdate", true)
+		);
+	}
+}
+
+/**
+ * Keeps the reference words under the names their entries have as the entries
+ * are renamed while the editor is open. It changes what is shown and not the
+ * text, so it is neither an edit nor a step to undo.
+ */
+function useCurrentNames(editor: Editor | null, terms: readonly DefinedTerm[]) {
+	const namesKey = JSON.stringify(terms.map((term) => [term.id, term.name]));
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `terms` is rebuilt every render; its ids and names say when it changed
+	useEffect(() => {
+		if (editor && !editor.isDestroyed) {
+			relabelReferences(editor, terms);
+		}
+	}, [editor, namesKey]);
 }
 
 /** Keeps the attributes on the editable region in step with the form's state. */
@@ -259,6 +300,7 @@ interface ReferenceEditorOptions {
 	onBlur?: () => void;
 	onChange: (text: string) => void;
 	readOnly: boolean;
+	terms: readonly DefinedTerm[];
 	value: string;
 }
 
@@ -269,14 +311,17 @@ function useReferenceEditor({
 	onBlur,
 	onChange,
 	readOnly,
+	terms,
 	value,
 }: ReferenceEditorOptions) {
 	const lastTextRef = useRef(value);
+	const termsRef = useRef(terms);
+	termsRef.current = terms;
 	const onChangeRef = useRef(onChange);
 	onChangeRef.current = onChange;
 	const onBlurRef = useRef(onBlur);
 	onBlurRef.current = onBlur;
-	const [initialContent] = useState(() => textToDocument(value));
+	const [initialContent] = useState(() => textToDocument(value, terms));
 
 	const editor = useEditor({
 		extensions,
@@ -286,13 +331,14 @@ function useReferenceEditor({
 		shouldRerenderOnTransaction: false,
 		editorProps: { attributes },
 		onUpdate: ({ editor: current }) => {
-			const text = documentToText(current.getJSON());
+			const text = documentToText(current.getJSON(), termsRef.current);
 			lastTextRef.current = text;
 			onChangeRef.current(text);
 		},
 		onBlur: () => onBlurRef.current?.(),
 	});
-	useLoadReplacedText(editor, value, lastTextRef);
+	useLoadReplacedText(editor, value, lastTextRef, termsRef);
+	useCurrentNames(editor, terms);
 	return editor;
 }
 
@@ -344,6 +390,7 @@ function ReferenceTextEditorBody(props: ReferenceTextEditorBodyProps) {
 		onBlur: props.onBlur,
 		onChange: props.onChange,
 		readOnly,
+		terms,
 		value: props.value,
 	});
 	const closeList = useEditorControls(editor, handleRef);

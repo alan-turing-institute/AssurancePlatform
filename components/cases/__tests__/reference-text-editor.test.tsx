@@ -77,6 +77,48 @@ describe("ReferenceTextEditor", () => {
 		expect(word).toHaveAttribute("data-id", "k3f9x2m7qa");
 	});
 
+	it("shows each reference under the name its entry has now, and keeps the stored name when the entry is out of reach", async () => {
+		renderEditor({
+			value: "use {old#k3f9x2m7qa} and {gone#zzzzzzzzzz}",
+		});
+
+		const box = await screen.findByRole("textbox", { name: "Description" });
+		const words = Array.from(box.querySelectorAll('span[data-type="mention"]'));
+		expect(words.map((word) => word.textContent)).toEqual(["window", "gone"]);
+	});
+
+	it("follows an entry renamed while the editor is open without counting it as an edit, and writes the new name with the next edit", async () => {
+		const { onChange, rerender } = renderEditor({
+			value: "use {window#k3f9x2m7qa}",
+		});
+		const box = await screen.findByRole("textbox", { name: "Description" });
+		const renamed = [{ ...WINDOW, name: "interval" }, RATE];
+
+		rerender(
+			<>
+				<span id="label">Description</span>
+				<ReferenceTextEditor
+					aria-labelledby="label"
+					onChange={onChange}
+					terms={renamed}
+					value="use {window#k3f9x2m7qa}"
+				/>
+			</>
+		);
+
+		await waitFor(() =>
+			expect(box.querySelector('span[data-type="mention"]')).toHaveTextContent(
+				"interval"
+			)
+		);
+		expect(onChange).not.toHaveBeenCalled();
+
+		act(() => {
+			editorOf(box).chain().focus("end").insertContent(" now").run();
+		});
+		expect(onChange).toHaveBeenLastCalledWith("use {interval#k3f9x2m7qa} now");
+	});
+
 	it("hands back the same plain string a text box would, with references written {name#id}", async () => {
 		const { onChange } = renderEditor({ value: "use " });
 		const box = await screen.findByRole("textbox", { name: "Description" });
