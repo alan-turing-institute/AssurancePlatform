@@ -30,6 +30,7 @@ import {
 	drawnContentAttribute,
 } from "@/lib/case/plugin-display-capture";
 import type { ElementAppearance } from "@/lib/plugins/slots";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
@@ -59,8 +60,8 @@ export interface BaseNodeProps {
 	children?: ReactNode;
 	/** Additional class names */
 	className?: string;
-	/** Context strings array */
-	context?: string[];
+	/** Context entries: plain strings or named entries */
+	context?: ContextEntry[];
 	/** Optional data-tour attribute for onboarding tours */
 	dataTour?: string;
 	/** Short description of the node */
@@ -107,7 +108,7 @@ function ExpandedContent({
 	descriptionText: string;
 	hasAttributes: boolean;
 	assumption?: string;
-	context?: string[];
+	context?: ContextEntry[];
 	justification?: string;
 	nodeType: DiagramNodeType;
 	children?: ReactNode;

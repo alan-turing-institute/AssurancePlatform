@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { generateJsonSchema } from "../../../scripts/generate-json-schema";
-import committedSchema from "../json-schema-v1.0.json";
+import committedSchema from "../json-schema-v1.1.json";
 
 /**
- * ADR 0004 D1: lib/schemas/json-schema-v1.0.json is a generated artifact,
+ * ADR 0004 D1: lib/schemas/json-schema-v1.1.json is a generated artifact,
  * never hand-maintained. This fails whenever the committed file and a
  * fresh regeneration disagree — a hand-edit of the JSON file, or a change
  * to CaseExportNestedSchema (or anything it references) that nobody ran
  * `pnpm schema:generate` for afterwards.
  */
-describe("json-schema-v1.0.json drift", () => {
+describe("json-schema-v1.1.json drift", () => {
 	it("matches a fresh generation from CaseExportNestedSchema", () => {
 		const fresh = generateJsonSchema();
 		expect(committedSchema).toEqual(fresh);

@@ -52,7 +52,9 @@ import {
 	getNodeMutationErrorMessage,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import { plainContextEntry } from "@/lib/case/defined-terms";
 import type { ElementPanelRegistration } from "@/lib/plugins/slots";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
@@ -129,9 +131,10 @@ function buildUpdatePayload(
 	if (supportsAttributes(nodeType)) {
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
+		// Named entries are sent back exactly as they were loaded.
 		updateItem.context = (values.context || [])
-			.map((c) => c.trim())
-			.filter((c) => c.length > 0);
+			.map((c) => (typeof c === "string" ? c.trim() : c))
+			.filter((c) => typeof c !== "string" || c.length > 0);
 		// Per-assertion status (ADR 0004 D3) — always one of the five
 		// author-declarable values; the Select never offers AS_CITED.
 		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
@@ -252,7 +255,7 @@ function AssertionStatusSection({
 }
 
 interface ContextSectionProps {
-	contextItems: Array<{ id: string; value: string }>;
+	contextItems: Array<{ id: string; value: ContextEntry }>;
 	form: UseFormReturn<FormValues>;
 	newContextValue: string;
 	onAddContext: () => void;
@@ -306,8 +309,13 @@ function ContextSection({
 														e.preventDefault();
 													}
 												}}
-												readOnly={readOnly}
+												readOnly={readOnly || typeof field.value === "object"}
 												{...field}
+												value={
+													typeof field.value === "object"
+														? plainContextEntry(field.value)
+														: field.value
+												}
 											/>
 										</FormControl>
 										{!readOnly && (

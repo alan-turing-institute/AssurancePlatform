@@ -6,6 +6,8 @@
  * before/after snapshots, allowing operations to be reversed.
  */
 
+import type { ContextEntry } from "@/lib/schemas/context-entry";
+
 /** Operation type for history commands */
 export type OperationType =
 	| "create"
@@ -25,7 +27,7 @@ export interface ElementSnapshot {
 	// default ASSERTED.
 	assertionStatus?: string | null;
 	assumption?: string | null;
-	context?: string[];
+	context?: ContextEntry[];
 	description: string;
 	elementType: string;
 	id: string;

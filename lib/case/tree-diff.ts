@@ -15,6 +15,7 @@ import type {
 	CaseExportNested,
 	TreeNode,
 } from "@/lib/schemas/case-export";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 
 /**
  * Element data for creating a new element
@@ -22,7 +23,7 @@ import type {
 export interface CreateElementData {
 	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
-	context?: string[];
+	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description: string;
 	fromPattern?: boolean;
@@ -47,7 +48,7 @@ export interface CreateElementData {
 export interface UpdateElementData {
 	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
-	context?: string[];
+	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description?: string;
 	fromPattern?: boolean;
@@ -86,7 +87,7 @@ export type ElementChange =
 interface FlatElement {
 	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
-	context?: string[];
+	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description: string;
 	fromPattern?: boolean;
@@ -233,11 +234,28 @@ function flattenCaseExportWithLinks(
 }
 
 /**
- * Compares two arrays for equality (shallow comparison)
+ * Whether two context entries are the same. A named entry is compared by its
+ * four fields, so the order of its keys does not matter (the database returns
+ * keys in its own order).
  */
-function arraysEqual(
-	a: unknown[] | undefined,
-	b: unknown[] | undefined
+function contextEntriesEqual(a: ContextEntry, b: ContextEntry): boolean {
+	if (typeof a === "string" || typeof b === "string") {
+		return a === b;
+	}
+	return (
+		a.id === b.id &&
+		a.name === b.name &&
+		a.text === b.text &&
+		a.value === b.value
+	);
+}
+
+/**
+ * Compares two context lists entry by entry, in order.
+ */
+function contextEqual(
+	a: ContextEntry[] | undefined,
+	b: ContextEntry[] | undefined
 ): boolean {
 	if (a === b) {
 		return true;
@@ -251,7 +269,10 @@ function arraysEqual(
 	if (a.length !== b.length) {
 		return false;
 	}
-	return a.every((val, i) => val === b[i]);
+	return a.every((entry, i) => {
+		const other = b[i];
+		return other !== undefined && contextEntriesEqual(entry, other);
+	});
 }
 
 /**
@@ -304,7 +325,7 @@ function computeElementChanges(
 	}
 
 	// Compare context array separately
-	if (!arraysEqual(current.context, edited.context)) {
+	if (!contextEqual(current.context, edited.context)) {
 		changes.context = edited.context;
 		hasChanges = true;
 	}

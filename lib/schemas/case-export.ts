@@ -11,6 +11,7 @@
  */
 
 import { z } from "zod";
+import { type ContextEntry, ContextEntrySchema } from "./context-entry";
 
 // ============================================
 // ENUMS (matching Prisma schema)
@@ -99,9 +100,9 @@ export const ElementV2Schema = z
 			.optional()
 			.describe("Justification text for applicable element types"),
 		context: z
-			.array(z.string())
+			.array(ContextEntrySchema)
 			.optional()
-			.describe("Context tags associated with the element"),
+			.describe("Context entries associated with the element"),
 		url: z.string().nullable().optional().describe("URL for evidence elements"),
 		level: z
 			.number()
@@ -246,7 +247,7 @@ export interface ExportComment {
  * - role: GOAL only
  * - assumption: GOAL, STRATEGY, PROPERTY_CLAIM, ASSUMPTION, AWAY_GOAL
  * - justification: GOAL, STRATEGY, PROPERTY_CLAIM, JUSTIFICATION
- * - context: GOAL, STRATEGY, PROPERTY_CLAIM (array of strings)
+ * - context: GOAL, STRATEGY, PROPERTY_CLAIM (array of strings or named entries)
  * - url: EVIDENCE only
  * - level: PROPERTY_CLAIM only
  * - moduleReferenceId: MODULE (required), AWAY_GOAL (required)
@@ -270,7 +271,7 @@ export interface TreeNode {
 	citedElementId?: string | null;
 	// Comments (optional - included when export option enabled)
 	comments?: ExportComment[];
-	context?: string[];
+	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description: string;
 	// Pattern metadata (only included when true)
@@ -320,7 +321,7 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		role: ElementRoleSchema.nullable().optional(),
 		assumption: z.string().nullable().optional(),
 		justification: z.string().nullable().optional(),
-		context: z.array(z.string()).optional(),
+		context: z.array(ContextEntrySchema).optional(),
 		url: z.string().nullable().optional(),
 		level: z.number().int().nullable().optional(),
 		// Module fields
@@ -368,21 +369,67 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 );
 
 /**
+ * Walks a parsed tree and returns the path of the first named context entry,
+ * or null when every context entry is plain text.
+ */
+function findNamedContextEntryPath(
+	node: unknown,
+	path: (string | number)[]
+): (string | number)[] | null {
+	if (typeof node !== "object" || node === null) {
+		return null;
+	}
+	const { context, children } = node as {
+		children?: unknown;
+		context?: unknown;
+	};
+	if (Array.isArray(context)) {
+		const index = context.findIndex((entry) => typeof entry !== "string");
+		if (index !== -1) {
+			return [...path, "context", index];
+		}
+	}
+	if (Array.isArray(children)) {
+		for (const [index, child] of children.entries()) {
+			const found = findNamedContextEntryPath(child, [
+				...path,
+				"children",
+				index,
+			]);
+			if (found) {
+				return found;
+			}
+		}
+	}
+	return null;
+}
+
+/**
  * Nested Export format - tree structure for human readability.
  * Evidence appears inline under claims, may be duplicated if multi-linked.
- * Uses version "1.0" as this is the first officially versioned export format
- * (the legacy Django format had no version field).
+ *
+ * Version "1.0" is the first officially versioned export format (the legacy
+ * Django format had no version field); every context entry in it is plain
+ * text. Version "1.1" lets a context entry also be a named entry and lets
+ * element text hold references to named entries. A 1.0 file is already valid
+ * 1.1, so nothing converts on import; a file that says "1.0" but holds a named
+ * entry is rejected, because the shape behind a version string never changes
+ * silently. That rule is a check in this schema only: it has no JSON Schema
+ * equivalent, and the generated file describes the 1.1 shape.
  *
  * ADR 0004 D1: `version` is the format-migration key for the whole case
  * export contract, not just a label. A change to the model this schema
- * describes bumps the literal (e.g. "1.0" -> "2.0", mirrored in
- * CaseExportV2Schema above) and ships an explicit migration; the shape
- * behind a given version string never changes silently underneath it.
+ * describes bumps the version (mirrored in CaseExportV2Schema above) and
+ * ships an explicit migration.
  */
 // biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportNestedSchema = z
 	.object({
-		version: z.literal("1.0").describe("Schema version identifier"),
+		version: z
+			.enum(["1.0", "1.1"])
+			.describe(
+				'Schema version identifier. "1.1" adds named context entries and references in element text'
+			),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
 		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 		case: z
@@ -396,7 +443,21 @@ export const CaseExportNestedSchema = z
 			.describe("Case metadata"),
 		tree: TreeNodeSchema.describe("Root element of the case tree"),
 	})
-	.describe("Assurance case export in nested tree format (v1.0)");
+	.superRefine((data, ctx) => {
+		if (data.version !== "1.0") {
+			return;
+		}
+		const path = findNamedContextEntryPath(data.tree, ["tree"]);
+		if (path) {
+			ctx.addIssue({
+				code: "custom",
+				path,
+				message:
+					'A version "1.0" file cannot hold named context entries; set the version to "1.1"',
+			});
+		}
+	})
+	.describe("Assurance case export in nested tree format (v1.0 and v1.1)");
 
 export type CaseExportNested = z.infer<typeof CaseExportNestedSchema>;
 

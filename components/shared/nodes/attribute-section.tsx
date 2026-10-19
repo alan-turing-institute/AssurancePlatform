@@ -9,6 +9,8 @@
 
 import { BookmarkCheck, Layers, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { plainContextEntry } from "@/lib/case/defined-terms";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
 
@@ -58,18 +60,19 @@ function AttributeItem({ icon, label, value }: AttributeItemProps) {
 interface AttributeSectionProps {
 	assumption?: string;
 	className?: string;
-	context?: string[];
+	context?: ContextEntry[];
 	justification?: string;
 	nodeType: DiagramNodeType;
 }
 
 export default function AttributeSection({
 	nodeType,
-	context,
+	context: contextEntries,
 	assumption,
 	justification,
 	className,
 }: AttributeSectionProps) {
+	const context = contextEntries?.map((entry) => plainContextEntry(entry));
 	const hasContext = context && context.length > 0;
 	const hasAssumption = assumption && assumption.trim() !== "";
 	const hasJustification = justification && justification.trim() !== "";

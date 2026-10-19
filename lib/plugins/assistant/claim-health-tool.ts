@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
+import type { PlainCase } from "@/lib/case/defined-terms";
 import { logger } from "@/lib/logger";
-import type { CaseExportNested } from "@/lib/schemas/case-export";
 import {
 	type HealthStatus,
 	readClaimEvidenceNodes,
@@ -181,7 +181,7 @@ async function liveEvidenceNodes(caseId: string): Promise<Map<string, string>> {
 async function readClaimHealth(
 	userId: string,
 	caseId: string,
-	caseExport: () => Promise<CaseExportNested | null>
+	caseExport: () => Promise<PlainCase | null>
 ) {
 	const data = await caseExport();
 	if (!data) {
@@ -212,7 +212,7 @@ async function readClaimHealth(
 export function createClaimHealthTool(
 	userId: string,
 	caseId: string,
-	caseExport: () => Promise<CaseExportNested | null>,
+	caseExport: () => Promise<PlainCase | null>,
 	limited: ToolCallLimit
 ) {
 	let inFlight: ReturnType<typeof readClaimHealth> | null = null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TreeNode } from "@/lib/schemas/case-export";
+import type { PlainTreeNode } from "@/lib/case/defined-terms";
 import { MarkdownExporter } from "../exporters/markdown-exporter";
 import type { RenderedDocument } from "../types";
 
@@ -8,7 +8,7 @@ const MARKDOWN_FILENAME_PATTERN = /^test-case-\d{4}-\d{2}-\d{2}\.md$/;
 /**
  * Sample tree node for testing
  */
-function createSampleTree(): TreeNode {
+function createSampleTree(): PlainTreeNode {
 	return {
 		id: "goal-1",
 		type: "GOAL",
@@ -380,7 +380,7 @@ describe("MarkdownExporter", () => {
 		});
 
 		it("should render evidence elements with URL", async () => {
-			const evidence: TreeNode = {
+			const evidence: PlainTreeNode = {
 				id: "e1",
 				type: "EVIDENCE",
 				name: "Test Evidence",
@@ -409,7 +409,7 @@ describe("MarkdownExporter", () => {
 		});
 
 		it("should indicate sandbox elements as draft", async () => {
-			const sandboxElement: TreeNode = {
+			const sandboxElement: PlainTreeNode = {
 				id: "s1",
 				type: "PROPERTY_CLAIM",
 				name: "Draft Claim",

@@ -1,6 +1,7 @@
 /**
  * Shared types for case helper modules
  */
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import type {
 	EvidenceResponse,
 	GoalResponse,
@@ -12,7 +13,7 @@ import type {
 // Dynamic property bag: legacy case tree operations pass arbitrary fields through nodes
 export interface CaseNode {
 	childrenHidden?: boolean;
-	context?: string[];
+	context?: ContextEntry[];
 	evidence?: EvidenceResponse[];
 	goals?: GoalResponse[];
 	hidden: boolean;

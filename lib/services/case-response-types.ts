@@ -5,6 +5,7 @@
  * and consumed by the frontend. IDs are strings (UUIDs from Prisma).
  */
 
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import type { CommentResponse } from "./comment-service";
 
 // The "Ready to Publish" intermediate step was retired (ADR 0003 §2) — DRAFT
@@ -90,7 +91,7 @@ export interface GoalResponse {
 	assuranceCaseId: string;
 	awayGoals?: AwayGoalResponse[];
 	comments?: CommentResponse[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;
@@ -116,7 +117,7 @@ export interface StrategyResponse {
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
 	comments?: CommentResponse[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate?: string;
 	description: string;
 	goalId: string | null;
@@ -139,7 +140,7 @@ export interface PropertyClaimResponse {
 	awayGoals?: AwayGoalResponse[];
 	claimType: string;
 	comments?: CommentResponse[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;

@@ -596,7 +596,7 @@ function buildCreateData(
 		assertionStatus: data.assertionStatus,
 		assumption: data.assumption,
 		justification: data.justification,
-		context: data.context ?? [],
+		context: (data.context ?? []) as string[],
 		url: data.url,
 		level,
 		moduleReferenceId: data.moduleReferenceId,

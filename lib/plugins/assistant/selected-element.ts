@@ -1,3 +1,4 @@
+import { toPlainCase } from "@/lib/case/defined-terms";
 import type { SelectedElement } from "@/lib/plugins/assistant/techniques-tool";
 import { exportCase } from "@/lib/services/case-export-service";
 
@@ -41,7 +42,7 @@ export async function resolveSelectedElement(
 	if (!("data" in result)) {
 		return null;
 	}
-	const node = find(result.data.tree as Node, elementId);
+	const node = find(toPlainCase(result.data).tree as Node, elementId);
 	return node
 		? {
 				id: node.id,

@@ -72,58 +72,6 @@ export function useNewLinkForm({
 		handleClose();
 	};
 
-	/** Handles creation of a context node linked to a goal */
-	const handleContextAdd = async (description: string) => {
-		const newContextItem = {
-			description,
-			parentId: assuranceCase?.goals?.[0]?.id ?? null,
-			assuranceCaseId: assuranceCase?.id,
-		};
-
-		const result = await createAssuranceCaseNode(
-			"contexts",
-			newContextItem,
-			""
-		);
-
-		if (result.error) {
-			toast({
-				variant: "destructive",
-				title: "Error",
-				description: "Failed to create context",
-			});
-			return;
-		}
-
-		if (result.data && assuranceCase) {
-			result.data.hidden = findSiblingHiddenState(assuranceCase, node.data.id);
-			recordCreate(result.data.id, "context", result.data);
-		}
-
-		const newContext = [
-			...(assuranceCase?.goals?.[0]?.context || []),
-			result.data,
-		].filter(Boolean);
-
-		const updatedAssuranceCase = assuranceCase
-			? {
-					...assuranceCase,
-					goals: [
-						{
-							...(assuranceCase.goals?.[0] || {}),
-							context: newContext,
-						} as GoalResponse,
-					],
-				}
-			: null;
-
-		if (updatedAssuranceCase) {
-			setAssuranceCase(updatedAssuranceCase as AssuranceCaseResponse);
-		}
-		reset();
-		setLoading(false);
-	};
-
 	/** Builds the strategy creation payload based on the parent node type */
 	const createStrategyPayload = (description: string) => {
 		const parentId =
@@ -612,9 +560,6 @@ export function useNewLinkForm({
 		const description = values.description as string;
 
 		switch (linkType) {
-			case "context":
-				handleContextAdd(description);
-				break;
 			case "claim":
 				handleClaimAdd(description);
 				break;
