@@ -39,6 +39,11 @@ function TermOption({
 	term: DefinedTerm;
 }) {
 	const origin = term.definedOn.elementName ?? "an element above";
+	// The highlighted option's background is too strong for the muted grey.
+	const secondary = cn(
+		"text-xs",
+		active ? "text-accent-foreground" : "text-muted-foreground"
+	);
 	return (
 		// biome-ignore lint/a11y/useKeyWithClickEvents: the caret stays in the text, so the keyboard reaches the options through the editor (arrow keys and Enter)
 		<div
@@ -55,17 +60,13 @@ function TermOption({
 		>
 			<div className="flex items-baseline justify-between gap-2">
 				<span className="font-medium">{term.name}</span>
-				<span className="shrink-0 text-muted-foreground text-xs">{origin}</span>
+				<span className={cn("shrink-0", secondary)}>{origin}</span>
 			</div>
 			{term.text.trim() && (
-				<div className="truncate text-muted-foreground text-xs">
-					{term.text}
-				</div>
+				<div className={cn("truncate", secondary)}>{term.text}</div>
 			)}
 			{term.value?.trim() && (
-				<div className="truncate text-muted-foreground text-xs">
-					Value: {term.value}
-				</div>
+				<div className={cn("truncate", secondary)}>Value: {term.value}</div>
 			)}
 		</div>
 	);
@@ -109,12 +110,16 @@ export default function ReferenceSuggestionList({
 			<PopoverAnchor virtualRef={anchor} />
 			<PopoverContent
 				align="start"
+				aria-label="Insert a term"
 				className="max-h-60 w-72 overflow-y-auto p-1"
 				onCloseAutoFocus={(event) => event.preventDefault()}
 				onMouseDown={(event) => event.preventDefault()}
 				onOpenAutoFocus={(event) => event.preventDefault()}
 				onWheel={(event) => event.stopPropagation()}
 				side="bottom"
+				// A scrolling region has to be focusable to be reachable by keyboard.
+				// The caret stays in the text, so the list never takes focus itself.
+				tabIndex={0}
 				updatePositionStrategy="always"
 			>
 				{list.items.length > 0 ? (
