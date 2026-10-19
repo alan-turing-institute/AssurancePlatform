@@ -14,11 +14,17 @@
 
 import { Mention, type MentionOptions } from "@tiptap/extension-mention";
 import Placeholder from "@tiptap/extension-placeholder";
-import { EditorContent, Extension, useEditor } from "@tiptap/react";
+import {
+	type Editor,
+	EditorContent,
+	Extension,
+	useEditor,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { exitSuggestion, SuggestionPluginKey } from "@tiptap/suggestion";
 import {
 	forwardRef,
+	type MutableRefObject,
 	useEffect,
 	useId,
 	useImperativeHandle,
@@ -61,9 +67,9 @@ export interface ReferenceTextEditorProps {
 }
 
 const EDITOR_CLASSES = cn(
-	"min-h-[80px] w-full whitespace-pre-wrap break-words rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+	"min-h-20 w-full whitespace-pre-wrap break-words rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
 	"focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-	"[&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-muted-foreground [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)]"
+	"[&_p.is-editor-empty:first-child]:before:pointer-events-none [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:h-0 [&_p.is-editor-empty:first-child]:before:text-muted-foreground [&_p.is-editor-empty:first-child]:before:content-(--reference-placeholder)"
 );
 
 /** Shift+Enter starts a new line, as Enter does; the text has no soft breaks. */
@@ -142,6 +148,8 @@ function buildEditorAttributes(input: AttributeInput): Record<string, string> {
 		"aria-autocomplete": "list",
 		"aria-placeholder": input.placeholder,
 		class: EDITOR_CLASSES,
+		// The placeholder is drawn from this variable by the class above.
+		style: `--reference-placeholder: ${JSON.stringify(input.placeholder)}`,
 	};
 	const optional: Record<string, string | undefined> = {
 		id: input.id,
@@ -176,6 +184,63 @@ function openList(
 	visible: boolean
 ): ReferenceListState | null {
 	return visible && list ? list : null;
+}
+
+/**
+ * The form can replace the text under the editor (when the dialog is reloaded
+ * for the element). Only a value the editor did not just send itself is
+ * loaded, and it is kept out of the undo history.
+ */
+function useLoadReplacedText(
+	editor: Editor | null,
+	value: string,
+	lastTextRef: MutableRefObject<string>
+) {
+	useEffect(() => {
+		if (!editor || editor.isDestroyed || value === lastTextRef.current) {
+			return;
+		}
+		lastTextRef.current = value;
+		editor
+			.chain()
+			.setMeta("addToHistory", false)
+			.setContent(textToDocument(value), { emitUpdate: false })
+			.run();
+	}, [editor, value, lastTextRef]);
+}
+
+/** Keeps the attributes on the editable region in step with the form's state. */
+function useEditorAttributes(
+	editor: Editor | null,
+	attributes: Record<string, string>
+) {
+	const serialised = JSON.stringify(attributes);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `attributes` is rebuilt every render; its serialised form says when it changed
+	useEffect(() => {
+		if (editor && !editor.isDestroyed) {
+			editor.setOptions({ editorProps: { attributes } });
+		}
+	}, [editor, serialised]);
+}
+
+/** Read-only state, and the caret when the dialog opens with the editor first. */
+function useEditorMode(
+	editor: Editor | null,
+	readOnly: boolean,
+	autoFocus: boolean
+) {
+	useEffect(() => {
+		if (editor && !editor.isDestroyed && editor.isEditable === readOnly) {
+			// Switching editability is not a change to the text, so no update is sent.
+			editor.setEditable(!readOnly, false);
+		}
+	}, [editor, readOnly]);
+
+	useEffect(() => {
+		if (autoFocus && editor && !readOnly && focusIsFree()) {
+			editor.commands.focus("end");
+		}
+	}, [autoFocus, editor, readOnly]);
 }
 
 const ReferenceTextEditor = forwardRef<
@@ -247,41 +312,9 @@ const ReferenceTextEditor = forwardRef<
 		[editor]
 	);
 
-	// The form can replace the text under the editor (when the dialog is
-	// reloaded for the element). Only a value the editor did not just send
-	// itself is loaded, and it is kept out of the undo history.
-	useEffect(() => {
-		if (!editor || editor.isDestroyed || value === lastTextRef.current) {
-			return;
-		}
-		lastTextRef.current = value;
-		editor
-			.chain()
-			.setMeta("addToHistory", false)
-			.setContent(textToDocument(value), { emitUpdate: false })
-			.run();
-	}, [editor, value]);
-
-	const serialisedAttributes = JSON.stringify(attributes);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `attributes` is rebuilt every render; its serialised form says when it changed
-	useEffect(() => {
-		if (editor && !editor.isDestroyed) {
-			editor.setOptions({ editorProps: { attributes } });
-		}
-	}, [editor, serialisedAttributes]);
-
-	useEffect(() => {
-		if (editor && !editor.isDestroyed && editor.isEditable === readOnly) {
-			// Switching editability is not a change to the text, so no update is sent.
-			editor.setEditable(!readOnly, false);
-		}
-	}, [editor, readOnly]);
-
-	useEffect(() => {
-		if (autoFocus && editor && !readOnly && focusIsFree()) {
-			editor.commands.focus("end");
-		}
-	}, [autoFocus, editor, readOnly]);
+	useLoadReplacedText(editor, value, lastTextRef);
+	useEditorAttributes(editor, attributes);
+	useEditorMode(editor, readOnly, autoFocus);
 
 	const closeList = () => {
 		if (editor && !editor.isDestroyed) {

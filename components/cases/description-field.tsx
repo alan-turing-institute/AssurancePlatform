@@ -23,7 +23,7 @@ const ReferenceTextEditor = dynamic(() => import("./reference-text-editor"), {
 	loading: () => (
 		<div
 			aria-busy="true"
-			className="min-h-[80px] w-full rounded-md border border-input bg-background"
+			className="min-h-20 w-full rounded-md border border-input bg-background"
 		/>
 	),
 });

@@ -82,7 +82,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 							/>
 						</div>
 					</div>
-					<div className="max-h-[320px] overflow-y-auto">
+					<div className="max-h-80 overflow-y-auto">
 						{filteredNodes.map((node) => (
 							<div key={node.id}>
 								<button

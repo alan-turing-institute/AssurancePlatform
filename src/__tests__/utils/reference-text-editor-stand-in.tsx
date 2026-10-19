@@ -45,4 +45,5 @@ const ReferenceTextEditorStandIn = forwardRef<
 	);
 });
 
+// fallow-ignore-next-line unused-export
 export default ReferenceTextEditorStandIn;
