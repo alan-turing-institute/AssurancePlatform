@@ -1,4 +1,9 @@
 import type { Edge, Node } from "reactflow";
+import {
+	type DefinedTerm,
+	parseContextEntries,
+	termsInReach,
+} from "@/lib/case/defined-terms";
 import { resolveReactFlowNodeType } from "@/lib/case/node-type-resolver";
 import { generateUuid } from "@/lib/generate-uuid";
 import { logger } from "@/lib/logger";
@@ -93,6 +98,29 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 	}
 };
 
+const NO_TERMS: DefinedTerm[] = [];
+
+/**
+ * The named context entries an item's text can refer to: its own, then those
+ * already worked out for its parent (nearest first). A card with no entry of
+ * its own shares its parent's list.
+ */
+const termsForItem = (
+	item: ConvertibleItem,
+	parentNode: Node | null
+): DefinedTerm[] => {
+	const inherited =
+		(parentNode?.data?.termsInReach as DefinedTerm[] | undefined) ?? NO_TERMS;
+	const own = termsInReach([
+		{
+			id: item.id,
+			name: item.name,
+			context: parseContextEntries(item.context),
+		},
+	]);
+	return own.length === 0 ? inherited : [...own, ...inherited];
+};
+
 // Helper function to create a single node
 const createNode = (
 	item: ConvertibleItem,
@@ -114,6 +142,8 @@ const createNode = (
 			elementType: nodeType, // Add elementType for identification
 			label: item.name, // Add label for compatibility
 			isDemo,
+			// What this card's text can refer to; cards read it from their data.
+			termsInReach: termsForItem(item, parentNode),
 		},
 		position: { x: 0, y: 50 },
 		hidden: item.hidden,

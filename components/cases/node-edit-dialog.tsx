@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
+import { Loader2, Lock, Minus, Plus } from "lucide-react";
 import {
 	useCallback,
 	useEffect,
@@ -40,6 +40,10 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	findDraftContextProblem,
+	useContextNaming,
+} from "@/hooks/use-context-naming";
 import { useElementPanelSlot } from "@/hooks/use-element-panel-slot";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
 import {
@@ -52,9 +56,8 @@ import {
 	getNodeMutationErrorMessage,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
-import { plainContextEntry } from "@/lib/case/defined-terms";
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import type { ElementPanelRegistration } from "@/lib/plugins/slots";
-import type { ContextEntry } from "@/lib/schemas/context-entry";
 import {
 	type NodeEditFormInput,
 	nodeEditFormSchema,
@@ -63,6 +66,10 @@ import { recordUpdate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import useStore from "@/store/store";
+import ContextEntriesSection from "./context-entries-section";
+import { finaliseContextEntries } from "./context-entry-form";
+import DescriptionField from "./description-field";
+import TermsInReachList from "./terms-in-reach-list";
 
 type FormValues = NodeEditFormInput;
 
@@ -71,6 +78,19 @@ const DETAILS_TAB = "details";
 // Helper to check if element type supports attributes
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
 	["goal", "strategy", "property"].includes(nodeType);
+
+/**
+ * Whether the description editor takes the caret when the dialog opens. It
+ * does where the description is the first field, as it was when it was a text
+ * box: with no tab strip above it. The editor loads a moment after the dialog,
+ * so the dialog's own focus step is skipped in that case and the editor
+ * takes focus once it is there.
+ */
+const focusesDescriptionOnOpen = (
+	nodeType: DiagramNodeType,
+	readOnly: boolean,
+	hasTabs: boolean
+): boolean => supportsAttributes(nodeType) && !(readOnly || hasTabs);
 
 /**
  * Resolves a node's current `assertionStatus` to one of the five
@@ -119,22 +139,26 @@ function getInitialUrls(
 	return [{ value: "" }];
 }
 
-/** Build update payload from form values */
+/**
+ * Build update payload from form values. The description is left out when it
+ * is the text the element already has, so opening and saving an untouched
+ * description changes nothing.
+ */
 function buildUpdatePayload(
 	values: FormValues,
-	nodeType: DiagramNodeType
+	nodeType: DiagramNodeType,
+	storedDescription: string
 ): Record<string, unknown> {
-	const updateItem: Record<string, unknown> = {
-		description: values.description,
-	};
+	const updateItem: Record<string, unknown> = {};
+
+	if (values.description !== storedDescription) {
+		updateItem.description = values.description;
+	}
 
 	if (supportsAttributes(nodeType)) {
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
-		// Named entries are sent back exactly as they were loaded.
-		updateItem.context = (values.context || [])
-			.map((c) => (typeof c === "string" ? c.trim() : c))
-			.filter((c) => typeof c !== "string" || c.length > 0);
+		updateItem.context = finaliseContextEntries(values.context || []);
 		// Per-assertion status (ADR 0004 D3) — always one of the five
 		// author-declarable values; the Select never offers AS_CITED.
 		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
@@ -251,117 +275,6 @@ function AssertionStatusSection({
 				</FormItem>
 			)}
 		/>
-	);
-}
-
-interface ContextSectionProps {
-	contextItems: Array<{ id: string; value: ContextEntry }>;
-	form: UseFormReturn<FormValues>;
-	newContextValue: string;
-	onAddContext: () => void;
-	onNewContextChange: (value: string) => void;
-	onRemoveContext: (idx: number) => void;
-	readOnly: boolean;
-}
-
-// `context` is a `string[]` on the shared zod schema (`nodeEditFormSchema`),
-// and react-hook-form's `useFieldArray` only accepts array fields whose
-// elements are objects (its `FieldArrayPath` type excludes primitive
-// arrays), so each entry is bound individually via `FormField` at the
-// indexed path `context.${idx}` instead — a plain `Path`, which primitive
-// array elements are valid targets for. Add/remove bookkeeping (stable keys
-// via `contextItems`) stays as before; only the read-only `<span>` becomes
-// an editable `Input`.
-function ContextSection({
-	contextItems,
-	form,
-	readOnly,
-	newContextValue,
-	onNewContextChange,
-	onAddContext,
-	onRemoveContext,
-}: ContextSectionProps) {
-	return (
-		<div className="space-y-3">
-			<FormLabel className="flex items-center gap-2">
-				Context
-				{readOnly && (
-					<span className="text-muted-foreground" title="Read Only">
-						<Lock className="h-3 w-3" />
-					</span>
-				)}
-			</FormLabel>
-			{contextItems.length > 0 && (
-				<div className="space-y-2">
-					{contextItems.map((item, idx) => (
-						<FormField
-							control={form.control}
-							key={item.id}
-							name={`context.${idx}`}
-							render={({ field }) => (
-								<FormItem>
-									<div className="flex items-start gap-2">
-										<FormControl>
-											<Input
-												aria-label={`Context entry ${idx + 1}`}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") {
-														e.preventDefault();
-													}
-												}}
-												readOnly={readOnly || typeof field.value === "object"}
-												{...field}
-												value={
-													typeof field.value === "object"
-														? plainContextEntry(field.value)
-														: field.value
-												}
-											/>
-										</FormControl>
-										{!readOnly && (
-											<button
-												className="rounded p-1 text-destructive hover:bg-destructive/10"
-												onClick={() => onRemoveContext(idx)}
-												title="Remove context"
-												type="button"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
-										)}
-									</div>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					))}
-				</div>
-			)}
-			{!readOnly && (
-				<div className="flex gap-2">
-					<Input
-						onChange={(e) => onNewContextChange(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") {
-								e.preventDefault();
-								onAddContext();
-							}
-						}}
-						placeholder="Add new context..."
-						value={newContextValue}
-					/>
-					<Button
-						disabled={!newContextValue.trim()}
-						onClick={onAddContext}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						<PlusIcon className="size-4" />
-						Add
-					</Button>
-				</div>
-			)}
-		</div>
 	);
 }
 
@@ -509,6 +422,11 @@ export default function NodeEditDialog({
 		assuranceCase?.permissions === "edit" ||
 		assuranceCase?.permissions === "manage"
 	);
+	const focusDescriptionOnOpen = focusesDescriptionOnOpen(
+		nodeType,
+		readOnly,
+		panelSlot.registrations.length > 0
+	);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
@@ -516,7 +434,7 @@ export default function NodeEditDialog({
 			description: (node.data?.description as string) ?? "",
 			assumption: (node.data?.assumption as string) ?? "",
 			justification: (node.data?.justification as string) ?? "",
-			context: (node.data?.context as string[]) ?? [],
+			context: parseContextEntries(node.data?.context),
 			urls: getInitialUrls(node.data as Record<string, unknown>),
 			assertionStatus: getInitialAssertionStatus(
 				node.data as Record<string, unknown>
@@ -557,7 +475,9 @@ export default function NodeEditDialog({
 			const newId = `${componentId}-${idCounter}`;
 			setIdCounter((c) => c + 1);
 			setItemIds([...itemIds, newId]);
-			form.setValue("context", [...currentContext, newContextValue.trim()]);
+			form.setValue("context", [...currentContext, newContextValue.trim()], {
+				shouldDirty: true,
+			});
 			setNewContextValue("");
 		}
 	};
@@ -567,9 +487,15 @@ export default function NodeEditDialog({
 		setItemIds(itemIds.filter((_, i) => i !== indexToRemove));
 		form.setValue(
 			"context",
-			currentContext.filter((_, i) => i !== indexToRemove)
+			currentContext.filter((_, i) => i !== indexToRemove),
+			{ shouldDirty: true }
 		);
 	};
+
+	// Naming entries, and the terms the description can refer to: the entries
+	// as they stand in the form, then those on the elements above.
+	const { contextProblem, nameContext, terms, unnameContext } =
+		useContextNaming(form, node.data, contextValues);
 
 	// The id of the node whose data is currently loaded into the form. Used
 	// (not `node` object identity — host node components rebuild that object
@@ -579,7 +505,7 @@ export default function NodeEditDialog({
 
 	const resetFormToNode = useCallback(
 		(n: Node) => {
-			const contextData = (n.data?.context as string[]) ?? [];
+			const contextData = parseContextEntries(n.data?.context);
 			form.reset({
 				description: (n.data?.description as string) ?? "",
 				assumption: (n.data?.assumption as string) ?? "",
@@ -664,9 +590,24 @@ export default function NodeEditDialog({
 			values.context = [...(values.context || []), newContextValue.trim()];
 			setNewContextValue("");
 		}
+		const listProblem = supportsAttributes(nodeType)
+			? findDraftContextProblem(values.context || [])
+			: undefined;
+		if (listProblem) {
+			toast({
+				variant: "destructive",
+				title: "Check the context entries",
+				description: listProblem,
+			});
+			return;
+		}
 		setLoading(true);
 		const beforeData = { ...node.data } as Record<string, unknown>;
-		const updateItem = buildUpdatePayload(values, nodeType);
+		const updateItem = buildUpdatePayload(
+			values,
+			nodeType,
+			(node.data?.description as string | undefined) ?? ""
+		);
 
 		const updated = await updateAssuranceCaseNode(
 			node.type || "unknown",
@@ -714,13 +655,26 @@ export default function NodeEditDialog({
 						<span>{challengedName ?? "an element outside this case"}</span>
 					</div>
 				)}
-				<TextFieldSection
-					form={form}
-					label="Description"
-					name="description"
-					placeholder="Type your description here."
-					readOnly={readOnly}
-				/>
+				{supportsAttributes(nodeType) ? (
+					<>
+						<DescriptionField
+							autoFocus={focusDescriptionOnOpen}
+							form={form}
+							placeholder="Type your description here."
+							readOnly={readOnly}
+							terms={terms}
+						/>
+						<TermsInReachList terms={terms} />
+					</>
+				) : (
+					<TextFieldSection
+						form={form}
+						label="Description"
+						name="description"
+						placeholder="Type your description here."
+						readOnly={readOnly}
+					/>
+				)}
 
 				{supportsAttributes(nodeType) && (
 					<>
@@ -743,13 +697,16 @@ export default function NodeEditDialog({
 							onSelectOpenChange={onSelectOpenChange}
 							readOnly={readOnly}
 						/>
-						<ContextSection
+						<ContextEntriesSection
 							contextItems={contextItems}
 							form={form}
 							newContextValue={newContextValue}
 							onAddContext={addContext}
+							onNameContext={nameContext}
 							onNewContextChange={setNewContextValue}
 							onRemoveContext={removeContext}
+							onUnnameContext={unnameContext}
+							problem={contextProblem}
 							readOnly={readOnly}
 						/>
 					</>
@@ -816,6 +773,11 @@ export default function NodeEditDialog({
 				// against a live dismissal — it's defensive only.
 				onInteractOutside={(event) => {
 					if (shouldGuardFocusDismiss()) {
+						event.preventDefault();
+					}
+				}}
+				onOpenAutoFocus={(event) => {
+					if (focusDescriptionOnOpen) {
 						event.preventDefault();
 					}
 				}}

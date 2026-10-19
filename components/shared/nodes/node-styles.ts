@@ -203,3 +203,22 @@ export function buildFooterIdClasses(): string {
 		"text-xs"
 	);
 }
+
+/**
+ * Build the classes for a reference to a defined term inside text. A found
+ * term is a tinted word. A term whose definition is out of reach gets a dashed
+ * underline in the warning colour on top of a tint, so it does not rely on
+ * colour alone; the text keeps the foreground colour to stay readable on a
+ * tinted card.
+ */
+export function buildReferenceClasses(found: boolean): string {
+	return cn(
+		"rounded-sm",
+		"px-0.5",
+		"font-medium",
+		"text-foreground",
+		found
+			? "bg-primary/15"
+			: "bg-warning/20 underline decoration-warning decoration-dashed underline-offset-2"
+	);
+}

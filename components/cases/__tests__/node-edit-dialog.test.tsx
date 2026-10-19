@@ -36,6 +36,12 @@ vi.mock("@/lib/services/history-service", async (importOriginal) => {
 	return { ...actual, recordUpdate: vi.fn() };
 });
 
+vi.mock("../reference-text-editor", async () => ({
+	default: (
+		await import("@/src/__tests__/utils/reference-text-editor-stand-in")
+	).default,
+}));
+
 vi.mock("@/lib/toast", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/toast")>();
 	return { ...actual, toast: vi.fn() };
