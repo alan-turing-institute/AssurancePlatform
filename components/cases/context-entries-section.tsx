@@ -107,55 +107,70 @@ function PlainEntryRow({
 	);
 }
 
-function EntryTextField({
-	idx,
-	form,
-	name,
-	label,
-	placeholder,
-	readOnly,
-	focusWhenEmpty = false,
-}: {
-	idx: number;
-	form: UseFormReturn<FormValues>;
-	name: "name" | "text" | "value";
+interface EntryInputProps {
+	error?: string;
+	inputRef?: (element: HTMLInputElement | null) => void;
 	label: string;
+	onChange: (value: string) => void;
 	placeholder: string;
 	readOnly: boolean;
-	focusWhenEmpty?: boolean;
-}) {
-	const inputRef = useRef<HTMLInputElement | null>(null);
-	const startedEmpty = useRef(focusWhenEmpty);
-	useEffect(() => {
-		if (startedEmpty.current) {
-			inputRef.current?.focus();
-		}
-	}, []);
+	value: string;
+}
+
+/** One box of a named entry, with the message for what is wrong with it. */
+function EntryInput({
+	error,
+	inputRef,
+	label,
+	onChange,
+	placeholder,
+	readOnly,
+	value,
+}: EntryInputProps) {
 	return (
-		<FormField
-			control={form.control}
-			name={`context.${idx}.${name}`}
-			render={({ field }) => (
-				<FormItem>
-					<FormControl>
-						<Input
-							aria-label={label}
-							onKeyDown={ignoreEnter}
-							placeholder={placeholder}
-							readOnly={readOnly}
-							{...field}
-							ref={(element) => {
-								field.ref(element);
-								inputRef.current = element;
-							}}
-							value={typeof field.value === "string" ? field.value : ""}
-						/>
-					</FormControl>
-					<FormMessage />
-				</FormItem>
+		<div className="space-y-1">
+			<Input
+				aria-invalid={!!error}
+				aria-label={label}
+				onChange={(event) => onChange(event.target.value)}
+				onKeyDown={ignoreEnter}
+				placeholder={placeholder}
+				readOnly={readOnly}
+				ref={inputRef}
+				value={value}
+			/>
+			{error && (
+				<p className="font-medium text-destructive text-sm" role="alert">
+					{error}
+				</p>
 			)}
-		/>
+		</div>
 	);
+}
+
+interface EntryProblems {
+	name?: string;
+	text?: string;
+	value?: string;
+}
+
+/**
+ * What the form's validation says is wrong with each part of the entry at
+ * `idx`. The schema reports it at `context.<idx>.name` and so on, below the
+ * one field this row is registered as.
+ */
+function entryProblems(
+	form: UseFormReturn<FormValues>,
+	idx: number
+): EntryProblems {
+	const reported = form.formState.errors.context?.[idx] as
+		| Record<keyof EntryProblems, { message?: string } | undefined>
+		| undefined;
+	return {
+		name: reported?.name?.message,
+		text: reported?.text?.message,
+		value: reported?.value?.message,
+	};
 }
 
 function UnnameWarning({
@@ -197,60 +212,86 @@ function NamedEntryRow({
 	readOnly,
 }: RowProps & { entry: NamedContextEntry; onUnname: () => void }) {
 	const [confirming, setConfirming] = useState(false);
+	const nameBox = useRef<HTMLInputElement | null>(null);
+	const startedWithoutName = useRef(entry.name === "");
+	useEffect(() => {
+		if (startedWithoutName.current) {
+			nameBox.current?.focus();
+		}
+	}, []);
 	const hasValue = !!entry.value?.trim();
 	const label = `Context entry ${idx + 1}`;
+	const problems = entryProblems(form, idx);
 	return (
-		<div className="space-y-2 rounded-md border p-2">
-			<div className="flex items-start gap-2">
-				<div className="flex-1">
-					<EntryTextField
-						focusWhenEmpty={entry.name === ""}
-						form={form}
-						idx={idx}
-						label={`${label} name`}
-						name="name"
-						placeholder="Name, such as window"
-						readOnly={readOnly}
-					/>
-				</div>
-				{!readOnly && (
-					<>
-						<Button
-							onClick={() => (hasValue ? setConfirming(true) : onUnname())}
-							size="sm"
-							type="button"
-							variant="ghost"
-						>
-							Remove name
-						</Button>
-						<RemoveEntryButton onRemove={onRemove} />
-					</>
-				)}
-			</div>
-			{confirming && (
-				<UnnameWarning
-					entry={entry}
-					onCancel={() => setConfirming(false)}
-					onConfirm={onUnname}
-				/>
-			)}
-			<EntryTextField
-				form={form}
-				idx={idx}
-				label={label}
-				name="text"
-				placeholder="What the name means"
-				readOnly={readOnly}
-			/>
-			<EntryTextField
-				form={form}
-				idx={idx}
-				label={`${label} value`}
-				name="value"
-				placeholder="Value (optional), such as 5 minutes"
-				readOnly={readOnly}
-			/>
-		</div>
+		// The whole entry is one field of the form, so a row never registers both a
+		// field and the parts below it.
+		<FormField
+			control={form.control}
+			name={`context.${idx}`}
+			render={({ field }) => {
+				const current = isNamedEntryValue(field.value) ? field.value : entry;
+				const update = (patch: Partial<NamedContextEntry>) =>
+					field.onChange({ ...current, ...patch });
+				return (
+					<div className="space-y-2 rounded-md border p-2">
+						<div className="flex items-start gap-2">
+							<div className="flex-1">
+								<EntryInput
+									error={problems.name}
+									inputRef={(element) => {
+										nameBox.current = element;
+										field.ref(element);
+									}}
+									label={`${label} name`}
+									onChange={(name) => update({ name })}
+									placeholder="Name, such as window"
+									readOnly={readOnly}
+									value={current.name}
+								/>
+							</div>
+							{!readOnly && (
+								<>
+									<Button
+										onClick={() =>
+											hasValue ? setConfirming(true) : onUnname()
+										}
+										size="sm"
+										type="button"
+										variant="ghost"
+									>
+										Remove name
+									</Button>
+									<RemoveEntryButton onRemove={onRemove} />
+								</>
+							)}
+						</div>
+						{confirming && (
+							<UnnameWarning
+								entry={current}
+								onCancel={() => setConfirming(false)}
+								onConfirm={onUnname}
+							/>
+						)}
+						<EntryInput
+							error={problems.text}
+							label={label}
+							onChange={(text) => update({ text })}
+							placeholder="What the name means"
+							readOnly={readOnly}
+							value={current.text}
+						/>
+						<EntryInput
+							error={problems.value}
+							label={`${label} value`}
+							onChange={(value) => update({ value })}
+							placeholder="Value (optional), such as 5 minutes"
+							readOnly={readOnly}
+							value={current.value ?? ""}
+						/>
+					</div>
+				);
+			}}
+		/>
 	);
 }
 

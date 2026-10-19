@@ -12,7 +12,7 @@
  * library stays out of the case page's first load.
  */
 
-import { Mention } from "@tiptap/extension-mention";
+import { Mention, type MentionOptions } from "@tiptap/extension-mention";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, Extension, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -96,11 +96,12 @@ const PLAIN_TEXT_ONLY = {
 	underline: false,
 } as const;
 
-type SuggestionOptions = ReturnType<
-	typeof useReferenceSuggestion
->["suggestion"];
+type SuggestionOptions = MentionOptions["suggestion"];
 
-function buildExtensions(suggestion: SuggestionOptions, placeholder: string) {
+export function buildExtensions(
+	suggestion: SuggestionOptions,
+	placeholder: string
+) {
 	return [
 		StarterKit.configure(PLAIN_TEXT_ONLY),
 		Placeholder.configure({ placeholder }),
