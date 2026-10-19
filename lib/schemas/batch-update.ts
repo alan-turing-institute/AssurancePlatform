@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { nullableUrlSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
+import { ContextEntrySchema } from "./context-entry";
 
 /**
  * Per-assertion status on a batch create/update payload (ADR 0004 D3).
@@ -33,7 +34,7 @@ export const batchUpdateRequestSchema = z.strictObject({
 						assertionStatus: assertionStatusInputSchema,
 						assumption: z.string().nullable().optional(),
 						justification: z.string().nullable().optional(),
-						context: z.array(z.string()).optional(),
+						context: z.array(ContextEntrySchema).optional(),
 						url: nullableUrlSchema,
 						level: z.number().nullable().optional(),
 						moduleReferenceId: z.string().optional(),
@@ -57,7 +58,7 @@ export const batchUpdateRequestSchema = z.strictObject({
 						assertionStatus: assertionStatusInputSchema,
 						assumption: z.string().nullable().optional(),
 						justification: z.string().nullable().optional(),
-						context: z.array(z.string()).optional(),
+						context: z.array(ContextEntrySchema).optional(),
 						url: nullableUrlSchema,
 						level: z.number().nullable().optional(),
 						moduleReferenceId: z.string().optional(),

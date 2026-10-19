@@ -6,6 +6,7 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { noticeElementName } from "@/lib/case/defined-terms";
 import { updateElementSchema } from "@/lib/schemas/element";
 import {
 	deleteElement,
@@ -113,7 +114,7 @@ export async function DELETE(
 			const username = session.username || session.email || "Someone";
 			emitSSEEvent("element:deleted", element.caseId, {
 				elementId,
-				elementName: element.name || element.description,
+				elementName: noticeElementName(element),
 				username,
 				userId: session.userId,
 			});

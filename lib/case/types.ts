@@ -36,7 +36,7 @@ export interface ReactFlowNode {
 		goalId?: string | null;
 		strategyId?: string | null;
 		propertyClaimId?: string | string[] | null;
-		context?: string[];
+		context?: ContextEntry[];
 		propertyClaims?: PropertyClaimResponse[];
 		strategies?: StrategyResponse[];
 		evidence?: EvidenceResponse[];

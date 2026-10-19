@@ -5,6 +5,7 @@
  * Used by the JSON editor to apply multiple changes in a single transaction.
  */
 
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import type {
 	CreateElementData,
 	ElementChange,
@@ -13,7 +14,12 @@ import type {
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { isWriteConflict } from "@/lib/prisma-errors";
+import {
+	type ContextEntry,
+	isNamedContextEntry,
+} from "@/lib/schemas/context-entry";
 import { validateElementName } from "@/lib/schemas/element-validation";
+import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
@@ -268,6 +274,48 @@ type TransactionClient = TransactionCallback extends (
 ) => Promise<unknown>
 	? T
 	: never;
+
+/**
+ * Named context entries: every element's names unique, and every id used once
+ * in the case, judged on the state the case will be in after the whole batch.
+ * A batch that deletes an element (or removes an entry) and creates the same
+ * entry again therefore passes. A batch that carries no named entry cannot add
+ * a clash, so it does not read the case's context at all.
+ */
+async function validateContextEntries(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	const carriesNamedEntry = [...creates, ...updates].some((change) =>
+		(change.data.context ?? []).some(isNamedContextEntry)
+	);
+	if (!carriesNamedEntry) {
+		return null;
+	}
+	// Every element of the case, including those in the bin, whose entries
+	// would come back on a restore.
+	const rows = await prisma.assuranceElement.findMany({
+		where: { caseId },
+		select: { id: true, context: true },
+	});
+	const finalContext = new Map<string, ContextEntry[]>(
+		rows.map((row) => [row.id, parseContextEntries(row.context)])
+	);
+	for (const change of deletes) {
+		finalContext.delete(change.elementId);
+	}
+	for (const change of creates) {
+		finalContext.set(change.elementId, change.data.context ?? []);
+	}
+	for (const change of updates) {
+		if (change.data.context !== undefined) {
+			finalContext.set(change.elementId, change.data.context);
+		}
+	}
+	return checkContextEntriesForCase(finalContext.values()) ?? null;
+}
 
 /**
  * Validates user has EDIT permission on the case
@@ -596,7 +644,7 @@ function buildCreateData(
 		assertionStatus: data.assertionStatus,
 		assumption: data.assumption,
 		justification: data.justification,
-		context: (data.context ?? []) as string[],
+		context: data.context ?? [],
 		url: data.url,
 		level,
 		moduleReferenceId: data.moduleReferenceId,
@@ -1332,6 +1380,16 @@ export async function applyBatchUpdate(
 	const nameFormatError = await validateElementNames(userId, creates, updates);
 	if (nameFormatError) {
 		return { error: nameFormatError };
+	}
+
+	const contextError = await validateContextEntries(
+		caseId,
+		creates,
+		updates,
+		deletes
+	);
+	if (contextError) {
+		return { error: contextError };
 	}
 
 	try {

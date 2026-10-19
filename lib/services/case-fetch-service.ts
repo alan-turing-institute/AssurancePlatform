@@ -1,3 +1,4 @@
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { logger } from "@/lib/logger";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
@@ -297,7 +298,7 @@ function buildGoalStructure(
 		keywords: "",
 		createdDate: goal.createdAt.toISOString(),
 		assuranceCaseId: goal.caseId ?? "",
-		context: goal.context || [],
+		context: parseContextEntries(goal.context),
 		strategies,
 		propertyClaims,
 		awayGoals,
@@ -359,7 +360,7 @@ function buildStrategyStructure(
 		comments: [],
 		assumption: strategy.assumption ?? "",
 		justification: strategy.justification ?? "",
-		context: strategy.context || [],
+		context: parseContextEntries(strategy.context),
 		inSandbox: strategy.inSandbox,
 		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
 		assertionStatus: strategy.assertionStatus ?? undefined,
@@ -438,7 +439,7 @@ function buildPropertyClaimStructure(
 		comments: [],
 		assumption: claim.assumption ?? "",
 		justification: claim.justification ?? "",
-		context: claim.context || [],
+		context: parseContextEntries(claim.context),
 		inSandbox: claim.inSandbox,
 		// Dialogical reasoning (defeaters, ADR 0005 D2) — decoration on the
 		// existing card, not a new node kind.

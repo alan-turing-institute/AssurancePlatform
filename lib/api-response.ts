@@ -50,6 +50,22 @@ export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
 }
 
 /**
+ * The 400 answer for an import file that failed validation. The "path:
+ * message" strings reach the client as their own top-level array, because the
+ * import dialog reads `validationErrors` specifically; the shared envelope
+ * carries only `fieldErrors`, a record of strings, which cannot hold a list.
+ */
+export function apiImportValidationError(
+	error: string,
+	validationErrors: string[]
+): NextResponse {
+	return NextResponse.json(
+		{ error, code: "VALIDATION", validationErrors },
+		{ status: 400 }
+	);
+}
+
+/**
  * Create a 429 Too Many Requests response.
  * Optionally sets the `Retry-After` header in seconds.
  */
@@ -122,6 +138,11 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^This claim is bound to check /,
 		factory: () => unprocessable(""),
 	},
+	// `context-entry-rules.ts` and `lib/schemas/context-entry.ts`: a named
+	// context entry that breaks a rule (a repeated name or id) is a validation
+	// failure (400). Anchored and listed before the substring patterns below
+	// because the message embeds an author-chosen name.
+	{ pattern: /^Context entry /, factory: () => validationError("") },
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },

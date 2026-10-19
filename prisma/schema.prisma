@@ -395,7 +395,7 @@ model AssuranceElement {
   // GSN-specific fields (applicable to GOAL, STRATEGY, PROPERTY_CLAIM only)
   assumption          String?          /// Assumptions upon which this element depends
   justification       String?          /// Rationale for strategies explaining the decomposition approach
-  context             String[]         @default([]) /// Contextual information strings (replaces legacy CONTEXT element type)
+  context             Json             @default("[]") /// Context entries (replaces legacy CONTEXT element type): plain text, or a named entry {id, name, text, value?}
 
   // Evidence-specific (EVIDENCE elements only)
   url                 String?          /// Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]
