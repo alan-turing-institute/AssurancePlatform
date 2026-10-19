@@ -343,7 +343,6 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	// fallow-ignore-next-line code-duplication
 	private renderEvidenceItem(
 		node: PlainTreeNode,
 		includeUrls: boolean
