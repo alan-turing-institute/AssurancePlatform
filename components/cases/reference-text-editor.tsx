@@ -320,33 +320,22 @@ type ReferenceTextEditorBodyProps = Required<
 		handleRef: ForwardedRef<ReferenceTextEditorHandle>;
 	};
 
-function ReferenceTextEditorBody({
-	"aria-describedby": describedBy,
-	"aria-invalid": invalid,
-	"aria-labelledby": labelledBy,
-	autoFocus,
-	handleRef,
-	id,
-	onBlur,
-	onChange,
-	placeholder,
-	readOnly,
-	terms,
-	value,
-}: ReferenceTextEditorBodyProps) {
+function ReferenceTextEditorBody(props: ReferenceTextEditorBodyProps) {
+	const { autoFocus, handleRef, placeholder, readOnly, terms } = props;
 	const listId = useId();
-	const { suggestion, list, activeIndex, setActiveIndex, visible } =
-		useReferenceSuggestion(terms);
+	const suggestionState = useReferenceSuggestion(terms);
+	const { activeIndex, list, setActiveIndex, suggestion, visible } =
+		suggestionState;
 	const shownList = visible ? list : null;
 	const extensions = useMemo(
 		() => buildExtensions(suggestion, placeholder),
 		[suggestion, placeholder]
 	);
 	const attributes = buildEditorAttributes({
-		id,
-		labelledBy,
-		describedBy,
-		invalid,
+		id: props.id,
+		labelledBy: props["aria-labelledby"],
+		describedBy: props["aria-describedby"],
+		invalid: props["aria-invalid"],
 		placeholder,
 		readOnly,
 		...listAttributes(shownList, listId, activeIndex),
@@ -354,12 +343,11 @@ function ReferenceTextEditorBody({
 	const editor = useReferenceEditor({
 		attributes,
 		extensions,
-		onBlur,
-		onChange,
+		onBlur: props.onBlur,
+		onChange: props.onChange,
 		readOnly,
-		value,
+		value: props.value,
 	});
-
 	const closeList = useEditorControls(editor, handleRef);
 	useEditorAttributes(editor, attributes);
 	useEditorMode(editor, readOnly, autoFocus);
