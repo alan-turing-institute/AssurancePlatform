@@ -18,7 +18,7 @@ The TEA Platform is a Next.js App Router application. It serves the browser inte
 | `lib/auth/` | Session configuration and machine token checks |
 | `lib/prisma.ts`, `prisma/` | Database client, schema and SQL migrations |
 | `hooks/`, `store/` | Browser event subscriptions and editor state |
-| `lib/plugins/` | Plugin registration, slots and the health plugin |
+| `lib/plugins/` | Plugin registration, slots, the health plugin and the Case Assistant |
 
 Browser components call both actions and `/api` handlers. Route handlers check authentication and delegate case operations to services. The editor itself is a client component at `/case/[caseId]`: it fetches case data, converts elements into a React Flow diagram and calls the relevant operations when you edit. See the [case editor](/docs/technical-guide/architecture/assurance-case-editor) for its data flow.
 

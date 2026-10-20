@@ -24,7 +24,7 @@ Next.js ships documentation matched to the installed version in `node_modules/ne
 - `lib/api-response.ts`, `lib/errors.ts`, `types/service.ts`: response and error contracts.
 - `lib/auth/`: session validation, API tokens, client-IP extraction, token encryption.
 - `lib/logger.ts`: the structured logger.
-- `lib/plugins/`: the plugin manifest, slot registries, client bootstrap and the `tea.health` plugin.
+- `lib/plugins/`: the plugin manifest, slot registries, client bootstrap and the `tea.health` and `tea.assistant` plugins.
 - `components/ui/`: shadcn primitives; `components/cases/` and `components/shared/nodes/`: case canvas UI.
 - `store/`: canvas and history state (Zustand); `hooks/` and `providers/`: UI state and context.
 - `prisma/`: schema, reviewed migrations and the development seed; `src/generated/prisma/`: generated client, untracked, never edit by hand.
@@ -129,7 +129,7 @@ Keep secrets out of log entries.
   Use kebab-case filenames, PascalCase components and `{ComponentName}Props`.
 - Keep components presentational; data access goes through routes and actions, and state through the existing Zustand stores and hooks.
   Do not add imports from `store/` into node components; that cycle is being inverted.
-- Plugins: consult `lib/plugins/manifest.ts`, `lib/plugins/slots/`, `lib/plugins/bootstrap.ts` and the `tea.health` implementation under `lib/plugins/health/` before changing extension behaviour.
+- Plugins: consult `lib/plugins/manifest.ts`, `lib/plugins/slots/`, `lib/plugins/bootstrap.ts` and the `tea.health` and `tea.assistant` implementations under `lib/plugins/health/` and `lib/plugins/assistant/` before changing extension behaviour.
   Keep plugin semantics out of core; register plugin UI through the slot registries and the client bootstrap.
   Disabling a plugin leaves its data stored; do not purge it as a side effect.
   Machine integrations under `/api/machine/` are distinct from in-process plugins.
@@ -189,6 +189,6 @@ The pre-push hook regenerates the Prisma client, then runs lint and typecheck, o
 `.pre-commit-config.yaml` is for manual runs and pre-commit.ci; `pre-commit install` refuses to install while `core.hooksPath` is set.
 
 Work is tracked in GitHub Issues.
-The plugin system is real but partial: the manifest, slots and one official plugin exist; a marketplace does not.
+The plugin system is real but partial: the manifest, slots and two official plugins (claim and evidence health, and the Case Assistant) exist; a marketplace does not.
 Staging deploys and the staging reseed workflow share one concurrency queue (`staging-database`), so a deploy and a reseed never run at the same time.
 Recover a broken staging database with one manual run of the reseed workflow (`gh workflow run seed-staging.yml --ref staging`), then restart the staging app if its health check does not return 200 within a few minutes.

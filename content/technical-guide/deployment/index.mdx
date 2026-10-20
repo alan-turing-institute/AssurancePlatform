@@ -37,7 +37,8 @@ Supply secrets through the deployment environment. These variable names come fro
 
 The table covers common settings rather than every application variable. `TEA_PLUGINS_DISABLED` disables selected compiled plugins; `SKIP_ELEMENT_VALIDATION` bypasses write-time element validation and must never be set in production. GitHub sign-in also reads `GITHUB_APP_CLIENT_ID_STAGING` and `GITHUB_APP_CLIENT_SECRET_STAGING` fallbacks. The compose file exposes only a subset of the application's optional integrations. Set Google, email and cron variables in the hosting environment if you use those features. A deployment should use its own secret values and a database password rather than the compose development defaults. The [scheduled jobs page](/docs/technical-guide/deployment/scheduled-jobs) explains the cron routes.
 
-`TEA_PLUGINS_DISABLED=tea.assistant` withholds the Case Assistant plugin, and the [Case Assistant page](/docs/technical-guide/architecture/case-assistant) describes the model settings and variables it uses.
+To withhold a plugin from every user, list its id in `TEA_PLUGINS_DISABLED` (for example `tea.assistant`).
+The [Case Assistant page](/docs/technical-guide/architecture/case-assistant) describes the model settings and variables the Case Assistant uses.
 
 ## Security and operations
 
