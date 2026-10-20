@@ -3,7 +3,10 @@ import { evidenceNodeText } from "@/lib/health-evidence-node-text";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { isWriteConflict } from "@/lib/prisma-errors";
-import type { HealthCheck } from "@/lib/schemas/health-checks";
+import {
+	type HealthCheck,
+	normaliseRecommendation,
+} from "@/lib/schemas/health-checks";
 import {
 	checkListIssues,
 	computeSource,
@@ -13,6 +16,7 @@ import {
 	type HealthCriteriaSettings,
 	issuesToFieldErrors,
 	nextCounters,
+	normaliseSettings,
 	type ServedSettings,
 	type SettingsSource,
 	servedFromStored,
@@ -268,6 +272,8 @@ export interface CriteriaView {
 		reason: string | null;
 	} | null;
 	latest_result: { differences: EchoDifference[]; record_id: string } | null;
+	/** The version of the check the pipeline lists now; null when it no longer lists the check or the claim has no settings in use. */
+	offered_version: string | null;
 	pipeline_read: { at: string; revision: number | null } | null;
 }
 
@@ -281,26 +287,39 @@ const NO_CRITERIA: CriteriaView = {
 	last_change: null,
 	pipeline_read: null,
 	check_offer: null,
+	offered_version: null,
 	latest_result: null,
 };
+
+interface CheckOfferView {
+	offer: CheckOffer;
+	/** The version the pipeline lists for the check; null when it does not list it. */
+	version: string | null;
+}
 
 async function checkOfferOf(
 	row: PluginHealthCriteria,
 	caseId: string
-): Promise<CheckOffer> {
+): Promise<CheckOfferView> {
+	const notOffered = { offer: "not-offered", version: null } as const;
 	if (!row.integrationId) {
-		return "not-offered";
+		return notOffered;
 	}
 	const offered = await loadOfferedChecks(row.integrationId, caseId);
-	const named = offered?.checks.filter((check) => check.name === row.checkName);
-	if (!named || named.length === 0) {
-		return "not-offered";
+	const named =
+		offered?.checks.filter((check) => check.name === row.checkName) ?? [];
+	const [listed] = named;
+	if (!listed) {
+		return notOffered;
 	}
 	const version = (row.settings as { check: { version: string } }).check
 		.version;
-	return named.some((check) => check.version === version)
-		? "current"
-		: "newer-version";
+	return {
+		offer: named.some((check) => check.version === version)
+			? "current"
+			: "newer-version",
+		version: listed.version,
+	};
 }
 
 async function latestResultOf(
@@ -383,7 +402,9 @@ async function buildCriteriaView(
 		criteria: servedCriteria(row),
 		evidence_node: node?.node ?? null,
 		evidence_node_text: await criteriaNodeText(claimId, node?.node),
-		check_description: row.checkDescription as unknown as HealthCheck,
+		check_description: normaliseRecommendation(
+			row.checkDescription as unknown as HealthCheck
+		),
 		integration,
 		accepted_by:
 			row.state === "ACCEPTED" && row.acceptedById
@@ -403,7 +424,8 @@ async function buildCriteriaView(
 		pipeline_read: row.lastReadAt
 			? { at: row.lastReadAt.toISOString(), revision: row.lastReadRevision }
 			: null,
-		check_offer: offer,
+		check_offer: offer?.offer ?? null,
+		offered_version: offer?.version ?? null,
 		latest_result: latest,
 	};
 }
@@ -534,7 +556,7 @@ async function writeSave(
 ): Promise<void> {
 	const { input, userId } = context;
 	const previousSettings = previous
-		? (previous.settings as unknown as HealthCriteriaSettings)
+		? normaliseSettings(previous.settings as unknown as HealthCriteriaSettings)
 		: null;
 	const counters = nextCounters(
 		previous && previousSettings

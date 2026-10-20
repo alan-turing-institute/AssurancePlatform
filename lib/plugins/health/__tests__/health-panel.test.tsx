@@ -303,6 +303,77 @@ describe("HealthPanel — levels with a marginal limit", () => {
 	});
 });
 
+describe("HealthPanel — the share and the percentile of a reduction", () => {
+	it("describes a share from its rule, with its marginal limit", async () => {
+		mockLog([
+			item(
+				{},
+				{
+					aggregation: {
+						kind: "proportion",
+						params: { use_verdict: true },
+						rule: {
+							kind: "threshold",
+							direction: "maximize",
+							params: { pass_values: 0.8, marginal_values: 0.7 },
+							version: "a3",
+						},
+						version: "a3",
+					},
+				}
+			),
+		]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+		const entry = await screen.findByTestId("health-evidence-entry");
+		expect(entry).toHaveTextContent(
+			"share passing at least 0.8 (marginal from 0.7) \u00b7 a3"
+		);
+	});
+
+	it("still describes a share and a percentile reduction written in the older form", async () => {
+		mockLog([
+			item(
+				{},
+				{
+					reduction: { kind: "percentile", params: { p: 95 }, version: "d1" },
+					aggregation: {
+						kind: "proportion",
+						params: { threshold: 0.9, marginal_threshold: 0.8 },
+						version: "a1",
+					},
+				}
+			),
+		]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+		const entry = await screen.findByTestId("health-evidence-entry");
+		expect(entry).toHaveTextContent(
+			"percentile 95, judged by the reading rule"
+		);
+		expect(entry).toHaveTextContent(
+			"share passing at least 0.9 (marginal from 0.8) \u00b7 a1"
+		);
+	});
+
+	it("describes a percentile reduction from percentile", async () => {
+		mockLog([
+			item(
+				{},
+				{
+					reduction: {
+						kind: "percentile",
+						params: { percentile: 90 },
+						version: "d2",
+					},
+				}
+			),
+		]);
+		render(<HealthPanel {...CLAIM_CONTEXT} />, { withProviders: false });
+		expect(
+			await screen.findByTestId("health-evidence-entry")
+		).toHaveTextContent("percentile 90, judged by the reading rule \u00b7 d2");
+	});
+});
+
 describe("HealthPanel — paging", () => {
 	it("loads the next older page with 'Load older' until there is none", async () => {
 		const requested: string[] = [];

@@ -81,7 +81,8 @@ export const validForSchema = z
 // Parameter bags
 // ---------------------------------------------------------------------------
 
-const PROTOTYPE_KEY = "__proto__";
+export const PROTOTYPE_KEY = "__proto__";
+export const PROTOTYPE_KEY_MESSAGE = `${PROTOTYPE_KEY} is not an allowed name`;
 
 /**
  * Refuses a key named `__proto__` at any depth. A record schema drops such a
@@ -101,7 +102,7 @@ const noPrototypeKeys = z.unknown().superRefine((value, ctx) => {
 			ctx.addIssue({
 				code: "custom",
 				path: [...item.path, PROTOTYPE_KEY],
-				message: `${PROTOTYPE_KEY} is not an allowed name`,
+				message: PROTOTYPE_KEY_MESSAGE,
 			});
 		}
 		for (const [key, child] of Object.entries(item.value)) {
@@ -298,6 +299,44 @@ function isFraction(value: unknown): boolean {
 export interface AggregationInput {
 	kind: (typeof AGGREGATION_KINDS)[number];
 	params: ParamsBag;
+	/** Only whether the aggregation has its own rule matters here; the rule is checked where it is parsed. */
+	rule?: unknown;
+}
+
+const FRACTION_MESSAGE = "must be a number from 0 to 1";
+
+const paramIssueAt = (key: string, message: string): ParamIssue => ({
+	path: ["params", key],
+	message,
+});
+
+/** A share's pass mark: its aggregation's own rule, or `params.threshold`. */
+function shareParamIssues(params: ParamsBag, hasRule: boolean): ParamIssue[] {
+	const issues: ParamIssue[] = [];
+	if (params.threshold !== undefined) {
+		if (!isFraction(params.threshold)) {
+			issues.push(paramIssueAt("threshold", FRACTION_MESSAGE));
+		}
+	} else if (!hasRule) {
+		issues.push({
+			path: ["rule"],
+			message: "is required when params.threshold is absent",
+		});
+	}
+	if (
+		params.marginal_threshold !== undefined &&
+		!isFraction(params.marginal_threshold)
+	) {
+		issues.push(paramIssueAt("marginal_threshold", FRACTION_MESSAGE));
+	}
+	return issues;
+}
+
+function percentileParamIssues(params: ParamsBag): ParamIssue[] {
+	const { percentile } = params;
+	return typeof percentile === "number" && percentile >= 0 && percentile <= 100
+		? []
+		: [paramIssueAt("percentile", "must be a number from 0 to 100")];
 }
 
 /** What `aggregation` has wrong in its `params` for its kind, as issues relative to the aggregation. */
@@ -306,34 +345,20 @@ export function aggregationParamIssues(
 ): ParamIssue[] {
 	const { params } = aggregation;
 	const issues: ParamIssue[] = [];
-	const fail = (key: string, message: string) =>
-		issues.push({ path: ["params", key], message });
-
 	if (params.avail_floor !== undefined && !isFraction(params.avail_floor)) {
-		fail("avail_floor", "must be a number from 0 to 1");
+		issues.push(paramIssueAt("avail_floor", FRACTION_MESSAGE));
 	}
 	if (
 		params.use_verdict !== undefined &&
 		typeof params.use_verdict !== "boolean"
 	) {
-		fail("use_verdict", "must be true or false");
+		issues.push(paramIssueAt("use_verdict", "must be true or false"));
 	}
 	if (aggregation.kind === "proportion") {
-		if (!isFraction(params.threshold)) {
-			fail("threshold", "must be a number from 0 to 1");
-		}
-		if (
-			params.marginal_threshold !== undefined &&
-			!isFraction(params.marginal_threshold)
-		) {
-			fail("marginal_threshold", "must be a number from 0 to 1");
-		}
+		issues.push(...shareParamIssues(params, aggregation.rule !== undefined));
 	}
 	if (aggregation.kind === "percentile") {
-		const percentile = params.percentile;
-		if (typeof percentile !== "number" || percentile < 0 || percentile > 100) {
-			fail("percentile", "must be a number from 0 to 100");
-		}
+		issues.push(...percentileParamIssues(params));
 	}
 	return issues;
 }
@@ -347,14 +372,93 @@ function checkAggregationParams(
 	}
 }
 
-/** An aggregation without its version label and without the per-kind parameter checks. */
+/**
+ * An aggregation without its version label and without the per-kind parameter
+ * checks. Its rule, when it has one, judges the combined result.
+ */
 export const aggregationBaseSchema = z.strictObject({
 	kind: z.enum(AGGREGATION_KINDS, {
 		message: `must be one of ${AGGREGATION_KINDS.join(", ")}`,
 	}),
 	params: paramsBagSchema,
+	rule: ruleBaseSchema.optional(),
 });
 
 export const aggregationSchema = aggregationBaseSchema
-	.extend({ version: versionSchema })
+	.extend({ rule: ruleSchema.optional(), version: versionSchema })
 	.superRefine(checkAggregationParams);
+
+// ---------------------------------------------------------------------------
+// Older forms
+// ---------------------------------------------------------------------------
+
+export function isPlainObject(
+	value: unknown
+): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A share's pass mark `params.threshold`, as the aggregation's own threshold rule. */
+function shareWithRule(aggregation: unknown): unknown {
+	if (
+		!(
+			isPlainObject(aggregation) &&
+			aggregation.kind === "proportion" &&
+			aggregation.rule === undefined &&
+			isPlainObject(aggregation.params) &&
+			Object.hasOwn(aggregation.params, "threshold")
+		)
+	) {
+		return aggregation;
+	}
+	const { threshold, ...params } = aggregation.params;
+	return {
+		...aggregation,
+		params,
+		rule: {
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: threshold },
+		},
+	};
+}
+
+/** A reduction's percentile given as `params.p`, under its current name `params.percentile`. */
+function percentileNamed(reduction: unknown): unknown {
+	if (
+		!(
+			isPlainObject(reduction) &&
+			reduction.kind === "percentile" &&
+			isPlainObject(reduction.params) &&
+			Object.hasOwn(reduction.params, "p") &&
+			!Object.hasOwn(reduction.params, "percentile")
+		)
+	) {
+		return reduction;
+	}
+	const { p, ...params } = reduction.params;
+	return { ...reduction, params: { ...params, percentile: p } };
+}
+
+/**
+ * The blocks of settings or of a recommendation with the older ways of
+ * writing the combining steps brought up to date: a share's pass mark becomes
+ * the aggregation's own rule, and a reduction's `p` becomes `percentile`.
+ * Anything that is not recognised is returned as it came, so this is safe to
+ * apply to stored data of any shape. Applying it twice changes nothing more.
+ */
+export function normaliseCombiningBlocks(blocks: unknown): unknown {
+	if (!isPlainObject(blocks)) {
+		return blocks;
+	}
+	const reduction = percentileNamed(blocks.reduction);
+	const aggregation = shareWithRule(blocks.aggregation);
+	if (reduction === blocks.reduction && aggregation === blocks.aggregation) {
+		return blocks;
+	}
+	return {
+		...blocks,
+		...(blocks.reduction !== undefined && { reduction }),
+		...(blocks.aggregation !== undefined && { aggregation }),
+	};
+}

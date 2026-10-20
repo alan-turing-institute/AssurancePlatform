@@ -237,7 +237,7 @@ describe("version labels", () => {
 			claim.id,
 			integration.id,
 			itemSettingsWith((settings) => {
-				settings.aggregation.params.threshold = 0.5;
+				settings.aggregation.rule.params.pass_values = 0.5;
 			}),
 			false
 		);
@@ -340,7 +340,12 @@ describe("version labels", () => {
 				settings: numericSettings({
 					aggregation: {
 						kind: "proportion",
-						params: { threshold: 0.5, avail_floor: 0.8, use_verdict: true },
+						params: { avail_floor: 0.8, use_verdict: true },
+						rule: {
+							kind: "threshold",
+							direction: "maximize",
+							params: { pass_values: 0.5 },
+						},
 					},
 				}),
 				accept: true,
@@ -411,7 +416,7 @@ describe("version labels", () => {
 			claim.id,
 			integration.id,
 			itemSettingsWith((s) => {
-				s.aggregation.params.threshold = 0.5;
+				s.aggregation.rule.params.pass_values = 0.5;
 			})
 		);
 		expect(edited.body.criteria.source).toMatchObject({
@@ -1291,6 +1296,7 @@ describe("the settings read", () => {
 			last_change: null,
 			pipeline_read: null,
 			check_offer: null,
+			offered_version: null,
 			latest_result: null,
 		});
 	});

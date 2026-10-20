@@ -169,6 +169,8 @@ export interface HealthCriteriaResponse {
 		differences: HealthEchoDifference[];
 		record_id: string;
 	} | null;
+	/** The version of the check the pipeline lists now; null when it does not list the check. */
+	offered_version: string | null;
 	pipeline_read: { at: string; revision: number | null } | null;
 }
 

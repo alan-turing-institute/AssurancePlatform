@@ -248,7 +248,7 @@ function ReductionSection({
 						{reduction.kind === "percentile" && (
 							<TextField
 								disabled={disabled}
-								error={analysis.errors["reduction.params.p"]}
+								error={analysis.errors["reduction.params.percentile"]}
 								inputMode="decimal"
 								label="Percentile (0 to 100)"
 								onChange={(percentile) => patch({ percentile })}
@@ -327,7 +327,7 @@ function AggregationSection({
 			<div className="grid gap-3 sm:grid-cols-2">
 				<TextField
 					disabled={disabled}
-					error={analysis.errors["aggregation.params.threshold"]}
+					error={analysis.errors["aggregation.rule.params.pass_values"]}
 					inputMode="decimal"
 					label="Claim passes at"
 					onChange={(threshold) =>

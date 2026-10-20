@@ -17,7 +17,9 @@ import { listCaseCheckLists } from "@/lib/services/health-check-catalogue-servic
  * Returns the check lists of the active integrations whose system user has
  * EDIT on the case, each as `{ integration: { id, name }, pipeline,
  * published_at, checks }`. A check holds its name, version, description,
- * scope, value type, the settings it describes and any recommended settings.
+ * scope, value type, the settings it describes as a list and any recommended
+ * settings, which are given in the current form whichever form the pipeline
+ * published them in.
  * @response 200 - `[{ integration, pipeline, published_at, checks }]`
  * @response 401 - No session
  * @response 403 - The `tea.health` plugin is not enabled for this deployment/user

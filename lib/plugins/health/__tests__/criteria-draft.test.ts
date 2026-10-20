@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { HealthCheck } from "@/lib/schemas/health-checks";
+import {
+	type HealthCheck,
+	normaliseRecommendation,
+} from "@/lib/schemas/health-checks";
 import {
 	checkListIssues,
 	healthCriteriaSettingsSchema,
@@ -60,10 +63,14 @@ describe("the draft built from each demo check's recommendation", () => {
 	it("sends shares as fractions and durations in ISO 8601", () => {
 		const check = demo(ITEM_CHECK_NAME);
 		const { complete } = analyseDraft(draftFromCheck(check, "i"), check);
-		expect(complete?.aggregation?.params).toMatchObject({
-			threshold: 0.95,
+		expect(complete?.aggregation?.params).toEqual({
 			avail_floor: 0.8,
 			use_verdict: true,
+		});
+		expect(complete?.aggregation?.rule).toEqual({
+			kind: "threshold",
+			direction: "maximize",
+			params: { pass_values: 0.95 },
 		});
 		expect(complete?.reduction?.rule?.params).toEqual({
 			pass_values: 0.8,
@@ -92,7 +99,8 @@ describe("percentages and durations", () => {
 			d.aggregation.threshold = "57";
 		});
 		expect(
-			analyseDraft(changed, check).complete?.aggregation?.params.threshold
+			analyseDraft(changed, check).complete?.aggregation?.rule?.params
+				?.pass_values
 		).toBe(0.57);
 	});
 
@@ -343,7 +351,7 @@ describe("messages", () => {
 		).toBe("must lie on the failing side of the pass limit (below it)");
 		expect(
 			friendlyMessage(
-				"aggregation.params.threshold",
+				"aggregation.rule.params.pass_values",
 				"must be a number from 0 to 1"
 			)
 		).toBe("must be a number from 0 to 100");
@@ -462,9 +470,10 @@ describe("numbers as typed", () => {
 				...base,
 				aggregation: {
 					...base.aggregation,
-					params: {
-						...base.aggregation.params,
-						threshold: 0.333_333_333_333_333,
+					rule: {
+						kind: "threshold",
+						direction: "maximize",
+						params: { pass_values: 0.333_333_333_333_333 },
 					},
 				},
 			},
@@ -473,8 +482,27 @@ describe("numbers as typed", () => {
 		const draft = draftFromStored(stored, item, "i");
 		expect(draft.aggregation.threshold).toBe("33.3333333333333");
 		expect(
-			analyseDraft(draft, item).complete?.aggregation?.params.threshold
+			analyseDraft(draft, item).complete?.aggregation?.rule?.params?.pass_values
 		).toBe(0.333_333_333_333_333);
+	});
+
+	it("sends the parameters of the combining rule that the form does not show back unchanged", () => {
+		const base = analyseDraft(draftFromCheck(item, "i"), item).complete;
+		if (!base?.aggregation) {
+			throw new Error("the demo recommendation is not complete");
+		}
+		const rule = {
+			kind: "threshold" as const,
+			direction: "maximize" as const,
+			params: { pass_values: 0.95, tolerance: 0.01 },
+		};
+		const stored = servedSettings(
+			{ ...base, aggregation: { ...base.aggregation, rule } },
+			{ rule: 1, reduction: 1, aggregation: 1 }
+		);
+		const draft = draftFromStored(stored, item, "i");
+		expect(draft.aggregation.threshold).toBe("95");
+		expect(analyseDraft(draft, item).complete?.aggregation?.rule).toEqual(rule);
 	});
 
 	it.each([
@@ -488,7 +516,7 @@ describe("numbers as typed", () => {
 			d.aggregation.threshold = typed;
 		});
 		expect(
-			analyseDraft(draft, item).complete?.aggregation?.params.threshold
+			analyseDraft(draft, item).complete?.aggregation?.rule?.params?.pass_values
 		).toBe(fraction);
 	});
 
@@ -532,7 +560,9 @@ describe("numbers as typed", () => {
 			d.aggregation.threshold = "";
 		});
 		const analysis = analyseDraft(draft, item);
-		expect(analysis.errors["aggregation.params.threshold"]).toBe("is required");
+		expect(analysis.errors["aggregation.rule.params.pass_values"]).toBe(
+			"is required"
+		);
 		expect(analysis.complete).toBeNull();
 	});
 
@@ -550,5 +580,86 @@ describe("numbers as typed", () => {
 		expect(
 			analyseDraft(draft, numeric).errors["rule.params.marginal_values"]
 		).toBe("needs both ends");
+	});
+});
+
+describe("the combining steps in the current form", () => {
+	const item = demo(ITEM_CHECK_NAME);
+	const withAggregation = (aggregation: unknown): HealthCheck =>
+		({
+			...item,
+			recommended: { ...item.recommended, aggregation },
+		}) as HealthCheck;
+
+	it("writes a percentile reduction's percentile under percentile and the share as the aggregation's own rule", () => {
+		const check = demo(NUMERIC_CHECK_NAME);
+		const draft = edited(check, (d) => {
+			d.reductionOn = true;
+			d.reduction = { ...d.reduction, kind: "percentile", percentile: "95" };
+		});
+		const { complete } = analyseDraft(draft, check);
+		expect(complete?.reduction?.params).toEqual({ percentile: 95 });
+		expect(complete?.aggregation).toEqual({
+			kind: "proportion",
+			params: { avail_floor: 0.8, use_verdict: true },
+			rule: {
+				kind: "threshold",
+				direction: "maximize",
+				params: { pass_values: 0.9 },
+			},
+		});
+	});
+
+	it("fills the form from an older recommendation once it is converted, and calls it usable", () => {
+		const older = withAggregation({
+			kind: "proportion",
+			params: { threshold: 0.9, avail_floor: 0.8, use_verdict: true },
+		});
+		const check = normaliseRecommendation(older);
+		expect(draftFromCheck(check, "i").aggregation.threshold).toBe("90");
+		expect(recommendationIsUsable(check, "i")).toBe(true);
+	});
+
+	it("does not call a recommendation usable when its combining step is not a share with a pass mark and nothing else", () => {
+		const rule = (params: Record<string, unknown>) => ({
+			kind: "threshold",
+			direction: "maximize",
+			params,
+		});
+		const unusable = [
+			{
+				kind: "worst-of",
+				params: { use_verdict: true },
+				rule: rule({ pass_values: 1 }),
+			},
+			{ kind: "proportion", params: { use_verdict: true } },
+			{
+				kind: "proportion",
+				params: { use_verdict: true },
+				rule: rule({ pass_values: 0.9, marginal_values: 0.8 }),
+			},
+		];
+		for (const aggregation of unusable) {
+			expect(
+				recommendationIsUsable(withAggregation(aggregation), "i"),
+				JSON.stringify(aggregation)
+			).toBe(false);
+		}
+	});
+
+	it("shows an error on the share's pass mark under the path the form places it by", () => {
+		const draft = edited(item, (d) => {
+			d.aggregation.threshold = "150";
+		});
+		const analysis = analyseDraft(draft, item);
+		expect(analysis.errors["aggregation.rule.params.pass_values"]).toBe(
+			"must be a number from 0 to 1"
+		);
+		expect(
+			friendlyMessage(
+				"aggregation.rule.params.pass_values",
+				analysis.errors["aggregation.rule.params.pass_values"] ?? ""
+			)
+		).toBe("must be a number from 0 to 100");
 	});
 });

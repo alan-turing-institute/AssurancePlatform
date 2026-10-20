@@ -131,6 +131,10 @@ export async function GET(
  * The body must be a format 1.1 record exactly.
  * Unknown top-level fields are rejected, and extra `provenance` keys are kept
  * as sent.
+ * An `aggregation` may carry a `rule` (with its own `version`) that judges the
+ * combined result, and a `proportion` needs either that `rule` or a
+ * `params.threshold` from 0 to 1.
+ * A reduction names its percentile `params.percentile`, or `p`.
  * `claim_ref` in the body must equal the path `[id]`; a mismatch is a 400 and
  * is never retargeted.
  * The first record accepted for a claim binds the claim to its check, and a
@@ -138,7 +142,7 @@ export async function GET(
  * A repeated `record_id` is refused with 409.
  * The status change is announced only after the record has been stored.
  *
- * @description Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.
+ * @description Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. An `aggregation` in the record may carry a `rule` that judges the combined result, and a reduction names its percentile `params.percentile`, or `p`. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.
  * @response 201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`, `mismatch`)
  * @response 400 - Invalid body (the field is named), or `claim_ref` does not match the path id
  * @response 401 - Unauthorised (missing, invalid or wrong-scope token)

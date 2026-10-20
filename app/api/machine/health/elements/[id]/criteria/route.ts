@@ -16,12 +16,14 @@ import { readClaimCriteriaForPipeline } from "@/lib/services/health-criteria-ser
  *
  * Returns the claim's accepted settings when their check came from the
  * calling integration's own check list, in the item shape of the case route.
+ * The aggregation carries its own `rule`, and a percentile reduction names its
+ * percentile `params.percentile`.
  * Suggested, inactive and another pipeline's settings give the same 404 as no
  * settings at all.
  * Reading records when and which revision was read, without changing
  * `updated_at`.
  *
- * @description Returns the evidence settings accepted for one property claim when their check came from the calling integration's own check list, in the item shape of the case route; suggested settings, inactive settings and another pipeline's settings give the same 404 as no settings at all, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.
+ * @description Returns the evidence settings accepted for one property claim when their check came from the calling integration's own check list, in the item shape of the case route, where each aggregation carries its own `rule` and a percentile reduction names its percentile `params.percentile`; suggested settings, inactive settings and another pipeline's settings give the same 404 as no settings at all, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.
  * @response 200 - One item, as in `GET /api/machine/health/cases/[id]/criteria`
  * @response 401 - Unauthorised (missing, invalid or wrong-scope token)
  * @response 403 - The `tea.health` plugin is not on for the integration's account: the deployment withholds it

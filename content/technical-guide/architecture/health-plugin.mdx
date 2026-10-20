@@ -32,8 +32,8 @@ Unknown top-level fields are rejected, so a producer cannot supply values the se
 | `claim_ref` | The property claim's UUID. It must equal the id in the path. |
 | `check` | `name`, `version` and `scope` (non-empty strings without leading or trailing whitespace), and optional `params`. A `scope` of `environment` means the check measures the whole system. |
 | `rule` | How each reading is judged: `kind` (`identity`, `threshold`, `band`, `membership`), the `direction` (`maximize`, `minimize` or `target`) for a threshold, `params`, and a `version`. |
-| `reduction` | Optional. How one subject's readings in the window were combined: `kind` (`sum`, `mean`, `max`, `min`, `median`, `percentile`, `last`), `params`, an optional `rule`, and a `version`. |
-| `aggregation` | Present on a population summary. `kind` (`proportion`, `worst-of`, `percentile`), `params` and a `version`. |
+| `reduction` | Optional. How one subject's readings in the window were combined: `kind` (`sum`, `mean`, `max`, `min`, `median`, `percentile`, `last`), `params`, an optional `rule`, and a `version`. A percentile is given as `params.percentile`; `p` is also read. |
+| `aggregation` | Present on a population summary. `kind` (`proportion`, `worst-of`, `percentile`), `params`, an optional `rule` that judges the combined result (with its own `version`), and a `version`. A `proportion` needs either a `rule` or a `params.threshold` from 0 to 1. |
 | `value` | A boolean, a string, or `{number, unit}` where `unit` may be a string, `null` or left out. It may be absent only when the verdict is `indeterminate`. A `null` value is stored as absent. |
 | `verdict` | `pass`, `marginal`, `fail` or `indeterminate`. The verdict is the check's own; TEA does not re-judge it. |
 | `window` | The window's length as an ISO 8601 duration of at most 100 years. The window is `[timestamp - window, timestamp]`. |
@@ -245,7 +245,7 @@ A person with edit access sets them up; a machine token cannot.
 
 | Route | Purpose |
 |---|---|
-| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered, how the claim's current result compares, the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings), where the claim's evidence node is (`evidence_node`, null when it has none), and for a live node its text and the check that text names (`evidence_node_text`, null otherwise). Needs view access. |
+| `GET /api/elements/[id]/health/criteria` | The settings with their state, who accepted them, the newest change, when the pipeline last read them, whether the check is still offered (`check_offer`) and the version the pipeline lists now (`offered_version`, null when it does not list the check), how the claim's current result compares, the check's entry in the check list as it was when the check was last found there (`check_description`, null when the claim has no settings), where the claim's evidence node is (`evidence_node`, null when it has none), and for a live node its text and the check that text names (`evidence_node_text`, null otherwise). Needs view access. |
 | `PUT /api/elements/[id]/health/criteria` | Saves the settings. The body is `{ integration_id, settings, accept, expected_revision?, add_evidence_node?, update_evidence_node_text? }`. Needs edit access. |
 | `POST /api/elements/[id]/health/criteria/retirement` | Stops using the settings. The body is `{ reason, evidence_node? }`. Needs edit access. |
 | `POST /api/elements/[id]/health/evidence-node` | Adds the evidence node to a claim whose settings are accepted and that has no live node. Takes no body. Needs edit access. |
@@ -281,15 +281,20 @@ The direction is `maximize` or `minimize`, and a marginal limit must lie on the 
 - A whole-system check (scope `environment`) has no reduction and no aggregation.
 Any other check needs an aggregation.
 A check that returns text takes no reduction.
-- A reduction is one of `sum`, `mean`, `max`, `min`, `median`, `percentile` (with `p`) or `last`.
+- A reduction is one of `sum`, `mean`, `max`, `min`, `median`, `percentile` (with `params.percentile` from 0 to 100) or `last`.
 When the reading rule is `identity` or `membership` and the reduction averages, adds or takes a percentile, the reduction needs its own `threshold` or `band` rule, because the combined value is a number.
-- The aggregation is `proportion` with a `threshold` from 0 to 1 and `use_verdict` set to true.
-A marginal threshold is not available.
+- The aggregation is `proportion` with `use_verdict` set to true and a `rule` of its own: a `threshold` rule with direction `maximize` and a pass mark `pass_values` from 0 to 1.
+The rule is required, and a marginal mark on it is not available.
+`params.threshold` and `params.marginal_threshold` are not available either, because the pass mark is the rule's.
+A refused field is reported by its path, for example `settings.aggregation.rule.params.pass_values`.
+- A request that gives the pass mark as `aggregation.params.threshold`, or a percentile reduction's percentile as `params.p`, is converted to the current form before it is checked, and stored in the current form.
+A percentile reduction that gives both `params.percentile` and `params.p` is refused on `params.p`, so a stored row never carries both.
 - `window` and `valid_for` are durations of at most 100 years; `valid_for` may be `indefinite`.
 `window` is required for every check, because every record carries one.
 
 Version labels count the changes to a block.
 The rule's label is `r<n>`, the reduction's `d<n>` and the aggregation's `a<n>`.
+The aggregation's own rule carries the aggregation's label, as the reduction's rule carries the reduction's.
 Each counter goes up by one when a save changes that block, and the first save makes each present block `1`.
 Changing the check's name raises all three.
 A counter never goes back, so a label never means two different things.
@@ -308,6 +313,7 @@ A claim's current result is the one that colours its badge.
 The first figure counts claims whose current result has no time limit, out of claims with a current result.
 The second counts checks with at least one such claim, out of the checks in use.
 The third counts accepted settings that are exactly what the check recommends, out of all accepted settings.
+A recommendation is compared in its current form, whichever form the pipeline published it in.
 
 ## The evidence node
 
@@ -475,8 +481,25 @@ The rules check counts it as support for its claim whatever the claim's current 
 A pipeline tells TEA which checks it can run with `PUT /api/machine/health/checks`, using a token with the `health:checks:write` scope.
 The body is `{ pipeline, checks }`.
 Each check has `name`, `version`, `scope` and `value` (`boolean`, `number` with an optional `unit`, `string` with an optional `allowed` list, or `datetime`).
-It may also have `description`, `scope_label` (`{ one, many }`), `params` (the settings the check describes, each with a `key`, `label`, `type`, optional `default`, `unit` and `options`) and `recommended` (suggested settings, with any block absent).
+A value type of `scalar` is accepted and stored as `number`.
+It may also have `description`, `scope_label` (`{ one, many }`), `params` (the settings the check describes) and `recommended` (suggested settings, with any block absent).
 Unknown keys are refused, apart from inside the `params` bags of a rule, reduction or aggregation.
+
+`params` takes either of two forms, and the list is what is stored and served.
+
+- A list of settings, each with a `key`, `label`, `type` (`string`, `number`, `boolean`, `duration` or `enum`), and optional `default`, `unit` and `options`.
+This form can describe a setting with no default or with a fixed set of choices.
+- A plain object of setting name to default value, for example `{ "max_dt": "PT12S", "strict": false }`.
+Each setting's type comes from its value: `true` or `false` is `boolean`, a finite number is `number`, text that is a duration TEA accepts is `duration`, and any other text is `string`.
+Its label is the name with every underscore replaced by a space, the first character in upper case and the rest in lower case, so `max_dt` is shown as "Max dt".
+A value that is `null`, a list or an object, a non-finite number, an empty name, the name `__proto__`, or a name whose label would be longer than 200 characters is refused, naming the setting.
+The list form refuses a `key` of `__proto__` in the same way.
+A setting written this way has no unit label and no fixed choices, so TEA cannot catch a misspelt value; use the list form with `type: enum` for that.
+
+A recommendation may carry a `version` label on its rule, reduction, the reduction's rule, aggregation and the aggregation's rule.
+It is accepted and dropped, because version labels are counted by TEA.
+A recommended aggregation may carry a `rule`, and a share needs one to be used as it stands.
+A recommendation that gives a share's pass mark as `aggregation.params.threshold`, or a percentile reduction's percentile as `params.p`, is read in the current form wherever it is judged or served.
 A list has at most 200 checks, one entry per check name, and a body of at most 256 KB, above which the answer is 413.
 Names, versions and scopes may not start or end with a space.
 
@@ -484,6 +507,7 @@ The list replaces the integration's previous one.
 Publishing never changes any claim's settings.
 A recommendation is checked for shape when published, and judged as settings only for the blocks it names.
 One that would not pass as settings is stored all the same, and the response names the problem: `200 { checks, warnings: [{ check, problem }] }`.
+A combining step with no rule, and an aggregation other than `proportion`, are named this way.
 `GET /api/cases/[id]/health/checks` returns the lists of the active integrations that can edit the case, which is what the settings form offers.
 
 ## Read settings back
@@ -497,6 +521,9 @@ A second pipeline on the same case gets only its own.
 Suggested and inactive settings are never returned.
 Each item is `{ claim_ref, state, revision, check, rule, reduction?, aggregation?, window, valid_for, source, accepted_at, updated_at }`, with version labels in place.
 The reduction's own rule carries the reduction's label.
+The aggregation is `{ kind, params, rule, version }`, with the pass mark in `rule.params.pass_values` and the aggregation's label on both the aggregation and its rule.
+A percentile reduction's percentile is `reduction.params.percentile`.
+Settings stored in an earlier form are served in this form, with the same labels.
 People's names are left out.
 
 Reading records `last_read_at` and `last_read_revision` in one statement that returns the rows it touched, so the revision recorded is the revision served.

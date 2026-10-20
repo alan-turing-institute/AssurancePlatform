@@ -29,6 +29,29 @@ Settings accepted by a person are returned only to the integration whose check l
 An integration registered before `health:checks:write` and `health:criteria:read` existed does not hold them.
 Its owner adds them with one `PATCH /api/integrations/[id]` request that lists every scope the integration should hold, because no screen edits the scopes of an existing integration.
 
+## What a service publishes and reads back
+
+A service tells TEA which checks it can run, and TEA hands back the settings people accepted for them.
+Both exchanges have a plain form and a fuller form.
+
+When it publishes a check list, a check may describe its own settings in either form.
+The fuller form is a list, one entry per setting, with a key, a label, a type and optionally a default, a unit and a fixed set of choices.
+The plain form is an object of setting name to default value, such as `{ "max_dt": "PT12S", "strict": false }`.
+TEA takes each setting's type from its value (yes-or-no, number, duration or text) and makes its label from its name, so `max_dt` appears in the settings form as "Max dt" with an amount and a unit for the duration.
+A plain setting has no fixed choices, so use the list form for a setting that must be one of several values or has no default.
+A check that returns a number may give its value type as `scalar`, which TEA stores as `number`.
+Version labels inside a recommendation are accepted and ignored, because TEA keeps its own version labels for settings.
+
+A recommendation can name how the claim combines its subjects.
+The share of subjects that pass is written with its pass mark as a rule of its own: `{ "kind": "proportion", "params": { "use_verdict": true }, "rule": { "kind": "threshold", "direction": "maximize", "params": { "pass_values": 0.8 } } }`.
+A recommendation that has no rule on that step, or that uses another way of combining, is stored and reported in the response as a warning, and people have to choose the settings themselves.
+A recommendation that gives the pass mark as `params.threshold`, or a percentile as `params.p`, is still read.
+
+When the service reads accepted settings back, the combining step comes in the same form: the pass mark is in the step's rule, and both the step and its rule carry the step's version label.
+A percentile in the per-subject step is `params.percentile`.
+Settings stored in an earlier form are served in this one too, with the same version labels, so a result that echoes the labels it was given still matches.
+A result may carry the combining step's rule, and may still give a share's pass mark as `params.threshold`.
+
 ## Rotate, revoke or pause access
 
 The integration card lists active tokens by identifying prefix. **Rotate** issues a new secret and gives the previous token a 24-hour overlap window so a client can switch without an immediate interruption. Store the new secret when it is shown. **Revoke** stops a token. You can also suspend an integration, reactivate it, revoke or delete the whole integration, or remove a case grant. These controls have different scope: token revocation affects one credential, while suspension and integration revocation affect the client as a whole. Removing a case grant blocks that case even when the token and its scope remain valid.

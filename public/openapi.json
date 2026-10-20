@@ -2446,7 +2446,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, evidence_node, evidence_node_text, integration, accepted_by, last_change, pipeline_read, check_offer, latest_result }`"
+                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, evidence_node, evidence_node_text, integration, accepted_by, last_change, pipeline_read, check_offer, offered_version, latest_result }`"
                 }
               }
             }
@@ -3305,7 +3305,7 @@
       "put": {
         "operationId": "put-machine-health-checks",
         "summary": "PUT /api/machine/health/checks",
-        "description": "Publishes the list of checks a pipeline can run, replacing the integration's previous list, and returns how many checks it holds with a warning for each recommendation that would not pass as evidence settings. Needs a bearer token with the `health:checks:write` scope and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin; it addresses no case, so the integration needs no case grant. The body is `{ pipeline, checks }` with at most 200 checks, one per check name, in at most 256 KB, and unknown keys are refused.",
+        "description": "Publishes the list of checks a pipeline can run, replacing the integration's previous list, and returns how many checks it holds with a warning for each recommendation that would not pass as evidence settings. Needs a bearer token with the `health:checks:write` scope and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin; it addresses no case, so the integration needs no case grant. The body is `{ pipeline, checks }` with at most 200 checks, one per check name, in at most 256 KB, and unknown keys are refused. A check's `params` may be a plain object of setting name to default value, and a recommended `aggregation` may carry a `rule` that judges the combined result.",
         "tags": [
           "Machine"
         ],
@@ -3345,7 +3345,7 @@
       "get": {
         "operationId": "get-machine-health-cases-{id}-criteria",
         "summary": "GET /api/machine/health/cases/[id]/criteria",
-        "description": "Returns the evidence settings accepted for the claims of a case whose checks came from the calling integration's own check list, which are the settings its pipeline should judge results against; settings that are only suggested or are inactive are never returned, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
+        "description": "Returns the evidence settings accepted for the claims of a case whose checks came from the calling integration's own check list, which are the settings its pipeline should judge results against; settings that are only suggested or are inactive are never returned, and reading records which revision was read. Each aggregation carries its own `rule` with the pass mark in `rule.params.pass_values`, and a percentile reduction's percentile is `reduction.params.percentile`. Needs a bearer token with the `health:criteria:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
           "Machine"
         ],
@@ -3431,7 +3431,7 @@
       "get": {
         "operationId": "get-machine-health-elements-{id}-criteria",
         "summary": "GET /api/machine/health/elements/[id]/criteria",
-        "description": "Returns the evidence settings accepted for one property claim when their check came from the calling integration's own check list, in the item shape of the case route; suggested settings, inactive settings and another pipeline's settings give the same 404 as no settings at all, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
+        "description": "Returns the evidence settings accepted for one property claim when their check came from the calling integration's own check list, in the item shape of the case route, where each aggregation carries its own `rule` and a percentile reduction names its percentile `params.percentile`; suggested settings, inactive settings and another pipeline's settings give the same 404 as no settings at all, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
           "Machine"
         ],
@@ -3518,7 +3518,7 @@
       "post": {
         "operationId": "post-machine-health-elements-{id}-evidence",
         "summary": "POST /api/machine/health/elements/[id]/evidence",
-        "description": "Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.",
+        "description": "Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. An `aggregation` in the record may carry a `rule` that judges the combined result, and a reduction names its percentile `params.percentile`, or `p`. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.",
         "tags": [
           "Machine"
         ],

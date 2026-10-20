@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import prisma from "@/lib/prisma";
+import { healthCheckListSchema } from "@/lib/schemas/health-checks";
 import { publishHealthCheckList } from "@/lib/services/health-check-catalogue-service";
 import { registerIntegration } from "@/lib/services/integration-registry-service";
 import {
@@ -172,7 +173,7 @@ export async function addPipelineWithoutAccess(ownerId: string) {
 	expectSuccess(
 		await publishHealthCheckList(
 			{ integrationId: integration.id, systemUserId },
-			buildHealthCheckList() as never
+			healthCheckListSchema.parse(buildHealthCheckList())
 		)
 	);
 	return { integration, systemUserId };

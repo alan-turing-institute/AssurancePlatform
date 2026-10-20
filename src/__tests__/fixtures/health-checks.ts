@@ -50,7 +50,12 @@ export function buildHealthCheckList() {
 					},
 					aggregation: {
 						kind: "proportion",
-						params: { threshold: 0.95, avail_floor: 0.8, use_verdict: true },
+						params: { avail_floor: 0.8, use_verdict: true },
+						rule: {
+							kind: "threshold",
+							direction: "maximize",
+							params: { pass_values: 0.95 },
+						},
 					},
 					window: "PT1M",
 					valid_for: "PT5M",
@@ -81,7 +86,12 @@ export function buildHealthCheckList() {
 					},
 					aggregation: {
 						kind: "proportion",
-						params: { threshold: 0.9, avail_floor: 0.8, use_verdict: true },
+						params: { avail_floor: 0.8, use_verdict: true },
+						rule: {
+							kind: "threshold",
+							direction: "maximize",
+							params: { pass_values: 0.9 },
+						},
 					},
 					window: "PT5M",
 					valid_for: "PT30M",
@@ -101,6 +111,102 @@ export function buildHealthCheckList() {
 					},
 					window: "PT10M",
 					valid_for: "PT1H",
+				},
+			},
+		],
+	};
+}
+
+/** The numeric check as a pipeline writes it for itself. */
+export const PIPELINE_FORM_CHECK_NAME = "Weld Seam Gauge";
+/** A check whose recommended aggregation cannot be used as it stands. */
+export const WORST_OF_CHECK_NAME = "Joint Fit Check";
+
+/**
+ * A check list written the way a pipeline writes its own case file rather than
+ * TEA's fuller form: settings as a plain object of name to default, `scalar`
+ * for a number-valued check, version labels inside the recommendations, and
+ * combining steps that carry a rule. Two of its recommendations need
+ * attention when it is published: a combining step with no rule, and one that
+ * takes the worst item of a yes-or-no check.
+ */
+export function buildPipelineFormCheckList() {
+	return {
+		pipeline: HEALTH_CHECK_PIPELINE,
+		checks: [
+			{
+				name: ITEM_CHECK_NAME,
+				version: "0.3",
+				description: "Is the surface of the item free of visible marks?",
+				scope: "item",
+				value: { type: "boolean" },
+				params: { camera_line: "ALL" },
+				recommended: {
+					rule: { kind: "identity", version: "0.0" },
+					aggregation: {
+						kind: "proportion",
+						params: { avail_floor: 0.05, use_verdict: true },
+						rule: {
+							kind: "threshold",
+							direction: "maximize",
+							params: { pass_values: 0.8 },
+							version: "0.0",
+						},
+						version: "0.0",
+					},
+					window: "PT1M",
+					valid_for: "PT5M",
+				},
+			},
+			{
+				name: PIPELINE_FORM_CHECK_NAME,
+				version: "0.3",
+				description: "How far apart the two sides of a seam are.",
+				scope: "item",
+				value: { type: "scalar" },
+				params: {
+					reference_gap: "mean_gap",
+					max_dt: "PT12S",
+					strict: false,
+					tolerance: 0.5,
+				},
+				recommended: {
+					rule: {
+						kind: "threshold",
+						direction: "minimize",
+						params: { pass_values: 5, marginal_values: 10 },
+						version: "0.0",
+					},
+					aggregation: {
+						kind: "proportion",
+						params: { avail_floor: 0.8, use_verdict: true },
+						version: "0.0",
+					},
+					window: "PT1M",
+					valid_for: "PT5M",
+				},
+			},
+			{
+				name: WORST_OF_CHECK_NAME,
+				version: "0.3",
+				description: "Does the joint fit?",
+				scope: "item",
+				value: { type: "boolean" },
+				recommended: {
+					rule: { kind: "identity", version: "0.0" },
+					aggregation: {
+						kind: "worst-of",
+						params: { avail_floor: 0, use_verdict: true },
+						rule: {
+							kind: "threshold",
+							direction: "minimize",
+							params: { pass_values: 1 },
+							version: "0.0",
+						},
+						version: "0.0",
+					},
+					window: "PT1M",
+					valid_for: "PT5M",
 				},
 			},
 		],
