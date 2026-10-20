@@ -230,9 +230,11 @@ describe("read_claim_health — a reply with more than one call", () => {
 			createCaseTools("u", "c", null, undefined, undefined, true)
 		);
 
-		await expect(call()).rejects.toThrow("database down");
+		const first = await call();
 		const second = await call();
 
+		expect(first).toMatchObject({ found: false });
+		expect(JSON.stringify(first)).not.toContain("database down");
 		expect(second.found).toBe(true);
 	});
 });

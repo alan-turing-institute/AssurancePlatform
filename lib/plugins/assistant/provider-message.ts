@@ -5,9 +5,9 @@ import { APICallError, RetryError } from "ai";
  * words are shown to the user whose account they concern (for example, a model
  * that needs an age confirmation before use), cleaned first: invisible
  * characters are removed and control characters become spaces, then the user's
- * key, any bearer token and any `sk-` token are replaced, the connection's
- * address is removed, and the text is cut to a short line. They are never
- * written to a log.
+ * key, any bearer token, any `sk-` token and any masked key are replaced, the
+ * connection's address is removed, and the text is cut to a short line. They
+ * are never written to a log.
  */
 
 /** What is said when the provider gave no usable reason. */
@@ -25,7 +25,21 @@ export interface ProviderSecrets {
 /** A key shorter than this is not replaced, since it would also match ordinary words. */
 const MIN_KEY_CHARS_TO_REPLACE = 4;
 const BEARER_TOKEN = /\bBearer\s+[^\s"',;]+/gi;
-const SK_TOKEN = /\bsk-[\w-]{4,}/gi;
+/**
+ * A token that starts `sk-`, masked or not. A full stop belongs to it only
+ * when more of the token follows, so the stop that ends a sentence stays.
+ */
+const SK_TOKEN = /\bsk-(?:[\w*-]|\.(?=[\w*-])){4,}/gi;
+/**
+ * A token holding a run of four or more `*`, whatever its prefix, with
+ * everything attached on either side of the run. Providers mask a key this
+ * way and leave its first and last characters showing. Quotes, brackets,
+ * commas and semicolons end a token, and so does the stop that ends a
+ * sentence. The match starts only at the start of a token, so a long message
+ * is scanned once. Markdown emphasis never has four `*` in a row.
+ */
+const MASKED_TOKEN =
+	/(?<![^\s"',;()<>])[^\s"',;()<>]*\*{4,}(?:[^\s"',;()<>]*[^\s"',;()<>.:!?])?/g;
 const SPECIAL_REGEX_CHARACTERS = /[.*+?^${}()|[\]\\]/g;
 const SPACE_RUNS = / {2,}/g;
 const REDACTED_KEY = "[key removed]";
@@ -130,11 +144,12 @@ function withoutHiddenCharacters(text: string): string {
 /**
  * The provider's message made fit to show: invisible characters removed and
  * control characters made spaces first, so that nothing hidden can split the
- * key or the address; then the key, bearer tokens, tokens that start `sk-` and
- * the address removed, the key and address wherever whitespace has been put
- * between their characters, and the address only as a whole word, so that no
- * letter or digit touches it; then runs of space collapsed to single spaces,
- * and the result cut to `MAX_PROVIDER_MESSAGE_CHARS` characters.
+ * key or the address; then the key, bearer tokens, tokens that start `sk-`,
+ * tokens holding a run of `*` (a masked key) and the address removed, the key
+ * and address wherever whitespace has been put between their characters, and
+ * the address only as a whole word, so that no letter or digit touches it;
+ * then runs of space collapsed to single spaces, and the result cut to
+ * `MAX_PROVIDER_MESSAGE_CHARS` characters.
  * Empty when nothing readable is left.
  */
 export function cleanProviderMessage(
@@ -147,7 +162,8 @@ export function cleanProviderMessage(
 	}
 	text = text
 		.replace(BEARER_TOKEN, `Bearer ${REDACTED_KEY}`)
-		.replace(SK_TOKEN, REDACTED_KEY);
+		.replace(SK_TOKEN, REDACTED_KEY)
+		.replace(MASKED_TOKEN, REDACTED_KEY);
 	text = removeAll(text, addressForms(secrets.baseUrl), REDACTED_ADDRESS, true)
 		.replace(SPACE_RUNS, " ")
 		.trim();

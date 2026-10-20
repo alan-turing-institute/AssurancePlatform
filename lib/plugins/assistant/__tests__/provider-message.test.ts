@@ -83,6 +83,31 @@ describe("cleanProviderMessage", () => {
 		expect(text).toBe("Keys [key removed] and [key removed] were refused");
 	});
 
+	it.each([
+		["OpenAI's masked form", "sk-********************abcd"],
+		["OpenAI's masked project form", "sk-proj-********************abcd"],
+		["a masked key with no sk- prefix", "abcd1234********wxyz"],
+		[
+			"a masked key with characters beyond letters and digits",
+			"ab+/12****wx==",
+		],
+	])("removes %s whole, with the characters on both sides of the mask", (_label, masked) => {
+		const text = cleanProviderMessage(
+			`Incorrect API key provided: ${masked}. You can find your key in the dashboard.`,
+			SECRETS
+		);
+
+		expect(text).toBe(
+			"Incorrect API key provided: [key removed]. You can find your key in the dashboard."
+		);
+	});
+
+	it("leaves markdown emphasis alone", () => {
+		const message = "The **model** is *not* available; ***try*** another one";
+
+		expect(cleanProviderMessage(message, SECRETS)).toBe(message);
+	});
+
 	it("keeps words that only begin like a key", () => {
 		expect(cleanProviderMessage("Ask-me and sk-1 are fine", SECRETS)).toBe(
 			"Ask-me and sk-1 are fine"
