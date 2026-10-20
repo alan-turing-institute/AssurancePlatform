@@ -1,0 +1,144 @@
+---
+title: "Case Assistant"
+description: "Ask questions about the case you have open, check it against the assurance-case rules and find techniques for a claim, using a model you connect."
+---
+
+The Case Assistant is a chat panel on the case page.
+It reads the case you have open and helps you work on it.
+You can ask it questions about the case, ask it to check the case against a set of rules, and ask it for techniques that could produce evidence for a claim.
+It never changes the case, and it does not judge whether the case is good enough.
+That judgement stays with you and your reviewers.
+
+## Turn it on
+
+The assistant is off until you turn it on.
+Open **Settings > Plugins** (`/dashboard/settings/plugins`) and switch on **Case Assistant**.
+Your site's operator can withhold the assistant from everyone.
+When they have, its card reads "Unavailable on this deployment" and the switch is locked.
+
+## Connect a model
+
+The assistant answers with a model you connect yourself.
+TEA does not supply one.
+If you ask a question before one is set up, the panel tells you so and links to the settings.
+Once the Case Assistant is on, an **AI models** section appears below the plugin cards.
+
+### Quick setup
+
+The fastest route is an OpenRouter key.
+Paste it into **Quick setup** and choose **Set up**.
+TEA tests the key first and saves nothing if OpenRouter refuses it.
+It then adds a connection and fills in the recommended model for each of the three jobs described below.
+
+### Add a connection yourself
+
+Choose **Add connection**, pick a type, give the connection a label and fill in the fields that type needs.
+
+| Type | What it is | Address | Key | Jobs it can do |
+|---|---|---|---|---|
+| OpenRouter | One key reaches many hosted models. | Fixed | Required | Chat, Ranking, Search |
+| Ollama | A model server you run yourself. | You enter it | Optional | Chat, Ranking, Search |
+| OpenAI-compatible | Any server that follows the OpenAI API, such as vLLM. | You enter it | Optional | Chat, Search |
+| Anthropic | Claude models. | Fixed | Required | Chat |
+| OpenAI | OpenAI's own models. | Fixed | Required | Chat |
+
+Each connection has **Test**, **Edit** and **Remove** buttons.
+**Test** checks that the connection works and loads the list of models you can choose from.
+A site normally allows only secure (`https`) addresses on the public internet.
+A model server on a private network, or one without `https`, works only if the site's operator has allowed it.
+
+TEA stores your key encrypted and does not show it again.
+To change it, choose **Edit**, then **Replace key**.
+
+### Choose a model for each job
+
+The **Jobs** list sets which connection and model does each of three jobs.
+For each job, pick a connection, pick a model and choose **Save**.
+A job lists only the connections that can do it.
+Each model list marks the recommended model, and you can type a model name that is not in the list.
+
+| Job | What it does | If it is not set |
+|---|---|---|
+| Chat | The model the assistant talks with. | The assistant cannot answer. Chat is the one job you must set. |
+| Ranking | Puts the techniques the search finds in order, best first. | Techniques stay in the order the search found them. |
+| Search | Lets the assistant find techniques by meaning, not only by keyword. | Techniques are found by keyword only. |
+
+Ranking and Search are optional, and you can switch either to **Off**.
+
+#### The search check
+
+Search by meaning works only if your search model gives the same results as the model the techniques library was built with.
+When you save a new search model, TEA checks this by comparing the results for a few fixed test sentences.
+The job then reads **Check passed** or **Check not passed**.
+Until a check has passed, techniques are found by keyword only.
+If the check does not pass, choose the recommended search model, or choose **Check again** to run it once more.
+If the techniques library changes later, the status says that the check no longer counts, and you can run it again.
+
+## Open the assistant
+
+On a case page, choose **Case assistant** (the robot icon) in the toolbar.
+The panel opens beside the diagram, and you can keep working on the diagram while it is open.
+Closing the panel keeps the conversation until you reload the page.
+
+## What you can ask
+
+Before your first message, the panel offers a few questions you can send with one click.
+Select an element on the diagram and the panel names it at the top, so that you can ask about it directly.
+Press **Enter** to send a message and **Shift+Enter** for a new line.
+Choose **Stop** to end a reply early.
+
+The assistant can do four things.
+
+- **Read the case.**
+  It reads the whole case, or one element and the elements directly beneath it, to answer questions such as which claims lack evidence.
+- **Check the case against the rules.**
+  Ask it to check the case.
+  The result lists findings by rule and element, each with a reason and a suggested fix, together with gaps you have already marked as **Needs support** and questions for you.
+  TEA checks some rules itself.
+  The assistant applies the rest with its own judgement, so those findings depend on the model you chose.
+- **Suggest techniques for a claim.**
+  This works only when your site offers the techniques library.
+  Select an element and ask for techniques, or type the claim in the chat.
+  The assistant is instructed to recommend only techniques the library returns.
+  It shows up to five, each with its goals and, where the library gives one, a link.
+  It is also instructed to tell you when search or ranking was not used.
+- **Report automated check results.**
+  This works when you have also turned on the Claim/Evidence Health plugin and the case has claims with checks or results.
+  For each property claim, the assistant can report the latest result (pass, marginal, fail or indeterminate), the check it comes from, when the result was taken and whether it is out of date.
+  It reads the results afresh each time you ask, because they change.
+  A result reports what a check found and does not make a claim true or false.
+  The [health plugin page](/docs/technical-guide/architecture/health-plugin) explains how results are recorded.
+
+## What it can see
+
+The assistant reads the case with your own access, so it can read only what you can open.
+It sees only the case you have open, and not your other cases.
+It also receives the element you have selected: its label, type and text.
+It does not read comments.
+
+## What is kept and what is sent
+
+- Your key is stored encrypted and is not shown again.
+- Your conversations stay in your browser tab.
+  TEA does not store them, and reloading the page clears them.
+- TEA does not write your questions or the assistant's replies to its logs.
+- Your model provider receives what the assistant sends it: your messages, the earlier messages in the chat, and whatever the assistant reads to answer, such as the case, the selected element and automated check results.
+  It receives them under your own account with that provider, so check the provider's terms on how it handles them.
+- When you ask for techniques, the text of the element also goes to the techniques library service and to the models you chose for search and ranking.
+
+## Links and images in replies
+
+Replies are shown as formatted text, with some limits.
+A link opens in a new tab only after you confirm it in a dialog that shows the address.
+Only web (`http` and `https`) and email (`mailto`) links work, and any other link appears as plain text.
+Images are never loaded, and an image appears as its description text.
+Raw HTML appears as text.
+
+## If a reply fails
+
+If your provider refuses a request, the panel shows the provider's own reason, with your key and the connection's address removed.
+
+## For operators
+
+An operator can withhold the plugin, allow model servers on a private network and set the assistant's limits.
+The [Case Assistant page in the Technical Guide](/docs/technical-guide/architecture/case-assistant) describes these settings.
