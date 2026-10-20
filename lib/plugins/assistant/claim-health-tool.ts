@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { PlainCase } from "@/lib/case/defined-terms";
+import { errorClassName } from "@/lib/error-class-name";
 import { logger } from "@/lib/logger";
 import {
 	type HealthStatus,
@@ -213,7 +214,7 @@ async function readClaimHealthSafely(
 		return await readClaimHealth(userId, caseId, caseExport);
 	} catch (error) {
 		log.warn("Claim health could not be read; answering unavailable", {
-			errorName: error instanceof Error ? error.name : "unknown",
+			errorName: errorClassName(error),
 		});
 		return UNAVAILABLE;
 	}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorClassName } from "@/lib/error-class-name";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
@@ -48,7 +49,7 @@ export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
 		dbStatus = "unhealthy";
 		dbError = DATABASE_FAILED;
 		log.error("Health check could not reach the database", {
-			errorName: error instanceof Error ? error.name : "unknown",
+			errorName: errorClassName(error),
 		});
 	}
 

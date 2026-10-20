@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { type PlainCase, toPlainCase } from "@/lib/case/defined-terms";
+import { errorClassName } from "@/lib/error-class-name";
 import { logger } from "@/lib/logger";
 import { createClaimHealthTool } from "@/lib/plugins/assistant/claim-health-tool";
 import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
@@ -105,7 +106,7 @@ async function unlessItThrows<T>(
 	} catch (error) {
 		log.warn("An assistant tool failed; answering with a fixed result", {
 			tool: toolName,
-			errorName: error instanceof Error ? error.name : "unknown",
+			errorName: errorClassName(error),
 		});
 		return UNREADABLE;
 	}

@@ -53,4 +53,36 @@ describe("GET /api/health", () => {
 		});
 		expect(JSON.stringify(logs.entries)).not.toContain("db.internal");
 	});
+
+	it("answers 503 with the fixed error text when the thrown error's name cannot be read", async () => {
+		const logs = captureLogs();
+		const thrown = new Error("connect ECONNREFUSED db.internal.example:5432");
+		Object.defineProperty(thrown, "name", {
+			get() {
+				throw new Error("name of db.internal.example is not readable");
+			},
+		});
+		vi.spyOn(prisma.user, "count").mockRejectedValue(thrown);
+
+		let response: Response;
+		try {
+			const { GET } = await import("@/app/api/health/route");
+			response = await GET();
+		} finally {
+			logs.restore();
+		}
+		const body = await response.json();
+
+		expect(response.status).toBe(503);
+		expect(body.checks.database).toEqual({
+			status: "unhealthy",
+			error: "Database connection failed",
+		});
+		expect(logs.entries).toHaveLength(1);
+		expect(logs.entries[0]).toMatchObject({
+			level: "error",
+			errorName: "unknown",
+		});
+		expect(JSON.stringify(logs.entries)).not.toContain("db.internal");
+	});
 });

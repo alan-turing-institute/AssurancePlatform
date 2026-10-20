@@ -173,5 +173,37 @@ describe("assistant tools", () => {
 			});
 			expect(JSON.stringify(logs.entries)).not.toContain("db.internal");
 		});
+
+		it("read_case still gives the fixed result when the error's name cannot be read", async () => {
+			const logs = captureLogs();
+			const thrown = new Error(FAILURE);
+			Object.defineProperty(thrown, "name", {
+				get() {
+					throw new Error(`${FAILURE} (name)`);
+				},
+			});
+			vi.mocked(exportCase).mockRejectedValue(thrown);
+
+			let result: unknown;
+			try {
+				result = await createCaseTools("u", "c").read_case.execute?.(
+					{},
+					options
+				);
+			} finally {
+				logs.restore();
+			}
+
+			expect(result).toEqual({
+				found: false,
+				message: "The case could not be read.",
+			});
+			expect(logs.entries).toHaveLength(1);
+			expect(logs.entries[0]).toMatchObject({
+				tool: "read_case",
+				errorName: "unknown",
+			});
+			expect(JSON.stringify(logs.entries)).not.toContain("db.internal");
+		});
 	});
 });
