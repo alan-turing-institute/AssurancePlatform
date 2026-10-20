@@ -196,4 +196,51 @@ describe("TourProvider (adversarial)", () => {
 		await waitFor(() => expect(pointer.style.width).toBe("50px"));
 		expect(pointer.style.height).toBe("40px");
 	}, 10_000);
+
+	describe("scrolling a step's target into view", () => {
+		const scrolled = vi.fn();
+
+		function stepIndex(target: string) {
+			const steps = (getTour("case-canvas") as Tour).steps;
+			return steps.findIndex((s) => s.selector === `[data-tour='${target}']`);
+		}
+
+		function showStep(target: string, container?: Element) {
+			const element = document.createElement("div");
+			element.setAttribute("data-tour", target);
+			element.scrollIntoView = scrolled;
+			(container ?? document.body).appendChild(element);
+			const ui = () => (
+				<TourProvider>
+					<div />
+				</TourProvider>
+			);
+			const { rerender } = render(ui());
+			nextStepState.currentTour = "case-canvas";
+			nextStepState.isNextStepVisible = true;
+			nextStepState.currentStep = stepIndex(target);
+			rerender(ui());
+		}
+
+		beforeEach(() => scrolled.mockClear());
+
+		it("brings a toolbar target into the bar before measuring it", () => {
+			const bar = document.createElement("div");
+			bar.setAttribute("data-tour", "toolbar");
+			document.body.appendChild(bar);
+
+			showStep("toolbar-share", bar);
+
+			expect(scrolled).toHaveBeenCalledWith({
+				block: "nearest",
+				inline: "nearest",
+			});
+		});
+
+		it("leaves a canvas target where it is", () => {
+			showStep("top-goal");
+
+			expect(scrolled).not.toHaveBeenCalled();
+		});
+	});
 });
