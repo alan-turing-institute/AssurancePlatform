@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
 import { exportCase } from "@/lib/services/case-export-service";
+import { captureLogs } from "@/src/__tests__/helpers/capture-logs";
 
 vi.mock("@/lib/services/case-export-service", () => ({
 	exportCase: vi.fn(),
@@ -126,5 +127,83 @@ describe("assistant tools", () => {
 		);
 
 		expect(result).toMatchObject({ found: false });
+	});
+
+	describe("when the case cannot be read", () => {
+		const FAILURE = "connect ECONNREFUSED db.internal.example:5432";
+		type Tools = ReturnType<typeof createCaseTools>;
+		const READS: [string, (tools: Tools) => Promise<unknown>][] = [
+			[
+				"read_case",
+				async (tools) => await tools.read_case.execute?.({}, options),
+			],
+			[
+				"read_element",
+				async (tools) =>
+					await tools.read_element.execute?.({ elementId: "p1" }, options),
+			],
+			[
+				"lint_case",
+				async (tools) => await tools.lint_case.execute?.({}, options),
+			],
+		];
+
+		it.each(
+			READS
+		)("%s gives a fixed result, never the error's message, and logs only its class", async (name, read) => {
+			const logs = captureLogs();
+			vi.mocked(exportCase).mockRejectedValue(new TypeError(FAILURE));
+
+			let result: unknown;
+			try {
+				result = await read(createCaseTools("u", "c"));
+			} finally {
+				logs.restore();
+			}
+
+			expect(result).toEqual({
+				found: false,
+				message: "The case could not be read.",
+			});
+			expect(logs.entries).toHaveLength(1);
+			expect(logs.entries[0]).toMatchObject({
+				level: "warn",
+				tool: name,
+				errorName: "TypeError",
+			});
+			expect(JSON.stringify(logs.entries)).not.toContain("db.internal");
+		});
+
+		it("read_case still gives the fixed result when the error's name cannot be read", async () => {
+			const logs = captureLogs();
+			const thrown = new Error(FAILURE);
+			Object.defineProperty(thrown, "name", {
+				get() {
+					throw new Error(`${FAILURE} (name)`);
+				},
+			});
+			vi.mocked(exportCase).mockRejectedValue(thrown);
+
+			let result: unknown;
+			try {
+				result = await createCaseTools("u", "c").read_case.execute?.(
+					{},
+					options
+				);
+			} finally {
+				logs.restore();
+			}
+
+			expect(result).toEqual({
+				found: false,
+				message: "The case could not be read.",
+			});
+			expect(logs.entries).toHaveLength(1);
+			expect(logs.entries[0]).toMatchObject({
+				tool: "read_case",
+				errorName: "unknown",
+			});
+			expect(JSON.stringify(logs.entries)).not.toContain("db.internal");
+		});
 	});
 });

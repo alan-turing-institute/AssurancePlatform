@@ -182,9 +182,10 @@ describe("createCaseTools: the cap on one reply's tool calls", () => {
 		vi.mocked(exportCase).mockRejectedValueOnce(new Error("database down"));
 		const tools = createCaseTools("u", "c");
 
-		await expect(tools.read_case.execute?.({}, options)).rejects.toThrow(
-			"database down"
-		);
+		const first = await tools.read_case.execute?.({}, options);
+
+		expect(first).toMatchObject({ found: false });
+		expect(JSON.stringify(first)).not.toContain("database down");
 		expect(await tools.read_case.execute?.({}, options)).toMatchObject({
 			found: true,
 		});

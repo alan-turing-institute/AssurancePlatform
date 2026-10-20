@@ -1,6 +1,8 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { type PlainCase, toPlainCase } from "@/lib/case/defined-terms";
+import { errorClassName } from "@/lib/error-class-name";
+import { logger } from "@/lib/logger";
 import { createClaimHealthTool } from "@/lib/plugins/assistant/claim-health-tool";
 import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
@@ -21,7 +23,15 @@ interface TreeNode {
 	[key: string]: unknown;
 }
 
+const log = logger.child({ component: "assistant-tools" });
+
 const NOT_FOUND = { found: false, message: "Not found in this case." } as const;
+
+/** What a case-reading tool returns when its work throws, in place of the error's own text. */
+const UNREADABLE = {
+	found: false,
+	message: "The case could not be read.",
+} as const;
 
 function findNode(node: TreeNode, id: string): TreeNode | null {
 	if (node.id === id) {
@@ -83,6 +93,26 @@ async function loadExport(
 }
 
 /**
+ * Runs a tool's work and returns its result. A throw gives `UNREADABLE`, so
+ * the model is never handed the error's message, which can name hosts or
+ * queries; only the error's class is logged.
+ */
+async function unlessItThrows<T>(
+	toolName: string,
+	work: () => Promise<T>
+): Promise<T | typeof UNREADABLE> {
+	try {
+		return await work();
+	} catch (error) {
+		log.warn("An assistant tool failed; answering with a fixed result", {
+			tool: toolName,
+			errorName: errorClassName(error),
+		});
+		return UNREADABLE;
+	}
+}
+
+/**
  * Reads the case on the first call and gives every later call the same
  * export, so however many tools run in a reply the case is exported once. A
  * read that throws is not kept, and the next call reads again.
@@ -110,7 +140,9 @@ function sharedCaseExport(
  * The tools are made for one reply. They share a cap on tool calls
  * (`MAX_TOOL_CALLS_PER_REPLY`): a call past it returns a fixed error and does
  * no work. `read_case`, `read_element` and `lint_case` share one export of the
- * case, so a reply reads it once however many of them are called.
+ * case, so a reply reads it once however many of them are called. None of the
+ * tools throws to the SDK: a failure gives a fixed result, and only the error's
+ * class is logged.
  *
  * `replyDeadline` is the epoch time in milliseconds at which the whole reply is
  * cut off; the techniques tool keeps its wait inside it. `models` gives that
@@ -138,12 +170,14 @@ export function createCaseTools(
 				"Read the whole open assurance case: its name, description and the full element tree (goals, strategies, property claims, evidence, contexts, assumptions, justifications).",
 			inputSchema: z.object({}),
 			execute: () =>
-				limited(async () => {
-					const data = await caseExport();
-					return data
-						? { found: true, case: data.case, tree: data.tree }
-						: NOT_FOUND;
-				}),
+				limited(() =>
+					unlessItThrows("read_case", async () => {
+						const data = await caseExport();
+						return data
+							? { found: true, case: data.case, tree: data.tree }
+							: NOT_FOUND;
+					})
+				),
 		}),
 		read_element: tool({
 			description:
@@ -156,25 +190,29 @@ export function createCaseTools(
 					),
 			}),
 			execute: ({ elementId }) =>
-				limited(async () => {
-					const data = await caseExport();
-					const node = data
-						? findElement(data.tree as TreeNode, elementId)
-						: null;
-					return node
-						? { found: true, element: withShallowChildren(node) }
-						: NOT_FOUND;
-				}),
+				limited(() =>
+					unlessItThrows("read_element", async () => {
+						const data = await caseExport();
+						const node = data
+							? findElement(data.tree as TreeNode, elementId)
+							: null;
+						return node
+							? { found: true, element: withShallowChildren(node) }
+							: NOT_FOUND;
+					})
+				),
 		}),
 		lint_case: tool({
 			description:
 				"Lint the open assurance case against the rule catalogue. Returns structural findings (rule id, element label, severity, reason, fix), gaps the author has acknowledged, questions for the author, the number of findings left out when there are more than 100 (truncated), and judgementRules: further rules for you to apply to the case yourself. When the case has prechecks (mechanical facts for the judgement rules) it also returns them as prechecks, with prechecksTruncated giving the number left out; when it has none, neither field is present. Prechecks, acknowledged gaps and questions are limited to 100 each, with acknowledgedGapsTruncated and questionsTruncated giving the number of gaps and questions left out.",
 			inputSchema: z.object({}),
 			execute: () =>
-				limited(async () => {
-					const data = await caseExport();
-					return data ? { found: true, ...lintCase(data) } : NOT_FOUND;
-				}),
+				limited(() =>
+					unlessItThrows("lint_case", async () => {
+						const data = await caseExport();
+						return data ? { found: true, ...lintCase(data) } : NOT_FOUND;
+					})
+				),
 		}),
 		...(techniquesConfigured()
 			? {

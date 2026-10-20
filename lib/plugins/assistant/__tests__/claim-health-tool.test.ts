@@ -489,6 +489,45 @@ describe("read_claim_health: when it cannot answer", () => {
 		expect(result).toEqual(UNAVAILABLE);
 		expect(JSON.stringify(result)).not.toContain("tea.health");
 	});
+
+	it.each([
+		[
+			"the case export",
+			() =>
+				vi
+					.mocked(exportCase)
+					.mockRejectedValue(new TypeError("connect to db.internal refused")),
+		],
+		[
+			"the status read",
+			() =>
+				vi
+					.mocked(readHealthStatusesForCase)
+					.mockRejectedValue(new TypeError("connect to db.internal refused")),
+		],
+	])("says so, never gives the error's message, and logs only its class, when %s throws", async (_label, fail) => {
+		const logged: LogEntry[] = [];
+		setLogSink((entry) => logged.push(entry));
+		vi.stubEnv("LOG_LEVEL", "debug");
+		fail();
+
+		let result: unknown;
+		try {
+			result = await read();
+		} finally {
+			resetLogSink();
+			vi.unstubAllEnvs();
+		}
+
+		expect(result).toEqual(UNAVAILABLE);
+		expect(logged).toHaveLength(1);
+		expect(logged[0]).toMatchObject({
+			level: "warn",
+			component: "claim-health-tool",
+			errorName: "TypeError",
+		});
+		expect(JSON.stringify(logged)).not.toContain("db.internal");
+	});
 });
 
 describe("read_claim_health: freshness", () => {

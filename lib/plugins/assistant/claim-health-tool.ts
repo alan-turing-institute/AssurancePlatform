@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { PlainCase } from "@/lib/case/defined-terms";
+import { errorClassName } from "@/lib/error-class-name";
 import { logger } from "@/lib/logger";
 import {
 	type HealthStatus,
@@ -200,6 +201,26 @@ async function readClaimHealth(
 }
 
 /**
+ * `readClaimHealth`, except that a throw gives the unavailable result, so the
+ * model is never handed the error's message, which can name hosts or queries.
+ * Only the error's class is logged.
+ */
+async function readClaimHealthSafely(
+	userId: string,
+	caseId: string,
+	caseExport: () => Promise<PlainCase | null>
+) {
+	try {
+		return await readClaimHealth(userId, caseId, caseExport);
+	} catch (error) {
+		log.warn("Claim health could not be read; answering unavailable", {
+			errorName: errorClassName(error),
+		});
+		return UNAVAILABLE;
+	}
+}
+
+/**
  * The read_claim_health tool. It closes over the route's `userId` and
  * `caseId`. The case export is the reply's shared one, which gives the labels,
  * text and order of the claims; the statuses are read again for every call,
@@ -215,16 +236,18 @@ export function createClaimHealthTool(
 	caseExport: () => Promise<PlainCase | null>,
 	limited: ToolCallLimit
 ) {
-	let inFlight: ReturnType<typeof readClaimHealth> | null = null;
+	let inFlight: ReturnType<typeof readClaimHealthSafely> | null = null;
 	return tool({
 		description:
 			"Read the latest result each property claim of the open case has received from automated checks, as of now. Takes no input. Returns checkedAt, the time of this read, and claims: for each claim that has a status, in the order the case shows them, its id, label (null when it has none), text, check (the check the claim is bound to now), result (pass, marginal, fail, indeterminate, or null when it has a check but no result, or every result was withdrawn), resultAt (when the reading was taken), validUntil (null when it does not expire), outOfDate with outOfDateReason (expired, condition or all-revoked) and outOfDateSince, and settings (as accepted, different from accepted, none accepted, or null when there is no result). When the settings differ it also returns settingsDifferences, each with the field, the declared value and the value used; when results from another check were refused since the last accepted one, it returns refusedSinceLastAccepted. claimsTruncated is the number of claims left out when there are more than 100. claimsWithoutResults lists the labels of the property claims that receive no automated results, naming a claim by its id when it has no label, with claimsWithoutResultsTruncated for those left out past 100. claimsNotInTree, present only when more than 0, counts claims with a status that are detached from the case tree. evidenceNode, present only on a claim that has a live evidence node in the case, is that node's identifier (such as E4); the node's text describes the check and never states a result, so take the result from this tool.",
 		inputSchema: z.object({}),
 		execute: () =>
 			limited(() => {
-				inFlight ??= readClaimHealth(userId, caseId, caseExport).finally(() => {
-					inFlight = null;
-				});
+				inFlight ??= readClaimHealthSafely(userId, caseId, caseExport).finally(
+					() => {
+						inFlight = null;
+					}
+				);
 				return inFlight;
 			}),
 	});

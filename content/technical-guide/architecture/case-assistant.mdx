@@ -294,7 +294,7 @@ The result holds:
 
 | Field | Meaning |
 |---|---|
-| `found` | `true`, or `false` when the case export or the health service refuses. A `false` result has the message "Claim health is not available for this case." |
+| `found` | `true`, or `false` when the case export or the health service refuses. It is also `false`, with fixed text, when the read fails. A `false` result has the message "Claim health is not available for this case." and never the error's own text. |
 | `checkedAt` | The time of this read. |
 | `claims` | The property claims that have a status, at most 100, in the order the case shows them. |
 | `claimsTruncated` | The number of claims left out past 100. |
@@ -380,13 +380,17 @@ The chat and its stored messages keep the call as it was.
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
 The tools `read_case`, `read_element`, `lint_case` and `read_claim_health` share one read of the case, so a reply reads the case once however many of them it calls.
+A failed read is not kept, so the next call reads the case again.
+A tool whose work fails returns a fixed result and never the error's own text, which can name hosts or queries.
+`read_case`, `read_element` and `lint_case` return "The case could not be read.", and `read_claim_health` returns its "not available" result.
+The log records only the error's class.
 The assistant is given the selected element's id, with its label, type and text, so that it can call `read_element` with it.
 
 When a model provider refuses a call, the user sees the provider's own reason.
 The server cleans it first.
 It first removes the characters that show nothing: format characters such as soft hyphens, direction marks, zero-width characters and tag characters, and other default-ignorable characters such as the variation selectors and the Hangul fillers.
 It turns control characters and the line and paragraph separators into spaces.
-It then takes out the key and the connection's address, matching each even when whitespace has been put between its characters, and takes out bearer tokens and tokens that start `sk-`.
+It then takes out the key and the connection's address, matching each even when whitespace has been put between its characters, and takes out bearer tokens, tokens that start `sk-` and any token that holds a run of four or more asterisks, which is how a provider shows a masked key.
 The address is matched only as a whole word, with no letter or digit touching it, and a form of it shorter than 3 characters, such as a two-letter host name, is not matched on its own.
 It turns runs of spaces into single spaces and cuts the text to 300 characters.
 When the failure is not an error answer from the provider, or nothing readable is left, the user sees "The model provider returned an error." instead.
