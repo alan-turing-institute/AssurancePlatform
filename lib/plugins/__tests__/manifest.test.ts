@@ -25,7 +25,8 @@ describe("PLUGIN_MANIFEST — card data contract", () => {
 		expect(PLUGIN_MANIFEST.length).toBeGreaterThan(0);
 		for (const entry of PLUGIN_MANIFEST) {
 			expect(entry.description.trim().length).toBeGreaterThan(0);
-			// docsPath is optional on an entry; when present it is a /docs/ route.
+			// The type allows docsPath to be absent, so its form is checked only where
+			// it is set; the docs links tests below require it on every official plugin.
 			if (entry.docsPath !== undefined) {
 				expect(entry.docsPath.startsWith("/docs/")).toBe(true);
 			}
