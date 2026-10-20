@@ -15,6 +15,8 @@ The assistant is off until you turn it on.
 Open **Settings > Plugins** (`/dashboard/settings/plugins`) and switch on **Case Assistant**.
 Your site's operator can withhold the assistant from everyone.
 When they have, its card reads "Unavailable on this deployment" and the switch is locked.
+Your organisation or your team can also turn it off for you.
+Its card then reads "Turned off by your organisation" or "Turned off by your team", and you cannot turn it on yourself.
 
 ## Connect a model
 
@@ -55,7 +57,9 @@ To change it, choose **Edit**, then **Replace key**.
 The **Jobs** list sets which connection and model does each of three jobs.
 For each job, pick a connection, pick a model and choose **Save**.
 A job lists only the connections that can do it.
-Each model list marks the recommended model, and you can type a model name that is not in the list.
+Each model list marks the recommended model where there is one, and you can type a model name that is not in the list.
+OpenRouter has a recommended model for all three jobs, and Ollama has one for Ranking and Search.
+The other connection types have none.
 
 | Job | What it does | If it is not set |
 |---|---|---|
@@ -71,13 +75,17 @@ Search by meaning works only if your search model gives the same results as the 
 When you save a new search model, TEA checks this by comparing the results for a few fixed test sentences.
 The job then reads **Check passed** or **Check not passed**.
 Until a check has passed, techniques are found by keyword only.
-If the check does not pass, choose the recommended search model, or choose **Check again** to run it once more.
-If the techniques library changes later, the status says that the check no longer counts, and you can run it again.
+If the check does not pass, choose the recommended search model where the list marks one, or choose **Check again** to run it once more.
+Where the list marks none, choose the model the techniques library was built with, or one that gives the same results.
+A passed check stops counting if the techniques library switches to a different search model or changes its test sentences.
+The status then says that the check no longer counts, and you can run it again.
 
 ## Open the assistant
 
 On a case page, choose **Case assistant** (the robot icon) in the toolbar.
-The panel opens beside the diagram, and you can keep working on the diagram while it is open.
+The panel opens at the right of the page, over the right-hand part of the diagram.
+It does not lock the rest of the page, so you can keep working on the case while it is open.
+On a narrow screen it fills the page, and you close it to see the diagram.
 Closing the panel keeps the conversation until you reload the page.
 
 ## What you can ask
@@ -104,7 +112,7 @@ The assistant can do four things.
   It is also instructed to tell you when search or ranking was not used.
 - **Report automated check results.**
   This works when you have also turned on the Claim/Evidence Health plugin and the case has claims with checks or results.
-  For each property claim, the assistant can report the latest result (pass, marginal, fail or indeterminate), the check it comes from, when the result was taken and whether it is out of date.
+  For each property claim, the assistant can report the latest result (pass, marginal, fail or indeterminate), the check the claim is bound to, when the result was taken and whether it is out of date.
   It reads the results afresh each time you ask, because they change.
   A result reports what a check found and does not make a claim true or false.
   The [health plugin page](/docs/technical-guide/architecture/health-plugin) explains how results are recorded.
@@ -122,9 +130,12 @@ It does not read comments.
 - Your conversations stay in your browser tab.
   TEA does not store them, and reloading the page clears them.
 - TEA does not write your questions or the assistant's replies to its logs.
-- Your model provider receives what the assistant sends it: your messages, the earlier messages in the chat, and whatever the assistant reads to answer, such as the case, the selected element and automated check results.
-  It receives them under your own account with that provider, so check the provider's terms on how it handles them.
-- When you ask for techniques, the text of the element also goes to the techniques library service and to the models you chose for search and ranking.
+- The provider or server your connection points at receives what the assistant sends it: your messages, the earlier messages in the chat, and whatever the assistant reads to answer, such as the case, the selected element and automated check results.
+  It receives them on the terms that apply there, so check how that provider or server handles them.
+- When you ask for techniques, the claim also goes to the techniques library service and to the models you chose for search and ranking, where those jobs are in use.
+  With an element selected, the claim is that element's text, unless you typed a claim of 40 characters or more in the chat, which is sent instead.
+  With no element selected, it is the claim you typed.
+  Only the first 2,000 characters are sent.
 
 ## Links and images in replies
 
