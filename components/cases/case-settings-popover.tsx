@@ -10,7 +10,7 @@ import {
 	Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Popover,
@@ -43,6 +43,7 @@ export function CaseSettingsPopover() {
 	const { assuranceCase, layoutDirection, setLayoutDirection, triggerLayout } =
 		useStore();
 	const [mounted, setMounted] = useState(false);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 
 	const handleDirectionChange = async (dir: "TB" | "LR") => {
 		if (dir === layoutDirection) {
@@ -102,13 +103,35 @@ export function CaseSettingsPopover() {
 		<Popover modal>
 			<ActionTooltip label="Settings">
 				<PopoverTrigger asChild>
-					<Button className="rounded-full p-3" size="icon" type="button">
+					<Button
+						className="rounded-full p-3"
+						ref={triggerRef}
+						size="icon"
+						type="button"
+					>
 						<Settings className="h-5 w-5" />
 						<span className="sr-only">Settings</span>
 					</Button>
 				</PopoverTrigger>
 			</ActionTooltip>
-			<PopoverContent className="w-80" side="top" sideOffset={12}>
+			{/* The toolbar re-enables pointer events for itself, so the trigger
+			 * still receives presses while `modal` has switched them off elsewhere.
+			 * Radix treats a press outside the content as a dismiss; ignoring it on
+			 * the trigger leaves the trigger's own toggle as the one thing that
+			 * closes the popover from there. */}
+			<PopoverContent
+				className="w-80"
+				onPointerDownOutside={(event) => {
+					if (
+						event.target instanceof Node &&
+						triggerRef.current?.contains(event.target)
+					) {
+						event.preventDefault();
+					}
+				}}
+				side="top"
+				sideOffset={12}
+			>
 				<div className="space-y-4">
 					{/* Mode selector */}
 					<section>
