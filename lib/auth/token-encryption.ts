@@ -45,6 +45,17 @@ const KEY_ENV_VAR_BY_VERSION: Record<string, string> = {
 	v1: "TOKEN_ENCRYPTION_KEY",
 };
 
+/** Decodes a base64 key; null unless it is exactly `KEY_BYTES` long. */
+function decodeKey(encoded: string): Buffer | null {
+	const key = Buffer.from(encoded, "base64");
+	return key.length === KEY_BYTES ? key : null;
+}
+
+/** True when `encoded` is base64 encoding exactly 32 bytes, as `TOKEN_ENCRYPTION_KEY` must be. */
+export function isValidEncryptionKey(encoded: string): boolean {
+	return decodeKey(encoded) !== null;
+}
+
 /**
  * Reads and validates the key for `version`, lazily — at call time, not
  * module load — so tests can set the env var per test and a build without it
@@ -65,8 +76,8 @@ function keyForVersion(version: string): Buffer {
 		);
 	}
 
-	const key = Buffer.from(encoded, "base64");
-	if (key.length !== KEY_BYTES) {
+	const key = decodeKey(encoded);
+	if (!key) {
 		throw new TokenEncryptionUnavailableError(
 			`${envVar} must be base64 encoding exactly ${KEY_BYTES} bytes.`
 		);

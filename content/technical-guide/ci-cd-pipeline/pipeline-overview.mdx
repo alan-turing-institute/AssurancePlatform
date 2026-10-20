@@ -26,6 +26,13 @@ The `Release` workflow runs when a successful `Build` workflow completes on `mai
 
 `Seed staging database` runs after a successful staging `Build` or on manual dispatch. It checks out `staging`, resets and migrates the staging database, grants the application database user access and runs the seed script. This is a staging reset, so do not treat it as a general production migration procedure.
 
+After the seed script, a second script recreates a shared `demo` account.
+The account has the Case Assistant and Claim/Evidence Health plugins on, the Bluebird demo case, an OpenRouter model connection and a machine integration for an evidence pipeline.
+It holds no checks and no evidence.
+Its password, model key and pipeline token come from repository secrets, and its model key is encrypted with the staging app's own `TOKEN_ENCRYPTION_KEY`.
+Every reseed rebuilds the account from scratch, so changes made to it do not survive a reseed.
+The pipeline publishes its list of checks when it starts, so restart it after a reseed.
+
 ## Scheduled workflows
 
 The workflow directory also contains `Purge expired trash`, `Sweep health staleness`, `Data retention sweep` and `Cleanup PR Docker Images`. Each has a schedule and a manual trigger. The first three call application cron routes using a cron secret; image cleanup acts on the container registry. The retired fallow file remains in the directory, making eight workflow files in total, but seven active workflows.

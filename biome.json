@@ -35,6 +35,7 @@
       "!lib/plugins/assistant/linter/ruleset-data.ts",
       "!lib/plugins/assistant/linter/judgement-prompt.ts",
       "!prisma/scripts",
+      "!prisma/seed/fixtures",
       "!.pnpm-store",
       "!TASKS",
       "!.claude",

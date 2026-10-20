@@ -78,3 +78,16 @@ jobs:
 
       - name: Verify expected seed content ran
         run: grep -q "claim P1 id=" seed.log || { echo "::error::seed log missing the demo-case line — wrong seed script/tree ran"; exit 1; }
+
+      # Recreates the shared `demo` account. The step pipes nothing, so a
+      # failure fails the run. TOKEN_ENCRYPTION_KEY must equal the staging
+      # app's own value (an Azure app setting), or the app cannot read the
+      # model key stored for the account.
+      - name: Seed the shared demo account
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DEMO_ACCOUNT_PASSWORD: ${{ secrets.DEMO_ACCOUNT_PASSWORD }}
+          DEMO_OPENROUTER_API_KEY: ${{ secrets.DEMO_OPENROUTER_API_KEY }}
+          DEMO_PIPELINE_TOKEN: ${{ secrets.DEMO_PIPELINE_TOKEN }}
+          TOKEN_ENCRYPTION_KEY: ${{ secrets.STAGING_TOKEN_ENCRYPTION_KEY }}
+        run: npx tsx prisma/seed/demo-account.ts
