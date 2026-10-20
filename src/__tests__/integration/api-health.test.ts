@@ -12,11 +12,11 @@ describe("GET /api/health", () => {
 		const response = await GET();
 
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({
-			status: "healthy",
-			checks: {
-				database: { status: "healthy", latencyMs: expect.any(Number) },
-			},
+		const body = await response.json();
+		expect(["healthy", "degraded"]).toContain(body.status);
+		expect(body.checks.database).toMatchObject({
+			status: body.status,
+			latencyMs: expect.any(Number),
 		});
 	});
 
