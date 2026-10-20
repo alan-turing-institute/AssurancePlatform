@@ -64,6 +64,15 @@ function TourPointerFix({ steps }: { steps: Tour[] }) {
 			return;
 		}
 
+		// On narrow screens the case toolbar scrolls sideways inside its fixed
+		// bar. The library only scrolls a target that is out of view vertically,
+		// which a fixed bar never is, so bring a toolbar target into the bar's
+		// visible span before measuring it. Canvas targets are left alone so the
+		// diagram pane is never scrolled.
+		if (targetEl.closest("[data-tour='toolbar']")) {
+			targetEl.scrollIntoView({ block: "nearest", inline: "nearest" });
+		}
+
 		const rect = targetEl.getBoundingClientRect();
 		const body = document.body;
 		const bodyRect = body.getBoundingClientRect();
