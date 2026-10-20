@@ -20,11 +20,16 @@ import {
 	readDemoAccountValues,
 	seedDemoAccount,
 } from "../../../prisma/seed/demo-account-seed";
+import {
+	makeSecrets,
+	runDemoEntryPoint,
+	validEnv,
+} from "../utils/demo-account-kit";
 
 const VALUES: DemoAccountValues = {
 	password: "Demo-account-test-1!", // pragma: allowlist secret
 	openRouterKey: "test-openrouter-key",
-	pipelineToken: "teap_test-pipeline-token",
+	pipelineToken: `teap_${"a1B2c3D4e5".repeat(4)}-_x`,
 };
 
 interface FixtureNode {
@@ -178,13 +183,37 @@ describe("seedDemoAccount", () => {
 	});
 });
 
+describe("the entry point with a malformed encryption key", () => {
+	it("exits non-zero naming TOKEN_ENCRYPTION_KEY and writes no row", async () => {
+		const key = Buffer.alloc(16, 7).toString("base64");
+
+		const run = await runDemoEntryPoint(
+			validEnv(makeSecrets(), { TOKEN_ENCRYPTION_KEY: key })
+		);
+
+		expect(run.code).not.toBe(0);
+		expect(run.output).toContain("TOKEN_ENCRYPTION_KEY");
+		expect(run.output).not.toContain(key);
+		expect(await countRows()).toEqual({
+			users: 0,
+			cases: 0,
+			elements: 0,
+			connections: 0,
+			integrations: 0,
+			tokens: 0,
+			grants: 0,
+			pluginStates: 0,
+		});
+	}, 60_000);
+});
+
 describe("readDemoAccountValues", () => {
 	const complete = {
 		DATABASE_URL: "postgresql://example/db",
 		DEMO_ACCOUNT_PASSWORD: VALUES.password,
 		DEMO_OPENROUTER_API_KEY: VALUES.openRouterKey,
 		DEMO_PIPELINE_TOKEN: VALUES.pipelineToken,
-		TOKEN_ENCRYPTION_KEY: "key-value-not-printed",
+		TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
 	};
 
 	it("returns the values when all five variables are set and conform", () => {
@@ -218,5 +247,50 @@ describe("readDemoAccountValues", () => {
 		expect(text).toContain("DEMO_PIPELINE_TOKEN");
 		expect(text).not.toContain("weakpassword");
 		expect(text).not.toContain("not-a-token-value");
+	});
+
+	it.each([
+		["too short", `teap_${"a".repeat(42)}`],
+		["too long", `teap_${"a".repeat(44)}`],
+		["holding a character outside base64url", `teap_${"a".repeat(42)}+`],
+	])("refuses a token that is %s, naming DEMO_PIPELINE_TOKEN only", (_case, token) => {
+		const result = readDemoAccountValues({
+			...complete,
+			DEMO_PIPELINE_TOKEN: token,
+		});
+
+		expect(result).toHaveProperty("problems");
+		const text = JSON.stringify(result);
+		expect(text).toContain("DEMO_PIPELINE_TOKEN");
+		expect(text).not.toContain(token);
+	});
+
+	it.each([
+		["16 bytes", Buffer.alloc(16, 7).toString("base64")],
+		["33 bytes", Buffer.alloc(33, 7).toString("base64")],
+		["text that is not a key", "not-a-key-value"],
+	])("refuses an encryption key of %s, naming TOKEN_ENCRYPTION_KEY only", (_case, key) => {
+		const result = readDemoAccountValues({
+			...complete,
+			TOKEN_ENCRYPTION_KEY: key,
+		});
+
+		expect(result).toHaveProperty("problems");
+		const text = JSON.stringify(result);
+		expect(text).toContain("TOKEN_ENCRYPTION_KEY");
+		expect(text).not.toContain(key);
+	});
+
+	it.each([
+		["DATABASE_URL", `${complete.DATABASE_URL}\n`],
+		["TOKEN_ENCRYPTION_KEY", ` ${complete.TOKEN_ENCRYPTION_KEY}`],
+		["DEMO_ACCOUNT_PASSWORD", "   "],
+	])("refuses %s with whitespace at the end, the start, or all of it, without printing it", (name, value) => {
+		const result = readDemoAccountValues({ ...complete, [name]: value });
+
+		expect(result).toHaveProperty("problems");
+		const text = JSON.stringify(result);
+		expect(text).toContain(name);
+		expect(text).not.toContain(value.trim() || "   ");
 	});
 });

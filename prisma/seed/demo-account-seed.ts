@@ -25,9 +25,9 @@ import { fileURLToPath } from "node:url";
 import argon2 from "argon2";
 import {
 	hashApiTokenSecret,
-	looksLikeApiToken,
 	tokenDisplayPrefix,
 } from "../../lib/auth/api-token-service";
+import { isValidEncryptionKey } from "../../lib/auth/token-encryption";
 import { MODEL_JOBS } from "../../lib/models/connection-types";
 import { recommendedModel } from "../../lib/models/recommended";
 import { passwordSchema } from "../../lib/schemas/user";
@@ -89,6 +89,53 @@ export class DemoSeedError extends Error {
 	}
 }
 
+type EnvName = (typeof REQUIRED_ENV)[number];
+
+/** A token as issued: `teap_` and 32 random bytes in base64url. */
+const ISSUED_TOKEN_SHAPE = /^teap_[A-Za-z0-9_-]{43}$/;
+
+function passwordProblem(value: string): string | undefined {
+	const check = passwordSchema.safeParse(value);
+	if (check.success) {
+		return;
+	}
+	const reasons = check.error.issues.map((issue) => issue.message);
+	return `DEMO_ACCOUNT_PASSWORD does not meet the password rules: ${reasons.join("; ")}`;
+}
+
+function tokenProblem(value: string): string | undefined {
+	return ISSUED_TOKEN_SHAPE.test(value)
+		? undefined
+		: "DEMO_PIPELINE_TOKEN is not a TEA API token as issued";
+}
+
+function encryptionKeyProblem(value: string): string | undefined {
+	return isValidEncryptionKey(value)
+		? undefined
+		: "TOKEN_ENCRYPTION_KEY must be base64 encoding exactly 32 bytes";
+}
+
+/** The checks on a value's content, for the variables that have rules beyond being present. */
+const CONTENT_CHECKS: Partial<
+	Record<EnvName, (value: string) => string | undefined>
+> = {
+	DEMO_ACCOUNT_PASSWORD: passwordProblem,
+	DEMO_PIPELINE_TOKEN: tokenProblem,
+	TOKEN_ENCRYPTION_KEY: encryptionKeyProblem,
+};
+
+/**
+ * What is wrong with `value`, naming `name` and never the value. Padding is
+ * refused rather than trimmed: a secret with a stray newline passes every
+ * content check and then fails at the other end without a message.
+ */
+function problemWith(name: EnvName, value: string): string | undefined {
+	if (value !== value.trim()) {
+		return `${name} must not start or end with whitespace`;
+	}
+	return CONTENT_CHECKS[name]?.(value);
+}
+
 /**
  * Reads the demo account's values from `env`. Returns every problem found,
  * each naming the variable and never its value.
@@ -103,25 +150,23 @@ export function readDemoAccountValues(
 		};
 	}
 
-	const password = env.DEMO_ACCOUNT_PASSWORD ?? "";
-	const openRouterKey = env.DEMO_OPENROUTER_API_KEY ?? "";
-	const pipelineToken = env.DEMO_PIPELINE_TOKEN ?? "";
-
 	const problems: string[] = [];
-	const passwordCheck = passwordSchema.safeParse(password);
-	if (!passwordCheck.success) {
-		const reasons = passwordCheck.error.issues.map((issue) => issue.message);
-		problems.push(
-			`DEMO_ACCOUNT_PASSWORD does not meet the password rules: ${reasons.join("; ")}`
-		);
-	}
-	if (!looksLikeApiToken(pipelineToken)) {
-		problems.push("DEMO_PIPELINE_TOKEN is not a TEA API token");
+	for (const name of REQUIRED_ENV) {
+		const problem = problemWith(name, env[name] ?? "");
+		if (problem) {
+			problems.push(problem);
+		}
 	}
 	if (problems.length > 0) {
 		return { problems };
 	}
-	return { values: { password, openRouterKey, pipelineToken } };
+	return {
+		values: {
+			password: env.DEMO_ACCOUNT_PASSWORD ?? "",
+			openRouterKey: env.DEMO_OPENROUTER_API_KEY ?? "",
+			pipelineToken: env.DEMO_PIPELINE_TOKEN ?? "",
+		},
+	};
 }
 
 /** The recommended OpenRouter model for each job; a job with none is left out. */

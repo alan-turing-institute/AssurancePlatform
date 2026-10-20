@@ -17,10 +17,7 @@ const TSX_CLI = join(ROOT, "node_modules/tsx/dist/cli.mjs");
 const ENTRY_POINT = "prisma/seed/demo-account.ts";
 const DEV_SEED = "prisma/seed/dev-seed.ts";
 
-export const FIXTURE_FILE = join(
-	ROOT,
-	"prisma/seed/fixtures/bluebird-demo-case.json"
-);
+const FIXTURE_FILE = join(ROOT, "prisma/seed/fixtures/bluebird-demo-case.json");
 
 /**
  * The id the demo case must always have. Pipeline configurations name it, so
@@ -148,7 +145,7 @@ export function runDevSeed(timeoutMs = 120_000): Promise<ChildResult> {
  * Every window of `size` characters in each secret, plus the secret itself.
  * A line of output containing one of them shows part of a secret.
  */
-export function secretFragments(secrets: string[], size = 6): string[] {
+function secretFragments(secrets: string[], size = 6): string[] {
 	const fragments = new Set<string>();
 	for (const secret of secrets) {
 		fragments.add(secret);

@@ -6,6 +6,7 @@ import {
 	encryptIfPlaintext,
 	encryptToken,
 	isEncrypted,
+	isValidEncryptionKey,
 	TokenEncryptionUnavailableError,
 } from "../token-encryption";
 
@@ -113,6 +114,25 @@ describe("token-encryption", () => {
 		it("returns false for legacy plaintext", () => {
 			expect(isEncrypted("gho_plaintexttoken")).toBe(false);
 			expect(isEncrypted("")).toBe(false);
+		});
+	});
+
+	describe("isValidEncryptionKey", () => {
+		it("accepts base64 encoding exactly 32 bytes", () => {
+			expect(isValidEncryptionKey(TEST_KEY)).toBe(true);
+		});
+
+		it("refuses a key of another length, text that is not a key, and an empty string", () => {
+			expect(isValidEncryptionKey(Buffer.alloc(16, 1).toString("base64"))).toBe(
+				false
+			);
+			expect(isValidEncryptionKey(Buffer.alloc(33, 1).toString("base64"))).toBe(
+				false
+			);
+			expect(isValidEncryptionKey("not-valid-base64-and-wrong-length!!!")).toBe(
+				false
+			);
+			expect(isValidEncryptionKey("")).toBe(false);
 		});
 	});
 
