@@ -102,6 +102,12 @@ describe("cleanProviderMessage", () => {
 		);
 	});
 
+	it("gives one placeholder for a masked key whose mask is broken by full stops", () => {
+		expect(
+			cleanProviderMessage("Rejected sk-proj-****...****Q7xZ today", SECRETS)
+		).toBe("Rejected [key removed] today");
+	});
+
 	it("leaves markdown emphasis alone", () => {
 		const message = "The **model** is *not* available; ***try*** another one";
 

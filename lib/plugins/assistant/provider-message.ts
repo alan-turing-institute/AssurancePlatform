@@ -44,6 +44,12 @@ const SPECIAL_REGEX_CHARACTERS = /[.*+?^${}()|[\]\\]/g;
 const SPACE_RUNS = / {2,}/g;
 const REDACTED_KEY = "[key removed]";
 const REDACTED_ADDRESS = "[address removed]";
+/**
+ * Stands for a removed key until every pass has run, so that a later pass
+ * cannot take the placeholder's own text for part of a token. The message has
+ * no NUL character by then, since control characters have become spaces.
+ */
+const KEY_MARK = "\u0000";
 
 type CodePointRange = readonly [first: number, last: number];
 
@@ -158,13 +164,14 @@ export function cleanProviderMessage(
 ): string {
 	let text = withoutHiddenCharacters(message);
 	if (secrets.apiKey && secrets.apiKey.length >= MIN_KEY_CHARS_TO_REPLACE) {
-		text = removeAll(text, [secrets.apiKey], REDACTED_KEY, false);
+		text = removeAll(text, [secrets.apiKey], KEY_MARK, false);
 	}
 	text = text
-		.replace(BEARER_TOKEN, `Bearer ${REDACTED_KEY}`)
-		.replace(SK_TOKEN, REDACTED_KEY)
-		.replace(MASKED_TOKEN, REDACTED_KEY);
+		.replace(BEARER_TOKEN, `Bearer ${KEY_MARK}`)
+		.replace(SK_TOKEN, KEY_MARK)
+		.replace(MASKED_TOKEN, KEY_MARK);
 	text = removeAll(text, addressForms(secrets.baseUrl), REDACTED_ADDRESS, true)
+		.replaceAll(KEY_MARK, REDACTED_KEY)
 		.replace(SPACE_RUNS, " ")
 		.trim();
 	return text.length > MAX_PROVIDER_MESSAGE_CHARS
