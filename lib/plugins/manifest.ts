@@ -6,14 +6,12 @@
  * withhold a manifest entry, never invent one out of thin air.
  *
  * This is more than lifecycle metadata: `description` and `docsPath` are the
- * copy the Plugins management page renders on each plugin's card (TEA —
- * Plugin management surface, D2) — keeping it here means the card and the
- * docs link can't drift from what the enablement/lifecycle code already
- * knows about a plugin.
+ * copy the Plugins management page renders on each plugin's card, so the card
+ * and its docs link stay with what the enablement and lifecycle code already
+ * know about a plugin.
  *
- * This list is deliberately closed and hand-edited — extend it only when a
- * new official plugin actually ships (1.1: `tea.techniques`, `tea.gsn-ui`),
- * never ad hoc at a call site.
+ * This list is deliberately closed and hand-edited: extend it only when a new
+ * official plugin ships, never ad hoc at a call site.
  */
 
 /** The four extension surfaces a plugin may use (ADR 0002 v2 §2.2/§2.3). */
@@ -48,12 +46,8 @@ export interface PluginManifestEntry {
 	readonly description: string;
 	/**
 	 * Site-relative docs URL for the card's "Learn more" link, e.g.
-	 * `/docs/technical-guide/architecture/plugin-ecosystem`. Omitted (not an
-	 * empty string) until a real docs page exists for this plugin — D2
-	 * amendment, cid 2026-09-22: `tea.health`'s docs page is still `draft:
-	 * true` and reads "Coming Soon", so linking to it would tell a user a
-	 * live plugin doesn't exist yet. The Plugins page card omits "Learn more"
-	 * entirely when this is absent.
+	 * `/docs/technical-guide/architecture/plugin-ecosystem`. The card shows the
+	 * link when this is set and omits it when it is absent.
 	 */
 	readonly docsPath?: string;
 	/** Namespace, e.g. "tea.health" — matches `PluginData.pluginId` / `PluginState.pluginId`. */
@@ -70,13 +64,10 @@ export interface PluginManifestEntry {
 }
 
 /**
- * 1.0 ships one official plugin: claim/evidence health (ADR 0002 v2 §3).
- * Its implementation (storage, scoring, machine endpoints) is a later issue —
- * this entry is metadata only, enough for the lifecycle/enablement/PluginData
- * plumbing to have a real namespace to prove itself against.
- *
- * No external callers yet (fallow dead-export finding) — staged for the
- * settings pane, a later work item. Not dead code; do not remove.
+ * The official plugins: claim/evidence health (`tea.health`) and the Case
+ * Assistant (`tea.assistant`). An entry is metadata only. It gives the
+ * lifecycle, enablement and PluginData code a namespace, and each plugin's own
+ * code registers its UI through the slot registries.
  */
 export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 	{
@@ -97,6 +88,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		],
 		description:
 			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Results never change your case: it changes only when you accept a check for a claim, which can add one evidence node under the claim that shows its current result.",
+		docsPath: "/docs/technical-guide/architecture/health-plugin",
 	},
 	{
 		id: "tea.assistant",
@@ -107,6 +99,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		surfaces: ["case-panel", "settings-section"],
 		description:
 			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You choose the models it uses in the AI models section of these settings.",
+		docsPath: "/docs/platform-guide/case-assistant",
 	},
 ];
 
