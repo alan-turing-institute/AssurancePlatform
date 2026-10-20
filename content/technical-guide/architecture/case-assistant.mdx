@@ -294,7 +294,7 @@ The result holds:
 
 | Field | Meaning |
 |---|---|
-| `found` | `true`, or `false` when the case export or the health service refuses. A `false` result has the message "Claim health is not available for this case." |
+| `found` | `true`, or `false` when the case export or the health service refuses. It is also `false`, with fixed text, when the read fails. A `false` result has the message "Claim health is not available for this case." and never the error's own text. |
 | `checkedAt` | The time of this read. |
 | `claims` | The property claims that have a status, at most 100, in the order the case shows them. |
 | `claimsTruncated` | The number of claims left out past 100. |
