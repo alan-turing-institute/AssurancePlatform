@@ -112,13 +112,13 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	};
 
 	return (
-		<div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 transform items-center justify-center">
+		<div className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex w-max max-w-full -translate-x-1/2 transform items-center justify-center">
 			<div
-				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg"
+				className="pointer-events-auto mx-12 flex scroll-px-14 items-center gap-2 overflow-x-auto rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg [scrollbar-width:thin]"
 				data-testid="action-buttons"
 				data-tour="toolbar"
 			>
-				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
+				<div className="flex shrink-0 items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
 					{assuranceCase &&
 						assuranceCase.permissions !== "view" &&
 						assuranceCase.permissions !== "review" && <HistoryControls />}
@@ -184,7 +184,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						</Button>
 					</ActionTooltip>
 				</div>
-				<div className="flex items-center justify-center gap-2">
+				<div className="flex shrink-0 items-center justify-center gap-2">
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Share">
 							<Button
