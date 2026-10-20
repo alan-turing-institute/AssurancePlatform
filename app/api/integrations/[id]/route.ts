@@ -17,20 +17,21 @@ import {
 /**
  * PATCH /api/integrations/[id]
  *
- * Updates an integration's description and/or scopes. Owner-only — a
- * non-owner gets the exact same 404 as a nonexistent id (no enumeration
- * oracle; `getOwnedIntegrationOrError` in the service layer).
+ * Updates an integration's description, its scopes, or both.
+ * The scopes sent replace the existing list, so send every scope the
+ * integration should hold.
+ * Only the owner can update an integration; anyone else gets the same 404 as
+ * for an id that does not exist.
  *
- * @description At least one of `description`/`scopes` must be present.
- * `scopes` is validated against the closed vocabulary in
- * `lib/auth/scopes.ts` — an unknown scope is a 400.
+ * @description Updates an integration's description and/or scopes (at least one is required); the scopes sent replace the existing list, and an unknown scope is a 400.
  * @pathParam id - Integration ID (UUID)
  * @body { description?: string, scopes?: string[] }
  * @response 200 - The updated integration
  * @response 400 - Validation error (including an unknown scope)
  * @response 401 - Unauthorised
- * @response 404 - Integration not found (covers non-existent and not-owned — same message)
+ * @response 404 - Integration not found (covers non-existent and not-owned, with the same message)
  * @response 413 - Payload too large
+ * @add 404
  * @auth SessionAuth
  * @tag Integrations
  */
@@ -67,20 +68,20 @@ export async function PATCH(
 /**
  * DELETE /api/integrations/[id]
  *
- * Deletes an integration's registration outright — its dedicated system
- * user artefacts and every one of its tokens go with it (cascade), per
- * `deleteIntegrationRegistration`'s existing semantics, unchanged here.
- * Owner-only — a non-owner gets the exact same 404 as a nonexistent id (no
- * enumeration oracle; `getOwnedIntegrationOrError` in the service layer).
+ * Deletes an integration with its account and every one of its tokens.
+ * Evidence the integration already sent stays in the log, but the record of
+ * who sent it no longer resolves to an account.
+ * Revoking the integration with `POST .../revoke` keeps the account, so that
+ * record stays resolvable.
+ * Only the owner can delete an integration; anyone else gets the same 404 as
+ * for an id that does not exist.
  *
- * @description Prefer `POST .../revoke` when the integration's own
- * accountability trail matters (it keeps the row, terminally revoked);
- * use this when a human owner needs the row itself gone, with no new
- * owner to reassign to (`deleteIntegrationRegistration`'s doc comment).
+ * @description Deletes an integration with its account and tokens; revoke it instead when the record of who sent its evidence must stay resolvable.
  * @pathParam id - Integration ID (UUID)
  * @response 200 - `{ success: true }`
  * @response 401 - Unauthorised
- * @response 404 - Integration not found (covers non-existent and not-owned — same message)
+ * @response 404 - Integration not found (covers non-existent and not-owned, with the same message)
+ * @add 404
  * @auth SessionAuth
  * @tag Integrations
  */

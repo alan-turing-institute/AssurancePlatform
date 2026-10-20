@@ -14,6 +14,9 @@ const nextConfig = {
 	// installed package and the standalone output traces it into its own
 	// node_modules.
 	serverExternalPackages: ["undici"],
+	// Stops `next dev` writing an agent-rules block into AGENTS.md when an AI
+	// agent runs it.
+	agentRules: false,
 	// Next 16 blocks cross-origin dev requests (HMR, /_next/static chunks) by
 	// default. Set NEXT_DEV_ALLOWED_ORIGINS (comma-separated hosts, no
 	// protocol) when running `next dev` for LAN review; leave it unset for a

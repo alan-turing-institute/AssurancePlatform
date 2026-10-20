@@ -29,6 +29,54 @@ The `ElementType` enum contains `GOAL`, `STRATEGY`, `PROPERTY_CLAIM`, `EVIDENCE`
 
 `assertionStatus` records the status of a claim or strategy. The enum includes `ASSERTED`, `NEEDS_SUPPORT`, `ASSUMED`, `AXIOMATIC`, `DEFEATED` and `AS_CITED`. The first five can be selected by an author in the edit dialog; `AS_CITED` is reserved and is not computed automatically in this build. A null value is treated as the default `ASSERTED` during interpretation or export. See the quick reference for the author-facing meanings.
 
+## Defined terms
+
+An entry in an element's `context` list is either plain text or a named entry.
+A plain entry is a string, as it always was.
+A named entry is a record with four keys:
+
+```json
+{
+  "id": "k3f9x2m7qa",
+  "name": "window",
+  "text": "the moving 5-minute interval over which separation is measured",
+  "value": "5 minutes"
+}
+```
+
+`text` is what the name means, and `value` is optional.
+The `id` is ten lowercase letters or digits and is unique within a case, counting elements in the bin.
+A name is 1 to 40 characters, starts with a letter, and uses letters, digits, spaces, hyphens and underscores.
+A value is at most 500 characters.
+Names on one element are unique when compared without regard to case.
+Every write path applies these rules: the element routes, the JSON editor's batch and case import.
+The `context` column is `jsonb`, and `parseContextEntries` in `lib/case/defined-terms.ts` is the one place that turns a stored value into entries, picking out only those four keys.
+
+Text refers to a named entry with a reference of the form `{name#id}`.
+The id decides what the reference points at.
+The name inside the braces is only the word shown when the entry cannot be found.
+Text that merely contains braces, such as `{like this}`, is ordinary text.
+
+Which entries a reference can reach is worked out when the case is read and is never stored.
+An element's text can refer to the named entries on that element and on every element above it in the parent chain, nearest first.
+`convertAssuranceCase` puts the result on each card's data as `termsInReach`, and the goal, strategy and property claim cards read it from there.
+Evidence, away goal and module cards are given no terms, so they resolve nothing and show any reference they hold as `{name}`.
+Moving an element or deleting an entry therefore changes what a reference resolves to without any stored flag to update.
+A reference with no definition in reach is shown as not found.
+
+Readers other than the editor and the diagram receive a plain-text copy of the case, produced by `toPlainCase`.
+In it every reference is written `{name}` using the entry's current name, and every named entry is the single string `name: meaning (value: ...)`.
+Document exports, the Case Assistant and the rules check read that copy, so they see the same shapes as before named entries existed.
+Machine formats keep the stored form: the export file, the Google Drive backup, GitHub import, published snapshots and the public Discover API.
+
+### The export file
+
+A case export carries `"version": "1.1"` when the case holds a named entry or a reference, and `"version": "1.0"` otherwise.
+Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries.
+Import accepts both versions.
+A file that says `"1.0"` but holds a named entry is rejected with a message saying so.
+The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry.
+
 ## Access
 
 `CasePermission` grants an individual `VIEW`, `COMMENT`, `EDIT` or `ADMIN` access. `CaseTeamPermission` grants one of those levels to a team, and members inherit it. `TeamMember` separately records the member's `OWNER`, `ADMIN` or `MEMBER` team role. A team role and a case permission answer different questions: who manages the team, and what that team may do with this case. `lib/permissions.ts` combines applicable case grants with the creator's access.

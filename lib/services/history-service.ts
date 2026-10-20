@@ -1,5 +1,6 @@
 "use client";
 
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import useHistoryStore from "@/store/history-store";
 import type {
 	ElementSnapshot,
@@ -217,7 +218,11 @@ export function createSnapshot(data: Record<string, unknown>): ElementSnapshot {
 		urls: data.urls as string[] | undefined,
 		assumption: data.assumption as string | undefined,
 		justification: data.justification as string | undefined,
-		context: data.context as string[] | undefined,
+		// Rebuilt entry by entry so a snapshot never carries keys a named entry
+		// does not have; undo and redo send this list back to the server.
+		context: Array.isArray(data.context)
+			? parseContextEntries(data.context)
+			: undefined,
 		inSandbox: data.inSandbox as boolean | undefined,
 		// Per-assertion status (ADR 0004 D3) — undo/redo must round-trip this
 		// like any other author-editable field.

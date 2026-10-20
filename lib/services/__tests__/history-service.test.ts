@@ -263,6 +263,35 @@ describe("createSnapshot", () => {
 		expect(snapshot.assertionStatus).toBe("NEEDS_SUPPORT");
 	});
 
+	it("keeps plain and named context entries and drops stray keys from the named ones", () => {
+		const snapshot = createSnapshot({
+			id: "elem-3",
+			type: "goal",
+			name: "Goal",
+			description: "A goal",
+			context: [
+				"Plain entry",
+				{
+					id: "k3f9x2m7qa",
+					name: "window",
+					text: "the interval",
+					value: "5 minutes",
+					hidden: false,
+				},
+			],
+		});
+
+		expect(snapshot.context).toEqual([
+			"Plain entry",
+			{
+				id: "k3f9x2m7qa",
+				name: "window",
+				text: "the interval",
+				value: "5 minutes",
+			},
+		]);
+	});
+
 	it("leaves assertionStatus undefined when the source data omits it", () => {
 		const snapshot = createSnapshot({
 			id: "elem-2",

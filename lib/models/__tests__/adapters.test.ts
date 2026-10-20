@@ -95,7 +95,14 @@ function lastRequest() {
 	if (!request) {
 		throw new Error("The server received no request");
 	}
-	return { ...request, json: JSON.parse(request.body) as { model?: string } };
+	return {
+		...request,
+		json: JSON.parse(request.body) as {
+			max_completion_tokens?: number;
+			max_tokens?: number;
+			model?: string;
+		},
+	};
 }
 
 /** Where each OpenAI-style type puts its API, as a suffix of the address the user entered. */
@@ -140,6 +147,38 @@ describe("chatModelFor", () => {
 		expect(request.headers["anthropic-version"]).toBe("2023-06-01");
 		expect(request.headers.authorization).toBeUndefined();
 		expect(request.json.model).toBe("the-claude-model");
+	});
+
+	it("sends an OpenAI request's length limit as max_completion_tokens, with no max_tokens", async () => {
+		await generateText({
+			model: chatModelFor(
+				connection("OPENAI", { baseUrl: `${server.origin}/v1` }),
+				"the-openai-model"
+			),
+			prompt: "hi",
+			maxOutputTokens: 8192,
+			maxRetries: 0,
+		});
+
+		const request = lastRequest();
+		expect(request.url).toBe("/v1/chat/completions");
+		expect(request.headers.authorization).toBe(`Bearer ${KEY}`);
+		expect(request.json.model).toBe("the-openai-model");
+		expect(request.json.max_completion_tokens).toBe(8192);
+		expect(request.json).not.toHaveProperty("max_tokens");
+	});
+
+	it("still sends an OpenAI-compatible request's length limit as max_tokens", async () => {
+		await generateText({
+			model: chatModelFor(connection("OPENAI_COMPATIBLE"), "m"),
+			prompt: "hi",
+			maxOutputTokens: 8192,
+			maxRetries: 0,
+		});
+
+		const request = lastRequest();
+		expect(request.json.max_tokens).toBe(8192);
+		expect(request.json).not.toHaveProperty("max_completion_tokens");
 	});
 
 	it("sends no Authorization header when a keyless server has no key", async () => {
@@ -219,6 +258,12 @@ describe("a job the type cannot do", () => {
 		}
 		expect(message).toContain("cannot do the search job");
 		expect(message).not.toContain(KEY);
+	});
+
+	it("throws for embeddings on an OpenAI connection", () => {
+		expect(() => embeddingModelFor(connection("OPENAI"), "m")).toThrow(
+			"cannot do the search job"
+		);
 	});
 });
 
@@ -329,6 +374,7 @@ describe("chatProviderOptions", () => {
 		"OLLAMA",
 		"OPENAI_COMPATIBLE",
 		"ANTHROPIC",
+		"OPENAI",
 	] as const)("sends nothing extra to a %s server", (type) => {
 		expect(chatProviderOptions(connection(type))).toBeUndefined();
 	});

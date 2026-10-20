@@ -25,11 +25,19 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { type DefinedTerm, plainReferenceText } from "@/lib/case/defined-terms";
+import {
+	appearanceAttribute,
+	drawnContentAttribute,
+} from "@/lib/case/plugin-display-capture";
+import type { ElementAppearance } from "@/lib/plugins/slots";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
 import AttributeSection from "./attribute-section";
 import { type DiagramNodeType, getNodeConfig } from "./node-config";
 import {
+	buildAppearanceFillClasses,
 	buildDescriptionClasses,
 	buildFooterIdClasses,
 	buildFooterLabelClasses,
@@ -41,8 +49,15 @@ import {
 	buildPreviewTextClasses,
 	buildSeparatorClasses,
 } from "./node-styles";
+import ReferenceText from "./reference-text";
+import { previewParts } from "./reference-text-utils";
+
+/** How many visible characters of the description a collapsed card shows. */
+const PREVIEW_LENGTH = 180;
 
 export interface BaseNodeProps {
+	/** How a plugin wants the card drawn: a tint under the content, faded or not. Absent draws the card as usual. */
+	appearance?: ElementAppearance | null;
 	/** Assumption text */
 	assumption?: string;
 	/** Actions to display in the bottom-left (e.g., toggle children button) */
@@ -51,8 +66,8 @@ export interface BaseNodeProps {
 	children?: ReactNode;
 	/** Additional class names */
 	className?: string;
-	/** Context strings array */
-	context?: string[];
+	/** Context entries: plain strings or named entries */
+	context?: ContextEntry[];
 	/** Optional data-tour attribute for onboarding tours */
 	dataTour?: string;
 	/** Short description of the node */
@@ -71,18 +86,14 @@ export interface BaseNodeProps {
 	nodeType: DiagramNodeType;
 	/** Whether the node is currently selected */
 	selected?: boolean;
+	/**
+	 * The defined terms the card's text can refer to, nearest definition first.
+	 * A card given none does not resolve references: any it holds shows as
+	 * `{name}` with no highlight.
+	 */
+	terms?: readonly DefinedTerm[];
 	/** Actions to display in the top-right (e.g., comment indicators) */
 	topRightActions?: ReactNode;
-}
-
-/**
- * Truncate text to a maximum number of lines worth of characters
- */
-function truncateText(text: string, maxLength = 180): string {
-	if (text.length <= maxLength) {
-		return text;
-	}
-	return `${text.slice(0, maxLength).trim()}...`;
 }
 
 function ExpandedContent({
@@ -95,20 +106,24 @@ function ExpandedContent({
 	children,
 	name,
 	config,
+	terms,
 }: {
 	descriptionText: string;
 	hasAttributes: boolean;
 	assumption?: string;
-	context?: string[];
+	context?: ContextEntry[];
 	justification?: string;
 	nodeType: DiagramNodeType;
 	children?: ReactNode;
 	name: string;
 	config: ReturnType<typeof getNodeConfig>;
+	terms: readonly DefinedTerm[];
 }) {
 	return (
 		<div className={buildNodeContentClasses(true)}>
-			<p className={buildDescriptionClasses()}>{descriptionText}</p>
+			<p className={buildDescriptionClasses()}>
+				<ReferenceText terms={terms} text={descriptionText} withTooltips />
+			</p>
 
 			{hasAttributes && (
 				<>
@@ -118,6 +133,7 @@ function ExpandedContent({
 						context={context}
 						justification={justification}
 						nodeType={nodeType}
+						terms={terms}
 					/>
 				</>
 			)}
@@ -138,10 +154,28 @@ function ExpandedContent({
 	);
 }
 
+const NO_TERMS: readonly DefinedTerm[] = [];
+
+/**
+ * The text a card draws and the terms it resolves references with. A card
+ * given terms leaves its references for the text component to resolve; one
+ * given none writes each as `{name}`, so no word is highlighted.
+ */
+function cardText(
+	description: string | undefined,
+	termsInReach: readonly DefinedTerm[] | undefined
+) {
+	const stored = description || "No description available";
+	return termsInReach
+		? { descriptionText: stored, terms: termsInReach }
+		: { descriptionText: plainReferenceText(stored), terms: NO_TERMS };
+}
+
 export default function BaseNode({
 	nodeType,
 	name,
 	description,
+	appearance = null,
 	selected = false,
 	context,
 	assumption,
@@ -154,7 +188,9 @@ export default function BaseNode({
 	className,
 	dataTour,
 	expandTour,
+	terms: termsInReach,
 }: BaseNodeProps) {
+	const { descriptionText, terms } = cardText(description, termsInReach);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { layoutNodes, layoutDirection } = useStore();
 	const { fitView, getNodes, getEdges } = useReactFlow();
@@ -185,8 +221,11 @@ export default function BaseNode({
 		(justification && justification.trim() !== "")
 	);
 
-	const descriptionText = description || "No description available";
-	const isTruncated = descriptionText.length > 180;
+	const isTruncated = previewParts(
+		descriptionText,
+		terms,
+		PREVIEW_LENGTH
+	).truncated;
 
 	const handleExpandToggle = (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -207,15 +246,30 @@ export default function BaseNode({
 		});
 	};
 
+	const drawnContent = drawnContentAttribute(appearance);
+
 	const containerClasses = buildNodeContainerClasses({
 		nodeType,
 		isSelected: selected,
 		isDefeater,
+		appearance,
 		className,
 	});
 
 	return (
-		<div className={containerClasses} data-tour={dataTour}>
+		<div
+			className={containerClasses}
+			data-appearance={appearanceAttribute(appearance)}
+			data-faded={appearance?.faded ? "" : undefined}
+			data-tour={dataTour}
+		>
+			{appearance && (
+				<span
+					aria-hidden="true"
+					className={buildAppearanceFillClasses(appearance)}
+					data-plugin-display=""
+				/>
+			)}
 			{/* Target Handle (top) */}
 			{config.showTargetHandle && (
 				<Handle id="target" position={targetPosition} type="target" />
@@ -229,8 +283,11 @@ export default function BaseNode({
 
 			<LazyMotion features={domAnimation} strict>
 				{/* Header: Icon + Name + Top-right Actions */}
-				<div className={buildNodeHeaderClasses()}>
-					<div className="flex min-w-0 flex-1 items-center gap-2">
+				<div
+					className={buildNodeHeaderClasses()}
+					data-drawn-content={drawnContent}
+				>
+					<div className="flex flex-1 items-center gap-2">
 						<Icon
 							aria-hidden="true"
 							className={buildNodeIconClasses(nodeType)}
@@ -247,7 +304,7 @@ export default function BaseNode({
 						)}
 					</div>
 					{topRightActions && (
-						<div className="flex items-center">{topRightActions}</div>
+						<div className="flex min-w-0 items-center">{topRightActions}</div>
 					)}
 				</div>
 
@@ -256,6 +313,7 @@ export default function BaseNode({
 					<m.div
 						animate={{ opacity: 1 }}
 						className="px-4 pb-3"
+						data-drawn-content={drawnContent}
 						exit={{ opacity: 0 }}
 						initial={{ opacity: 0 }}
 						onAnimationComplete={handleAnimationComplete}
@@ -266,16 +324,22 @@ export default function BaseNode({
 								<Tooltip delayDuration={400}>
 									<TooltipTrigger asChild>
 										<p className={buildPreviewTextClasses()}>
-											{truncateText(descriptionText)}
+											<ReferenceText
+												maxLength={PREVIEW_LENGTH}
+												terms={terms}
+												text={descriptionText}
+											/>
 										</p>
 									</TooltipTrigger>
 									<TooltipContent className="max-w-xs">
-										<p>{descriptionText}</p>
+										<p>{plainReferenceText(descriptionText, terms)}</p>
 									</TooltipContent>
 								</Tooltip>
 							</TooltipProvider>
 						) : (
-							<p className={buildPreviewTextClasses()}>{descriptionText}</p>
+							<p className={buildPreviewTextClasses()}>
+								<ReferenceText terms={terms} text={descriptionText} />
+							</p>
 						)}
 					</m.div>
 				)}
@@ -286,6 +350,7 @@ export default function BaseNode({
 						<m.div
 							animate="expanded"
 							className="overflow-hidden"
+							data-drawn-content={drawnContent}
 							exit="collapsed"
 							initial="collapsed"
 							onAnimationComplete={handleAnimationComplete}
@@ -300,6 +365,7 @@ export default function BaseNode({
 								justification={justification}
 								name={name}
 								nodeType={nodeType}
+								terms={terms}
 							>
 								{children}
 							</ExpandedContent>
@@ -308,7 +374,10 @@ export default function BaseNode({
 				</AnimatePresence>
 
 				{/* Bottom row: Actions left, Expand/Collapse right */}
-				<div className="flex items-center justify-between px-2 pb-2">
+				<div
+					className="flex items-center justify-between px-2 pb-2"
+					data-drawn-content={drawnContent}
+				>
 					{/* Bottom-left actions (e.g., toggle children) */}
 					<div className="flex items-center">{bottomLeftActions}</div>
 					<m.button

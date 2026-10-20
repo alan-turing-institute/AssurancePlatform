@@ -34,7 +34,7 @@ describe("recommendedModel", () => {
 	});
 
 	it("recommends nothing for chat or search on the types with no fixed model", () => {
-		for (const type of ["OPENAI_COMPATIBLE", "ANTHROPIC"] as const) {
+		for (const type of ["OPENAI_COMPATIBLE", "ANTHROPIC", "OPENAI"] as const) {
 			expect(recommendedModel(type, "chat")).toBeNull();
 			expect(recommendedModel(type, "search")).toBeNull();
 		}
@@ -43,6 +43,7 @@ describe("recommendedModel", () => {
 	it("recommends nothing for ranking on a type that cannot rank", () => {
 		expect(recommendedModel("OPENAI_COMPATIBLE", "ranking")).toBeNull();
 		expect(recommendedModel("ANTHROPIC", "ranking")).toBeNull();
+		expect(recommendedModel("OPENAI", "ranking")).toBeNull();
 	});
 
 	it("has an entry for every type and job, and only recommends a job the type can do", () => {

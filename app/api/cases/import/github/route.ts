@@ -2,9 +2,9 @@ import { parseJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
+	apiImportFailure,
 	apiSuccess,
 	requireAuth,
-	serviceErrorToAppError,
 } from "@/lib/api-response";
 import type { ErrorCode } from "@/lib/errors";
 import { AppError, forbidden, validationError } from "@/lib/errors";
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
 		// Import the case
 		const importResult = await importCase(userId, jsonData);
 		if ("error" in importResult) {
-			return apiError(serviceErrorToAppError(importResult.error));
+			return apiImportFailure(importResult);
 		}
 
 		return apiSuccess({

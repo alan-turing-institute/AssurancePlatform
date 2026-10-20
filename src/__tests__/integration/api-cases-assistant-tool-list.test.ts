@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
+import prisma from "@/lib/prisma";
+import { changeBoundCheck } from "@/lib/services/health-evidence-service";
 import {
 	getConnectionForUse,
 	getRoles,
 } from "@/lib/services/model-connection-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
+import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
+import { appendRecord } from "../utils/health-adversarial-kit";
 import {
 	addTeamMember,
 	createTestCase,
@@ -15,6 +19,7 @@ import {
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -57,6 +62,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	await createTestElement(testCase.id, owner.id, {
 		elementType: "GOAL",
@@ -134,6 +140,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	] as const)("answers a user with direct %s permission", async (level) => {
 		const { owner, testCase } = await setup();
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, "tea.health");
 		await createTestPluginState(user.id, { pluginId: PLUGIN_ID });
 		await createTestPermission(testCase.id, user.id, owner.id, level);
 		await as(user);
@@ -147,6 +154,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("answers a member of a team that can view the case", async () => {
 		const { owner, testCase } = await setup();
 		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
 		await createTestPluginState(member.id, { pluginId: PLUGIN_ID });
 		const team = await createTestTeam(owner.id);
 		await addTeamMember(team.id, member.id);
@@ -167,6 +175,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("answers one and the same 404 for no permission, a missing case, a malformed id and the plugin being off", async () => {
 		const { owner, testCase } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await createTestPluginState(outsider.id, { pluginId: PLUGIN_ID });
 		await as(outsider);
 		const noAccess = await get(testCase.id);
@@ -187,6 +196,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("answers 404 when the deployment withholds the plugin, and when the user never turned it on", async () => {
 		const { owner, testCase } = await setup();
 		const newcomer = await createTestUser();
+		await enableTestPlugin(newcomer.id, "tea.health");
 		await as(newcomer);
 		const neverOn = await get(testCase.id);
 		await as(owner);
@@ -200,6 +210,7 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 	it("builds no tools for any request that fails", async () => {
 		const { owner, testCase } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		await createTestPluginState(outsider.id, { pluginId: PLUGIN_ID });
 		await as(outsider);
 		await get(testCase.id);
@@ -210,5 +221,102 @@ describe("GET /api/cases/[id]/assistant — the tool list", () => {
 		await get(testCase.id);
 
 		expect(createCaseTools).not.toHaveBeenCalled();
+	});
+});
+
+describe("GET /api/cases/[id]/assistant — claim health", () => {
+	const HEALTH_PLUGIN_ID = "tea.health";
+
+	async function addClaim(
+		owner: { id: string },
+		testCase: { id: string },
+		has: "a bound check" | "a record" | "neither"
+	) {
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+		});
+		if (has === "a bound check") {
+			expectSuccess(
+				await changeBoundCheck(owner.id, claim.id, {
+					name: "Sensor Range Checker",
+					reason: "Bind ahead of the first record",
+				})
+			);
+		}
+		if (has === "a record") {
+			await appendRecord(owner.id, claim.id);
+		}
+		return claim;
+	}
+
+	async function tools(
+		user: { id: string; username: string; email: string },
+		caseId: string
+	) {
+		await as(user);
+		return (await (await get(caseId)).json()).tools as string[];
+	}
+
+	it.each([
+		"a bound check",
+		"a record",
+	] as const)("lists read_claim_health when a claim has %s", async (has) => {
+		const { owner, testCase } = await setup();
+		await addClaim(owner, testCase, has);
+
+		expect(await tools(owner, testCase.id)).toEqual([
+			"read_case",
+			"read_element",
+			"lint_case",
+			"read_claim_health",
+		]);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(true);
+	});
+
+	it("lists it for a user who can only view the case", async () => {
+		const { owner, testCase } = await setup();
+		await addClaim(owner, testCase, "a record");
+		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
+		await createTestPluginState(viewer.id, { pluginId: PLUGIN_ID });
+		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
+
+		expect(await tools(viewer, testCase.id)).toContain("read_claim_health");
+	});
+
+	it("leaves it out when no claim has a bound check or a record", async () => {
+		const { owner, testCase } = await setup();
+		await addClaim(owner, testCase, "neither");
+
+		expect(await tools(owner, testCase.id)).not.toContain("read_claim_health");
+	});
+
+	it("leaves it out when the only claim with a record has been deleted", async () => {
+		const { owner, testCase } = await setup();
+		const claim = await addClaim(owner, testCase, "a record");
+		await prisma.assuranceElement.update({
+			where: { id: claim.id },
+			data: { deletedAt: new Date() },
+		});
+
+		expect(await tools(owner, testCase.id)).not.toContain("read_claim_health");
+	});
+
+	it("leaves it out for a user who switched the health plugin off, and for a deployment that withholds it", async () => {
+		const { owner, testCase } = await setup();
+		await addClaim(owner, testCase, "a record");
+		await setPluginEnabledForUser(HEALTH_PLUGIN_ID, owner.id, {
+			enabled: false,
+		});
+		const switchedOff = await tools(owner, testCase.id);
+		await setPluginEnabledForUser(HEALTH_PLUGIN_ID, owner.id, {
+			enabled: true,
+		});
+		vi.stubEnv("TEA_PLUGINS_DISABLED", HEALTH_PLUGIN_ID);
+		const withheld = await tools(owner, testCase.id);
+
+		expect(switchedOff).toEqual(["read_case", "read_element", "lint_case"]);
+		expect(withheld).toEqual(["read_case", "read_element", "lint_case"]);
 	});
 });

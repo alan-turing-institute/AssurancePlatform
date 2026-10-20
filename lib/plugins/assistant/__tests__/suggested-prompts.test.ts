@@ -63,6 +63,27 @@ describe("suggestedPrompts", () => {
 		expect(prompts).toContain("Suggest techniques for the selected element");
 	});
 
+	it("offers the claim-health question with or without a selected element when the tool is registered", () => {
+		const question = "Are the claims passing their automated checks?";
+		const tools = [...WITHOUT_TECHNIQUES, "read_claim_health"];
+
+		expect(suggestedPrompts({ tools, selected: false }).prompts).toEqual([
+			"What is the top-level goal?",
+			"Which claims lack evidence?",
+			question,
+			"Check this case against the rules",
+		]);
+		expect(
+			suggestedPrompts({ tools, selected: true, label: "P1" }).prompts
+		).toContain(question);
+	});
+
+	it("leaves out the claim-health question when the tool is not registered", () => {
+		expect(
+			suggestedPrompts({ tools: ALL, selected: false }).prompts.join("\n")
+		).not.toContain("automated checks");
+	});
+
 	it("offers only the prompts whose tool is registered", () => {
 		expect(
 			suggestedPrompts({ tools: ["lint_case"], selected: false }).prompts

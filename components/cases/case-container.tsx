@@ -8,8 +8,12 @@ import { ReactFlowProvider } from "reactflow";
 import CheckTour from "@/components/tour/check-tour";
 import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
-import { useCaseEvents } from "@/hooks/use-case-events";
+import {
+	CASE_RELOAD_EVENT_TYPES,
+	useCaseEvents,
+} from "@/hooks/use-case-events";
 import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
+import { plainReferenceText } from "@/lib/case/defined-terms";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
@@ -22,22 +26,6 @@ import Header from "./header";
 interface CaseContainerProps {
 	caseId?: string;
 }
-
-/** Event types that trigger a case refetch */
-const REFETCH_EVENTS = [
-	"case:updated",
-	"element:created",
-	"element:updated",
-	"element:deleted",
-	"element:restored",
-	"element:attached",
-	"element:detached",
-	"element:moved",
-	"comment:created",
-	"comment:updated",
-	"comment:deleted",
-	"permission:changed",
-];
 
 /** Event types that also require orphan refetch */
 const ORPHAN_REFETCH_EVENTS = ["element:attached", "element:detached"];
@@ -61,13 +49,17 @@ const EVENT_MESSAGE_TEMPLATES: Record<string, [string, string]> = {
 };
 
 /**
- * Extracts element name from SSE event payload.
+ * Extracts element name from SSE event payload. An element with no name is
+ * identified by its description, with references written as `{name}`.
  */
 function getElementName(event: SSEEvent): string | undefined {
+	const element = event.payload?.element as
+		| { name?: string; description?: string }
+		| undefined;
 	return (
 		(event.payload?.elementName as string) ||
-		(event.payload?.element as { name?: string })?.name ||
-		(event.payload?.element as { description?: string })?.description
+		element?.name ||
+		(element?.description ? plainReferenceText(element.description) : undefined)
 	);
 }
 
@@ -254,7 +246,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			}
 
 			// Refetch case data for element/case events
-			if (REFETCH_EVENTS.includes(event.type)) {
+			if (CASE_RELOAD_EVENT_TYPES.includes(event.type)) {
 				debouncedRefetchCase();
 				if (ORPHAN_REFETCH_EVENTS.includes(event.type)) {
 					debouncedOrphanRefetch();

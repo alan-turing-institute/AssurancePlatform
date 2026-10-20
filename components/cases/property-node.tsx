@@ -13,7 +13,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
-	const topRightActions = useNodeTopRightActions(data, "property");
+	const topRightActions = useNodeTopRightActions(data, "property", props.id);
 
 	const dataTour =
 		data.isDemo && data.name === "P1" ? "demo-claim-1" : undefined;
@@ -42,6 +42,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="property"
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 

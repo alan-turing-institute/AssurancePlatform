@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
 import { validateTemplateConfig } from "../schemas";
 import {
 	createTemplateFromPreset,
@@ -19,7 +19,7 @@ import {
 /**
  * Sample tree node for testing
  */
-function createSampleTree(): TreeNode {
+function createSampleTree(): PlainTreeNode {
 	return {
 		id: "goal-1",
 		type: "GOAL",
@@ -76,7 +76,7 @@ function createSampleTree(): TreeNode {
 /**
  * Sample case export data for testing
  */
-function createSampleCaseExport(): CaseExportNested {
+function createSampleCaseExport(): PlainCase {
 	return {
 		version: "1.0",
 		exportedAt: "2024-01-15T10:00:00Z",

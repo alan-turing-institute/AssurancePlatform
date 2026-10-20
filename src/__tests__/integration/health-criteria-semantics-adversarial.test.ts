@@ -1288,6 +1288,8 @@ describe("the settings read", () => {
 		const view = await readView(claim.id);
 		expect(view.body).toEqual({
 			criteria: null,
+			evidence_node: null,
+			evidence_node_text: null,
 			check_description: null,
 			integration: null,
 			accepted_by: null,

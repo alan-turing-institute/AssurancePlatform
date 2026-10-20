@@ -13,6 +13,10 @@ Open the case at `/case/<caseId>` and select its status control in the header. T
 
 When the information is complete, choose **Publish**. The platform exports the case tree and freezes it in a `PublishedAssuranceCase` record. That record includes the case's argument and evidence links, plus Case Information and any plugin data present on the case. The public page presents the snapshot's title, descriptive information and a download of its full JSON content. Internal collaboration comments are excluded from the public snapshot. Review the case content and its attached data before publishing, since a public visitor can download the snapshot.
 
+An evidence node that the health plugin added under a claim is published as ordinary evidence.
+Its text names the check and the pipeline that runs it, and the snapshot carries no results and no health data.
+Accepting a check's settings with a node changes the argument, so the case then shows as changed since publication.
+
 ## Public links and later changes
 
 The first publication makes a slug from the case name: lower case letters and digits, with other characters collapsed to hyphens. If another current public case uses that slug, the platform appends a number. The public page is at `/discover/<slug>`. Republishing a case while it remains published keeps the same slug, even if you rename the working case.

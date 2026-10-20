@@ -9,9 +9,12 @@ import {
 	revokeHealthEvidence,
 } from "@/lib/services/health-evidence-service";
 import {
+	caseHasHealthStatus,
 	computeHealthStatus,
 	readHealthStatus,
+	readHealthStatusesForCase,
 } from "@/lib/services/health-status-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
 	buildHealthRecords,
 	type HealthRecordName,
@@ -22,8 +25,8 @@ import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
-	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 const PLUGIN_ID = "tea.health";
@@ -37,6 +40,7 @@ afterEach(() => {
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -391,13 +395,11 @@ describe("computeHealthStatus — the same for everyone", () => {
 		const { owner, testCase, claim } = await setup();
 		const collaborator = await createTestUser();
 		await createTestPermission(testCase.id, collaborator.id, owner.id, "VIEW");
-		await createTestPluginState(owner.id, {
-			pluginId: PLUGIN_ID,
+		await setPluginEnabledForUser(PLUGIN_ID, owner.id, {
 			enabled: true,
 			settings: { validityWindowSeconds: 1, verdictScores: { PASS: 0 } },
 		});
-		await createTestPluginState(collaborator.id, {
-			pluginId: PLUGIN_ID,
+		await setPluginEnabledForUser(PLUGIN_ID, collaborator.id, {
 			enabled: true,
 			settings: { validityWindowSeconds: 999_999 },
 		});
@@ -427,6 +429,7 @@ describe("readHealthStatus — access", () => {
 			elementType: "GOAL",
 		});
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 		const deleted = await addClaim(testCase.id, owner.id);
 		await prisma.assuranceElement.update({
 			where: { id: deleted.id },
@@ -456,5 +459,58 @@ describe("readHealthStatus — access", () => {
 			await readHealthStatus(owner.id, "00000000-0000-0000-0000-000000000000"),
 			NOT_ENABLED_PATTERN
 		);
+	});
+});
+
+describe("caseHasHealthStatus", () => {
+	it("is false for a case whose claims have neither a bound check nor a record", async () => {
+		const { testCase } = await setup();
+
+		expect(await caseHasHealthStatus(testCase.id)).toBe(false);
+	});
+
+	it("is true once a claim has a record, and once a claim has only a bound check", async () => {
+		const withRecord = await setup();
+		await append(withRecord.owner.id, withRecord.claim.id, "populationPass");
+		const boundOnly = await setup();
+		expectSuccess(
+			await changeBoundCheck(boundOnly.owner.id, boundOnly.claim.id, {
+				name: "Sensor Range Checker",
+				reason: "Bind ahead of the first record",
+			})
+		);
+
+		expect(await caseHasHealthStatus(withRecord.testCase.id)).toBe(true);
+		expect(await caseHasHealthStatus(boundOnly.testCase.id)).toBe(true);
+	});
+
+	it("looks at the one case it is given", async () => {
+		const withRecord = await setup();
+		await append(withRecord.owner.id, withRecord.claim.id, "populationPass");
+		const other = await setup();
+
+		expect(await caseHasHealthStatus(other.testCase.id)).toBe(false);
+	});
+
+	it("is false when the only claim with a record is deleted", async () => {
+		const { owner, testCase, claim } = await setup();
+		await append(owner.id, claim.id, "populationPass");
+		await prisma.assuranceElement.update({
+			where: { id: claim.id },
+			data: { deletedAt: new Date() },
+		});
+
+		expect(await caseHasHealthStatus(testCase.id)).toBe(false);
+	});
+
+	it("agrees with the claims readHealthStatusesForCase reports", async () => {
+		const { owner, testCase, claim } = await setup();
+		const before = await readHealthStatusesForCase(owner.id, testCase.id);
+		await append(owner.id, claim.id, "populationPass");
+		const after = await readHealthStatusesForCase(owner.id, testCase.id);
+
+		expect(expectSuccess(before)).toHaveLength(0);
+		expect(expectSuccess(after)).toHaveLength(1);
+		expect(await caseHasHealthStatus(testCase.id)).toBe(true);
 	});
 });

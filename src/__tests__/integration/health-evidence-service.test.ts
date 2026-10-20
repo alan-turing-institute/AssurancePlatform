@@ -11,6 +11,7 @@ import {
 	reinstateHealthEvidence,
 	revokeHealthEvidence,
 } from "@/lib/services/health-evidence-service";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
 	buildHealthRecords,
 	type HealthRecordName,
@@ -22,8 +23,8 @@ import {
 	createTestCase,
 	createTestElement,
 	createTestPermission,
-	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 const PLUGIN_ID = "tea.health";
@@ -34,6 +35,7 @@ const HEX_SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const EXPECTED_EXPORTS = [
 	"DEFAULT_EVIDENCE_PAGE_SIZE",
 	"MAX_EVIDENCE_PAGE_SIZE",
+	"THINNING_LOCK_NAME",
 	"appendHealthEvidence",
 	"applyBoundCheck",
 	"boundCheckRefusal",
@@ -43,6 +45,7 @@ const EXPECTED_EXPORTS = [
 	"listHealthEvidence",
 	"reinstateHealthEvidence",
 	"revokeHealthEvidence",
+	"thinHealthEvidence",
 ].sort();
 
 afterEach(() => {
@@ -52,6 +55,7 @@ afterEach(() => {
 /** Owner + case + a PROPERTY_CLAIM element the owner (as case creator) has ADMIN access to. */
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -70,7 +74,7 @@ function validRecord(
 }
 
 describe("health-evidence-service — module surface (append-only, structurally)", () => {
-	it("exposes append, list, revoke, reinstate, change-bound-check, the binding helper for the settings service and the hash helpers — still no update or delete path for an evidence row", async () => {
+	it("exposes append, list, revoke, reinstate, change-bound-check, the binding helper for the settings service, the hash helpers and the thinning job — no update path for an evidence row, and thinning as its only removal", async () => {
 		const module = await import("@/lib/services/health-evidence-service");
 		const exportedNames = Object.keys(module).sort();
 
@@ -281,6 +285,7 @@ describe("appendHealthEvidence — one check per claim", () => {
 describe("appendHealthEvidence — claim resolution guard (no enumeration oracle)", () => {
 	it("returns the generic not-found message for a nonexistent claim id", async () => {
 		const owner = await createTestUser();
+		await enableTestPlugin(owner.id, "tea.health");
 		const claimId = "00000000-0000-0000-0000-000000000000";
 		expectError(
 			await appendHealthEvidence(owner.id, claimId, validRecord(claimId)),
@@ -290,6 +295,7 @@ describe("appendHealthEvidence — claim resolution guard (no enumeration oracle
 
 	it("returns the SAME generic message for an element that exists but isn't a PROPERTY_CLAIM", async () => {
 		const owner = await createTestUser();
+		await enableTestPlugin(owner.id, "tea.health");
 		const testCase = await createTestCase(owner.id);
 		const goal = await createTestElement(testCase.id, owner.id, {
 			elementType: "GOAL",
@@ -317,6 +323,7 @@ describe("appendHealthEvidence — claim resolution guard (no enumeration oracle
 	it("returns the SAME generic message when the caller lacks case access", async () => {
 		const { claim } = await setup();
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 
 		expectError(
 			await appendHealthEvidence(outsider.id, claim.id, validRecord(claim.id)),
@@ -327,6 +334,7 @@ describe("appendHealthEvidence — claim resolution guard (no enumeration oracle
 	it("refuses a write for a caller with only VIEW access (write requires EDIT)", async () => {
 		const { owner, testCase, claim } = await setup();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		expectError(
@@ -340,6 +348,7 @@ describe("appendHealthEvidence — claim resolution guard (no enumeration oracle
 		const record = validRecord(claim.id);
 		expectSuccess(await appendHealthEvidence(owner.id, claim.id, record));
 		const outsider = await createTestUser();
+		await enableTestPlugin(outsider.id, "tea.health");
 
 		expectError(
 			await appendHealthEvidence(outsider.id, claim.id, record),
@@ -361,11 +370,7 @@ describe("plugin enablement gate", () => {
 
 	it("refuses to append when the plugin is switched off for the acting user", async () => {
 		const { owner, claim } = await setup();
-		await createTestPluginState(owner.id, {
-			pluginId: PLUGIN_ID,
-			scopeType: "USER",
-			enabled: false,
-		});
+		await setPluginEnabledForUser(PLUGIN_ID, owner.id, { enabled: false });
 
 		expectError(
 			await appendHealthEvidence(owner.id, claim.id, validRecord(claim.id)),
@@ -453,6 +458,7 @@ describe("listHealthEvidence", () => {
 		const { owner, testCase, claim } = await setup();
 		await appendMany(owner.id, claim.id, 1);
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		const page = expectSuccess(await listHealthEvidence(viewer.id, claim.id));
@@ -577,6 +583,7 @@ describe("revocation and reinstatement", () => {
 	it("needs EDIT: a VIEW-only caller is refused", async () => {
 		const { owner, testCase, claim, record } = await setupWithRecord();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		expectError(
@@ -655,6 +662,7 @@ describe("changeBoundCheck", () => {
 	it("needs EDIT: a VIEW-only caller is refused", async () => {
 		const { owner, testCase, claim } = await setup();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, "tea.health");
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 
 		expectError(
@@ -705,6 +713,7 @@ describe("appendHealthEvidence — concurrent writers on the same claim", () => 
 
 	it("does not block writers on a DIFFERENT claim", async () => {
 		const owner = await createTestUser();
+		await enableTestPlugin(owner.id, "tea.health");
 		const testCase = await createTestCase(owner.id);
 		const claimA = await createTestElement(testCase.id, owner.id, {
 			elementType: "PROPERTY_CLAIM",

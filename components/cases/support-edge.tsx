@@ -2,9 +2,12 @@
 
 import { type EdgeProps, getSmoothStepPath } from "reactflow";
 import {
+	buildAppearanceEdgeStyle,
 	HIGHLIGHTED_EDGE_PATH_CLASS,
 	HIGHLIGHTED_EDGE_STYLE,
 } from "@/components/cases/edge-highlight-style";
+import { useEdgeAppearance } from "@/hooks/use-element-appearance";
+import { appearanceAttribute } from "@/lib/case/plugin-display-capture";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,7 +57,13 @@ export default function SupportEdge({
 	centerX?: number;
 	centerY?: number;
 	highlighted?: boolean;
+	sourceElementId?: string;
+	targetElementId?: string;
 }>) {
+	const appearance = useEdgeAppearance(
+		data?.sourceElementId,
+		data?.targetElementId
+	);
 	const [edgePath] = getSmoothStepPath({
 		sourceX,
 		sourceY,
@@ -66,10 +75,15 @@ export default function SupportEdge({
 		centerY: data?.centerY,
 	});
 
+	// The selection highlight replaces a plugin's colour on the edges it marks.
 	const highlighted = !!data?.highlighted;
-	const pathStyle = highlighted
-		? { ...style, ...HIGHLIGHTED_EDGE_STYLE }
-		: style;
+	const drawn = highlighted ? null : appearance;
+	let pathStyle = style;
+	if (highlighted) {
+		pathStyle = { ...style, ...HIGHLIGHTED_EDGE_STYLE };
+	} else if (drawn) {
+		pathStyle = { ...style, ...buildAppearanceEdgeStyle(drawn) };
+	}
 
 	return (
 		<>
@@ -79,6 +93,8 @@ export default function SupportEdge({
 					highlighted && HIGHLIGHTED_EDGE_PATH_CLASS
 				)}
 				d={edgePath}
+				data-appearance={appearanceAttribute(drawn)}
+				data-faded={drawn?.faded ? "" : undefined}
 				fill="none"
 				id={id}
 				markerEnd={markerEnd}

@@ -1,27 +1,27 @@
 /**
  * Input and output types for the structural checker.
  *
- * The input is the case export's nested tree. One widening from
+ * The input is the case export's nested tree in its plain-text form: every
+ * context entry a string and every reference written as `{name}`
+ * (`toPlainCase`, `lib/case/defined-terms.ts`), so the rules read the same
+ * text whether or not the case has named entries. One widening from
  * `lib/schemas/case-export.ts`: its hand-written `TreeNode` types
  * `assertionStatus` as `AssertionStatus | undefined`, while the zod schema
  * beside it marks the field `.nullable().optional()` and real exports carry
  * `null`. `LintNode` accepts what the schema accepts.
  */
 
-import type {
-	AssertionStatus,
-	CaseExportNested,
-	TreeNode,
-} from "@/lib/schemas/case-export";
+import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
+import type { AssertionStatus } from "@/lib/schemas/case-export";
 
 export type { ElementType } from "@/lib/schemas/case-export";
 
-export type LintNode = Omit<TreeNode, "assertionStatus" | "children"> & {
+export type LintNode = Omit<PlainTreeNode, "assertionStatus" | "children"> & {
 	assertionStatus?: AssertionStatus | null;
 	children: LintNode[];
 };
 
-export type LintCase = Omit<CaseExportNested, "tree"> & { tree: LintNode };
+export type LintCase = Omit<PlainCase, "tree"> & { tree: LintNode };
 
 export type Severity = "error" | "warning" | "style";
 
@@ -76,6 +76,7 @@ export interface Report {
 	};
 	findings: Finding[];
 	incomplete: { acked_claims: number };
+	/** The label is fixed at "1.0": the checker only ever reads the plain-text form of a case (`toPlainCase`), which has the shape of a 1.0 file. */
 	input: { schema: "tea-nested"; version: "1.0" };
 	/** Rules a reader must apply, computed from the ruleset. */
 	judgement_rules: string[];

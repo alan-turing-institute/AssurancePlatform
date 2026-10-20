@@ -51,3 +51,94 @@ describe("BaseNode — defeater decoration (ADR 0005 D2)", () => {
 		expect(screen.getByText("Defeater")).toBeInTheDocument();
 	});
 });
+
+/**
+ * A plugin's appearance (the `element-appearance` slot): a tint on a layer
+ * under the content, faded or not. A card with no appearance is drawn exactly
+ * as before.
+ */
+describe("BaseNode — a card given no terms", () => {
+	it("writes a stored reference as {name} and highlights nothing", () => {
+		const { container } = renderWithReactFlow(
+			<BaseNode
+				description="Within the {win#k3f9x2m7qa}"
+				name="E1"
+				nodeType="evidence"
+			/>
+		);
+
+		expect(screen.getByText("Within the {win}")).toBeInTheDocument();
+		expect(container.querySelector("[data-reference-id]")).toBeNull();
+	});
+});
+
+describe("BaseNode — plugin appearance", () => {
+	it("draws no appearance layer and no marker by default", () => {
+		const { container } = renderWithReactFlow(
+			<BaseNode description="Evidence" name="E1" nodeType="evidence" />
+		);
+
+		expect(container.querySelector("[data-plugin-display]")).toBeNull();
+		expect(container.querySelector("[data-appearance]")).toBeNull();
+		expect(container.querySelector(".border-2")).not.toHaveClass("isolate");
+	});
+
+	it.each([
+		["positive", "from-success/15"],
+		["caution", "from-warning/15"],
+		["negative", "from-destructive/15"],
+		["neutral", "from-muted-foreground/15"],
+	] as const)("tints a %s card on a layer under the content", (tone, tint) => {
+		const { container } = renderWithReactFlow(
+			<BaseNode
+				appearance={{ tone, faded: false }}
+				description="Evidence"
+				name="E1"
+				nodeType="evidence"
+			/>
+		);
+
+		const card = container.querySelector(".border-2");
+		expect(card).toHaveAttribute("data-appearance", tone);
+		expect(card).not.toHaveAttribute("data-faded");
+		const layer = container.querySelector("[data-plugin-display]");
+		expect(layer).toHaveClass(tint, "-z-10");
+		expect(layer).toHaveAttribute("aria-hidden", "true");
+		expect(card).toHaveClass("isolate");
+	});
+
+	it("veils a faded card and draws its tint at a third of the strength", () => {
+		const { container } = renderWithReactFlow(
+			<BaseNode
+				appearance={{ tone: "positive", faded: true }}
+				description="Evidence"
+				name="E1"
+				nodeType="evidence"
+			/>
+		);
+
+		const layer = container.querySelector("[data-plugin-display]");
+		expect(layer).toHaveClass("bg-muted/65", "from-success/5");
+		expect(layer).not.toHaveClass("from-success/15");
+		expect(container.querySelector(".border-2")).toHaveAttribute(
+			"data-faded",
+			""
+		);
+	});
+
+	it("keeps the text outside the tinted layer", () => {
+		renderWithReactFlow(
+			<BaseNode
+				appearance={{ tone: "negative", faded: true }}
+				description="Readable text"
+				name="E1"
+				nodeType="evidence"
+			/>
+		);
+
+		expect(screen.getByText("Readable text")).not.toHaveClass("opacity-30");
+		expect(
+			screen.getByText("Readable text").closest("[data-plugin-display]")
+		).toBeNull();
+	});
+});

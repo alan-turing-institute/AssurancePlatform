@@ -2,7 +2,11 @@ import type {
 	HealthEvidenceRecord,
 	HealthVerdict,
 } from "@/lib/schemas/health-evidence";
-import type { HealthRevocationCause, HealthStatus } from "./health-types";
+import type {
+	HealthRevocationCause,
+	HealthStatus,
+	HealthThinnedRun,
+} from "./health-types";
 
 export const VERDICT_DOT_CLASSES: Record<HealthVerdict, string> = {
 	pass: "bg-success",
@@ -42,6 +46,46 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
 export function formatDateTime(iso: string): string {
 	const date = new Date(iso);
 	return Number.isFinite(date.getTime()) ? dateTimeFormat.format(date) : iso;
+}
+
+const timeOfDayFormat = new Intl.DateTimeFormat("en-GB", {
+	hour: "2-digit",
+	minute: "2-digit",
+});
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
+	day: "numeric",
+	month: "short",
+});
+
+/**
+ * The line shown where passing results were removed from the log: how many,
+ * and from when to when, in the viewer's time zone. "1,437 identical passing
+ * results from 10:00 to 11:00 on 14 Oct are not kept."
+ */
+export function describeThinnedRun(run: HealthThinnedRun): string {
+	const count = run.removed_count;
+	const subject = `${count.toLocaleString("en-GB")} identical passing ${
+		count === 1 ? "result" : "results"
+	}`;
+	const verb = count === 1 ? "is" : "are";
+	const first = new Date(run.first_removed_at);
+	const last = new Date(run.last_removed_at);
+	if (!(Number.isFinite(first.getTime()) && Number.isFinite(last.getTime()))) {
+		return `${subject} ${verb} not kept.`;
+	}
+	const startTime = timeOfDayFormat.format(first);
+	const endTime = timeOfDayFormat.format(last);
+	const startDay = dayFormat.format(first);
+	const endDay = dayFormat.format(last);
+	let when = `from ${startTime} on ${startDay} to ${endTime} on ${endDay}`;
+	if (startDay === endDay) {
+		when =
+			startTime === endTime
+				? `at ${startTime} on ${startDay}`
+				: `from ${startTime} to ${endTime} on ${startDay}`;
+	}
+	return `${subject} ${when} ${verb} not kept.`;
 }
 
 const DURATION_PATTERN =
@@ -320,6 +364,62 @@ export function isStatusStale(status: HealthStatus, now: number): boolean {
 		status.stale ||
 		(status.expires_at !== null && Date.parse(status.expires_at) <= now)
 	);
+}
+
+/** What a claim's status looks like on its live evidence node. */
+export type LiveNodeKind =
+	| HealthVerdict
+	| "none" // bound to a check, no result yet
+	| "withdrawn"; // every result withdrawn
+
+export interface LiveNodeState {
+	kind: LiveNodeKind;
+	/** The result has expired, or a condition it was valid under no longer holds. Withdrawn results count as out of date. */
+	stale: boolean;
+}
+
+/** Reads a claim's status as the live node shows it, with the age judged at `now`. */
+export function liveNodeStateOf(
+	status: HealthStatus | null,
+	now: number
+): LiveNodeState {
+	if (!status) {
+		return { kind: "none", stale: false };
+	}
+	if (status.verdict === null) {
+		return status.stale_reason === "all-revoked"
+			? { kind: "withdrawn", stale: true }
+			: { kind: "none", stale: false };
+	}
+	return { kind: status.verdict, stale: isStatusStale(status, now) };
+}
+
+/** The word on a live node's badge for each state. */
+export const LIVE_NODE_WORDS: Record<LiveNodeKind, string> = {
+	none: "No result yet",
+	pass: "Passing",
+	marginal: "Marginal",
+	fail: "Failing",
+	indeterminate: "Could not judge",
+	withdrawn: "No current result",
+};
+
+/**
+ * The live node badge's accessible label: the claim it reports on, then the
+ * claim badge's own label (`describeBadge`) for the same status.
+ */
+export function describeLiveNode(
+	status: HealthStatus | null,
+	state: LiveNodeState,
+	claimName: string | null
+): string {
+	const subject = claimName
+		? `Live results for ${claimName}`
+		: "Live results for its claim";
+	if (!status || state.kind === "none") {
+		return `${subject}. Health: no result yet`;
+	}
+	return `${subject}. ${describeBadge(status, state.stale)}`;
 }
 
 const MISMATCH_WORDS = {

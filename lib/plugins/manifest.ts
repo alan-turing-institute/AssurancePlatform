@@ -21,6 +21,7 @@ export type PluginSurface =
 	| "extension-data" // tier-1 PluginData
 	| "plugin-tables" // tier-2 plugin-owned tables
 	| "machine-endpoints" // /api/machine/* routes this plugin exposes
+	| "element-appearance"
 	| "element-badge"
 	| "element-panel"
 	| "case-panel"
@@ -32,7 +33,11 @@ export interface PluginManifestEntry {
 	/**
 	 * Whether a user who has never set this plugin gets it on. Absent means
 	 * on. When `false`, the plugin is off until the user's own USER-scope row
-	 * turns it on; an off row at any higher scope still wins.
+	 * turns it on; an off row at any higher scope still wins. For a plugin
+	 * that lists the `machine-endpoints` surface, an integration's machine
+	 * account is treated as having turned it on, so pipelines keep working; a
+	 * row turning it off, or the deployment withholding it, still applies to
+	 * that account. A plugin without that surface gets no such exception.
 	 */
 	readonly defaultEnabled?: boolean;
 	/**
@@ -78,18 +83,20 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		id: "tea.health",
 		name: "Claim/Evidence Health",
 		version: "0.1.0",
+		defaultEnabled: false,
 		surfaces: [
 			"extension-data",
 			"plugin-tables",
 			"machine-endpoints",
 			"element-badge",
+			"element-appearance",
 			"element-panel",
 			"case-panel",
 			"settings-section",
 			"events",
 		],
 		description:
-			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
+			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Results never change your case: it changes only when you accept a check for a claim, which can add one evidence node under the claim that shows its current result.",
 	},
 	{
 		id: "tea.assistant",

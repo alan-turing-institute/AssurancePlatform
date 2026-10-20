@@ -355,11 +355,24 @@ export const criteriaSaveRequestSchema = z.strictObject({
 	accept: z.boolean({ error: "must be true or false" }),
 	/** The revision the person's form was read at, null when no settings were stored; a different stored revision refuses the save. */
 	expected_revision: z.number().int().nullable().optional(),
+	/** Add an evidence node under the claim; refused unless the save moves settings to accepted from not accepted. */
+	add_evidence_node: z.boolean({ error: "must be true or false" }).optional(),
+	/** Rewrite the live node's text to name the new check; refused unless accepted settings change their check and the node is live. */
+	update_evidence_node_text: z
+		.boolean({ error: "must be true or false" })
+		.optional(),
+});
+
+/** What happens to the claim's live evidence node when its settings are retired. */
+const evidenceNodeChoiceSchema = z.enum(["keep", "remove"], {
+	error: "must be keep or remove",
 });
 
 /** The body of `POST /api/elements/[id]/health/criteria/retirement`. */
 export const criteriaRetirementRequestSchema = z.strictObject({
 	reason: reasonSchema.optional(),
+	/** `keep` (the default) leaves a live node as ordinary evidence; `remove` trashes it. Does nothing without a live node. */
+	evidence_node: evidenceNodeChoiceSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------

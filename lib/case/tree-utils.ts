@@ -12,6 +12,14 @@ import type {
 import type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";
 
 /**
+ * Keys of a case node that hold the node's own data rather than child nodes.
+ * A context list can hold named-entry records, which must not be walked as if
+ * they were nodes: a visibility flag written onto one would travel back to the
+ * server with the next save.
+ */
+const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["context"]);
+
+/**
  * Gets the adjacent nodes for a given case node based on its type.
  */
 const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
@@ -19,10 +27,8 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 		return (caseNode.goals || []) as unknown as CaseNode[];
 	}
 	if (caseNode.type === "goal") {
-		return ((caseNode.context || []) as unknown as CaseNode[]).concat(
-			(caseNode.propertyClaims || []) as unknown as CaseNode[],
-			(caseNode.strategies || []) as unknown as CaseNode[],
-			(caseNode.context || []) as unknown as CaseNode[]
+		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
+			(caseNode.strategies || []) as unknown as CaseNode[]
 		);
 	}
 	if (caseNode.type === "strategy") {
@@ -89,6 +95,9 @@ export const addHiddenProp = (
 		(assuranceCase as unknown as Record<string, unknown>).hidden = false;
 
 		for (const key of Object.keys(assuranceCase)) {
+			if (NON_CHILD_KEYS.has(key)) {
+				continue;
+			}
 			const value = (assuranceCase as unknown as Record<string, unknown>)[key];
 			if (value && (typeof value === "object" || Array.isArray(value))) {
 				addHiddenProp(
@@ -196,6 +205,9 @@ const processObjectProperties = (
 ): void => {
 	const { targetParentId, parentFound, hide, toggleChildren } = options;
 	for (const key of Object.keys(obj)) {
+		if (NON_CHILD_KEYS.has(key)) {
+			continue;
+		}
 		toggleChildren(obj[key], targetParentId, parentFound, hide);
 	}
 };
@@ -278,10 +290,6 @@ const getChildrenByKey = (
 		case "goals":
 			return "goals" in element
 				? (element as AssuranceCaseResponse).goals
-				: undefined;
-		case "context":
-			return "context" in element
-				? (element as GoalResponse).context
 				: undefined;
 		case "propertyClaims":
 			return "propertyClaims" in element
@@ -368,7 +376,6 @@ function findElementById(
 
 		const childrenKeys = [
 			"goals",
-			"context",
 			"propertyClaims",
 			"strategies",
 			"evidence",
@@ -415,13 +422,7 @@ function getChildrenHiddenStatus(
 	element: NestedArrayItem | AssuranceCaseResponse
 ): boolean[] {
 	const hiddenStatus: boolean[] = [];
-	const childrenKeys = [
-		"context",
-		"propertyClaims",
-		"strategies",
-		"evidence",
-		"comments",
-	];
+	const childrenKeys = ["propertyClaims", "strategies", "evidence", "comments"];
 
 	for (const key of childrenKeys) {
 		const children = getChildrenByKey(element, key);

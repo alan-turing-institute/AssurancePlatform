@@ -50,6 +50,22 @@ export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
 }
 
 /**
+ * The 400 answer for an import file that failed validation. The "path:
+ * message" strings reach the client as their own top-level array, because the
+ * import dialog reads `validationErrors` specifically; the shared envelope
+ * carries only `fieldErrors`, a record of strings, which cannot hold a list.
+ */
+export function apiImportValidationError(
+	error: string,
+	validationErrors: string[]
+): NextResponse {
+	return NextResponse.json(
+		{ error, code: "VALIDATION", validationErrors },
+		{ status: 400 }
+	);
+}
+
+/**
  * Create a 429 Too Many Requests response.
  * Optionally sets the `Retry-After` header in seconds.
  */
@@ -122,6 +138,11 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^This claim is bound to check /,
 		factory: () => unprocessable(""),
 	},
+	// `context-entry-rules.ts` and `lib/schemas/context-entry.ts`: a named
+	// context entry that breaks a rule (a repeated name or id) is a validation
+	// failure (400). Anchored and listed before the substring patterns below
+	// because the message embeds an author-chosen name.
+	{ pattern: /^Context entry /, factory: () => validationError("") },
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
@@ -149,6 +170,20 @@ const ERROR_MAPPINGS: Array<{
 	// that were replaced since the form read them is a state conflict (409).
 	{
 		pattern: /^These settings were changed by someone else$/,
+		factory: conflict,
+	},
+	// `health-criteria-service.ts`: adding an evidence node to settings that are
+	// not accepted, or to a claim that already has a live node, is a state
+	// conflict (409). So is any failure that means another change to the case
+	// got in first (a deadlock or write conflict, or a record that went missing
+	// before it could be locked): the person is told to try again.
+	{ pattern: /^These settings are not accepted$/, factory: conflict },
+	{
+		pattern: /^This claim already has a live evidence node$/,
+		factory: conflict,
+	},
+	{
+		pattern: /^The case changed while you were saving\. Try again\.$/,
 		factory: conflict,
 	},
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
@@ -290,4 +325,19 @@ export function serviceErrorToAppError(error: string): AppError {
 	}
 
 	return new AppError({ code: "INTERNAL", message: error });
+}
+
+/**
+ * The answer for a case import that failed. A file that failed validation gets
+ * the list of validation messages (`apiImportValidationError`); any other
+ * failure is mapped from its service error message.
+ */
+export function apiImportFailure(failure: {
+	error: string;
+	validationErrors?: string[];
+}): NextResponse {
+	if (failure.validationErrors?.length) {
+		return apiImportValidationError(failure.error, failure.validationErrors);
+	}
+	return apiError(serviceErrorToAppError(failure.error));
 }

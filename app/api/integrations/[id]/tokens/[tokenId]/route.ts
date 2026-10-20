@@ -12,22 +12,20 @@ import { revokeToken } from "@/lib/services/integration-registry-service";
 /**
  * DELETE /api/integrations/[id]/tokens/[tokenId]
  *
- * Revokes a single token immediately — no grace period (unlike rotation's
- * overlap window). Owner-only — ownership rides the token's OWN
- * integration, not the path `[id]`. The path `[id]` IS still checked,
- * though, for a different reason: a `tokenId` that exists and is owned by
- * the caller but actually belongs to a DIFFERENT integration the caller
- * also owns is rejected with the exact same generic 404 as a nonexistent
- * `tokenId` (deviation-5 fix, work item 2 — no enumeration oracle, and no
- * cross-integration token operations via a mismatched path).
+ * Revokes one token at once, with no overlap.
+ * The integration in the path must be the one the token belongs to; otherwise
+ * the answer is the same 404 as for a token that does not exist.
+ * Only the owner can revoke a token.
  *
- * @pathParam id - Integration ID (UUID) — checked against the token's OWN integration; a mismatch is a 404 identical to a nonexistent tokenId
+ * @description Revokes a single token immediately; revoking a token that is already revoked is a 409.
+ * @pathParam id - Integration ID (UUID), which must be the integration the token belongs to
  * @pathParam tokenId - Token ID (UUID)
  * @response 200 - `{ success: true }`
  * @response 400 - Validation error
  * @response 401 - Unauthorised
- * @response 404 - Token not found (covers non-existent, not-owned, and belonging to a different integration than the path — same message)
+ * @response 404 - Token not found (covers non-existent, not-owned, and belonging to a different integration than the path, with the same message)
  * @response 409 - The token is already revoked
+ * @add 404,409
  * @auth SessionAuth
  * @tag Integrations
  */

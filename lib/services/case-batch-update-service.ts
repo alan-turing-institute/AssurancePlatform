@@ -5,6 +5,7 @@
  * Used by the JSON editor to apply multiple changes in a single transaction.
  */
 
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import type {
 	CreateElementData,
 	ElementChange,
@@ -12,7 +13,13 @@ import type {
 } from "@/lib/case/tree-diff";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { isWriteConflict } from "@/lib/prisma-errors";
+import {
+	type ContextEntry,
+	isNamedContextEntry,
+} from "@/lib/schemas/context-entry";
 import { validateElementName } from "@/lib/schemas/element-validation";
+import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
@@ -29,6 +36,9 @@ import type {
 } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-batch-update-service" });
+
+/** The answer, flagged as a conflict, when another person's change to the case got in first. */
+const CASE_MODIFIED = "Case has been modified by another user";
 
 /**
  * ADR 0004 D3 write rule (author-declared, machine-proposable, never
@@ -264,6 +274,65 @@ type TransactionClient = TransactionCallback extends (
 ) => Promise<unknown>
 	? T
 	: never;
+
+/**
+ * Named context entries: every element's names unique, and every id used once
+ * in the case, judged on the state the case will be in after the whole batch.
+ * A batch that deletes an element (or removes an entry) and creates the same
+ * entry again therefore passes. A batch that carries no named entry cannot add
+ * a clash, so it does not read the case's context at all.
+ */
+async function validateContextEntries(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	const carriesNamedEntry = [...creates, ...updates].some((change) =>
+		(change.data.context ?? []).some(isNamedContextEntry)
+	);
+	if (!carriesNamedEntry) {
+		return null;
+	}
+	// Every element of the case, including those in the bin, whose entries
+	// would come back on a restore.
+	const rows = await prisma.assuranceElement.findMany({
+		where: { caseId },
+		select: { id: true, context: true },
+	});
+	const finalContext = new Map<string, ContextEntry[]>(
+		rows.map((row) => [row.id, parseContextEntries(row.context)])
+	);
+	for (const change of deletes) {
+		finalContext.delete(change.elementId);
+	}
+	for (const change of creates) {
+		finalContext.set(change.elementId, change.data.context ?? []);
+	}
+	for (const change of updates) {
+		if (change.data.context !== undefined) {
+			finalContext.set(change.elementId, change.data.context);
+		}
+	}
+	return checkContextEntriesForCase(finalContext.values()) ?? null;
+}
+
+/**
+ * Every check of the values a batch writes into element fields: the element
+ * names, then the named context entries.
+ */
+async function validateElementFields(
+	userId: string,
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	return (
+		(await validateElementNames(userId, creates, updates)) ??
+		(await validateContextEntries(caseId, creates, updates, deletes))
+	);
+}
 
 /**
  * Validates user has EDIT permission on the case
@@ -1260,10 +1329,7 @@ export async function applyBatchUpdate(
 	if (options.expectedVersion) {
 		const hasConflict = await checkForConflict(caseId, options.expectedVersion);
 		if (hasConflict) {
-			return {
-				error: "Case has been modified by another user",
-				conflictDetected: true,
-			};
+			return { error: CASE_MODIFIED, conflictDetected: true };
 		}
 	}
 
@@ -1328,9 +1394,15 @@ export async function applyBatchUpdate(
 	// point shape as the single-element route (element-service.ts's
 	// createElement/updateElement), applied here so a rename or create
 	// through the JSON editor can't bypass it.
-	const nameFormatError = await validateElementNames(userId, creates, updates);
-	if (nameFormatError) {
-		return { error: nameFormatError };
+	const fieldError = await validateElementFields(
+		userId,
+		caseId,
+		creates,
+		updates,
+		deletes
+	);
+	if (fieldError) {
+		return { error: fieldError };
 	}
 
 	try {
@@ -1359,6 +1431,12 @@ export async function applyBatchUpdate(
 			},
 		};
 	} catch (error) {
+		if (isWriteConflict(error)) {
+			// Another transaction holds rows this one needs while waiting for rows
+			// this one holds, and the database ended this one. Nothing was written.
+			log.warn("Batch update ended by a write conflict", { error });
+			return { error: CASE_MODIFIED, conflictDetected: true };
+		}
 		log.error("Batch update failed", { error });
 		return {
 			error:

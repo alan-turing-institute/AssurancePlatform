@@ -17,12 +17,13 @@ tags:
 - **Goal:** The broad proposition at the top of a case. The editor creates `G1` when a new case is made.
 - **Strategy:** An explanation of how a goal or claim is broken into parts that can be supported.
 - **Property claim:** A narrower proposition about the system or project that a reviewer can test or challenge.
-- **Evidence:** An artefact or result offered for a particular claim. Its relevance, reliability and sufficiency still need assessment.
+- **Evidence:** An artefact or result offered for a particular claim. Its relevance, reliability and sufficiency still need assessment. An evidence node that the health plugin added shows the claim's current result on screen and is ordinary evidence everywhere else.
 - **Evidence quality:** A judgement about whether evidence is relevant to a claim, comes from a credible source and is sufficient for the proposed conclusion.
 - **Relevance:** The degree to which evidence addresses the particular claim to which it is linked.
 - **Reliability:** The trustworthiness of an evidence source, method and record.
 - **Sufficiency:** Whether the available evidence is enough for the claim and its stated scope.
 - **Context:** A definition or boundary needed to understand where a claim applies.
+- **Defined term:** A context entry that has been given a name, so that text on the same element and on the elements below it can refer to it. Hovering a reference on the diagram shows its meaning.
 - **Assumption:** A condition taken as given in an argument and open to challenge if it fails.
 - **Justification:** A reason for including a claim, choice or decomposition in the argument.
 - **Defeater:** An element used to challenge another element. Its name uses `C` before its normal type prefix, such as `CP1`.
@@ -58,7 +59,7 @@ tags:
 - **Slug:** The readable path segment used for a published case page.
 - **Backup:** A separate exported copy of case data, such as JSON saved to Google Drive.
 - **Machine integration:** A registered external service that uses scoped API tokens and case grants.
-- **Health evidence:** An append-only, hash-chained record of one runtime check result against a property claim, with a metric, value, threshold, verdict and provenance.
+- **Health evidence:** An append-only, hash-chained record of one runtime check result against a property claim, with a metric, value, threshold, verdict and provenance. Results are never stored as case elements; accepting the claim's check can add one evidence node under the claim, which shows the claim's current result.
 - **API token:** A secret beginning `teap_` that a machine client sends as a bearer credential and that TEA shows once on issue.
 - **Scope:** A named kind of machine action allowed to an integration; case permission still controls which case it can use.
 - **Trash:** The recovery area for deleted cases before the 30-day purge cutoff.

@@ -1,4 +1,9 @@
 import type { Edge, Node } from "reactflow";
+import {
+	type DefinedTerm,
+	parseContextEntries,
+	termsInReach,
+} from "@/lib/case/defined-terms";
 import { resolveReactFlowNodeType } from "@/lib/case/node-type-resolver";
 import { generateUuid } from "@/lib/generate-uuid";
 import { logger } from "@/lib/logger";
@@ -93,6 +98,29 @@ export const convertAssuranceCase = (assuranceCase: AssuranceCaseWithGoals) => {
 	}
 };
 
+const NO_TERMS: DefinedTerm[] = [];
+
+/**
+ * The named context entries an item's text can refer to: its own, then those
+ * already worked out for its parent (nearest first). A card with no entry of
+ * its own shares its parent's list.
+ */
+const termsForItem = (
+	item: ConvertibleItem,
+	parentNode: Node | null
+): DefinedTerm[] => {
+	const inherited =
+		(parentNode?.data?.termsInReach as DefinedTerm[] | undefined) ?? NO_TERMS;
+	const own = termsInReach([
+		{
+			id: item.id,
+			name: item.name,
+			context: parseContextEntries(item.context),
+		},
+	]);
+	return own.length === 0 ? inherited : [...own, ...inherited];
+};
+
 // Helper function to create a single node
 const createNode = (
 	item: ConvertibleItem,
@@ -114,6 +142,8 @@ const createNode = (
 			elementType: nodeType, // Add elementType for identification
 			label: item.name, // Add label for compatibility
 			isDemo,
+			// What this card's text can refer to; cards read it from their data.
+			termsInReach: termsForItem(item, parentNode),
 		},
 		position: { x: 0, y: 50 },
 		hidden: item.hidden,
@@ -324,16 +354,28 @@ const applyDefeaterAttachments = (nodes: Node[]): Node[] => {
  * for a cell's outgoing children edges, so the bend clears the whole cell
  * rather than the target's own midpoint. Edges outside a cell get no
  * `centerY` and render identically to the old plain `smoothstep`.
+ *
+ * `data` carries the ids of the two elements the edge joins, so a plugin can
+ * be asked about the edge (the `element-appearance` slot) without working
+ * them out from node ids.
  */
-function buildSupportEdge(node: Node): Edge {
+function buildSupportEdge(
+	node: Node,
+	elementIdByNodeId: Map<string, string>
+): Edge {
+	const source = node.data.parentId as string;
 	return {
 		id: `e${generateUuid()}`,
-		source: node.data.parentId as string,
+		source,
 		target: node.id,
 		type: "support",
 		animated: false,
 		sourceHandle: "c",
 		hidden: false,
+		data: {
+			sourceElementId: elementIdByNodeId.get(source),
+			targetElementId: elementIdByNodeId.get(node.id),
+		},
 	};
 }
 
@@ -376,6 +418,12 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 
 	// Create a set of all node IDs for validation
 	const nodeIds = new Set(nodes.map((node) => node.id));
+	const elementIdByNodeId = new Map<string, string>();
+	for (const node of nodes) {
+		if (node.data?.id !== undefined) {
+			elementIdByNodeId.set(node.id, String(node.data.id));
+		}
+	}
 
 	for (const node of nodes) {
 		const attachedTo = node.data.attachedTo as string | undefined;
@@ -392,7 +440,7 @@ export const createEdgesFromNodes = (nodes: Node[]): Edge[] => {
 			nodeIds.has(node.data.parentId) &&
 			!replacesSupport
 		) {
-			edges.push(buildSupportEdge(node));
+			edges.push(buildSupportEdge(node, elementIdByNodeId));
 		}
 
 		if (isChallenge && attachedTo) {

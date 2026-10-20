@@ -1,3 +1,4 @@
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import { toDisplayType } from "@/lib/element-types";
 import type { ElementResponse } from "@/lib/services/element-service";
 import type { AssertionStatus } from "@/src/generated/prisma";
@@ -70,7 +71,8 @@ function applyOptionalFields(
 	element: {
 		assumption: string | null;
 		justification: string | null;
-		context: string[];
+		/** The stored column value; read through parseContextEntries. */
+		context: unknown;
 		url: string | null;
 		urls: string[];
 		level: number | null;
@@ -98,8 +100,9 @@ function applyOptionalFields(
 	if (element.justification) {
 		response.justification = element.justification;
 	}
-	if (element.context && element.context.length > 0) {
-		response.context = element.context;
+	const context = parseContextEntries(element.context);
+	if (context.length > 0) {
+		response.context = context;
 	}
 	if (element.level !== null) {
 		response.level = element.level;
@@ -132,7 +135,8 @@ export function transformToResponse(element: {
 	description: string;
 	assumption: string | null;
 	justification: string | null;
-	context: string[];
+	/** The stored column value; read through parseContextEntries. */
+	context: unknown;
 	url: string | null;
 	urls: string[];
 	inSandbox: boolean;

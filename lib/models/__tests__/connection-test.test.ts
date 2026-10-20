@@ -234,6 +234,38 @@ describe("OpenAI-compatible servers", () => {
 	});
 });
 
+describe("OpenAI", () => {
+	it("lists models for chat only, with the Bearer key", async () => {
+		server.respond = routes({ "/v1/models": listOf("gpt-x", "embed-y") });
+
+		const result = await testConnection(
+			connection("OPENAI", { baseUrl: `${server.origin}/v1` })
+		);
+
+		expect(result).toEqual({
+			ok: true,
+			message: "The connection works.",
+			models: { chat: ["gpt-x", "embed-y"], ranking: [], search: [] },
+		});
+		expect(server.requests[0]?.headers.authorization).toBe(`Bearer ${KEY}`);
+	});
+
+	it("reports a refused key with the fixed message", async () => {
+		server.respond = (_request, response) =>
+			sendJson(response, { error: { message: `bad key ${KEY}` } }, 401);
+
+		const result = await testConnection(
+			connection("OPENAI", { baseUrl: `${server.origin}/v1` })
+		);
+
+		expect(result).toEqual({
+			ok: false,
+			message: "The server did not accept the key.",
+			models: { chat: [], ranking: [], search: [] },
+		});
+	});
+});
+
 describe("Anthropic", () => {
 	it("lists chat models with the key and version headers and a full page size", async () => {
 		server.respond = routes({

@@ -13,7 +13,7 @@ describe("buildPluginOffCopy", () => {
 
 		expect(copy.title).toBe("Turn off Claim/Evidence Health for your account?");
 		expect(copy.introLine).toBe(
-			"Health badges, the Evidence tab and the Evidence health panel will disappear for you."
+			"Health badges, the Evidence tab and the Evidence health panel will disappear for you. Evidence nodes that show a claim's result stay in your case as ordinary evidence."
 		);
 		expect(copy.closingLine).toBe("Other collaborators are not affected.");
 		expect(copy.variableLines).toEqual([]);
@@ -43,7 +43,7 @@ describe("buildPluginOffCopy", () => {
 		});
 
 		expect(copy.variableLines).toEqual([
-			"The 212 evidence records on 3 of your cases stay stored and are never deleted.",
+			"The 212 evidence records on 3 of your cases stay stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on.",
 		]);
 	});
 
@@ -59,7 +59,7 @@ describe("buildPluginOffCopy", () => {
 		});
 
 		expect(copy.variableLines).toEqual([
-			"The 1 evidence record on 1 of your cases stays stored and is never deleted.",
+			"The 1 evidence record on 1 of your cases stays stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on.",
 		]);
 	});
 
@@ -92,7 +92,7 @@ describe("buildPluginOffCopy", () => {
 		});
 
 		expect(copy.variableLines).toEqual([
-			"The 2 evidence records on 1 of your cases stay stored and are never deleted.",
+			"The 2 evidence records on 1 of your cases stay stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on.",
 			"2 integrations (DARTER pipeline, Sourcery) currently write evidence to your cases; they will keep doing so, and you will see what was written when you turn the plugin back on.",
 		]);
 	});

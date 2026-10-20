@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { attachCaseElement } from "@/lib/case";
+import { plainReferenceText } from "@/lib/case/defined-terms";
 import {
 	getCompatibleChildTypes,
 	normaliseOrphanType,
@@ -129,7 +130,7 @@ export function AttachElementDialog({
 										{typeof orphan.description === "string" &&
 											orphan.description !== "" && (
 												<p className="truncate text-muted-foreground text-xs">
-													{String(orphan.description)}
+													{plainReferenceText(String(orphan.description))}
 												</p>
 											)}
 									</div>

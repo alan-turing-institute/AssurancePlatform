@@ -1,13 +1,16 @@
 // biome-ignore-all lint/performance/useTopLevelRegex: inline patterns keep each assertion readable
 import { MockLanguageModelV3, simulateReadableStream } from "ai/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
+import { appendRecord, isoAgo, MINUTE } from "../utils/health-adversarial-kit";
 import { giveChatJob } from "../utils/model-jobs";
 import {
 	createTestCase,
 	createTestElement,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -131,6 +134,7 @@ const MESSAGES = {
 /** A signed-in user with the assistant on, a chat job on a stored connection, and a case. */
 async function setup() {
 	const user = await createTestUser();
+	await enableTestPlugin(user.id, "tea.health");
 	const kase = await createTestCase(user.id);
 	const root = await createTestElement(kase.id, user.id, {
 		name: "G1",
@@ -359,5 +363,130 @@ describe("assistant suggest_techniques through the route", () => {
 		const text = await res.text();
 		expect(res.status).toBe(200);
 		expect(text).toContain("The techniques service is not reachable.");
+	});
+});
+
+describe("assistant claim health through the route", () => {
+	const TECH_URL = "https://techniques.example/mcp";
+	const HEALTH_PLUGIN = "tea.health";
+
+	/** A property claim under the case's top goal, with a record when `withRecord` is set. */
+	async function addClaim(
+		setupResult: Awaited<ReturnType<typeof setup>>,
+		withRecord: boolean
+	) {
+		const { user, kase, root } = setupResult;
+		const claim = await createTestElement(kase.id, user.id, {
+			name: "P1",
+			elementType: "PROPERTY_CLAIM",
+			parentId: root.id,
+			description: "Sensor readings stay within range",
+		});
+		if (withRecord) {
+			await appendRecord(user.id, claim.id, "populationPass", {
+				timestamp: isoAgo(5 * MINUTE),
+			});
+		}
+		return claim;
+	}
+
+	/** What the model is given for one question: the system prompt and the names of the tools. */
+	async function captureCall(kase: { id: string }) {
+		let prompt = "";
+		let tools: string[] = [];
+		(await modelFactory()).mockImplementation(() =>
+			textModel((o) => {
+				prompt = systemPromptOf(o);
+				tools = ((o as { tools?: { name: string }[] }).tools ?? []).map(
+					(t) => t.name
+				);
+			})
+		);
+		await (await post(kase.id, MESSAGES)).text();
+		return { prompt, tools };
+	}
+
+	it("offers the tool, and adds its paragraph after the techniques paragraph, when a claim has a result", async () => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", TECH_URL);
+		const made = await setup();
+		await addClaim(made, true);
+
+		const { prompt, tools } = await captureCall(made.kase);
+
+		expect(tools).toContain("read_claim_health");
+		expect(prompt).toContain(
+			"You have these read-only tools: read_case, read_element, lint_case, suggest_techniques, read_claim_health."
+		);
+		const techniques = prompt.indexOf(
+			"For any question about which techniques"
+		);
+		const claimHealth = prompt.indexOf(
+			"read_claim_health returns the latest result"
+		);
+		expect(techniques).toBeGreaterThanOrEqual(0);
+		expect(claimHealth).toBeGreaterThan(techniques);
+		expect(
+			prompt.split("read_claim_health returns the latest result")
+		).toHaveLength(2);
+	});
+
+	it("offers no tool and says the case has no results when no claim has a check or a record", async () => {
+		const made = await setup();
+		await addClaim(made, false);
+
+		const { prompt, tools } = await captureCall(made.kase);
+
+		expect(tools).not.toContain("read_claim_health");
+		expect(prompt).toContain(
+			"This case has no claims with automated check results."
+		);
+		expect(prompt).not.toContain("read_claim_health returns");
+	});
+
+	it("offers no tool and says the plugin is off when the user has switched it off", async () => {
+		const made = await setup();
+		await addClaim(made, true);
+		await setPluginEnabledForUser(HEALTH_PLUGIN, made.user.id, {
+			enabled: false,
+		});
+
+		const { prompt, tools } = await captureCall(made.kase);
+
+		expect(tools).not.toContain("read_claim_health");
+		expect(prompt).toContain(
+			"because the Claim/Evidence Health plugin is off."
+		);
+	});
+
+	it("offers no tool and says the plugin is off when the deployment withholds it", async () => {
+		const made = await setup();
+		await addClaim(made, true);
+		vi.stubEnv("TEA_PLUGINS_DISABLED", HEALTH_PLUGIN);
+
+		const { prompt, tools } = await captureCall(made.kase);
+
+		expect(tools).not.toContain("read_claim_health");
+		expect(prompt).toContain(
+			"because the Claim/Evidence Health plugin is off."
+		);
+	});
+
+	it("answers each question from a fresh read, so a failing record posted between two questions shows in the second reply", async () => {
+		const made = await setup();
+		const claim = await addClaim(made, true);
+		(await modelFactory()).mockImplementation(() =>
+			toolThenTextModel("read_claim_health", {})
+		);
+
+		const first = await (await post(made.kase.id, MESSAGES)).text();
+		await appendRecord(made.user.id, claim.id, "failingSummary", {
+			timestamp: isoAgo(1 * MINUTE),
+		});
+		const second = await (await post(made.kase.id, MESSAGES)).text();
+
+		expect(first).toContain('"result":"pass"');
+		expect(first).not.toContain('"result":"fail"');
+		expect(second).toContain('"result":"fail"');
+		expect(second).toContain('"label":"P1"');
 	});
 });

@@ -434,7 +434,7 @@
       "get": {
         "operationId": "get-cases-export",
         "summary": "Export an assurance case as JSON",
-        "description": "Exports the specified case in nested JSON format (v1.0).",
+        "description": "Exports the specified case in nested JSON format (v1.1 when the case uses named context entries, v1.0 otherwise).",
         "tags": [
           "Cases"
         ],
@@ -1471,6 +1471,46 @@
         }
       }
     },
+    "/cases/{id}/health/evidence-nodes": {
+      "get": {
+        "operationId": "get-cases-{id}-health-evidence-nodes",
+        "summary": "GET /api/cases/[id]/health/evidence-nodes",
+        "description": "Human session only; the session user needs VIEW on the case.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `[{ id, name, claim_id, claim_name, status }]`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/health/hygiene": {
       "get": {
         "operationId": "get-cases-{id}-health-hygiene",
@@ -1814,6 +1854,41 @@
         ],
         "parameters": [],
         "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cron/health-evidence-thinning": {
+      "post": {
+        "operationId": "post-cron-health-evidence-thinning",
+        "summary": "Thin the health plugin's evidence log (cron job)",
+        "description": "Removes repeated passing results older than a day from the evidence log.",
+        "tags": [
+          "Cron"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true, dryRun: boolean, busy: boolean, claimsProcessed: number, recordsRemoved: number, runsRecorded: number, more: boolean }"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -2371,7 +2446,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, integration, accepted_by, last_change, pipeline_read, check_offer, offered_version, latest_result }`"
+                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, evidence_node, evidence_node_text, integration, accepted_by, last_change, pipeline_read, check_offer, offered_version, latest_result }`"
                 }
               }
             }
@@ -2410,6 +2485,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/200 - The same body as the GET, after the save"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/evidence-node": {
+      "post": {
+        "operationId": "post-elements-{id}-health-evidence-node",
+        "summary": "POST /api/elements/[id]/health/evidence-node",
+        "description": "Human session only. The session user needs EDIT on the claim's",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The same body as `GET /api/elements/[id]/health/criteria`, after the change"
                 }
               }
             }
@@ -2578,7 +2693,7 @@
       "get": {
         "operationId": "get-integrations",
         "summary": "GET /api/integrations",
-        "description": "Owner-only listing — the caller's own integrations only.",
+        "description": "Lists the integrations the signed-in user owns, each with a summary of its tokens and never a secret.",
         "tags": [
           "Integrations"
         ],
@@ -2616,7 +2731,7 @@
       "post": {
         "operationId": "post-integrations",
         "summary": "POST /api/integrations",
-        "description": "Any authenticated user may register an integration; the",
+        "description": "Registers an integration owned by the signed-in user and returns it without a token; any signed-in user may register one, and an unknown scope is a 400.",
         "tags": [
           "Integrations"
         ],
@@ -2646,6 +2761,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2656,7 +2774,7 @@
       "patch": {
         "operationId": "patch-integrations-{id}",
         "summary": "PATCH /api/integrations/[id]",
-        "description": "At least one of `description`/`scopes` must be present.",
+        "description": "Updates an integration's description and/or scopes (at least one is required); the scopes sent replace the existing list, and an unknown scope is a 400.",
         "tags": [
           "Integrations"
         ],
@@ -2686,6 +2804,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2694,7 +2815,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}",
         "summary": "DELETE /api/integrations/[id]",
-        "description": "Prefer `POST .../revoke` when the integration's own",
+        "description": "Deletes an integration with its account and tokens; revoke it instead when the record of who sent its evidence must stay resolvable.",
         "tags": [
           "Integrations"
         ],
@@ -2717,6 +2838,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2727,7 +2851,7 @@
       "get": {
         "operationId": "get-integrations-{id}-case-grants",
         "summary": "GET /api/integrations/[id]/case-grants",
-        "description": "",
+        "description": "Lists the cases the integration can reach and the permission level on each, limited to cases the signed-in user can view; it works for a suspended or revoked integration.",
         "tags": [
           "Integrations"
         ],
@@ -2757,6 +2881,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2765,7 +2892,7 @@
       "post": {
         "operationId": "post-integrations-{id}-case-grants",
         "summary": "POST /api/integrations/[id]/case-grants",
-        "description": "Never errors on a repeat call for a case the system user",
+        "description": "Grants the integration's account View, Comment or Edit access to a case (Admin is refused); the integration must be active, and the signed-in user must own it and hold Admin on the case.",
         "tags": [
           "Integrations"
         ],
@@ -2781,7 +2908,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` — new grant, or an existing grant's permission level changed"
+                  "$ref": "#/components/schemas/201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` for a new grant, or an existing grant whose permission level changed"
                 }
               }
             }
@@ -2795,6 +2922,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2805,7 +2938,7 @@
       "post": {
         "operationId": "post-integrations-{id}-reactivate",
         "summary": "POST /api/integrations/[id]/reactivate",
-        "description": "REVOKED stays terminal — reactivating a revoked integration",
+        "description": "Reactivates a suspended integration; a revoked integration cannot be reactivated, and reactivating one that is already active is a 409.",
         "tags": [
           "Integrations"
         ],
@@ -2835,6 +2968,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2845,7 +2984,7 @@
       "post": {
         "operationId": "post-integrations-{id}-revoke",
         "summary": "POST /api/integrations/[id]/revoke",
-        "description": "",
+        "description": "Revokes an integration permanently, together with all of its tokens that are still valid; a revoked integration cannot be reactivated.",
         "tags": [
           "Integrations"
         ],
@@ -2875,6 +3014,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2885,7 +3027,7 @@
       "post": {
         "operationId": "post-integrations-{id}-suspend",
         "summary": "POST /api/integrations/[id]/suspend",
-        "description": "A REVOKED integration cannot be suspended (REVOKED is",
+        "description": "Suspends an active integration so that none of its tokens authenticate until it is reactivated; a revoked integration cannot be suspended (409).",
         "tags": [
           "Integrations"
         ],
@@ -2915,6 +3057,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2925,7 +3073,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens",
         "summary": "POST /api/integrations/[id]/tokens",
-        "description": "`expiresAt` is optional — omitted means the token never",
+        "description": "Issues a bearer token for an active integration and returns its secret once; the token does not expire unless `expiresAt` is given.",
         "tags": [
           "Integrations"
         ],
@@ -2955,6 +3103,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2965,7 +3119,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}-case-grants-{caseId}",
         "summary": "DELETE /api/integrations/[id]/case-grants/[caseId]",
-        "description": "",
+        "description": "Removes the integration's access to a case; removing a grant that does not exist succeeds, and it works for a suspended or revoked integration.",
         "tags": [
           "Integrations"
         ],
@@ -2987,6 +3141,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -2998,7 +3155,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}-tokens-{tokenId}",
         "summary": "DELETE /api/integrations/[id]/tokens/[tokenId]",
-        "description": "",
+        "description": "Revokes a single token immediately; revoking a token that is already revoked is a 409.",
         "tags": [
           "Integrations"
         ],
@@ -3021,6 +3178,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3031,7 +3194,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens-{tokenId}-rotate",
         "summary": "POST /api/integrations/[id]/tokens/[tokenId]/rotate",
-        "description": "Refuses a token that is already revoked, or whose",
+        "description": "Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked token, or a token of an integration that is not active, is refused with 409.",
         "tags": [
           "Integrations"
         ],
@@ -3060,6 +3223,12 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -3096,7 +3265,7 @@
       "get": {
         "operationId": "get-machine-whoami",
         "summary": "Diagnostic identity check for a machine integration.",
-        "description": "Returns the identity of the integration whose bearer token",
+        "description": "Returns the name, current scopes and token prefix of the integration whose bearer token authenticated the request; any valid token for an active integration works, whatever its scopes, so it is the quickest way to check that a token and the connection to TEA are working.",
         "tags": [
           "Machine"
         ],
@@ -3136,7 +3305,7 @@
       "put": {
         "operationId": "put-machine-health-checks",
         "summary": "PUT /api/machine/health/checks",
-        "description": "Machine-only (`requireApiToken(\"health:checks:write\")`). The",
+        "description": "Publishes the list of checks a pipeline can run, replacing the integration's previous list, and returns how many checks it holds with a warning for each recommendation that would not pass as evidence settings. Needs a bearer token with the `health:checks:write` scope and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin; it addresses no case, so the integration needs no case grant. The body is `{ pipeline, checks }` with at most 200 checks, one per check name, in at most 256 KB, and unknown keys are refused. A check's `params` may be a plain object of setting name to default value, and a recommended `aggregation` may carry a `rule` that judges the combined result.",
         "tags": [
           "Machine"
         ],
@@ -3176,7 +3345,7 @@
       "get": {
         "operationId": "get-machine-health-cases-{id}-criteria",
         "summary": "GET /api/machine/health/cases/[id]/criteria",
-        "description": "Machine-only (`requireApiToken(\"health:criteria:read\")`); the",
+        "description": "Returns the evidence settings accepted for the claims of a case whose checks came from the calling integration's own check list, which are the settings its pipeline should judge results against; settings that are only suggested or are inactive are never returned, and reading records which revision was read. Each aggregation carries its own `rule` with the pass mark in `rule.params.pass_values`, and a percentile reduction's percentile is `reduction.params.percentile`. Needs a bearer token with the `health:criteria:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
           "Machine"
         ],
@@ -3206,6 +3375,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3216,7 +3388,7 @@
       "get": {
         "operationId": "get-machine-health-cases-{id}-status",
         "summary": "GET /api/machine/health/cases/[id]/status",
-        "description": "Machine-only (`requireApiToken(\"health:evidence:read\")`); the",
+        "description": "Returns the health status of every property claim in a case that has a bound check or at least one record, as `{ claim_ref, status }` entries; claims with neither are left out. Needs a bearer token with the `health:evidence:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
           "Machine"
         ],
@@ -3246,6 +3418,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3256,7 +3431,7 @@
       "get": {
         "operationId": "get-machine-health-elements-{id}-criteria",
         "summary": "GET /api/machine/health/elements/[id]/criteria",
-        "description": "Machine-only (`requireApiToken(\"health:criteria:read\")`); the",
+        "description": "Returns the evidence settings accepted for one property claim when their check came from the calling integration's own check list, in the item shape of the case route, where each aggregation carries its own `rule` and a percentile reduction names its percentile `params.percentile`; suggested settings, inactive settings and another pipeline's settings give the same 404 as no settings at all, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
           "Machine"
         ],
@@ -3286,6 +3461,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3296,7 +3474,7 @@
       "get": {
         "operationId": "get-machine-health-elements-{id}-evidence",
         "summary": "GET /api/machine/health/elements/[id]/evidence",
-        "description": "Auth is EITHER a bearer token scoped `health:evidence:read`",
+        "description": "Returns a page of a claim's evidence log, newest first, for a bearer token with the `health:evidence:read` scope or a signed-in person with view access to the case; the caller also needs the Claim/Evidence Health plugin on, which an integration's account counts as unless the deployment withholds the plugin. `limit` (default 50, at most 200) sets the page size and `before` (a `chain_sequence`) returns only older records; `next_before` in the response is the value to pass as `before` for the next page, or null on the last page. With `live=true`, only records that are not revoked and not expired are returned.",
         "tags": [
           "Machine"
         ],
@@ -3329,6 +3507,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3337,7 +3518,7 @@
       "post": {
         "operationId": "post-machine-health-elements-{id}-evidence",
         "summary": "POST /api/machine/health/elements/[id]/evidence",
-        "description": "Machine-only (`requireApiToken(\"health:evidence:write\")`).",
+        "description": "Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. An `aggregation` in the record may carry a `rule` that judges the combined result, and a reduction names its percentile `params.percentile`, or `p`. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.",
         "tags": [
           "Machine"
         ],
@@ -3367,6 +3548,15 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -3377,7 +3567,7 @@
       "get": {
         "operationId": "get-machine-health-elements-{id}-status",
         "summary": "GET /api/machine/health/elements/[id]/status",
-        "description": "Machine-only (`requireApiToken(\"health:evidence:read\")`); the",
+        "description": "Returns one property claim's health status, which is null when the claim has no bound check and no record; its `mismatch` field is null when the current result was judged with the accepted settings, `{ state: \"undeclared\" }` when the claim has no accepted settings, and `{ state: \"mismatch\", differences }` when the current result used other settings than those accepted now. Needs a bearer token with the `health:evidence:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
           "Machine"
         ],
@@ -3406,6 +3596,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"

@@ -1,6 +1,6 @@
 ---
 title: "Case Assistant"
-description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, and how technique suggestions find and rank techniques."
+description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, how technique suggestions find and rank techniques, and how the assistant reads the automated check results of a case's claims."
 ---
 
 The `tea.assistant` plugin adds a chat panel to the case editor.
@@ -38,11 +38,16 @@ The server refuses to give a connection a job that its type cannot do.
 | Ollama | Entered by the user | Optional | Yes | Yes | Yes |
 | OpenAI-compatible | Entered by the user | Optional | Yes | No | Yes |
 | Anthropic | Fixed (`https://api.anthropic.com`) | Required | Yes | No | No |
+| OpenAI | Fixed (`https://api.openai.com/v1`) | Required | Yes | No | No |
 
 An OpenAI-compatible connection fits any server that follows the OpenAI API, such as vLLM.
 Its address is entered up to and including `/v1` where the server has one.
 An Ollama address has no path after it.
+An OpenAI connection is for OpenAI's own service, so the user enters only a label and a key.
+It sends a reply's length limit in the `max_completion_tokens` field, which OpenAI's newer models require.
+An OpenAI-compatible connection sends the older `max_tokens` field, which most other servers expect.
 Ranking runs only on OpenRouter and Ollama connections, the two types that have a Clef-Flash endpoint.
+A user whose chat model is on OpenAI keeps ranking on OpenRouter or Ollama, and search on a connection type that can do it, because OpenAI serves neither Clef-Flash nor the catalogue's embedding model.
 A user can have up to 10 connections.
 
 ### Where the settings live
@@ -80,6 +85,7 @@ The recommended models are in the table below.
 | Ollama | None | `clef-flash` | `qwen3-embedding:4b-fp16` |
 | OpenAI-compatible | None | None | None |
 | Anthropic | None | None | None |
+| OpenAI | None | None | None |
 
 An Ollama connection has no recommended chat model, because the right one depends on what is installed on the server.
 
@@ -260,6 +266,91 @@ If the service does not answer in time, replies with an error status code, redir
 In the chat, the tool call shows a line for semantic search and a line for ranking, each saying whether the step was used and giving the reason when it was not.
 Below those lines it shows each technique, with a link when the result has a `url`, and its score and its goals.
 
+## Claim health
+
+When the Claim/Evidence Health plugin (`tea.health`) is on for the user, the assistant can report what the automated checks say about the case's property claims.
+The tool is `read_claim_health`.
+It takes no input, because the route supplies the case.
+The tool call appears in the chat as "Read claim health".
+
+### When it is offered
+
+The tool is registered only when both of these hold:
+
+- The deployment offers `tea.health` (it is not listed in `TEA_PLUGINS_DISABLED`) and the user has turned it on.
+- The case has at least one property claim that is not deleted and has a bound check or a record.
+
+One helper answers this for both the chat route and `GET /api/cases/{id}/assistant`, so the panel's list of tools and the model's tools are decided by the same rule.
+The panel reads its list when it opens, and the route decides again for each reply, so the two can differ for a while.
+The helper checks the plugin first and queries the claims only when the plugin is on.
+The claim query uses the same filter as the health plugin's own case status read, in `lib/services/health-status-service.ts`.
+
+### What it returns
+
+The tool reads each claim's status through `readHealthStatusesForCase`, the service the health plugin uses for its case status route.
+The service checks that the plugin is on and that the user can view the case, and it works the status out again on every read.
+The tool copies named fields from each status, so a field added to the status later does not reach the model provider unless the tool is changed.
+The result holds:
+
+| Field | Meaning |
+|---|---|
+| `found` | `true`, or `false` when the case export or the health service refuses. A `false` result has the message "Claim health is not available for this case." |
+| `checkedAt` | The time of this read. |
+| `claims` | The property claims that have a status, at most 100, in the order the case shows them. |
+| `claimsTruncated` | The number of claims left out past 100. |
+| `claimsWithoutResults` | The labels of property claims in the tree that have no status, at most 100. A claim with no label is named by its id. |
+| `claimsWithoutResultsTruncated` | The number left out of that list past 100, counted separately. |
+| `claimsNotInTree` | Present only when more than 0: the number of claims with a status that are detached from the case tree. They are counted and not listed. |
+
+Each entry in `claims` has:
+
+| Field | Meaning |
+|---|---|
+| `id`, `label` | The claim's id and its label, such as P4. The label is `null` when the claim has none, and an empty label counts as none. |
+| `text` | The claim's text, cut to 200 characters. |
+| `check` | The check the claim is bound to now. A change of the bound check after the result arrived changes this and not the result. |
+| `result` | `pass`, `marginal`, `fail`, `indeterminate`, or `null` when the claim has a check but no result yet, or every result was withdrawn. |
+| `resultAt` | When the reading was taken, which is the result's own timestamp and not the time it was stored. `null` when there is no result. |
+| `validUntil` | When the result expires, or `null` when it never does. |
+| `outOfDate`, `outOfDateReason`, `outOfDateSince` | Whether the result can no longer be relied on, why (`expired`, `condition` or `all-revoked`) and since when. Expiry is compared with the time of this read. |
+| `settings` | How the result was judged compared with the settings accepted now: `as accepted`, `different from accepted`, or `none accepted` when the claim has no accepted settings. `null` when there is no result. |
+| `settingsDifferences` | Present only when the settings differ: each difference as `field`, `declared` and `used`, with each value as JSON text cut to 200 characters. |
+| `refusedSinceLastAccepted` | Present only when more than 0: the number of results refused since the last accepted one. |
+| `evidenceNode` | Present only when the claim has a live evidence node: the node's identifier, such as E4. |
+
+A live evidence node is the evidence element the health plugin adds under a claim when a person accepts its evidence settings.
+The tool decides which nodes are live with the health plugin's own function, the one the settings read and the case's live-node list use, so the three agree.
+The node's text names the check and the pipeline and never states a result, and the tool's description says so, so the model takes the result from this tool and not from the node.
+`read_case` is unchanged: the node appears there as ordinary evidence under its claim, and counts as support for the rules check.
+
+Every time in the result, `checkedAt` included, is written as `YYYY-MM-DD HH:MM:SS UTC`, to the whole second, so that the model can copy it into an answer as it stands.
+A time that does not apply is `null`.
+
+The order of claims comes from the shared case export, which the reply reads once, and labels and text come from it too.
+The statuses are not kept between calls.
+Each call reads them again, so a record that arrives between two questions in one chat shows in the second answer.
+Calls made while a read is still running share that read, so several calls in one step make one read.
+A call counts towards the reply's cap on tool calls.
+When the assistant sends a chat's earlier messages back to the model, it replaces the output of each earlier `read_claim_health` call with a notice that the result is out of date and that the tool should be called again, so the model does not repeat a result from earlier in the conversation.
+
+### What leaves TEA
+
+The result goes to the model provider the user chose, as the case text does.
+It carries the claims' labels and text, check names, results and times, and the identifier of a claim's live evidence node.
+Where a result was judged with settings different from the accepted ones, it also carries those settings as the record states them: versions, window, time limit and the check's own parameters, each value cut to 200 characters.
+It carries no record payload, provenance, comments, integration names or people's names.
+
+### The prompt
+
+The system prompt ends with one paragraph about claim health, after the techniques paragraph.
+It has three forms.
+
+| Case | The paragraph |
+|---|---|
+| The tool is registered | Tells the model that the results change while it talks, so each question about whether claims are passing, valid or current gets a fresh call and an answer that gives `checkedAt`. A claim is passing only when its result is `pass` and it is not out of date. A `null` result means a check with no result yet, or every result withdrawn, and the model says which. The model gives each claim's label, result in words, bound check and time, says plainly when a result is out of date and why, when settings differ and which claims receive no results, and never says whether the case is adequate. |
+| The plugin is on and no claim has a bound check or a record | Says that the case has no claims with automated check results, and tells the model to say so if asked and not to infer results from the case text. |
+| The plugin is off for the user or withheld | Says that automated check results are not available because the Claim/Evidence Health plugin is off, and tells the model to say so if asked and not to infer results from the case text. |
+
 ## Replies and errors
 
 A model call in a reply writes at most 8,192 tokens.
@@ -288,7 +379,7 @@ The chat and its stored messages keep the call as it was.
 
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
-The tools `read_case`, `read_element` and `lint_case` share one read of the case, so a reply reads the case once however many of them it calls.
+The tools `read_case`, `read_element`, `lint_case` and `read_claim_health` share one read of the case, so a reply reads the case once however many of them it calls.
 The assistant is given the selected element's id, with its label, type and text, so that it can call `read_element` with it.
 
 When a model provider refuses a call, the user sees the provider's own reason.
@@ -370,6 +461,7 @@ The prompts depend on the tools registered for the case and on the selection.
 With nothing selected, the panel offers "What is the top-level goal?" and "Which claims lack evidence?", both of which need `read_case`.
 With an element selected, it offers "Explain" the element's role and "What evidence supports" the element, both of which need `read_case`.
 With an element selected and `suggest_techniques` registered, it also offers "Suggest techniques for" the element.
+Whenever `read_claim_health` is registered, it offers "Are the claims passing their automated checks?", with or without a selected element.
 Whenever `lint_case` is registered, it offers "Check this case against the rules".
 An element is named by its label, for example P1, or as "the selected element" when it has none.
 The technique prompt needs a selected element because only then does the server send the claim's exact text.

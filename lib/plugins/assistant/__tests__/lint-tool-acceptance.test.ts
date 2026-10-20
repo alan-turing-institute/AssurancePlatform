@@ -12,6 +12,9 @@ const exportCase = vi.fn();
 vi.mock("@/lib/services/case-export-service", () => ({
 	exportCase: (...args: unknown[]) => exportCase(...args),
 }));
+vi.mock("@/lib/services/health-status-service", () => ({
+	readHealthStatusesForCase: vi.fn(),
+}));
 
 import { buildSystemPrompt, createCaseTools } from "../tools";
 

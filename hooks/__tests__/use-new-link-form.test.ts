@@ -103,7 +103,7 @@ function setup(overrides: { node?: Node; linkType?: string } = {}) {
 	);
 }
 
-/** Submits the description-only form (context/claim/strategy paths - no urls field). */
+/** Submits the description-only form (claim/strategy paths - no urls field). */
 async function submitDescription(
 	result: { current: ReturnType<typeof useNewLinkForm> },
 	description: string
@@ -179,17 +179,6 @@ describe("useNewLinkForm — evidence URL submission", () => {
  * same as the evidence describe block above) — no DB, mocked fetch only.
  */
 describe("useNewLinkForm — rewritten payload builders (parentId resolution)", () => {
-	it("handleContextAdd sends parentId = the goal's id (context is always attached under the goal)", async () => {
-		const { getReceivedBody } = mockElementsRoute();
-		const { result } = setup({ node: GOAL_NODE, linkType: "context" });
-
-		await submitDescription(result, "A context description");
-
-		const body = getReceivedBody();
-		expect(body).toBeDefined();
-		expect(body?.parentId).toBe("goal-1");
-	});
-
 	it("createStrategyPayload sends parentId = node.data.id when node.type is 'property'", async () => {
 		const { getReceivedBody } = mockElementsRoute();
 		const { result } = setup({ node: NODE, linkType: "strategy" });

@@ -5,7 +5,7 @@
  * Useful for creating an evidence register or checklist.
  */
 
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
 import type { BrandingConfig } from "../../schemas/branding-config";
 import { DEFAULT_SECTIONS_EVIDENCE_LIST } from "../../schemas/section-config";
 import type { TemplateConfig } from "../../schemas/template-config";
@@ -37,7 +37,7 @@ export class EvidenceListTemplate extends BaseTemplate {
 	}
 
 	protected renderSections(
-		caseData: CaseExportNested,
+		caseData: PlainCase,
 		_diagramImage?: DiagramImage,
 		_branchDiagrams?: import("../../types").LabelledDiagramImage[]
 	): RenderedSection[] {
@@ -59,7 +59,7 @@ export class EvidenceListTemplate extends BaseTemplate {
 		return sections;
 	}
 
-	private renderTitlePage(caseData: CaseExportNested): RenderedSection {
+	private renderTitlePage(caseData: PlainCase): RenderedSection {
 		const blocks: ContentBlock[] = [
 			this.heading(1, `${caseData.case.name} - Evidence Register`),
 			this.paragraph(caseData.case.description),
@@ -80,7 +80,7 @@ export class EvidenceListTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderEvidenceSection(tree: TreeNode): RenderedSection {
+	private renderEvidenceSection(tree: PlainTreeNode): RenderedSection {
 		const evidence = collectElementsByType(tree, "EVIDENCE", 0, {
 			includeSandbox: this.elementFilter?.includeSandbox,
 		});
@@ -129,7 +129,7 @@ export class EvidenceListTemplate extends BaseTemplate {
 	}
 
 	private renderEvidenceItem(
-		node: TreeNode,
+		node: PlainTreeNode,
 		includeUrls: boolean
 	): ContentBlock[] {
 		const blocks: ContentBlock[] = [];
@@ -149,7 +149,7 @@ export class EvidenceListTemplate extends BaseTemplate {
 		return blocks;
 	}
 
-	private renderMetadataSection(caseData: CaseExportNested): RenderedSection {
+	private renderMetadataSection(caseData: PlainCase): RenderedSection {
 		return {
 			type: "metadata",
 			title: this.getSectionTitle("metadata", "Document Information"),

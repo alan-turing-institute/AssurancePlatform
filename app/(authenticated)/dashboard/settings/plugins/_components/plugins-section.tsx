@@ -71,7 +71,8 @@ export function PluginsSection() {
 				<p className="mt-1 text-muted-foreground text-sm leading-6">
 					Official plugins extend the case builder. Turning a plugin off here
 					hides it for your account only — data other collaborators have written
-					stays inert, never deleted.
+					stays stored, though passing results that repeat are still thinned out
+					each night.
 				</p>
 			</div>
 

@@ -11,6 +11,7 @@ The application and its Fumadocs documentation share one Next.js App Router proj
 The stack is Next.js 16, React 19, TypeScript, PostgreSQL, Prisma 7, NextAuth 4, Tailwind 4, React Flow and Zustand.
 The Django backend was removed in December 2025; everything is TypeScript.
 Use `package.json` and `pnpm-lock.yaml` for exact dependency versions.
+Next.js ships documentation matched to the installed version in `node_modules/next/dist/docs/`; read the relevant guide before using an API you are not sure of.
 
 | Environment | URL |
 |---|---|

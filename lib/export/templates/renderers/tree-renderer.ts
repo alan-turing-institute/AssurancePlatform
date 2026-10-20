@@ -1,11 +1,12 @@
 /**
- * Tree renderer utilities for converting TreeNode structures to content blocks.
+ * Tree renderer utilities for converting PlainTreeNode structures to content blocks.
  *
  * These functions transform the hierarchical case data into format-agnostic
  * content blocks that can be consumed by any exporter.
  */
 
-import type { ElementType, TreeNode } from "@/lib/schemas/case-export";
+import type { PlainTreeNode } from "@/lib/case/defined-terms";
+import type { ElementType } from "@/lib/schemas/case-export";
 import type { ContentBlock } from "../../types";
 import { ELEMENT_TYPE_LABELS } from "../../types";
 
@@ -25,14 +26,14 @@ interface TreeRenderOptions {
 interface RenderedElement {
 	blocks: ContentBlock[];
 	depth: number;
-	node: TreeNode;
+	node: PlainTreeNode;
 }
 
 /**
  * Check if an element should be included based on options
  */
 export function shouldIncludeElement(
-	node: TreeNode,
+	node: PlainTreeNode,
 	depth: number,
 	options: TreeRenderOptions
 ): boolean {
@@ -66,7 +67,10 @@ export function shouldIncludeElement(
  * - Description
  * - Type-specific fields (assumption, justification, context, url)
  */
-function renderElementAsBlocks(node: TreeNode, depth: number): ContentBlock[] {
+function renderElementAsBlocks(
+	node: PlainTreeNode,
+	depth: number
+): ContentBlock[] {
 	const blocks: ContentBlock[] = [];
 	const headingLevel = Math.min(depth + 2, 6) as 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -147,7 +151,7 @@ function renderElementAsBlocks(node: TreeNode, depth: number): ContentBlock[] {
  * Collect all elements of a specific type from tree
  */
 export function collectElementsByType(
-	node: TreeNode,
+	node: PlainTreeNode,
 	type: ElementType,
 	depth = 0,
 	options: TreeRenderOptions = {}
@@ -173,20 +177,20 @@ export function collectElementsByType(
  * Collect all comments from tree with element context
  */
 export function collectAllComments(
-	node: TreeNode,
+	node: PlainTreeNode,
 	depth = 0,
 	options: TreeRenderOptions = {}
 ): Array<{
 	elementId: string;
 	elementName: string | null;
 	elementType: ElementType;
-	comments: NonNullable<TreeNode["comments"]>;
+	comments: NonNullable<PlainTreeNode["comments"]>;
 }> {
 	const results: Array<{
 		elementId: string;
 		elementName: string | null;
 		elementType: ElementType;
-		comments: NonNullable<TreeNode["comments"]>;
+		comments: NonNullable<PlainTreeNode["comments"]>;
 	}> = [];
 
 	if (
@@ -213,7 +217,7 @@ export function collectAllComments(
  * Count elements by type in tree
  */
 export function countElementsByType(
-	node: TreeNode,
+	node: PlainTreeNode,
 	options: TreeRenderOptions = {}
 ): Record<ElementType, number> {
 	const counts: Record<string, number> = {
@@ -229,7 +233,7 @@ export function countElementsByType(
 		CONTRACT: 0,
 	};
 
-	function traverse(n: TreeNode, d: number): void {
+	function traverse(n: PlainTreeNode, d: number): void {
 		if (shouldIncludeElement(n, d, options)) {
 			counts[n.type] = (counts[n.type] ?? 0) + 1;
 		}
@@ -246,12 +250,12 @@ export function countElementsByType(
  * Get total element count in tree
  */
 export function getTotalElementCount(
-	node: TreeNode,
+	node: PlainTreeNode,
 	options: TreeRenderOptions = {}
 ): number {
 	let count = 0;
 
-	function traverse(n: TreeNode, d: number): void {
+	function traverse(n: PlainTreeNode, d: number): void {
 		if (shouldIncludeElement(n, d, options)) {
 			count++;
 		}
@@ -267,10 +271,10 @@ export function getTotalElementCount(
 /**
  * Get maximum depth of tree
  */
-export function getTreeDepth(node: TreeNode): number {
+export function getTreeDepth(node: PlainTreeNode): number {
 	let maxDepth = 0;
 
-	function traverse(n: TreeNode, d: number): void {
+	function traverse(n: PlainTreeNode, d: number): void {
 		maxDepth = Math.max(maxDepth, d);
 		for (const child of n.children ?? []) {
 			traverse(child, d + 1);
@@ -291,7 +295,7 @@ export function getTreeDepth(node: TreeNode): number {
  * allowing exporters to apply visual hierarchy (indentation, colours).
  */
 export function renderHierarchicalTree(
-	node: TreeNode,
+	node: PlainTreeNode,
 	depth = 0,
 	options: TreeRenderOptions = {}
 ): ContentBlock[] {

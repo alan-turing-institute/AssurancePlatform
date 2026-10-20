@@ -29,6 +29,8 @@ import { render, screen } from "@/src/__tests__/utils/test-utils";
 import "@/lib/plugins/bootstrap";
 
 vi.mock("@/hooks/use-case-events", () => ({
+	CASE_RELOAD_EVENT_TYPES: [],
+	subscribeToCaseEvents: vi.fn(() => () => undefined),
 	useCaseEvents: vi.fn(),
 }));
 
@@ -126,6 +128,7 @@ function mockEvidenceLog() {
 						created_at: new Date().toISOString(),
 						expires_at: null,
 						revocation: null,
+						thinned_before: null,
 					},
 				],
 				next_before: null,

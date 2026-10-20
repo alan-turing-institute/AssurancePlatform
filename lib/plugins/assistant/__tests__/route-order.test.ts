@@ -5,6 +5,7 @@ import { unauthorised } from "@/lib/errors";
 import { canAccessCase } from "@/lib/permissions";
 import { resolveChatModel } from "@/lib/plugins/assistant/model-config";
 import { createCaseTools } from "@/lib/plugins/assistant/tools";
+import { caseHasHealthStatus } from "@/lib/services/health-status-service";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 
 const requireAuth = vi.hoisted(() => vi.fn());
@@ -20,6 +21,12 @@ vi.mock("@/lib/api-response", async (importOriginal) => ({
 }));
 vi.mock("@/lib/services/plugin-enablement-service", () => ({
 	assertPluginEnabledForUser: vi.fn(),
+}));
+vi.mock("@/lib/services/health-status-service", () => ({
+	caseHasHealthStatus: vi.fn(),
+}));
+vi.mock("@/lib/services/health-claim-access", () => ({
+	HEALTH_PLUGIN_ID: "tea.health",
 }));
 vi.mock("@/lib/plugins/assistant/tools", () => ({
 	buildSystemPrompt: vi.fn(() => ""),
@@ -55,6 +62,7 @@ beforeEach(() => {
 	requireAuth.mockResolvedValue("user-1");
 	vi.mocked(assertPluginEnabledForUser).mockResolvedValue({ data: true });
 	vi.mocked(canAccessCase).mockResolvedValue(true);
+	vi.mocked(caseHasHealthStatus).mockResolvedValue(false);
 });
 
 describe("assistant route check order", () => {
@@ -164,6 +172,43 @@ describe("assistant tools route check order", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ tools: ["read_case"] });
-		expect(createCaseTools).toHaveBeenCalledWith("user-1", CASE_ID);
+		expect(createCaseTools).toHaveBeenCalledWith(
+			"user-1",
+			CASE_ID,
+			null,
+			undefined,
+			undefined,
+			false
+		);
+	});
+
+	it("turns claim health on when the health plugin is on and the case has a claim with a status", async () => {
+		vi.mocked(caseHasHealthStatus).mockResolvedValue(true);
+
+		await callGet();
+
+		expect(assertPluginEnabledForUser).toHaveBeenCalledWith(
+			"tea.health",
+			"user-1"
+		);
+		expect(caseHasHealthStatus).toHaveBeenCalledWith(CASE_ID);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(true);
+	});
+
+	it("leaves claim health off, without looking at the claims, when the health plugin is off for the user", async () => {
+		vi.mocked(caseHasHealthStatus).mockResolvedValue(true);
+		vi.mocked(assertPluginEnabledForUser).mockImplementation((pluginId) =>
+			Promise.resolve(
+				pluginId === "tea.health"
+					? { error: "Plugin 'tea.health' is not enabled" }
+					: { data: true }
+			)
+		);
+
+		const response = await callGet();
+
+		expect(response.status).toBe(200);
+		expect(caseHasHealthStatus).not.toHaveBeenCalled();
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(false);
 	});
 });

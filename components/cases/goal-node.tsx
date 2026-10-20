@@ -13,7 +13,7 @@ function GoalNode({ data, ...props }: NodeProps) {
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
-	const topRightActions = useNodeTopRightActions(data, "goal");
+	const topRightActions = useNodeTopRightActions(data, "goal", props.id);
 
 	const isDemoGoal = data.isDemo && data.name === "G1";
 	// A goal with no parent node is the root of its tree.
@@ -51,6 +51,7 @@ function GoalNode({ data, ...props }: NodeProps) {
 				name={data.name}
 				nodeType="goal"
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 

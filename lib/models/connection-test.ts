@@ -226,8 +226,9 @@ async function testByListing(
  * the key and then for its chat, ranking and embedding models separately. The
  * other types make one request, whose answer both proves the connection and
  * lists the models: Ollama's installed models for every job, an OpenAI-style
- * server's models for chat and search, Anthropic's for chat. Each request has a
- * ten-second limit and a cap on the size of the answer. Never throws.
+ * server's models for chat and search, Anthropic's and OpenAI's for chat. Each
+ * request has a ten-second limit and a cap on the size of the answer. Never
+ * throws.
  */
 export async function testConnection(
 	connection: ModelConnectionAccess
@@ -257,6 +258,13 @@ export async function testConnection(
 					"anthropic-version": ANTHROPIC_VERSION,
 					...(connection.apiKey ? { "x-api-key": connection.apiKey } : {}),
 				},
+				idsFromDataList,
+				["chat"]
+			);
+		case "OPENAI":
+			return await testByListing(
+				`${base}/models`,
+				bearer(connection),
 				idsFromDataList,
 				["chat"]
 			);

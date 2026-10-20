@@ -15,6 +15,7 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "./prisma-factories";
 
 const HEALTH_SCOPES = [
@@ -32,6 +33,7 @@ export async function setupCriteriaCase(
 	options: { publish?: boolean; scopes?: string[] } = {}
 ) {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",
@@ -159,6 +161,36 @@ export async function callRetirement(
 			bearer(token)
 		),
 		{ params: Promise.resolve({ id: claimId }) }
+	);
+}
+
+export async function callAddEvidenceNode(claimId: string, token?: string) {
+	const { POST } = await import(
+		"@/app/api/elements/[id]/health/evidence-node/route"
+	);
+	return await POST(
+		jsonRequest(
+			`${BASE}/elements/${claimId}/health/evidence-node`,
+			"POST",
+			undefined,
+			bearer(token)
+		),
+		{ params: Promise.resolve({ id: claimId }) }
+	);
+}
+
+export async function callEvidenceNodes(caseId: string, token?: string) {
+	const { GET } = await import(
+		"@/app/api/cases/[id]/health/evidence-nodes/route"
+	);
+	return await GET(
+		jsonRequest(
+			`${BASE}/cases/${caseId}/health/evidence-nodes`,
+			"GET",
+			undefined,
+			bearer(token)
+		),
+		{ params: Promise.resolve({ id: caseId }) }
 	);
 }
 

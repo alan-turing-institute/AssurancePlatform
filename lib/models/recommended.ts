@@ -25,6 +25,7 @@ export const RECOMMENDED_MODELS: Readonly<
 	},
 	OPENAI_COMPATIBLE: { chat: null, ranking: null, search: null },
 	ANTHROPIC: { chat: null, ranking: null, search: null },
+	OPENAI: { chat: null, ranking: null, search: null },
 };
 
 /** The recommended model for `job` on a connection of `type`, or null when there is none. */

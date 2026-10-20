@@ -395,7 +395,7 @@ model AssuranceElement {
   // GSN-specific fields (applicable to GOAL, STRATEGY, PROPERTY_CLAIM only)
   assumption          String?          /// Assumptions upon which this element depends
   justification       String?          /// Rationale for strategies explaining the decomposition approach
-  context             String[]         @default([]) /// Contextual information strings (replaces legacy CONTEXT element type)
+  context             Json             @default("[]") /// Context entries (replaces legacy CONTEXT element type): plain text, or a named entry {id, name, text, value?}
 
   // Evidence-specific (EVIDENCE elements only)
   url                 String?          /// Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]
@@ -494,10 +494,12 @@ model AssuranceElement {
   releaseComments     ReleaseComment[]
   pluginData          PluginData[]
   pluginHealthEvidence PluginHealthEvidence[]
+  pluginHealthThinnedRuns PluginHealthThinnedRun[]
   pluginHealthClaimState PluginHealthClaimState?
   pluginHealthBindingChanges PluginHealthBindingChange[]
   pluginHealthCriteria PluginHealthCriteria?
   pluginHealthCriteriaRevisions PluginHealthCriteriaRevision[]
+  pluginHealthCriteriaAsEvidenceNode PluginHealthCriteria? @relation("HealthCriteriaEvidenceNode")
 
   @@index([caseId])
   @@index([caseId, elementType])
@@ -1151,9 +1153,14 @@ model ApiToken {
 //
 // plugin_health_evidence is the append-only, hash-chained log of runtime
 // evidence records (evidence format 1.1). Its only writer is
-// `lib/services/health-evidence-service.ts`, which exposes no update or
-// delete path: revoking a record adds a plugin_health_revocations row and
-// never touches the evidence row, so the hash chain is unaffected.
+// `lib/services/health-evidence-service.ts`, which exposes no update path.
+// Its one removal path is the nightly thinning of repeated passing results
+// older than a day (`thinHealthEvidence`); each removed stretch leaves a
+// plugin_health_thinned_runs row naming the kept records either side of it,
+// so the chain can still be walked across the gap. Revoking a record adds a
+// plugin_health_revocations row and never touches the evidence row, so the
+// hash chain is unaffected. The only other removal is the cascade that
+// follows deleting the claim or its case for good.
 
 /// One accepted evidence record (format 1.1) bearing on a PROPERTY_CLAIM.
 model PluginHealthEvidence {
@@ -1198,10 +1205,19 @@ model PluginHealthEvidence {
   // Relations — one-way: points at core only.
   claim       AssuranceElement          @relation(fields: [claimId], references: [id], onDelete: Cascade)
   revocations PluginHealthRevocation[]
+  thinnedAfter  PluginHealthThinnedRun? @relation("ThinnedRunKeptBefore") /// The note for the stretch removed straight after this record, if any
+  thinnedBefore PluginHealthThinnedRun? @relation("ThinnedRunKeptAfter") /// The note for the stretch removed straight before this record, if any
 
   @@index([claimId, chainSequence])
   @@index([claimId, recordTimestamp])
   @@index([session])
+  // A second, partial index on (session) holds only the records whose
+  // `valid_while` is a non-empty object; the thinning job reads it to see
+  // whether a session carries conditions. It is hand-written in the
+  // 20261016130000 migration because Prisma's schema DSL cannot express
+  // partial indexes, and `prisma migrate diff` ignores them, so the schema
+  // needs no line for it. Keep its predicate identical to the one in
+  // `sessionCarriesConditions`.
   @@map("plugin_health_evidence")
 }
 
@@ -1224,10 +1240,40 @@ model PluginHealthClaimState {
   boundCheckName          String    @map("bound_check_name") /// The one check this claim accepts evidence from
   rejectedSinceLastAccept Int       @default(0) @map("rejected_since_last_accept") /// Records refused for naming a different check since the last accepted one
   staleNotifiedAt         DateTime? @map("stale_notified_at") /// Set when the sweep has told open browsers the claim is stale; cleared when it is fresh again
+  thinnedThroughSequence  Int?      @map("thinned_through_sequence") /// The chain_sequence the nightly thinning job last examined up to for this claim; null before its first pass. Written only by the job.
 
   claim AssuranceElement @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   @@map("plugin_health_claim_states")
+}
+
+/// A note of one stretch of repeated passing results removed from a claim's
+/// log by the nightly thinning job. It names the kept record before the
+/// stretch and the kept record after it, so a verifier walking the chain can
+/// account for the break in the links between them. Written only by the job.
+/// The two foreign keys to the evidence table refuse to let a kept record be
+/// removed while its note exists. Postgres checks them once the whole delete
+/// statement has run, so deleting a claim or case, whose cascade removes the
+/// evidence and the notes together, is not blocked.
+model PluginHealthThinnedRun {
+  id                   String   @id @default(uuid())
+  claimId              String   @map("claim_id")
+  keptBeforeId         String   @unique @map("kept_before_id") /// The evidence row kept just before the removed stretch
+  keptAfterId          String   @unique @map("kept_after_id") /// The evidence row kept just after it
+  removedCount         Int      @map("removed_count")
+  firstRemovedSequence Int      @map("first_removed_sequence") /// chain_sequence of the first removed record
+  lastRemovedSequence  Int      @map("last_removed_sequence") /// chain_sequence of the last removed record
+  firstRemovedAt       DateTime @map("first_removed_at") /// record timestamp of the first removed record
+  lastRemovedAt        DateTime @map("last_removed_at") /// record timestamp of the last removed record
+  ruleVersion          Int      @map("rule_version") /// Which version of the thinning rule removed them
+  thinnedAt            DateTime @default(now()) @map("thinned_at")
+
+  claim      AssuranceElement     @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  keptBefore PluginHealthEvidence @relation("ThinnedRunKeptBefore", fields: [keptBeforeId], references: [id], onDelete: NoAction)
+  keptAfter  PluginHealthEvidence @relation("ThinnedRunKeptAfter", fields: [keptAfterId], references: [id], onDelete: NoAction)
+
+  @@index([claimId])
+  @@map("plugin_health_thinned_runs")
 }
 
 enum PluginHealthBindingSource {
@@ -1328,8 +1374,11 @@ model PluginHealthCriteria {
   lastReadAt       DateTime? @map("last_read_at") /// When the pipeline last fetched these settings
   lastReadRevision Int?      @map("last_read_revision")
 
-  claim       AssuranceElement @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  integration Integration?     @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  evidenceElementId String? @unique @map("evidence_element_id") /// The ordinary evidence element added under the claim when the settings were accepted; written only by the health service, cleared by the database if that element is ever hard-deleted
+
+  claim           AssuranceElement  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  integration     Integration?      @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  evidenceElement AssuranceElement? @relation("HealthCriteriaEvidenceNode", fields: [evidenceElementId], references: [id], onDelete: SetNull)
 
   @@index([integrationId])
   @@map("plugin_health_criteria")
@@ -1374,6 +1423,7 @@ enum ModelConnectionType {
   OLLAMA
   OPENAI_COMPATIBLE
   ANTHROPIC
+  OPENAI
 }
 
 /// One model connection a user has added: a label, a type, an address (null for

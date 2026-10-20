@@ -19,6 +19,7 @@ import {
 	createTestTeam,
 	createTestTeamPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 const KNOWN_PLUGIN_ID = "tea.health";
@@ -32,6 +33,7 @@ const ELEMENT_NOT_FOUND = "Element not found";
 
 async function setup() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, KNOWN_PLUGIN_ID);
 	const testCase = await createTestCase(owner.id);
 	const element = await createTestElement(testCase.id, owner.id);
 	return { owner, testCase, element };
@@ -475,6 +477,7 @@ describe("plugin-data-service — permission matrix", () => {
 	it("allows a direct EDIT share to write", async () => {
 		const { owner, testCase } = await setup();
 		const editor = await createTestUser();
+		await enableTestPlugin(editor.id, KNOWN_PLUGIN_ID);
 		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
 
 		expectSuccess(
@@ -490,6 +493,7 @@ describe("plugin-data-service — permission matrix", () => {
 	it("allows a direct VIEW share to read but refuses it to write", async () => {
 		const { owner, testCase } = await setup();
 		const viewer = await createTestUser();
+		await enableTestPlugin(viewer.id, KNOWN_PLUGIN_ID);
 		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
 		await writePluginData(
 			KNOWN_PLUGIN_ID,
@@ -514,6 +518,7 @@ describe("plugin-data-service — permission matrix", () => {
 	it("allows a team EDIT share to write", async () => {
 		const { owner, testCase } = await setup();
 		const teamMember = await createTestUser();
+		await enableTestPlugin(teamMember.id, KNOWN_PLUGIN_ID);
 		const team = await createTestTeam(teamMember.id);
 		await createTestTeamPermission(testCase.id, team.id, owner.id, "EDIT");
 
@@ -530,6 +535,7 @@ describe("plugin-data-service — permission matrix", () => {
 	it("refuses a user with no permission on the case", async () => {
 		const { testCase } = await setup();
 		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, KNOWN_PLUGIN_ID);
 
 		expectError(
 			await readPluginData(KNOWN_PLUGIN_ID, stranger.id, {
@@ -541,6 +547,7 @@ describe("plugin-data-service — permission matrix", () => {
 	it("returns the same error for a non-existent case and for no permission (no enumeration oracle)", async () => {
 		const { owner } = await setup();
 		const stranger = await createTestUser();
+		await enableTestPlugin(stranger.id, KNOWN_PLUGIN_ID);
 		const otherCase = await createTestCase(owner.id);
 
 		const notFoundResult = await readPluginData(KNOWN_PLUGIN_ID, owner.id, {

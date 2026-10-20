@@ -13,18 +13,20 @@ import { readHealthStatus } from "@/lib/services/health-status-service";
  *
  * One claim's health status, for a pipeline.
  *
- * @description Machine-only (`requireApiToken("health:evidence:read")`); the
- * token's system user needs VIEW on the claim's case. The status is the one
- * the session route returns, including `mismatch`: null when the current
- * result was judged with the accepted settings, `{ state: "undeclared" }` when
- * the claim has no accepted settings, and `{ state: "mismatch", differences }`
- * when the current result used other settings than those accepted now. A
- * status belongs to the claim, so it is not limited to one integration's
+ * The status is the one the session route returns, including `mismatch`:
+ * null when the current result was judged with the accepted settings,
+ * `{ state: "undeclared" }` when the claim has no accepted settings, and
+ * `{ state: "mismatch", differences }` when the current result used other
+ * settings than those accepted now.
+ * A status belongs to the claim, so it is not limited to one integration's
  * checks.
+ *
+ * @description Returns one property claim's health status, which is null when the claim has no bound check and no record; its `mismatch` field is null when the current result was judged with the accepted settings, `{ state: "undeclared" }` when the claim has no accepted settings, and `{ state: "mismatch", differences }` when the current result used other settings than those accepted now. Needs a bearer token with the `health:evidence:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.
  * @response 200 - `{ status }` (null when the claim has no bound check and no record)
- * @response 401 - Unauthorised (missing/invalid/wrong-scope token)
- * @response 403 - The `tea.health` plugin is not enabled for this integration
- * @response 404 - Claim not found (covers non-existent, wrong element type, and no-access — same message, no enumeration oracle)
+ * @response 401 - Unauthorised (missing, invalid or wrong-scope token)
+ * @response 403 - The `tea.health` plugin is not on for the integration's account: the deployment withholds it
+ * @response 404 - Claim not found (covers a claim that does not exist, one of the wrong element type and one the integration cannot view, with the same message)
+ * @add 404
  * @auth bearer
  * @tag Machine
  */

@@ -110,6 +110,7 @@ describe("rankCandidates: where and how it asks", () => {
 	it.each([
 		"OPENAI_COMPATIBLE",
 		"ANTHROPIC",
+		"OPENAI",
 	] as const)("does not ask a %s connection at all", async (type) => {
 		const result = await rank(candidates(2), { connection: connection(type) });
 		expect(result).toBeNull();

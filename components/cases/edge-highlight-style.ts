@@ -1,4 +1,37 @@
 import type { CSSProperties } from "react";
+import type { AppearanceTone, ElementAppearance } from "@/lib/plugins/slots";
+
+const APPEARANCE_STROKES: Record<AppearanceTone, string> = {
+	positive: "var(--success)",
+	caution: "var(--warning)",
+	negative: "var(--destructive)",
+	neutral: "var(--muted-foreground)",
+};
+
+/** Edge strokes drawn faded keep this share of their strength. */
+const FADED_STROKE_OPACITY = 0.35;
+
+/**
+ * Inline style for a `support` edge's connector `<path>` that a plugin has
+ * given an appearance: the tone's theme colour, a little heavier than an
+ * ordinary edge so the colour reads, and at about a third of its strength when
+ * faded. With no tone the edge keeps its own colour and width, so only the
+ * fade is set. Image capture removes these three properties
+ * (`plugin-display-capture.ts`).
+ */
+export function buildAppearanceEdgeStyle(
+	appearance: ElementAppearance
+): CSSProperties {
+	const strokeOpacity = appearance.faded ? FADED_STROKE_OPACITY : 1;
+	if (!appearance.tone) {
+		return { strokeOpacity };
+	}
+	return {
+		stroke: APPEARANCE_STROKES[appearance.tone],
+		strokeWidth: 3,
+		strokeOpacity,
+	};
+}
 
 /**
  * Class applied to a `support`/`challenges` edge's own connector `<path>`

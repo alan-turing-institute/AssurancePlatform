@@ -14,6 +14,12 @@ vi.mock("@/lib/api-response", async (importOriginal) => ({
 vi.mock("@/lib/services/plugin-enablement-service", () => ({
 	assertPluginEnabledForUser: vi.fn(),
 }));
+vi.mock("@/lib/services/health-status-service", () => ({
+	caseHasHealthStatus: vi.fn(),
+}));
+vi.mock("@/lib/services/health-claim-access", () => ({
+	HEALTH_PLUGIN_ID: "tea.health",
+}));
 vi.mock("@/lib/plugins/assistant/tools", () => ({
 	buildSystemPrompt: vi.fn(() => ""),
 	createCaseTools: vi.fn(),

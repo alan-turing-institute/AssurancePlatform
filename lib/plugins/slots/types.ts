@@ -38,14 +38,15 @@ export type ElementType =
  * non-UI surfaces with no registry here). ADR §2.3 also names `case-panel`
  * and `canvas-decorator` as 1.1 slots; they're included in this union so
  * their eventual registries slot in without a type redesign. A live
- * `SlotRegistry` instance exists for `case-panel`, `element-badge`,
- * `element-panel` and `settings-section` (`registry.ts`); no official plugin
- * consumes `canvas-decorator` yet.
+ * `SlotRegistry` instance exists for `case-panel`, `element-appearance`,
+ * `element-badge`, `element-panel` and `settings-section` (`registry.ts`); no
+ * official plugin consumes `canvas-decorator` yet.
  */
 export type SlotId = Extract<
 	PluginSurface,
 	| "canvas-decorator"
 	| "case-panel"
+	| "element-appearance"
 	| "element-badge"
 	| "element-panel"
 	| "settings-section"
@@ -56,6 +57,8 @@ export interface ElementSlotContext {
 	/** Whether the viewer may edit the case. Absent means view-only. The server enforces permission whatever a slot shows. */
 	canEdit?: boolean;
 	caseId: string;
+	/** Whether the element's children are collapsed on the canvas, so none of them is drawn. Absent where the host has no canvas to ask. */
+	childrenHidden?: boolean;
 	elementId: string;
 	/** The element's own text, as the details form holds it. Absent where the host has none to give. */
 	elementText?: string;
@@ -81,6 +84,48 @@ export interface CaseSlotContext {
 /** A small status affordance rendered on a canvas node (ADR §2.3: "the state dot"). */
 export interface ElementBadgeRegistration extends SlotRegistrationBase {
 	Component: ComponentType<ElementSlotContext>;
+}
+
+/** How an element, or the line between two elements, is tinted. Core knows tones, never what they mean to a plugin. */
+export type AppearanceTone = "caution" | "negative" | "neutral" | "positive";
+
+/** A plugin's answer for one element or edge: its tone, and whether it is drawn faded. */
+export interface ElementAppearance {
+	/** Fills and lines are drawn at about a third of their strength. Text stays at full contrast. */
+	faded: boolean;
+	/** `null` keeps the element's own colours: a faded card or line with no tint or stroke colour of its own. */
+	tone: AppearanceTone | null;
+}
+
+/** What an appearance is asked about: one element, or the line from one element to another. */
+export type AppearanceSubject =
+	| {
+			caseId: string;
+			elementId: string;
+			elementType: ElementType;
+			kind: "node";
+	  }
+	| {
+			caseId: string;
+			kind: "edge";
+			sourceElementId: string;
+			targetElementId: string;
+	  };
+
+/**
+ * A plugin's answer source for how an element or edge is drawn. `useAppearance`
+ * is a React hook, called on every render of every node and edge for every
+ * registered plugin, whether or not the plugin is on, so the number of hooks a
+ * component runs never changes once plugin enablement has loaded. It returns
+ * the answer or `null` for "no opinion". `enabled` is false while the plugin is
+ * off for the viewer, or on a canvas with no plugin data; the hook then must
+ * make no request and return `null`.
+ */
+export interface ElementAppearanceRegistration extends SlotRegistrationBase {
+	useAppearance: (
+		subject: AppearanceSubject,
+		enabled: boolean
+	) => ElementAppearance | null;
 }
 
 /** A tab contributed to the element detail view (ADR §2.3: "the evidence log / trace view"). */

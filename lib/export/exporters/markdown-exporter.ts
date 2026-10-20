@@ -5,7 +5,7 @@
  * with YAML frontmatter and proper formatting for GitHub compatibility.
  */
 
-import type { TreeNode } from "@/lib/schemas/case-export";
+import type { PlainTreeNode } from "@/lib/case/defined-terms";
 import type {
 	ContentBlock,
 	ExportOptions,
@@ -318,7 +318,7 @@ export class MarkdownExporter extends AbstractExporter {
 	/**
 	 * Render an element block with structured formatting.
 	 */
-	private renderElement(node: TreeNode, depth: number): string {
+	private renderElement(node: PlainTreeNode, depth: number): string {
 		const parts: string[] = [];
 		const headingLevel = Math.min(depth + 3, 6); // Start at h3, max h6
 		const hashes = "#".repeat(headingLevel);

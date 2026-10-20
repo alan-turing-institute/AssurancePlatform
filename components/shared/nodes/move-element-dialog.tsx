@@ -21,6 +21,7 @@ import { recordMove } from "@/lib/services/history-service";
 import { toastError, toastSuccess } from "@/lib/toast";
 import type { DiagramNodeType } from "./node-config";
 import { getNodeIcon } from "./node-config";
+import { plainDescription } from "./reference-text-utils";
 
 export interface MoveElementDialogProps {
 	node: Node;
@@ -163,7 +164,7 @@ export function MoveElementDialog({
 								(candidate.data.name as string) || candidate.type;
 							const candidateDescription =
 								typeof candidate.data.description === "string"
-									? candidate.data.description
+									? plainDescription(candidate.data)
 									: null;
 							return (
 								<button

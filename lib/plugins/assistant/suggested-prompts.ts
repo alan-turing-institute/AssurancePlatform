@@ -1,6 +1,7 @@
 const READ_CASE = "read_case";
 const LINT_CASE = "lint_case";
 const SUGGEST_TECHNIQUES = "suggest_techniques";
+const READ_CLAIM_HEALTH = "read_claim_health";
 
 /** How the selected element is named in a prompt when it has no label. */
 const UNLABELLED_ELEMENT = "the selected element";
@@ -43,6 +44,9 @@ export function suggestedPrompts({
 		}
 	} else if (has(READ_CASE)) {
 		prompts.push("What is the top-level goal?", "Which claims lack evidence?");
+	}
+	if (has(READ_CLAIM_HEALTH)) {
+		prompts.push("Are the claims passing their automated checks?");
 	}
 	if (has(LINT_CASE)) {
 		prompts.push("Check this case against the rules");

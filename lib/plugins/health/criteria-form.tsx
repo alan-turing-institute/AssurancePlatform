@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { HealthCheck } from "@/lib/schemas/health-checks";
 import { CombiningSections } from "./criteria-combining";
 import { type CriteriaDraft, recommendationIsUsable } from "./criteria-draft";
+import type { NodeEvidence } from "./criteria-node-offer";
 import {
 	type CompareOffer,
 	FreshPickNotice,
@@ -26,6 +27,7 @@ import type { HealthCriteriaResponse } from "./health-types";
 import { RetireCriteriaDialog } from "./retire-criteria-dialog";
 import { retireCriteria, saveCriteria } from "./use-criteria";
 import { useCriteriaDraft } from "./use-criteria-draft";
+import { useNodeChoice } from "./use-node-choice";
 
 export type FormState = "accepted" | "new" | "suggested";
 
@@ -63,7 +65,8 @@ export interface CriteriaFormProps {
 	state: FormState;
 	/** True when the settings the form was opened on have since been stopped or discarded by someone else. */
 	superseded?: boolean;
-	view: HealthCriteriaResponse | null;
+	/** The claim's settings read, which also says where its evidence node is and what the node's text names. A fresh pick holds no stored settings in use, so nothing of the read shows beyond the node. */
+	view: HealthCriteriaResponse;
 }
 
 /** The server's refusal of a save made from settings that were replaced since the form read them. */
@@ -83,6 +86,14 @@ function cancelOf(
 		return leaveNew;
 	}
 	return move ? move.onCancel : resetToStored;
+}
+
+/** The settings read for the lines that describe stored settings. A fresh pick is not the stored settings, so none of their lines belong on it. */
+function storedViewOf(
+	state: FormState,
+	view: HealthCriteriaResponse
+): HealthCriteriaResponse | null {
+	return state === "new" ? null : view;
 }
 
 /** Whether the check's entry recommends anything at all. */
@@ -229,6 +240,12 @@ function ProblemList({
 	) : null;
 }
 
+/** What a person chose about the evidence node when saving. */
+interface NodeChoice {
+	add: boolean;
+	update: boolean;
+}
+
 /** Saving, accepting and discarding, with the request in flight and the server's refusal. */
 function useCriteriaActions(
 	claimId: string,
@@ -271,7 +288,7 @@ function useCriteriaActions(
 		},
 		message,
 		pending,
-		save: async (accept: boolean) => {
+		save: async (accept: boolean, node: NodeChoice) => {
 			if (!analysis.complete) {
 				return;
 			}
@@ -279,9 +296,11 @@ function useCriteriaActions(
 			const view = await run(() =>
 				saveCriteria(claimId, {
 					accept,
+					addEvidenceNode: accept && node.add,
 					expectedRevision: form.baseRevision,
 					integrationId: draft.integrationId,
 					settings,
+					updateEvidenceNodeText: accept && node.update,
 				})
 			);
 			if (view) {
@@ -347,6 +366,8 @@ interface FormFooterProps
 	extends Omit<ButtonRowProps, "onStop" | "stopButton"> {
 	claimId: string;
 	hasProblems: boolean;
+	/** The claim's live evidence node, asked about when the use of accepted settings is stopped. */
+	liveNode: { name: string | null } | null;
 	onChanged: () => void;
 }
 
@@ -354,6 +375,7 @@ interface FormFooterProps
 function FormFooter({
 	claimId,
 	hasProblems,
+	liveNode,
 	onChanged,
 	...buttons
 }: FormFooterProps) {
@@ -374,6 +396,7 @@ function FormFooter({
 			{buttons.state === "accepted" && (
 				<RetireCriteriaDialog
 					claimId={claimId}
+					liveNode={liveNode}
 					onDone={onChanged}
 					onOpenChange={setStopping}
 					open={stopping}
@@ -495,8 +518,12 @@ interface FooterInput {
 	cancel: () => void;
 	claimId: string;
 	form: CriteriaDraftState;
+	/** The claim's live evidence node, if it has one. */
+	liveNode: { name: string | null } | null;
 	/** True while a change made elsewhere has turned saving off. */
 	locked: boolean;
+	/** What the person chose about the evidence node. */
+	node: NodeChoice;
 	onChanged: () => void;
 	state: FormState;
 }
@@ -507,7 +534,9 @@ function footerOf({
 	cancel,
 	claimId,
 	form,
+	liveNode,
 	locked,
+	node,
 	onChanged,
 	state,
 }: FooterInput): FormFooterProps {
@@ -516,28 +545,50 @@ function footerOf({
 		changedElsewhere: locked,
 		claimId,
 		hasProblems: form.hasProblems,
-		onAccept: () => actions.save(true),
+		liveNode,
+		onAccept: () => actions.save(true, node),
 		onCancel: cancel,
 		onChanged,
 		onDiscard: actions.discard,
-		onSuggest: () => actions.save(false),
+		onSuggest: () => actions.save(false, node),
 		pending: actions.pending,
 		state,
 	};
 }
 
-interface EditControlsProps {
+interface EditControlsProps extends Omit<FooterInput, "liveNode" | "node"> {
 	canEdit: boolean;
-	footer: FormFooterProps;
-	/** True when the pipeline the settings were set up for no longer exists. */
-	pipelineGone: boolean;
+	choices: CheckChoice[];
+	/** The claim's evidence node and its text, which decide what is offered about the node. */
+	evidence: NodeEvidence;
+	/** The key of the check the form was opened on. */
+	initialChoiceKey: string;
 }
 
-/** What a person who can edit sees below the form: the reason saving is off for a deleted pipeline, and the buttons. */
-function EditControls({ canEdit, footer, pipelineGone }: EditControlsProps) {
+/**
+ * What a person who can edit sees below the form: the reason saving is off for
+ * a deleted pipeline, the evidence node's choices, and the buttons.
+ */
+function EditControls({
+	canEdit,
+	choices,
+	evidence,
+	initialChoiceKey,
+	...footerInput
+}: EditControlsProps) {
+	const { liveNode, node, nodeOptions } = useNodeChoice({
+		check: footerInput.form.check,
+		chosenKey: footerInput.form.draftKey,
+		choices,
+		disabled: footerInput.actions.pending,
+		evidence,
+		initialChoiceKey,
+		state: footerInput.state,
+	});
 	if (!canEdit) {
 		return null;
 	}
+	const pipelineGone = footerInput.form.draft.integrationId === "";
 	return (
 		<>
 			{pipelineGone && (
@@ -547,7 +598,8 @@ function EditControls({ canEdit, footer, pipelineGone }: EditControlsProps) {
 					these settings.
 				</p>
 			)}
-			<FormFooter {...footer} />
+			{nodeOptions}
+			<FormFooter {...footerOf({ ...footerInput, liveNode, node })} />
 		</>
 	);
 }
@@ -620,6 +672,7 @@ export function CriteriaForm({
 		state,
 	});
 	const change = changeFlags(form, actions, superseded);
+	const stored = storedViewOf(state, view);
 
 	return (
 		<div className="space-y-4" data-testid="health-criteria-form">
@@ -630,7 +683,7 @@ export function CriteriaForm({
 				onReload={reload}
 				recommends={hasRecommendation(form.check)}
 				state={state}
-				view={view}
+				view={stored}
 			/>
 			<PlainWordsSummary sentences={form.sentences} />
 			<FormSections
@@ -640,22 +693,22 @@ export function CriteriaForm({
 				onPick={form.onPick}
 				sectionProps={sectionPropsOf(form, actions, canEdit)}
 				state={state}
-				versions={versionsOf(view, move)}
+				versions={versionsOf(stored, move)}
 			/>
 			<ProblemList errors={form.errors} message={actions.message} />
-			<PipelineFooter view={view} />
+			<PipelineFooter view={stored} />
 			<EditControls
+				actions={actions}
+				cancel={cancel}
 				canEdit={canEdit}
-				footer={footerOf({
-					actions,
-					cancel,
-					claimId,
-					form,
-					locked: change.locked,
-					onChanged,
-					state,
-				})}
-				pipelineGone={form.draft.integrationId === ""}
+				choices={choices}
+				claimId={claimId}
+				evidence={view}
+				form={form}
+				initialChoiceKey={initialChoiceKey}
+				locked={change.locked}
+				onChanged={onChanged}
+				state={state}
 			/>
 		</div>
 	);

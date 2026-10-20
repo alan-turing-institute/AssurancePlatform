@@ -40,7 +40,7 @@ describe("GET /api/user/plugins", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns the manifest plugin with its effective state for the session user", async () => {
+	it("returns the manifest plugin with its effective state for the session user, off until they turn it on", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
@@ -55,8 +55,8 @@ describe("GET /api/user/plugins", () => {
 			name: "Claim/Evidence Health",
 			version: "0.1.0",
 			available: true,
-			enabled: true,
-			pinnedAt: null,
+			enabled: false,
+			pinnedAt: "USER",
 			settings: null,
 		});
 	});

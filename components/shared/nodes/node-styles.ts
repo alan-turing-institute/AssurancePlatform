@@ -5,10 +5,13 @@
  * the curriculum design system with tinted backgrounds and colored borders.
  */
 
+import type { AppearanceTone, ElementAppearance } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
 import { type DiagramNodeType, getNodeColours } from "./node-config";
 
 interface NodeContainerOptions {
+	/** How a plugin wants the card drawn. The card then paints its fill on a layer under its content (`buildAppearanceFillClasses`). */
+	appearance?: ElementAppearance | null;
 	className?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — a distinct destructive-token border, overriding the node kind's own colour. */
 	isDefeater?: boolean;
@@ -25,12 +28,16 @@ export function buildNodeContainerClasses({
 	nodeType,
 	isSelected = false,
 	isDefeater = false,
+	appearance = null,
 	className = "",
 }: NodeContainerOptions): string {
 	const colours = getNodeColours(nodeType);
 
 	const baseClasses = [
 		"relative",
+		// A stacking context of its own keeps the appearance layer (z-index -10)
+		// above the card's fill and below its content, whatever sits around it.
+		appearance ? "isolate" : "",
 		"w-[320px]", // Fixed width - only height changes on expand
 		colours.bgLight, // Light tinted background
 		"rounded-xl",
@@ -55,6 +62,53 @@ export function buildNodeContainerClasses({
 }
 
 /**
+ * The tint each tone puts over the card, at full strength and faded to about a
+ * third. The tints come from the theme's own tokens, so they follow the
+ * preset and the light or dark mode.
+ */
+const APPEARANCE_TINTS: Record<
+	AppearanceTone,
+	{ faded: string; full: string }
+> = {
+	positive: {
+		full: "from-success/15 to-success/15",
+		faded: "from-success/5 to-success/5",
+	},
+	caution: {
+		full: "from-warning/15 to-warning/15",
+		faded: "from-warning/5 to-warning/5",
+	},
+	negative: {
+		full: "from-destructive/15 to-destructive/15",
+		faded: "from-destructive/5 to-destructive/5",
+	},
+	neutral: {
+		full: "from-muted-foreground/15 to-muted-foreground/15",
+		faded: "from-muted-foreground/5 to-muted-foreground/5",
+	},
+};
+
+/**
+ * Classes for the layer that carries a plugin's fill. The layer sits under the
+ * card's content, so the text keeps its full contrast; a faded card is veiled
+ * with the canvas's colour, which leaves the card about a third as solid, and
+ * its tint is drawn at about a third of its strength. With no tone the layer
+ * has no tint of its own, so a faded card is only the veil and an unfaded one
+ * is left as it is.
+ */
+export function buildAppearanceFillClasses(
+	appearance: ElementAppearance
+): string {
+	const tint = appearance.tone ? APPEARANCE_TINTS[appearance.tone] : null;
+	return cn(
+		"pointer-events-none absolute inset-0 -z-10 rounded-[inherit]",
+		tint && "bg-linear-to-b",
+		appearance.faded && "bg-muted/65",
+		tint && (appearance.faded ? tint.faded : tint.full)
+	);
+}
+
+/**
  * Build node header classes
  */
 export function buildNodeHeaderClasses(): string {
@@ -62,10 +116,22 @@ export function buildNodeHeaderClasses(): string {
 }
 
 /**
- * Build node title classes (ID badge like G1, S1, etc.)
+ * Build node title classes (ID badge like G1, S1, etc.). The identifier never
+ * shrinks, so whatever shares the header gives way to it, up to a width that
+ * shows a name of about 19 characters of dotted numbering in full. A longer
+ * name (digits, deep sub-numbering, or a name restored from before the name
+ * format) ends in an ellipsis, and the width leaves the live badge in its
+ * narrowest wrapped form room inside the card beside it.
  */
 export function buildNodeTitleClasses(): string {
-	return cn("font-semibold", "text-foreground", "text-sm", "truncate");
+	return cn(
+		"font-semibold",
+		"text-foreground",
+		"text-sm",
+		"shrink-0",
+		"truncate",
+		"max-w-32"
+	);
 }
 
 /**
@@ -124,8 +190,35 @@ export function buildFooterLabelClasses(): string {
 }
 
 /**
- * Build footer ID classes (e.g., "G1", "S1")
+ * Build footer ID classes (e.g., "G1", "S1"). The identifier is drawn at a
+ * share of the secondary text colour, 70% unless the stylesheet sets
+ * `--node-footer-id-share` higher: on a card a plugin tints or fades, inside
+ * its drawn content, it takes the whole of it so it keeps its contrast against
+ * the tint.
  */
 export function buildFooterIdClasses(): string {
-	return cn("font-mono", "text-muted-foreground/70", "text-xs");
+	return cn(
+		"font-mono",
+		"text-muted-foreground/(--node-footer-id-share)",
+		"text-xs"
+	);
+}
+
+/**
+ * Build the classes for a reference to a defined term inside text. A found
+ * term is a tinted word. A term whose definition is out of reach gets a dashed
+ * underline in the warning colour on top of a tint, so it does not rely on
+ * colour alone; the text keeps the foreground colour to stay readable on a
+ * tinted card.
+ */
+export function buildReferenceClasses(found: boolean): string {
+	return cn(
+		"rounded-sm",
+		"px-0.5",
+		"font-medium",
+		"text-foreground",
+		found
+			? "bg-primary/15"
+			: "bg-warning/20 underline decoration-warning decoration-dashed underline-offset-2"
+	);
 }

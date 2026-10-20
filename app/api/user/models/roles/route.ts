@@ -28,7 +28,7 @@ function sameJob(stored: JobAssignment | null, wanted: JobAssignment): boolean {
  * PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or that the caller asks to have checked again.
  *
  * Takes `{ chat, ranking, search, recheckSearch? }`, each job `{ connectionId, model }` or `null` to switch the job off.
- * Every connection must be the user's own and its type must be able to do the job (Anthropic: chat only; OpenAI-compatible: chat and search).
+ * Every connection must be the user's own and its type must be able to do the job (Anthropic and OpenAI: chat only; OpenAI-compatible: chat and search).
  * Saving a changed search job clears the old check, and the server then runs the search check against the techniques service's published vectors.
  * Saving a search job that is unchanged runs no check, so a save of the chat or ranking job never spends a provider call on a search job that is failing.
  * `recheckSearch: true` runs the check again for the search job as saved, which is how a failed or out-of-date check is tried again.

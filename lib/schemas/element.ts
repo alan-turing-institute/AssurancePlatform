@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AuthorAssertionStatusSchema } from "@/lib/assertion-status";
 import { lenientUrlSchema, optionalString, optionalUrlSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
+import { ContextEntrySchema } from "./context-entry";
 
 /**
  * Per-assertion status on create/update input (ADR 0004 D3). Author-writable
@@ -41,7 +42,7 @@ export const createElementSchema = z.strictObject({
 	// GSN-specific
 	assumption: optionalString(5000),
 	justification: optionalString(5000),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 
 	// Per-assertion status (ADR 0004 D3)
 	assertionStatus: assertionStatusInputSchema,
@@ -90,7 +91,7 @@ export const updateElementSchema = z.strictObject({
 	// GSN-specific
 	assumption: optionalString(5000),
 	justification: optionalString(5000),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 
 	// Per-assertion status (ADR 0004 D3)
 	assertionStatus: assertionStatusInputSchema,
@@ -162,7 +163,7 @@ export type ElementDescriptionFormOutput = z.output<
 export const elementAttributesFormSchema = z.strictObject({
 	assumption: z.string().optional(),
 	justification: z.string().optional(),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 });
 
 export type ElementAttributesFormInput = z.input<
@@ -192,7 +193,7 @@ export const nodeEditFormSchema = z.strictObject({
 	}),
 	assumption: z.string().optional(),
 	justification: z.string().optional(),
-	context: z.array(z.string()).optional(),
+	context: z.array(ContextEntrySchema).optional(),
 	urls: z.array(z.strictObject({ value: z.string() })),
 	// Per-assertion status (ADR 0004 D3). The five author-declarable values
 	// only — `AS_CITED` is derived-only and must never be offered in this

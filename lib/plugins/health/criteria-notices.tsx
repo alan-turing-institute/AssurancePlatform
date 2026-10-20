@@ -162,6 +162,67 @@ export function MoveNotice({ version }: { version: string }) {
 	);
 }
 
+/** What is said about a node that is not in place, before the sentence that results are not shown as evidence. */
+function whereTheNodeIs(
+	node: NonNullable<HealthCriteriaResponse["evidence_node"]>
+) {
+	const name = node.name ?? "The evidence node";
+	if (node.state === "moved") {
+		return `${name} is no longer under this claim.`;
+	}
+	if (node.state === "trashed") {
+		return `${name} is in the trash.`;
+	}
+	return "";
+}
+
+export interface NodeLineProps {
+	/** Whether the person may add the node; the button is left out otherwise. */
+	canEdit: boolean;
+	onAdd: () => void;
+	pending: boolean;
+	view: HealthCriteriaResponse;
+}
+
+/**
+ * For accepted settings: where the claim's evidence node is. With a live node
+ * it says which node results show on. Without one (never added, moved, in the
+ * trash or gone) it says results are not shown as evidence in the case, and a
+ * person who can edit may add the node.
+ */
+export function NodeLine({ canEdit, onAdd, pending, view }: NodeLineProps) {
+	if (view.criteria?.state !== "accepted") {
+		return null;
+	}
+	const node = view.evidence_node;
+	if (node?.state === "live") {
+		return (
+			<Notice testId="health-node-line">
+				Results show on evidence node {node.name ?? "under this claim"}.
+			</Notice>
+		);
+	}
+	const where = node ? whereTheNodeIs(node) : "";
+	return (
+		<div className="space-y-2">
+			<Notice testId="health-node-line">
+				{where} Results are not shown as evidence in the case.
+			</Notice>
+			{canEdit && (
+				<Button
+					disabled={pending}
+					onClick={onAdd}
+					size="sm"
+					type="button"
+					variant="outline"
+				>
+					Add evidence node
+				</Button>
+			)}
+		</div>
+	);
+}
+
 /** For settings that were stopped or discarded: who, when and why. */
 export function StoppedNotice({ view }: { view: HealthCriteriaResponse }) {
 	const { last_change: change } = view;

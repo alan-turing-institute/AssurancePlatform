@@ -17,12 +17,14 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "./prisma-factories";
 
 export const MINUTE = 60_000;
 
 export async function setupClaim() {
 	const owner = await createTestUser();
+	await enableTestPlugin(owner.id, "tea.health");
 	const testCase = await createTestCase(owner.id);
 	const claim = await createTestElement(testCase.id, owner.id, {
 		elementType: "PROPERTY_CLAIM",

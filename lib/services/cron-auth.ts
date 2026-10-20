@@ -7,7 +7,8 @@ export type CronAuthResult =
 
 /**
  * Shared CRON_SECRET guard for every cron-triggered service
- * (`purgeExpiredCases`, `sweepHealthStaleness`, `runRetentionSweep`). Fails
+ * (`purgeExpiredCases`, `sweepHealthStaleness`, `runRetentionSweep`,
+ * `thinHealthEvidence`). Fails
  * closed if `CRON_SECRET` isn't configured, and compares with
  * `timingSafeCompare` so response timing can't be used to guess the secret.
  *

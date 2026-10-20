@@ -1,12 +1,13 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { type PlainCase, toPlainCase } from "@/lib/case/defined-terms";
+import { createClaimHealthTool } from "@/lib/plugins/assistant/claim-health-tool";
 import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
 	createTechniquesTool,
 	type SelectedElement,
 	techniquesConfigured,
 } from "@/lib/plugins/assistant/techniques-tool";
-import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 import { lintCase } from "./linter/lint-case";
 import { createToolCallLimit } from "./tool-call-limit";
@@ -76,9 +77,9 @@ function withShallowChildren(node: TreeNode) {
 async function loadExport(
 	userId: string,
 	caseId: string
-): Promise<CaseExportNested | null> {
+): Promise<PlainCase | null> {
 	const result = await exportCase(userId, caseId, { includeComments: false });
-	return "data" in result ? result.data : null;
+	return "data" in result ? toPlainCase(result.data) : null;
 }
 
 /**
@@ -89,8 +90,8 @@ async function loadExport(
 function sharedCaseExport(
 	userId: string,
 	caseId: string
-): () => Promise<CaseExportNested | null> {
-	let pending: Promise<CaseExportNested | null> | null = null;
+): () => Promise<PlainCase | null> {
+	let pending: Promise<PlainCase | null> | null = null;
 	return () => {
 		pending ??= loadExport(userId, caseId).catch((error: unknown) => {
 			pending = null;
@@ -115,13 +116,19 @@ function sharedCaseExport(
  * cut off; the techniques tool keeps its wait inside it. `models` gives that
  * tool the user's search and ranking jobs; without it the tool searches by
  * keyword only.
+ *
+ * `claimHealth` adds `read_claim_health`, which the caller sets only when the
+ * health plugin is on for the user and the case has claims with automated
+ * checks. It takes the claims' order and labels from the shared export and
+ * reads their statuses again on every call.
  */
 export function createCaseTools(
 	userId: string,
 	caseId: string,
 	selection: SelectedElement | null = null,
 	replyDeadline?: number,
-	models?: TechniquesModelAccess
+	models?: TechniquesModelAccess,
+	claimHealth = false
 ) {
 	const limited = createToolCallLimit();
 	const caseExport = sharedCaseExport(userId, caseId);
@@ -175,6 +182,16 @@ export function createCaseTools(
 						selection,
 						replyDeadline,
 						models,
+						limited
+					),
+				}
+			: {}),
+		...(claimHealth
+			? {
+					read_claim_health: createClaimHealthTool(
+						userId,
+						caseId,
+						caseExport,
 						limited
 					),
 				}

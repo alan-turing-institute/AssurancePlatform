@@ -1,5 +1,5 @@
 /**
- * Generates lib/schemas/json-schema-v1.0.json from CaseExportNestedSchema
+ * Generates lib/schemas/json-schema-v1.1.json from CaseExportNestedSchema
  * (ADR 0004 D1 — the Zod schema is the single source of truth for the case
  * model; this file becomes a generated artifact, never hand-maintained).
  *
@@ -18,13 +18,12 @@
  *
  * What does NOT survive the Zod -> JSON Schema conversion (documented here
  * because it is easy to rediscover as a bug): `.refine()` and `.transform()`
- * predicates have no JSON Schema equivalent and are dropped. Nothing in
- * CaseExportNestedSchema currently uses either, but lib/schemas more broadly
- * does (e.g. base.ts's trimming transforms) — if a refine/transform is ever
- * added to the case-export schemas, the shape it produces will still be
- * generated, but the extra check it enforces stays Zod-only and unenforced
- * by any JSON Schema consumer (including this editor). z.lazy recursion
- * (TreeNodeSchema) DOES survive, as a $ref into `definitions`.
+ * predicates have no JSON Schema equivalent and are dropped. The one check
+ * of that kind in CaseExportNestedSchema is that a file whose version is "1.0" may not hold named
+ * context entries. It stays Zod-only and unenforced by any JSON Schema
+ * consumer (including this editor); the generated file describes the 1.1
+ * shape. z.lazy recursion (TreeNodeSchema) DOES survive, as a $ref into
+ * `definitions`.
  */
 
 import { spawnSync } from "node:child_process";
@@ -41,11 +40,11 @@ const OUTPUT_PATH = path.join(
 	"..",
 	"lib",
 	"schemas",
-	"json-schema-v1.0.json"
+	"json-schema-v1.1.json"
 );
 
-const SCHEMA_ID = "https://tea-platform.org/schemas/case-export-v1.0.json";
-const SCHEMA_TITLE = "TEA Platform Assurance Case Export Schema v1.0";
+const SCHEMA_ID = "https://tea-platform.org/schemas/case-export-v1.1.json";
+const SCHEMA_TITLE = "TEA Platform Assurance Case Export Schema v1.1";
 
 // zod's draft-07 generator names an extracted recursive definition
 // `__schema0` — a positional placeholder; `.meta({ id })` on TreeNodeSchema

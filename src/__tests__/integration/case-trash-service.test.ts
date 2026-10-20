@@ -31,6 +31,7 @@ import {
 	createTestElement,
 	createTestPermission,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
@@ -305,6 +306,7 @@ describe("case-trash-service", () => {
 			);
 
 			const owner = await createTestUser();
+			await enableTestPlugin(owner.id, "tea.health");
 			const testCase = await createTestCase(owner.id, {
 				name: "Cascade Purge — Health Evidence",
 			});
