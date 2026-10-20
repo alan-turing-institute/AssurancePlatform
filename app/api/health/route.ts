@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+
+const log = logger.child({ component: "health-route" });
+
+/** What the public response says when the database check throws; the error's own message is never shown. */
+const DATABASE_FAILED = "Database connection failed";
 
 type HealthStatus = "healthy" | "unhealthy" | "degraded";
 
@@ -40,8 +46,10 @@ export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
 		}
 	} catch (error) {
 		dbStatus = "unhealthy";
-		dbError =
-			error instanceof Error ? error.message : "Database connection failed";
+		dbError = DATABASE_FAILED;
+		log.error("Health check could not reach the database", {
+			errorName: error instanceof Error ? error.name : "unknown",
+		});
 	}
 
 	const response: HealthCheckResponse = {
