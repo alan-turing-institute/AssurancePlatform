@@ -172,26 +172,33 @@ function generateUuid(): string {
 }
 
 /**
- * Builds the ID mapping from temp/original IDs to new UUIDs.
+ * Builds the ID mapping from temp/original IDs to new UUIDs, or to themselves
+ * when the caller asked to keep the file's ids.
  */
-function buildIdMap(elements: ElementV2[]): Map<string, string> {
+function buildIdMap(
+	elements: ElementV2[],
+	keepIds: boolean
+): Map<string, string> {
 	const idMap = new Map<string, string>();
 	for (const el of elements) {
-		idMap.set(el.id, generateUuid());
+		idMap.set(el.id, keepIds ? el.id : generateUuid());
 	}
 	return idMap;
 }
 
 /**
- * Creates the case and grants ADMIN permission to the user.
+ * Creates the case and grants ADMIN permission to the user. A given `caseId`
+ * becomes the case's id; without one the database generates it.
  */
 async function createCaseWithPermission(
 	tx: TransactionClient,
 	caseData: CaseExportV2["case"],
-	userId: string
+	userId: string,
+	caseId?: string
 ): Promise<string> {
 	const newCase = await tx.assuranceCase.create({
 		data: {
+			id: caseId,
 			name: caseData.name,
 			description: caseData.description,
 			createdById: userId,
@@ -930,15 +937,28 @@ async function renumberIfDefeaterNamesNonConforming(
 	return "This case was imported from an older export with pre-GSN defeater names (e.g. P1.1 instead of CP1) — every identifier in the case has been renumbered to the current CP1/CG1/CE1 scheme.";
 }
 
+/** Options for `importCase` that only code reading a trusted file sets. */
+interface ImportCaseOptions {
+	/**
+	 * Keeps every element's id from the file and gives the new case this id,
+	 * instead of generating new ones. For seeding a case from a file held in
+	 * the repository, so that other systems can keep referring to its elements.
+	 * No import route sets it.
+	 */
+	fixedIds?: { caseId: string };
+}
+
 /**
  * Imports a case from JSON data.
  *
  * Accepts nested (v1.0 and v1.1) and flat (v2.0) formats.
  * The importing user becomes the owner with ADMIN permission.
+ * Every element and the case get new ids unless `options.fixedIds` is given.
  */
 export async function importCase(
 	userId: string,
-	jsonData: unknown
+	jsonData: unknown,
+	options: ImportCaseOptions = {}
 ): Promise<ImportResult> {
 	// Validate and transform input
 	const processed = await processImportData(jsonData);
@@ -954,7 +974,7 @@ export async function importCase(
 
 	try {
 		// Build ID mapping
-		const idMap = buildIdMap(v2Data.elements);
+		const idMap = buildIdMap(v2Data.elements, options.fixedIds !== undefined);
 
 		// Review fix item 1: batch-resolve external citedElementIds against the
 		// target DB BEFORE opening the transaction — keeps the transaction
@@ -983,7 +1003,12 @@ export async function importCase(
 		// savepoint path) — regardless of import payload size, not O(elements).
 		const result = await prisma.$transaction(async (tx) => {
 			// Create case
-			const caseId = await createCaseWithPermission(tx, v2Data.case, userId);
+			const caseId = await createCaseWithPermission(
+				tx,
+				v2Data.case,
+				userId,
+				options.fixedIds?.caseId
+			);
 
 			// Create elements
 			const { count: elementCount, warnings: elementWarnings } =
