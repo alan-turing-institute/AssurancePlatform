@@ -12,9 +12,10 @@ name: Fallow Audit (retired)
 # integration tests).
 #
 # The audit now runs inside build.yaml, fed by coverage merged from BOTH the
-# unit suite (`pnpm test:coverage:check`) and the integration suite
-# (`vitest --project integration --coverage`, instrumented in the existing
-# "Run integration tests" step rather than run twice). See build.yaml's
+# unit suite (sharded `vitest --coverage` runs, merged by the `coverage` job)
+# and the integration suite (`vitest --project integration --coverage`,
+# instrumented in the `integration` job's existing "Run integration tests"
+# step rather than run twice). See build.yaml's
 # `structural-quality` job for the full audit invocation (kept verbatim in
 # semantics from this file's history — same fallow flags, same PR-comment
 # posting, same fail-closed exit-code handling) and its header comment for

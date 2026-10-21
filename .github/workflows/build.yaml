@@ -1017,7 +1017,7 @@ jobs:
     # rather than sitting "expected" forever.
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    # Matches the test and lint jobs. The audit itself takes seconds; the
+    # Same limit as the E2E job. The audit itself takes seconds; the
     # budget is for the npm registry, which this job hits twice (pnpm
     # setup, then `npx fallow`) with no cache, and which can be slow
     # enough to exceed a 10-minute cap on its own.
