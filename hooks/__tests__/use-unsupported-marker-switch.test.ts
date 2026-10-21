@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { create } from "zustand";
 
 const { fetchMock, saveMock, toastMock } = vi.hoisted(() => ({
 	fetchMock: vi.fn(),
@@ -20,6 +21,19 @@ import { useUnsupportedMarkerSwitch } from "../use-unsupported-marker-switch";
 function useHeld(initial: boolean | null) {
 	const [value, setValue] = useState<boolean | null>(initial);
 	return { value, ...useUnsupportedMarkerSwitch(value, setValue) };
+}
+
+/** A store shared by two instances of the switch, as the case toolbar's value is shared between pages. */
+const shared = create<{ value: boolean | null }>(() => ({ value: true }));
+
+function useShared() {
+	const value = shared((state) => state.value);
+	return {
+		value,
+		...useUnsupportedMarkerSwitch(value, (next) =>
+			shared.setState({ value: next })
+		),
+	};
 }
 
 function deferred<T>() {
@@ -107,6 +121,7 @@ describe("useUnsupportedMarkerSwitch", () => {
 			await result.current.onCheckedChange(false);
 		});
 
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(result.current.value).toBe(true);
 		expect(toastMock).toHaveBeenCalledTimes(1);
 	});
@@ -128,6 +143,55 @@ describe("useUnsupportedMarkerSwitch", () => {
 
 		expect(result.current.value).toBe(true);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(toastMock).not.toHaveBeenCalled();
+	});
+
+	it("writes nothing to the store of a page it has been moved away from", async () => {
+		shared.setState({ value: true });
+		const read = deferred<boolean | null>();
+		const nextSave = deferred<boolean | null>();
+		saveMock.mockResolvedValueOnce(null).mockReturnValueOnce(nextSave.promise);
+		fetchMock.mockReturnValueOnce(read.promise);
+
+		// The first page's save fails and it starts to read the stored value back.
+		const first = renderHook(() => useShared());
+		act(() => {
+			first.result.current.onCheckedChange(false);
+		});
+		await act(async () => undefined);
+		// The next page loads the stored value into the same store and a press is made on it.
+		first.unmount();
+		act(() => shared.setState({ value: true }));
+		const next = renderHook(() => useShared());
+		act(() => {
+			next.result.current.onCheckedChange(false);
+		});
+		// The first page's read comes back with the value from before that press was saved.
+		await act(async () => read.resolve(true));
+		await act(async () => nextSave.resolve(false));
+
+		expect(shared.getState().value).toBe(false);
+		expect(toastMock).not.toHaveBeenCalled();
+	});
+
+	it("keeps the later choice when the later save is stored before the earlier one", async () => {
+		const earlier = deferred<boolean | null>();
+		const later = deferred<boolean | null>();
+		saveMock
+			.mockReturnValueOnce(earlier.promise)
+			.mockReturnValueOnce(later.promise);
+		const { result } = renderHook(() => useHeld(true));
+
+		act(() => {
+			result.current.onCheckedChange(false);
+		});
+		act(() => {
+			result.current.onCheckedChange(true);
+		});
+		await act(async () => later.resolve(true));
+		await act(async () => earlier.resolve(false));
+
+		expect(result.current.value).toBe(true);
 		expect(toastMock).not.toHaveBeenCalled();
 	});
 
