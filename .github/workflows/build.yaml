@@ -358,10 +358,12 @@ jobs:
         # which would otherwise send the blob to test-results/.
         # SKIP_COVERAGE_THRESHOLDS turns the coverage floors off: a shard sees
         # only part of the suite, so the `coverage` job enforces the floors
-        # on the merged report instead.
+        # on the merged report instead. --coverage.reporter=json leaves out
+        # the HTML report: nothing uploads it, and the blob carries the data.
         run: |
           pnpm exec vitest run \
             --coverage \
+            --coverage.reporter=json \
             --shard=${{ matrix.shard }}/3 \
             --reporter=default \
             --reporter=blob \
