@@ -571,6 +571,35 @@ type ParentInfoForNaming = {
 } | null;
 
 /**
+ * Returns the flat identifier `<prefix><n>` for the lowest `n` at or above
+ * `startAt` that no live element in the case already carries.
+ *
+ * The flat tallies in the property-claim namers count only the claims that
+ * do not dot-continue a parent's name. A claim placed under a parent whose
+ * own name is not a well-formed identifier is named flat as well, yet falls
+ * outside those tallies, so the tally alone can name several claims alike.
+ * Skipping the names in use keeps every flat identifier unique, and leaves
+ * the tally's own choice untouched whenever it is already free.
+ */
+async function nextFreeFlatName(
+	caseId: string,
+	prefix: string,
+	startAt: number,
+	db: TxClient
+): Promise<string> {
+	const named = await db.assuranceElement.findMany({
+		where: { caseId, deletedAt: null, name: { startsWith: prefix } },
+		select: { name: true },
+	});
+	const inUse = new Set(named.map((element) => element.name));
+	let next = startAt;
+	while (inUse.has(`${prefix}${next}`)) {
+		next += 1;
+	}
+	return `${prefix}${next}`;
+}
+
+/**
  * Names a DEFEATER property claim (Chris's ruling, 2026-09-15 — D8 of ADR
  * 0005, "TEA — Defeater identifiers follow GSN"). Two cases:
  * - Nested under ANOTHER defeater property claim (a counter to a counter,
@@ -624,7 +653,7 @@ async function generateDefeaterPropertyClaimName(
 			NOT: { parent: { elementType: "PROPERTY_CLAIM", isDefeater: true } },
 		},
 	});
-	return `${prefix}${caseWideCount + 1}`;
+	return await nextFreeFlatName(caseId, prefix, caseWideCount + 1, db);
 }
 
 /**
@@ -741,7 +770,9 @@ async function generatePlainPropertyClaimName(
 	// once a strategy-transparent claim already existed). Mirrors the
 	// branch decision one hop further, via a nested self-relation filter,
 	// instead of `level` — see the round-1 note on why `level` can't be
-	// used here once a defeater can sit in the parent chain.
+	// used here once a defeater can sit in the parent chain. A claim under a
+	// parent whose name is malformed is named flat but is not in this tally,
+	// so the number is moved past any name already taken.
 	const caseWideCount = await db.assuranceElement.count({
 		where: {
 			caseId,
@@ -761,7 +792,7 @@ async function generatePlainPropertyClaimName(
 			},
 		},
 	});
-	return `${prefix}${caseWideCount + 1}`;
+	return await nextFreeFlatName(caseId, prefix, caseWideCount + 1, db);
 }
 
 /**
