@@ -527,125 +527,184 @@ interface Live {
 	parentId: string | null;
 }
 
+/** What the random run keeps track of: the case, a model of its live elements and a log of its steps. */
+interface Run {
+	context: Context;
+	live: Live[];
+	problems: string[];
+	random: () => number;
+	trace: string[];
+}
+
+/** Claims written straight to the table before the run starts: two plain and one defeater, none well-formed. */
+const SEEDED_CLAIMS = [
+	["Property claim", false],
+	["PNaN", false],
+	["Counter claim", true],
+] as const;
+
+async function startRun(seed: number): Promise<Run> {
+	const random = generator(seed);
+	const context = await newCase();
+	const live: Live[] = [
+		{
+			id: context.goal.id,
+			kind: "goal",
+			name: context.goal.name ?? "",
+			isDefeater: false,
+			parentId: null,
+		},
+	];
+	for (const [name, isDefeater] of SEEDED_CLAIMS) {
+		const seeded = await seedClaim(context, name, context.goal.id, {
+			isDefeater,
+		});
+		live.push({
+			id: seeded.id,
+			kind: "claim",
+			name,
+			isDefeater,
+			parentId: context.goal.id,
+		});
+	}
+	return { context, live, problems: [], random, trace: [] };
+}
+
+function pickOne<T>(run: Run, items: T[]): T {
+	return items[Math.floor(run.random() * items.length)] as T;
+}
+
+function logStep(run: Run, step: number, roll: number, ...fields: string[]) {
+	run.trace.push([step, roll.toFixed(9), ...fields].join("|"));
+}
+
+function claimNamesInClass(run: Run, isDefeater: boolean): string[] {
+	return run.live
+		.filter((e) => e.kind === "claim" && e.isDefeater === isDefeater)
+		.map((e) => e.name);
+}
+
+/** A plain claim under any live element. */
+async function addClaimStep(run: Run, step: number, roll: number) {
+	const parent = pickOne(run, run.live);
+	const taken = claimNamesInClass(run, false);
+	const made = await addClaim(run.context, parent.id);
+	logStep(run, step, roll, "plain", parent.name, made.name);
+	if (!PLAIN_ANY.test(made.name) || taken.includes(made.name)) {
+		run.problems.push(`step ${step}: plain ${made.name} under ${parent.name}`);
+	}
+	run.live.push({
+		id: made.id,
+		kind: "claim",
+		name: made.name,
+		isDefeater: false,
+		parentId: parent.id,
+	});
+}
+
+/** A defeater of any live element other than a strategy. */
+async function addDefeaterStep(run: Run, step: number, roll: number) {
+	const target = pickOne(
+		run,
+		run.live.filter((e) => e.kind !== "strategy")
+	);
+	const taken = claimNamesInClass(run, true);
+	const made = await addDefeater(run.context, target.id);
+	logStep(run, step, roll, "defeater", target.name, made.name);
+	if (!DEFEATER_ANY.test(made.name) || taken.includes(made.name)) {
+		run.problems.push(
+			`step ${step}: defeater ${made.name} under ${target.name}`
+		);
+	}
+	run.live.push({
+		id: made.id,
+		kind: "claim",
+		name: made.name,
+		isDefeater: true,
+		parentId: target.id,
+	});
+}
+
+/** A strategy under the goal. */
+async function addStrategyStep(run: Run, step: number, roll: number) {
+	const parent = run.context.goal;
+	const made = await addStrategy(run.context, parent.id);
+	logStep(run, step, roll, "strategy", parent.name ?? "", made.name ?? "");
+	run.live.push({
+		id: made.id,
+		kind: "strategy",
+		name: made.name ?? "",
+		isDefeater: false,
+		parentId: parent.id,
+	});
+}
+
+/** The ids of an element and everything below it in the model. */
+function idsFromHere(live: Live[], rootId: string): Set<string> {
+	const ids = new Set([rootId]);
+	let grew = true;
+	while (grew) {
+		grew = false;
+		for (const e of live) {
+			if (!ids.has(e.id) && e.parentId && ids.has(e.parentId)) {
+				ids.add(e.id);
+				grew = true;
+			}
+		}
+	}
+	return ids;
+}
+
+/**
+ * Deletes one flat-named claim. Only a flat-named claim goes: the dotted
+ * names under a live parent are not renumbered when one of them leaves.
+ */
+async function deleteFlatClaimStep(run: Run, step: number, roll: number) {
+	const removable = run.live.filter(
+		(e) => e.kind === "claim" && ANY_FLAT.test(e.name)
+	);
+	if (removable.length === 0) {
+		logStep(run, step, roll, "skip");
+		return;
+	}
+	const gone = pickOne(run, removable);
+	expectSuccess(await deleteElement(run.context.user.id, gone.id));
+	const removed = idsFromHere(run.live, gone.id);
+	const goneNames = run.live
+		.filter((e) => removed.has(e.id))
+		.map((e) => e.name)
+		.sort();
+	logStep(run, step, roll, "delete", gone.name, goneNames.join(","));
+	run.live = run.live.filter((e) => !removed.has(e.id));
+}
+
+/** One step of the run; the draw decides what it does. */
+async function runStep(run: Run, step: number) {
+	const roll = run.random();
+	if (roll < 0.4) {
+		await addClaimStep(run, step, roll);
+	} else if (roll < 0.6) {
+		await addDefeaterStep(run, step, roll);
+	} else if (roll < 0.7) {
+		await addStrategyStep(run, step, roll);
+	} else {
+		await deleteFlatClaimStep(run, step, roll);
+	}
+}
+
 describe("a long mixed run of creations and deletions", () => {
 	it.each([
 		1, 2, 3, 4, 5,
 	])("never gives a new claim a name another live claim carries (seed %i)", async (seed) => {
-		const random = generator(seed);
-		const pick = <T>(items: T[]): T =>
-			items[Math.floor(random() * items.length)] as T;
-		const context = await newCase();
-		const live: Live[] = [
-			{
-				id: context.goal.id,
-				kind: "goal",
-				name: context.goal.name ?? "",
-				isDefeater: false,
-				parentId: null,
-			},
-		];
-		for (const [name, isDefeater] of [
-			["Property claim", false],
-			["PNaN", false],
-			["Counter claim", true],
-		] as const) {
-			const seeded = await seedClaim(context, name, context.goal.id, {
-				isDefeater,
-			});
-			live.push({
-				id: seeded.id,
-				kind: "claim",
-				name,
-				isDefeater,
-				parentId: context.goal.id,
-			});
-		}
-		const claimsOf = (isDefeater: boolean) =>
-			live.filter((e) => e.kind === "claim" && e.isDefeater === isDefeater);
-		const namesInClass = (isDefeater: boolean) =>
-			claimsOf(isDefeater).map((e) => e.name);
-		const problems: string[] = [];
+		const run = await startRun(seed);
 
 		for (let step = 0; step < 60; step++) {
-			const roll = random();
-			if (roll < 0.4) {
-				const parent = pick(
-					live.filter(
-						(e) =>
-							e.kind === "goal" || e.kind === "strategy" || e.kind === "claim"
-					)
-				);
-				const taken = namesInClass(false);
-				const made = await addClaim(context, parent.id);
-				if (!PLAIN_ANY.test(made.name) || taken.includes(made.name)) {
-					problems.push(
-						`step ${step}: plain ${made.name} under ${parent.name}`
-					);
-				}
-				live.push({
-					id: made.id,
-					kind: "claim",
-					name: made.name,
-					isDefeater: false,
-					parentId: parent.id,
-				});
-			} else if (roll < 0.6) {
-				const target = pick(live.filter((e) => e.kind !== "strategy"));
-				const taken = namesInClass(true);
-				const made = await addDefeater(context, target.id);
-				if (!DEFEATER_ANY.test(made.name) || taken.includes(made.name)) {
-					problems.push(
-						`step ${step}: defeater ${made.name} under ${target.name}`
-					);
-				}
-				live.push({
-					id: made.id,
-					kind: "claim",
-					name: made.name,
-					isDefeater: true,
-					parentId: target.id,
-				});
-			} else if (roll < 0.7) {
-				const parent = context.goal;
-				const made = await addStrategy(context, parent.id);
-				live.push({
-					id: made.id,
-					kind: "strategy",
-					name: made.name ?? "",
-					isDefeater: false,
-					parentId: parent.id,
-				});
-			} else {
-				// Only a flat-named claim goes: the dotted names under a live
-				// parent are not renumbered when one of them leaves.
-				const removable = live.filter(
-					(e) => e.kind === "claim" && ANY_FLAT.test(e.name)
-				);
-				if (removable.length === 0) {
-					continue;
-				}
-				const gone = pick(removable);
-				expectSuccess(await deleteElement(context.user.id, gone.id));
-				const removed = new Set([gone.id]);
-				let grew = true;
-				while (grew) {
-					grew = false;
-					for (const e of live) {
-						if (!removed.has(e.id) && e.parentId && removed.has(e.parentId)) {
-							removed.add(e.id);
-							grew = true;
-						}
-					}
-				}
-				for (let index = live.length - 1; index >= 0; index--) {
-					if (removed.has(live[index]?.id ?? "")) {
-						live.splice(index, 1);
-					}
-				}
-			}
+			await runStep(run, step);
 		}
 
-		expect(problems).toEqual([]);
-		expect(duplicates(await liveClaimNames(context.testCase.id))).toEqual([]);
+		expect(run.problems, run.trace.join("\n")).toEqual([]);
+		expect(duplicates(await liveClaimNames(run.context.testCase.id))).toEqual(
+			[]
+		);
 	});
 });
