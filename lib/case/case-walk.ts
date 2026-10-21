@@ -20,7 +20,7 @@ export interface CaseTreeNode {
  * counter-goal can be met beneath any goal, strategy, claim or piece of
  * evidence.
  */
-export const CHILD_LISTS = [
+const CHILD_LISTS = [
 	"propertyClaims",
 	"strategies",
 	"evidence",
