@@ -12,6 +12,9 @@ import type {
 } from "@/lib/services/case-response-types";
 import type { NestedArrayItem } from "./types";
 
+/** The lists of cited elements, each of which can carry counter-goals. */
+const CITED_LISTS = ["awayGoals", "modules"] as const;
+
 /**
  * Recursively removes an item with a specific `id` and `type` from a deeply nested array structure.
  */
@@ -58,6 +61,18 @@ const removeItemFromNestedStructure = (
 					id,
 					type
 				) as unknown as GoalResponse[];
+			}
+
+			// Remove from away goals and modules: counter-goals hang from them too
+			const cited = item as unknown as Record<
+				string,
+				NestedArrayItem[] | undefined
+			>;
+			for (const key of CITED_LISTS) {
+				const list = cited[key];
+				if (list) {
+					cited[key] = removeItemFromNestedStructure(list, id, type);
+				}
 			}
 
 			// Note: context is now a string[] attribute, not an array of elements to remove

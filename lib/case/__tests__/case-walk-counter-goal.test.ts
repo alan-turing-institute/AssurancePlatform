@@ -11,9 +11,10 @@ import { removeAssuranceCaseNode } from "../node-utils";
 import { addPropertyClaimToNested } from "../property-claims";
 
 /**
- * A counter-goal hangs from the node it challenges: a claim, a strategy or a
- * piece of evidence, as well as a goal. The walkers that add to the stored
- * case or remove from it find a node beneath each of them.
+ * A counter-goal hangs from the node it challenges: a claim, a strategy, a
+ * piece of evidence, an away goal or a module, as well as a goal. The walkers
+ * that add to the stored case or remove from it find a node beneath each of
+ * them.
  */
 
 type Loose = Record<string, unknown>;
@@ -41,9 +42,10 @@ function counterGoal(id: string, extra: Loose): Loose {
 }
 
 /**
- * One counter-goal hangs from a claim (P1), one from a strategy (S1) and one
- * from a piece of evidence (E1); each is supported by a claim and, in the
- * strategy's case, by a strategy of its own.
+ * One counter-goal hangs from a claim (P1), one from a strategy (S1), one from
+ * a piece of evidence (E1), one from an away goal (AG1) and one from a module
+ * (M1); each is supported by a claim and, in the strategy's case, by strategies
+ * of its own. P0 is a claim with no counter-goal.
  */
 function buildCase() {
 	const assuranceCase = {
@@ -53,6 +55,20 @@ function buildCase() {
 			{
 				id: "G1",
 				type: "goal",
+				awayGoals: [
+					{
+						id: "AG1",
+						type: "away_goal",
+						goals: [counterGoal("CG4", { propertyClaims: [claim("P6")] })],
+					},
+				],
+				modules: [
+					{
+						id: "M1",
+						type: "module",
+						goals: [counterGoal("CG5", { propertyClaims: [claim("P7")] })],
+					},
+				],
 				strategies: [
 					{
 						id: "S1",
@@ -62,6 +78,11 @@ function buildCase() {
 								propertyClaims: [claim("P3")],
 								strategies: [
 									{ id: "S2", type: "strategy", propertyClaims: [] },
+									{
+										id: "S3",
+										type: "strategy",
+										propertyClaims: [claim("P9")],
+									},
 								],
 							}),
 						],
@@ -81,8 +102,16 @@ function buildCase() {
 					},
 				],
 				propertyClaims: [
+					claim("P0"),
 					claim("P1", {
-						goals: [counterGoal("CG1", { propertyClaims: [claim("P2")] })],
+						goals: [
+							counterGoal("CG1", {
+								propertyClaims: [
+									claim("P2"),
+									claim("P8", { evidence: [{ id: "E2", type: "evidence" }] }),
+								],
+							}),
+						],
 					}),
 				],
 			},
@@ -95,13 +124,53 @@ const SUPPORTING_CLAIMS = [
 	["a claim", "P2"],
 	["a strategy", "P3"],
 	["a piece of evidence", "P5"],
+	["an away goal", "P6"],
+	["a module", "P7"],
+] as const;
+
+/** What can be removed from the case, with the type the canvas names it by. */
+const REMOVABLE = [
+	...SUPPORTING_CLAIMS.map(
+		([label, id]) =>
+			[
+				`the claim beneath a counter-goal hung from ${label}`,
+				id,
+				"property_claim",
+			] as const
+	),
+	["evidence that supports a counter-goal's claim", "E2", "evidence"],
+	["a claim beneath a counter-goal's own strategy", "P9", "property_claim"],
+	["a claim that carries no counter-goal", "P0", "property_claim"],
 ] as const;
 
 const NEW_EVIDENCE = { id: "E9", type: "evidence" } as EvidenceResponse;
-const NEW_CLAIM = { id: "P9", type: "property_claim" } as PropertyClaimResponse;
+const NEW_CLAIM = {
+	id: "P-new",
+	type: "property_claim",
+} as PropertyClaimResponse;
 
 function nodeOf(goals: GoalResponse[], id: string): Loose {
 	return findCaseNode(goals, id) as unknown as Loose;
+}
+
+const CHILD_KEYS = [
+	"propertyClaims",
+	"strategies",
+	"evidence",
+	"goals",
+	"awayGoals",
+	"modules",
+];
+
+/** Every id in the case, however deep. */
+function allIds(nodes: unknown[]): string[] {
+	return nodes.flatMap((node) => {
+		const item = node as Loose;
+		const below = CHILD_KEYS.flatMap((key) =>
+			Array.isArray(item[key]) ? allIds(item[key] as unknown[]) : []
+		);
+		return [item.id as string, ...below];
+	});
 }
 
 describe("findCaseNode", () => {
@@ -143,17 +212,16 @@ describe("walking the case beneath a counter-goal hung from", () => {
 	});
 
 	it.each(
-		SUPPORTING_CLAIMS
-	)("%s: removeAssuranceCaseNode removes the supporting claim and nothing else", (_label, id) => {
+		REMOVABLE
+	)("removeAssuranceCaseNode removes %s and nothing else", (_label, id, type) => {
 		const { assuranceCase } = buildCase();
+		const before = allIds(assuranceCase.goals ?? []);
 
-		const result = removeAssuranceCaseNode(assuranceCase, id, "property_claim");
+		const result = removeAssuranceCaseNode(assuranceCase, id, type);
 
-		const goals = result.goals ?? [];
-		expect(findCaseNode(goals, id)).toBeNull();
-		for (const other of ["P1", "S1", "P4", "E1", "CG1", "CG2", "CG3", "S2"]) {
-			expect(findCaseNode(goals, other)?.id, other).toBe(other);
-		}
+		expect(allIds(result.goals ?? [])).toEqual(
+			before.filter((other) => other !== id)
+		);
 	});
 
 	it("leaves the case alone when the node is not there", () => {

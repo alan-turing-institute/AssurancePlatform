@@ -7,9 +7,11 @@
  * the lists that can hold further nodes.
  */
 export interface CaseTreeNode {
+	awayGoals?: CaseTreeNode[];
 	evidence?: CaseTreeNode[];
 	goals?: CaseTreeNode[];
 	id: string;
+	modules?: CaseTreeNode[];
 	propertyClaims?: CaseTreeNode[];
 	strategies?: CaseTreeNode[];
 }
@@ -17,14 +19,16 @@ export interface CaseTreeNode {
 /**
  * The lists of a node that hold further nodes. A counter-goal hangs from the
  * node it challenges, so `goals` sits beside the ordinary children and a
- * counter-goal can be met beneath any goal, strategy, claim or piece of
- * evidence.
+ * counter-goal can be met beneath any goal, strategy, claim, piece of
+ * evidence, away goal or module.
  */
 const CHILD_LISTS = [
 	"propertyClaims",
 	"strategies",
 	"evidence",
 	"goals",
+	"awayGoals",
+	"modules",
 ] as const;
 
 /**
