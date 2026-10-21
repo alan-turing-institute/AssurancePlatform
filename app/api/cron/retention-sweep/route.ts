@@ -1,5 +1,6 @@
 import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
-import { AppError } from "@/lib/errors";
+import { AppError, validationError } from "@/lib/errors";
+import { parseHealthEvidenceThinningQuery } from "@/lib/schemas/health-evidence-thinning";
 import { runRetentionSweep } from "@/lib/services/retention-service";
 
 /**
@@ -11,8 +12,9 @@ import { runRetentionSweep } from "@/lib/services/retention-service";
  * deletion. Protected by CRON_SECRET environment variable.
  *
  * @header Authorization - Bearer token matching CRON_SECRET env var
- * @query dryRun - Set to "1" to compute counts without sending emails, writing warning timestamps, or deleting anyone
+ * @query dryRun - "1" or "true" computes counts without sending emails, writing warning timestamps, or deleting anyone; "0", "false" or absent runs the sweep; any other or repeated value is refused with 400
  * @response 200 - { success: true, dryRun: boolean, warned30: number, warned7: number, deleted: number, skipped: number }
+ * @response 400 - Invalid or repeated query parameter
  * @response 401 - Unauthorised (invalid or missing token)
  * @response 500 - Server error
  * @tag Cron
@@ -22,7 +24,19 @@ export async function POST(request: Request) {
 		const authHeader = request.headers.get("authorization");
 		const token = authHeader?.replace("Bearer ", "") ?? null;
 		const { searchParams } = new URL(request.url);
-		const dryRun = searchParams.get("dryRun") === "1";
+		const query = parseHealthEvidenceThinningQuery(searchParams);
+		if (!query.success) {
+			const issue = query.error.issues[0];
+			const field = issue?.path.join(".");
+			return apiError(
+				validationError(
+					field
+						? `${field} ${issue?.message}`
+						: (issue?.message ?? "Invalid query")
+				)
+			);
+		}
+		const { dryRun } = query.data;
 
 		const result = await runRetentionSweep(token, { dryRun });
 
