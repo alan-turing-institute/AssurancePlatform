@@ -235,6 +235,37 @@ describe("useCaseEvents sharing", () => {
 		expect(live()).toHaveLength(0);
 	});
 
+	it("replaces a source that fails during pending close when a subscriber rejoins in the same tick", () => {
+		const a = renderHook(() => useCaseEvents({ caseId: "A" }));
+		const first = src(0);
+		act(() => first.open());
+		a.unmount();
+		first.readyState = Src.CLOSED;
+		act(() => first.fail());
+
+		const b = renderHook(() => useCaseEvents({ caseId: "A" }));
+		expect(first.closed).toBe(true);
+		expect(Src.all).toHaveLength(2);
+		expect(b.result.current.status).toBe("connecting");
+		act(() => src(1).open());
+		tick();
+		expect(b.result.current.status).toBe("connected");
+		expect(b.result.current.isConnected).toBe(true);
+		expect(live()).toEqual([src(1)]);
+	});
+
+	it("clears a scheduled reconnect when the only subscriber unmounts", () => {
+		const a = renderHook(() =>
+			useCaseEvents({ caseId: "A", reconnectDelay: 10 })
+		);
+		act(() => src(0).fail());
+		a.unmount();
+		act(() => vi.advanceTimersByTime(10_000));
+
+		expect(Src.all).toHaveLength(1);
+		expect(live()).toHaveLength(0);
+	});
+
 	it("an error on a source that was already closed and removed opens nothing new", () => {
 		const a = renderHook(() =>
 			useCaseEvents({ caseId: "A", reconnectDelay: 10 })

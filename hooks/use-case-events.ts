@@ -150,11 +150,12 @@ function connectStream(caseId: string, stream: CaseStream) {
 
 	source.onerror = () => {
 		// A source already closed and removed must not schedule a reconnect.
-		if (
-			streams.get(caseId) !== stream ||
-			stream.source !== source ||
-			stream.subscribers.size === 0
-		) {
+		if (streams.get(caseId) !== stream || stream.source !== source) {
+			return;
+		}
+		if (stream.subscribers.size === 0) {
+			source.close();
+			stream.source = null;
 			return;
 		}
 		source.close();

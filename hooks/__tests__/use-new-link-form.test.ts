@@ -307,3 +307,23 @@ describe("useNewLinkForm — handleDefeaterAdd (ADR 0005 D7)", () => {
 		);
 	});
 });
+
+describe("useNewLinkForm — claim creation failure", () => {
+	it("clears the Add button loading state when creation is refused", async () => {
+		server.use(
+			http.post("/api/cases/:caseId/elements", () =>
+				HttpResponse.json({ error: "Failed" }, { status: 400 })
+			)
+		);
+		const { result } = setup({ linkType: "claim" });
+
+		await submitDescription(result, "A property claim description");
+
+		expect(toast).toHaveBeenCalledWith(
+			expect.objectContaining({
+				variant: "destructive",
+				description: "Failed to create claim",
+			})
+		);
+	});
+});

@@ -328,6 +328,7 @@ export function useNewLinkForm({
 				title: "Error",
 				description: "Failed to create claim",
 			});
+			setLoading(false);
 			return;
 		}
 

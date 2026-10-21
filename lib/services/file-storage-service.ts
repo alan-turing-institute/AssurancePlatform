@@ -19,6 +19,7 @@ import {
 	downloadFromBlob,
 	getMimeTypeFromExtension,
 	isAzureStorageConfigured,
+	isLocalStorageEnabled,
 	resolveSafeUploadsPath,
 	UPLOADS_DIR,
 	uploadToBlob,
@@ -230,10 +231,7 @@ export async function saveFile(
 	}
 
 	// Fall back to local storage in development or when explicitly enabled for self-hosting
-	if (
-		process.env.NODE_ENV === "development" ||
-		process.env.USE_LOCAL_STORAGE === "true"
-	) {
+	if (isLocalStorageEnabled()) {
 		return saveFileLocally(buffer, subDirectory, extension);
 	}
 
