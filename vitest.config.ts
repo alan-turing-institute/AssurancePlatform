@@ -90,7 +90,7 @@ export default defineConfig({
 							statements: 17,
 							branches: 12,
 							functions: 19,
-							lines: 17,
+							lines: 99,
 						},
 		},
 		// codemirror-json-schema's ESM build omits file extensions on its
