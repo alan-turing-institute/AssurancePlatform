@@ -122,6 +122,12 @@ interface EvidenceLinkRecord {
 interface FlattenResult {
 	elements: Map<string, FlatElement>;
 	evidenceLinks: EvidenceLinkRecord[];
+	/**
+	 * For each piece of evidence, the claims under which the tree shows what
+	 * hangs from it (its counter-goals). The export shows that under one claim
+	 * only; the evidence's other copies are leaves.
+	 */
+	expandedUnder: Map<string, Set<string>>;
 }
 
 /**
@@ -188,6 +194,22 @@ function createFlatElement(
 }
 
 /**
+ * Records that the tree shows what hangs from a piece of evidence under a claim.
+ */
+function noteExpansion(
+	result: FlattenResult,
+	evidenceId: string,
+	claimId: string
+): void {
+	const claims = result.expandedUnder.get(evidenceId);
+	if (claims) {
+		claims.add(claimId);
+	} else {
+		result.expandedUnder.set(evidenceId, new Set([claimId]));
+	}
+}
+
+/**
  * Flattens a tree structure into elements and evidence links.
  * Evidence children under claims are tracked as evidence links, not parent relationships.
  */
@@ -210,6 +232,9 @@ function flattenTreeWithLinks(
 				evidenceId: child.id,
 				claimId: node.id,
 			});
+			if (child.children.length > 0) {
+				noteExpansion(result, child.id, node.id);
+			}
 			// Still need to add the evidence element itself (with null parentId)
 			flattenTreeWithLinks(child, null, result);
 		} else {
@@ -228,9 +253,101 @@ function flattenCaseExportWithLinks(
 	const result: FlattenResult = {
 		elements: new Map(),
 		evidenceLinks: [],
+		expandedUnder: new Map(),
 	};
 	flattenTreeWithLinks(caseExport.tree, null, result);
 	return result;
+}
+
+/**
+ * Carries what hangs from a piece of evidence into the edited state, unchanged:
+ * everything beneath it by parent, and the evidence linked to claims in that
+ * part with its own children.
+ */
+function carryOverBeneath(
+	rootId: string,
+	current: FlattenResult,
+	edited: FlattenResult
+): void {
+	const childrenOf = groupByParent(current.elements.values());
+	const seen = new Set([rootId]);
+	const queue = [rootId];
+	for (const id of queue) {
+		const links = current.evidenceLinks.filter((link) => link.claimId === id);
+		carryLinks(links, edited);
+		const reached = [
+			...(childrenOf.get(id) ?? []).map((element) => element.id),
+			...links.map((link) => link.evidenceId),
+		];
+		for (const reachedId of reached) {
+			const element = current.elements.get(reachedId);
+			if (element && !seen.has(reachedId)) {
+				seen.add(reachedId);
+				queue.push(reachedId);
+				if (!edited.elements.has(reachedId)) {
+					edited.elements.set(reachedId, element);
+				}
+			}
+		}
+	}
+}
+
+/** The elements grouped by their parent. */
+function groupByParent(
+	elements: Iterable<FlatElement>
+): Map<string, FlatElement[]> {
+	const grouped = new Map<string, FlatElement[]>();
+	for (const element of elements) {
+		if (!element.parentId) {
+			continue;
+		}
+		const siblings = grouped.get(element.parentId);
+		if (siblings) {
+			siblings.push(element);
+		} else {
+			grouped.set(element.parentId, [element]);
+		}
+	}
+	return grouped;
+}
+
+/** Adds to the edited state the evidence links it does not have. */
+function carryLinks(links: EvidenceLinkRecord[], edited: FlattenResult): void {
+	const have = new Set(edited.evidenceLinks.map(evidenceLinkKey));
+	for (const link of links) {
+		if (!have.has(evidenceLinkKey(link))) {
+			edited.evidenceLinks.push(link);
+		}
+	}
+}
+
+/**
+ * The export shows what hangs from shared evidence (its counter-goals) under
+ * one claim only, and the evidence's other copies are leaves. When an edit
+ * removes the claim that showed it, or removes the evidence from that claim,
+ * the edited tree keeps the evidence as a leaf and no longer shows what hangs
+ * from it. The person did not delete that, so it is carried over unchanged.
+ * Removing the counter-goal from the copy that shows it, or removing the
+ * evidence everywhere, is still a deletion.
+ */
+function keepWhatHangsFromEvidenceNoLongerShown(
+	current: FlattenResult,
+	edited: FlattenResult
+): void {
+	for (const [evidenceId, shownUnder] of current.expandedUnder) {
+		if (
+			!edited.elements.has(evidenceId) ||
+			edited.expandedUnder.has(evidenceId)
+		) {
+			continue;
+		}
+		const stillShown = edited.evidenceLinks.some(
+			(link) => link.evidenceId === evidenceId && shownUnder.has(link.claimId)
+		);
+		if (!stillShown) {
+			carryOverBeneath(evidenceId, current, edited);
+		}
+	}
 }
 
 /**
@@ -470,6 +587,7 @@ export function computeTreeDiff(
 ): TreeDiffResult {
 	const currentResult = flattenCaseExportWithLinks(currentExport);
 	const editedResult = flattenCaseExportWithLinks(editedExport);
+	keepWhatHangsFromEvidenceNoLongerShown(currentResult, editedResult);
 
 	const currentMap = currentResult.elements;
 	const editedMap = editedResult.elements;
