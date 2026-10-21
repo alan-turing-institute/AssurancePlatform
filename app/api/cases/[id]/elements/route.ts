@@ -14,14 +14,18 @@ import { createElement } from "@/lib/services/element-service";
  *
  * @description Creates a goal, strategy, property claim, evidence, or other
  * element type within the case hierarchy. Requires EDIT permission.
+ * A goal defeater (counter-goal) needs a `parentId`, and a case has one
+ * ordinary goal.
  *
  * @pathParam id - Case ID (UUID)
  * @body { type, name?, description?, parentId?, url?, assumption?, justification? }
  * @response 201 - Created element data
- * @response 400 - Validation error
+ * @response 400 - Validation error (including a goal defeater without a parent)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
+ * @response 409 - The case already has its ordinary goal
  * @response 413 - Payload too large
+ * @add 409
  * @auth bearer
  * @tag Elements
  */

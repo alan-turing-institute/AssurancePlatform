@@ -39,8 +39,9 @@ export async function GET(
 }
 
 /**
- * PUT /api/elements/[id]
+ * PUT /api/elements/[id] (400 without a parent, 409 for a second goal)
  * Updates an existing element
+ * @add 409
  */
 export async function PUT(
 	request: Request,

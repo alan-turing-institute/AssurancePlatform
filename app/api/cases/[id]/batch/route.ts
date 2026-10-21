@@ -20,15 +20,18 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
  *
  * @description Applies multiple element changes (create, update, delete) atomically.
  * Used by the JSON editor to sync changes back to the database.
+ * The goal rules hold for the goals as the batch leaves them: a goal defeater
+ * (counter-goal) has a parent, and a case has one ordinary goal.
  *
  * @pathParam id - Case ID (UUID)
  * @body { changes: ElementChange[], expectedVersion?: string }
  * @response 200 - Success with summary of changes
- * @response 400 - Validation error
+ * @response 400 - Validation error (including a goal defeater without a parent)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
- * @response 409 - Conflict (case was modified)
+ * @response 409 - Conflict (case was modified, or the batch would leave a second ordinary goal)
  * @response 413 - Payload too large
+ * @add 409
  * @auth bearer
  * @tag Elements
  */
