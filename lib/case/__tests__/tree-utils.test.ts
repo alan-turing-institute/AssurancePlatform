@@ -83,4 +83,77 @@ describe("tree utilities and context entries", () => {
 		expect(contextOf(result)).toEqual(["plain", NAMED_ENTRY]);
 		expect(result.goals?.[0]?.hidden).toBe(false);
 	});
+
+	describe("counter-goals", () => {
+		function buildCaseWithCounterGoalUnderEvidence(
+			rootType: string
+		): AssuranceCaseResponse {
+			const counter = {
+				id: "counter-1",
+				type: "goal",
+				name: "CG1",
+				isDefeater: true,
+				hidden: true,
+				strategies: [],
+				propertyClaims: [],
+			};
+			const evidence = {
+				id: "evidence-1",
+				type: "evidence",
+				hidden: true,
+				goals: [counter],
+			};
+			const claim = {
+				id: "claim-1",
+				type: "property_claim",
+				hidden: true,
+				propertyClaims: [],
+				strategies: [],
+				evidence: [evidence],
+			};
+			const goal = {
+				id: "goal-1",
+				type: "goal",
+				hidden: true,
+				strategies: [],
+				propertyClaims: [claim],
+			};
+			return {
+				id: "case-1",
+				type: rootType,
+				goals: [goal],
+			} as unknown as AssuranceCaseResponse;
+		}
+
+		const counterNode = {
+			data: { id: "counter-1", type: "goal" },
+		} as unknown as ReactFlowNode;
+
+		it("toggleHiddenForParent reveals the path to a counter-goal under evidence", () => {
+			const result = toggleHiddenForParent(
+				counterNode,
+				buildCaseWithCounterGoalUnderEvidence("AssuranceCase")
+			);
+
+			const goal = result.goals?.[0];
+			const claim = goal?.propertyClaims[0];
+			const evidence = claim?.evidence[0];
+			expect([
+				goal?.hidden,
+				claim?.hidden,
+				evidence?.hidden,
+				evidence?.goals?.[0]?.hidden,
+			]).toEqual([false, false, false, false]);
+		});
+
+		it("toggleHiddenForParent leaves a case of the live root type untouched", () => {
+			const result = toggleHiddenForParent(
+				counterNode,
+				buildCaseWithCounterGoalUnderEvidence("assurance_case")
+			);
+
+			expect(result.goals?.[0]?.hidden).toBe(true);
+			expect(result.goals?.[0]?.propertyClaims[0]?.hidden).toBe(true);
+		});
+	});
 });

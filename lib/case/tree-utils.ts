@@ -45,7 +45,17 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 		);
 	}
 
-	return (caseNode.goals || []) as unknown as CaseNode[];
+	// Evidence, away goals and modules carry only the counter-goals attached to
+	// them.
+	if (
+		caseNode.type === "evidence" ||
+		caseNode.type === "away_goal" ||
+		caseNode.type === "module"
+	) {
+		return (caseNode.goals || []) as unknown as CaseNode[];
+	}
+
+	return [];
 };
 
 /**
