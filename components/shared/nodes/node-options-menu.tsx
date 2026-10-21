@@ -91,7 +91,8 @@ function getParentDataId(
  * element and what hangs from it at once; what it cannot work out is what the
  * server now draws elsewhere, such as the counter-goals of a piece of shared
  * evidence that were drawn with the removed claim's copy. Reading the case
- * does not wait for the live-update stream.
+ * does not wait for the live-update stream. A reply that arrives after the
+ * canvas has moved to another case is dropped.
  */
 function refreshCase(
 	caseId: string,
@@ -99,7 +100,7 @@ function refreshCase(
 ) {
 	fetchAndRefreshCase(caseId)
 		.then((fresh) => {
-			if (fresh) {
+			if (fresh && useStore.getState().assuranceCase?.id === caseId) {
 				setAssuranceCase(fresh);
 			}
 		})

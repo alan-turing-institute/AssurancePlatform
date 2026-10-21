@@ -183,6 +183,59 @@ describe("NodeOptionsMenu — settling on the server's case", () => {
 	});
 });
 
+describe("NodeOptionsMenu — a late reply to the case read", () => {
+	beforeEach(() => {
+		resetStore();
+		vi.mocked(recordDelete).mockClear();
+	});
+
+	it("is dropped when the canvas has moved to another case", async () => {
+		const user = userEvent.setup();
+		let release: () => void = () => undefined;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		let replied = false;
+		server.use(
+			http.delete("/api/elements/1", () =>
+				HttpResponse.json({}, { status: 200 })
+			),
+			http.get("/api/cases/case-1", async () => {
+				await gate;
+				replied = true;
+				return HttpResponse.json({
+					id: "case-1",
+					name: "Case as the server holds it",
+					type: "assurance-case",
+					permissions: "manage",
+					createdDate: new Date().toISOString(),
+					comments: [],
+				});
+			})
+		);
+		renderWithReactFlow(<NodeOptionsMenu node={NODE} nodeType="strategy" />);
+
+		await openDeleteConfirmation(user);
+		await waitFor(() => expect(recordDelete).toHaveBeenCalledTimes(1));
+		useStore.setState({
+			assuranceCase: {
+				id: "case-2",
+				name: "Another case",
+				type: "assurance-case",
+				permissions: "manage",
+				createdDate: new Date().toISOString(),
+				comments: [],
+			},
+		});
+		release();
+		await waitFor(() => expect(replied).toBe(true));
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(useStore.getState().assuranceCase?.id).toBe("case-2");
+		expect(useStore.getState().assuranceCase?.name).toBe("Another case");
+	});
+});
+
 describe("NodeOptionsMenu — detach failure handling", () => {
 	beforeEach(() => {
 		resetStore();
