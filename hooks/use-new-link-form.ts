@@ -23,7 +23,6 @@ import type {
 	EvidenceResponse,
 	GoalResponse,
 	PropertyClaimResponse,
-	StrategyResponse,
 } from "@/lib/services/case-response-types";
 import { recordCreate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
@@ -185,53 +184,26 @@ export function useNewLinkForm({
 		}
 	};
 
-	/** Updates assurance case state when a claim belongs to a strategy */
-	const handleStrategyClaimUpdate = (result: {
-		data: PropertyClaimResponse;
-		error?: unknown;
-	}) => {
-		if (!assuranceCase?.goals) {
-			return false;
-		}
-		const goalContainingStrategy = assuranceCase.goals.find((goal) =>
-			goal.strategies?.some(
-				(strategy) => strategy.id === result.data.strategyId
-			)
-		);
-
-		if (!goalContainingStrategy) {
-			return false;
+	/**
+	 * Updates assurance case state when a claim belongs to a strategy or to
+	 * another claim. The parent is looked for wherever it sits in the case,
+	 * including beneath a counter-goal.
+	 */
+	const addClaimBeneathParent = (
+		newClaim: PropertyClaimResponse | undefined,
+		parentId: string | null | undefined
+	): void => {
+		if (!(assuranceCase?.goals && newClaim && parentId)) {
+			return;
 		}
 
-		const updatedStrategies = goalContainingStrategy.strategies.map(
-			(strategy) => {
-				if (strategy.id === result.data.strategyId) {
-					return {
-						...strategy,
-						propertyClaims: [...(strategy.propertyClaims || []), result.data],
-					};
-				}
-				return strategy;
-			}
+		const goalsClone: GoalResponse[] = JSON.parse(
+			JSON.stringify(assuranceCase.goals)
 		);
 
-		const updatedGoalContainingStrategy = {
-			...goalContainingStrategy,
-			strategies: updatedStrategies,
-		};
-
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: (assuranceCase.goals || []).map((goal) => {
-				if (goal === goalContainingStrategy) {
-					return updatedGoalContainingStrategy;
-				}
-				return goal;
-			}),
-		};
-
-		setAssuranceCase(updatedAssuranceCase);
-		return true;
+		if (addPropertyClaimToNested(goalsClone, parentId, newClaim)) {
+			setAssuranceCase({ ...assuranceCase, goals: goalsClone });
+		}
 	};
 
 	/** Updates assurance case state when a claim belongs directly to a goal */
@@ -263,66 +235,14 @@ export function useNewLinkForm({
 		result: { data?: unknown; error?: unknown },
 		nodeType: string
 	): void => {
+		const claim = result.data as PropertyClaimResponse | undefined;
 		if (nodeType === "strategy") {
-			handleStrategyClaimUpdate(
-				result as { data: PropertyClaimResponse; error?: unknown }
-			);
+			addClaimBeneathParent(claim, claim?.strategyId);
 		} else if (nodeType === "property") {
-			handlePropertyClaim(result);
+			addClaimBeneathParent(claim, claim?.propertyClaimId);
 		} else if (nodeType === "goal" && !isCounterGoalCard) {
 			handleGoalClaimUpdate(result as { data: PropertyClaimResponse });
 		}
-	};
-
-	/** Searches strategies' property claims for a parent claim */
-	const findAndAddClaimInStrategies = (
-		strategies: StrategyResponse[],
-		parentId: string,
-		newClaim: PropertyClaimResponse
-	): boolean => {
-		for (const strategy of strategies) {
-			const strategyPropertyClaims = strategy.propertyClaims || [];
-			const found = addPropertyClaimToNested(
-				strategyPropertyClaims,
-				parentId,
-				newClaim
-			);
-			if (found) {
-				return true;
-			}
-		}
-		return false;
-	};
-
-	/** Updates assurance case state for a nested property claim */
-	const handlePropertyClaim = (result: {
-		data?: unknown;
-		error?: unknown;
-	}): void => {
-		if (!assuranceCase?.goals) {
-			return;
-		}
-
-		const goalsClone: GoalResponse[] = JSON.parse(
-			JSON.stringify(assuranceCase.goals)
-		);
-		const parentId =
-			(result.data as PropertyClaimResponse)?.propertyClaimId || "";
-		const newClaim =
-			(result.data as PropertyClaimResponse) || ({} as PropertyClaimResponse);
-
-		const goalPropertyClaims = goalsClone[0]?.propertyClaims || [];
-		const strategies = goalsClone[0]?.strategies || [];
-
-		const added =
-			addPropertyClaimToNested(goalPropertyClaims, parentId, newClaim) ||
-			findAndAddClaimInStrategies(strategies, parentId, newClaim);
-
-		if (!added) {
-			return;
-		}
-
-		setAssuranceCase({ ...assuranceCase, goals: goalsClone });
 	};
 
 	/** Handles creation of a property claim linked to a goal, strategy, or nested claim */
@@ -441,53 +361,6 @@ export function useNewLinkForm({
 		assuranceCaseId: assuranceCase?.id,
 	});
 
-	/** Searches strategies' property claims for a claim to attach evidence to */
-	const checkPropertyClaimsInStrategies = (
-		strategies: StrategyResponse[] | undefined,
-		parentClaimId: string,
-		evidence: EvidenceResponse
-	): boolean => {
-		if (!strategies) {
-			return false;
-		}
-
-		return strategies.some(
-			(strategy) =>
-				strategy.propertyClaims &&
-				addEvidenceToClaim(strategy.propertyClaims, parentClaimId, evidence)
-		);
-	};
-
-	/** Searches a single goal's property claims (direct and via strategies) */
-	const checkPropertyClaimsInGoal = (
-		goal: GoalResponse,
-		parentClaimId: string,
-		evidence: EvidenceResponse
-	): boolean => {
-		if (
-			goal.propertyClaims &&
-			addEvidenceToClaim(goal.propertyClaims, parentClaimId, evidence)
-		) {
-			return true;
-		}
-
-		return checkPropertyClaimsInStrategies(
-			goal.strategies,
-			parentClaimId,
-			evidence
-		);
-	};
-
-	/** Searches all goals to find the claim and attach evidence */
-	const addEvidenceToGoals = (
-		goals: GoalResponse[],
-		parentClaimId: string,
-		evidence: EvidenceResponse
-	): boolean =>
-		goals.some((goal) =>
-			checkPropertyClaimsInGoal(goal, parentClaimId, evidence)
-		);
-
 	/** Updates assurance case state with a modified goals structure */
 	const updateAssuranceCaseWithModifiedGoals = (
 		modifiedGoals: GoalResponse[]
@@ -542,9 +415,11 @@ export function useNewLinkForm({
 		const evidenceData = result.data as unknown as EvidenceResponse;
 		const parentClaimId = evidenceData?.propertyClaimId?.[0] || "";
 
-		const goalsClone = JSON.parse(JSON.stringify(assuranceCase?.goals || []));
+		const goalsClone: GoalResponse[] = JSON.parse(
+			JSON.stringify(assuranceCase?.goals || [])
+		);
 
-		const added = addEvidenceToGoals(goalsClone, parentClaimId, evidenceData);
+		const added = addEvidenceToClaim(goalsClone, parentClaimId, evidenceData);
 
 		if (!added) {
 			handleEvidenceError("Could not find the parent property claim.");

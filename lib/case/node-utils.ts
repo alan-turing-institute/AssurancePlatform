@@ -42,27 +42,22 @@ const removeItemFromNestedStructure = (
 				) as unknown as PropertyClaimResponse[];
 			}
 
-			// Remove from strategies
+			// Remove from strategies, and from what hangs from them
 			if ("strategies" in item && item.strategies) {
-				(item as GoalResponse).strategies = (item as GoalResponse).strategies
-					.map((strategy: StrategyResponse) => {
-						if (strategy.propertyClaims) {
-							strategy.propertyClaims = strategy.propertyClaims.filter(
-								(claim: PropertyClaimResponse) =>
-									!(claim.id === id && claim.type === type)
-							);
-							strategy.propertyClaims = removeItemFromNestedStructure(
-								strategy.propertyClaims as unknown as NestedArrayItem[],
-								id,
-								type
-							) as unknown as PropertyClaimResponse[];
-						}
-						return strategy;
-					})
-					.filter(
-						(strategy: StrategyResponse) =>
-							!(strategy.id === id && strategy.type === type)
-					);
+				(item as GoalResponse).strategies = removeItemFromNestedStructure(
+					(item as GoalResponse).strategies as unknown as NestedArrayItem[],
+					id,
+					type
+				) as unknown as StrategyResponse[];
+			}
+
+			// Remove from counter-goals, and from what supports them
+			if ("goals" in item && item.goals) {
+				(item as GoalResponse).goals = removeItemFromNestedStructure(
+					(item as GoalResponse).goals as unknown as NestedArrayItem[],
+					id,
+					type
+				) as unknown as GoalResponse[];
 			}
 
 			// Note: context is now a string[] attribute, not an array of elements to remove
