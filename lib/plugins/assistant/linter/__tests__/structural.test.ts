@@ -265,6 +265,10 @@ describe("TREE04 — undeveloped branches are marked", () => {
 		expect(findings[0]?.severity).toBe("warning");
 		expect(findings[0]?.reason).toContain("1 branch");
 		expect(findings[0]?.reason).toContain("NEEDS_SUPPORT");
+		// The diagram's own marker is worked out, not set by the author, so it is not the author's mark.
+		expect(findings[0]?.reason).toContain(
+			"automatic Unsupported marker does not count as the author's mark"
+		);
 	});
 });
 

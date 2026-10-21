@@ -102,7 +102,13 @@ interface Store {
 	) => void;
 	setReadOnlyCanvas: (readOnlyCanvas: boolean) => void;
 	setReviewMembers: (members: Member[]) => void;
+	setShowUnsupportedMarkers: (show: boolean | null) => void;
 	setViewMembers: (members: Member[]) => void;
+	// The signed-in viewer's own choice to see the unsupported marker on the
+	// diagram (an account setting, never a property of the case). `null` means
+	// not loaded yet, which draws no marker, so a viewer who has switched the
+	// markers off never sees them flash on while the page opens.
+	showUnsupportedMarkers: boolean | null;
 	triggerLayout: () => Promise<void>;
 	viewMembers: Member[];
 }
@@ -285,6 +291,10 @@ const useStore = create<Store>((set, get) => ({
 	readOnlyCanvas: false,
 	setReadOnlyCanvas: (readOnlyCanvas: boolean) => {
 		set({ readOnlyCanvas });
+	},
+	showUnsupportedMarkers: null,
+	setShowUnsupportedMarkers: (show: boolean | null) => {
+		set({ showUnsupportedMarkers: show });
 	},
 }));
 

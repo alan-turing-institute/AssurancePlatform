@@ -28,7 +28,6 @@ export {
 	nodeTypeConfigs,
 } from "./node-config";
 export { default as NodeOptionsMenu } from "./node-options-menu";
-
 // Node styling utilities
 export {
 	buildDescriptionClasses,
@@ -42,3 +41,4 @@ export {
 	buildPreviewTextClasses,
 	buildSeparatorClasses,
 } from "./node-styles";
+export { UnsupportedMarkerBadge } from "./unsupported-marker-badge";

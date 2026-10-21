@@ -19,6 +19,7 @@ export * from "./status";
 // Domain schemas for API routes
 export * from "./team";
 export * from "./tour";
+export * from "./unsupported-markers";
 export * from "./user";
 
 // Note: batch-update.ts, case-export.ts, connected-accounts.ts, element-validation.ts,

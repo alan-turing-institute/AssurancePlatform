@@ -10,6 +10,7 @@ const EDGE_STYLE = "stroke: var(--success); stroke-width: 3;";
 
 interface Seen {
 	badgeKept: boolean;
+	derivedKept: boolean;
 	edgeStyle: string;
 	fillKept: boolean;
 }
@@ -17,6 +18,7 @@ interface Seen {
 let target: HTMLDivElement;
 let edge: SVGPathElement;
 let badge: HTMLElement;
+let derived: HTMLElement;
 let fill: HTMLElement;
 let seen: Seen | undefined;
 
@@ -25,6 +27,8 @@ beforeEach(() => {
 	target.id = "screenshot-target";
 	badge = document.createElement("div");
 	badge.setAttribute("data-plugin-display", "");
+	derived = document.createElement("div");
+	derived.setAttribute("data-derived-display", "");
 	fill = document.createElement("span");
 	fill.setAttribute("data-plugin-display", "");
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -33,7 +37,7 @@ beforeEach(() => {
 	edge.setAttribute("data-appearance", "positive");
 	edge.setAttribute("style", EDGE_STYLE);
 	svg.append(edge);
-	target.append(badge, fill, svg);
+	target.append(badge, derived, fill, svg);
 	document.body.append(target);
 
 	seen = undefined;
@@ -42,6 +46,7 @@ beforeEach(() => {
 		const keep = options?.filter ?? (() => true);
 		seen = {
 			badgeKept: keep(badge),
+			derivedKept: keep(derived),
 			fillKept: keep(fill),
 			edgeStyle: edge.getAttribute("style") ?? "",
 		};
@@ -69,6 +74,7 @@ describe("the dashboard thumbnail", () => {
 
 		expect(seen).toEqual({
 			badgeKept: false,
+			derivedKept: false,
 			fillKept: false,
 			edgeStyle: "",
 		});
