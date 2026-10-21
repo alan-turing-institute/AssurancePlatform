@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { convertAssuranceCase } from "@/lib/case/convert-case";
+import prisma from "@/lib/prisma";
+import type { TreeNode } from "@/lib/schemas/case-export";
+import { exportCase } from "@/lib/services/case-export-service";
 import { fetchCaseFromPrisma } from "@/lib/services/case-fetch-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import {
@@ -230,7 +234,196 @@ describe("fetchCaseFromPrisma — AWAY_GOAL/MODULE admission (ADR 0005 D3)", () 
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Counter-goals (goal-type defeaters)
+// ---------------------------------------------------------------------------
+
+type CounterGoalTarget =
+	| "GOAL"
+	| "STRATEGY"
+	| "PROPERTY_CLAIM"
+	| "EVIDENCE"
+	| "AWAY_GOAL"
+	| "MODULE";
+
+const COUNTER_GOAL_TARGETS: CounterGoalTarget[] = [
+	"GOAL",
+	"STRATEGY",
+	"PROPERTY_CLAIM",
+	"EVIDENCE",
+	"AWAY_GOAL",
+	"MODULE",
+];
+
+function findExported(node: TreeNode, id: string): TreeNode | undefined {
+	if (node.id === id) {
+		return node;
+	}
+	for (const child of node.children) {
+		const found = findExported(child, id);
+		if (found) {
+			return found;
+		}
+	}
+}
+
+/**
+ * A case whose top goal G1 has a counter-goal CG1 attached to an element of
+ * the given type, with one claim supporting the counter-goal.
+ */
+async function createCaseWithCounterGoal(target: CounterGoalTarget) {
+	const owner = await createTestUser();
+	const referencedCase = await createTestCase(owner.id);
+	const testCase = await createTestCase(owner.id);
+	const root = await createTestElement(testCase.id, owner.id, {
+		elementType: "GOAL",
+		name: "G1",
+	});
+
+	let targetElement = root;
+	if (target === "EVIDENCE") {
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+			parentId: root.id,
+		});
+		targetElement = await createTestElement(testCase.id, owner.id, {
+			elementType: "EVIDENCE",
+			name: "E1",
+		});
+		await prisma.evidenceLink.create({
+			data: { evidenceId: targetElement.id, claimId: claim.id },
+		});
+	} else if (target !== "GOAL") {
+		targetElement = await createTestElement(testCase.id, owner.id, {
+			elementType: target,
+			name: "T1",
+			parentId: root.id,
+			...(target === "AWAY_GOAL" || target === "MODULE"
+				? { moduleReferenceId: referencedCase.id }
+				: {}),
+			...(target === "MODULE" ? { moduleEmbedType: "COPY" as const } : {}),
+		});
+	}
+
+	const counter = await createTestElement(testCase.id, owner.id, {
+		elementType: "GOAL",
+		name: "CG1",
+		parentId: targetElement.id,
+		isDefeater: true,
+		defeatsElementId: targetElement.id,
+	});
+	const support = await createTestElement(testCase.id, owner.id, {
+		elementType: "PROPERTY_CLAIM",
+		name: "P2",
+		parentId: counter.id,
+	});
+	return { owner, testCase, targetElement, counter, support };
+}
+
+async function fetchCanvas(caseId: string, userId: string) {
+	const data = expectSuccess(await fetchCaseFromPrisma(caseId, userId));
+	return convertAssuranceCase({ ...data, goals: data.goals ?? [] });
+}
+
 describe("fetchCaseFromPrisma — counter-goals", () => {
+	it.each(
+		COUNTER_GOAL_TARGETS
+	)("keeps a counter-goal of a %s as a side attachment, with its support", async (target) => {
+		const { owner, testCase, targetElement, counter, support } =
+			await createCaseWithCounterGoal(target);
+
+		const exported = expectSuccess(await exportCase(owner.id, testCase.id));
+		expect(findExported(exported.tree, counter.id)).toMatchObject({
+			type: "GOAL",
+			isDefeater: true,
+			defeatsElementId: targetElement.id,
+			children: [expect.objectContaining({ id: support.id })],
+		});
+
+		const { caseNodes, caseEdges } = await fetchCanvas(testCase.id, owner.id);
+		expect(caseNodes).toHaveLength(
+			await prisma.assuranceElement.count({ where: { caseId: testCase.id } })
+		);
+		const targetNode = caseNodes.find(
+			(node) => node.data.id === targetElement.id
+		);
+		const counterNode = caseNodes.find((node) => node.data.id === counter.id);
+		expect(counterNode).toMatchObject({
+			type: "goal",
+			data: {
+				isDefeater: true,
+				attachedTo: targetNode?.id,
+				attachSide: "right",
+			},
+		});
+		expect(caseEdges.filter((edge) => edge.target === counterNode?.id)).toEqual(
+			[]
+		);
+		expect(caseEdges).toContainEqual(
+			expect.objectContaining({
+				type: "challenges",
+				source: counterNode?.id,
+				target: targetNode?.id,
+			})
+		);
+		expect(caseEdges).toContainEqual(
+			expect.objectContaining({
+				type: "support",
+				source: counterNode?.id,
+				target: `property-${support.id}`,
+			})
+		);
+	});
+
+	it("does not expand a counter-goal again inside itself when its support reuses the evidence", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const root = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+			parentId: root.id,
+		});
+		const evidence = await createTestElement(testCase.id, owner.id, {
+			elementType: "EVIDENCE",
+			name: "E1",
+		});
+		const counter = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "CG1",
+			parentId: evidence.id,
+			isDefeater: true,
+			defeatsElementId: evidence.id,
+		});
+		const support = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P2",
+			parentId: counter.id,
+		});
+		await prisma.evidenceLink.createMany({
+			data: [
+				{ evidenceId: evidence.id, claimId: claim.id },
+				{ evidenceId: evidence.id, claimId: support.id },
+			],
+		});
+
+		const exported = expectSuccess(await exportCase(owner.id, testCase.id));
+		expect(findExported(exported.tree, counter.id)?.children[0]).toMatchObject({
+			id: support.id,
+			children: [expect.objectContaining({ id: evidence.id, children: [] })],
+		});
+
+		const { caseNodes } = await fetchCanvas(testCase.id, owner.id);
+		expect(
+			caseNodes.filter((node) => node.data.id === counter.id)
+		).toHaveLength(1);
+		expect(caseNodes.some((node) => node.data.id === support.id)).toBe(true);
+	});
+
 	it.each([
 		["before", true],
 		["after", false],
