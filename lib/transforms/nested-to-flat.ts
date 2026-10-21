@@ -23,6 +23,8 @@ interface FlattenContext {
 	elements: ElementV2[];
 	evidenceLinks: EvidenceLinkV2[];
 	evidenceMap: Map<string, string>;
+	/** Ids of evidence nodes whose children have already been flattened. */
+	walkedEvidence: Set<string>;
 }
 
 /**
@@ -31,6 +33,8 @@ interface FlattenContext {
  * Evidence deduplication:
  * - Evidence nodes with identical name+url are merged into one element
  * - Multiple EvidenceLink records are created for multi-linked evidence
+ * - What hangs from a piece of evidence (counter-goals and their support) is
+ *   flattened once per evidence id, however many claims repeat the node
  *
  * @param nestedCase - The nested export to flatten
  * @returns Flat format with elements and evidenceLinks arrays
@@ -42,6 +46,7 @@ export function flattenNestedToFlat(
 		elements: [],
 		evidenceLinks: [],
 		evidenceMap: new Map<string, string>(),
+		walkedEvidence: new Set<string>(),
 	};
 
 	// Recursively flatten the tree
@@ -183,6 +188,16 @@ function flattenNode(
 				evidenceId,
 				claimId: parentId,
 			});
+		}
+
+		// The export repeats a piece of evidence, with everything that hangs from
+		// it, under each claim that links it. Elements may appear only once in the
+		// flat format, so the children are taken from the first copy met.
+		if (!ctx.walkedEvidence.has(node.id)) {
+			ctx.walkedEvidence.add(node.id);
+			for (const child of node.children) {
+				flattenNode(child, evidenceId, ctx);
+			}
 		}
 		return;
 	}

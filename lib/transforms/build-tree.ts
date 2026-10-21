@@ -214,6 +214,21 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 }
 
 /**
+ * Whether a child is drawn beneath its parent. Beneath a piece of evidence
+ * only goal defeaters (counter-goals) are, as on the diagram; everything else
+ * hangs from a claim, strategy or goal.
+ */
+function isBuiltBeneath(
+	parent: ElementWithLinks,
+	child: ElementWithLinks
+): boolean {
+	return (
+		parent.elementType !== "EVIDENCE" ||
+		(child.elementType === "GOAL" && child.isDefeater)
+	);
+}
+
+/**
  * Recursively builds a tree node from an element.
  */
 function buildNode(
@@ -227,7 +242,9 @@ function buildNode(
 	const nextAncestors = new Set(ancestors);
 	nextAncestors.add(element.id);
 	// Get direct children (via parentId relationship)
-	const directChildren = childrenMap.get(element.id) ?? [];
+	const directChildren = (childrenMap.get(element.id) ?? []).filter((child) =>
+		isBuiltBeneath(element, child)
+	);
 
 	// Get evidence linked to this element (if it's a claim)
 	const linkedEvidence =

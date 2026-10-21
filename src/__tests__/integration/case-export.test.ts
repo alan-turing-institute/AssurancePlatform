@@ -314,6 +314,48 @@ describe("exportCase", () => {
 	});
 
 	describe("counter-goals", () => {
+		it("builds only goal defeaters beneath a piece of evidence", async () => {
+			const owner = await createTestUser();
+			const testCase = await createTestCase(owner.id);
+			const goal = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const claim = await createTestElement(testCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const evidence = await createTestElement(testCase.id, owner.id, {
+				elementType: "EVIDENCE",
+				name: "E1",
+			});
+			await prisma.evidenceLink.create({
+				data: { evidenceId: evidence.id, claimId: claim.id },
+			});
+			const counter = await createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "CG1",
+				parentId: evidence.id,
+				isDefeater: true,
+				defeatsElementId: evidence.id,
+			});
+			await createTestElement(testCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P9",
+				parentId: evidence.id,
+			});
+
+			const { exportCase } = await import("@/lib/services/case-export-service");
+			const data = expectSuccess(await exportCase(owner.id, testCase.id));
+
+			const claimNode = data.tree.children.find((c) => c.id === claim.id);
+			const evidenceNode = claimNode?.children.find(
+				(c) => c.id === evidence.id
+			);
+			expect(evidenceNode?.children.map((c) => c.id)).toEqual([counter.id]);
+		});
+
 		it.each([
 			["before", true],
 			["after", false],
