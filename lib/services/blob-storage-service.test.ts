@@ -15,6 +15,8 @@ vi.mock("./azure-blob-adapter", () => ({
 	azureUploadBlob: vi.fn(),
 }));
 
+const SCREENSHOT_KEY_PATTERN = /^screenshots\/.+\.png$/;
+
 /**
  * `UPLOADS_DIR` is read once at import time by `blob-storage-service.ts`
  * (same ordering constraint noted in `src/__tests__/setup.integration.tsx`),
@@ -22,8 +24,6 @@ vi.mock("./azure-blob-adapter", () => ({
  * file. Setting the env var before the dynamic import below gives this unit
  * test its own throwaway root, the way each integration worker gets one.
  */
-const SCREENSHOT_KEY_PATTERN = /^screenshots\/.+\.png$/;
-
 const uploadsDir = mkdtempSync(join(tmpdir(), "tea-blob-storage-service-"));
 process.env.UPLOADS_DIR = uploadsDir;
 
