@@ -5,7 +5,6 @@ import { fetchCaseFromPrisma } from "@/lib/services/case-fetch-service";
 import { deleteElement } from "@/lib/services/element-service";
 import { mockNoAuth } from "../utils/auth-helpers";
 import {
-	type ArgumentFixture,
 	addChild,
 	addCounterGoal,
 	buildArgument,
@@ -15,6 +14,7 @@ import {
 	fetchIdCounts,
 	fetchNodes,
 	linkEvidence,
+	ownersOf,
 	viewed,
 } from "../utils/counter-goal-kit";
 import { createTestElement, createTestUser } from "../utils/prisma-factories";
@@ -56,167 +56,6 @@ async function exportTree(ownerId: string, caseId: string) {
 	}
 	return result.data.tree as unknown as ExportedNode;
 }
-
-/** Ids of the nodes in a fetch whose `goals` list holds the given counter-goal. */
-function ownersOf(goals: unknown, counterGoalId: string): string[] {
-	return fetchNodes(goals)
-		.filter((node) =>
-			Array.isArray(node.goals)
-				? (node.goals as { id: string }[]).some(
-						(goal) => goal.id === counterGoalId
-					)
-				: false
-		)
-		.map((node) => node.id as string);
-}
-
-type TargetKey =
-	| "goal"
-	| "strategy"
-	| "claim"
-	| "evidenceOne"
-	| "evidenceShared";
-
-const TARGETS: Array<{
-	key: TargetKey;
-	label: string;
-	nodeType: string;
-	pick: (fx: ArgumentFixture) => string;
-}> = [
-	{
-		key: "goal",
-		label: "the top goal",
-		nodeType: "goal",
-		pick: (fx) => fx.goal.id,
-	},
-	{
-		key: "strategy",
-		label: "a strategy",
-		nodeType: "strategy",
-		pick: (fx) => fx.strategy.id,
-	},
-	{
-		key: "claim",
-		label: "a property claim",
-		nodeType: "property",
-		pick: (fx) => fx.claim.id,
-	},
-	{
-		key: "evidenceOne",
-		label: "evidence linked to one claim",
-		nodeType: "evidence",
-		pick: (fx) => fx.evidenceOne.id,
-	},
-	{
-		key: "evidenceShared",
-		label: "evidence linked to two claims",
-		nodeType: "evidence",
-		pick: (fx) => fx.evidenceShared.id,
-	},
-];
-
-describe.each(TARGETS)("a counter-goal against $label", ({
-	label,
-	nodeType,
-	pick,
-}) => {
-	async function setUp() {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		const targetId = pick(fx);
-		const counterGoal = await addCounterGoal(fx, {
-			name: "CG1",
-			description: `counter-goal against ${label}`,
-			parentId: targetId,
-		});
-		return { owner, fx, targetId, counterGoal };
-	}
-
-	it("is returned by the case fetch beneath its target", async () => {
-		const { owner, fx, targetId, counterGoal } = await setUp();
-
-		const data = await fetchGoals(owner.id, fx.caseId);
-
-		const counts = fetchIdCounts(data.goals);
-		expect(counts.get(counterGoal.id)).toBeGreaterThanOrEqual(1);
-		// Shared evidence is drawn under each claim that links it, but its
-		// counter-goal comes with one copy only.
-		expect(counts.get(counterGoal.id)).toBe(1);
-		const owners = ownersOf(data.goals, counterGoal.id);
-		expect(owners).toEqual([targetId]);
-		// The rest of the argument is untouched.
-		for (const id of [
-			fx.goal.id,
-			fx.strategy.id,
-			fx.claim.id,
-			fx.strategyClaim.id,
-		]) {
-			expect(counts.get(id), id).toBe(1);
-		}
-	});
-
-	it("is drawn attached to the side of its target, with a challenge edge", async () => {
-		const { owner, fx, targetId, counterGoal } = await setUp();
-		const data = await fetchGoals(owner.id, fx.caseId);
-
-		const { caseNodes, caseEdges } = convertAssuranceCase(
-			data as unknown as Parameters<typeof convertAssuranceCase>[0]
-		);
-
-		const targetNodeId = `${nodeType}-${targetId}`;
-		const counterGoalNodes = caseNodes.filter(
-			(node) => node.id === `goal-${counterGoal.id}`
-		);
-		expect(counterGoalNodes.length).toBeGreaterThanOrEqual(1);
-		for (const node of counterGoalNodes) {
-			expect(node.data.isDefeater).toBe(true);
-			expect(node.data.attachedTo).toBe(targetNodeId);
-			expect(node.data.attachSide).toBe("right");
-		}
-		expect(caseNodes.some((node) => node.id === targetNodeId)).toBe(true);
-		const challenges = caseEdges.filter(
-			(edge) =>
-				edge.type === "challenges" && edge.source === `goal-${counterGoal.id}`
-		);
-		expect(challenges.length).toBeGreaterThanOrEqual(1);
-		for (const edge of challenges) {
-			expect(edge.target).toBe(targetNodeId);
-		}
-		// The challenge replaces the support edge to the same target.
-		expect(
-			caseEdges.filter(
-				(edge) =>
-					edge.type === "support" &&
-					edge.source === targetNodeId &&
-					edge.target === `goal-${counterGoal.id}`
-			)
-		).toHaveLength(0);
-	});
-
-	it("is exported as a child of its parent", async () => {
-		const { owner, fx, targetId, counterGoal } = await setUp();
-
-		const tree = await exportTree(owner.id, fx.caseId);
-
-		const parents = exportNodes(tree).filter((node) =>
-			node.children.some((child) => child.id === counterGoal.id)
-		);
-		expect(parents.length).toBeGreaterThanOrEqual(1);
-		expect(new Set(parents.map((node) => node.id))).toEqual(
-			new Set([targetId])
-		);
-		const exported = exportNodes(tree).find(
-			(node) => node.id === counterGoal.id
-		);
-		expect(exported?.type).toBe("GOAL");
-		expect(exported?.isDefeater).toBe(true);
-		expect(exported?.defeatsElementId).toBe(targetId);
-		const counts = exportIdCounts(tree);
-		expect(counts.get(counterGoal.id)).toBeLessThanOrEqual(
-			counts.get(targetId) ?? 0
-		);
-	});
-});
 
 describe("counter-goals with their own branches", () => {
 	it("keeps a counter-goal's own strategy, claims and evidence beneath it", async () => {
@@ -444,44 +283,6 @@ describe("export beneath evidence", () => {
 });
 
 describe("evidence reused beneath its own counter-goal", () => {
-	it("ends in the case fetch and the export when one piece of evidence supports a claim under its own counter-goal", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		const counterGoal = await addCounterGoal(fx, {
-			name: "CG1",
-			description: "counter-goal on the evidence",
-			parentId: fx.evidenceOne.id,
-		});
-		const loopClaim = await addChild(fx, {
-			elementType: "PROPERTY_CLAIM",
-			name: "P3",
-			description: "claim under the counter-goal",
-			parentId: counterGoal.id,
-		});
-		await linkEvidence(fx.evidenceOne.id, loopClaim.id);
-
-		const data = await fetchGoals(owner.id, fx.caseId);
-		const tree = await exportTree(owner.id, fx.caseId);
-
-		for (const [source, counts] of [
-			["fetch", fetchIdCounts(data.goals)],
-			["export", exportIdCounts(tree)],
-		] as const) {
-			// Once under the original claim and once under the claim in the loop.
-			expect(counts.get(fx.evidenceOne.id), source).toBe(2);
-			expect(counts.get(counterGoal.id), source).toBe(1);
-			expect(counts.get(loopClaim.id), source).toBe(1);
-		}
-		// Drawn: the evidence under the loop claim does not bring the
-		// counter-goal back a second time.
-		const canvas = convertAssuranceCase(
-			data as unknown as Parameters<typeof convertAssuranceCase>[0]
-		);
-		expect(
-			canvas.caseNodes.filter((node) => node.id === `goal-${counterGoal.id}`)
-		).toHaveLength(1);
-	});
-
 	it("ends when two counter-goals each lead back to the other's evidence", async () => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);

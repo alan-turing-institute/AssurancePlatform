@@ -184,6 +184,19 @@ export function fetchNodes(goals: unknown): Record<string, unknown>[] {
 	return found;
 }
 
+/** Ids of the nodes in a fetch whose `goals` list holds the given counter-goal. */
+export function ownersOf(goals: unknown, counterGoalId: string): string[] {
+	return fetchNodes(goals)
+		.filter((node) =>
+			Array.isArray(node.goals)
+				? (node.goals as { id: string }[]).some(
+						(goal) => goal.id === counterGoalId
+					)
+				: false
+		)
+		.map((node) => node.id as string);
+}
+
 /** How many times each element id occurs in a case fetch's `goals` tree. */
 export function fetchIdCounts(goals: unknown): Map<string, number> {
 	const counts = new Map<string, number>();

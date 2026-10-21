@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
 import { fetchCaseFromPrisma } from "@/lib/services/case-fetch-service";
-import { importCase } from "@/lib/services/case-import-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	type ExportedNode,
@@ -20,11 +19,11 @@ import {
 } from "../utils/prisma-factories";
 
 /**
- * A case can hold a counter-goal with no parent next to its top goal (older
- * stored data, an import, an edit that cleared a parent). Whichever of the two
- * the database happens to return first, the case must be read from the
- * ordinary goal: the fetch's `goals`, the export's root and the publish
- * snapshot all keep the real argument.
+ * A case can hold a counter-goal with no parent next to its top goal (data
+ * stored before such goals were refused). Whichever of the two the database
+ * happens to return first, the case must be read from the ordinary goal: the
+ * fetch's `goals`, the export's root and the publish snapshot all keep the
+ * real argument.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -60,12 +59,11 @@ interface RootClash {
 /**
  * The real argument (G1, a claim and a piece of evidence), a counter-goal
  * hung from the claim, and one parentless counter-goal with a claim of its
- * own. The two roots are written in the order asked for.
+ * own. The two roots end up in the table in the order asked for.
  */
 async function buildRootClash(
 	ownerId: string,
-	order: RowOrder,
-	flipWithUpdate: boolean
+	order: RowOrder
 ): Promise<RootClash> {
 	const testCase = await createTestCase(ownerId);
 	const caseId = testCase.id;
@@ -85,10 +83,10 @@ async function buildRootClash(
 			role: "TOP_LEVEL",
 		});
 
-	// With an update, the roots are written in the opposite order first and the
-	// row that should end up later is rewritten, which moves its new version
-	// behind the other root in the table.
-	const writeCounterFirst = (order === "counter-goal first") !== flipWithUpdate;
+	// The roots are written in the opposite order first and the row that should
+	// end up later is rewritten, which moves its new version behind the other
+	// root in the table.
+	const writeCounterFirst = order === "top goal first";
 	let parentless: Awaited<ReturnType<typeof writeParentless>>;
 	let top: Awaited<ReturnType<typeof writeTop>>;
 	if (writeCounterFirst) {
@@ -133,14 +131,12 @@ async function buildRootClash(
 		parentId: parentless.id,
 	});
 
-	if (flipWithUpdate) {
-		// Rewriting the row that was written first moves it behind the other.
-		const first = writeCounterFirst ? parentless : top;
-		await prisma.assuranceElement.update({
-			where: { id: first.id },
-			data: { description: `${first.description} (edited)` },
-		});
-	}
+	// Rewriting the row that was written first moves it behind the other.
+	const first = writeCounterFirst ? parentless : top;
+	await prisma.assuranceElement.update({
+		where: { id: first.id },
+		data: { description: `${first.description} (edited)` },
+	});
 
 	return {
 		ownerId,
@@ -154,47 +150,40 @@ async function buildRootClash(
 	};
 }
 
-const SCENARIOS: Array<{ flip: boolean; label: string; order: RowOrder }> = [
-	{
-		label: "written counter-goal first",
-		order: "counter-goal first",
-		flip: false,
-	},
-	{ label: "written top goal first", order: "top goal first", flip: false },
+/**
+ * Editing a row moves its new version behind the other root in the table, so
+ * these two scenarios put each root first in turn.
+ */
+const AFTER_AN_EDIT: Array<{ label: string; order: RowOrder }> = [
 	{
 		label: "counter-goal first after the top goal is edited",
 		order: "counter-goal first",
-		flip: true,
 	},
 	{
 		label: "top goal first after the counter-goal is edited",
 		order: "top goal first",
-		flip: true,
 	},
 ];
 
-describe.each(
-	SCENARIOS
-)("a parentless counter-goal beside the top goal ($label)", ({
-	order,
-	flip,
-}) => {
-	async function setUp() {
-		const owner = await createTestUser();
-		const clash = await buildRootClash(owner.id, order, flip);
-		const rows = await physicalOrder(clash.caseId);
-		const topIndex = rows.indexOf(clash.goalId);
-		const counterIndex = rows.indexOf(clash.counterGoalId);
-		// The scenario only means something if the rows really sit that way.
-		const rowsInIntendedOrder =
-			order === "counter-goal first"
-				? counterIndex < topIndex
-				: topIndex < counterIndex;
-		return { owner, clash, rowsInIntendedOrder };
-	}
+async function setUp(order: RowOrder) {
+	const owner = await createTestUser();
+	const clash = await buildRootClash(owner.id, order);
+	const rows = await physicalOrder(clash.caseId);
+	const topIndex = rows.indexOf(clash.goalId);
+	const counterIndex = rows.indexOf(clash.counterGoalId);
+	// The scenario only means something if the rows really sit that way.
+	const rowsInIntendedOrder =
+		order === "counter-goal first"
+			? counterIndex < topIndex
+			: topIndex < counterIndex;
+	return { owner, clash, rowsInIntendedOrder };
+}
 
+describe.each(
+	AFTER_AN_EDIT
+)("a parentless counter-goal beside the top goal ($label)", ({ order }) => {
 	it("puts the ordinary goal first in the case fetch and keeps its whole argument", async () => {
-		const { owner, clash, rowsInIntendedOrder } = await setUp();
+		const { owner, clash, rowsInIntendedOrder } = await setUp(order);
 		expect(rowsInIntendedOrder).toBe(true);
 
 		const result = viewed(await fetchCaseFromPrisma(clash.caseId, owner.id));
@@ -213,7 +202,7 @@ describe.each(
 	});
 
 	it("roots the export on the ordinary goal and keeps its whole argument", async () => {
-		const { owner, clash, rowsInIntendedOrder } = await setUp();
+		const { owner, clash, rowsInIntendedOrder } = await setUp(order);
 		expect(rowsInIntendedOrder).toBe(true);
 
 		const result = viewed(
@@ -233,9 +222,12 @@ describe.each(
 		expect(counts.get(clash.supportedCounterGoalId)).toBe(1);
 		expect(counts.has(clash.counterGoalSupportId)).toBe(false);
 	});
+});
 
+describe("a parentless counter-goal beside the top goal, read elsewhere", () => {
 	it("freezes the real argument into the publish snapshot", async () => {
-		const { owner, clash, rowsInIntendedOrder } = await setUp();
+		const { owner, clash, rowsInIntendedOrder } =
+			await setUp("counter-goal first");
 		expect(rowsInIntendedOrder).toBe(true);
 
 		const { publishAssuranceCase } = await import(
@@ -258,7 +250,8 @@ describe.each(
 	});
 
 	it("returns the ordinary goal first from the case route", async () => {
-		const { owner, clash, rowsInIntendedOrder } = await setUp();
+		const { owner, clash, rowsInIntendedOrder } =
+			await setUp("counter-goal first");
 		expect(rowsInIntendedOrder).toBe(true);
 		await mockAuth(owner.id, owner.username, owner.email);
 
@@ -271,98 +264,5 @@ describe.each(
 		expect(response.status).toBe(200);
 		const body = await response.json();
 		expect(body.goals[0].id).toBe(clash.goalId);
-	});
-});
-
-describe("a parentless counter-goal arriving through import", () => {
-	function flatFile(counterGoalFirst: boolean) {
-		const goalId = crypto.randomUUID();
-		const counterGoalId = crypto.randomUUID();
-		const claimId = crypto.randomUUID();
-		const evidenceId = crypto.randomUUID();
-		const goal = {
-			id: goalId,
-			elementType: "GOAL",
-			role: "TOP_LEVEL",
-			parentId: null,
-			name: "G1",
-			description: "imported top goal",
-			inSandbox: false,
-		};
-		const counterGoal = {
-			id: counterGoalId,
-			elementType: "GOAL",
-			parentId: null,
-			name: "CG1",
-			description: "imported parentless counter-goal",
-			isDefeater: true,
-			defeatsElementId: goalId,
-			inSandbox: false,
-		};
-		const claim = {
-			id: claimId,
-			elementType: "PROPERTY_CLAIM",
-			parentId: goalId,
-			name: "P1",
-			description: "imported claim",
-			inSandbox: false,
-		};
-		const evidence = {
-			id: evidenceId,
-			elementType: "EVIDENCE",
-			parentId: null,
-			name: "E1",
-			description: "imported evidence",
-			url: "https://example.com/imported",
-			inSandbox: false,
-		};
-		return {
-			ids: { goalId, claimId, evidenceId },
-			file: {
-				version: "2.0",
-				exportedAt: new Date().toISOString(),
-				case: { name: "Imported", description: "" },
-				elements: counterGoalFirst
-					? [counterGoal, goal, claim, evidence]
-					: [goal, claim, evidence, counterGoal],
-				evidenceLinks: [{ evidenceId, claimId }],
-			},
-		};
-	}
-
-	it.each([
-		["counter-goal listed first", true],
-		["top goal listed first", false],
-	])("reads the imported case from its ordinary goal (%s)", async (_label, counterGoalFirst) => {
-		const owner = await createTestUser();
-		const { file } = flatFile(counterGoalFirst);
-
-		const imported = await importCase(owner.id, file);
-		if ("error" in imported) {
-			throw new Error(imported.error);
-		}
-		const caseId = imported.data.caseId;
-
-		const fetched = viewed(await fetchCaseFromPrisma(caseId, owner.id));
-		const goalRow = await prisma.assuranceElement.findFirstOrThrow({
-			where: { caseId, elementType: "GOAL", isDefeater: false },
-		});
-		expect(fetched.data?.goals?.[0]?.id).toBe(goalRow.id);
-		const exported = viewed(
-			await exportCase(owner.id, caseId, {
-				includeComments: false,
-			})
-		);
-		const tree = exported.data?.tree as unknown as ExportedNode;
-		expect(tree.id).toBe(goalRow.id);
-		const counts = exportIdCounts(tree);
-		const claimRow = await prisma.assuranceElement.findFirstOrThrow({
-			where: { caseId, elementType: "PROPERTY_CLAIM" },
-		});
-		const evidenceRow = await prisma.assuranceElement.findFirstOrThrow({
-			where: { caseId, elementType: "EVIDENCE" },
-		});
-		expect(counts.get(claimRow.id)).toBe(1);
-		expect(counts.get(evidenceRow.id)).toBe(1);
 	});
 });

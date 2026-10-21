@@ -5,6 +5,7 @@ import type { TreeNode } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 import { fetchCaseFromPrisma } from "@/lib/services/case-fetch-service";
 import { expectSuccess } from "../utils/assertion-helpers";
+import { fetchIdCounts, ownersOf } from "../utils/counter-goal-kit";
 import {
 	createTestCase,
 	createTestElement,
@@ -243,6 +244,7 @@ type CounterGoalTarget =
 	| "STRATEGY"
 	| "PROPERTY_CLAIM"
 	| "EVIDENCE"
+	| "SHARED_EVIDENCE"
 	| "AWAY_GOAL"
 	| "MODULE";
 
@@ -251,6 +253,7 @@ const COUNTER_GOAL_TARGETS: CounterGoalTarget[] = [
 	"STRATEGY",
 	"PROPERTY_CLAIM",
 	"EVIDENCE",
+	"SHARED_EVIDENCE",
 	"AWAY_GOAL",
 	"MODULE",
 ];
@@ -281,7 +284,7 @@ async function createCaseWithCounterGoal(target: CounterGoalTarget) {
 	});
 
 	let targetElement = root;
-	if (target === "EVIDENCE") {
+	if (target === "EVIDENCE" || target === "SHARED_EVIDENCE") {
 		const claim = await createTestElement(testCase.id, owner.id, {
 			elementType: "PROPERTY_CLAIM",
 			name: "P1",
@@ -294,6 +297,17 @@ async function createCaseWithCounterGoal(target: CounterGoalTarget) {
 		await prisma.evidenceLink.create({
 			data: { evidenceId: targetElement.id, claimId: claim.id },
 		});
+		if (target === "SHARED_EVIDENCE") {
+			// The same evidence under a second claim: drawn and exported under both.
+			const other = await createTestElement(testCase.id, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P3",
+				parentId: root.id,
+			});
+			await prisma.evidenceLink.create({
+				data: { evidenceId: targetElement.id, claimId: other.id },
+			});
+		}
 	} else if (target !== "GOAL") {
 		targetElement = await createTestElement(testCase.id, owner.id, {
 			elementType: target,
@@ -341,8 +355,18 @@ describe("fetchCaseFromPrisma — counter-goals", () => {
 			children: [expect.objectContaining({ id: support.id })],
 		});
 
+		// The fetch holds the counter-goal once, beneath its target alone, even
+		// when the target is drawn under several claims.
+		const fetched = expectSuccess(
+			await fetchCaseFromPrisma(testCase.id, owner.id)
+		);
+		expect(fetchIdCounts(fetched.goals).get(counter.id)).toBe(1);
+		expect(ownersOf(fetched.goals, counter.id)).toEqual([targetElement.id]);
+
 		const { caseNodes, caseEdges } = await fetchCanvas(testCase.id, owner.id);
-		expect(caseNodes).toHaveLength(
+		// Shared evidence is drawn under each claim that links it, so count the
+		// distinct cards.
+		expect(new Set(caseNodes.map((node) => node.id)).size).toBe(
 			await prisma.assuranceElement.count({ where: { caseId: testCase.id } })
 		);
 		const targetNode = caseNodes.find(
@@ -422,37 +446,5 @@ describe("fetchCaseFromPrisma — counter-goals", () => {
 			caseNodes.filter((node) => node.data.id === counter.id)
 		).toHaveLength(1);
 		expect(caseNodes.some((node) => node.data.id === support.id)).toBe(true);
-	});
-
-	it.each([
-		["before", true],
-		["after", false],
-	])("keeps the ordinary goal as the case's goal when a counter-goal with no parent is stored %s it", async (_order, counterFirst) => {
-		const owner = await createTestUser();
-		const testCase = await createTestCase(owner.id);
-		const createCounter = () =>
-			createTestElement(testCase.id, owner.id, {
-				elementType: "GOAL",
-				name: "CG1",
-				isDefeater: true,
-			});
-		const createRoot = () =>
-			createTestElement(testCase.id, owner.id, {
-				elementType: "GOAL",
-				name: "G1",
-			});
-		let root: Awaited<ReturnType<typeof createRoot>>;
-		if (counterFirst) {
-			await createCounter();
-			root = await createRoot();
-		} else {
-			root = await createRoot();
-			await createCounter();
-		}
-
-		const data = expectSuccess(
-			await fetchCaseFromPrisma(testCase.id, owner.id)
-		);
-		expect(data.goals?.map((goal) => goal.id)).toEqual([root.id]);
 	});
 });

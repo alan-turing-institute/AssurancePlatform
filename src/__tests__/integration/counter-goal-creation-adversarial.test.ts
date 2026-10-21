@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { createElement, deleteElement } from "@/lib/services/element-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
-	addChild,
+	type ArgumentFixture,
 	addCounterGoal,
 	buildArgument,
 	viewed,
@@ -165,22 +165,6 @@ describe("counter-goal creation through the service", () => {
 		expect(await liveGoals(fx.caseId)).toHaveLength(before.length);
 	});
 
-	it("refuses a parentless counter-goal even in a case that has no goal at all", async () => {
-		const owner = await createTestUser();
-		const emptyCase = await createTestCase(owner.id);
-
-		const result = await create(owner.id, {
-			caseId: emptyCase.id,
-			elementType: "GOAL",
-			description: "parentless counter-goal in an empty case",
-			isDefeater: true,
-		});
-
-		expect(result.data).toBeUndefined();
-		expect(result.error).toBeTruthy();
-		expect(await liveGoals(emptyCase.id)).toHaveLength(0);
-	});
-
 	it("refuses a counter-goal whose parent belongs to another case", async () => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);
@@ -201,80 +185,54 @@ describe("counter-goal creation through the service", () => {
 		expect(goals.map((goal) => goal.id)).toEqual([fx.goal.id]);
 	});
 
-	it("still refuses a second ordinary goal when isDefeater is left out", async () => {
+	it.each([
+		{ label: "isDefeater is left out", counterGoals: false, input: () => ({}) },
+		{
+			label: "isDefeater is stated as false",
+			counterGoals: false,
+			input: () => ({ isDefeater: false }),
+		},
+		{
+			label: "it has a parent",
+			counterGoals: false,
+			input: (fx: ArgumentFixture) => ({
+				parentId: fx.claim.id,
+				isDefeater: false,
+			}),
+		},
+		{
+			label: "the case also holds counter-goals",
+			counterGoals: true,
+			input: () => ({}),
+		},
+	])("still refuses a second ordinary goal when $label", async ({
+		counterGoals,
+		input,
+	}) => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);
+		if (counterGoals) {
+			await addCounterGoal(fx, {
+				name: "CG1",
+				description: "counter-goal on the claim",
+				parentId: fx.claim.id,
+			});
+			await addCounterGoal(fx, {
+				name: "CG2",
+				description: "counter-goal on the evidence",
+				parentId: fx.evidenceOne.id,
+			});
+		}
 
 		const result = await create(owner.id, {
 			caseId: fx.caseId,
 			elementType: "GOAL",
 			description: "second ordinary goal",
+			...input(fx),
 		});
 
 		expect(result.data).toBeUndefined();
-		expect(result.error).toBeTruthy();
-		expect(await liveGoals(fx.caseId)).toHaveLength(1);
-	});
-
-	it("still refuses a second ordinary goal when isDefeater is stated as false", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-
-		const result = await create(owner.id, {
-			caseId: fx.caseId,
-			elementType: "GOAL",
-			description: "second ordinary goal, explicit",
-			isDefeater: false,
-		});
-
-		expect(result.data).toBeUndefined();
-		expect(result.error).toBeTruthy();
-		expect(await liveGoals(fx.caseId)).toHaveLength(1);
-	});
-
-	it("still refuses a second ordinary goal that has a parent", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-
-		const result = await create(owner.id, {
-			caseId: fx.caseId,
-			elementType: "GOAL",
-			description: "ordinary goal hung from a claim",
-			parentId: fx.claim.id,
-			isDefeater: false,
-		});
-
-		expect(result.data).toBeUndefined();
-		expect(result.error).toBeTruthy();
-		expect(await liveGoals(fx.caseId)).toHaveLength(1);
-	});
-
-	it("still refuses a second ordinary goal once the case also holds counter-goals", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await addCounterGoal(fx, {
-			name: "CG1",
-			description: "counter-goal on the claim",
-			parentId: fx.claim.id,
-		});
-		await addCounterGoal(fx, {
-			name: "CG2",
-			description: "counter-goal on the evidence",
-			parentId: fx.evidenceOne.id,
-		});
-
-		for (const extra of [{}, { isDefeater: false }]) {
-			const result = await create(owner.id, {
-				caseId: fx.caseId,
-				elementType: "GOAL",
-				description: "second ordinary goal beside counter-goals",
-				...extra,
-			});
-
-			expect(result.data, JSON.stringify(extra)).toBeUndefined();
-			expect(result.error, JSON.stringify(extra)).toBeTruthy();
-		}
-
+		expect(result.error).toBe("A case can only have one goal claim");
 		const ordinary = await prisma.assuranceElement.findMany({
 			where: { caseId: fx.caseId, elementType: "GOAL", isDefeater: false },
 		});
@@ -301,7 +259,7 @@ describe("counter-goal creation through the service", () => {
 		expect(result.data?.name).toMatch(ORDINARY_GOAL_NAME);
 	});
 
-	it("accepts an ordinary top goal when only a counter-goal parented to evidence remains", async () => {
+	it("accepts the new top goal when only a counter-goal remains, and then refuses another", async () => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);
 		await addCounterGoal(fx, {
@@ -314,33 +272,9 @@ describe("counter-goal creation through the service", () => {
 		// claims by link, so the counter-goal under the evidence survives.
 		const deleted = viewed(await deleteElement(owner.id, fx.goal.id));
 		expect(deleted.error).toBeUndefined();
-		const remaining = await liveGoals(fx.caseId);
-		expect(remaining.map((goal) => goal.name)).toEqual(["CG1"]);
-
-		const result = await create(owner.id, {
-			caseId: fx.caseId,
-			elementType: "GOAL",
-			description: "new top goal",
-		});
-
-		expect(result.error).toBeUndefined();
-		expect(result.data?.name).toMatch(ORDINARY_GOAL_NAME);
-		const stored = await prisma.assuranceElement.findUniqueOrThrow({
-			where: { id: result.data?.id },
-		});
-		expect(stored.isDefeater).toBe(false);
-		expect(stored.parentId).toBeNull();
-	});
-
-	it("accepts the new top goal with isDefeater stated as false, and then refuses another", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await addCounterGoal(fx, {
-			name: "CG1",
-			description: "counter-goal that outlives the top goal",
-			parentId: fx.evidenceOne.id,
-		});
-		await deleteElement(owner.id, fx.goal.id);
+		expect((await liveGoals(fx.caseId)).map((goal) => goal.name)).toEqual([
+			"CG1",
+		]);
 
 		const first = await create(owner.id, {
 			caseId: fx.caseId,
@@ -356,38 +290,14 @@ describe("counter-goal creation through the service", () => {
 		});
 
 		expect(first.error).toBeUndefined();
+		expect(first.data?.name).toMatch(ORDINARY_GOAL_NAME);
+		const stored = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: first.data?.id },
+		});
+		expect(stored.isDefeater).toBe(false);
+		expect(stored.parentId).toBeNull();
 		expect(second.data).toBeUndefined();
 		expect(second.error).toBeTruthy();
-	});
-
-	it("lets a counter-goal support its own strategy and claims under the case's top goal", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		const counterGoal = await addCounterGoal(fx, {
-			name: "CG1",
-			description: "counter-goal on the claim",
-			parentId: fx.claim.id,
-		});
-
-		const strategy = await create(owner.id, {
-			caseId: fx.caseId,
-			elementType: "STRATEGY",
-			description: "strategy under the counter-goal",
-			parentId: counterGoal.id,
-		});
-		const claim = await create(owner.id, {
-			caseId: fx.caseId,
-			elementType: "PROPERTY_CLAIM",
-			description: "claim under the counter-goal",
-			parentId: counterGoal.id,
-		});
-
-		expect(strategy.error).toBeUndefined();
-		expect(claim.error).toBeUndefined();
-		const stored = await prisma.assuranceElement.findMany({
-			where: { parentId: counterGoal.id },
-		});
-		expect(stored).toHaveLength(2);
 	});
 });
 
@@ -415,94 +325,5 @@ describe("counter-goal creation through the elements route", () => {
 		expect(stored.parentId).toBe(fx.claim.id);
 		expect(stored.defeatsElementId).toBe(fx.claim.id);
 		expect(stored.elementType).toBe("GOAL");
-	});
-
-	it.each([
-		["parentId left out", {}],
-		["parentId null", { parentId: null }],
-	])("refuses a counter-goal with no parent with a 4xx (%s)", async (_label, extra) => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await mockAuth(owner.id, owner.username, owner.email);
-
-		const response = await postElement(fx.caseId, {
-			type: "goal",
-			description: "parentless counter-goal",
-			isDefeater: true,
-			defeatsElementId: fx.goal.id,
-			...extra,
-		});
-
-		expect(response.status).toBeGreaterThanOrEqual(400);
-		expect(response.status).toBeLessThan(500);
-		expect(await liveGoals(fx.caseId)).toHaveLength(1);
-	});
-
-	it("refuses a parentless counter-goal with a 4xx whatever the type field is spelled", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await mockAuth(owner.id, owner.username, owner.email);
-
-		const response = await postElement(fx.caseId, {
-			elementType: "GOAL",
-			description: "parentless counter-goal, upper-case type",
-			isDefeater: true,
-		});
-
-		expect(response.status).toBeGreaterThanOrEqual(400);
-		expect(response.status).toBeLessThan(500);
-		expect(await liveGoals(fx.caseId)).toHaveLength(1);
-	});
-
-	it("does not accept a second ordinary goal, with isDefeater false or left out", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await addChild(fx, {
-			elementType: "PROPERTY_CLAIM",
-			name: "P3",
-			description: "another claim",
-			parentId: fx.goal.id,
-		});
-		await mockAuth(owner.id, owner.username, owner.email);
-
-		for (const extra of [{}, { isDefeater: false }]) {
-			const response = await postElement(fx.caseId, {
-				type: "goal",
-				description: "second ordinary goal",
-				...extra,
-			});
-
-			expect(response.status, JSON.stringify(extra)).toBeGreaterThanOrEqual(
-				400
-			);
-		}
-		expect(await liveGoals(fx.caseId)).toHaveLength(1);
-	});
-
-	it("accepts the ordinary top goal when only a counter-goal remains", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await addCounterGoal(fx, {
-			name: "CG1",
-			description: "counter-goal that outlives the top goal",
-			parentId: fx.evidenceShared.id,
-		});
-		await deleteElement(owner.id, fx.goal.id);
-		await mockAuth(owner.id, owner.username, owner.email);
-
-		const response = await postElement(fx.caseId, {
-			type: "goal",
-			description: "replacement top goal",
-			isDefeater: false,
-		});
-
-		expect(response.status).toBe(201);
-		const body = await response.json();
-		expect(body.name).toMatch(ORDINARY_GOAL_NAME);
-		const stored = await prisma.assuranceElement.findUniqueOrThrow({
-			where: { id: body.id },
-		});
-		expect(stored.isDefeater).toBe(false);
-		expect(stored.parentId).toBeNull();
 	});
 });

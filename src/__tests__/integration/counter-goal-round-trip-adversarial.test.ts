@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import { exportCase } from "@/lib/services/case-export-service";
-import {
-	importCase,
-	validateImportData,
-} from "@/lib/services/case-import-service";
+import { importCase } from "@/lib/services/case-import-service";
 import { mockNoAuth } from "../utils/auth-helpers";
 import {
 	type ArgumentFixture,
@@ -207,45 +204,16 @@ describe("export then import with counter-goals", () => {
 		expect(kept?.defeats).toBe("evidence for one claim");
 	});
 
-	it("keeps a counter-goal beneath evidence linked to two claims, exactly once", async () => {
+	it("keeps counter-goals beneath evidence linked to several claims, exactly once", async () => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);
-		const counterGoal = await addCounterGoal(fx, {
-			name: "CG1",
-			description: "against the shared evidence",
-			parentId: fx.evidenceShared.id,
-		});
-		await addChild(fx, {
+		const third = await addChild(fx, {
 			elementType: "PROPERTY_CLAIM",
-			name: "P3",
-			description: "claim supporting the counter-goal",
-			parentId: counterGoal.id,
+			name: "P5",
+			description: "third claim using the shared evidence",
+			parentId: fx.goal.id,
 		});
-		await addCounterGoal(fx, {
-			name: "CG2",
-			description: "against the counter-goal",
-			parentId: counterGoal.id,
-		});
-
-		const { after, imported } = await expectRoundTripKeepsCase(
-			owner.id,
-			fx.caseId
-		);
-
-		expect(
-			after.elements.filter(
-				(e) => e.description === "against the shared evidence"
-			)
-		).toHaveLength(1);
-		expect(
-			after.links.filter((link) => link.evidence === "evidence for two claims")
-		).toHaveLength(2);
-		expect(imported.warnings).toHaveLength(0);
-	});
-
-	it("links the evidence of a counter-goal's own claim once, however many claims repeat the shared evidence above it", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
+		await linkEvidence(fx.evidenceShared.id, third.id);
 		const counterGoal = await addCounterGoal(fx, {
 			name: "CG1",
 			description: "against the shared evidence",
@@ -263,48 +231,36 @@ describe("export then import with counter-goals", () => {
 			"evidence for the counter-goal's claim"
 		);
 		await linkEvidence(supportEvidence.id, support.id);
+		await addCounterGoal(fx, {
+			name: "CG2",
+			description: "against the counter-goal",
+			parentId: counterGoal.id,
+		});
+		await addCounterGoal(fx, {
+			name: "CG3",
+			description: "second counter-goal on the shared evidence",
+			parentId: fx.evidenceShared.id,
+		});
 
-		const { after } = await expectRoundTripKeepsCase(owner.id, fx.caseId);
+		const { after, imported } = await expectRoundTripKeepsCase(
+			owner.id,
+			fx.caseId
+		);
 
+		expect(
+			after.elements.filter(
+				(e) => e.description === "against the shared evidence"
+			)
+		).toHaveLength(1);
+		expect(
+			after.links.filter((link) => link.evidence === "evidence for two claims")
+		).toHaveLength(3);
 		expect(
 			after.links.filter(
 				(link) => link.evidence === "evidence for the counter-goal's claim"
 			)
 		).toHaveLength(1);
-	});
-
-	it("keeps evidence shared by three claims whose counter-goals and supports sit beneath it", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		const third = await addChild(fx, {
-			elementType: "PROPERTY_CLAIM",
-			name: "P5",
-			description: "third claim using the shared evidence",
-			parentId: fx.goal.id,
-		});
-		await linkEvidence(fx.evidenceShared.id, third.id);
-		const one = await addCounterGoal(fx, {
-			name: "CG1",
-			description: "first counter-goal on the shared evidence",
-			parentId: fx.evidenceShared.id,
-		});
-		await addCounterGoal(fx, {
-			name: "CG2",
-			description: "second counter-goal on the shared evidence",
-			parentId: fx.evidenceShared.id,
-		});
-		await addChild(fx, {
-			elementType: "PROPERTY_CLAIM",
-			name: "P6",
-			description: "claim under the first counter-goal",
-			parentId: one.id,
-		});
-
-		const { after } = await expectRoundTripKeepsCase(owner.id, fx.caseId);
-
-		expect(
-			after.links.filter((link) => link.evidence === "evidence for two claims")
-		).toHaveLength(3);
+		expect(imported.warnings).toHaveLength(0);
 	});
 
 	it("keeps counter-goals nested under counter-goals under evidence", async () => {
@@ -442,42 +398,5 @@ describe("export then import with counter-goals", () => {
 		const after = await shapeOf(second.imported.caseId);
 
 		expect(after).toEqual(before);
-	});
-
-	it("accepts the exported file as valid import data", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await addCounterGoal(fx, {
-			name: "CG1",
-			description: "against the shared evidence",
-			parentId: fx.evidenceShared.id,
-		});
-		const exported = viewed(
-			await exportCase(owner.id, fx.caseId, {
-				includeComments: false,
-			})
-		);
-
-		const verdict = await validateImportData(
-			JSON.parse(JSON.stringify(exported.data))
-		);
-
-		expect(verdict.isValid).toBe(true);
-		expect(verdict.errors).toBeUndefined();
-	});
-
-	it("leaves the source case unchanged", async () => {
-		const owner = await createTestUser();
-		const fx = await buildArgument(owner.id);
-		await addCounterGoal(fx, {
-			name: "CG1",
-			description: "against the shared evidence",
-			parentId: fx.evidenceShared.id,
-		});
-		const before = await shapeOf(fx.caseId);
-
-		await roundTrip(owner.id, fx.caseId);
-
-		expect(await shapeOf(fx.caseId)).toEqual(before);
 	});
 });

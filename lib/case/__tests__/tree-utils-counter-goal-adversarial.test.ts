@@ -396,19 +396,7 @@ describe("search order for a case without counter-goals", () => {
 		expect(shownIds(result.goals).sort()).toEqual(["E", "G1", "T", "U", "X"]);
 	});
 
-	it("finds nothing below a case whose root type is the real 'assurance_case'", () => {
-		const hidden = hiddenEverywhere(plainCase("assurance_case"));
-		const before = JSON.stringify(hidden);
-
-		const result = toggleHiddenForParent(
-			nodeFor("P2", "property_claim"),
-			hidden
-		);
-
-		expect(JSON.stringify(result)).toBe(before);
-	});
-
-	it("finds nothing below the real 'assurance_case' root even when the case has counter-goals", () => {
+	it("finds nothing below the real 'assurance_case' root, counter-goals included", () => {
 		const hidden = hiddenEverywhere(buildCase("assurance_case"));
 		const before = JSON.stringify(hidden);
 
