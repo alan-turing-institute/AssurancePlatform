@@ -31,6 +31,7 @@ import {
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
+	fetchAndRefreshCase,
 	getNodeMutationErrorMessage,
 	type ReactFlowNode,
 	removeAssuranceCaseNode,
@@ -40,6 +41,7 @@ import {
 	normaliseOrphanType,
 	REACTFLOW_TO_CANONICAL,
 } from "@/lib/element-compatibility";
+import { logger } from "@/lib/logger";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { recordDelete, recordDetach } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
@@ -48,6 +50,8 @@ import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
 import { plainDescription } from "./reference-text-utils";
+
+const log = logger.child({ component: "node-options-menu" });
 
 const MORE_OPTIONS_LABEL = "More options";
 
@@ -82,6 +86,30 @@ function getParentDataId(
 	return parentNode ? String(parentNode.data.id as string | number) : "";
 }
 
+/**
+ * Reads the case again once an element has left it. The store drops the
+ * element and what hangs from it at once; what it cannot work out is what the
+ * server now draws elsewhere, such as the counter-goals of a piece of shared
+ * evidence that were drawn with the removed claim's copy. Reading the case
+ * does not wait for the live-update stream.
+ */
+function refreshCase(
+	caseId: string,
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void
+) {
+	fetchAndRefreshCase(caseId)
+		.then((fresh) => {
+			if (fresh) {
+				setAssuranceCase(fresh);
+			}
+		})
+		.catch((error) => {
+			log.warn("Failed to read the case again after removing an element", {
+				error,
+			});
+		});
+}
+
 /** Process detach result and update state */
 function processDetachResult(
 	node: Node,
@@ -101,6 +129,7 @@ function processDetachResult(
 
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
+		refreshCase(assuranceCase.id, setAssuranceCase);
 		const existingIds = new Set(orphanedElements.map((el) => el.id));
 		if (!existingIds.has(newOrphanElement.id)) {
 			setOrphanedElements([...orphanedElements, newOrphanElement]);
@@ -122,6 +151,7 @@ function processDeleteResult(
 	);
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
+		refreshCase(assuranceCase.id, setAssuranceCase);
 	}
 }
 

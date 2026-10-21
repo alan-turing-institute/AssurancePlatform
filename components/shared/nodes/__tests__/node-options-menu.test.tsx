@@ -131,6 +131,58 @@ describe("NodeOptionsMenu — delete failure handling", () => {
 	});
 });
 
+describe("NodeOptionsMenu — settling on the server's case", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	it.each([
+		{
+			action: "delete",
+			confirm: openDeleteConfirmation,
+			answer: () =>
+				http.delete("/api/elements/1", () =>
+					HttpResponse.json({}, { status: 200 })
+				),
+		},
+		{
+			action: "detach",
+			confirm: openDetachConfirmation,
+			answer: () =>
+				http.post("/api/elements/1/detach", () =>
+					HttpResponse.json({}, { status: 200 })
+				),
+		},
+	])("reads the case again after a $action, without waiting for the event stream", async ({
+		confirm,
+		answer,
+	}) => {
+		const user = userEvent.setup();
+		server.use(
+			answer(),
+			http.get("/api/cases/case-1", () =>
+				HttpResponse.json({
+					id: "case-1",
+					name: "Case as the server holds it",
+					type: "assurance-case",
+					permissions: "manage",
+					createdDate: new Date().toISOString(),
+					comments: [],
+				})
+			)
+		);
+
+		renderWithReactFlow(<NodeOptionsMenu node={NODE} nodeType="strategy" />);
+		await confirm(user);
+
+		await waitFor(() =>
+			expect(useStore.getState().assuranceCase?.name).toBe(
+				"Case as the server holds it"
+			)
+		);
+	});
+});
+
 describe("NodeOptionsMenu — detach failure handling", () => {
 	beforeEach(() => {
 		resetStore();
