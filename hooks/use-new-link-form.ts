@@ -72,12 +72,26 @@ export function useNewLinkForm({
 		handleClose();
 	};
 
+	const topGoalId = assuranceCase?.goals?.[0]?.id ?? null;
+
+	/**
+	 * A goal card other than the case's top goal: a counter-goal. What is added
+	 * from it belongs to that goal, not to the top goal. The optimistic updates
+	 * below only extend the top goal, so for a counter-goal the refetch that
+	 * follows the live update places the new element.
+	 */
+	const isCounterGoalCard =
+		node.type === "goal" && (node.data.id as string) !== topGoalId;
+
+	/** The element a new strategy attaches to: the card's own goal or claim. */
+	const strategyParentId = () =>
+		node.type === "property" || node.type === "goal"
+			? (node.data.id as string)
+			: topGoalId;
+
 	/** Builds the strategy creation payload based on the parent node type */
 	const createStrategyPayload = (description: string) => {
-		const parentId =
-			node.type === "property"
-				? (node.data.id as string)
-				: (assuranceCase?.goals?.[0]?.id ?? null);
+		const parentId = strategyParentId();
 		return {
 			description,
 			parentId,
@@ -111,10 +125,7 @@ export function useNewLinkForm({
 
 	/** Handles creation of a strategy node linked to a goal or property claim */
 	const handleStrategyAdd = async (description: string) => {
-		const parentId =
-			node.type === "property"
-				? (node.data.id as string)
-				: assuranceCase?.goals?.[0]?.id;
+		const parentId = strategyParentId();
 
 		if (!(parentId && session?.user?.id)) {
 			setLoading(false);
@@ -142,10 +153,11 @@ export function useNewLinkForm({
 			recordCreate(result.data.id, "strategy", result.data);
 		}
 
-		// Optimistic update: for goal-level strategies, update state directly.
-		// For strategies under property claims, the SSE event triggers a full
-		// case refetch that places the strategy correctly in the nested tree.
-		if (node.type !== "property") {
+		// Optimistic update: for top-goal strategies, update state directly.
+		// For strategies under property claims or counter-goals, the SSE event
+		// triggers a full case refetch that places the strategy correctly in the
+		// nested tree.
+		if (node.type !== "property" && !isCounterGoalCard) {
 			updateGoalWithStrategy(result.data);
 		}
 
@@ -163,11 +175,12 @@ export function useNewLinkForm({
 		switch (node.type) {
 			case "strategy":
 			case "property":
+			case "goal":
 				return { ...baseItem, parentId: node.data.id as string };
 			default:
 				return {
 					...baseItem,
-					parentId: assuranceCase?.goals?.[0]?.id ?? null,
+					parentId: topGoalId,
 				};
 		}
 	};
@@ -256,7 +269,7 @@ export function useNewLinkForm({
 			);
 		} else if (nodeType === "property") {
 			handlePropertyClaim(result);
-		} else if (nodeType === "goal") {
+		} else if (nodeType === "goal" && !isCounterGoalCard) {
 			handleGoalClaimUpdate(result as { data: PropertyClaimResponse });
 		}
 	};

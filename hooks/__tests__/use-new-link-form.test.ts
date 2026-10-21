@@ -235,6 +235,44 @@ describe("useNewLinkForm — rewritten payload builders (parentId resolution)", 
 	});
 });
 
+/**
+ * A counter-goal is a goal card whose id differs from the case's top goal.
+ * What is added from it belongs to it, and the top goal's own tree is left
+ * alone for the live update to refresh.
+ */
+describe("useNewLinkForm — add actions on a counter-goal card", () => {
+	const COUNTER_GOAL_NODE: Node = {
+		id: "9",
+		type: "goal",
+		position: { x: 0, y: 0 },
+		data: { id: "counter-1", isDefeater: true },
+	};
+
+	it("sends a property claim's parentId as the counter-goal, not the top goal", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: COUNTER_GOAL_NODE, linkType: "claim" });
+
+		await submitDescription(result, "A claim supporting the counter-goal");
+
+		expect(getReceivedBody()?.parentId).toBe("counter-1");
+		expect(
+			useStore.getState().assuranceCase?.goals?.[0]?.propertyClaims
+		).toEqual(CASE_WITH_CLAIM.goals?.[0]?.propertyClaims);
+	});
+
+	it("sends a strategy's parentId as the counter-goal, not the top goal", async () => {
+		const { getReceivedBody } = mockElementsRoute();
+		const { result } = setup({ node: COUNTER_GOAL_NODE, linkType: "strategy" });
+
+		await submitDescription(result, "A strategy for the counter-goal");
+
+		expect(getReceivedBody()?.parentId).toBe("counter-1");
+		expect(useStore.getState().assuranceCase?.goals?.[0]?.strategies).toEqual(
+			[]
+		);
+	});
+});
+
 // defeatsElementId is zod-validated as a UUID (lib/schemas/element.ts) —
 // unlike the shared NODE/STRATEGY_NODE/GOAL_NODE fixtures above (whose
 // data.id values are plain test strings, fine for parentId but not for a
