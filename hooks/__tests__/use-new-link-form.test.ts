@@ -327,23 +327,3 @@ describe("useNewLinkForm — claim creation failure", () => {
 		);
 	});
 });
-
-describe("useNewLinkForm — handleClaimAdd failure", () => {
-	it("stops loading after the server rejects claim creation", async () => {
-		server.use(
-			http.post("/api/cases/:caseId/elements", () =>
-				HttpResponse.json({ error: "Failed" }, { status: 400 })
-			)
-		);
-		const { result } = setup({ linkType: "claim" });
-
-		await submitDescription(result, "A property claim description");
-
-		expect(toast).toHaveBeenCalledWith(
-			expect.objectContaining({
-				variant: "destructive",
-				description: "Failed to create claim",
-			})
-		);
-	});
-});
