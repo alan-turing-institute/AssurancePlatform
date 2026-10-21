@@ -266,15 +266,21 @@ jobs:
   # required check) reports the combined verdict. `structural-quality` and
   # `docker-build` read only `needs.test.result`.
   #
-  # All five jobs share one `if:`. `changes` runs on every event and is never
-  # skipped, so the way `needs` propagates a skip (a dependent job is skipped
-  # when a needed job is skipped UNLESS its `if:` holds a status-check
-  # function; GitHub docs and actions/runner#2205, where community reports on
-  # the exact trigger conditions are contradictory) cannot bite either way.
-  # Each `if:` still opens with `!cancelled()` rather than depend on that
-  # reasoning. For `coverage` and `test` it matters: a failed or skipped test
-  # job must not skip them silently. They run, and fail, or the shared
-  # condition skips them together with the rest.
+  # All five jobs share one condition. `changes` runs on every event and is
+  # never skipped, so the way `needs` propagates a skip (a dependent job is
+  # skipped when a needed job is skipped UNLESS its `if:` holds a
+  # status-check function; GitHub docs and actions/runner#2205, where
+  # community reports on the exact trigger conditions are contradictory)
+  # cannot bite either way. Each `if:` still opens with a status function
+  # rather than depend on that reasoning. For `coverage` and `test` it
+  # matters: a failed or skipped test job must not skip them silently. They
+  # run, and fail, or the shared condition skips them together with the rest.
+  #
+  # The four working jobs open with `!cancelled()`. `test` opens with
+  # always() instead (see its comment), so after a cancellation it reaches its
+  # result step and fails on any test job that is not `success`. A cancelled
+  # `unit`, `integration`, `e2e` or `coverage` job therefore fails "Run
+  # Tests", and `coverage` needs no always() of its own.
   #
   # Fail CLOSED: `!cancelled()` means this only skips evaluation if the
   # workflow run itself is being cancelled. `needs.changes.result !=
@@ -287,9 +293,9 @@ jobs:
   # paths-filter's real answer. Net effect: push/dispatch → run; PR
   # touching code paths → run; config-only PR → changes succeeds with
   # code=false → every test job SKIPPED, including "Run Tests" (skipped still
-  # satisfies a required status check); changes fails or the run is
-  # cancelled mid-PR → run (fail closed), except a genuine cancellation
-  # short-circuits via !cancelled().
+  # satisfies a required status check); changes fails → run (fail closed).
+  # On a genuine cancellation the working jobs short-circuit via
+  # !cancelled(), and `test` still runs and fails.
   unit:
     name: Unit tests (shard ${{ matrix.shard }}/3)
     needs: [changes]
@@ -907,9 +913,15 @@ jobs:
     # The required check. Branch protection matches on this `name:`, so it
     # stays "Run Tests"; the matrix job above is deliberately named
     # differently, because a matrix job reports as "<name> (<n>)" and would
-    # not satisfy the check. Same `if:` as the jobs above (see the comment
-    # there): with no code changes it is skipped together with them.
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    # not satisfy the check. Same condition as the jobs above (see the
+    # comment there): with no code changes it is skipped together with them.
+    #
+    # Opens with always(), not !cancelled(). This job waits for every other
+    # test job, so a cancellation during that wait would otherwise stop it
+    # from starting, and a skipped required check satisfies branch
+    # protection. With always() it still runs after a cancellation, finds a
+    # test job that is not `success`, and fails.
+    if: ${{ always() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
