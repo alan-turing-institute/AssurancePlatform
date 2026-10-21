@@ -1,6 +1,9 @@
 import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
 import { AppError, validationError } from "@/lib/errors";
-import { parseCronDryRunQuery } from "@/lib/schemas/cron-dry-run";
+import {
+	describeQueryIssue,
+	parseCronDryRunQuery,
+} from "@/lib/schemas/cron-dry-run";
 import { requireCronSecret } from "@/lib/services/cron-auth";
 import { runRetentionSweep } from "@/lib/services/retention-service";
 
@@ -37,15 +40,7 @@ export async function POST(request: Request) {
 
 		const query = parseCronDryRunQuery(new URL(request.url).searchParams);
 		if (!query.success) {
-			const issue = query.error.issues[0];
-			const field = issue?.path.join(".");
-			return apiError(
-				validationError(
-					field
-						? `${field} ${issue?.message}`
-						: (issue?.message ?? "Invalid query")
-				)
-			);
+			return apiError(validationError(describeQueryIssue(query.error)));
 		}
 		const { dryRun } = query.data;
 

@@ -32,6 +32,18 @@ export function queryInputFromSearchParams(searchParams: URLSearchParams) {
 	);
 }
 
+/**
+ * The message a cron route returns with its 400 when the query is refused:
+ * the first issue, named by the parameter it concerns when it has one.
+ */
+export function describeQueryIssue(error: z.ZodError): string {
+	const issue = error.issues[0];
+	const field = issue?.path.join(".");
+	return field
+		? `${field} ${issue?.message}`
+		: (issue?.message ?? "Invalid query");
+}
+
 /** Checks a request's query string against the shared dry-run schema. */
 export function parseCronDryRunQuery(searchParams: URLSearchParams) {
 	return cronDryRunQuerySchema.safeParse(

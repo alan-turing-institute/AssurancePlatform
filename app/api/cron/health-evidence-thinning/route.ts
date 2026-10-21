@@ -1,5 +1,6 @@
 import { apiError, apiErrorFromUnknown, apiSuccess } from "@/lib/api-response";
 import { AppError, validationError } from "@/lib/errors";
+import { describeQueryIssue } from "@/lib/schemas/cron-dry-run";
 import { parseHealthEvidenceThinningQuery } from "@/lib/schemas/health-evidence-thinning";
 import { requireCronSecret } from "@/lib/services/cron-auth";
 import { thinHealthEvidence } from "@/lib/services/health-evidence-service";
@@ -48,15 +49,7 @@ export async function POST(request: Request) {
 			new URL(request.url).searchParams
 		);
 		if (!query.success) {
-			const issue = query.error.issues[0];
-			const field = issue?.path.join(".");
-			return apiError(
-				validationError(
-					field
-						? `${field} ${issue?.message}`
-						: (issue?.message ?? "Invalid query")
-				)
-			);
+			return apiError(validationError(describeQueryIssue(query.error)));
 		}
 		const { dryRun } = query.data;
 
