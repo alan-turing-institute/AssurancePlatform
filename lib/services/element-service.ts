@@ -596,7 +596,13 @@ async function generateDefeaterPropertyClaimName(
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
 		parentInfo.isDefeater &&
-		parentInfo.name
+		parentInfo.name &&
+		validateElementName(
+			parentInfo.elementType,
+			parentInfo.name,
+			[],
+			parentInfo.isDefeater
+		).valid
 	) {
 		const siblingCount = await db.assuranceElement.count({
 			where: {
@@ -651,7 +657,13 @@ async function generatePlainPropertyClaimName(
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
 		!parentInfo.isDefeater &&
-		parentInfo.name
+		parentInfo.name &&
+		validateElementName(
+			parentInfo.elementType,
+			parentInfo.name,
+			[],
+			parentInfo.isDefeater
+		).valid
 	) {
 		const siblingCount = await db.assuranceElement.count({
 			where: {
@@ -685,7 +697,8 @@ async function generatePlainPropertyClaimName(
 			if (
 				ancestor?.elementType === "PROPERTY_CLAIM" &&
 				!ancestor.isDefeater &&
-				ancestor.name
+				ancestor.name &&
+				validateElementName(ancestor.elementType, ancestor.name).valid
 			) {
 				const strategyChildren = await db.assuranceElement.findMany({
 					where: {
