@@ -6,9 +6,9 @@ import { flattenNestedToFlat } from "../nested-to-flat";
 /**
  * The export tree (flat rows to nested tree) and the import flattening
  * (nested tree to flat rows) with counter-goals: the root is the ordinary
- * goal whatever the row order, evidence carries its counter-goals into every
- * copy but is never expanded inside itself, and the flattening takes what hangs
- * from a piece of evidence once however many claims repeat it.
+ * goal whatever the row order, evidence carries its counter-goals on its first
+ * copy only and is never expanded inside itself, and the flattening takes what
+ * hangs from a piece of evidence once however many claims repeat it.
  */
 
 function element(
@@ -137,7 +137,7 @@ describe("buildTreeFromElements root-finding", () => {
 });
 
 describe("buildTreeFromElements evidence", () => {
-	it("repeats shared evidence, with its counter-goals, under every claim that links it", () => {
+	it("repeats shared evidence under every claim that links it, with its counter-goals on the first copy only", () => {
 		const e1 = evidence("E1");
 		const cg = counterGoal("CG1", "E1");
 		const support = claim("P3", "CG1");
@@ -154,12 +154,50 @@ describe("buildTreeFromElements evidence", () => {
 
 		const counts = countById(tree);
 		expect(counts.get("E1")).toBe(2);
-		expect(counts.get("CG1")).toBe(2);
-		expect(counts.get("P3")).toBe(2);
-		for (const claimNode of tree.children) {
-			const evidenceNode = claimNode.children.find((c) => c.id === "E1");
-			expect(evidenceNode?.children.map((c) => c.id)).toEqual(["CG1"]);
+		expect(counts.get("CG1")).toBe(1);
+		expect(counts.get("P3")).toBe(1);
+		const copies = nodes(tree).filter((node) => node.id === "E1");
+		expect(copies[0]?.children.map((c) => c.id)).toEqual(["CG1"]);
+		expect(copies[1]?.children).toEqual([]);
+	});
+
+	it("carries the counter-goals on the first copy met walking the tree, whichever way a claim orders its nested claims and evidence", () => {
+		const e1 = evidence("E1");
+		const rows = [
+			element("G1", { role: "TOP_LEVEL" }),
+			claim("P1", "G1", [e1]),
+			claim("P2", "P1", [e1]),
+			e1,
+			counterGoal("CG1", "E1"),
+		];
+
+		const tree = buildTreeFromElements(rows);
+
+		const copies = nodes(tree).filter((node) => node.id === "E1");
+		expect(copies).toHaveLength(2);
+		expect(copies[0]?.children.map((c) => c.id)).toEqual(["CG1"]);
+		expect(copies[1]?.children).toEqual([]);
+	});
+
+	it("keeps a chain of shared evidence and counter-goals in proportion to its length", () => {
+		const levels = 10;
+		const rows: ElementWithLinks[] = [element("G1", { role: "TOP_LEVEL" })];
+		let parentId = "G1";
+		for (let level = 0; level < levels; level += 1) {
+			const shared = evidence(`E${level}`);
+			rows.push(
+				claim(`A${level}`, parentId, [shared]),
+				claim(`B${level}`, parentId, [shared]),
+				shared,
+				counterGoal(`CG${level}`, shared.id)
+			);
+			parentId = `CG${level}`;
 		}
+
+		const tree = buildTreeFromElements(rows);
+
+		// Per level: two claims, two copies of the evidence and one counter-goal.
+		expect(nodes(tree)).toHaveLength(1 + 5 * levels);
 	});
 
 	it("builds only goal defeaters beneath evidence", () => {
@@ -288,6 +326,30 @@ describe("flattenNestedToFlat with evidence that carries counter-goals", () => {
 		expect(byId.get("CG1")?.isDefeater).toBe(true);
 		expect(byId.get("P3")?.parentId).toBe("CG1");
 		expect(byId.get("E1")?.parentId).toBeNull();
+		expect(
+			flat.evidenceLinks
+				.map((link) => `${link.evidenceId}>${link.claimId}`)
+				.sort()
+		).toEqual(["E1>P1", "E1>P2"]);
+	});
+
+	it("finds the children of evidence on its first copy when later copies are leaves", () => {
+		const tree = node("G1", "GOAL", [
+			node("P1", "PROPERTY_CLAIM", [
+				node("E1", "EVIDENCE", [
+					counterNode("CG1", [node("P3", "PROPERTY_CLAIM")]),
+				]),
+			]),
+			node("P2", "PROPERTY_CLAIM", [node("E1", "EVIDENCE")]),
+		]);
+
+		const flat = flattenNestedToFlat(document(tree));
+
+		const ids = flat.elements.map((e) => e.id);
+		expect(ids.sort()).toEqual(["CG1", "E1", "G1", "P1", "P2", "P3"]);
+		const byId = new Map(flat.elements.map((e) => [e.id, e]));
+		expect(byId.get("CG1")?.parentId).toBe("E1");
+		expect(byId.get("P3")?.parentId).toBe("CG1");
 		expect(
 			flat.evidenceLinks
 				.map((link) => `${link.evidenceId}>${link.claimId}`)

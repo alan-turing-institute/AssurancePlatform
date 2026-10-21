@@ -200,7 +200,7 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 		if (!firstAnyRoot) {
 			throw new Error("No root element found (element with parentId = null)");
 		}
-		return buildNode(firstAnyRoot, childrenMap);
+		return buildNode(firstAnyRoot, childrenMap, new Set());
 	}
 
 	// A case has one ordinary root goal. A goal defeater with no parent (stored
@@ -210,7 +210,7 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 	if (!firstRoot) {
 		throw new Error("No root element found");
 	}
-	return buildNode(firstRoot, childrenMap);
+	return buildNode(firstRoot, childrenMap, new Set());
 }
 
 /**
@@ -229,14 +229,42 @@ function isBuiltBeneath(
 }
 
 /**
- * Recursively builds a tree node from an element.
+ * Whether an earlier copy of this piece of evidence has already been built.
+ * Evidence appears under every claim that links it, but what hangs from it is
+ * built with the first copy only; later copies are leaves. Repeating it with
+ * each copy would double the size of the tree at every level of shared
+ * evidence. Records the element as built when it is evidence met for the
+ * first time.
+ */
+function isLaterCopyOfEvidence(
+	element: ElementWithLinks,
+	builtEvidence: Set<string>
+): boolean {
+	if (element.elementType !== "EVIDENCE") {
+		return false;
+	}
+	if (builtEvidence.has(element.id)) {
+		return true;
+	}
+	builtEvidence.add(element.id);
+	return false;
+}
+
+/**
+ * Recursively builds a tree node from an element. The children are built in
+ * the order they are written, so the first copy of a piece of evidence met
+ * walking the finished tree is the one that carries what hangs from it.
  */
 function buildNode(
 	element: ElementWithLinks,
 	childrenMap: Map<string | null, ElementWithLinks[]>,
+	builtEvidence: Set<string>,
 	ancestors: ReadonlySet<string> = new Set()
 ): TreeNode {
-	if (ancestors.has(element.id)) {
+	if (
+		ancestors.has(element.id) ||
+		isLaterCopyOfEvidence(element, builtEvidence)
+	) {
 		return buildCleanNode(element, []);
 	}
 	const nextAncestors = new Set(ancestors);
@@ -246,16 +274,16 @@ function buildNode(
 		isBuiltBeneath(element, child)
 	);
 
+	// Build children nodes recursively
+	const childNodes = directChildren.map((child) =>
+		buildNode(child, childrenMap, builtEvidence, nextAncestors)
+	);
+
 	// Get evidence linked to this element (if it's a claim)
 	const linkedEvidence =
 		element.evidenceLinksTo?.map((link) =>
-			buildNode(link.evidence, childrenMap, nextAncestors)
+			buildNode(link.evidence, childrenMap, builtEvidence, nextAncestors)
 		) ?? [];
-
-	// Build children nodes recursively
-	const childNodes = directChildren.map((child) =>
-		buildNode(child, childrenMap, nextAncestors)
-	);
 
 	return buildCleanNode(element, [...childNodes, ...linkedEvidence]);
 }

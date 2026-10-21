@@ -20,8 +20,8 @@ import { createTestElement, createTestUser } from "../utils/prisma-factories";
  * Export then import must give back the same case: every element once, under
  * the same parent, with the same defeated element and the same evidence links.
  * Counter-goals can hang from evidence, which the export repeats under every
- * claim that links it, so the import has to take what hangs from the evidence
- * once.
+ * claim that links it and expands on its first copy only, so the import has to
+ * find what hangs from the evidence there and take it once.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({

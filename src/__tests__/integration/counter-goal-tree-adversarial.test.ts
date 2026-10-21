@@ -139,13 +139,11 @@ describe.each(TARGETS)("a counter-goal against $label", ({
 
 		const counts = fetchIdCounts(data.goals);
 		expect(counts.get(counterGoal.id)).toBeGreaterThanOrEqual(1);
-		// Shared evidence is drawn under each claim that links it, so its
-		// counter-goal comes with each copy and no more often than that.
-		const copies = counts.get(targetId) ?? 0;
-		expect(counts.get(counterGoal.id)).toBeLessThanOrEqual(copies);
+		// Shared evidence is drawn under each claim that links it, but its
+		// counter-goal comes with one copy only.
+		expect(counts.get(counterGoal.id)).toBe(1);
 		const owners = ownersOf(data.goals, counterGoal.id);
-		expect(owners.length).toBeGreaterThanOrEqual(1);
-		expect(new Set(owners)).toEqual(new Set([targetId]));
+		expect(owners).toEqual([targetId]);
 		// The rest of the argument is untouched.
 		for (const id of [
 			fx.goal.id,
@@ -536,7 +534,7 @@ describe("evidence reused beneath its own counter-goal", () => {
 		}
 	});
 
-	it("repeats shared evidence once per claim that links it and no more", async () => {
+	it("repeats shared evidence once per claim that links it, with its counter-goal on one copy", async () => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);
 		const counterGoal = await addCounterGoal(fx, {
@@ -559,8 +557,8 @@ describe("evidence reused beneath its own counter-goal", () => {
 			["export", exportIdCounts(tree)],
 		] as const) {
 			expect(counts.get(fx.evidenceShared.id), source).toBe(2);
-			expect(counts.get(counterGoal.id), source).toBe(2);
-			expect(counts.get(support.id), source).toBe(2);
+			expect(counts.get(counterGoal.id), source).toBe(1);
+			expect(counts.get(support.id), source).toBe(1);
 			// Nothing else is repeated.
 			for (const id of [
 				fx.goal.id,
@@ -572,5 +570,49 @@ describe("evidence reused beneath its own counter-goal", () => {
 				expect(counts.get(id), `${source} ${id}`).toBe(1);
 			}
 		}
+	});
+
+	it("draws the counter-goal on shared evidence once, attached to the evidence card, with its own support", async () => {
+		const owner = await createTestUser();
+		const fx = await buildArgument(owner.id);
+		const counterGoal = await addCounterGoal(fx, {
+			name: "CG1",
+			description: "counter-goal on the shared evidence",
+			parentId: fx.evidenceShared.id,
+		});
+		const support = await addChild(fx, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P3",
+			description: "claim supporting the counter-goal",
+			parentId: counterGoal.id,
+		});
+
+		const data = await fetchGoals(owner.id, fx.caseId);
+		const { caseNodes, caseEdges } = convertAssuranceCase(
+			data as unknown as Parameters<typeof convertAssuranceCase>[0]
+		);
+
+		const evidenceNodeId = `evidence-${fx.evidenceShared.id}`;
+		const counterGoalNodeId = `goal-${counterGoal.id}`;
+		const supportNodeId = `property-${support.id}`;
+		const counterGoalNodes = caseNodes.filter(
+			(node) => node.id === counterGoalNodeId
+		);
+		expect(counterGoalNodes).toHaveLength(1);
+		expect(counterGoalNodes[0]?.data.attachedTo).toBe(evidenceNodeId);
+		expect(caseNodes.filter((node) => node.id === supportNodeId)).toHaveLength(
+			1
+		);
+		const edgesBetween = (type: string, source: string, target: string) =>
+			caseEdges.filter(
+				(edge) =>
+					edge.type === type && edge.source === source && edge.target === target
+			);
+		expect(
+			edgesBetween("challenges", counterGoalNodeId, evidenceNodeId)
+		).toHaveLength(1);
+		expect(
+			edgesBetween("support", counterGoalNodeId, supportNodeId)
+		).toHaveLength(1);
 	});
 });

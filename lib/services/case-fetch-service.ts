@@ -53,6 +53,13 @@ type CaseElement = CaseWithIncludes["elements"][number];
 interface ElementIndex {
 	childrenByParent: Map<string, CaseElement[]>;
 	/**
+	 * Evidence whose counter-goals have been built. A piece of evidence appears
+	 * under every claim that links it, but what hangs from it is built once;
+	 * later copies are leaves. Repeating it with each copy would double the
+	 * size of the result at every level of shared evidence.
+	 */
+	expandedEvidence: Set<string>;
+	/**
 	 * Counter-goals being built on the current path. Evidence reused beneath a
 	 * counter-goal can lead back to it; it is not expanded again inside itself.
 	 */
@@ -72,7 +79,11 @@ function indexElements(elements: CaseElement[]): ElementIndex {
 			childrenByParent.set(element.parentId, [element]);
 		}
 	}
-	return { childrenByParent, openCounterGoals: new Set() };
+	return {
+		childrenByParent,
+		expandedEvidence: new Set(),
+		openCounterGoals: new Set(),
+	};
 }
 
 function childrenOf(index: ElementIndex, parentId: string): CaseElement[] {
@@ -328,6 +339,23 @@ function buildGoalDefeaters(
 	return goals.length > 0 ? { goals } : {};
 }
 
+/**
+ * Counter-goals beneath a piece of evidence, built on the evidence's first
+ * appearance in the fetch. The canvas draws one card per piece of evidence, so
+ * the counter-goals belong to one copy, and later copies carry none.
+ */
+function buildEvidenceDefeaters(
+	evidenceId: string,
+	index: ElementIndex,
+	citation: CitationContext
+): { goals?: GoalResponse[] } {
+	if (index.expandedEvidence.has(evidenceId)) {
+		return {};
+	}
+	index.expandedEvidence.add(evidenceId);
+	return buildGoalDefeaters(evidenceId, index, citation);
+}
+
 function buildGoalStructure(
 	goal: CaseElement,
 	index: ElementIndex,
@@ -444,7 +472,7 @@ function buildPropertyClaimStructure(
 	const evidence = linkedEvidence
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((ev) => ({
-			...buildGoalDefeaters(ev.id, index, citation),
+			...buildEvidenceDefeaters(ev.id, index, citation),
 			id: ev.id,
 			type: "evidence",
 			name: ev.name ?? "",
