@@ -24,7 +24,12 @@ The workflow works out the current UTC hour once, when a run starts, and sends i
 The thinning route also accepts `dryRun=1` or `dryRun=true`, which makes one call that counts what would be removed and writes nothing.
 It refuses with a 400, and does nothing, a `dryRun` other than `1`, `true`, `0` or `false`, a `now` that is not an ISO 8601 date-time, and any unknown or repeated parameter.
 
-The retention route also accepts `dryRun=1` or `dryRun=true` for a trial run; `0`, `false` or no parameter runs the sweep. Values are case-sensitive. An unrecognised or repeated `dryRun` is refused with 400 and does nothing. It can report `skipped` for an account that cannot be deleted. A dry run does not send warnings or delete accounts.
+The retention route also accepts `dryRun=1` or `dryRun=true` for a trial run; `0`, `false` or no parameter runs the sweep.
+Values are case-sensitive.
+It refuses with a 400, and does nothing, a `dryRun` other than `1`, `true`, `0` or `false`, a repeated `dryRun`, and any other parameter, including the thinning route's `now`.
+The route checks the token before the query, so a request without a valid token gets a 401 whatever its query holds.
+It can report `skipped` for an account that cannot be deleted.
+A dry run does not send warnings or delete accounts.
 
 ## Secure and observe a run
 
