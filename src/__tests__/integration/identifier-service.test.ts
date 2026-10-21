@@ -327,17 +327,21 @@ describe("identifier-service", () => {
 		});
 
 		it("assigns the CG1 prefix to a defeater goal during reset", async () => {
-			// A fresh case with only a defeater GOAL (no plain goal) —
-			// `caseHasGoal`'s single-goal rule counts any GOAL row, defeater
-			// or not, and blocking a second GOAL is a separate, pre-existing
-			// business rule this issue does not change.
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
 			const defeaterGoal = expectSuccess(
 				await createElement(user.id, {
 					caseId: testCase.id,
 					elementType: "goal",
+					parentId: goal.id,
 					isDefeater: true,
+					defeatsElementId: goal.id,
 				})
 			);
 

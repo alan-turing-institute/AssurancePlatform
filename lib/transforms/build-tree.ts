@@ -203,8 +203,10 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 		return buildNode(firstAnyRoot, childrenMap);
 	}
 
-	// Use first root GOAL (cases typically have one)
-	const firstRoot = roots[0];
+	// A case has one ordinary root goal. A goal defeater with no parent (stored
+	// before such goals were refused) never stands in for it, whatever order
+	// the rows come back in.
+	const firstRoot = roots.find((root) => !root.isDefeater) ?? roots[0];
 	if (!firstRoot) {
 		throw new Error("No root element found");
 	}

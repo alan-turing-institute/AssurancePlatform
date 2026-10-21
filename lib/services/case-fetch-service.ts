@@ -551,9 +551,15 @@ export async function fetchCaseFromPrisma(
 	// Transform Prisma data to the expected format
 	// Build the nested structure from flat elements
 	const citation = await buildCitationContext(userId, caseData.elements);
-	const goals = caseData.elements
-		.filter((el) => el.elementType === "GOAL" && el.parentId === null)
-		.map((goal) => buildGoalStructure(goal, caseData.elements, citation));
+	const roots = caseData.elements.filter(
+		(el) => el.elementType === "GOAL" && el.parentId === null
+	);
+	// A goal defeater without a parent (stored before such goals were refused)
+	// never stands in for the case's goal, whatever order the rows come back in.
+	const ordinaryRoots = roots.filter((el) => !el.isDefeater);
+	const goals = (
+		ordinaryRoots.length > 0 ? ordinaryRoots : roots.slice(0, 1)
+	).map((goal) => buildGoalStructure(goal, caseData.elements, citation));
 
 	const permissions = mapPermissionToFrontend(
 		permissionResult.permission,

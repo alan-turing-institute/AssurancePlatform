@@ -1072,6 +1072,10 @@ async function createElementInDatabase(
  * `if`-blocks in createElement) to keep createElement under the
  * cognitive-complexity budget; order is preserved byte-for-byte because nothing
  * here changes which check fires first when more than one would fail.
+ *
+ * A goal defeater (counter-goal) must hang from the element it challenges or
+ * supports, so it is refused without a `parentId`: a parentless goal is a root,
+ * and a case has exactly one root goal.
  */
 async function validateElementReferences(
 	caseId: string,
@@ -1080,6 +1084,10 @@ async function validateElementReferences(
 	input: CreateElementInput,
 	db: TxClient
 ): Promise<{ error: string } | undefined> {
+	if (elementType === "GOAL" && input.isDefeater && !parentId) {
+		return { error: "parentId is required for a goal defeater" };
+	}
+
 	if (parentId) {
 		const parentError = await validateParentIdInCase(caseId, parentId, db);
 		if (parentError) {

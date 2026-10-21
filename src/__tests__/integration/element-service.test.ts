@@ -187,23 +187,85 @@ describe("element-service", () => {
 			});
 		});
 
-		it("accepts a plain top goal when only a defeater goal exists", async () => {
+		it("refuses a GOAL defeater without a parent", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 			expectSuccess(
 				await createElement(user.id, {
 					caseId: testCase.id,
 					elementType: "goal",
-					isDefeater: true,
 				})
 			);
+
+			for (const input of [
+				{ isDefeater: true },
+				{ isDefeater: true, parentId: null },
+			]) {
+				expectError(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "goal",
+						...input,
+					}),
+					"parentId is required for a goal defeater"
+				);
+			}
+			expect(
+				await prisma.assuranceElement.count({
+					where: { caseId: testCase.id, isDefeater: true },
+				})
+			).toBe(0);
+		});
+
+		it("accepts a plain top goal when only a counter-goal remains", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
 			const goal = expectSuccess(
 				await createElement(user.id, {
 					caseId: testCase.id,
 					elementType: "goal",
 				})
 			);
-			expect(goal).toMatchObject({ type: "goal", name: "G1" });
+			const claim = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "property_claim",
+					parentId: goal.id,
+				})
+			);
+			const evidence = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "evidence",
+					parentId: claim.id,
+				})
+			);
+			const counter = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					parentId: evidence.id,
+					isDefeater: true,
+					defeatsElementId: evidence.id,
+				})
+			);
+
+			// Evidence is linked to its claim, not parented to it, so the
+			// counter-goal outlives the top goal.
+			expectSuccess(await deleteElement(user.id, goal.id));
+			const survivor = await prisma.assuranceElement.findUnique({
+				where: { id: counter.id },
+			});
+			expect(survivor?.deletedAt).toBeNull();
+
+			const replacement = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			expect(replacement.type).toBe("goal");
+			expect(replacement.isDefeater).toBeFalsy();
 		});
 
 		it("returns 'Permission denied' when user lacks EDIT permission", async () => {
@@ -1524,19 +1586,22 @@ describe("element-service", () => {
 		});
 
 		it("auto-names a defeater goal CG1", async () => {
-			// A fresh case with no plain GOAL yet: `caseHasGoal`'s single-goal
-			// rule (unrelated to this issue — it counts any GOAL row,
-			// defeater or not) would otherwise block a second GOAL element
-			// regardless of isDefeater, so this proves the CG1 naming path in
-			// isolation rather than attacking an existing goal.
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
 
 			const defeaterGoal = expectSuccess(
 				await createElement(user.id, {
 					caseId: testCase.id,
 					elementType: "goal",
+					parentId: goal.id,
 					isDefeater: true,
+					defeatsElementId: goal.id,
 				})
 			);
 			expect(defeaterGoal.name).toBe("CG1");

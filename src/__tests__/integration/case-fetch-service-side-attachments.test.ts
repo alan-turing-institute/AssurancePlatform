@@ -229,3 +229,37 @@ describe("fetchCaseFromPrisma — AWAY_GOAL/MODULE admission (ADR 0005 D3)", () 
 		expect(defeater?.defeatsElementId).toBe(target.id);
 	});
 });
+
+describe("fetchCaseFromPrisma — counter-goals", () => {
+	it.each([
+		["before", true],
+		["after", false],
+	])("keeps the ordinary goal as the case's goal when a counter-goal with no parent is stored %s it", async (_order, counterFirst) => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const createCounter = () =>
+			createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "CG1",
+				isDefeater: true,
+			});
+		const createRoot = () =>
+			createTestElement(testCase.id, owner.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+		let root: Awaited<ReturnType<typeof createRoot>>;
+		if (counterFirst) {
+			await createCounter();
+			root = await createRoot();
+		} else {
+			root = await createRoot();
+			await createCounter();
+		}
+
+		const data = expectSuccess(
+			await fetchCaseFromPrisma(testCase.id, owner.id)
+		);
+		expect(data.goals?.map((goal) => goal.id)).toEqual([root.id]);
+	});
+});
