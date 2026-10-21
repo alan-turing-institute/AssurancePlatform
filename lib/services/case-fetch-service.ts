@@ -46,6 +46,39 @@ type CaseWithIncludes = Prisma.AssuranceCaseGetPayload<{
 }>;
 type CaseElement = CaseWithIncludes["elements"][number];
 
+/**
+ * A case's live elements grouped by parent, built once per fetch so each
+ * builder reads its children from a lookup instead of scanning every element.
+ */
+interface ElementIndex {
+	childrenByParent: Map<string, CaseElement[]>;
+	/**
+	 * Counter-goals being built on the current path. Evidence reused beneath a
+	 * counter-goal can lead back to it; it is not expanded again inside itself.
+	 */
+	openCounterGoals: Set<string>;
+}
+
+function indexElements(elements: CaseElement[]): ElementIndex {
+	const childrenByParent = new Map<string, CaseElement[]>();
+	for (const element of elements) {
+		if (element.parentId === null) {
+			continue;
+		}
+		const siblings = childrenByParent.get(element.parentId);
+		if (siblings) {
+			siblings.push(element);
+		} else {
+			childrenByParent.set(element.parentId, [element]);
+		}
+	}
+	return { childrenByParent, openCounterGoals: new Set() };
+}
+
+function childrenOf(index: ElementIndex, parentId: string): CaseElement[] {
+	return index.childrenByParent.get(parentId) ?? [];
+}
+
 // ---------------------------------------------------------------------------
 // Away goal / module citation resolution (ADR 0005 D3)
 // ---------------------------------------------------------------------------
@@ -204,14 +237,14 @@ function buildCitedChildren(
 	goalId: string | null,
 	strategyId: string | null,
 	citation: CitationContext,
-	allElements: CaseElement[]
+	index: ElementIndex
 ): { awayGoals: AwayGoalResponse[]; modules: ModuleResponse[] } {
 	const awayGoals = children
 		.filter((el) => el.elementType === "AWAY_GOAL")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((el) => ({
 			...buildAwayGoalStructure(el, goalId, strategyId, citation),
-			...buildGoalDefeaters(el.id, allElements, citation),
+			...buildGoalDefeaters(el.id, index, citation),
 		}));
 
 	const modules = children
@@ -219,7 +252,7 @@ function buildCitedChildren(
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((el) => ({
 			...buildModuleStructure(el, goalId, strategyId, citation),
-			...buildGoalDefeaters(el.id, allElements, citation),
+			...buildGoalDefeaters(el.id, index, citation),
 		}));
 
 	return { awayGoals, modules };
@@ -235,14 +268,14 @@ function buildCitedChildren(
 function buildNestedStrategies(
 	children: CaseElement[],
 	goalId: string | null,
-	allElements: CaseElement[],
+	index: ElementIndex,
 	citation: CitationContext
 ): StrategyResponse[] {
 	return children
 		.filter((el) => el.elementType === "STRATEGY")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((strategy) =>
-			buildStrategyStructure(strategy, allElements, goalId, citation)
+			buildStrategyStructure(strategy, index, goalId, citation)
 		);
 }
 
@@ -275,46 +308,40 @@ function mapPermissionToFrontend(
 /** Preserve nested counter-goals for the canvas's existing defeater attachments. */
 function buildGoalDefeaters(
 	parentId: string,
-	allElements: CaseElement[],
+	index: ElementIndex,
 	citation: CitationContext
 ): { goals?: GoalResponse[] } {
-	const goals = allElements
+	const goals = childrenOf(index, parentId)
 		.filter(
 			(el) =>
-				el.parentId === parentId && el.elementType === "GOAL" && el.isDefeater
+				el.elementType === "GOAL" &&
+				el.isDefeater &&
+				!index.openCounterGoals.has(el.id)
 		)
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((goal) =>
-			buildGoalStructure(
-				goal,
-				// Reused evidence can lead back to this counter-goal. It must
-				// not be expanded again within its own descendants.
-				allElements.filter((el) => el.id !== goal.id),
-				citation
-			)
-		);
+		.map((goal) => {
+			index.openCounterGoals.add(goal.id);
+			const structure = buildGoalStructure(goal, index, citation);
+			index.openCounterGoals.delete(goal.id);
+			return structure;
+		});
 	return goals.length > 0 ? { goals } : {};
 }
 
 function buildGoalStructure(
 	goal: CaseElement,
-	allElements: CaseElement[],
+	index: ElementIndex,
 	citation: CitationContext
 ): GoalResponse {
-	const children = allElements.filter((el) => el.parentId === goal.id);
+	const children = childrenOf(index, goal.id);
 
-	const strategies = buildNestedStrategies(
-		children,
-		goal.id,
-		allElements,
-		citation
-	);
+	const strategies = buildNestedStrategies(children, goal.id, index, citation);
 
 	const propertyClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((claim) =>
-			buildPropertyClaimStructure(claim, allElements, goal.id, null, citation)
+			buildPropertyClaimStructure(claim, index, goal.id, null, citation)
 		);
 
 	// ADR 0005 D3: AWAY_GOAL and MODULE are admitted wherever PROPERTY_CLAIM
@@ -324,11 +351,11 @@ function buildGoalStructure(
 		goal.id,
 		null,
 		citation,
-		allElements
+		index
 	);
 
 	return {
-		...buildGoalDefeaters(goal.id, allElements, citation),
+		...buildGoalDefeaters(goal.id, index, citation),
 		id: goal.id,
 		type: "goal",
 		name: goal.name ?? "",
@@ -358,23 +385,17 @@ function buildGoalStructure(
 
 function buildStrategyStructure(
 	strategy: CaseElement,
-	allElements: CaseElement[],
+	index: ElementIndex,
 	goalId: string | null,
 	citation: CitationContext
 ): StrategyResponse {
-	const children = allElements.filter((el) => el.parentId === strategy.id);
+	const children = childrenOf(index, strategy.id);
 
 	const propertyClaims = children
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((claim) =>
-			buildPropertyClaimStructure(
-				claim,
-				allElements,
-				null,
-				strategy.id,
-				citation
-			)
+			buildPropertyClaimStructure(claim, index, null, strategy.id, citation)
 		);
 
 	// ADR 0005 D3: AWAY_GOAL and MODULE admitted wherever PROPERTY_CLAIM is.
@@ -383,11 +404,11 @@ function buildStrategyStructure(
 		null,
 		strategy.id,
 		citation,
-		allElements
+		index
 	);
 
 	return {
-		...buildGoalDefeaters(strategy.id, allElements, citation),
+		...buildGoalDefeaters(strategy.id, index, citation),
 		id: strategy.id,
 		type: "strategy",
 		name: strategy.name ?? "",
@@ -409,12 +430,12 @@ function buildStrategyStructure(
 
 function buildPropertyClaimStructure(
 	claim: CaseElement,
-	allElements: CaseElement[],
+	index: ElementIndex,
 	goalId: string | null,
 	strategyId: string | null,
 	citation: CitationContext
 ): PropertyClaimResponse {
-	const children = allElements.filter((el) => el.parentId === claim.id);
+	const children = childrenOf(index, claim.id);
 
 	// Get evidence from EvidenceLink table (evidence uses many-to-many links, not parentId)
 	const linkedEvidence =
@@ -423,7 +444,7 @@ function buildPropertyClaimStructure(
 	const evidence = linkedEvidence
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((ev) => ({
-			...buildGoalDefeaters(ev.id, allElements, citation),
+			...buildGoalDefeaters(ev.id, index, citation),
 			id: ev.id,
 			type: "evidence",
 			name: ev.name ?? "",
@@ -443,13 +464,13 @@ function buildPropertyClaimStructure(
 		.filter((el) => el.elementType === "PROPERTY_CLAIM")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((nested) =>
-			buildPropertyClaimStructure(nested, allElements, null, null, citation)
+			buildPropertyClaimStructure(nested, index, null, null, citation)
 		);
 
 	const nestedStrategies = buildNestedStrategies(
 		children,
 		null,
-		allElements,
+		index,
 		citation
 	);
 
@@ -459,11 +480,11 @@ function buildPropertyClaimStructure(
 		null,
 		null,
 		citation,
-		allElements
+		index
 	);
 
 	return {
-		...buildGoalDefeaters(claim.id, allElements, citation),
+		...buildGoalDefeaters(claim.id, index, citation),
 		id: claim.id,
 		type: "property_claim",
 		name: claim.name ?? "",
@@ -551,6 +572,7 @@ export async function fetchCaseFromPrisma(
 	// Transform Prisma data to the expected format
 	// Build the nested structure from flat elements
 	const citation = await buildCitationContext(userId, caseData.elements);
+	const index = indexElements(caseData.elements);
 	const roots = caseData.elements.filter(
 		(el) => el.elementType === "GOAL" && el.parentId === null
 	);
@@ -559,7 +581,7 @@ export async function fetchCaseFromPrisma(
 	const ordinaryRoots = roots.filter((el) => !el.isDefeater);
 	const goals = (
 		ordinaryRoots.length > 0 ? ordinaryRoots : roots.slice(0, 1)
-	).map((goal) => buildGoalStructure(goal, caseData.elements, citation));
+	).map((goal) => buildGoalStructure(goal, index, citation));
 
 	const permissions = mapPermissionToFrontend(
 		permissionResult.permission,
