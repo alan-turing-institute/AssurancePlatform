@@ -215,6 +215,31 @@ describe("changing a goal with POST /api/cases/[id]/batch", () => {
 			changes: () => [newGoalChange({}, null)],
 			status: 409,
 		},
+		{
+			label:
+				"updating the top goal twice, which would leave a parentless counter-goal",
+			changes: ({ fx }: Fixture) => [
+				{
+					type: "update",
+					elementId: fx.goal.id,
+					data: { isDefeater: true, parentId: fx.evidenceOne.id },
+				},
+				{ type: "update", elementId: fx.goal.id, data: { parentId: null } },
+			],
+			status: 400,
+		},
+		{
+			label: "updating and deleting one counter-goal",
+			changes: ({ counterGoal }: Fixture) => [
+				{
+					type: "update",
+					elementId: counterGoal.id,
+					data: { description: "edited" },
+				},
+				{ type: "delete", elementId: counterGoal.id },
+			],
+			status: 400,
+		},
 	])("refuses $label", async ({ changes, status }) => {
 		const setUp = await buildCaseWithCounterGoal();
 		const before = await storedGoals(setUp.fx.caseId);
@@ -223,6 +248,51 @@ describe("changing a goal with POST /api/cases/[id]/batch", () => {
 
 		expect(response.status).toBe(status);
 		expect(await storedGoals(setUp.fx.caseId)).toEqual(before);
+	});
+
+	it("lets the top goal and a counter-goal change places in one batch", async () => {
+		const { fx, counterGoal } = await buildCaseWithCounterGoal();
+
+		const response = await postBatch(fx.caseId, [
+			{
+				type: "update",
+				elementId: fx.goal.id,
+				data: { isDefeater: true, parentId: fx.evidenceOne.id },
+			},
+			{
+				type: "update",
+				elementId: counterGoal.id,
+				data: { isDefeater: false, parentId: null },
+			},
+		]);
+
+		expect(response.status).toBe(200);
+		const ordinary = await prisma.assuranceElement.findMany({
+			where: { caseId: fx.caseId, elementType: "GOAL", isDefeater: false },
+		});
+		expect(ordinary.map((goal) => goal.id)).toEqual([counterGoal.id]);
+	});
+
+	it("refuses that change of places when the batch also creates an ordinary goal", async () => {
+		const { fx, counterGoal } = await buildCaseWithCounterGoal();
+		const before = await storedGoals(fx.caseId);
+
+		const response = await postBatch(fx.caseId, [
+			{
+				type: "update",
+				elementId: fx.goal.id,
+				data: { isDefeater: true, parentId: fx.evidenceOne.id },
+			},
+			{
+				type: "update",
+				elementId: counterGoal.id,
+				data: { isDefeater: false, parentId: null },
+			},
+			newGoalChange({}, null),
+		]);
+
+		expect(response.status).toBe(409);
+		expect(await storedGoals(fx.caseId)).toEqual(before);
 	});
 
 	it("judges the goals as the batch leaves them", async () => {
@@ -251,13 +321,13 @@ describe("importing a file with goal rows", () => {
 		};
 	}
 
-	function flatFile(elements: unknown[]) {
+	function flatFile(elements: unknown[], evidenceLinks: unknown[] = []) {
 		return {
 			version: "2.0",
 			exportedAt: new Date().toISOString(),
 			case: { name: "Imported", description: "" },
 			elements,
-			evidenceLinks: [],
+			evidenceLinks,
 		};
 	}
 

@@ -39,6 +39,9 @@ import type {
 
 const log = logger.child({ component: "case-batch-update-service" });
 
+/** The refusal of a batch that changes one element more than once. */
+const ELEMENT_CHANGED_ONCE = "A batch can change an element only once";
+
 /** The answer, flagged as a conflict, when another person's change to the case got in first. */
 const CASE_MODIFIED = "Case has been modified by another user";
 
@@ -451,8 +454,33 @@ async function validateGoalChanges(
 }
 
 /**
- * Every check of the values a batch writes into element fields: the element
- * names, the named context entries, then the goal rules.
+ * A batch can change an element once: in one update, or in one delete. The
+ * checks of the goal rules judge each change against the stored element, so
+ * two changes to one element would each pass and together break a rule. The
+ * JSON editor never repeats an element, so a batch that does is refused
+ * instead of merged.
+ */
+function validateEachElementChangedOnce(
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): string | null {
+	const seen = new Set<string>();
+	for (const change of updates) {
+		if (seen.has(change.elementId)) {
+			return `${ELEMENT_CHANGED_ONCE} (element ${change.elementId})`;
+		}
+		seen.add(change.elementId);
+	}
+	const deletedToo = deletes.find((change) => seen.has(change.elementId));
+	return deletedToo
+		? `${ELEMENT_CHANGED_ONCE} (element ${deletedToo.elementId})`
+		: null;
+}
+
+/**
+ * Every check of the values a batch writes into element fields: that no
+ * element is changed twice, the element names, the named context entries, then
+ * the goal rules.
  */
 async function validateElementFields(
 	userId: string,
@@ -462,6 +490,7 @@ async function validateElementFields(
 	deletes: DeleteChange[]
 ): Promise<string | null> {
 	return (
+		validateEachElementChangedOnce(updates, deletes) ??
 		(await validateElementNames(userId, creates, updates)) ??
 		(await validateContextEntries(caseId, creates, updates, deletes)) ??
 		(await validateGoalChanges(caseId, creates, updates, deletes))

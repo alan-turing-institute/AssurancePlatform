@@ -253,7 +253,13 @@ const ERROR_MAPPINGS: Array<{
 	// validation failure (400), not a 500.
 	{ pattern: /^parentId /, factory: () => validationError("") },
 	// A second ordinary goal in a case is a state conflict (409), not a 500.
-	{ pattern: /^A case can only have one goal claim/, factory: conflict },
+	{ pattern: /^A case can only have one goal claim$/, factory: conflict },
+	// `case-batch-update-service.ts`: a batch that updates an element twice, or
+	// updates and deletes it, is a validation failure (400), not a 500.
+	{
+		pattern: /^A batch can change an element only once/,
+		factory: () => validationError(""),
+	},
 	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
 	// element-name prefix validation): a name that doesn't match its type's
 	// registered prefix format is a validation failure (400), not a 500.
