@@ -6,6 +6,10 @@ import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import { resetIdentifiers } from "@/lib/services/identifier-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
+import {
+	isGoalDefeater,
+	leftOutBeneathEvidenceWarning,
+} from "@/lib/transforms/build-tree";
 import { Prisma } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-import-service" });
@@ -118,6 +122,91 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
 // ---------------------------------------------------------------------------
 
 /**
+ * What a flat file holds beneath evidence that the nested format would leave
+ * out: every element whose parent is evidence and which is not a counter-goal,
+ * with what hangs from it by parent, and evidence that supports only elements
+ * left out.
+ */
+function findLeftOutBeneathEvidence(
+	file: CaseExportV2,
+	warnings: string[]
+): Set<string> {
+	const evidenceIds = new Set(
+		file.elements
+			.filter((element) => element.elementType === "EVIDENCE")
+			.map((element) => element.id)
+	);
+	const left = new Set<string>();
+	for (const element of file.elements) {
+		const hangsFromEvidence =
+			element.parentId !== null &&
+			element.parentId !== undefined &&
+			evidenceIds.has(element.parentId);
+		if (
+			hangsFromEvidence &&
+			!isGoalDefeater(element.elementType, element.isDefeater)
+		) {
+			left.add(element.id);
+			warnings.push(leftOutBeneathEvidenceWarning(element.name));
+		}
+	}
+	let grew = left.size > 0;
+	while (grew) {
+		const before = left.size;
+		for (const element of file.elements) {
+			if (!left.has(element.id) && isLeftOutWith(element, file, left)) {
+				left.add(element.id);
+			}
+		}
+		grew = left.size > before;
+	}
+	return left;
+}
+
+/**
+ * Whether an element goes with what a file leaves out: its parent was left
+ * out, or it is evidence whose every link is to an element left out.
+ */
+function isLeftOutWith(
+	element: ElementV2,
+	file: CaseExportV2,
+	left: Set<string>
+): boolean {
+	if (element.parentId && left.has(element.parentId)) {
+		return true;
+	}
+	if (element.elementType !== "EVIDENCE") {
+		return false;
+	}
+	const links = file.evidenceLinks.filter(
+		(link) => link.evidenceId === element.id
+	);
+	return links.length > 0 && links.every((link) => left.has(link.claimId));
+}
+
+/**
+ * Applies to a flat file the rule the nested format already follows: only
+ * counter-goals hang from evidence. What does not is left out and named in
+ * `warnings`.
+ */
+function leaveOutBeneathEvidence(
+	file: CaseExportV2,
+	warnings: string[]
+): CaseExportV2 {
+	const left = findLeftOutBeneathEvidence(file, warnings);
+	if (left.size === 0) {
+		return file;
+	}
+	return {
+		...file,
+		elements: file.elements.filter((element) => !left.has(element.id)),
+		evidenceLinks: file.evidenceLinks.filter(
+			(link) => !(left.has(link.claimId) || left.has(link.evidenceId))
+		),
+	};
+}
+
+/**
  * The goal rules the element routes apply, checked on the rows of a file: a
  * goal defeater (counter-goal) needs a parent that is part of the file, and a
  * case has one ordinary goal. One message per offending row, in the
@@ -185,7 +274,7 @@ async function processImportData(data: unknown): Promise<{
 		);
 		v2Data = flattenNestedToFlat(result.data, warnings);
 	} else {
-		v2Data = result.data as CaseExportV2;
+		v2Data = leaveOutBeneathEvidence(result.data as CaseExportV2, warnings);
 	}
 
 	const contextProblem = checkContextEntriesForCase(

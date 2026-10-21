@@ -14,7 +14,7 @@ import type {
 	EvidenceLinkV2,
 	TreeNode,
 } from "../schemas/case-export";
-import { isGoalDefeater } from "./build-tree";
+import { isGoalDefeater, leftOutBeneathEvidenceWarning } from "./build-tree";
 
 /**
  * Context object for flattening operations.
@@ -180,9 +180,7 @@ function flattenEvidenceChildren(
 		if (isGoalDefeater(child.type, child.isDefeater)) {
 			flattenNode(child, evidenceId, ctx);
 		} else {
-			ctx.warnings.push(
-				`${child.name ?? "element"}: only counter-goals can hang from evidence; the element has been left out`
-			);
+			ctx.warnings.push(leftOutBeneathEvidenceWarning(child.name));
 		}
 	}
 }

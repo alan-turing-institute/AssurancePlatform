@@ -225,6 +225,16 @@ export function isGoalDefeater(
 }
 
 /**
+ * The warning for an element left out of an import because it hangs from a
+ * piece of evidence and is not a counter-goal.
+ */
+export function leftOutBeneathEvidenceWarning(
+	name: string | null | undefined
+): string {
+	return `${name ?? "element"}: only counter-goals can hang from evidence; the element has been left out`;
+}
+
+/**
  * Whether a child is drawn beneath its parent. Beneath a piece of evidence
  * only goal defeaters (counter-goals) are, as on the diagram; everything else
  * hangs from a claim, strategy or goal.

@@ -375,6 +375,66 @@ describe("importing a file with goal rows", () => {
 		).toBe(0);
 	});
 
+	it("keeps only counter-goals beneath evidence in a flat file too, and says what it left out", async () => {
+		const owner = await createTestUser();
+		const ids = {
+			goal: crypto.randomUUID(),
+			claim: crypto.randomUUID(),
+			evidence: crypto.randomUUID(),
+			counter: crypto.randomUUID(),
+			stray: crypto.randomUUID(),
+			strayEvidence: crypto.randomUUID(),
+		};
+		const row = (
+			id: string,
+			elementType: string,
+			name: string,
+			parentId: string | null,
+			extra: Record<string, unknown> = {}
+		) => ({
+			id,
+			elementType,
+			name,
+			parentId,
+			description: `${elementType} ${name}`,
+			inSandbox: false,
+			...extra,
+		});
+		const file = flatFile(
+			[
+				row(ids.goal, "GOAL", "G1", null),
+				row(ids.claim, "PROPERTY_CLAIM", "P1", ids.goal),
+				row(ids.evidence, "EVIDENCE", "E1", null),
+				row(ids.counter, "GOAL", "CG1", ids.evidence, { isDefeater: true }),
+				row(ids.stray, "PROPERTY_CLAIM", "P9", ids.evidence),
+				row(ids.strayEvidence, "EVIDENCE", "E9", null),
+			],
+			[
+				{ evidenceId: ids.evidence, claimId: ids.claim },
+				{ evidenceId: ids.strayEvidence, claimId: ids.stray },
+			]
+		);
+
+		const result = await importCase(owner.id, file);
+
+		if ("error" in result) {
+			throw new Error(result.error);
+		}
+		expect(result.data.warnings).toEqual([
+			expect.stringContaining("P9: only counter-goals can hang from evidence"),
+		]);
+		const stored = await prisma.assuranceElement.findMany({
+			where: { caseId: result.data.caseId },
+		});
+		expect(stored.map((element) => element.name).sort()).toEqual([
+			"CG1",
+			"E1",
+			"G1",
+			"P1",
+		]);
+		expect(result.data.evidenceLinkCount).toBe(1);
+	});
+
 	it("keeps only counter-goals beneath evidence in a nested file, and says what it left out", async () => {
 		const owner = await createTestUser();
 		const ids = {
