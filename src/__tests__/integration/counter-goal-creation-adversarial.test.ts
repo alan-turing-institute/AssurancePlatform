@@ -326,4 +326,20 @@ describe("counter-goal creation through the elements route", () => {
 		expect(stored.defeatsElementId).toBe(fx.claim.id);
 		expect(stored.elementType).toBe("GOAL");
 	});
+
+	it("answers 409 with the reason for a second ordinary goal", async () => {
+		const owner = await createTestUser();
+		const fx = await buildArgument(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postElement(fx.caseId, {
+			type: "goal",
+			description: "second ordinary goal",
+		});
+
+		expect(response.status).toBe(409);
+		const body = await response.json();
+		expect(body.error).toBe("A case can only have one goal claim");
+		expect(await liveGoals(fx.caseId)).toHaveLength(1);
+	});
 });
