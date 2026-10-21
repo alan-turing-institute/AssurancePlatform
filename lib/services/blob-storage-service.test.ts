@@ -182,3 +182,44 @@ describe("saveFile backend selection", () => {
 		);
 	});
 });
+
+describe("configured Azure with USE_LOCAL_STORAGE=true", () => {
+	it("still uploads to Azure through both uploadToBlob and saveFile", async () => {
+		vi.stubEnv("NODE_ENV", "production");
+		vi.stubEnv("USE_LOCAL_STORAGE", "true");
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", "test-account");
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", "test-key");
+		vi.mocked(azureUploadBlob).mockResolvedValue(true);
+		const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+		const file = new File([Uint8Array.from(png)], "screenshot.png", {
+			type: "image/png",
+		});
+		file.arrayBuffer = async () => Uint8Array.from(png).buffer;
+		const blobKey = "images/azure-first.png";
+
+		expect(await uploadToBlob(png, blobKey)).toEqual({
+			data: { key: blobKey },
+		});
+		const saved = await saveFile(file, "screenshots");
+
+		expect(saved).toHaveProperty("data.key");
+		if (!("data" in saved)) {
+			throw new Error(saved.error);
+		}
+		expect(azureUploadBlob).toHaveBeenCalledTimes(2);
+		expect(azureUploadBlob).toHaveBeenNthCalledWith(
+			1,
+			blobKey,
+			png,
+			"image/png"
+		);
+		expect(azureUploadBlob).toHaveBeenNthCalledWith(
+			2,
+			saved.data.key,
+			png,
+			"image/png"
+		);
+		expect(existsSync(join(uploadsDir, blobKey))).toBe(false);
+		expect(existsSync(join(uploadsDir, saved.data.key))).toBe(false);
+	});
+});
