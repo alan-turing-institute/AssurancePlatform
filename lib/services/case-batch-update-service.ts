@@ -23,7 +23,9 @@ import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
+	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
+	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
 	validateCitedElementId,
 } from "@/lib/services/element-service";
@@ -317,9 +319,140 @@ async function validateContextEntries(
 	return checkContextEntriesForCase(finalContext.values()) ?? null;
 }
 
+/** A goal as it is stored, before a batch changes it. */
+interface StoredGoal {
+	isDefeater: boolean;
+	parentId: string | null;
+}
+
+/**
+ * The id of the first goal defeater (counter-goal) the batch leaves without a
+ * parent: one it creates that way, or one it clears the parent of or makes a
+ * counter-goal while it has none. Goals the batch does not move or re-flag are
+ * not looked at.
+ */
+function findParentlessGoalDefeater(
+	goalCreates: CreateChange[],
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>
+): string | undefined {
+	const created = goalCreates.find(
+		(change) => change.data.isDefeater && !change.parentId
+	);
+	if (created) {
+		return created.elementId;
+	}
+	return movedUpdates.find((change) => {
+		const stored = storedById.get(change.elementId);
+		if (!stored) {
+			return false;
+		}
+		const parentId =
+			change.data.parentId === undefined
+				? stored.parentId
+				: change.data.parentId;
+		return (change.data.isDefeater ?? stored.isDefeater) && !parentId;
+	})?.elementId;
+}
+
+/**
+ * Whether the batch leaves the case with more than one ordinary goal. It only
+ * looks when the batch adds one, as a new ordinary goal or as a counter-goal
+ * made ordinary; the goals that count are those stored and not deleted or made
+ * counter-goals by the batch.
+ */
+async function leavesSecondOrdinaryGoal(
+	caseId: string,
+	goalCreates: CreateChange[],
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>,
+	deletes: DeleteChange[]
+): Promise<boolean> {
+	const madeOrdinary = movedUpdates.filter(
+		(change) =>
+			change.data.isDefeater === false &&
+			storedById.get(change.elementId)?.isDefeater === true
+	);
+	const added =
+		goalCreates.filter((change) => !change.data.isDefeater).length +
+		madeOrdinary.length;
+	if (added === 0) {
+		return false;
+	}
+	const leaving = new Set([
+		...deletes.map((change) => change.elementId),
+		...movedUpdates
+			.filter((change) => change.data.isDefeater === true)
+			.map((change) => change.elementId),
+	]);
+	const ordinary = await prisma.assuranceElement.findMany({
+		where: {
+			caseId,
+			elementType: "GOAL",
+			isDefeater: false,
+			deletedAt: null,
+		},
+		select: { id: true },
+	});
+	return ordinary.filter((goal) => !leaving.has(goal.id)).length + added > 1;
+}
+
+/**
+ * The goal rules, as the single-element create and update routes apply them:
+ * a goal defeater (counter-goal) has a parent, and a case has one ordinary
+ * goal. Judged on the goals as the batch leaves them.
+ */
+async function validateGoalChanges(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	const goalCreates = creates.filter(
+		(change) => mapElementType(change.data.type) === "GOAL"
+	);
+	const movedUpdates = updates.filter(
+		(change) =>
+			change.data.isDefeater !== undefined || change.data.parentId !== undefined
+	);
+	if (goalCreates.length === 0 && movedUpdates.length === 0) {
+		return null;
+	}
+
+	const storedGoals =
+		movedUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: {
+						id: { in: movedUpdates.map((change) => change.elementId) },
+						elementType: "GOAL",
+					},
+					select: { id: true, isDefeater: true, parentId: true },
+				})
+			: [];
+	const storedById = new Map(storedGoals.map((goal) => [goal.id, goal]));
+
+	const parentless = findParentlessGoalDefeater(
+		goalCreates,
+		movedUpdates,
+		storedById
+	);
+	if (parentless) {
+		return `${GOAL_DEFEATER_NEEDS_PARENT} (element ${parentless})`;
+	}
+	return (await leavesSecondOrdinaryGoal(
+		caseId,
+		goalCreates,
+		movedUpdates,
+		storedById,
+		deletes
+	))
+		? ONE_GOAL_PER_CASE
+		: null;
+}
+
 /**
  * Every check of the values a batch writes into element fields: the element
- * names, then the named context entries.
+ * names, the named context entries, then the goal rules.
  */
 async function validateElementFields(
 	userId: string,
@@ -330,7 +463,8 @@ async function validateElementFields(
 ): Promise<string | null> {
 	return (
 		(await validateElementNames(userId, creates, updates)) ??
-		(await validateContextEntries(caseId, creates, updates, deletes))
+		(await validateContextEntries(caseId, creates, updates, deletes)) ??
+		(await validateGoalChanges(caseId, creates, updates, deletes))
 	);
 }
 

@@ -14,6 +14,7 @@ import type {
 	EvidenceLinkV2,
 	TreeNode,
 } from "../schemas/case-export";
+import { isGoalDefeater } from "./build-tree";
 
 /**
  * Context object for flattening operations.
@@ -25,6 +26,8 @@ interface FlattenContext {
 	evidenceMap: Map<string, string>;
 	/** Ids of evidence nodes whose children have already been flattened. */
 	walkedEvidence: Set<string>;
+	/** What the flattening left out of the file, one message each. */
+	warnings: string[];
 }
 
 /**
@@ -35,17 +38,22 @@ interface FlattenContext {
  * - Multiple EvidenceLink records are created for multi-linked evidence
  * - What hangs from a piece of evidence (counter-goals and their support) is
  *   flattened once per evidence id, however many claims repeat the node
+ * - Anything else hanging from evidence is left out, and a message for it is
+ *   added to `warnings`
  *
  * @param nestedCase - The nested export to flatten
+ * @param warnings - Receives one message for each node left out
  * @returns Flat format with elements and evidenceLinks arrays
  */
 export function flattenNestedToFlat(
-	nestedCase: CaseExportNested
+	nestedCase: CaseExportNested,
+	warnings: string[] = []
 ): CaseExportV2 {
 	const ctx: FlattenContext = {
 		elements: [],
 		evidenceLinks: [],
 		evidenceMap: new Map<string, string>(),
+		warnings,
 		walkedEvidence: new Set<string>(),
 	};
 
@@ -158,6 +166,28 @@ function extractContextFromChildren(children: TreeNode[]): {
 }
 
 /**
+ * Flattens what hangs from a piece of evidence. Only goal defeaters
+ * (counter-goals) do, as in the export and the case fetch; any other child
+ * would be stored but drawn nowhere, so it is left out with its descendants and
+ * reported.
+ */
+function flattenEvidenceChildren(
+	evidence: TreeNode,
+	evidenceId: string,
+	ctx: FlattenContext
+): void {
+	for (const child of evidence.children) {
+		if (isGoalDefeater(child.type, child.isDefeater)) {
+			flattenNode(child, evidenceId, ctx);
+		} else {
+			ctx.warnings.push(
+				`${child.name ?? "element"}: only counter-goals can hang from evidence; the element has been left out`
+			);
+		}
+	}
+}
+
+/**
  * Recursively flattens a tree node into elements and evidence links.
  *
  * @param node - Current tree node to process
@@ -195,9 +225,7 @@ function flattenNode(
 		// flat format, so the children are taken from the first copy met.
 		if (!ctx.walkedEvidence.has(node.id)) {
 			ctx.walkedEvidence.add(node.id);
-			for (const child of node.children) {
-				flattenNode(child, evidenceId, ctx);
-			}
+			flattenEvidenceChildren(node, evidenceId, ctx);
 		}
 		return;
 	}

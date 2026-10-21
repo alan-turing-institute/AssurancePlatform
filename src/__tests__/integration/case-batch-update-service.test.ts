@@ -197,14 +197,14 @@ describe("applyBatchUpdate", () => {
 			{
 				type: "create",
 				elementId: newId,
-				parentId: null,
+				parentId: toUpdate.id,
 				data: {
 					id: newId,
 					type: "GOAL",
-					name: "G1",
+					name: "CG1",
 					description: "Created in mixed batch",
 					inSandbox: false,
-					role: "TOP_LEVEL",
+					isDefeater: true,
 				},
 			},
 			{
@@ -229,7 +229,7 @@ describe("applyBatchUpdate", () => {
 		const created = await prisma.assuranceElement.findUnique({
 			where: { id: newId },
 		});
-		expect(created?.name).toBe("G1");
+		expect(created?.name).toBe("CG1");
 
 		const updated = await prisma.assuranceElement.findUnique({
 			where: { id: toUpdate.id },
@@ -1909,10 +1909,10 @@ describe("applyBatchUpdate", () => {
 				data: {
 					id,
 					type: "GOAL",
-					name: `G${i + 1}`,
+					name: `CG${i + 1}`,
 					description: "batched create",
 					inSandbox: false,
-					role: "SUPPORTING",
+					isDefeater: true,
 				},
 			}));
 

@@ -248,10 +248,12 @@ const ERROR_MAPPINGS: Array<{
 	// self-reference target) is a validation failure (400), not a 500 —
 	// same shape as citedElementId/moduleReferenceId above.
 	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
-	// `element-service.ts`'s `validateElementReferences`: a goal defeater
-	// created without a `parentId` would be a second root goal — a validation
-	// failure (400), not a 500.
+	// `element-service.ts`'s goal rules, on create, update and the batch editor:
+	// a goal defeater without a `parentId` would be a second root goal — a
+	// validation failure (400), not a 500.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// A second ordinary goal in a case is a state conflict (409), not a 500.
+	{ pattern: /^A case can only have one goal claim/, factory: conflict },
 	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
 	// element-name prefix validation): a name that doesn't match its type's
 	// registered prefix format is a validation failure (400), not a 500.

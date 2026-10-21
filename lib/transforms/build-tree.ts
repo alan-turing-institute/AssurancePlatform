@@ -214,6 +214,17 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 }
 
 /**
+ * Whether an element is a goal defeater (counter-goal), the only kind of
+ * element that hangs from a piece of evidence.
+ */
+export function isGoalDefeater(
+	elementType: string,
+	isDefeater: boolean | undefined
+): boolean {
+	return elementType === "GOAL" && isDefeater === true;
+}
+
+/**
  * Whether a child is drawn beneath its parent. Beneath a piece of evidence
  * only goal defeaters (counter-goals) are, as on the diagram; everything else
  * hangs from a claim, strategy or goal.
@@ -224,7 +235,7 @@ function isBuiltBeneath(
 ): boolean {
 	return (
 		parent.elementType !== "EVIDENCE" ||
-		(child.elementType === "GOAL" && child.isDefeater)
+		isGoalDefeater(child.elementType, child.isDefeater)
 	);
 }
 

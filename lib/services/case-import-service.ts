@@ -118,6 +118,38 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
 // ---------------------------------------------------------------------------
 
 /**
+ * The goal rules the element routes apply, checked on the rows of a file: a
+ * goal defeater (counter-goal) needs a parent that is part of the file, and a
+ * case has one ordinary goal. One message per offending row, in the
+ * "path: message" form the schema errors use.
+ */
+function checkGoalRules(elements: ElementV2[]): string[] {
+	const ids = new Set(elements.map((element) => element.id));
+	const problems: string[] = [];
+	let ordinaryGoals = 0;
+	elements.forEach((element, index) => {
+		if (element.elementType !== "GOAL") {
+			return;
+		}
+		if (element.isDefeater) {
+			if (!(element.parentId && ids.has(element.parentId))) {
+				problems.push(
+					`elements.${index}.parentId: a goal defeater needs a parent that is part of the file`
+				);
+			}
+			return;
+		}
+		ordinaryGoals += 1;
+		if (ordinaryGoals > 1) {
+			problems.push(
+				`elements.${index}.elementType: a case can only have one goal claim`
+			);
+		}
+	});
+	return problems;
+}
+
+/**
  * Validates and transforms imported JSON data.
  * Returns v2 format data regardless of input version.
  *
@@ -125,7 +157,8 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
  * writes context as it finds it and does not go through the checks the element
  * routes make, so a repeated name or id has to be caught before anything is
  * written. An import makes a new case, so the ids only have to be unique
- * within the file.
+ * within the file. The goal rules are checked in the same place, for the same
+ * reason.
  */
 async function processImportData(data: unknown): Promise<{
 	success: boolean;
@@ -145,11 +178,12 @@ async function processImportData(data: unknown): Promise<{
 
 	// If nested, flatten to flat format; otherwise it is already v2
 	let v2Data: CaseExportV2;
+	const warnings: string[] = [];
 	if (result.version === "nested") {
 		const { flattenNestedToFlat } = await import(
 			"@/lib/transforms/nested-to-flat"
 		);
-		v2Data = flattenNestedToFlat(result.data);
+		v2Data = flattenNestedToFlat(result.data, warnings);
 	} else {
 		v2Data = result.data as CaseExportV2;
 	}
@@ -161,7 +195,12 @@ async function processImportData(data: unknown): Promise<{
 		return { success: false, warnings: [], errors: [contextProblem] };
 	}
 
-	return { success: true, data: v2Data, warnings: [] };
+	const goalProblems = checkGoalRules(v2Data.elements);
+	if (goalProblems.length > 0) {
+		return { success: false, warnings: [], errors: goalProblems };
+	}
+
+	return { success: true, data: v2Data, warnings };
 }
 
 /**
