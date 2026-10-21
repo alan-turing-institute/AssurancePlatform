@@ -161,6 +161,51 @@ describe("element-service", () => {
 			);
 		});
 
+		it("accepts a GOAL defeater while the case has a top goal", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const counter = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					parentId: goal.id,
+					isDefeater: true,
+					defeatsElementId: goal.id,
+				})
+			);
+			expect(counter).toMatchObject({
+				type: "goal",
+				name: "CG1",
+				isDefeater: true,
+				defeatsElementId: goal.id,
+			});
+		});
+
+		it("accepts a plain top goal when only a defeater goal exists", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+					isDefeater: true,
+				})
+			);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			expect(goal).toMatchObject({ type: "goal", name: "G1" });
+		});
+
 		it("returns 'Permission denied' when user lacks EDIT permission", async () => {
 			const owner = await createTestUser();
 			const viewer = await createTestUser();

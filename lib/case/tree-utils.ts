@@ -28,20 +28,24 @@ const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
 	}
 	if (caseNode.type === "goal") {
 		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
-			(caseNode.strategies || []) as unknown as CaseNode[]
+			(caseNode.strategies || []) as unknown as CaseNode[],
+			(caseNode.goals || []) as unknown as CaseNode[]
 		);
 	}
 	if (caseNode.type === "strategy") {
-		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
+		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
+			(caseNode.goals || []) as unknown as CaseNode[]
+		);
 	}
 	if (caseNode.type === "property_claim") {
 		return ((caseNode.strategies || []) as unknown as CaseNode[]).concat(
 			(caseNode.propertyClaims || []) as unknown as CaseNode[],
-			(caseNode.evidence || []) as unknown as CaseNode[]
+			(caseNode.evidence || []) as unknown as CaseNode[],
+			(caseNode.goals || []) as unknown as CaseNode[]
 		);
 	}
 
-	return [];
+	return (caseNode.goals || []) as unknown as CaseNode[];
 };
 
 /**
@@ -406,7 +410,7 @@ const processChildrenForHiddenStatus = (
 			hiddenStatus.push((child as { hidden: boolean }).hidden);
 		}
 		// Recursively check nested property claims and strategies
-		if (key === "propertyClaims" || key === "strategies") {
+		if (key === "propertyClaims" || key === "strategies" || key === "goals") {
 			const nestedStatus = getChildrenHiddenStatus(
 				child as NestedArrayItem | AssuranceCaseResponse
 			);
@@ -422,7 +426,13 @@ function getChildrenHiddenStatus(
 	element: NestedArrayItem | AssuranceCaseResponse
 ): boolean[] {
 	const hiddenStatus: boolean[] = [];
-	const childrenKeys = ["propertyClaims", "strategies", "evidence", "comments"];
+	const childrenKeys = [
+		"goals",
+		"propertyClaims",
+		"strategies",
+		"evidence",
+		"comments",
+	];
 
 	for (const key of childrenKeys) {
 		const children = getChildrenByKey(element, key);

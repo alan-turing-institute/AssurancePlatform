@@ -947,8 +947,7 @@ export async function regenerateNameForIsDefeaterChange(
 }
 
 /**
- * Checks if a case already has a goal element.
- * Returns true if a goal exists, false otherwise.
+ * Checks if a case already has a live, non-defeater goal element.
  */
 async function caseHasGoal(
 	caseId: string,
@@ -958,6 +957,7 @@ async function caseHasGoal(
 		where: {
 			caseId,
 			elementType: "GOAL",
+			isDefeater: false,
 			deletedAt: null,
 		},
 		select: { id: true },
@@ -1087,7 +1087,11 @@ async function validateElementReferences(
 		}
 	}
 
-	if (elementType === "GOAL" && (await caseHasGoal(caseId, db))) {
+	if (
+		elementType === "GOAL" &&
+		!input.isDefeater &&
+		(await caseHasGoal(caseId, db))
+	) {
 		return { error: "A case can only have one goal claim" };
 	}
 

@@ -24,6 +24,7 @@ export interface ConvertibleItem {
 	defeatsElementId?: string | null;
 	description?: string;
 	evidence?: EvidenceResponse[];
+	goals?: GoalResponse[];
 	hidden?: boolean;
 	id: string;
 	isDefeater?: boolean;
@@ -167,6 +168,20 @@ const processChildNodes = (
 	isDemo = false
 ): Node[] => {
 	const childNodes: Node[] = [];
+
+	// Nested goals are counter-goals; their target attachment is applied after conversion.
+	if (item.goals && Array.isArray(item.goals) && item.goals.length > 0) {
+		childNodes.push(
+			...createNodesRecursively(
+				item.goals as unknown as ConvertibleItem[],
+				"goal",
+				node,
+				processedItems,
+				effectiveDepth - 1,
+				isDemo
+			)
+		);
+	}
 
 	// Process strategies
 	if (

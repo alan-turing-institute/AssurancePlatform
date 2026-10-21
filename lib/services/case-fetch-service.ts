@@ -203,17 +203,24 @@ function buildCitedChildren(
 	children: CaseElement[],
 	goalId: string | null,
 	strategyId: string | null,
-	citation: CitationContext
+	citation: CitationContext,
+	allElements: CaseElement[]
 ): { awayGoals: AwayGoalResponse[]; modules: ModuleResponse[] } {
 	const awayGoals = children
 		.filter((el) => el.elementType === "AWAY_GOAL")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildAwayGoalStructure(el, goalId, strategyId, citation));
+		.map((el) => ({
+			...buildAwayGoalStructure(el, goalId, strategyId, citation),
+			...buildGoalDefeaters(el.id, allElements, citation),
+		}));
 
 	const modules = children
 		.filter((el) => el.elementType === "MODULE")
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
-		.map((el) => buildModuleStructure(el, goalId, strategyId, citation));
+		.map((el) => ({
+			...buildModuleStructure(el, goalId, strategyId, citation),
+			...buildGoalDefeaters(el.id, allElements, citation),
+		}));
 
 	return { awayGoals, modules };
 }
@@ -265,6 +272,30 @@ function mapPermissionToFrontend(
 	}
 }
 
+/** Preserve nested counter-goals for the canvas's existing defeater attachments. */
+function buildGoalDefeaters(
+	parentId: string,
+	allElements: CaseElement[],
+	citation: CitationContext
+): { goals?: GoalResponse[] } {
+	const goals = allElements
+		.filter(
+			(el) =>
+				el.parentId === parentId && el.elementType === "GOAL" && el.isDefeater
+		)
+		.sort((a, b) => compareIdentifiers(a.name, b.name))
+		.map((goal) =>
+			buildGoalStructure(
+				goal,
+				// Reused evidence can lead back to this counter-goal. It must
+				// not be expanded again within its own descendants.
+				allElements.filter((el) => el.id !== goal.id),
+				citation
+			)
+		);
+	return goals.length > 0 ? { goals } : {};
+}
+
 function buildGoalStructure(
 	goal: CaseElement,
 	allElements: CaseElement[],
@@ -292,10 +323,12 @@ function buildGoalStructure(
 		children,
 		goal.id,
 		null,
-		citation
+		citation,
+		allElements
 	);
 
 	return {
+		...buildGoalDefeaters(goal.id, allElements, citation),
 		id: goal.id,
 		type: "goal",
 		name: goal.name ?? "",
@@ -349,10 +382,12 @@ function buildStrategyStructure(
 		children,
 		null,
 		strategy.id,
-		citation
+		citation,
+		allElements
 	);
 
 	return {
+		...buildGoalDefeaters(strategy.id, allElements, citation),
 		id: strategy.id,
 		type: "strategy",
 		name: strategy.name ?? "",
@@ -388,6 +423,7 @@ function buildPropertyClaimStructure(
 	const evidence = linkedEvidence
 		.sort((a, b) => compareIdentifiers(a.name, b.name))
 		.map((ev) => ({
+			...buildGoalDefeaters(ev.id, allElements, citation),
 			id: ev.id,
 			type: "evidence",
 			name: ev.name ?? "",
@@ -422,10 +458,12 @@ function buildPropertyClaimStructure(
 		children,
 		null,
 		null,
-		citation
+		citation,
+		allElements
 	);
 
 	return {
+		...buildGoalDefeaters(claim.id, allElements, citation),
 		id: claim.id,
 		type: "property_claim",
 		name: claim.name ?? "",

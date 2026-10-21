@@ -216,19 +216,26 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
  */
 function buildNode(
 	element: ElementWithLinks,
-	childrenMap: Map<string | null, ElementWithLinks[]>
+	childrenMap: Map<string | null, ElementWithLinks[]>,
+	ancestors: ReadonlySet<string> = new Set()
 ): TreeNode {
+	if (ancestors.has(element.id)) {
+		return buildCleanNode(element, []);
+	}
+	const nextAncestors = new Set(ancestors);
+	nextAncestors.add(element.id);
 	// Get direct children (via parentId relationship)
 	const directChildren = childrenMap.get(element.id) ?? [];
 
 	// Get evidence linked to this element (if it's a claim)
 	const linkedEvidence =
-		element.evidenceLinksTo?.map((link) => buildCleanNode(link.evidence, [])) ??
-		[];
+		element.evidenceLinksTo?.map((link) =>
+			buildNode(link.evidence, childrenMap, nextAncestors)
+		) ?? [];
 
 	// Build children nodes recursively
 	const childNodes = directChildren.map((child) =>
-		buildNode(child, childrenMap)
+		buildNode(child, childrenMap, nextAncestors)
 	);
 
 	return buildCleanNode(element, [...childNodes, ...linkedEvidence]);
