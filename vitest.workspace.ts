@@ -85,7 +85,8 @@ export default defineConfig({
 						// pathname is discarded per-worker. Defaults to the dedicated
 						// `postgres-test` container (docker-compose.local.yml, port 5433,
 						// fsync=off) — CI overrides via DATABASE_URL_INTEGRATION_BASE
-						// (build.yaml) to keep using its own single service container.
+						// (the `integration` job in build.yaml) to keep using its own single
+						// service container.
 						DATABASE_URL:
 							process.env.DATABASE_URL_INTEGRATION_BASE ??
 							"postgresql://tea_user:tea_password@localhost:5433/tea_test",
