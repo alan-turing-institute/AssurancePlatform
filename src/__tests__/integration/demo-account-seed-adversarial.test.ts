@@ -15,6 +15,7 @@ import {
 import { isPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { TOUR_IDS } from "@/lib/tours";
 import {
+	DEMO_FIXTURES,
 	type DemoAccountValues,
 	seedDemoAccount,
 } from "@/prisma/seed/demo-account-seed";
@@ -31,7 +32,9 @@ import {
 	type DemoSecrets,
 	findLeak,
 	fixtureClaimId,
+	fixtureElementIds,
 	fixtureElements,
+	fixtureEvidenceCount,
 	healthTableNames,
 	makeSecrets,
 	runDemoEntryPoint,
@@ -83,6 +86,11 @@ vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
 beforeEach(async () => {
 	await mockNoAuth();
 });
+
+/** The listed fixtures other than Bluebird. */
+const SHOWCASE_FIXTURES = DEMO_FIXTURES.filter(
+	(fixture) => fixture.caseId !== DEMO_CASE_ID
+);
 
 function valuesOf(secrets: DemoSecrets): DemoAccountValues {
 	return {
@@ -136,7 +144,11 @@ describe("the demo account the seed creates", () => {
 	it("reports the fixed case id and the user can log in by username or by email, and only with exactly the password", async () => {
 		const { result, secrets, user } = await seeded();
 
-		expect(result).toEqual({ status: "created", caseId: DEMO_CASE_ID });
+		expect(result).toEqual({
+			status: "created",
+			caseId: DEMO_CASE_ID,
+			showcaseCases: SHOWCASE_FIXTURES,
+		});
 		expect(await authenticateWithPrisma("demo", secrets.password)).toEqual({
 			id: user.id,
 			name: "demo",
@@ -191,8 +203,8 @@ describe("the demo account the seed creates", () => {
 		const { user } = await seeded();
 
 		const found = await prisma.assuranceCase.findMany();
-		expect(found).toHaveLength(1);
-		expect(found[0]).toMatchObject({
+		expect(found).toHaveLength(DEMO_FIXTURES.length);
+		expect(found.find((row) => row.id === DEMO_CASE_ID)).toMatchObject({
 			id: "c557f324-f2a8-41cd-87c5-6a662fefff9f",
 			createdById: user.id,
 			name: "Bluebird Demo Assurance Case",
@@ -336,7 +348,7 @@ describe("the demo account the seed creates", () => {
 		).toBe(false);
 	});
 
-	it("creates no check list, accepted check or evidence", async () => {
+	it("creates no check list, accepted check or evidence result, and no evidence item the fixtures do not hold", async () => {
 		await seeded();
 
 		const tables = await healthTableNames();
@@ -349,7 +361,7 @@ describe("the demo account the seed creates", () => {
 			await prisma.assuranceElement.count({
 				where: { elementType: "EVIDENCE" },
 			})
-		).toBe(0);
+		).toBe(fixtureEvidenceCount(DEMO_FIXTURES.map((fixture) => fixture.file)));
 	});
 
 	it("lets the pipeline publish checks with the shared token, offers them for the case's claims, and takes the claim's accepted settings and a result back", async () => {
@@ -455,7 +467,6 @@ describe("when the user demo already exists", () => {
 	it("comes back with the same case id, claim ids and token after the data is wiped and the seed runs again", async () => {
 		const secrets = makeSecrets();
 		await seeded(secrets);
-		const idsBefore = [...fixtureElements().keys()].sort();
 		await prisma.$executeRawUnsafe(
 			"TRUNCATE TABLE users, assurance_cases, integrations, api_tokens, plugin_state CASCADE"
 		);
@@ -463,12 +474,20 @@ describe("when the user demo already exists", () => {
 
 		const again = await seeded(secrets);
 
-		expect(again.result).toEqual({ status: "created", caseId: DEMO_CASE_ID });
-		const stored = await prisma.assuranceElement.findMany({
-			where: { caseId: DEMO_CASE_ID },
-			select: { id: true },
+		expect(again.result).toEqual({
+			status: "created",
+			caseId: DEMO_CASE_ID,
+			showcaseCases: SHOWCASE_FIXTURES,
 		});
-		expect(stored.map((row) => row.id).sort()).toEqual(idsBefore);
+		for (const { file, caseId } of DEMO_FIXTURES) {
+			const stored = await prisma.assuranceElement.findMany({
+				where: { caseId },
+				select: { id: true },
+			});
+			expect(stored.map((row) => row.id).sort()).toEqual(
+				fixtureElementIds(file)
+			);
+		}
 		expect(
 			"data" in
 				(await validateApiToken({
@@ -493,6 +512,11 @@ describe("the entry point run as its own process", () => {
 		expect(first.stdout).toContain(
 			`demo account ready: case id=${DEMO_CASE_ID}`
 		);
+		for (const { file, caseId } of SHOWCASE_FIXTURES) {
+			expect(first.stdout).toContain(
+				`showcase case ready: case id=${caseId} file=${file}`
+			);
+		}
 		expect(findLeak(first.output, allSecretValues(env))).toBeNull();
 		const user = await prisma.user.findUniqueOrThrow({
 			where: { username: "demo" },
@@ -510,6 +534,7 @@ describe("the entry point run as its own process", () => {
 
 		expect(second.code).toBe(0);
 		expect(second.output).not.toContain("demo account ready");
+		expect(second.output).not.toContain("showcase case ready");
 		expect(findLeak(second.output, allSecretValues(env))).toBeNull();
 		expect(await snapshotDatabase()).toEqual(before);
 	}, 180_000);
