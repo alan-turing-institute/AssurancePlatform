@@ -5,20 +5,20 @@
  * Health plugins on, the cases listed in `DEMO_FIXTURES`, an OpenRouter model
  * connection and a machine integration whose token the DARTER pipeline is
  * configured with. The integration is granted the Bluebird case only. It
- * attaches no checks to the cases and records no evidence; whoever runs the
- * demo adds those.
+ * attaches no checks to the cases and records no evidence results; whoever
+ * runs the demo adds those.
  *
  * The Bluebird case is imported first, then the model connection and the
  * integration (with its token and grant) are created, and the showcase cases
  * are imported last, in list order.
  *
  * It expects a freshly reset database. If the `demo` user already exists it
- * changes nothing. A list with no Bluebird entry is refused before anything
- * is written. A run that fails part-way leaves what it had written: when a
- * showcase file is broken, the account holds the user, the plugins, the
- * Bluebird case, the connection, the integration with its token and grant,
- * and the showcase cases listed before the broken file, and the seed fails
- * naming that file. The next reset removes the account.
+ * changes nothing. A list that does not hold exactly one Bluebird entry is
+ * refused before anything is written. A run that fails part-way leaves what
+ * it had written: when a showcase file is broken, the account holds the user,
+ * the plugins, the Bluebird case, the connection, the integration with its
+ * token and grant, and the showcase cases listed before the broken file, and
+ * the seed fails naming that file. The next reset removes the account.
  *
  * `readDemoAccountValues` checks the environment without touching the
  * database. The modules that open a connection when they load are imported
@@ -79,9 +79,9 @@ export interface DemoFixture {
 
 /**
  * The cases the demo account holds, each under its own fixed id. The Bluebird
- * entry must stay: the pipeline integration is granted that case, and only
- * that case, and it is imported before the others. Every other entry is a
- * showcase case, imported in this order. To add one, put its file in
+ * entry must stay, once: the pipeline integration is granted that case, and
+ * only that case, and it is imported before the others. Every other entry is
+ * a showcase case, imported in this order. To add one, put its file in
  * `prisma/seed/fixtures/` and add an entry here.
  */
 export const DEMO_FIXTURES: readonly DemoFixture[] = [
@@ -299,17 +299,26 @@ async function importDemoCases(
 
 /**
  * Separates the Bluebird entry from the showcase entries, which keep their
- * list order. A list with no Bluebird entry is refused, because the pipeline
- * integration is granted that case.
+ * list order. A list without exactly one Bluebird entry is refused, because
+ * the pipeline integration is granted that case and two entries would import
+ * it twice under one id.
  */
 function splitBluebird(fixtures: readonly DemoFixture[]): {
 	bluebird: DemoFixture;
 	showcases: DemoFixture[];
 } {
-	const bluebird = fixtures.find((fixture) => fixture.caseId === DEMO_CASE_ID);
+	const bluebirds = fixtures.filter(
+		(fixture) => fixture.caseId === DEMO_CASE_ID
+	);
+	const [bluebird] = bluebirds;
 	if (!bluebird) {
 		throw new DemoSeedError(
 			`The Bluebird case is missing from the demo case list: no entry has the case id ${DEMO_CASE_ID}`
+		);
+	}
+	if (bluebirds.length > 1) {
+		throw new DemoSeedError(
+			`The Bluebird case is in the demo case list more than once: ${bluebirds.map((fixture) => fixture.file).join(", ")} all have the case id ${DEMO_CASE_ID}`
 		);
 	}
 	return {
