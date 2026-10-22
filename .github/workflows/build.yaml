@@ -4,8 +4,8 @@ name: Build
 #
 # The `structural-quality` job below (required check "Structural Quality
 # (blocking)") audits against coverage MERGED from the unit suite AND the
-# integration suite (see the `test` job's "Run integration tests" / "Merge
-# unit + integration coverage" steps), so integration-only-tested functions
+# integration suite (see the `integration` job and the `coverage` job's
+# "Merge unit + integration coverage" step), so integration-only-tested functions
 # (routes/services, per the testing-trophy convention in CLAUDE.md) score
 # real coverage instead of a false 0%.
 #
@@ -32,9 +32,9 @@ name: Build
 #   # Unit coverage (same command/env as pnpm test:coverage:check)
 #   COVERAGE=true pnpm exec vitest run --coverage
 #
-#   # Integration coverage — needs a real Postgres; see build.yaml's `test`
-#   # job for the service-container env vars (DATABASE_URL, tea_test/tea_dev,
-#   # migrations, seed) if running this outside CI.
+#   # Integration coverage — needs a real Postgres; see build.yaml's
+#   # `integration` job for the service-container env vars (DATABASE_URL,
+#   # tea_test/tea_dev) if running this outside CI.
 #   COVERAGE=true pnpm exec vitest run --config vitest.workspace.ts \
 #     --project integration --coverage \
 #     --coverage.reportsDirectory=coverage-integration
@@ -43,7 +43,7 @@ name: Build
 #   # Sanitize first: vitest's v8-coverage provider can emit negative hit
 #   # counts under the integration project's multi-fork pool, which fallow's
 #   # coverage parser hard-errors on (expects u32) — see the "Merge unit +
-#   # integration coverage" step in the `test` job for the sanitize script;
+#   # integration coverage" step in the `coverage` job for the sanitize script;
 #   # run the same script here before nyc merge.
 #   mkdir -p coverage-merge-input coverage-merged
 #   cp coverage/coverage-final.json coverage-merge-input/unit.json
@@ -93,19 +93,35 @@ on:
       - "content/**"
       - "e2e/**"
       - "src/__tests__/**"
-      - "theme.config.tsx"
+      - "providers/**"
+      - "store/**"
+      - "config/**"
+      - "patches/**"
+      - "public/**"
+      - "lint-rules/**"
       - "mdx-components.tsx"
+      - "proxy*.ts"
+      - "prisma.config.ts"
+      - "source.config.ts"
+      - "postcss.config.js"
       - "playwright.config.ts"
       - "vitest.config.ts"
       - "vitest.workspace.ts"
       - "package.json"
       - ".releaserc.json"
       - "pnpm-lock.yaml"
+      - ".pnpmrc.json"
       - "Dockerfile"
+      - ".dockerignore"
+      - ".gitignore"
       - "types/**"
       - "next.config.*"
+      - "next.openapi.json"
       - "tsconfig.json"
       - "biome.json"
+      - ".a11y-baseline.json"
+      - ".fallow-baseline*.json"
+      - ".fallowrc.json"
       - ".github/workflows/**"
 
 env:
@@ -120,7 +136,7 @@ jobs:
   changes:
     name: Detect code-relevant changes
     # Runs on EVERY event, unfiltered — not just pull_request. Two reasons:
-    # 1. `test` (below) declares `needs: [changes]`. Per GitHub's docs and
+    # 1. The test jobs (below) declare `needs: [changes]`. Per GitHub's docs and
     #    actions/runner#2205, a dependent job is skipped when a needed job is
     #    skipped UNLESS the dependent's `if:` contains a status-check function
     #    (always()/!cancelled()/etc). Community reports on the exact trigger
@@ -156,19 +172,35 @@ jobs:
               - "content/**"
               - "e2e/**"
               - "src/__tests__/**"
-              - "theme.config.tsx"
+              - "providers/**"
+              - "store/**"
+              - "config/**"
+              - "patches/**"
+              - "public/**"
+              - "lint-rules/**"
               - "mdx-components.tsx"
+              - "proxy*.ts"
+              - "prisma.config.ts"
+              - "source.config.ts"
+              - "postcss.config.js"
               - "playwright.config.ts"
               - "vitest.config.ts"
               - "vitest.workspace.ts"
               - "package.json"
               - ".releaserc.json"
               - "pnpm-lock.yaml"
+              - ".pnpmrc.json"
               - "Dockerfile"
+              - ".dockerignore"
+              - ".gitignore"
               - "types/**"
               - "next.config.*"
+              - "next.openapi.json"
               - "tsconfig.json"
               - "biome.json"
+              - ".a11y-baseline.json"
+              - ".fallow-baseline*.json"
+              - ".fallowrc.json"
               - ".github/workflows/**"
 
   validate:
@@ -230,32 +262,134 @@ jobs:
             exit 1
           fi
 
-  test:
-    name: Run Tests
+  # --- Test jobs ---
+  #
+  # `unit` (three shards), `integration` and `e2e` run in parallel; none reads
+  # another's output. `coverage` merges the unit shard reports with the
+  # integration coverage once both have finished, and `test` ("Run Tests", the
+  # required check) reports the combined verdict. `structural-quality` and
+  # `docker-build` read only `needs.test.result`.
+  #
+  # All five jobs share one condition. `changes` runs on every event and is
+  # never skipped, so the way `needs` propagates a skip (a dependent job is
+  # skipped when a needed job is skipped UNLESS its `if:` holds a
+  # status-check function; GitHub docs and actions/runner#2205, where
+  # community reports on the exact trigger conditions are contradictory)
+  # cannot bite either way. Each `if:` still opens with a status function
+  # rather than depend on that reasoning. For `coverage` and `test` it
+  # matters: a failed or skipped test job must not skip them silently. They
+  # run, and fail, or the shared condition skips them together with the rest.
+  #
+  # The four working jobs open with `!cancelled()`. `test` opens with
+  # always() instead (see its comment), so after a cancellation it reaches its
+  # result step and fails on any test job that is not `success`. A cancelled
+  # `unit`, `integration`, `e2e` or `coverage` job therefore fails "Run
+  # Tests", and `coverage` needs no always() of its own.
+  #
+  # Fail CLOSED: `!cancelled()` means this only skips evaluation if the
+  # workflow run itself is being cancelled. `needs.changes.result !=
+  # 'success'` covers `changes` failing or erroring (e.g. paths-filter
+  # throwing on a malformed PR diff) — in that case `needs.changes.outputs.
+  # code` would be empty/undefined, and we must NOT silently skip tests
+  # behind a green required check, so this clause runs tests instead.
+  # `needs.changes.outputs.code == 'true'` is the normal path: push/
+  # workflow_dispatch always get code=true from `changes`; PRs get the
+  # paths-filter's real answer. Net effect: push/dispatch → run; PR
+  # touching code paths → run; config-only PR → changes succeeds with
+  # code=false → every test job SKIPPED, including "Run Tests" (skipped still
+  # satisfies a required status check); changes fails → run (fail closed).
+  # On a genuine cancellation the working jobs short-circuit via
+  # !cancelled(), and `test` still runs and fails.
+  unit:
+    name: Unit tests (shard ${{ matrix.shard }}/3)
     needs: [changes]
-    # `changes` now runs unconditionally (see its own comment), so it is never
-    # itself skipped — the skip-propagation subtlety documented there
-    # (GitHub docs + actions/runner#2205; community reports are contradictory
-    # on the precise trigger conditions) cannot bite this job either way, but
-    # we still write this `if:` defensively with an explicit status function
-    # rather than depend on that reasoning holding.
-    #
-    # Fail CLOSED: `!cancelled()` means this only skips evaluation if the
-    # workflow run itself is being cancelled. `needs.changes.result !=
-    # 'success'` covers `changes` failing or erroring (e.g. paths-filter
-    # throwing on a malformed PR diff) — in that case `needs.changes.outputs.
-    # code` would be empty/undefined, and we must NOT silently skip tests
-    # behind a green required check, so this clause runs tests instead.
-    # `needs.changes.outputs.code == 'true'` is the normal path: push/
-    # workflow_dispatch always get code=true from `changes`; PRs get the
-    # paths-filter's real answer. Net effect: push/dispatch → run; PR
-    # touching code paths → run; config-only PR → changes succeeds with
-    # code=false → SKIPPED (skipped still satisfies a required status
-    # check); changes fails or the run is cancelled mid-PR → run (fail
-    # closed), except a genuine cancellation short-circuits via !cancelled().
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    strategy:
+      # Let every shard finish so a run reports all of its failures at once.
+      fail-fast: false
+      matrix:
+        # The shard count is repeated in the job name, in the --shard
+        # argument below and in the blob check of the `coverage` job; change
+        # them together.
+        shard: [1, 2, 3]
+
+    # The unit suite mocks the database and never connects to one; Prisma
+    # only needs DATABASE_URL to be set.
+    env:
+      DATABASE_URL: postgresql://tea_user:tea_password@localhost:5432/tea_test
+      NEXTAUTH_SECRET: test-secret-for-ci-only
+      NEXTAUTH_URL: http://localhost:3000
+      USE_LOCAL_STORAGE: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Prisma Client
+        uses: actions/cache@v6
+        id: prisma-cache-unit
+        with:
+          path: src/generated/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma', 'pnpm-lock.yaml') }}
+
+      - name: Generate Prisma client
+        if: steps.prisma-cache-unit.outputs.cache-hit != 'true'
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      - name: Run unit tests (shard ${{ matrix.shard }}/3)
+        # The blob reporter writes this shard's results and raw coverage to
+        # vitest-blob/, a visible folder because upload-artifact skips hidden
+        # ones. --outputFile overrides the CI default in vitest.config.ts,
+        # which would otherwise send the blob to test-results/.
+        # SKIP_COVERAGE_THRESHOLDS turns the coverage floors off: a shard sees
+        # only part of the suite, so the `coverage` job enforces the floors
+        # on the merged report instead. --coverage.reporter=json leaves out
+        # the HTML report: nothing uploads it, and the blob carries the data.
+        run: |
+          pnpm exec vitest run \
+            --coverage \
+            --coverage.reporter=json \
+            --shard=${{ matrix.shard }}/3 \
+            --reporter=default \
+            --reporter=blob \
+            --outputFile=vitest-blob/blob-${{ matrix.shard }}-3.json
+        env:
+          COVERAGE: "true"
+          SKIP_COVERAGE_THRESHOLDS: "true"
+
+      - name: Upload unit test blob report
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-blob-${{ matrix.shard }}
+          path: vitest-blob/
+          retention-days: 14
+          if-no-files-found: error
+
+  integration:
+    name: Integration tests
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     services:
       postgres:
@@ -290,7 +424,6 @@ jobs:
       INTEGRATION_TEST_ADMIN_DATABASE_URL: postgresql://tea_user:tea_password@localhost:5432/tea_dev
       NEXTAUTH_SECRET: test-secret-for-ci-only
       NEXTAUTH_URL: http://localhost:3000
-      SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
       USE_LOCAL_STORAGE: "true"
 
     steps:
@@ -370,13 +503,13 @@ jobs:
 
       - name: Cache Prisma Client
         uses: actions/cache@v6
-        id: prisma-cache-test
+        id: prisma-cache-integration
         with:
           path: src/generated/prisma
           key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma', 'pnpm-lock.yaml') }}
 
       - name: Generate Prisma client
-        if: steps.prisma-cache-test.outputs.cache-hit != 'true'
+        if: steps.prisma-cache-integration.outputs.cache-hit != 'true'
         run: npx prisma generate --schema=prisma/schema.prisma
 
       - name: Create tea_dev database
@@ -386,131 +519,131 @@ jobs:
           PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "SELECT 1 FROM pg_database WHERE datname = 'tea_dev'" | grep -q 1 \
             || PGPASSWORD=tea_password createdb -h localhost -U tea_user tea_dev
 
-      - name: Run migrations
-        run: npx prisma migrate deploy --schema=prisma/schema.prisma
-
-      - name: Check migrations match schema
-        run: npx prisma migrate diff --from-config-datasource --to-schema=prisma/schema.prisma --exit-code
-
-      - name: Seed database
-        run: npx tsx prisma/seed/dev-seed.ts
-
-      - name: Run unit tests with coverage
-        # Enforces the vitest.config.ts coverage ratchet (statements/branches/
-        # functions/lines) on the full unit suite; fails the job on breach.
-        # Local `pnpm test` stays coverage-optional for a fast inner loop.
-        run: pnpm test:coverage:check
-
       - name: Run integration tests
         # COVERAGE=true + --coverage instruments this run (same suite,
         # not a second run) so fallow's per-function CRAP score sees the
         # integration-only functions (services/routes, per the testing-trophy
         # convention in CLAUDE.md) that the unit suite never exercises and
         # which otherwise score 0% coverage and false-fail the structural
-        # quality gate (PR #908). --coverage.reportsDirectory points this at
-        # its own directory so it can't clobber the unit run's ./coverage
-        # (pnpm test:coverage:check, above) — the two are merged in the next
-        # step. Reporters are vitest's coverage defaults (includes json,
-        # which writes coverage-final.json — the istanbul file the merge
-        # step and fallow both consume).
+        # quality gate. --coverage.reportsDirectory points this at its own
+        # directory so it can't collide with the unit coverage the
+        # `coverage` job produces in ./coverage — the two are merged there.
+        # Reporters are vitest's coverage defaults (includes json, which
+        # writes coverage-final.json — the istanbul file the merge step and
+        # fallow both consume). The suite migrates its own template database,
+        # so this job runs no migrations of its own.
         run: pnpm exec vitest run --config vitest.workspace.ts --project integration --coverage --coverage.reportsDirectory=coverage-integration
         env:
           COVERAGE: "true"
 
-      - name: Merge unit + integration coverage
-        # Fail closed: fallow's CRAP score must see BOTH suites, not
-        # whichever one happened to produce a file. If either input is
-        # missing this step errors rather than silently auditing on a
-        # partial (unit-only or integration-only) coverage view, which is
-        # exactly the blind spot this change fixes (see fallow.yml's old
-        # unit-only pass).
-        run: |
-          set -euo pipefail
-          UNIT_FILE="coverage/coverage-final.json"
-          INTEGRATION_FILE="coverage-integration/coverage-final.json"
-          if [ ! -f "$UNIT_FILE" ]; then
-            echo "::error::missing $UNIT_FILE — unit coverage step did not produce output, refusing to audit on a partial coverage view"
-            exit 1
-          fi
-          if [ ! -f "$INTEGRATION_FILE" ]; then
-            echo "::error::missing $INTEGRATION_FILE — integration coverage step did not produce output, refusing to audit on a partial coverage view"
-            exit 1
-          fi
-          mkdir -p coverage-merge-input coverage-merged
-          cp "$UNIT_FILE" coverage-merge-input/unit.json
-          cp "$INTEGRATION_FILE" coverage-merge-input/integration.json
-
-          # Sanitize negative hit counts BEFORE merging. Verified locally
-          # (2026-08-25): the integration run's raw coverage-final.json can
-          # itself contain negative statement/branch/function hit counts —
-          # an existing artefact of vitest's v8-coverage provider under the
-          # integration project's multi-fork pool (maxWorkers > 1), not
-          # something this merge introduces. fallow's coverage parser
-          # expects unsigned ints and hard-errors on any negative value
-          # ("invalid value: integer `-N`, expected u32"), so an
-          # un-sanitized file fails closed on every PR that touches
-          # instrumented code, not just the ones the gate should flag.
-          # Clamping to 0 is a deliberate under-count (never inflates
-          # coverage, so it can only make CRAP scores more conservative,
-          # never hide a real risk) — the alternative is the audit step
-          # hard-failing on unrelated PRs. Applied to both inputs so this
-          # is safe even if the unit run is ever affected the same way.
-          node -e '
-            const fs = require("fs");
-            function sanitize(path) {
-              const data = JSON.parse(fs.readFileSync(path, "utf8"));
-              let fixed = 0;
-              for (const file of Object.values(data)) {
-                for (const section of ["s", "f"]) {
-                  const map = file[section];
-                  if (!map) continue;
-                  for (const k of Object.keys(map)) {
-                    if (map[k] < 0) { map[k] = 0; fixed++; }
-                  }
-                }
-                if (file.b) {
-                  for (const k of Object.keys(file.b)) {
-                    file.b[k] = file.b[k].map((v) => (v < 0 ? (fixed++, 0) : v));
-                  }
-                }
-              }
-              fs.writeFileSync(path, JSON.stringify(data));
-              if (fixed > 0) {
-                console.log(`::warning::${path}: clamped ${fixed} negative coverage counts to 0 (see step comment for why)`);
-              }
-            }
-            sanitize("coverage-merge-input/unit.json");
-            sanitize("coverage-merge-input/integration.json");
-          '
-
-          npx -y nyc merge coverage-merge-input coverage-merged/coverage-final.json
-          if [ ! -s coverage-merged/coverage-final.json ]; then
-            echo "::error::nyc merge produced an empty or missing coverage-merged/coverage-final.json"
-            exit 1
-          fi
-
-      - name: Upload merged coverage
+      - name: Upload integration coverage
         uses: actions/upload-artifact@v7
         with:
-          name: merged-coverage
-          path: coverage-merged/coverage-final.json
+          name: integration-coverage
+          path: coverage-integration/coverage-final.json
           retention-days: 14
+          if-no-files-found: error
 
-      - name: Re-seed database for E2E
+  e2e:
+    name: E2E and page check
+    needs: [changes]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tea_user
+          POSTGRES_PASSWORD: tea_password
+          POSTGRES_DB: tea_test
+        ports:
+          - 5432:5432
+        options: >-
+          --shm-size=1gb
+          --health-cmd "pg_isready -U tea_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://tea_user:tea_password@localhost:5432/tea_test
+      NEXTAUTH_SECRET: test-secret-for-ci-only
+      NEXTAUTH_URL: http://localhost:3000
+      SEED_USER_PASSWORD: ${{ secrets.SEED_USER_PASSWORD }}
+      USE_LOCAL_STORAGE: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Tune Postgres service container (fsync/shared_buffers/max_wal_size)
+        # Same throwaway-database tuning as the integration job's step of the
+        # same name (see its comment for the mechanism and the warning against
+        # using fsync=off anywhere durable): service containers take no
+        # `command:`, so ALTER SYSTEM plus a restart applies it, and the
+        # assertions fail the job if it did not take effect.
         run: |
-          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -c "
-            TRUNCATE TABLE
-              published_assurance_cases,
-              release_images, release_comments, release_snapshots, releases,
-              comments, evidence_links, case_images, case_type_assignments, case_types,
-              case_invites, case_team_permissions, case_permissions, assurance_elements,
-              assurance_cases, pattern_permissions, pattern_team_permissions,
-              pattern_elements, argument_patterns, team_members, teams,
-              github_repositories, rate_limit_attempts, security_audit_logs,
-              password_reset_attempts, users
-            CASCADE;
-          "
-          npx tsx prisma/seed/dev-seed.ts
+          set -euo pipefail
+          PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test \
+            -c "ALTER SYSTEM SET fsync = off;" \
+            -c "ALTER SYSTEM SET shared_buffers = '1GB';" \
+            -c "ALTER SYSTEM SET max_wal_size = '4GB';"
+          cid=$(docker ps --filter "ancestor=postgres:16" --format "{{.ID}}")
+          docker restart "$cid"
+          for _ in $(seq 1 30); do
+            PGPASSWORD=tea_password pg_isready -h localhost -U tea_user -d tea_test && break
+            sleep 1
+          done
+          check() {
+            local setting="$1" expected="$2" actual
+            actual=$(PGPASSWORD=tea_password psql -h localhost -U tea_user -d tea_test -tAc "SHOW ${setting};")
+            echo "${setting} = ${actual}"
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Postgres ${setting} is '${actual}', expected '${expected}' — tuning did not take effect"
+              exit 1
+            fi
+          }
+          check fsync off
+          check shared_buffers 1GB
+          check max_wal_size 4GB
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Prisma Client
+        uses: actions/cache@v6
+        id: prisma-cache-e2e
+        with:
+          path: src/generated/prisma
+          key: prisma-${{ runner.os }}-${{ hashFiles('prisma/schema.prisma', 'pnpm-lock.yaml') }}
+
+      - name: Generate Prisma client
+        if: steps.prisma-cache-e2e.outputs.cache-hit != 'true'
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      - name: Run migrations
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
+
+      - name: Check migrations match schema
+        # Compares the live, migrated database with the schema, so it runs
+        # in the job that owns one.
+        run: npx prisma migrate diff --from-config-datasource --to-schema=prisma/schema.prisma --exit-code
+
+      - name: Seed database
+        run: npx tsx prisma/seed/dev-seed.ts
 
       - name: Build application for E2E
         run: |
@@ -576,8 +709,8 @@ jobs:
         # Playwright's failure snapshot (error-context.md) and trace.zip both
         # record the values typed into form fields, including passwords, and
         # this workflow uploads test-results/ on every run (see the two
-        # upload steps below) — a public repo, downloadable for 14 days. This
-        # is how SEED_USER_PASSWORD leaked in run 34991925500 (2026-09-15).
+        # upload steps below) — a public repo, downloadable for 14 days. A
+        # previous run leaked SEED_USER_PASSWORD this way.
         # The HTML reporter also copies every path-backed attachment (both
         # files included) into playwright-report/data/<sha1>.<ext> before this
         # step runs, so that tree needs stripping too, not just test-results/.
@@ -622,6 +755,214 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  coverage:
+    name: Merge coverage
+    needs: [changes, unit, integration]
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      # Fail closed: this job runs even when a needed job failed or was
+      # skipped (its `if:` opens with !cancelled()), so it checks the
+      # results itself rather than merge a partial view of the coverage.
+      - name: Require the unit and integration jobs to have succeeded
+        env:
+          UNIT_RESULT: ${{ needs.unit.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+        run: |
+          failed=0
+          if [ "$UNIT_RESULT" != "success" ]; then
+            echo "::error::the unit test jobs did not all succeed (result: $UNIT_RESULT) — refusing to merge a partial coverage view"
+            failed=1
+          fi
+          if [ "$INTEGRATION_RESULT" != "success" ]; then
+            echo "::error::the integration test job did not succeed (result: $INTEGRATION_RESULT) — refusing to merge a partial coverage view"
+            failed=1
+          fi
+          exit "$failed"
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js with cache
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download unit test blob reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: unit-blob-*
+          merge-multiple: true
+          path: vitest-blob
+
+      - name: Require all three unit blob reports
+        # `vitest --merge-reports` merges whatever is in the folder and does
+        # not count it. A missing shard would otherwise yield a merged report
+        # that covers only part of the suite; one that still cleared the
+        # coverage floors would pass without the other shards' tests.
+        run: |
+          set -euo pipefail
+          for n in 1 2 3; do
+            if [ ! -s "vitest-blob/blob-${n}-3.json" ]; then
+              echo "::error::vitest-blob/blob-${n}-3.json is missing or empty — unit shard ${n} of 3 did not deliver its report, refusing to merge a partial run"
+              exit 1
+            fi
+          done
+          count=$(find vitest-blob -type f | wc -l)
+          if [ "$count" -ne 3 ]; then
+            echo "::error::expected exactly 3 blob reports in vitest-blob/, found $count"
+            ls -la vitest-blob
+            exit 1
+          fi
+
+      - name: Merge unit reports and enforce the coverage ratchet
+        # Enforces the vitest.config.ts coverage ratchet (statements/branches/
+        # functions/lines) on the full unit suite, from the merged shard
+        # reports; fails the job on breach. Writes the unit coverage-final.json
+        # the next step consumes. Local `pnpm test` stays coverage-optional
+        # for a fast inner loop.
+        run: pnpm exec vitest run --merge-reports=vitest-blob --coverage
+        env:
+          COVERAGE: "true"
+
+      - name: Download integration coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: integration-coverage
+          path: coverage-integration
+
+      - name: Merge unit + integration coverage
+        # Fail closed: fallow's CRAP score must see BOTH suites, not
+        # whichever one happened to produce a file. If either input is
+        # missing this step errors rather than silently auditing on a
+        # partial (unit-only or integration-only) coverage view, which is
+        # exactly the blind spot this change fixes (see fallow.yml's old
+        # unit-only pass).
+        run: |
+          set -euo pipefail
+          UNIT_FILE="coverage/coverage-final.json"
+          INTEGRATION_FILE="coverage-integration/coverage-final.json"
+          if [ ! -f "$UNIT_FILE" ]; then
+            echo "::error::missing $UNIT_FILE — unit coverage step did not produce output, refusing to audit on a partial coverage view"
+            exit 1
+          fi
+          if [ ! -f "$INTEGRATION_FILE" ]; then
+            echo "::error::missing $INTEGRATION_FILE — integration coverage step did not produce output, refusing to audit on a partial coverage view"
+            exit 1
+          fi
+          mkdir -p coverage-merge-input coverage-merged
+          cp "$UNIT_FILE" coverage-merge-input/unit.json
+          cp "$INTEGRATION_FILE" coverage-merge-input/integration.json
+
+          # Sanitize negative hit counts BEFORE merging. The integration
+          # run's raw coverage-final.json can itself contain negative
+          # statement/branch/function hit counts —
+          # an existing artefact of vitest's v8-coverage provider under the
+          # integration project's multi-fork pool (maxWorkers > 1), not
+          # something this merge introduces. fallow's coverage parser
+          # expects unsigned ints and hard-errors on any negative value
+          # ("invalid value: integer `-N`, expected u32"), so an
+          # un-sanitized file fails closed on every PR that touches
+          # instrumented code, not just the ones the gate should flag.
+          # Clamping to 0 is a deliberate under-count (never inflates
+          # coverage, so it can only make CRAP scores more conservative,
+          # never hide a real risk) — the alternative is the audit step
+          # hard-failing on unrelated PRs. Applied to both inputs so this
+          # is safe even if the unit run is ever affected the same way.
+          node -e '
+            const fs = require("fs");
+            function sanitize(path) {
+              const data = JSON.parse(fs.readFileSync(path, "utf8"));
+              let fixed = 0;
+              for (const file of Object.values(data)) {
+                for (const section of ["s", "f"]) {
+                  const map = file[section];
+                  if (!map) continue;
+                  for (const k of Object.keys(map)) {
+                    if (map[k] < 0) { map[k] = 0; fixed++; }
+                  }
+                }
+                if (file.b) {
+                  for (const k of Object.keys(file.b)) {
+                    file.b[k] = file.b[k].map((v) => (v < 0 ? (fixed++, 0) : v));
+                  }
+                }
+              }
+              fs.writeFileSync(path, JSON.stringify(data));
+              if (fixed > 0) {
+                console.log(`::warning::${path}: clamped ${fixed} negative coverage counts to 0 (see step comment for why)`);
+              }
+            }
+            sanitize("coverage-merge-input/unit.json");
+            sanitize("coverage-merge-input/integration.json");
+          '
+
+          npx -y nyc merge coverage-merge-input coverage-merged/coverage-final.json
+          if [ ! -s coverage-merged/coverage-final.json ]; then
+            echo "::error::nyc merge produced an empty or missing coverage-merged/coverage-final.json"
+            exit 1
+          fi
+
+      - name: Upload merged coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: merged-coverage
+          path: coverage-merged/coverage-final.json
+          retention-days: 14
+
+  test:
+    name: Run Tests
+    needs: [changes, unit, integration, e2e, coverage]
+    # The required check. Branch protection matches on this `name:`, so it
+    # stays "Run Tests"; the matrix job above is deliberately named
+    # differently, because a matrix job reports as "<name> (<n>)" and would
+    # not satisfy the check. Same condition as the jobs above (see the
+    # comment there): with no code changes it is skipped together with them.
+    #
+    # Opens with always(), not !cancelled(). This job waits for every other
+    # test job, so a cancellation during that wait would otherwise stop it
+    # from starting, and a skipped required check satisfies branch
+    # protection. With always() it still runs after a cancellation, finds a
+    # test job that is not `success`, and fails.
+    if: ${{ always() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Fail closed: anything but `success` from a test job fails this job,
+      # including a job that was skipped, cancelled or failed. A skipped job
+      # is only expected when this job is skipped as well, which never
+      # reaches this step.
+      - name: Require every test job to have succeeded
+        env:
+          UNIT_RESULT: ${{ needs.unit.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+        run: |
+          failed=0
+          for entry in "unit:$UNIT_RESULT" "integration:$INTEGRATION_RESULT" "e2e:$E2E_RESULT" "coverage:$COVERAGE_RESULT"; do
+            job="${entry%%:*}"
+            result="${entry#*:}"
+            if [ "$result" != "success" ]; then
+              echo "::error::the '$job' job did not succeed (result: $result)"
+              failed=1
+            fi
+          done
+          exit "$failed"
+
   structural-quality:
     # Required-check name is "Structural Quality (blocking)" (branch
     # protection matches on this `name:`, not the job id) — this used to be
@@ -629,8 +970,8 @@ jobs:
     # coverage pass and false-failed on functions covered exclusively by the
     # integration suite (testing-trophy convention, CLAUDE.md — see PR #908,
     # 5 false findings on functions with 11 dedicated integration tests).
-    # fallow.yml is retired; this job now consumes the coverage `test`
-    # merged from BOTH suites.
+    # fallow.yml is retired; this job now consumes the coverage the
+    # `coverage` job merged from BOTH suites.
     name: Structural Quality (blocking)
     needs: [test]
     # PR events only. This workflow also triggers on push (the staging deploy
@@ -644,7 +985,7 @@ jobs:
     # branch explicitly on needs.test.result and fail closed on failure.
     # Branches explicitly on needs.test.result rather than relying on either
     # documented "needs skip propagation" reading (actions/runner#2205 class,
-    # see the `changes`/`test` comments above) or on the implicit success() a
+    # see the `changes` comment and the test jobs' comment above) or on the implicit success() a
     # bare `if:` would otherwise drop (PR #904 lesson: a custom if with no
     # status function silently loses fail-blocking). Concretely:
     #   - needs.test.result == 'skipped' (docs-only PR, gated by `changes`)
@@ -688,7 +1029,7 @@ jobs:
     # rather than sitting "expected" forever.
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
-    # Matches the test and lint jobs. The audit itself takes seconds; the
+    # Same limit as the E2E job. The audit itself takes seconds; the
     # budget is for the npm registry, which this job hits twice (pnpm
     # setup, then `npx fallow`) with no cache, and which can be slow
     # enough to exceed a 10-minute cap on its own.
