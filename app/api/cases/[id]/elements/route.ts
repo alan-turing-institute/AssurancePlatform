@@ -23,9 +23,9 @@ import { createElement } from "@/lib/services/element-service";
  * @response 400 - Validation error (including a goal defeater without a parent)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
- * @response 409 - The case already has its ordinary goal
  * @response 413 - Payload too large
- * @add 409
+ * @response 422 - The case already has its ordinary goal
+ * @add 422
  * @auth bearer
  * @tag Elements
  */

@@ -252,8 +252,13 @@ const ERROR_MAPPINGS: Array<{
 	// a goal defeater without a `parentId` would be a second root goal — a
 	// validation failure (400), not a 500.
 	{ pattern: /^parentId /, factory: () => validationError("") },
-	// A second ordinary goal in a case is a state conflict (409), not a 500.
-	{ pattern: /^A case can only have one goal claim$/, factory: conflict },
+	// A second ordinary goal in a case is a rule refusal (422), not a 500. It is
+	// not a 409: that code on the batch endpoint means another person changed
+	// the case, and the JSON editor reads it that way.
+	{
+		pattern: /^A case can only have one goal claim$/,
+		factory: () => unprocessable(""),
+	},
 	// `case-batch-update-service.ts`: a batch that updates an element twice, or
 	// updates and deletes it, is a validation failure (400), not a 500.
 	{

@@ -45,13 +45,14 @@ async function putElement(
 
 async function postBatch(
 	caseId: string,
-	changes: unknown[]
+	changes: unknown[],
+	expectedVersion?: string
 ): Promise<Response> {
 	const { POST } = await import("@/app/api/cases/[id]/batch/route");
 	return POST(
 		new NextRequest(`http://localhost:3000/api/cases/${caseId}/batch`, {
 			method: "POST",
-			body: JSON.stringify({ changes }),
+			body: JSON.stringify({ changes, expectedVersion }),
 			headers: { "Content-Type": "application/json" },
 		}),
 		{ params: Promise.resolve({ id: caseId }) }
@@ -117,7 +118,7 @@ describe("changing a goal with PUT /api/elements/[id]", () => {
 			label: "making a counter-goal ordinary while the case has its top goal",
 			target: ({ counterGoal }: Fixture) => counterGoal.id,
 			body: { isDefeater: false },
-			status: 409,
+			status: 422,
 		},
 	])("refuses $label", async ({ target, body, status }) => {
 		const setUp = await buildCaseWithCounterGoal();
@@ -208,12 +209,12 @@ describe("changing a goal with POST /api/cases/[id]/batch", () => {
 					data: { isDefeater: false },
 				},
 			],
-			status: 409,
+			status: 422,
 		},
 		{
 			label: "creating a second ordinary goal",
 			changes: () => [newGoalChange({}, null)],
-			status: 409,
+			status: 422,
 		},
 		{
 			label:
@@ -299,8 +300,29 @@ describe("changing a goal with POST /api/cases/[id]/batch", () => {
 			newGoalChange({}, null),
 		]);
 
-		expect(response.status).toBe(409);
+		expect(response.status).toBe(422);
 		expect(await storedGoals(fx.caseId)).toEqual(before);
+	});
+
+	it("answers a rule refusal with UNPROCESSABLE and the reason, not CONFLICT", async () => {
+		const { fx } = await buildCaseWithCounterGoal();
+
+		const response = await postBatch(fx.caseId, [newGoalChange({}, null)]);
+
+		expect(response.status).toBe(422);
+		expect(await response.json()).toMatchObject({
+			code: "UNPROCESSABLE",
+			error: "A case can only have one goal claim",
+		});
+	});
+
+	it("still answers an edit made on a stale version with CONFLICT", async () => {
+		const { fx } = await buildCaseWithCounterGoal();
+
+		const response = await postBatch(fx.caseId, [], new Date(0).toISOString());
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toMatchObject({ code: "CONFLICT" });
 	});
 
 	it("judges the goals as the batch leaves them", async () => {

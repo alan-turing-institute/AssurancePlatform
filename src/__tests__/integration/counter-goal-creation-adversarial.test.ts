@@ -327,7 +327,7 @@ describe("counter-goal creation through the elements route", () => {
 		expect(stored.elementType).toBe("GOAL");
 	});
 
-	it("answers 409 with the reason for a second ordinary goal", async () => {
+	it("answers 422 with the reason for a second ordinary goal", async () => {
 		const owner = await createTestUser();
 		const fx = await buildArgument(owner.id);
 		await mockAuth(owner.id, owner.username, owner.email);
@@ -337,7 +337,7 @@ describe("counter-goal creation through the elements route", () => {
 			description: "second ordinary goal",
 		});
 
-		expect(response.status).toBe(409);
+		expect(response.status).toBe(422);
 		const body = await response.json();
 		expect(body.error).toBe("A case can only have one goal claim");
 		expect(await liveGoals(fx.caseId)).toHaveLength(1);
