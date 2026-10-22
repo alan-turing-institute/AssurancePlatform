@@ -327,7 +327,7 @@ function SelectionRow({
 	return (
 		<div className="flex items-center justify-between gap-2">
 			<p
-				className="min-w-0 flex-1 text-muted-foreground text-sm"
+				className="min-w-0 flex-1 break-words text-muted-foreground text-sm"
 				data-testid="assistant-selection"
 			>
 				{selectedElementId
