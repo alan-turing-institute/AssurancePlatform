@@ -437,6 +437,8 @@ Values below 5000 are raised to 5000, values above 600000 are lowered to 600000,
 ## The chat panel
 
 The panel shows the conversation, a box for the next question, and a line above them that names the selected element.
+The same line holds a New chat button, which is disabled while the conversation is empty.
+The button stops any reply that is still arriving and empties this case's conversation, and the text in the message box is kept.
 While the assistant is working and nothing on screen is moving, the panel shows a "Thinking…" line.
 That covers the wait before the first output, and the wait after a tool has finished while the model carries on.
 The line is not shown while thinking or text is arriving, while a tool is running, or under a finished reply.
