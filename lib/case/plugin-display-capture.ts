@@ -6,12 +6,15 @@
  * case only.
  *
  * Elements that are a plugin's display carry `data-plugin-display`, and the
- * capture's filter drops them. An edge's colour is an inline style on its
- * path, which survives the capture's own stroke override, so the capture
- * removes it explicitly while it takes the picture. An SVG image is markup,
- * so the attributes the canvas puts on the elements it keeps (their tone, fade
- * and drawn content), and the attribute a capture puts on its root, are taken
- * out of the finished file as well.
+ * capture's filter drops them. The same goes for what the diagram works out
+ * for one viewer, such as the unsupported marker on a card, which carries
+ * `data-derived-display`: a picture of the case shows what the author wrote,
+ * not a marker that depends on the viewer's own setting. An edge's colour is
+ * an inline style on its path, which survives the capture's own stroke
+ * override, so the capture removes it explicitly while it takes the picture.
+ * An SVG image is markup, so the attributes the canvas puts on the elements it
+ * keeps (their tone, fade and drawn content), and the attribute a capture puts
+ * on its root, are taken out of the finished file as well.
  *
  * A drawn card's secondary text is in the full text colour on screen, set by a
  * stylesheet rule on `data-drawn-content`. The capture library copies each
@@ -22,17 +25,21 @@
 /** The attribute on every element that exists only to show a plugin's display. */
 const PLUGIN_DISPLAY_ATTRIBUTE = "data-plugin-display";
 
+/** The attribute on every element the diagram works out for the viewer, such as the unsupported marker. */
+const DERIVED_DISPLAY_ATTRIBUTE = "data-derived-display";
+
 /** The attribute on each content wrapper of a card a plugin has drawn. */
 const DRAWN_CONTENT_ATTRIBUTE = "data-drawn-content";
 
 /** The attribute on the root of a capture while the picture is taken. */
 const CAPTURING_ATTRIBUTE = "data-capturing";
 
-/** Every attribute that records a plugin's display or a capture in progress, and so stays out of an SVG image. */
+/** Every attribute that records a plugin's display, a derived display or a capture in progress, and so stays out of an SVG image. */
 const PLUGIN_DISPLAY_MARKERS = [
 	"data-appearance",
 	"data-faded",
 	PLUGIN_DISPLAY_ATTRIBUTE,
+	DERIVED_DISPLAY_ATTRIBUTE,
 	DRAWN_CONTENT_ATTRIBUTE,
 	CAPTURING_ATTRIBUTE,
 ] as const;
@@ -74,10 +81,12 @@ const EDGE_APPEARANCE_PROPERTIES = [
 	"stroke-opacity",
 ] as const;
 
-/** A capture filter: false for an element that only shows a plugin's display. */
+/** A capture filter: false for an element that only shows a plugin's display or what the diagram worked out for the viewer. */
 export function isAuthoredContent(domNode: HTMLElement): boolean {
 	return !(
-		domNode instanceof Element && domNode.hasAttribute(PLUGIN_DISPLAY_ATTRIBUTE)
+		domNode instanceof Element &&
+		(domNode.hasAttribute(PLUGIN_DISPLAY_ATTRIBUTE) ||
+			domNode.hasAttribute(DERIVED_DISPLAY_ATTRIBUTE))
 	);
 }
 

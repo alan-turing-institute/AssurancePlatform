@@ -107,7 +107,7 @@ Raw JSON exports keep the stored form, `{name#id}`, where the id is what ties th
 
 ## Assertion status
 
-Goals and property claims carry an assertion status, set from the edit dialog.
+Goals, strategies and property claims carry an assertion status, set from the edit dialog.
 There are five values an author can choose from:
 
 - **Asserted** — the author's stated position. This is the default.
@@ -117,10 +117,47 @@ There are five values an author can choose from:
 - **Defeated** — marked by the author as refuted or withdrawn.
 
 <Callout type="info">
-A sixth status, **As cited**, can appear on an element, but you cannot set it directly. It is computed automatically when an element cites another claim, from that claim's own status.
+A sixth status, **As cited**, can appear on an element, but you cannot set it directly. It is not computed automatically in this build; it arrives only when a case is imported with that status.
 </Callout>
 
 Assertion status records the author's own position; it is not an automated verdict on whether the evidence is actually sufficient.
+
+### The Unsupported marker
+
+A goal, strategy or property claim with nothing beneath it carries a small badge reading **Unsupported**, drawn with a dashed outline.
+The marker shows where an argument stops.
+Hover over it for a reminder of how to clear it.
+
+An element counts as supported when at least one of these sits directly beneath it:
+
+- a strategy or a property claim;
+- a piece of evidence;
+- an away goal or a module, even when its link to the other case or module is broken.
+
+A defeater does not count, because it challenges the element it is attached to rather than supporting it.
+A claim whose only child is a defeater is still marked.
+Collapsing a branch hides its children without removing them, so a collapsed element is never marked for that reason.
+
+The marker sits on the element with nothing beneath it, not on the elements above it.
+Add a strategy under an unsupported goal and the marker moves to the strategy.
+Add a claim under that strategy and it moves to the claim.
+Add evidence under the claim and it clears.
+
+The marker does not appear on evidence, away goals, modules or defeaters, which end a branch by design.
+It also does not appear once you have set a status that explains why nothing is beneath the element.
+**Needs support** shows its own badge instead, and **Assumed**, **Axiomatic**, **Defeated** and **As cited** show no marker.
+An element with the default **Asserted** status can carry the marker.
+
+The marker is different from the **Needs support** status.
+**Needs support** is your own declaration that an element still needs work, and it is saved with the case.
+The marker is worked out from the diagram each time it is drawn.
+It is never saved, so it does not appear in a JSON export or on import, and it never changes a status you have set.
+It is also left out of exported images and the dashboard thumbnail, and out of the example diagrams in the documentation.
+
+Each person chooses whether to see the marker.
+Use **Show unsupported markers** in the **Settings** menu on the case toolbar, or in the **Case diagram** section of the account **Settings** page.
+The choice is saved to your account, so it applies in every browser you sign in from, and it starts on.
+Other people viewing the same case see the marker by their own setting.
 
 ## Element names and the prefix rule
 

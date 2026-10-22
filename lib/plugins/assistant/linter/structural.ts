@@ -613,7 +613,7 @@ function checkTREE04(
 			rule: "TREE04",
 			doc,
 			elements,
-			reason: `${elements.length} branch(es) have no support beneath them and no undeveloped marker — TEA has none; ${needsSupportClause}.`,
+			reason: `${elements.length} branch(es) have no support beneath them and no undeveloped marker set by the author — the diagram's automatic Unsupported marker does not count as the author's mark; ${needsSupportClause}.`,
 			severity: severityOf(ruleset, "TREE04"),
 			fix: fixFor(
 				ruleset,

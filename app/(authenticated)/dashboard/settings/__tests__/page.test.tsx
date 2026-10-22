@@ -24,6 +24,9 @@ vi.mock("@/actions/connected-accounts", () => ({
 vi.mock("../_components/appearance-form", () => ({
 	AppearanceForm: () => <div data-testid="appearance-form" />,
 }));
+vi.mock("../_components/unsupported-markers-form", () => ({
+	UnsupportedMarkersForm: () => <div data-testid="unsupported-markers-form" />,
+}));
 vi.mock("../_components/personal-info-form", () => ({
 	PersonalInfoForm: () => <div data-testid="personal-info-form" />,
 }));
@@ -67,6 +70,22 @@ describe("SettingsPage", () => {
 		expect(pluginsIndex).toBeGreaterThanOrEqual(0);
 		expect(integrationsIndex).toBeGreaterThan(pluginsIndex);
 		expect(passwordIndex).toBeGreaterThan(integrationsIndex);
+	});
+
+	it("places the unsupported markers section after Appearance and before the personal details", async () => {
+		const { container } = render(await SettingsPage());
+
+		const testIds = Array.from(container.querySelectorAll("[data-testid]")).map(
+			(el) => el.getAttribute("data-testid")
+		);
+
+		const appearanceIndex = testIds.indexOf("appearance-form");
+		const markersIndex = testIds.indexOf("unsupported-markers-form");
+		const personalIndex = testIds.indexOf("personal-info-form");
+
+		expect(appearanceIndex).toBeGreaterThanOrEqual(0);
+		expect(markersIndex).toBeGreaterThan(appearanceIndex);
+		expect(personalIndex).toBeGreaterThan(markersIndex);
 	});
 
 	it("renders the settings navigation strip, including a link to Plugins (regression: the landing page had no strip at all)", async () => {

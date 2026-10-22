@@ -46,6 +46,7 @@ interface Seen {
 	badgeKept: boolean;
 	cardKept: boolean;
 	controlsKept: boolean;
+	derivedKept: boolean;
 	edgeStyle: string;
 	fillKept: boolean;
 	plainEdgeStyle: string;
@@ -56,6 +57,7 @@ let canvas: {
 	badge: HTMLElement;
 	card: HTMLElement;
 	controls: HTMLElement;
+	derived: HTMLElement;
 	edge: SVGPathElement;
 	fill: HTMLElement;
 	plainEdge: SVGPathElement;
@@ -88,15 +90,16 @@ beforeEach(() => {
 	const card = element("div", { "data-appearance": "positive" });
 	const fill = element("span", { "data-plugin-display": "" });
 	const badge = element("div", { "data-plugin-display": "" });
+	const derived = element("div", { "data-derived-display": "" });
 	const controls = element("div", { class: "react-flow__controls" });
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	const edge = edgePath({ "data-appearance": "negative", style: EDGE_STYLE });
 	const plainEdge = edgePath({ style: "stroke-width: 2;" });
 	svg.append(edge, plainEdge);
-	card.append(fill, badge);
+	card.append(fill, badge, derived);
 	viewport.append(card, svg, controls);
 	document.body.append(viewport);
-	canvas = { viewport, card, fill, badge, controls, edge, plainEdge };
+	canvas = { viewport, card, fill, badge, controls, derived, edge, plainEdge };
 
 	vi.mocked(saveAs).mockClear();
 	seen = undefined;
@@ -109,6 +112,7 @@ beforeEach(() => {
 			badgeKept: keep(canvas.badge),
 			cardKept: keep(canvas.card),
 			controlsKept: keep(canvas.controls),
+			derivedKept: keep(canvas.derived),
 			edgeStyle: canvas.edge.getAttribute("style") ?? "",
 			fillKept: keep(canvas.fill),
 			plainEdgeStyle: canvas.plainEdge.getAttribute("style") ?? "",
@@ -141,6 +145,10 @@ describe("what a capture leaves out", () => {
 		expect(isAuthoredContent(canvas.badge)).toBe(false);
 		expect(isAuthoredContent(canvas.card)).toBe(true);
 		expect(isAuthoredContent(canvas.edge as unknown as HTMLElement)).toBe(true);
+	});
+
+	it("drops an element the diagram worked out for the viewer, such as the unsupported marker", () => {
+		expect(isAuthoredContent(canvas.derived)).toBe(false);
 	});
 
 	it("removes a plugin's colour from its edges, and only theirs, until restored", () => {
@@ -231,6 +239,7 @@ describe("an image export", () => {
 		expect(capture).toHaveBeenCalledTimes(1);
 		expect(seen).toMatchObject({
 			badgeKept: false,
+			derivedKept: false,
 			fillKept: false,
 			cardKept: true,
 			controlsKept: false,
@@ -261,6 +270,7 @@ describe("an SVG image export's file", () => {
 		'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50" viewBox="0 0 100 50">' +
 		'<foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="viewport" data-capturing="">' +
 		'<div class="card" data-appearance="negative" data-faded="">E6</div>' +
+		'<div class="badge" data-derived-display="">Unsupported</div>' +
 		'<div class="px-4 pb-3" data-drawn-content="">words</div>' +
 		'<div data-drawn-content="">more</div>' +
 		'<svg><path class="react-flow__edge-path" d="M0 0L5 5" data-appearance="plain" data-faded=""/></svg>' +
@@ -297,12 +307,14 @@ describe("an SVG image export's file", () => {
 			"data-appearance",
 			"data-faded",
 			"data-plugin-display",
+			"data-derived-display",
 			"data-drawn-content",
 			"data-capturing",
 		]) {
 			expect(file).not.toContain(marker);
 		}
 		expect(file).toContain('class="card"');
+		expect(file).toContain('class="badge"');
 		expect(file).toContain('class="px-4 pb-3"');
 		expect(file).toContain(">E6<");
 		expect(file).toContain('d="M0 0L5 5"');
@@ -341,6 +353,7 @@ describe("a report diagram", () => {
 		expect(toPngMock).toHaveBeenCalledTimes(1);
 		expect(seen).toMatchObject({
 			badgeKept: false,
+			derivedKept: false,
 			fillKept: false,
 			cardKept: true,
 		});

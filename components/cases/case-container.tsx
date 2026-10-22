@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
+import { fetchShowUnsupportedMarkers } from "@/actions/unsupported-markers";
 import CheckTour from "@/components/tour/check-tour";
 import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
@@ -101,6 +102,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		setOrphanedElements,
 		caseDetailsOpen,
 		setCaseDetailsOpen,
+		setShowUnsupportedMarkers,
 	} = useStore();
 	const { setCaseId: setHistoryCaseId } = useHistoryStore();
 
@@ -278,6 +280,27 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	useEffect(() => {
 		loadOrphanedElementsData();
 	}, [loadOrphanedElementsData]);
+
+	// The viewer's own unsupported-marker setting, loaded once per page. It
+	// starts as "not loaded", which draws no marker, so someone who has
+	// switched the markers off never sees them flash on while the page opens.
+	// If the setting cannot be read it stays "not loaded".
+	useEffect(() => {
+		let current = true;
+		setShowUnsupportedMarkers(null);
+		fetchShowUnsupportedMarkers()
+			.then((show) => {
+				if (current) {
+					setShowUnsupportedMarkers(show);
+				}
+			})
+			.catch(() => {
+				// Left as "not loaded": no marker is drawn.
+			});
+		return () => {
+			current = false;
+		};
+	}, [setShowUnsupportedMarkers]);
 
 	if (loading) {
 		return (

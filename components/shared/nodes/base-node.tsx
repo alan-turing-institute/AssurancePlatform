@@ -304,7 +304,12 @@ export default function BaseNode({
 						)}
 					</div>
 					{topRightActions && (
-						<div className="flex min-w-0 items-center">{topRightActions}</div>
+						<div
+							className="flex min-w-0 items-center"
+							data-testid="node-top-right-actions"
+						>
+							{topRightActions}
+						</div>
 					)}
 				</div>
 
