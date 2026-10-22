@@ -321,6 +321,43 @@ describe("a broken case file", () => {
 	);
 });
 
+describe("a case file that cannot be used", () => {
+	it.each([
+		[
+			"is not valid JSON",
+			() => writeText(dir, "garbled.json", "{ not json"),
+			"it is not valid JSON",
+		],
+		[
+			"is refused by the import schema",
+			() =>
+				writeText(
+					dir,
+					"refused.json",
+					JSON.stringify({ version: "1.0", case: {}, tree: {} })
+				),
+			"Invalid import data",
+		],
+		["is not there", () => join(dir, "missing.json"), "it could not be read"],
+	])(
+		"fails the seed with the file's path and the reason: it %s",
+		async (_name, makeFile, reason) => {
+			const file = makeFile();
+
+			const error = await failureOf([
+				bluebird(),
+				{ file, caseId: randomUUID() },
+			]);
+
+			expect(error).toBeInstanceOf(DemoSeedError);
+			expect((error as Error).message).toContain(
+				`Could not import ${file}: ${reason}`
+			);
+		},
+		60_000
+	);
+});
+
 describe("a list without the Bluebird case", () => {
 	it("is refused with an error saying the Bluebird case is missing, and nothing is written", async () => {
 		const before = await snapshotDatabase();
@@ -332,6 +369,29 @@ describe("a list without the Bluebird case", () => {
 
 		expect(error).toBeInstanceOf(DemoSeedError);
 		expect((error as Error).message).toContain("Bluebird case is missing");
+		expect(await snapshotDatabase()).toEqual(before);
+	}, 60_000);
+});
+
+describe("a list with the Bluebird case twice", () => {
+	it("is refused with an error saying the Bluebird case is listed more than once, naming both files, and nothing is written", async () => {
+		const before = await snapshotDatabase();
+		const again: DemoFixture = {
+			file: writeShowcase(dir, "again").file,
+			caseId: DEMO_CASE_ID,
+		};
+
+		const error = await failureOf([
+			bluebird(),
+			writeShowcase(dir, "other"),
+			again,
+		]);
+
+		expect(error).toBeInstanceOf(DemoSeedError);
+		const message = (error as Error).message;
+		expect(message).toContain("more than once");
+		expect(message).toContain(BLUEBIRD_FILE);
+		expect(message).toContain(again.file);
 		expect(await snapshotDatabase()).toEqual(before);
 	}, 60_000);
 });

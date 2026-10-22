@@ -1,6 +1,3 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import argon2 from "argon2";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -20,17 +17,19 @@ import {
 	DEMO_PIPELINE_SCOPES,
 	DEMO_USERNAME,
 	type DemoAccountValues,
-	DemoSeedError,
 	readDemoAccountValues,
 	seedDemoAccount,
 } from "../../../prisma/seed/demo-account-seed";
 import {
-	fixtureElementIds,
-	fixturePath,
 	makeSecrets,
 	runDemoEntryPoint,
 	validEnv,
 } from "../utils/demo-account-kit";
+import {
+	committedFixtureText,
+	elementIdsIn,
+	SHOWCASE_FIXTURES,
+} from "../utils/demo-fixture-files";
 
 const VALUES: DemoAccountValues = {
 	password: "Demo-account-test-1!", // pragma: allowlist secret
@@ -39,18 +38,6 @@ const VALUES: DemoAccountValues = {
 };
 
 const BLUEBIRD_FILE = "bluebird-demo-case.json";
-
-/** The listed fixtures other than Bluebird. */
-const SHOWCASE_FIXTURES = DEMO_FIXTURES.filter(
-	(fixture) => fixture.caseId !== DEMO_CASE_ID
-);
-
-/** What a showcase case's project name must never be: a Turing project. */
-const TURING_PROJECT_NAMES = ["bluebird", "darter", "fastnet"];
-
-function readFixtureText(file: string): string {
-	return readFileSync(fixturePath(file), "utf-8");
-}
 
 async function countRows() {
 	return {
@@ -157,7 +144,7 @@ describe("seedDemoAccount", () => {
 			where: { caseId: DEMO_CASE_ID },
 		});
 		expect(elements.map((element) => element.id).sort()).toEqual(
-			fixtureElementIds(BLUEBIRD_FILE)
+			elementIdsIn(committedFixtureText(BLUEBIRD_FILE))
 		);
 
 		expect(await prisma.pluginHealthCheckCatalogue.count()).toBe(0);
@@ -182,112 +169,18 @@ describe("seedDemoAccount", () => {
 		});
 		expect(userAfter).toEqual(userBefore);
 	});
-
-	it("imports every listed fixture under its fixed case id, keeping the file's element ids", async () => {
-		useTestEncryptionKey();
-
-		await seedDemoAccount(VALUES);
-
-		const user = await prisma.user.findUniqueOrThrow({
-			where: { username: DEMO_USERNAME },
-		});
-		expect(await prisma.assuranceCase.count()).toBe(DEMO_FIXTURES.length);
-		for (const { file, caseId } of DEMO_FIXTURES) {
-			const imported = await prisma.assuranceCase.findUniqueOrThrow({
-				where: { id: caseId },
-			});
-			expect(imported.createdById).toBe(user.id);
-			const elements = await prisma.assuranceElement.findMany({
-				where: { caseId },
-				select: { id: true },
-			});
-			expect(elements.map((element) => element.id).sort()).toEqual(
-				fixtureElementIds(file)
-			);
-		}
-	});
-
-	it("grants the pipeline's system user access to the Bluebird case and to no other", async () => {
-		useTestEncryptionKey();
-
-		await seedDemoAccount(VALUES);
-
-		const integration = await prisma.integration.findUniqueOrThrow({
-			where: { name: DEMO_INTEGRATION_NAME },
-		});
-		const grants = await prisma.casePermission.findMany({
-			where: { userId: integration.systemUserId },
-		});
-		expect(grants.map((grant) => grant.caseId)).toEqual([DEMO_CASE_ID]);
-	});
 });
 
 describe("the demo fixture list", () => {
-	it("holds the Bluebird fixture under the pipeline case id, and no file or case id twice", () => {
-		expect(
-			DEMO_FIXTURES.find((fixture) => fixture.caseId === DEMO_CASE_ID)?.file
-		).toBe(BLUEBIRD_FILE);
-		expect(new Set(DEMO_FIXTURES.map((fixture) => fixture.file)).size).toBe(
-			DEMO_FIXTURES.length
-		);
-		expect(new Set(DEMO_FIXTURES.map((fixture) => fixture.caseId)).size).toBe(
-			DEMO_FIXTURES.length
-		);
-	});
-
 	it.each(
 		DEMO_FIXTURES.map((fixture) => fixture.file)
 	)("parses %s with the import schema", async (file) => {
-		const checked = await validateImportData(JSON.parse(readFixtureText(file)));
+		const checked = await validateImportData(
+			JSON.parse(committedFixtureText(file))
+		);
 
 		expect(checked.errors).toBeUndefined();
 		expect(checked.isValid).toBe(true);
-	});
-
-	it("names no Turing project in any showcase fixture", () => {
-		for (const { file } of SHOWCASE_FIXTURES) {
-			const text = readFixtureText(file).toLowerCase();
-
-			const named = TURING_PROJECT_NAMES.filter((name) => text.includes(name));
-
-			expect({ file, named }).toEqual({ file, named: [] });
-		}
-	});
-});
-
-describe("a broken fixture in the list", () => {
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
-	it.each([
-		["a file that is not valid JSON", "{ not json", "it is not valid JSON"],
-		[
-			"a file the import schema refuses",
-			JSON.stringify({ version: "1.0", case: {}, tree: {} }),
-			"Invalid import data",
-		],
-		["a file that is not there", undefined, "it could not be read"],
-	])("fails the seed, naming the file, for %s", async (_label, text, reason) => {
-		vi.stubEnv("TOKEN_ENCRYPTION_KEY", Buffer.alloc(32, 7).toString("base64"));
-		const directory = mkdtempSync(join(tmpdir(), "demo-fixture-"));
-		const file = join(directory, "broken-demo-case.json");
-		if (text !== undefined) {
-			writeFileSync(file, text);
-		}
-
-		try {
-			const failure = await seedDemoAccount(VALUES, [
-				...DEMO_FIXTURES,
-				{ file, caseId: crypto.randomUUID() },
-			]).catch((error: unknown) => error);
-
-			expect(failure).toBeInstanceOf(DemoSeedError);
-			expect(String(failure)).toContain(file);
-			expect(String(failure)).toContain(reason);
-		} finally {
-			rmSync(directory, { recursive: true, force: true });
-		}
 	});
 });
 

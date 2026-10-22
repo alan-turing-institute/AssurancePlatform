@@ -1,11 +1,9 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { generateApiTokenSecret } from "@/lib/auth/api-token-service";
 import prisma from "@/lib/prisma";
-import { detectAndValidate } from "@/lib/schemas/version-detection";
-import { flattenNestedToFlat } from "@/lib/transforms/nested-to-flat";
+import { committedFixtureText, elementsIn } from "./demo-fixture-files";
 
 /**
  * Helpers for the shared demo account tests: the values the account is built
@@ -18,14 +16,6 @@ const ROOT = resolve(import.meta.dirname, "../../..");
 const TSX_CLI = join(ROOT, "node_modules/tsx/dist/cli.mjs");
 const ENTRY_POINT = "prisma/seed/demo-account.ts";
 const DEV_SEED = "prisma/seed/dev-seed.ts";
-
-const FIXTURE_DIR = join(ROOT, "prisma/seed/fixtures");
-const FIXTURE_FILE = join(FIXTURE_DIR, "bluebird-demo-case.json");
-
-/** The path of a case file in `prisma/seed/fixtures/`. */
-export function fixturePath(file: string): string {
-	return join(FIXTURE_DIR, file);
-}
 
 /**
  * The id the demo case must always have. Pipeline configurations name it, so
@@ -201,7 +191,7 @@ interface FixtureNode {
 
 /** The fixture's elements: id to name. */
 export function fixtureElements(): Map<string, string> {
-	const file = JSON.parse(readFileSync(FIXTURE_FILE, "utf-8")) as {
+	const file = JSON.parse(committedFixtureText("bluebird-demo-case.json")) as {
 		tree: FixtureNode;
 	};
 	const found = new Map<string, string>();
@@ -215,35 +205,10 @@ export function fixtureElements(): Map<string, string> {
 	return found;
 }
 
-/**
- * The elements a fixture file holds once the import has read it, whether the
- * file is a nested tree or a flat element list.
- */
-function importedElements(file: string) {
-	const checked = detectAndValidate(
-		JSON.parse(readFileSync(fixturePath(file), "utf-8"))
-	);
-	if (!checked.isValid) {
-		throw new Error(`${file} does not parse with the import schema`);
-	}
-	const flat =
-		checked.version === "nested"
-			? flattenNestedToFlat(checked.data)
-			: checked.data;
-	return flat.elements;
-}
-
-/** The element ids a fixture file holds, which the seeded case must keep. */
-export function fixtureElementIds(file: string): string[] {
-	return importedElements(file)
-		.map((element) => element.id)
-		.sort();
-}
-
 /** How many evidence elements the fixture files hold between them. */
 export function fixtureEvidenceCount(files: string[]): number {
 	return files
-		.flatMap(importedElements)
+		.flatMap((file) => elementsIn(committedFixtureText(file)))
 		.filter((element) => element.elementType === "EVIDENCE").length;
 }
 

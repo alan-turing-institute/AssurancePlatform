@@ -32,7 +32,6 @@ import {
 	type DemoSecrets,
 	findLeak,
 	fixtureClaimId,
-	fixtureElementIds,
 	fixtureElements,
 	fixtureEvidenceCount,
 	healthTableNames,
@@ -42,6 +41,11 @@ import {
 	snapshotDatabase,
 	validEnv,
 } from "../utils/demo-account-kit";
+import {
+	committedFixtureText,
+	elementIdsIn,
+	SHOWCASE_FIXTURES,
+} from "../utils/demo-fixture-files";
 import {
 	importMachineRoute,
 	machinePost,
@@ -86,11 +90,6 @@ vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => {
 beforeEach(async () => {
 	await mockNoAuth();
 });
-
-/** The listed fixtures other than Bluebird. */
-const SHOWCASE_FIXTURES = DEMO_FIXTURES.filter(
-	(fixture) => fixture.caseId !== DEMO_CASE_ID
-);
 
 function valuesOf(secrets: DemoSecrets): DemoAccountValues {
 	return {
@@ -348,7 +347,7 @@ describe("the demo account the seed creates", () => {
 		).toBe(false);
 	});
 
-	it("creates no check list, accepted check or evidence result, and no evidence item the fixtures do not hold", async () => {
+	it("creates no check list, accepted check or evidence result, no evidence item the fixtures do not hold, and leaves the Bluebird case without evidence", async () => {
 		await seeded();
 
 		const tables = await healthTableNames();
@@ -362,6 +361,11 @@ describe("the demo account the seed creates", () => {
 				where: { elementType: "EVIDENCE" },
 			})
 		).toBe(fixtureEvidenceCount(DEMO_FIXTURES.map((fixture) => fixture.file)));
+		expect(
+			await prisma.assuranceElement.count({
+				where: { caseId: DEMO_CASE_ID, elementType: "EVIDENCE" },
+			})
+		).toBe(0);
 	});
 
 	it("lets the pipeline publish checks with the shared token, offers them for the case's claims, and takes the claim's accepted settings and a result back", async () => {
@@ -485,7 +489,7 @@ describe("when the user demo already exists", () => {
 				select: { id: true },
 			});
 			expect(stored.map((row) => row.id).sort()).toEqual(
-				fixtureElementIds(file)
+				elementIdsIn(committedFixtureText(file))
 			);
 		}
 		expect(

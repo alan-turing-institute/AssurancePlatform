@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { flattenNestedToFlat } from "@/lib/transforms/nested-to-flat";
-import type { DemoFixture } from "../../../prisma/seed/demo-account-seed";
+import {
+	DEMO_CASE_ID,
+	DEMO_FIXTURES,
+	type DemoFixture,
+} from "../../../prisma/seed/demo-account-seed";
 
 /**
  * Case files for the demo-account seed tests, written to a temporary
@@ -37,8 +41,16 @@ export function committedFixturePath(file: string): string {
 	return join(FIXTURE_DIR, file);
 }
 
-/** The ids of the elements the import creates from a fixture's text, sorted. */
-export function elementIdsIn(text: string): string[] {
+/** The listed fixtures other than Bluebird. */
+export const SHOWCASE_FIXTURES = DEMO_FIXTURES.filter(
+	(fixture) => fixture.caseId !== DEMO_CASE_ID
+);
+
+/**
+ * The elements the import creates from a fixture's text, whether the text is a
+ * nested tree or a flat element list.
+ */
+export function elementsIn(text: string) {
 	const checked = detectAndValidate(JSON.parse(text));
 	if (!checked.isValid) {
 		throw new Error("the case file does not parse with the import schema");
@@ -47,7 +59,14 @@ export function elementIdsIn(text: string): string[] {
 		checked.version === "nested"
 			? flattenNestedToFlat(checked.data)
 			: checked.data;
-	return flat.elements.map((element) => element.id).sort();
+	return flat.elements;
+}
+
+/** The ids of the elements the import creates from a fixture's text, sorted. */
+export function elementIdsIn(text: string): string[] {
+	return elementsIn(text)
+		.map((element) => element.id)
+		.sort();
 }
 
 /** The case name inside a fixture's text. */
