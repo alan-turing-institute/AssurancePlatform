@@ -86,6 +86,14 @@ export interface DemoFixture {
  */
 export const DEMO_FIXTURES: readonly DemoFixture[] = [
 	{ file: "bluebird-demo-case.json", caseId: DEMO_CASE_ID },
+	{
+		file: "security-demo-case.json",
+		caseId: "7a33ef25-9e2b-493f-96f6-5f8d42e354f7",
+	},
+	{
+		file: "explainability-demo-case.json",
+		caseId: "d1592017-1adb-4eae-95a0-017651a147cb",
+	},
 ];
 
 /** The environment variables the demo account is built from. */
