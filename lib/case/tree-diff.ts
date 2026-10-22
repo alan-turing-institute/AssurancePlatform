@@ -374,15 +374,28 @@ function isHiddenByEdit(
  * whatever else they added beneath the evidence's other copies. Removing the
  * counter-goal from the copy that shows it, or removing the evidence
  * everywhere, is still a deletion.
+ *
+ * Carrying one piece of evidence's part over can bring another piece of
+ * evidence back into the edited state, as a leaf in the part that was hidden.
+ * That evidence was not gone, so the passes repeat until nothing more is
+ * carried, which makes the result independent of the order the export lists
+ * the evidence in. Carrying only adds, so the repeats end.
  */
 function keepWhatHangsFromEvidenceNoLongerShown(
 	current: FlattenResult,
 	edited: FlattenResult
 ): void {
 	const childrenOf = groupByParent(current.elements.values());
-	for (const [evidenceId, shownUnder] of current.expandedUnder) {
-		if (isHiddenByEdit(evidenceId, shownUnder, childrenOf, edited)) {
-			carryOverBeneath(evidenceId, current, edited, childrenOf);
+	const pending = new Map(current.expandedUnder);
+	let carried = true;
+	while (carried) {
+		carried = false;
+		for (const [evidenceId, shownUnder] of pending) {
+			if (isHiddenByEdit(evidenceId, shownUnder, childrenOf, edited)) {
+				pending.delete(evidenceId);
+				carryOverBeneath(evidenceId, current, edited, childrenOf);
+				carried = true;
+			}
 		}
 	}
 }

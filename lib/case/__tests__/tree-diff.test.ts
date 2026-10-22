@@ -343,6 +343,27 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 			["E2", "C"],
 		],
 	};
+	// E2 is linked to M before E1 is, so the export shows E2 under M, and E2 is
+	// a leaf inside E1's hidden part, which is hidden once M goes.
+	const sideBySide: Model = {
+		rows: [
+			{ id: "G1", type: "GOAL" },
+			{ id: "M", type: "PROPERTY_CLAIM", parent: "G1" },
+			{ id: "B", type: "PROPERTY_CLAIM", parent: "G1" },
+			{ id: "E2", type: "EVIDENCE" },
+			{ id: "CG2", type: "GOAL", parent: "E2", defeater: true },
+			{ id: "P2", type: "PROPERTY_CLAIM", parent: "CG2" },
+			{ id: "E1", type: "EVIDENCE" },
+			{ id: "CG1", type: "GOAL", parent: "E1", defeater: true },
+			{ id: "P1", type: "PROPERTY_CLAIM", parent: "CG1" },
+		],
+		links: [
+			["E2", "M"],
+			["E1", "M"],
+			["E1", "B"],
+			["E2", "P1"],
+		],
+	};
 
 	it.each([
 		{
@@ -402,6 +423,14 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 			model: nested,
 			edit: (tree: TreeNode) => without(without(tree, "A"), "C"),
 			deleted: ["A", "C"],
+			created: [],
+		},
+		{
+			label:
+				"deleting M where E2 is shown first and is a leaf inside E1's hidden part",
+			model: sideBySide,
+			edit: (tree: TreeNode) => without(tree, "M"),
+			deleted: ["M"],
 			created: [],
 		},
 	])("when $label, deletes only what the edit removes", ({
