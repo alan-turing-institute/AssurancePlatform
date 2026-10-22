@@ -229,6 +229,14 @@ describe("changing a goal with POST /api/cases/[id]/batch", () => {
 			status: 400,
 		},
 		{
+			label: "deleting one counter-goal twice",
+			changes: ({ counterGoal }: Fixture) => [
+				{ type: "delete", elementId: counterGoal.id },
+				{ type: "delete", elementId: counterGoal.id },
+			],
+			status: 400,
+		},
+		{
 			label: "updating and deleting one counter-goal",
 			changes: ({ counterGoal }: Fixture) => [
 				{
@@ -384,6 +392,7 @@ describe("importing a file with goal rows", () => {
 			counter: crypto.randomUUID(),
 			stray: crypto.randomUUID(),
 			strayEvidence: crypto.randomUUID(),
+			grandchild: crypto.randomUUID(),
 		};
 		const row = (
 			id: string,
@@ -407,6 +416,7 @@ describe("importing a file with goal rows", () => {
 				row(ids.evidence, "EVIDENCE", "E1", null),
 				row(ids.counter, "GOAL", "CG1", ids.evidence, { isDefeater: true }),
 				row(ids.stray, "PROPERTY_CLAIM", "P9", ids.evidence),
+				row(ids.grandchild, "PROPERTY_CLAIM", "P9.1", ids.stray),
 				row(ids.strayEvidence, "EVIDENCE", "E9", null),
 			],
 			[

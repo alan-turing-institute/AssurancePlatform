@@ -11,9 +11,10 @@ import {
 	addCounterGoal,
 	buildArgument,
 	fetchIdCounts,
+	linkEvidence,
 	viewed,
 } from "../utils/counter-goal-kit";
-import { createTestUser } from "../utils/prisma-factories";
+import { createTestElement, createTestUser } from "../utils/prisma-factories";
 
 /**
  * The JSON editor sends the difference between the case as exported and the
@@ -104,5 +105,64 @@ describe("deleting, in the JSON editor, the claim that shows a counter-goal on s
 		const counts = fetchIdCounts(fetched.data?.goals);
 		expect(counts.get(counterGoal.id)).toBe(1);
 		expect(counts.get(support.id)).toBe(1);
+	});
+});
+
+describe("deleting, in the JSON editor, an element that has others beneath it", () => {
+	it.each([
+		{
+			label: "a strategy and the claim beneath it",
+			build: async (fx: Awaited<ReturnType<typeof buildArgument>>) => ({
+				target: fx.strategy.id,
+				beneath: [fx.strategyClaim.id],
+			}),
+		},
+		{
+			label: "a counter-goal, its claim and that claim's evidence",
+			build: async (fx: Awaited<ReturnType<typeof buildArgument>>) => {
+				const counterGoal = await addCounterGoal(fx, {
+					name: "CG1",
+					description: "against the evidence",
+					parentId: fx.evidenceOne.id,
+				});
+				const support = await addChild(fx, {
+					elementType: "PROPERTY_CLAIM",
+					name: "P3",
+					description: "claim supporting the counter-goal",
+					parentId: counterGoal.id,
+				});
+				const evidence = await createTestElement(fx.caseId, fx.ownerId, {
+					elementType: "EVIDENCE",
+					name: "E3",
+					description: "evidence for the counter-goal's claim",
+					url: "https://example.com/e3",
+				});
+				await linkEvidence(evidence.id, support.id);
+				return {
+					target: counterGoal.id,
+					beneath: [support.id, evidence.id],
+				};
+			},
+		},
+	])("deletes $label", async ({ build }) => {
+		const owner = await createTestUser();
+		const fx = await buildArgument(owner.id);
+		const { target, beneath } = await build(fx);
+		const exported = viewed(
+			await exportCase(owner.id, fx.caseId, { includeComments: false })
+		);
+		const current = JSON.parse(
+			JSON.stringify(exported.data)
+		) as CaseExportNested;
+		const edited = { ...current, tree: without(current.tree, target) };
+
+		const { changes } = computeTreeDiff(current, edited);
+		const result = await applyBatchUpdate(owner.id, fx.caseId, changes);
+
+		expect(result).not.toHaveProperty("error");
+		const stored = await prisma.assuranceElement.findMany({
+			where: { id: { in: [target, ...beneath] } },
+		});
+		expect(stored).toEqual([]);
 	});
 });

@@ -457,24 +457,21 @@ async function validateGoalChanges(
  * A batch can change an element once: in one update, or in one delete. The
  * checks of the goal rules judge each change against the stored element, so
  * two changes to one element would each pass and together break a rule. The
- * JSON editor never repeats an element, so a batch that does is refused
- * instead of merged.
+ * JSON editor never repeats an element, so a batch that does (two updates, an
+ * update and a delete, or two deletes) is refused instead of merged.
  */
 function validateEachElementChangedOnce(
 	updates: UpdateChange[],
 	deletes: DeleteChange[]
 ): string | null {
 	const seen = new Set<string>();
-	for (const change of updates) {
+	for (const change of [...updates, ...deletes]) {
 		if (seen.has(change.elementId)) {
 			return `${ELEMENT_CHANGED_ONCE} (element ${change.elementId})`;
 		}
 		seen.add(change.elementId);
 	}
-	const deletedToo = deletes.find((change) => seen.has(change.elementId));
-	return deletedToo
-		? `${ELEMENT_CHANGED_ONCE} (element ${deletedToo.elementId})`
-		: null;
+	return null;
 }
 
 /**
@@ -839,17 +836,21 @@ function buildCreateData(
 }
 
 /**
- * Applies delete operations
+ * Applies delete operations in one statement. Deleting an element also deletes
+ * everything beneath it, and the batch lists those elements too, so deleting
+ * them one by one would fail on the first one the parent's delete had already
+ * taken with it.
  */
 async function applyDeletes(
 	tx: TransactionClient,
 	deletes: DeleteChange[]
 ): Promise<void> {
-	for (const change of deletes) {
-		await tx.assuranceElement.delete({
-			where: { id: change.elementId },
-		});
+	if (deletes.length === 0) {
+		return;
 	}
+	await tx.assuranceElement.deleteMany({
+		where: { id: { in: deletes.map((change) => change.elementId) } },
+	});
 }
 
 /**
