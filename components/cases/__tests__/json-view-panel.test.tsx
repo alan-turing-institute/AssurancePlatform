@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { exportCase } from "@/actions/export-case";
+import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import JsonViewPanel from "../json-view-panel";
 
@@ -44,6 +45,11 @@ vi.mock("@/lib/case", async (importOriginal) => {
 		...actual,
 		fetchAndRefreshCase: vi.fn(async () => null),
 	};
+});
+
+vi.mock("@/lib/toast", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/toast")>();
+	return { ...actual, toast: vi.fn() };
 });
 
 function resetStore(): void {
@@ -505,6 +511,54 @@ describe("JsonViewPanel — 409 conflict on Apply", () => {
 		);
 		expect(screen.getByText(CONFLICT_TEXT)).toBeInTheDocument();
 		expect(docText(content)).toContain("G1-edited");
+	});
+});
+
+describe("JsonViewPanel — a rule refusal on Apply", () => {
+	beforeEach(() => {
+		resetStore();
+		vi.mocked(toast).mockClear();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("shows the server's reason, not the concurrent-edit conflict, and keeps Apply", async () => {
+		const user = userEvent.setup();
+		const reason = "A case can only have one goal claim";
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(() =>
+				Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ error: reason, code: "UNPROCESSABLE" }),
+				} as Response)
+			)
+		);
+
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const content = await waitFor(() => {
+			const el = document.querySelector(".cm-content");
+			expect(el).not.toBeNull();
+			expect(el?.textContent).toContain("Root goal");
+			return el as HTMLElement;
+		});
+
+		await editAndClickApply(user, content, "G1-edited");
+
+		await waitFor(() =>
+			expect(toast).toHaveBeenCalledWith(
+				expect.objectContaining({
+					variant: "destructive",
+					title: "Failed to apply changes",
+					description: reason,
+				})
+			)
+		);
+		expect(screen.queryByText(CONFLICT_TEXT)).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
 	});
 });
 

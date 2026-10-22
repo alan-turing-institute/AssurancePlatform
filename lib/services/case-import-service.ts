@@ -6,6 +6,10 @@ import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import { resetIdentifiers } from "@/lib/services/identifier-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
+import {
+	isGoalDefeater,
+	leftOutBeneathEvidenceWarning,
+} from "@/lib/transforms/build-tree";
 import { Prisma } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-import-service" });
@@ -118,6 +122,123 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
 // ---------------------------------------------------------------------------
 
 /**
+ * What a flat file holds beneath evidence that the nested format would leave
+ * out: every element whose parent is evidence and which is not a counter-goal,
+ * with what hangs from it by parent, and evidence that supports only elements
+ * left out.
+ */
+function findLeftOutBeneathEvidence(
+	file: CaseExportV2,
+	warnings: string[]
+): Set<string> {
+	const evidenceIds = new Set(
+		file.elements
+			.filter((element) => element.elementType === "EVIDENCE")
+			.map((element) => element.id)
+	);
+	const left = new Set<string>();
+	for (const element of file.elements) {
+		const hangsFromEvidence =
+			element.parentId !== null &&
+			element.parentId !== undefined &&
+			evidenceIds.has(element.parentId);
+		if (
+			hangsFromEvidence &&
+			!isGoalDefeater(element.elementType, element.isDefeater)
+		) {
+			left.add(element.id);
+			warnings.push(leftOutBeneathEvidenceWarning(element.name));
+		}
+	}
+	let grew = left.size > 0;
+	while (grew) {
+		const before = left.size;
+		for (const element of file.elements) {
+			if (!left.has(element.id) && isLeftOutWith(element, file, left)) {
+				left.add(element.id);
+			}
+		}
+		grew = left.size > before;
+	}
+	return left;
+}
+
+/**
+ * Whether an element goes with what a file leaves out: its parent was left
+ * out, or it is evidence whose every link is to an element left out.
+ */
+function isLeftOutWith(
+	element: ElementV2,
+	file: CaseExportV2,
+	left: Set<string>
+): boolean {
+	if (element.parentId && left.has(element.parentId)) {
+		return true;
+	}
+	if (element.elementType !== "EVIDENCE") {
+		return false;
+	}
+	const links = file.evidenceLinks.filter(
+		(link) => link.evidenceId === element.id
+	);
+	return links.length > 0 && links.every((link) => left.has(link.claimId));
+}
+
+/**
+ * Applies to a flat file the rule the nested format already follows: only
+ * counter-goals hang from evidence. What does not is left out and named in
+ * `warnings`.
+ */
+function leaveOutBeneathEvidence(
+	file: CaseExportV2,
+	warnings: string[]
+): CaseExportV2 {
+	const left = findLeftOutBeneathEvidence(file, warnings);
+	if (left.size === 0) {
+		return file;
+	}
+	return {
+		...file,
+		elements: file.elements.filter((element) => !left.has(element.id)),
+		evidenceLinks: file.evidenceLinks.filter(
+			(link) => !(left.has(link.claimId) || left.has(link.evidenceId))
+		),
+	};
+}
+
+/**
+ * The goal rules the element routes apply, checked on the rows of a file: a
+ * goal defeater (counter-goal) needs a parent that is part of the file, and a
+ * case has one ordinary goal. One message per offending row, in the
+ * "path: message" form the schema errors use.
+ */
+function checkGoalRules(elements: ElementV2[]): string[] {
+	const ids = new Set(elements.map((element) => element.id));
+	const problems: string[] = [];
+	let ordinaryGoals = 0;
+	elements.forEach((element, index) => {
+		if (element.elementType !== "GOAL") {
+			return;
+		}
+		if (element.isDefeater) {
+			if (!(element.parentId && ids.has(element.parentId))) {
+				problems.push(
+					`elements.${index}.parentId: a goal defeater needs a parent that is part of the file`
+				);
+			}
+			return;
+		}
+		ordinaryGoals += 1;
+		if (ordinaryGoals > 1) {
+			problems.push(
+				`elements.${index}.elementType: a case can only have one goal claim`
+			);
+		}
+	});
+	return problems;
+}
+
+/**
  * Validates and transforms imported JSON data.
  * Returns v2 format data regardless of input version.
  *
@@ -125,7 +246,8 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
  * writes context as it finds it and does not go through the checks the element
  * routes make, so a repeated name or id has to be caught before anything is
  * written. An import makes a new case, so the ids only have to be unique
- * within the file.
+ * within the file. The goal rules are checked in the same place, for the same
+ * reason.
  */
 async function processImportData(data: unknown): Promise<{
 	success: boolean;
@@ -145,13 +267,14 @@ async function processImportData(data: unknown): Promise<{
 
 	// If nested, flatten to flat format; otherwise it is already v2
 	let v2Data: CaseExportV2;
+	const warnings: string[] = [];
 	if (result.version === "nested") {
 		const { flattenNestedToFlat } = await import(
 			"@/lib/transforms/nested-to-flat"
 		);
-		v2Data = flattenNestedToFlat(result.data);
+		v2Data = flattenNestedToFlat(result.data, warnings);
 	} else {
-		v2Data = result.data as CaseExportV2;
+		v2Data = leaveOutBeneathEvidence(result.data as CaseExportV2, warnings);
 	}
 
 	const contextProblem = checkContextEntriesForCase(
@@ -161,7 +284,12 @@ async function processImportData(data: unknown): Promise<{
 		return { success: false, warnings: [], errors: [contextProblem] };
 	}
 
-	return { success: true, data: v2Data, warnings: [] };
+	const goalProblems = checkGoalRules(v2Data.elements);
+	if (goalProblems.length > 0) {
+		return { success: false, warnings: [], errors: goalProblems };
+	}
+
+	return { success: true, data: v2Data, warnings };
 }
 
 /**

@@ -15,10 +15,13 @@ import { importCase } from "@/lib/services/case-import-service";
  * @description Imports a case from JSON data. Accepts v1 (legacy Django),
  * v2 (flat format), and nested (v1.0 and v1.1) formats. Creates a new case with
  * all elements and evidence links.
+ * A goal defeater (counter-goal) needs a parent in the file and a case has one
+ * ordinary goal; a file that breaks either is refused. Anything but a goal
+ * defeater found beneath evidence is left out and named in `warnings`.
  *
  * @body JSON case data in any supported format
  * @response 200 - { id, name, elementCount, evidenceLinkCount, warnings }
- * @response 400 - Validation errors
+ * @response 400 - Validation errors (including a goal defeater without a parent and a second ordinary goal)
  * @response 401 - Unauthorised
  * @response 413 - Payload too large
  * @auth bearer

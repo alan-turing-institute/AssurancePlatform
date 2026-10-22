@@ -2070,7 +2070,7 @@
       },
       "put": {
         "operationId": "put-elements-{id}",
-        "summary": "PUT /api/elements/[id]",
+        "summary": "PUT /api/elements/[id] (400 without a parent, 422 for a second goal)",
         "description": "",
         "tags": [
           "Elements"
@@ -2085,6 +2085,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -2152,6 +2155,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2191,6 +2200,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"

@@ -976,18 +976,32 @@ export async function regenerateNameForIsDefeaterChange(
 }
 
 /**
- * Checks if a case already has a goal element.
- * Returns true if a goal exists, false otherwise.
+ * A goal defeater (counter-goal) hangs from the element it challenges or
+ * supports, so it is refused without a parent: a parentless goal is a root, and
+ * a case has exactly one root goal.
+ */
+export const GOAL_DEFEATER_NEEDS_PARENT =
+	"parentId is required for a goal defeater";
+
+/** A case has one ordinary goal; counter-goals are not counted. */
+export const ONE_GOAL_PER_CASE = "A case can only have one goal claim";
+
+/**
+ * Checks if a case already has a live, non-defeater goal element, leaving out
+ * the element given as `exceptElementId` (the goal being changed).
  */
 async function caseHasGoal(
 	caseId: string,
-	db: TxClient = prisma
+	db: TxClient = prisma,
+	exceptElementId?: string
 ): Promise<boolean> {
 	const existingGoal = await db.assuranceElement.findFirst({
 		where: {
 			caseId,
 			elementType: "GOAL",
+			isDefeater: false,
 			deletedAt: null,
+			...(exceptElementId ? { id: { not: exceptElementId } } : {}),
 		},
 		select: { id: true },
 	});
@@ -1101,6 +1115,10 @@ async function createElementInDatabase(
  * `if`-blocks in createElement) to keep createElement under the
  * cognitive-complexity budget; order is preserved byte-for-byte because nothing
  * here changes which check fires first when more than one would fail.
+ *
+ * A goal defeater (counter-goal) is refused without a `parentId`
+ * (`GOAL_DEFEATER_NEEDS_PARENT`), and counter-goals do not count towards the
+ * case's one ordinary goal (`ONE_GOAL_PER_CASE`).
  */
 async function validateElementReferences(
 	caseId: string,
@@ -1109,6 +1127,10 @@ async function validateElementReferences(
 	input: CreateElementInput,
 	db: TxClient
 ): Promise<{ error: string } | undefined> {
+	if (elementType === "GOAL" && input.isDefeater && !parentId) {
+		return { error: GOAL_DEFEATER_NEEDS_PARENT };
+	}
+
 	if (parentId) {
 		const parentError = await validateParentIdInCase(caseId, parentId, db);
 		if (parentError) {
@@ -1116,8 +1138,12 @@ async function validateElementReferences(
 		}
 	}
 
-	if (elementType === "GOAL" && (await caseHasGoal(caseId, db))) {
-		return { error: "A case can only have one goal claim" };
+	if (
+		elementType === "GOAL" &&
+		!input.isDefeater &&
+		(await caseHasGoal(caseId, db))
+	) {
+		return { error: ONE_GOAL_PER_CASE };
 	}
 
 	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
@@ -1530,10 +1556,48 @@ async function applyParentChangeForUpdate(
 }
 
 /**
+ * The goal rules for an update, judged on what the goal will be once the update
+ * is applied: a goal defeater (counter-goal) has a parent, and a case has one
+ * ordinary goal. An update that leaves `isDefeater` and `parentId` alone is not
+ * held to the first rule, so a counter-goal stored without a parent can still
+ * be edited. A counter-goal made ordinary is the only change that can add an
+ * ordinary goal, so that is the only one checked against the others.
+ */
+async function enforceGoalRulesOnUpdate(
+	elementId: string,
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	},
+	input: UpdateElementInput
+): Promise<{ error: string } | undefined> {
+	if (existing.elementType !== "GOAL") {
+		return;
+	}
+	const isDefeater = input.isDefeater ?? existing.isDefeater;
+	const newParentId = resolveParentId(input);
+	const parentId = newParentId === undefined ? existing.parentId : newParentId;
+	const changesPlace =
+		input.isDefeater !== undefined || newParentId !== undefined;
+	if (changesPlace && isDefeater && !parentId) {
+		return { error: GOAL_DEFEATER_NEEDS_PARENT };
+	}
+	if (
+		existing.isDefeater &&
+		!isDefeater &&
+		(await caseHasGoal(existing.caseId, prisma, elementId))
+	) {
+		return { error: ONE_GOAL_PER_CASE };
+	}
+}
+
+/**
  * Runs every field-level validation guard `updateElement` needs before it
  * touches the update itself, in the exact order it previously ran them
  * inline: assertionStatus, moduleReferenceId, citedElementId,
- * defeatsElementId, then name format. Extracted (mirroring
+ * defeatsElementId, the goal rules, then name format. Extracted (mirroring
  * `validateElementReferences`'s role for `createElement`) to keep
  * `updateElement` under the cognitive-complexity budget; order is preserved
  * byte-for-byte because nothing here changes which check fires first when
@@ -1547,6 +1611,7 @@ async function validateUpdateElementFields(
 		elementType: PrismaElementType;
 		isDefeater: boolean;
 		moduleReferenceId: string | null;
+		parentId: string | null;
 	},
 	input: UpdateElementInput,
 	userId: string
@@ -1624,6 +1689,15 @@ async function validateUpdateElementFields(
 	);
 	if (defeatsElementIdError) {
 		return { error: defeatsElementIdError };
+	}
+
+	const goalRuleError = await enforceGoalRulesOnUpdate(
+		elementId,
+		existing,
+		input
+	);
+	if (goalRuleError) {
+		return goalRuleError;
 	}
 
 	// Named context entries: unique names on this element, and ids unique in

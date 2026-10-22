@@ -45,6 +45,8 @@ export interface AwayGoalResponse {
 	createdDate?: string;
 	description: string;
 	goalId?: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -69,6 +71,8 @@ export interface ModuleResponse {
 	createdDate?: string;
 	description: string;
 	goalId?: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -96,6 +100,8 @@ export interface GoalResponse {
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;
 	description: string;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -121,6 +127,8 @@ export interface StrategyResponse {
 	createdDate?: string;
 	description: string;
 	goalId: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -147,6 +155,8 @@ export interface PropertyClaimResponse {
 	description: string;
 	evidence: EvidenceResponse[];
 	goalId: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -171,6 +181,8 @@ export interface EvidenceResponse {
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;
 	description: string;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;

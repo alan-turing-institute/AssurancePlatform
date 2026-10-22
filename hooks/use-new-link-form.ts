@@ -13,6 +13,7 @@ import {
 	createAssuranceCaseNode,
 	findParentNode,
 	findSiblingHiddenState,
+	refreshCaseIfShown,
 } from "@/lib/case";
 import {
 	type NodeEditFormInput,
@@ -23,7 +24,6 @@ import type {
 	EvidenceResponse,
 	GoalResponse,
 	PropertyClaimResponse,
-	StrategyResponse,
 } from "@/lib/services/case-response-types";
 import { recordCreate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
@@ -72,12 +72,41 @@ export function useNewLinkForm({
 		handleClose();
 	};
 
+	const topGoalId = assuranceCase?.goals?.[0]?.id ?? null;
+
+	/**
+	 * Reads the case again, for an element the form did not place in the case
+	 * itself, so it is drawn without waiting for the live-update stream.
+	 */
+	const refresh = () => {
+		const caseId = assuranceCase?.id;
+		if (caseId) {
+			refreshCaseIfShown(
+				caseId,
+				() => useStore.getState().assuranceCase?.id,
+				setAssuranceCase
+			);
+		}
+	};
+
+	/**
+	 * A goal card other than the case's top goal: a counter-goal. What is added
+	 * from it belongs to that goal, not to the top goal. The optimistic updates
+	 * below only extend the top goal, so for a counter-goal the case is read
+	 * again to place the new element.
+	 */
+	const isCounterGoalCard =
+		node.type === "goal" && (node.data.id as string) !== topGoalId;
+
+	/** The element a new strategy attaches to: the card's own goal or claim. */
+	const strategyParentId = () =>
+		node.type === "property" || node.type === "goal"
+			? (node.data.id as string)
+			: topGoalId;
+
 	/** Builds the strategy creation payload based on the parent node type */
 	const createStrategyPayload = (description: string) => {
-		const parentId =
-			node.type === "property"
-				? (node.data.id as string)
-				: (assuranceCase?.goals?.[0]?.id ?? null);
+		const parentId = strategyParentId();
 		return {
 			description,
 			parentId,
@@ -111,10 +140,7 @@ export function useNewLinkForm({
 
 	/** Handles creation of a strategy node linked to a goal or property claim */
 	const handleStrategyAdd = async (description: string) => {
-		const parentId =
-			node.type === "property"
-				? (node.data.id as string)
-				: assuranceCase?.goals?.[0]?.id;
+		const parentId = strategyParentId();
 
 		if (!(parentId && session?.user?.id)) {
 			setLoading(false);
@@ -142,11 +168,13 @@ export function useNewLinkForm({
 			recordCreate(result.data.id, "strategy", result.data);
 		}
 
-		// Optimistic update: for goal-level strategies, update state directly.
-		// For strategies under property claims, the SSE event triggers a full
-		// case refetch that places the strategy correctly in the nested tree.
-		if (node.type !== "property") {
+		// Optimistic update: for top-goal strategies, update state directly.
+		// For strategies under property claims or counter-goals, the case is read
+		// again, which places the strategy correctly in the nested tree.
+		if (node.type !== "property" && !isCounterGoalCard) {
 			updateGoalWithStrategy(result.data);
+		} else {
+			refresh();
 		}
 
 		reset();
@@ -163,65 +191,41 @@ export function useNewLinkForm({
 		switch (node.type) {
 			case "strategy":
 			case "property":
+			case "goal":
 				return { ...baseItem, parentId: node.data.id as string };
 			default:
 				return {
 					...baseItem,
-					parentId: assuranceCase?.goals?.[0]?.id ?? null,
+					parentId: topGoalId,
 				};
 		}
 	};
 
-	/** Updates assurance case state when a claim belongs to a strategy */
-	const handleStrategyClaimUpdate = (result: {
-		data: PropertyClaimResponse;
-		error?: unknown;
-	}) => {
-		if (!assuranceCase?.goals) {
-			return false;
-		}
-		const goalContainingStrategy = assuranceCase.goals.find((goal) =>
-			goal.strategies?.some(
-				(strategy) => strategy.id === result.data.strategyId
-			)
-		);
-
-		if (!goalContainingStrategy) {
+	/**
+	 * Updates assurance case state when a claim belongs to a strategy or to
+	 * another claim. The parent is looked for wherever it sits in the case,
+	 * including beneath a counter-goal.
+	 */
+	const addClaimBeneathParent = (
+		newClaim: PropertyClaimResponse | undefined,
+		parentId: string | null | undefined
+	): boolean => {
+		if (!(assuranceCase?.goals && newClaim && parentId)) {
 			return false;
 		}
 
-		const updatedStrategies = goalContainingStrategy.strategies.map(
-			(strategy) => {
-				if (strategy.id === result.data.strategyId) {
-					return {
-						...strategy,
-						propertyClaims: [...(strategy.propertyClaims || []), result.data],
-					};
-				}
-				return strategy;
-			}
+		const goalsClone: GoalResponse[] = JSON.parse(
+			JSON.stringify(assuranceCase.goals)
 		);
 
-		const updatedGoalContainingStrategy = {
-			...goalContainingStrategy,
-			strategies: updatedStrategies,
-		};
-
-		const updatedAssuranceCase = {
-			...assuranceCase,
-			goals: (assuranceCase.goals || []).map((goal) => {
-				if (goal === goalContainingStrategy) {
-					return updatedGoalContainingStrategy;
-				}
-				return goal;
-			}),
-		};
-
-		setAssuranceCase(updatedAssuranceCase);
+		if (!addPropertyClaimToNested(goalsClone, parentId, newClaim)) {
+			return false;
+		}
+		setAssuranceCase({ ...assuranceCase, goals: goalsClone });
 		return true;
 	};
 
-	/** Updates assurance case state when a claim belongs directly to a goal */
+	/** Updates assurance case state when a claim belongs directly to the top goal */
 	const handleGoalClaimUpdate = (result: { data: PropertyClaimResponse }) => {
 		const newPropertyClaim = [
 			...(assuranceCase?.goals?.[0]?.propertyClaims || []),
@@ -245,71 +249,27 @@ export function useNewLinkForm({
 		}
 	};
 
-	/** Routes claim result to the correct state update helper */
+	/**
+	 * Routes claim result to the correct state update helper, and reads the case
+	 * again when the claim was not placed in it here.
+	 */
 	const processClaimResult = (
 		result: { data?: unknown; error?: unknown },
 		nodeType: string
 	): void => {
+		const claim = result.data as PropertyClaimResponse | undefined;
+		let placed = false;
 		if (nodeType === "strategy") {
-			handleStrategyClaimUpdate(
-				result as { data: PropertyClaimResponse; error?: unknown }
-			);
+			placed = addClaimBeneathParent(claim, claim?.strategyId);
 		} else if (nodeType === "property") {
-			handlePropertyClaim(result);
-		} else if (nodeType === "goal") {
+			placed = addClaimBeneathParent(claim, claim?.propertyClaimId);
+		} else if (nodeType === "goal" && !isCounterGoalCard) {
 			handleGoalClaimUpdate(result as { data: PropertyClaimResponse });
+			placed = true;
 		}
-	};
-
-	/** Searches strategies' property claims for a parent claim */
-	const findAndAddClaimInStrategies = (
-		strategies: StrategyResponse[],
-		parentId: string,
-		newClaim: PropertyClaimResponse
-	): boolean => {
-		for (const strategy of strategies) {
-			const strategyPropertyClaims = strategy.propertyClaims || [];
-			const found = addPropertyClaimToNested(
-				strategyPropertyClaims,
-				parentId,
-				newClaim
-			);
-			if (found) {
-				return true;
-			}
+		if (!placed) {
+			refresh();
 		}
-		return false;
-	};
-
-	/** Updates assurance case state for a nested property claim */
-	const handlePropertyClaim = (result: {
-		data?: unknown;
-		error?: unknown;
-	}): void => {
-		if (!assuranceCase?.goals) {
-			return;
-		}
-
-		const goalsClone: GoalResponse[] = JSON.parse(
-			JSON.stringify(assuranceCase.goals)
-		);
-		const parentId =
-			(result.data as PropertyClaimResponse)?.propertyClaimId || "";
-		const newClaim =
-			(result.data as PropertyClaimResponse) || ({} as PropertyClaimResponse);
-
-		const goalPropertyClaims = goalsClone[0]?.propertyClaims || [];
-		const strategies = goalsClone[0]?.strategies || [];
-
-		const added =
-			addPropertyClaimToNested(goalPropertyClaims, parentId, newClaim) ||
-			findAndAddClaimInStrategies(strategies, parentId, newClaim);
-
-		if (!added) {
-			return;
-		}
-
-		setAssuranceCase({ ...assuranceCase, goals: goalsClone });
 	};
 
 	/** Handles creation of a property claim linked to a goal, strategy, or nested claim */
@@ -428,53 +388,6 @@ export function useNewLinkForm({
 		assuranceCaseId: assuranceCase?.id,
 	});
 
-	/** Searches strategies' property claims for a claim to attach evidence to */
-	const checkPropertyClaimsInStrategies = (
-		strategies: StrategyResponse[] | undefined,
-		parentClaimId: string,
-		evidence: EvidenceResponse
-	): boolean => {
-		if (!strategies) {
-			return false;
-		}
-
-		return strategies.some(
-			(strategy) =>
-				strategy.propertyClaims &&
-				addEvidenceToClaim(strategy.propertyClaims, parentClaimId, evidence)
-		);
-	};
-
-	/** Searches a single goal's property claims (direct and via strategies) */
-	const checkPropertyClaimsInGoal = (
-		goal: GoalResponse,
-		parentClaimId: string,
-		evidence: EvidenceResponse
-	): boolean => {
-		if (
-			goal.propertyClaims &&
-			addEvidenceToClaim(goal.propertyClaims, parentClaimId, evidence)
-		) {
-			return true;
-		}
-
-		return checkPropertyClaimsInStrategies(
-			goal.strategies,
-			parentClaimId,
-			evidence
-		);
-	};
-
-	/** Searches all goals to find the claim and attach evidence */
-	const addEvidenceToGoals = (
-		goals: GoalResponse[],
-		parentClaimId: string,
-		evidence: EvidenceResponse
-	): boolean =>
-		goals.some((goal) =>
-			checkPropertyClaimsInGoal(goal, parentClaimId, evidence)
-		);
-
 	/** Updates assurance case state with a modified goals structure */
 	const updateAssuranceCaseWithModifiedGoals = (
 		modifiedGoals: GoalResponse[]
@@ -529,9 +442,11 @@ export function useNewLinkForm({
 		const evidenceData = result.data as unknown as EvidenceResponse;
 		const parentClaimId = evidenceData?.propertyClaimId?.[0] || "";
 
-		const goalsClone = JSON.parse(JSON.stringify(assuranceCase?.goals || []));
+		const goalsClone: GoalResponse[] = JSON.parse(
+			JSON.stringify(assuranceCase?.goals || [])
+		);
 
-		const added = addEvidenceToGoals(goalsClone, parentClaimId, evidenceData);
+		const added = addEvidenceToClaim(goalsClone, parentClaimId, evidenceData);
 
 		if (!added) {
 			handleEvidenceError("Could not find the parent property claim.");

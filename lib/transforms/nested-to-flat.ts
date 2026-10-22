@@ -14,6 +14,7 @@ import type {
 	EvidenceLinkV2,
 	TreeNode,
 } from "../schemas/case-export";
+import { isGoalDefeater, leftOutBeneathEvidenceWarning } from "./build-tree";
 
 /**
  * Context object for flattening operations.
@@ -23,6 +24,10 @@ interface FlattenContext {
 	elements: ElementV2[];
 	evidenceLinks: EvidenceLinkV2[];
 	evidenceMap: Map<string, string>;
+	/** Ids of evidence nodes whose children have already been flattened. */
+	walkedEvidence: Set<string>;
+	/** What the flattening left out of the file, one message each. */
+	warnings: string[];
 }
 
 /**
@@ -31,17 +36,25 @@ interface FlattenContext {
  * Evidence deduplication:
  * - Evidence nodes with identical name+url are merged into one element
  * - Multiple EvidenceLink records are created for multi-linked evidence
+ * - What hangs from a piece of evidence (counter-goals and their support) is
+ *   flattened once per evidence id, however many claims repeat the node
+ * - Anything else hanging from evidence is left out, and a message for it is
+ *   added to `warnings`
  *
  * @param nestedCase - The nested export to flatten
+ * @param warnings - Receives one message for each node left out
  * @returns Flat format with elements and evidenceLinks arrays
  */
 export function flattenNestedToFlat(
-	nestedCase: CaseExportNested
+	nestedCase: CaseExportNested,
+	warnings: string[] = []
 ): CaseExportV2 {
 	const ctx: FlattenContext = {
 		elements: [],
 		evidenceLinks: [],
 		evidenceMap: new Map<string, string>(),
+		warnings,
+		walkedEvidence: new Set<string>(),
 	};
 
 	// Recursively flatten the tree
@@ -153,6 +166,26 @@ function extractContextFromChildren(children: TreeNode[]): {
 }
 
 /**
+ * Flattens what hangs from a piece of evidence. Only goal defeaters
+ * (counter-goals) do, as in the export and the case fetch; any other child
+ * would be stored but drawn nowhere, so it is left out with its descendants and
+ * reported.
+ */
+function flattenEvidenceChildren(
+	evidence: TreeNode,
+	evidenceId: string,
+	ctx: FlattenContext
+): void {
+	for (const child of evidence.children) {
+		if (isGoalDefeater(child.type, child.isDefeater)) {
+			flattenNode(child, evidenceId, ctx);
+		} else {
+			ctx.warnings.push(leftOutBeneathEvidenceWarning(child.name));
+		}
+	}
+}
+
+/**
  * Recursively flattens a tree node into elements and evidence links.
  *
  * @param node - Current tree node to process
@@ -183,6 +216,14 @@ function flattenNode(
 				evidenceId,
 				claimId: parentId,
 			});
+		}
+
+		// The export repeats a piece of evidence, with everything that hangs from
+		// it, under each claim that links it. Elements may appear only once in the
+		// flat format, so the children are taken from the first copy met.
+		if (!ctx.walkedEvidence.has(node.id)) {
+			ctx.walkedEvidence.add(node.id);
+			flattenEvidenceChildren(node, evidenceId, ctx);
 		}
 		return;
 	}

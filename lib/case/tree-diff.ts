@@ -122,6 +122,12 @@ interface EvidenceLinkRecord {
 interface FlattenResult {
 	elements: Map<string, FlatElement>;
 	evidenceLinks: EvidenceLinkRecord[];
+	/**
+	 * For each piece of evidence, the claims under which the tree shows what
+	 * hangs from it (its counter-goals). The export shows that under one claim
+	 * only; the evidence's other copies are leaves.
+	 */
+	expandedUnder: Map<string, Set<string>>;
 }
 
 /**
@@ -188,6 +194,22 @@ function createFlatElement(
 }
 
 /**
+ * Records that the tree shows what hangs from a piece of evidence under a claim.
+ */
+function noteExpansion(
+	result: FlattenResult,
+	evidenceId: string,
+	claimId: string
+): void {
+	const claims = result.expandedUnder.get(evidenceId);
+	if (claims) {
+		claims.add(claimId);
+	} else {
+		result.expandedUnder.set(evidenceId, new Set([claimId]));
+	}
+}
+
+/**
  * Flattens a tree structure into elements and evidence links.
  * Evidence children under claims are tracked as evidence links, not parent relationships.
  */
@@ -210,6 +232,9 @@ function flattenTreeWithLinks(
 				evidenceId: child.id,
 				claimId: node.id,
 			});
+			if (child.children.length > 0) {
+				noteExpansion(result, child.id, node.id);
+			}
 			// Still need to add the evidence element itself (with null parentId)
 			flattenTreeWithLinks(child, null, result);
 		} else {
@@ -228,9 +253,151 @@ function flattenCaseExportWithLinks(
 	const result: FlattenResult = {
 		elements: new Map(),
 		evidenceLinks: [],
+		expandedUnder: new Map(),
 	};
 	flattenTreeWithLinks(caseExport.tree, null, result);
 	return result;
+}
+
+/**
+ * Carries what hangs from a piece of evidence into the edited state, unchanged:
+ * everything beneath it by parent, the evidence linked to claims in that part,
+ * and what hangs from that evidence where the tree showed it under such a claim.
+ * Where the tree showed the evidence as a leaf, what hangs from it is shown
+ * somewhere else and the person's edits to it there stand.
+ */
+function carryOverBeneath(
+	rootId: string,
+	current: FlattenResult,
+	edited: FlattenResult,
+	childrenOf: Map<string, FlatElement[]>
+): void {
+	const seen = new Set([rootId]);
+	const queue = [rootId];
+	for (const id of queue) {
+		const links = current.evidenceLinks.filter((link) => link.claimId === id);
+		carryLinks(links, edited);
+		for (const link of links) {
+			carryElement(link.evidenceId, current, edited);
+		}
+		const shown = links
+			.filter((link) => current.expandedUnder.get(link.evidenceId)?.has(id))
+			.map((link) => link.evidenceId);
+		const reached = [
+			...(childrenOf.get(id) ?? []).map((element) => element.id),
+			...shown,
+		];
+		for (const reachedId of reached) {
+			if (!seen.has(reachedId)) {
+				seen.add(reachedId);
+				queue.push(reachedId);
+				carryElement(reachedId, current, edited);
+			}
+		}
+	}
+}
+
+/** Adds an element of the current state to the edited one if it has none. */
+function carryElement(
+	id: string,
+	current: FlattenResult,
+	edited: FlattenResult
+): void {
+	const element = current.elements.get(id);
+	if (element && !edited.elements.has(id)) {
+		edited.elements.set(id, element);
+	}
+}
+
+/** The elements grouped by their parent. */
+function groupByParent(
+	elements: Iterable<FlatElement>
+): Map<string, FlatElement[]> {
+	const grouped = new Map<string, FlatElement[]>();
+	for (const element of elements) {
+		if (!element.parentId) {
+			continue;
+		}
+		const siblings = grouped.get(element.parentId);
+		if (siblings) {
+			siblings.push(element);
+		} else {
+			grouped.set(element.parentId, [element]);
+		}
+	}
+	return grouped;
+}
+
+/** Adds to the edited state the evidence links it does not have. */
+function carryLinks(links: EvidenceLinkRecord[], edited: FlattenResult): void {
+	const have = new Set(edited.evidenceLinks.map(evidenceLinkKey));
+	for (const link of links) {
+		if (!have.has(evidenceLinkKey(link))) {
+			edited.evidenceLinks.push(link);
+		}
+	}
+}
+
+/**
+ * Whether an edit hid what hangs from a piece of evidence without deleting it.
+ * Not when the evidence is gone from the edited tree, which deletes it; not
+ * when the claim that showed it still links it, so a counter-goal removed from
+ * the shown copy is a deletion; and not when any of its counter-goals still
+ * sits under it somewhere, so the person moved or edited the shown copy.
+ */
+function isHiddenByEdit(
+	evidenceId: string,
+	shownUnder: Set<string>,
+	childrenOf: Map<string, FlatElement[]>,
+	edited: FlattenResult
+): boolean {
+	if (!edited.elements.has(evidenceId)) {
+		return false;
+	}
+	const stillShown = edited.evidenceLinks.some(
+		(link) => link.evidenceId === evidenceId && shownUnder.has(link.claimId)
+	);
+	if (stillShown) {
+		return false;
+	}
+	return !(childrenOf.get(evidenceId) ?? []).some(
+		(child) => edited.elements.get(child.id)?.parentId === evidenceId
+	);
+}
+
+/**
+ * The export shows what hangs from shared evidence (its counter-goals) under
+ * one claim only, and the evidence's other copies are leaves. When an edit
+ * removes the claim that showed it, or removes the evidence from that claim,
+ * the edited tree keeps the evidence as a leaf and no longer shows what hangs
+ * from it. The person did not delete that, so it is carried over unchanged,
+ * whatever else they added beneath the evidence's other copies. Removing the
+ * counter-goal from the copy that shows it, or removing the evidence
+ * everywhere, is still a deletion.
+ *
+ * Carrying one piece of evidence's part over can bring another piece of
+ * evidence back into the edited state, as a leaf in the part that was hidden.
+ * That evidence was not gone, so the passes repeat until nothing more is
+ * carried, which makes the result independent of the order the export lists
+ * the evidence in. Carrying only adds, so the repeats end.
+ */
+function keepWhatHangsFromEvidenceNoLongerShown(
+	current: FlattenResult,
+	edited: FlattenResult
+): void {
+	const childrenOf = groupByParent(current.elements.values());
+	const pending = new Map(current.expandedUnder);
+	let carried = true;
+	while (carried) {
+		carried = false;
+		for (const [evidenceId, shownUnder] of pending) {
+			if (isHiddenByEdit(evidenceId, shownUnder, childrenOf, edited)) {
+				pending.delete(evidenceId);
+				carryOverBeneath(evidenceId, current, edited, childrenOf);
+				carried = true;
+			}
+		}
+	}
 }
 
 /**
@@ -470,6 +637,7 @@ export function computeTreeDiff(
 ): TreeDiffResult {
 	const currentResult = flattenCaseExportWithLinks(currentExport);
 	const editedResult = flattenCaseExportWithLinks(editedExport);
+	keepWhatHangsFromEvidenceNoLongerShown(currentResult, editedResult);
 
 	const currentMap = currentResult.elements;
 	const editedMap = editedResult.elements;

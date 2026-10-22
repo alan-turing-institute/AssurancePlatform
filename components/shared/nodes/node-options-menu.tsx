@@ -33,6 +33,7 @@ import {
 	detachCaseElement,
 	getNodeMutationErrorMessage,
 	type ReactFlowNode,
+	refreshCaseIfShown,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
 import {
@@ -82,6 +83,25 @@ function getParentDataId(
 	return parentNode ? String(parentNode.data.id as string | number) : "";
 }
 
+/**
+ * Reads the case again once an element has left it. The store drops the
+ * element and what hangs from it at once; what it cannot work out is what the
+ * server now draws elsewhere, such as the counter-goals of a piece of shared
+ * evidence that were drawn with the removed claim's copy. Reading the case
+ * does not wait for the live-update stream. A reply that arrives after the
+ * canvas has moved to another case is dropped.
+ */
+function refreshCase(
+	caseId: string,
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void
+) {
+	refreshCaseIfShown(
+		caseId,
+		() => useStore.getState().assuranceCase?.id,
+		setAssuranceCase
+	);
+}
+
 /** Process detach result and update state */
 function processDetachResult(
 	node: Node,
@@ -101,6 +121,7 @@ function processDetachResult(
 
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
+		refreshCase(assuranceCase.id, setAssuranceCase);
 		const existingIds = new Set(orphanedElements.map((el) => el.id));
 		if (!existingIds.has(newOrphanElement.id)) {
 			setOrphanedElements([...orphanedElements, newOrphanElement]);
@@ -122,6 +143,7 @@ function processDeleteResult(
 	);
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
+		refreshCase(assuranceCase.id, setAssuranceCase);
 	}
 }
 

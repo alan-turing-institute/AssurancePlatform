@@ -23,7 +23,9 @@ import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
+	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
+	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
 	validateCitedElementId,
 } from "@/lib/services/element-service";
@@ -36,6 +38,26 @@ import type {
 } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-batch-update-service" });
+
+/** The refusal of a batch that changes one element more than once. */
+const ELEMENT_CHANGED_ONCE = "A batch can change an element only once";
+
+/**
+ * Thrown inside the batch's transaction when fewer elements were deleted than
+ * the batch lists: another change to the case removed some of them after the
+ * batch was checked. Nothing is written, and the answer is the same conflict
+ * as for any other change that got in first.
+ */
+class ListedElementsMissingError extends Error {
+	constructor() {
+		super("The case changed while the batch was applied");
+	}
+}
+
+/** Whether the batch's transaction ended because another change to the case got in first. */
+function endedByAnotherChange(error: unknown): boolean {
+	return isWriteConflict(error) || error instanceof ListedElementsMissingError;
+}
 
 /** The answer, flagged as a conflict, when another person's change to the case got in first. */
 const CASE_MODIFIED = "Case has been modified by another user";
@@ -317,9 +339,162 @@ async function validateContextEntries(
 	return checkContextEntriesForCase(finalContext.values()) ?? null;
 }
 
+/** A goal as it is stored, before a batch changes it. */
+interface StoredGoal {
+	isDefeater: boolean;
+	parentId: string | null;
+}
+
 /**
- * Every check of the values a batch writes into element fields: the element
- * names, then the named context entries.
+ * The id of the first goal defeater (counter-goal) the batch leaves without a
+ * parent: one it creates that way, or one it clears the parent of or makes a
+ * counter-goal while it has none. Goals the batch does not move or re-flag are
+ * not looked at.
+ */
+function findParentlessGoalDefeater(
+	goalCreates: CreateChange[],
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>
+): string | undefined {
+	const created = goalCreates.find(
+		(change) => change.data.isDefeater && !change.parentId
+	);
+	if (created) {
+		return created.elementId;
+	}
+	return movedUpdates.find((change) => {
+		const stored = storedById.get(change.elementId);
+		if (!stored) {
+			return false;
+		}
+		const parentId =
+			change.data.parentId === undefined
+				? stored.parentId
+				: change.data.parentId;
+		return (change.data.isDefeater ?? stored.isDefeater) && !parentId;
+	})?.elementId;
+}
+
+/**
+ * Whether the batch leaves the case with more than one ordinary goal. It only
+ * looks when the batch adds one, as a new ordinary goal or as a counter-goal
+ * made ordinary; the goals that count are those stored and not deleted or made
+ * counter-goals by the batch.
+ */
+async function leavesSecondOrdinaryGoal(
+	caseId: string,
+	goalCreates: CreateChange[],
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>,
+	deletes: DeleteChange[]
+): Promise<boolean> {
+	const madeOrdinary = movedUpdates.filter(
+		(change) =>
+			change.data.isDefeater === false &&
+			storedById.get(change.elementId)?.isDefeater === true
+	);
+	const added =
+		goalCreates.filter((change) => !change.data.isDefeater).length +
+		madeOrdinary.length;
+	if (added === 0) {
+		return false;
+	}
+	const leaving = new Set([
+		...deletes.map((change) => change.elementId),
+		...movedUpdates
+			.filter((change) => change.data.isDefeater === true)
+			.map((change) => change.elementId),
+	]);
+	const ordinary = await prisma.assuranceElement.findMany({
+		where: {
+			caseId,
+			elementType: "GOAL",
+			isDefeater: false,
+			deletedAt: null,
+		},
+		select: { id: true },
+	});
+	return ordinary.filter((goal) => !leaving.has(goal.id)).length + added > 1;
+}
+
+/**
+ * The goal rules, as the single-element create and update routes apply them:
+ * a goal defeater (counter-goal) has a parent, and a case has one ordinary
+ * goal. Judged on the goals as the batch leaves them.
+ */
+async function validateGoalChanges(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	const goalCreates = creates.filter(
+		(change) => mapElementType(change.data.type) === "GOAL"
+	);
+	const movedUpdates = updates.filter(
+		(change) =>
+			change.data.isDefeater !== undefined || change.data.parentId !== undefined
+	);
+	if (goalCreates.length === 0 && movedUpdates.length === 0) {
+		return null;
+	}
+
+	const storedGoals =
+		movedUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: {
+						id: { in: movedUpdates.map((change) => change.elementId) },
+						elementType: "GOAL",
+					},
+					select: { id: true, isDefeater: true, parentId: true },
+				})
+			: [];
+	const storedById = new Map(storedGoals.map((goal) => [goal.id, goal]));
+
+	const parentless = findParentlessGoalDefeater(
+		goalCreates,
+		movedUpdates,
+		storedById
+	);
+	if (parentless) {
+		return `${GOAL_DEFEATER_NEEDS_PARENT} (element ${parentless})`;
+	}
+	return (await leavesSecondOrdinaryGoal(
+		caseId,
+		goalCreates,
+		movedUpdates,
+		storedById,
+		deletes
+	))
+		? ONE_GOAL_PER_CASE
+		: null;
+}
+
+/**
+ * A batch can change an element once: in one update, or in one delete. The
+ * checks of the goal rules judge each change against the stored element, so
+ * two changes to one element would each pass and together break a rule. The
+ * JSON editor never repeats an element, so a batch that does (two updates, an
+ * update and a delete, or two deletes) is refused instead of merged.
+ */
+function validateEachElementChangedOnce(
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): string | null {
+	const seen = new Set<string>();
+	for (const change of [...updates, ...deletes]) {
+		if (seen.has(change.elementId)) {
+			return `${ELEMENT_CHANGED_ONCE} (element ${change.elementId})`;
+		}
+		seen.add(change.elementId);
+	}
+	return null;
+}
+
+/**
+ * Every check of the values a batch writes into element fields: that no
+ * element is changed twice, the element names, the named context entries, then
+ * the goal rules.
  */
 async function validateElementFields(
 	userId: string,
@@ -329,8 +504,10 @@ async function validateElementFields(
 	deletes: DeleteChange[]
 ): Promise<string | null> {
 	return (
+		validateEachElementChangedOnce(updates, deletes) ??
 		(await validateElementNames(userId, creates, updates)) ??
-		(await validateContextEntries(caseId, creates, updates, deletes))
+		(await validateContextEntries(caseId, creates, updates, deletes)) ??
+		(await validateGoalChanges(caseId, creates, updates, deletes))
 	);
 }
 
@@ -363,9 +540,10 @@ async function validateEditAccess(
  *   `elementId` in this batch — otherwise a batch containing both
  *   `{type:"delete", elementId:X}` and `{type:"create", elementId:X, ...}`
  *   for a foreign X would pass ownership (X "will exist" by the time the
- *   create runs), and since `applyDeletes` runs before `applyCreates` and
- *   deletes by bare PK with no case filter, the victim's row would be
- *   hard-deleted and silently recreated under the attacker's case.
+ *   create runs), and since `applyDeletes` runs before `applyCreates`, the
+ *   victim's row could be hard-deleted and silently recreated under the
+ *   attacker's case. This check refuses it first, and `applyDeletes` itself
+ *   only deletes rows of the case being written.
  * - MAY-BE-SATISFIED-BY-A-SIBLING-CREATE ids — parent references
  *   (`parentId` on a create/update) and FK-style references to another
  *   element (`defeatsElementId` on a create/update, both sides of a
@@ -676,16 +854,27 @@ function buildCreateData(
 }
 
 /**
- * Applies delete operations
+ * Applies delete operations in one statement, on the rows of this case.
+ * Deleting an element also deletes everything beneath it, and the batch lists
+ * those elements too, so deleting them one by one would fail on the first one
+ * the parent's delete had already taken with it. Every listed element must be
+ * found: if fewer rows go than were listed, the batch is rolled back rather
+ * than deleting less than it was asked to.
  */
 async function applyDeletes(
 	tx: TransactionClient,
+	caseId: string,
 	deletes: DeleteChange[]
 ): Promise<void> {
-	for (const change of deletes) {
-		await tx.assuranceElement.delete({
-			where: { id: change.elementId },
-		});
+	if (deletes.length === 0) {
+		return;
+	}
+	const ids = deletes.map((change) => change.elementId);
+	const { count } = await tx.assuranceElement.deleteMany({
+		where: { id: { in: ids }, caseId },
+	});
+	if (count < ids.length) {
+		throw new ListedElementsMissingError();
 	}
 }
 
@@ -1409,7 +1598,7 @@ export async function applyBatchUpdate(
 		await prisma.$transaction(async (tx) => {
 			// Order: unlinks first, then deletes, creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
-			await applyDeletes(tx, deletes);
+			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, updates);
 			await applyLinkEvidence(tx, links);
@@ -1431,9 +1620,10 @@ export async function applyBatchUpdate(
 			},
 		};
 	} catch (error) {
-		if (isWriteConflict(error)) {
+		if (endedByAnotherChange(error)) {
 			// Another transaction holds rows this one needs while waiting for rows
-			// this one holds, and the database ended this one. Nothing was written.
+			// this one holds, and the database ended this one, or it removed
+			// elements this one was to delete. Nothing was written.
 			log.warn("Batch update ended by a write conflict", { error });
 			return { error: CASE_MODIFIED, conflictDetected: true };
 		}

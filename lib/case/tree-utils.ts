@@ -20,29 +20,28 @@ import type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";
 const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["context"]);
 
 /**
+ * The child lists each kind of node is searched through, in search order. A
+ * counter-goal hangs from the node it challenges, so every node that can be
+ * challenged lists `goals`. A type not listed here, including the live case
+ * root ("assurance_case"), has no adjacent nodes.
+ */
+const ADJACENT_KEYS: ReadonlyMap<string, readonly string[]> = new Map([
+	["AssuranceCase", ["goals"]],
+	["goal", ["propertyClaims", "strategies", "goals"]],
+	["strategy", ["propertyClaims", "goals"]],
+	["property_claim", ["strategies", "propertyClaims", "evidence", "goals"]],
+	["evidence", ["goals"]],
+	["away_goal", ["goals"]],
+	["module", ["goals"]],
+]);
+
+/**
  * Gets the adjacent nodes for a given case node based on its type.
  */
-const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
-	if (caseNode.type === "AssuranceCase") {
-		return (caseNode.goals || []) as unknown as CaseNode[];
-	}
-	if (caseNode.type === "goal") {
-		return ((caseNode.propertyClaims || []) as unknown as CaseNode[]).concat(
-			(caseNode.strategies || []) as unknown as CaseNode[]
-		);
-	}
-	if (caseNode.type === "strategy") {
-		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
-	}
-	if (caseNode.type === "property_claim") {
-		return ((caseNode.strategies || []) as unknown as CaseNode[]).concat(
-			(caseNode.propertyClaims || []) as unknown as CaseNode[],
-			(caseNode.evidence || []) as unknown as CaseNode[]
-		);
-	}
-
-	return [];
-};
+const getAdjacent = (caseNode: CaseNode): CaseNode[] =>
+	(ADJACENT_KEYS.get(caseNode.type) ?? []).flatMap(
+		(key) => (caseNode[key] ?? []) as CaseNode[]
+	);
 
 /**
  * Searches for a target node within an assurance case using a depth-first search algorithm.
@@ -406,7 +405,7 @@ const processChildrenForHiddenStatus = (
 			hiddenStatus.push((child as { hidden: boolean }).hidden);
 		}
 		// Recursively check nested property claims and strategies
-		if (key === "propertyClaims" || key === "strategies") {
+		if (key === "propertyClaims" || key === "strategies" || key === "goals") {
 			const nestedStatus = getChildrenHiddenStatus(
 				child as NestedArrayItem | AssuranceCaseResponse
 			);
@@ -422,7 +421,13 @@ function getChildrenHiddenStatus(
 	element: NestedArrayItem | AssuranceCaseResponse
 ): boolean[] {
 	const hiddenStatus: boolean[] = [];
-	const childrenKeys = ["propertyClaims", "strategies", "evidence", "comments"];
+	const childrenKeys = [
+		"goals",
+		"propertyClaims",
+		"strategies",
+		"evidence",
+		"comments",
+	];
 
 	for (const key of childrenKeys) {
 		const children = getChildrenByKey(element, key);

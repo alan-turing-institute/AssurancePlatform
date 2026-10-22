@@ -200,36 +200,111 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 		if (!firstAnyRoot) {
 			throw new Error("No root element found (element with parentId = null)");
 		}
-		return buildNode(firstAnyRoot, childrenMap);
+		return buildNode(firstAnyRoot, childrenMap, new Set());
 	}
 
-	// Use first root GOAL (cases typically have one)
-	const firstRoot = roots[0];
+	// A case has one ordinary root goal. A goal defeater with no parent (stored
+	// before such goals were refused) never stands in for it, whatever order
+	// the rows come back in.
+	const firstRoot = roots.find((root) => !root.isDefeater) ?? roots[0];
 	if (!firstRoot) {
 		throw new Error("No root element found");
 	}
-	return buildNode(firstRoot, childrenMap);
+	return buildNode(firstRoot, childrenMap, new Set());
 }
 
 /**
- * Recursively builds a tree node from an element.
+ * Whether an element is a goal defeater (counter-goal), the only kind of
+ * element that hangs from a piece of evidence.
+ */
+export function isGoalDefeater(
+	elementType: string,
+	isDefeater: boolean | undefined
+): boolean {
+	return elementType === "GOAL" && isDefeater === true;
+}
+
+/**
+ * The warning for an element left out of an import because it hangs from a
+ * piece of evidence and is not a counter-goal.
+ */
+export function leftOutBeneathEvidenceWarning(
+	name: string | null | undefined
+): string {
+	return `${name ?? "element"}: only counter-goals can hang from evidence; the element has been left out`;
+}
+
+/**
+ * Whether a child is drawn beneath its parent. Beneath a piece of evidence
+ * only goal defeaters (counter-goals) are, as on the diagram; everything else
+ * hangs from a claim, strategy or goal.
+ */
+function isBuiltBeneath(
+	parent: ElementWithLinks,
+	child: ElementWithLinks
+): boolean {
+	return (
+		parent.elementType !== "EVIDENCE" ||
+		isGoalDefeater(child.elementType, child.isDefeater)
+	);
+}
+
+/**
+ * Whether an earlier copy of this piece of evidence has already been built.
+ * Evidence appears under every claim that links it, but what hangs from it is
+ * built with the first copy only; later copies are leaves. Repeating it with
+ * each copy would double the size of the tree at every level of shared
+ * evidence. Records the element as built when it is evidence met for the
+ * first time.
+ */
+function isLaterCopyOfEvidence(
+	element: ElementWithLinks,
+	builtEvidence: Set<string>
+): boolean {
+	if (element.elementType !== "EVIDENCE") {
+		return false;
+	}
+	if (builtEvidence.has(element.id)) {
+		return true;
+	}
+	builtEvidence.add(element.id);
+	return false;
+}
+
+/**
+ * Recursively builds a tree node from an element. The children are built in
+ * the order they are written, so the first copy of a piece of evidence met
+ * walking the finished tree is the one that carries what hangs from it.
  */
 function buildNode(
 	element: ElementWithLinks,
-	childrenMap: Map<string | null, ElementWithLinks[]>
+	childrenMap: Map<string | null, ElementWithLinks[]>,
+	builtEvidence: Set<string>,
+	ancestors: ReadonlySet<string> = new Set()
 ): TreeNode {
+	if (
+		ancestors.has(element.id) ||
+		isLaterCopyOfEvidence(element, builtEvidence)
+	) {
+		return buildCleanNode(element, []);
+	}
+	const nextAncestors = new Set(ancestors);
+	nextAncestors.add(element.id);
 	// Get direct children (via parentId relationship)
-	const directChildren = childrenMap.get(element.id) ?? [];
-
-	// Get evidence linked to this element (if it's a claim)
-	const linkedEvidence =
-		element.evidenceLinksTo?.map((link) => buildCleanNode(link.evidence, [])) ??
-		[];
+	const directChildren = (childrenMap.get(element.id) ?? []).filter((child) =>
+		isBuiltBeneath(element, child)
+	);
 
 	// Build children nodes recursively
 	const childNodes = directChildren.map((child) =>
-		buildNode(child, childrenMap)
+		buildNode(child, childrenMap, builtEvidence, nextAncestors)
 	);
+
+	// Get evidence linked to this element (if it's a claim)
+	const linkedEvidence =
+		element.evidenceLinksTo?.map((link) =>
+			buildNode(link.evidence, childrenMap, builtEvidence, nextAncestors)
+		) ?? [];
 
 	return buildCleanNode(element, [...childNodes, ...linkedEvidence]);
 }
