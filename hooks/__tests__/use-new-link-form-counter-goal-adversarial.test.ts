@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import type { Node } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { findCaseNode } from "@/lib/case/case-walk";
 import { createElementSchema } from "@/lib/schemas/element";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { server } from "@/src/__tests__/mocks/server";
@@ -12,9 +13,9 @@ import { useNewLinkForm } from "../use-new-link-form";
  * The Add Strategy, Add Property Claim and Add Defeater actions create their
  * element under the card they were opened on. On a counter-goal card that is
  * the counter-goal itself, and the store's top goal (`goals[0]`) is not
- * rewritten to make room for it: the refetch that follows the live update
- * puts the new element in the right place. On the top goal's own card the
- * optimistic update still happens.
+ * rewritten to make room for it: the case is read again, which puts the new
+ * element in the right place. On the top goal's own card the optimistic update
+ * still happens.
  */
 
 const TOP_GOAL_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -265,5 +266,67 @@ describe("Add actions on the top goal card", () => {
 		expect(
 			useStore.getState().assuranceCase?.goals?.[0]?.propertyClaims
 		).toHaveLength(2);
+	});
+});
+
+/**
+ * The form does not place these elements in the case itself, so it reads the
+ * case again. With the live-update stream down, that read is the only thing
+ * that draws them.
+ */
+describe("Add actions the form does not place in the case itself", () => {
+	const NEW_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+	const CLAIM_NODE: Node = {
+		id: `property-${CLAIM_ID}`,
+		type: "property",
+		position: { x: 0, y: 0 },
+		data: { id: CLAIM_ID },
+	};
+
+	it.each([
+		{
+			label: "a property claim from a counter-goal card",
+			node: COUNTER_GOAL_NODE,
+			linkType: "claim" as const,
+			parentId: COUNTER_GOAL_ID,
+			list: "propertyClaims",
+		},
+		{
+			label: "a strategy from a counter-goal card",
+			node: COUNTER_GOAL_NODE,
+			linkType: "strategy" as const,
+			parentId: COUNTER_GOAL_ID,
+			list: "strategies",
+		},
+		{
+			label: "a strategy from a claim card",
+			node: CLAIM_NODE,
+			linkType: "strategy" as const,
+			parentId: CLAIM_ID,
+			list: "strategies",
+		},
+	])("draws $label once the case is read again", async ({
+		node,
+		linkType,
+		parentId,
+		list,
+	}) => {
+		mockElementsRoute();
+		const fresh = buildCase();
+		const parent = findCaseNode(
+			fresh.goals ?? [],
+			parentId
+		) as unknown as Record<string, unknown[]>;
+		parent[list] = [...(parent[list] ?? []), { id: NEW_ID, name: "N1" }];
+		server.use(http.get("/api/cases/case-1", () => HttpResponse.json(fresh)));
+		const { result } = setup(node, linkType);
+
+		await submitDescription(result, "A new element");
+
+		await waitFor(() =>
+			expect(
+				findCaseNode(useStore.getState().assuranceCase?.goals ?? [], NEW_ID)
+			).not.toBeNull()
+		);
 	});
 });

@@ -16,7 +16,10 @@ export {
 // Evidence operations
 export { addEvidenceToClaim } from "./evidence";
 // Fetch + transform
-export { fetchAndRefreshCase } from "./fetch-and-refresh-case";
+export {
+	fetchAndRefreshCase,
+	refreshCaseIfShown,
+} from "./fetch-and-refresh-case";
 // Node utilities
 export { removeAssuranceCaseNode } from "./node-utils";
 // Property claims operations

@@ -31,9 +31,9 @@ import {
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
-	fetchAndRefreshCase,
 	getNodeMutationErrorMessage,
 	type ReactFlowNode,
+	refreshCaseIfShown,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
 import {
@@ -41,7 +41,6 @@ import {
 	normaliseOrphanType,
 	REACTFLOW_TO_CANONICAL,
 } from "@/lib/element-compatibility";
-import { logger } from "@/lib/logger";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { recordDelete, recordDetach } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
@@ -50,8 +49,6 @@ import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
 import { plainDescription } from "./reference-text-utils";
-
-const log = logger.child({ component: "node-options-menu" });
 
 const MORE_OPTIONS_LABEL = "More options";
 
@@ -98,17 +95,11 @@ function refreshCase(
 	caseId: string,
 	setAssuranceCase: (ac: AssuranceCaseResponse) => void
 ) {
-	fetchAndRefreshCase(caseId)
-		.then((fresh) => {
-			if (fresh && useStore.getState().assuranceCase?.id === caseId) {
-				setAssuranceCase(fresh);
-			}
-		})
-		.catch((error) => {
-			log.warn("Failed to read the case again after removing an element", {
-				error,
-			});
-		});
+	refreshCaseIfShown(
+		caseId,
+		() => useStore.getState().assuranceCase?.id,
+		setAssuranceCase
+	);
 }
 
 /** Process detach result and update state */

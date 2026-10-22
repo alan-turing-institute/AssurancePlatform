@@ -13,6 +13,7 @@ import {
 	createAssuranceCaseNode,
 	findParentNode,
 	findSiblingHiddenState,
+	refreshCaseIfShown,
 } from "@/lib/case";
 import {
 	type NodeEditFormInput,
@@ -74,10 +75,25 @@ export function useNewLinkForm({
 	const topGoalId = assuranceCase?.goals?.[0]?.id ?? null;
 
 	/**
+	 * Reads the case again, for an element the form did not place in the case
+	 * itself, so it is drawn without waiting for the live-update stream.
+	 */
+	const refresh = () => {
+		const caseId = assuranceCase?.id;
+		if (caseId) {
+			refreshCaseIfShown(
+				caseId,
+				() => useStore.getState().assuranceCase?.id,
+				setAssuranceCase
+			);
+		}
+	};
+
+	/**
 	 * A goal card other than the case's top goal: a counter-goal. What is added
 	 * from it belongs to that goal, not to the top goal. The optimistic updates
-	 * below only extend the top goal, so for a counter-goal the refetch that
-	 * follows the live update places the new element.
+	 * below only extend the top goal, so for a counter-goal the case is read
+	 * again to place the new element.
 	 */
 	const isCounterGoalCard =
 		node.type === "goal" && (node.data.id as string) !== topGoalId;
@@ -153,11 +169,12 @@ export function useNewLinkForm({
 		}
 
 		// Optimistic update: for top-goal strategies, update state directly.
-		// For strategies under property claims or counter-goals, the SSE event
-		// triggers a full case refetch that places the strategy correctly in the
-		// nested tree.
+		// For strategies under property claims or counter-goals, the case is read
+		// again, which places the strategy correctly in the nested tree.
 		if (node.type !== "property" && !isCounterGoalCard) {
 			updateGoalWithStrategy(result.data);
+		} else {
+			refresh();
 		}
 
 		reset();
@@ -192,21 +209,23 @@ export function useNewLinkForm({
 	const addClaimBeneathParent = (
 		newClaim: PropertyClaimResponse | undefined,
 		parentId: string | null | undefined
-	): void => {
+	): boolean => {
 		if (!(assuranceCase?.goals && newClaim && parentId)) {
-			return;
+			return false;
 		}
 
 		const goalsClone: GoalResponse[] = JSON.parse(
 			JSON.stringify(assuranceCase.goals)
 		);
 
-		if (addPropertyClaimToNested(goalsClone, parentId, newClaim)) {
-			setAssuranceCase({ ...assuranceCase, goals: goalsClone });
+		if (!addPropertyClaimToNested(goalsClone, parentId, newClaim)) {
+			return false;
 		}
+		setAssuranceCase({ ...assuranceCase, goals: goalsClone });
+		return true;
 	};
 
-	/** Updates assurance case state when a claim belongs directly to a goal */
+	/** Updates assurance case state when a claim belongs directly to the top goal */
 	const handleGoalClaimUpdate = (result: { data: PropertyClaimResponse }) => {
 		const newPropertyClaim = [
 			...(assuranceCase?.goals?.[0]?.propertyClaims || []),
@@ -230,18 +249,26 @@ export function useNewLinkForm({
 		}
 	};
 
-	/** Routes claim result to the correct state update helper */
+	/**
+	 * Routes claim result to the correct state update helper, and reads the case
+	 * again when the claim was not placed in it here.
+	 */
 	const processClaimResult = (
 		result: { data?: unknown; error?: unknown },
 		nodeType: string
 	): void => {
 		const claim = result.data as PropertyClaimResponse | undefined;
+		let placed = false;
 		if (nodeType === "strategy") {
-			addClaimBeneathParent(claim, claim?.strategyId);
+			placed = addClaimBeneathParent(claim, claim?.strategyId);
 		} else if (nodeType === "property") {
-			addClaimBeneathParent(claim, claim?.propertyClaimId);
+			placed = addClaimBeneathParent(claim, claim?.propertyClaimId);
 		} else if (nodeType === "goal" && !isCounterGoalCard) {
 			handleGoalClaimUpdate(result as { data: PropertyClaimResponse });
+			placed = true;
+		}
+		if (!placed) {
+			refresh();
 		}
 	};
 
