@@ -2,14 +2,23 @@
  * The shared demo account for the staging environment.
  *
  * `seedDemoAccount` creates one account, `demo`, with the Case Assistant and
- * Health plugins on, the Bluebird demo case, an OpenRouter model connection
- * and a machine integration whose token the DARTER pipeline is configured
- * with. It attaches no checks to the case and records no evidence; whoever
+ * Health plugins on, the cases listed in `DEMO_FIXTURES`, an OpenRouter model
+ * connection and a machine integration whose token the DARTER pipeline is
+ * configured with. The integration is granted the Bluebird case only. It
+ * attaches no checks to the cases and records no evidence results; whoever
  * runs the demo adds those.
  *
+ * The Bluebird case is imported first, then the model connection and the
+ * integration (with its token and grant) are created, and the showcase cases
+ * are imported last, in list order.
+ *
  * It expects a freshly reset database. If the `demo` user already exists it
- * changes nothing. A run that fails part-way leaves a partial account, which
- * the next reset removes.
+ * changes nothing. A list that does not hold exactly one Bluebird entry is
+ * refused before anything is written. A run that fails part-way leaves what
+ * it had written: when a showcase file is broken, the account holds the user,
+ * the plugins, the Bluebird case, the connection, the integration with its
+ * token and grant, and the showcase cases listed before the broken file, and
+ * the seed fails naming that file. The next reset removes the account.
  *
  * `readDemoAccountValues` checks the environment without touching the
  * database. The modules that open a connection when they load are imported
@@ -20,7 +29,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import argon2 from "argon2";
 import {
@@ -55,7 +64,37 @@ export const DEMO_PIPELINE_SCOPES = [
 const DEMO_PLUGIN_IDS = ["tea.health", "tea.assistant"] as const;
 const DEMO_CONNECTION_LABEL = "OpenRouter";
 
-const FIXTURE_PATH = join(__dirname, "fixtures", "bluebird-demo-case.json");
+const FIXTURE_DIR = join(__dirname, "fixtures");
+
+/** A case file the demo account is seeded with. */
+export interface DemoFixture {
+	/** The id the imported case always gets. */
+	caseId: string;
+	/**
+	 * The file's name in `prisma/seed/fixtures/`. A path that is already
+	 * absolute is used as it stands.
+	 */
+	file: string;
+}
+
+/**
+ * The cases the demo account holds, each under its own fixed id. The Bluebird
+ * entry must stay, once: the pipeline integration is granted that case, and
+ * only that case, and it is imported before the others. Every other entry is
+ * a showcase case, imported in this order. To add one, put its file in
+ * `prisma/seed/fixtures/` and add an entry here.
+ */
+export const DEMO_FIXTURES: readonly DemoFixture[] = [
+	{ file: "bluebird-demo-case.json", caseId: DEMO_CASE_ID },
+	{
+		file: "security-demo-case.json",
+		caseId: "7a33ef25-9e2b-493f-96f6-5f8d42e354f7",
+	},
+	{
+		file: "explainability-demo-case.json",
+		caseId: "d1592017-1adb-4eae-95a0-017651a147cb",
+	},
+];
 
 /** The environment variables the demo account is built from. */
 const REQUIRED_ENV = [
@@ -77,8 +116,18 @@ export interface DemoAccountValues {
 	pipelineToken: string;
 }
 
+/** A case the seed imported, with the fixture file it came from. */
+export interface ImportedDemoCase {
+	caseId: string;
+	file: string;
+}
+
+/**
+ * `caseId` is the Bluebird case; `showcaseCases` are the other cases the
+ * demo account holds, in the order they were imported.
+ */
 export type DemoAccountResult =
-	| { caseId: string; status: "created" }
+	| { caseId: string; showcaseCases: ImportedDemoCase[]; status: "created" }
 	| { status: "exists" };
 
 /** A failure whose message is safe to print: it never contains a secret. */
@@ -208,21 +257,148 @@ async function loadDatabaseModules() {
 	};
 }
 
+type DatabaseModules = Awaited<ReturnType<typeof loadDatabaseModules>>;
+
+/**
+ * The parsed contents of a fixture file. A failure names the file and says
+ * what kind of failure it was, and never repeats the file's text.
+ */
+function readFixture(file: string): unknown {
+	try {
+		return JSON.parse(readFileSync(resolve(FIXTURE_DIR, file), "utf-8"));
+	} catch (error) {
+		const reason =
+			error instanceof SyntaxError
+				? "it is not valid JSON"
+				: "it could not be read";
+		throw new DemoSeedError(`Could not import ${file}: ${reason}`);
+	}
+}
+
+/** Imports one fixture for `userId` under its fixed case id. */
+async function importDemoCase(
+	importCase: DatabaseModules["importCase"],
+	userId: string,
+	{ file, caseId }: DemoFixture
+): Promise<ImportedDemoCase> {
+	const imported = await importCase(userId, readFixture(file), {
+		fixedIds: { caseId },
+	});
+	if ("error" in imported) {
+		throw new DemoSeedError(
+			`Could not import ${file}: ${[imported.error, ...(imported.validationErrors ?? [])].join("; ")}`
+		);
+	}
+	return { file, caseId: imported.data.caseId };
+}
+
+/** Imports each fixture for `userId`, in order, under its fixed case id. */
+async function importDemoCases(
+	importCase: DatabaseModules["importCase"],
+	userId: string,
+	fixtures: readonly DemoFixture[]
+): Promise<ImportedDemoCase[]> {
+	const cases: ImportedDemoCase[] = [];
+	for (const fixture of fixtures) {
+		cases.push(await importDemoCase(importCase, userId, fixture));
+	}
+	return cases;
+}
+
+/**
+ * Separates the Bluebird entry from the showcase entries, which keep their
+ * list order. A list without exactly one Bluebird entry is refused, because
+ * the pipeline integration is granted that case and two entries would import
+ * it twice under one id.
+ */
+function splitBluebird(fixtures: readonly DemoFixture[]): {
+	bluebird: DemoFixture;
+	showcases: DemoFixture[];
+} {
+	const bluebirds = fixtures.filter(
+		(fixture) => fixture.caseId === DEMO_CASE_ID
+	);
+	const [bluebird] = bluebirds;
+	if (!bluebird) {
+		throw new DemoSeedError(
+			`The Bluebird case is missing from the demo case list: no entry has the case id ${DEMO_CASE_ID}`
+		);
+	}
+	if (bluebirds.length > 1) {
+		throw new DemoSeedError(
+			`The Bluebird case is in the demo case list more than once: ${bluebirds.map((fixture) => fixture.file).join(", ")} all have the case id ${DEMO_CASE_ID}`
+		);
+	}
+	return {
+		bluebird,
+		showcases: fixtures.filter((fixture) => fixture !== bluebird),
+	};
+}
+
+/**
+ * Adds the OpenRouter connection, the pipeline's machine integration with its
+ * token, and the integration's EDIT grant on the Bluebird case.
+ */
+async function wirePipeline(
+	modules: DatabaseModules,
+	values: DemoAccountValues,
+	userId: string
+): Promise<void> {
+	const connection = await modules.createConnectionWithJobs(
+		userId,
+		{
+			label: DEMO_CONNECTION_LABEL,
+			type: "OPENROUTER",
+			apiKey: values.openRouterKey,
+		},
+		recommendedJobs()
+	);
+	if ("error" in connection) {
+		throw new DemoSeedError(
+			`Could not add the model connection: ${connection.error}`
+		);
+	}
+
+	const registered = await modules.registerIntegration(
+		{
+			name: DEMO_INTEGRATION_NAME,
+			description: DEMO_INTEGRATION_DESCRIPTION,
+			scopes: [...DEMO_PIPELINE_SCOPES],
+		},
+		userId
+	);
+	if ("error" in registered) {
+		throw new DemoSeedError(
+			`Could not register the pipeline integration: ${registered.error}`
+		);
+	}
+	await modules.prisma.apiToken.create({
+		data: {
+			integrationId: registered.data.integration.id,
+			tokenHash: hashApiTokenSecret(values.pipelineToken),
+			tokenPrefix: tokenDisplayPrefix(values.pipelineToken),
+		},
+	});
+	await modules.ensureDarterCaseGrant(
+		DEMO_CASE_ID,
+		registered.data.systemUserId,
+		"EDIT",
+		userId
+	);
+}
+
 /**
  * Creates the demo account, or does nothing if a `demo` user exists.
- * Needs DATABASE_URL and TOKEN_ENCRYPTION_KEY in the environment.
+ * Needs DATABASE_URL and TOKEN_ENCRYPTION_KEY in the environment. `fixtures`
+ * is the list of cases to import; only a test passes another.
  */
 export async function seedDemoAccount(
-	values: DemoAccountValues
+	values: DemoAccountValues,
+	fixtures: readonly DemoFixture[] = DEMO_FIXTURES
 ): Promise<DemoAccountResult> {
-	const {
-		prisma,
-		importCase,
-		createConnectionWithJobs,
-		ensureDarterCaseGrant,
-		registerIntegration,
-		setPluginEnabledForUser,
-	} = await loadDatabaseModules();
+	const { bluebird, showcases } = splitBluebird(fixtures);
+	const modules = await loadDatabaseModules();
+	const { prisma, importCase, setPluginEnabledForUser } = modules;
 
 	const existing = await prisma.user.findUnique({
 		where: { username: DEMO_USERNAME },
@@ -263,57 +439,13 @@ export async function seedDemoAccount(
 		}
 	}
 
-	const fixture: unknown = JSON.parse(readFileSync(FIXTURE_PATH, "utf-8"));
-	const imported = await importCase(user.id, fixture, {
-		fixedIds: { caseId: DEMO_CASE_ID },
-	});
-	if ("error" in imported) {
-		throw new DemoSeedError(
-			`Could not import the demo case: ${[imported.error, ...(imported.validationErrors ?? [])].join("; ")}`
-		);
-	}
+	await importDemoCase(importCase, user.id, bluebird);
+	await wirePipeline(modules, values, user.id);
+	const showcaseCases = await importDemoCases(importCase, user.id, showcases);
 
-	const connection = await createConnectionWithJobs(
-		user.id,
-		{
-			label: DEMO_CONNECTION_LABEL,
-			type: "OPENROUTER",
-			apiKey: values.openRouterKey,
-		},
-		recommendedJobs()
-	);
-	if ("error" in connection) {
-		throw new DemoSeedError(
-			`Could not add the model connection: ${connection.error}`
-		);
-	}
-
-	const registered = await registerIntegration(
-		{
-			name: DEMO_INTEGRATION_NAME,
-			description: DEMO_INTEGRATION_DESCRIPTION,
-			scopes: [...DEMO_PIPELINE_SCOPES],
-		},
-		user.id
-	);
-	if ("error" in registered) {
-		throw new DemoSeedError(
-			`Could not register the pipeline integration: ${registered.error}`
-		);
-	}
-	await prisma.apiToken.create({
-		data: {
-			integrationId: registered.data.integration.id,
-			tokenHash: hashApiTokenSecret(values.pipelineToken),
-			tokenPrefix: tokenDisplayPrefix(values.pipelineToken),
-		},
-	});
-	await ensureDarterCaseGrant(
-		imported.data.caseId,
-		registered.data.systemUserId,
-		"EDIT",
-		user.id
-	);
-
-	return { status: "created", caseId: imported.data.caseId };
+	return {
+		status: "created",
+		caseId: DEMO_CASE_ID,
+		showcaseCases,
+	};
 }

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import argon2 from "argon2";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -9,10 +7,12 @@ import {
 import { decryptToken, isEncrypted } from "@/lib/auth/token-encryption";
 import { recommendedModel } from "@/lib/models/recommended";
 import prisma from "@/lib/prisma";
+import { validateImportData } from "@/lib/services/case-import-service";
 import { isPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import { TOUR_IDS } from "@/lib/tours";
 import {
 	DEMO_CASE_ID,
+	DEMO_FIXTURES,
 	DEMO_INTEGRATION_NAME,
 	DEMO_PIPELINE_SCOPES,
 	DEMO_USERNAME,
@@ -25,6 +25,11 @@ import {
 	runDemoEntryPoint,
 	validEnv,
 } from "../utils/demo-account-kit";
+import {
+	committedFixtureText,
+	elementIdsIn,
+	SHOWCASE_FIXTURES,
+} from "../utils/demo-fixture-files";
 
 const VALUES: DemoAccountValues = {
 	password: "Demo-account-test-1!", // pragma: allowlist secret
@@ -32,28 +37,7 @@ const VALUES: DemoAccountValues = {
 	pipelineToken: `teap_${"a1B2c3D4e5".repeat(4)}-_x`,
 };
 
-interface FixtureNode {
-	children: FixtureNode[];
-	id: string;
-}
-
-function fixtureElementIds(): string[] {
-	const fixture: { tree: FixtureNode } = JSON.parse(
-		readFileSync(
-			join(process.cwd(), "prisma/seed/fixtures/bluebird-demo-case.json"),
-			"utf-8"
-		)
-	);
-	const ids: string[] = [];
-	const walk = (node: FixtureNode) => {
-		ids.push(node.id);
-		for (const child of node.children) {
-			walk(child);
-		}
-	};
-	walk(fixture.tree);
-	return ids.sort();
-}
+const BLUEBIRD_FILE = "bluebird-demo-case.json";
 
 async function countRows() {
 	return {
@@ -81,7 +65,11 @@ describe("seedDemoAccount", () => {
 		useTestEncryptionKey();
 
 		const result = await seedDemoAccount(VALUES);
-		expect(result).toEqual({ status: "created", caseId: DEMO_CASE_ID });
+		expect(result).toEqual({
+			status: "created",
+			caseId: DEMO_CASE_ID,
+			showcaseCases: SHOWCASE_FIXTURES,
+		});
 
 		const user = await prisma.user.findUniqueOrThrow({
 			where: { username: DEMO_USERNAME },
@@ -156,7 +144,7 @@ describe("seedDemoAccount", () => {
 			where: { caseId: DEMO_CASE_ID },
 		});
 		expect(elements.map((element) => element.id).sort()).toEqual(
-			fixtureElementIds()
+			elementIdsIn(committedFixtureText(BLUEBIRD_FILE))
 		);
 
 		expect(await prisma.pluginHealthCheckCatalogue.count()).toBe(0);
@@ -180,6 +168,19 @@ describe("seedDemoAccount", () => {
 			where: { username: DEMO_USERNAME },
 		});
 		expect(userAfter).toEqual(userBefore);
+	});
+});
+
+describe("the demo fixture list", () => {
+	it.each(
+		DEMO_FIXTURES.map((fixture) => fixture.file)
+	)("parses %s with the import schema", async (file) => {
+		const checked = await validateImportData(
+			JSON.parse(committedFixtureText(file))
+		);
+
+		expect(checked.errors).toBeUndefined();
+		expect(checked.isValid).toBe(true);
 	});
 });
 

@@ -1,0 +1,152 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-10-22T06:29:45.579Z",
+  "case": {
+    "name": "Severe-rainfall forecast explanations (explainability)",
+    "description": "Illustrative example. A fictional data-driven weather model whose forecasts of heavy rainfall come with explanations for duty forecasters."
+  },
+  "tree": {
+    "id": "32f4ee83-1326-40dd-a523-edfc1ac40abe",
+    "type": "GOAL",
+    "name": "G1",
+    "description": "The explanations shown with the forecast model's heavy-rainfall forecasts are fit for duty forecasters to use when deciding whether to issue a warning.",
+    "inSandbox": false,
+    "children": [
+      {
+        "id": "a4d7e6b3-9c72-4766-b884-156cc0384aad",
+        "type": "STRATEGY",
+        "name": "S1",
+        "description": "Argument over three properties of the attribution maps' fidelity to the model: dependence on what the model learned, ranking first the input regions the forecast depends on, and agreement with how much the model relies on each input variable overall.",
+        "inSandbox": false,
+        "children": [
+          {
+            "id": "1cb6f5c9-3fb2-418e-abaa-b19f2a828bfb",
+            "type": "PROPERTY_CLAIM",
+            "name": "P1",
+            "description": "Attribution maps made from the forecast model with its learned weights randomised have a structural similarity below 0.3 to the maps from the trained model.",
+            "inSandbox": false,
+            "children": [
+              {
+                "id": "108340c1-c61b-4c29-9320-4797c7ebf738",
+                "type": "EVIDENCE",
+                "name": "E1",
+                "description": "Sanity-check report SC-4.1, table 2: structural similarity between maps from the trained and weight-randomised model for 200 forecasts from the 2025 verification set. Covers model version 4.1; run by the model team; assumes the 200 forecasts represent the heavy-rainfall cases forecasters meet.",
+                "inSandbox": false,
+                "children": []
+              }
+            ],
+            "level": 1
+          },
+          {
+            "id": "1daad11e-464a-46a6-9dad-bc9d57f34d6a",
+            "type": "PROPERTY_CLAIM",
+            "name": "P2",
+            "description": "The attribution maps rank first the input regions whose deletion changes the forecast at the selected location fastest, compared with a random ranking of the same regions.",
+            "inSandbox": false,
+            "children": [
+              {
+                "id": "01c0dffb-fbbb-4cd6-b464-0b963aaa8b12",
+                "type": "EVIDENCE",
+                "name": "E2",
+                "description": "Deletion-curve analysis DC-4.1, figure 3: 500 heavy-rainfall forecasts from the 2025 verification set, compared with a random-removal baseline. Covers model version 4.1; run by the model team; assumes that replacing a region with its climate average removes its information.",
+                "inSandbox": false,
+                "children": []
+              }
+            ],
+            "level": 1
+          },
+          {
+            "id": "a6ffba4f-62f5-406c-8187-6ebad79ba2e6",
+            "type": "PROPERTY_CLAIM",
+            "name": "P3",
+            "description": "The input variables that the attribution maps rank highest on average are the ones whose shuffling most reduces the forecast model's skill on heavy-rainfall cases.",
+            "inSandbox": false,
+            "children": [
+              {
+                "id": "d3e0a93f-1add-4c05-aec3-dbdc2b836df9",
+                "type": "EVIDENCE",
+                "name": "E3",
+                "description": "Permutation-importance analysis PM-4.1, table 2: the drop in forecast skill on 500 heavy-rainfall cases from the 2025 verification set when each input variable is shuffled, set against each variable's average rank in the attribution maps. Covers model version 4.1; run by the model team; assumes the input variables are not strongly correlated.",
+                "inSandbox": false,
+                "children": []
+              }
+            ],
+            "level": 1
+          }
+        ],
+        "justification": "Each property rules out a different way an attribution map can look plausible without reflecting the model."
+      },
+      {
+        "id": "6e914571-f94a-4e8a-821a-d141e4829671",
+        "type": "STRATEGY",
+        "name": "S2",
+        "description": "Argument over three properties of the explanations in use: how well they convey the model's behaviour to forecasters, their effect on warning decisions, and their delivery time.",
+        "inSandbox": false,
+        "children": [
+          {
+            "id": "b0fcdf73-49b4-4f66-8ec8-c1994a03ebab",
+            "type": "PROPERTY_CLAIM",
+            "name": "P4",
+            "description": "The explanations let duty forecasters simulate the forecast model, predicting its output for new cases more accurately than they can without them.",
+            "inSandbox": false,
+            "children": [],
+            "level": 1
+          },
+          {
+            "id": "f3eeaa1f-01a5-465b-8f57-b208ba6f0264",
+            "type": "PROPERTY_CLAIM",
+            "name": "P5",
+            "description": "The explanations are useful to duty forecasters in cases where they disagree with the model.",
+            "inSandbox": false,
+            "children": [
+              {
+                "id": "94b6c214-90f1-4f27-803d-4e2635f24577",
+                "type": "EVIDENCE",
+                "name": "E4",
+                "description": "Reliance trial report RL-1, table 4: 24 duty forecasters deciding 60 past heavy-rainfall cases with and without the explanations, in random order. Covers model version 4.1; run by the service's human-factors team; assumes decisions in a trial match decisions on shift.",
+                "inSandbox": false,
+                "children": []
+              }
+            ],
+            "level": 1
+          },
+          {
+            "id": "c54f23f1-f1b2-4a89-addc-49225aa4424a",
+            "type": "PROPERTY_CLAIM",
+            "name": "P6",
+            "description": "The explanations reach the duty forecaster within 30 seconds of each forecast run, and score above the midpoint of a standard explanation-satisfaction scale among duty forecasters.",
+            "inSandbox": false,
+            "children": [
+              {
+                "id": "c625ce7e-64a8-4f49-9888-605e871e5c43",
+                "type": "EVIDENCE",
+                "name": "E5",
+                "description": "Latency log LL-25, per-run records: time from each forecast run to its explanation reaching the forecaster's console, winter 2025–26. Covers the operational explanation service; logged automatically; assumes the console clocks are synchronised.",
+                "inSandbox": false,
+                "children": []
+              },
+              {
+                "id": "8258499f-24a2-4600-8e15-e0e8ae06e628",
+                "type": "EVIDENCE",
+                "name": "E6",
+                "description": "Explanation-satisfaction survey ES-1, summary table: 40 duty forecasters rating the explanations on a standard eight-item scale. Covers model version 4.1; self-reported; assumes the respondents represent all duty forecasters.",
+                "inSandbox": false,
+                "children": []
+              }
+            ],
+            "level": 1
+          }
+        ],
+        "justification": "An explanation that is faithful but misread, ignored or late does not help the warning decision."
+      }
+    ],
+    "role": "TOP_LEVEL",
+    "context": [
+      "Use: duty forecasters at a national weather service see an explanation beside each heavy-rainfall forecast, as one input to the decision to issue a warning.",
+      "Heavy-rainfall forecast: a forecast of rainfall above the service's warning threshold at a location within the next 48 hours.",
+      "Explanation: an attribution map of which input variables and grid regions most influenced the forecast at a selected location, made with integrated gradients.",
+      "Fit for use: the explanations reflect what drove the forecast, and forecasters who use them make better warning decisions than forecasters who do not."
+    ],
+    "justification": "Confidence: medium. The evidence covers model version 4.1 and the 2025 verification set only."
+  }
+}

@@ -37,10 +37,18 @@ function describeFailure(error: unknown): string {
 		: "unknown error";
 }
 
+/** One line for the account and its Bluebird case, then one for each showcase case. */
 function describeResult(result: DemoAccountResult): string {
-	return result.status === "created"
-		? `demo account ready: case id=${result.caseId}`
-		: "demo account already exists: nothing changed";
+	if (result.status !== "created") {
+		return "demo account already exists: nothing changed";
+	}
+	return [
+		`demo account ready: case id=${result.caseId}`,
+		...result.showcaseCases.map(
+			(imported) =>
+				`showcase case ready: case id=${imported.caseId} file=${imported.file}`
+		),
+	].join("\n");
 }
 
 async function main(): Promise<number> {

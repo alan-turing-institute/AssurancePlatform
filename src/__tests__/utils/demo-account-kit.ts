@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { generateApiTokenSecret } from "@/lib/auth/api-token-service";
 import prisma from "@/lib/prisma";
+import { committedFixtureText, elementsIn } from "./demo-fixture-files";
 
 /**
  * Helpers for the shared demo account tests: the values the account is built
@@ -16,8 +16,6 @@ const ROOT = resolve(import.meta.dirname, "../../..");
 const TSX_CLI = join(ROOT, "node_modules/tsx/dist/cli.mjs");
 const ENTRY_POINT = "prisma/seed/demo-account.ts";
 const DEV_SEED = "prisma/seed/dev-seed.ts";
-
-const FIXTURE_FILE = join(ROOT, "prisma/seed/fixtures/bluebird-demo-case.json");
 
 /**
  * The id the demo case must always have. Pipeline configurations name it, so
@@ -193,7 +191,7 @@ interface FixtureNode {
 
 /** The fixture's elements: id to name. */
 export function fixtureElements(): Map<string, string> {
-	const file = JSON.parse(readFileSync(FIXTURE_FILE, "utf-8")) as {
+	const file = JSON.parse(committedFixtureText("bluebird-demo-case.json")) as {
 		tree: FixtureNode;
 	};
 	const found = new Map<string, string>();
@@ -205,6 +203,13 @@ export function fixtureElements(): Map<string, string> {
 	};
 	visit(file.tree);
 	return found;
+}
+
+/** How many evidence elements the fixture files hold between them. */
+export function fixtureEvidenceCount(files: string[]): number {
+	return files
+		.flatMap((file) => elementsIn(committedFixtureText(file)))
+		.filter((element) => element.elementType === "EVIDENCE").length;
 }
 
 /** The id of a fixture claim, found by its name. */
