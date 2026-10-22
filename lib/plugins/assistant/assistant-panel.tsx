@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { isToolUIPart, type UIMessage } from "ai";
-import { Bot } from "lucide-react";
+import { Bot, MessageSquarePlus } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
@@ -312,17 +312,62 @@ function useSendClaim(busy: boolean): () => boolean {
 	};
 }
 
+/** The line above the chat: which element is selected, and the button that starts a new chat. The button is disabled while there is nothing to clear. */
+function SelectionRow({
+	hasMessages,
+	onNewChat,
+	selectedElementId,
+	selectedElementLabel,
+}: {
+	hasMessages: boolean;
+	onNewChat: () => void;
+	selectedElementId: string | undefined;
+	selectedElementLabel: string | undefined;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-2">
+			<p
+				className="min-w-0 flex-1 text-muted-foreground text-sm"
+				data-testid="assistant-selection"
+			>
+				{selectedElementId
+					? `Selected: ${selectedElementLabel || "an element"}`
+					: "No element selected"}
+			</p>
+			<Button
+				disabled={!hasMessages}
+				onClick={onNewChat}
+				size="sm"
+				type="button"
+				variant="outline"
+			>
+				<MessageSquarePlus />
+				New chat
+			</Button>
+		</div>
+	);
+}
+
 function AssistantChat({
 	caseId,
 	selectedElementId,
 	selectedElementLabel,
 	userId,
 }: CaseSlotContext & { userId: string }) {
-	const { messages, sendMessage, status, stop, error } = useChat({
+	const {
+		messages,
+		sendMessage,
+		setMessages,
+		clearError,
+		status,
+		stop,
+		error,
+	} = useChat({
 		chat: getCaseChat(userId, caseId),
 	});
 	const tools = useAssistantTools(caseId);
 	const [draft, setDraft] = useState("");
+	const messageBox = useRef<HTMLTextAreaElement>(null);
 	const busy = status === "submitted" || status === "streaming";
 	const { prompts, mentionsTechniques } = suggestedPrompts({
 		tools: tools ?? [],
@@ -338,6 +383,14 @@ function AssistantChat({
 			return;
 		}
 		sendMessage({ text }, { body: { selectedElementId } });
+	}
+
+	/** Ends any reply still arriving, then empties this case's chat and any failure notice. The draft stays. */
+	function newChat() {
+		stop();
+		setMessages([]);
+		clearError();
+		messageBox.current?.focus();
 	}
 
 	function submit() {
@@ -366,14 +419,12 @@ function AssistantChat({
 			className="flex flex-col gap-3"
 			style={{ height: "calc(100vh - 8rem)" }}
 		>
-			<p
-				className="text-muted-foreground text-sm"
-				data-testid="assistant-selection"
-			>
-				{selectedElementId
-					? `Selected: ${selectedElementLabel || "an element"}`
-					: "No element selected"}
-			</p>
+			<SelectionRow
+				hasMessages={messages.length > 0}
+				onNewChat={newChat}
+				selectedElementId={selectedElementId}
+				selectedElementLabel={selectedElementLabel}
+			/>
 			<Conversation>
 				<ConversationContent data-testid="assistant-messages">
 					{messages.length === 0 && (
@@ -431,6 +482,7 @@ function AssistantChat({
 					onChange={(event) => setDraft(event.target.value)}
 					onKeyDown={onKeyDown}
 					placeholder="Ask about this case"
+					ref={messageBox}
 					value={draft}
 				/>
 				{busy && (

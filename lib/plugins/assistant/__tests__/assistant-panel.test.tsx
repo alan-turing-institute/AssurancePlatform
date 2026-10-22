@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	act,
 	renderWithoutProviders,
@@ -8,23 +8,37 @@ import {
 import { AssistantPanel } from "../assistant-panel";
 
 const chat = vi.hoisted(() => ({
+	/** True in the tests that run the real `useChat` and the real chat store, with only the network faked. */
+	live: false,
 	state: {
 		messages: [] as unknown[],
 		status: "ready",
 		error: undefined as Error | undefined,
 		sendMessage: vi.fn(),
 		stop: vi.fn(),
+		setMessages: vi.fn(),
+		clearError: vi.fn(),
 	},
 }));
 
-vi.mock("@ai-sdk/react", () => ({ useChat: () => chat.state }));
+vi.mock("@ai-sdk/react", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@ai-sdk/react")>();
+	return {
+		...actual,
+		useChat: (options: Parameters<typeof actual.useChat>[0]) =>
+			// biome-ignore lint/correctness/useHookAtTopLevel: chat.live is fixed for the whole of a test, so every render calls the same hooks in the same order
+			chat.live ? actual.useChat(options) : chat.state,
+	};
+});
 const session = vi.hoisted(() => ({
 	value: { data: { user: { id: "u1" } }, status: "authenticated" } as {
 		data: { user: { id: string } } | null;
 		status: string;
 	},
 }));
-const getCaseChat = vi.hoisted(() => vi.fn(() => ({})));
+const getCaseChat = vi.hoisted(() =>
+	vi.fn((_userId: string, _caseId: string): unknown => ({}))
+);
 const assistantTools = vi.hoisted(() => ({
 	value: null as string[] | null,
 }));
@@ -49,12 +63,20 @@ const TOOLS = ["read_case", "read_element", "lint_case"];
 beforeEach(() => {
 	assistantTools.value = TOOLS;
 	session.value = { data: { user: { id: "u1" } }, status: "authenticated" };
+	chat.live = false;
 	getCaseChat.mockClear();
+	getCaseChat.mockImplementation(() => ({}));
 	chat.state.messages = [];
 	chat.state.status = "ready";
 	chat.state.error = undefined;
 	chat.state.sendMessage.mockReset();
 	chat.state.stop.mockReset();
+	chat.state.setMessages.mockReset();
+	chat.state.clearError.mockReset();
+});
+
+afterEach(() => {
+	vi.unstubAllGlobals();
 });
 
 describe("AssistantPanel", () => {
@@ -348,5 +370,216 @@ describe("AssistantPanel", () => {
 
 		expect(screen.queryByTestId("assistant-reasoning")).toBeNull();
 		expect(screen.getByText("G1 claims safety.")).toBeInTheDocument();
+	});
+});
+
+const QUESTION = {
+	id: "q1",
+	role: "user" as const,
+	parts: [{ type: "text" as const, text: "What does G1 claim?" }],
+};
+const ANSWER = {
+	id: "a1",
+	role: "assistant" as const,
+	parts: [{ type: "text" as const, text: "G1 claims safety." }],
+};
+
+/** Switches the next render to the real chat hook and store, and returns the real `getCaseChat` for looking inside. */
+async function goLive() {
+	const store =
+		await vi.importActual<typeof import("../chat-store")>("../chat-store");
+	chat.live = true;
+	getCaseChat.mockImplementation(store.getCaseChat);
+	return store.getCaseChat;
+}
+
+function stubFetch() {
+	const fetchMock = vi.fn<typeof fetch>();
+	vi.stubGlobal("fetch", fetchMock);
+	return fetchMock;
+}
+
+const STREAM_HEADERS = { "Content-Type": "text/event-stream" };
+
+/** A reply that has arrived whole. */
+function finishedReply(text: string): Response {
+	const events = [
+		{ type: "start" },
+		{ type: "text-start", id: "t" },
+		{ type: "text-delta", id: "t", delta: text },
+		{ type: "text-end", id: "t" },
+		{ type: "finish" },
+	];
+	return new Response(
+		`${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`,
+		{ headers: STREAM_HEADERS }
+	);
+}
+
+/** A reply the test feeds by hand, so that it is still arriving when New chat is chosen. */
+function openReply() {
+	const encoder = new TextEncoder();
+	let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+	let cancelled = false;
+	const body = new ReadableStream<Uint8Array>({
+		start(c) {
+			controller = c;
+		},
+		cancel() {
+			cancelled = true;
+		},
+	});
+	return {
+		response: new Response(body, { headers: STREAM_HEADERS }),
+		wasCancelled: () => cancelled,
+		push(...events: unknown[]) {
+			for (const event of events) {
+				controller?.enqueue(
+					encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+				);
+			}
+		},
+	};
+}
+
+describe("New chat", () => {
+	it("is offered only once there is a message to clear", () => {
+		const { rerender } = renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByRole("button", { name: "New chat" })).toBeDisabled();
+
+		chat.state.messages = [QUESTION];
+		rerender(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByRole("button", { name: "New chat" })).toBeEnabled();
+	});
+
+	it("empties the conversation and brings back the introduction and prompts", async () => {
+		const liveChat = await goLive();
+		liveChat("u1", "new-chat-empties").messages = [QUESTION, ANSWER];
+		renderWithoutProviders(
+			<AssistantPanel {...CTX} caseId="new-chat-empties" />
+		);
+		expect(screen.getByText("G1 claims safety.")).toBeInTheDocument();
+		expect(screen.queryByTestId("assistant-intro")).toBeNull();
+
+		await userEvent.click(screen.getByRole("button", { name: "New chat" }));
+
+		expect(screen.queryByText("G1 claims safety.")).toBeNull();
+		expect(screen.getByTestId("assistant-intro")).toBeInTheDocument();
+		expect(screen.getByTestId("assistant-suggestions")).toBeInTheDocument();
+		expect(liveChat("u1", "new-chat-empties").messages).toHaveLength(0);
+	});
+
+	it("clears a failure notice along with the messages", async () => {
+		const liveChat = await goLive();
+		stubFetch().mockResolvedValue(
+			new Response(JSON.stringify({ code: "CONFLICT", error: "No key set." }), {
+				status: 409,
+			})
+		);
+		renderWithoutProviders(<AssistantPanel {...CTX} caseId="new-chat-error" />);
+		await userEvent.type(
+			screen.getByLabelText("Message the assistant"),
+			"Hello{Enter}"
+		);
+		expect(
+			await screen.findByTestId("assistant-not-configured")
+		).toBeInTheDocument();
+
+		await userEvent.click(screen.getByRole("button", { name: "New chat" }));
+
+		expect(screen.queryByTestId("assistant-not-configured")).toBeNull();
+		expect(liveChat("u1", "new-chat-error").error).toBeUndefined();
+		expect(liveChat("u1", "new-chat-error").status).toBe("ready");
+	});
+
+	it("stops a reply that is still arriving, and none of it appears afterwards", async () => {
+		const liveChat = await goLive();
+		const reply = openReply();
+		stubFetch().mockResolvedValue(reply.response);
+		const { container } = renderWithoutProviders(
+			<AssistantPanel {...CTX} caseId="new-chat-stop" />
+		);
+		await userEvent.type(
+			screen.getByLabelText("Message the assistant"),
+			"Question{Enter}"
+		);
+		act(() => {
+			reply.push(
+				{ type: "start" },
+				{ type: "text-start", id: "t" },
+				{ type: "text-delta", id: "t", delta: "First words" }
+			);
+		});
+		expect(await screen.findByText("First words")).toBeInTheDocument();
+
+		act(() => {
+			reply.push({ type: "text-delta", id: "t", delta: " and later words" });
+			screen.getByRole("button", { name: "New chat" }).click();
+		});
+		await screen.findByRole("button", { name: "Send" });
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+		});
+
+		expect(reply.wasCancelled()).toBe(true);
+		expect(container).not.toHaveTextContent("First words");
+		expect(container).not.toHaveTextContent("later words");
+		expect(screen.getByTestId("assistant-intro")).toBeInTheDocument();
+		expect(liveChat("u1", "new-chat-stop").messages).toHaveLength(0);
+	});
+
+	it("keeps what was typed in the message box and moves focus to it", async () => {
+		chat.state.messages = [QUESTION];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+		const box = screen.getByLabelText("Message the assistant");
+		await userEvent.type(box, "half-written question");
+
+		await userEvent.click(screen.getByRole("button", { name: "New chat" }));
+
+		expect(box).toHaveValue("half-written question");
+		expect(box).toHaveFocus();
+	});
+
+	it("sends the next message with no earlier messages in the request", async () => {
+		await goLive();
+		const fetchMock = stubFetch();
+		fetchMock.mockImplementation(() =>
+			Promise.resolve(finishedReply("An answer."))
+		);
+		renderWithoutProviders(<AssistantPanel {...CTX} caseId="new-chat-next" />);
+		const box = screen.getByLabelText("Message the assistant");
+		await userEvent.type(box, "First question{Enter}");
+		await screen.findByText("An answer.");
+
+		await userEvent.click(screen.getByRole("button", { name: "New chat" }));
+		await userEvent.type(box, "Second question{Enter}");
+
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		const sent = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
+		expect(sent.messages).toHaveLength(1);
+		expect(sent.messages[0]).toMatchObject({
+			role: "user",
+			parts: [{ type: "text", text: "Second question" }],
+		});
+	});
+
+	it("leaves the chat of another case as it was", async () => {
+		const liveChat = await goLive();
+		liveChat("u1", "new-chat-here").messages = [QUESTION, ANSWER];
+		liveChat("u1", "new-chat-elsewhere").messages = [
+			{ ...QUESTION, parts: [{ type: "text", text: "A question elsewhere." }] },
+		];
+		const { rerender } = renderWithoutProviders(
+			<AssistantPanel {...CTX} caseId="new-chat-here" />
+		);
+
+		await userEvent.click(screen.getByRole("button", { name: "New chat" }));
+		rerender(<AssistantPanel {...CTX} caseId="new-chat-elsewhere" />);
+
+		expect(liveChat("u1", "new-chat-here").messages).toHaveLength(0);
+		expect(liveChat("u1", "new-chat-elsewhere").messages).toHaveLength(1);
+		expect(screen.getByText("A question elsewhere.")).toBeInTheDocument();
 	});
 });
