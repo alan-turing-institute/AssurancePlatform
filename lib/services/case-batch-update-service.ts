@@ -42,6 +42,23 @@ const log = logger.child({ component: "case-batch-update-service" });
 /** The refusal of a batch that changes one element more than once. */
 const ELEMENT_CHANGED_ONCE = "A batch can change an element only once";
 
+/**
+ * Thrown inside the batch's transaction when fewer elements were deleted than
+ * the batch lists: another change to the case removed some of them after the
+ * batch was checked. Nothing is written, and the answer is the same conflict
+ * as for any other change that got in first.
+ */
+class ListedElementsMissingError extends Error {
+	constructor() {
+		super("The case changed while the batch was applied");
+	}
+}
+
+/** Whether the batch's transaction ended because another change to the case got in first. */
+function endedByAnotherChange(error: unknown): boolean {
+	return isWriteConflict(error) || error instanceof ListedElementsMissingError;
+}
+
 /** The answer, flagged as a conflict, when another person's change to the case got in first. */
 const CASE_MODIFIED = "Case has been modified by another user";
 
@@ -523,9 +540,10 @@ async function validateEditAccess(
  *   `elementId` in this batch — otherwise a batch containing both
  *   `{type:"delete", elementId:X}` and `{type:"create", elementId:X, ...}`
  *   for a foreign X would pass ownership (X "will exist" by the time the
- *   create runs), and since `applyDeletes` runs before `applyCreates` and
- *   deletes by bare PK with no case filter, the victim's row would be
- *   hard-deleted and silently recreated under the attacker's case.
+ *   create runs), and since `applyDeletes` runs before `applyCreates`, the
+ *   victim's row could be hard-deleted and silently recreated under the
+ *   attacker's case. This check refuses it first, and `applyDeletes` itself
+ *   only deletes rows of the case being written.
  * - MAY-BE-SATISFIED-BY-A-SIBLING-CREATE ids — parent references
  *   (`parentId` on a create/update) and FK-style references to another
  *   element (`defeatsElementId` on a create/update, both sides of a
@@ -836,21 +854,28 @@ function buildCreateData(
 }
 
 /**
- * Applies delete operations in one statement. Deleting an element also deletes
- * everything beneath it, and the batch lists those elements too, so deleting
- * them one by one would fail on the first one the parent's delete had already
- * taken with it.
+ * Applies delete operations in one statement, on the rows of this case.
+ * Deleting an element also deletes everything beneath it, and the batch lists
+ * those elements too, so deleting them one by one would fail on the first one
+ * the parent's delete had already taken with it. Every listed element must be
+ * found: if fewer rows go than were listed, the batch is rolled back rather
+ * than deleting less than it was asked to.
  */
 async function applyDeletes(
 	tx: TransactionClient,
+	caseId: string,
 	deletes: DeleteChange[]
 ): Promise<void> {
 	if (deletes.length === 0) {
 		return;
 	}
-	await tx.assuranceElement.deleteMany({
-		where: { id: { in: deletes.map((change) => change.elementId) } },
+	const ids = deletes.map((change) => change.elementId);
+	const { count } = await tx.assuranceElement.deleteMany({
+		where: { id: { in: ids }, caseId },
 	});
+	if (count < ids.length) {
+		throw new ListedElementsMissingError();
+	}
 }
 
 /**
@@ -1573,7 +1598,7 @@ export async function applyBatchUpdate(
 		await prisma.$transaction(async (tx) => {
 			// Order: unlinks first, then deletes, creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
-			await applyDeletes(tx, deletes);
+			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, updates);
 			await applyLinkEvidence(tx, links);
@@ -1595,9 +1620,10 @@ export async function applyBatchUpdate(
 			},
 		};
 	} catch (error) {
-		if (isWriteConflict(error)) {
+		if (endedByAnotherChange(error)) {
 			// Another transaction holds rows this one needs while waiting for rows
-			// this one holds, and the database ended this one. Nothing was written.
+			// this one holds, and the database ended this one, or it removed
+			// elements this one was to delete. Nothing was written.
 			log.warn("Batch update ended by a write conflict", { error });
 			return { error: CASE_MODIFIED, conflictDetected: true };
 		}

@@ -2645,6 +2645,56 @@ describe("applyBatchUpdate", () => {
 	 * the single-element route (element-service.ts) has the same gap,
 	 * tracked as a separate issue.
 	 */
+	describe("deleting the elements a batch lists", () => {
+		it("rolls the whole batch back when another change removed one of them first", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const removedFirst = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const stays = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P2",
+				parentId: goal.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+			// The batch has passed its checks; another change removes one of the
+			// elements before the transaction that deletes them starts.
+			const realTransaction = prisma.$transaction.bind(prisma) as (
+				...args: unknown[]
+			) => Promise<unknown>;
+			vi.spyOn(prisma, "$transaction").mockImplementationOnce((async (
+				...args: unknown[]
+			) => {
+				await prisma.assuranceElement.delete({
+					where: { id: removedFirst.id },
+				});
+				return realTransaction(...args);
+			}) as never);
+
+			const result = await applyBatchUpdate(user.id, testCase.id, [
+				{ type: "delete", elementId: removedFirst.id },
+				{ type: "delete", elementId: stays.id },
+			]);
+
+			expectError(result, "Case has been modified by another user");
+			expect("conflictDetected" in result && result.conflictDetected).toBe(
+				true
+			);
+			expect(
+				await prisma.assuranceElement.findUnique({ where: { id: stays.id } })
+			).not.toBeNull();
+		});
+	});
+
 	describe("defeatsElementId cross-case reference (regression)", () => {
 		it("rejects a create whose defeatsElementId belongs to a different case", async () => {
 			const user = await createTestUser();
