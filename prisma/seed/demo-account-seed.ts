@@ -2,15 +2,23 @@
  * The shared demo account for the staging environment.
  *
  * `seedDemoAccount` creates one account, `demo`, with the Case Assistant and
- * Health plugins on, the cases listed in `DEMO_FIXTURES` (the Bluebird demo
- * case first, then the showcase cases), an OpenRouter model connection and a
- * machine integration whose token the DARTER pipeline is configured with. The
- * integration is granted the Bluebird case only. It attaches no checks to the
- * cases and records no evidence; whoever runs the demo adds those.
+ * Health plugins on, the cases listed in `DEMO_FIXTURES`, an OpenRouter model
+ * connection and a machine integration whose token the DARTER pipeline is
+ * configured with. The integration is granted the Bluebird case only. It
+ * attaches no checks to the cases and records no evidence; whoever runs the
+ * demo adds those.
+ *
+ * The Bluebird case is imported first, then the model connection and the
+ * integration (with its token and grant) are created, and the showcase cases
+ * are imported last, in list order.
  *
  * It expects a freshly reset database. If the `demo` user already exists it
- * changes nothing. A run that fails part-way leaves a partial account, which
- * the next reset removes.
+ * changes nothing. A list with no Bluebird entry is refused before anything
+ * is written. A run that fails part-way leaves what it had written: when a
+ * showcase file is broken, the account holds the user, the plugins, the
+ * Bluebird case, the connection, the integration with its token and grant,
+ * and the showcase cases listed before the broken file, and the seed fails
+ * naming that file. The next reset removes the account.
  *
  * `readDemoAccountValues` checks the environment without touching the
  * database. The modules that open a connection when they load are imported
@@ -70,10 +78,11 @@ export interface DemoFixture {
 }
 
 /**
- * The cases the demo account holds, imported in this order, each under its own
- * fixed id. The Bluebird entry must stay: the pipeline integration is granted
- * that case, and only that case. Every other entry is a showcase case. To add
- * one, put its file in `prisma/seed/fixtures/` and add an entry here.
+ * The cases the demo account holds, each under its own fixed id. The Bluebird
+ * entry must stay: the pipeline integration is granted that case, and only
+ * that case, and it is imported before the others. Every other entry is a
+ * showcase case, imported in this order. To add one, put its file in
+ * `prisma/seed/fixtures/` and add an entry here.
  */
 export const DEMO_FIXTURES: readonly DemoFixture[] = [
 	{ file: "bluebird-demo-case.json", caseId: DEMO_CASE_ID },
@@ -258,6 +267,23 @@ function readFixture(file: string): unknown {
 	}
 }
 
+/** Imports one fixture for `userId` under its fixed case id. */
+async function importDemoCase(
+	importCase: DatabaseModules["importCase"],
+	userId: string,
+	{ file, caseId }: DemoFixture
+): Promise<ImportedDemoCase> {
+	const imported = await importCase(userId, readFixture(file), {
+		fixedIds: { caseId },
+	});
+	if ("error" in imported) {
+		throw new DemoSeedError(
+			`Could not import ${file}: ${[imported.error, ...(imported.validationErrors ?? [])].join("; ")}`
+		);
+	}
+	return { file, caseId: imported.data.caseId };
+}
+
 /** Imports each fixture for `userId`, in order, under its fixed case id. */
 async function importDemoCases(
 	importCase: DatabaseModules["importCase"],
@@ -265,18 +291,83 @@ async function importDemoCases(
 	fixtures: readonly DemoFixture[]
 ): Promise<ImportedDemoCase[]> {
 	const cases: ImportedDemoCase[] = [];
-	for (const { file, caseId } of fixtures) {
-		const imported = await importCase(userId, readFixture(file), {
-			fixedIds: { caseId },
-		});
-		if ("error" in imported) {
-			throw new DemoSeedError(
-				`Could not import ${file}: ${[imported.error, ...(imported.validationErrors ?? [])].join("; ")}`
-			);
-		}
-		cases.push({ file, caseId: imported.data.caseId });
+	for (const fixture of fixtures) {
+		cases.push(await importDemoCase(importCase, userId, fixture));
 	}
 	return cases;
+}
+
+/**
+ * Separates the Bluebird entry from the showcase entries, which keep their
+ * list order. A list with no Bluebird entry is refused, because the pipeline
+ * integration is granted that case.
+ */
+function splitBluebird(fixtures: readonly DemoFixture[]): {
+	bluebird: DemoFixture;
+	showcases: DemoFixture[];
+} {
+	const bluebird = fixtures.find((fixture) => fixture.caseId === DEMO_CASE_ID);
+	if (!bluebird) {
+		throw new DemoSeedError(
+			`The Bluebird case is missing from the demo case list: no entry has the case id ${DEMO_CASE_ID}`
+		);
+	}
+	return {
+		bluebird,
+		showcases: fixtures.filter((fixture) => fixture !== bluebird),
+	};
+}
+
+/**
+ * Adds the OpenRouter connection, the pipeline's machine integration with its
+ * token, and the integration's EDIT grant on the Bluebird case.
+ */
+async function wirePipeline(
+	modules: DatabaseModules,
+	values: DemoAccountValues,
+	userId: string
+): Promise<void> {
+	const connection = await modules.createConnectionWithJobs(
+		userId,
+		{
+			label: DEMO_CONNECTION_LABEL,
+			type: "OPENROUTER",
+			apiKey: values.openRouterKey,
+		},
+		recommendedJobs()
+	);
+	if ("error" in connection) {
+		throw new DemoSeedError(
+			`Could not add the model connection: ${connection.error}`
+		);
+	}
+
+	const registered = await modules.registerIntegration(
+		{
+			name: DEMO_INTEGRATION_NAME,
+			description: DEMO_INTEGRATION_DESCRIPTION,
+			scopes: [...DEMO_PIPELINE_SCOPES],
+		},
+		userId
+	);
+	if ("error" in registered) {
+		throw new DemoSeedError(
+			`Could not register the pipeline integration: ${registered.error}`
+		);
+	}
+	await modules.prisma.apiToken.create({
+		data: {
+			integrationId: registered.data.integration.id,
+			tokenHash: hashApiTokenSecret(values.pipelineToken),
+			tokenPrefix: tokenDisplayPrefix(values.pipelineToken),
+		},
+	});
+	await modules.ensureDarterCaseGrant(
+		DEMO_CASE_ID,
+		registered.data.systemUserId,
+		"EDIT",
+		userId
+	);
 }
 
 /**
@@ -288,14 +379,9 @@ export async function seedDemoAccount(
 	values: DemoAccountValues,
 	fixtures: readonly DemoFixture[] = DEMO_FIXTURES
 ): Promise<DemoAccountResult> {
-	const {
-		prisma,
-		importCase,
-		createConnectionWithJobs,
-		ensureDarterCaseGrant,
-		registerIntegration,
-		setPluginEnabledForUser,
-	} = await loadDatabaseModules();
+	const { bluebird, showcases } = splitBluebird(fixtures);
+	const modules = await loadDatabaseModules();
+	const { prisma, importCase, setPluginEnabledForUser } = modules;
 
 	const existing = await prisma.user.findUnique({
 		where: { username: DEMO_USERNAME },
@@ -336,53 +422,13 @@ export async function seedDemoAccount(
 		}
 	}
 
-	const cases = await importDemoCases(importCase, user.id, fixtures);
-
-	const connection = await createConnectionWithJobs(
-		user.id,
-		{
-			label: DEMO_CONNECTION_LABEL,
-			type: "OPENROUTER",
-			apiKey: values.openRouterKey,
-		},
-		recommendedJobs()
-	);
-	if ("error" in connection) {
-		throw new DemoSeedError(
-			`Could not add the model connection: ${connection.error}`
-		);
-	}
-
-	const registered = await registerIntegration(
-		{
-			name: DEMO_INTEGRATION_NAME,
-			description: DEMO_INTEGRATION_DESCRIPTION,
-			scopes: [...DEMO_PIPELINE_SCOPES],
-		},
-		user.id
-	);
-	if ("error" in registered) {
-		throw new DemoSeedError(
-			`Could not register the pipeline integration: ${registered.error}`
-		);
-	}
-	await prisma.apiToken.create({
-		data: {
-			integrationId: registered.data.integration.id,
-			tokenHash: hashApiTokenSecret(values.pipelineToken),
-			tokenPrefix: tokenDisplayPrefix(values.pipelineToken),
-		},
-	});
-	await ensureDarterCaseGrant(
-		DEMO_CASE_ID,
-		registered.data.systemUserId,
-		"EDIT",
-		user.id
-	);
+	await importDemoCase(importCase, user.id, bluebird);
+	await wirePipeline(modules, values, user.id);
+	const showcaseCases = await importDemoCases(importCase, user.id, showcases);
 
 	return {
 		status: "created",
 		caseId: DEMO_CASE_ID,
-		showcaseCases: cases.filter((imported) => imported.caseId !== DEMO_CASE_ID),
+		showcaseCases,
 	};
 }

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, rmSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hashApiTokenSecret } from "@/lib/auth/api-token-service";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
@@ -35,7 +36,8 @@ import {
 /**
  * The demo account's case list: every listed file is imported under its own
  * fixed case id with the element ids it holds, the pipeline integration
- * stays tied to the Bluebird case, and a broken file fails the seed by name.
+ * stays tied to the Bluebird case, a list without it is refused, and a broken
+ * file fails the seed by name.
  */
 
 const SECRETS = makeSecrets();
@@ -149,6 +151,23 @@ function refusedCopy(): string {
 		child.type = "NOT_AN_ELEMENT_TYPE";
 	}
 	return JSON.stringify(parsed);
+}
+
+/** The pipeline's rows: the connections and integrations, every token hash, and every case grant. */
+async function pipelineRows() {
+	const integrations = await prisma.integration.findMany();
+	const tokens = await prisma.apiToken.findMany();
+	const grants = await prisma.casePermission.findMany();
+	return {
+		connections: await prisma.userModelConnection.count(),
+		integrations: integrations.length,
+		tokenHashes: tokens.map((token) => token.tokenHash),
+		grants: grants.map((grant) => ({
+			caseId: grant.caseId,
+			permission: grant.permission,
+			toIntegration: grant.userId === integrations[0]?.systemUserId,
+		})),
+	};
 }
 
 function filesNamingATuringProject(fixtures: readonly DemoFixture[]): string[] {
@@ -302,8 +321,23 @@ describe("a broken case file", () => {
 	);
 });
 
+describe("a list without the Bluebird case", () => {
+	it("is refused with an error saying the Bluebird case is missing, and nothing is written", async () => {
+		const before = await snapshotDatabase();
+
+		const error = await failureOf([
+			writeShowcase(dir, "first"),
+			writeShowcase(dir, "second"),
+		]);
+
+		expect(error).toBeInstanceOf(DemoSeedError);
+		expect((error as Error).message).toContain("Bluebird case is missing");
+		expect(await snapshotDatabase()).toEqual(before);
+	}, 60_000);
+});
+
 describe("a failure part-way through the list", () => {
-	it("leaves the user, the plugins and the cases before the broken file, and nothing after it; a retry changes nothing and a wipe clears it", async () => {
+	it("leaves the user, the plugins, Bluebird, the pipeline wiring and the cases before the broken file, and nothing after it; a retry changes nothing and a wipe clears it", async () => {
 		const good = writeShowcase(dir, "good");
 		const late = writeShowcase(dir, "late");
 		const clash: DemoFixture = {
@@ -319,10 +353,14 @@ describe("a failure part-way through the list", () => {
 		expect(await casesInDatabase()).toEqual(
 			casesExpectedFrom([bluebird(), good], userId)
 		);
-		expect(await prisma.userModelConnection.count()).toBe(0);
-		expect(await prisma.integration.count()).toBe(0);
-		expect(await prisma.apiToken.count()).toBe(0);
-		expect(await prisma.casePermission.count()).toBe(0);
+		expect(await pipelineRows()).toEqual({
+			connections: 1,
+			integrations: 1,
+			tokenHashes: [hashApiTokenSecret(SECRETS.pipelineToken)],
+			grants: [
+				{ caseId: DEMO_CASE_ID, permission: "EDIT", toIntegration: true },
+			],
+		});
 
 		const before = await snapshotDatabase();
 		const retry = await seedDemoAccount(SECRETS, [bluebird(), good, late]);
