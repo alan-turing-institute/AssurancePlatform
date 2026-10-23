@@ -57,6 +57,7 @@ const NEW_KEY = "sk-openai-REPLACEMENT-9921";
 const REPLY_TEXT = "Incorrect API key provided: sk-proj-LEAKED-IN-REPLY";
 const FIXED_ADDRESS = "https://api.openai.com/v1";
 const CHAT = "/v1/chat/completions";
+const RESPONSES = "/v1/responses";
 const MODELS = "/v1/models";
 const OPENAI_OUTPUT_LIMIT = 8192;
 const PRISMA_DIR = path.resolve(import.meta.dirname, "../../../prisma");
@@ -75,7 +76,15 @@ let api: Routes;
 beforeEach(async () => {
 	resetHarness();
 	server = await startServer((hit, response) => {
-		if (hit.url === CHAT) {
+		if (hit.url === RESPONSES) {
+			response.writeHead(200, { "content-type": "text/event-stream" });
+			response.end(
+				readFileSync(
+					"lib/plugins/assistant/__tests__/fixtures/openai-answer.sse",
+					"utf8"
+				)
+			);
+		} else if (hit.url === CHAT) {
 			streamChat(response, "A fine answer.");
 		} else if (hit.url === MODELS) {
 			json(response, {
@@ -443,7 +452,7 @@ describe("a chat request on an OpenAI connection, through the assistant route", 
 			.map((hit) => JSON.parse(hit.body) as Record<string, unknown>);
 	}
 
-	it("streams the answer from OpenAI's address with max_completion_tokens at the route's limit and no max_tokens", async () => {
+	it("streams the answer from OpenAI's Responses address with storage off and max_output_tokens at the route's limit", async () => {
 		const { user, id } = await userWithOpenAi();
 		await prisma.userModelConnection.update({
 			where: { id },
@@ -453,13 +462,17 @@ describe("a chat request on an OpenAI connection, through the assistant route", 
 		const outcome = await chatOn(user.id, id);
 
 		expect(outcome.status).toBe(200);
-		expect(outcome.text).toContain("A fine answer.");
+		expect(outcome.text).toContain("The case is ready.");
 		expect(outcome.text).not.toContain(KEY);
-		const [body] = chatBodies();
-		expect(chatBodies()).toHaveLength(1);
+		const [body] = server.hits
+			.filter((hit) => hit.url === RESPONSES)
+			.map((hit) => JSON.parse(hit.body));
+		expect(server.hits.filter((hit) => hit.url === RESPONSES)).toHaveLength(1);
 		expect(body?.model).toBe("the-chat-model");
 		expect(body?.stream).toBe(true);
-		expect(body?.max_completion_tokens).toBe(OPENAI_OUTPUT_LIMIT);
+		expect(body?.max_output_tokens).toBe(OPENAI_OUTPUT_LIMIT);
+		expect(body?.store).toBe(false);
+		expect(body).not.toHaveProperty("max_completion_tokens");
 		expect(body).not.toHaveProperty("max_tokens");
 		expect(body).not.toHaveProperty("reasoning");
 		expect(body).not.toHaveProperty("reasoning_effort");
@@ -468,9 +481,9 @@ describe("a chat request on an OpenAI connection, through the assistant route", 
 			expect(body).not.toHaveProperty(field);
 		}
 		expect(Array.isArray(body?.tools)).toBe(true);
-		const hit = server.hits.find((item) => item.url === CHAT);
+		const hit = server.hits.find((item) => item.url === RESPONSES);
 		expect(hit?.headers.authorization).toBe(`Bearer ${KEY}`);
-		expect(harness.requests).toEqual([`${FIXED_ADDRESS}/chat/completions`]);
+		expect(harness.requests).toEqual([`${FIXED_ADDRESS}/responses`]);
 		expect(trap.hits).toEqual([]);
 	});
 

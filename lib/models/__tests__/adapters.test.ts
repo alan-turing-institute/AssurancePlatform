@@ -149,25 +149,6 @@ describe("chatModelFor", () => {
 		expect(request.json.model).toBe("the-claude-model");
 	});
 
-	it("sends an OpenAI request's length limit as max_completion_tokens, with no max_tokens", async () => {
-		await generateText({
-			model: chatModelFor(
-				connection("OPENAI", { baseUrl: `${server.origin}/v1` }),
-				"the-openai-model"
-			),
-			prompt: "hi",
-			maxOutputTokens: 8192,
-			maxRetries: 0,
-		});
-
-		const request = lastRequest();
-		expect(request.url).toBe("/v1/chat/completions");
-		expect(request.headers.authorization).toBe(`Bearer ${KEY}`);
-		expect(request.json.model).toBe("the-openai-model");
-		expect(request.json.max_completion_tokens).toBe(8192);
-		expect(request.json).not.toHaveProperty("max_tokens");
-	});
-
 	it("still sends an OpenAI-compatible request's length limit as max_tokens", async () => {
 		await generateText({
 			model: chatModelFor(connection("OPENAI_COMPATIBLE"), "m"),
@@ -374,7 +355,6 @@ describe("chatProviderOptions", () => {
 		"OLLAMA",
 		"OPENAI_COMPATIBLE",
 		"ANTHROPIC",
-		"OPENAI",
 	] as const)("sends nothing extra to a %s server", (type) => {
 		expect(chatProviderOptions(connection(type))).toBeUndefined();
 	});
