@@ -783,3 +783,98 @@ describe("GET /api/cases/[id]/assistant — the registered tools", () => {
 		expect(response.status).toBe(404);
 	});
 });
+
+describe("POST /api/cases/[id]/assistant — the suggestion tools by permission", () => {
+	const SUGGESTION_TOOLS = ["suggest_edit", "suggest_new_element"];
+
+	function toolsOfTheReply() {
+		const options = streamTextSpy.calls[0] as {
+			tools?: Record<string, unknown>;
+		};
+		return Object.keys(options.tools ?? {});
+	}
+
+	async function replyAs(
+		user: { id: string; username: string; email: string },
+		caseId: string
+	) {
+		vi.stubEnv("TECHNIQUES_MCP_URL", "");
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+		await mockAuth(user.id, user.username, user.email);
+		const response = await post(caseId);
+		await response.text();
+		if (response.status !== 200) {
+			throw new Error(`The reply was refused with ${response.status}`);
+		}
+		return toolsOfTheReply();
+	}
+
+	it.each([
+		["VIEW", false],
+		["COMMENT", false],
+		["EDIT", true],
+		["ADMIN", true],
+	] as const)("with direct %s permission, the model has the suggestion tools: %s", async (level, offered) => {
+		const { owner, testCase } = await setup();
+		const user = await createTestUser();
+		await configure(user.id);
+		await createTestPermission(testCase.id, user.id, owner.id, level);
+
+		const tools = await replyAs(user, testCase.id);
+
+		expect(tools).toContain("read_case");
+		for (const name of SUGGESTION_TOOLS) {
+			expect(tools.includes(name)).toBe(offered);
+		}
+	});
+
+	it.each([
+		["VIEW", false],
+		["COMMENT", false],
+		["EDIT", true],
+		["ADMIN", true],
+	] as const)("with %s permission through a team, the model has the suggestion tools: %s", async (level, offered) => {
+		const { owner, testCase } = await setup();
+		const member = await createTestUser();
+		await configure(member.id);
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, level);
+
+		const tools = await replyAs(member, testCase.id);
+
+		expect(tools).toContain("read_case");
+		for (const name of SUGGESTION_TOOLS) {
+			expect(tools.includes(name)).toBe(offered);
+		}
+	});
+
+	it("tells the model of a view-only user that it cannot change the case", async () => {
+		const { owner, testCase } = await setup();
+		const viewer = await createTestUser();
+		await configure(viewer.id);
+		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
+
+		await replyAs(viewer, testCase.id);
+
+		const { system } = streamTextSpy.calls[0] as { system: string };
+		expect(system).toContain("You cannot change the case.");
+		expect(system).not.toContain("suggest_edit");
+	});
+
+	it("takes the suggestion tools from everyone, the owner included, while the switch-off setting is on", async () => {
+		const { owner, testCase } = await setup();
+		await configure(owner.id);
+		vi.stubEnv("TECHNIQUES_MCP_URL", "");
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "true");
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		await (await post(testCase.id)).text();
+
+		const tools = toolsOfTheReply();
+		expect(tools).toContain("read_case");
+		for (const name of SUGGESTION_TOOLS) {
+			expect(tools).not.toContain(name);
+		}
+	});
+});

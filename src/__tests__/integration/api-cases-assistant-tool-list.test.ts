@@ -366,6 +366,62 @@ describe("GET /api/cases/[id]/assistant — the suggestion tools", () => {
 		]);
 	});
 
+	async function toolsForTeamMember(
+		level: "VIEW" | "COMMENT" | "EDIT" | "ADMIN"
+	) {
+		const { owner, testCase } = await setup();
+		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
+		await createTestPluginState(member.id, { pluginId: PLUGIN_ID });
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, level);
+		await as(member);
+		return (await (await get(testCase.id)).json()).tools as string[];
+	}
+
+	it.each([
+		"EDIT",
+		"ADMIN",
+	] as const)("lists them for a member of a team with %s permission on the case", async (level) => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+
+		expect(await toolsForTeamMember(level)).toEqual(
+			expect.arrayContaining(SUGGESTION_TOOLS)
+		);
+	});
+
+	it.each([
+		"VIEW",
+		"COMMENT",
+	] as const)("leaves them out for a member of a team with only %s permission on the case", async (level) => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+
+		const tools = await toolsForTeamMember(level);
+
+		expect(tools).toContain("read_case");
+		expect(tools).not.toContain("suggest_edit");
+		expect(tools).not.toContain("suggest_new_element");
+	});
+
+	it("leaves them out for a team member who has only view rights through the team, though another team grants edit on a different case", async () => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+		const { owner, testCase } = await setup();
+		const otherCase = await createTestCase(owner.id);
+		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
+		await createTestPluginState(member.id, { pluginId: PLUGIN_ID });
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
+		await createTestTeamPermission(otherCase.id, team.id, owner.id, "EDIT");
+		await as(member);
+
+		const tools = (await (await get(testCase.id)).json()).tools as string[];
+
+		expect(tools).not.toContain("suggest_edit");
+	});
+
 	it("lists them for the owner, and leaves them out for everyone while the switch-off setting is on", async () => {
 		const { owner, testCase } = await setup();
 		await as(owner);
