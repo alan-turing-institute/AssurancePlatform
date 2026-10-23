@@ -212,7 +212,7 @@ interface SuggestionCardProps {
 }
 
 /**
- * A suggested change, shown in the open beside its collapsed tool row. Nothing
+ * A suggested change, shown in the open beneath its collapsed tool row. Nothing
  * in the case changes until Apply is chosen. Apply saves it as if the user had
  * typed it into the element's form, or refuses and says why; Dismiss leaves
  * the case as it was.

@@ -174,7 +174,7 @@ const SUGGESTION_ELEMENT_NOT_FOUND: Refusal = {
 
 /** Added to every suggestion, so the model does not report it as a change that was made. */
 const SUGGESTION_NOTE =
-	"The user has not applied this suggestion, and the case has not changed. Do not say it has been applied. Say briefly what you suggested and that the user can apply or dismiss it on the card below your tool call.";
+	"The user has not applied this suggestion, and the case has not changed. Do not say it has been applied. Say briefly what you suggested and that the user can apply or dismiss it on the suggestion card.";
 
 /**
  * The two tools that suggest a change. Each looks the element up in the case as
