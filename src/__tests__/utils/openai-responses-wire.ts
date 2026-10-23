@@ -23,9 +23,9 @@
 type Event = Record<string, unknown>;
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-export const OPENAI_HOST = "api.openai.com";
+const OPENAI_HOST = "api.openai.com";
 
-export interface WireRequest {
+interface WireRequest {
 	/** The request body parsed as JSON. */
 	readonly body: Record<string, unknown>;
 	readonly headers: Headers;

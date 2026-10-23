@@ -24,9 +24,10 @@ import {
 	chatProviderOptions,
 	embeddingModelFor,
 } from "../adapters";
-import type {
-	ModelConnectionAccess,
-	ModelConnectionType,
+import {
+	CONNECTION_TYPES,
+	type ModelConnectionAccess,
+	type ModelConnectionType,
 } from "../connection-types";
 import {
 	type ModelServer,
@@ -276,6 +277,21 @@ describe("an OpenAI Responses request", () => {
 		expect(() =>
 			chatModelFor({ ...access, apiKey: null }, "gpt-6.1-sol")
 		).toThrow("An OPENAI connection needs a key to chat");
+	});
+
+	it("refuses to build when the type has no fixed address, whatever the server's environment holds", () => {
+		vi.stubEnv("OPENAI_BASE_URL", "https://elsewhere.example/v1");
+		const spec = CONNECTION_TYPES.OPENAI;
+		Object.defineProperty(spec, "baseUrl", { value: null });
+		try {
+			expect(() => chatModelFor(access, "gpt-6.1-sol")).toThrow(
+				"has no fixed address"
+			);
+		} finally {
+			Object.defineProperty(spec, "baseUrl", {
+				value: "https://api.openai.com/v1",
+			});
+		}
 	});
 
 	it("continues to refuse the search job", () => {
