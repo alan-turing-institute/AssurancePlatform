@@ -25,7 +25,7 @@ describe("WebSocket Testing Utilities", () => {
 		let mockWS: MockWebSocket;
 
 		beforeEach(() => {
-			mockWS = new MockWebSocket("ws://localhost:8000/ws");
+			mockWS = new MockWebSocket("ws://localhost:3000/ws");
 		});
 
 		afterEach(() => {
@@ -33,7 +33,7 @@ describe("WebSocket Testing Utilities", () => {
 		});
 
 		it("should create a mock WebSocket with correct initial state", () => {
-			expect(mockWS.url).toBe("ws://localhost:8000/ws");
+			expect(mockWS.url).toBe("ws://localhost:3000/ws");
 			expect(mockWS.readyState).toBe(WS_READY_STATE.CONNECTING);
 		});
 
@@ -153,7 +153,7 @@ describe("WebSocket Testing Utilities", () => {
 		let mockWS: MockWebSocket;
 
 		beforeEach(() => {
-			mockWS = new MockWebSocket("ws://localhost:8000/ws");
+			mockWS = new MockWebSocket("ws://localhost:3000/ws");
 		});
 
 		it("should assert connection states correctly", async () => {
@@ -187,7 +187,7 @@ describe("WebSocket Testing Utilities", () => {
 
 	describe("Utility Functions", () => {
 		it("should wait for connection", async () => {
-			const mockWS = new MockWebSocket("ws://localhost:8000/ws");
+			const mockWS = new MockWebSocket("ws://localhost:3000/ws");
 
 			// Simulate connection opening after a delay
 			setTimeout(() => {
@@ -241,7 +241,7 @@ describe("WebSocket Testing Utilities", () => {
 			let testExecuted = false;
 
 			await simulateWebSocketLifecycle(
-				() => new MockWebSocket("ws://localhost:8000/ws"),
+				() => new MockWebSocket("ws://localhost:3000/ws"),
 				(ws) => {
 					expect(ws.readyState).toBe(WS_READY_STATE.OPEN);
 					testExecuted = true;
@@ -408,7 +408,7 @@ describe("WebSocket Testing Utilities", () => {
 
 		it("should simulate successful reconnection", async () => {
 			const createConnection = () =>
-				new MockWebSocket("ws://localhost:8000/ws");
+				new MockWebSocket("ws://localhost:3000/ws");
 
 			const ws = await tester.simulateReconnectionWithBackoff(createConnection);
 
@@ -423,7 +423,7 @@ describe("WebSocket Testing Utilities", () => {
 
 		it("should handle failed reconnection attempts", async () => {
 			const createConnection = () =>
-				new MockWebSocket("ws://localhost:8000/ws");
+				new MockWebSocket("ws://localhost:3000/ws");
 
 			try {
 				await tester.simulateReconnectionWithBackoff(

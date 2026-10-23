@@ -100,8 +100,8 @@ interface TeamMemberCreateRequest {
 	title: string;
 }
 
-// Mock API base URL (should match your backend)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Mock the same-origin Next.js API.
+const API_BASE_URL = "http://localhost:3000";
 
 export const handlers = [
 	// NextAuth endpoints (these are frontend endpoints, not backend)
