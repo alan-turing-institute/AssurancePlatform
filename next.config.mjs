@@ -30,12 +30,6 @@ const nextConfig = {
 		remotePatterns: [
 			{
 				protocol: "https",
-				hostname: "stagingteastorageaccount.blob.core.windows.net",
-				port: "",
-				pathname: "**/*",
-			},
-			{
-				protocol: "https",
 				hostname: "teastorageaccount.blob.core.windows.net",
 				port: "",
 				pathname: "**/*",
@@ -43,12 +37,6 @@ const nextConfig = {
 			{
 				protocol: "https",
 				hostname: "images.unsplash.com",
-				port: "",
-				pathname: "**/*",
-			},
-			{
-				protocol: "https",
-				hostname: "res.cloudinary.com",
 				port: "",
 				pathname: "**/*",
 			},
