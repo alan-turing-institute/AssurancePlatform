@@ -6,6 +6,7 @@ import {
 	screen,
 } from "@/src/__tests__/utils/test-utils";
 import { AssistantPanel } from "../assistant-panel";
+import { getCaseOutcomes } from "../suggestion-outcomes";
 
 const chat = vi.hoisted(() => ({
 	/** True in the tests that run the real `useChat` and the real chat store, with only the network faked. */
@@ -93,7 +94,7 @@ describe("AssistantPanel", () => {
 
 		expect(chat.state.sendMessage).toHaveBeenCalledWith(
 			{ text: "What does G1 claim?" },
-			{ body: { selectedElementId: "el-1" } }
+			{ body: { selectedElementId: "el-1", suggestionOutcomes: {} } }
 		);
 	});
 
@@ -202,7 +203,7 @@ describe("AssistantPanel", () => {
 
 		const intro = screen.getByTestId("assistant-intro");
 		expect(intro).toHaveTextContent("Ask about this case");
-		expect(intro).toHaveTextContent("never changes it");
+		expect(intro).toHaveTextContent("It never changes the case.");
 		expect(intro).not.toHaveTextContent("TEA Techniques library");
 		unmount();
 
@@ -212,6 +213,17 @@ describe("AssistantPanel", () => {
 		expect(screen.getByTestId("assistant-intro")).toHaveTextContent(
 			"TEA Techniques library"
 		);
+	});
+
+	it("says the assistant suggests changes for the user to apply when it has the suggestion tools, and not otherwise", () => {
+		assistantTools.value = [...TOOLS, "suggest_edit", "suggest_new_element"];
+		renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		const intro = screen.getByTestId("assistant-intro");
+		expect(intro).toHaveTextContent(
+			"suggests one and you choose whether to apply it"
+		);
+		expect(intro).not.toHaveTextContent("It never changes the case.");
 	});
 
 	it("shows the introduction and no prompts while the tools are unknown", () => {
@@ -234,7 +246,7 @@ describe("AssistantPanel", () => {
 		expect(chat.state.sendMessage).toHaveBeenCalledTimes(1);
 		expect(chat.state.sendMessage).toHaveBeenCalledWith(
 			{ text: "What evidence supports G1?" },
-			{ body: { selectedElementId: "el-1" } }
+			{ body: { selectedElementId: "el-1", suggestionOutcomes: {} } }
 		);
 		expect(box).toHaveValue("half-written question");
 	});
@@ -268,7 +280,7 @@ describe("AssistantPanel", () => {
 		expect(chat.state.sendMessage).toHaveBeenCalledTimes(2);
 		expect(chat.state.sendMessage).toHaveBeenLastCalledWith(
 			{ text: "Next question" },
-			{ body: { selectedElementId: "el-1" } }
+			{ body: { selectedElementId: "el-1", suggestionOutcomes: {} } }
 		);
 	});
 
@@ -581,5 +593,89 @@ describe("New chat", () => {
 		expect(liveChat("u1", "new-chat-here").messages).toHaveLength(0);
 		expect(liveChat("u1", "new-chat-elsewhere").messages).toHaveLength(1);
 		expect(screen.getByText("A question elsewhere.")).toBeInTheDocument();
+	});
+});
+
+describe("suggestion cards in the panel", () => {
+	const SUGGESTION = {
+		suggested: true,
+		kind: "edit",
+		elementId: "p1",
+		elementType: "property_claim",
+		label: "P1",
+		changes: { description: { before: "Old text", after: "New text" } },
+	};
+
+	function withSuggestion() {
+		chat.state.messages = [
+			QUESTION,
+			{
+				id: "a2",
+				role: "assistant",
+				parts: [
+					{
+						type: "tool-suggest_edit",
+						toolCallId: "call-1",
+						state: "output-available",
+						input: {},
+						output: SUGGESTION,
+					},
+				],
+			},
+		];
+	}
+
+	afterEach(() => {
+		getCaseOutcomes("u1", "case-1").clear();
+	});
+
+	it("shows the card openly beside its collapsed tool row", () => {
+		withSuggestion();
+		renderWithoutProviders(<AssistantPanel {...CTX} canEdit />);
+
+		expect(screen.getByTestId("assistant-tool-call")).toHaveTextContent(
+			"Suggest an edit"
+		);
+		expect(screen.getByTestId("assistant-suggestion")).toHaveTextContent(
+			"New text"
+		);
+	});
+
+	it("keeps what the user did with a card, sends it with the next question, and forgets it on New chat", async () => {
+		withSuggestion();
+		renderWithoutProviders(<AssistantPanel {...CTX} canEdit />);
+
+		await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+		expect(screen.getByRole("status")).toHaveTextContent("Dismissed");
+		await userEvent.type(
+			screen.getByLabelText("Message the assistant"),
+			"And P2?{Enter}"
+		);
+
+		expect(chat.state.sendMessage).toHaveBeenCalledWith(
+			{ text: "And P2?" },
+			{
+				body: {
+					selectedElementId: "el-1",
+					suggestionOutcomes: { "call-1": "dismissed" },
+				},
+			}
+		);
+
+		await userEvent.click(screen.getByRole("button", { name: "New chat" }));
+
+		expect(getCaseOutcomes("u1", "case-1").snapshot()).toEqual({});
+	});
+
+	it("keeps the outcome when the panel is closed and opened again", async () => {
+		withSuggestion();
+		const view = renderWithoutProviders(<AssistantPanel {...CTX} canEdit />);
+		await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+		view.unmount();
+
+		renderWithoutProviders(<AssistantPanel {...CTX} canEdit />);
+
+		expect(screen.getByRole("status")).toHaveTextContent("Dismissed");
+		expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
 	});
 });

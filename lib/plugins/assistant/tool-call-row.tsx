@@ -31,6 +31,8 @@ const TOOL_TITLES: Record<string, string> = {
 	lint_case: "Check against the rules",
 	suggest_techniques: "Suggest techniques",
 	read_claim_health: "Read claim health",
+	suggest_edit: "Suggest an edit",
+	suggest_new_element: "Suggest a new element",
 };
 
 /** A flag the tool may leave out or get wrong is dropped rather than turning the whole list into raw text. */

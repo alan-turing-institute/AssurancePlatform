@@ -2,6 +2,7 @@ import type { UIMessage } from "ai";
 import { describe, expect, it } from "vitest";
 import {
 	modelHistory,
+	OUT_OF_DATE_CASE_RESULT,
 	OUT_OF_DATE_CLAIM_HEALTH_RESULT,
 	UNFINISHED_CALL_RESULT,
 } from "@/lib/plugins/assistant/model-history";
@@ -27,7 +28,12 @@ const call = (state: "input-available" | "input-streaming") =>
 	}) as UIMessage["parts"][number];
 
 const finishedCall = (
-	tool: "read_case" | "read_claim_health",
+	tool:
+		| "read_case"
+		| "read_element"
+		| "lint_case"
+		| "read_claim_health"
+		| "suggest_techniques",
 	outcome: { output: unknown } | { errorText: string }
 ) =>
 	({
@@ -115,12 +121,12 @@ describe("modelHistory", () => {
 		});
 	});
 
-	it("leaves the result of another tool as it was", async () => {
+	it("leaves the result of a tool that does not read the case as it was", async () => {
 		const sent = await modelHistory([
 			asked("one"),
 			reply(
 				{ type: "step-start" },
-				finishedCall("read_case", { output: { found: true } })
+				finishedCall("suggest_techniques", { output: { found: true } })
 			),
 			asked("two"),
 		]);
@@ -153,5 +159,106 @@ describe("modelHistory", () => {
 				},
 			],
 		});
+	});
+	it.each([
+		"read_case",
+		"read_element",
+		"lint_case",
+	] as const)("replaces the result of an earlier %s call with a notice that it is out of date, whatever has happened since", async (tool) => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply(
+				{ type: "step-start" },
+				finishedCall(tool, { output: { found: true } })
+			),
+			asked("two"),
+		]);
+
+		expect(sent[2]).toMatchObject({
+			content: [
+				{
+					type: "tool-result",
+					toolName: tool,
+					output: { type: "json", value: OUT_OF_DATE_CASE_RESULT },
+				},
+			],
+		});
+	});
+});
+
+describe("modelHistory — suggestions", () => {
+	const suggestion = (toolCallId: string, output: unknown) =>
+		({
+			type: "tool-suggest_edit",
+			toolCallId,
+			input: {},
+			state: "output-available",
+			output,
+		}) as UIMessage["parts"][number];
+
+	const SUGGESTED = { suggested: true, kind: "edit", elementId: "p1" };
+
+	const decisionsSentFor = async (
+		outcomes: Record<string, "applied" | "dismissed" | "changed">
+	) => {
+		const sent = await modelHistory(
+			[
+				asked("one"),
+				reply(
+					{ type: "step-start" },
+					suggestion("a", SUGGESTED),
+					suggestion("b", SUGGESTED),
+					suggestion("c", SUGGESTED),
+					suggestion("d", SUGGESTED)
+				),
+				asked("two"),
+			],
+			outcomes
+		);
+		return sent
+			.filter((message) => message.role === "tool")
+			.flatMap((message) => message.content)
+			.map((part) =>
+				part.type === "tool-result" && part.output.type === "json"
+					? (part.output.value as { userDecision: string }).userDecision
+					: null
+			);
+	};
+
+	it("tells the model what the user did with each earlier suggestion, and that one with no decision is not applied", async () => {
+		const decisions = await decisionsSentFor({
+			a: "applied",
+			b: "dismissed",
+			c: "changed",
+		});
+
+		expect(decisions[0]).toContain("applied this suggestion");
+		expect(decisions[1]).toContain("dismissed this suggestion");
+		expect(decisions[2]).toContain("had changed since");
+		expect(decisions[3]).toContain("has not applied or dismissed");
+	});
+
+	it("keeps the rest of the suggestion as it was, and leaves a refusal alone", async () => {
+		const refusal = { suggested: false, reason: "No." };
+		const sent = await modelHistory(
+			[
+				asked("one"),
+				reply(
+					{ type: "step-start" },
+					suggestion("a", SUGGESTED),
+					suggestion("b", refusal)
+				),
+				asked("two"),
+			],
+			{ a: "applied", b: "applied" }
+		);
+
+		const results = sent
+			.filter((message) => message.role === "tool")
+			.flatMap((message) => message.content);
+		expect(results[0]).toMatchObject({
+			output: { value: { ...SUGGESTED, userDecision: expect.any(String) } },
+		});
+		expect(results[1]).toMatchObject({ output: { value: refusal } });
 	});
 });

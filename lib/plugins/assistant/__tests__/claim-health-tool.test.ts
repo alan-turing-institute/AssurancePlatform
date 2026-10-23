@@ -80,7 +80,7 @@ function showStatuses(entries: [string, HealthStatus][]) {
 }
 
 async function read() {
-	const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+	const tools = createCaseTools("u", "c", { claimHealth: true });
 	return await tools.read_claim_health?.execute?.({}, options);
 }
 
@@ -532,7 +532,7 @@ describe("read_claim_health: when it cannot answer", () => {
 
 describe("read_claim_health: freshness", () => {
 	it("reads the statuses for the user and the case on every call, and the case once", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 
 		await tools.read_claim_health?.execute?.({}, options);
 		showStatuses([["p1", status({ verdict: "fail" })]]);
@@ -547,7 +547,7 @@ describe("read_claim_health: freshness", () => {
 
 describe("read_claim_health: calls at the same time", () => {
 	it("makes one read for calls that overlap, and gives each the same result", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 
 		const [first, second] = await Promise.all([
 			tools.read_claim_health?.execute?.({}, options),

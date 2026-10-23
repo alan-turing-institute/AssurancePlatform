@@ -94,7 +94,7 @@ interface ClaimHealthResult {
 
 /** One reply's tools, with `read_claim_health` registered. */
 export function replyTools(userId: string, caseId: string) {
-	return createCaseTools(userId, caseId, null, undefined, undefined, true);
+	return createCaseTools(userId, caseId, { claimHealth: true });
 }
 
 /** The tool of one new reply, as a function that calls it. */

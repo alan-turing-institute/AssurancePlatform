@@ -30,6 +30,8 @@ import {
 	resolveSelectedElement,
 	selectionPrompt,
 } from "@/lib/plugins/assistant/selected-element";
+import { suggestionOutcomeSchema } from "@/lib/plugins/assistant/suggestion";
+import { suggestionsSwitchedOff } from "@/lib/plugins/assistant/suggestion-switch";
 import { techniquesPrompt } from "@/lib/plugins/assistant/techniques-tool";
 import {
 	buildSystemPrompt,
@@ -42,6 +44,8 @@ const log = logger.child({ component: "assistant-route" });
 /** Chat history carries earlier tool results (whole case trees), so the cap is generous. */
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_MESSAGES = 100;
+/** The most suggestion outcomes one request carries: a card per tool call of the chat so far. */
+const MAX_SUGGESTION_OUTCOMES = 500;
 const MAX_STEPS = 8;
 /**
  * Bounds on one model call: tokens written and provider retries. The cap on
@@ -98,6 +102,14 @@ const messageSchema = z.looseObject({
 const bodySchema = z.object({
 	messages: z.array(messageSchema).min(1).max(MAX_MESSAGES),
 	selectedElementId: z.uuid().optional(),
+	/** What the user did with each earlier suggestion card, by tool call id. The browser keeps it outside the messages. */
+	suggestionOutcomes: z
+		.record(z.string().min(1).max(200), suggestionOutcomeSchema)
+		.refine(
+			(outcomes) => Object.keys(outcomes).length <= MAX_SUGGESTION_OUTCOMES,
+			"Too many suggestion outcomes"
+		)
+		.optional(),
 });
 
 /**
@@ -126,6 +138,23 @@ async function authorise(params: Promise<{ id: string }>) {
 }
 
 /**
+ * Whether the suggestion tools are offered for this case: the user can edit it
+ * and the deployment has not switched the suggestions off. Both the chat reply
+ * and the tool list the panel reads decide it here, so they cannot disagree.
+ * The switch is read first, so a deployment that has it on asks nothing of the
+ * database.
+ */
+async function suggestionsOffered(
+	userId: string,
+	caseId: string
+): Promise<boolean> {
+	return (
+		!suggestionsSwitchedOff() &&
+		(await canAccessCase({ userId, caseId }, "EDIT"))
+	);
+}
+
+/**
  * POST /api/cases/[id]/assistant
  *
  * Streams the case assistant's reply. Order matters: session, plugin
@@ -143,10 +172,11 @@ export async function POST(
 			maxBytes: MAX_BODY_BYTES,
 		});
 
-		const [resolved, selection, claimHealth] = await Promise.all([
+		const [resolved, selection, claimHealth, suggestions] = await Promise.all([
 			resolveChatModel(userId),
 			resolveSelectedElement(userId, caseId, body.selectedElementId),
 			claimHealthAvailability(userId, caseId),
+			suggestionsOffered(userId, caseId),
 		]);
 		if ("error" in resolved) {
 			throw new AppError({ code: "CONFLICT", message: resolved.error });
@@ -156,14 +186,13 @@ export async function POST(
 		// moment it ends so that they can keep their own waits inside it.
 		const timeoutMs = modelTimeoutMs();
 		const replyDeadline = Date.now() + timeoutMs;
-		const tools = createCaseTools(
-			userId,
-			caseId,
+		const tools = createCaseTools(userId, caseId, {
 			selection,
 			replyDeadline,
-			modelAccessFor(userId),
-			claimHealth === "available"
-		);
+			models: modelAccessFor(userId),
+			claimHealth: claimHealth === "available",
+			suggestions,
+		});
 		const result = streamText({
 			model: resolved.model,
 			system:
@@ -171,7 +200,10 @@ export async function POST(
 				selectionPrompt(selection) +
 				techniquesPrompt() +
 				claimHealthPrompt(claimHealth),
-			messages: await modelHistory(body.messages as UIMessage[]),
+			messages: await modelHistory(
+				body.messages as UIMessage[],
+				body.suggestionOutcomes
+			),
 			tools,
 			// Files never reach the model call through the schema above; this
 			// keeps the SDK from fetching a URL itself should one get through.
@@ -219,15 +251,14 @@ export async function GET(
 ) {
 	try {
 		const { userId, caseId } = await authorise(params);
-		const claimHealth = await claimHealthAvailability(userId, caseId);
-		const tools = createCaseTools(
-			userId,
-			caseId,
-			null,
-			undefined,
-			undefined,
-			claimHealth === "available"
-		);
+		const [claimHealth, suggestions] = await Promise.all([
+			claimHealthAvailability(userId, caseId),
+			suggestionsOffered(userId, caseId),
+		]);
+		const tools = createCaseTools(userId, caseId, {
+			claimHealth: claimHealth === "available",
+			suggestions,
+		});
 		return apiSuccess({ tools: Object.keys(tools) });
 	} catch (error) {
 		return apiErrorFromUnknown(error);

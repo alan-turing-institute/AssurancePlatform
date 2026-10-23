@@ -1,10 +1,11 @@
 ---
 title: "Case Assistant"
-description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, how technique suggestions find and rank techniques, and how the assistant reads the automated check results of a case's claims."
+description: "Set up the Case Assistant plugin: the model connections and jobs each user chooses, the limits on model addresses, the environment variables it reads, how technique suggestions find and rank techniques, how the assistant reads the automated check results of a case's claims, and how it suggests changes that the user applies."
 ---
 
 The `tea.assistant` plugin adds a chat panel to the case editor.
-The assistant reads the open case to answer questions about it and never changes it.
+The assistant reads the open case to answer questions about it.
+It never changes the case itself: for a user who can edit the case it can suggest a change, which is saved only when the user applies it (see Suggested changes below).
 The plugin is off until a user turns it on in Settings → Plugins.
 An operator can withhold it from a whole deployment by listing `tea.assistant` in `TEA_PLUGINS_DISABLED`.
 The assistant runs on models that each user connects, so a deployment needs no model of its own.
@@ -219,6 +220,7 @@ Their time limits bound them instead.
 | `TOKEN_ENCRYPTION_KEY` | Saving a connection key | A base64-encoded 32-byte key the server uses to encrypt each connection's key before it is stored. It also encrypts stored OAuth tokens. Without it a user cannot save a key. |
 | `TEA_MODELS_LOCAL_ADDRESSES` | Model servers on a private address or plain http | A comma-separated list of origins that the server may reach over plain http or on a private, loopback or link-local address. Only the operator sets it. See Addresses and limits above. |
 | `TECHNIQUES_MCP_URL` | Technique suggestions | The address of a techniques service that accepts JSON-RPC 2.0 `tools/call` requests over HTTP. The service's `/embedding-spec` is read from the same origin. When the variable is unset, or is not an `http` or `https` URL, the `suggest_techniques` tool is not offered, the search check cannot run, and the assistant says that technique suggestions are unavailable. |
+| `ASSISTANT_SUGGESTIONS_DISABLED` | Optional | Switches the suggestion tools (`suggest_edit` and `suggest_new_element`) off for everyone, which returns the assistant to read-only. Unset, empty, `0`, `false`, `no` and `off` leave them on; any other value switches them off. See Suggested changes below. |
 | `ASSISTANT_MODEL_TIMEOUT_MS` | Optional | How long a whole reply may run, including the time the tools take, before it is cancelled, in milliseconds. The default is 60000. See Time limits below. |
 | `ASSISTANT_TECHNIQUES_TIMEOUT_MS` | Optional | The longest one technique lookup may take, in milliseconds. The default is 45000. The lookup can have less when little of the reply's time is left. See Time limits below. |
 | `ASSISTANT_RANKING_TIMEOUT_MS` | Optional | The longest the ranking step may take, in milliseconds. The default is 30000. It is also limited by what remains of the lookup. |
@@ -351,6 +353,87 @@ It has three forms.
 | The plugin is on and no claim has a bound check or a record | Says that the case has no claims with automated check results, and tells the model to say so if asked and not to infer results from the case text. |
 | The plugin is off for the user or withheld | Says that automated check results are not available because the Claim/Evidence Health plugin is off, and tells the model to say so if asked and not to infer results from the case text. |
 
+## Suggested changes
+
+For a user who can edit the case, the assistant has two more tools, `suggest_edit` and `suggest_new_element`.
+They only suggest.
+Each looks an element up in the case, checks the request against the rules below and returns either a suggestion or a plain reason for refusing.
+Neither calls a service that writes, and neither waits for an approval: both run on the server within the reply, like the read tools.
+A suggestion is saved only when the user chooses Apply on its card in the chat.
+
+### When they are offered
+
+One helper in the chat route decides this for both the chat reply and `GET /api/cases/{id}/assistant`, so the panel's list of tools and the model's tools follow the same rule.
+The tools are offered when the user has EDIT permission on the case and `ASSISTANT_SUGGESTIONS_DISABLED` is not set to switch them off.
+The setting is read first, on every request, so a deployment that has switched the tools off asks the database nothing about edit rights.
+A user with view or comment permission gets the read-only assistant, and so does everyone while the setting is on.
+The system prompt names the read tools in one sentence and the suggestion tools in another.
+The second tells the model that the user decides whether to apply each suggestion, that it must never say a change was made unless the user applied it, and that it is to use these tools only when the user asks for a change.
+Without the tools, the prompt says the assistant cannot change the case.
+The lint instructions are not changed.
+
+### What they check
+
+Both tools resolve an element by id or, when no id matches and only one element has the label, by label.
+Evidence linked beneath two claims appears twice in the export, so its label can name two elements.
+The tool then refuses and tells the model to ask the user to select the element, because the selected element's id is given to the model.
+The tools work on the case as stored, and not on the plain copy that the read tools return.
+The plain copy writes defined-term references and named context entries as text, so only the stored form shows whether a field refers to a term.
+
+`suggest_edit` takes an element and the complete new text of any of the description, assumption, justification and context fields.
+It refuses, with a reason in plain words, when:
+
+- the element is an away goal or a module, which point at other cases;
+- the element type has no such field (`fieldAppliesTo`);
+- a value is empty after trimming, or the context list is empty, because a suggestion cannot empty a field;
+- a value is over 5,000 characters, which is the server's limit for one field;
+- the stored text of the field refers to a defined term, or the stored context list has a named entry or an entry that refers to a term;
+- the new text, or a new context entry, itself holds a reference to a defined term, because the assistant never writes a reference token;
+- nothing would change, or no new text was given.
+
+For each field that would change, the suggestion carries the stored text as `before` and the trimmed new text as `after`.
+`before` is what Apply later compares with the element.
+
+`suggest_new_element` takes a parent element, a child type (a strategy, a property claim or evidence) and a description.
+It refuses a pairing that `canBeChildOf` rejects, and a parent that is a counter-argument (`isDefeater`), whatever the child type.
+It applies the same rules to the text, so new text that holds a reference to a defined term is refused too.
+`suggest_edit` can still reword a counter-argument's text.
+The card's Apply checks the pairing again with `canBeChildOf` before it creates anything.
+A new element carries its description only, and its label is generated by the server.
+
+Both tools return the suggestion with a note for the model that it is only a suggestion and that the case has not changed.
+
+### Applying a suggestion
+
+The card is shown in the open beside the collapsed tool row.
+It shows case text as plain text and never as markdown.
+Apply works in the browser, with the user's own session:
+
+1. It reads the element again with `GET /api/elements/{id}`, because the editor's copy can be out of date.
+   It compares each field the suggestion changes with `before` after trimming, reading a missing value as empty.
+   If any differs, or the element is gone or in another case, nothing is saved and the card reads that the element has changed since the suggestion.
+   A response that cannot be read, or that does not say which case the element is in, also saves nothing, and the card shows an error and keeps its buttons.
+2. For a rewording, it saves only the changed fields through the editor's own update call, checks that the save succeeded, and records the edit for Undo and Redo.
+   It never sends the label or the status.
+3. For a new element, it reads the parent again, checks `canBeChildOf` and that the parent is in this case, creates the element through the editor's create call with the description and the parent, and records the creation for Undo.
+4. It reads the case again so that the diagram redraws, and does not rely on the live-update stream, which reaches only clients connected to the same server process.
+
+The server's own checks still apply to the save: edit rights, the parent being in the same case and the field length rules.
+A save that fails keeps the card's buttons and shows the server's reason.
+
+### What the model is told afterwards
+
+The chat store holds only the SDK's own message objects, and the route's body schema drops keys it does not know.
+So the panel keeps a map from tool call id to outcome (applied, dismissed or changed since) for each chat, beside the chat store, and keeps it when the panel is closed.
+It sends the map with each request in the body field `suggestionOutcomes`, which the route validates, and empties it when a new chat starts.
+The route adds each outcome to the earlier suggestion's output before the history goes to the model, and a suggestion with no outcome is marked as not yet applied or dismissed.
+It takes out the tool's own note that the suggestion has not been applied when it does so, so the note cannot contradict an applied suggestion.
+The map's keys must be between 1 and 200 characters long.
+
+The case can change between replies, whether a card is applied or the user edits by hand.
+So every earlier `read_case`, `read_element` and `lint_case` result in the history is replaced by a notice that it is out of date, as `read_claim_health` results already were, whether or not anything has been applied.
+The model reads the case again when it needs it, and a reply still reads the case only once.
+
 ## Replies and errors
 
 A model call in a reply writes at most 8,192 tokens.
@@ -379,10 +462,10 @@ The chat and its stored messages keep the call as it was.
 
 A reply makes at most 24 tool calls, counted across all tools.
 A call past the limit returns the error "Too many tool calls in one reply." and does no work.
-The tools `read_case`, `read_element`, `lint_case` and `read_claim_health` share one read of the case, so a reply reads the case once however many of them it calls.
+The tools `read_case`, `read_element`, `lint_case`, `read_claim_health`, `suggest_edit` and `suggest_new_element` share one read of the case, so a reply reads the case once however many of them it calls.
 A failed read is not kept, so the next call reads the case again.
 A tool whose work fails returns a fixed result and never the error's own text, which can name hosts or queries.
-`read_case`, `read_element` and `lint_case` return "The case could not be read.", and `read_claim_health` returns its "not available" result.
+`read_case`, `read_element`, `lint_case`, `suggest_edit` and `suggest_new_element` return "The case could not be read.", and `read_claim_health` returns its "not available" result.
 The log records only the error's class.
 The assistant is given the selected element's id, with its label, type and text, so that it can call `read_element` with it.
 
@@ -458,6 +541,8 @@ If a message cannot be drawn at all, a short notice takes its place and the rest
 Each tool call is one collapsed row with a plain title and a state label: Pending, Running, Completed or Error.
 Opening a row shows the tool's input when it has one, then its result.
 Technique suggestions and lint results appear as lists, and the other tools show their result as text cut to 4,000 characters.
+A suggestion from `suggest_edit` or `suggest_new_element` also appears in the open, beneath its row, as a card with Apply and Dismiss buttons (see Suggested changes above).
+A refused request appears in the same place as a plain line with the reason and no buttons.
 
 ## Suggested prompts
 
@@ -472,6 +557,7 @@ Whenever `lint_case` is registered, it offers "Check this case against the rules
 An element is named by its label, for example P1, or as "the selected element" when it has none.
 The technique prompt needs a selected element because only then does the server send the claim's exact text.
 The introduction mentions technique suggestions only when `suggest_techniques` is registered.
+It says that the assistant never changes the case itself and that the user decides whether to apply a suggestion when either suggestion tool is registered, and that it never changes the case otherwise.
 
 The panel learns which tools are registered from `GET /api/cases/{id}/assistant`, which returns `{ "tools": ["read_case", ...] }`.
 The names come from the same call that builds the tools for a chat request, so there is no second list to keep up to date.

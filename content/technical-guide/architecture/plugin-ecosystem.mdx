@@ -41,7 +41,8 @@ The [Health plugin and evidence chain](/docs/technical-guide/architecture/health
 ### Case Assistant (`tea.assistant`)
 
 This plugin adds a chat panel beside the case canvas.
-It reads the open case to answer questions and can check the case against the rules, and it never changes the case.
+It reads the open case to answer questions and can check the case against the rules.
+It never changes the case itself: a user who can edit the case can ask it to reword an element or add one, and the change is saved only when that user applies the suggestion.
 Technique suggestions need a techniques service that the operator has set up.
 Reading automated claim results needs Claim/Evidence Health to be on for the person asking, and a case with at least one property claim that has a check or a record.
 
@@ -58,6 +59,7 @@ Operators provide these settings where they are needed:
 | `TOKEN_ENCRYPTION_KEY` | Encrypting model connection keys before they are stored. Without it, a person cannot save a connection key. |
 | `TEA_MODELS_LOCAL_ADDRESSES` | Allowing named model server origins on private addresses or plain HTTP. |
 | `TECHNIQUES_MCP_URL` | Connecting the techniques service that suggestions use. Without a valid HTTP or HTTPS address, the suggestion tool is not offered. |
+| `ASSISTANT_SUGGESTIONS_DISABLED` | Optional. Switching off the assistant's suggested changes for everyone, which leaves it read-only. |
 
 The [Case Assistant](/docs/technical-guide/architecture/case-assistant) page describes connection types, model jobs and these settings in full.
 

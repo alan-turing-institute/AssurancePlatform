@@ -98,7 +98,7 @@ export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 		usesModels: true,
 		surfaces: ["case-panel", "settings-section"],
 		description:
-			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case. You choose the models it uses in the AI models section of these settings.",
+			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case itself: when you ask for a change, it suggests one and you choose whether to apply it. You choose the models it uses in the AI models section of these settings.",
 		docsPath: "/docs/platform-guide/case-assistant",
 	},
 ];

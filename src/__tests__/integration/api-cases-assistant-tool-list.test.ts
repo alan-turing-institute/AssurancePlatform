@@ -53,6 +53,9 @@ beforeEach(async () => {
 	vi.mocked(getConnectionForUse).mockClear();
 	await mockNoAuth();
 	vi.stubEnv("TECHNIQUES_MCP_URL", "");
+	// The suggestion tools have their own describe at the end of this file;
+	// elsewhere the lists are of the read tools alone.
+	vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "true");
 });
 
 afterEach(() => {
@@ -271,7 +274,9 @@ describe("GET /api/cases/[id]/assistant — claim health", () => {
 			"lint_case",
 			"read_claim_health",
 		]);
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(true);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.claimHealth).toBe(
+			true
+		);
 	});
 
 	it("lists it for a user who can only view the case", async () => {
@@ -318,5 +323,114 @@ describe("GET /api/cases/[id]/assistant — claim health", () => {
 
 		expect(switchedOff).toEqual(["read_case", "read_element", "lint_case"]);
 		expect(withheld).toEqual(["read_case", "read_element", "lint_case"]);
+	});
+});
+
+describe("GET /api/cases/[id]/assistant — the suggestion tools", () => {
+	const SUGGESTION_TOOLS = ["suggest_edit", "suggest_new_element"];
+
+	async function toolsFor(level: "VIEW" | "COMMENT" | "EDIT" | "ADMIN") {
+		const { owner, testCase } = await setup();
+		const user = await createTestUser();
+		await enableTestPlugin(user.id, "tea.health");
+		await createTestPluginState(user.id, { pluginId: PLUGIN_ID });
+		await createTestPermission(testCase.id, user.id, owner.id, level);
+		await as(user);
+		return (await (await get(testCase.id)).json()).tools as string[];
+	}
+
+	it.each([
+		"EDIT",
+		"ADMIN",
+	] as const)("lists them for a user with direct %s permission", async (level) => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+
+		expect(await toolsFor(level)).toEqual([
+			"read_case",
+			"read_element",
+			"lint_case",
+			...SUGGESTION_TOOLS,
+		]);
+	});
+
+	it.each([
+		"VIEW",
+		"COMMENT",
+	] as const)("leaves them out for a user with only %s permission", async (level) => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+
+		expect(await toolsFor(level)).toEqual([
+			"read_case",
+			"read_element",
+			"lint_case",
+		]);
+	});
+
+	async function toolsForTeamMember(
+		level: "VIEW" | "COMMENT" | "EDIT" | "ADMIN"
+	) {
+		const { owner, testCase } = await setup();
+		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
+		await createTestPluginState(member.id, { pluginId: PLUGIN_ID });
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, level);
+		await as(member);
+		return (await (await get(testCase.id)).json()).tools as string[];
+	}
+
+	it.each([
+		"EDIT",
+		"ADMIN",
+	] as const)("lists them for a member of a team with %s permission on the case", async (level) => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+
+		expect(await toolsForTeamMember(level)).toEqual(
+			expect.arrayContaining(SUGGESTION_TOOLS)
+		);
+	});
+
+	it.each([
+		"VIEW",
+		"COMMENT",
+	] as const)("leaves them out for a member of a team with only %s permission on the case", async (level) => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+
+		const tools = await toolsForTeamMember(level);
+
+		expect(tools).toContain("read_case");
+		expect(tools).not.toContain("suggest_edit");
+		expect(tools).not.toContain("suggest_new_element");
+	});
+
+	it("leaves them out for a team member who has only view rights through the team, though another team grants edit on a different case", async () => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+		const { owner, testCase } = await setup();
+		const otherCase = await createTestCase(owner.id);
+		const member = await createTestUser();
+		await enableTestPlugin(member.id, "tea.health");
+		await createTestPluginState(member.id, { pluginId: PLUGIN_ID });
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id);
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "VIEW");
+		await createTestTeamPermission(otherCase.id, team.id, owner.id, "EDIT");
+		await as(member);
+
+		const tools = (await (await get(testCase.id)).json()).tools as string[];
+
+		expect(tools).not.toContain("suggest_edit");
+	});
+
+	it("lists them for the owner, and leaves them out for everyone while the switch-off setting is on", async () => {
+		const { owner, testCase } = await setup();
+		await as(owner);
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "");
+		const on = (await (await get(testCase.id)).json()).tools;
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "true");
+		const off = (await (await get(testCase.id)).json()).tools;
+
+		expect(on).toEqual(expect.arrayContaining(SUGGESTION_TOOLS));
+		expect(off).toEqual(["read_case", "read_element", "lint_case"]);
 	});
 });

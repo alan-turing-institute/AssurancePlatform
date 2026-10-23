@@ -54,9 +54,11 @@ describe("createCaseTools registration of suggest_techniques", () => {
 		);
 		vi.stubGlobal("fetch", fetchMock);
 		const tools = createCaseTools("u", "c", {
-			label: "P1",
-			type: "PROPERTY_CLAIM",
-			text: "From selection",
+			selection: {
+				label: "P1",
+				type: "PROPERTY_CLAIM",
+				text: "From selection",
+			},
 		});
 		await tools.suggest_techniques?.execute?.(
 			{},
@@ -74,7 +76,7 @@ describe("createCaseTools registration of read_claim_health", () => {
 	it("registers it after the other tools when the caller turns claim health on", () => {
 		vi.stubEnv("TECHNIQUES_MCP_URL", "https://techniques.example/mcp");
 		expect(
-			Object.keys(createCaseTools("u", "c", null, undefined, undefined, true))
+			Object.keys(createCaseTools("u", "c", { claimHealth: true }))
 		).toEqual([
 			"read_case",
 			"read_element",
@@ -87,7 +89,7 @@ describe("createCaseTools registration of read_claim_health", () => {
 	it("leaves it out by default and when claim health is off", () => {
 		expect(createCaseTools("u", "c")).not.toHaveProperty("read_claim_health");
 		expect(
-			createCaseTools("u", "c", null, undefined, undefined, false)
+			createCaseTools("u", "c", { claimHealth: false })
 		).not.toHaveProperty("read_claim_health");
 	});
 });
