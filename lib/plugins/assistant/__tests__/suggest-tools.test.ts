@@ -20,6 +20,9 @@ vi.mock("@/lib/services/element-service", () => writes);
 
 const WINDOW = { id: "k3f9x2m7qa", name: "window", text: "Ten minutes" };
 
+/** Where a card sits in the panel depends on the layout, so the note must not say. */
+const POSITION_WORD = /below|above/i;
+
 const TREE = {
 	id: "g1",
 	type: "GOAL",
@@ -155,6 +158,9 @@ describe("suggest_edit", () => {
 
 		expect(result).toMatchObject({
 			note: expect.stringContaining("Do not say it has been applied"),
+		});
+		expect(result).toMatchObject({
+			note: expect.not.stringMatching(POSITION_WORD),
 		});
 	});
 

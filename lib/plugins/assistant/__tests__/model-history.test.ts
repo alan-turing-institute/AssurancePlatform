@@ -197,8 +197,9 @@ describe("modelHistory", () => {
 		const notice = JSON.stringify(sent[2]);
 
 		expect(notice).toContain('"outOfDate":true');
-		expect(notice).toContain("It was correct when it was made");
-		expect(notice).toContain("call the tool again before you quote");
+		expect(notice).toContain("stands in for a read");
+		expect(notice).toContain("its result is not repeated here");
+		expect(notice).toContain("its text, its structure or its findings");
 		expect(notice).toContain(
 			"Do not take back or apologise for earlier answers"
 		);

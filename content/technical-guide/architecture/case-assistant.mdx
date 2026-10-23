@@ -431,7 +431,8 @@ It takes out the tool's own note that the suggestion has not been applied when i
 The map's keys must be between 1 and 200 characters long.
 
 The case can change between replies, whether a card is applied or the user edits by hand.
-So every earlier `read_case`, `read_element` and `lint_case` result in the history is replaced by a notice that it is out of date, as `read_claim_health` results already were, whether or not anything has been applied.
+So every earlier `read_case`, `read_element` and `lint_case` result in the history is replaced by a notice, whether or not anything has been applied.
+The notice says the read was correct when it was made and that the case may have changed since, so the model should call the tool again before describing the case as it is now, and should not take back earlier answers because of it.
 The model reads the case again when it needs it, and a reply still reads the case only once.
 
 ## Replies and errors
