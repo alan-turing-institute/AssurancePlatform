@@ -313,12 +313,19 @@ const INTRO_TECHNIQUES =
 	" With an element selected, it can suggest techniques from the TEA Techniques library that could produce evidence for it.";
 const INTRO_LIMIT = " It does not judge whether the case is good enough.";
 
-/** The introduction before the first message, by what the assistant's tools allow. */
+/**
+ * The introduction before the first message, by what the assistant's tools
+ * allow. While the tool list is still loading it says nothing about changes,
+ * so that it does not promise suggestions or deny them before it knows.
+ */
 function introText(
 	tools: readonly string[] | null,
 	mentionsTechniques: boolean
 ) {
-	const suggestsChanges = (tools ?? []).some((name) =>
+	if (tools === null) {
+		return `${INTRO_BASE}${INTRO_LIMIT}`;
+	}
+	const suggestsChanges = tools.some((name) =>
 		SUGGESTION_TOOL_NAMES.includes(name)
 	);
 	return `${INTRO_BASE}${suggestsChanges ? INTRO_SUGGESTS : INTRO_READ_ONLY}${mentionsTechniques ? INTRO_TECHNIQUES : ""}${INTRO_LIMIT}`;

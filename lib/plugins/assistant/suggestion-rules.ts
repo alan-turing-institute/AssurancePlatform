@@ -10,6 +10,7 @@ import {
 	type NewElementSuggestion,
 	type NewElementType,
 	type Refusal,
+	trimmed,
 	typeLabel,
 } from "./suggestion";
 
@@ -51,11 +52,6 @@ function called(node: TreeNode): string {
 	return node.name?.trim() || `this ${typeLabel(node.type)}`;
 }
 
-/** Stored text as plain trimmed text; a missing value reads as empty. */
-function trimmed(value: string | null | undefined): string {
-	return value?.trim() ?? "";
-}
-
 /** The reason a piece of new text cannot be suggested, or null when it can. */
 function textProblem(field: string, text: string): string | null {
 	if (text === "") {
@@ -63,6 +59,9 @@ function textProblem(field: string, text: string): string | null {
 	}
 	if (text.length > MAX_SUGGESTED_CHARS) {
 		return `The ${field} is over ${MAX_SUGGESTED_CHARS} characters, which is the most TEA saves in one field.`;
+	}
+	if (hasReference(text)) {
+		return `The new ${field} contains a reference to a defined term, and the assistant does not write those. Give the text without the reference; the user can add it in the element's form.`;
 	}
 	return null;
 }
@@ -100,13 +99,14 @@ function planContext(node: TreeNode, requested: string[]): ContextPlan {
 	if (!fieldAppliesTo("context", node.type)) {
 		return refuse(`A ${typeLabel(node.type)} has no context field.`);
 	}
-	const stored = node.context ?? [];
-	if (
-		stored.some((entry) => isNamedContextEntry(entry) || hasReference(entry))
-	) {
-		return refuse(
-			`The context of ${called(node)} defines terms or refers to them, and rewording the list would break them. The user can edit it in the element's form.`
-		);
+	const before: string[] = [];
+	for (const entry of node.context ?? []) {
+		if (isNamedContextEntry(entry) || hasReference(entry)) {
+			return refuse(
+				`The context of ${called(node)} defines terms or refers to them, and rewording the list would break them. The user can edit it in the element's form.`
+			);
+		}
+		before.push(trimmed(entry));
 	}
 	const after = requested.map((entry) => entry.trim());
 	if (after.length === 0) {
@@ -120,9 +120,6 @@ function planContext(node: TreeNode, requested: string[]): ContextPlan {
 			return refuse(problem);
 		}
 	}
-	const before = stored.map((entry) =>
-		isNamedContextEntry(entry) ? "" : trimmed(entry)
-	);
 	const same =
 		before.length === after.length &&
 		before.every((entry, position) => entry === after[position]);
@@ -242,6 +239,11 @@ export function planNewElement(
 	if (!childType) {
 		return refuse(
 			"The assistant can suggest a new strategy, a new claim or new evidence, and nothing else."
+		);
+	}
+	if (parent.isDefeater) {
+		return refuse(
+			`${called(parent)} is a counter-argument, and the assistant does not add elements beneath one.`
 		);
 	}
 	if (!canBeChildOf(childType, parent.type)) {

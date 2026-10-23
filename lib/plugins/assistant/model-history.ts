@@ -122,14 +122,27 @@ function withResultsOutOfDate(messages: UIMessage[]): UIMessage[] {
 	}));
 }
 
-/** A suggestion's output with what the user did with its card added. Anything that is not a suggestion is left as it was. */
+/**
+ * A suggestion's output with what the user did with its card added, and the
+ * tool's own note that the suggestion is not yet applied taken out, because
+ * the decision replaces it and the two would contradict each other. Anything
+ * that is not a suggestion is left as it was.
+ */
 function withDecision(output: unknown, decision: string): unknown {
-	return typeof output === "object" &&
-		output !== null &&
-		"suggested" in output &&
-		output.suggested === true
-		? { ...output, userDecision: decision }
-		: output;
+	if (
+		typeof output !== "object" ||
+		output === null ||
+		!("suggested" in output) ||
+		output.suggested !== true
+	) {
+		return output;
+	}
+	return {
+		...Object.fromEntries(
+			Object.entries(output).filter(([key]) => key !== "note")
+		),
+		userDecision: decision,
+	};
 }
 
 /**

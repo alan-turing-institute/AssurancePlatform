@@ -8,11 +8,12 @@ import {
 import { canBeChildOf } from "@/lib/element-compatibility";
 import { recordCreate, recordUpdate } from "@/lib/services/history-service";
 import useStore from "@/store/store";
-import type {
-	EditSuggestion,
-	NewElementSuggestion,
-	NewElementType,
-	Suggestion,
+import {
+	type EditSuggestion,
+	type NewElementSuggestion,
+	type NewElementType,
+	type Suggestion,
+	trimmed,
 } from "./suggestion";
 
 /**
@@ -36,7 +37,7 @@ function failed(message: string): ApplyResult {
 const elementSchema = z.looseObject({
 	id: z.string(),
 	type: z.string(),
-	assuranceCaseId: z.string().optional(),
+	assuranceCaseId: z.string(),
 	description: z.string().optional(),
 	assumption: z.string().nullish(),
 	justification: z.string().nullish(),
@@ -73,11 +74,6 @@ const UNREADABLE = failed(
 	"The element could not be read, so nothing was saved. Try again."
 );
 
-/** Text as the server saves it: trimmed, and a missing value is empty. */
-function plain(value: string | null | undefined): string {
-	return value?.trim() ?? "";
-}
-
 /** Whether the element's context is still the list of plain entries the suggestion started from. */
 function sameContext(
 	current: unknown[] | undefined,
@@ -88,7 +84,8 @@ function sameContext(
 		entries.length === before.length &&
 		entries.every(
 			(entry, position) =>
-				typeof entry === "string" && plain(entry) === plain(before[position])
+				typeof entry === "string" &&
+				trimmed(entry) === trimmed(before[position])
 		)
 	);
 }
@@ -100,11 +97,12 @@ function matchesBefore(
 ): boolean {
 	return (
 		(!changes.description ||
-			plain(current.description) === plain(changes.description.before)) &&
+			trimmed(current.description) === trimmed(changes.description.before)) &&
 		(!changes.assumption ||
-			plain(current.assumption) === plain(changes.assumption.before)) &&
+			trimmed(current.assumption) === trimmed(changes.assumption.before)) &&
 		(!changes.justification ||
-			plain(current.justification) === plain(changes.justification.before)) &&
+			trimmed(current.justification) ===
+				trimmed(changes.justification.before)) &&
 		(!changes.context || sameContext(current.context, changes.context.before))
 	);
 }
@@ -140,8 +138,7 @@ async function applyEdit(
 	}
 	const { element } = read;
 	if (
-		(element.assuranceCaseId !== undefined &&
-			element.assuranceCaseId !== caseId) ||
+		element.assuranceCaseId !== caseId ||
 		!matchesBefore(element, suggestion.changes)
 	) {
 		return CHANGED;
@@ -161,7 +158,13 @@ async function applyEdit(
 			)
 		);
 	}
-	recordUpdate(element.id, element.type, element, { ...element, ...fields });
+	// The element read back leaves `context` out when it is empty, and Undo
+	// sends back only what the saved entry holds, so an empty list is spelled
+	// out when the suggestion fills it.
+	const before = suggestion.changes.context
+		? { ...element, context: element.context ?? [] }
+		: element;
+	recordUpdate(element.id, element.type, before, { ...element, ...fields });
 	refreshShownCase(caseId);
 	return APPLIED;
 }
@@ -182,8 +185,7 @@ async function applyNewElement(
 	}
 	const { element: parent } = read;
 	if (
-		(parent.assuranceCaseId !== undefined &&
-			parent.assuranceCaseId !== caseId) ||
+		parent.assuranceCaseId !== caseId ||
 		!canBeChildOf(suggestion.childType, parent.type)
 	) {
 		return CHANGED;

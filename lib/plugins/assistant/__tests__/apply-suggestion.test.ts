@@ -170,6 +170,23 @@ describe("applying a rewording", () => {
 		expect(await applySuggestion(CASE_ID, EDIT)).toEqual({ status: "changed" });
 	});
 
+	it("treats a response that does not say which case the element is in as unreadable, and saves nothing", async () => {
+		const { assuranceCaseId: _omitted, ...withoutCase } = element();
+		const server = serve({
+			"GET /api/elements/p1": () => json(withoutCase),
+		});
+
+		for (const suggestion of [EDIT, NEW_EVIDENCE]) {
+			expect(await applySuggestion(CASE_ID, suggestion)).toMatchObject({
+				status: "failed",
+				message: expect.stringContaining("could not be read"),
+			});
+		}
+
+		expect(new Set(server.requests)).toEqual(new Set(["GET /api/elements/p1"]));
+		expect(useHistoryStore.getState().undoStack).toEqual([]);
+	});
+
 	it("compares a context list entry by entry", async () => {
 		serve({
 			"GET /api/elements/p1": () =>

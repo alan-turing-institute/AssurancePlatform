@@ -115,6 +115,23 @@ describe("planEdit", () => {
 		);
 	});
 
+	it("refuses new text that holds a defined-term reference, in a field, in a context entry or in a new element", () => {
+		const reference = "within {window#k3f9x2m7qa}";
+
+		expect(reasonOf(planEdit(node(), { description: reference }))).toContain(
+			"contains a reference to a defined term"
+		);
+		expect(
+			reasonOf(planEdit(node(), { context: ["Fine", reference] }))
+		).toContain("contains a reference to a defined term");
+		expect(
+			reasonOf(planNewElement(node(), "evidence", `Alerts arrive ${reference}`))
+		).toContain("contains a reference to a defined term");
+		expect(
+			planEdit(node(), { description: "Braces {like this} are only text" })
+		).toMatchObject({ suggested: true });
+	});
+
 	it("still rewords another field of an element whose description refers to a term", () => {
 		const plan = planEdit(
 			node({ description: "Alerts arrive within {window#k3f9x2m7qa}" }),
@@ -238,6 +255,19 @@ describe("planNewElement", () => {
 		expect(
 			reasonOf(planNewElement(node(), "evidence", "x".repeat(5001)))
 		).toContain("over 5000");
+	});
+
+	it("refuses a parent that is a counter-argument, whatever the child, and still rewords its text", () => {
+		const counterArgument = node({ isDefeater: true });
+
+		for (const child of ["strategy", "property_claim", "evidence"]) {
+			expect(
+				reasonOf(planNewElement(counterArgument, child, "text"))
+			).toContain("P1 is a counter-argument");
+		}
+		expect(
+			planEdit(counterArgument, { description: "Reworded" })
+		).toMatchObject({ suggested: true });
 	});
 });
 

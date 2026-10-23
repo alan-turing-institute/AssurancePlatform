@@ -104,7 +104,7 @@ const bodySchema = z.object({
 	selectedElementId: z.uuid().optional(),
 	/** What the user did with each earlier suggestion card, by tool call id. The browser keeps it outside the messages. */
 	suggestionOutcomes: z
-		.record(z.string().max(200), suggestionOutcomeSchema)
+		.record(z.string().min(1).max(200), suggestionOutcomeSchema)
 		.refine(
 			(outcomes) => Object.keys(outcomes).length <= MAX_SUGGESTION_OUTCOMES,
 			"Too many suggestion outcomes"

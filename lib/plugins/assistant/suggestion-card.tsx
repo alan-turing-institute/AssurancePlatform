@@ -1,7 +1,7 @@
 "use client";
 
 import { getToolName, isToolUIPart, type UIMessage } from "ai";
-import { useId, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { applySuggestion } from "./apply-suggestion";
 import {
@@ -34,20 +34,27 @@ const OUTCOME_TEXT: Record<Exclude<SuggestionOutcome, "changed">, string> = {
 	dismissed: "Dismissed",
 };
 
+function Empty() {
+	return <span className="text-muted-foreground">(empty)</span>;
+}
+
 /** Case text, shown as plain text and never as markdown, so that it cannot turn into a link or an image. */
 function PlainText({ children }: { children: string }) {
 	return (
 		<p className="whitespace-pre-wrap break-words">
-			{children === "" ? (
-				<span className="text-muted-foreground">(empty)</span>
-			) : (
-				children
-			)}
+			{children === "" ? <Empty /> : children}
 		</p>
 	);
 }
 
 function PlainList({ items }: { items: string[] }) {
+	if (items.length === 0) {
+		return (
+			<p>
+				<Empty />
+			</p>
+		);
+	}
 	const keyed = items.map((item, position) => ({
 		item,
 		key: `${position}-${item}`,
@@ -142,6 +149,8 @@ interface ActionsProps {
 	onApply: () => void;
 	onDismiss: () => void;
 	outcome: SuggestionOutcome | undefined;
+	/** Where the line saying what became of the suggestion is kept, so that focus can be moved to it. */
+	outcomeLine: RefObject<HTMLOutputElement | null>;
 	pending: boolean;
 	suggestion: Suggestion;
 }
@@ -152,12 +161,17 @@ function Actions({
 	onApply,
 	onDismiss,
 	outcome,
+	outcomeLine,
 	pending,
 	suggestion,
 }: ActionsProps) {
 	if (outcome) {
 		return (
-			<output className="block">
+			<output
+				className="block outline-offset-2"
+				ref={outcomeLine}
+				tabIndex={-1}
+			>
 				{outcome === "changed"
 					? CHANGED_TEXT[suggestion.kind]
 					: OUTCOME_TEXT[outcome]}
@@ -212,8 +226,30 @@ function SuggestionCard({
 }: SuggestionCardProps) {
 	const headingId = useId();
 	const claimed = useRef(false);
+	const card = useRef<HTMLElement>(null);
+	const outcomeLine = useRef<HTMLOutputElement>(null);
+	const previousOutcome = useRef(outcome);
 	const [pending, setPending] = useState(false);
 	const [failure, setFailure] = useState<string | null>(null);
+
+	// The buttons are gone once the user has decided, and focus would fall to
+	// the page. Move it to the line that says what became of the suggestion,
+	// unless the user has already moved on to something else.
+	useEffect(() => {
+		const wasUndecided = previousOutcome.current === undefined;
+		previousOutcome.current = outcome;
+		if (!wasUndecided || outcome === undefined) {
+			return;
+		}
+		const focused = document.activeElement;
+		if (
+			!focused ||
+			focused === document.body ||
+			card.current?.contains(focused)
+		) {
+			outcomeLine.current?.focus();
+		}
+	}, [outcome]);
 
 	async function apply() {
 		if (claimed.current) {
@@ -233,10 +269,11 @@ function SuggestionCard({
 	}
 
 	return (
-		<section
+		<article
 			aria-labelledby={headingId}
 			className="not-prose mb-4 w-full space-y-3 rounded-md border p-3 text-sm"
 			data-testid="assistant-suggestion"
+			ref={card}
 		>
 			<h3 className="break-words font-semibold" id={headingId}>
 				{heading(suggestion)}
@@ -251,6 +288,7 @@ function SuggestionCard({
 				onApply={apply}
 				onDismiss={() => onOutcome("dismissed")}
 				outcome={outcome}
+				outcomeLine={outcomeLine}
 				pending={pending}
 				suggestion={suggestion}
 			/>
@@ -259,7 +297,7 @@ function SuggestionCard({
 					{failure}
 				</p>
 			)}
-		</section>
+		</article>
 	);
 }
 

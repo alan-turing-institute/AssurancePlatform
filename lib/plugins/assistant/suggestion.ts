@@ -11,6 +11,11 @@ export const SUGGESTION_TOOL_NAMES: readonly string[] = [
 	SUGGEST_NEW_ELEMENT,
 ];
 
+/** Text as the server saves it: trimmed, and a missing value is empty. */
+export function trimmed(value: string | null | undefined): string {
+	return value?.trim() ?? "";
+}
+
 /** The longest text the server accepts in one field of an element. */
 export const MAX_SUGGESTED_CHARS = 5000;
 

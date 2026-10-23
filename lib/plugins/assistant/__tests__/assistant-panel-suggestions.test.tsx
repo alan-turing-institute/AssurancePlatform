@@ -301,4 +301,21 @@ describe("AssistantPanel: what the introduction promises", () => {
 			"suggests"
 		);
 	});
+
+	it("neither promises suggestions nor says it never changes the case until the tool list arrives", () => {
+		assistantTools.value = null;
+		const { rerender } = renderWithoutProviders(<AssistantPanel {...CTX} />);
+
+		const intro = screen.getByTestId("assistant-intro");
+		expect(intro).toHaveTextContent("reads this case");
+		expect(intro).not.toHaveTextContent("never changes");
+		expect(intro).not.toHaveTextContent("suggests");
+
+		assistantTools.value = READ_TOOLS;
+		rerender(<AssistantPanel {...CTX} />);
+
+		expect(screen.getByTestId("assistant-intro")).toHaveTextContent(
+			"It never changes the case."
+		);
+	});
 });

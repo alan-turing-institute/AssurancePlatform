@@ -1,6 +1,8 @@
 import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { axe } from "vitest-axe";
 import {
 	renderWithoutProviders,
 	screen,
@@ -172,6 +174,87 @@ describe("the suggestion card for a rewording", () => {
 		expect(screen.getByTestId("assistant-suggestion")).toHaveTextContent(
 			"needs permission to edit"
 		);
+	});
+});
+
+/** A card that keeps the outcome the way the panel does, so the buttons go once the user has chosen. */
+function DecidingCard({ output = EDIT }: { output?: unknown }) {
+	const [outcome, setOutcome] = useState<
+		"applied" | "dismissed" | "changed" | undefined
+	>();
+	return (
+		<>
+			<input aria-label="Elsewhere" />
+			<SuggestionResult
+				canEdit
+				caseId="case-1"
+				onOutcome={(_id, decision) => setOutcome(decision)}
+				outcome={outcome}
+				part={part(output)}
+			/>
+		</>
+	);
+}
+
+describe("the suggestion card: accessibility", () => {
+	it("passes axe with two cards for the same element, which share a heading", async () => {
+		const { container } = renderWithoutProviders(
+			<main>
+				<h1>Case</h1>
+				<h2>Chat</h2>
+				<SuggestionResult
+					canEdit
+					caseId="case-1"
+					onOutcome={onOutcome}
+					outcome={undefined}
+					part={part(EDIT)}
+				/>
+				<SuggestionResult
+					canEdit
+					caseId="case-1"
+					onOutcome={onOutcome}
+					outcome={undefined}
+					part={
+						{
+							...part(EDIT),
+							toolCallId: "call-2",
+						} as UIMessage["parts"][number]
+					}
+				/>
+			</main>
+		);
+
+		expect(screen.getAllByText("Suggested change to P1")).toHaveLength(2);
+		const results = await axe(container);
+
+		expect(results.violations).toEqual([]);
+	});
+
+	it.each([
+		["Apply", "Applied"],
+		["Dismiss", "Dismissed"],
+	])("moves focus to the outcome line when %s removes the buttons", async (button, text) => {
+		apply.mockResolvedValue({ status: "applied" });
+		renderWithoutProviders(<DecidingCard />);
+
+		await userEvent.click(screen.getByRole("button", { name: button }));
+
+		const line = await screen.findByRole("status");
+		expect(line).toHaveTextContent(text);
+		expect(line).toHaveFocus();
+	});
+
+	it("leaves focus where the user has moved to while the save was running", async () => {
+		let finish: (result: ApplyResult) => void = () => undefined;
+		apply.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+		renderWithoutProviders(<DecidingCard />);
+		await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+		await userEvent.click(screen.getByLabelText("Elsewhere"));
+
+		finish({ status: "applied" });
+
+		expect(await screen.findByRole("status")).toHaveTextContent("Applied");
+		expect(screen.getByLabelText("Elsewhere")).toHaveFocus();
 	});
 });
 

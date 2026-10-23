@@ -279,6 +279,13 @@ describe("the suggestion outcomes in the request body", () => {
 		expect(streamText).not.toHaveBeenCalled();
 	});
 
+	it("refuses an outcome with an empty tool call id, before calling the model", async () => {
+		const response = await post({ suggestionOutcomes: { "": "applied" } });
+
+		expect(response.status).toBe(400);
+		expect(streamText).not.toHaveBeenCalled();
+	});
+
 	it("refuses null for the whole field", async () => {
 		const response = await post({ suggestionOutcomes: null });
 
