@@ -176,6 +176,7 @@ function ReadOnlyCaseCanvasInner({
 			edgeTypes={edgeTypes}
 			fitView
 			nodes={nodes}
+			nodesConnectable={false}
 			nodesDraggable={false}
 			nodeTypes={nodeTypes}
 			onNodesChange={onNodesChange}
