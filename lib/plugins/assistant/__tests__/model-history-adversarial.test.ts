@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { modelHistory } from "@/lib/plugins/assistant/model-history";
 
 const OLD_CASE_TEXT = "STALE-CASE-TEXT";
-const OUT_OF_DATE = /out of date/i;
+const OUT_OF_DATE = /may have changed since/i;
 const NOT_APPLIED_WORDS = /dismissed|changed since|had changed/i;
 const CHANGED_WORDS = /had changed|changed since/i;
 const UNDECIDED_WORDS = /not (yet )?(applied|decided)|has not/i;
@@ -14,7 +14,7 @@ const STILL_UNAPPLIED =
 	/has not applied this|not been applied|case has not changed|do not say it has been applied/i;
 /** The note a suggestion tool adds to every suggestion it returns. */
 const TOOL_NOTE =
-	"The user has not applied this suggestion, and the case has not changed. Do not say it has been applied. Say briefly what you suggested and that the user can apply or dismiss it on the card below your tool call.";
+	"The user has not applied this suggestion, and the case has not changed. Do not say it has been applied. Say briefly what you suggested and that the user can apply or dismiss it on the suggestion card.";
 
 const asked = (text: string, id = `u-${text}`): UIMessage => ({
 	id,
@@ -128,7 +128,7 @@ describe("modelHistory: earlier reads of the case", () => {
 		);
 
 		expect(sent).not.toContain(OLD_CASE_TEXT);
-		expect(sent.match(/out of date/gi)).toHaveLength(5);
+		expect(sent.match(/may have changed since/gi)).toHaveLength(5);
 	});
 
 	it("keeps the error text of a read that failed, since it says nothing about the case", async () => {

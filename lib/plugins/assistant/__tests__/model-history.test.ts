@@ -184,6 +184,25 @@ describe("modelHistory", () => {
 			],
 		});
 	});
+
+	it("tells the model that an earlier case read was correct when it was made, and that it must not take back earlier answers", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply(
+				{ type: "step-start" },
+				finishedCall("read_case", { output: { found: true } })
+			),
+			asked("two"),
+		]);
+		const notice = JSON.stringify(sent[2]);
+
+		expect(notice).toContain('"outOfDate":true');
+		expect(notice).toContain("It was correct when it was made");
+		expect(notice).toContain("call the tool again before you quote");
+		expect(notice).toContain(
+			"Do not take back or apologise for earlier answers"
+		);
+	});
 });
 
 describe("modelHistory — suggestions", () => {

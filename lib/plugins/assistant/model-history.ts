@@ -26,7 +26,7 @@ export const OUT_OF_DATE_CLAIM_HEALTH_RESULT = {
 export const OUT_OF_DATE_CASE_RESULT = {
 	outOfDate: true,
 	message:
-		"This result is from earlier in the conversation and is out of date: the case may have changed since, by the user or by an applied suggestion. Call the tool again for the current case.",
+		"This is a read of the case from earlier in the conversation. It was correct when it was made, and what you said from it was accurate then. The case may have changed since, by the user or by an applied suggestion, so call the tool again before you quote the case's current text or findings. Do not take back or apologise for earlier answers because of this notice.",
 } as const;
 
 /** What the model is told about a suggestion the user has not applied or dismissed. */
