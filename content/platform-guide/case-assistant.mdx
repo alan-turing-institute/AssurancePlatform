@@ -1,12 +1,13 @@
 ---
 title: "Case Assistant"
-description: "Ask questions about the case you have open, check it against the assurance-case rules and find techniques for a claim, using a model you connect."
+description: "Ask questions about the case you have open, check it against the assurance-case rules, find techniques for a claim and review suggested changes to its text, using a model you connect."
 ---
 
 The Case Assistant is a chat panel on the case page.
 It reads the case you have open and helps you work on it.
-You can ask it questions about the case, ask it to check the case against a set of rules, and ask it for techniques that could produce evidence for a claim.
-It never changes the case, and it does not judge whether the case is good enough.
+You can ask it questions about the case, ask it to check the case against a set of rules, ask it for techniques that could produce evidence for a claim, and ask it to reword an element or add one.
+It never changes the case itself: when you ask for a change, it suggests one, and nothing is saved until you choose **Apply**.
+It does not judge whether the case is good enough.
 That judgement stays with you and your reviewers.
 
 ## Turn it on
@@ -86,7 +87,7 @@ On a case page, choose **Case assistant** (the robot icon) in the toolbar.
 The panel opens at the right of the page, over the right-hand part of the diagram.
 It does not lock the rest of the page, so you can keep working on the case while it is open.
 On a narrow screen it fills the page, and you close it to see the diagram.
-Closing the panel keeps the conversation until you reload the page.
+Closing the panel keeps the conversation, and what you did with each suggestion, until you reload the page.
 Choose **New chat** at the top of the panel to clear the conversation and start again.
 
 ## What you can ask
@@ -96,7 +97,7 @@ Select an element on the diagram and the panel names it at the top, so that you 
 Press **Enter** to send a message and **Shift+Enter** for a new line.
 Choose **Stop** to end a reply early.
 
-The assistant can do four things.
+The assistant can do five things.
 
 - **Read the case.**
   It reads the whole case, or one element and the elements directly beneath it, to answer questions such as which claims lack evidence.
@@ -117,6 +118,55 @@ The assistant can do four things.
   It reads the results afresh each time you ask, because they change.
   A result reports what a check found and does not make a claim true or false.
   The [health plugin page](/docs/technical-guide/architecture/health-plugin) explains how results are recorded.
+- **Suggest a change.**
+  This works when you can edit the case.
+  Ask it to reword an element or to add one, for example "reword P1 so it is more specific" or "add evidence for this claim".
+  It replies with a suggestion card that you can apply or dismiss.
+  [Suggested changes](#suggested-changes) describes the cards.
+
+## Suggested changes
+
+A suggestion appears in the chat as a card, beneath the tool's own row.
+For a rewording, the card shows the element's label, its current text and the suggested text.
+For a new element, it shows which element the new one would go beneath, the type of the new element and its text.
+Case text on a card is plain text, so a link or an image in it is not made active.
+
+The card has two buttons, **Apply** and **Dismiss**.
+Nothing in the case changes until you choose **Apply**.
+**Apply** saves the change as if you had typed it into the element's edit form.
+The diagram updates, and the toolbar's **Undo** reverses the change like any other edit.
+After you choose, the card reads **Applied** or **Dismissed**.
+Each suggestion is applied on its own, and there is no button to apply them all.
+The assistant knows which suggestions you applied and which you dismissed, so you can carry on the conversation from there.
+
+If the element changed after the suggestion was made, here or in another tab, **Apply** saves nothing.
+The card then says that the element has changed since the suggestion, and you can ask the assistant again.
+If the save fails for another reason, the card shows the reason and keeps its buttons, so you can try again.
+
+### What it can suggest
+
+- **A new wording** for an element's description, assumption, justification or context entries, where that kind of element has the field.
+  A suggestion gives the whole new text of each field it changes.
+  It cannot empty a field, and the text is at most 5,000 characters, which is what TEA saves in one field.
+- **A new element** beneath an existing one: a strategy, a claim or evidence.
+  TEA allows a strategy or a claim beneath a goal, a claim beneath a strategy, and a claim, evidence or a strategy beneath a claim.
+  The new element gets its label from TEA, as it does when you add one yourself.
+  A new element carries a description only; add a link to evidence in the element's own form.
+
+When you ask for something the assistant cannot do, it says so and shows no **Apply** button.
+It does not suggest deleting, moving or detaching elements, counter-arguments, a change to an element's status or label, evidence links, or changes to away goals and modules.
+It does not reword text that refers to a defined term, or a context list that defines terms, because the assistant reads a plain copy of that text and a rewording would break the reference.
+Edit those in the element's form.
+
+The assistant makes suggestions only when you ask for a change.
+Asking it to check the case gives the findings as before.
+
+### Who can use it
+
+Suggestions are offered only to people who can edit the case.
+With view or comment access, the assistant stays read-only and answers questions as before.
+Applying a suggestion goes through the same save as the edit form, so the usual checks of your access to the case still apply.
+Your site's operator can also switch suggestions off for everyone, which leaves the assistant read-only.
 
 ## What it can see
 
@@ -152,5 +202,5 @@ If your provider refuses a request, the panel shows the provider's own reason, w
 
 ## For operators
 
-An operator can withhold the plugin, allow model servers on a private network and set the assistant's limits.
+An operator can withhold the plugin, allow model servers on a private network, switch the suggested changes off and set the assistant's limits.
 The [Case Assistant page in the Technical Guide](/docs/technical-guide/architecture/case-assistant) describes these settings.

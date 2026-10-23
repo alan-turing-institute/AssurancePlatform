@@ -59,14 +59,7 @@ async function world() {
 type World = Awaited<ReturnType<typeof world>>;
 
 function tools(w: World) {
-	return createCaseTools(
-		w.owner.id,
-		w.kase.id,
-		null,
-		undefined,
-		undefined,
-		true
-	);
+	return createCaseTools(w.owner.id, w.kase.id, { claimHealth: true });
 }
 
 function callAll(toolSet: ReturnType<typeof tools>) {

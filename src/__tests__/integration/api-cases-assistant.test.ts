@@ -690,7 +690,7 @@ function enable(userId: string) {
 }
 
 describe("GET /api/cases/[id]/assistant — the registered tools", () => {
-	it("lists the three case tools for the owner", async () => {
+	it("lists the three read tools and the two suggestion tools for the owner", async () => {
 		vi.stubEnv("TECHNIQUES_MCP_URL", "");
 		const { owner, testCase } = await setup();
 		await enable(owner.id);
@@ -700,7 +700,13 @@ describe("GET /api/cases/[id]/assistant — the registered tools", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
-			tools: ["read_case", "read_element", "lint_case"],
+			tools: [
+				"read_case",
+				"read_element",
+				"lint_case",
+				"suggest_edit",
+				"suggest_new_element",
+			],
 		});
 	});
 
@@ -717,6 +723,8 @@ describe("GET /api/cases/[id]/assistant — the registered tools", () => {
 			"read_element",
 			"lint_case",
 			"suggest_techniques",
+			"suggest_edit",
+			"suggest_new_element",
 		]);
 	});
 

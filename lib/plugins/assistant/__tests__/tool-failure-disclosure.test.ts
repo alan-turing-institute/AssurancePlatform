@@ -172,7 +172,7 @@ beforeEach(() => {
 });
 
 function toolsFor(claimHealth: boolean) {
-	return createCaseTools("u", "c", null, undefined, undefined, claimHealth);
+	return createCaseTools("u", "c", { claimHealth });
 }
 
 function run(

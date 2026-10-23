@@ -1,3 +1,4 @@
+import { convertToModelMessages } from "ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/cases/[id]/assistant/route";
 import { canAccessCase } from "@/lib/permissions";
@@ -81,7 +82,7 @@ describe("assistant route reply deadline", () => {
 
 		const { timeout } = streamText.mock.calls[0]?.[0] ?? {};
 		expect(timeout).toBe(60_000);
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[3]).toBe(
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.replyDeadline).toBe(
 			START.getTime() + timeout
 		);
 	});
@@ -92,7 +93,7 @@ describe("assistant route reply deadline", () => {
 		await call();
 
 		expect(streamText.mock.calls[0]?.[0].timeout).toBe(90_000);
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[3]).toBe(
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.replyDeadline).toBe(
 			START.getTime() + 90_000
 		);
 	});
@@ -101,7 +102,9 @@ describe("assistant route reply deadline", () => {
 		await call();
 
 		expect(streamText.mock.calls[0]?.[0].model).toBe(CHAT_MODEL);
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[4]).toBe(MODEL_ACCESS);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.models).toBe(
+			MODEL_ACCESS
+		);
 	});
 });
 
@@ -118,7 +121,9 @@ describe("assistant route claim health", () => {
 
 		await call();
 
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(true);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.claimHealth).toBe(
+			true
+		);
 		const techniques = systemPrompt().indexOf("call `suggest_techniques`");
 		const claimHealth = systemPrompt().indexOf("read_claim_health returns");
 		expect(techniques).toBeGreaterThanOrEqual(0);
@@ -128,7 +133,9 @@ describe("assistant route claim health", () => {
 	it("says the case has no results when the plugin is on and no claim has a status", async () => {
 		await call();
 
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(false);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.claimHealth).toBe(
+			false
+		);
 		expect(systemPrompt()).toContain(
 			"This case has no claims with automated check results."
 		);
@@ -147,10 +154,92 @@ describe("assistant route claim health", () => {
 
 		await call();
 
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(false);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.claimHealth).toBe(
+			false
+		);
 		expect(systemPrompt()).toContain(
 			"because the Claim/Evidence Health plugin is off."
 		);
 		expect(caseHasHealthStatus).not.toHaveBeenCalled();
+	});
+});
+
+describe("assistant route suggestion tools", () => {
+	const suggestions = () =>
+		vi.mocked(createCaseTools).mock.calls[0]?.[2]?.suggestions;
+
+	it("offers them to a user who can edit the case", async () => {
+		await call();
+
+		expect(canAccessCase).toHaveBeenCalledWith(
+			{ userId: "user-1", caseId: CASE_ID },
+			"EDIT"
+		);
+		expect(suggestions()).toBe(true);
+	});
+
+	it("withholds them from a user who can view or comment but not edit", async () => {
+		vi.mocked(canAccessCase).mockImplementation((_who, level) =>
+			Promise.resolve(level !== "EDIT")
+		);
+
+		await call();
+
+		expect(suggestions()).toBe(false);
+	});
+
+	it("withholds them from everyone while the switch-off setting is on, without asking about edit rights", async () => {
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "true");
+
+		await call();
+
+		expect(suggestions()).toBe(false);
+		expect(canAccessCase).not.toHaveBeenCalledWith(expect.anything(), "EDIT");
+	});
+
+	it("tells the model what the user did with each earlier suggestion", async () => {
+		await POST(
+			new Request("http://localhost/api/cases/x/assistant", {
+				method: "POST",
+				body: JSON.stringify({
+					messages: [
+						{
+							id: "m",
+							role: "assistant",
+							parts: [
+								{
+									type: "tool-suggest_edit",
+									toolCallId: "call-1",
+									state: "output-available",
+									input: {},
+									output: { suggested: true },
+								},
+							],
+						},
+					],
+					suggestionOutcomes: { "call-1": "dismissed" },
+				}),
+			}),
+			{ params: Promise.resolve({ id: CASE_ID }) }
+		);
+
+		const [sent] = vi.mocked(convertToModelMessages).mock.calls[0] ?? [];
+		expect(JSON.stringify(sent)).toContain("dismissed this suggestion");
+	});
+
+	it("refuses an outcome that is not one the panel records", async () => {
+		const response = await POST(
+			new Request("http://localhost/api/cases/x/assistant", {
+				method: "POST",
+				body: JSON.stringify({
+					messages: [{ id: "m", role: "user", parts: [] }],
+					suggestionOutcomes: { "call-1": "approved" },
+				}),
+			}),
+			{ params: Promise.resolve({ id: CASE_ID }) }
+		);
+
+		expect(response.status).toBe(400);
+		expect(streamText).not.toHaveBeenCalled();
 	});
 });

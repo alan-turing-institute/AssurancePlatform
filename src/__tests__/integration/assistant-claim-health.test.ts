@@ -76,7 +76,7 @@ async function setup() {
 }
 
 function tools(userId: string, caseId: string) {
-	return createCaseTools(userId, caseId, null, undefined, undefined, true);
+	return createCaseTools(userId, caseId, { claimHealth: true });
 }
 
 async function readAs(userId: string, caseId: string) {

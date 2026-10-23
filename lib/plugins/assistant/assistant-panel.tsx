@@ -46,6 +46,15 @@ import {
 	silentReplyIds,
 } from "@/lib/plugins/assistant/silent-reply";
 import { suggestedPrompts } from "@/lib/plugins/assistant/suggested-prompts";
+import {
+	SUGGESTION_TOOL_NAMES,
+	type SuggestionOutcome,
+} from "@/lib/plugins/assistant/suggestion";
+import { SuggestionResult } from "@/lib/plugins/assistant/suggestion-card";
+import {
+	getCaseOutcomes,
+	useSuggestionOutcomes,
+} from "@/lib/plugins/assistant/suggestion-outcomes";
 import { ToolCallRow } from "@/lib/plugins/assistant/tool-call-row";
 import { useAssistantTools } from "@/lib/plugins/assistant/use-assistant-tools";
 import { showWaitingLine } from "@/lib/plugins/assistant/waiting-state";
@@ -144,14 +153,24 @@ function thinkingSteps(message: UIMessage): number {
 	return message.parts.filter((part) => part.type === "reasoning").length;
 }
 
+/** What a suggestion card needs from the panel: whether the user may apply it, and what became of each card. */
+interface SuggestionCards {
+	canEdit: boolean;
+	caseId: string;
+	onOutcome: (toolCallId: string, outcome: SuggestionOutcome) => void;
+	outcomeOf: (toolCallId: string) => SuggestionOutcome | undefined;
+}
+
 function MessagePartView({
 	part,
 	replyEnded,
 	role,
+	suggestions,
 }: {
 	part: MessagePart;
 	replyEnded: boolean;
 	role: UIMessage["role"];
+	suggestions: SuggestionCards;
 }) {
 	if (part.type === NOTICE_PART) {
 		return (
@@ -171,7 +190,16 @@ function MessagePartView({
 		);
 	}
 	return isToolUIPart(part) ? (
-		<ToolCallRow part={part} replyEnded={replyEnded} />
+		<>
+			<ToolCallRow part={part} replyEnded={replyEnded} />
+			<SuggestionResult
+				canEdit={suggestions.canEdit}
+				caseId={suggestions.caseId}
+				onOutcome={suggestions.onOutcome}
+				outcome={suggestions.outcomeOf(part.toolCallId)}
+				part={part}
+			/>
+		</>
 	) : null;
 }
 
@@ -179,6 +207,7 @@ function MessageView({
 	message,
 	replyEnded,
 	silent,
+	suggestions,
 	thinking,
 }: {
 	message: UIMessage;
@@ -186,6 +215,7 @@ function MessageView({
 	replyEnded: boolean;
 	/** The reply finished with nothing to read. */
 	silent: boolean;
+	suggestions: SuggestionCards;
 	thinking: { steps: number; streaming: boolean; text: string };
 }) {
 	return (
@@ -227,6 +257,7 @@ function MessageView({
 							part={part}
 							replyEnded={replyEnded}
 							role={message.role}
+							suggestions={suggestions}
 						/>
 					))}
 					{silent && (
@@ -274,10 +305,24 @@ function ErrorNotice({
 }
 
 const INTRO_BASE =
-	"The assistant reads this case to answer your questions and never changes it. It can check the case against the assurance-case rules.";
+	"The assistant reads this case to answer your questions. It can check the case against the assurance-case rules.";
+const INTRO_READ_ONLY = " It never changes the case.";
+const INTRO_SUGGESTS =
+	" It never changes the case itself: when you ask for a change, it suggests one and you choose whether to apply it.";
 const INTRO_TECHNIQUES =
 	" With an element selected, it can suggest techniques from the TEA Techniques library that could produce evidence for it.";
 const INTRO_LIMIT = " It does not judge whether the case is good enough.";
+
+/** The introduction before the first message, by what the assistant's tools allow. */
+function introText(
+	tools: readonly string[] | null,
+	mentionsTechniques: boolean
+) {
+	const suggestsChanges = (tools ?? []).some((name) =>
+		SUGGESTION_TOOL_NAMES.includes(name)
+	);
+	return `${INTRO_BASE}${suggestsChanges ? INTRO_SUGGESTS : INTRO_READ_ONLY}${mentionsTechniques ? INTRO_TECHNIQUES : ""}${INTRO_LIMIT}`;
+}
 
 /** The case assistant's chat: messages, tool calls as collapsible rows, and a prompt box. Messages live in a per-user, per-case module store, so closing the sheet keeps them. The chat is built only once the session is known, so no entry is ever keyed to an unknown user. */
 export function AssistantPanel(context: CaseSlotContext) {
@@ -348,7 +393,20 @@ function SelectionRow({
 	);
 }
 
+/** What the user did with each suggestion card of this chat, kept beside the chat, and what the cards need from the panel. Re-renders when an outcome is recorded. */
+function useSuggestionCards(userId: string, caseId: string, canEdit: boolean) {
+	const outcomes = useSuggestionOutcomes(getCaseOutcomes(userId, caseId));
+	const suggestions: SuggestionCards = {
+		canEdit,
+		caseId,
+		onOutcome: (toolCallId, outcome) => outcomes.record(toolCallId, outcome),
+		outcomeOf: (toolCallId) => outcomes.get(toolCallId),
+	};
+	return { outcomes, suggestions };
+}
+
 function AssistantChat({
+	canEdit,
 	caseId,
 	selectedElementId,
 	selectedElementLabel,
@@ -366,6 +424,7 @@ function AssistantChat({
 		chat: getCaseChat(userId, caseId),
 	});
 	const tools = useAssistantTools(caseId);
+	const { outcomes, suggestions } = useSuggestionCards(userId, caseId, canEdit);
 	const [draft, setDraft] = useState("");
 	const messageBox = useRef<HTMLTextAreaElement>(null);
 	const busy = status === "submitted" || status === "streaming";
@@ -382,13 +441,22 @@ function AssistantChat({
 		if (!claimSend()) {
 			return;
 		}
-		sendMessage({ text }, { body: { selectedElementId } });
+		sendMessage(
+			{ text },
+			{
+				body: {
+					selectedElementId,
+					suggestionOutcomes: outcomes.snapshot(),
+				},
+			}
+		);
 	}
 
 	/** Ends any reply still arriving, then empties this case's chat and any failure notice. The draft stays. */
 	function newChat() {
 		stop();
 		setMessages([]);
+		outcomes.clear();
 		clearError();
 		messageBox.current?.focus();
 	}
@@ -430,7 +498,7 @@ function AssistantChat({
 					{messages.length === 0 && (
 						<ConversationEmptyState
 							data-testid="assistant-intro"
-							description={`${INTRO_BASE}${mentionsTechniques ? INTRO_TECHNIQUES : ""}${INTRO_LIMIT}`}
+							description={introText(tools, mentionsTechniques)}
 							icon={<Bot className="size-6" />}
 							title="Ask about this case"
 						/>
@@ -441,6 +509,7 @@ function AssistantChat({
 							message={message}
 							replyEnded={!busy || message.id !== lastId}
 							silent={silentIds.has(message.id)}
+							suggestions={suggestions}
 							thinking={{
 								steps: thinkingSteps(message),
 								streaming:

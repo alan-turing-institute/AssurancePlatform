@@ -633,7 +633,7 @@ describe("the suggested prompts", () => {
 		expect(chat.state.sendMessage).toHaveBeenCalledTimes(1);
 		expect(chat.state.sendMessage).toHaveBeenCalledWith(
 			{ text: sentence },
-			{ body: { selectedElementId: "el-1" } }
+			{ body: { selectedElementId: "el-1", suggestionOutcomes: {} } }
 		);
 		expect(box).toHaveValue("my own question");
 	});
@@ -648,7 +648,7 @@ describe("the suggested prompts", () => {
 
 		expect(chat.state.sendMessage).toHaveBeenCalledWith(
 			{ text: first.textContent },
-			{ body: { selectedElementId: undefined } }
+			{ body: { selectedElementId: undefined, suggestionOutcomes: {} } }
 		);
 	});
 
@@ -1071,7 +1071,7 @@ describe("Send and Stop", () => {
 
 		expect(chat.state.sendMessage).toHaveBeenCalledWith(
 			{ text: "What does P1 claim?" },
-			{ body: { selectedElementId: "el-1" } }
+			{ body: { selectedElementId: "el-1", suggestionOutcomes: {} } }
 		);
 		expect(box).toHaveValue("");
 	});

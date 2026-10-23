@@ -95,14 +95,7 @@ function health(tools: ReturnType<typeof createCaseTools>) {
 describe("createCaseTools — registering read_claim_health", () => {
 	it("registers the tool only when asked to, and leaves the other tools alone", () => {
 		const without = createCaseTools("u", "c");
-		const withHealth = createCaseTools(
-			"u",
-			"c",
-			null,
-			undefined,
-			undefined,
-			true
-		);
+		const withHealth = createCaseTools("u", "c", { claimHealth: true });
 
 		expect(Object.keys(without)).not.toContain("read_claim_health");
 		expect(Object.keys(withHealth)).toContain("read_claim_health");
@@ -113,22 +106,24 @@ describe("createCaseTools — registering read_claim_health", () => {
 	});
 
 	it("does not register the tool when the flag is false", () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, false);
+		const tools = createCaseTools("u", "c", { claimHealth: false });
 
 		expect(Object.keys(tools)).not.toContain("read_claim_health");
 	});
 
-	it("keeps the techniques selection, deadline and model access in the same positions", () => {
+	it("passes the techniques selection and deadline alongside the claim health flag", () => {
 		vi.stubEnv("TECHNIQUES_MCP_URL", "https://techniques.example/mcp");
 		try {
-			const tools = createCaseTools(
-				"u",
-				"c",
-				{ id: "x", label: "P1", type: "PROPERTY_CLAIM", text: "t" } as never,
-				Date.now() + 60_000,
-				undefined,
-				true
-			);
+			const tools = createCaseTools("u", "c", {
+				selection: {
+					id: "x",
+					label: "P1",
+					type: "PROPERTY_CLAIM",
+					text: "t",
+				},
+				replyDeadline: Date.now() + 60_000,
+				claimHealth: true,
+			});
 
 			expect(Object.keys(tools).sort()).toEqual([
 				"lint_case",
@@ -145,9 +140,7 @@ describe("createCaseTools — registering read_claim_health", () => {
 
 describe("read_claim_health — a reply with more than one call", () => {
 	it("reads the statuses again on every call and shows what changed between them", async () => {
-		const call = health(
-			createCaseTools("u", "c", null, undefined, undefined, true)
-		);
+		const call = health(createCaseTools("u", "c", { claimHealth: true }));
 
 		const first = await call();
 		mocks.readStatuses.mockResolvedValue({
@@ -177,9 +170,7 @@ describe("read_claim_health — a reply with more than one call", () => {
 	});
 
 	it("does not serve an earlier result when a later read returns an error", async () => {
-		const call = health(
-			createCaseTools("u", "c", null, undefined, undefined, true)
-		);
+		const call = health(createCaseTools("u", "c", { claimHealth: true }));
 		await call();
 		mocks.readStatuses.mockResolvedValue({ error: "Case not found" });
 
@@ -192,7 +183,7 @@ describe("read_claim_health — a reply with more than one call", () => {
 	});
 
 	it("exports the case once for the whole reply, whichever tools read it", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		const call = health(tools);
 
 		await tools.read_case.execute?.({}, OPTIONS);
@@ -205,7 +196,7 @@ describe("read_claim_health — a reply with more than one call", () => {
 	});
 
 	it("leaves the shared export as it was for the other tools", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		const before = JSON.stringify(await tools.read_case.execute?.({}, OPTIONS));
 
 		await health(tools)();
@@ -215,7 +206,7 @@ describe("read_claim_health — a reply with more than one call", () => {
 	});
 
 	it("does not read the statuses when the other tools run", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 
 		await tools.read_case.execute?.({}, OPTIONS);
 		await tools.read_element.execute?.({ elementId: "id-P1" }, OPTIONS);
@@ -226,9 +217,7 @@ describe("read_claim_health — a reply with more than one call", () => {
 
 	it("reads the export again after a failed export, as the other tools do", async () => {
 		mocks.exportCase.mockRejectedValueOnce(new Error("database down"));
-		const call = health(
-			createCaseTools("u", "c", null, undefined, undefined, true)
-		);
+		const call = health(createCaseTools("u", "c", { claimHealth: true }));
 
 		const first = await call();
 		const second = await call();
@@ -241,7 +230,7 @@ describe("read_claim_health — a reply with more than one call", () => {
 
 describe("read_claim_health — the reply's cap on tool calls", () => {
 	it("returns the fixed limit error, and reads nothing, once the cap is used up by other tools", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		for (let i = 0; i < MAX_TOOL_CALLS_PER_REPLY; i += 1) {
 			await tools.read_case.execute?.({}, OPTIONS);
 		}
@@ -253,7 +242,7 @@ describe("read_claim_health — the reply's cap on tool calls", () => {
 	});
 
 	it("counts its own calls towards the cap the other tools share", async () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		const call = health(tools);
 		for (let i = 0; i < MAX_TOOL_CALLS_PER_REPLY; i += 1) {
 			await call();
@@ -270,7 +259,7 @@ describe("read_claim_health — the reply's cap on tool calls", () => {
 
 describe("read_claim_health — what the model is told about the tool", () => {
 	it("takes no input", () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		const schema = (
 			tools.read_claim_health as unknown as {
 				inputSchema: { safeParse: (v: unknown) => { success: boolean } };
@@ -281,7 +270,7 @@ describe("read_claim_health — what the model is told about the tool", () => {
 	});
 
 	it("says that claimsWithoutResults names a claim by its id when it has no label", () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 
 		expect(tools.read_claim_health?.description).toContain(
 			"naming a claim by its id when it has no label"
@@ -289,7 +278,7 @@ describe("read_claim_health — what the model is told about the tool", () => {
 	});
 
 	it("describes every field the tool can return", () => {
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		const description = tools.read_claim_health?.description ?? "";
 
 		for (const field of [

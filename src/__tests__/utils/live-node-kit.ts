@@ -378,14 +378,7 @@ interface ToolClaim {
 /** One reply's tool set for the world's owner. */
 export async function assistantTools(world: NodeWorld) {
 	const { createCaseTools } = await import("@/lib/plugins/assistant/tools");
-	return createCaseTools(
-		world.owner.id,
-		world.kase.id,
-		null,
-		undefined,
-		undefined,
-		true
-	);
+	return createCaseTools(world.owner.id, world.kase.id, { claimHealth: true });
 }
 
 /** What `read_claim_health` reports, as the model gets it. */

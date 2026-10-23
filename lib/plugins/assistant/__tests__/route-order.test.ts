@@ -172,14 +172,26 @@ describe("assistant tools route check order", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ tools: ["read_case"] });
-		expect(createCaseTools).toHaveBeenCalledWith(
-			"user-1",
-			CASE_ID,
-			null,
-			undefined,
-			undefined,
-			false
+		expect(createCaseTools).toHaveBeenCalledWith("user-1", CASE_ID, {
+			claimHealth: false,
+			suggestions: true,
+		});
+	});
+
+	it("lists the suggestion tools only for a user who can edit the case, and not while they are switched off", async () => {
+		vi.mocked(canAccessCase).mockImplementation((_who, level) =>
+			Promise.resolve(level !== "EDIT")
 		);
+		await callGet();
+		vi.mocked(canAccessCase).mockResolvedValue(true);
+		await callGet();
+		vi.stubEnv("ASSISTANT_SUGGESTIONS_DISABLED", "1");
+		await callGet();
+		vi.unstubAllEnvs();
+
+		expect(
+			vi.mocked(createCaseTools).mock.calls.map((c) => c[2]?.suggestions)
+		).toEqual([false, true, false]);
 	});
 
 	it("turns claim health on when the health plugin is on and the case has a claim with a status", async () => {
@@ -192,7 +204,9 @@ describe("assistant tools route check order", () => {
 			"user-1"
 		);
 		expect(caseHasHealthStatus).toHaveBeenCalledWith(CASE_ID);
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(true);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.claimHealth).toBe(
+			true
+		);
 	});
 
 	it("leaves claim health off, without looking at the claims, when the health plugin is off for the user", async () => {
@@ -209,6 +223,8 @@ describe("assistant tools route check order", () => {
 
 		expect(response.status).toBe(200);
 		expect(caseHasHealthStatus).not.toHaveBeenCalled();
-		expect(vi.mocked(createCaseTools).mock.calls[0]?.[5]).toBe(false);
+		expect(vi.mocked(createCaseTools).mock.calls[0]?.[2]?.claimHealth).toBe(
+			false
+		);
 	});
 });

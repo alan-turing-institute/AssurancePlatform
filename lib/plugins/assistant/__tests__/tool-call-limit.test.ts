@@ -154,7 +154,7 @@ describe("createCaseTools: the cap on one reply's tool calls", () => {
 
 	it("counts read_claim_health in the same cap, and does not read statuses past it", async () => {
 		vi.mocked(readHealthStatusesForCase).mockResolvedValue({ data: [] });
-		const tools = createCaseTools("u", "c", null, undefined, undefined, true);
+		const tools = createCaseTools("u", "c", { claimHealth: true });
 		for (let index = 0; index < MAX_TOOL_CALLS_PER_REPLY; index += 1) {
 			await tools.read_case.execute?.({}, options);
 		}
