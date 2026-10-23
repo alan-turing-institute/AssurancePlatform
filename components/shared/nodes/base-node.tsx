@@ -270,16 +270,39 @@ export default function BaseNode({
 					data-plugin-display=""
 				/>
 			)}
+			{/* The handles stay mounted so edges are still drawn to them, but they
+			are invisible and inert because links are not made by dragging between
+			points. They must not use display:none, which removes the position
+			the edges are drawn to. */}
+
 			{/* Target Handle (top) */}
 			{config.showTargetHandle && (
-				<Handle id="target" position={targetPosition} type="target" />
+				<Handle
+					className="pointer-events-none opacity-0"
+					id="target"
+					isConnectable={false}
+					position={targetPosition}
+					type="target"
+				/>
 			)}
 
 			{/* Side handles (ADR 0005 D4): the `challenges` edge always
 			connects here, regardless of node kind — any card can be a
 			defeater or a defeat target. */}
-			<Handle id="side-target" position={sideTargetPosition} type="target" />
-			<Handle id="side-source" position={sideSourcePosition} type="source" />
+			<Handle
+				className="pointer-events-none opacity-0"
+				id="side-target"
+				isConnectable={false}
+				position={sideTargetPosition}
+				type="target"
+			/>
+			<Handle
+				className="pointer-events-none opacity-0"
+				id="side-source"
+				isConnectable={false}
+				position={sideSourcePosition}
+				type="source"
+			/>
 
 			<LazyMotion features={domAnimation} strict>
 				{/* Header: Icon + Name + Top-right Actions */}
@@ -408,7 +431,13 @@ export default function BaseNode({
 
 			{/* Source Handle (bottom) */}
 			{config.showSourceHandle && (
-				<Handle id="c" position={sourcePosition} type="source" />
+				<Handle
+					className="pointer-events-none opacity-0"
+					id="c"
+					isConnectable={false}
+					position={sourcePosition}
+					type="source"
+				/>
 			)}
 		</div>
 	);

@@ -217,6 +217,7 @@ function Flow() {
 						fitView
 						id="ReactFlow"
 						nodes={nodes}
+						nodesConnectable={false}
 						nodesDraggable={false}
 						nodeTypes={nodeTypes}
 						onNodesChange={onNodesChange}
