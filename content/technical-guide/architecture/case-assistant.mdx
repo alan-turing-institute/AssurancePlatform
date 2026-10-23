@@ -45,8 +45,12 @@ An OpenAI-compatible connection fits any server that follows the OpenAI API, suc
 Its address is entered up to and including `/v1` where the server has one.
 An Ollama address has no path after it.
 An OpenAI connection is for OpenAI's own service, so the user enters only a label and a key.
-It sends a reply's length limit in the `max_completion_tokens` field, which OpenAI's newer models require.
-An OpenAI-compatible connection sends the older `max_tokens` field, which most other servers expect.
+Chat requests use OpenAI's `/v1/responses` endpoint with `store: false`, so the endpoint does not keep the conversation's state for later retrieval.
+OpenAI's own data-retention terms still apply: OpenAI keeps API inputs and outputs in abuse-monitoring logs for up to 30 days, unless the organisation has OpenAI's approval for zero data retention.
+The SDK sends the reply's length limit as `max_output_tokens` and sets no reasoning effort.
+For a model the SDK recognises as a reasoning model, it also carries encrypted reasoning between tool steps, so that nothing needs to be stored.
+Model listing and connection tests use `GET /v1/models`.
+An OpenAI-compatible connection sends the reply's length limit as the older `max_tokens` field, which most other servers expect.
 Ranking runs only on OpenRouter and Ollama connections, the two types that have a Clef-Flash endpoint.
 A user whose chat model is on OpenAI keeps ranking on OpenRouter or Ollama, and search on a connection type that can do it, because OpenAI serves neither Clef-Flash nor the catalogue's embedding model.
 A user can have up to 10 connections.

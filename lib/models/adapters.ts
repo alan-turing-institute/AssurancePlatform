@@ -1,12 +1,15 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { EmbeddingModel, JSONValue, LanguageModel } from "ai";
 import {
+	CONNECTION_TYPES,
 	connectionTypeCanDo,
 	type ModelConnectionAccess,
 	type ModelJob,
 } from "@/lib/models/connection-types";
 import { guardedFetch } from "@/lib/models/guarded-fetch";
+import { logSdkWarnings } from "@/lib/models/sdk-warnings";
 
 /**
  * The AI SDK models for a stored connection. Every request they make goes
@@ -30,6 +33,11 @@ export const EMBEDDING_MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
  * with no answer at all, so the bound leaves most of the cap for the answer.
  */
 const OPENROUTER_REASONING_MAX_TOKENS = 3072;
+
+// The AI SDK prints its warnings with console.warn unless this global is set,
+// and a warning can quote a private case. Setting it as this module loads puts
+// it in place before any model made here is used.
+globalThis.AI_SDK_LOG_WARNINGS = logSdkWarnings;
 
 /** The guarded fetch with a cap on the response body that suits the job. */
 function guardedFetchCappedAt(maxBytes: number) {
@@ -60,21 +68,6 @@ function openAiStyleBaseUrl(connection: ModelConnectionAccess): string {
 	}
 }
 
-/**
- * Sends a chat request's reply length limit in the field OpenAI requires.
- * OpenAI's reasoning models refuse `max_tokens`; all its chat models accept
- * `max_completion_tokens`. A body with no limit is returned unchanged.
- */
-function withCompletionTokenLimit(
-	body: Record<string, unknown>
-): Record<string, unknown> {
-	if (body.max_tokens === undefined) {
-		return body;
-	}
-	const { max_tokens: limit, ...rest } = body;
-	return { ...rest, max_completion_tokens: limit };
-}
-
 function openAiStyleProvider(
 	connection: ModelConnectionAccess,
 	maxResponseBytes: number
@@ -85,22 +78,35 @@ function openAiStyleProvider(
 		baseURL: openAiStyleBaseUrl(connection),
 		apiKey: connection.apiKey || undefined,
 		fetch: guardedFetchCappedAt(maxResponseBytes),
-		// Applies to chat requests only; the SDK does not pass it to embeddings.
-		transformRequestBody:
-			connection.type === "OPENAI" ? withCompletionTokenLimit : undefined,
 	});
 }
 
 /**
  * The model for the chat job. Throws when the connection's type cannot chat,
- * and for an Anthropic connection without a key, because the SDK would then
- * fall back to a key in the server's own environment.
+ * and for an OpenAI or Anthropic connection without a key, because the SDK
+ * would then fall back to a key in the server's own environment. It also
+ * throws if the OpenAI type has no fixed address, because the SDK would then
+ * fall back to an address in the server's own environment.
  */
 export function chatModelFor(
 	connection: ModelConnectionAccess,
 	model: string
 ): LanguageModel {
 	requireJob(connection, "chat");
+	if (connection.type === "OPENAI") {
+		if (!connection.apiKey) {
+			throw new Error("An OPENAI connection needs a key to chat");
+		}
+		const baseURL = CONNECTION_TYPES.OPENAI.baseUrl;
+		if (!baseURL) {
+			throw new Error("The OPENAI connection type has no fixed address");
+		}
+		return createOpenAI({
+			baseURL,
+			apiKey: connection.apiKey,
+			fetch: guardedFetchCappedAt(CHAT_MAX_RESPONSE_BYTES),
+		}).responses(model);
+	}
 	if (connection.type === "ANTHROPIC") {
 		if (!connection.apiKey) {
 			throw new Error("An ANTHROPIC connection needs a key to chat");
@@ -131,13 +137,19 @@ export function embeddingModelFor(
 /**
  * Provider options to pass with each chat request on this connection, or
  * undefined when there are none. OpenRouter is asked to bound the reasoning of
- * models that reason. Other servers get nothing, since they may refuse a
+ * models that reason. OpenAI uses stateless Responses requests. For a model
+ * the SDK recognises as a reasoning model, the SDK also asks for encrypted
+ * reasoning and carries it between steps without storage; any other model gets
+ * no reasoning options. Other servers get nothing, since they may refuse a
  * parameter they do not know; Anthropic's extended thinking is off unless it
  * is asked for, so there is nothing to bound there.
  */
 export function chatProviderOptions(
 	connection: ModelConnectionAccess
 ): Record<string, Record<string, JSONValue>> | undefined {
+	if (connection.type === "OPENAI") {
+		return { openai: { store: false } };
+	}
 	if (connection.type !== "OPENROUTER") {
 		return undefined;
 	}

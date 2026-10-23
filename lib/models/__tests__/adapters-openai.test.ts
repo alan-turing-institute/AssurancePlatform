@@ -1,13 +1,6 @@
+import { readFileSync } from "node:fs";
 import type { ServerResponse } from "node:http";
-import {
-	embed,
-	generateText,
-	type LanguageModel,
-	stepCountIs,
-	streamText,
-	type ToolSet,
-	tool,
-} from "ai";
+import { generateText, type LanguageModel, streamText, type ToolSet } from "ai";
 import {
 	afterAll,
 	afterEach,
@@ -19,14 +12,22 @@ import {
 	vi,
 } from "vitest";
 import { z } from "zod";
+import { guardedFetch } from "../guarded-fetch";
+
+vi.mock("../guarded-fetch", async (importOriginal) => {
+	const original = await importOriginal<typeof import("../guarded-fetch")>();
+	return { ...original, guardedFetch: vi.fn(original.guardedFetch) };
+});
+
 import {
 	chatModelFor,
 	chatProviderOptions,
 	embeddingModelFor,
 } from "../adapters";
-import type {
-	ModelConnectionAccess,
-	ModelConnectionType,
+import {
+	CONNECTION_TYPES,
+	type ModelConnectionAccess,
+	type ModelConnectionType,
 } from "../connection-types";
 import {
 	type ModelServer,
@@ -138,6 +139,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	vi.mocked(guardedFetch).mockRestore();
 	vi.unstubAllEnvs();
 	callsToolFirst = false;
 });
@@ -192,191 +194,110 @@ const OTHER_OPENAI_STYLE = [
 	"OPENAI_COMPATIBLE",
 ] as const;
 
-describe("an OpenAI chat request", () => {
-	it.each(
-		MODES
-	)("sends the limit as max_completion_tokens and no max_tokens when %s", async (mode) => {
-		const body = await sentBody(
-			chatModelFor(connection("OPENAI"), "gpt-test"),
-			mode,
-			{ maxOutputTokens: LIMIT }
+describe("an OpenAI Responses request", () => {
+	const access = {
+		type: "OPENAI",
+		baseUrl: "https://ignored.example",
+		apiKey: KEY,
+	} as const;
+	const fixture = readFileSync(
+		"lib/plugins/assistant/__tests__/fixtures/openai-answer.sse",
+		"utf8"
+	);
+
+	async function request(
+		model = "gpt-6.1-sol",
+		maxOutputTokens: number | undefined = LIMIT
+	) {
+		vi.mocked(guardedFetch).mockResolvedValue(
+			new Response(fixture, {
+				headers: { "content-type": "text/event-stream" },
+			})
 		);
+		const result = streamText({
+			model: chatModelFor(access, model),
+			prompt: "hi",
+			maxOutputTokens,
+			providerOptions: chatProviderOptions(access),
+			maxRetries: 0,
+			tools: { lookup: { inputSchema: z.object({ query: z.string() }) } },
+		});
+		await result.consumeStream();
+		const text = await result.text;
+		const [url, init, guard] = vi.mocked(guardedFetch).mock.calls.at(-1)!;
+		return { url, init, guard, text, body: JSON.parse(String(init?.body)) };
+	}
 
-		expect(body.max_completion_tokens).toBe(LIMIT);
-		expect(body).not.toHaveProperty("max_tokens");
-		expect(body.model).toBe("gpt-test");
-	});
-
-	it.each(
-		MODES
-	)("sends the limit it was given, not a fixed one, when %s", async (mode) => {
-		const body = await sentBody(
-			chatModelFor(connection("OPENAI"), "gpt-test"),
-			mode,
-			{ maxOutputTokens: 77 }
+	it("posts tools, the connection key and max_output_tokens to the fixed Responses address through the capped guard", async () => {
+		const { url, init, guard, body, text } = await request();
+		expect(text).toBe("The case is ready.");
+		expect(url).toBe("https://api.openai.com/v1/responses");
+		expect(init?.method).toBe("POST");
+		expect(new Headers(init?.headers).get("authorization")).toBe(
+			`Bearer ${KEY}`
 		);
-
-		expect(body.max_completion_tokens).toBe(77);
-		expect(body).not.toHaveProperty("max_tokens");
-	});
-
-	it.each(
-		MODES
-	)("sends neither field when no limit is set, when %s", async (mode) => {
-		const body = await sentBody(
-			chatModelFor(connection("OPENAI"), "gpt-test"),
-			mode
-		);
-
+		expect(guard).toEqual({ maxBytes: 4 * 1024 * 1024 });
+		expect(body).toMatchObject({
+			model: "gpt-6.1-sol",
+			store: false,
+			max_output_tokens: LIMIT,
+			tools: [{ type: "function", name: "lookup" }],
+		});
 		expect(body).not.toHaveProperty("max_tokens");
 		expect(body).not.toHaveProperty("max_completion_tokens");
+		expect(
+			vi
+				.mocked(guardedFetch)
+				.mock.calls.every(([address]) => String(address).endsWith("/responses"))
+		).toBe(true);
 	});
 
-	it.each(
-		MODES
-	)("changes only the name of the limit: every other field matches an OpenAI-compatible request, when %s", async (mode) => {
-		const lookup = tool({
-			description: "Looks something up",
-			inputSchema: z.object({ query: z.string() }),
-			execute: ({ query }) => query,
-		});
-		const extra = {
-			maxOutputTokens: LIMIT,
-			temperature: 0.2,
-			topP: 0.9,
-			seed: 7,
-			stopSequences: ["END"],
-			system: "Be brief.",
-			tools: { lookup },
-		};
-
-		const compatible = await sentBody(
-			chatModelFor(connection("OPENAI_COMPATIBLE"), "gpt-test"),
-			mode,
-			extra
-		);
-		const openAi = await sentBody(
-			chatModelFor(connection("OPENAI"), "gpt-test"),
-			mode,
-			extra
-		);
-
-		const { max_tokens: limit, ...rest } = compatible;
-		expect(limit).toBe(LIMIT);
-		expect(openAi).toEqual({ ...rest, max_completion_tokens: LIMIT });
-		expect(openAi.tools).toBeDefined();
-		expect(openAi.messages).toEqual(compatible.messages);
-	});
-
-	it.each(
-		MODES
-	)("carries the limit on every step of a reply that calls a tool, when %s", async (mode) => {
-		callsToolFirst = true;
-		const lookup = tool({
-			description: "Looks something up",
-			inputSchema: z.object({ query: z.string() }),
-			execute: ({ query }) => query,
-		});
-		const options = {
-			model: chatModelFor(connection("OPENAI"), "gpt-test"),
-			prompt: "hi",
-			maxRetries: 0,
-			maxOutputTokens: LIMIT,
-			tools: { lookup },
-			stopWhen: stepCountIs(3),
-		};
-		if (mode === "stream") {
-			const result = streamText(options);
-			await result.consumeStream();
-			await result.text;
-		} else {
-			await generateText(options);
-		}
-
-		expect(server.requests).toHaveLength(2);
-		for (const request of server.requests) {
-			const body = JSON.parse(request.body) as Body;
-			expect(body.max_completion_tokens).toBe(LIMIT);
-			expect(body).not.toHaveProperty("max_tokens");
-		}
-	});
-
-	it("sends no reasoning setting that a non-reasoning OpenAI model would refuse", async () => {
-		expect(chatProviderOptions(connection("OPENAI"))).toBeUndefined();
-
-		const body = await sentBody(
-			chatModelFor(connection("OPENAI"), "gpt-test"),
-			"stream",
-			{
-				maxOutputTokens: LIMIT,
-				providerOptions: chatProviderOptions(connection("OPENAI")),
-			}
-		);
-
+	it("requests encrypted reasoning with storage off and leaves reasoning effort at the model default", async () => {
+		const { body } = await request();
+		expect(chatProviderOptions(access)).toEqual({ openai: { store: false } });
+		expect(body.include).toContain("reasoning.encrypted_content");
 		expect(body).not.toHaveProperty("reasoning");
 		expect(body).not.toHaveProperty("reasoning_effort");
 	});
 
-	it("uses the address as stored with a Bearer key, and the chat path", async () => {
-		await sentBody(
-			chatModelFor(
-				connection("OPENAI", { baseUrl: `${server.origin}/v1/` }),
-				"gpt-test"
-			),
-			"generate"
-		);
-
-		const request = server.requests.at(-1);
-		expect(request?.method).toBe("POST");
-		expect(request?.url).toBe("/v1/chat/completions");
-		expect(request?.headers.authorization).toBe(`Bearer ${KEY}`);
+	it("sends no reasoning parameters to a non-reasoning model", async () => {
+		const { body } = await request("gpt-4.1");
+		expect(body.store).toBe(false);
+		expect(body).not.toHaveProperty("reasoning");
+		expect(body).not.toHaveProperty("reasoning_effort");
+		expect(body.include ?? []).not.toContain("reasoning.encrypted_content");
 	});
 
-	it("goes through the network guard on the streamed path", async () => {
-		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", "");
-		const errors: unknown[] = [];
-		const result = streamText({
-			model: chatModelFor(connection("OPENAI"), "gpt-test"),
-			prompt: "hi",
-			maxRetries: 0,
-			onError: ({ error }) => {
-				errors.push(error);
-			},
-		});
-		await result.consumeStream({ onError: () => undefined });
-
-		expect(errors).toHaveLength(1);
-		expect(errors[0]).toMatchObject({ code: "insecure-url" });
-		expect(String(errors[0])).not.toContain(KEY);
-		expect(server.requests).toEqual([]);
+	it("uses the requested limit rather than a fixed value", async () => {
+		expect((await request("gpt-4.1", 77)).body.max_output_tokens).toBe(77);
 	});
 
-	it("is refused for embeddings, without making a request or naming the key", () => {
-		let message = "";
+	it("rejects a missing connection key even when the server has one", () => {
+		vi.stubEnv("OPENAI_API_KEY", "server-key");
+		expect(() =>
+			chatModelFor({ ...access, apiKey: null }, "gpt-6.1-sol")
+		).toThrow("An OPENAI connection needs a key to chat");
+	});
+
+	it("refuses to build when the type has no fixed address, whatever the server's environment holds", () => {
+		vi.stubEnv("OPENAI_BASE_URL", "https://elsewhere.example/v1");
+		const spec = CONNECTION_TYPES.OPENAI;
+		Object.defineProperty(spec, "baseUrl", { value: null });
 		try {
-			embeddingModelFor(connection("OPENAI"), "text-embedding-3-small");
-		} catch (error) {
-			message = String(error);
+			expect(() => chatModelFor(access, "gpt-6.1-sol")).toThrow(
+				"has no fixed address"
+			);
+		} finally {
+			Object.defineProperty(spec, "baseUrl", {
+				value: "https://api.openai.com/v1",
+			});
 		}
-
-		expect(message).toContain("cannot do the search job");
-		expect(message).not.toContain(KEY);
-		expect(server.requests).toEqual([]);
 	});
 
-	it("is refused for embeddings even when the model is used", async () => {
-		const result = await Promise.resolve()
-			.then(() =>
-				embed({
-					model: embeddingModelFor(connection("OPENAI"), "m"),
-					value: "a claim",
-					maxRetries: 0,
-				})
-			)
-			.catch((caught: unknown) => caught);
-
-		expect(String(result)).toContain("cannot do the search job");
-		expect(server.requests).toEqual([]);
+	it("continues to refuse the search job", () => {
+		expect(() => embeddingModelFor(access, "text-embedding-3-small")).toThrow(
+			"cannot do the search job"
+		);
 	});
 });
 
@@ -417,27 +338,6 @@ describe("a chat request on every other type", () => {
 
 		expect(body.max_tokens).toBe(LIMIT);
 		expect(body).not.toHaveProperty("max_completion_tokens");
-	});
-
-	it("keeps each connection's behaviour when the models are built together and used in turn", async () => {
-		const compatible = chatModelFor(connection("OPENAI_COMPATIBLE"), "m");
-		const openAi = chatModelFor(connection("OPENAI"), "m");
-		const ollama = chatModelFor(connection("OLLAMA"), "m");
-		const extra = { maxOutputTokens: LIMIT };
-
-		const first = await sentBody(compatible, "stream", extra);
-		const second = await sentBody(openAi, "stream", extra);
-		const third = await sentBody(ollama, "generate", extra);
-		const fourth = await sentBody(openAi, "generate", extra);
-
-		expect(first.max_tokens).toBe(LIMIT);
-		expect(first).not.toHaveProperty("max_completion_tokens");
-		expect(second.max_completion_tokens).toBe(LIMIT);
-		expect(second).not.toHaveProperty("max_tokens");
-		expect(third.max_tokens).toBe(LIMIT);
-		expect(third).not.toHaveProperty("max_completion_tokens");
-		expect(fourth.max_completion_tokens).toBe(LIMIT);
-		expect(fourth).not.toHaveProperty("max_tokens");
 	});
 
 	it("still embeds on an OpenAI-compatible connection", () => {
