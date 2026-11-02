@@ -30,18 +30,18 @@ describe("safeRedirectPath", () => {
 		["an encoded backslash pair", "%5C%5Cevil.example"],
 		["a javascript: URL", "javascript:alert(1)"],
 		["a data: URL", "data:text/html,<p>x</p>"],
-		["a leading space", " /dashboard"],
-		["a leading tab", "\t/dashboard"],
+		["a leading space", " /cases/1"],
+		["a leading tab", "\t/cases/1"],
 		["a tab between the slashes", "/\t/evil.example"],
 		["a newline between the slashes", "/\n/evil.example"],
-		["a carriage return in the path", "/dash\rboard"],
+		["a carriage return in the path", "/cases/\r1"],
 		["a null byte", "/dash\u0000board"],
 		["a dot segment that collapses to a protocol-relative path", "/.//host"],
 		[
 			"a parent segment that collapses to a protocol-relative path",
 			"/a/..//host",
 		],
-		["a bare word", "dashboard"],
+		["a path without a leading slash", "cases/1"],
 		["an empty string", ""],
 	])("falls back for %s", (_label, raw) => {
 		expect(safeRedirectPath(raw)).toBe(FALLBACK);
