@@ -248,7 +248,8 @@ const ERROR_MAPPINGS: Array<{
 	// `element-service.ts`'s `rejectModuleReferenceIdIfNotApplicable` /
 	// `rejectMissingModuleReferenceId` / `validateModuleReferenceId`: a bad
 	// `moduleReferenceId` (wrong element type, missing on a required type,
-	// nonexistent target case) is a validation failure (400), not a 500.
+	// target case that is missing, in the bin or not viewable by the editor)
+	// is a validation failure (400), not a 500.
 	{ pattern: /^moduleReferenceId /, factory: () => validationError("") },
 	// `element-service.ts`'s `validateDefeatsElementId`: a bad
 	// `defeatsElementId` (cross-case, nonexistent, soft-deleted, or

@@ -28,6 +28,7 @@ import {
 	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
 	validateCitedElementId,
+	validateModuleReferenceId,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
@@ -111,41 +112,95 @@ async function validateAssertionStatusChanges(
 	return null;
 }
 
+/** An element's stored case reference and cited element, before a batch changes them. */
+interface StoredReference {
+	citedElementId: string | null;
+	moduleReferenceId: string | null;
+}
+
 /**
- * ADR 0004 D5 (batch/JSON-editor parity, follow-up from vincent's review of
- * the canvas slice, 2026-09-16): `buildUpdateData` writes `moduleReferenceId`
- * with no citation check of its own — this batch path cannot write
- * `citedElementId` directly (it isn't part of `UpdateElementData`), so a
- * change that touches only `moduleReferenceId` could otherwise leave an
- * existing `citedElementId` pointing at the OLD case, unvalidated. Mirrors
- * element-service.ts's `updateElement` round-2 security fix exactly, scoped
- * to the batch shape: only updates that actually change `moduleReferenceId`
- * are checked, against the EXISTING `citedElementId` (one batched fetch, not
- * one query per update), reusing `validateCitedElementId` — the same
- * function, same anti-enumeration error message — as the single-element
- * route, and rejecting the whole batch on a violation rather than degrading
- * (batch is an explicit author edit, not import).
+ * The first case reference a batch newly sets or changes that the editor
+ * cannot view, as the error to refuse the batch with. A create's reference is
+ * always new; an update's is new only when it differs from the stored one, so
+ * an element whose existing reference the editor cannot view can still be
+ * edited. A case that does not exist, one in the bin and one the editor cannot
+ * view get the same answer. Each case is looked up once.
+ */
+async function findUnviewableModuleReference(
+	userId: string,
+	creates: CreateChange[],
+	moduleRefUpdates: UpdateChange[],
+	storedById: Map<string, StoredReference>
+): Promise<string | null> {
+	const caseIds = new Set<string>();
+	for (const change of creates) {
+		if (change.data.moduleReferenceId) {
+			caseIds.add(change.data.moduleReferenceId);
+		}
+	}
+	for (const change of moduleRefUpdates) {
+		const caseId = change.data.moduleReferenceId;
+		if (
+			caseId &&
+			caseId !== storedById.get(change.elementId)?.moduleReferenceId
+		) {
+			caseIds.add(caseId);
+		}
+	}
+
+	for (const caseId of caseIds) {
+		const error = await validateModuleReferenceId(caseId, userId);
+		if (error) {
+			return error;
+		}
+	}
+	return null;
+}
+
+/**
+ * Case references a batch writes: each one newly set or changed must name a
+ * case the editor can view (see `findUnviewableModuleReference`), and a
+ * change to `moduleReferenceId` must not orphan an existing `citedElementId`.
+ * `buildUpdateData` writes `moduleReferenceId` with no citation check of its
+ * own and this batch path cannot write `citedElementId` directly (it isn't
+ * part of `UpdateElementData`), so a change that touches only
+ * `moduleReferenceId` could otherwise leave an existing `citedElementId`
+ * pointing at the OLD case, unvalidated. Mirrors element-service.ts's
+ * `updateElement` exactly, scoped to the batch shape: the stored values come
+ * from one batched fetch (not one query per update), `validateCitedElementId`
+ * is the same function with the same anti-enumeration error message as the
+ * single-element route, and a violation rejects the whole batch rather than
+ * degrading (batch is an explicit author edit, not import).
  */
 async function validateModuleReferenceChanges(
+	userId: string,
+	creates: CreateChange[],
 	updates: UpdateChange[]
 ): Promise<string | null> {
 	const moduleRefUpdates = updates.filter(
 		(c) => c.data.moduleReferenceId !== undefined
 	);
-	if (moduleRefUpdates.length === 0) {
-		return null;
+	const storedRows =
+		moduleRefUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: moduleRefUpdates.map((c) => c.elementId) } },
+					select: { id: true, citedElementId: true, moduleReferenceId: true },
+				})
+			: [];
+	const storedById = new Map(storedRows.map((r) => [r.id, r]));
+
+	const unviewable = await findUnviewableModuleReference(
+		userId,
+		creates,
+		moduleRefUpdates,
+		storedById
+	);
+	if (unviewable) {
+		return unviewable;
 	}
 
-	const existingRows = await prisma.assuranceElement.findMany({
-		where: { id: { in: moduleRefUpdates.map((c) => c.elementId) } },
-		select: { id: true, citedElementId: true },
-	});
-	const citedElementIdById = new Map(
-		existingRows.map((r) => [r.id, r.citedElementId])
-	);
-
 	for (const change of moduleRefUpdates) {
-		const citedElementId = citedElementIdById.get(change.elementId);
+		const citedElementId = storedById.get(change.elementId)?.citedElementId;
 		if (!citedElementId) {
 			continue;
 		}
@@ -1560,10 +1615,14 @@ export async function applyBatchUpdate(
 		return { error: assertionStatusError };
 	}
 
-	// ADR 0004 D5 (citation integrity follow-up, 2026-09-16): a moduleReferenceId
-	// change must not orphan an existing citedElementId against the OLD case —
+	// A new or changed moduleReferenceId must name a case the editor can view,
+	// and must not orphan an existing citedElementId against the OLD case —
 	// see validateModuleReferenceChanges's docstring.
-	const moduleReferenceError = await validateModuleReferenceChanges(updates);
+	const moduleReferenceError = await validateModuleReferenceChanges(
+		userId,
+		creates,
+		updates
+	);
 	if (moduleReferenceError) {
 		return { error: moduleReferenceError };
 	}

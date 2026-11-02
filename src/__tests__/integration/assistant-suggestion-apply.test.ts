@@ -355,6 +355,39 @@ describe("applying a rewording against the real element routes", () => {
 		expect(result).toEqual({ status: "applied" });
 		expect((await stored(claim.id)).description).toBe(longest);
 	});
+
+	it("saves a rewording of an away goal whose cited case the editor cannot view, and leaves the citation as it was", async () => {
+		const { owner, testCase } = await setup();
+		const hiddenCase = await createTestCase((await createTestUser()).id);
+		const awayGoal = await createTestElement(testCase.id, owner.id, {
+			elementType: "AWAY_GOAL",
+			name: "AG1",
+			description: "Another team shows the data is current",
+			moduleReferenceId: hiddenCase.id,
+		});
+		routeFetchToHandlers();
+
+		const result = await applySuggestion(testCase.id, {
+			suggested: true,
+			kind: "edit",
+			elementId: awayGoal.id,
+			elementType: "away_goal",
+			label: "AG1",
+			changes: {
+				description: {
+					before: "Another team shows the data is current",
+					after: "Another team shows the data is updated daily",
+				},
+			},
+		});
+
+		expect(result).toEqual({ status: "applied" });
+		const after = await stored(awayGoal.id);
+		expect(after.description).toBe(
+			"Another team shows the data is updated daily"
+		);
+		expect(after.moduleReferenceId).toBe(hiddenCase.id);
+	});
 });
 
 describe("applying a new element against the real element routes", () => {
