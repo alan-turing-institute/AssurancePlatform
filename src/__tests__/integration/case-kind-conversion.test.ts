@@ -394,7 +394,6 @@ describe("getConversionConsequences", () => {
 		);
 
 		expect(data).toEqual({
-			kind: "CASE",
 			people: 2,
 			teams: 2,
 			citingCases: 0,
@@ -443,7 +442,6 @@ describe("getConversionConsequences", () => {
 			await getConversionConsequences(owner.id, testCase.id)
 		);
 
-		expect(data.kind).toBe("PATTERN");
 		expect(data.citingCases).toBe(2);
 	});
 
@@ -585,6 +583,20 @@ describe("the case-kind actions", () => {
 		expect(revalidatePath).not.toHaveBeenCalled();
 	});
 
+	it("passes a refusal that is not about permission on to the client unchanged", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id, {
+			published: true,
+			publishStatus: "PUBLISHED",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const result = await convertCaseKindAction(testCase.id, "PATTERN");
+
+		expect(result).toEqual({ success: false, error: UNPUBLISH_CASE });
+		expect(await kindOf(testCase.id)).toBe("CASE");
+	});
+
 	it("reads the consequences and the pattern list for the signed-in user", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id, { kind: "PATTERN" });
@@ -595,7 +607,7 @@ describe("the case-kind actions", () => {
 
 		expect(consequences).toEqual({
 			success: true,
-			data: { kind: "PATTERN", people: 0, teams: 0, citingCases: 0 },
+			data: { people: 0, teams: 0, citingCases: 0 },
 		});
 		expect(patterns?.map((row) => row.id)).toEqual([testCase.id]);
 	});

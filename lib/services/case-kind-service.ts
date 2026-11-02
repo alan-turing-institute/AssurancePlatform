@@ -15,9 +15,10 @@ const CHANGED_MEANWHILE = "The case changed while converting it. Try again";
 export interface ConversionConsequences {
 	/** Other cases that cite this one through an away goal or a module. */
 	citingCases: number;
-	/** The kind the case has now. */
-	kind: CaseKind;
-	/** People it is shared with directly, not counting integration accounts. */
+	/**
+	 * Other people it is shared with directly: not the person asking, and not
+	 * integration accounts.
+	 */
 	people: number;
 	/** Teams it is shared with. */
 	teams: number;
@@ -135,10 +136,14 @@ export async function getConversionConsequences(
 		const [current, people, teams, citingCases] = await Promise.all([
 			prisma.assuranceCase.findUnique({
 				where: { id: caseId, deletedAt: null },
-				select: { kind: true },
+				select: { id: true },
 			}),
 			prisma.casePermission.count({
-				where: { caseId, user: { isSystemUser: false } },
+				where: {
+					caseId,
+					userId: { not: userId },
+					user: { isSystemUser: false },
+				},
 			}),
 			prisma.caseTeamPermission.count({ where: { caseId } }),
 			prisma.assuranceCase.count({
@@ -159,7 +164,7 @@ export async function getConversionConsequences(
 			return { error: PERMISSION_DENIED };
 		}
 
-		return { data: { kind: current.kind, people, teams, citingCases } };
+		return { data: { people, teams, citingCases } };
 	} catch (error) {
 		log.error("getConversionConsequences", { userId, caseId, error });
 		return { error: "Failed to read what converting would affect" };

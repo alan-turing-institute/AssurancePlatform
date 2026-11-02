@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ConversionConsequences } from "@/lib/services/case-kind-service";
@@ -7,7 +7,6 @@ import { ConvertCaseKindDialog } from "../convert-case-kind-dialog";
 const EXPORT_FIRST_PATTERN = /export it first/;
 
 const CASE_CONSEQUENCES: ConversionConsequences = {
-	kind: "CASE",
 	people: 3,
 	teams: 1,
 	citingCases: 2,
@@ -42,7 +41,7 @@ describe("ConvertCaseKindDialog", () => {
 		).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"Everyone it is shared with (3 people and 1 team) will see a pattern."
+				"Everyone else it is shared with (3 people and 1 team) will see a pattern."
 			)
 		).toBeInTheDocument();
 		expect(
@@ -59,7 +58,7 @@ describe("ConvertCaseKindDialog", () => {
 
 	it("says it is not shared when nobody else has access, and uses the singular for one citation", () => {
 		renderDialog({
-			consequences: { kind: "CASE", people: 0, teams: 0, citingCases: 1 },
+			consequences: { people: 0, teams: 0, citingCases: 1 },
 		});
 
 		expect(
@@ -72,7 +71,7 @@ describe("ConvertCaseKindDialog", () => {
 
 	it("says no other case cites it when none does", () => {
 		renderDialog({
-			consequences: { kind: "CASE", people: 1, teams: 0, citingCases: 0 },
+			consequences: { people: 1, teams: 0, citingCases: 0 },
 		});
 
 		expect(
@@ -82,7 +81,7 @@ describe("ConvertCaseKindDialog", () => {
 		).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"Everyone it is shared with (1 person) will see a pattern."
+				"Everyone else it is shared with (1 person) will see a pattern."
 			)
 		).toBeInTheDocument();
 	});
@@ -95,7 +94,7 @@ describe("ConvertCaseKindDialog", () => {
 		).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"Everyone it is shared with (3 people and 1 team) will see a case."
+				"Everyone else it is shared with (3 people and 1 team) will see a case."
 			)
 		).toBeInTheDocument();
 		expect(
@@ -148,5 +147,18 @@ describe("ConvertCaseKindDialog", () => {
 		expect(
 			screen.getByRole("button", { name: "Converting..." })
 		).toBeDisabled();
+	});
+
+	it("closes on Escape when idle, and ignores Escape while the conversion runs", async () => {
+		const user = userEvent.setup();
+		const idle = renderDialog();
+		await user.keyboard("{Escape}");
+		expect(idle.onCancel).toHaveBeenCalledTimes(1);
+		cleanup();
+
+		const running = renderDialog({ loading: true });
+		await user.keyboard("{Escape}");
+		expect(running.onCancel).not.toHaveBeenCalled();
+		expect(screen.getByText("Convert this case to a pattern?")).toBeVisible();
 	});
 });

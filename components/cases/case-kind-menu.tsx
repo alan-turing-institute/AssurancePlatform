@@ -1,7 +1,7 @@
 "use client";
 
 import { MoreHorizontal, Shapes } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	convertCaseKind,
 	fetchConversionConsequences,
@@ -34,7 +34,12 @@ const SUCCESS_MESSAGE: Record<CaseKind, string> = {
 export function CaseKindMenu() {
 	const assuranceCase = useStore((state) => state.assuranceCase);
 	const setAssuranceCase = useStore((state) => state.setAssuranceCase);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 	const [open, setOpen] = useState(false);
+	// The kind the dialog was opened for. It does not follow the case while the
+	// dialog is open, so a conversion by someone else cannot turn "Convert to
+	// pattern" into "Convert to case" under the person reading it.
+	const [dialogTarget, setDialogTarget] = useState<CaseKind>("PATTERN");
 	const [consequences, setConsequences] =
 		useState<ConversionConsequences | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -81,7 +86,7 @@ export function CaseKindMenu() {
 		setLoading(true);
 		setError(null);
 		try {
-			const result = await convertCaseKind(caseId, targetKind);
+			const result = await convertCaseKind(caseId, dialogTarget);
 			if (!result.success) {
 				setError(result.error);
 				return;
@@ -99,10 +104,17 @@ export function CaseKindMenu() {
 		}
 	};
 
+	// The dialog is opened from a menu item that is gone by the time it closes,
+	// so focus would otherwise fall to the page; send it back to the menu button.
+	const returnFocusToTrigger = (event: Event) => {
+		event.preventDefault();
+		triggerRef.current?.focus();
+	};
+
 	return (
 		<>
 			<DropdownMenu>
-				<ActionTooltip label="More actions">
+				<ActionTooltip label="More actions" ref={triggerRef}>
 					<DropdownMenuTrigger asChild>
 						<Button
 							className="rounded-full p-3"
@@ -118,7 +130,10 @@ export function CaseKindMenu() {
 				<DropdownMenuContent align="end" side="top">
 					<DropdownMenuItem
 						data-testid="convert-case-kind"
-						onSelect={() => setOpen(true)}
+						onSelect={() => {
+							setDialogTarget(targetKind);
+							setOpen(true);
+						}}
 					>
 						<Shapes aria-hidden="true" className="mr-2 h-4 w-4" />
 						{targetKind === "PATTERN"
@@ -133,8 +148,9 @@ export function CaseKindMenu() {
 				isOpen={open}
 				loading={loading}
 				onCancel={() => setOpen(false)}
+				onCloseAutoFocus={returnFocusToTrigger}
 				onConfirm={onConfirm}
-				targetKind={targetKind}
+				targetKind={dialogTarget}
 			/>
 		</>
 	);

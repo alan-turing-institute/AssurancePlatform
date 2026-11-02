@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	convertCaseKind,
@@ -44,7 +44,7 @@ beforeEach(() => {
 	vi.mocked(toastSuccess).mockReset();
 	vi.mocked(fetchConversionConsequences).mockResolvedValue({
 		success: true,
-		data: { kind: "CASE", people: 2, teams: 0, citingCases: 0 },
+		data: { people: 2, teams: 0, citingCases: 0 },
 	});
 	vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({})));
 });
@@ -96,7 +96,7 @@ describe("CaseKindMenu", () => {
 
 		expect(
 			await screen.findByText(
-				"Everyone it is shared with (2 people) will see a pattern."
+				"Everyone else it is shared with (2 people) will see a pattern."
 			)
 		).toBeInTheDocument();
 		expect(fetchConversionConsequences).toHaveBeenCalledWith(CASE_ID);
@@ -137,6 +137,66 @@ describe("CaseKindMenu", () => {
 		);
 		expect(useStore.getState().assuranceCase?.kind).toBe("CASE");
 		expect(toastSuccess).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		[
+			"Cancel",
+			async (user: UserEvent) => {
+				await user.click(screen.getByRole("button", { name: "Cancel" }));
+			},
+		],
+		[
+			"Escape",
+			async (user: UserEvent) => {
+				await user.keyboard("{Escape}");
+			},
+		],
+	])("returns focus to the More actions button when the dialog is closed with %s", async (_label, close) => {
+		setCase("CASE");
+		render(<CaseKindMenu />);
+
+		const user = await openMenu();
+		await user.click(
+			screen.getByRole("menuitem", { name: "Convert to pattern" })
+		);
+		await screen.findByText("No copy is kept.");
+		await close(user);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("toolbar-more-actions")).toHaveFocus();
+		});
+	});
+
+	it("keeps the kind it was opened for when someone else converts the case meanwhile", async () => {
+		setCase("CASE");
+		vi.mocked(convertCaseKind).mockResolvedValue({
+			success: false,
+			error: "This is already a pattern",
+		});
+		render(<CaseKindMenu />);
+
+		const user = await openMenu();
+		await user.click(
+			screen.getByRole("menuitem", { name: "Convert to pattern" })
+		);
+		await screen.findByText("No copy is kept.");
+		act(() => setCase("PATTERN"));
+
+		expect(
+			screen.getByText("Convert this case to a pattern?")
+		).toBeInTheDocument();
+		await user.click(
+			screen.getByRole("button", { name: "Convert to pattern" })
+		);
+
+		expect(convertCaseKind).toHaveBeenCalledWith(CASE_ID, "PATTERN");
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"This is already a pattern"
+		);
+		expect(
+			screen.getByText("Convert this case to a pattern?")
+		).toBeInTheDocument();
 	});
 });
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { uuidSchema } from "@/lib/schemas/base";
+import { CaseKindSchema } from "@/lib/schemas/case-export";
 
 /**
  * `actions/case-kind.ts`'s `convertCaseKind` input. The kind of a case is
@@ -8,5 +9,5 @@ import { uuidSchema } from "@/lib/schemas/base";
  */
 export const convertCaseKindSchema = z.strictObject({
 	caseId: uuidSchema,
-	targetKind: z.enum(["CASE", "PATTERN"]),
+	targetKind: CaseKindSchema,
 });

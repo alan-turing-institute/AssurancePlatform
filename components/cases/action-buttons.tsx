@@ -249,22 +249,22 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						<CaseSettingsPopover />
 					</span>
 					{assuranceCase && assuranceCase.permissions === "manage" && (
-						<CaseKindMenu />
-					)}
-					{assuranceCase && assuranceCase.permissions === "manage" && (
-						<ActionTooltip label="Delete">
-							<Button
-								className="rounded-full p-3"
-								data-testid="toolbar-delete"
-								onClick={() => setDeleteOpen(true)}
-								size="icon"
-								type="button"
-								variant="destructive"
-							>
-								<Trash2 className="h-5 w-5" />
-								<span className="sr-only">Delete</span>
-							</Button>
-						</ActionTooltip>
+						<>
+							<CaseKindMenu />
+							<ActionTooltip label="Delete">
+								<Button
+									className="rounded-full p-3"
+									data-testid="toolbar-delete"
+									onClick={() => setDeleteOpen(true)}
+									size="icon"
+									type="button"
+									variant="destructive"
+								>
+									<Trash2 className="h-5 w-5" />
+									<span className="sr-only">Delete</span>
+								</Button>
+							</ActionTooltip>
+						</>
 					)}
 				</div>
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />

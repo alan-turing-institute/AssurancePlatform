@@ -22,6 +22,8 @@ interface ConvertCaseKindDialogProps {
 	/** Whether the conversion itself is running. */
 	loading: boolean;
 	onCancel: () => void;
+	/** Runs when focus would return to the page as the dialog closes. */
+	onCloseAutoFocus?: (event: Event) => void;
 	onConfirm: () => void;
 	/** The kind the case would become. */
 	targetKind: CaseKind;
@@ -49,7 +51,7 @@ function sharingSentence(
 	if (parts.length === 0) {
 		return "It is not shared with anyone else.";
 	}
-	return `Everyone it is shared with (${parts.join(" and ")}) will see a ${noun(targetKind)}.`;
+	return `Everyone else it is shared with (${parts.join(" and ")}) will see a ${noun(targetKind)}.`;
 }
 
 function citationSentence(count: number): string {
@@ -61,9 +63,10 @@ function citationSentence(count: number): string {
 
 /**
  * The confirmation shown before a case becomes a pattern or a pattern becomes
- * a case: who will see the change, what stays attached, how many cases cite
- * it, and that no copy is kept. The confirm button stays disabled until the
- * consequences have been read, so nobody confirms without seeing them.
+ * a case: who else will see the change, what stays attached, how many cases
+ * cite it, and that no copy is kept. The confirm button stays disabled until
+ * the consequences have been read, so nobody confirms without seeing them.
+ * While a conversion is running the dialog ignores attempts to close it.
  */
 export function ConvertCaseKindDialog({
 	consequences,
@@ -71,6 +74,7 @@ export function ConvertCaseKindDialog({
 	isOpen,
 	loading,
 	onCancel,
+	onCloseAutoFocus,
 	onConfirm,
 	targetKind,
 }: ConvertCaseKindDialogProps) {
@@ -80,13 +84,14 @@ export function ConvertCaseKindDialog({
 	return (
 		<AlertDialog
 			onOpenChange={(open) => {
-				if (!open) {
+				// Escape must not hide a refusal that is still on its way.
+				if (!(open || loading)) {
 					onCancel();
 				}
 			}}
 			open={isOpen}
 		>
-			<AlertDialogContent>
+			<AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>
 						Convert this {currentNoun} to a {targetNoun}?
