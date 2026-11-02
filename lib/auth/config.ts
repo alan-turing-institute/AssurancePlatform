@@ -669,18 +669,21 @@ export const authOptions: NextAuthOptions = {
 				);
 			}
 
-			// Allow relative URLs on the same site (e.g., /login for signout)
-			if (url.startsWith("/")) {
-				return `${authUrl}${url}`;
-			}
-
-			// Allow absolute URLs on the same origin
-			if (url.startsWith(authUrl)) {
-				return url;
+			// Only an address on the auth URL's own origin is followed after
+			// OAuth sign-in or sign-out. The target is resolved against the auth
+			// URL, so a relative path (e.g. /login for sign-out) stays on the
+			// site, while another host, a network-path reference or a scheme
+			// such as javascript: resolves to a different origin.
+			const authOrigin = new URL(authUrl).origin;
+			if (URL.canParse(url, authUrl)) {
+				const target = new URL(url, authUrl);
+				if (target.origin === authOrigin) {
+					return target.href;
+				}
 			}
 
 			// Default: redirect to dashboard (for sign-in)
-			return `${authUrl}/dashboard`;
+			return `${authOrigin}/dashboard`;
 		},
 
 		/**
