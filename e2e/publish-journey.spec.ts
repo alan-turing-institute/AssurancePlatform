@@ -47,6 +47,7 @@ const CASE_INFO = {
 	sector: "Information, Communication & Media",
 };
 const NEW_STRATEGY_DESCRIPTION = "New strategy added for divergence coverage";
+const GOAL_TEXT = "The case is complete enough to publish";
 
 const DIVERGENCE_TEXT =
 	"Changes have been made since this case was last published.";
@@ -110,6 +111,18 @@ test.describe("ADR 0003 — publish journey", () => {
 		expect(caseId).toBeTruthy();
 
 		await expect(editor.statusButton).toHaveText("Draft");
+
+		// ---- Write the top goal: a new case's goal is a placeholder with no
+		// text, and a case with a placeholder cannot be published. The edit
+		// dialog updates the open canvas, which the status dialog reads. ----
+		const goalCard = page
+			.locator(".react-flow__node")
+			.filter({ hasText: "G1" });
+		await goalCard.hover();
+		await goalCard.getByRole("button", { name: "Edit element" }).click();
+		await page.getByRole("dialog").getByLabel("Description").fill(GOAL_TEXT);
+		await page.getByRole("button", { name: "Update Goal" }).click();
+		await expect(page.getByRole("dialog")).toBeHidden();
 
 		// ---- Fill case information: description, authors, sector all
 		// required to publish (ADR 0003 §4 — widened 2026-08-11) ----

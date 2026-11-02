@@ -38,9 +38,11 @@ function PropertyNode({ data, ...props }: NodeProps) {
 				dataTour={dataTour}
 				description={data.description}
 				isDefeater={!!data.isDefeater}
+				isPlaceholder={!!data.isPlaceholder}
 				justification={data.justification}
 				name={data.name}
 				nodeType="property"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
 				terms={data.termsInReach}
 				topRightActions={topRightActions}

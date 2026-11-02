@@ -7,6 +7,7 @@ import {
 	BaseNode,
 	getAssertionStatusIndicator,
 	NodeActionGroup,
+	withPlaceholderIndicator,
 } from "@/components/shared/nodes";
 import CitedCaseLink from "./cited-case-link";
 import NodeEditDialog from "./node-edit-dialog";
@@ -69,7 +70,10 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 	const citedElementId = data.citedElementId as string | null | undefined;
 	const moduleReferenceDangling = !!data.moduleReferenceDangling;
 
-	const topRightActions = getAssertionStatusIndicator(data.assertionStatus);
+	const topRightActions = withPlaceholderIndicator(
+		data,
+		getAssertionStatusIndicator(data.assertionStatus)
+	);
 
 	return (
 		<>
@@ -89,8 +93,10 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 				// The cited case/goal is the card's whole point — unlike a
 				// description preview, it shouldn't be hidden behind a click.
 				initialExpanded
+				isPlaceholder={!!data.isPlaceholder}
 				name={data.name}
 				nodeType="awayGoal"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
 				topRightActions={topRightActions}
 			>

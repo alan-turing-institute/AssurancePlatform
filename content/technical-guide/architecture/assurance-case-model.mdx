@@ -31,9 +31,19 @@ One conditional update does the conversion and changes a row only for a case tha
 The conversion changes nothing else: elements, access grants, plugin data and integration grants stay as they are.
 
 An element has two placeholder columns, `isPlaceholder` and `placeholderHint`.
-`isPlaceholder` marks an element that is to be filled in when a case is started from a pattern, and is false by default.
-`placeholderHint` is optional guidance of up to 500 characters for whoever fills the element in.
-Neither column is carried in the export file.
+`isPlaceholder` marks an element that the person using the case or pattern writes, and is false by default.
+`placeholderHint` is optional guidance of up to 500 characters for whoever fills the element in; the element response and the export carry it only while the element is a placeholder.
+Anyone with `EDIT` permission can set both through the element routes and the batch route, since marking an element only holds a case back from publishing until it is written.
+
+Writing text changes the markers on the server.
+In a case, an update whose description is not empty and differs from the stored one sets `isPlaceholder` to false, unless the same request sets `isPlaceholder` itself, and `modifiedFromPattern` is set when the description, assumption, justification or context differs from the stored value on an element with `fromPattern`.
+The edit dialog sends the assumption, justification and context every time, so the comparison is with the stored values.
+In a pattern, nothing clears `isPlaceholder`.
+`updateElement` and the batch service apply these rules; `updateElementWithin`, which the health plugin uses for its own nodes, does not.
+Only the server sets `fromPattern` and `modifiedFromPattern`, so the batch route refuses a change that carries them.
+`lib/case/placeholders.ts` holds the rules, which the browser also uses to record the state an undo or redo sends back.
+
+A new blank case or pattern, created by `createCase`, starts with its top-level goal as a placeholder with no text and the hint "Describe your top-level assurance goal".
 
 Elements use `parentId` to form the argument hierarchy. A root goal has no parent and can have the `TOP_LEVEL` role. Other elements can have the `SUPPORTING` role. `name` is nullable, so consumers must not assume it is present. `description` is the main text. `context` is an array on an element, and `assumption` and `justification` are optional fields. Evidence has a `urls` array; the single `url` field remains for compatibility and tracks its first URL. Both cases and elements can be soft deleted.
 
@@ -87,13 +97,16 @@ Machine formats keep the stored form: the export file, the Google Drive backup, 
 
 ### The export file
 
-A case export carries `"version": "1.1"` when the case holds a named entry or a reference, or when the case is a pattern, and `"version": "1.0"` otherwise.
+A case export carries `"version": "1.1"` when the case holds a named entry or a reference, when the case is a pattern, or when an element is a placeholder, and `"version": "1.0"` otherwise.
 `exportCase` makes that choice from one check, so anything else added to 1.1 extends it there.
-Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries and kinds.
+Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries, kinds and placeholders.
 Import accepts both versions.
-A file that says `"1.0"` but holds a named entry, or marks the case as a pattern, is rejected with a message saying so.
+A file that says `"1.0"` but holds a named entry, holds a placeholder or marks the case as a pattern is rejected with a message saying so.
 A `"1.0"` file with `"kind": "CASE"` is accepted.
 The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry.
+
+An element that is a placeholder carries `"isPlaceholder": true` and, when it has one, a `"placeholderHint"`; an element that is not a placeholder carries neither key.
+Importing the file restores both, so a case started from a pattern, which is an export of the pattern imported with `markFromPattern`, keeps the pattern's placeholders.
 
 The `case` object carries `"kind": "PATTERN"` when the case is a pattern.
 An ordinary case omits `kind`, so its file has the shape it always had, and a file without `kind` imports as an ordinary case.
@@ -108,6 +121,10 @@ No import route reads these from a request, and a `sourcePatternId` written insi
 `CasePermission` grants an individual `VIEW`, `COMMENT`, `EDIT` or `ADMIN` access. `CaseTeamPermission` grants one of those levels to a team, and members inherit it. `TeamMember` separately records the member's `OWNER`, `ADMIN` or `MEMBER` team role. A team role and a case permission answer different questions: who manages the team, and what that team may do with this case. `lib/permissions.ts` combines applicable case grants with the creator's access.
 
 ## Published records
+
+The publish gate, `requireCaseInformationComplete`, refuses a case whose exported tree still holds placeholders, with the message "N elements still to fill in".
+It counts each element once and leaves out detached sandbox elements, which the tree does not contain, and it does not count a pattern's placeholders.
+Both the publish route and the status route call it, so first publication and republication are held back alike.
 
 Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nullableUrlSchema } from "./base";
+import { nullableUrlSchema, placeholderHintInputSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
 import { ContextEntrySchema } from "./context-entry";
 
@@ -15,6 +15,9 @@ const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
 /**
  * Schema for batch update request body.
  * Extracted from cases/[id]/batch/route.ts for reuse.
+ *
+ * `fromPattern` and `modifiedFromPattern` are not accepted: only the server
+ * sets them, when a case is started from a pattern and when text is edited.
  */
 export const batchUpdateRequestSchema = z.strictObject({
 	changes: z
@@ -40,10 +43,10 @@ export const batchUpdateRequestSchema = z.strictObject({
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
 						modulePublicSummary: z.string().nullable().optional(),
-						fromPattern: z.boolean().optional(),
-						modifiedFromPattern: z.boolean().optional(),
 						isDefeater: z.boolean().optional(),
 						defeatsElementId: z.string().optional(),
+						isPlaceholder: z.boolean().optional(),
+						placeholderHint: placeholderHintInputSchema,
 					}),
 				}),
 				z.strictObject({
@@ -64,10 +67,10 @@ export const batchUpdateRequestSchema = z.strictObject({
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
 						modulePublicSummary: z.string().nullable().optional(),
-						fromPattern: z.boolean().optional(),
-						modifiedFromPattern: z.boolean().optional(),
 						isDefeater: z.boolean().optional(),
 						defeatsElementId: z.string().optional(),
+						isPlaceholder: z.boolean().optional(),
+						placeholderHint: placeholderHintInputSchema,
 					}),
 				}),
 				z.strictObject({

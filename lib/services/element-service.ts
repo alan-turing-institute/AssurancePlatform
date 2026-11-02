@@ -1,7 +1,13 @@
+import {
+	type PatternMarkerChanges,
+	patternMarkersForEdit,
+	storedElementText,
+} from "@/lib/case/placeholders";
 import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
 import type {
 	CreateElementSchemaOutput,
@@ -80,6 +86,9 @@ export interface ElementResponse {
 	inSandbox: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	isDefeater?: boolean;
+	// Placeholder marker: the person using the case or pattern writes this
+	// element. The hint is returned only with the marker.
+	isPlaceholder?: boolean;
 	justification?: string;
 	level?: number;
 	// Dangling-module-reference indicator: true when moduleReferenceId was
@@ -91,6 +100,7 @@ export interface ElementResponse {
 	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
 	moduleReferenceId?: string | null;
 	name: string;
+	placeholderHint?: string;
 	propertyClaimId?: string | string[] | null;
 	strategyId?: string | null;
 	type: string;
@@ -1082,6 +1092,8 @@ async function createElementInDatabase(
 			// function is called.
 			isDefeater: input.isDefeater ?? false,
 			defeatsElementId: input.defeatsElementId,
+			isPlaceholder: input.isPlaceholder ?? false,
+			placeholderHint: input.placeholderHint,
 			createdById: userId,
 		},
 		include: {
@@ -1466,8 +1478,45 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 		// citationDangling's reset above).
 		updateData.defeatsDangling = false;
 	}
+	if (input.isPlaceholder !== undefined) {
+		updateData.isPlaceholder = input.isPlaceholder;
+	}
+	if (input.placeholderHint !== undefined) {
+		updateData.placeholderHint = input.placeholderHint;
+	}
 
 	return updateData;
+}
+
+/**
+ * The pattern markers an update changes by itself, judged against the text
+ * the element holds now: an explicit `isPlaceholder` in the request is left
+ * to `buildUpdateData`, and a pattern's markers are never cleared.
+ */
+function patternMarkerChanges(
+	existing: {
+		assumption: string | null;
+		case: { kind: CaseKind };
+		context: unknown;
+		description: string;
+		fromPattern: boolean;
+		justification: string | null;
+	},
+	input: UpdateElementInput
+): PatternMarkerChanges {
+	return patternMarkersForEdit({
+		kind: existing.case.kind,
+		stored: storedElementText(existing),
+		edit: {
+			// The aliases overwrite one another in `buildUpdateData`, longest last.
+			description:
+				input.longDescription ?? input.shortDescription ?? input.description,
+			assumption: input.assumption,
+			justification: input.justification,
+			context: input.context,
+		},
+		placeholderSetByEdit: input.isPlaceholder !== undefined,
+	});
 }
 
 /**
@@ -1813,6 +1862,13 @@ export async function updateElement(
 				citedElementId: true,
 				isDefeater: true,
 				parentId: true,
+				// What the pattern-marker rules compare an edit with
+				description: true,
+				assumption: true,
+				justification: true,
+				context: true,
+				fromPattern: true,
+				case: { select: { kind: true } },
 			},
 		});
 
@@ -1840,8 +1896,13 @@ export async function updateElement(
 			return fieldError;
 		}
 
-		// Build update data from input fields
-		const updateData = buildUpdateData(input);
+		// Build update data from input fields, then the markers the new text
+		// changes: writing the description of a placeholder in a case takes the
+		// marker off, and text changed on an element from a pattern marks it.
+		const updateData = {
+			...buildUpdateData(input),
+			...patternMarkerChanges(existing, input),
+		};
 
 		// Handle parent change (for move operations) — `undefined` means the
 		// input didn't touch parentId at all, so nothing runs.

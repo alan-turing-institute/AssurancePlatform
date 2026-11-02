@@ -41,4 +41,8 @@ export {
 	buildPreviewTextClasses,
 	buildSeparatorClasses,
 } from "./node-styles";
+export {
+	getPlaceholderIndicator,
+	withPlaceholderIndicator,
+} from "./placeholder-badge";
 export { UnsupportedMarkerBadge } from "./unsupported-marker-badge";

@@ -341,8 +341,6 @@ describe("JsonViewPanel — Apply after a rejection", () => {
 				elementId: ROOT_ID,
 				data: {
 					assertionStatus: "AS_CITED",
-					fromPattern: false,
-					modifiedFromPattern: false,
 				},
 			},
 		]);
@@ -381,8 +379,6 @@ describe("JsonViewPanel — Apply after a rejection", () => {
 				elementId: ROOT_ID,
 				data: {
 					name: "G1-corrected",
-					fromPattern: false,
-					modifiedFromPattern: false,
 				},
 			},
 		]);

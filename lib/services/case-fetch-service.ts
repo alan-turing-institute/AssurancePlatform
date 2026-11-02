@@ -15,6 +15,7 @@ import type {
 	AwayGoalResponse,
 	GoalResponse,
 	ModuleResponse,
+	PlaceholderFields,
 	PropertyClaimResponse,
 	StrategyResponse,
 } from "@/lib/services/case-response-types";
@@ -89,6 +90,26 @@ function indexElements(elements: CaseElement[]): ElementIndex {
 
 function childrenOf(index: ElementIndex, parentId: string): CaseElement[] {
 	return index.childrenByParent.get(parentId) ?? [];
+}
+
+/**
+ * The placeholder marker of an element, in the shape the responses carry it:
+ * nothing for an element that is not a placeholder, and the hint only when
+ * there is one.
+ */
+function placeholderFields(element: {
+	isPlaceholder: boolean;
+	placeholderHint: string | null;
+}): PlaceholderFields {
+	if (!element.isPlaceholder) {
+		return {};
+	}
+	return {
+		isPlaceholder: true,
+		...(element.placeholderHint && {
+			placeholderHint: element.placeholderHint,
+		}),
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -203,6 +224,7 @@ function buildAwayGoalStructure(
 			: false,
 		comments: [],
 		inSandbox: element.inSandbox,
+		...placeholderFields(element),
 	};
 }
 
@@ -232,6 +254,7 @@ function buildModuleStructure(
 			: false,
 		comments: [],
 		inSandbox: element.inSandbox,
+		...placeholderFields(element),
 	};
 }
 
@@ -409,6 +432,7 @@ function buildGoalStructure(
 		// "ASSERTED") when unset, matching element-response.ts's convention —
 		// the badge/setter treat undefined the same as the default.
 		assertionStatus: goal.assertionStatus ?? undefined,
+		...placeholderFields(goal),
 	};
 }
 
@@ -454,6 +478,7 @@ function buildStrategyStructure(
 		inSandbox: strategy.inSandbox,
 		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
 		assertionStatus: strategy.assertionStatus ?? undefined,
+		...placeholderFields(strategy),
 	};
 }
 
@@ -487,6 +512,7 @@ function buildPropertyClaimStructure(
 			// Dialogical reasoning (defeaters, ADR 0005 D2).
 			isDefeater: ev.isDefeater,
 			defeatsElementId: ev.defeatsElementId,
+			...placeholderFields(ev),
 		}));
 
 	const nestedClaims = children
@@ -540,6 +566,7 @@ function buildPropertyClaimStructure(
 		defeatsElementId: claim.defeatsElementId,
 		// Per-assertion status (ADR 0004 D3) — see buildGoalStructure comment.
 		assertionStatus: claim.assertionStatus ?? undefined,
+		...placeholderFields(claim),
 	};
 }
 
@@ -934,10 +961,16 @@ export async function listCaseGoalElements(
 	}
 }
 
+/** What a new blank case or pattern asks of whoever writes its top-level goal. */
+const TOP_GOAL_HINT = "Describe your top-level assurance goal";
+
 /**
  * Creates a new assurance case owned by the given user. `kind` makes a blank
  * pattern instead of an ordinary case; the new case holds a single top-level
- * goal either way.
+ * goal either way. The goal is a placeholder with no text, whose hint says
+ * what to write: in a case, writing it takes the placeholder off; in a pattern
+ * the author either writes it and switches the placeholder off, or leaves it
+ * for the person using the pattern.
  */
 export async function createCase(
 	userId: string,
@@ -966,7 +999,9 @@ export async function createCase(
 					elementType: "GOAL",
 					role: "TOP_LEVEL",
 					name: "G1",
-					description: "Describe your top-level assurance goal",
+					description: "",
+					isPlaceholder: true,
+					placeholderHint: TOP_GOAL_HINT,
 					createdById: userId,
 				},
 			});

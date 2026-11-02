@@ -38,6 +38,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -60,6 +61,7 @@ import {
 	parseContextEntries,
 	plainReferenceText,
 } from "@/lib/case/defined-terms";
+import { recordedStates } from "@/lib/case/placeholders";
 import type { ElementPanelRegistration } from "@/lib/plugins/slots";
 import {
 	type NodeEditFormInput,
@@ -126,6 +128,23 @@ function findChallengedElementName(
 }
 
 /**
+ * The placeholder marker and hint a node holds, as the form's fields. The hint
+ * is empty for a node that is not a placeholder, which returns no hint.
+ */
+function getInitialPlaceholder(nodeData: Record<string, unknown>): {
+	isPlaceholder: boolean;
+	placeholderHint: string;
+} {
+	return {
+		isPlaceholder: nodeData?.isPlaceholder === true,
+		placeholderHint:
+			typeof nodeData?.placeholderHint === "string"
+				? nodeData.placeholderHint
+				: "",
+	};
+}
+
+/**
  * Converts node data URLs to field array format.
  */
 function getInitialUrls(
@@ -150,12 +169,23 @@ function getInitialUrls(
 function buildUpdatePayload(
 	values: FormValues,
 	nodeType: DiagramNodeType,
-	storedDescription: string
+	storedDescription: string,
+	isPattern: boolean
 ): Record<string, unknown> {
 	const updateItem: Record<string, unknown> = {};
 
 	if (values.description !== storedDescription) {
 		updateItem.description = values.description;
+	}
+
+	// In a pattern the author sets the marker and its hint. In a case the
+	// dialog leaves the marker alone: the server takes it off when a new
+	// description is written.
+	if (isPattern) {
+		updateItem.isPlaceholder = values.isPlaceholder === true;
+		updateItem.placeholderHint = values.isPlaceholder
+			? (values.placeholderHint ?? "").trim()
+			: "";
 	}
 
 	if (supportsAttributes(nodeType)) {
@@ -183,7 +213,7 @@ function buildUpdatePayload(
 interface TextFieldProps {
 	form: UseFormReturn<FormValues>;
 	label: string;
-	name: "description" | "assumption" | "justification";
+	name: "description" | "assumption" | "justification" | "placeholderHint";
 	placeholder: string;
 	readOnly: boolean;
 }
@@ -278,6 +308,84 @@ function AssertionStatusSection({
 				</FormItem>
 			)}
 		/>
+	);
+}
+
+interface PatternPlaceholderFieldsProps {
+	form: UseFormReturn<FormValues>;
+	isPattern: boolean;
+	readOnly: boolean;
+}
+
+/**
+ * The pattern author's switch for making the element a placeholder, and the
+ * hint for whoever fills it in. Nothing in a case: there the marker comes off
+ * by itself when the description is written.
+ */
+function PatternPlaceholderFields({
+	form,
+	isPattern,
+	readOnly,
+}: PatternPlaceholderFieldsProps) {
+	const isPlaceholder = form.watch("isPlaceholder");
+	if (!isPattern) {
+		return null;
+	}
+	return (
+		<div className="space-y-3">
+			<FormField
+				control={form.control}
+				name="isPlaceholder"
+				render={({ field }) => (
+					<FormItem className="flex items-center justify-between gap-3 space-y-0">
+						<FormLabel className="font-normal">
+							Placeholder: the person using this pattern writes this
+						</FormLabel>
+						<FormControl>
+							<Switch
+								checked={field.value === true}
+								disabled={readOnly}
+								onCheckedChange={field.onChange}
+							/>
+						</FormControl>
+					</FormItem>
+				)}
+			/>
+			{isPlaceholder && (
+				<TextFieldSection
+					form={form}
+					label="Hint for the person filling this in"
+					name="placeholderHint"
+					placeholder="Say what to write here (optional)."
+					readOnly={readOnly}
+				/>
+			)}
+		</div>
+	);
+}
+
+/**
+ * In a case, the hint of a placeholder that is still to be written, shown
+ * above the description. Nothing for an element that is not a placeholder or
+ * has no hint.
+ */
+function PlaceholderHintNotice({
+	hint,
+	isPattern,
+	isPlaceholder,
+}: {
+	hint: string;
+	isPattern: boolean;
+	isPlaceholder: boolean;
+}) {
+	if (isPattern || !isPlaceholder || hint === "") {
+		return null;
+	}
+	return (
+		<div className="rounded-md border border-warning/60 border-dashed bg-warning/10 px-3 py-2 text-sm">
+			<span className="font-medium text-muted-foreground">To fill in: </span>
+			<span>{hint}</span>
+		</div>
 	);
 }
 
@@ -431,6 +539,11 @@ export default function NodeEditDialog({
 		panelSlot.registrations.length > 0
 	);
 
+	const isPattern = assuranceCase?.kind === "PATTERN";
+	const initialPlaceholder = getInitialPlaceholder(
+		node.data as Record<string, unknown>
+	);
+
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
 		defaultValues: {
@@ -442,6 +555,7 @@ export default function NodeEditDialog({
 			assertionStatus: getInitialAssertionStatus(
 				node.data as Record<string, unknown>
 			),
+			...getInitialPlaceholder(node.data as Record<string, unknown>),
 		},
 	});
 
@@ -518,6 +632,7 @@ export default function NodeEditDialog({
 				assertionStatus: getInitialAssertionStatus(
 					n.data as Record<string, unknown>
 				),
+				...getInitialPlaceholder(n.data as Record<string, unknown>),
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
@@ -609,7 +724,8 @@ export default function NodeEditDialog({
 		const updateItem = buildUpdatePayload(
 			values,
 			nodeType,
-			(node.data?.description as string | undefined) ?? ""
+			(node.data?.description as string | undefined) ?? "",
+			isPattern
 		);
 
 		const updated = await updateAssuranceCaseNode(
@@ -620,10 +736,17 @@ export default function NodeEditDialog({
 		);
 
 		if (updated === true) {
-			recordUpdate(node.data.id as number, node.type || "unknown", beforeData, {
-				...beforeData,
-				...updateItem,
-			});
+			const recorded = recordedStates(
+				assuranceCase?.kind,
+				beforeData,
+				updateItem
+			);
+			recordUpdate(
+				node.data.id as number,
+				node.type || "unknown",
+				recorded.before,
+				recorded.after
+			);
 			setLoading(false);
 			handleClose();
 			return;
@@ -658,6 +781,11 @@ export default function NodeEditDialog({
 						<span>{challengedName ?? "an element outside this case"}</span>
 					</div>
 				)}
+				<PlaceholderHintNotice
+					hint={initialPlaceholder.placeholderHint}
+					isPattern={isPattern}
+					isPlaceholder={initialPlaceholder.isPlaceholder}
+				/>
 				{supportsAttributes(nodeType) ? (
 					<>
 						<DescriptionField
@@ -724,6 +852,12 @@ export default function NodeEditDialog({
 						readOnly={readOnly}
 					/>
 				)}
+
+				<PatternPlaceholderFields
+					form={form}
+					isPattern={isPattern}
+					readOnly={readOnly}
+				/>
 
 				<DialogFooter className="pt-4">
 					<Button onClick={handleClose} type="button" variant="outline">

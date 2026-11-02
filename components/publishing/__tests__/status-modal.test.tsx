@@ -142,6 +142,35 @@ describe("StatusModal — Draft (the Publish flow, ADR 0003 §2)", () => {
 		).not.toBeInTheDocument();
 	});
 
+	it("shows how many elements are still to fill in, instead of Publish, even with complete case information", () => {
+		stubCaseInformation({
+			information: {
+				description: "Ready",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+				featureImageUrl: null,
+			},
+		});
+
+		render(
+			<StatusModal
+				caseId="case-1"
+				onOpenChange={vi.fn()}
+				onPublish={vi.fn()}
+				open={true}
+				placeholderCount={3}
+				status="DRAFT"
+			/>
+		);
+
+		expect(
+			screen.getByTestId("publish-content-placeholders")
+		).toHaveTextContent("3 elements still to fill in");
+		expect(
+			screen.queryByRole("button", { name: "Publish" })
+		).not.toBeInTheDocument();
+	});
+
 	it("disables Publish while a publish is in flight", () => {
 		stubCaseInformation({
 			information: {
@@ -250,6 +279,26 @@ describe("StatusModal — Published (divergence + unpublish)", () => {
 		);
 		expect(onRequestCaseInformation).toHaveBeenCalledWith("description");
 		expect(onUpdatePublished).not.toHaveBeenCalled();
+	});
+
+	it("blocks republish and shows the number still to fill in when the case has placeholders", () => {
+		render(
+			<StatusModal
+				hasChanges={true}
+				onOpenChange={vi.fn()}
+				onUpdatePublished={vi.fn()}
+				open={true}
+				placeholderCount={1}
+				status="PUBLISHED"
+			/>
+		);
+
+		expect(
+			screen.getByTestId("republish-content-placeholders")
+		).toHaveTextContent("1 element still to fill in");
+		expect(
+			screen.queryByRole("button", { name: "Update Published" })
+		).not.toBeInTheDocument();
 	});
 
 	it("does not show the republish gate when there are no unpublished changes, even if case information is incomplete", () => {

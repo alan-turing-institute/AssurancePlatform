@@ -183,6 +183,10 @@ type ElementOverrides = Partial<{
 	isDefeater: boolean;
 	defeatsElementId: string | null;
 	defeatsDangling: boolean;
+	// Placeholders and pattern markers
+	isPlaceholder: boolean;
+	placeholderHint: string | null;
+	fromPattern: boolean;
 }>;
 
 export function createTestElement(
@@ -210,6 +214,9 @@ export function createTestElement(
 			isDefeater: overrides.isDefeater ?? false,
 			defeatsElementId: overrides.defeatsElementId,
 			defeatsDangling: overrides.defeatsDangling ?? false,
+			isPlaceholder: overrides.isPlaceholder ?? false,
+			placeholderHint: overrides.placeholderHint,
+			fromPattern: overrides.fromPattern ?? false,
 		},
 	});
 }

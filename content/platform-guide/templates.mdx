@@ -1,6 +1,6 @@
 ---
 title: "Patterns"
-description: "Understand what a pattern is, convert a case to a pattern and back, and find your patterns."
+description: "Understand what a pattern is, mark the elements the person using it writes, convert a case to a pattern and back, and find your patterns."
 ---
 
 A pattern is an argument set aside for reuse.
@@ -11,6 +11,54 @@ What differs is where it appears: a pattern is left out of **My Assurance Cases*
 
 When you open a pattern, a small notice at the top left of the canvas reads "This is a pattern."
 Everything else in the editor works as it does for a case.
+
+## Placeholders
+
+A placeholder is an element that the person using the pattern writes.
+It marks a place where the pattern needs your own claim, strategy or evidence, and it is how a pattern says what is left to fill in.
+
+### Mark a placeholder in a pattern
+
+Open an element in a pattern and choose its edit button.
+Switch on **Placeholder: the person using this pattern writes this**.
+A **Hint for the person filling this in** box appears; use it to say what to write, in up to 500 characters.
+The element may keep sample text, or have none.
+Switch the placeholder off again to take the marker and its hint away.
+
+A placeholder is drawn with a dashed outline and a **To fill in** badge, in a pattern and in a case alike.
+Hover over the badge to read the hint.
+
+### Fill a placeholder in a case
+
+A case started from a pattern keeps each placeholder as a placeholder, with its hint, and every element in it counts as coming from the pattern.
+A placeholder with no text shows its hint, in italics, where the text will go.
+In the edit dialog the hint is shown above the description.
+
+Writing the description of a placeholder takes the marker off.
+That holds whichever way you write it: in the edit dialog, in the JSON editor, or by applying a suggestion from the Case Assistant.
+Changing only the assumption, justification or context leaves the marker on, and so does saving the description unchanged.
+Emptying the description does not count as writing it.
+**Undo** puts the marker back, and **Redo** takes it off again.
+
+A case with elements still to fill in cannot be published; see [Publishing and Discover](/docs/platform-guide/publishing-and-discover).
+
+### In a pattern, nothing clears by itself
+
+Writing text into a placeholder in a pattern does not take the marker off.
+The author decides, with the switch, whether the person using the pattern writes the element.
+The dashed outline shows which elements are still placeholders.
+A pattern is not held back from publishing by its own placeholders.
+
+### A new blank case or pattern
+
+A new blank case or pattern starts with one element, the top-level goal **G1**, as a placeholder with no text and the hint "Describe your top-level assurance goal".
+In a case, writing the goal takes the marker off.
+In a pattern, either write the goal and switch the placeholder off, or leave it for the person using the pattern.
+
+### Export and import
+
+An export keeps each placeholder's marker and hint, and an import restores them.
+A file that holds a placeholder is written as export version 1.1, and a file that says 1.0 but holds one is refused, because an older reader would drop the markers.
 
 ## Convert a case to a pattern, and back
 
@@ -67,3 +115,4 @@ Restoring a pattern from Trash returns it to **My Patterns**.
 
 `lib/services/case-kind-service.ts` holds the conversion, the read behind the confirmation dialog and the My Patterns list, and `actions/case-kind.ts` exposes them to the interface.
 `components/cases/case-kind-menu.tsx`, `components/cases/convert-case-kind-dialog.tsx` and `components/cases/pattern-banner.tsx` draw the menu item, the dialog and the banner, and `app/(authenticated)/dashboard/patterns/page.tsx` is the My Patterns page.
+`lib/case/placeholders.ts` holds the rules for when a placeholder is cleared and how many a case has left, `components/shared/nodes/placeholder-badge.tsx` draws the badge, and `components/cases/node-edit-dialog.tsx` holds the switch and the hint box.

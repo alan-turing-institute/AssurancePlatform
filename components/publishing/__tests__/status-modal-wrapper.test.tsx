@@ -125,6 +125,57 @@ describe("StatusModalWrapper — Draft: the guided Publish action", () => {
 	});
 });
 
+describe("StatusModalWrapper — Draft: placeholders on the diagram", () => {
+	beforeEach(() => {
+		resetStores();
+		stubCaseInformation({
+			information: {
+				description: "A worked example",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+				featureImageUrl: null,
+			},
+		});
+		useStatusModal.getState().onOpen({ caseId: CASE_ID, status: "DRAFT" });
+	});
+
+	/** The diagram's nodes: shared evidence counts once, a written element not at all. */
+	const NODES = [
+		{ id: "goal-1", data: { id: "1", isPlaceholder: true } },
+		{ id: "evidence-1", data: { id: "2", isPlaceholder: true } },
+		{ id: "evidence-1-again", data: { id: "2", isPlaceholder: true } },
+		{ id: "property-1", data: { id: "3" } },
+	].map((node) => ({ ...node, position: { x: 0, y: 0 } }));
+
+	afterEach(() => {
+		useStore.setState({ nodes: [] });
+	});
+
+	it("holds a case back from publishing and says how many elements are left", () => {
+		useStore.setState({ nodes: NODES });
+
+		render(<StatusModalWrapper />);
+
+		expect(
+			screen.getByTestId("publish-content-placeholders")
+		).toHaveTextContent("2 elements still to fill in");
+		expect(
+			screen.queryByRole("button", { name: "Publish" })
+		).not.toBeInTheDocument();
+	});
+
+	it("does not hold a pattern back from publishing", () => {
+		useStore.setState({
+			nodes: NODES,
+			assuranceCase: { ...useStore.getState().assuranceCase!, kind: "PATTERN" },
+		});
+
+		render(<StatusModalWrapper />);
+
+		expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
+	});
+});
+
 describe("StatusModalWrapper — Published: unpublish", () => {
 	beforeEach(() => {
 		resetStores();

@@ -43,6 +43,8 @@ export interface ElementWithLinks {
 	inSandbox: boolean;
 	// Dialogical reasoning
 	isDefeater: boolean;
+	// Placeholder metadata; the hint is written only for a placeholder
+	isPlaceholder?: boolean;
 	justification: string | null;
 	level: number | null;
 	modifiedFromPattern: boolean;
@@ -52,6 +54,7 @@ export interface ElementWithLinks {
 	moduleReferenceId: string | null;
 	name: string | null;
 	parentId: string | null;
+	placeholderHint?: string | null;
 	// Type-specific fields
 	role: ElementRole | null;
 	url: string | null;
@@ -109,7 +112,9 @@ function addTypeSpecificFields(
 }
 
 /**
- * Adds optional metadata fields (pattern and dialogical reasoning).
+ * Adds optional metadata fields (pattern, placeholder and dialogical
+ * reasoning). A hint is written only with the placeholder it guides: the
+ * hint stored on an element that has since been filled in is not exported.
  */
 function addMetadataFields(node: TreeNode, element: ElementWithLinks): void {
 	if (element.fromPattern) {
@@ -117,6 +122,12 @@ function addMetadataFields(node: TreeNode, element: ElementWithLinks): void {
 	}
 	if (element.modifiedFromPattern) {
 		node.modifiedFromPattern = element.modifiedFromPattern;
+	}
+	if (element.isPlaceholder) {
+		node.isPlaceholder = true;
+		if (element.placeholderHint) {
+			node.placeholderHint = element.placeholderHint;
+		}
 	}
 	if (element.isDefeater) {
 		node.isDefeater = element.isDefeater;

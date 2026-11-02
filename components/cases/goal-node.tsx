@@ -47,9 +47,11 @@ function GoalNode({ data, ...props }: NodeProps) {
 				expandTour={isDemoGoal ? "demo-expand" : undefined}
 				initialExpanded={isDemoGoal}
 				isDefeater={!!data.isDefeater}
+				isPlaceholder={!!data.isPlaceholder}
 				justification={data.justification}
 				name={data.name}
 				nodeType="goal"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
 				terms={data.termsInReach}
 				topRightActions={topRightActions}

@@ -7,7 +7,7 @@
     "version": {
       "type": "string",
       "enum": ["1.0", "1.1"],
-      "description": "Schema version identifier. \"1.1\" adds named context entries, references in element text and case.kind"
+      "description": "Schema version identifier. \"1.1\" adds named context entries, references in element text, case.kind and placeholders"
     },
     "exportedAt": {
       "type": "string",
@@ -206,6 +206,23 @@
           "description": "Whether this element has been modified since being created from a pattern",
           "default": false,
           "type": "boolean"
+        },
+        "isPlaceholder": {
+          "description": "Whether the person using the case or pattern writes this element's text",
+          "default": false,
+          "type": "boolean"
+        },
+        "placeholderHint": {
+          "description": "Guidance for whoever fills in a placeholder element",
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 500
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "isDefeater": {
           "description": "Whether this element is a defeater (dialogical reasoning)",

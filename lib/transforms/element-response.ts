@@ -60,6 +60,23 @@ function applyDialogicalReasoningFields(
 }
 
 /**
+ * Applies the placeholder marker, and its hint when it has one. The hint
+ * stored on an element that is no longer a placeholder is not returned.
+ */
+function applyPlaceholderFields(
+	response: ElementResponse,
+	element: { isPlaceholder?: boolean; placeholderHint?: string | null }
+): void {
+	if (!element.isPlaceholder) {
+		return;
+	}
+	response.isPlaceholder = true;
+	if (element.placeholderHint) {
+		response.placeholderHint = element.placeholderHint;
+	}
+}
+
+/**
  * Applies the optional single-value response fields (URLs, prose fields,
  * assertion status, and the citation/module-reference metadata) that are
  * only present on the response when the underlying element data is present.
@@ -84,6 +101,8 @@ function applyOptionalFields(
 		isDefeater?: boolean;
 		defeatsElementId?: string | null;
 		defeatsDangling?: boolean;
+		isPlaceholder?: boolean;
+		placeholderHint?: string | null;
 	}
 ): void {
 	// Handle URLs: prefer urls array, fall back to legacy url field
@@ -123,6 +142,7 @@ function applyOptionalFields(
 		response.moduleReferenceDangling = true;
 	}
 	applyDialogicalReasoningFields(response, element);
+	applyPlaceholderFields(response, element);
 }
 
 /**
@@ -163,6 +183,9 @@ export function transformToResponse(element: {
 	// case-import-service.ts) — true when defeatsElementId was blanked
 	// because the imported target wasn't part of the same import.
 	defeatsDangling?: boolean;
+	// Placeholder marker and its hint (see applyPlaceholderFields)
+	isPlaceholder?: boolean;
+	placeholderHint?: string | null;
 	caseId: string;
 	parentId: string | null;
 	createdAt: Date;

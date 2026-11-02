@@ -2,6 +2,7 @@ import {
 	caseUsesDefinedTerms,
 	parseContextEntries,
 } from "@/lib/case/defined-terms";
+import { countPlaceholders, treeNodes } from "@/lib/case/placeholders";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -29,12 +30,16 @@ export type ExportResult = { data: CaseExportNested } | { error: string };
 
 /**
  * Whether a case uses anything that exists only from export version 1.1: a
- * named context entry or a reference to one, or being a pattern. The version
- * is chosen from this one check, so a feature added to 1.1 later extends it
- * here.
+ * named context entry or a reference to one, being a pattern, or holding a
+ * placeholder. The version is chosen from this one check, so a feature added
+ * to 1.1 later extends it here.
  */
 function usesVersion11Features(tree: TreeNode, kind: CaseKind): boolean {
-	return kind === "PATTERN" || caseUsesDefinedTerms(tree);
+	return (
+		kind === "PATTERN" ||
+		caseUsesDefinedTerms(tree) ||
+		countPlaceholders(treeNodes(tree)) > 0
+	);
 }
 
 /**
@@ -158,6 +163,9 @@ export async function exportCase(
 						// Pattern metadata
 						fromPattern: true,
 						modifiedFromPattern: true,
+						// Placeholder metadata
+						isPlaceholder: true,
+						placeholderHint: true,
 						// Dialogical reasoning
 						isDefeater: true,
 						defeatsElementId: true,
@@ -193,6 +201,9 @@ export async function exportCase(
 										// Pattern metadata
 										fromPattern: true,
 										modifiedFromPattern: true,
+										// Placeholder metadata
+										isPlaceholder: true,
+										placeholderHint: true,
 										// Dialogical reasoning
 										isDefeater: true,
 										defeatsElementId: true,
@@ -253,6 +264,9 @@ export async function exportCase(
 			// Pattern metadata
 			fromPattern: el.fromPattern,
 			modifiedFromPattern: el.modifiedFromPattern,
+			// Placeholder metadata
+			isPlaceholder: el.isPlaceholder,
+			placeholderHint: el.placeholderHint,
 			// Dialogical reasoning
 			isDefeater: el.isDefeater,
 			defeatsElementId: el.defeatsElementId,
@@ -285,6 +299,9 @@ export async function exportCase(
 					// Pattern metadata
 					fromPattern: link.evidence.fromPattern,
 					modifiedFromPattern: link.evidence.modifiedFromPattern,
+					// Placeholder metadata
+					isPlaceholder: link.evidence.isPlaceholder,
+					placeholderHint: link.evidence.placeholderHint,
 					// Dialogical reasoning
 					isDefeater: link.evidence.isDefeater,
 					defeatsElementId: link.evidence.defeatsElementId,

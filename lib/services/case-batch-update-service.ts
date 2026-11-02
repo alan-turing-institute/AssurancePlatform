@@ -6,6 +6,11 @@
  */
 
 import { parseContextEntries } from "@/lib/case/defined-terms";
+import {
+	type PatternMarkerChanges,
+	patternMarkersForEdit,
+	storedElementText,
+} from "@/lib/case/placeholders";
 import type {
 	CreateElementData,
 	ElementChange,
@@ -845,10 +850,10 @@ function buildCreateData(
 		moduleReferenceId: data.moduleReferenceId,
 		moduleEmbedType: data.moduleEmbedType as "COPY" | "REFERENCE" | null,
 		modulePublicSummary: data.modulePublicSummary,
-		fromPattern: data.fromPattern ?? false,
-		modifiedFromPattern: data.modifiedFromPattern ?? false,
 		isDefeater: data.isDefeater ?? false,
 		defeatsElementId: data.defeatsElementId,
+		isPlaceholder: data.isPlaceholder ?? false,
+		placeholderHint: data.placeholderHint,
 		createdById: userId,
 	};
 }
@@ -999,8 +1004,8 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 		"moduleReferenceId",
 		"moduleEmbedType",
 		"modulePublicSummary",
-		"fromPattern",
-		"modifiedFromPattern",
+		"isPlaceholder",
+		"placeholderHint",
 		"isDefeater",
 		"defeatsElementId",
 	];
@@ -1364,10 +1369,68 @@ async function applyCascadeLevelUpdates(
 }
 
 /**
+ * The pattern markers each update changes by itself: writing the description
+ * of a placeholder in a case takes the marker off, and text changed on an
+ * element from a pattern marks it as modified. Judged against the text the
+ * elements hold now, and not for an update that sets `isPlaceholder` itself.
+ * Reads nothing when no update carries text.
+ */
+async function resolvePatternMarkers(
+	tx: TransactionClient,
+	caseId: string,
+	updates: UpdateChange[]
+): Promise<Map<string, PatternMarkerChanges>> {
+	const textUpdates = updates.filter(
+		({ data }) =>
+			data.description !== undefined ||
+			data.assumption !== undefined ||
+			data.justification !== undefined ||
+			data.context !== undefined
+	);
+	if (textUpdates.length === 0) {
+		return new Map();
+	}
+	const caseRow = await tx.assuranceCase.findUnique({
+		where: { id: caseId },
+		select: { kind: true },
+	});
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: textUpdates.map((change) => change.elementId) } },
+		select: {
+			id: true,
+			description: true,
+			assumption: true,
+			justification: true,
+			context: true,
+			fromPattern: true,
+		},
+	});
+	const storedById = new Map(rows.map((row) => [row.id, row]));
+	const markers = new Map<string, PatternMarkerChanges>();
+	for (const { data, elementId } of textUpdates) {
+		const stored = storedById.get(elementId);
+		if (!(caseRow && stored)) {
+			continue;
+		}
+		markers.set(
+			elementId,
+			patternMarkersForEdit({
+				kind: caseRow.kind,
+				stored: storedElementText(stored),
+				edit: data,
+				placeholderSetByEdit: data.isPlaceholder !== undefined,
+			})
+		);
+	}
+	return markers;
+}
+
+/**
  * Applies update operations
  */
 async function applyUpdates(
 	tx: TransactionClient,
+	caseId: string,
 	updates: UpdateChange[]
 ): Promise<void> {
 	const relevantForLevel = updates.filter(
@@ -1427,9 +1490,13 @@ async function applyUpdates(
 	// regenerateNamesForDefeaterFlips's own docstring for the known
 	// same-batch-count limitation.
 	const regeneratedNames = await regenerateNamesForDefeaterFlips(updates);
+	const patternMarkers = await resolvePatternMarkers(tx, caseId, updates);
 
 	for (const change of updates) {
-		const updateData = buildUpdateData(change.data);
+		const updateData: Record<string, unknown> = {
+			...buildUpdateData(change.data),
+			...patternMarkers.get(change.elementId),
+		};
 
 		if (finalLevels.has(change.elementId)) {
 			updateData.level = finalLevels.get(change.elementId);
@@ -1600,7 +1667,7 @@ export async function applyBatchUpdate(
 			await applyUnlinkEvidence(tx, unlinks);
 			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
-			await applyUpdates(tx, updates);
+			await applyUpdates(tx, caseId, updates);
 			await applyLinkEvidence(tx, links);
 
 			// Update the case's updatedAt timestamp

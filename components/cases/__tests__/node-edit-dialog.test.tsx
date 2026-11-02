@@ -1109,6 +1109,122 @@ describe("NodeEditDialog — read-only mode by case permission", () => {
 	});
 });
 
+describe("NodeEditDialog — placeholders", () => {
+	const SWITCH_LABEL = "Placeholder: the person using this pattern writes this";
+
+	const PLACEHOLDER_NODE: Node = {
+		id: "9",
+		type: "goal",
+		position: { x: 0, y: 0 },
+		data: {
+			id: 9,
+			name: "G1",
+			description: "",
+			isPlaceholder: true,
+			placeholderHint: "Say what the goal is",
+		},
+	};
+
+	function openIn(kind: "CASE" | "PATTERN", node: Node) {
+		const previous = useStore.getState().assuranceCase;
+		useStore.setState({ assuranceCase: { ...previous!, kind } });
+		mockPluginsResponse(true);
+		const captured: { body?: Record<string, unknown> } = {};
+		server.use(
+			http.put("/api/elements/9", async ({ request }) => {
+				captured.body = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+		const onOpenChange = vi.fn();
+		render(
+			<NodeEditDialog
+				node={node}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+		return { captured, onOpenChange };
+	}
+
+	beforeEach(() => {
+		vi.mocked(recordUpdate).mockClear();
+	});
+
+	it("lets a pattern's author switch the marker on with a hint, and records the change for undo", async () => {
+		const user = userEvent.setup();
+		const plain: Node = {
+			...PLACEHOLDER_NODE,
+			data: { id: 9, name: "G1", description: "Sample text" },
+		};
+		const { captured, onOpenChange } = openIn("PATTERN", plain);
+
+		await user.click(await screen.findByRole("switch", { name: SWITCH_LABEL }));
+		await user.type(
+			screen.getByLabelText("Hint for the person filling this in"),
+			"  Name the system  "
+		);
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).toMatchObject({
+			isPlaceholder: true,
+			placeholderHint: "Name the system",
+		});
+		const [, , before, after] = vi.mocked(recordUpdate).mock.calls[0]!;
+		expect(before).toMatchObject({ isPlaceholder: false });
+		expect(after).toMatchObject({ isPlaceholder: true });
+	});
+
+	it("saves a pattern's placeholder with no text, and clears the hint when the marker is switched off", async () => {
+		const user = userEvent.setup();
+		const { captured, onOpenChange } = openIn("PATTERN", PLACEHOLDER_NODE);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Update Goal" })
+		);
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		const kept = captured.body;
+		onOpenChange.mockClear();
+
+		await user.click(screen.getByRole("switch", { name: SWITCH_LABEL }));
+		await user.type(
+			screen.getByLabelText("Description"),
+			"Written by the author"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(kept).toMatchObject({
+			isPlaceholder: true,
+			placeholderHint: "Say what the goal is",
+		});
+		expect(captured.body).toMatchObject({
+			isPlaceholder: false,
+			placeholderHint: "",
+		});
+	});
+
+	it("shows a case's placeholder hint above the description, with no switch, and leaves the marker to the server", async () => {
+		const user = userEvent.setup();
+		const { captured, onOpenChange } = openIn("CASE", PLACEHOLDER_NODE);
+
+		expect(await screen.findByText("Say what the goal is")).toBeInTheDocument();
+		expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+		await user.type(screen.getByLabelText("Description"), "The system is safe");
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).toHaveProperty("description", "The system is safe");
+		expect(captured.body).not.toHaveProperty("isPlaceholder");
+		const [, , before, after] = vi.mocked(recordUpdate).mock.calls[0]!;
+		expect(before).toMatchObject({ isPlaceholder: true });
+		expect(after).toMatchObject({ isPlaceholder: false });
+	});
+});
+
 describe("NodeEditDialog — defined terms", () => {
 	const NAMED_ENTRY = {
 		id: "k3f9x2m7qa",

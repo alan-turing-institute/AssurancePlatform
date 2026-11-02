@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { renderWithReactFlow, screen } from "@/src/__tests__/utils/test-utils";
+import useStore from "@/store/store";
 import BaseNode from "../base-node";
 
 /**
@@ -49,6 +51,84 @@ describe("BaseNode — defeater decoration (ADR 0005 D2)", () => {
 		);
 
 		expect(screen.getByText("Defeater")).toBeInTheDocument();
+	});
+});
+
+describe("BaseNode — placeholders", () => {
+	afterEach(() => {
+		useStore.setState({ assuranceCase: null });
+	});
+
+	it("draws a dashed outline for a placeholder and a solid one otherwise", () => {
+		const placeholder = renderWithReactFlow(
+			<BaseNode description="" isPlaceholder name="P1" nodeType="property" />
+		);
+		const outline = placeholder.container.querySelector(".border-2");
+		placeholder.unmount();
+		const ordinary = renderWithReactFlow(
+			<BaseNode description="Written" name="P2" nodeType="property" />
+		);
+
+		expect(outline).toHaveClass("border-dashed");
+		expect(ordinary.container.querySelector(".border-2")).not.toHaveClass(
+			"border-dashed"
+		);
+	});
+
+	it("shows the hint in a case in place of text it does not have yet", () => {
+		renderWithReactFlow(
+			<BaseNode
+				description=""
+				isPlaceholder
+				name="G1"
+				nodeType="goal"
+				placeholderHint="Describe your top-level assurance goal"
+			/>
+		);
+
+		expect(
+			screen.getByText("Describe your top-level assurance goal")
+		).toHaveClass("italic");
+		expect(screen.queryByText("No description available")).toBeNull();
+	});
+
+	it("shows written text, not the hint, and the usual note when there is neither", () => {
+		const written = renderWithReactFlow(
+			<BaseNode
+				description="Already written"
+				isPlaceholder
+				name="P1"
+				nodeType="property"
+				placeholderHint="A hint"
+			/>
+		);
+
+		expect(screen.getByText("Already written")).toBeInTheDocument();
+		expect(screen.queryByText("A hint")).toBeNull();
+		written.unmount();
+		renderWithReactFlow(
+			<BaseNode description="" isPlaceholder name="P2" nodeType="property" />
+		);
+
+		expect(screen.getByText("No description available")).toBeInTheDocument();
+	});
+
+	it("keeps the usual note for a pattern's placeholder: the hint is for whoever uses the pattern", () => {
+		useStore.setState({
+			assuranceCase: { kind: "PATTERN" } as AssuranceCaseResponse,
+		});
+		renderWithReactFlow(
+			<BaseNode
+				description=""
+				isPlaceholder
+				name="P1"
+				nodeType="property"
+				placeholderHint="A hint"
+			/>
+		);
+
+		expect(screen.getByText("No description available")).toBeInTheDocument();
+		expect(screen.queryByText("A hint")).toBeNull();
 	});
 });
 
