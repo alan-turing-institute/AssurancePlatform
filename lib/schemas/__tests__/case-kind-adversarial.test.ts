@@ -95,16 +95,49 @@ const REFUSED_KINDS: [string, unknown][] = [
 ];
 
 describe("the kind a case file can name", () => {
-	it("accepts exactly the values the database enum has", () => {
+	it("accepts exactly the values the database enum has, except PATTERN in a nested 1.0 file", () => {
 		const kinds = Object.values(CaseKind).sort();
 		expect(kinds).toEqual(["CASE", "PATTERN"]);
-		for (const [, schema, build] of SCHEMAS) {
+		for (const [label, schema, build] of SCHEMAS) {
 			for (const kind of kinds) {
 				const parsed = schema.safeParse(build({ kind }));
+				if (label === "nested 1.0" && kind === "PATTERN") {
+					expect(parsed.success).toBe(false);
+					continue;
+				}
 				expect(parsed.success).toBe(true);
 				expect(parsed.data?.case.kind).toBe(kind);
 			}
 		}
+	});
+
+	it("refuses kind PATTERN in a nested 1.0 file at case.kind, and accepts kind CASE or no kind there", () => {
+		const refused = CaseExportNestedSchema.safeParse(
+			nestedFile("1.0", { kind: "PATTERN" })
+		);
+		const named = CaseExportNestedSchema.safeParse(
+			nestedFile("1.0", { kind: "CASE" })
+		);
+		const silent = CaseExportNestedSchema.safeParse(nestedFile("1.0", {}));
+		const current = CaseExportNestedSchema.safeParse(
+			nestedFile("1.1", { kind: "PATTERN" })
+		);
+
+		expect(refused.success).toBe(false);
+		expect(
+			refused.error?.issues.map((issue) => [
+				issue.path.join("."),
+				issue.message,
+			])
+		).toEqual([
+			[
+				"case.kind",
+				'A version "1.0" file cannot mark the case as a pattern; set the version to "1.1"',
+			],
+		]);
+		expect(named.success).toBe(true);
+		expect(silent.success).toBe(true);
+		expect(current.success).toBe(true);
 	});
 
 	it.each(

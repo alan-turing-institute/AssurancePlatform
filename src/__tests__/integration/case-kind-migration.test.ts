@@ -279,6 +279,16 @@ describe("the case kind migration on a database that holds cases", () => {
 		expect(toOldTable.rowCount).toBe(0);
 	});
 
+	it("indexes the source link column under the name Prisma gives it", async () => {
+		const indexes = await pool.query<{ indexname: string; indexdef: string }>(
+			`SELECT indexname, indexdef FROM pg_indexes
+			 WHERE tablename = 'assurance_cases' AND indexname = 'assurance_cases_source_pattern_id_idx'`
+		);
+
+		expect(indexes.rows).toHaveLength(1);
+		expect(indexes.rows[0]?.indexdef).toContain("(source_pattern_id)");
+	});
+
 	it("lets a new case link to a pattern, refuses a link to the old table, and clears the link when the pattern goes", async () => {
 		const pattern = randomUUID();
 		const started = randomUUID();

@@ -315,6 +315,7 @@ model AssuranceCase {
   @@index([createdById, publishStatus], map: "assurance_cases_created_by_status_idx")
   @@index([deletedAt], map: "assurance_cases_deleted_at_idx")
   @@index([createdById, deletedAt], map: "assurance_cases_owner_deleted_idx")
+  @@index([sourcePatternId])
   @@map("assurance_cases")
 }
 

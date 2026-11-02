@@ -423,9 +423,11 @@ function findNamedContextEntryPath(
  * text. Version "1.1" lets a context entry also be a named entry, lets
  * element text hold references to named entries, and lets the case say it is a
  * pattern (`case.kind`). A 1.0 file is already valid 1.1, so nothing converts
- * on import; a file that says "1.0" but holds a named entry is rejected,
- * because the shape behind a version string never changes silently. That rule
- * is a check in this schema only: it has no JSON Schema equivalent, and the
+ * on import; a file that says "1.0" but holds a named entry or marks the case
+ * as a pattern is rejected, because the shape behind a version string never
+ * changes silently. A "1.0" file with `kind: "CASE"` is accepted: an older
+ * reader drops the key and reads the same ordinary case. Those rules are
+ * checks in this schema only: they have no JSON Schema equivalent, and the
  * generated file describes the 1.1 shape.
  *
  * ADR 0004 D1: `version` is the format-migration key for the whole case
@@ -466,6 +468,14 @@ export const CaseExportNestedSchema = z
 				path,
 				message:
 					'A version "1.0" file cannot hold named context entries; set the version to "1.1"',
+			});
+		}
+		if (data.case.kind === "PATTERN") {
+			ctx.addIssue({
+				code: "custom",
+				path: ["case", "kind"],
+				message:
+					'A version "1.0" file cannot mark the case as a pattern; set the version to "1.1"',
 			});
 		}
 	})

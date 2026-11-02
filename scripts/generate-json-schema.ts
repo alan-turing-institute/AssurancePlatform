@@ -18,12 +18,12 @@
  *
  * What does NOT survive the Zod -> JSON Schema conversion (documented here
  * because it is easy to rediscover as a bug): `.refine()` and `.transform()`
- * predicates have no JSON Schema equivalent and are dropped. The one check
- * of that kind in CaseExportNestedSchema is that a file whose version is "1.0" may not hold named
- * context entries. It stays Zod-only and unenforced by any JSON Schema
- * consumer (including this editor); the generated file describes the 1.1
- * shape. z.lazy recursion (TreeNodeSchema) DOES survive, as a $ref into
- * `definitions`.
+ * predicates have no JSON Schema equivalent and are dropped. The checks of
+ * that kind in CaseExportNestedSchema are that a file whose version is "1.0"
+ * may not hold named context entries and may not mark the case as a pattern.
+ * They stay Zod-only and unenforced by any JSON Schema consumer (including
+ * this editor); the generated file describes the 1.1 shape. z.lazy recursion
+ * (TreeNodeSchema) DOES survive, as a $ref into `definitions`.
  */
 
 import { spawnSync } from "node:child_process";

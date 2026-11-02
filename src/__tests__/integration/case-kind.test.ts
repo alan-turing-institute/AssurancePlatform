@@ -48,6 +48,19 @@ async function importWith(
 	return expectSuccess(await importCase(userId, file, options));
 }
 
+/** A copy of a nested tree in which every node says it was changed since it came from a pattern. */
+function withEveryElementModified(
+	node: Record<string, unknown>
+): Record<string, unknown> {
+	const children =
+		(node.children as Record<string, unknown>[] | undefined) ?? [];
+	return {
+		...node,
+		modifiedFromPattern: true,
+		children: children.map(withEveryElementModified),
+	};
+}
+
 async function storedCase(caseId: string) {
 	return await prisma.assuranceCase.findUniqueOrThrow({
 		where: { id: caseId },
@@ -161,10 +174,12 @@ describe("importCase and the kind of the new case", () => {
 		expect((await storedCase(data.caseId)).sourcePatternId).toBeNull();
 	});
 
-	it("marks every element as from a pattern when markFromPattern is set", async () => {
+	it("marks every element as from a pattern, and as not yet modified, when markFromPattern is set", async () => {
 		const user = await createTestUser();
+		const file = createNestedCaseWithChainJSON();
+		file.tree = withEveryElementModified(file.tree as Record<string, unknown>);
 
-		const data = await importWith(user.id, createNestedCaseWithChainJSON(), {
+		const data = await importWith(user.id, file, {
 			markFromPattern: true,
 		});
 
@@ -173,6 +188,9 @@ describe("importCase and the kind of the new case", () => {
 		});
 		expect(elements).toHaveLength(4);
 		expect(elements.every((element) => element.fromPattern)).toBe(true);
+		expect(
+			elements.every((element) => element.modifiedFromPattern === false)
+		).toBe(true);
 	});
 
 	it("leaves elements as the file has them when markFromPattern is not set", async () => {

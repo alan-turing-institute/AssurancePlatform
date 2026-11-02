@@ -47,27 +47,73 @@ async function counts() {
 	};
 }
 
-describe.each(FILE_FORMATS)("the kind a %s file names", (_label, build) => {
-	it("makes a pattern from kind PATTERN, a case from kind CASE, and a case from no kind", async () => {
+/** A nested "1.0" file cannot mark the case as a pattern; every other format can. */
+function cannotNamePattern(label: string) {
+	return label === "nested 1.0";
+}
+
+/** What an import of a nested "1.0" file that names kind PATTERN gives: a refusal at `case.kind` and nothing created. */
+const REFUSED_AT_KIND = {
+	error: "Invalid import data",
+	namesKind: true,
+	created: { cases: 0, elements: 0 },
+};
+
+/** Imports `file` and reports the error, whether it names `case.kind`, and what was created. */
+async function refusalOf(
+	userId: string,
+	file: unknown,
+	options?: Parameters<typeof importCase>[2]
+) {
+	const before = await counts();
+
+	const result = await importCase(userId, file, options);
+
+	const after = await counts();
+	const errors = "validationErrors" in result ? result.validationErrors : [];
+	return {
+		error: "error" in result ? result.error : undefined,
+		namesKind: errors?.some((message) => message.startsWith("case.kind")),
+		created: {
+			cases: after.cases - before.cases,
+			elements: after.elements - before.elements,
+		},
+	};
+}
+
+describe.each(FILE_FORMATS)("the kind a %s file names", (label, build) => {
+	it("makes a pattern from kind PATTERN (a nested 1.0 file refuses it), a case from kind CASE, and a case from no kind", async () => {
 		const user = await createTestUser();
 
-		const pattern = await importOk(
-			user.id,
-			build({ caseFields: { kind: "PATTERN" } })
-		);
+		if (cannotNamePattern(label)) {
+			expect(
+				await refusalOf(user.id, build({ caseFields: { kind: "PATTERN" } }))
+			).toEqual(REFUSED_AT_KIND);
+		} else {
+			const pattern = await importOk(
+				user.id,
+				build({ caseFields: { kind: "PATTERN" } })
+			);
+			expect((await storedCase(pattern.caseId)).kind).toBe("PATTERN");
+		}
 		const named = await importOk(
 			user.id,
 			build({ caseFields: { kind: "CASE" } })
 		);
 		const silent = await importOk(user.id, build());
 
-		expect((await storedCase(pattern.caseId)).kind).toBe("PATTERN");
 		expect((await storedCase(named.caseId)).kind).toBe("CASE");
 		expect((await storedCase(silent.caseId)).kind).toBe("CASE");
 	});
 
-	it("makes a pattern the importing user owns, with every element of the file", async () => {
+	it("makes a pattern the importing user owns, with every element of the file (a nested 1.0 file refuses it)", async () => {
 		const user = await createTestUser();
+		if (cannotNamePattern(label)) {
+			expect(
+				await refusalOf(user.id, build({ caseFields: { kind: "PATTERN" } }))
+			).toEqual(REFUSED_AT_KIND);
+			return;
+		}
 
 		const imported = await importOk(
 			user.id,
@@ -83,34 +129,54 @@ describe.each(FILE_FORMATS)("the kind a %s file names", (_label, build) => {
 		);
 	});
 
-	it("is overridden by the kind option in both directions", async () => {
+	it("is overridden by the kind option in both directions (a nested 1.0 file that names PATTERN is refused whatever the option says)", async () => {
 		const user = await createTestUser();
 
-		const toCase = await importOk(
-			user.id,
-			build({ caseFields: { kind: "PATTERN" } }),
-			{ kind: "CASE" }
-		);
 		const toPattern = await importOk(
 			user.id,
 			build({ caseFields: { kind: "CASE" } }),
 			{ kind: "PATTERN" }
 		);
 		const fromSilence = await importOk(user.id, build(), { kind: "PATTERN" });
+		expect((await storedCase(toPattern.caseId)).kind).toBe("PATTERN");
+		expect((await storedCase(fromSilence.caseId)).kind).toBe("PATTERN");
+		if (cannotNamePattern(label)) {
+			for (const kind of ["CASE", "PATTERN"] as const) {
+				expect(
+					await refusalOf(user.id, build({ caseFields: { kind: "PATTERN" } }), {
+						kind,
+					})
+				).toEqual(REFUSED_AT_KIND);
+			}
+			return;
+		}
+
+		const toCase = await importOk(
+			user.id,
+			build({ caseFields: { kind: "PATTERN" } }),
+			{ kind: "CASE" }
+		);
 		const same = await importOk(
 			user.id,
 			build({ caseFields: { kind: "PATTERN" } }),
 			{ kind: "PATTERN" }
 		);
-
 		expect((await storedCase(toCase.caseId)).kind).toBe("CASE");
-		expect((await storedCase(toPattern.caseId)).kind).toBe("PATTERN");
-		expect((await storedCase(fromSilence.caseId)).kind).toBe("PATTERN");
 		expect((await storedCase(same.caseId)).kind).toBe("PATTERN");
 	});
 
-	it("is used when the kind option is present but undefined", async () => {
+	it("is used when the kind option is present but undefined (a nested 1.0 file that names PATTERN is refused)", async () => {
 		const user = await createTestUser();
+		if (cannotNamePattern(label)) {
+			expect(
+				await refusalOf(user.id, build({ caseFields: { kind: "PATTERN" } }), {
+					kind: undefined,
+					name: undefined,
+					description: undefined,
+				})
+			).toEqual(REFUSED_AT_KIND);
+			return;
+		}
 
 		const imported = await importOk(
 			user.id,
@@ -162,7 +228,7 @@ describe.each(FILE_FORMATS)("the kind a %s file names", (_label, build) => {
 		expect(await counts()).toEqual(before);
 	});
 
-	it("is reported by the validation preview: a pattern file is valid, an invalid kind is not", async () => {
+	it("is reported by the validation preview: a pattern file is valid (not in a nested 1.0 file), an invalid kind is not", async () => {
 		const valid = await validateImportData(
 			build({ caseFields: { kind: "PATTERN" } })
 		);
@@ -170,8 +236,15 @@ describe.each(FILE_FORMATS)("the kind a %s file names", (_label, build) => {
 			build({ caseFields: { kind: "pattern" } })
 		);
 
-		expect(valid.isValid).toBe(true);
-		expect(valid.caseName).toBe("File case name");
+		if (cannotNamePattern(label)) {
+			expect(valid.isValid).toBe(false);
+			expect(
+				valid.errors?.some((message) => message.startsWith("case.kind"))
+			).toBe(true);
+		} else {
+			expect(valid.isValid).toBe(true);
+			expect(valid.caseName).toBe("File case name");
+		}
 		expect(invalid.isValid).toBe(false);
 		expect(
 			invalid.errors?.some((message) => message.startsWith("case.kind"))
@@ -227,13 +300,27 @@ describe.each(FILE_FORMATS)("markFromPattern on a %s file", (_label, build) => {
 		expect(flags.every((row) => row.fromPattern)).toBe(true);
 	});
 
-	it("keeps the modified flag the file gives each element", async () => {
+	it("clears the modified flag on every element, whatever the file says", async () => {
 		const user = await createTestUser();
 
 		const imported = await importOk(
 			user.id,
 			build({ everyElement: { modifiedFromPattern: true } }),
 			{ markFromPattern: true }
+		);
+
+		const flags = await patternFlags(imported.caseId);
+		expect(flags).toHaveLength(RICH_ELEMENT_COUNT);
+		expect(flags.every((row) => row.fromPattern)).toBe(true);
+		expect(flags.every((row) => row.modifiedFromPattern === false)).toBe(true);
+	});
+
+	it("leaves the modified flag as the file has it when the option is absent", async () => {
+		const user = await createTestUser();
+
+		const imported = await importOk(
+			user.id,
+			build({ everyElement: { modifiedFromPattern: true } })
 		);
 
 		const modified = await prisma.assuranceElement.count({
@@ -466,7 +553,11 @@ describe("starting a case from an exported pattern", () => {
 		const cited = await createStoredCase(user.id);
 		const made = await importOk(
 			user.id,
-			richNestedFile({ caseFields: { kind: "PATTERN" }, citedCaseId: cited.id })
+			richNestedFile({
+				caseFields: { kind: "PATTERN" },
+				citedCaseId: cited.id,
+				version: "1.1",
+			})
 		);
 		const patternFile = expectSuccess(await exportCase(user.id, made.caseId));
 

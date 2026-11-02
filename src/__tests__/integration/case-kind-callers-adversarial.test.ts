@@ -233,6 +233,19 @@ describe.each(IMPORT_ROUTES)("%s", (_label, send) => {
 		expect(listed.map((row) => row.id)).not.toContain(body.id);
 	});
 
+	it("refuses a version 1.0 file that says PATTERN with a 400 and creates nothing", async () => {
+		const user = await createTestUser();
+
+		const response = await send(
+			user,
+			richNestedFile({ version: "1.0", caseFields: { kind: "PATTERN" } })
+		);
+
+		expect(response.status).toBe(400);
+		expect(await prisma.assuranceCase.count()).toBe(0);
+		expect(await prisma.assuranceElement.count()).toBe(0);
+	});
+
 	it("refuses a file with an invalid kind with a 400 and creates nothing", async () => {
 		const user = await createTestUser();
 
@@ -251,7 +264,7 @@ describe.each(IMPORT_ROUTES)("%s", (_label, send) => {
 });
 
 describe("PUT /api/cases/import", () => {
-	it("validates a pattern file and refuses an invalid kind, creating nothing either way", async () => {
+	it("validates a pattern file and refuses an invalid kind or a pattern in a 1.0 file, creating nothing either way", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 		const { PUT } = await import("@/app/api/cases/import/route");
@@ -266,12 +279,21 @@ describe("PUT /api/cases/import", () => {
 		const valid = await send(
 			richNestedFile({ version: "1.1", caseFields: { kind: "PATTERN" } })
 		);
+		const oldVersion = await send(
+			richNestedFile({ version: "1.0", caseFields: { kind: "PATTERN" } })
+		);
 		const invalid = await send(
 			richNestedFile({ caseFields: { kind: "TEMPLATE" } })
 		);
 
 		expect(valid.status).toBe(200);
 		expect((await valid.json()).isValid).toBe(true);
+		expect(oldVersion.status).toBe(400);
+		expect(
+			(await oldVersion.json()).errors.some((message: string) =>
+				message.startsWith("case.kind")
+			)
+		).toBe(true);
 		expect(invalid.status).toBe(400);
 		const refused = await invalid.json();
 		expect(refused.isValid).toBe(false);

@@ -86,7 +86,8 @@ A case export carries `"version": "1.1"` when the case holds a named entry or a 
 `exportCase` makes that choice from one check, so anything else added to 1.1 extends it there.
 Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries and kinds.
 Import accepts both versions.
-A file that says `"1.0"` but holds a named entry is rejected with a message saying so.
+A file that says `"1.0"` but holds a named entry, or marks the case as a pattern, is rejected with a message saying so.
+A `"1.0"` file with `"kind": "CASE"` is accepted.
 The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry.
 
 The `case` object carries `"kind": "PATTERN"` when the case is a pattern.
@@ -94,7 +95,7 @@ An ordinary case omits `kind`, so its file has the shape it always had, and a fi
 The nested and flat formats both accept `kind`, with the values `CASE` and `PATTERN`.
 
 `importCase` takes options that only server code sets.
-`kind` overrides the file's kind, `name` and `description` replace the file's, `sourcePatternId` records the pattern the new case was started from, and `markFromPattern` sets `fromPattern` on every element.
+`kind` overrides the file's kind, `name` and `description` replace the file's, `sourcePatternId` records the pattern the new case was started from, and `markFromPattern` sets `fromPattern` on every element and clears `modifiedFromPattern`, because a case just started from a pattern has not yet been changed.
 No import route reads these from a request, and a `sourcePatternId` written inside a file is ignored.
 
 ## Access

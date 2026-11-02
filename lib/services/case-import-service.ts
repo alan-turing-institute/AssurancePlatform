@@ -1095,7 +1095,11 @@ interface ImportCaseOptions {
 	 * without one makes an ordinary case.
 	 */
 	kind?: CaseKind;
-	/** Sets `fromPattern` on every element, whatever the file says. */
+	/**
+	 * Sets `fromPattern` on every element and clears `modifiedFromPattern`,
+	 * whatever the file says: a case just started from a pattern has not yet
+	 * been changed since it came from the pattern.
+	 */
 	markFromPattern?: boolean;
 	/** Replaces the file's case name. */
 	name?: string;
@@ -1144,7 +1148,11 @@ export async function importCase(
 		sourcePatternId: options.sourcePatternId,
 	};
 	const elementsToCreate = options.markFromPattern
-		? v2Data.elements.map((element) => ({ ...element, fromPattern: true }))
+		? v2Data.elements.map((element) => ({
+				...element,
+				fromPattern: true,
+				modifiedFromPattern: false,
+			}))
 		: v2Data.elements;
 
 	try {
