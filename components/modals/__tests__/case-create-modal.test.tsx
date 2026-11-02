@@ -37,6 +37,8 @@ const A_BLANK_CASE = /^A blank case/;
 const A_BLANK_PATTERN = /^A blank pattern/;
 const A_PATTERN = /^A pattern/;
 const CLEARED_WARNING = /AG1: cited case not available/;
+const CHOOSE_HOW_TO_START =
+	"Choose how to start, then enter a name and description.";
 
 const OWN_PATTERN: ViewablePattern = {
 	key: "case:pattern-1",
@@ -179,6 +181,10 @@ describe("CaseCreateModal", () => {
 		await user.click(screen.getByRole("button", { name: "Submit" }));
 
 		expect(await screen.findByText(CLEARED_WARNING)).toBeVisible();
+		expect(screen.getByRole("status")).toHaveTextContent(
+			"Some things were changed in the copy:"
+		);
+		expect(screen.queryByText(CHOOSE_HOW_TO_START)).not.toBeInTheDocument();
 		expect(mockPush).not.toHaveBeenCalled();
 		expect(createCaseFromPattern).toHaveBeenCalledWith(
 			{ publishedSlug: "a-pattern" },
@@ -203,16 +209,58 @@ describe("CaseCreateModal", () => {
 		expect(
 			await screen.findByText("Choose a pattern to start from")
 		).toBeVisible();
+		const picker = screen.getByRole("combobox", { name: "Pattern" });
+		expect(picker).toHaveAttribute("aria-invalid", "true");
+		expect(picker).toHaveFocus();
 		expect(createCaseFromPattern).not.toHaveBeenCalled();
 		expect(createAssuranceCase).not.toHaveBeenCalled();
 	});
 
-	it("says so when the patterns cannot be loaded and again when there are none", async () => {
+	it("submits on Enter in the Name field instead of cancelling", async () => {
 		const user = userEvent.setup();
-		vi.mocked(fetchViewablePatterns).mockResolvedValueOnce(null);
+		render(<CaseCreateModal />);
+
+		await user.type(screen.getByLabelText("Description"), "About the new case");
+		await user.type(screen.getByLabelText("Name"), "My new case{Enter}");
+
+		await waitFor(() =>
+			expect(createAssuranceCase).toHaveBeenCalledWith({
+				name: "My new case",
+				description: "About the new case",
+				kind: "CASE",
+			})
+		);
+	});
+
+	it("labels an archived published pattern in the picker", async () => {
+		const user = userEvent.setup();
+		vi.mocked(fetchViewablePatterns).mockResolvedValue([
+			{ ...PUBLISHED_PATTERN, archived: true },
+		]);
 		render(<CaseCreateModal />);
 
 		await startFromPattern(user);
+		await user.click(await screen.findByRole("combobox", { name: "Pattern" }));
+
+		expect(
+			screen.getByRole("option", { name: "Published pattern Archived" })
+		).toBeVisible();
+	});
+
+	it("says so when the patterns cannot be loaded and again when there are none", async () => {
+		const user = userEvent.setup();
+		vi.mocked(fetchViewablePatterns).mockRejectedValueOnce(
+			new Error("Failed to fetch")
+		);
+		render(<CaseCreateModal />);
+
+		await startFromPattern(user);
+		expect(
+			await screen.findByText("Patterns could not be loaded.")
+		).toBeVisible();
+
+		vi.mocked(fetchViewablePatterns).mockResolvedValueOnce(null);
+		await user.click(screen.getByRole("button", { name: "Try again" }));
 		expect(
 			await screen.findByText("Patterns could not be loaded.")
 		).toBeVisible();

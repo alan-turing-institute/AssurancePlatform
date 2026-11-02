@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -24,14 +25,25 @@ export type PatternChoices =
 	| { status: "failed" }
 	| { patterns: ViewablePattern[]; status: "ready" };
 
+/**
+ * Why no pattern could be used. Each failed submit makes a new object, so the
+ * picker takes focus again even when the message is the same as before.
+ */
+export interface PatternError {
+	message: string;
+}
+
 interface StartFromSectionProps {
 	choices: PatternChoices;
 	disabled: boolean;
 	onPatternChange: (key: string) => void;
 	onStartChange: (start: StartFrom) => void;
+	patternError: PatternError | null;
 	patternKey: string | undefined;
 	start: StartFrom;
 }
+
+const PATTERN_ERROR_ID = "start-from-pattern-error";
 
 const STARTS: { hint: string; label: string; value: StartFrom }[] = [
 	{
@@ -64,14 +76,23 @@ function PatternPicker({
 	disabled,
 	onPatternChange,
 	onRetry,
+	patternError,
 	patternKey,
 }: {
 	choices: PatternChoices;
 	disabled: boolean;
 	onPatternChange: (key: string) => void;
 	onRetry: () => void;
+	patternError: PatternError | null;
 	patternKey: string | undefined;
 }) {
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	useEffect(() => {
+		if (patternError) {
+			triggerRef.current?.focus();
+		}
+	}, [patternError]);
+
 	if (choices.status === "idle" || choices.status === "loading") {
 		return (
 			<p className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -107,10 +128,16 @@ function PatternPicker({
 				onValueChange={onPatternChange}
 				value={patternKey}
 			>
-				<SelectTrigger id="start-from-pattern-picker">
+				<SelectTrigger
+					aria-describedby={patternError ? PATTERN_ERROR_ID : undefined}
+					aria-invalid={patternError ? true : undefined}
+					className="aria-invalid:border-destructive"
+					id="start-from-pattern-picker"
+					ref={triggerRef}
+				>
 					<SelectValue placeholder="Choose a pattern" />
 				</SelectTrigger>
-				<SelectContent>
+				<SelectContent className="w-(--radix-select-trigger-width)">
 					{ORIGINS.map((origin) => {
 						const patterns = choices.patterns.filter(
 							(pattern) => pattern.origin === origin
@@ -122,8 +149,20 @@ function PatternPicker({
 							<SelectGroup key={origin}>
 								<SelectLabel>{ORIGIN_HEADINGS[origin]}</SelectLabel>
 								{patterns.map((pattern) => (
-									<SelectItem key={pattern.key} value={pattern.key}>
-										{pattern.name}
+									<SelectItem
+										className="[&>span:last-child]:min-w-0"
+										key={pattern.key}
+										title={pattern.name}
+										value={pattern.key}
+									>
+										<span className="flex items-baseline gap-2">
+											<span className="truncate">{pattern.name}</span>{" "}
+											{pattern.archived && (
+												<span className="shrink-0 text-muted-foreground text-xs">
+													Archived
+												</span>
+											)}
+										</span>
 									</SelectItem>
 								))}
 							</SelectGroup>
@@ -132,7 +171,11 @@ function PatternPicker({
 				</SelectContent>
 			</Select>
 			{chosen && (
-				<p className="whitespace-pre-line text-muted-foreground text-sm">
+				<p
+					className="wrap-anywhere max-h-24 overflow-y-auto whitespace-pre-line text-muted-foreground text-sm"
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: a long description scrolls, and a scrolling region has to take focus to be reachable by keyboard
+					tabIndex={0}
+				>
 					{chosen.description || "This pattern has no description."}
 				</p>
 			)}
@@ -149,6 +192,7 @@ export function StartFromSection({
 	disabled,
 	onPatternChange,
 	onStartChange,
+	patternError,
 	patternKey,
 	start,
 }: StartFromSectionProps) {
@@ -186,13 +230,21 @@ export function StartFromSection({
 				))}
 			</RadioGroup>
 			{start === "pattern" && (
-				<PatternPicker
-					choices={choices}
-					disabled={disabled}
-					onPatternChange={onPatternChange}
-					onRetry={() => onStartChange("pattern")}
-					patternKey={patternKey}
-				/>
+				<div className="space-y-2">
+					<PatternPicker
+						choices={choices}
+						disabled={disabled}
+						onPatternChange={onPatternChange}
+						onRetry={() => onStartChange("pattern")}
+						patternError={patternError}
+						patternKey={patternKey}
+					/>
+					{patternError && (
+						<p className="text-destructive text-sm" id={PATTERN_ERROR_ID}>
+							{patternError.message}
+						</p>
+					)}
+				</div>
 			)}
 		</div>
 	);

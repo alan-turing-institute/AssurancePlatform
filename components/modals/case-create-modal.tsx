@@ -39,9 +39,10 @@ export const CaseCreateModal = () => {
 		errors,
 		loading,
 		openCase,
+		patternError,
 		patternKey,
 		pending,
-		setPatternKey,
+		selectPattern,
 		start,
 	} = useCaseCreate({ onClose: createCaseModal.onClose });
 
@@ -68,7 +69,11 @@ export const CaseCreateModal = () => {
 
 	return (
 		<Modal
-			description="Choose how to start, then enter a name and description."
+			description={
+				pending
+					? "Your case has been created from the pattern."
+					: "Choose how to start, then enter a name and description."
+			}
 			isOpen={createCaseModal.isOpen}
 			onClose={close}
 			title="Create New Assurance Case"
@@ -95,8 +100,9 @@ export const CaseCreateModal = () => {
 								<StartFromSection
 									choices={choices}
 									disabled={loading}
-									onPatternChange={setPatternKey}
+									onPatternChange={selectPattern}
 									onStartChange={changeStart}
+									patternError={patternError}
 									patternKey={patternKey}
 									start={start}
 								/>
@@ -146,6 +152,7 @@ export const CaseCreateModal = () => {
 									<Button
 										disabled={loading}
 										onClick={(e) => handleCancel(e)}
+										type="button"
 										variant="outline"
 									>
 										Cancel
