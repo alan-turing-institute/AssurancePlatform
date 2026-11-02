@@ -21,9 +21,14 @@ A case has `STANDARD` or `ADVANCED` mode. Its current publishing states are `DRA
 
 A case also has a `kind`: `CASE` for an ordinary case, or `PATTERN` for a reusable pattern that cases are started from.
 A pattern is a row of the same table, with the same elements and permissions as any other case, and every case that existed before kinds were added is a `CASE`.
-`sourcePatternId` names the `PATTERN` case that a case was started from.
-It is empty unless server code sets it when the case is created, and the database clears it if the pattern is deleted permanently.
+`sourcePatternId` records the case that a case was started from, which was a pattern at the time; that case may have been converted back to an ordinary case since.
+It is empty unless server code sets it when the case is created, and the database clears it if the source case is deleted permanently.
 `listUserCases` returns ordinary cases only, so a pattern does not appear in the dashboard list or in the integrations access form, and the away goal and module picker leaves out patterns shared with the user.
+`listUserPatterns` returns the patterns the user owns or has been given directly, for the My Patterns page.
+A case changes kind only through `convertCaseKind` in `lib/services/case-kind-service.ts`, which needs `ADMIN` permission.
+The kind is not part of the ordinary case-update schema, which anyone with `EDIT` permission can reach.
+One conditional update does the conversion and changes a row only for a case that is not in the trash, is a draft and has no published copy, live or archived.
+The conversion changes nothing else: elements, access grants, plugin data and integration grants stay as they are.
 
 An element has two placeholder columns, `isPlaceholder` and `placeholderHint`.
 `isPlaceholder` marks an element that is to be filled in when a case is started from a pattern, and is false by default.

@@ -22,6 +22,7 @@ import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import { ErrorBoundary } from "../ui/error-boundary";
+import { CaseKindMenu } from "./case-kind-menu";
 import CaseNotes from "./case-notes";
 import { CasePanelButtons } from "./case-panel-buttons";
 import { CaseSettingsPopover } from "./case-settings-popover";
@@ -248,19 +249,22 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						<CaseSettingsPopover />
 					</span>
 					{assuranceCase && assuranceCase.permissions === "manage" && (
-						<ActionTooltip label="Delete">
-							<Button
-								className="rounded-full p-3"
-								data-testid="toolbar-delete"
-								onClick={() => setDeleteOpen(true)}
-								size="icon"
-								type="button"
-								variant="destructive"
-							>
-								<Trash2 className="h-5 w-5" />
-								<span className="sr-only">Delete</span>
-							</Button>
-						</ActionTooltip>
+						<>
+							<CaseKindMenu />
+							<ActionTooltip label="Delete">
+								<Button
+									className="rounded-full p-3"
+									data-testid="toolbar-delete"
+									onClick={() => setDeleteOpen(true)}
+									size="icon"
+									type="button"
+									variant="destructive"
+								>
+									<Trash2 className="h-5 w-5" />
+									<span className="sr-only">Delete</span>
+								</Button>
+							</ActionTooltip>
+						</>
 					)}
 				</div>
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />

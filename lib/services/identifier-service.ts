@@ -475,10 +475,19 @@ export async function resetIdentifiers(
 		{ timeout: 30_000, maxWait: 10_000 }
 	);
 
-	// Emit SSE event for real-time updates
-	// Note: Don't pass userId to ensure the triggering user also receives the event
-	// (the frontend doesn't update optimistically for reset identifiers)
-	emitSSEEvent("case:updated", caseId, { action: "identifiers-reset" });
+	// Emit SSE event for real-time updates. Every viewer's canvas reads the case
+	// again after it, the acting user's included (the page does not update
+	// optimistically for a reset); `userId` only stops the acting user being
+	// shown a notice about their own action.
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { username: true },
+	});
+	emitSSEEvent("case:updated", caseId, {
+		action: "identifiers-reset",
+		userId,
+		username: user?.username ?? "Someone",
+	});
 
 	return { data: null };
 }

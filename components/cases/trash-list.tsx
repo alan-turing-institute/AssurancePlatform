@@ -13,9 +13,11 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatShortDate } from "@/lib/date";
 import { logger } from "@/lib/logger";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +29,8 @@ export interface TrashedCase {
 	deletedAt: string;
 	description: string | null;
 	id: string;
+	/** CASE for an ordinary case, PATTERN for a pattern. */
+	kind: CaseKind;
 	name: string;
 }
 
@@ -182,7 +186,12 @@ export function TrashList({ cases }: TrashListProps) {
 						{cases.map((caseItem) => (
 							<tr key={caseItem.id}>
 								<td className="w-full max-w-0 py-4 pr-3 pl-4 font-medium text-foreground text-sm sm:w-auto sm:max-w-none sm:pl-0">
-									<div>{caseItem.name}</div>
+									<div className="flex items-center gap-2">
+										{caseItem.name}
+										{caseItem.kind === "PATTERN" && (
+											<Badge variant="secondary">Pattern</Badge>
+										)}
+									</div>
 									<div className="mt-1 text-muted-foreground text-xs sm:hidden">
 										Deleted {formatShortDate(caseItem.deletedAt)}
 									</div>

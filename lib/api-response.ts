@@ -186,6 +186,13 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^The case changed while you were saving\. Try again\.$/,
 		factory: conflict,
 	},
+	// `publish-service.ts`'s `publishAssuranceCase`: a conversion between a
+	// case and a pattern committed while the first publish was being written,
+	// so nothing was published (409).
+	{
+		pattern: /^The case changed while it was being published\. Try again\.$/,
+		factory: conflict,
+	},
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
 	// outside the allowed set, or one whose content signature doesn't match
 	// what was declared (AP-QA-007), is a validation failure (400), not the

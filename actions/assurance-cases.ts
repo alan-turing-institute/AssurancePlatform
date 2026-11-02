@@ -6,6 +6,7 @@ import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import { validateInput } from "@/lib/validation/input-validation";
 
 interface AssuranceCase {
@@ -13,6 +14,7 @@ interface AssuranceCase {
 	description?: string;
 	id: number | string;
 	isDemo?: boolean;
+	kind?: CaseKind;
 	name: string;
 	owner?: number | string;
 	published?: boolean;

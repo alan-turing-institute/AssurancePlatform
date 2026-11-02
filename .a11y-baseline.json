@@ -39,6 +39,13 @@
     },
     "cls": 0
   },
+  "/dashboard/patterns": {
+    "violations": {
+      "color-contrast": 4,
+      "list": 2
+    },
+    "cls": 0
+  },
   "/dashboard/settings": {
     "violations": {
       "color-contrast": 8,
