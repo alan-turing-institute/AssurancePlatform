@@ -9,7 +9,7 @@ What differs is where it appears: a pattern is left out of **My Assurance Cases*
 
 ## How a pattern looks in the editor
 
-When you open a pattern, a bar under the header reads "This is a pattern."
+When you open a pattern, a small notice at the top left of the canvas reads "This is a pattern."
 Everything else in the editor works as it does for a case.
 
 ## Convert a case to a pattern, and back
@@ -25,7 +25,7 @@ People with View, Comment or Edit access do not see it, and the platform refuses
 Choosing the item opens a confirmation dialog.
 The dialog states:
 
-- how many people and teams the case is shared with, all of whom will see the new kind;
+- how many other people (not counting you) and teams the case is shared with, all of whom will see the new kind;
 - that health plugin checks and integration access grants stay attached to it;
 - how many other cases cite it through away goals or modules;
 - that no copy is kept.
@@ -63,16 +63,7 @@ A line at the top tells you how to make a pattern: start a blank pattern from th
 **Shared With Me** and **Trash** list patterns together with cases, so the **Pattern** badge is how you tell them apart there.
 Restoring a pattern from Trash returns it to **My Patterns**.
 
-## Document export presets
-
-The case share and export dialog offers document export presets.
-The presets include a full report, summary and evidence list.
-They control which sections and rendering layout appear in an exported document; they do not add claims or evidence to a working case.
-Choose the preset that suits the intended reader, then review the resulting file.
-An evidence list is a way to present what the case already contains, not a judgement about evidence quality.
-
 ## Limits and code location
 
 `lib/services/case-kind-service.ts` holds the conversion, the read behind the confirmation dialog and the My Patterns list, and `actions/case-kind.ts` exposes them to the interface.
 `components/cases/case-kind-menu.tsx`, `components/cases/convert-case-kind-dialog.tsx` and `components/cases/pattern-banner.tsx` draw the menu item, the dialog and the banner, and `app/(authenticated)/dashboard/patterns/page.tsx` is the My Patterns page.
-Document presets are in `components/modals/_share-modal/document-export-section.tsx`.
