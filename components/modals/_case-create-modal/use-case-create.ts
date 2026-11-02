@@ -231,6 +231,12 @@ export function useCaseCreate({
 	};
 
 	const selectPattern = (key: string) => {
+		// The picker has no empty choice. The select reports an empty key when
+		// the chosen entry changes to one it has not registered yet, as happens
+		// when the loaded list replaces the preset with its own entry for it.
+		if (!key) {
+			return;
+		}
 		setPatternKey(key);
 		setPatternError(null);
 	};
