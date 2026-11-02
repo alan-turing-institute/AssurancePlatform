@@ -152,7 +152,9 @@ const CaseList = ({ assuranceCases, showCreate = false }: CaseListProps) => {
 							aria-hidden="true"
 							className="-ml-0.5 h-5 w-5 md:mr-1.5"
 						/>
-						<span className="sr-only md:not-sr-only">Import File</span>
+						<span className="sr-only md:not-sr-only md:whitespace-nowrap">
+							Import File
+						</span>
 					</Button>
 				</div>
 			</div>

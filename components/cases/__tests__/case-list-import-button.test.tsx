@@ -24,8 +24,13 @@ describe("the Import File button in the case list", () => {
 		expect(button).toContainElement(label);
 		// jsdom applies no stylesheet, so assert the classes: the label is
 		// visually hidden below md rather than removed from layout, and it is
-		// shown as ordinary text from md up.
-		expect(label).toHaveClass("sr-only", "md:not-sr-only");
+		// shown as ordinary text from md up, on one line (not-sr-only resets
+		// white-space to normal, so nowrap is restored from md).
+		expect(label).toHaveClass(
+			"sr-only",
+			"md:not-sr-only",
+			"md:whitespace-nowrap"
+		);
 		expect(label).not.toHaveClass("hidden");
 	});
 });
