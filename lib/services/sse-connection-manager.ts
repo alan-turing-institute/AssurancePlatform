@@ -39,6 +39,8 @@ interface SSEConnection {
 	controller: ReadableStreamDefaultController<Uint8Array>;
 	createdAt: Date;
 	id: string;
+	/** Runs once, when the connection is removed by any route to removal. */
+	onRemove?: () => void;
 	userId: string;
 }
 
@@ -53,13 +55,16 @@ class SSEConnectionManager {
 	private readonly encoder = new TextEncoder();
 
 	/**
-	 * Adds a new SSE connection for a case.
+	 * Adds a new SSE connection for a case. `onRemove` runs once when the
+	 * connection leaves the manager, whether the client closed it, the server
+	 * ended it or a write to it failed.
 	 */
 	addConnection(
 		caseId: string,
 		connectionId: string,
 		controller: ReadableStreamDefaultController<Uint8Array>,
-		userId: string
+		userId: string,
+		onRemove?: () => void
 	): void {
 		if (!this.connections.has(caseId)) {
 			this.connections.set(caseId, new Map());
@@ -72,6 +77,7 @@ class SSEConnectionManager {
 				controller,
 				userId,
 				createdAt: new Date(),
+				onRemove,
 			});
 		}
 
@@ -83,23 +89,30 @@ class SSEConnectionManager {
 	}
 
 	/**
-	 * Removes an SSE connection.
+	 * Removes an SSE connection and runs its `onRemove` callback. Removing a
+	 * connection that is not registered does nothing, so every path that ends a
+	 * stream can call this without checking whether another already has.
 	 */
 	removeConnection(caseId: string, connectionId: string): void {
 		const caseConnections = this.connections.get(caseId);
-		if (caseConnections) {
-			caseConnections.delete(connectionId);
-			log.info("SSE connection removed", {
-				connectionId,
-				caseId,
-				remainingConnections: caseConnections.size,
-			});
-
-			// Clean up empty case entries
-			if (caseConnections.size === 0) {
-				this.connections.delete(caseId);
-			}
+		const connection = caseConnections?.get(connectionId);
+		if (!(caseConnections && connection)) {
+			return;
 		}
+
+		caseConnections.delete(connectionId);
+		log.info("SSE connection removed", {
+			connectionId,
+			caseId,
+			remainingConnections: caseConnections.size,
+		});
+
+		// Clean up empty case entries
+		if (caseConnections.size === 0) {
+			this.connections.delete(caseId);
+		}
+
+		connection.onRemove?.();
 	}
 
 	/**

@@ -23,14 +23,22 @@ function generateConnectionId(): string {
 	return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
 /**
  * GET /api/cases/[id]/events
  *
  * Server-Sent Events endpoint for real-time case updates.
  * Clients connect here to receive live updates when the case changes.
+ *
+ * Every way a stream ends (the client closing it, the request aborting, a
+ * failed write, the server closing it) removes its connection from the
+ * manager, which clears the stream's heartbeat timer. At each heartbeat the
+ * user's VIEW access to the case is checked again, and the stream is closed
+ * once they no longer have it or the case is trashed or deleted.
  */
 export async function GET(
-	_request: Request,
+	request: Request,
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const { id: caseId } = await params;
@@ -54,15 +62,67 @@ export async function GET(
 	const connectionId = generateConnectionId();
 
 	// Create the SSE stream
-	const stream = new ReadableStream({
+	const stream = new ReadableStream<Uint8Array>({
 		start(controller) {
-			// Register the connection
+			if (request.signal.aborted) {
+				controller.close();
+				return;
+			}
+
+			// Ends the stream from the server side. Removing the connection also
+			// clears the heartbeat timer, and does nothing if it is already gone.
+			const endStream = () => {
+				sseConnectionManager.removeConnection(caseId, connectionId);
+				try {
+					controller.close();
+				} catch {
+					// The stream is already closed or errored.
+				}
+			};
+
+			// Re-checks access without holding up the heartbeat. A check that is
+			// still running when the next heartbeat falls due is not repeated, and
+			// a failed check keeps the stream open so that a passing database
+			// error does not close every viewer's stream.
+			let checkingAccess = false;
+			const endStreamIfAccessLost = async () => {
+				if (checkingAccess) {
+					return;
+				}
+				checkingAccess = true;
+				try {
+					if (!(await validateCaseAccess(userId, caseId))) {
+						log.info("Closing stream: case access lost", {
+							connectionId,
+							caseId,
+						});
+						endStream();
+					}
+				} catch (error) {
+					log.warn("Could not re-check case access; keeping stream open", {
+						connectionId,
+						caseId,
+						error,
+					});
+				} finally {
+					checkingAccess = false;
+				}
+			};
+
+			const heartbeatInterval = setInterval(() => {
+				sseConnectionManager.sendHeartbeat(caseId);
+				endStreamIfAccessLost();
+			}, HEARTBEAT_INTERVAL_MS);
+
+			// Register the connection; its removal clears the heartbeat timer
 			sseConnectionManager.addConnection(
 				caseId,
 				connectionId,
 				controller,
-				userId
+				userId,
+				() => clearInterval(heartbeatInterval)
 			);
+			request.signal.addEventListener("abort", endStream, { once: true });
 
 			// Send initial connection event
 			const encoder = new TextEncoder();
@@ -74,21 +134,6 @@ export async function GET(
 				})}\n\n`
 			);
 			controller.enqueue(connectEvent);
-
-			// Set up heartbeat interval (every 30 seconds)
-			const heartbeatInterval = setInterval(() => {
-				sseConnectionManager.sendHeartbeat(caseId);
-			}, 30_000);
-
-			// Clean up on close
-			const cleanup = () => {
-				clearInterval(heartbeatInterval);
-				sseConnectionManager.removeConnection(caseId, connectionId);
-			};
-
-			// Store cleanup function for later use
-			// Note: The actual cleanup happens when the stream is cancelled
-			(controller as unknown as { cleanup: () => void }).cleanup = cleanup;
 		},
 		cancel() {
 			// This is called when the client disconnects
