@@ -48,6 +48,17 @@ type TransactionClient = TransactionCallback extends (
  */
 class CaseTrashedDuringTransactionError extends Error {}
 
+/**
+ * Thrown from inside a first-publish transaction when the case is still out of
+ * Trash but is no longer of the kind the snapshot was composed from — a
+ * conversion committed between the read and the write. The snapshot is of the
+ * other kind, so nothing is published and the caller is asked to try again.
+ */
+class CaseKindChangedDuringPublishError extends Error {}
+
+const CASE_CHANGED_WHILE_PUBLISHING =
+	"The case changed while it was being published. Try again.";
+
 /** The five publish-state fields, reset to their draft values — shared by `removePublishedCopies` and `case-trash-service.ts`'s `removeArchivedCopy`. */
 export const DRAFT_PUBLISH_FIELDS = {
 	published: false,
@@ -398,6 +409,9 @@ async function publishSnapshot(
 		if (error instanceof CaseTrashedDuringTransactionError) {
 			return { error: "Case not found" };
 		}
+		if (error instanceof CaseKindChangedDuringPublishError) {
+			return { error: CASE_CHANGED_WHILE_PUBLISHING };
+		}
 		log.error(failureMessage, { error });
 		return { error: failureMessage };
 	}
@@ -478,6 +492,7 @@ export async function publishAssuranceCase(
 			id: true,
 			name: true,
 			published: true,
+			kind: true,
 		},
 	});
 
@@ -504,6 +519,12 @@ export async function publishAssuranceCase(
 			// means the case was trashed in between; `publishSnapshot` maps that
 			// to "Case not found", and nothing about the published row is written.
 			//
+			// The same condition names the kind the snapshot was composed from, so
+			// a conversion that committed after that read leaves no matching row:
+			// the snapshot would be of the other kind. A second read tells the two
+			// causes apart — a case still out of Trash was converted, and the
+			// caller is asked to try again with nothing written.
+			//
 			// Generating the slug and creating the row must share this same
 			// transaction — otherwise a concurrent first-publish of a same-named
 			// case could observe the same "no collision yet" result and both try
@@ -512,7 +533,7 @@ export async function publishAssuranceCase(
 			// numeric-suffix behaviour ADR 0003 §6 promises).
 			prisma.$transaction(async (tx) => {
 				const updateResult = await tx.assuranceCase.updateMany({
-					where: { id: caseId, deletedAt: null },
+					where: { id: caseId, deletedAt: null, kind: assuranceCase.kind },
 					data: {
 						published: true,
 						publishedAt: now,
@@ -520,7 +541,13 @@ export async function publishAssuranceCase(
 					},
 				});
 				if (updateResult.count === 0) {
-					throw new CaseTrashedDuringTransactionError();
+					const current = await tx.assuranceCase.findUnique({
+						where: { id: caseId },
+						select: { deletedAt: true },
+					});
+					throw current && current.deletedAt === null
+						? new CaseKindChangedDuringPublishError()
+						: new CaseTrashedDuringTransactionError();
 				}
 				const slug = await generateUniqueSlug(assuranceCase.name, tx);
 				return await swapCurrentPublishedVersion(tx, {
