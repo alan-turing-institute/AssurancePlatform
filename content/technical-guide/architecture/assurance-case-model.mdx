@@ -11,13 +11,24 @@ An assurance case is a structured argument. `AssuranceCase` stores its identity 
 
 | Model | What it holds |
 | --- | --- |
-| `AssuranceCase` | Name, description, mode, creator, layout, publish status, deletion state and relations to elements and access grants |
-| `AssuranceElement` | Type, optional name, description, parent and case references, type-specific fields, assertion status and deletion state |
+| `AssuranceCase` | Name, description, kind, mode, creator, layout, publish status, deletion state, the pattern it was started from and relations to elements and access grants |
+| `AssuranceElement` | Type, optional name, description, parent and case references, type-specific fields, assertion status, placeholder marking and deletion state |
 | `CaseInformation` | Case metadata held separately from the element tree |
 | `EvidenceLink` | A many-to-many link from evidence to the claims it supports |
 | `Comment` | Internal discussion on case elements |
 
 A case has `STANDARD` or `ADVANCED` mode. Its current publishing states are `DRAFT` and `PUBLISHED`. `deletedAt` marks a case moved to trash. The creator is recorded for attribution and receives access through the permission rules; other users can gain access directly or through a team.
+
+A case also has a `kind`: `CASE` for an ordinary case, or `PATTERN` for a reusable pattern that cases are started from.
+A pattern is a row of the same table, with the same elements and permissions as any other case, and every case that existed before kinds were added is a `CASE`.
+`sourcePatternId` names the `PATTERN` case that a case was started from.
+It is empty unless server code sets it when the case is created, and the database clears it if the pattern is deleted permanently.
+`listUserCases` returns ordinary cases only, so a pattern does not appear in the dashboard list or in the integrations access form, and the away goal and module picker leaves out patterns shared with the user.
+
+An element has two placeholder columns, `isPlaceholder` and `placeholderHint`.
+`isPlaceholder` marks an element that is to be filled in when a case is started from a pattern, and is false by default.
+`placeholderHint` is optional guidance of up to 500 characters for whoever fills the element in.
+Neither column is carried in the export file.
 
 Elements use `parentId` to form the argument hierarchy. A root goal has no parent and can have the `TOP_LEVEL` role. Other elements can have the `SUPPORTING` role. `name` is nullable, so consumers must not assume it is present. `description` is the main text. `context` is an array on an element, and `assumption` and `justification` are optional fields. Evidence has a `urls` array; the single `url` field remains for compatibility and tracks its first URL. Both cases and elements can be soft deleted.
 
@@ -71,11 +82,21 @@ Machine formats keep the stored form: the export file, the Google Drive backup, 
 
 ### The export file
 
-A case export carries `"version": "1.1"` when the case holds a named entry or a reference, and `"version": "1.0"` otherwise.
-Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries.
+A case export carries `"version": "1.1"` when the case holds a named entry or a reference, or when the case is a pattern, and `"version": "1.0"` otherwise.
+`exportCase` makes that choice from one check, so anything else added to 1.1 extends it there.
+Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries and kinds.
 Import accepts both versions.
-A file that says `"1.0"` but holds a named entry is rejected with a message saying so.
+A file that says `"1.0"` but holds a named entry, or marks the case as a pattern, is rejected with a message saying so.
+A `"1.0"` file with `"kind": "CASE"` is accepted.
 The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry.
+
+The `case` object carries `"kind": "PATTERN"` when the case is a pattern.
+An ordinary case omits `kind`, so its file has the shape it always had, and a file without `kind` imports as an ordinary case.
+The nested and flat formats both accept `kind`, with the values `CASE` and `PATTERN`.
+
+`importCase` takes options that only server code sets.
+`kind` overrides the file's kind, `name` and `description` replace the file's, `sourcePatternId` records the pattern the new case was started from, and `markFromPattern` sets `fromPattern` on every element and clears `modifiedFromPattern`, because a case just started from a pattern has not yet been changed.
+No import route reads these from a request, and a `sourcePatternId` written inside a file is ignored.
 
 ## Access
 

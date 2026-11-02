@@ -7,7 +7,7 @@
     "version": {
       "type": "string",
       "enum": ["1.0", "1.1"],
-      "description": "Schema version identifier. \"1.1\" adds named context entries and references in element text"
+      "description": "Schema version identifier. \"1.1\" adds named context entries, references in element text and case.kind"
     },
     "exportedAt": {
       "type": "string",
@@ -26,6 +26,11 @@
         "description": {
           "type": "string",
           "description": "Description of the assurance case"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["CASE", "PATTERN"],
+          "description": "What the case is - CASE for an ordinary case, PATTERN for a reusable pattern that cases are started from. Omitted means CASE"
         }
       },
       "required": ["name", "description"],

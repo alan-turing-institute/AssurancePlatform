@@ -115,6 +115,12 @@ enum CaseMode {
   ADVANCED
 }
 
+/// What an assurance case row is: an ordinary CASE, or a reusable PATTERN that cases are started from.
+enum CaseKind {
+  CASE
+  PATTERN
+}
+
 /// DRAFT and PUBLISHED are the only two states now that the "Ready to
 /// Publish" intermediate step is retired (ADR 0003 §2). READY_TO_PUBLISH
 /// existed here until migration 20260716000000, which maps every existing
@@ -247,6 +253,9 @@ model AssuranceCase {
   // Mode
   mode            CaseMode              @default(STANDARD) /// STANDARD (simplified UI) or ADVANCED (full GSN notation)
 
+  // Kind
+  kind            CaseKind              @default(CASE) /// CASE (an ordinary case) or PATTERN (a reusable template that cases are started from)
+
   // Visual settings
   colourProfile   String                @default("default") @map("color_profile") /// Colour scheme for the case diagram
 
@@ -257,7 +266,7 @@ model AssuranceCase {
   layoutDirection String                @default("TB") @map("layout_direction") /// ELK layout direction: TB (top-bottom) or LR (left-right)
 
   // Pattern tracking
-  sourcePatternId String?               @map("source_pattern_id") /// If created from a pattern, the source pattern ID
+  sourcePatternId String?               @map("source_pattern_id") /// If started from a pattern, the ID of the PATTERN-kind case it was started from
 
   // Timestamps
   createdAt       DateTime              @default(now()) @map("created_at")
@@ -280,7 +289,8 @@ model AssuranceCase {
   createdBy       User                  @relation("CaseCreator", fields: [createdById], references: [id])
   markedReadyBy   User?                 @relation("CaseMarkedReady", fields: [markedReadyById], references: [id])
   deletedByUser   User?                 @relation("CaseDeleter", fields: [deletedById], references: [id])
-  sourcePattern   ArgumentPattern?      @relation(fields: [sourcePatternId], references: [id])
+  sourcePattern   AssuranceCase?        @relation("PatternDerivation", fields: [sourcePatternId], references: [id], onDelete: SetNull)
+  derivedCases    AssuranceCase[]       @relation("PatternDerivation")
   elements        AssuranceElement[]
   userPermissions CasePermission[]
   teamPermissions CaseTeamPermission[]
@@ -305,6 +315,7 @@ model AssuranceCase {
   @@index([createdById, publishStatus], map: "assurance_cases_created_by_status_idx")
   @@index([deletedAt], map: "assurance_cases_deleted_at_idx")
   @@index([createdById, deletedAt], map: "assurance_cases_owner_deleted_idx")
+  @@index([sourcePatternId])
   @@map("assurance_cases")
 }
 
@@ -422,6 +433,8 @@ model AssuranceElement {
   // Pattern tracking
   fromPattern         Boolean          @default(false) @map("from_pattern") /// True if element came from a pattern template
   modifiedFromPattern Boolean          @default(false) @map("modified_from_pattern") /// True if element was modified after pattern application
+  isPlaceholder       Boolean          @default(false) @map("is_placeholder") /// True if the element is a placeholder to be filled in when a case is started from a pattern
+  placeholderHint     String?          @map("placeholder_hint") @db.VarChar(500) /// Guidance shown to whoever fills in a placeholder element
 
   // Sandbox/draft status
   inSandbox           Boolean          @default(false) @map("in_sandbox") /// True if element is in draft/sandbox mode
@@ -613,7 +626,6 @@ model ArgumentPattern {
   elements        PatternElement[]
   userPermissions PatternPermission[]
   teamPermissions PatternTeamPermission[]
-  derivedCases    AssuranceCase[]
 
   @@map("argument_patterns")
 }

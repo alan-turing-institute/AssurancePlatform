@@ -7,10 +7,12 @@ import { prisma } from "@/lib/prisma";
 import type {
 	AssertionStatus,
 	CaseExportNested,
+	CaseKind,
 	ElementRole,
 	ElementType,
 	ExportComment,
 	ModuleEmbedType,
+	TreeNode,
 } from "@/lib/schemas/case-export";
 import {
 	buildTreeFromElements,
@@ -24,6 +26,16 @@ export interface ExportOptions {
 }
 
 export type ExportResult = { data: CaseExportNested } | { error: string };
+
+/**
+ * Whether a case uses anything that exists only from export version 1.1: a
+ * named context entry or a reference to one, or being a pattern. The version
+ * is chosen from this one check, so a feature added to 1.1 later extends it
+ * here.
+ */
+function usesVersion11Features(tree: TreeNode, kind: CaseKind): boolean {
+	return kind === "PATTERN" || caseUsesDefinedTerms(tree);
+}
 
 /**
  * Validates user has VIEW permission on the case.
@@ -291,16 +303,18 @@ export async function exportCase(
 		const tree = buildTreeFromElements(elements);
 
 		// Build the nested export. Version "1.1" is written only for a case that
-		// holds a named context entry or a reference to one; any other case is
+		// uses something 1.1 added (see usesVersion11Features); any other case is
 		// still written as "1.0", so its file stays readable by a TEA that
-		// predates named entries.
+		// predates those features. `case.kind` is written only for a pattern, so
+		// an ordinary case's file keeps the shape it always had.
 		// exportedAt uses the case's updatedAt for conflict detection during batch updates
 		const exportData: CaseExportNested = {
-			version: caseUsesDefinedTerms(tree) ? "1.1" : "1.0",
+			version: usesVersion11Features(tree, caseData.kind) ? "1.1" : "1.0",
 			exportedAt: caseData.updatedAt.toISOString(),
 			case: {
 				name: caseData.name,
 				description: caseData.description,
+				...(caseData.kind === "PATTERN" ? { kind: caseData.kind } : {}),
 			},
 			tree,
 		};

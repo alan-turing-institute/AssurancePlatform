@@ -5,6 +5,7 @@
  * and consumed by the frontend. IDs are strings (UUIDs from Prisma).
  */
 
+import type { CaseKind } from "@/lib/schemas/case-export";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
 import type { CommentResponse } from "./comment-service";
 
@@ -227,6 +228,8 @@ export interface AssuranceCaseResponse {
 	isDemo?: boolean;
 	/** Whether the caller is the case's owner, rather than a collaborator with delete rights (both map to `permissions: "manage"`) */
 	isOwner?: boolean;
+	/** CASE for an ordinary case, PATTERN for a reusable pattern */
+	kind?: CaseKind;
 	/** ELK layout direction preference: TB (top-bottom) or LR (left-right) */
 	layoutDirection?: "TB" | "LR";
 	/** When the case was marked as ready to publish */
