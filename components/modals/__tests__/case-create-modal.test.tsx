@@ -6,6 +6,7 @@ import {
 	createCaseFromPattern,
 	fetchViewablePatterns,
 } from "@/actions/case-from-pattern";
+import type { PublishedPatternPreset } from "@/hooks/modal-hooks";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import {
 	mockPush,
@@ -19,9 +20,14 @@ import { CaseCreateModal } from "../case-create-modal";
  * is checked is which one the dialog calls, with what, and where it goes next.
  */
 const mockOnClose = vi.fn();
+const mockModal: { preset?: PublishedPatternPreset } = {};
 
 vi.mock("@/hooks/modal-hooks", () => ({
-	useCreateCaseModal: () => ({ isOpen: true, onClose: mockOnClose }),
+	useCreateCaseModal: () => ({
+		isOpen: true,
+		onClose: mockOnClose,
+		preset: mockModal.preset,
+	}),
 }));
 
 vi.mock("@/actions/assurance-cases", () => ({
@@ -67,6 +73,7 @@ async function startFromPattern(user: ReturnType<typeof userEvent.setup>) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	resetNavigationMocks();
+	mockModal.preset = undefined;
 	vi.mocked(createAssuranceCase).mockResolvedValue({
 		success: true,
 		data: { id: "new-case" },
@@ -245,6 +252,94 @@ describe("CaseCreateModal", () => {
 		expect(
 			screen.getByRole("option", { name: "Published pattern Archived" })
 		).toBeVisible();
+	});
+
+	it("opened with a published pattern, shows it chosen before the list loads and starts a case from it", async () => {
+		const user = userEvent.setup();
+		mockModal.preset = {
+			slug: "a-pattern",
+			title: "Published pattern",
+			description: "What the page says it is for",
+		};
+		vi.mocked(fetchViewablePatterns).mockReturnValue(
+			new Promise(() => undefined)
+		);
+		vi.mocked(createCaseFromPattern).mockResolvedValue({
+			success: true,
+			data: { id: "copied-case", warnings: [] },
+		});
+		render(<CaseCreateModal />);
+
+		expect(screen.getByRole("radio", { name: A_PATTERN })).toBeChecked();
+		expect(
+			await screen.findByRole("combobox", { name: "Pattern" })
+		).not.toHaveTextContent("Choose a pattern");
+		expect(screen.getByText("What the page says it is for")).toBeVisible();
+		await fillDetails(user);
+		await user.click(screen.getByRole("button", { name: "Submit" }));
+
+		await waitFor(() =>
+			expect(mockPush).toHaveBeenCalledWith("/case/copied-case")
+		);
+		expect(createCaseFromPattern).toHaveBeenCalledWith(
+			{ publishedSlug: "a-pattern" },
+			"My new case",
+			"About the new case"
+		);
+	});
+
+	it("adds the preset pattern to a list that lacks it, and lets another pattern be chosen", async () => {
+		const user = userEvent.setup();
+		mockModal.preset = {
+			slug: "a-pattern",
+			title: "Published pattern",
+			description: "What the page says it is for",
+		};
+		vi.mocked(fetchViewablePatterns).mockResolvedValue([OWN_PATTERN]);
+		vi.mocked(createCaseFromPattern).mockResolvedValue({
+			success: true,
+			data: { id: "copied-case", warnings: [] },
+		});
+		render(<CaseCreateModal />);
+
+		const picker = await screen.findByRole("combobox", { name: "Pattern" });
+		await user.click(picker);
+		await screen.findByRole("option", { name: "Own pattern" });
+		expect(
+			screen.getByRole("option", { name: "Published pattern" })
+		).toBeVisible();
+		await user.click(screen.getByRole("option", { name: "Own pattern" }));
+		expect(screen.getByText("What the own pattern is for")).toBeVisible();
+		await fillDetails(user);
+		await user.click(screen.getByRole("button", { name: "Submit" }));
+
+		await waitFor(() => expect(createCaseFromPattern).toHaveBeenCalled());
+		expect(createCaseFromPattern).toHaveBeenCalledWith(
+			{ patternCaseId: "pattern-1" },
+			"My new case",
+			"About the new case"
+		);
+	});
+
+	it("uses the list's own entry for the preset pattern when the list has it", async () => {
+		const user = userEvent.setup();
+		mockModal.preset = {
+			slug: "a-pattern",
+			title: "Published pattern",
+			description: "What the page says it is for",
+		};
+		vi.mocked(fetchViewablePatterns).mockResolvedValue([
+			{ ...PUBLISHED_PATTERN, description: "What the list says it is for" },
+		]);
+		render(<CaseCreateModal />);
+
+		expect(
+			await screen.findByText("What the list says it is for")
+		).toBeVisible();
+		await user.click(screen.getByRole("combobox", { name: "Pattern" }));
+		expect(
+			screen.getAllByRole("option", { name: "Published pattern" })
+		).toHaveLength(1);
 	});
 
 	it("says so when the patterns cannot be loaded and again when there are none", async () => {

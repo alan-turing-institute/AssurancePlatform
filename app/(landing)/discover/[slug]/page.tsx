@@ -7,7 +7,7 @@ import { SanitisedHtml } from "@/components/cases/sanitised-html";
 import { formatShortDate } from "@/lib/date";
 import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import { ArchivedOnNotice } from "../_components/archived-status";
-import DownloadPublishedItemButton from "../_components/download-published-item-button";
+import FrozenSnapshotSection from "../_components/frozen-snapshot-section";
 import PublishableItemTypeBadge from "../_components/publishable-item-type-badge";
 
 interface DiscoverItemPageProps {
@@ -31,7 +31,7 @@ export async function generateMetadata({
  * ruling, 2026-08-11): any path that isn't a real, currently-published
  * slug — including a legacy numeric id — resolves through
  * `fetchPublishedItemBySlug`'s `notFound()` to the standard 404, with no
- * redirect.
+ * redirect. The page of a published pattern also offers "Use this pattern".
  */
 const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 	const { slug } = await params;
@@ -141,19 +141,7 @@ const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 								<p>No description has been provided for this item.</p>
 							)}
 
-							<div className="pt-6">
-								<h3 className="font-semibold text-foreground text-lg">
-									Frozen snapshot
-								</h3>
-								<p className="mt-2 text-sm">
-									Download the full, point-in-time snapshot published for this
-									item, including its argument structure.
-								</p>
-								<DownloadPublishedItemButton
-									content={JSON.stringify(item.content)}
-									title={item.title}
-								/>
-							</div>
+							<FrozenSnapshotSection item={item} />
 						</div>
 					</div>
 				</div>

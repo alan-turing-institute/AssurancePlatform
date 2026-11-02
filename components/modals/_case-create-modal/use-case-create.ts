@@ -1,11 +1,12 @@
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	createCaseFromPattern,
 	fetchViewablePatterns,
 } from "@/actions/case-from-pattern";
+import type { PublishedPatternPreset } from "@/hooks/modal-hooks";
 import type { ActionResult } from "@/lib/errors";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import type {
@@ -63,6 +64,37 @@ function chosenPattern(
 		: undefined;
 }
 
+/** The picker entry for a published pattern the dialog was opened with. */
+function presetPattern(preset: PublishedPatternPreset): ViewablePattern {
+	return {
+		key: `published:${preset.slug}`,
+		name: preset.title,
+		description: preset.description,
+		origin: "published",
+		source: { publishedSlug: preset.slug },
+	};
+}
+
+/**
+ * The picker's choices with the preset pattern among them. Before the list
+ * has loaded, or when it cannot be loaded, the preset is the only choice; once
+ * it has loaded, the list's own entry for the pattern is used when it has one.
+ */
+function withPreset(
+	choices: PatternChoices,
+	preset: ViewablePattern | undefined
+): PatternChoices {
+	if (!preset) {
+		return choices;
+	}
+	if (choices.status !== "ready") {
+		return { status: "ready", patterns: [preset] };
+	}
+	return choices.patterns.some((pattern) => pattern.key === preset.key)
+		? choices
+		: { status: "ready", patterns: [...choices.patterns, preset] };
+}
+
 async function submitNewCase(
 	start: StartFrom,
 	chosen: ViewablePattern | undefined,
@@ -83,9 +115,17 @@ async function submitNewCase(
 /**
  * State and actions of the new-case dialog: which start is chosen, the
  * patterns the picker offers, and creating the case. `onClose` closes the
- * dialog; the hook clears its own state whenever the dialog closes.
+ * dialog; the hook clears its own state whenever the dialog closes. A
+ * `preset` is a published pattern the dialog opens with chosen: it starts from
+ * "a pattern" with that pattern picked, until the user changes either.
  */
-export function useCaseCreate({ onClose }: { onClose: () => void }) {
+export function useCaseCreate({
+	onClose,
+	preset,
+}: {
+	onClose: () => void;
+	preset?: PublishedPatternPreset;
+}) {
 	const router = useRouter();
 	const { data: session } = useSession();
 
@@ -94,12 +134,21 @@ export function useCaseCreate({ onClose }: { onClose: () => void }) {
 	// Shown by the picker rather than with the other errors, because it is the
 	// picker that needs attention.
 	const [patternError, setPatternError] = useState<PatternError | null>(null);
-	const [start, setStart] = useState<StartFrom>("blank-case");
-	const [choices, setChoices] = useState<PatternChoices>({ status: "idle" });
-	const [patternKey, setPatternKey] = useState<string>();
+	// What the user has chosen; until they choose, the preset (if any) decides.
+	const [pickedStart, setStart] = useState<StartFrom>();
+	const [loaded, setChoices] = useState<PatternChoices>({ status: "idle" });
+	const [pickedKey, setPatternKey] = useState<string>();
 	// A case started from a pattern that had to leave references out stops
 	// here, so the user sees what was left out before opening the case.
 	const [pending, setPending] = useState<PendingCase | null>(null);
+
+	const presetChoice = useMemo(
+		() => (preset ? presetPattern(preset) : undefined),
+		[preset]
+	);
+	const start = pickedStart ?? (preset ? "pattern" : "blank-case");
+	const choices = withPreset(loaded, presetChoice);
+	const patternKey = pickedKey ?? presetChoice?.key;
 
 	const loadPatterns = useCallback(async () => {
 		setChoices({ status: "loading" });
@@ -113,17 +162,24 @@ export function useCaseCreate({ onClose }: { onClose: () => void }) {
 		}
 	}, []);
 
+	// The preset is shown at once; the rest of the list follows.
+	useEffect(() => {
+		if (preset) {
+			loadPatterns();
+		}
+	}, [preset, loadPatterns]);
+
 	const changeStart = (next: StartFrom) => {
 		setStart(next);
 		setErrors([]);
 		setPatternError(null);
-		if (next === "pattern" && choices.status !== "ready") {
+		if (next === "pattern" && loaded.status !== "ready") {
 			loadPatterns();
 		}
 	};
 
 	const reset = () => {
-		setStart("blank-case");
+		setStart(undefined);
 		setChoices({ status: "idle" });
 		setPatternKey(undefined);
 		setPending(null);
