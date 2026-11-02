@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
@@ -54,12 +55,18 @@ const SignInForm = () => {
 			});
 
 			if (result?.ok) {
-				// Redirect to original page or dashboard on successful sign-in
-				const redirectTo = searchParams.get("redirect") || "/dashboard";
+				// Return to the page that asked for sign-in. `redirect` is set by
+				// our own links and pages; `callbackUrl` is set by the auth proxy
+				// when it sends a signed-out visitor here (for example from an
+				// invitation link). Only a same-site path is followed.
+				const redirectTo = safeRedirectPath(
+					searchParams.get("redirect") || searchParams.get("callbackUrl")
+				);
 				// Use router.refresh() to update server state, then redirect
-				// This ensures the session is properly recognised before navigation
+				// This ensures the session is properly recognised before navigation.
+				// replace() keeps the sign-in page out of the browser history.
 				router.refresh();
-				router.push(redirectTo);
+				router.replace(redirectTo);
 			} else {
 				setLoading(false);
 				// Provide user-friendly error messages

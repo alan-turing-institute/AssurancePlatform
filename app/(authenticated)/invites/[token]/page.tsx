@@ -29,7 +29,7 @@ export default async function AcceptInvitePage({
 
 	const session = await getServerSession(authOptions);
 	if (!session?.user?.id) {
-		redirect(`/login?callbackUrl=/invites/${token}`);
+		redirect(`/login?redirect=/invites/${token}`);
 	}
 
 	return (
