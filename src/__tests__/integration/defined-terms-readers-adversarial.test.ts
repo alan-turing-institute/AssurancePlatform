@@ -270,13 +270,18 @@ describe("the export file", () => {
 			throw new Error(copy.error);
 		}
 		const copyPlain = toPlainCase(copy.data);
+		// The database does not fix the order of siblings, and changes it when its
+		// statistics are refreshed, so each node's children are compared in a fixed
+		// order.
 		const words = (node: typeof copyPlain.tree): unknown => ({
 			name: node.name,
 			description: node.description,
 			assumption: node.assumption ?? null,
 			justification: node.justification ?? null,
 			context: node.context ?? null,
-			children: node.children.map(words),
+			children: node.children
+				.map(words)
+				.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
 		});
 		expect(words(copyPlain.tree)).toEqual(words(original.plain.tree));
 		expect(copy.data.version).toBe("1.1");
