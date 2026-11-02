@@ -1,6 +1,10 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
+import type {
+	CaseExportV2,
+	CaseKind,
+	ElementV2,
+} from "@/lib/schemas/case-export";
 import { validateElementName } from "@/lib/schemas/element-validation";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
 import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
@@ -314,21 +318,31 @@ function buildIdMap(
 	return idMap;
 }
 
+/** What an import sets on the new case beyond the file's name and description. */
+interface NewCaseSettings {
+	/** Becomes the case's id; without one the database generates it. */
+	caseId?: string;
+	kind: CaseKind;
+	/** The pattern the case is started from; unset for an ordinary import. */
+	sourcePatternId?: string;
+}
+
 /**
- * Creates the case and grants ADMIN permission to the user. A given `caseId`
- * becomes the case's id; without one the database generates it.
+ * Creates the case and grants ADMIN permission to the user.
  */
 async function createCaseWithPermission(
 	tx: TransactionClient,
-	caseData: CaseExportV2["case"],
+	caseData: Pick<CaseExportV2["case"], "name" | "description">,
 	userId: string,
-	caseId?: string
+	settings: NewCaseSettings
 ): Promise<string> {
 	const newCase = await tx.assuranceCase.create({
 		data: {
-			id: caseId,
+			id: settings.caseId,
 			name: caseData.name,
 			description: caseData.description,
+			kind: settings.kind,
+			sourcePatternId: settings.sourcePatternId,
 			createdById: userId,
 		},
 	});
@@ -1065,8 +1079,10 @@ async function renumberIfDefeaterNamesNonConforming(
 	return "This case was imported from an older export with pre-GSN defeater names (e.g. P1.1 instead of CP1) — every identifier in the case has been renumbered to the current CP1/CG1/CE1 scheme.";
 }
 
-/** Options for `importCase` that only code reading a trusted file sets. */
+/** Options for `importCase`. Server code sets them; no request body does. */
 interface ImportCaseOptions {
+	/** Replaces the file's case description. */
+	description?: string;
 	/**
 	 * Keeps every element's id from the file and gives the new case this id,
 	 * instead of generating new ones. For seeding a case from a file held in
@@ -1074,6 +1090,21 @@ interface ImportCaseOptions {
 	 * No import route sets it.
 	 */
 	fixedIds?: { caseId: string };
+	/**
+	 * The case's kind. Without it the file's `case.kind` is used, and a file
+	 * without one makes an ordinary case.
+	 */
+	kind?: CaseKind;
+	/** Sets `fromPattern` on every element, whatever the file says. */
+	markFromPattern?: boolean;
+	/** Replaces the file's case name. */
+	name?: string;
+	/**
+	 * Records the PATTERN-kind case the new case is started from. Set by server
+	 * code that has already checked the importing user may read that pattern;
+	 * nothing in the file or the request body can set it.
+	 */
+	sourcePatternId?: string;
 }
 
 /**
@@ -1082,6 +1113,8 @@ interface ImportCaseOptions {
  * Accepts nested (v1.0 and v1.1) and flat (v2.0) formats.
  * The importing user becomes the owner with ADMIN permission.
  * Every element and the case get new ids unless `options.fixedIds` is given.
+ * The other options set the new case's kind, name, description and source
+ * pattern, and mark its elements as coming from a pattern.
  */
 export async function importCase(
 	userId: string,
@@ -1099,6 +1132,20 @@ export async function importCase(
 	}
 
 	const v2Data = processed.data;
+
+	// What the new case takes from the options rather than from the file.
+	const caseData = {
+		name: options.name ?? v2Data.case.name,
+		description: options.description ?? v2Data.case.description,
+	};
+	const caseSettings: NewCaseSettings = {
+		caseId: options.fixedIds?.caseId,
+		kind: options.kind ?? v2Data.case.kind ?? "CASE",
+		sourcePatternId: options.sourcePatternId,
+	};
+	const elementsToCreate = options.markFromPattern
+		? v2Data.elements.map((element) => ({ ...element, fromPattern: true }))
+		: v2Data.elements;
 
 	try {
 		// Build ID mapping
@@ -1133,9 +1180,9 @@ export async function importCase(
 			// Create case
 			const caseId = await createCaseWithPermission(
 				tx,
-				v2Data.case,
+				caseData,
 				userId,
-				options.fixedIds?.caseId
+				caseSettings
 			);
 
 			// Create elements
@@ -1143,7 +1190,7 @@ export async function importCase(
 				await createElements(
 					tx,
 					caseId,
-					v2Data.elements,
+					elementsToCreate,
 					idMap,
 					resolvedExternalCitedElementIds,
 					resolvedModuleReferenceCaseIds,
@@ -1167,7 +1214,7 @@ export async function importCase(
 
 			return {
 				caseId,
-				caseName: v2Data.case.name,
+				caseName: caseData.name,
 				elementCount,
 				evidenceLinkCount,
 				commentCount,

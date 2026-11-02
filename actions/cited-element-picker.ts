@@ -47,10 +47,13 @@ export async function listCitableCases(): Promise<
 	// `listSharedCases` returns direct-or-team shares (excluding own) — so a
 	// directly-shared case comes back from BOTH calls. De-duplicate by case
 	// id, first occurrence wins (owned.data first), so each case appears
-	// exactly once regardless of which call(s) produced it.
+	// exactly once regardless of which call(s) produced it. A pattern shared
+	// with the user comes back from `listSharedCases`; it is a template for
+	// starting cases, not a case an away goal or module can cite, so it is left
+	// out here.
 	const byId = new Map<string, CitableCaseSummary>();
 	for (const c of [...owned.data, ...shared.data]) {
-		if (!byId.has(c.id)) {
+		if (c.kind === "CASE" && !byId.has(c.id)) {
 			byId.set(c.id, { id: c.id, name: c.name });
 		}
 	}

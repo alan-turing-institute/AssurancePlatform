@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { canAccessCase, getCasePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import type {
 	AssuranceCaseResponse,
 	AwayGoalResponse,
@@ -637,6 +638,7 @@ export async function fetchCaseFromPrisma(
 			markedReadyAt: caseData.markedReadyAt?.toISOString() ?? null,
 			// Demo/tutorial flag
 			isDemo: caseData.isDemo,
+			kind: caseData.kind,
 			// Layout preference
 			layoutDirection: (caseData.layoutDirection ?? undefined) as
 				| "TB"
@@ -691,6 +693,7 @@ export interface AssuranceCaseSummary {
 	description?: string;
 	id: string;
 	isDemo?: boolean;
+	kind: CaseKind;
 	name: string;
 	owner?: string;
 	permissions?: string;
@@ -705,7 +708,8 @@ export interface AssuranceCaseSummary {
 
 /**
  * Fetches all assurance cases the user owns or has explicit permission on.
- * Excludes soft-deleted cases.
+ * Excludes soft-deleted cases and patterns: it feeds lists meant for ordinary
+ * cases only.
  */
 export async function listUserCases(
 	userId: string
@@ -714,6 +718,7 @@ export async function listUserCases(
 		const cases = await prisma.assuranceCase.findMany({
 			where: {
 				deletedAt: null,
+				kind: "CASE",
 				OR: [
 					{ createdById: userId },
 					{
@@ -731,6 +736,7 @@ export async function listUserCases(
 				updatedAt: true,
 				createdById: true,
 				isDemo: true,
+				kind: true,
 				published: true,
 			},
 			orderBy: { createdAt: "desc" },
@@ -745,6 +751,7 @@ export async function listUserCases(
 				updatedDate: c.updatedAt.toISOString(),
 				owner: c.createdById ?? undefined,
 				isDemo: c.isDemo,
+				kind: c.kind,
 				permissions: c.createdById === userId ? "owner" : "view",
 				published: c.published,
 			})),
@@ -800,6 +807,7 @@ export async function listSharedCases(
 				createdAt: true,
 				updatedAt: true,
 				createdById: true,
+				kind: true,
 				published: true,
 			},
 			orderBy: { createdAt: "desc" },
@@ -813,6 +821,7 @@ export async function listSharedCases(
 				createdDate: c.createdAt.toISOString(),
 				updatedDate: c.updatedAt.toISOString(),
 				owner: c.createdById ?? undefined,
+				kind: c.kind,
 				published: c.published,
 			})),
 		};
@@ -987,6 +996,7 @@ export async function updateCaseWithPrisma(
 				| "LR"
 				| undefined,
 			type: "assurance_case",
+			kind: updated.kind,
 			comments: [],
 			permissions: "edit",
 		},

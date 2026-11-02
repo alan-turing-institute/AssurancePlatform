@@ -116,6 +116,7 @@ type CaseOverrides = Partial<{
 	name: string;
 	description: string;
 	mode: "STANDARD" | "ADVANCED";
+	kind: "CASE" | "PATTERN";
 	publishStatus: "DRAFT" | "PUBLISHED";
 	published: boolean;
 	isDemo: boolean;
@@ -132,6 +133,7 @@ export function createTestCase(
 			description: overrides.description ?? `Description for test case ${n}`,
 			createdById,
 			mode: overrides.mode ?? "STANDARD",
+			kind: overrides.kind ?? "CASE",
 			publishStatus: overrides.publishStatus ?? "DRAFT",
 			published: overrides.published ?? false,
 			isDemo: overrides.isDemo ?? false,

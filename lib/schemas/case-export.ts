@@ -64,8 +64,18 @@ export const AssertionStatusSchema = z
 		"Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
 	);
 
+/**
+ * What an exported case is. A file without `kind` is an ordinary case.
+ */
+const CaseKindSchema = z
+	.enum(["CASE", "PATTERN"])
+	.describe(
+		"What the case is - CASE for an ordinary case, PATTERN for a reusable pattern that cases are started from. Omitted means CASE"
+	);
+
 export type ElementType = z.infer<typeof ElementTypeSchema>;
 export type ElementRole = z.infer<typeof ElementRoleSchema>;
+export type CaseKind = z.infer<typeof CaseKindSchema>;
 export type ModuleEmbedType = z.infer<typeof ModuleEmbedTypeSchema>;
 export type AssertionStatus = z.infer<typeof AssertionStatusSchema>;
 
@@ -214,6 +224,7 @@ export const CaseExportV2Schema = z
 					.min(1, "Case name is required")
 					.describe("Name of the assurance case"),
 				description: z.string().describe("Description of the assurance case"),
+				kind: CaseKindSchema.optional(),
 			})
 			.describe("Case metadata"),
 		elements: z.array(ElementV2Schema).describe("All elements in the case"),
@@ -409,12 +420,13 @@ function findNamedContextEntryPath(
  *
  * Version "1.0" is the first officially versioned export format (the legacy
  * Django format had no version field); every context entry in it is plain
- * text. Version "1.1" lets a context entry also be a named entry and lets
- * element text hold references to named entries. A 1.0 file is already valid
- * 1.1, so nothing converts on import; a file that says "1.0" but holds a named
- * entry is rejected, because the shape behind a version string never changes
- * silently. That rule is a check in this schema only: it has no JSON Schema
- * equivalent, and the generated file describes the 1.1 shape.
+ * text. Version "1.1" lets a context entry also be a named entry, lets
+ * element text hold references to named entries, and lets the case say it is a
+ * pattern (`case.kind`). A 1.0 file is already valid 1.1, so nothing converts
+ * on import; a file that says "1.0" but holds a named entry is rejected,
+ * because the shape behind a version string never changes silently. That rule
+ * is a check in this schema only: it has no JSON Schema equivalent, and the
+ * generated file describes the 1.1 shape.
  *
  * ADR 0004 D1: `version` is the format-migration key for the whole case
  * export contract, not just a label. A change to the model this schema
@@ -427,7 +439,7 @@ export const CaseExportNestedSchema = z
 		version: z
 			.enum(["1.0", "1.1"])
 			.describe(
-				'Schema version identifier. "1.1" adds named context entries and references in element text'
+				'Schema version identifier. "1.1" adds named context entries, references in element text and case.kind'
 			),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
 		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
@@ -438,6 +450,7 @@ export const CaseExportNestedSchema = z
 					.min(1, "Case name is required")
 					.describe("Name of the assurance case"),
 				description: z.string().describe("Description of the assurance case"),
+				kind: CaseKindSchema.optional(),
 			})
 			.describe("Case metadata"),
 		tree: TreeNodeSchema.describe("Root element of the case tree"),
