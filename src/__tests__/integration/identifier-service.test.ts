@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { createElement } from "@/lib/services/element-service";
 import { resetIdentifiers } from "@/lib/services/identifier-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
+import { tapCaseEvents } from "../utils/case-kind-convert-kit";
 import {
 	createTestCase,
 	createTestPermission,
@@ -426,6 +427,29 @@ describe("identifier-service", () => {
 				await resetIdentifiers(testCase.id, outsider.id),
 				"Permission denied"
 			);
+		});
+	});
+
+	describe("resetIdentifiers live update", () => {
+		it("tells open editors who reset the identifiers", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const tap = tapCaseEvents(testCase.id);
+
+			expectSuccess(await resetIdentifiers(testCase.id, user.id));
+			tap.stop();
+
+			expect(tap.events()).toEqual([
+				expect.objectContaining({
+					type: "case:updated",
+					userId: user.id,
+					payload: {
+						action: "identifiers-reset",
+						userId: user.id,
+						username: user.username,
+					},
+				}),
+			]);
 		});
 	});
 
