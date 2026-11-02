@@ -3,7 +3,7 @@
 import { CopyPlusIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useCreateCaseModal } from "@/hooks/modal-hooks";
 
@@ -38,6 +38,8 @@ const UsePatternButton = ({
 	const asked = searchParams.get(OPEN_DIALOG_FLAG) === OPEN_DIALOG_VALUE;
 	const handled = useRef(false);
 	const pagePath = `/discover/${slug}`;
+	const hintId = useId();
+	const showHint = !(signedIn || status === "loading");
 
 	useEffect(() => {
 		if (!(asked && signedIn) || handled.current) {
@@ -60,6 +62,7 @@ const UsePatternButton = ({
 	return (
 		<div className="mt-4 flex shrink-0 flex-col items-start gap-2">
 			<Button
+				aria-describedby={showHint ? hintId : undefined}
 				disabled={status === "loading"}
 				onClick={handleClick}
 				variant="default"
@@ -67,8 +70,8 @@ const UsePatternButton = ({
 				Use this pattern
 				<CopyPlusIcon className="ml-2 size-4" />
 			</Button>
-			{!(signedIn || status === "loading") && (
-				<p className="text-muted-foreground text-sm">
+			{showHint && (
+				<p className="text-muted-foreground text-sm" id={hintId}>
 					You will be asked to sign in first.
 				</p>
 			)}

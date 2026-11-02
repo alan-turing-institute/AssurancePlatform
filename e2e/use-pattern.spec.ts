@@ -90,7 +90,9 @@ async function createCaseFromChosenPattern(page: Page, caseName: string) {
 		.fill("Started from a published pattern");
 	await dialog.getByRole("button", { name: "Submit" }).click();
 	await page.waitForURL(CASE_URL_PATTERN);
-	await expect(page.getByText(GOAL_DESCRIPTION).first()).toBeVisible();
+	await expect(
+		page.locator(".react-flow__node", { hasText: GOAL_DESCRIPTION })
+	).toBeVisible();
 }
 
 test.describe("Use this pattern", () => {
