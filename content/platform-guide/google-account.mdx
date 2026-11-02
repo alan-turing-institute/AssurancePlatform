@@ -13,7 +13,10 @@ Choose **Google** on the sign-in page to authorise the account. The platform sto
 
 From the dashboard, open **Import File**. The import dialog supports a local JSON file, a GitHub JSON file, and a Google Drive backup. On the GitHub tab, enter a URL to a JSON file or the supported `owner/repo/file.json` shorthand, then select **Import from GitHub**. The connection prompt appears when the account has no usable GitHub token. On the Google Drive tab, select a file from the **TEA Platform Backups** folder and choose **Import from Google Drive**. The Drive tab prompts for Google connection if needed.
 
-An import creates a working case from case data. It does not merge a file into the case you currently have open. The import logic accepts supported case formats and can return warnings. Read those warnings before continuing to the imported case. A GitHub URL must point to a JSON case file; the GitHub tab is not a general repository browser.
+An import creates a working case from case data. It does not merge a file into the case you currently have open. The import logic accepts supported case formats and can return warnings. Read those warnings before continuing to the imported case.
+An away goal or module in the file that cites another case keeps that reference only if you can view the cited case.
+Otherwise the reference is dropped, the element is flagged as having lost its citation, and a warning names it.
+A GitHub URL must point to a JSON case file; the GitHub tab is not a general repository browser.
 
 ## Back up to Drive
 

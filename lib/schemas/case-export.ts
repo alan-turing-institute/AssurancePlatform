@@ -67,7 +67,7 @@ export const AssertionStatusSchema = z
 /**
  * What an exported case is. A file without `kind` is an ordinary case.
  */
-const CaseKindSchema = z
+export const CaseKindSchema = z
 	.enum(["CASE", "PATTERN"])
 	.describe(
 		"What the case is - CASE for an ordinary case, PATTERN for a reusable pattern that cases are started from. Omitted means CASE"

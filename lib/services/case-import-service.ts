@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type {
 	CaseExportV2,
@@ -388,6 +389,11 @@ async function createCaseWithPermission(
  * actually runs, re-calling this same function after that P2003 correctly
  * comes back without it — see createElements' docstring.
  *
+ * Only elements in a case the importing user can view resolve: a cited
+ * element in any other case comes back unresolved, exactly as if it did not
+ * exist, so the import cannot learn or keep a reference to a case its user
+ * has no access to.
+ *
  * Takes a `client` (global `prisma` for the pre-transaction call in
  * `importCase`, or the transaction-scoped `tx` for the in-transaction retry
  * inside `createElements`) rather than being duplicated per call site.
@@ -395,7 +401,8 @@ async function createCaseWithPermission(
 async function resolveExternalCitedElementIds(
 	client: PrismaLikeClient,
 	elements: ElementV2[],
-	idMap: Map<string, string>
+	idMap: Map<string, string>,
+	userId: string
 ): Promise<Map<string, string>> {
 	const externalIds = new Set<string>();
 	for (const el of elements) {
@@ -409,7 +416,11 @@ async function resolveExternalCitedElementIds(
 	}
 
 	const found = await client.assuranceElement.findMany({
-		where: { id: { in: [...externalIds] }, deletedAt: null },
+		where: {
+			id: { in: [...externalIds] },
+			deletedAt: null,
+			case: viewableCaseWhere(userId),
+		},
 		select: { id: true, caseId: true },
 	});
 
@@ -427,10 +438,16 @@ async function resolveExternalCitedElementIds(
  * moduleReferenceId that doesn't resolve here would otherwise hit the
  * createMany FK (assurance_elements_module_reference_id_fkey) and roll back
  * the whole import, the exact failure this ruling replaces.
+ *
+ * Only cases the importing user can view resolve. A case the user cannot
+ * view, one that is in the trash and one that does not exist all come back
+ * the same way, so an import never keeps a reference to a case its user has
+ * no access to and does not reveal whether such a case exists.
  */
 async function resolveExternalModuleReferenceIds(
 	client: PrismaLikeClient,
-	elements: ElementV2[]
+	elements: ElementV2[],
+	userId: string
 ): Promise<Set<string>> {
 	const caseIds = new Set<string>();
 	for (const el of elements) {
@@ -444,7 +461,7 @@ async function resolveExternalModuleReferenceIds(
 	}
 
 	const found = await client.assuranceCase.findMany({
-		where: { id: { in: [...caseIds] }, deletedAt: null },
+		where: { id: { in: [...caseIds] }, ...viewableCaseWhere(userId) },
 		select: { id: true },
 	});
 
@@ -899,7 +916,7 @@ async function createElements(
 		await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT "${savepoint}"`);
 
 		const reResolvedExternalCitedElementIds =
-			await resolveExternalCitedElementIds(tx, elements, idMap);
+			await resolveExternalCitedElementIds(tx, elements, idMap, userId);
 		const retry = buildElementRows(
 			sortedElements,
 			idMap,
@@ -1163,14 +1180,19 @@ export async function importCase(
 		// target DB BEFORE opening the transaction — keeps the transaction
 		// short and means the createMany insert never has to guess.
 		const resolvedExternalCitedElementIds =
-			await resolveExternalCitedElementIds(prisma, v2Data.elements, idMap);
+			await resolveExternalCitedElementIds(
+				prisma,
+				v2Data.elements,
+				idMap,
+				userId
+			);
 
 		// TEA — Import fails outright when an away goal or module cites a case
 		// absent from the target environment (Chris's ruling, 2026-09-16):
 		// batch-resolve external moduleReferenceIds the same way, and BEFORE
 		// the transaction opens for the same reason.
 		const resolvedModuleReferenceCaseIds =
-			await resolveExternalModuleReferenceIds(prisma, v2Data.elements);
+			await resolveExternalModuleReferenceIds(prisma, v2Data.elements, userId);
 
 		// Use a transaction to ensure atomicity. The callback takes the
 		// transaction-scoped `tx` client and threads it through every helper

@@ -8,9 +8,34 @@ If you want to build something step by step first, see [Module 2 of the TEA Trai
 
 ## Create a case
 
-From the dashboard, choose **New Case** (or the **Create new case** card if you already have cases) and fill in **Name** and **Description** in the **Create New Assurance Case** dialog, then choose **Submit**.
-This creates a blank working case with a single top-level goal, named `G1` and holding a placeholder description for you to replace.
-There is no starter-template choice in this dialog; a separate **Import File** option on the dashboard creates a case from an existing JSON export instead.
+From the dashboard, choose **New Case** (or the **Create new case** card if you already have cases) to open the **Create New Assurance Case** dialog.
+Under **Start from**, choose one of three starting points:
+
+- **A blank case** creates a working case with a single top-level goal, named `G1` and holding a placeholder description for you to replace.
+  This is the default.
+- **A blank pattern** creates the same single-goal starting point, but as a pattern: a reusable argument that cases can be started from.
+  A pattern does not appear in your list of cases.
+- **A pattern** creates a case from a pattern you can view, as described below.
+
+Fill in **Name** and **Description**, then choose **Submit**.
+A separate **Import File** option on the dashboard creates a case from an existing JSON export instead.
+
+### Starting a case from a pattern
+
+Choose **A pattern** under **Start from** to open a picker of the patterns you can view.
+It lists the patterns you own, then patterns shared with you directly or through a team, then any patterns published on Discover.
+Choosing one shows its description below the picker.
+Enter a name and description for the new case as usual; they are yours, not the pattern's.
+
+The new case is an ordinary case that belongs to you.
+It holds a copy of the pattern's elements, and each copied element is marked as coming from the pattern.
+Comments on the pattern are not copied.
+The case also records which pattern it was started from, unless that pattern no longer exists.
+Changing the pattern afterwards does not change cases already started from it.
+
+A pattern can hold an away goal or a module that cites another case.
+A reference to a case you cannot view is not kept in the new case: the reference is cleared and the element is flagged as having lost its citation.
+The dialog lists what was left out before you continue to the new case.
 
 ## Element types
 

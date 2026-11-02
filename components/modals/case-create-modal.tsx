@@ -8,6 +8,10 @@ import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
+	createCaseFromPattern,
+	fetchViewablePatterns,
+} from "@/actions/case-from-pattern";
+import {
 	Form,
 	FormControl,
 	FormField,
@@ -19,11 +23,42 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateCaseModal } from "@/hooks/modal-hooks";
+import type { ActionResult } from "@/lib/errors";
 import {
 	type CreateAssuranceCaseInput,
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
+import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import { Button } from "../ui/button";
+import {
+	type PatternChoices,
+	type StartFrom,
+	StartFromSection,
+} from "./_case-create-modal/start-from-section";
+
+/**
+ * Creates the case the dialog describes: a copy of the chosen pattern, a blank
+ * pattern, or a blank case. Only a copy of a pattern can come back with
+ * warnings.
+ */
+async function requestCase(
+	start: StartFrom,
+	chosen: ViewablePattern | undefined,
+	name: string,
+	description: string
+): Promise<ActionResult<{ id: string; warnings: string[] }>> {
+	if (start === "pattern" && chosen) {
+		return await createCaseFromPattern(chosen.source, name, description);
+	}
+	const created = await createAssuranceCase({
+		name,
+		description,
+		kind: start === "blank-pattern" ? "PATTERN" : "CASE",
+	});
+	return created.success
+		? { success: true, data: { id: created.data.id, warnings: [] } }
+		: created;
+}
 
 export const CaseCreateModal = () => {
 	const createCaseModal = useCreateCaseModal();
@@ -31,8 +66,16 @@ export const CaseCreateModal = () => {
 	const { data: session } = useSession();
 
 	const [loading, setLoading] = useState(false);
-	const [_stage, _setStage] = useState(0);
 	const [errors, setErrors] = useState<string[]>([]);
+	const [start, setStart] = useState<StartFrom>("blank-case");
+	const [choices, setChoices] = useState<PatternChoices>({ status: "idle" });
+	const [patternKey, setPatternKey] = useState<string>();
+	// A case started from a pattern that had to leave references out stops
+	// here, so the user sees what was left out before opening the case.
+	const [pending, setPending] = useState<{
+		id: string;
+		warnings: string[];
+	} | null>(null);
 
 	const form = useForm<CreateAssuranceCaseInput>({
 		resolver: zodResolver(createAssuranceCaseSchema),
@@ -42,62 +85,118 @@ export const CaseCreateModal = () => {
 		},
 	});
 
-	const CreateCase = useCallback(
-		async (name: string, description: string) => {
-			// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
-			if (!session?.user?.id) {
-				setErrors(["You must be logged in to create a case"]);
-				return;
+	const loadPatterns = useCallback(async () => {
+		setChoices({ status: "loading" });
+		const patterns = await fetchViewablePatterns();
+		setChoices(patterns ? { status: "ready", patterns } : { status: "failed" });
+	}, []);
+
+	const handleStartChange = (next: StartFrom) => {
+		setStart(next);
+		setErrors([]);
+		if (next === "pattern" && choices.status !== "ready") {
+			loadPatterns();
+		}
+	};
+
+	const resetChoices = () => {
+		setStart("blank-case");
+		setChoices({ status: "idle" });
+		setPatternKey(undefined);
+		setPending(null);
+		setErrors([]);
+	};
+
+	const handleClose = () => {
+		resetChoices();
+		createCaseModal.onClose();
+	};
+
+	const openCase = (id: string) => {
+		resetChoices();
+		createCaseModal.onClose();
+		router.push(`/case/${id}`);
+	};
+
+	const CreateCase = async (name: string, description: string) => {
+		// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
+		if (!session?.user?.id) {
+			setErrors(["You must be logged in to create a case"]);
+			return;
+		}
+
+		const chosen =
+			choices.status === "ready"
+				? choices.patterns.find((pattern) => pattern.key === patternKey)
+				: undefined;
+		if (start === "pattern" && !chosen) {
+			setErrors(["Choose a pattern to start from"]);
+			return;
+		}
+
+		setLoading(true);
+
+		try {
+			const result = await requestCase(start, chosen, name, description);
+
+			setLoading(false);
+			if (!result.success) {
+				setErrors([
+					result.error ?? "An error occurred, please try again later",
+				]);
+			} else if (result.data.warnings.length > 0) {
+				setPending(result.data);
+			} else {
+				openCase(result.data.id);
 			}
-
-			setLoading(true);
-
-			try {
-				const result = await createAssuranceCase({
-					name,
-					description,
-				});
-
-				if (result.success) {
-					setLoading(false);
-					createCaseModal.onClose();
-					router.push(`/case/${result.data.id}`);
-				} else {
-					setLoading(false);
-					setErrors([
-						result.error ?? "An error occurred, please try again later",
-					]);
-				}
-			} catch (_ex) {
-				setLoading(false);
-				setErrors(["An error occurred, please try again later"]);
-			}
-		},
-		[session, createCaseModal, router]
-	);
+		} catch (_ex) {
+			setLoading(false);
+			setErrors(["An error occurred, please try again later"]);
+		}
+	};
 
 	const handleCancel = (e: React.MouseEvent<HTMLButtonElement>) => {
 		e.preventDefault();
 		form.clearErrors();
-		createCaseModal.onClose();
+		handleClose();
 	};
 
 	const onSubmit = (values: CreateAssuranceCaseInput) => {
 		CreateCase(values.name, values.description);
 	};
 
+	const makingPattern = start === "blank-pattern";
+
 	return (
 		<Modal
-			description="Please enter a name and description for your new assurance case."
+			description="Choose how to start, then enter a name and description."
 			isOpen={createCaseModal.isOpen}
-			onClose={createCaseModal.onClose}
+			onClose={handleClose}
 			title="Create New Assurance Case"
 		>
-			{loading ? (
+			{loading && (
 				<div className="flex items-center justify-center p-16">
 					<Loader className="h-10 w-10 animate-spin" />
 				</div>
-			) : (
+			)}
+			{!loading && pending && (
+				<div className="space-y-4 py-2 pb-4">
+					<div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-sm text-warning-foreground">
+						<p className="font-semibold">Some references were left out:</p>
+						<ul className="list-inside list-disc">
+							{pending.warnings.map((warning) => (
+								<li key={warning}>{warning}</li>
+							))}
+						</ul>
+					</div>
+					<div className="flex w-full justify-end">
+						<Button onClick={() => openCase(pending.id)}>
+							Continue to case
+						</Button>
+					</div>
+				</div>
+			)}
+			{!(loading || pending) && (
 				<div className="space-y-4 py-2 pb-4">
 					<div className="space-y-2">
 						<Form {...form}>
@@ -105,6 +204,14 @@ export const CaseCreateModal = () => {
 								className="space-y-6"
 								onSubmit={form.handleSubmit(onSubmit)}
 							>
+								<StartFromSection
+									choices={choices}
+									disabled={loading}
+									onPatternChange={setPatternKey}
+									onStartChange={handleStartChange}
+									patternKey={patternKey}
+									start={start}
+								/>
 								<FormField
 									control={form.control}
 									name="name"
@@ -114,7 +221,9 @@ export const CaseCreateModal = () => {
 											<FormControl>
 												<Input
 													disabled={loading}
-													placeholder="Case name"
+													placeholder={
+														makingPattern ? "Pattern name" : "Case name"
+													}
 													{...field}
 												/>
 											</FormControl>
@@ -131,8 +240,12 @@ export const CaseCreateModal = () => {
 											<FormControl>
 												<Textarea
 													disabled={loading}
-													placeholder="Your case description"
-													rows={6}
+													placeholder={
+														makingPattern
+															? "Your pattern description"
+															: "Your case description"
+													}
+													rows={4}
 													{...field}
 												/>
 											</FormControl>

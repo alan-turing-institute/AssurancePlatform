@@ -210,22 +210,38 @@ describe("keys a file cannot use to link a case to a pattern", () => {
 });
 
 describe("request bodies that create or change a case", () => {
-	it("refuse a kind or a source pattern", () => {
-		for (const extra of [
-			{ kind: "PATTERN" },
-			{ kind: "CASE" },
-			{ sourcePatternId: "00000000-0000-4000-8000-0000000000aa" },
-		]) {
+	it("refuse a source pattern", () => {
+		const extra = { sourcePatternId: "00000000-0000-4000-8000-0000000000aa" };
+		expect(
+			createAssuranceCaseSchema.safeParse({
+				name: "A case",
+				description: "About it",
+				...extra,
+			}).success
+		).toBe(false);
+		expect(
+			updateAssuranceCaseSchema.safeParse({ name: "A case", ...extra }).success
+		).toBe(false);
+	});
+
+	it("let a new case be an ordinary case or a pattern, and default to a case", () => {
+		const body = { name: "A case", description: "About it" };
+		expect(createAssuranceCaseSchema.parse(body).kind).toBe("CASE");
+		expect(
+			createAssuranceCaseSchema.parse({ ...body, kind: "CASE" }).kind
+		).toBe("CASE");
+		expect(
+			createAssuranceCaseSchema.parse({ ...body, kind: "PATTERN" }).kind
+		).toBe("PATTERN");
+		expect(
+			createAssuranceCaseSchema.safeParse({ ...body, kind: "TEMPLATE" }).success
+		).toBe(false);
+	});
+
+	it("refuse a change of kind to an existing case", () => {
+		for (const kind of ["PATTERN", "CASE"]) {
 			expect(
-				createAssuranceCaseSchema.safeParse({
-					name: "A case",
-					description: "About it",
-					...extra,
-				}).success
-			).toBe(false);
-			expect(
-				updateAssuranceCaseSchema.safeParse({ name: "A case", ...extra })
-					.success
+				updateAssuranceCaseSchema.safeParse({ name: "A case", kind }).success
 			).toBe(false);
 		}
 	});

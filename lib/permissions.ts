@@ -1,4 +1,4 @@
-import type { PermissionLevel, TeamRole } from "@/src/generated/prisma";
+import type { PermissionLevel, Prisma, TeamRole } from "@/src/generated/prisma";
 
 /**
  * Team role hierarchy (higher index = more permissions)
@@ -181,6 +181,30 @@ export async function canAccessCase(
 		return false;
 	}
 	return hasPermissionLevel(result.permission, requiredPermission);
+}
+
+/**
+ * The cases a user can view, as a filter for a Prisma query: ones they
+ * created, ones shared with them directly and ones shared with a team they
+ * belong to, at any permission level. Trashed cases are left out, as
+ * `canAccessCase` treats them as not found. Use it to check or list many
+ * cases in one query; `canAccessCase` answers the same question for one case.
+ */
+export function viewableCaseWhere(
+	userId: string
+): Prisma.AssuranceCaseWhereInput {
+	return {
+		deletedAt: null,
+		OR: [
+			{ createdById: userId },
+			{ userPermissions: { some: { userId } } },
+			{
+				teamPermissions: {
+					some: { team: { members: { some: { userId } } } },
+				},
+			},
+		],
+	};
 }
 
 // ============================================
