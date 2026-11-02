@@ -2,7 +2,10 @@ import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { CaseKind } from "@/lib/schemas/case-export";
-import type { AssuranceCaseSummary } from "@/lib/services/case-fetch-service";
+import {
+	type AssuranceCaseSummary,
+	listOwnAndDirectlySharedCases,
+} from "@/lib/services/case-fetch-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 import type { ServiceResult } from "@/types/service";
 
@@ -180,46 +183,8 @@ export async function listUserPatterns(
 	userId: string
 ): ServiceResult<AssuranceCaseSummary[]> {
 	try {
-		const patterns = await prisma.assuranceCase.findMany({
-			where: {
-				deletedAt: null,
-				kind: "PATTERN",
-				OR: [
-					{ createdById: userId },
-					{
-						userPermissions: {
-							some: { userId },
-						},
-					},
-				],
-			},
-			select: {
-				id: true,
-				name: true,
-				description: true,
-				createdAt: true,
-				updatedAt: true,
-				createdById: true,
-				isDemo: true,
-				kind: true,
-				published: true,
-			},
-			orderBy: { createdAt: "desc" },
-		});
-
 		return {
-			data: patterns.map((c) => ({
-				id: c.id,
-				name: c.name,
-				description: c.description ?? undefined,
-				createdDate: c.createdAt.toISOString(),
-				updatedDate: c.updatedAt.toISOString(),
-				owner: c.createdById ?? undefined,
-				isDemo: c.isDemo,
-				kind: c.kind,
-				permissions: c.createdById === userId ? "owner" : "view",
-				published: c.published,
-			})),
+			data: await listOwnAndDirectlySharedCases(userId, "PATTERN"),
 		};
 	} catch (error) {
 		log.error("listUserPatterns", { userId, error });

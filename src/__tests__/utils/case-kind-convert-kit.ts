@@ -26,7 +26,7 @@ import {
  * connection.
  */
 
-export type PermissionLevel = "VIEW" | "COMMENT" | "EDIT" | "ADMIN";
+type PermissionLevel = "VIEW" | "COMMENT" | "EDIT" | "ADMIN";
 
 export interface Person {
 	/** Whether this person may convert the case. */

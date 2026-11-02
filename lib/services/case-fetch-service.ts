@@ -707,6 +707,56 @@ export interface AssuranceCaseSummary {
 // ---------------------------------------------------------------------------
 
 /**
+ * Reads the non-deleted cases of one kind that the user created or has been
+ * given a direct permission on, newest first. Throws on a database failure;
+ * the two public lists catch it and report in their own words.
+ */
+export async function listOwnAndDirectlySharedCases(
+	userId: string,
+	kind: CaseKind
+): Promise<AssuranceCaseSummary[]> {
+	const cases = await prisma.assuranceCase.findMany({
+		where: {
+			deletedAt: null,
+			kind,
+			OR: [
+				{ createdById: userId },
+				{
+					userPermissions: {
+						some: { userId },
+					},
+				},
+			],
+		},
+		select: {
+			id: true,
+			name: true,
+			description: true,
+			createdAt: true,
+			updatedAt: true,
+			createdById: true,
+			isDemo: true,
+			kind: true,
+			published: true,
+		},
+		orderBy: { createdAt: "desc" },
+	});
+
+	return cases.map((c) => ({
+		id: c.id,
+		name: c.name,
+		description: c.description ?? undefined,
+		createdDate: c.createdAt.toISOString(),
+		updatedDate: c.updatedAt.toISOString(),
+		owner: c.createdById ?? undefined,
+		isDemo: c.isDemo,
+		kind: c.kind,
+		permissions: c.createdById === userId ? "owner" : "view",
+		published: c.published,
+	}));
+}
+
+/**
  * Fetches all assurance cases the user owns or has explicit permission on.
  * Excludes soft-deleted cases and patterns: it feeds lists meant for ordinary
  * cases only.
@@ -715,47 +765,7 @@ export async function listUserCases(
 	userId: string
 ): ServiceResult<AssuranceCaseSummary[]> {
 	try {
-		const cases = await prisma.assuranceCase.findMany({
-			where: {
-				deletedAt: null,
-				kind: "CASE",
-				OR: [
-					{ createdById: userId },
-					{
-						userPermissions: {
-							some: { userId },
-						},
-					},
-				],
-			},
-			select: {
-				id: true,
-				name: true,
-				description: true,
-				createdAt: true,
-				updatedAt: true,
-				createdById: true,
-				isDemo: true,
-				kind: true,
-				published: true,
-			},
-			orderBy: { createdAt: "desc" },
-		});
-
-		return {
-			data: cases.map((c) => ({
-				id: c.id,
-				name: c.name,
-				description: c.description ?? undefined,
-				createdDate: c.createdAt.toISOString(),
-				updatedDate: c.updatedAt.toISOString(),
-				owner: c.createdById ?? undefined,
-				isDemo: c.isDemo,
-				kind: c.kind,
-				permissions: c.createdById === userId ? "owner" : "view",
-				published: c.published,
-			})),
-		};
+		return { data: await listOwnAndDirectlySharedCases(userId, "CASE") };
 	} catch (error) {
 		log.error("listUserCases", { userId, error });
 		return { error: "Failed to fetch cases" };
