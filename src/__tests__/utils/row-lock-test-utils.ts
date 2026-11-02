@@ -23,9 +23,25 @@ export interface HeldRowLock {
 	/**
 	 * Signals the holder to commit, and resolves once it actually has —
 	 * or rejects with the holder transaction's own error, if it failed.
+	 *
+	 * Every writer queued behind the lock wakes at once and re-checks the row
+	 * against what the holder committed. Those that still match then compete
+	 * for the new version of the row, so which of several queued writers goes
+	 * first is not fixed by the order they queued in.
 	 */
 	release: () => Promise<void>;
+	/**
+	 * Signals the holder to roll back instead, so none of its writes land, and
+	 * resolves once it has. Writers queued behind the lock take the row strictly
+	 * in the order they queued, because the row they were waiting for is
+	 * unchanged. Use this when the holder only needs to hold the lock, and the
+	 * test depends on which queued writer goes first.
+	 */
+	rollback: () => Promise<void>;
 }
+
+/** Thrown inside the holder's transaction to make it roll back. */
+class HolderRollback extends Error {}
 
 const LOCK_WAIT_POLL_INTERVAL_MS = 10;
 const LOCK_WAIT_TIMEOUT_MS = 5000;
@@ -70,10 +86,11 @@ export async function waitForLockWait(
 /**
  * Opens a transaction, runs `mutate` inside it (typically a write that
  * takes a row lock), then blocks the transaction open — holding that lock —
- * until `release()` is called. Any other transaction that needs the same
- * row for a write (an `updateMany`/`deleteMany` on it) blocks until
- * `release()` lets this one commit, then re-evaluates its own `where`
- * clause against whatever `mutate` just committed.
+ * until `release()` or `rollback()` is called. Any other transaction that
+ * needs the same row for a write (an `updateMany`/`deleteMany` on it) blocks
+ * until `release()` lets this one commit, then re-evaluates its own `where`
+ * clause against whatever `mutate` just committed. With `rollback()` it
+ * proceeds against the row as it was.
  */
 export async function holdRowLock(
 	mutate: (tx: TestTransactionClient) => Promise<void>
@@ -85,41 +102,50 @@ export async function holdRowLock(
 		resolveAcquired = resolve;
 	});
 
-	let resolveReleaseSignal: () => void = () => {
+	let signalFinish: (commit: boolean) => void = () => {
 		/* replaced synchronously below */
 	};
-	const releaseSignal = new Promise<void>((resolve) => {
-		resolveReleaseSignal = resolve;
+	const finishSignal = new Promise<boolean>((resolve) => {
+		signalFinish = resolve;
 	});
 
-	let resolveCommitted: () => void = () => {
+	let resolveFinished: () => void = () => {
 		/* replaced synchronously below */
 	};
-	let rejectCommitted: (error: unknown) => void = () => {
+	let rejectFinished: (error: unknown) => void = () => {
 		/* replaced synchronously below */
 	};
-	const committed = new Promise<void>((resolve, reject) => {
-		resolveCommitted = resolve;
-		rejectCommitted = reject;
+	const finished = new Promise<void>((resolve, reject) => {
+		resolveFinished = resolve;
+		rejectFinished = reject;
 	});
 
 	prisma
 		.$transaction(async (tx) => {
 			await mutate(tx);
 			resolveAcquired();
-			await releaseSignal;
+			if (!(await finishSignal)) {
+				throw new HolderRollback();
+			}
 		})
 		.then(
-			() => resolveCommitted(),
-			(error) => rejectCommitted(error)
+			() => resolveFinished(),
+			(error) =>
+				error instanceof HolderRollback
+					? resolveFinished()
+					: rejectFinished(error)
 		);
 
 	await acquired;
 
 	return {
 		release: async () => {
-			resolveReleaseSignal();
-			await committed;
+			signalFinish(true);
+			await finished;
+		},
+		rollback: async () => {
+			signalFinish(false);
+			await finished;
 		},
 	};
 }

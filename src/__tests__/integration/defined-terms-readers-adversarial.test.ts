@@ -167,6 +167,22 @@ function findNode<T extends { name: string | null; children: T[] }>(
 	return;
 }
 
+/**
+ * A finding, question or precheck that names several elements joins their
+ * labels in the order the export lists the elements. Returns the same item with
+ * those labels sorted; nothing is dropped or merged.
+ */
+function withLabelsInOrder(item: unknown): unknown {
+	const label = (item as { elementLabel?: unknown } | null)?.elementLabel;
+	if (typeof label !== "string") {
+		return item;
+	}
+	return {
+		...(item as object),
+		elementLabel: label.split(", ").sort().join(", "),
+	};
+}
+
 const ASSISTANT_OPTIONS = { toolCallId: "call", messages: [] };
 
 async function runTool(
@@ -477,8 +493,9 @@ describe("the Case Assistant's tools", () => {
 			await prisma.$executeRaw`UPDATE assurance_elements SET context = ${JSON.stringify(node.context ?? [])}::jsonb, description = ${node.description}, assumption = ${node.assumption ?? null}, justification = ${node.justification ?? null} WHERE id = ${row.id}`;
 		}
 
-		// The order of siblings that were created together is the database's to
-		// choose, so each list of results is compared in a fixed order.
+		// The order of siblings is the database's to choose, and changes when its
+		// statistics are refreshed. So each list of results, and the labels inside
+		// a finding that names several elements, are compared in a fixed order.
 		const lint = async (world: NamedCase) => {
 			const result = (await runTool(
 				createCaseTools(world.userId, world.caseId),
@@ -488,7 +505,9 @@ describe("the Case Assistant's tools", () => {
 				Object.entries(result).map(([key, value]) => [
 					key,
 					Array.isArray(value)
-						? value.map((item) => JSON.stringify(item)).sort()
+						? value
+								.map((item) => JSON.stringify(withLabelsInOrder(item)))
+								.sort()
 						: value,
 				])
 			);
