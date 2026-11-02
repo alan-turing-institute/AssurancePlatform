@@ -49,6 +49,12 @@ const EVENT_MESSAGE_TEMPLATES: Record<string, [string, string]> = {
 	],
 };
 
+/** What a `case:updated` event says when it reports a change of kind. */
+const KIND_CHANGE_MESSAGES: Record<string, string> = {
+	PATTERN: "converted this case to a pattern",
+	CASE: "converted this pattern to a case",
+};
+
 /**
  * Extracts element name from SSE event payload. An element with no name is
  * identified by its description, with references written as `{name}`.
@@ -74,6 +80,17 @@ function buildToastMessage(event: SSEEvent): string | null {
 	}
 
 	const username = (event.payload?.username as string) || "Someone";
+
+	if (
+		event.type === "case:updated" &&
+		event.payload?.action === "kind-changed"
+	) {
+		const kindMessage = KIND_CHANGE_MESSAGES[String(event.payload.kind)];
+		if (kindMessage) {
+			return `${username} ${kindMessage}`;
+		}
+	}
+
 	const elementName = getElementName(event);
 	const [withElement, withoutElement] = templates;
 

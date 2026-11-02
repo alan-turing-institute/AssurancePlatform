@@ -266,7 +266,7 @@ model AssuranceCase {
   layoutDirection String                @default("TB") @map("layout_direction") /// ELK layout direction: TB (top-bottom) or LR (left-right)
 
   // Pattern tracking
-  sourcePatternId String?               @map("source_pattern_id") /// If started from a pattern, the ID of the PATTERN-kind case it was started from
+  sourcePatternId String?               @map("source_pattern_id") /// If started from a pattern, the ID of the case it was started from, which was a pattern at the time; that case may have been converted back to an ordinary case since
 
   // Timestamps
   createdAt       DateTime              @default(now()) @map("created_at")

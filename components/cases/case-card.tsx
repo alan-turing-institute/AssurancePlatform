@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
+import { Badge } from "@/components/ui/badge";
 import {
 	Card,
 	CardDescription,
@@ -20,6 +21,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { formatShortDate } from "@/lib/date";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
@@ -31,6 +33,8 @@ export interface CaseCardData {
 	description?: string;
 	id: number | string;
 	isDemo?: boolean;
+	/** CASE for an ordinary case, PATTERN for a pattern: a pattern is badged wherever it is listed. */
+	kind?: CaseKind;
 	name: string;
 	permissions?: string | string[];
 	/** Whether the case has a current published copy on Discover — decides which delete dialog the card shows. */
@@ -149,7 +153,14 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 								)}
 							</div>
 						)}
-						<CardTitle>{name}</CardTitle>
+						<div className="flex items-start justify-between gap-2">
+							<CardTitle>{name}</CardTitle>
+							{assuranceCase.kind === "PATTERN" && (
+								<Badge className="shrink-0" variant="secondary">
+									Pattern
+								</Badge>
+							)}
+						</div>
 						<CardDescription className="text-foreground">
 							{description}
 						</CardDescription>

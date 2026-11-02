@@ -24,6 +24,7 @@ import useStore from "@/store/store";
 import { Button } from "../ui/button";
 import ActionButtons from "./action-buttons";
 import CommentsSheet from "./comments-sheet";
+import { PatternBanner } from "./pattern-banner";
 
 // nodeTypes (components/cases/node-type-resolver.ts, ADR 0005 D5) and
 // edgeTypes are defined at module level to ensure stable references — this
@@ -228,27 +229,30 @@ function Flow() {
 					<ActionButtons actions={{ onLayout }} notifyError={notifyError} />
 					{/* Comments Sheet - controlled by store state */}
 					<CommentsSheet />
-					{orphanedElements &&
-						orphanedElements.length > 0 &&
-						showOrphanMessage && (
-							<div className="absolute top-16 left-0 w-full bg-card px-8 py-2 text-foreground shadow-sm">
-								<div className="flex items-center justify-center">
-									<div className="container mx-auto flex items-center justify-center gap-2">
-										<Unplug className="h-4 w-4" />
-										<p>You have orphaned elements for this assurance case.</p>
+					<div className="pointer-events-none absolute top-16 left-0 w-full">
+						<PatternBanner />
+						{orphanedElements &&
+							orphanedElements.length > 0 &&
+							showOrphanMessage && (
+								<div className="pointer-events-auto w-full bg-card px-8 py-2 text-foreground shadow-sm">
+									<div className="flex items-center justify-center">
+										<div className="container mx-auto flex items-center justify-center gap-2">
+											<Unplug className="h-4 w-4" />
+											<p>You have orphaned elements for this assurance case.</p>
+										</div>
+										<Button
+											className="hover:bg-muted"
+											onClick={() => setShowOrphanMessage(false)}
+											size={"icon"}
+											title="Dismiss"
+											variant={"ghost"}
+										>
+											<X className="h-4 w-4" />
+										</Button>
 									</div>
-									<Button
-										className="hover:bg-muted"
-										onClick={() => setShowOrphanMessage(false)}
-										size={"icon"}
-										title="Dismiss"
-										variant={"ghost"}
-									>
-										<X className="h-4 w-4" />
-									</Button>
 								</div>
-							</div>
-						)}
+							)}
+					</div>
 				</div>
 			)}
 		</div>

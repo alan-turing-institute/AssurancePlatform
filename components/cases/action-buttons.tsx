@@ -22,6 +22,7 @@ import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import { ErrorBoundary } from "../ui/error-boundary";
+import { CaseKindMenu } from "./case-kind-menu";
 import CaseNotes from "./case-notes";
 import { CasePanelButtons } from "./case-panel-buttons";
 import { CaseSettingsPopover } from "./case-settings-popover";
@@ -247,6 +248,9 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>
+					{assuranceCase && assuranceCase.permissions === "manage" && (
+						<CaseKindMenu />
+					)}
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Delete">
 							<Button
