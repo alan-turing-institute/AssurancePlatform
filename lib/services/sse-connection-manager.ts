@@ -192,18 +192,19 @@ class SSEConnectionManager {
 	}
 }
 
-// Use globalThis to persist the singleton across module reloads in dev mode
+// Keep the singleton on globalThis. A production build bundles server actions
+// and route handlers separately, so each bundle evaluates this module on its
+// own; without a shared instance, an event emitted from a server action
+// reaches no connection opened by the events route.
 const globalForSSE = globalThis as unknown as {
 	sseConnectionManager: SSEConnectionManager | undefined;
 };
 
-// Export singleton instance (persisted across hot reloads)
+// Export singleton instance (shared across bundles and hot reloads)
 export const sseConnectionManager =
 	globalForSSE.sseConnectionManager ?? new SSEConnectionManager();
 
-if (process.env.NODE_ENV !== "production") {
-	globalForSSE.sseConnectionManager = sseConnectionManager;
-}
+globalForSSE.sseConnectionManager = sseConnectionManager;
 
 /**
  * Helper function to emit an SSE event.
