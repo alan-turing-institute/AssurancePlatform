@@ -21,22 +21,47 @@ import {
 type User = Awaited<ReturnType<typeof createTestUser>>;
 type Level = "VIEW" | "COMMENT" | "EDIT" | "ADMIN";
 
-/** Everything below is built once per test: users, teams and cases. */
-async function grid() {
-	const creator = await createTestUser();
-	const granter = await createTestUser();
+const LEVELS = ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const;
 
+/** A user given direct access to every case, at one level. */
+interface DirectShare {
+	level: Level;
+	user: User;
+}
+
+/** Who every case is shared with, and who shared it. */
+interface Sharing {
+	/** A user given a direct share and a team share, and the team. */
+	both: { teamId: string; userId: string };
+	directShares: DirectShare[];
+	granterId: string;
+	/** A team that holds a share but has a user outside it. */
+	lonelyTeamId: string;
+	/** One team per role and level, each shared at its level. */
+	teams: { id: string; level: Level }[];
+}
+
+/** The creator, a stranger and one user for each level of direct access. */
+async function buildDirectUsers(creator: User) {
 	const users: Record<string, User> = {
 		creator,
 		stranger: await createTestUser(),
 	};
-	for (const level of ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const) {
-		users[`direct ${level}`] = await createTestUser();
+	const shares: DirectShare[] = [];
+	for (const level of LEVELS) {
+		const user = await createTestUser();
+		users[`direct ${level}`] = user;
+		shares.push({ level, user });
 	}
+	return { users, shares };
+}
 
-	const teams: Record<string, { id: string; level: Level }> = {};
+/** For each team role and share level, a team and a user holding that role. */
+async function buildTeamUsers() {
+	const users: Record<string, User> = {};
+	const teams: { id: string; level: Level }[] = [];
 	for (const role of ["OWNER", "ADMIN", "MEMBER"] as const) {
-		for (const level of ["VIEW", "COMMENT", "EDIT", "ADMIN"] as const) {
+		for (const level of LEVELS) {
 			const lead = await createTestUser();
 			const team = await createTestTeam(lead.id);
 			let member = lead;
@@ -45,25 +70,66 @@ async function grid() {
 				await addTeamMember(team.id, member.id, role);
 			}
 			users[`team ${role} at ${level}`] = member;
-			teams[`team ${role} at ${level}`] = { id: team.id, level };
+			teams.push({ id: team.id, level });
 		}
 	}
+	return { users, teams };
+}
 
+/** The users that teams reach in odd ways: not at all, or a second time. */
+async function buildEdgeUsers() {
 	// A member of a team that holds no share on any case below.
 	const emptyLead = await createTestUser();
 	await createTestTeam(emptyLead.id);
-	users["member of an unshared team"] = emptyLead;
 
 	// A user outside a team that holds a share.
 	const lonelyTeamLead = await createTestUser();
 	const lonelyTeam = await createTestTeam(lonelyTeamLead.id);
-	users["outside a shared team"] = await createTestUser();
+	const outsider = await createTestUser();
 
 	// A user holding two shares at once: directly and through a team.
-	users["direct and team"] = await createTestUser();
+	const both = await createTestUser();
 	const bothTeam = await createTestTeam(lonelyTeamLead.id);
-	await addTeamMember(bothTeam.id, users["direct and team"].id, "MEMBER");
+	await addTeamMember(bothTeam.id, both.id, "MEMBER");
 
+	const users: Record<string, User> = {
+		"member of an unshared team": emptyLead,
+		"outside a shared team": outsider,
+		"direct and team": both,
+	};
+	return {
+		users,
+		both: { teamId: bothTeam.id, userId: both.id },
+		lonelyTeamId: lonelyTeam.id,
+	};
+}
+
+/** Shares one case with every user and team the grid holds. */
+async function shareCase(caseId: string, sharing: Sharing) {
+	const { granterId } = sharing;
+	for (const { level, user } of sharing.directShares) {
+		await createTestPermission(caseId, user.id, granterId, level);
+	}
+	for (const team of sharing.teams) {
+		await createTestTeamPermission(caseId, team.id, granterId, team.level);
+	}
+	await createTestTeamPermission(
+		caseId,
+		sharing.lonelyTeamId,
+		granterId,
+		"VIEW"
+	);
+	await createTestPermission(caseId, sharing.both.userId, granterId, "COMMENT");
+	await createTestTeamPermission(
+		caseId,
+		sharing.both.teamId,
+		granterId,
+		"VIEW"
+	);
+}
+
+/** A live and a trashed case of each kind, each shared as `sharing` says. */
+async function buildCases(creator: User, sharing: Sharing) {
 	const cases: Record<
 		string,
 		{ id: string; kind: "CASE" | "PATTERN"; trashed: boolean }
@@ -81,39 +147,28 @@ async function grid() {
 				},
 			});
 			cases[label] = { id: made.id, kind, trashed };
-			for (const [name, user] of Object.entries(users)) {
-				if (name.startsWith("direct ") && name !== "direct and team") {
-					await createTestPermission(
-						made.id,
-						user.id,
-						granter.id,
-						name.slice("direct ".length) as Level
-					);
-				}
-			}
-			for (const team of Object.values(teams)) {
-				await createTestTeamPermission(
-					made.id,
-					team.id,
-					granter.id,
-					team.level
-				);
-			}
-			await createTestTeamPermission(
-				made.id,
-				lonelyTeam.id,
-				granter.id,
-				"VIEW"
-			);
-			await createTestPermission(
-				made.id,
-				users["direct and team"].id,
-				granter.id,
-				"COMMENT"
-			);
-			await createTestTeamPermission(made.id, bothTeam.id, granter.id, "VIEW");
+			await shareCase(made.id, sharing);
 		}
 	}
+	return cases;
+}
+
+/** Everything below is built once per test: users, teams and cases. */
+async function grid() {
+	const creator = await createTestUser();
+	const granter = await createTestUser();
+	const direct = await buildDirectUsers(creator);
+	const byTeam = await buildTeamUsers();
+	const edge = await buildEdgeUsers();
+
+	const users = { ...direct.users, ...byTeam.users, ...edge.users };
+	const cases = await buildCases(creator, {
+		both: edge.both,
+		directShares: direct.shares,
+		granterId: granter.id,
+		lonelyTeamId: edge.lonelyTeamId,
+		teams: byTeam.teams,
+	});
 
 	return { users, cases };
 }

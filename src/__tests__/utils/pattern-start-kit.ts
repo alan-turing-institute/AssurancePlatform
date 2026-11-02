@@ -64,7 +64,7 @@ export async function makePattern(
 }
 
 /** The id of the element named `name` in a stored case. */
-export async function elementIdByName(caseId: string, name: string) {
+async function elementIdByName(caseId: string, name: string) {
 	const row = await prisma.assuranceElement.findFirstOrThrow({
 		where: { caseId, name },
 		select: { id: true },
@@ -77,7 +77,7 @@ export async function elementIdByName(caseId: string, name: string) {
  * empty: an assumption, a justification, context entries and a declared
  * assertion status.
  */
-export async function addTextFieldsTo(caseId: string) {
+async function addTextFieldsTo(caseId: string) {
 	await prisma.assuranceElement.update({
 		where: { id: await elementIdByName(caseId, "P1") },
 		data: { assumption: "Assumes the data is current" },
@@ -100,7 +100,7 @@ export async function addTextFieldsTo(caseId: string) {
  * Comments on a stored pattern: two on the goal (one a reply to the other,
  * by two people) and one on the case itself.
  */
-export async function addCommentsTo(caseId: string, commenters: [User, User]) {
+async function addCommentsTo(caseId: string, commenters: [User, User]) {
 	const goalId = await elementIdByName(caseId, "G1");
 	const first = await createTestComment(commenters[0].id, {
 		elementId: goalId,
