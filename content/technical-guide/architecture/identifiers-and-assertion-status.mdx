@@ -17,7 +17,7 @@ An assertion status is an author's explicit statement about support, not a score
 
 ## Citation integrity
 
-Only an `AWAY_GOAL` may set `citedElementId`. An away goal must first name a module case, then cite an existing, active element in it that is not the away goal itself. Element create and edit enforce the pair, as does the JSON editor's batch update. Import checks the pair too: if the reference is invalid, it clears the citation and sets `citationDangling` or `moduleReferenceDangling` for review. If a cited element is deleted or detached later, the citation is cleared and a dangling indicator remains. Restoring that element does not silently recreate the old citation.
+Only an `AWAY_GOAL` may set `citedElementId`. An away goal must first name a module case, then cite an existing, active element in it that is not the away goal itself. Element create and edit enforce the pair, as does the JSON editor's batch update. Import checks the pair too: if the reference is invalid, or names a case the importing user cannot view, it clears the citation and sets `citationDangling` or `moduleReferenceDangling` for review. If a cited element is deleted or detached later, the citation is cleared and a dangling indicator remains. Restoring that element does not silently recreate the old citation.
 
 ## Limits and code location
 

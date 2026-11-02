@@ -10,6 +10,7 @@ import {
 	createNestedCaseWithChainJSON,
 	createTestCase,
 	createTestElement,
+	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -480,6 +481,7 @@ describe("validateImportData", () => {
 		expect(exportedAwayGoal?.citedElementId).toBe(citedGoal.id);
 
 		const importer = await createTestUser();
+		await createTestPermission(awayCase.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, firstExport));
 
 		// Direct DB check — proves the createMany write itself carries the
@@ -657,6 +659,7 @@ describe("validateImportData", () => {
 
 		try {
 			const importer = await createTestUser();
+			await createTestPermission(awayCase.id, importer.id, owner.id);
 			const imported = expectSuccess(await importCase(importer.id, json));
 
 			// The import SUCCEEDED — not rolled back by the raced FK violation —
@@ -937,6 +940,8 @@ describe("validateImportData", () => {
 
 		const { importCase } = await import("@/lib/services/case-import-service");
 		const importer = await createTestUser();
+		await createTestPermission(caseA.id, importer.id, owner.id);
+		await createTestPermission(caseB.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, json));
 
 		expect(imported.elementCount).toBe(2);
@@ -1017,6 +1022,7 @@ describe("validateImportData", () => {
 
 		const { importCase } = await import("@/lib/services/case-import-service");
 		const importer = await createTestUser();
+		await createTestPermission(awayCase.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, json));
 
 		expect(imported.elementCount).toBe(2);
@@ -1125,6 +1131,7 @@ describe("validateImportData", () => {
 		expect(exportedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
 
 		const importer = await createTestUser();
+		await createTestPermission(awayCase.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, firstExport));
 
 		// Direct DB check — proves the createMany write itself carries the

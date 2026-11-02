@@ -75,6 +75,7 @@ export const createAssuranceCase = async (
 		name: validation.data.name,
 		description: validation.data.description,
 		colourProfile: validation.data.colourProfile,
+		kind: validation.data.kind,
 	});
 
 	if ("error" in result) {

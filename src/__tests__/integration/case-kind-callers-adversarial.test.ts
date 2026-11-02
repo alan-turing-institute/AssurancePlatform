@@ -18,7 +18,10 @@ import {
 	richNestedFile,
 	storedCase,
 } from "../utils/case-kind-kit";
-import { createTestUser } from "../utils/prisma-factories";
+import {
+	createTestPermission,
+	createTestUser,
+} from "../utils/prisma-factories";
 
 /**
  * The callers that import or export a case without any options: the file,
@@ -260,6 +263,47 @@ describe.each(IMPORT_ROUTES)("%s", (_label, send) => {
 
 		expect(await prisma.assuranceCase.count()).toBe(0);
 		expect(await prisma.assuranceElement.count()).toBe(0);
+	});
+
+	it("clears the references to a case the user cannot view and names them in the warnings, and keeps the references to a case they can view", async () => {
+		const user = await createTestUser();
+		const author = await createTestUser();
+		const hidden = await createStoredCase(author.id);
+		const shared = await createStoredCase(author.id);
+		await createTestPermission(shared.id, user.id, author.id);
+		const referencesOf = (caseId: string) =>
+			prisma.assuranceElement.findMany({
+				where: { caseId, elementType: { in: ["AWAY_GOAL", "MODULE"] } },
+				select: { moduleReferenceId: true, moduleReferenceDangling: true },
+			});
+
+		const hiddenResponse = await send(
+			user,
+			richNestedFile({ citedCaseId: hidden.id })
+		);
+		const sharedResponse = await send(
+			user,
+			richNestedFile({ citedCaseId: shared.id })
+		);
+
+		expect(hiddenResponse.status).toBe(200);
+		expect(sharedResponse.status).toBe(200);
+		const clearedBody = await hiddenResponse.json();
+		const keptBody = await sharedResponse.json();
+		expect(await referencesOf(clearedBody.id)).toEqual([
+			{ moduleReferenceId: null, moduleReferenceDangling: true },
+			{ moduleReferenceId: null, moduleReferenceDangling: true },
+		]);
+		expect(
+			clearedBody.warnings.filter((message: string) =>
+				message.endsWith("the reference has been cleared")
+			)
+		).toHaveLength(2);
+		expect(await referencesOf(keptBody.id)).toEqual([
+			{ moduleReferenceId: shared.id, moduleReferenceDangling: false },
+			{ moduleReferenceId: shared.id, moduleReferenceDangling: false },
+		]);
+		expect(keptBody.warnings).toEqual([]);
 	});
 });
 

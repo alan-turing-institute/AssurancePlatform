@@ -935,11 +935,18 @@ export async function listCaseGoalElements(
 }
 
 /**
- * Creates a new assurance case owned by the given user.
+ * Creates a new assurance case owned by the given user. `kind` makes a blank
+ * pattern instead of an ordinary case; the new case holds a single top-level
+ * goal either way.
  */
 export async function createCase(
 	userId: string,
-	data: { name: string; description?: string; colourProfile?: string }
+	data: {
+		name: string;
+		description?: string;
+		colourProfile?: string;
+		kind?: CaseKind;
+	}
 ): ServiceResult<{ id: string }> {
 	try {
 		const newCase = await prisma.$transaction(async (tx) => {
@@ -948,6 +955,7 @@ export async function createCase(
 					name: data.name,
 					description: data.description ?? "",
 					colourProfile: data.colourProfile,
+					kind: data.kind ?? "CASE",
 					createdById: userId,
 				},
 			});

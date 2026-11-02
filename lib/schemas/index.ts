@@ -4,6 +4,7 @@
 export * from "./assurance-case";
 export * from "./auth";
 export * from "./base";
+export * from "./case-from-pattern";
 export * from "./case-image";
 export * from "./case-information";
 export * from "./case-kind";

@@ -51,7 +51,7 @@ export interface PublishableItemDetailResponse
  * current tree nodes, legacy shapes, or a future nested location — without
  * needing to track every place `comments` could appear.
  */
-function stripComments(value: unknown): unknown {
+export function stripComments(value: unknown): unknown {
 	if (Array.isArray(value)) {
 		return value.map(stripComments);
 	}
