@@ -1,3 +1,4 @@
+import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { PublishableItemDetailResponse } from "@/lib/services/discover-transforms";
 import DownloadPublishedItemButton from "./download-published-item-button";
 import UsePatternButton from "./use-pattern-button";
@@ -8,7 +9,9 @@ interface FrozenSnapshotSectionProps {
 
 /**
  * The detail page's snapshot section: the download of the frozen snapshot
- * and, for a published pattern only, "Use this pattern" beside it.
+ * and, for a published pattern only, "Use this pattern" beside it. The page
+ * is rendered on the server, where the published description (sanitised HTML)
+ * is turned into the plain text the new-case dialog shows.
  */
 const FrozenSnapshotSection = ({ item }: FrozenSnapshotSectionProps) => {
 	const isPattern = item.type === "ARGUMENT_PATTERN";
@@ -29,7 +32,7 @@ const FrozenSnapshotSection = ({ item }: FrozenSnapshotSectionProps) => {
 				/>
 				{isPattern && (
 					<UsePatternButton
-						description={item.description ?? ""}
+						description={extractTextFromHtml(item.description ?? "")}
 						slug={item.slug}
 						title={item.title}
 					/>
