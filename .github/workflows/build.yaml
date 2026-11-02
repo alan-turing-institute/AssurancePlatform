@@ -650,7 +650,8 @@ jobs:
 
       - name: Build application for E2E
         run: |
-          # next build type-checks the whole project, which needs more than Node's default heap.
+          # next build type-checks the whole project, which needs more than
+          # Node's default heap limit leaves on some runners.
           NODE_OPTIONS=--max-old-space-size=6144 pnpm build
           cp -r public .next/standalone/public
           cp -r .next/static .next/standalone/.next/static
