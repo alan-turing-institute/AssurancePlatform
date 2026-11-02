@@ -30,11 +30,17 @@ import {
 } from "@/lib/schemas/assurance-case";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import { Button } from "../ui/button";
+import { LeftOutNotice } from "./_case-create-modal/left-out-notice";
 import {
 	type PatternChoices,
 	type StartFrom,
 	StartFromSection,
 } from "./_case-create-modal/start-from-section";
+
+const PLACEHOLDERS = {
+	case: { name: "Case name", description: "Your case description" },
+	pattern: { name: "Pattern name", description: "Your pattern description" },
+};
 
 /**
  * Creates the case the dialog describes: a copy of the chosen pattern, a blank
@@ -165,7 +171,8 @@ export const CaseCreateModal = () => {
 		CreateCase(values.name, values.description);
 	};
 
-	const makingPattern = start === "blank-pattern";
+	const placeholders =
+		PLACEHOLDERS[start === "blank-pattern" ? "pattern" : "case"];
 
 	return (
 		<Modal
@@ -180,21 +187,10 @@ export const CaseCreateModal = () => {
 				</div>
 			)}
 			{!loading && pending && (
-				<div className="space-y-4 py-2 pb-4">
-					<div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-sm text-warning-foreground">
-						<p className="font-semibold">Some references were left out:</p>
-						<ul className="list-inside list-disc">
-							{pending.warnings.map((warning) => (
-								<li key={warning}>{warning}</li>
-							))}
-						</ul>
-					</div>
-					<div className="flex w-full justify-end">
-						<Button onClick={() => openCase(pending.id)}>
-							Continue to case
-						</Button>
-					</div>
-				</div>
+				<LeftOutNotice
+					onContinue={() => openCase(pending.id)}
+					warnings={pending.warnings}
+				/>
 			)}
 			{!(loading || pending) && (
 				<div className="space-y-4 py-2 pb-4">
@@ -221,9 +217,7 @@ export const CaseCreateModal = () => {
 											<FormControl>
 												<Input
 													disabled={loading}
-													placeholder={
-														makingPattern ? "Pattern name" : "Case name"
-													}
+													placeholder={placeholders.name}
 													{...field}
 												/>
 											</FormControl>
@@ -240,11 +234,7 @@ export const CaseCreateModal = () => {
 											<FormControl>
 												<Textarea
 													disabled={loading}
-													placeholder={
-														makingPattern
-															? "Your pattern description"
-															: "Your case description"
-													}
+													placeholder={placeholders.description}
 													rows={4}
 													{...field}
 												/>
