@@ -89,6 +89,7 @@ function stored(id: string) {
 			description: true,
 			isPlaceholder: true,
 			placeholderHint: true,
+			fromPattern: true,
 			modifiedFromPattern: true,
 		},
 	});
@@ -138,6 +139,17 @@ describe.each(
 			description: "",
 			isPlaceholder: true,
 		});
+	});
+
+	it("does not take the marker off for the stored text with spaces added", async () => {
+		const { caseId, id } = await placeholderGoal("CASE", {
+			description: "Draft",
+		});
+
+		const response = await write(caseId, id, { description: "Draft " });
+
+		expect(response.status).toBe(200);
+		expect((await stored(id)).isPlaceholder).toBe(true);
 	});
 
 	it("never takes the marker off in a pattern", async () => {
@@ -259,17 +271,18 @@ describe("creating an element as a placeholder", () => {
 	});
 });
 
-describe("markers the batch route no longer accepts", () => {
-	it("refuses a change that carries fromPattern or modifiedFromPattern", async () => {
+describe("markers the batch route ignores", () => {
+	it("accepts a change that carries fromPattern or modifiedFromPattern and does not store them", async () => {
 		const { caseId, id } = await placeholderGoal("CASE");
+		const write = WRITERS["the batch route"];
 
-		const responses = await Promise.all(
-			[{ fromPattern: true }, { modifiedFromPattern: true }].map((data) =>
-				WRITERS["the batch route"]?.(caseId, id, data)
-			)
-		);
+		const first = await write?.(caseId, id, { fromPattern: true });
+		const second = await write?.(caseId, id, { modifiedFromPattern: true });
 
-		expect(responses.map((response) => response?.status)).toEqual([400, 400]);
-		expect(await stored(id)).toMatchObject({ modifiedFromPattern: false });
+		expect([first?.status, second?.status]).toEqual([200, 200]);
+		expect(await stored(id)).toMatchObject({
+			fromPattern: false,
+			modifiedFromPattern: false,
+		});
 	});
 });

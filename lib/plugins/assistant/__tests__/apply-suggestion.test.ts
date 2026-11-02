@@ -118,6 +118,39 @@ describe("applying a rewording", () => {
 		);
 	});
 
+	it("records a placeholder in a case as marked before the edit and not marked after it", async () => {
+		useStore.setState({
+			assuranceCase: { id: CASE_ID, kind: "CASE" } as AssuranceCaseResponse,
+		});
+		serve({
+			"GET /api/elements/p1": () =>
+				json(
+					element({
+						description: "",
+						isPlaceholder: true,
+						placeholderHint: "Say what the claim asserts",
+					})
+				),
+			"PUT /api/elements/p1": () => json(element()),
+			[`GET /api/cases/${CASE_ID}`]: () => json(FRESH_CASE),
+		});
+
+		await applySuggestion(CASE_ID, {
+			...EDIT,
+			changes: { description: { before: "", after: "It is accurate to 2%" } },
+		});
+
+		const [entry] = useHistoryStore.getState().undoStack;
+		expect(entry?.commands[0]).toMatchObject({
+			before: {
+				description: "",
+				isPlaceholder: true,
+				placeholderHint: "Say what the claim asserts",
+			},
+			after: { description: "It is accurate to 2%", isPlaceholder: false },
+		});
+	});
+
 	it("refuses and saves nothing when the element was reworded after the suggestion", async () => {
 		const server = serve({
 			"GET /api/elements/p1": () =>

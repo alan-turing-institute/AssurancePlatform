@@ -11,15 +11,16 @@
  * labels, the missing-fields gate); this file drives one case through the
  * whole publish/unpublish lifecycle end to end.
  *
+ * A new case's top goal is a placeholder with no text, and a case with a
+ * placeholder cannot be published, so the journey first writes the goal
+ * through the canvas's edit dialog.
+ *
  * The content-change step (edit -> divergence) goes through the elements
- * API directly rather than the React Flow canvas: the canvas node action
- * buttons (edit/add) have no accessible name in this codebase yet (icon-only,
- * tooltip content isn't an accessible name), so there is no established
- * Playwright pattern for driving them, and inventing a brittle CSS-icon
- * selector here isn't worth it for a single setup step. Every
- * publish/unpublish/anonymous-view step below still goes through the real
- * UI; only the structural edit is made via the same API route the canvas
- * "Add child element" action itself calls.
+ * API directly rather than the React Flow canvas: adding a child through the
+ * canvas takes several steps of popover and form work that are not under test
+ * here. Every publish/unpublish/anonymous-view step below still goes through
+ * the real UI; only the structural edit is made via the same API route the
+ * canvas "Add child element" action itself calls.
  *
  * Published payloads carry no comments (an existing strip layer handles
  * that, see `discover-comments-privacy.test.ts`) — this file doesn't
@@ -119,10 +120,22 @@ test.describe("ADR 0003 — publish journey", () => {
 			.locator(".react-flow__node")
 			.filter({ hasText: "G1" });
 		await goalCard.hover();
-		await goalCard.getByRole("button", { name: "Edit element" }).click();
-		await page.getByRole("dialog").getByLabel("Description").fill(GOAL_TEXT);
-		await page.getByRole("button", { name: "Update Goal" }).click();
-		await expect(page.getByRole("dialog")).toBeHidden();
+		// A card's own wrapper is a button whose name folds in everything inside
+		// it, so the edit button is found inside the card and by exact name.
+		await goalCard
+			.getByRole("button", { name: "Edit element", exact: true })
+			.click();
+		const goalDialog = page.getByRole("dialog", {
+			name: "Editing G1",
+			exact: true,
+		});
+		await goalDialog
+			.getByRole("textbox", { name: "Description", exact: true })
+			.fill(GOAL_TEXT);
+		await goalDialog
+			.getByRole("button", { name: "Update Goal", exact: true })
+			.click();
+		await expect(goalDialog).toBeHidden();
 
 		// ---- Fill case information: description, authors, sector all
 		// required to publish (ADR 0003 §4 — widened 2026-08-11) ----

@@ -40,7 +40,8 @@ In a case, an update whose description is not empty and differs from the stored 
 The edit dialog sends the assumption, justification and context every time, so the comparison is with the stored values.
 In a pattern, nothing clears `isPlaceholder`.
 `updateElement` and the batch service apply these rules; `updateElementWithin`, which the health plugin uses for its own nodes, does not.
-Only the server sets `fromPattern` and `modifiedFromPattern`, so the batch route refuses a change that carries them.
+Only the server sets `fromPattern` and `modifiedFromPattern`.
+The element routes refuse a request that carries them, and the batch route accepts a change that carries them, so a document saved from an earlier export still applies, and ignores them.
 `lib/case/placeholders.ts` holds the rules, which the browser also uses to record the state an undo or redo sends back.
 
 A new blank case or pattern, created by `createCase`, starts with its top-level goal as a placeholder with no text and the hint "Describe your top-level assurance goal".

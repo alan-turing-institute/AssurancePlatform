@@ -433,8 +433,8 @@ model AssuranceElement {
   // Pattern tracking
   fromPattern         Boolean          @default(false) @map("from_pattern") /// True if element came from a pattern template
   modifiedFromPattern Boolean          @default(false) @map("modified_from_pattern") /// True if element was modified after pattern application
-  isPlaceholder       Boolean          @default(false) @map("is_placeholder") /// True if the element is a placeholder to be filled in when a case is started from a pattern
-  placeholderHint     String?          @map("placeholder_hint") @db.VarChar(500) /// Guidance shown to whoever fills in a placeholder element
+  isPlaceholder       Boolean          @default(false) @map("is_placeholder") /// True if the person using the case or pattern writes this element; writing its description takes this off in a case, and a case with any left cannot be published
+  placeholderHint     String?          @map("placeholder_hint") @db.VarChar(500) /// Guidance of up to 500 characters for whoever fills in a placeholder element; returned and exported only while isPlaceholder is true
 
   // Sandbox/draft status
   inSandbox           Boolean          @default(false) @map("in_sandbox") /// True if element is in draft/sandbox mode

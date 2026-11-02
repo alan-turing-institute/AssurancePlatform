@@ -199,6 +199,9 @@ export const elementUrlsFormSchema = z.strictObject({
 export type ElementUrlsFormInput = z.input<typeof elementUrlsFormSchema>;
 export type ElementUrlsFormOutput = z.output<typeof elementUrlsFormSchema>;
 
+/** The fewest characters an element's description may have, spaces apart. */
+export const MIN_DESCRIPTION_LENGTH = 2;
+
 /**
  * Combined node edit form schema — description + attributes + urls
  * Used by NodeEditDialog and EditForm components
@@ -218,16 +221,19 @@ export const nodeEditFormSchema = z
 		assertionStatus: AuthorAssertionStatusSchema.optional(),
 		// The placeholder marker and its hint, as the dialog holds them.
 		isPlaceholder: z.boolean().optional(),
-		placeholderHint: z.string().max(500).optional(),
+		placeholderHint: z
+			.string()
+			.max(500, "A hint must be 500 characters or fewer")
+			.optional(),
 	})
 	// A placeholder may be saved with no text: it is the person using the
-	// pattern who writes it.
+	// pattern who writes it. Spaces do not count towards the length.
 	.refine(
 		(values) =>
-			values.description.length >= 2 ||
+			values.description.trim().length >= MIN_DESCRIPTION_LENGTH ||
 			(values.isPlaceholder === true && values.description.trim() === ""),
 		{
-			message: "Description must be at least 2 characters",
+			message: `Description must be at least ${MIN_DESCRIPTION_LENGTH} characters`,
 			path: ["description"],
 		}
 	);

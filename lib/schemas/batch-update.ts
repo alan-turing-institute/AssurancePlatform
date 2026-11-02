@@ -13,11 +13,25 @@ import { ContextEntrySchema } from "./context-entry";
 const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
 
 /**
+ * `fromPattern` and `modifiedFromPattern` on a change. Only the server sets
+ * them (when a case is started from a pattern and when text is edited), but a
+ * document saved from an earlier export still carries them, so a change that
+ * has them is accepted and they are dropped.
+ */
+const ignoredPatternMarkers = {
+	fromPattern: z
+		.boolean()
+		.optional()
+		.transform(() => undefined),
+	modifiedFromPattern: z
+		.boolean()
+		.optional()
+		.transform(() => undefined),
+};
+
+/**
  * Schema for batch update request body.
  * Extracted from cases/[id]/batch/route.ts for reuse.
- *
- * `fromPattern` and `modifiedFromPattern` are not accepted: only the server
- * sets them, when a case is started from a pattern and when text is edited.
  */
 export const batchUpdateRequestSchema = z.strictObject({
 	changes: z
@@ -47,6 +61,7 @@ export const batchUpdateRequestSchema = z.strictObject({
 						defeatsElementId: z.string().optional(),
 						isPlaceholder: z.boolean().optional(),
 						placeholderHint: placeholderHintInputSchema,
+						...ignoredPatternMarkers,
 					}),
 				}),
 				z.strictObject({
@@ -71,6 +86,7 @@ export const batchUpdateRequestSchema = z.strictObject({
 						defeatsElementId: z.string().optional(),
 						isPlaceholder: z.boolean().optional(),
 						placeholderHint: placeholderHintInputSchema,
+						...ignoredPatternMarkers,
 					}),
 				}),
 				z.strictObject({

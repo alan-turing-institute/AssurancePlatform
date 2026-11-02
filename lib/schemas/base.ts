@@ -51,16 +51,16 @@ export const optionalString = (maxLength = 2000) =>
 		.describe("Optional string field");
 
 /**
- * Optional trimmed string where an empty string is a value, not "leave as it
- * is" (null still becomes undefined). For text that may be emptied, such as a
- * placeholder's description.
+ * Optional trimmed string where an exact empty string is a value, not "leave
+ * as it is" (null, and text of only spaces, still become undefined). For text
+ * that may be emptied on purpose, such as a placeholder's description.
  */
 export const optionalStringAllowingEmpty = (maxLength = 2000) =>
 	z
 		.string()
 		.max(maxLength, `Must be less than ${maxLength} characters`)
 		.nullable()
-		.transform((v) => (v === null ? undefined : v.trim()))
+		.transform((v) => (v === "" ? v : v?.trim() || undefined))
 		.optional()
 		.describe("Optional string field");
 

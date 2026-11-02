@@ -64,6 +64,7 @@ import {
 import { recordedStates } from "@/lib/case/placeholders";
 import type { ElementPanelRegistration } from "@/lib/plugins/slots";
 import {
+	MIN_DESCRIPTION_LENGTH,
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
@@ -328,6 +329,8 @@ function PatternPlaceholderFields({
 	readOnly,
 }: PatternPlaceholderFieldsProps) {
 	const isPlaceholder = form.watch("isPlaceholder");
+	const hasText =
+		form.watch("description").trim().length >= MIN_DESCRIPTION_LENGTH;
 	if (!isPattern) {
 		return null;
 	}
@@ -345,12 +348,20 @@ function PatternPlaceholderFields({
 							<Switch
 								checked={field.value === true}
 								disabled={readOnly}
+								onBlur={field.onBlur}
 								onCheckedChange={field.onChange}
+								ref={field.ref}
 							/>
 						</FormControl>
 					</FormItem>
 				)}
 			/>
+			{!(isPlaceholder || hasText || readOnly) && (
+				<p className="text-muted-foreground text-sm">
+					This element has no text yet. Write its description above before
+					switching the placeholder off.
+				</p>
+			)}
 			{isPlaceholder && (
 				<TextFieldSection
 					form={form}

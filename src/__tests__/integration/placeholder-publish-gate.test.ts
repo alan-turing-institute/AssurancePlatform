@@ -23,6 +23,15 @@ vi.mock("next/cache", () => ({
 	revalidatePath: vi.fn(),
 }));
 
+// The real export, except where a test makes it fail.
+vi.mock("@/lib/services/case-export-service", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/services/case-export-service")>();
+	return { ...actual, exportCase: vi.fn(actual.exportCase) };
+});
+
+const { exportCase } = await import("@/lib/services/case-export-service");
+
 beforeEach(async () => {
 	await mockNoAuth();
 });
@@ -127,6 +136,25 @@ describe.each(
 		const response = await publish(scene.caseId);
 
 		expect(response.status).toBe(200);
+	});
+});
+
+describe("when the case cannot be exported", () => {
+	it.each(
+		Object.entries(ROUTES)
+	)("is refused through %s for a reason other than permission or a missing case", async (_label, publish) => {
+		const scene = await publishableCase();
+		vi.mocked(exportCase).mockResolvedValueOnce({
+			error: "Failed to export case",
+		});
+
+		const response = await publish(scene.caseId);
+
+		expect(response.ok).toBe(false);
+		const row = await prisma.assuranceCase.findUnique({
+			where: { id: scene.caseId },
+		});
+		expect(row?.published).toBe(false);
 	});
 });
 

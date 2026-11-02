@@ -1417,7 +1417,9 @@ async function resolvePatternMarkers(
 			patternMarkersForEdit({
 				kind: caseRow.kind,
 				stored: storedElementText(stored),
-				edit: data,
+				// Trimmed, as the element route reads a description, so trailing
+				// spaces alone do not count as writing the element.
+				edit: { ...data, description: data.description?.trim() },
 				placeholderSetByEdit: data.isPlaceholder !== undefined,
 			})
 		);

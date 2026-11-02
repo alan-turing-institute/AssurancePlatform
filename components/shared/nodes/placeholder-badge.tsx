@@ -2,13 +2,17 @@
 
 import { Portal as TooltipPortal } from "@radix-ui/react-tooltip";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+/** The words on the badge. */
+const BADGE_WORDS = "To fill in";
 
 /** What the hover says when the author gave no hint. */
 const NO_HINT = "This element is still to be filled in.";
@@ -22,20 +26,27 @@ interface PlaceholderBadgeProps {
  * The small badge an element carries while it is a placeholder: the person
  * using the case or pattern writes it. The word is visible text, so the badge
  * is never colour-only, and the dashed outline matches the card's own. The
- * hint is a hover for mouse users, drawn outside the canvas so zooming the
- * diagram does not scale it; the edit dialog shows the same hint in full.
+ * badge is a button, so the hint opens on keyboard focus as well as on hover;
+ * its accessible name is the visible words followed by the hint. The hint is
+ * drawn outside the canvas so zooming the diagram does not scale it; the edit
+ * dialog shows the same hint in full.
  */
 function PlaceholderBadge({ hint }: PlaceholderBadgeProps) {
 	return (
 		<TooltipProvider>
 			<Tooltip delayDuration={200}>
 				<TooltipTrigger asChild>
-					<Badge
-						className="rounded-full border-warning/60 border-dashed bg-warning/10 px-2 py-px font-medium text-[10px] text-foreground"
-						variant="outline"
+					<button
+						aria-label={hint ? `${BADGE_WORDS}: ${hint}` : undefined}
+						className={cn(
+							badgeVariants({ variant: "outline" }),
+							"rounded-full border-warning/60 border-dashed bg-warning/10 px-2 py-px font-medium text-[10px] text-foreground"
+						)}
+						onMouseDown={(event) => event.stopPropagation()}
+						type="button"
 					>
-						To fill in
-					</Badge>
+						{BADGE_WORDS}
+					</button>
 				</TooltipTrigger>
 				<TooltipPortal>
 					<TooltipContent className="max-w-xs">

@@ -282,12 +282,24 @@ export async function requireCaseInformationComplete(
 }
 
 /**
+ * The export errors the gate leaves to the publish step, which reports them
+ * itself: the person cannot read the case, it does not exist, or it has no
+ * elements (so no placeholders).
+ */
+const EXPORT_ERRORS_FOR_PUBLISH_TO_REPORT: ReadonlySet<string> = new Set([
+	"Permission denied",
+	"Case not found",
+	"Case has no elements to export",
+]);
+
+/**
  * The placeholder half of the publish gate: a case cannot be published while
  * an element of the argument that would be published is still to fill in.
  * Counted on the exported tree, which leaves out detached sandbox elements; a
  * pattern is never held back by its own placeholders. Fails with the number
- * still to fill in; a case that cannot be read for export passes, because the
- * publish that follows reads it again and reports why it cannot.
+ * still to fill in. The export errors listed above pass, because the publish
+ * that follows reports them with its own errors; any other failure to export
+ * refuses.
  */
 async function requireNoPlaceholders(
 	userId: string,
@@ -297,9 +309,9 @@ async function requireNoPlaceholders(
 		includeComments: false,
 	});
 	if ("error" in exported) {
-		// A case that cannot be exported cannot be published either, and the
-		// publish itself refuses it with its own error and permission checks.
-		return { data: true };
+		return EXPORT_ERRORS_FOR_PUBLISH_TO_REPORT.has(exported.error)
+			? { data: true }
+			: exported;
 	}
 	if (exported.data.case.kind === "PATTERN") {
 		return { data: true };
