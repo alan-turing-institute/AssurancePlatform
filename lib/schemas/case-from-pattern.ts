@@ -8,11 +8,14 @@ import { publishableItemSlugSchema } from "./publishable-item";
  * pattern published on Discover, named by its public slug. Exactly one of the
  * two keys is allowed.
  */
-const patternSourceSchema = z
-	.union([
-		z.strictObject({ patternCaseId: uuidSchema }),
-		z.strictObject({ publishedSlug: publishableItemSlugSchema }),
-	])
+export const patternSourceSchema = z
+	.union(
+		[
+			z.strictObject({ patternCaseId: uuidSchema }),
+			z.strictObject({ publishedSlug: publishableItemSlugSchema }),
+		],
+		{ error: "Choose a pattern to start from" }
+	)
 	.describe("The pattern to start a case from");
 
 export type PatternSource = z.infer<typeof patternSourceSchema>;

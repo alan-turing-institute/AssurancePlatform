@@ -461,7 +461,7 @@ async function resolveExternalModuleReferenceIds(
 	}
 
 	const found = await client.assuranceCase.findMany({
-		where: { id: { in: [...caseIds] }, ...viewableCaseWhere(userId) },
+		where: { id: { in: [...caseIds] }, AND: [viewableCaseWhere(userId)] },
 		select: { id: true },
 	});
 

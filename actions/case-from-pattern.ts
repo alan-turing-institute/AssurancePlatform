@@ -53,7 +53,9 @@ export const createCaseFromPattern = async (
 	if (!validation.success) {
 		return {
 			success: false,
-			error: validation.error,
+			// The dialog shows this under its fields, so it carries the problem
+			// alone, without the "name:" or "description:" path prefix.
+			error: Object.values(validation.fieldErrors ?? {})[0] ?? validation.error,
 			fieldErrors: validation.fieldErrors,
 		};
 	}

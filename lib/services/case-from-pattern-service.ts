@@ -3,6 +3,7 @@ import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
 	type PatternSource,
+	patternSourceSchema,
 	startedCaseDescriptionSchema,
 	startedCaseNameSchema,
 } from "@/lib/schemas/case-from-pattern";
@@ -18,6 +19,8 @@ const log = logger.child({ component: "case-from-pattern-service" });
  * source to name when starting the case, and how to show it in a picker.
  */
 export interface ViewablePattern {
+	/** Set on a published copy that was archived when its case went to Trash. */
+	archived?: true;
 	description: string;
 	/** Stable per pattern and per origin; for list keys and picker values. */
 	key: string;
@@ -31,7 +34,9 @@ export interface ViewablePattern {
  * Lists the patterns a user can start a case from: patterns they own, then
  * patterns shared with them directly or through a team, then the current
  * published patterns on Discover. A site with no published patterns lists
- * none; trashed patterns are never listed.
+ * none; trashed patterns are never listed. A published pattern whose source
+ * case is already listed is left out, so a pattern appears once, as the
+ * case itself.
  */
 export async function listViewablePatterns(
 	userId: string
@@ -39,7 +44,7 @@ export async function listViewablePatterns(
 	try {
 		const [cases, published] = await Promise.all([
 			prisma.assuranceCase.findMany({
-				where: { kind: "PATTERN", ...viewableCaseWhere(userId) },
+				where: { kind: "PATTERN", AND: [viewableCaseWhere(userId)] },
 				select: {
 					id: true,
 					name: true,
@@ -50,10 +55,17 @@ export async function listViewablePatterns(
 			}),
 			prisma.publishedAssuranceCase.findMany({
 				where: { type: "ARGUMENT_PATTERN", isCurrent: true },
-				select: { slug: true, title: true, description: true },
+				select: {
+					slug: true,
+					title: true,
+					description: true,
+					assuranceCaseId: true,
+					archivedAt: true,
+				},
 				orderBy: { title: "asc" },
 			}),
 		]);
+		const listedCaseIds = new Set(cases.map((pattern) => pattern.id));
 
 		const fromCases = cases.map((pattern): ViewablePattern => {
 			const own = pattern.createdById === userId;
@@ -70,15 +82,24 @@ export async function listViewablePatterns(
 			data: [
 				...fromCases.filter((pattern) => pattern.origin === "own"),
 				...fromCases.filter((pattern) => pattern.origin === "shared"),
-				...published.map(
-					(pattern): ViewablePattern => ({
-						key: `published:${pattern.slug}`,
-						name: pattern.title,
-						description: pattern.description ?? "",
-						origin: "published",
-						source: { publishedSlug: pattern.slug },
-					})
-				),
+				...published
+					.filter(
+						(pattern) =>
+							!(
+								pattern.assuranceCaseId &&
+								listedCaseIds.has(pattern.assuranceCaseId)
+							)
+					)
+					.map(
+						(pattern): ViewablePattern => ({
+							key: `published:${pattern.slug}`,
+							name: pattern.title,
+							description: pattern.description ?? "",
+							origin: "published",
+							source: { publishedSlug: pattern.slug },
+							...(pattern.archivedAt ? { archived: true } : {}),
+						})
+					),
 			],
 		};
 	} catch (error) {
@@ -100,6 +121,9 @@ interface PatternFile {
  */
 const PATTERN_NOT_FOUND = "Pattern not found";
 
+const NOT_A_PATTERN = "That case is not a pattern";
+const PATTERN_KIND = "PATTERN";
+
 /**
  * Reads a pattern case the user can view. Refuses a case that is not a
  * pattern, and does not copy comments: an import would attribute them to the
@@ -110,14 +134,14 @@ async function readPatternCase(
 	patternCaseId: string
 ): ServiceResult<PatternFile> {
 	const pattern = await prisma.assuranceCase.findFirst({
-		where: { id: patternCaseId, ...viewableCaseWhere(userId) },
+		where: { id: patternCaseId, AND: [viewableCaseWhere(userId)] },
 		select: { kind: true },
 	});
 	if (!pattern) {
 		return { error: PATTERN_NOT_FOUND };
 	}
-	if (pattern.kind !== "PATTERN") {
-		return { error: "That case is not a pattern" };
+	if (pattern.kind !== PATTERN_KIND) {
+		return { error: NOT_A_PATTERN };
 	}
 
 	const exported = await exportCase(userId, patternCaseId, {
@@ -125,6 +149,11 @@ async function readPatternCase(
 	});
 	if ("error" in exported) {
 		return { error: "Could not read that pattern" };
+	}
+	// The case may have been converted back to an ordinary case since the kind
+	// check above; a copy must not record an ordinary case as its source.
+	if (exported.data.case.kind !== PATTERN_KIND) {
+		return { error: NOT_A_PATTERN };
 	}
 	return { data: { file: exported.data, sourcePatternId: patternCaseId } };
 }
@@ -164,11 +193,12 @@ async function readPublishedPattern(
  * pattern's elements with every element marked as coming from the pattern, no
  * comments, and a link back to the pattern when it still exists.
  *
- * The name and description are checked here, with the rules for any new case,
- * because the import does not check the ones it is given. The pattern is read
- * only if the user may view it (or it is published) and it really is a
- * pattern. References in the pattern to cases the user cannot view are
- * cleared by the import and named in `warnings`.
+ * The source, name and description are checked here, with the rules for any
+ * new case, because the import does not check the ones it is given; a source
+ * must name exactly one well-formed key. The pattern is read only if the user
+ * may view it (or it is published) and it really is a pattern. References in
+ * the pattern to cases the user cannot view are cleared by the import and
+ * named in `warnings`.
  */
 export async function createCaseFromPattern(
 	userId: string,
@@ -176,6 +206,12 @@ export async function createCaseFromPattern(
 	name: string,
 	description: string
 ): ServiceResult<{ id: string; warnings: string[] }> {
+	const parsedSource = patternSourceSchema.safeParse(source);
+	if (!parsedSource.success) {
+		return {
+			error: parsedSource.error.issues[0]?.message ?? "Invalid pattern source",
+		};
+	}
 	const parsedName = startedCaseNameSchema.safeParse(name);
 	if (!parsedName.success) {
 		return { error: parsedName.error.issues[0]?.message ?? "Invalid name" };
@@ -189,10 +225,11 @@ export async function createCaseFromPattern(
 	}
 
 	try {
+		const validSource = parsedSource.data;
 		const pattern =
-			"patternCaseId" in source
-				? await readPatternCase(userId, source.patternCaseId)
-				: await readPublishedPattern(source.publishedSlug);
+			"patternCaseId" in validSource
+				? await readPatternCase(userId, validSource.patternCaseId)
+				: await readPublishedPattern(validSource.publishedSlug);
 		if ("error" in pattern) {
 			return pattern;
 		}

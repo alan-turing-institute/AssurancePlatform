@@ -542,6 +542,22 @@ describe("the createCaseFromPattern action", () => {
 		}
 	});
 
+	it("names a name of spaces plainly, without the field it came from", async () => {
+		const owner = await createTestUser();
+		const patternId = await makePattern(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const { createCaseFromPattern: action } = await import(
+			"@/actions/case-from-pattern"
+		);
+
+		const result = await action({ patternCaseId: patternId }, "   ", "About");
+
+		expect(result).toMatchObject({
+			success: false,
+			error: "Case name is required",
+		});
+	});
+
 	it.each([
 		["an id that is not a UUID", { patternCaseId: "not-a-uuid" }],
 		["a slug that is not a slug", { publishedSlug: "Not A Slug!" }],
@@ -633,6 +649,35 @@ describe("listViewablePatterns", () => {
 		]);
 		expect(listed[0]?.description).toBe("What the pattern is for");
 		expect(new Set(listed.map((pattern) => pattern.key)).size).toBe(4);
+	});
+
+	it("marks an archived published pattern as archived and no other", async () => {
+		const author = await createTestUser();
+		const patternId = await makePattern(author.id);
+		const content = await frozenPattern(author.id, patternId);
+		await publishRow({
+			slug: "a-live-pattern",
+			type: "ARGUMENT_PATTERN",
+			assuranceCaseId: null,
+			content,
+		});
+		await publishRow({
+			slug: "an-archived-pattern",
+			type: "ARGUMENT_PATTERN",
+			assuranceCaseId: null,
+			archivedAt: new Date(),
+			content,
+		});
+		const reader = await createTestUser();
+
+		const listed = expectSuccess(await listViewablePatterns(reader.id));
+
+		expect(listed.map((pattern) => [pattern.source, pattern.archived])).toEqual(
+			[
+				[{ publishedSlug: "a-live-pattern" }, undefined],
+				[{ publishedSlug: "an-archived-pattern" }, true],
+			]
+		);
 	});
 
 	it("lists nothing when there are no patterns", async () => {
