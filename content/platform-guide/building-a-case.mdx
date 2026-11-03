@@ -158,8 +158,8 @@ A pattern can be published with its variables empty.
 Search, the move list, document exports and the rules check show an ordinary reference as `{name}` and a variable as its value, or `[name]` while it has none.
 Search finds a variable by its name as well as by its value.
 The [Case Assistant](/docs/platform-guide/case-assistant) reads a variable as `{name = "value"}`, or `{name = (not set)}`, so that it can tell a variable from fixed wording.
-The attach dialog's list of detached elements writes each reference as `{name}`, a variable's too, for an element that was already detached when the case loaded.
-An element you have just detached in the same session keeps the words its card showed, with a variable as its value.
+The attach dialog's list of detached elements writes each reference as `{name}`, a variable's too, because the list is made without the terms in reach.
+For a moment after you detach an element, the list can still hold the words its card showed, with a variable as its value, until the list is loaded again.
 Raw JSON exports keep the stored form, `{name#id}`, where the id is what ties the reference to its entry, and a variable's entry carries `"variable": true`.
 
 ## Assertion status
