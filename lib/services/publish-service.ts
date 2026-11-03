@@ -367,7 +367,9 @@ async function throwForUnmatchedCaseWrite(
  * transaction: `ARGUMENT_PATTERN` for a pattern, `ASSURANCE_CASE` for a case.
  * Both callers write to the case row first, which holds its lock until the
  * transaction ends, so the kind read here is the kind their write matched.
- * A republish therefore keeps the type of the row it replaces.
+ * A republish keeps the type of the row it replaces because `convertCaseKind`
+ * refuses any case that has a published row, live or archived, so a case's
+ * kind cannot change while a row exists for it.
  *
  * Shared verbatim between `publishAssuranceCase` and `updatePublishedCase`;
  * each layers its own extra side effects (case status flip vs case-study
