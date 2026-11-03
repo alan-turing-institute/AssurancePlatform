@@ -1,12 +1,18 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import {
+	publishAssuranceCase,
+	removePublishedCopies,
+} from "@/lib/services/publish-service";
+import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCaseInformation,
 	createTestCaseWithGoal,
 	createTestUser,
 } from "../utils/prisma-factories";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -201,5 +207,47 @@ describe("PATCH /api/cases/[id]/status — republish completeness gate", () => {
 		expect(body.fieldErrors).toStrictEqual({
 			sector: "Sector is required before publishing",
 		});
+	});
+});
+
+describe("PATCH /api/cases/[id]/status — republish refused when the case changed", () => {
+	it("answers 409 CONFLICT and writes nothing when the case was unpublished after the snapshot was composed", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCaseWithGoal(user.id);
+		await createTestCaseInformation(testCase.id, {
+			description: "Complete for first publish",
+		});
+		expectSuccess(await publishAssuranceCase(user.id, testCase.id));
+		await mockAuth(user.id, user.username, user.email);
+
+		// An unpublish that has not yet committed holds the case row, so the
+		// republish reads the case as still published and then waits for the
+		// row before writing.
+		const holder = await holdRowLock(async (tx) => {
+			await removePublishedCopies(tx, [testCase.id]);
+		});
+		const { PATCH } = await import("@/app/api/cases/[id]/status/route");
+		const pending = PATCH(patchStatusRequest(testCase.id, "PUBLISHED"), {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+		await waitForLockWait();
+		await holder.release();
+		const response = await pending;
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toMatchObject({
+			code: "CONFLICT",
+			error: "The case changed while it was being published. Try again.",
+		});
+		expect(
+			await prisma.publishedAssuranceCase.count({
+				where: { assuranceCaseId: testCase.id },
+			})
+		).toBe(0);
+		const after = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+			select: { published: true, publishStatus: true },
+		});
+		expect(after).toEqual({ published: false, publishStatus: "DRAFT" });
 	});
 });
