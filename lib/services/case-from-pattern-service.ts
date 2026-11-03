@@ -1,12 +1,21 @@
+import {
+	type PatternVariable,
+	patternVariables,
+	setVariableValues,
+} from "@/lib/case/pattern-variables";
 import { logger } from "@/lib/logger";
 import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import {
+	NOT_A_VARIABLE_MESSAGE,
 	type PatternSource,
 	patternSourceSchema,
+	protoKeyProblem,
 	startedCaseDescriptionSchema,
 	startedCaseNameSchema,
+	type VariableValues,
+	variableValuesSchema,
 } from "@/lib/schemas/case-from-pattern";
 import { exportCase } from "@/lib/services/case-export-service";
 import { importCase } from "@/lib/services/case-import-service";
@@ -205,24 +214,85 @@ async function readPublishedPattern(
 	};
 }
 
-/**
- * Starts a new case, owned by the user, from a pattern: a copy of the
- * pattern's elements with every element marked as coming from the pattern, no
- * comments, and a link back to the pattern when it still exists.
- *
- * The source, name and description are checked here, with the rules for any
- * new case, because the import does not check the ones it is given; a source
- * must name exactly one well-formed key. The pattern is read only if the user
- * may view it (or it is published) and it really is a pattern. References in
- * the pattern to cases the user cannot view are cleared by the import and
- * named in `warnings`.
- */
-export async function createCaseFromPattern(
+/** Reads the pattern a source names, from a pattern case or from Discover. */
+async function readPattern(
 	userId: string,
+	source: PatternSource
+): ServiceResult<PatternFile> {
+	return "patternCaseId" in source
+		? await readPatternCase(userId, source.patternCaseId)
+		: await readPublishedPattern(source.publishedSlug);
+}
+
+/**
+ * Lists the variables of a pattern the user may read, for the new-case
+ * dialog's fields: each with its name and meaning, and any value the pattern
+ * gives it. The pattern is found in the same way, and refused in the same
+ * words, as when a case is started from it.
+ */
+export async function readPatternVariables(
+	userId: string,
+	source: PatternSource
+): ServiceResult<PatternVariable[]> {
+	const parsedSource = patternSourceSchema.safeParse(source);
+	if (!parsedSource.success) {
+		return {
+			error: parsedSource.error.issues[0]?.message ?? "Invalid pattern source",
+		};
+	}
+
+	try {
+		const pattern = await readPattern(userId, parsedSource.data);
+		if ("error" in pattern) {
+			return pattern;
+		}
+		return { data: patternVariables(pattern.data.file) };
+	} catch (error) {
+		log.error("readPatternVariables", { userId, error });
+		return { error: "Failed to read the pattern's variables" };
+	}
+}
+
+/**
+ * The pattern's file with the values given to its variables, or an error when
+ * a value is meant for an entry that is not one of the pattern's variables.
+ * Whatever is refused is refused before anything is written.
+ */
+function fillVariables(
+	file: unknown,
+	values: VariableValues
+): { file: unknown } | { error: string } {
+	const entries = new Map(Object.entries(values));
+	if (entries.size === 0) {
+		return { file };
+	}
+	const ids = new Set(patternVariables(file).map((variable) => variable.id));
+	for (const id of entries.keys()) {
+		if (!ids.has(id)) {
+			return { error: NOT_A_VARIABLE_MESSAGE };
+		}
+	}
+	return { file: setVariableValues(file, entries) };
+}
+
+/** A request to start a case from a pattern, with every part checked. */
+interface PatternRequest {
+	description: string;
+	name: string;
+	source: PatternSource;
+	variableValues: VariableValues;
+}
+
+/**
+ * Checks the parts of a request with the rules for any new case, and returns
+ * them in the form they are used, or the first message that applies.
+ */
+function parseRequest(
 	source: PatternSource,
 	name: string,
-	description: string
-): ServiceResult<{ id: string; warnings: string[] }> {
+	description: string,
+	variableValues: VariableValues
+): { data: PatternRequest } | { error: string } {
 	const parsedSource = patternSourceSchema.safeParse(source);
 	if (!parsedSource.success) {
 		return {
@@ -240,21 +310,70 @@ export async function createCaseFromPattern(
 				parsedDescription.error.issues[0]?.message ?? "Invalid description",
 		};
 	}
+	const protoProblem = protoKeyProblem(variableValues);
+	if (protoProblem) {
+		return { error: protoProblem };
+	}
+	const parsedValues = variableValuesSchema.safeParse(variableValues);
+	if (!parsedValues.success) {
+		return {
+			error: parsedValues.error.issues[0]?.message ?? "Invalid variable values",
+		};
+	}
+	return {
+		data: {
+			source: parsedSource.data,
+			name: parsedName.data,
+			description: parsedDescription.data,
+			variableValues: parsedValues.data,
+		},
+	};
+}
+
+/**
+ * Starts a new case, owned by the user, from a pattern: a copy of the
+ * pattern's elements with every element marked as coming from the pattern, no
+ * comments, and a link back to the pattern when it still exists.
+ *
+ * The source, name, description and variable values are checked here, with the
+ * rules for any new case, because the import does not check the ones it is
+ * given; a source must name exactly one well-formed key. The pattern is read
+ * only if the user may view it (or it is published) and it really is a
+ * pattern. `variableValues` gives values to the pattern's variables by entry
+ * id: a value is stored as given, trimmed, and an empty one leaves the
+ * variable without a value; a variable with no entry keeps the value the
+ * pattern gives it. An id that is not one of the pattern's variables, or a
+ * value over the length limit, refuses the whole request. References in the
+ * pattern to cases the user cannot view are cleared by the import and named in
+ * `warnings`.
+ */
+export async function createCaseFromPattern(
+	userId: string,
+	source: PatternSource,
+	name: string,
+	description: string,
+	variableValues: VariableValues = {}
+): ServiceResult<{ id: string; warnings: string[] }> {
+	const parsed = parseRequest(source, name, description, variableValues);
+	if ("error" in parsed) {
+		return parsed;
+	}
+	const request = parsed.data;
 
 	try {
-		const validSource = parsedSource.data;
-		const pattern =
-			"patternCaseId" in validSource
-				? await readPatternCase(userId, validSource.patternCaseId)
-				: await readPublishedPattern(validSource.publishedSlug);
+		const pattern = await readPattern(userId, request.source);
 		if ("error" in pattern) {
 			return pattern;
 		}
+		const filled = fillVariables(pattern.data.file, request.variableValues);
+		if ("error" in filled) {
+			return filled;
+		}
 
-		const imported = await importCase(userId, pattern.data.file, {
+		const imported = await importCase(userId, filled.file, {
 			kind: "CASE",
-			name: parsedName.data,
-			description: parsedDescription.data,
+			name: request.name,
+			description: request.description,
 			sourcePatternId: pattern.data.sourcePatternId ?? undefined,
 			markFromPattern: true,
 		});

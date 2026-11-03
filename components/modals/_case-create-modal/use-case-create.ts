@@ -14,6 +14,7 @@ import type {
 	PatternError,
 	StartFrom,
 } from "./start-from-section";
+import { usePatternVariables } from "./use-pattern-variables";
 
 const GENERIC_ERROR = "An error occurred, please try again later";
 const CHOOSE_A_PATTERN = "Choose a pattern to start from";
@@ -28,6 +29,14 @@ type Outcome =
 	| { status: "error"; message: string }
 	| { status: "created"; id: string; warnings: string[] };
 
+/** What the user entered for the new case. */
+interface NewCase {
+	description: string;
+	name: string;
+	/** Values for the chosen pattern's variables, by entry id; only a copy of a pattern uses them. */
+	variableValues: Record<string, string>;
+}
+
 /**
  * Creates the case the dialog describes: a copy of the chosen pattern, a blank
  * pattern, or a blank case. Only a copy of a pattern can come back with
@@ -36,12 +45,16 @@ type Outcome =
 async function requestCase(
 	start: StartFrom,
 	chosen: ViewablePattern | undefined,
-	name: string,
-	description: string
+	{ description, name, variableValues }: NewCase
 ): Promise<ActionResult<{ id: string; warnings: string[] }>> {
 	if (start === "pattern") {
 		return chosen
-			? await createCaseFromPattern(chosen.source, name, description)
+			? await createCaseFromPattern(
+					chosen.source,
+					name,
+					description,
+					variableValues
+				)
 			: { success: false, error: CHOOSE_A_PATTERN };
 	}
 	const created = await createAssuranceCase({
@@ -163,11 +176,10 @@ async function loadChoices(): Promise<PatternChoices> {
 async function submitNewCase(
 	start: StartFrom,
 	chosen: ViewablePattern | undefined,
-	name: string,
-	description: string
+	newCase: NewCase
 ): Promise<Outcome> {
 	try {
-		const result = await requestCase(start, chosen, name, description);
+		const result = await requestCase(start, chosen, newCase);
 		if (!result.success) {
 			return { status: "error", message: result.error ?? GENERIC_ERROR };
 		}
@@ -216,6 +228,11 @@ export function useCaseCreate({
 		preset,
 		presetChoice,
 		{ start: pickedStart, key: pickedKey }
+	);
+
+	const chosen = chosenPattern(choices, patternKey, presetChoice);
+	const variables = usePatternVariables(
+		start === "pattern" ? chosen : undefined
 	);
 
 	// Counts the loads started, so that only the latest one is used: a load
@@ -287,18 +304,21 @@ export function useCaseCreate({
 			return;
 		}
 
-		const chosen = chosenPattern(choices, patternKey, presetChoice);
 		if (start === "pattern" && !chosen) {
 			setPatternError({ message: CHOOSE_A_PATTERN });
 			return;
 		}
 
 		setLoading(true);
-		const outcome = await submitNewCase(start, chosen, name, description);
+		const outcome = await submitNewCase(start, chosen, {
+			name,
+			description,
+			variableValues: variables.valuesToSend(),
+		});
 		setLoading(false);
 
 		if (outcome.status === "error") {
-			setErrors([outcome.message]);
+			setErrors(variables.explainRefusal(outcome.message));
 		} else if (outcome.warnings.length > 0) {
 			setPending({ id: outcome.id, warnings: outcome.warnings });
 		} else {
@@ -319,5 +339,6 @@ export function useCaseCreate({
 		pending,
 		selectPattern,
 		start,
+		variables,
 	};
 }

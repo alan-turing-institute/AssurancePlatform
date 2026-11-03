@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	createCaseFromPattern,
+	fetchPatternVariables,
 	fetchViewablePatterns,
 } from "@/actions/case-from-pattern";
 import {
@@ -36,6 +37,7 @@ vi.mock("@/actions/assurance-cases", () => ({
 
 vi.mock("@/actions/case-from-pattern", () => ({
 	createCaseFromPattern: vi.fn(),
+	fetchPatternVariables: vi.fn(),
 	fetchViewablePatterns: vi.fn(),
 }));
 
@@ -130,6 +132,8 @@ beforeEach(() => {
 	vi.mocked(createAssuranceCase).mockReset();
 	vi.mocked(createCaseFromPattern).mockReset();
 	vi.mocked(fetchViewablePatterns).mockReset();
+	vi.mocked(fetchPatternVariables).mockReset();
+	vi.mocked(fetchPatternVariables).mockResolvedValue([]);
 	vi.mocked(createAssuranceCase).mockResolvedValue({
 		success: true,
 		data: { id: "new-case" },
@@ -182,7 +186,8 @@ describe("the new-case dialog opened with a published pattern", () => {
 		expect(createCaseFromPattern).toHaveBeenCalledWith(
 			{ publishedSlug: "fairness-pattern" },
 			"My new case",
-			"About the new case"
+			"About the new case",
+			{}
 		);
 		expect(createAssuranceCase).not.toHaveBeenCalled();
 	});
@@ -275,7 +280,8 @@ describe("the new-case dialog opened with a published pattern", () => {
 			expect(createCaseFromPattern).toHaveBeenCalledWith(
 				{ patternCaseId: "pattern-1" },
 				"My new case",
-				"About the new case"
+				"About the new case",
+				{}
 			)
 		);
 	});
@@ -317,7 +323,8 @@ describe("the new-case dialog opened with a published pattern", () => {
 			expect(createCaseFromPattern).toHaveBeenCalledWith(
 				{ publishedSlug: "fairness-pattern" },
 				"My new case",
-				"About the new case"
+				"About the new case",
+				{}
 			)
 		);
 	});
@@ -413,7 +420,8 @@ describe("the new-case dialog closed and opened again", () => {
 			expect(createCaseFromPattern).toHaveBeenCalledWith(
 				{ publishedSlug: "privacy-pattern" },
 				"My new case",
-				"About the new case"
+				"About the new case",
+				{}
 			)
 		);
 	});
