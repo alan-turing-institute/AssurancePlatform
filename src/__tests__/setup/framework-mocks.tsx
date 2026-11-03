@@ -88,8 +88,15 @@ const mockModalHook = () => ({
 	onClose: vi.fn(),
 });
 
+// The new-case dialog can also be opened with a published pattern chosen.
+const mockPresetModalHook = () => ({
+	...mockModalHook(),
+	onOpenWith: vi.fn(),
+	preset: undefined,
+});
+
 vi.mock("@/hooks/modal-hooks", () => ({
-	useCreateCaseModal: mockModalHook,
+	useCreateCaseModal: mockPresetModalHook,
 	useCreateTeamModal: mockModalHook,
 	useEmailModal: mockModalHook,
 	useExportModal: mockModalHook,

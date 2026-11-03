@@ -195,6 +195,43 @@ describe("Modal Hooks", () => {
 	testModalHook("useEmailModal", useEmailModal);
 	testModalHook("useHelpModal", useHelpModal);
 
+	describe("Create case modal preset", () => {
+		const PRESET = {
+			slug: "a-pattern",
+			title: "A pattern",
+			description: "What it is for",
+		};
+
+		it("opens with a preset and drops it when the modal closes", () => {
+			const { result } = renderHook(() => useCreateCaseModal());
+			expect(result.current.preset).toBeUndefined();
+
+			act(() => {
+				result.current.onOpenWith(PRESET);
+			});
+			expect(result.current.isOpen).toBe(true);
+			expect(result.current.preset).toEqual(PRESET);
+
+			act(() => {
+				result.current.onClose();
+			});
+			expect(result.current.isOpen).toBe(false);
+			expect(result.current.preset).toBeUndefined();
+		});
+
+		it("opens without a preset when opened plainly after one", () => {
+			const { result } = renderHook(() => useCreateCaseModal());
+
+			act(() => {
+				result.current.onOpenWith(PRESET);
+				result.current.onOpen();
+			});
+
+			expect(result.current.isOpen).toBe(true);
+			expect(result.current.preset).toBeUndefined();
+		});
+	});
+
 	describe("Cross-modal interactions", () => {
 		it("should allow multiple modals to be open simultaneously", () => {
 			const { result: createModal } = renderHook(() => useCreateCaseModal());

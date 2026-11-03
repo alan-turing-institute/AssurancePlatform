@@ -44,7 +44,10 @@ export const CaseCreateModal = () => {
 		pending,
 		selectPattern,
 		start,
-	} = useCaseCreate({ onClose: createCaseModal.onClose });
+	} = useCaseCreate({
+		onClose: createCaseModal.onClose,
+		preset: createCaseModal.preset,
+	});
 
 	const form = useForm<CreateAssuranceCaseInput>({
 		resolver: zodResolver(createAssuranceCaseSchema),

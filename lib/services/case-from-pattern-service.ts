@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { extractTextFromHtml } from "@/lib/sanitize-html";
 import {
 	type PatternSource,
 	patternSourceSchema,
@@ -27,6 +28,12 @@ export interface ViewablePattern {
 	name: string;
 	/** Own pattern, shared with the user, or published on Discover. */
 	origin: "own" | "shared" | "published";
+	/**
+	 * On a pattern case that has a current published copy: the slug of that
+	 * copy, so a page for the published copy can tell this entry is the same
+	 * pattern.
+	 */
+	publishedSlug?: string;
 	source: PatternSource;
 }
 
@@ -36,7 +43,9 @@ export interface ViewablePattern {
  * published patterns on Discover. A site with no published patterns lists
  * none; trashed patterns are never listed. A published pattern whose source
  * case is already listed is left out, so a pattern appears once, as the
- * case itself.
+ * case itself; the case's entry then carries the published copy's slug. A
+ * published description is stored as sanitised HTML and is listed as plain
+ * text; the description of a pattern case is listed as written.
  */
 export async function listViewablePatterns(
 	userId: string
@@ -66,15 +75,23 @@ export async function listViewablePatterns(
 			}),
 		]);
 		const listedCaseIds = new Set(cases.map((pattern) => pattern.id));
+		const publishedSlugs = new Map<string, string>();
+		for (const pattern of published) {
+			if (pattern.assuranceCaseId) {
+				publishedSlugs.set(pattern.assuranceCaseId, pattern.slug);
+			}
+		}
 
 		const fromCases = cases.map((pattern): ViewablePattern => {
 			const own = pattern.createdById === userId;
+			const publishedSlug = publishedSlugs.get(pattern.id);
 			return {
 				key: `case:${pattern.id}`,
 				name: pattern.name,
 				description: pattern.description ?? "",
 				origin: own ? "own" : "shared",
 				source: { patternCaseId: pattern.id },
+				...(publishedSlug ? { publishedSlug } : {}),
 			};
 		});
 
@@ -94,7 +111,7 @@ export async function listViewablePatterns(
 						(pattern): ViewablePattern => ({
 							key: `published:${pattern.slug}`,
 							name: pattern.title,
-							description: pattern.description ?? "",
+							description: extractTextFromHtml(pattern.description ?? ""),
 							origin: "published",
 							source: { publishedSlug: pattern.slug },
 							...(pattern.archivedAt ? { archived: true } : {}),

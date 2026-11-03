@@ -112,6 +112,14 @@ A line at the top tells you how to make a pattern: start a blank pattern from th
 **Shared With Me** and **Trash** list patterns together with cases, so the **Pattern** badge is how you tell them apart there.
 Restoring a pattern from Trash returns it to **My Patterns**.
 
+## Start a case from a pattern
+
+A pattern is used by starting a new case from a copy of it.
+Choose **A pattern** under **Start from** in the new case dialog, as described in [Starting a case from a pattern](/docs/platform-guide/building-a-case#starting-a-case-from-a-pattern).
+
+A pattern published on Discover can also be used from its own page.
+**Use this pattern** opens the same dialog with that pattern chosen, as described in [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).
+
 ## Limits and code location
 
 `lib/services/case-kind-service.ts` holds the conversion, the read behind the confirmation dialog and the My Patterns list, and `actions/case-kind.ts` exposes them to the interface.
