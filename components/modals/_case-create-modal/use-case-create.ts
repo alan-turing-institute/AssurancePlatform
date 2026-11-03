@@ -127,6 +127,39 @@ function withPreset(
 		: { status: "ready", patterns: [...choices.patterns, preset] };
 }
 
+/**
+ * What the dialog shows and creates from: the start, the picker's choices and
+ * the picked pattern's key. Until the user chooses, the preset (if any)
+ * decides the start and the key.
+ */
+function dialogChoices(
+	loaded: PatternChoices,
+	preset: PublishedPatternPreset | undefined,
+	presetChoice: ViewablePattern | undefined,
+	picked: { start: StartFrom | undefined; key: string | undefined }
+): {
+	start: StartFrom;
+	choices: PatternChoices;
+	patternKey: string | undefined;
+} {
+	const listed = listedPreset(loaded, preset);
+	return {
+		start: picked.start ?? (preset ? "pattern" : "blank-case"),
+		choices: withPreset(loaded, presetChoice, listed),
+		patternKey: picked.key ?? listed?.key ?? presetChoice?.key,
+	};
+}
+
+/** The patterns the picker offers, or a failed load. */
+async function loadChoices(): Promise<PatternChoices> {
+	try {
+		const patterns = await fetchViewablePatterns();
+		return patterns ? { status: "ready", patterns } : { status: "failed" };
+	} catch {
+		return { status: "failed" };
+	}
+}
+
 async function submitNewCase(
 	start: StartFrom,
 	chosen: ViewablePattern | undefined,
@@ -178,10 +211,12 @@ export function useCaseCreate({
 		() => (preset ? presetPattern(preset) : undefined),
 		[preset]
 	);
-	const start = pickedStart ?? (preset ? "pattern" : "blank-case");
-	const listed = listedPreset(loaded, preset);
-	const choices = withPreset(loaded, presetChoice, listed);
-	const patternKey = pickedKey ?? listed?.key ?? presetChoice?.key;
+	const { start, choices, patternKey } = dialogChoices(
+		loaded,
+		preset,
+		presetChoice,
+		{ start: pickedStart, key: pickedKey }
+	);
 
 	// Counts the loads started, so that only the latest one is used: a load
 	// that finishes after the dialog closed, or after a later load began, is
@@ -192,13 +227,7 @@ export function useCaseCreate({
 		latestLoad.current += 1;
 		const thisLoad = latestLoad.current;
 		setChoices({ status: "loading" });
-		let result: PatternChoices;
-		try {
-			const patterns = await fetchViewablePatterns();
-			result = patterns ? { status: "ready", patterns } : { status: "failed" };
-		} catch {
-			result = { status: "failed" };
-		}
+		const result = await loadChoices();
 		if (thisLoad === latestLoad.current) {
 			setChoices(result);
 		}
