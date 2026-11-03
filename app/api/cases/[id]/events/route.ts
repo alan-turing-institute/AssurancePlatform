@@ -24,6 +24,78 @@ function generateConnectionId(): string {
 }
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
+const ACCESS_CHECK_TIMEOUT_MS = 10_000;
+
+/**
+ * Settles with `promise`, or rejects once `ms` have passed without it
+ * settling, and clears its timer either way.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timedOut = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => reject(new Error(`Timed out after ${ms} ms`)), ms);
+	});
+	return Promise.race([promise, timedOut]).finally(() => clearTimeout(timer));
+}
+
+interface AccessRecheckOptions {
+	caseId: string;
+	connectionId: string;
+	/** Ends the stream; called when the user can no longer view the case. */
+	endStream: () => void;
+	/** True once the connection has been removed, for any reason. */
+	isClosed: () => boolean;
+	userId: string;
+}
+
+/**
+ * Builds the access re-check that runs at each heartbeat. It never holds up
+ * the heartbeat, and starts nothing for a connection that has been removed.
+ * A check still running when the next heartbeat falls due is not repeated.
+ * A check that fails, or does not settle within `ACCESS_CHECK_TIMEOUT_MS`,
+ * keeps the stream open and is logged, so a passing database error does not
+ * close every viewer's stream and a check that never settles cannot stop
+ * later heartbeats from checking. Once the connection is gone, a check's
+ * outcome is dropped without a log entry.
+ */
+function createAccessRecheck({
+	caseId,
+	connectionId,
+	endStream,
+	isClosed,
+	userId,
+}: AccessRecheckOptions): () => Promise<void> {
+	let checking = false;
+	return async () => {
+		if (checking || isClosed()) {
+			return;
+		}
+		checking = true;
+		try {
+			const allowed = await withTimeout(
+				validateCaseAccess(userId, caseId),
+				ACCESS_CHECK_TIMEOUT_MS
+			);
+			if (isClosed()) {
+				return;
+			}
+			if (!allowed) {
+				log.info("Closing stream: case access lost", { connectionId, caseId });
+				endStream();
+			}
+		} catch (error) {
+			if (!isClosed()) {
+				log.warn("Could not re-check case access; keeping stream open", {
+					connectionId,
+					caseId,
+					error,
+				});
+			}
+		} finally {
+			checking = false;
+		}
+	};
+}
 
 /**
  * GET /api/cases/[id]/events
@@ -69,6 +141,9 @@ export async function GET(
 				return;
 			}
 
+			// Set when the connection is removed, whichever way that happens
+			let closed = false;
+
 			// Ends the stream from the server side. Removing the connection also
 			// clears the heartbeat timer, and does nothing if it is already gone.
 			const endStream = () => {
@@ -80,38 +155,17 @@ export async function GET(
 				}
 			};
 
-			// Re-checks access without holding up the heartbeat. A check that is
-			// still running when the next heartbeat falls due is not repeated, and
-			// a failed check keeps the stream open so that a passing database
-			// error does not close every viewer's stream.
-			let checkingAccess = false;
-			const endStreamIfAccessLost = async () => {
-				if (checkingAccess) {
-					return;
-				}
-				checkingAccess = true;
-				try {
-					if (!(await validateCaseAccess(userId, caseId))) {
-						log.info("Closing stream: case access lost", {
-							connectionId,
-							caseId,
-						});
-						endStream();
-					}
-				} catch (error) {
-					log.warn("Could not re-check case access; keeping stream open", {
-						connectionId,
-						caseId,
-						error,
-					});
-				} finally {
-					checkingAccess = false;
-				}
-			};
+			const recheckAccess = createAccessRecheck({
+				caseId,
+				connectionId,
+				endStream,
+				isClosed: () => closed,
+				userId,
+			});
 
 			const heartbeatInterval = setInterval(() => {
 				sseConnectionManager.sendHeartbeat(caseId);
-				endStreamIfAccessLost();
+				recheckAccess();
 			}, HEARTBEAT_INTERVAL_MS);
 
 			// Register the connection; its removal clears the heartbeat timer
@@ -120,7 +174,10 @@ export async function GET(
 				connectionId,
 				controller,
 				userId,
-				() => clearInterval(heartbeatInterval)
+				() => {
+					closed = true;
+					clearInterval(heartbeatInterval);
+				}
 			);
 			request.signal.addEventListener("abort", endStream, { once: true });
 

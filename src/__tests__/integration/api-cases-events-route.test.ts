@@ -98,7 +98,7 @@ async function until(condition: () => boolean) {
 		if (Date.now() > deadline) {
 			throw new Error("Timed out waiting for the stream");
 		}
-		await new Promise((resolve) => setTimeout(resolve, 5));
+		await new Promise((resolve) => setImmediate(resolve));
 	}
 }
 
@@ -106,7 +106,7 @@ async function until(condition: () => boolean) {
 async function afterChecks() {
 	const results = vi.mocked(canAccessCase).mock.results;
 	await Promise.allSettled(results.map((result) => result.value));
-	await new Promise((resolve) => setTimeout(resolve, 0));
+	await new Promise((resolve) => setImmediate(resolve));
 }
 
 /** Advances one heartbeat and waits for the access checks it starts to finish. */
@@ -316,5 +316,45 @@ describe("a heartbeat whose access check does not finish cleanly", () => {
 
 		expect(vi.mocked(canAccessCase)).toHaveBeenCalledTimes(2);
 		expect(stream.ended).toBe(false);
+	});
+});
+
+describe("a heartbeat whose access check never settles", () => {
+	beforeEach(() => {
+		// The check's time limit is a timeout, so the timeout functions are
+		// faked as well. Nothing here reaches the database once the stream is open.
+		vi.useRealTimers();
+		vi.useFakeTimers({
+			toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout"],
+		});
+	});
+
+	it("gives up on the check at the time limit, keeps the stream, and checks again at the next heartbeat", async () => {
+		const { viewer, assuranceCase } = await caseWithViewer();
+		const stream = await openStream(assuranceCase.id, viewer.id);
+		const keepingOpen = () =>
+			logged.filter(
+				(entry) =>
+					entry.level === "warn" && String(entry.msg).includes("keeping stream")
+			);
+		vi.mocked(canAccessCase)
+			.mockImplementationOnce(() => new Promise<boolean>(() => undefined))
+			.mockResolvedValueOnce(false);
+
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+		expect(vi.mocked(canAccessCase)).toHaveBeenCalledTimes(1);
+		await vi.advanceTimersByTimeAsync(9999);
+		expect(keepingOpen()).toHaveLength(0);
+
+		await vi.advanceTimersByTimeAsync(1);
+		expect(keepingOpen()).toHaveLength(1);
+		expect(stream.ended).toBe(false);
+		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(1);
+
+		// The stalled check no longer blocks the next one, which finds access gone.
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS - 10_000);
+		expect(vi.mocked(canAccessCase)).toHaveBeenCalledTimes(2);
+		await until(() => stream.ended);
+		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(0);
 	});
 });
