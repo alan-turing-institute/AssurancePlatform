@@ -1,9 +1,9 @@
 ---
 title: "Publishing and Discover"
-description: "Publish a frozen assurance case snapshot, update it and remove its public listing."
+description: "Publish a frozen snapshot of an assurance case or a pattern, update it and remove its public listing."
 ---
 
-Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public Discover page at `/discover` lists published cases. A visitor can open a case's public page by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
+Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public Discover page at `/discover` lists published cases and published patterns. A visitor can open a published case or pattern by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
 
 The same frozen snapshot is also available without sign-in as JSON at `/api/public/discover/<slug>`. Review all case and plugin data included in the export before publishing.
 
@@ -52,8 +52,23 @@ Deleting an account archives the Discover copies of the deleted person's cases t
 
 Publishing does not grant visitors edit rights, copy private comments into the snapshot or create a live mirror of future changes. Sharing the working case with a colleague is a separate permission action.
 
-Discover lists the assurance cases published from the editor, and any published argument pattern.
+## Cases and patterns on Discover
+
+A pattern is published in the same way as a case.
+Open it in the editor at `/case/<caseId>`, select its status control and choose **Publish**.
+The same checks apply, including the description, authors and sector in Case Information.
+A pattern may still hold elements to fill in and variables with no value, which a case may not.
+The slug, **Update published version**, **Unpublish**, Trash and archived copies work as they do for a case.
+The platform records that the public copy was published from a pattern, and keeps that through every update.
+
+Discover lists published cases and published patterns together.
+Each card and each page carries a badge: **Worked example** for a case and **Reusable template** for a pattern.
+The **Filter by type** list, beside the sector filter, shows **All types**, **Cases** only or **Patterns** only.
 The page of a published pattern can be used to start a new case, as described in [Use a published pattern](#use-a-published-pattern).
+
+The public API names the type.
+In the JSON at `/api/public/discover/<slug>`, `type` is `ARGUMENT_PATTERN` for a published pattern and `ASSURANCE_CASE` for a published case.
+The `content` of a pattern's snapshot records `"kind": "PATTERN"` on its `case` object, as an export of a pattern does.
 
 ## Use a published pattern
 
