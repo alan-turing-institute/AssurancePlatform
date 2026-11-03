@@ -58,7 +58,7 @@ function variableEntry(id: string, name: string, text: string, value?: string) {
 }
 
 /** The text of every element, with a reference to each name it can reach. */
-export const TEXT = {
+const TEXT = {
 	goal: `Goal: ${ref("system", ID.system)} run by ${ref("owner", ID.owner)}`,
 	strategy: `Strategy over ${ref("scope", ID.scope)} of ${ref("system", ID.system)}`,
 	strategyJustification: `Because ${ref("system", ID.system)} matters`,

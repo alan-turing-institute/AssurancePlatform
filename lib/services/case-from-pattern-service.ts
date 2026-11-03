@@ -8,7 +8,7 @@ import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import {
-	NOT_A_VARIABLE,
+	NOT_A_VARIABLE_MESSAGE,
 	type PatternSource,
 	patternSourceSchema,
 	protoKeyProblem,
@@ -269,7 +269,7 @@ function fillVariables(
 	const ids = new Set(patternVariables(file).map((variable) => variable.id));
 	for (const id of entries.keys()) {
 		if (!ids.has(id)) {
-			return { error: NOT_A_VARIABLE };
+			return { error: NOT_A_VARIABLE_MESSAGE };
 		}
 	}
 	return { file: setVariableValues(file, entries) };

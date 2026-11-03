@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-	NOT_A_VARIABLE,
+	NOT_A_VARIABLE_MESSAGE,
 	protoKeyProblem,
 	variableValuesSchema,
 } from "../case-from-pattern";
@@ -32,7 +32,7 @@ describe("protoKeyProblem", () => {
 			const values = JSON.parse(
 				`{"__proto__": ${JSON.stringify(value)}, "k3f9x2m7qa": "x"}`
 			);
-			expect(protoKeyProblem(values)).toBe(NOT_A_VARIABLE);
+			expect(protoKeyProblem(values)).toBe(NOT_A_VARIABLE_MESSAGE);
 		}
 	});
 

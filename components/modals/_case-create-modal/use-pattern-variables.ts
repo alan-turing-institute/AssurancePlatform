@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchPatternVariables } from "@/actions/case-from-pattern";
 import type { PatternVariable } from "@/lib/case/pattern-variables";
-import type { PatternSource } from "@/lib/schemas/case-from-pattern";
+import {
+	NOT_A_VARIABLE_MESSAGE,
+	type PatternSource,
+} from "@/lib/schemas/case-from-pattern";
 
 /** The chosen pattern's variables, and whether they have been fetched yet. */
 export type VariablesState =
@@ -12,6 +15,9 @@ export type VariablesState =
 
 const IDLE: VariablesState = { status: "idle" };
 const LOADING: VariablesState = { status: "loading" };
+
+const PATTERN_CHANGED =
+	"The pattern has changed since its variables were shown. They have been reloaded: check the fields, then submit again.";
 
 /** The variables of a pattern, or a failed load. */
 async function loadVariables(source: PatternSource): Promise<VariablesState> {
@@ -106,6 +112,19 @@ export function usePatternVariables(
 			setTyped((before) => new Map(before).set(id, value)),
 		forget: () => setTyped(new Map()),
 		retry: () => load(source, identity),
+		/**
+		 * What to tell the user about a refusal. A value given to something that
+		 * is no longer one of the pattern's variables means the pattern changed
+		 * since the fields were shown: its variables are read again, and what was
+		 * typed for those that remain is kept.
+		 */
+		explainRefusal: (message: string): string[] => {
+			if (message !== NOT_A_VARIABLE_MESSAGE) {
+				return [message];
+			}
+			load(source, identity);
+			return [message, PATTERN_CHANGED];
+		},
 		valuesToSend: () => typedValues(state, typed),
 	};
 }

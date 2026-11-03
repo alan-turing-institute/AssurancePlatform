@@ -43,7 +43,7 @@ export const startedCaseDescriptionSchema = newCaseDescriptionSchema.refine(
  * What is said to someone who gives a value to something that is not one of
  * the pattern's variables.
  */
-export const NOT_A_VARIABLE =
+export const NOT_A_VARIABLE_MESSAGE =
 	"That pattern has no variable to give that value to";
 
 /**
@@ -76,7 +76,7 @@ export function protoKeyProblem(values: unknown): string | undefined {
 	return typeof values === "object" &&
 		values !== null &&
 		Object.hasOwn(values, "__proto__")
-		? NOT_A_VARIABLE
+		? NOT_A_VARIABLE_MESSAGE
 		: undefined;
 }
 

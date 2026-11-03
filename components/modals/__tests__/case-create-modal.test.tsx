@@ -9,7 +9,7 @@ import {
 } from "@/actions/case-from-pattern";
 import type { PublishedPatternPreset } from "@/hooks/modal-hooks";
 import type { PatternVariable } from "@/lib/case/pattern-variables";
-import { NOT_A_VARIABLE } from "@/lib/schemas/case-from-pattern";
+import { NOT_A_VARIABLE_MESSAGE } from "@/lib/schemas/case-from-pattern";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import {
 	mockPush,
@@ -662,7 +662,7 @@ describe("CaseCreateModal variables", () => {
 		const user = userEvent.setup();
 		vi.mocked(createCaseFromPattern).mockResolvedValue({
 			success: false,
-			error: NOT_A_VARIABLE,
+			error: NOT_A_VARIABLE_MESSAGE,
 		});
 		render(<CaseCreateModal />);
 		await chooseOwnPattern(user);
@@ -677,7 +677,7 @@ describe("CaseCreateModal variables", () => {
 
 		await user.click(screen.getByRole("button", { name: "Submit" }));
 
-		expect(await screen.findByText(NOT_A_VARIABLE)).toBeVisible();
+		expect(await screen.findByText(NOT_A_VARIABLE_MESSAGE)).toBeVisible();
 		expect(screen.getByText(PATTERN_CHANGED)).toBeVisible();
 		expect(await screen.findByLabelText("region")).toHaveValue("");
 		expect(screen.queryByLabelText("system")).not.toBeInTheDocument();
