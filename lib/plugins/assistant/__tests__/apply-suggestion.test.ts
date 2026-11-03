@@ -149,6 +149,10 @@ describe("applying a rewording", () => {
 			},
 			after: { description: "It is accurate to 2%", isPlaceholder: false },
 		});
+		// The redraw of the case is still in flight; let it land inside this test.
+		await vi.waitFor(() =>
+			expect(useStore.getState().assuranceCase).toMatchObject({ name: "Fresh" })
+		);
 	});
 
 	it("refuses and saves nothing when the element was reworded after the suggestion", async () => {

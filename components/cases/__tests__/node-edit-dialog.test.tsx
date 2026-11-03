@@ -1191,7 +1191,7 @@ describe("NodeEditDialog — placeholders", () => {
 
 		await user.click(screen.getByRole("switch", { name: SWITCH_LABEL }));
 		await user.type(
-			screen.getByLabelText("Description"),
+			await screen.findByLabelText("Description"),
 			"Written by the author"
 		);
 		await user.click(screen.getByRole("button", { name: "Update Goal" }));
@@ -1213,7 +1213,10 @@ describe("NodeEditDialog — placeholders", () => {
 
 		expect(await screen.findByText("Say what the goal is")).toBeInTheDocument();
 		expect(screen.queryByRole("switch")).not.toBeInTheDocument();
-		await user.type(screen.getByLabelText("Description"), "The system is safe");
+		await user.type(
+			await screen.findByLabelText("Description"),
+			"The system is safe"
+		);
 		await user.click(screen.getByRole("button", { name: "Update Goal" }));
 
 		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));

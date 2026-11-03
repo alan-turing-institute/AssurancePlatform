@@ -119,7 +119,9 @@ describe("the edit dialog of a placeholder in a case", () => {
 		renderClaim(claim({ isPlaceholder: true, placeholderHint: HINT }));
 
 		const hint = await screen.findByText(HINT);
-		const description = screen.getByLabelText("Description");
+		// The description editor loads after the dialog, so its label is there
+		// before the control is.
+		const description = await screen.findByLabelText("Description");
 
 		expect(positionOf(hint)).toBeLessThan(positionOf(description));
 		expect(screen.queryByRole("switch")).not.toBeInTheDocument();
