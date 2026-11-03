@@ -25,7 +25,8 @@ export interface Starter {
 		user: User,
 		source: Source,
 		name?: string,
-		description?: string
+		description?: string,
+		variableValues?: Record<string, string>
 	) => Promise<Outcome>;
 }
 
@@ -34,12 +35,13 @@ export const DESCRIPTION = "Started from a pattern";
 
 export const viaService: Starter = {
 	label: "the service",
-	start: async (user, source, name = NAME, description = DESCRIPTION) => {
+	start: async (user, source, name, description, variableValues) => {
 		const result = await createCaseFromPattern(
 			user.id,
 			source as unknown as PatternSource,
-			name,
-			description
+			name === undefined ? NAME : name,
+			description === undefined ? DESCRIPTION : description,
+			variableValues
 		);
 		return "data" in result
 			? { ok: true, id: result.data.id, warnings: result.data.warnings }
@@ -49,15 +51,16 @@ export const viaService: Starter = {
 
 export const viaAction: Starter = {
 	label: "the action",
-	start: async (user, source, name = NAME, description = DESCRIPTION) => {
+	start: async (user, source, name, description, variableValues) => {
 		await mockAuth(user.id, user.username, user.email ?? undefined);
 		const { createCaseFromPattern: startFromAction } = await import(
 			"@/actions/case-from-pattern"
 		);
 		const result = await startFromAction(
 			source as unknown as PatternSource,
-			name,
-			description
+			name === undefined ? NAME : name,
+			description === undefined ? DESCRIPTION : description,
+			variableValues
 		);
 		return result.success
 			? { ok: true, id: result.data.id, warnings: result.data.warnings }

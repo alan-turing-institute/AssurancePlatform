@@ -23,6 +23,7 @@ import { Button } from "../ui/button";
 import { LeftOutNotice } from "./_case-create-modal/left-out-notice";
 import { StartFromSection } from "./_case-create-modal/start-from-section";
 import { useCaseCreate } from "./_case-create-modal/use-case-create";
+import { VariablesSection } from "./_case-create-modal/variables-section";
 
 const PLACEHOLDERS = {
 	case: { name: "Case name", description: "Your case description" },
@@ -44,6 +45,7 @@ export const CaseCreateModal = () => {
 		pending,
 		selectPattern,
 		start,
+		variables,
 	} = useCaseCreate({
 		onClose: createCaseModal.onClose,
 		preset: createCaseModal.preset,
@@ -144,6 +146,13 @@ export const CaseCreateModal = () => {
 										</FormItem>
 									)}
 								/>
+								<VariablesSection
+									disabled={loading}
+									onChange={variables.change}
+									onRetry={variables.retry}
+									state={variables.state}
+									typed={variables.typed}
+								/>
 								{errors.length > 0 && (
 									<div className="text-destructive text-sm">
 										{errors.map((e) => (
@@ -160,7 +169,10 @@ export const CaseCreateModal = () => {
 									>
 										Cancel
 									</Button>
-									<Button disabled={loading} type="submit">
+									<Button
+										disabled={loading || variables.state.status === "loading"}
+										type="submit"
+									>
 										Submit
 									</Button>
 								</div>

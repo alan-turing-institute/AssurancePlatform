@@ -1,6 +1,7 @@
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import type { PublishableItemDetailResponse } from "@/lib/services/discover-transforms";
 import DownloadPublishedItemButton from "./download-published-item-button";
+import PatternVariables from "./pattern-variables";
 import UsePatternButton from "./use-pattern-button";
 
 interface FrozenSnapshotSectionProps {
@@ -38,6 +39,7 @@ const FrozenSnapshotSection = ({ item }: FrozenSnapshotSectionProps) => {
 					/>
 				)}
 			</div>
+			{isPattern && <PatternVariables content={item.content} />}
 		</div>
 	);
 };

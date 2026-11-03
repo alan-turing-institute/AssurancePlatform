@@ -1,12 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	createCaseFromPattern,
+	fetchPatternVariables,
 	fetchViewablePatterns,
 } from "@/actions/case-from-pattern";
 import type { PublishedPatternPreset } from "@/hooks/modal-hooks";
+import type { PatternVariable } from "@/lib/case/pattern-variables";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import {
 	mockPush,
@@ -36,6 +38,7 @@ vi.mock("@/actions/assurance-cases", () => ({
 
 vi.mock("@/actions/case-from-pattern", () => ({
 	createCaseFromPattern: vi.fn(),
+	fetchPatternVariables: vi.fn(),
 	fetchViewablePatterns: vi.fn(),
 }));
 
@@ -53,6 +56,17 @@ const OWN_PATTERN: ViewablePattern = {
 	origin: "own",
 	source: { patternCaseId: "pattern-1" },
 };
+const SYSTEM_ID = "k3f9x2m7qa";
+const OWNER_ID = "p4n8c2d6xz";
+const TWO_VARIABLES: PatternVariable[] = [
+	{
+		id: SYSTEM_ID,
+		name: "system",
+		meaning: "The system this case is about",
+		value: "AcmeBot",
+	},
+	{ id: OWNER_ID, name: "owner", meaning: "Who is responsible for it" },
+];
 const PUBLISHED_PATTERN: ViewablePattern = {
 	key: "published:a-pattern",
 	name: "Published pattern",
@@ -74,6 +88,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	resetNavigationMocks();
 	mockModal.preset = undefined;
+	vi.mocked(fetchPatternVariables).mockResolvedValue([]);
 	vi.mocked(createAssuranceCase).mockResolvedValue({
 		success: true,
 		data: { id: "new-case" },
@@ -161,7 +176,8 @@ describe("CaseCreateModal", () => {
 		expect(createCaseFromPattern).toHaveBeenCalledWith(
 			{ patternCaseId: "pattern-1" },
 			"My new case",
-			"About the new case"
+			"About the new case",
+			{}
 		);
 		expect(createAssuranceCase).not.toHaveBeenCalled();
 	});
@@ -196,7 +212,8 @@ describe("CaseCreateModal", () => {
 		expect(createCaseFromPattern).toHaveBeenCalledWith(
 			{ publishedSlug: "a-pattern" },
 			"My new case",
-			"About the new case"
+			"About the new case",
+			{}
 		);
 
 		await user.click(screen.getByRole("button", { name: "Continue to case" }));
@@ -284,7 +301,8 @@ describe("CaseCreateModal", () => {
 		expect(createCaseFromPattern).toHaveBeenCalledWith(
 			{ publishedSlug: "a-pattern" },
 			"My new case",
-			"About the new case"
+			"About the new case",
+			{}
 		);
 	});
 
@@ -317,7 +335,8 @@ describe("CaseCreateModal", () => {
 		expect(createCaseFromPattern).toHaveBeenCalledWith(
 			{ patternCaseId: "pattern-1" },
 			"My new case",
-			"About the new case"
+			"About the new case",
+			{}
 		);
 	});
 
@@ -365,5 +384,175 @@ describe("CaseCreateModal", () => {
 		expect(
 			await screen.findByText("You have no patterns to start from yet.")
 		).toBeVisible();
+	});
+});
+
+describe("CaseCreateModal variables", () => {
+	async function chooseOwnPattern(user: ReturnType<typeof userEvent.setup>) {
+		await startFromPattern(user);
+		await user.click(await screen.findByRole("combobox", { name: "Pattern" }));
+		await user.click(screen.getByRole("option", { name: "Own pattern" }));
+	}
+
+	beforeEach(() => {
+		vi.mocked(fetchViewablePatterns).mockResolvedValue([
+			OWN_PATTERN,
+			PUBLISHED_PATTERN,
+		]);
+		vi.mocked(fetchPatternVariables).mockResolvedValue(TWO_VARIABLES);
+		vi.mocked(createCaseFromPattern).mockResolvedValue({
+			success: true,
+			data: { id: "copied-case", warnings: [] },
+		});
+	});
+
+	it("asks for each variable of the chosen pattern, filled with the value the pattern gives it, and sends what was typed", async () => {
+		const user = userEvent.setup();
+		render(<CaseCreateModal />);
+
+		await startFromPattern(user);
+		expect(fetchPatternVariables).not.toHaveBeenCalled();
+		await user.click(await screen.findByRole("combobox", { name: "Pattern" }));
+		await user.click(screen.getByRole("option", { name: "Own pattern" }));
+
+		expect(await screen.findByLabelText("system")).toHaveValue("AcmeBot");
+		expect(screen.getByLabelText("owner")).toHaveValue("");
+		expect(screen.getByText("The system this case is about")).toBeVisible();
+		expect(screen.getByText("Who is responsible for it")).toBeVisible();
+		expect(fetchPatternVariables).toHaveBeenCalledWith({
+			patternCaseId: "pattern-1",
+		});
+
+		await user.type(screen.getByLabelText("owner"), "  Dana  ");
+		await fillDetails(user);
+		await user.click(screen.getByRole("button", { name: "Submit" }));
+
+		await waitFor(() =>
+			expect(mockPush).toHaveBeenCalledWith("/case/copied-case")
+		);
+		expect(createCaseFromPattern).toHaveBeenCalledWith(
+			{ patternCaseId: "pattern-1" },
+			"My new case",
+			"About the new case",
+			{ [OWNER_ID]: "  Dana  " }
+		);
+	});
+
+	it("sends an empty value for a variable the user clears, so the new case leaves it unset", async () => {
+		const user = userEvent.setup();
+		render(<CaseCreateModal />);
+
+		await chooseOwnPattern(user);
+		await user.clear(await screen.findByLabelText("system"));
+		await fillDetails(user);
+		await user.click(screen.getByRole("button", { name: "Submit" }));
+
+		await waitFor(() => expect(createCaseFromPattern).toHaveBeenCalled());
+		expect(createCaseFromPattern).toHaveBeenCalledWith(
+			{ patternCaseId: "pattern-1" },
+			"My new case",
+			"About the new case",
+			{ [SYSTEM_ID]: "" }
+		);
+	});
+
+	it("limits a value to the length a variable can hold", async () => {
+		const user = userEvent.setup();
+		render(<CaseCreateModal />);
+
+		await chooseOwnPattern(user);
+
+		expect(await screen.findByLabelText("owner")).toHaveAttribute(
+			"maxlength",
+			"500"
+		);
+	});
+
+	it("sends nothing typed for a pattern that was chosen earlier", async () => {
+		const user = userEvent.setup();
+		render(<CaseCreateModal />);
+
+		await chooseOwnPattern(user);
+		await user.type(await screen.findByLabelText("owner"), "Dana");
+
+		vi.mocked(fetchPatternVariables).mockResolvedValue([
+			{ id: "q1w2e3r4t5", name: "region", meaning: "" },
+		]);
+		await user.click(screen.getByRole("combobox", { name: "Pattern" }));
+		await user.click(screen.getByRole("option", { name: "Published pattern" }));
+		expect(await screen.findByLabelText("region")).toHaveValue("");
+		expect(screen.queryByLabelText("owner")).not.toBeInTheDocument();
+		await fillDetails(user);
+		await user.click(screen.getByRole("button", { name: "Submit" }));
+
+		await waitFor(() => expect(createCaseFromPattern).toHaveBeenCalled());
+		expect(createCaseFromPattern).toHaveBeenCalledWith(
+			{ publishedSlug: "a-pattern" },
+			"My new case",
+			"About the new case",
+			{}
+		);
+	});
+
+	it("shows what the action refuses and keeps the values typed", async () => {
+		const user = userEvent.setup();
+		vi.mocked(createCaseFromPattern).mockResolvedValue({
+			success: false,
+			error: "Variable values must be at most 500 characters",
+		});
+		render(<CaseCreateModal />);
+
+		await chooseOwnPattern(user);
+		await user.type(await screen.findByLabelText("owner"), "Dana");
+		await fillDetails(user);
+		await user.click(screen.getByRole("button", { name: "Submit" }));
+
+		expect(
+			await screen.findByText("Variable values must be at most 500 characters")
+		).toBeVisible();
+		expect(mockPush).not.toHaveBeenCalled();
+		expect(screen.getByLabelText("owner")).toHaveValue("Dana");
+	});
+
+	it("holds Submit back while the variables load, and says so when they cannot be loaded", async () => {
+		const user = userEvent.setup();
+		vi.mocked(fetchPatternVariables).mockRejectedValueOnce(
+			new Error("Failed to fetch")
+		);
+		render(<CaseCreateModal />);
+
+		await chooseOwnPattern(user);
+		expect(
+			await screen.findByText("Variables could not be loaded.")
+		).toBeVisible();
+		expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+
+		let finish: (variables: PatternVariable[]) => void = () => undefined;
+		vi.mocked(fetchPatternVariables).mockReturnValueOnce(
+			new Promise((resolve) => {
+				finish = resolve;
+			})
+		);
+		await user.click(screen.getByRole("button", { name: "Try again" }));
+		expect(await screen.findByText("Loading variables")).toBeVisible();
+		expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+
+		await act(async () => {
+			finish(TWO_VARIABLES);
+			await Promise.resolve();
+		});
+		expect(await screen.findByLabelText("system")).toBeVisible();
+		expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+	});
+
+	it("asks for no values for a blank case or a pattern with no variables", async () => {
+		const user = userEvent.setup();
+		vi.mocked(fetchPatternVariables).mockResolvedValue([]);
+		render(<CaseCreateModal />);
+
+		expect(fetchPatternVariables).not.toHaveBeenCalled();
+		await chooseOwnPattern(user);
+		await waitFor(() => expect(fetchPatternVariables).toHaveBeenCalled());
+		expect(screen.queryByText("Variables")).not.toBeInTheDocument();
 	});
 });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { newCaseDescriptionSchema, newCaseNameSchema } from "./assurance-case";
 import { uuidSchema } from "./base";
+import { CONTEXT_ENTRY_VALUE_MAX_LENGTH } from "./context-entry";
 import { publishableItemSlugSchema } from "./publishable-item";
 
 /**
@@ -36,6 +37,26 @@ export const startedCaseDescriptionSchema = newCaseDescriptionSchema.refine(
 );
 
 /**
+ * The values to give a pattern's variables in the new case, by the id of the
+ * entry that defines each. A value is trimmed and may be at most as long as
+ * any context entry's value; an empty one leaves the variable without a value.
+ */
+export const variableValuesSchema = z
+	.record(
+		z.string(),
+		z
+			.string()
+			.trim()
+			.max(
+				CONTEXT_ENTRY_VALUE_MAX_LENGTH,
+				`Variable values must be at most ${CONTEXT_ENTRY_VALUE_MAX_LENGTH} characters`
+			)
+	)
+	.describe("Values for the pattern's variables, by entry id");
+
+export type VariableValues = z.infer<typeof variableValuesSchema>;
+
+/**
  * Schema for starting a new case from a pattern.
  */
 export const createCaseFromPatternSchema = z
@@ -43,6 +64,7 @@ export const createCaseFromPatternSchema = z
 		source: patternSourceSchema,
 		name: startedCaseNameSchema,
 		description: startedCaseDescriptionSchema,
+		variableValues: variableValuesSchema.default({}),
 	})
 	.describe("Input schema for starting a new assurance case from a pattern");
 

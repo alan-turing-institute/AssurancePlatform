@@ -124,4 +124,49 @@ describe("FrozenSnapshotSection", () => {
 		expect(description).toContain("Second paragraph");
 		expect(description).not.toContain("alikeSecond");
 	});
+
+	describe("the variables list", () => {
+		const content = {
+			tree: {
+				id: "g1",
+				name: "G1",
+				description: "Goal",
+				children: [],
+				context: [
+					{
+						id: "k3f9x2m7qa",
+						name: "system",
+						text: "The system this case is about",
+						variable: true,
+					},
+				],
+			},
+		};
+
+		it("lists a published pattern's variables beside the button", () => {
+			render(
+				<FrozenSnapshotSection
+					item={itemOf({ type: "ARGUMENT_PATTERN", content })}
+				/>
+			);
+
+			expect(screen.getByRole("heading", { name: "Variables" })).toBeVisible();
+			expect(screen.getByText("system")).toBeVisible();
+			expect(
+				screen.getByRole("button", { name: USE_THIS_PATTERN })
+			).toBeVisible();
+		});
+
+		it("is not shown for a published case, whatever its snapshot holds", () => {
+			render(
+				<FrozenSnapshotSection
+					item={itemOf({ type: "ASSURANCE_CASE", content })}
+				/>
+			);
+
+			expect(
+				screen.queryByRole("heading", { name: "Variables" })
+			).not.toBeInTheDocument();
+		});
+	});
 });

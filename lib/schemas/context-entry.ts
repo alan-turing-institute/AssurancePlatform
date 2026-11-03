@@ -11,7 +11,7 @@
 import { z } from "zod";
 
 const CONTEXT_ENTRY_NAME_MAX_LENGTH = 40;
-const CONTEXT_ENTRY_VALUE_MAX_LENGTH = 500;
+export const CONTEXT_ENTRY_VALUE_MAX_LENGTH = 500;
 
 /** Ten lowercase letters or digits. */
 const CONTEXT_ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
