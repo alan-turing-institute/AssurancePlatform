@@ -3,26 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import SignInForm from "@/components/auth/sign-in-form";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { validateSession } from "@/lib/auth/validate-session";
 
 function SignInContent() {
 	return <SignInForm />;
-}
-
-/**
- * Guards against the open-redirect a raw `?redirect=` query value could
- * otherwise enable: only a same-site relative path is honoured, matching
- * the check `proxy.ts` used to apply before this redirect moved here
- * (AP-QA-003) — anything else falls back to `/dashboard`.
- */
-function safeRedirectTarget(
-	rawRedirect: string | string[] | undefined
-): string {
-	const value = Array.isArray(rawRedirect) ? rawRedirect[0] : rawRedirect;
-	if (value?.startsWith("/") && !value.startsWith("//")) {
-		return value;
-	}
-	return "/dashboard";
 }
 
 interface SignInPageProps {
@@ -33,7 +18,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 	const session = await validateSession();
 	if (session) {
 		const params = await searchParams;
-		redirect(safeRedirectTarget(params.redirect));
+		redirect(safeRedirectPath(params.redirect || params.callbackUrl));
 	}
 
 	return (
