@@ -81,6 +81,15 @@ const PUBLISHED_PATTERN: ViewablePattern = {
 	source: { publishedSlug: "a-pattern" },
 };
 
+/** A promise that the test settles by hand. */
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((res) => {
+		resolve = res;
+	});
+	return { promise, resolve };
+}
+
 async function fillDetails(user: ReturnType<typeof userEvent.setup>) {
 	await user.type(screen.getByLabelText("Name"), "My new case");
 	await user.type(screen.getByLabelText("Description"), "About the new case");
@@ -616,8 +625,8 @@ describe("CaseCreateModal variables", () => {
 			title: "Published pattern",
 			description: "What the page says it is for",
 		};
-		const list = Promise.withResolvers<ViewablePattern[]>();
-		const fresh = Promise.withResolvers<PatternVariable[]>();
+		const list = deferred<ViewablePattern[]>();
+		const fresh = deferred<PatternVariable[]>();
 		vi.mocked(fetchViewablePatterns).mockReturnValue(list.promise);
 		vi.mocked(fetchPatternVariables).mockImplementation((source) =>
 			"publishedSlug" in source ? Promise.resolve(TWO_VARIABLES) : fresh.promise
