@@ -55,7 +55,7 @@ export async function openCase(
 }
 
 /** What a stored snapshot says it was composed from. */
-export function snapshotKind(content: unknown): Kind {
+function snapshotKind(content: unknown): Kind {
 	const caseBlock = (content as { case?: { kind?: string } } | null)?.case;
 	return caseBlock?.kind === "PATTERN" ? "PATTERN" : "CASE";
 }
@@ -95,37 +95,55 @@ export type StoredState = Awaited<ReturnType<typeof storedState>>;
  */
 export function inconsistencies(state: StoredState): string[] {
 	const { stored, rows } = state;
+	const caseProblems = stored.published
+		? publishedCaseProblems(stored, rows)
+		: unpublishedCaseProblems(stored, rows);
+	return [...caseProblems, ...rowTypeProblems(rows)];
+}
+
+function publishedCaseProblems(
+	stored: StoredState["stored"],
+	rows: PublishedRows
+): string[] {
 	const problems: string[] = [];
 	const current = rows.filter((row) => row.isCurrent);
-
-	if (stored.published) {
-		if (current.length !== 1) {
-			problems.push(`published with ${current.length} current rows`);
-		}
-		const [only] = current;
-		if (only && only.type !== TYPE_FOR_KIND[stored.kind]) {
-			problems.push(
-				`a ${stored.kind} is listed with type ${only.type}, not ${TYPE_FOR_KIND[stored.kind]}`
-			);
-		}
-		if (stored.publishStatus !== "PUBLISHED") {
-			problems.push(`published but ${stored.publishStatus}`);
-		}
-		if (!stored.publishedAt) {
-			problems.push("published with no publishedAt");
-		}
-	} else {
-		if (rows.length > 0) {
-			problems.push(`not published but holds ${rows.length} rows`);
-		}
-		if (stored.publishStatus !== "DRAFT") {
-			problems.push(`not published but ${stored.publishStatus}`);
-		}
-		if (stored.publishedAt) {
-			problems.push("not published but has a publishedAt");
-		}
+	if (current.length !== 1) {
+		problems.push(`published with ${current.length} current rows`);
 	}
+	const [only] = current;
+	if (only && only.type !== TYPE_FOR_KIND[stored.kind]) {
+		problems.push(
+			`a ${stored.kind} is listed with type ${only.type}, not ${TYPE_FOR_KIND[stored.kind]}`
+		);
+	}
+	if (stored.publishStatus !== "PUBLISHED") {
+		problems.push(`published but ${stored.publishStatus}`);
+	}
+	if (!stored.publishedAt) {
+		problems.push("published with no publishedAt");
+	}
+	return problems;
+}
 
+function unpublishedCaseProblems(
+	stored: StoredState["stored"],
+	rows: PublishedRows
+): string[] {
+	const problems: string[] = [];
+	if (rows.length > 0) {
+		problems.push(`not published but holds ${rows.length} rows`);
+	}
+	if (stored.publishStatus !== "DRAFT") {
+		problems.push(`not published but ${stored.publishStatus}`);
+	}
+	if (stored.publishedAt) {
+		problems.push("not published but has a publishedAt");
+	}
+	return problems;
+}
+
+function rowTypeProblems(rows: PublishedRows): string[] {
+	const problems: string[] = [];
 	for (const row of rows) {
 		const composedFrom = snapshotKind(row.content);
 		if (row.type !== TYPE_FOR_KIND[composedFrom]) {
