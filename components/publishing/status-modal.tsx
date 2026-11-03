@@ -111,19 +111,11 @@ export function StatusModal({
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
 			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>
-						{ITEM_TITLES[itemName]} Status: {getStatusLabel(status)}
-						{hasChanges && status === "PUBLISHED" && (
-							<span className="ml-2 font-normal text-sm text-warning">
-								(Changes pending)
-							</span>
-						)}
-					</DialogTitle>
-					<DialogDescription>
-						{getStatusDescription(status, itemName)}
-					</DialogDescription>
-				</DialogHeader>
+				<StatusModalHeader
+					hasChanges={hasChanges}
+					itemName={itemName}
+					status={status}
+				/>
 
 				<Separator />
 
@@ -167,6 +159,35 @@ export function StatusModal({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+interface StatusModalHeaderProps {
+	hasChanges: boolean;
+	itemName: CaseItemName;
+	status: PublishStatusType;
+}
+
+/** The dialog's title, with a pending-changes note on a published item, and its one-line description. */
+function StatusModalHeader({
+	hasChanges,
+	itemName,
+	status,
+}: StatusModalHeaderProps) {
+	return (
+		<DialogHeader>
+			<DialogTitle>
+				{ITEM_TITLES[itemName]} Status: {getStatusLabel(status)}
+				{hasChanges && status === "PUBLISHED" && (
+					<span className="ml-2 font-normal text-sm text-warning">
+						(Changes pending)
+					</span>
+				)}
+			</DialogTitle>
+			<DialogDescription>
+				{getStatusDescription(status, itemName)}
+			</DialogDescription>
+		</DialogHeader>
 	);
 }
 

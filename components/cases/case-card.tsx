@@ -123,7 +123,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	}, [fetchScreenshot]);
 
 	return (
-		<div className="group relative min-h-[420px]">
+		<div className="group relative min-h-105">
 			<Link href={`/case/${assuranceCase.id}`}>
 				<Card
 					className={cn(
