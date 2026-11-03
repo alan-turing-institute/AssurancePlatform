@@ -43,7 +43,8 @@ import {
  * The variable flag through every way a case is written and read back: the
  * single-element routes, the batch route behind the JSON editor, the export
  * file and import, undo and redo, and the JSON editor's own checks. A flag
- * that is not exactly `true` is refused and leaves the stored case alone.
+ * that is not a boolean is refused and leaves the stored case alone; `false`
+ * is accepted and stored as no flag.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -66,7 +67,6 @@ beforeEach(async () => {
 });
 
 const BAD_FLAGS: [string, unknown][] = [
-	["false", false],
 	["the string true", "true"],
 	["the string false", "false"],
 	["the number one", 1],
@@ -158,6 +158,25 @@ describe("the single-element routes", () => {
 
 		expect(response.status).toBe(400);
 		expect(await storedContext(world.claimId)).toEqual([variableEntry("kept")]);
+	});
+
+	it("accepts a flag of false and stores the entry without it, so a variable can be unmarked", async () => {
+		const world = await freshWorld();
+		await putContext(world.claimId, [variableEntry("AcmeBot")]);
+
+		const response = await putContext(world.claimId, [
+			{ ...variableEntry("AcmeBot"), variable: false },
+		]);
+		const body = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(body.context[0]).not.toHaveProperty("variable");
+		const [stored] = (await storedContext(world.claimId)) as Record<
+			string,
+			unknown
+		>[];
+		expect(stored).not.toHaveProperty("variable");
+		expect(stored).toMatchObject({ id: SYS, value: "AcmeBot" });
 	});
 
 	it("refuses a stray key beside the flag", async () => {
@@ -264,6 +283,24 @@ describe("the single-element routes", () => {
 		).toBe(0);
 	});
 
+	it("accepts a flag of false on the create route and stores the entry without it", async () => {
+		const owner = await openWorld("CASE");
+		const empty = await prismaCaseWithoutElements(owner.ownerId);
+
+		const response = await postElementWithContext(empty, [
+			{ ...variableEntry("AcmeBot"), variable: false },
+		]);
+		const body = await response.json();
+
+		expect(response.status).toBe(201);
+		const [stored] = (await storedContext(body.id)) as Record<
+			string,
+			unknown
+		>[];
+		expect(stored).not.toHaveProperty("variable");
+		expect(stored).toMatchObject({ id: SYS, value: "AcmeBot" });
+	});
+
 	it("leaves the text of the elements that mention a variable as it was when the value changes", async () => {
 		const world = await variableWorld("CASE", "AcmeBot");
 		const description = `Operators test the ${ref("system", SYS)}`;
@@ -365,6 +402,24 @@ describe("the batch route behind the JSON editor", () => {
 		expect(await storedContext(world.strategyId)).toEqual([]);
 	});
 
+	it("accepts a flag of false and stores the entry without it", async () => {
+		const world = await variableWorld("CASE");
+
+		const response = await postBatch(world.caseId, [
+			batchContext(world.strategyId, [
+				{ ...variableEntry("AcmeBot", "other", MORE), variable: false },
+			]),
+		]);
+
+		expect(response.status).toBe(200);
+		const [stored] = (await storedContext(world.strategyId)) as Record<
+			string,
+			unknown
+		>[];
+		expect(stored).not.toHaveProperty("variable");
+		expect(stored).toMatchObject({ id: MORE, value: "AcmeBot" });
+	});
+
 	it("refuses two elements that define a variable with the same id, judged after the whole batch", async () => {
 		const world = await variableWorld("CASE");
 
@@ -459,6 +514,23 @@ describe("the export file and import", () => {
 
 		expect(response.status).toBe(400);
 		expect(await prisma.assuranceCase.count()).toBe(before);
+	});
+
+	it("take a file with a flag of false as a name that is not a variable", async () => {
+		const world = await variableWorld("CASE", "AcmeBot");
+		const file = await exportFile(world.caseId);
+		file.tree.context = [
+			{ ...variableEntry("AcmeBot"), variable: false },
+		] as never;
+
+		const response = await importFile(file);
+		const body = await response.json();
+
+		expect(response.status).toBe(200);
+		const [entry] = (await exported(world.ownerId, body.id)).tree
+			.context as Record<string, unknown>[];
+		expect(entry).not.toHaveProperty("variable");
+		expect(entry).toMatchObject({ id: SYS, value: "AcmeBot" });
 	});
 
 	it("refuses a file that says version 1.0 and holds a variable", async () => {
@@ -601,6 +673,28 @@ describe("the JSON editor's own checks and diff", () => {
 		});
 
 		expect(CaseExportNestedSchema.safeParse(draft).success).toBe(false);
+	});
+
+	it("unmarks a variable when its flag is changed to false, in one update", async () => {
+		const world = await variableWorld("CASE", "AcmeBot");
+		const { server, draft } = await edited(world, (file) => {
+			file.tree.context = [
+				{ ...variableEntry("AcmeBot"), variable: false },
+			] as never;
+		});
+		const parsed = CaseExportNestedSchema.parse(draft);
+		const diff = computeTreeDiff(server, parsed);
+		expect(diff.changes).toHaveLength(1);
+
+		const response = await postBatch(world.caseId, diff.changes);
+
+		expect(response.status).toBe(200);
+		const [stored] = (await storedContext(world.goalId)) as Record<
+			string,
+			unknown
+		>[];
+		expect(stored).not.toHaveProperty("variable");
+		expect(stored).toMatchObject({ id: SYS, value: "AcmeBot" });
 	});
 
 	it("refuses a document that says 1.0 and holds a variable", async () => {

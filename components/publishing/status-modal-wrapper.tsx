@@ -39,9 +39,13 @@ export function StatusModalWrapper() {
 					isPlaceholder: node.data?.isPlaceholder === true,
 				}))
 			);
-	const unsetVariableCount = isPattern
-		? 0
-		: countUnsetVariablesOnCards(nodes.map((node) => node.data));
+	// Counted only while the dialog is open: the wrapper is always mounted, and
+	// reading every card's text for references on each change to the diagram is
+	// work nobody sees.
+	const unsetVariableCount =
+		isPattern || !statusModal.isOpen
+			? 0
+			: countUnsetVariablesOnCards(nodes.map((node) => node.data));
 	const [loading, setLoading] = useState(false);
 	const [publishLoading, setPublishLoading] = useState(false);
 	const [unpublishLoading, setUnpublishLoading] = useState(false);

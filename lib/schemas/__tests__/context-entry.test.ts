@@ -34,7 +34,7 @@ describe("NamedContextEntrySchema", () => {
 		).toBe(true);
 	});
 
-	it("accepts the variable marker only as true", () => {
+	it("accepts the variable marker as a boolean, and stores false as no marker", () => {
 		expect(
 			NamedContextEntrySchema.parse({
 				id: ID,
@@ -43,7 +43,15 @@ describe("NamedContextEntrySchema", () => {
 				variable: true,
 			})
 		).toEqual({ id: ID, name: "w", text: "", variable: true });
-		for (const variable of [false, "true", 1, null]) {
+		const unmarked = NamedContextEntrySchema.parse({
+			id: ID,
+			name: "w",
+			text: "",
+			variable: false,
+		});
+		expect(unmarked).toEqual({ id: ID, name: "w", text: "" });
+		expect(unmarked).not.toHaveProperty("variable");
+		for (const variable of ["true", 1, null]) {
 			expect(
 				NamedContextEntrySchema.safeParse({
 					id: ID,

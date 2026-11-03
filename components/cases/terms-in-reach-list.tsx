@@ -29,7 +29,10 @@ export default function TermsInReachList({ terms }: TermsInReachListProps) {
 			) : (
 				<ul className="space-y-1.5 text-xs">
 					{terms.map((term) => (
-						<li key={`${term.definedOn.elementId}:${term.id}`}>
+						<li
+							className="wrap-anywhere"
+							key={`${term.definedOn.elementId}:${term.id}`}
+						>
 							<span className="font-medium">{term.name}</span>
 							{term.variable && (
 								<span className="text-muted-foreground">

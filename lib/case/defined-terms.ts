@@ -230,9 +230,10 @@ export function variableNote(value: string | undefined): string {
 /** How plain text is written. */
 interface PlainTextOptions {
 	/**
-	 * Write each variable as `{name = value}` (`{name = (not set)}` while it has
-	 * none) instead of its value, for a reader that must tell a variable from
-	 * fixed wording, such as a model.
+	 * Write each variable as `{name = "value"}` (`{name = (not set)}` while it
+	 * has none) instead of its value, the value as a JSON string so that
+	 * nothing in it can be taken for the end of the marker, for a reader that
+	 * must tell a variable from fixed wording, such as a model.
 	 */
 	marked?: boolean;
 }
@@ -264,7 +265,7 @@ export function plainReferenceText(
 				return `{${shown.text}}`;
 			}
 			if (options.marked) {
-				return `{${shown.name} = ${shown.unfilled ? "(not set)" : shown.text}}`;
+				return `{${shown.name} = ${shown.unfilled ? "(not set)" : JSON.stringify(shown.text)}}`;
 			}
 			return shown.text;
 		})
@@ -321,10 +322,12 @@ export type PlainCase = Omit<CaseExportNested, "tree"> & {
 	tree: PlainTreeNode;
 };
 
-/** How an element still to fill in is marked in the text a model reads: `{to fill in: hint}`. */
+/** How an element still to fill in is marked in the text a model reads: `{to fill in: "hint"}`, the hint as a JSON string. */
 function placeholderMarker(hint: string | null | undefined): string {
 	const guidance = hint?.trim();
-	return guidance ? `{to fill in: ${guidance}}` : "{to fill in}";
+	return guidance
+		? `{to fill in: ${JSON.stringify(guidance)}}`
+		: "{to fill in}";
 }
 
 function plainNode(
@@ -374,7 +377,7 @@ function plainNode(
 /**
  * Converts an exported case to its plain-text copy; the input is untouched.
  * The `marked` form is for a model: it writes each variable as
- * `{name = value}` and adds `{to fill in: hint}` to the description of an
+ * `{name = "value"}` and adds `{to fill in: "hint"}` to the description of an
  * element still to fill in, so the model can tell both from fixed wording.
  */
 export function toPlainCase(

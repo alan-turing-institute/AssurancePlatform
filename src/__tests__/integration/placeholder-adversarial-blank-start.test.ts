@@ -152,7 +152,7 @@ describe.each(KINDS)("a new blank %s", (kind) => {
 			found: true,
 			tree: {
 				name: "G1",
-				description: `{to fill in: ${TOP_GOAL_HINT}}`,
+				description: `{to fill in: ${JSON.stringify(TOP_GOAL_HINT)}}`,
 				isPlaceholder: true,
 			},
 		});

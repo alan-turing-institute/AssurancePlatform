@@ -25,14 +25,11 @@ describe("json-schema-v1.1.json drift", () => {
 		expect(named?.additionalProperties).toBe(false);
 	});
 
-	it("lets a named entry carry the variable marker, as true only", () => {
+	it("lets a named entry carry the variable marker, as a boolean", () => {
 		const [, named] =
 			committedSchema.definitions.TreeNode.properties.context.items.anyOf ?? [];
 
-		expect(named?.properties?.variable).toMatchObject({
-			type: "boolean",
-			const: true,
-		});
+		expect(named?.properties?.variable).toMatchObject({ type: "boolean" });
 		expect(named?.required).not.toContain("variable");
 	});
 

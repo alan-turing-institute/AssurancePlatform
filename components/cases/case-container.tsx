@@ -71,6 +71,20 @@ function getElementName(event: SSEEvent): string | undefined {
 }
 
 /**
+ * An orphaned element with its description in plain form (references written
+ * `{name}`). Orphans are held in plain form, as the ones detached in this
+ * session are, so the attach list shows the text as it is and never reads it
+ * for references a second time.
+ */
+function withPlainDescription<T extends { description?: unknown }>(
+	element: T
+): T {
+	return typeof element.description === "string"
+		? { ...element, description: plainReferenceText(element.description) }
+		: element;
+}
+
+/**
  * Builds a human-readable toast message for an SSE event.
  */
 function buildToastMessage(event: SSEEvent): string | null {
@@ -204,7 +218,11 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 		try {
 			const result = await fetchOrphanedElements(idValue);
-			setOrphanedElements(result || []);
+			setOrphanedElements(
+				Array.isArray(result)
+					? result.map(withPlainDescription)
+					: (result ?? [])
+			);
 		} catch {
 			setOrphanedElements([]);
 		}

@@ -88,6 +88,9 @@ export interface SelectedElement {
 	/** The element's id in the case, which `read_element` takes; absent when not known. */
 	id?: string;
 	label: string;
+	/** The text with each variable marked and an element still to fill in marked, when that differs from `text`; the prompt shows the model this form. */
+	markedText?: string;
+	/** The element's text in plain form, which the techniques search uses as its query. */
 	text: string;
 	type: string;
 }

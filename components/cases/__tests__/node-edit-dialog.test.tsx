@@ -1622,6 +1622,56 @@ describe("NodeEditDialog — defined terms", () => {
 		);
 	});
 
+	it("sends a piece of evidence's description with {name#id} in it when it is saved, never the variable's value", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		let body: Record<string, unknown> | undefined;
+		server.use(
+			http.put("/api/elements/3", async ({ request }) => {
+				body = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+		mockPluginsResponse(true);
+		render(
+			<NodeEditDialog
+				node={{
+					id: "3",
+					type: "evidence",
+					position: { x: 0, y: 0 },
+					data: {
+						id: 3,
+						name: "E1",
+						description: "Tested on {system#a1b2c3d4e5}",
+						urls: [],
+						termsInReach: [
+							{
+								id: "a1b2c3d4e5",
+								name: "system",
+								text: "the system",
+								value: "AcmeBot",
+								variable: true,
+								definedOn: { elementId: "1", elementName: "G1" },
+							},
+						],
+					},
+				}}
+				nodeType="evidence"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		await user.type(description, " again");
+		await user.click(screen.getByRole("button", { name: "Update Evidence" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(body?.description).toBe("Tested on {system#a1b2c3d4e5} again");
+		expect(JSON.stringify(body)).not.toContain("AcmeBot");
+	});
+
 	it("edits a piece of evidence's description with the terms in reach of its claim", async () => {
 		mockPluginsResponse(true);
 		render(

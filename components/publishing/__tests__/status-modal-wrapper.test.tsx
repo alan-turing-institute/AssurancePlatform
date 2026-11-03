@@ -4,6 +4,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCaseInformation } from "@/hooks/use-case-information";
 import { useStatusModal } from "@/hooks/use-status-modal";
+import { countUnsetVariablesOnCards } from "@/lib/case/placeholders";
 import { server } from "@/src/__tests__/mocks/server";
 import useStore from "@/store/store";
 import { StatusModalWrapper } from "../status-modal-wrapper";
@@ -11,6 +12,15 @@ import { StatusModalWrapper } from "../status-modal-wrapper";
 vi.mock("@/hooks/use-case-information", () => ({
 	useCaseInformation: vi.fn(),
 }));
+
+vi.mock("@/lib/case/placeholders", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/case/placeholders")>();
+	return {
+		...actual,
+		countUnsetVariablesOnCards: vi.fn(actual.countUnsetVariablesOnCards),
+	};
+});
 
 vi.mock("@/lib/toast", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/toast")>();
@@ -173,6 +183,19 @@ describe("StatusModalWrapper — Draft: placeholders on the diagram", () => {
 		render(<StatusModalWrapper />);
 
 		expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
+	});
+
+	it("reads the cards for variables only while the dialog is open", () => {
+		useStore.setState({ nodes: NODES });
+		useStatusModal.getState().onClose();
+
+		const { unmount } = render(<StatusModalWrapper />);
+		expect(countUnsetVariablesOnCards).not.toHaveBeenCalled();
+		unmount();
+
+		useStatusModal.getState().onOpen({ caseId: CASE_ID, status: "DRAFT" });
+		render(<StatusModalWrapper />);
+		expect(countUnsetVariablesOnCards).toHaveBeenCalled();
 	});
 
 	describe("a variable with no value", () => {

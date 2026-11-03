@@ -72,7 +72,8 @@ A named entry is a record with four keys, and a fifth that marks a variable:
 ```
 
 `text` is what the name means, and `value` is optional.
-`variable` is optional and, when present, is exactly `true`; an entry without it is an ordinary defined term.
+`variable` is optional and a boolean.
+The schema takes `false` and stores the entry without the key, so a variable is unmarked by changing `true` to `false` (in the JSON editor, for example); an entry without the key is an ordinary defined term.
 The `id` is ten lowercase letters or digits and is unique within a case, counting elements in the bin.
 A name is 1 to 40 characters, starts with a letter, and uses letters, digits, spaces, hyphens and underscores.
 A value is at most 500 characters.
@@ -100,17 +101,21 @@ Machine formats keep the stored form: the export file, the Google Drive backup, 
 ### Variables
 
 An entry with `"variable": true` is a variable.
-One helper, `referenceDisplay` in `lib/case/defined-terms.ts`, decides how a reference to a term reads, and only `previewParts` (the card, search, move and options lists, attribute lines) and `plainReferenceText` (document exports, the rules check, the away-goal picker) call it.
+One helper, `referenceDisplay` in `lib/case/defined-terms.ts`, decides how a reference to a term reads.
+It is called by `previewParts`, which draws the card's text; by `plainReferenceText`, which every plain-text reader uses (`plainDescription` for the search results and the move and options lists, the attribute lines, `toPlainCase` for document exports, the rules check and the Case Assistant, and the away-goal picker); and by `unsetVariablesMentioned`, which the publish gate and the status dialog use.
 A reference to an ordinary term, or to a term out of reach, reads as its name.
 A reference to a variable reads as its value, trimmed, or as `[name]` when the value is empty or only blanks; the card draws `[name]` in the placeholder style.
-The value is inserted as text and is never parsed again for references, so a value that looks like `{name#id}` is shown as typed.
+The value is inserted as text and is not parsed for references.
+Text that has been made plain is not converted a second time, so a value that looks like `{name#id}` stays as typed: the health settings view takes the edit dialog's plain text as it is, and the attach list holds each detached element's description in plain form, converted once when the list is loaded or when the element is detached.
+The Markdown report writes descriptions as they are, a variable's value included.
 `previewParts` cuts a value like ordinary text when it counts the visible characters, and leaves a name or `[name]` out whole when it does not fit.
 Search matches a variable by its value and by its name.
 
 The definition line of a variable ends in `(variable: value)`, or `(variable, not set)`, in the plain copy (`name: meaning (variable: AcmeBot)`) and on the expanded card.
 
 `toPlainCase` takes a `marked` option, which the Case Assistant uses for what the model reads.
-In it a variable is written `{name = value}`, or `{name = (not set)}`, and the description of an element that is still a placeholder ends with `{to fill in}` or `{to fill in: hint}`.
+In it a variable is written `{name = "value"}`, or `{name = (not set)}`, and the description of an element that is still a placeholder ends with `{to fill in}` or `{to fill in: "hint"}`.
+The value and the hint are written as JSON strings, so that quotation marks, braces and line breaks in them cannot be taken for the end of the marker.
 The rules check receives the unmarked copy, with the value where a card shows it.
 
 The flag is kept in four places: `pickNamedEntry` and `termsInReach` (onto `DefinedTerm`) in `lib/case/defined-terms.ts`, `finaliseNamedEntry` in the edit dialog's form, and the entry comparison in `lib/case/tree-diff.ts`, which decides what the JSON editor and undo send.

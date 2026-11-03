@@ -418,7 +418,7 @@ describe("variables", () => {
 			);
 		});
 
-		it("writes the marked form for a model: {name = value} and {name = (not set)}", () => {
+		it('writes the marked form for a model: {name = "value"} and {name = (not set)}', () => {
 			const marked = { marked: true };
 			expect(
 				plainReferenceText(
@@ -426,7 +426,7 @@ describe("variables", () => {
 					termsOf({ ...set, variable: true }, window),
 					marked
 				)
-			).toBe("Tested on {system = AcmeBot} and {window}.");
+			).toBe('Tested on {system = "AcmeBot"} and {window}.');
 			expect(
 				plainReferenceText(
 					text,
@@ -483,7 +483,7 @@ describe("variables", () => {
 			const plain = toPlainCase(variableCase(), { marked: true });
 			const [claim, blank] = plain.tree.children;
 			expect(claim?.description).toBe(
-				"Safe on {system = AcmeBot}. {to fill in: Say how it is safe}"
+				'Safe on {system = "AcmeBot"}. {to fill in: "Say how it is safe"}'
 			);
 			expect(blank?.description).toBe("{to fill in}");
 			expect(plain.tree.description).toBe("The system is safe");

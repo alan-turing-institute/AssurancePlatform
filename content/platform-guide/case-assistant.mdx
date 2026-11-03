@@ -160,8 +160,8 @@ It does not reword text that refers to a defined term, or a context list that de
 It does not write a reference to a defined term into new text either.
 Edit those in the element's form.
 
-The assistant reads a [variable](/docs/platform-guide/building-a-case) as `{name = value}`, or `{name = (not set)}` while it has no value, so that it can tell a variable from fixed wording.
-It reads an element that is still to fill in with `{to fill in}` or `{to fill in: hint}` after its text, so it knows what is left to write.
+The assistant reads a [variable](/docs/platform-guide/building-a-case) as `{name = "value"}`, with the value in quotation marks, or `{name = (not set)}` while it has no value, so that it can tell a variable from fixed wording.
+It reads an element that is still to fill in with `{to fill in}` or `{to fill in: "hint"}` after its text, so it knows what is left to write.
 It is told not to copy a variable's value into new text, and not to write these markers or `[name]` into a suggestion.
 The rules check reads the case as the diagram shows it, with each variable as its value.
 

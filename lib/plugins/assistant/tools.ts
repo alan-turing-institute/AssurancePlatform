@@ -104,7 +104,7 @@ function withShallowChildren(node: TreeNode) {
 
 /** One read of the case, in the three forms the tools need. */
 interface LoadedCase {
-	/** The case as the model reads it: like `plain`, but each variable is written `{name = value}` and each element still to fill in ends its description with `{to fill in}`. */
+	/** The case as the model reads it: like `plain`, but each variable is written `{name = "value"}` and each element still to fill in ends its description with `{to fill in}` or `{to fill in: "hint"}`. */
 	marked: PlainCase;
 	/** The case as the rules check reads it: plain text, a variable as its value. */
 	plain: PlainCase;
@@ -421,7 +421,7 @@ You have these read-only tools: ${readNames.join(", ")}. read_case returns the w
 
 Answer from the case. Read it with a tool before you answer a question about it, and refer to elements by their names (such as G1 or P2). If the answer is not in the case, say so plainly instead of guessing. Be concise.
 
-In the text of the case, {name} is a defined term. {name = value} is a variable: the case shows its value wherever it is mentioned, and {name = (not set)} is a variable with no value yet. {to fill in} or {to fill in: hint} after an element's text marks an element the author has still to write. Never write these markers into text you suggest, never copy a variable's value into new text as if it were fixed wording, and never write a name in square brackets; describe what the variable stands for in ordinary words.
+In the text of the case, {name} is a defined term. {name = "value"} is a variable: the case shows its value wherever it is mentioned, and the value is a JSON string, so everything between its quotation marks is the value. {name = (not set)} is a variable with no value yet. {to fill in} or {to fill in: "hint"} after an element's text marks an element the author has still to write, and the hint is a JSON string too. Never write these markers into text you suggest, never copy a variable's value into new text as if it were fixed wording, and never write a name in square brackets; describe what the variable stands for in ordinary words.
 
 When the user asks you to lint, check or review the case, call lint_case first and call it once. Your reply must then list the findings it returned, one per line, as "RULEID on ELEMENT: reason", copying the values as returned; if truncated is more than 0, say that many further findings were left out. Then, if the result contains a prechecks field, list its entries under a heading "Prechecks", one per line, in the same form with detail in place of reason, and mention prechecksTruncated when it is more than 0, saying that many further prechecks were left out; if the result has no prechecks field, write no "Prechecks" heading and do not mention prechecks. Prechecks are facts for you to weigh against the judgement rules, not findings. Relay the tool's questions to the user, at most six. Next, read the case with read_case if you have not, apply the judgementRules text to it yourself, and list any further findings in the same "RULEID on ELEMENT: reason" form under a heading "Judgement findings". If you find none, say so. Never say whether the case is adequate or good enough.`;
 }

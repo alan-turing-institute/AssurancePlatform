@@ -149,9 +149,8 @@
                     "maxLength": 500
                   },
                   "variable": {
-                    "description": "Present when the name is a variable: wherever it is mentioned, the case shows its value",
-                    "type": "boolean",
-                    "const": true
+                    "description": "True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out",
+                    "type": "boolean"
                   }
                 },
                 "required": ["id", "name", "text"],

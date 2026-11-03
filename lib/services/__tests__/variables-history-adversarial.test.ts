@@ -95,7 +95,7 @@ describe("a snapshot of an element that defines a variable", () => {
 		["the string true", "true"],
 		["null", null],
 		["the number one", 1],
-	])("does not carry a flag of %s, which the server would refuse", (_what, flag) => {
+	])("does not carry a flag of %s", (_what, flag) => {
 		const [entry] = createSnapshot({
 			id: "e1",
 			name: "P1",

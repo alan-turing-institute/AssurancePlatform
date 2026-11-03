@@ -27,6 +27,21 @@ const CONTEXT_ENTRY_NAME_PATTERN = /^\p{L}[\p{L}\p{M}\p{Nd} _-]*$/u;
 const NAMED_ENTRY_REQUIRED_KEYS = ["id", "name", "text"] as const;
 
 /**
+ * Takes the variable marker off an entry unless it is true, so that `false`,
+ * which says the entry is not a variable, is stored as no marker at all and an
+ * entry has one way of not being a variable.
+ */
+function dropVariableMarkerUnlessTrue<
+	T extends { variable?: boolean | undefined },
+>(entry: T): T {
+	if (entry.variable === true || !("variable" in entry)) {
+		return entry;
+	}
+	const { variable: _dropped, ...rest } = entry;
+	return rest as T;
+}
+
+/**
  * A context entry that carries a name (and optionally a value) so that text
  * elsewhere in the case can refer to it by id. Marked as a variable, the name
  * shows its value wherever it is mentioned.
@@ -64,12 +79,13 @@ export const NamedContextEntrySchema = z
 			.optional()
 			.describe("Optional value for the name, such as a threshold"),
 		variable: z
-			.literal(true)
+			.boolean()
 			.optional()
 			.describe(
-				"Present when the name is a variable: wherever it is mentioned, the case shows its value"
+				"True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out"
 			),
 	})
+	.overwrite(dropVariableMarkerUnlessTrue)
 	.describe("A context entry with a name, a meaning and an optional value");
 
 export type NamedContextEntry = z.infer<typeof NamedContextEntrySchema>;

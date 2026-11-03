@@ -11,7 +11,6 @@ import {
 } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { plainReferenceText } from "@/lib/case/defined-terms";
 import type { ServedSettings } from "@/lib/schemas/health-criteria";
 import { VersionCompare } from "./criteria-compare";
 import { draftFromCheck, draftFromStored } from "./criteria-draft";
@@ -385,7 +384,7 @@ function WithoutSettings({
 	);
 }
 
-/** The claim's text in a muted block, as text and wrapped; absent when the claim has none. */
+/** The claim's text in a muted block, as text and wrapped; absent when the claim has none. The text is already in plain form, so it is not read for references again. */
 function ClaimText({ text }: { text: string | undefined }) {
 	const headingId = useId();
 	if (!text?.trim()) {
@@ -401,7 +400,7 @@ function ClaimText({ text }: { text: string | undefined }) {
 				Claim
 			</h3>
 			<p className="wrap-anywhere max-h-40 overflow-y-auto whitespace-pre-wrap text-muted-foreground text-sm">
-				{plainReferenceText(text)}
+				{text}
 			</p>
 		</section>
 	);

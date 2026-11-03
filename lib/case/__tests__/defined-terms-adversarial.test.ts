@@ -441,7 +441,7 @@ describe("a variable's value", () => {
 		const text = `On {system#${ID_A}}.`;
 		expect(plainReferenceText(text, reach(value))).toBe(`On ${value}.`);
 		expect(plainReferenceText(text, reach(value), { marked: true })).toBe(
-			`On {system = ${value}}.`
+			`On {system = ${JSON.stringify(value)}}.`
 		);
 		expect(
 			toPlainCase(

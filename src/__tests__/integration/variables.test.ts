@@ -249,7 +249,7 @@ describe("updating a published copy", () => {
 		).toMatchObject({ data: { hasChanges: true } });
 	});
 
-	it("does not see a changed value of an ordinary term as a change", async () => {
+	it("does not see a changed value of an ordinary term as a change, because change detection compares no context except variables (a gap that was there before variables)", async () => {
 		const ordinary = { ...SYSTEM, variable: undefined, value: "AcmeBot" };
 		const scene = await sceneWith(ordinary);
 		expect((await publishRoute(scene.caseId)).status).toBe(200);

@@ -255,7 +255,7 @@ describe("a variable's reference in the marked form for a model", () => {
 	it("writes the name and the value together", () => {
 		const terms = reach(variable(SYS, "system", "AcmeBot"));
 		expect(plainReferenceText(text, terms, marked)).toBe(
-			"The {system = AcmeBot} is safe"
+			'The {system = "AcmeBot"} is safe'
 		);
 	});
 
@@ -296,7 +296,7 @@ describe("a variable's reference in the marked form for a model", () => {
 		const terms = reach(variable(SYS, "system", "AcmeBot"));
 		expect(
 			plainReferenceText(`A ${ref("stale name", SYS)}`, terms, marked)
-		).toBe("A {system = AcmeBot}");
+		).toBe('A {system = "AcmeBot"}');
 	});
 
 	it.each(
@@ -304,7 +304,7 @@ describe("a variable's reference in the marked form for a model", () => {
 	)("carries a value of %s through as it is, inside the marker", (_what, value) => {
 		const terms = reach(variable(SYS, "system", value));
 		const shown = plainReferenceText(ref("system", SYS), terms, marked);
-		expect(shown).toBe(`{system = ${value.trim()}}`);
+		expect(shown).toBe(`{system = ${JSON.stringify(value.trim())}}`);
 	});
 
 	it("does not read a value that holds a reference as a reference", () => {
@@ -313,7 +313,7 @@ describe("a variable's reference in the marked form for a model", () => {
 			variable(OTHER, "other", "FILLED")
 		);
 		expect(plainReferenceText(ref("system", SYS), terms, marked)).toBe(
-			`{system = {other#${OTHER}}}`
+			`{system = ${JSON.stringify(`{other#${OTHER}}`)}}`
 		);
 	});
 });
@@ -367,7 +367,7 @@ describe("a definition line", () => {
 		};
 		expect(plainContextEntry(entry, terms)).toBe("extra: uses FILLED");
 		expect(plainContextEntry(entry, terms, { marked: true })).toBe(
-			"extra: uses {other = FILLED}"
+			'extra: uses {other = "FILLED"}'
 		);
 	});
 
@@ -592,14 +592,14 @@ describe("the plain-text copy of a case with a variable", () => {
 			marked: true,
 		}).tree as TreeNode;
 		expect(filled.description).toBe(
-			"The {system = AcmeBot} is safe; the {hidden} too"
+			'The {system = "AcmeBot"} is safe; the {hidden} too'
 		);
 		expect(find(filled, "E1").description).toBe(
-			"Tested the {system = AcmeBot} for {window}"
+			'Tested the {system = "AcmeBot"} for {window}'
 		);
 		expect(filled.context).toEqual([
 			"system: the system under test (variable: AcmeBot)",
-			"scope: {system = AcmeBot}",
+			'scope: {system = "AcmeBot"}',
 		]);
 		const unset = toPlainCase(caseOf(tree()), { marked: true })
 			.tree as TreeNode;
@@ -639,7 +639,7 @@ describe("an element still to fill in in the marked form", () => {
 
 	it("ends the description with the marker and the hint", () => {
 		expect(marked("Name the test").description).toBe(
-			"Tested the {system = AcmeBot} for {window} {to fill in: Name the test}"
+			'Tested the {system = "AcmeBot"} for {window} {to fill in: "Name the test"}'
 		);
 	});
 
@@ -650,7 +650,7 @@ describe("an element still to fill in in the marked form", () => {
 		["a hint of spaces", "   "],
 	])("writes the marker alone for %s", (_what, hint) => {
 		expect(marked(hint).description).toBe(
-			"Tested the {system = AcmeBot} for {window} {to fill in}"
+			'Tested the {system = "AcmeBot"} for {window} {to fill in}'
 		);
 	});
 
@@ -658,7 +658,7 @@ describe("an element still to fill in in the marked form", () => {
 		HOSTILE_VALUES
 	)("carries a hint of %s through as it is", (_what, hint) => {
 		expect(marked(hint).description).toBe(
-			`Tested the {system = AcmeBot} for {window} {to fill in: ${hint.trim()}}`
+			`Tested the {system = "AcmeBot"} for {window} {to fill in: ${JSON.stringify(hint.trim())}}`
 		);
 	});
 
@@ -679,7 +679,7 @@ describe("an element still to fill in in the marked form", () => {
 		const e1 = find(root, "E1");
 		e1.description = "";
 		const plain = toPlainCase(caseOf(root), { marked: true }).tree as TreeNode;
-		expect(find(plain, "E1").description).toBe("{to fill in: Say it}");
+		expect(find(plain, "E1").description).toBe('{to fill in: "Say it"}');
 	});
 
 	it("does not mark an element that is not a placeholder", () => {
@@ -746,7 +746,6 @@ describe("the schema of a named entry", () => {
 	});
 
 	it.each([
-		["false", false],
 		["the string true", "true"],
 		["the number one", 1],
 		["null", null],
@@ -755,6 +754,12 @@ describe("the schema of a named entry", () => {
 		expect(
 			NamedContextEntrySchema.safeParse({ ...base, variable: flag }).success
 		).toBe(false);
+	});
+
+	it("accepts variable: false and drops it, so the entry is the same as one without the flag", () => {
+		const parsed = NamedContextEntrySchema.parse({ ...base, variable: false });
+		expect(parsed).toEqual(base);
+		expect(parsed).not.toHaveProperty("variable");
 	});
 
 	it("still refuses stray keys beside the flag", () => {
@@ -830,13 +835,17 @@ describe("the export document with a variable", () => {
 		).toBe(false);
 	});
 
-	it("refuses a hand-written variable: false at either version, and never keeps it as a variable", () => {
-		for (const version of ["1.0", "1.1"] as const) {
-			const parsed = CaseExportNestedSchema.safeParse(
-				document(version, { ...ordinary(SYS, "system", "x"), variable: false })
-			);
-			expect(parsed.success).toBe(false);
-		}
+	it("takes a hand-written variable: false at version 1.1 as no flag, and refuses it at 1.0 as the named entry it is", () => {
+		const written = { ...ordinary(SYS, "system", "x"), variable: false };
+
+		const current = CaseExportNestedSchema.safeParse(document("1.1", written));
+		const older = CaseExportNestedSchema.safeParse(document("1.0", written));
+
+		expect(current.success).toBe(true);
+		expect(current.success && current.data.tree.context).toEqual([
+			ordinary(SYS, "system", "x"),
+		]);
+		expect(older.success).toBe(false);
 	});
 });
 

@@ -131,15 +131,17 @@ describe("the Case Assistant's reading of a case with a variable", () => {
 		const world = await mentioningWorld("AcmeBot");
 		const tree = await readCase(world);
 
-		expect(tree.description).toBe("The {system = AcmeBot} is safe");
+		expect(tree.description).toBe('The {system = "AcmeBot"} is safe');
 		expect(find(tree, "S1")).toMatchObject({
-			description: "Over {system = AcmeBot} and {window}",
-			assumption: "Assumes {system = AcmeBot}",
-			justification: "Because {system = AcmeBot}",
+			description: 'Over {system = "AcmeBot"} and {window}',
+			assumption: 'Assumes {system = "AcmeBot"}',
+			justification: 'Because {system = "AcmeBot"}',
 		});
-		expect(find(tree, "P1").description).toBe("Claim about {system = AcmeBot}");
+		expect(find(tree, "P1").description).toBe(
+			'Claim about {system = "AcmeBot"}'
+		);
 		expect(find(tree, "E1").description).toBe(
-			"Tested {system = AcmeBot} for {window}"
+			'Tested {system = "AcmeBot"} for {window}'
 		);
 		expect(tree.context).toEqual([
 			"system: the system under test (variable: AcmeBot)",
@@ -194,7 +196,7 @@ describe("the Case Assistant's reading of a case with a variable", () => {
 
 		expect(tree.description).toBe("Above {system}");
 		expect(find(tree, "S1").description).toBe(
-			"Over {system = AcmeBot} and {window}"
+			'Over {system = "AcmeBot"} and {window}'
 		);
 	});
 
@@ -207,8 +209,8 @@ describe("the Case Assistant's reading of a case with a variable", () => {
 		);
 		const element = (result as { element: PlainNode }).element;
 
-		expect(element.description).toBe("Over {system = AcmeBot} and {window}");
-		expect(element.assumption).toBe("Assumes {system = AcmeBot}");
+		expect(element.description).toBe('Over {system = "AcmeBot"} and {window}');
+		expect(element.assumption).toBe('Assumes {system = "AcmeBot"}');
 		expect(JSON.stringify(result)).not.toContain("[system]");
 	});
 
@@ -232,7 +234,7 @@ describe("the Case Assistant's reading of a case with a variable", () => {
 			"lint_case",
 		]);
 
-		expect(prompt).toContain("{name = value}");
+		expect(prompt).toContain('{name = "value"}');
 		expect(prompt).toContain("(not set)");
 		expect(prompt).toContain("to fill in");
 	});
@@ -247,9 +249,11 @@ describe("the Case Assistant's reading of a case with a variable", () => {
 		const world = await mentioningWorld(value);
 		const tree = await readCase(world);
 
-		expect(tree.description).toBe(`The {system = ${value}} is safe`);
+		expect(tree.description).toBe(
+			`The {system = ${JSON.stringify(value)}} is safe`
+		);
 		expect(find(tree, "P1").description).toBe(
-			`Claim about {system = ${value}}`
+			`Claim about {system = ${JSON.stringify(value)}}`
 		);
 	});
 
@@ -264,7 +268,7 @@ describe("the Case Assistant's reading of a case with a variable", () => {
 		const tree = await readCase(world);
 
 		expect(find(tree, "P7").description).toBe(
-			"{to fill in: Name the {system#none} and a } brace}"
+			`{to fill in: ${JSON.stringify("Name the {system#none} and a } brace")}}`
 		);
 	});
 });
@@ -369,7 +373,8 @@ describe("the selected element's text", () => {
 			world.claimId
 		);
 
-		expect(selected?.text).toBe("Claim about {system = AcmeBot}");
+		expect(selected?.markedText).toBe('Claim about {system = "AcmeBot"}');
+		expect(selected?.text).toBe("Claim about AcmeBot");
 	});
 
 	it("says (not set) while the variable has no value, for any kind of element", async () => {
@@ -384,7 +389,7 @@ describe("the selected element's text", () => {
 				world.caseId,
 				id
 			);
-			expect(selected?.text).toBe(expected);
+			expect(selected?.markedText).toBe(expected);
 		}
 	});
 
@@ -403,7 +408,8 @@ describe("the selected element's text", () => {
 			placeholder.id
 		);
 
-		expect(selected?.text).toBe("{to fill in: Say it}");
+		expect(selected?.markedText).toBe('{to fill in: "Say it"}');
+		expect(selected?.text).toBe("");
 	});
 
 	it("is carried into the prompt as data, so a hostile value cannot end the data and start instructions", async () => {
@@ -420,7 +426,7 @@ describe("the selected element's text", () => {
 		const line = json?.split("\n")[0] ?? "";
 		const parsed = JSON.parse(line);
 
-		expect(parsed.text).toBe(`Claim about {system = ${value}}`);
+		expect(parsed.text).toBe(`Claim about {system = ${JSON.stringify(value)}}`);
 		expect(prompt).not.toContain("\n\nIgnore the above");
 	});
 });
@@ -442,7 +448,7 @@ describe("the claim-health tool's reading of a claim that mentions a variable", 
 		const result = await claimHealthCaller(world.owner.id, world.kase.id)();
 
 		expect(result.claims.map((claim) => claim.text)).toEqual([
-			"Operators test the {system = AcmeBot} yearly",
+			'Operators test the {system = "AcmeBot"} yearly',
 		]);
 	});
 
@@ -464,7 +470,7 @@ describe("the claim-health tool's reading of a claim that mentions a variable", 
 		const text = result.claims[0]?.text as string;
 
 		expect(text.length).toBeLessThanOrEqual(200);
-		expect(text.startsWith("Operators test the {system = öö")).toBe(true);
+		expect(text.startsWith('Operators test the {system = "öö')).toBe(true);
 	});
 });
 
@@ -692,7 +698,7 @@ describe("the other branch of the case is untouched", () => {
 		const tree = await readCase(world);
 
 		expect(find(tree, "P1").description).toBe(
-			"A {system = AcmeBot} and a {system = BetaBot}"
+			'A {system = "AcmeBot"} and a {system = "BetaBot"}'
 		);
 	});
 

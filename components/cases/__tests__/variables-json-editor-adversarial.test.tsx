@@ -12,8 +12,8 @@ import JsonViewPanel from "../json-view-panel";
  * Marking a name as a variable in the JSON editor: the document is checked,
  * the difference reaches the batch route with the flag, and Undo and Redo
  * send the entries back as they were and as they became. A document with a
- * flag that is not `true`, or a 1.0 document that holds a variable, is not
- * applied.
+ * flag that is not a boolean, or a 1.0 document that holds a variable, is not
+ * applied; a flag of `false` is applied as the flag taken off.
  */
 
 vi.unmock("@radix-ui/react-dialog");
@@ -254,6 +254,20 @@ describe("marking a name as a variable in the JSON editor", () => {
 		expect((undo.context as Entry[])[0]).not.toHaveProperty("value");
 	});
 
+	it("applies a flag of false as the flag taken off, and Undo puts it back", async () => {
+		served = docWith([VARIABLE]);
+		await applyDocument(docWith([{ ...PLAIN, variable: false }]));
+		const command = recordedCommand();
+		const sent = batchBody().changes;
+
+		const undo = await replayBody(applyUndo, command);
+
+		expect(sent).toHaveLength(1);
+		expect(JSON.stringify(sent)).not.toContain("true");
+		expect(command.after?.context).toEqual([PLAIN]);
+		expect(undo.context).toEqual([VARIABLE]);
+	});
+
 	it("applies the flag being taken off, and Undo puts it back", async () => {
 		served = docWith([VARIABLE]);
 		await applyDocument(docWith([PLAIN]));
@@ -282,7 +296,6 @@ describe("a document the JSON editor refuses", () => {
 	}
 
 	it.each([
-		["false", false],
 		["the string true", "true"],
 		["the number one", 1],
 		["null", null],

@@ -275,16 +275,27 @@ interface TreeNodeCompareData {
  * The variables an element defines (id, name and value of each), as one
  * string. A variable shows its value wherever it is mentioned, so marking a
  * name as a variable, or changing its name or value, changes what the case
- * shows on elements that do not themselves change. Other context entries are
- * not compared.
+ * shows on elements that do not themselves change. The variables are compared
+ * as a set, sorted by id, with the value trimmed as the case shows it, so a
+ * different order or spaces round a value are not a change. Other context
+ * entries are not compared.
  */
 function variablesOf(node: TreeNode): string {
-	return JSON.stringify(
-		parseContextEntries(node.context)
-			.filter(isNamedContextEntry)
-			.filter((entry) => entry.variable === true)
-			.map((entry) => [entry.id, entry.name, entry.value ?? ""])
-	);
+	const variables = parseContextEntries(node.context)
+		.filter(isNamedContextEntry)
+		.filter((entry) => entry.variable === true)
+		.map((entry) => ({
+			id: entry.id,
+			name: entry.name,
+			value: (entry.value ?? "").trim(),
+		}));
+	variables.sort((a, b) => {
+		if (a.id === b.id) {
+			return 0;
+		}
+		return a.id < b.id ? -1 : 1;
+	});
+	return JSON.stringify(variables);
 }
 
 /**

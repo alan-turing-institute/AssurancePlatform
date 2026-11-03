@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toPlainCase } from "@/lib/case/defined-terms";
 import { lintCase } from "@/lib/plugins/assistant/linter/lint-case";
-import { resolveSelectedElement } from "@/lib/plugins/assistant/selected-element";
+import {
+	resolveSelectedElement,
+	selectionPrompt,
+} from "@/lib/plugins/assistant/selected-element";
 import {
 	buildSystemPrompt,
 	createCaseTools,
@@ -178,7 +181,7 @@ describe("the Case Assistant's tools on a case with a variable and a placeholder
 		};
 	}
 
-	it("read_case marks a variable as {name = value} and a placeholder as {to fill in: hint}", async () => {
+	it('read_case marks a variable as {name = "value"} and a placeholder as {to fill in: "hint"}', async () => {
 		vi.mocked(exportCase).mockResolvedValue({
 			data: caseWithVariable("AcmeBot"),
 		});
@@ -192,10 +195,10 @@ describe("the Case Assistant's tools on a case with a variable and a placeholder
 			"system: the system under test (variable: AcmeBot)",
 		]);
 		expect(result.tree.children[0]?.description).toBe(
-			"Safe on {system = AcmeBot}."
+			'Safe on {system = "AcmeBot"}.'
 		);
 		expect(result.tree.children[1]?.description).toBe(
-			"{to fill in: Say how it is tested}"
+			'{to fill in: "Say how it is tested"}'
 		);
 	});
 
@@ -218,20 +221,49 @@ describe("the Case Assistant's tools on a case with a variable and a placeholder
 			element: {
 				children: [
 					{ id: "p1", description: "Safe on {system = (not set)}." },
-					{ id: "p2", description: "{to fill in: Say how it is tested}" },
+					{ id: "p2", description: '{to fill in: "Say how it is tested"}' },
 				],
 			},
 		});
 	});
 
-	it("hands the selected element's text to the prompt in the marked form", async () => {
+	it("shows the prompt the selected element's marked text and keeps the plain text for the search", async () => {
 		vi.mocked(exportCase).mockResolvedValue({
 			data: caseWithVariable("AcmeBot"),
 		});
 
-		const selection = await resolveSelectedElement("u", "c", "p2");
+		const claim = await resolveSelectedElement("u", "c", "p1");
+		const blank = await resolveSelectedElement("u", "c", "p2");
 
-		expect(selection?.text).toBe("{to fill in: Say how it is tested}");
+		expect(claim).toMatchObject({
+			text: "Safe on AcmeBot.",
+			markedText: 'Safe on {system = "AcmeBot"}.',
+		});
+		expect(selectionPrompt(claim)).toContain(
+			JSON.stringify('Safe on {system = "AcmeBot"}.')
+		);
+		expect(blank).toMatchObject({
+			text: "",
+			markedText: '{to fill in: "Say how it is tested"}',
+		});
+	});
+
+	it("does not send an empty placeholder's marker to the techniques search as a query", async () => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", "http://localhost:9");
+		vi.mocked(exportCase).mockResolvedValue({
+			data: caseWithVariable("AcmeBot"),
+		});
+		const selection = await resolveSelectedElement("u", "c", "p2");
+		const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+		const result = await createCaseTools("u", "c", {
+			selection,
+		}).suggest_techniques?.execute?.({}, options);
+
+		expect(result).toEqual({ error: "The selected element has no text." });
+		expect(fetchSpy).not.toHaveBeenCalled();
+		vi.unstubAllEnvs();
+		fetchSpy.mockRestore();
 	});
 
 	it("gives the rules check the plain form, with the value where the card shows it", async () => {
@@ -249,8 +281,9 @@ describe("the Case Assistant's tools on a case with a variable and a placeholder
 	it("explains the markers to the model and tells it not to copy them", () => {
 		const prompt = buildSystemPrompt(["read_case"]);
 
-		expect(prompt).toContain("{name = value}");
-		expect(prompt).toContain("{to fill in");
+		expect(prompt).toContain('{name = "value"}');
+		expect(prompt).toContain('{to fill in: "hint"}');
+		expect(prompt).toContain("JSON string");
 		expect(prompt).toContain("Never write these markers");
 	});
 });

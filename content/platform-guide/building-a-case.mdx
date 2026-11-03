@@ -93,7 +93,8 @@ Text that referred to the name then shows it as not found.
 
 ### Use a name in a description
 
-In the description of a goal, strategy or property claim, type `{`.
+In the description of a goal, strategy, property claim or piece of evidence, type `{`.
+Evidence has no context entries of its own, so the list holds the names in reach of the claim it sits under.
 A list opens beside the cursor with the names the element can use.
 Each name is labelled with the element it is defined on, and the nearest definition comes first.
 Keep typing to narrow the list.
@@ -136,7 +137,9 @@ A pattern uses variables for details that the person using it sets once, such as
 A variable with no value shows its name in square brackets, such as `[system]`, in a dashed outline like a placeholder.
 Its tooltip says the variable is not set yet, and screen readers announce "(variable not set)".
 A value made only of spaces counts as no value.
-The value is shown as plain text: it is not read for references or for formatting, and a long value is cut like ordinary text when a collapsed card is cut short.
+The value is shown as plain text on the card and is not read for references, so a value that looks like a reference stays as typed.
+A long value is cut like ordinary text when a collapsed card is cut short.
+A document export writes the value as it writes any other description.
 
 The description box in the edit dialog still shows the name, as a highlighted word, and saves the name, never the value.
 **Terms you can use here** shows each variable's current value beside its name, or "variable, not set".
@@ -154,8 +157,9 @@ A pattern can be published with its variables empty.
 
 Search, the move list, document exports and the rules check show an ordinary reference as `{name}` and a variable as its value, or `[name]` while it has none.
 Search finds a variable by its name as well as by its value.
-The [Case Assistant](/docs/platform-guide/case-assistant) reads a variable as `{name = value}`, or `{name = (not set)}`, so that it can tell a variable from fixed wording.
-The list of unattached elements in the attach dialog shows every reference as `{name}`.
+The [Case Assistant](/docs/platform-guide/case-assistant) reads a variable as `{name = "value"}`, or `{name = (not set)}`, so that it can tell a variable from fixed wording.
+The attach dialog's list of detached elements writes each reference as `{name}`, a variable's too, for an element that was already detached when the case loaded.
+An element you have just detached in the same session keeps the words its card showed, with a variable as its value.
 Raw JSON exports keep the stored form, `{name#id}`, where the id is what ties the reference to its entry, and a variable's entry carries `"variable": true`.
 
 ## Assertion status
