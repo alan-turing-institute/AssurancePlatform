@@ -11,15 +11,22 @@ interface PublishableItemTypeBadgeProps {
 /**
  * Renders a publishable item's type as a badge (ADR 0003 §5 — "worked
  * example" for a published case, "reusable template" for a published
- * pattern).
+ * pattern). Renders nothing for a type that has no label, rather than an
+ * empty badge.
  */
 const PublishableItemTypeBadge = ({
 	className,
 	type,
-}: PublishableItemTypeBadgeProps) => (
-	<Badge className={cn("font-medium", className)} variant="secondary">
-		{PUBLISHABLE_ITEM_TYPE_LABELS[type]}
-	</Badge>
-);
+}: PublishableItemTypeBadgeProps) => {
+	const label = PUBLISHABLE_ITEM_TYPE_LABELS[type];
+	if (!label) {
+		return null;
+	}
+	return (
+		<Badge className={cn("font-medium", className)} variant="secondary">
+			{label}
+		</Badge>
+	);
+};
 
 export default PublishableItemTypeBadge;

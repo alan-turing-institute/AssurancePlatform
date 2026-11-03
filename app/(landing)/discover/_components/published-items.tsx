@@ -123,7 +123,7 @@ function PublishedItems({ items }: PublishedItemsProps) {
 					{filteredItems.length > 0 ? (
 						filteredItems.map((item: PublishableItemSummaryResponse) => (
 							<article
-								className="flex flex-col items-start justify-start"
+								className="flex min-w-0 flex-col items-start justify-start"
 								key={item.id}
 							>
 								<Link
@@ -145,15 +145,21 @@ function PublishedItems({ items }: PublishedItemsProps) {
 										<div className="absolute inset-0 rounded-2xl ring-1 ring-border ring-inset" />
 									</div>
 								</Link>
-								<div className="max-w-xl">
-									<div className="mt-8 flex items-center gap-x-4 text-xs">
-										<div className="flex items-center justify-start gap-2 text-muted-foreground">
-											<CalendarDaysIcon className="size-4" />
-											{formatShortDate(item.publishedAt)}
-										</div>
-										<PublishableItemTypeBadge type={item.type} />
+								<div className="w-full max-w-xl">
+									<div className="mt-8 flex items-center justify-start gap-2 text-muted-foreground text-xs">
+										<CalendarDaysIcon className="size-4" />
+										{formatShortDate(item.publishedAt)}
+									</div>
+									<div className="mt-3 flex items-center gap-x-2 text-xs">
+										<PublishableItemTypeBadge
+											className="shrink-0 whitespace-nowrap"
+											type={item.type}
+										/>
 										{item.sector && (
-											<span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 font-medium text-primary text-xs">
+											<span
+												className="min-w-0 truncate rounded-full bg-primary/10 px-2 py-1 font-medium text-primary text-xs"
+												title={item.sector}
+											>
 												{item.sector}
 											</span>
 										)}
