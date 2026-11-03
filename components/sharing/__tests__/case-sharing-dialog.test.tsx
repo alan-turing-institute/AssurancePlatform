@@ -5,7 +5,7 @@ import useStore from "@/store/store";
 import { AvailableTeamsList } from "../_case-sharing/permission-components";
 import { CaseSharingDialog } from "../case-sharing-dialog";
 
-function openFor(kind: "CASE" | "PATTERN") {
+function setKind(kind: "CASE" | "PATTERN") {
 	useStore.setState({
 		assuranceCase: {
 			id: "case-1",
@@ -17,6 +17,10 @@ function openFor(kind: "CASE" | "PATTERN") {
 			comments: [],
 		} as never,
 	});
+}
+
+function openFor(kind: "CASE" | "PATTERN") {
+	setKind(kind);
 	useCaseSharingModal.getState().onOpen("case-1");
 }
 
@@ -63,12 +67,12 @@ describe("the share panel", () => {
 
 describe("the list of teams to share with", () => {
 	it.each([
-		["case"],
-		["pattern"],
-	] as const)("names the %s when every team already has access", (itemName) => {
+		["CASE", "case"],
+		["PATTERN", "pattern"],
+	] as const)("for a %s, names the %s when every team already has access", (kind, itemName) => {
+		setKind(kind);
 		render(
 			<AvailableTeamsList
-				itemName={itemName}
 				onShareWithTeam={vi.fn()}
 				teams={[]}
 				userTeamsCount={2}

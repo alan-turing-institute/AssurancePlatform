@@ -5,13 +5,7 @@ import { Check, Copy, Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
 	Form,
 	FormControl,
@@ -32,12 +26,12 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
-import useStore from "@/store/store";
 import {
 	AvailableTeamsList,
 	TeamPermissionRow,
 	UserPermissionRow,
 } from "./_case-sharing/permission-components";
+import { SharingDialogHeader } from "./_case-sharing/shared-item-name";
 import {
 	type ShareFormValues,
 	shareFormSchema,
@@ -46,11 +40,6 @@ import {
 
 export function CaseSharingDialog() {
 	const sharingModal = useCaseSharingModal();
-	// The share panel is opened from the editor, so the case on screen is the
-	// one being shared; a pattern is named as a pattern.
-	const itemName = useStore((state) =>
-		state.assuranceCase?.kind === "PATTERN" ? "pattern" : "case"
-	);
 
 	const form = useForm<ShareFormValues>({
 		resolver: zodResolver(shareFormSchema),
@@ -109,14 +98,7 @@ export function CaseSharingDialog() {
 					}
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>
-						{itemName === "pattern" ? "Share Pattern" : "Share Case"}
-					</DialogTitle>
-					<DialogDescription>
-						{`Share this ${itemName} with individuals or teams`}
-					</DialogDescription>
-				</DialogHeader>
+				<SharingDialogHeader />
 
 				{loading ? (
 					<div className="flex items-center justify-center py-8">
@@ -226,7 +208,6 @@ export function CaseSharingDialog() {
 
 						<TabsContent className="space-y-4" value="team">
 							<AvailableTeamsList
-								itemName={itemName}
 								onShareWithTeam={onShareWithTeam}
 								teams={availableTeams}
 								userTeamsCount={userTeams.length}

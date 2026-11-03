@@ -16,6 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useSharedItemName } from "./shared-item-name";
 
 export interface UserPermission {
 	id: string;
@@ -189,19 +190,18 @@ export function TeamPermissionRow({
 
 interface AvailableTeamsListProps {
 	className?: string;
-	/** What is being shared, named in the message shown when every team already has access. */
-	itemName: "case" | "pattern";
 	onShareWithTeam: (teamId: string, permission: string) => void;
 	teams: Team[];
 	userTeamsCount: number;
 }
 
 export function AvailableTeamsList({
-	itemName,
 	teams,
 	userTeamsCount,
 	onShareWithTeam,
 }: AvailableTeamsListProps) {
+	const itemName = useSharedItemName();
+
 	if (teams.length === 0) {
 		return (
 			<p className="py-4 text-center text-muted-foreground text-sm">
