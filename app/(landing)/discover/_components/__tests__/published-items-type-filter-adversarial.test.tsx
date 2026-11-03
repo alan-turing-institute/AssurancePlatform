@@ -52,7 +52,10 @@ const ITEMS = [
 		title: "Fairness pattern",
 		sector: "Energy",
 	}),
-	item("e", "ARGUMENT_PATTERN", { title: "Robustness pattern", sector: "Health" }),
+	item("e", "ARGUMENT_PATTERN", {
+		title: "Robustness pattern",
+		sector: "Health",
+	}),
 ];
 
 function cards(): HTMLElement[] {
@@ -299,9 +302,9 @@ describe("the type filter together with search and sector", () => {
 		await chooseType(user, "Patterns");
 		await chooseType(user, "All types");
 
-		expect(screen.getByPlaceholderText("Search published items...")).toHaveValue(
-			"safety"
-		);
+		expect(
+			screen.getByPlaceholderText("Search published items...")
+		).toHaveValue("safety");
 		expect(sectorFilter()).toHaveTextContent("Health");
 		expect(titlesShown()).toEqual(["Safety case", "Safety pattern"]);
 	});
@@ -323,7 +326,9 @@ describe("the empty state", () => {
 	it("is shown when the chosen type has no items, and goes away when All types is chosen", async () => {
 		const user = userEvent.setup();
 		render(
-			<PublishedItems items={[item("a", "ASSURANCE_CASE", { title: "Only" })]} />
+			<PublishedItems
+				items={[item("a", "ASSURANCE_CASE", { title: "Only" })]}
+			/>
 		);
 
 		await chooseType(user, "Patterns");

@@ -21,9 +21,11 @@ vi.mock("@/actions/discover", () => ({
 	fetchPublishedItemBySlug,
 }));
 
-import DiscoverPage, { metadata } from "../page";
 import DiscoverItemPage, { generateMetadata } from "../[slug]/page";
+import DiscoverPage, { metadata } from "../page";
 
+const FROZEN = /frozen/i;
+const NO_LONGER_UPDATES = /no longer receives updates/;
 const CASES = /\bcases?\b/i;
 const PATTERNS = /\bpatterns?\b/i;
 const OLD_TITLE = /case studies/i;
@@ -89,7 +91,7 @@ describe("the Discover page", () => {
 		const intro = screen.getByRole("heading", { level: 2 }).nextElementSibling;
 		expect(intro?.textContent).toMatch(CASES);
 		expect(intro?.textContent).toMatch(PATTERNS);
-		expect(intro?.textContent).toMatch(/frozen/i);
+		expect(intro?.textContent).toMatch(FROZEN);
 	});
 
 	it("lists what the data feed returns, a case and a pattern each under its own badge, with the type filter in place", async () => {
@@ -101,7 +103,9 @@ describe("the Discover page", () => {
 		render(await DiscoverPage());
 
 		const [caseCard, patternCard] = screen.getAllByRole("article");
-		expect(within(caseCard as HTMLElement).getByText("Worked example")).toBeVisible();
+		expect(
+			within(caseCard as HTMLElement).getByText("Worked example")
+		).toBeVisible();
 		expect(
 			within(patternCard as HTMLElement).getByText("Reusable template")
 		).toBeVisible();
@@ -139,7 +143,9 @@ describe("the page of one published item", () => {
 		expect(
 			screen.queryByRole("button", USE_THIS_PATTERN)
 		).not.toBeInTheDocument();
-		expect(screen.getByRole("heading", { name: "Frozen snapshot" })).toBeVisible();
+		expect(
+			screen.getByRole("heading", { name: "Frozen snapshot" })
+		).toBeVisible();
 	});
 
 	it.each([
@@ -155,7 +161,7 @@ describe("the page of one published item", () => {
 		);
 
 		const text = screen.getByText(ARCHIVED_NOTICE).textContent ?? "";
-		expect(text).toMatch(/no longer receives updates/);
+		expect(text).toMatch(NO_LONGER_UPDATES);
 		const namesOnlyCases = CASES.test(text) && !PATTERNS.test(text);
 		expect(namesOnlyCases).toBe(false);
 	});
