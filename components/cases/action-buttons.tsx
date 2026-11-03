@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useExportModal, useHelpModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import { caseItemName } from "@/lib/case-item-name";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
@@ -284,6 +285,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					<DeleteCaseDialog
 						isOpen={deleteOpen}
 						isOwner={assuranceCase?.isOwner ?? false}
+						itemName={caseItemName(assuranceCase?.kind)}
 						loading={loading}
 						onCancel={() => setDeleteOpen(false)}
 						onConfirm={onDelete}
@@ -293,7 +295,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						confirmButtonText={"Move to Trash"}
 						isOpen={deleteOpen}
 						loading={loading}
-						message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
+						message={`This ${caseItemName(assuranceCase?.kind)} will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash.`}
 						onClose={() => setDeleteOpen(false)}
 						onConfirm={() => onDelete()}
 					/>

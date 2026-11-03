@@ -19,6 +19,7 @@ import {
 	placeholderCountMessage,
 	unsetVariableCountMessage,
 } from "@/lib/case/placeholders";
+import type { CaseItemName } from "@/lib/case-item-name";
 import {
 	CASE_INFORMATION_FIELD_LABELS,
 	getMissingCaseInformationFields,
@@ -26,9 +27,17 @@ import {
 } from "@/lib/schemas/case-information";
 import type { PublishStatusType } from "@/lib/services/case-response-types";
 
+/** The dialog title's word for what is being published. */
+const ITEM_TITLES: Record<CaseItemName, string> = {
+	case: "Case",
+	pattern: "Pattern",
+};
+
 interface StatusModalProps {
 	caseId?: string | null;
 	hasChanges?: boolean;
+	/** What the dialog calls the thing being published: "case" (the default) or "pattern". */
+	itemName?: CaseItemName;
 	onOpenChange: (open: boolean) => void;
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
@@ -62,6 +71,7 @@ export function StatusModal({
 	caseId,
 	status,
 	hasChanges = false,
+	itemName = "case",
 	publishedAt,
 	onUpdatePublished,
 	onPublish,
@@ -103,14 +113,16 @@ export function StatusModal({
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>
-						Case Status: {getStatusLabel(status)}
+						{ITEM_TITLES[itemName]} Status: {getStatusLabel(status)}
 						{hasChanges && status === "PUBLISHED" && (
 							<span className="ml-2 font-normal text-sm text-warning">
 								(Changes pending)
 							</span>
 						)}
 					</DialogTitle>
-					<DialogDescription>{getStatusDescription(status)}</DialogDescription>
+					<DialogDescription>
+						{getStatusDescription(status, itemName)}
+					</DialogDescription>
 				</DialogHeader>
 
 				<Separator />
@@ -118,6 +130,7 @@ export function StatusModal({
 				{status === "DRAFT" && caseId && (
 					<PublishContent
 						caseId={caseId}
+						itemName={itemName}
 						loading={publishLoading}
 						onPublish={onPublish}
 						onRequestCaseInformation={onRequestCaseInformation}
@@ -132,6 +145,7 @@ export function StatusModal({
 						formattedDate={formattedDate}
 						handleAction={handleAction}
 						hasChanges={hasChanges}
+						itemName={itemName}
 						loading={loading}
 						onRequestCaseInformation={onRequestCaseInformation}
 						onUnpublish={onUnpublish}
@@ -167,12 +181,15 @@ function getStatusLabel(status: PublishStatusType): string {
 	}
 }
 
-function getStatusDescription(status: PublishStatusType): string {
+function getStatusDescription(
+	status: PublishStatusType,
+	itemName: CaseItemName
+): string {
 	switch (status) {
 		case "DRAFT":
-			return "This case is private. Publish it to make it available on Discover.";
+			return `This ${itemName} is private. Publish it to make it available on Discover.`;
 		case "PUBLISHED":
-			return "This case is published and visible on Discover.";
+			return `This ${itemName} is published and visible on Discover.`;
 		default:
 			return status satisfies never;
 	}
@@ -282,6 +299,7 @@ function PlaceholdersGate({
 
 interface PublishContentProps {
 	caseId: string;
+	itemName: CaseItemName;
 	loading: boolean;
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
@@ -297,6 +315,7 @@ interface PublishContentProps {
  */
 function PublishContent({
 	caseId,
+	itemName,
 	loading,
 	onPublish,
 	onRequestCaseInformation,
@@ -349,8 +368,7 @@ function PublishContent({
 			<Alert>
 				<Globe className="h-4 w-4" />
 				<AlertDescription>
-					Case information is complete. Publishing creates a snapshot of this
-					case and makes it visible on the Discover page.
+					{`Case information is complete. Publishing creates a snapshot of this ${itemName} and makes it visible on the Discover page.`}
 				</AlertDescription>
 			</Alert>
 			<Button disabled={loading} onClick={onPublish}>
@@ -370,6 +388,7 @@ interface PublishedContentProps {
 	formattedDate: string | null;
 	handleAction: (action: (() => Promise<void>) | undefined) => void;
 	hasChanges: boolean;
+	itemName: CaseItemName;
 	loading: boolean;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	onUnpublish?: () => Promise<void>;
@@ -392,6 +411,7 @@ function PublishedContent({
 	caseId,
 	hasChanges,
 	formattedDate,
+	itemName,
 	loading,
 	onUpdatePublished,
 	onUnpublish,
@@ -419,8 +439,7 @@ function PublishedContent({
 			{hasChanges && !republishBlocked && (
 				<Alert>
 					<AlertDescription>
-						Changes have been made since this case was last published. Update
-						the published version to reflect the latest changes.
+						{`Changes have been made since this ${itemName} was last published. Update the published version to reflect the latest changes.`}
 					</AlertDescription>
 				</Alert>
 			)}
@@ -462,9 +481,7 @@ function PublishedContent({
 							<Alert variant="destructive">
 								<AlertTriangle className="h-4 w-4" />
 								<AlertDescription>
-									Unpublishing removes the public record. Anyone with the
-									Discover link will no longer be able to view it. This case
-									stays intact as a private draft.
+									{`Unpublishing removes the public record. Anyone with the Discover link will no longer be able to view it. This ${itemName} stays intact as a private draft.`}
 								</AlertDescription>
 							</Alert>
 							<div className="flex justify-end gap-2">

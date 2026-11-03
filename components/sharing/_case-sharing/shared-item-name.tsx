@@ -3,6 +3,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { type CaseItemName, caseItemName } from "@/lib/case-item-name";
 import useStore from "@/store/store";
 
 /**
@@ -10,10 +11,8 @@ import useStore from "@/store/store";
  * the editor, so the case on screen is the one being shared; a pattern is
  * named as a pattern.
  */
-export function useSharedItemName(): "case" | "pattern" {
-	return useStore((state) =>
-		state.assuranceCase?.kind === "PATTERN" ? "pattern" : "case"
-	);
+export function useSharedItemName(): CaseItemName {
+	return useStore((state) => caseItemName(state.assuranceCase?.kind));
 }
 
 /** The share panel's title and one-line description, worded for a case or a pattern. */
