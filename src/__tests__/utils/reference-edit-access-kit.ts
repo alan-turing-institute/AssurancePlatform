@@ -70,7 +70,7 @@ export async function makeWorld(): Promise<World> {
 // Targets: the cases a reference can name
 // ---------------------------------------------------------------------------
 
-export interface Target {
+interface Target {
 	label: string;
 	/** Makes the case (or the id that stands for one) and returns its id. */
 	make: (world: World) => Promise<string>;
