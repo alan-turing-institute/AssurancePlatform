@@ -989,10 +989,9 @@ model GitHubRepository {
   @@map("github_repositories")
 }
 
-/// A publishable item's concrete type (ADR 0003 §5). Only ASSURANCE_CASE
-/// ships in 1.0 — ARGUMENT_PATTERN is a discriminator placeholder so the
-/// fast-follow issue that publishes reusable pattern templates needs no
-/// schema rework on `PublishedAssuranceCase`.
+/// A publishable item's concrete type (ADR 0003 §5). ASSURANCE_CASE is a
+/// published case; ARGUMENT_PATTERN is a published pattern (a case of kind
+/// PATTERN), listed on Discover as a reusable template.
 enum PublishableItemType {
   ASSURANCE_CASE
   ARGUMENT_PATTERN
@@ -1014,7 +1013,7 @@ enum PublishableItemType {
 /// when the case holds no case information at all.
 model PublishedAssuranceCase {
   id              String              @id @default(uuid()) @db.Uuid
-  type            PublishableItemType @default(ASSURANCE_CASE) /// Discriminator (ADR 0003 §5) — only ASSURANCE_CASE is implemented; ready for a future pattern type with no rework.
+  type            PublishableItemType @default(ASSURANCE_CASE) /// Discriminator (ADR 0003 §5): ARGUMENT_PATTERN when the source case is a pattern, ASSURANCE_CASE otherwise. Set when the row is created (`swapCurrentPublishedVersion` in `publish-service.ts`) and kept by every later republish.
   slug            String              @db.VarChar(255) /// Stable, name-derived, deployment-unique public address (ADR 0003 §6). Generated once at first publish (see `slug-service.ts`) and carried forward verbatim — UNCHANGED — onto every later republish row of the same source case, never regenerated on rename. Collisions append a numeric suffix. NOT `@unique` here: every historical version of the same case shares one slug by design (that is what "stable" means), so true uniqueness is scoped to the CURRENT version only — see `isCurrent` and the hand-written partial index below (same DSL limitation as `PluginData`'s case-level partial index; Prisma cannot express a partial unique constraint).
   isCurrent       Boolean             @default(true) @map("is_current") /// True for exactly one row per `assuranceCaseId` at a time — the version Discover and the public API serve. Republishing flips the previous current row to `false` in the same transaction that inserts the new current row (`updatePublishedCase`). That "exactly one" invariant is enforced at the service layer, not the DB — the partial unique index below only stops two DIFFERENT cases' current rows from colliding on the same slug.
   title           String              @db.VarChar(255) /// Title at time of publishing
