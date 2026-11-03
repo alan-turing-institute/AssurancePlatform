@@ -239,7 +239,10 @@ jobs:
         run: |
           pnpm exec ultracite check &
           LINT_PID=$!
-          npx tsc --noEmit &
+          # The type check needs about 3.4 GB, more than Node's default heap
+          # limit leaves on some runners. The setting is scoped to this command
+          # so the linter keeps the default.
+          NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit &
           TSC_PID=$!
           LINT_EXIT=0; wait $LINT_PID || LINT_EXIT=$?
           TSC_EXIT=0; wait $TSC_PID || TSC_EXIT=$?
@@ -647,7 +650,9 @@ jobs:
 
       - name: Build application for E2E
         run: |
-          pnpm build
+          # next build type-checks the whole project, which needs more than
+          # Node's default heap limit leaves on some runners.
+          NODE_OPTIONS=--max-old-space-size=6144 pnpm build
           cp -r public .next/standalone/public
           cp -r .next/static .next/standalone/.next/static
 
