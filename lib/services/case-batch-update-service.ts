@@ -124,7 +124,8 @@ interface StoredReference {
  * always new; an update's is new only when it differs from the stored one, so
  * an element whose existing reference the editor cannot view can still be
  * edited. A case that does not exist, one in the bin and one the editor cannot
- * view get the same answer. Each case is looked up once.
+ * view get the same answer, as does any other string that names no case,
+ * including an empty one. Each case is looked up once.
  */
 async function findUnviewableModuleReference(
 	userId: string,
@@ -134,14 +135,14 @@ async function findUnviewableModuleReference(
 ): Promise<string | null> {
 	const caseIds = new Set<string>();
 	for (const change of creates) {
-		if (change.data.moduleReferenceId) {
+		if (change.data.moduleReferenceId !== undefined) {
 			caseIds.add(change.data.moduleReferenceId);
 		}
 	}
 	for (const change of moduleRefUpdates) {
 		const caseId = change.data.moduleReferenceId;
 		if (
-			caseId &&
+			caseId !== undefined &&
 			caseId !== storedById.get(change.elementId)?.moduleReferenceId
 		) {
 			caseIds.add(caseId);

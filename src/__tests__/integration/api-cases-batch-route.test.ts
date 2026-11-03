@@ -295,6 +295,7 @@ describe("POST /api/cases/[id]/batch — the editor must be able to view the cas
 			],
 		});
 		expect(mixed.status).toBe(400);
+		expect((await mixed.json()).error).toBe(NOT_VIEWABLE_MESSAGE);
 
 		const rows = await prisma.assuranceElement.findMany({
 			where: { caseId: homeCase.id },

@@ -266,9 +266,9 @@ export async function validateCitedElementId(
  * An update that sets or changes the cited element while leaving the case
  * reference as it is is accepted only if the editor can view that case. A
  * cited element in a case the editor cannot view gets the same answer as an
- * element that does not exist. An update that sets the case reference too is
- * not checked here: the reference itself is already accepted only to a case
- * the editor can view. A citation left as it is is not checked.
+ * element that does not exist. An update that changes the case reference to
+ * another value is not checked here: the new reference is already accepted
+ * only to a case the editor can view. A citation left as it is is not checked.
  */
 async function enforceCitationInViewableCase(
 	existing: { citedElementId: string | null; moduleReferenceId: string | null },
@@ -462,15 +462,16 @@ function rejectMissingModuleReferenceId(
  * `moduleReferenceId` is accepted only when it names a case the editor
  * (`viewerId`) can view. A case that does not exist, one in the bin and one
  * the editor cannot view all get the same answer, so the check does not
- * reveal which case ids exist. Exported so the batch path applies the same
- * rule to the references it writes.
+ * reveal which case ids exist. Any string, including an empty one, is a
+ * reference to check; only `null` or an absent value names no case. Exported
+ * so the batch path applies the same rule to the references it writes.
  */
 export async function validateModuleReferenceId(
 	moduleReferenceId: string | null | undefined,
 	viewerId: string,
 	db: TxClient = prisma
 ): Promise<string | undefined> {
-	if (!moduleReferenceId) {
+	if (moduleReferenceId === null || moduleReferenceId === undefined) {
 		return;
 	}
 	const target = await db.assuranceCase.findFirst({
@@ -1121,8 +1122,8 @@ async function createElementInDatabase(
 			// function is called.
 			citedElementId: input.citedElementId,
 			// Module reference (MODULE/AWAY_GOAL) — applicability, requiredness,
-			// and existence are validated in createElementWithin before this
-			// function is called.
+			// and that the editor can view the case are validated in
+			// createElementWithin before this function is called.
 			moduleReferenceId: input.moduleReferenceId,
 			// Required for MODULE at the Prisma validation layer
 			// (element-validation.ts's REQUIRED_FIELDS); harmless for every
@@ -1697,15 +1698,6 @@ async function validateUpdateElementFields(
 		return { error: moduleReferenceIdError };
 	}
 
-	const citationAccessError = await enforceCitationInViewableCase(
-		existing,
-		input,
-		userId
-	);
-	if (citationAccessError) {
-		return { error: citationAccessError };
-	}
-
 	// ADR 0004 D5: citedElementId is AWAY_GOAL-only, must reference an
 	// existing element in the case moduleReferenceId names, and cannot
 	// reference the element itself. `moduleReferenceId` is the EFFECTIVE
@@ -1743,6 +1735,18 @@ async function validateUpdateElementFields(
 	);
 	if (citedElementIdError) {
 		return { error: citedElementIdError };
+	}
+
+	// Last of the citation checks, so a wrong element type or a self-citation
+	// keeps its own message when the stored reference is one the editor cannot
+	// view.
+	const citationAccessError = await enforceCitationInViewableCase(
+		existing,
+		input,
+		userId
+	);
+	if (citationAccessError) {
+		return { error: citationAccessError };
 	}
 
 	// Dialogical reasoning (defeaters): defeatsElementId must stay inside

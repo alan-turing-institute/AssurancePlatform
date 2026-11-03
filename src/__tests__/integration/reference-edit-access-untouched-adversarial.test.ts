@@ -18,6 +18,7 @@ import {
 	countNaming,
 	distinctAnswers,
 	elementIn,
+	errorText,
 	hiddenCaseWithElement,
 	LOST_TARGETS,
 	makeWorld,
@@ -470,6 +471,52 @@ describe("PUT /api/elements/[id]: an away goal whose reference the editor can no
 			moduleReferenceId: away.moduleReferenceId,
 			citedElementId: null,
 		});
+	});
+
+	it("can not be made to cite another element of a case in the bin that it names, and gets the answer for a missing element", async () => {
+		const world = await makeWorld();
+		const binned = await viewableCaseWithElement(world);
+		const second = await elementIn(binned.caseId, world.editor.id);
+		const away = await storeReference(world, "AWAY_GOAL", binned.caseId, {
+			citedElementId: binned.elementId,
+		});
+		await prisma.assuranceCase.update({
+			where: { id: binned.caseId },
+			data: { deletedAt: new Date() },
+		});
+		const before = await snapshot(world.homeCaseId);
+
+		const real = await putElement(world.editor, away.id, {
+			citedElementId: second.id,
+		});
+		const missing = await putElement(world.editor, away.id, {
+			citedElementId: crypto.randomUUID(),
+		});
+
+		expect(real.status).toBe(400);
+		expect(real).toEqual(missing);
+		expect(await snapshot(world.homeCaseId)).toEqual(before);
+	});
+
+	it("keeps the message for a citation of itself and for a citation on an element that cannot cite", async () => {
+		const world = await makeWorld();
+		const hidden = await hiddenCaseWithElement(world);
+		const away = await storeReference(world, "AWAY_GOAL", hidden.caseId);
+		const module = await storeReference(world, "MODULE", hidden.caseId);
+
+		const ofItself = await putElement(world.editor, away.id, {
+			citedElementId: away.id,
+		});
+		const wrongType = await putElement(world.editor, module.id, {
+			citedElementId: hidden.elementId,
+		});
+
+		expect(errorText(ofItself)).toBe(
+			"citedElementId cannot reference the element itself"
+		);
+		expect(errorText(wrongType)).toBe(
+			"citedElementId is only applicable to AWAY_GOAL elements"
+		);
 	});
 });
 
