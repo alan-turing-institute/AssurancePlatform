@@ -24,8 +24,8 @@ const log = logger.child({ component: "discover-service" });
 
 /**
  * A publishable item's public-facing summary — generic over `type` (ADR
- * 0003 §5) so Discover can list assurance cases (v1.0) and, later, argument
- * patterns with no shape change.
+ * 0003 §5), so Discover lists published cases and published patterns in the
+ * same shape.
  */
 export interface PublishableItemSummary {
 	archivedAt: Date | null;

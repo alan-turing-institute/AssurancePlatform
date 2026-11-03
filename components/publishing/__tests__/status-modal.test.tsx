@@ -18,6 +18,9 @@ const BOTH_LEFT_PATTERN =
 const UNPUBLISH_CONSEQUENCE_PATTERN = /Unpublishing removes the public record/;
 const DIVERGENCE_INDICATOR_PATTERN =
 	/Changes have been made since this case was last published/;
+const PATTERN_DIVERGENCE_PATTERN =
+	/Changes have been made since this pattern was last published/;
+const CASE_WORD_PATTERN = /\bcase\b/;
 
 function stubCaseInformation(
 	overrides: Partial<ReturnType<typeof useCaseInformation>>
@@ -431,5 +434,96 @@ describe("StatusModal — Published (divergence + unpublish)", () => {
 
 		expect(screen.queryByTestId("unpublish-confirm")).not.toBeInTheDocument();
 		expect(onUnpublish).not.toHaveBeenCalled();
+	});
+});
+
+describe("StatusModal — a pattern is called a pattern", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		stubCaseInformation({
+			information: {
+				description: "A reusable argument",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+				featureImageUrl: null,
+			},
+		});
+	});
+
+	it("words the Draft dialog for a pattern", () => {
+		render(
+			<StatusModal
+				caseId="case-1"
+				itemName="pattern"
+				onOpenChange={vi.fn()}
+				onPublish={vi.fn()}
+				open={true}
+				status="DRAFT"
+			/>
+		);
+
+		expect(screen.getByText("Pattern Status: Draft")).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				"This pattern is private. Publish it to make it available on Discover."
+			)
+		).toBeInTheDocument();
+		expect(screen.getByTestId("publish-content-ready")).toHaveTextContent(
+			"Publishing creates a snapshot of this pattern and makes it visible on the Discover page."
+		);
+		expect(screen.getByRole("dialog").textContent).not.toMatch(
+			CASE_WORD_PATTERN
+		);
+	});
+
+	it("words the Published dialog, the divergence notice and the unpublish confirm for a pattern", async () => {
+		const user = userEvent.setup();
+
+		render(
+			<StatusModal
+				hasChanges={true}
+				itemName="pattern"
+				onOpenChange={vi.fn()}
+				onUnpublish={vi.fn()}
+				onUpdatePublished={vi.fn()}
+				open={true}
+				status="PUBLISHED"
+			/>
+		);
+
+		expect(
+			screen.getByText("Pattern Status: Published", { exact: false })
+		).toBeInTheDocument();
+		expect(
+			screen.getByText("This pattern is published and visible on Discover.")
+		).toBeInTheDocument();
+		expect(screen.getByText(PATTERN_DIVERGENCE_PATTERN)).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Unpublish" }));
+		expect(screen.getByTestId("unpublish-confirm")).toHaveTextContent(
+			"This pattern stays intact as a private draft."
+		);
+		expect(screen.getByRole("dialog").textContent).not.toMatch(
+			CASE_WORD_PATTERN
+		);
+	});
+
+	it("keeps the case wording when no item name is given", () => {
+		render(
+			<StatusModal
+				caseId="case-1"
+				onOpenChange={vi.fn()}
+				onPublish={vi.fn()}
+				open={true}
+				status="DRAFT"
+			/>
+		);
+
+		expect(screen.getByText("Case Status: Draft")).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				"This case is private. Publish it to make it available on Discover."
+			)
+		).toBeInTheDocument();
 	});
 });

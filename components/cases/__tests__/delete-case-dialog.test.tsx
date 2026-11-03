@@ -7,6 +7,8 @@ const OWNER_REMOVES_PATTERN = /You can remove it later from your Trash page/;
 const CASE_OWNER_REMOVES_PATTERN =
 	/The case owner can remove it later from their Trash page/;
 
+const CASE_WORD_PATTERN = /\bcase\b/i;
+
 describe("DeleteCaseDialog", () => {
 	it("sends 'archive' when Keep as archived is clicked", async () => {
 		const user = userEvent.setup();
@@ -15,6 +17,7 @@ describe("DeleteCaseDialog", () => {
 			<DeleteCaseDialog
 				isOpen
 				isOwner
+				itemName="case"
 				loading={false}
 				onCancel={vi.fn()}
 				onConfirm={onConfirm}
@@ -33,6 +36,7 @@ describe("DeleteCaseDialog", () => {
 			<DeleteCaseDialog
 				isOpen
 				isOwner
+				itemName="case"
 				loading={false}
 				onCancel={vi.fn()}
 				onConfirm={onConfirm}
@@ -51,6 +55,7 @@ describe("DeleteCaseDialog", () => {
 			<DeleteCaseDialog
 				isOpen
 				isOwner
+				itemName="case"
 				loading={false}
 				onCancel={vi.fn()}
 				onConfirm={vi.fn()}
@@ -65,6 +70,7 @@ describe("DeleteCaseDialog", () => {
 			<DeleteCaseDialog
 				isOpen
 				isOwner={false}
+				itemName="case"
 				loading={false}
 				onCancel={vi.fn()}
 				onConfirm={vi.fn()}
@@ -72,5 +78,31 @@ describe("DeleteCaseDialog", () => {
 		);
 
 		expect(screen.getByText(CASE_OWNER_REMOVES_PATTERN)).toBeInTheDocument();
+	});
+
+	it("calls a pattern a pattern throughout", () => {
+		render(
+			<DeleteCaseDialog
+				isOpen
+				isOwner={false}
+				itemName="pattern"
+				loading={false}
+				onCancel={vi.fn()}
+				onConfirm={vi.fn()}
+			/>
+		);
+
+		const dialog = screen.getByRole("alertdialog");
+		expect(
+			screen.getByText("This pattern is published on Discover")
+		).toBeInTheDocument();
+		expect(dialog).toHaveTextContent(
+			"The pattern moves to the trash either way"
+		);
+		expect(dialog).toHaveTextContent(
+			"If you restore the pattern, it comes back"
+		);
+		expect(dialog).toHaveTextContent("The pattern owner can remove it later");
+		expect(dialog.textContent).not.toMatch(CASE_WORD_PATTERN);
 	});
 });

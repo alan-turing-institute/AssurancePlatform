@@ -23,7 +23,11 @@ import type {
 	UnpublishResult,
 } from "@/lib/services/publish-service.types";
 import { generateUniqueSlug } from "@/lib/services/slug-service";
-import type { Prisma } from "@/src/generated/prisma";
+import type {
+	CaseKind,
+	Prisma,
+	PublishableItemType,
+} from "@/src/generated/prisma";
 
 const log = logger.child({ component: "publish-service" });
 
@@ -49,15 +53,22 @@ type TransactionClient = TransactionCallback extends (
 class CaseTrashedDuringTransactionError extends Error {}
 
 /**
- * Thrown from inside a first-publish transaction when the case is still out of
- * Trash but is no longer of the kind the snapshot was composed from — a
- * conversion committed between the read and the write. The snapshot is of the
- * other kind, so nothing is published and the caller is asked to try again.
+ * Thrown from inside a publish/republish transaction when the case is still
+ * out of Trash but no longer matches what the snapshot was composed from: a
+ * conversion changed its kind, or (for a republish) it stopped being
+ * published, between the read and the write. The snapshot is stale, so
+ * nothing is written and the caller is asked to try again.
  */
-class CaseKindChangedDuringPublishError extends Error {}
+class CaseChangedDuringPublishError extends Error {}
 
 const CASE_CHANGED_WHILE_PUBLISHING =
 	"The case changed while it was being published. Try again.";
+
+/** The type a published row takes for each kind of case it is published from. */
+const PUBLISHED_TYPE_FOR_KIND: Record<CaseKind, PublishableItemType> = {
+	CASE: "ASSURANCE_CASE",
+	PATTERN: "ARGUMENT_PATTERN",
+};
 
 /** The five publish-state fields, reset to their draft values — shared by `removePublishedCopies` and `case-trash-service.ts`'s `removeArchivedCopy`. */
 export const DRAFT_PUBLISH_FIELDS = {
@@ -320,6 +331,25 @@ async function composeSnapshotContent(
 }
 
 /**
+ * Raises the error for a guarded case-row write that matched nothing. A case
+ * now in Trash (or gone) raises `CaseTrashedDuringTransactionError`; a case
+ * still out of Trash raises `CaseChangedDuringPublishError`, because it was
+ * converted, or unpublished, after the snapshot was composed.
+ */
+async function throwForUnmatchedCaseWrite(
+	tx: TransactionClient,
+	caseId: string
+): Promise<never> {
+	const current = await tx.assuranceCase.findUnique({
+		where: { id: caseId },
+		select: { deletedAt: true },
+	});
+	throw current && current.deletedAt === null
+		? new CaseChangedDuringPublishError()
+		: new CaseTrashedDuringTransactionError();
+}
+
+/**
  * Retires whichever row is currently `isCurrent: true` for `caseId` and
  * inserts its replacement, inside the caller's transaction. Retirement must
  * run BEFORE the insert — the partial unique index on (slug) WHERE
@@ -332,6 +362,14 @@ async function composeSnapshotContent(
  * invariant against being called twice on an already-published case — e.g.
  * directly via `POST /api/cases/[id]/publish`, outside `transitionStatus`'s
  * DRAFT-only gate); republish has exactly one.
+ *
+ * The new row's `type` follows the case's kind, read here inside the
+ * transaction: `ARGUMENT_PATTERN` for a pattern, `ASSURANCE_CASE` for a case.
+ * Both callers write to the case row first, which holds its lock until the
+ * transaction ends, so the kind read here is the kind their write matched.
+ * A republish keeps the type of the row it replaces because `convertCaseKind`
+ * refuses any case that has a published row, live or archived, so a case's
+ * kind cannot change while a row exists for it.
  *
  * Shared verbatim between `publishAssuranceCase` and `updatePublishedCase`;
  * each layers its own extra side effects (case status flip vs case-study
@@ -348,6 +386,14 @@ async function swapCurrentPublishedVersion(
 		createdAt: Date;
 	}
 ) {
+	const source = await tx.assuranceCase.findUnique({
+		where: { id: input.caseId },
+		select: { kind: true },
+	});
+	if (!source) {
+		throw new CaseTrashedDuringTransactionError();
+	}
+
 	await tx.publishedAssuranceCase.updateMany({
 		where: { assuranceCaseId: input.caseId, isCurrent: true },
 		data: { isCurrent: false },
@@ -355,6 +401,7 @@ async function swapCurrentPublishedVersion(
 
 	return tx.publishedAssuranceCase.create({
 		data: {
+			type: PUBLISHED_TYPE_FOR_KIND[source.kind],
 			title: input.title,
 			slug: input.slug,
 			content: input.content,
@@ -409,7 +456,7 @@ async function publishSnapshot(
 		if (error instanceof CaseTrashedDuringTransactionError) {
 			return { error: "Case not found" };
 		}
-		if (error instanceof CaseKindChangedDuringPublishError) {
+		if (error instanceof CaseChangedDuringPublishError) {
 			return { error: CASE_CHANGED_WHILE_PUBLISHING };
 		}
 		log.error(failureMessage, { error });
@@ -541,13 +588,7 @@ export async function publishAssuranceCase(
 					},
 				});
 				if (updateResult.count === 0) {
-					const current = await tx.assuranceCase.findUnique({
-						where: { id: caseId },
-						select: { deletedAt: true },
-					});
-					throw current && current.deletedAt === null
-						? new CaseKindChangedDuringPublishError()
-						: new CaseTrashedDuringTransactionError();
+					await throwForUnmatchedCaseWrite(tx, caseId);
 				}
 				const slug = await generateUniqueSlug(assuranceCase.name, tx);
 				return await swapCurrentPublishedVersion(tx, {
@@ -743,6 +784,7 @@ export async function updatePublishedCase(
 		select: {
 			id: true,
 			name: true,
+			kind: true,
 			published: true,
 			publishStatus: true,
 			publishedVersions: {
@@ -785,13 +827,25 @@ export async function updatePublishedCase(
 			// that can both trash and publish/republish a case must lock the case
 			// row before touching the published row, matching the order
 			// `softDeleteCase` locks them in.
+			//
+			// The condition also names `published: true` and the kind the snapshot
+			// was composed from: an unpublish or a conversion that committed after
+			// that read leaves no matching row, so no published row is written for
+			// a case that is no longer published or is of the other kind. A case
+			// still out of Trash is then refused with the same "changed while it
+			// was being published" message as a first publish.
 			prisma.$transaction(async (tx) => {
 				const updateResult = await tx.assuranceCase.updateMany({
-					where: { id: caseId, deletedAt: null },
+					where: {
+						id: caseId,
+						deletedAt: null,
+						published: true,
+						kind: assuranceCase.kind,
+					},
 					data: { publishedAt: now },
 				});
 				if (updateResult.count === 0) {
-					throw new CaseTrashedDuringTransactionError();
+					await throwForUnmatchedCaseWrite(tx, caseId);
 				}
 
 				// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable

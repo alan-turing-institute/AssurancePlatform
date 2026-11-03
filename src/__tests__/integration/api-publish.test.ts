@@ -9,6 +9,7 @@ import {
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -333,6 +334,56 @@ describe("POST /api/cases/[id]/publish", () => {
 		expect(body.fieldErrors).toStrictEqual({
 			sector: "Sector is required before publishing",
 		});
+	});
+
+	it("answers 409 CONFLICT and publishes nothing when the case was converted after the snapshot was composed", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, { name: "Converted Mid" });
+		await createTestElement(testCase.id, user.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		await createTestCaseInformation(testCase.id, {
+			description: "A worked example",
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		// A conversion that has not yet committed holds the case row, so the
+		// publish reads the case as a case and then waits for the row before
+		// writing.
+		const holder = await holdRowLock(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: testCase.id },
+				data: { kind: "PATTERN" },
+			});
+		});
+		const { POST } = await import("@/app/api/cases/[id]/publish/route");
+		const pending = POST(
+			new NextRequest(
+				`http://localhost:3000/api/cases/${testCase.id}/publish`,
+				{ method: "POST" }
+			),
+			{ params: Promise.resolve({ id: testCase.id }) }
+		);
+		await waitForLockWait();
+		await holder.release();
+		const response = await pending;
+
+		expect(response.status).toBe(409);
+		expect(await response.json()).toMatchObject({
+			code: "CONFLICT",
+			error: "The case changed while it was being published. Try again.",
+		});
+		expect(
+			await prisma.publishedAssuranceCase.count({
+				where: { assuranceCaseId: testCase.id },
+			})
+		).toBe(0);
+		const after = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+			select: { published: true, publishStatus: true },
+		});
+		expect(after).toEqual({ published: false, publishStatus: "DRAFT" });
 	});
 });
 

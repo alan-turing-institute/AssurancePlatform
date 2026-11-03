@@ -5,13 +5,7 @@ import { Check, Copy, Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
 	Form,
 	FormControl,
@@ -37,6 +31,7 @@ import {
 	TeamPermissionRow,
 	UserPermissionRow,
 } from "./_case-sharing/permission-components";
+import { SharingDialogHeader } from "./_case-sharing/shared-item-name";
 import {
 	type ShareFormValues,
 	shareFormSchema,
@@ -103,12 +98,7 @@ export function CaseSharingDialog() {
 					}
 				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Share Case</DialogTitle>
-					<DialogDescription>
-						Share this case with individuals or teams
-					</DialogDescription>
-				</DialogHeader>
+				<SharingDialogHeader />
 
 				{loading ? (
 					<div className="flex items-center justify-center py-8">

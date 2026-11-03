@@ -10,12 +10,15 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import type { CaseItemName } from "@/lib/case-item-name";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 
 interface DeleteCaseDialogProps {
 	isOpen: boolean;
 	/** Whether the caller is the case's owner, not merely a collaborator with delete rights. Picks which "Keep as archived" sentence to show. */
 	isOwner: boolean;
+	/** What the dialog calls the thing being deleted: "case" or "pattern". */
+	itemName: CaseItemName;
 	loading: boolean;
 	onCancel: () => void;
 	onConfirm: (publishedCopy: PublishedCopyChoice) => void;
@@ -33,6 +36,7 @@ interface DeleteCaseDialogProps {
 export function DeleteCaseDialog({
 	isOpen,
 	isOwner,
+	itemName,
 	loading,
 	onCancel,
 	onConfirm,
@@ -49,28 +53,26 @@ export function DeleteCaseDialog({
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>
-						This case is published on Discover
+						{`This ${itemName} is published on Discover`}
 					</AlertDialogTitle>
 					<AlertDialogDescription asChild>
 						<div className="space-y-3 text-left">
 							<p>
-								The case moves to the trash either way, and you can restore it
-								within 30 days. What should happen to its public copy?
+								{`The ${itemName} moves to the trash either way, and you can restore it within 30 days. What should happen to its public copy?`}
 							</p>
 							<p>
 								<strong className="text-foreground">
 									Remove from Discover
 								</strong>{" "}
-								— the public copy is deleted. If you restore the case, it comes
-								back as a draft.
+								{`— the public copy is deleted. If you restore the ${itemName}, it comes back as a draft.`}
 							</p>
 							<p>
 								<strong className="text-foreground">Keep as archived</strong> —
 								the public copy stays on Discover, marked as archived, and no
 								longer receives updates.{" "}
 								{isOwner
-									? "You can remove it later from your Trash page, even after the case itself is permanently deleted."
-									: "The case owner can remove it later from their Trash page, even after the case itself is permanently deleted."}
+									? `You can remove it later from your Trash page, even after the ${itemName} itself is permanently deleted.`
+									: `The ${itemName} owner can remove it later from their Trash page, even after the ${itemName} itself is permanently deleted.`}
 							</p>
 						</div>
 					</AlertDialogDescription>

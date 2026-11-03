@@ -161,6 +161,9 @@ It does not count a pattern's placeholders or empty variables.
 Both the publish route and the status route call it, so first publication and republication are held back alike.
 
 Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.
+The row's `type` is `ARGUMENT_PATTERN` when the case is a pattern and `ASSURANCE_CASE` when it is a case.
+`swapCurrentPublishedVersion` in `lib/services/publish-service.ts` sets it from the case's kind when it creates the row, and a republish keeps it.
+A republish is refused, with "The case changed while it was being published. Try again.", if the case was unpublished or converted after the snapshot was composed.
 
 ## Working with the schema
 

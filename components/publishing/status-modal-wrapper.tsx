@@ -7,6 +7,7 @@ import {
 	countPlaceholders,
 	countUnsetVariablesOnCards,
 } from "@/lib/case/placeholders";
+import { caseItemName } from "@/lib/case-item-name";
 import type { RequiredCaseInformationField } from "@/lib/schemas/case-information";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -226,6 +227,7 @@ export function StatusModalWrapper() {
 		<StatusModal
 			caseId={statusModal.caseId}
 			hasChanges={hasChanges || statusModal.hasChanges}
+			itemName={caseItemName(assuranceCase?.kind)}
 			onOpenChange={(open) => {
 				if (!open) {
 					statusModal.onClose();

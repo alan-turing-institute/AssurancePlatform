@@ -20,6 +20,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { caseItemName } from "@/lib/case-item-name";
 import { formatShortDate } from "@/lib/date";
 import type { CaseKind } from "@/lib/schemas/case-export";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
@@ -122,7 +123,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	}, [fetchScreenshot]);
 
 	return (
-		<div className="group relative min-h-[420px]">
+		<div className="group relative min-h-105">
 			<Link href={`/case/${assuranceCase.id}`}>
 				<Card
 					className={cn(
@@ -197,6 +198,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 				<DeleteCaseDialog
 					isOpen={open}
 					isOwner={permissions.includes("owner")}
+					itemName={caseItemName(assuranceCase.kind)}
 					loading={loading}
 					onCancel={() => setOpen(false)}
 					onConfirm={onDelete}

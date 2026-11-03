@@ -16,7 +16,7 @@ const LABELS = [
 	"Shared With Me",
 	"Teams",
 	"Trash",
-	"Discover Public Projects",
+	"Discover Cases & Patterns",
 ];
 
 beforeEach(() => {
@@ -79,7 +79,7 @@ describe.each(SIDEBARS)("%s", (_name, sidebar) => {
 			"Shared With Me": "/dashboard/shared",
 			Teams: "/dashboard/teams",
 			Trash: "/dashboard/trash",
-			"Discover Public Projects": "/discover",
+			"Discover Cases & Patterns": "/discover",
 		});
 	});
 });

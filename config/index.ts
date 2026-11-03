@@ -51,7 +51,7 @@ export const navigation = [
 		tourId: "sidebar-trash",
 	},
 	{
-		name: "Discover Public Projects",
+		name: "Discover Cases & Patterns",
 		href: "/discover",
 		icon: GlobeAltIcon,
 		current: false,

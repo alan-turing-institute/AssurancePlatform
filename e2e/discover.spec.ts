@@ -22,13 +22,32 @@ test.describe("Discover — slug-addressed published items", () => {
 		page,
 	}) => {
 		await page.goto("/discover");
-		await expect(page.getByText("Community Case Studies")).toBeVisible();
+		await expect(page.getByText("Community Cases and Patterns")).toBeVisible();
 		// Each card renders two links to the same item (image + title), both
 		// with an accessible name containing the title — .first() avoids a
 		// Playwright strict-mode violation from matching both.
 		await expect(
 			page.getByRole("link", { name: SEEDED_TITLE }).first()
 		).toBeVisible();
+	});
+
+	test("a published case is badged as a worked example and is kept by the Cases filter, not the Patterns filter", async ({
+		page,
+	}) => {
+		await page.goto("/discover");
+		const card = page.getByRole("article").filter({ hasText: SEEDED_TITLE });
+		await expect(
+			card.getByText("Worked example", { exact: true })
+		).toBeVisible();
+
+		const typeFilter = page.getByRole("combobox", { name: "Filter by type" });
+		await typeFilter.click();
+		await page.getByRole("option", { name: "Patterns" }).click();
+		await expect(card).toBeHidden();
+
+		await typeFilter.click();
+		await page.getByRole("option", { name: "Cases" }).click();
+		await expect(card).toBeVisible();
 	});
 
 	test("clicking a published item from Discover opens it at /discover/<slug>", async ({

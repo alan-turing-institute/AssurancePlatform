@@ -186,9 +186,10 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^The case changed while you were saving\. Try again\.$/,
 		factory: conflict,
 	},
-	// `publish-service.ts`'s `publishAssuranceCase`: a conversion between a
-	// case and a pattern committed while the first publish was being written,
-	// so nothing was published (409).
+	// `publish-service.ts`'s `publishAssuranceCase` and `updatePublishedCase`:
+	// a conversion between a case and a pattern committed while a publish or
+	// republish was being written, or (for a republish) the case was
+	// unpublished in that window, so nothing was written (409).
 	{
 		pattern: /^The case changed while it was being published\. Try again\.$/,
 		factory: conflict,
