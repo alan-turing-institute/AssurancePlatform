@@ -24,10 +24,12 @@ export interface HeldRowLock {
 	 * Signals the holder to commit, and resolves once it actually has —
 	 * or rejects with the holder transaction's own error, if it failed.
 	 *
-	 * Every writer queued behind the lock wakes at once and re-checks the row
-	 * against what the holder committed. Those that still match then compete
-	 * for the new version of the row, so which of several queued writers goes
-	 * first is not fixed by the order they queued in.
+	 * If `mutate` changed the row, every writer queued behind the lock wakes at
+	 * once and re-checks the row against what the holder committed. Those that
+	 * still match then compete for the new version of the row, so which of
+	 * several queued writers goes first is not fixed by the order they queued
+	 * in. A holder that only locks the row keeps the queue order on commit,
+	 * because the first waiter proceeds while it still holds the row lock.
 	 */
 	release: () => Promise<void>;
 	/**
@@ -125,6 +127,10 @@ export async function holdRowLock(
 			await mutate(tx);
 			resolveAcquired();
 			if (!(await finishSignal)) {
+				// A query on the transaction first, so one that Prisma already timed
+				// out and rolled back rejects with its own timeout error instead of
+				// being reported as a rollback that worked.
+				await tx.$queryRaw`SELECT 1`;
 				throw new HolderRollback();
 			}
 		})

@@ -231,8 +231,12 @@ describe.each(KINDS)("converting a %s while it is being published", (from) => {
 		const publishing = publishAssuranceCase(rich.ownerId, rich.caseId);
 		await waitForLockWait(5000, 2);
 		await holder.rollback();
-		await Promise.all([converting, publishing]);
+		const [converted, published] = await Promise.all([converting, publishing]);
 
+		expect(converted).toEqual({ data: { kind: to } });
+		expect(published).toEqual({
+			error: "The case changed while it was being published. Try again.",
+		});
 		const stored = await prisma.assuranceCase.findUniqueOrThrow({
 			where: { id: rich.caseId },
 		});
