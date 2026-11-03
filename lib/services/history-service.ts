@@ -37,6 +37,8 @@ export async function applyUndo(command: HistoryCommand): Promise<void> {
 						context: command.before.context,
 						inSandbox: command.before.inSandbox,
 						assertionStatus: command.before.assertionStatus,
+						isPlaceholder: command.before.isPlaceholder,
+						placeholderHint: command.before.placeholderHint,
 					}),
 				});
 			}
@@ -113,6 +115,8 @@ export async function applyRedo(command: HistoryCommand): Promise<void> {
 						context: command.after.context,
 						inSandbox: command.after.inSandbox,
 						assertionStatus: command.after.assertionStatus,
+						isPlaceholder: command.after.isPlaceholder,
+						placeholderHint: command.after.placeholderHint,
 					}),
 				});
 			}
@@ -227,6 +231,9 @@ export function createSnapshot(data: Record<string, unknown>): ElementSnapshot {
 		// Per-assertion status (ADR 0004 D3) — undo/redo must round-trip this
 		// like any other author-editable field.
 		assertionStatus: data.assertionStatus as string | undefined,
+		// Placeholder marker and hint — undo/redo must round-trip them too.
+		isPlaceholder: data.isPlaceholder as boolean | undefined,
+		placeholderHint: data.placeholderHint as string | null | undefined,
 	};
 }
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nullableUrlSchema } from "./base";
+import { nullableUrlSchema, placeholderHintInputSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
 import { ContextEntrySchema } from "./context-entry";
 
@@ -11,6 +11,23 @@ import { ContextEntrySchema } from "./context-entry";
  * here — mirrors lib/schemas/element.ts's assertionStatusInputSchema.
  */
 const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
+
+/**
+ * `fromPattern` and `modifiedFromPattern` on a change. Only the server sets
+ * them (when a case is started from a pattern and when text is edited), but a
+ * document saved from an earlier export still carries them, so a change that
+ * has them is accepted and they are dropped.
+ */
+const ignoredPatternMarkers = {
+	fromPattern: z
+		.boolean()
+		.optional()
+		.transform(() => undefined),
+	modifiedFromPattern: z
+		.boolean()
+		.optional()
+		.transform(() => undefined),
+};
 
 /**
  * Schema for batch update request body.
@@ -40,10 +57,11 @@ export const batchUpdateRequestSchema = z.strictObject({
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
 						modulePublicSummary: z.string().nullable().optional(),
-						fromPattern: z.boolean().optional(),
-						modifiedFromPattern: z.boolean().optional(),
 						isDefeater: z.boolean().optional(),
 						defeatsElementId: z.string().optional(),
+						isPlaceholder: z.boolean().optional(),
+						placeholderHint: placeholderHintInputSchema,
+						...ignoredPatternMarkers,
 					}),
 				}),
 				z.strictObject({
@@ -64,10 +82,11 @@ export const batchUpdateRequestSchema = z.strictObject({
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
 						modulePublicSummary: z.string().nullable().optional(),
-						fromPattern: z.boolean().optional(),
-						modifiedFromPattern: z.boolean().optional(),
 						isDefeater: z.boolean().optional(),
 						defeatsElementId: z.string().optional(),
+						isPlaceholder: z.boolean().optional(),
+						placeholderHint: placeholderHintInputSchema,
+						...ignoredPatternMarkers,
 					}),
 				}),
 				z.strictObject({

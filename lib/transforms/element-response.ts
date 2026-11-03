@@ -60,6 +60,71 @@ function applyDialogicalReasoningFields(
 }
 
 /**
+ * Applies the placeholder marker, and its hint when it has one. The hint
+ * stored on an element that is no longer a placeholder is not returned.
+ */
+function applyPlaceholderFields(
+	response: ElementResponse,
+	element: { isPlaceholder?: boolean; placeholderHint?: string | null }
+): void {
+	if (!element.isPlaceholder) {
+		return;
+	}
+	response.isPlaceholder = true;
+	if (element.placeholderHint) {
+		response.placeholderHint = element.placeholderHint;
+	}
+}
+
+/** A stored element, as the response is built from it. */
+interface StoredElement {
+	// ADR 0004 D3 — nullable; null means unset (interpreted as ASSERTED at
+	// export time in build-tree.ts, not here — this response mirrors the
+	// raw stored value for the canvas/JSON-editor UI).
+	assertionStatus?: AssertionStatus | null;
+	assumption: string | null;
+	caseId: string;
+	// Dangling-citation indicator (ADR 0004 D5) — true when citedElementId
+	// was nullified because the cited element was deleted/detached
+	citationDangling?: boolean;
+	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
+	citedElementId?: string | null;
+	/** The stored column value; read through parseContextEntries. */
+	context: unknown;
+	createdAt: Date;
+	// Dangling-defeat indicator (see resolveImportedDefeatsElementId,
+	// case-import-service.ts) — true when defeatsElementId was blanked
+	// because the imported target wasn't part of the same import.
+	defeatsDangling?: boolean;
+	defeatsElementId?: string | null;
+	description: string;
+	elementType: string;
+	id: string;
+	inSandbox: boolean;
+	// Dialogical reasoning (defeaters) — applies to every element type.
+	isDefeater?: boolean;
+	// Placeholder marker and its hint (see applyPlaceholderFields)
+	isPlaceholder?: boolean;
+	justification: string | null;
+	level: number | null;
+	// Dangling-module-reference indicator (see resolveImportedModuleReferenceId,
+	// case-import-service.ts) — true when moduleReferenceId was nullified
+	// because the imported target case doesn't exist in this environment.
+	moduleReferenceDangling?: boolean;
+	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
+	moduleReferenceId?: string | null;
+	name: string | null;
+	parent?: {
+		id: string;
+		elementType: string;
+	} | null;
+	parentId: string | null;
+	placeholderHint?: string | null;
+	url: string | null;
+	urls: string[];
+}
+
+/**
  * Applies the optional single-value response fields (URLs, prose fields,
  * assertion status, and the citation/module-reference metadata) that are
  * only present on the response when the underlying element data is present.
@@ -68,23 +133,7 @@ function applyDialogicalReasoningFields(
  */
 function applyOptionalFields(
 	response: ElementResponse,
-	element: {
-		assumption: string | null;
-		justification: string | null;
-		/** The stored column value; read through parseContextEntries. */
-		context: unknown;
-		url: string | null;
-		urls: string[];
-		level: number | null;
-		assertionStatus?: AssertionStatus | null;
-		citedElementId?: string | null;
-		citationDangling?: boolean;
-		moduleReferenceId?: string | null;
-		moduleReferenceDangling?: boolean;
-		isDefeater?: boolean;
-		defeatsElementId?: string | null;
-		defeatsDangling?: boolean;
-	}
+	element: StoredElement
 ): void {
 	// Handle URLs: prefer urls array, fall back to legacy url field
 	if (element.urls && element.urls.length > 0) {
@@ -123,54 +172,13 @@ function applyOptionalFields(
 		response.moduleReferenceDangling = true;
 	}
 	applyDialogicalReasoningFields(response, element);
+	applyPlaceholderFields(response, element);
 }
 
 /**
  * Transforms a Prisma element to API response format
  */
-export function transformToResponse(element: {
-	id: string;
-	elementType: string;
-	name: string | null;
-	description: string;
-	assumption: string | null;
-	justification: string | null;
-	/** The stored column value; read through parseContextEntries. */
-	context: unknown;
-	url: string | null;
-	urls: string[];
-	inSandbox: boolean;
-	level: number | null;
-	// ADR 0004 D3 — nullable; null means unset (interpreted as ASSERTED at
-	// export time in build-tree.ts, not here — this response mirrors the
-	// raw stored value for the canvas/JSON-editor UI).
-	assertionStatus?: AssertionStatus | null;
-	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
-	citedElementId?: string | null;
-	// Dangling-citation indicator (ADR 0004 D5) — true when citedElementId
-	// was nullified because the cited element was deleted/detached
-	citationDangling?: boolean;
-	// Module reference (MODULE/AWAY_GOAL only) — names the referenced case
-	moduleReferenceId?: string | null;
-	// Dangling-module-reference indicator (see resolveImportedModuleReferenceId,
-	// case-import-service.ts) — true when moduleReferenceId was nullified
-	// because the imported target case doesn't exist in this environment.
-	moduleReferenceDangling?: boolean;
-	// Dialogical reasoning (defeaters) — applies to every element type.
-	isDefeater?: boolean;
-	defeatsElementId?: string | null;
-	// Dangling-defeat indicator (see resolveImportedDefeatsElementId,
-	// case-import-service.ts) — true when defeatsElementId was blanked
-	// because the imported target wasn't part of the same import.
-	defeatsDangling?: boolean;
-	caseId: string;
-	parentId: string | null;
-	createdAt: Date;
-	parent?: {
-		id: string;
-		elementType: string;
-	} | null;
-}): ElementResponse {
+export function transformToResponse(element: StoredElement): ElementResponse {
 	const response: ElementResponse = {
 		id: element.id,
 		type: toDisplayType(element.elementType),

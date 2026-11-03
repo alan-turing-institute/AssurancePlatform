@@ -26,17 +26,17 @@ export interface CreateElementData {
 	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description: string;
-	fromPattern?: boolean;
 	id: string;
 	inSandbox: boolean;
 	isDefeater?: boolean;
+	isPlaceholder?: boolean;
 	justification?: string | null;
 	level?: number | null;
-	modifiedFromPattern?: boolean;
 	moduleEmbedType?: string;
 	modulePublicSummary?: string | null;
 	moduleReferenceId?: string;
 	name: string | null;
+	placeholderHint?: string | null;
 	role?: string | null;
 	type: string;
 	url?: string | null;
@@ -51,17 +51,17 @@ export interface UpdateElementData {
 	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description?: string;
-	fromPattern?: boolean;
 	inSandbox?: boolean;
 	isDefeater?: boolean;
+	isPlaceholder?: boolean;
 	justification?: string | null;
 	level?: number | null;
-	modifiedFromPattern?: boolean;
 	moduleEmbedType?: string;
 	modulePublicSummary?: string | null;
 	moduleReferenceId?: string;
 	name?: string | null;
 	parentId?: string | null;
+	placeholderHint?: string | null;
 	role?: string | null;
 	url?: string | null;
 }
@@ -90,18 +90,18 @@ interface FlatElement {
 	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description: string;
-	fromPattern?: boolean;
 	id: string;
 	inSandbox: boolean;
 	isDefeater?: boolean;
+	isPlaceholder: boolean;
 	justification?: string | null;
 	level?: number | null;
-	modifiedFromPattern?: boolean;
 	moduleEmbedType?: string;
 	modulePublicSummary?: string | null;
 	moduleReferenceId?: string;
 	name: string | null;
 	parentId: string | null;
+	placeholderHint: string | null;
 	role?: string | null;
 	type: string;
 	url?: string | null;
@@ -185,8 +185,10 @@ function createFlatElement(
 		moduleReferenceId: node.moduleReferenceId,
 		moduleEmbedType: node.moduleEmbedType,
 		modulePublicSummary: node.modulePublicSummary,
-		fromPattern: node.fromPattern,
-		modifiedFromPattern: node.modifiedFromPattern,
+		// A marker left out of the document is off, so removing it from the JSON
+		// turns it off; the hint is compared the same way.
+		isPlaceholder: node.isPlaceholder === true,
+		placeholderHint: node.placeholderHint ?? null,
 		isDefeater: node.isDefeater,
 		defeatsElementId: node.defeatsElementId,
 		assertionStatus: node.assertionStatus,
@@ -420,7 +422,7 @@ function contextEntriesEqual(a: ContextEntry, b: ContextEntry): boolean {
 /**
  * Compares two context lists entry by entry, in order.
  */
-function contextEqual(
+export function contextEqual(
 	a: ContextEntry[] | undefined,
 	b: ContextEntry[] | undefined
 ): boolean {
@@ -459,8 +461,8 @@ const SCALAR_FIELDS = [
 	"moduleReferenceId",
 	"moduleEmbedType",
 	"modulePublicSummary",
-	"fromPattern",
-	"modifiedFromPattern",
+	"isPlaceholder",
+	"placeholderHint",
 	"isDefeater",
 	"defeatsElementId",
 ] as const;
@@ -519,8 +521,8 @@ function toCreateElementData(element: FlatElement): CreateElementData {
 		moduleReferenceId: element.moduleReferenceId,
 		moduleEmbedType: element.moduleEmbedType,
 		modulePublicSummary: element.modulePublicSummary,
-		fromPattern: element.fromPattern,
-		modifiedFromPattern: element.modifiedFromPattern,
+		isPlaceholder: element.isPlaceholder || undefined,
+		placeholderHint: element.placeholderHint ?? undefined,
 		isDefeater: element.isDefeater,
 		defeatsElementId: element.defeatsElementId,
 		assertionStatus: element.assertionStatus,

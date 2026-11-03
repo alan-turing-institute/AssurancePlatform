@@ -5,6 +5,7 @@ import {
 	refreshCaseIfShown,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import { recordedStates } from "@/lib/case/placeholders";
 import { canBeChildOf } from "@/lib/element-compatibility";
 import { recordCreate, recordUpdate } from "@/lib/services/history-service";
 import useStore from "@/store/store";
@@ -164,7 +165,14 @@ async function applyEdit(
 	const before = suggestion.changes.context
 		? { ...element, context: element.context ?? [] }
 		: element;
-	recordUpdate(element.id, element.type, before, { ...element, ...fields });
+	// Writing the description of a placeholder in a case takes its marker off,
+	// so the entry records the element without it; see recordedStates.
+	const recorded = recordedStates(
+		useStore.getState().assuranceCase?.kind,
+		before,
+		fields
+	);
+	recordUpdate(element.id, element.type, recorded.before, recorded.after);
 	refreshShownCase(caseId);
 	return APPLIED;
 }

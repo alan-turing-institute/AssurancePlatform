@@ -31,6 +31,7 @@ import {
 	drawnContentAttribute,
 } from "@/lib/case/plugin-display-capture";
 import type { ElementAppearance } from "@/lib/plugins/slots";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
@@ -78,12 +79,16 @@ export interface BaseNodeProps {
 	initialExpanded?: boolean;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — shows a "Defeater" chip and a distinct destructive-token border, regardless of node kind. */
 	isDefeater?: boolean;
+	/** A placeholder: the person using the case or pattern writes it. Drawn with a dashed outline; the badge goes in `topRightActions`. */
+	isPlaceholder?: boolean;
 	/** Justification text */
 	justification?: string;
 	/** The display name/ID of the node (e.g., "G1", "S1", "P1") */
 	name: string;
 	/** The type of node (goal, strategy, property, evidence) */
 	nodeType: DiagramNodeType;
+	/** The author's guidance for a placeholder; a case's placeholder with no text shows it in place of the text. */
+	placeholderHint?: string;
 	/** Whether the node is currently selected */
 	selected?: boolean;
 	/**
@@ -98,6 +103,7 @@ export interface BaseNodeProps {
 
 function ExpandedContent({
 	descriptionText,
+	isHint,
 	hasAttributes,
 	assumption,
 	context,
@@ -109,6 +115,7 @@ function ExpandedContent({
 	terms,
 }: {
 	descriptionText: string;
+	isHint: boolean;
 	hasAttributes: boolean;
 	assumption?: string;
 	context?: ContextEntry[];
@@ -121,7 +128,7 @@ function ExpandedContent({
 }) {
 	return (
 		<div className={buildNodeContentClasses(true)}>
-			<p className={buildDescriptionClasses()}>
+			<p className={buildDescriptionClasses(isHint)}>
 				<ReferenceText terms={terms} text={descriptionText} withTooltips />
 			</p>
 
@@ -157,18 +164,35 @@ function ExpandedContent({
 const NO_TERMS: readonly DefinedTerm[] = [];
 
 /**
+ * The hint a card draws where its text will go. Only a placeholder in a case
+ * has one: in a pattern the hint is the author's note to whoever uses the
+ * pattern, and the edit dialog shows it.
+ */
+function hintInPlaceOfText(
+	isPlaceholder: boolean,
+	kind: CaseKind | undefined,
+	hint: string | undefined
+): string | undefined {
+	return isPlaceholder && kind !== "PATTERN" ? hint : undefined;
+}
+
+/**
  * The text a card draws and the terms it resolves references with. A card
  * given terms leaves its references for the text component to resolve; one
- * given none writes each as `{name}`, so no word is highlighted.
+ * given none writes each as `{name}`, so no word is highlighted. A card with
+ * no text draws `hint` in its place when it has one (`isHint` says so),
+ * otherwise a note that there is none.
  */
 function cardText(
 	description: string | undefined,
-	termsInReach: readonly DefinedTerm[] | undefined
+	termsInReach: readonly DefinedTerm[] | undefined,
+	hint?: string
 ) {
-	const stored = description || "No description available";
+	const stored = description || hint || "No description available";
+	const isHint = !description && !!hint;
 	return termsInReach
-		? { descriptionText: stored, terms: termsInReach }
-		: { descriptionText: plainReferenceText(stored), terms: NO_TERMS };
+		? { descriptionText: stored, isHint, terms: termsInReach }
+		: { descriptionText: plainReferenceText(stored), isHint, terms: NO_TERMS };
 }
 
 export default function BaseNode({
@@ -182,6 +206,8 @@ export default function BaseNode({
 	justification,
 	initialExpanded = false,
 	isDefeater = false,
+	isPlaceholder = false,
+	placeholderHint,
 	topRightActions,
 	bottomLeftActions,
 	children,
@@ -190,9 +216,13 @@ export default function BaseNode({
 	expandTour,
 	terms: termsInReach,
 }: BaseNodeProps) {
-	const { descriptionText, terms } = cardText(description, termsInReach);
+	const { layoutNodes, layoutDirection, assuranceCase } = useStore();
+	const { descriptionText, isHint, terms } = cardText(
+		description,
+		termsInReach,
+		hintInPlaceOfText(isPlaceholder, assuranceCase?.kind, placeholderHint)
+	);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
-	const { layoutNodes, layoutDirection } = useStore();
 	const { fitView, getNodes, getEdges } = useReactFlow();
 
 	const targetPosition =
@@ -252,6 +282,7 @@ export default function BaseNode({
 		nodeType,
 		isSelected: selected,
 		isDefeater,
+		isPlaceholder,
 		appearance,
 		className,
 	});
@@ -351,7 +382,7 @@ export default function BaseNode({
 							<TooltipProvider>
 								<Tooltip delayDuration={400}>
 									<TooltipTrigger asChild>
-										<p className={buildPreviewTextClasses()}>
+										<p className={buildPreviewTextClasses(isHint)}>
 											<ReferenceText
 												maxLength={PREVIEW_LENGTH}
 												terms={terms}
@@ -365,7 +396,7 @@ export default function BaseNode({
 								</Tooltip>
 							</TooltipProvider>
 						) : (
-							<p className={buildPreviewTextClasses()}>
+							<p className={buildPreviewTextClasses(isHint)}>
 								<ReferenceText terms={terms} text={descriptionText} />
 							</p>
 						)}
@@ -390,6 +421,7 @@ export default function BaseNode({
 								context={context}
 								descriptionText={descriptionText}
 								hasAttributes={hasAttributes}
+								isHint={isHint}
 								justification={justification}
 								name={name}
 								nodeType={nodeType}

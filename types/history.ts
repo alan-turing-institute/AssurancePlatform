@@ -32,10 +32,14 @@ export interface ElementSnapshot {
 	elementType: string;
 	id: string;
 	inSandbox?: boolean;
+	// Placeholder marker and its hint; undo and redo send them back so a
+	// restored element is as marked as it was.
+	isPlaceholder?: boolean;
 	justification?: string | null;
 	level?: number | null;
 	name: string;
 	parentId?: string | null;
+	placeholderHint?: string | null;
 	url?: string | null;
 	urls?: string[];
 	[key: string]: unknown;

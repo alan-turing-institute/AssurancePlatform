@@ -84,6 +84,45 @@ describe("computeTreeDiff and context", () => {
  * claim CGP, and the evidence E3 under that claim) under the first claim A that
  * links it; under claim B the evidence is a leaf.
  */
+describe("computeTreeDiff and placeholders", () => {
+	function exportWithMarkers(fields: Partial<TreeNode>): CaseExportNested {
+		const doc = exportWith(undefined);
+		return { ...doc, tree: { ...doc.tree, ...fields } };
+	}
+
+	it("sends the marker and hint that were added, and turns them off when the keys are removed", () => {
+		const plain = exportWithMarkers({});
+		const marked = exportWithMarkers({
+			isPlaceholder: true,
+			placeholderHint: "Say what to write",
+		});
+
+		expect(computeTreeDiff(plain, marked).changes).toEqual([
+			{
+				type: "update",
+				elementId: GOAL_ID,
+				data: { isPlaceholder: true, placeholderHint: "Say what to write" },
+			},
+		]);
+		expect(computeTreeDiff(marked, plain).changes).toEqual([
+			{
+				type: "update",
+				elementId: GOAL_ID,
+				data: { isPlaceholder: false, placeholderHint: null },
+			},
+		]);
+	});
+
+	it("leaves out the pattern markers, which only the server sets", () => {
+		const { changes } = computeTreeDiff(
+			exportWithMarkers({}),
+			exportWithMarkers({ fromPattern: true, modifiedFromPattern: true })
+		);
+
+		expect(changes).toEqual([]);
+	});
+});
+
 describe("computeTreeDiff and what hangs from shared evidence", () => {
 	const node = (
 		id: string,

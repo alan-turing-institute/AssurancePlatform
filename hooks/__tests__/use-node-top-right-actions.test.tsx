@@ -26,6 +26,21 @@ afterEach(() => {
 	useStore.setState({ nodes: [], showUnsupportedMarkers: null });
 });
 
+describe("useNodeTopRightActions — the placeholder badge", () => {
+	it("shows To fill in for a placeholder, beside the author's status badge", () => {
+		useStore.setState({ nodes: EMPTY_GOAL, showUnsupportedMarkers: false });
+
+		render(
+			<Actions
+				data={{ isPlaceholder: true, assertionStatus: "NEEDS_SUPPORT" }}
+			/>
+		);
+
+		expect(screen.getByText("To fill in")).toBeInTheDocument();
+		expect(screen.getByText("Needs support")).toBeInTheDocument();
+	});
+});
+
 describe("useNodeTopRightActions — the unsupported marker", () => {
 	it("shows the marker on an element with nothing beneath it", () => {
 		useStore.setState({ nodes: EMPTY_GOAL, showUnsupportedMarkers: true });

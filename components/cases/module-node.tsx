@@ -2,7 +2,11 @@
 
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import {
+	BaseNode,
+	getPlaceholderIndicator,
+	NodeActionGroup,
+} from "@/components/shared/nodes";
 import CitedCaseLink from "./cited-case-link";
 import NodeEditDialog from "./node-edit-dialog";
 
@@ -42,9 +46,12 @@ function ModuleNode({ data, ...props }: NodeProps) {
 				// The referenced case is the card's whole point — unlike a
 				// description preview, it shouldn't be hidden behind a click.
 				initialExpanded
+				isPlaceholder={!!data.isPlaceholder}
 				name={data.name}
 				nodeType="module"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
+				topRightActions={getPlaceholderIndicator(data)}
 			>
 				<div className="space-y-1">
 					<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">

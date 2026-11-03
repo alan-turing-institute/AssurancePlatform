@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { AuthorAssertionStatusSchema } from "@/lib/assertion-status";
-import { lenientUrlSchema, optionalString, optionalUrlSchema } from "./base";
+import {
+	lenientUrlSchema,
+	optionalString,
+	optionalStringAllowingEmpty,
+	optionalUrlSchema,
+	placeholderHintInputSchema,
+} from "./base";
 import { AssertionStatusSchema } from "./case-export";
 import { ContextEntrySchema } from "./context-entry";
 
@@ -65,6 +71,10 @@ export const createElementSchema = z.strictObject({
 	// (case-batch-update-service.ts's validateElementOwnership).
 	isDefeater: z.boolean().optional(),
 	defeatsElementId: z.string().uuid().nullable().optional(),
+	// Marks the element as one the person using the case or pattern writes,
+	// with optional guidance. Any person who can edit the case may set these.
+	isPlaceholder: z.boolean().optional(),
+	placeholderHint: placeholderHintInputSchema,
 });
 
 export type CreateElementSchemaInput = z.input<typeof createElementSchema>;
@@ -74,9 +84,10 @@ export type CreateElementSchemaOutput = z.output<typeof createElementSchema>;
  * Update element input schema
  */
 export const updateElementSchema = z.strictObject({
-	// Names/descriptions
+	// Names/descriptions. An empty description empties the text: it is how an
+	// undo puts a placeholder back to the empty text it started with.
 	name: optionalString(500),
-	description: optionalString(5000),
+	description: optionalStringAllowingEmpty(5000),
 	shortDescription: optionalString(5000),
 	longDescription: optionalString(10_000),
 
@@ -109,6 +120,11 @@ export const updateElementSchema = z.strictObject({
 	// (case-batch-update-service.ts's validateElementOwnership).
 	isDefeater: z.boolean().optional(),
 	defeatsElementId: z.string().uuid().nullable().optional(),
+
+	// Placeholder marker and its hint. In a case, writing a new description
+	// takes the marker off unless this request sets it (element-service.ts).
+	isPlaceholder: z.boolean().optional(),
+	placeholderHint: placeholderHintInputSchema,
 
 	// Sandbox flag
 	inSandbox: z.boolean().optional(),
@@ -183,25 +199,44 @@ export const elementUrlsFormSchema = z.strictObject({
 export type ElementUrlsFormInput = z.input<typeof elementUrlsFormSchema>;
 export type ElementUrlsFormOutput = z.output<typeof elementUrlsFormSchema>;
 
+/** The fewest characters an element's description may have, spaces apart. */
+export const MIN_DESCRIPTION_LENGTH = 2;
+
 /**
  * Combined node edit form schema — description + attributes + urls
  * Used by NodeEditDialog and EditForm components
  */
-export const nodeEditFormSchema = z.strictObject({
-	description: z.string().min(2, {
-		message: "Description must be at least 2 characters",
-	}),
-	assumption: z.string().optional(),
-	justification: z.string().optional(),
-	context: z.array(ContextEntrySchema).optional(),
-	urls: z.array(z.strictObject({ value: z.string() })),
-	// Per-assertion status (ADR 0004 D3). The five author-declarable values
-	// only — `AS_CITED` is derived-only and must never be offered in this
-	// form's Select (components/cases/node-edit-dialog.tsx). "Unset" is
-	// represented by the explicit "ASSERTED" option, not by omitting the
-	// field, since the Select always needs a concrete value to display.
-	assertionStatus: AuthorAssertionStatusSchema.optional(),
-});
+export const nodeEditFormSchema = z
+	.strictObject({
+		description: z.string(),
+		assumption: z.string().optional(),
+		justification: z.string().optional(),
+		context: z.array(ContextEntrySchema).optional(),
+		urls: z.array(z.strictObject({ value: z.string() })),
+		// Per-assertion status (ADR 0004 D3). The five author-declarable values
+		// only — `AS_CITED` is derived-only and must never be offered in this
+		// form's Select (components/cases/node-edit-dialog.tsx). "Unset" is
+		// represented by the explicit "ASSERTED" option, not by omitting the
+		// field, since the Select always needs a concrete value to display.
+		assertionStatus: AuthorAssertionStatusSchema.optional(),
+		// The placeholder marker and its hint, as the dialog holds them.
+		isPlaceholder: z.boolean().optional(),
+		placeholderHint: z
+			.string()
+			.max(500, "A hint must be 500 characters or fewer")
+			.optional(),
+	})
+	// A placeholder may be saved with no text: it is the person using the
+	// pattern who writes it. Spaces do not count towards the length.
+	.refine(
+		(values) =>
+			values.description.trim().length >= MIN_DESCRIPTION_LENGTH ||
+			(values.isPlaceholder === true && values.description.trim() === ""),
+		{
+			message: `Description must be at least ${MIN_DESCRIPTION_LENGTH} characters`,
+			path: ["description"],
+		}
+	);
 
 export type NodeEditFormInput = z.input<typeof nodeEditFormSchema>;
 export type NodeEditFormOutput = z.output<typeof nodeEditFormSchema>;

@@ -27,6 +27,16 @@ export type AssertionStatusResponseType =
 	| "AS_CITED";
 
 /**
+ * The placeholder marker an element carries: the person using the case or
+ * pattern writes it. Both fields are left out for an element that is not a
+ * placeholder; the hint is left out when there is none.
+ */
+export interface PlaceholderFields {
+	isPlaceholder?: boolean;
+	placeholderHint?: string;
+}
+
+/**
  * An away goal (ADR 0005 D3): a goal that cites a goal in another case.
  * `moduleReferenceId` names the cited case; `citedElementId` names the
  * cited goal within it (ADR 0004 D5). The `cited*` fields are resolved by
@@ -36,7 +46,7 @@ export type AssertionStatusResponseType =
  * lacks permission on it, matching the same-error-for-missing-and-forbidden
  * rule used elsewhere in this file.
  */
-export interface AwayGoalResponse {
+export interface AwayGoalResponse extends PlaceholderFields {
 	citationDangling?: boolean;
 	citedCaseAccessible?: boolean;
 	citedCaseName?: string | null;
@@ -67,7 +77,7 @@ export interface AwayGoalResponse {
  * name-resolution and accessibility rules as `AwayGoalResponse` above, minus
  * the element-level citation (a module cites a case, not an element within it).
  */
-export interface ModuleResponse {
+export interface ModuleResponse extends PlaceholderFields {
 	comments?: CommentResponse[];
 	createdDate?: string;
 	description: string;
@@ -90,7 +100,7 @@ export interface ModuleResponse {
 	type: string;
 }
 
-export interface GoalResponse {
+export interface GoalResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	assuranceCaseId: string;
@@ -119,7 +129,7 @@ export interface GoalResponse {
 	type: string;
 }
 
-export interface StrategyResponse {
+export interface StrategyResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
@@ -143,7 +153,7 @@ export interface StrategyResponse {
 	type?: string;
 }
 
-export interface PropertyClaimResponse {
+export interface PropertyClaimResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
@@ -176,7 +186,7 @@ export interface PropertyClaimResponse {
 	type: string;
 }
 
-export interface EvidenceResponse {
+export interface EvidenceResponse extends PlaceholderFields {
 	comments?: CommentResponse[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */

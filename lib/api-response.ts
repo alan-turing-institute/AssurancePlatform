@@ -330,6 +330,13 @@ const ERROR_MAPPINGS: Array<{
 	// `/uploads/...`/blob address, or an `http://` address) is a validation
 	// failure (400), not a 500.
 	{ pattern: /^featureImageUrl must be/, factory: () => validationError("") },
+	// `case-information-service.ts`'s publish gate: a case with placeholders
+	// left in its argument is refused with the number still to fill in — a
+	// validation failure (400), as for incomplete case information, not a 500.
+	{
+		pattern: /^\d+ elements? still to fill in$/,
+		factory: () => validationError(""),
+	},
 ];
 
 /**

@@ -15,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCaseInformation } from "@/hooks/use-case-information";
+import { placeholderCountMessage } from "@/lib/case/placeholders";
 import {
 	CASE_INFORMATION_FIELD_LABELS,
 	getMissingCaseInformationFields,
@@ -31,6 +32,8 @@ interface StatusModalProps {
 	onUnpublish?: () => Promise<void>;
 	onUpdatePublished?: () => Promise<void>;
 	open: boolean;
+	/** How many elements of the case's argument are still to fill in; they hold the case back from publishing. */
+	placeholderCount?: number;
 	publishedAt?: Date | string | null;
 	publishLoading?: boolean;
 	status: PublishStatusType;
@@ -59,6 +62,7 @@ export function StatusModal({
 	onPublish,
 	onUnpublish,
 	onRequestCaseInformation,
+	placeholderCount = 0,
 	publishLoading = false,
 	unpublishLoading = false,
 }: StatusModalProps) {
@@ -111,6 +115,7 @@ export function StatusModal({
 						loading={publishLoading}
 						onPublish={onPublish}
 						onRequestCaseInformation={onRequestCaseInformation}
+						placeholderCount={placeholderCount}
 					/>
 				)}
 
@@ -124,6 +129,7 @@ export function StatusModal({
 						onRequestCaseInformation={onRequestCaseInformation}
 						onUnpublish={onUnpublish}
 						onUpdatePublished={onUpdatePublished}
+						placeholderCount={placeholderCount}
 						unpublishLoading={unpublishLoading}
 					/>
 				)}
@@ -215,6 +221,39 @@ function MissingFieldsGate({
 }
 
 // ============================================
+// Shared — placeholders still to fill in
+// ============================================
+
+interface PlaceholdersGateProps {
+	count: number;
+	testId: string;
+	trailingCopy: string;
+}
+
+/**
+ * "N elements still to fill in" — shown in place of the Publish action (Draft)
+ * or the Update Published action (Published) while a case has placeholders left
+ * in its argument. The same count the server refuses with.
+ */
+function PlaceholdersGate({
+	count,
+	testId,
+	trailingCopy,
+}: PlaceholdersGateProps) {
+	return (
+		<div data-testid={testId}>
+			<Alert>
+				<Info className="h-4 w-4" />
+				<AlertDescription>
+					{placeholderCountMessage(count)}. Write each element marked{" "}
+					<strong>To fill in</strong> on the diagram {trailingCopy}
+				</AlertDescription>
+			</Alert>
+		</div>
+	);
+}
+
+// ============================================
 // Draft — the Publish flow (ADR 0003 §2)
 // ============================================
 
@@ -223,6 +262,7 @@ interface PublishContentProps {
 	loading: boolean;
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
+	placeholderCount: number;
 }
 
 /**
@@ -236,6 +276,7 @@ function PublishContent({
 	loading,
 	onPublish,
 	onRequestCaseInformation,
+	placeholderCount,
 }: PublishContentProps) {
 	const { information, loading: infoLoading } = useCaseInformation(caseId);
 
@@ -251,14 +292,25 @@ function PublishContent({
 
 	const missingFields = getMissingCaseInformationFields(information);
 
-	if (missingFields.length > 0) {
+	if (missingFields.length > 0 || placeholderCount > 0) {
 		return (
-			<MissingFieldsGate
-				missingFields={missingFields}
-				onRequestCaseInformation={onRequestCaseInformation}
-				testId="publish-content-incomplete"
-				trailingCopy="before publishing."
-			/>
+			<div className="space-y-4">
+				{missingFields.length > 0 && (
+					<MissingFieldsGate
+						missingFields={missingFields}
+						onRequestCaseInformation={onRequestCaseInformation}
+						testId="publish-content-incomplete"
+						trailingCopy="before publishing."
+					/>
+				)}
+				{placeholderCount > 0 && (
+					<PlaceholdersGate
+						count={placeholderCount}
+						testId="publish-content-placeholders"
+						trailingCopy="before publishing."
+					/>
+				)}
+			</div>
 		);
 	}
 
@@ -292,6 +344,7 @@ interface PublishedContentProps {
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	onUnpublish?: () => Promise<void>;
 	onUpdatePublished?: () => Promise<void>;
+	placeholderCount: number;
 	unpublishLoading: boolean;
 }
 
@@ -312,13 +365,15 @@ function PublishedContent({
 	onUpdatePublished,
 	onUnpublish,
 	onRequestCaseInformation,
+	placeholderCount,
 	unpublishLoading,
 	handleAction,
 }: PublishedContentProps) {
 	const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
 	const { information } = useCaseInformation(caseId ?? undefined);
 	const missingFields = getMissingCaseInformationFields(information);
-	const republishBlocked = hasChanges && missingFields.length > 0;
+	const republishBlocked =
+		hasChanges && (missingFields.length > 0 || placeholderCount > 0);
 
 	return (
 		<div className="space-y-4">
@@ -337,11 +392,19 @@ function PublishedContent({
 				</Alert>
 			)}
 
-			{republishBlocked && (
+			{republishBlocked && missingFields.length > 0 && (
 				<MissingFieldsGate
 					missingFields={missingFields}
 					onRequestCaseInformation={onRequestCaseInformation}
 					testId="republish-content-incomplete"
+					trailingCopy="before updating the published version."
+				/>
+			)}
+
+			{republishBlocked && placeholderCount > 0 && (
+				<PlaceholdersGate
+					count={placeholderCount}
+					testId="republish-content-placeholders"
 					trailingCopy="before updating the published version."
 				/>
 			)}

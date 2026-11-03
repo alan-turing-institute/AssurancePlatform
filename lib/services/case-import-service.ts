@@ -773,6 +773,8 @@ function buildElementRow(
 		inSandbox: el.inSandbox,
 		fromPattern: el.fromPattern ?? false,
 		modifiedFromPattern: el.modifiedFromPattern ?? false,
+		isPlaceholder: el.isPlaceholder ?? false,
+		placeholderHint: el.placeholderHint ?? null,
 		// Per-assertion status (ADR 0004 D3) — lead ruling: import
 		// PRESERVES a declared status rather than dropping it. This is a
 		// direct createMany write (not through createElement/updateElement),

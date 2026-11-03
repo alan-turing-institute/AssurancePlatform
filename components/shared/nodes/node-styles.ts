@@ -15,6 +15,8 @@ interface NodeContainerOptions {
 	className?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — a distinct destructive-token border, overriding the node kind's own colour. */
 	isDefeater?: boolean;
+	/** A placeholder: the person using the case or pattern writes it — drawn with a dashed outline. */
+	isPlaceholder?: boolean;
 	isSelected?: boolean;
 	nodeType: DiagramNodeType;
 }
@@ -28,6 +30,7 @@ export function buildNodeContainerClasses({
 	nodeType,
 	isSelected = false,
 	isDefeater = false,
+	isPlaceholder = false,
 	appearance = null,
 	className = "",
 }: NodeContainerOptions): string {
@@ -49,6 +52,9 @@ export function buildNodeContainerClasses({
 		// A defeater's border is destructive-token, regardless of its card
 		// kind's own colour — the card decoration ADR 0005 D2 asks for.
 		isDefeater ? "border-destructive/60" : colours.border,
+		// A placeholder keeps its colour and gets a dashed outline, so it reads
+		// as not yet written without relying on colour.
+		isPlaceholder ? "border-dashed" : "",
 	];
 
 	if (isSelected) {
@@ -144,22 +150,29 @@ export function buildNodeIconClasses(nodeType: DiagramNodeType): string {
 }
 
 /**
- * Build preview text classes (collapsed state - description below header)
+ * Build preview text classes (collapsed state - description below header).
+ * `isHint` draws a placeholder's hint, standing where its text will go, in italics.
  */
-export function buildPreviewTextClasses(): string {
+export function buildPreviewTextClasses(isHint = false): string {
 	return cn(
 		"text-xs",
 		"text-muted-foreground",
 		"line-clamp-3",
-		"leading-relaxed"
+		"leading-relaxed",
+		isHint && "italic"
 	);
 }
 
 /**
- * Build full description classes (expanded state)
+ * Build full description classes (expanded state). `isHint` as for the preview.
  */
-export function buildDescriptionClasses(): string {
-	return cn("text-sm", "text-muted-foreground", "leading-relaxed");
+export function buildDescriptionClasses(isHint = false): string {
+	return cn(
+		"text-sm",
+		"text-muted-foreground",
+		"leading-relaxed",
+		isHint && "italic"
+	);
 }
 
 /**
