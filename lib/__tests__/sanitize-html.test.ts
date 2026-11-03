@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	escapeHtml,
 	extractTextFromHtml,
@@ -108,7 +108,7 @@ describe("sanitize-html", () => {
 		it("should handle HTML entities", () => {
 			const input = "<p>&nbsp;</p><p><br></p><p>Content &amp; more</p>";
 			// sanitize-html decodes &nbsp; to a non-breaking space (U+00A0) and uses XHTML-style br tags
-			const expected = "<p>\u00A0</p><p>Content &amp; more</p>";
+			const expected = "<p>\xA0</p><p>Content &amp; more</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
 		});
 
@@ -166,357 +166,138 @@ describe("sanitize-html", () => {
 	});
 
 	describe("extractTextFromHtml", () => {
-		// Mock DOM environment tests
-		describe("browser environment", () => {
-			beforeEach(() => {
-				// Mock window object to simulate browser environment
-				Object.defineProperty(global, "window", {
-					value: {
-						document: {
-							createElement: vi.fn(() => ({
-								innerHTML: "",
-								textContent: "",
-								innerText: "",
-							})),
-						},
-					},
-					writable: true,
-					configurable: true,
-				});
-
-				// Mock document.createElement
-				const mockDiv = {
-					innerHTML: "",
-					textContent: "",
-					innerText: "",
-				};
-
-				global.document = {
-					createElement: vi.fn(() => mockDiv),
-				} as any;
-			});
-
-			afterEach(() => {
-				(global as any).window = undefined;
-				(global as any).document = undefined;
-				vi.restoreAllMocks();
-			});
-
-			it("should extract text using DOM manipulation in browser", () => {
-				const mockDiv = {
-					innerHTML: "",
-					textContent: "Plain text content",
-					innerText: "Plain text content",
-				};
-
-				vi.mocked(document.createElement).mockReturnValue(mockDiv as any);
-
-				const input = "<p>Plain text <strong>content</strong></p>";
-				const result = extractTextFromHtml(input);
-
-				expect(document.createElement).toHaveBeenCalledWith("div");
-				expect(mockDiv.innerHTML).toBe(input);
-				expect(result).toBe("Plain text content");
-			});
-
-			it("should prioritise textContent over innerText", () => {
-				const mockDiv = {
-					innerHTML: "",
-					textContent: "textContent value",
-					innerText: "innerText value",
-				};
-
-				vi.mocked(document.createElement).mockReturnValue(mockDiv as any);
-
-				const result = extractTextFromHtml("<p>Test</p>");
-				expect(result).toBe("textContent value");
-			});
-
-			it("should fallback to innerText when textContent is empty", () => {
-				const mockDiv = {
-					innerHTML: "",
-					textContent: "",
-					innerText: "innerText value",
-				};
-
-				vi.mocked(document.createElement).mockReturnValue(mockDiv as any);
-
-				const result = extractTextFromHtml("<p>Test</p>");
-				expect(result).toBe("innerText value");
-			});
-
-			it("should return empty string when both textContent and innerText are empty", () => {
-				const mockDiv = {
-					innerHTML: "",
-					textContent: "",
-					innerText: "",
-				};
-
-				vi.mocked(document.createElement).mockReturnValue(mockDiv as any);
-
-				const result = extractTextFromHtml("<p></p>");
-				expect(result).toBe("");
-			});
-
-			it("should handle null textContent and innerText", () => {
-				const mockDiv = {
-					innerHTML: "",
-					textContent: null,
-					innerText: null,
-				};
-
-				vi.mocked(document.createElement).mockReturnValue(mockDiv as any);
-
-				const result = extractTextFromHtml("<p>Test</p>");
-				expect(result).toBe("");
-			});
+		afterEach(() => {
+			vi.restoreAllMocks();
+			vi.unstubAllGlobals();
 		});
 
-		// Server-side environment tests
-		describe("server-side environment", () => {
-			beforeEach(() => {
-				// Ensure window is undefined for server-side tests
-				(global as any).window = undefined;
-			});
-
-			it("should remove HTML tags using regex on server-side", () => {
-				const input = "<p>Plain <strong>text</strong> content</p>";
-				const expected = "Plain text content";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle complex nested HTML", () => {
-				const input =
-					"<div><p>Nested <span>content</span></p><br><a href='#'>Link</a></div>";
-				const expected = "Nested contentLink";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle self-closing tags", () => {
-				const input = "Before<br/>Middle<hr>After";
-				const expected = "BeforeMiddleAfter";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle HTML with attributes", () => {
-				const input =
-					'<p class="test" id="content">Text with <a href="http://example.com" target="_blank">link</a></p>';
-				const expected = "Text with link";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle malformed HTML gracefully", () => {
-				const input = "<p>Unclosed tag<span>Nested<div>Content";
-				const expected = "Unclosed tagNestedContent";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle HTML entities", () => {
-				const input = "<p>&lt;script&gt;alert('xss')&lt;/script&gt;</p>";
-				// Server-side regex doesn't decode HTML entities
-				const expected = "&lt;script&gt;alert('xss')&lt;/script&gt;";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should trim whitespace from result", () => {
-				const input = "<p>  Content with spaces  </p>";
-				const expected = "Content with spaces";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle empty HTML", () => {
-				expect(extractTextFromHtml("")).toBe("");
-				expect(extractTextFromHtml("<p></p>")).toBe("");
-				expect(extractTextFromHtml("<div><span></span></div>")).toBe("");
-			});
-
-			it("should handle HTML with only whitespace", () => {
-				const input = "<p>   </p><div>  </div>";
-				expect(extractTextFromHtml(input)).toBe("");
-			});
-
-			it("should handle mixed content types", () => {
-				const input =
-					"Plain text <p>Paragraph</p> more text <span>span content</span>";
-				const expected = "Plain text Paragraph more text span content";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle comments in HTML", () => {
-				const input = "<p>Before <!-- comment --> After</p>";
-				const expected = "Before  After";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle script and style tags", () => {
-				const input =
-					'<p>Content</p><script>alert("xss")</script><style>body{color:red}</style><p>More</p>';
-				const expected = 'Contentalert("xss")body{color:red}More';
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			// Security-focused tests
-			it("should not execute JavaScript during text extraction", () => {
-				const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {
-					/* suppress */
-				});
-				const input =
-					'<script>console.log("Should not execute")</script><p>Safe content</p>';
-
-				const result = extractTextFromHtml(input);
-
-				expect(result).toBe('console.log("Should not execute")Safe content');
-				expect(consoleSpy).not.toHaveBeenCalled();
-
-				consoleSpy.mockRestore();
-			});
-
-			it("should handle potentially dangerous HTML attributes", () => {
-				const input = '<p onload="alert()" onclick="evil()">Content</p>';
-				const expected = "Content";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle Unicode and special characters", () => {
-				const input = "<p>🚀 Test with émojis and spéciål characters ñ</p>";
-				const expected = "🚀 Test with émojis and spéciål characters ñ";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle very long HTML strings efficiently", () => {
-				const longText = "A".repeat(10_000);
-				const input = `<div><p>${longText}</p></div>`;
-
-				const startTime = performance.now();
-				const result = extractTextFromHtml(input);
-				const endTime = performance.now();
-
-				expect(result).toBe(longText);
-				expect(endTime - startTime).toBeLessThan(100); // Should be reasonably fast
-			});
-
-			it("should handle deeply nested HTML", () => {
-				const input =
-					"<div><p><span><strong><em>Deeply nested content</em></strong></span></p></div>";
-				const expected = "Deeply nested content";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle HTML with newlines and formatting", () => {
-				const input = `<p>Line 1</p>
-<p>Line 2</p>
-<div>
-  <span>Indented content</span>
-</div>`;
-				const expected = "Line 1\nLine 2\n\n  Indented content";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle edge case with angle brackets in content", () => {
-				const input = "Text with < and > symbols <p>and HTML</p>";
-				// The regex removes < and > when they form tags, but preserves standalone ones
-				const expected = "Text with  symbols and HTML";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
-
-			it("should handle null and undefined input", () => {
-				expect(() => extractTextFromHtml(null as any)).toThrow();
-				expect(() => extractTextFromHtml(undefined as any)).toThrow();
-			});
+		it("returns the words of nested markup", () => {
+			const input =
+				"<div><p>Nested <span>content</span></p><a href='#'>Link</a></div>";
+			expect(extractTextFromHtml(input)).toBe("Nested content Link");
 		});
 
-		// Cross-environment consistency tests
-		describe("environment consistency", () => {
-			it("should produce consistent results between browser and server-side for simple HTML", () => {
-				const input = "<p>Simple <strong>text</strong> content</p>";
-				const expectedText = "Simple text content";
-
-				// Test server-side (no window)
-				(global as any).window = undefined;
-				const serverResult = extractTextFromHtml(input);
-
-				// Test browser-side (with window)
-				const mockDiv = {
-					innerHTML: "",
-					textContent: expectedText,
-					innerText: expectedText,
-				};
-
-				Object.defineProperty(global, "window", {
-					value: { document: { createElement: () => mockDiv } },
-					writable: true,
-					configurable: true,
-				});
-
-				global.document = {
-					createElement: vi.fn(() => mockDiv),
-				} as any;
-
-				const browserResult = extractTextFromHtml(input);
-
-				expect(serverResult).toBe(expectedText);
-				expect(browserResult).toBe(expectedText);
-				expect(serverResult).toBe(browserResult);
-
-				// Cleanup
-				(global as any).window = undefined;
-				(global as any).document = undefined;
-			});
+		it("keeps inline tags inside a word", () => {
+			const input = '<p>Un<strong>break</strong>able <a href="/x">link</a></p>';
+			expect(extractTextFromHtml(input)).toBe("Unbreakable link");
 		});
 
-		// Performance and edge case tests
-		describe("performance and edge cases", () => {
-			beforeEach(() => {
-				(global as any).window = undefined;
-			});
+		it("separates paragraphs, list items and line breaks", () => {
+			const input =
+				"<p>One</p><p>Two</p><ul><li>Three</li><li>Four</li></ul>Five<br>Six<hr>Seven";
+			expect(extractTextFromHtml(input)).toBe(
+				"One Two Three Four Five Six Seven"
+			);
+		});
 
-			it("should handle extremely large HTML documents", () => {
-				const largeContent = "Content ".repeat(50_000); // 350KB+ of text
-				const input = `<div><p>${largeContent}</p></div>`;
+		it("decodes entities once", () => {
+			const input =
+				"<p>Fish &amp; chips &#8217;n&#x2019; caf&eacute; &quot;ok&quot; &amp;lt;</p>";
+			expect(extractTextFromHtml(input)).toBe(
+				'Fish & chips ’n’ café "ok" &lt;'
+			);
+		});
 
-				const startTime = performance.now();
-				const result = extractTextFromHtml(input);
-				const endTime = performance.now();
+		it("returns entity-encoded markup as text", () => {
+			const input = "<p>&lt;script&gt;alert('x')&lt;/script&gt;</p>";
+			expect(extractTextFromHtml(input)).toBe("<script>alert('x')</script>");
+		});
 
-				expect(result.trim()).toBe(largeContent.trim());
-				expect(endTime - startTime).toBeLessThan(1000); // Should complete within 1 second
-			});
+		it("collapses whitespace and trims", () => {
+			const input = "  <p>  Line 1 </p>\n\n<div> Line\t2 <!-- note --> </div> ";
+			expect(extractTextFromHtml(input)).toBe("Line 1 Line 2");
+		});
 
-			it("should handle HTML with many nested tags", () => {
-				let input = "Content";
-				const tagCount = 1000;
+		it("returns an empty string when there is no text", () => {
+			expect(extractTextFromHtml("")).toBe("");
+			expect(extractTextFromHtml("<div><span></span><p> </p></div>")).toBe("");
+		});
 
-				// Wrap content in many nested divs
-				for (let i = 0; i < tagCount; i++) {
-					input = `<div>${input}</div>`;
-				}
+		it("closes unclosed tags", () => {
+			const input = "<p>Unclosed tag<span>Nested<div>Content";
+			expect(extractTextFromHtml(input)).toBe("Unclosed tagNested Content");
+		});
 
-				const result = extractTextFromHtml(input);
-				expect(result).toBe("Content");
-			});
+		it.each([
+			"center",
+			"dir",
+			"hgroup",
+			"legend",
+			"listing",
+			"menu",
+			"optgroup",
+			"search",
+		])("separates the words around <%s>", (tag) => {
+			expect(extractTextFromHtml(`<${tag}>A</${tag}><${tag}>B</${tag}>`)).toBe(
+				"A B"
+			);
+		});
 
-			it("should handle HTML with unusual but valid tag structures", () => {
-				const input =
-					"<article><header><h1>Title</h1></header><main><section><p>Content</p></section></main></article>";
-				const expected = "TitleContent";
-				const result = extractTextFromHtml(input);
-				expect(result).toBe(expected);
-			});
+		it("removes NUL characters", () => {
+			const nul = String.fromCodePoint(0);
+			expect(extractTextFromHtml(`a${nul}b <${nul}b>c</b>`)).toBe("ab c");
+		});
+
+		it.each([
+			[
+				"image with an error handler",
+				"<img src=x onerror=\"console.log('X')\">",
+			],
+			["script element", "<script>console.log('X')</script>"],
+			["style element", "<style>body{color:red}</style>"],
+			["svg load handler", "<svg onload=\"console.log('X')\"><circle /></svg>"],
+			[
+				"iframe with a script address",
+				"<iframe src=\"javascript:console.log('X')\"></iframe>",
+			],
+			[
+				"link with a script address",
+				"<a href=\"javascript:console.log('X')\"></a>",
+			],
+			["nested script", "<div><p><script>console.log('X')</script></p></div>"],
+		])("drops a %s and keeps the surrounding words", (_name, payload) => {
+			expect(extractTextFromHtml(`Before ${payload} After`)).toBe(
+				"Before After"
+			);
+		});
+
+		it("never creates an element or parses a document", () => {
+			const createElement = vi.spyOn(document, "createElement");
+			const parseFromString = vi.spyOn(DOMParser.prototype, "parseFromString");
+
+			const result = extractTextFromHtml(
+				"<img src=x onerror=\"console.log('X')\"><p>Words &amp; more</p>"
+			);
+
+			expect(result).toBe("Words & more");
+			expect(createElement).not.toHaveBeenCalled();
+			expect(parseFromString).not.toHaveBeenCalled();
+		});
+
+		it("returns the same text with and without a browser window", () => {
+			const input = "<p>One &amp; two</p>\n<p>Three</p><br>Four ";
+			const inBrowser = extractTextFromHtml(input);
+
+			vi.stubGlobal("window", undefined);
+			vi.stubGlobal("document", undefined);
+			const onServer = extractTextFromHtml(input);
+
+			expect(onServer).toBe("One & two Three Four");
+			expect(inBrowser).toBe(onServer);
+		});
+
+		it("handles very large and deeply nested input", () => {
+			const words = "Content ".repeat(50_000);
+			const nested = `${"<div>".repeat(1000)}Content${"</div>".repeat(1000)}`;
+
+			const startTime = performance.now();
+			const large = extractTextFromHtml(`<div><p>${words}</p></div>`);
+			const deep = extractTextFromHtml(nested);
+			const elapsed = performance.now() - startTime;
+
+			expect(large).toBe(words.trim());
+			expect(deep).toBe("Content");
+			expect(elapsed).toBeLessThan(2000);
 		});
 	});
 });
