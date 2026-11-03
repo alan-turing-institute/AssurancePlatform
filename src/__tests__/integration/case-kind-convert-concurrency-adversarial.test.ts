@@ -30,7 +30,12 @@ beforeEach(async () => {
 
 const KINDS = ["CASE", "PATTERN"] as const;
 
-/** A transaction that touches the case row and changes nothing a conversion cares about. */
+/**
+ * A transaction that touches the case row and changes nothing a conversion
+ * cares about. Finish it with `rollback()`: writers queued behind a rolled-back
+ * lock take the row in the order they queued, whereas after a commit they wake
+ * together and the one that goes first is down to scheduling.
+ */
 function holdCaseRow(caseId: string) {
 	return holdRowLock(async (tx) => {
 		await tx.assuranceCase.update({
@@ -138,7 +143,7 @@ describe.each(
 		const first = convertCaseKind(rich.ownerId, rich.caseId, to);
 		const second = convertCaseKind(rich.ownerId, rich.caseId, to);
 		await waitForLockWait(5000, 2);
-		await holder.release();
+		await holder.rollback();
 		const results = await Promise.all([first, second]);
 		tap.stop();
 
@@ -157,7 +162,7 @@ describe.each(
 			convertCaseKind(rich.ownerId, rich.caseId, to)
 		);
 		await waitForLockWait(5000, 6);
-		await holder.release();
+		await holder.rollback();
 		const results = await Promise.all(all);
 		tap.stop();
 
@@ -175,7 +180,7 @@ describe.each(
 		await waitForLockWait();
 		const eventsWhileWaiting = tap.events().length;
 		const kindWhileWaiting = (await storedKind(rich.caseId)).kind;
-		await holder.release();
+		await holder.rollback();
 		await pending;
 		tap.stop();
 
@@ -225,9 +230,13 @@ describe.each(KINDS)("converting a %s while it is being published", (from) => {
 		await waitForLockWait(5000, 1);
 		const publishing = publishAssuranceCase(rich.ownerId, rich.caseId);
 		await waitForLockWait(5000, 2);
-		await holder.release();
-		await Promise.all([converting, publishing]);
+		await holder.rollback();
+		const [converted, published] = await Promise.all([converting, publishing]);
 
+		expect(converted).toEqual({ data: { kind: to } });
+		expect(published).toEqual({
+			error: "The case changed while it was being published. Try again.",
+		});
 		const stored = await prisma.assuranceCase.findUniqueOrThrow({
 			where: { id: rich.caseId },
 		});
@@ -250,7 +259,7 @@ describe.each(KINDS)("converting a %s while it is being published", (from) => {
 		await waitForLockWait(5000, 1);
 		const converting = convertCaseKind(rich.ownerId, rich.caseId, to);
 		await waitForLockWait(5000, 2);
-		await holder.release();
+		await holder.rollback();
 		const [published, converted] = await Promise.all([publishing, converting]);
 
 		expect(published).toHaveProperty("data");
