@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
-import { countPlaceholders } from "@/lib/case/placeholders";
+import {
+	countPlaceholders,
+	countUnsetVariablesOnCards,
+} from "@/lib/case/placeholders";
 import type { RequiredCaseInformationField } from "@/lib/schemas/case-information";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -24,17 +27,21 @@ export function StatusModalWrapper() {
 		setCaseInformationFocusField,
 	} = useStore();
 	const statusModal = useStatusModal();
-	// The elements on the diagram that are still to fill in. A pattern is never
-	// held back by its own placeholders.
-	const placeholderCount =
-		assuranceCase?.kind === "PATTERN"
-			? 0
-			: countPlaceholders(
-					nodes.map((node) => ({
-						id: String(node.data?.id),
-						isPlaceholder: node.data?.isPlaceholder === true,
-					}))
-				);
+	// The elements on the diagram that are still to fill in, and the variables
+	// they mention that have no value. A pattern is never held back by its own
+	// placeholders or empty variables.
+	const isPattern = assuranceCase?.kind === "PATTERN";
+	const placeholderCount = isPattern
+		? 0
+		: countPlaceholders(
+				nodes.map((node) => ({
+					id: String(node.data?.id),
+					isPlaceholder: node.data?.isPlaceholder === true,
+				}))
+			);
+	const unsetVariableCount = isPattern
+		? 0
+		: countUnsetVariablesOnCards(nodes.map((node) => node.data));
 	const [loading, setLoading] = useState(false);
 	const [publishLoading, setPublishLoading] = useState(false);
 	const [unpublishLoading, setUnpublishLoading] = useState(false);
@@ -230,6 +237,7 @@ export function StatusModalWrapper() {
 			publishLoading={publishLoading}
 			status={statusModal.status}
 			unpublishLoading={unpublishLoading}
+			unsetVariableCount={unsetVariableCount}
 		/>
 	);
 }

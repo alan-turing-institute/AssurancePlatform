@@ -28,7 +28,8 @@ const NAMED_ENTRY_REQUIRED_KEYS = ["id", "name", "text"] as const;
 
 /**
  * A context entry that carries a name (and optionally a value) so that text
- * elsewhere in the case can refer to it by id.
+ * elsewhere in the case can refer to it by id. Marked as a variable, the name
+ * shows its value wherever it is mentioned.
  */
 export const NamedContextEntrySchema = z
 	.strictObject({
@@ -62,6 +63,12 @@ export const NamedContextEntrySchema = z
 			)
 			.optional()
 			.describe("Optional value for the name, such as a threshold"),
+		variable: z
+			.literal(true)
+			.optional()
+			.describe(
+				"Present when the name is a variable: wherever it is mentioned, the case shows its value"
+			),
 	})
 	.describe("A context entry with a name, a meaning and an optional value");
 

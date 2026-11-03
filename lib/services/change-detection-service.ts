@@ -1,6 +1,8 @@
+import { parseContextEntries } from "@/lib/case/defined-terms";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import { isNamedContextEntry } from "@/lib/schemas/context-entry";
 import { exportCase } from "@/lib/services/case-export-service";
 
 // ============================================
@@ -266,6 +268,23 @@ interface TreeNodeCompareData {
 	role: string | null;
 	type: string;
 	url: string | null;
+	variables: string;
+}
+
+/**
+ * The variables an element defines (id, name and value of each), as one
+ * string. A variable shows its value wherever it is mentioned, so marking a
+ * name as a variable, or changing its name or value, changes what the case
+ * shows on elements that do not themselves change. Other context entries are
+ * not compared.
+ */
+function variablesOf(node: TreeNode): string {
+	return JSON.stringify(
+		parseContextEntries(node.context)
+			.filter(isNamedContextEntry)
+			.filter((entry) => entry.variable === true)
+			.map((entry) => [entry.id, entry.name, entry.value ?? ""])
+	);
 }
 
 /**
@@ -283,6 +302,7 @@ function extractCompareData(node: TreeNode): TreeNodeCompareData {
 		level: node.level ?? null,
 		isDefeater: node.isDefeater ?? null,
 		defeatsElementId: node.defeatsElementId ?? null,
+		variables: variablesOf(node),
 	};
 }
 
@@ -301,6 +321,7 @@ function elementsAreEqual(
 		a.url === b.url &&
 		a.level === b.level &&
 		a.isDefeater === b.isDefeater &&
-		a.defeatsElementId === b.defeatsElementId
+		a.defeatsElementId === b.defeatsElementId &&
+		a.variables === b.variables
 	);
 }

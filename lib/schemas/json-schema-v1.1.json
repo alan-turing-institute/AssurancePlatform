@@ -7,7 +7,7 @@
     "version": {
       "type": "string",
       "enum": ["1.0", "1.1"],
-      "description": "Schema version identifier. \"1.1\" adds named context entries, references in element text, case.kind and placeholders"
+      "description": "Schema version identifier. \"1.1\" adds named context entries (which can be variables), references in element text, case.kind and placeholders"
     },
     "exportedAt": {
       "type": "string",
@@ -147,6 +147,11 @@
                     "description": "Optional value for the name, such as a threshold",
                     "type": "string",
                     "maxLength": 500
+                  },
+                  "variable": {
+                    "description": "Present when the name is a variable: wherever it is mentioned, the case shows its value",
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": ["id", "name", "text"],

@@ -13,6 +13,8 @@ const mockedUseCaseInformation = vi.mocked(useCaseInformation);
 const ADD_DESCRIPTION_PATTERN = /Add Description/;
 const ADD_AUTHORS_SECTOR_PATTERN = /Add Authors, Sector/;
 const PUBLISH_BUTTON_PATTERN = /Publish/;
+const BOTH_LEFT_PATTERN =
+	/2 elements still to fill in.*3 variables with no value/;
 const UNPUBLISH_CONSEQUENCE_PATTERN = /Unpublishing removes the public record/;
 const DIVERGENCE_INDICATOR_PATTERN =
 	/Changes have been made since this case was last published/;
@@ -171,6 +173,51 @@ describe("StatusModal — Draft (the Publish flow, ADR 0003 §2)", () => {
 		).not.toBeInTheDocument();
 	});
 
+	it("shows how many variables have no value, beside the elements still to fill in, instead of Publish", () => {
+		stubCaseInformation({
+			information: {
+				description: "Ready",
+				authors: "Ada Lovelace",
+				sector: "Healthcare",
+				featureImageUrl: null,
+			},
+		});
+
+		const { rerender } = render(
+			<StatusModal
+				caseId="case-1"
+				onOpenChange={vi.fn()}
+				onPublish={vi.fn()}
+				open={true}
+				placeholderCount={0}
+				status="DRAFT"
+				unsetVariableCount={1}
+			/>
+		);
+
+		const gate = screen.getByTestId("publish-content-placeholders");
+		expect(gate).toHaveTextContent("1 variable with no value");
+		expect(gate).not.toHaveTextContent("still to fill in");
+		expect(
+			screen.queryByRole("button", { name: "Publish" })
+		).not.toBeInTheDocument();
+
+		rerender(
+			<StatusModal
+				caseId="case-1"
+				onOpenChange={vi.fn()}
+				onPublish={vi.fn()}
+				open={true}
+				placeholderCount={2}
+				status="DRAFT"
+				unsetVariableCount={3}
+			/>
+		);
+		expect(
+			screen.getByTestId("publish-content-placeholders")
+		).toHaveTextContent(BOTH_LEFT_PATTERN);
+	});
+
 	it("disables Publish while a publish is in flight", () => {
 		stubCaseInformation({
 			information: {
@@ -296,6 +343,26 @@ describe("StatusModal — Published (divergence + unpublish)", () => {
 		expect(
 			screen.getByTestId("republish-content-placeholders")
 		).toHaveTextContent("1 element still to fill in");
+		expect(
+			screen.queryByRole("button", { name: "Update Published" })
+		).not.toBeInTheDocument();
+	});
+
+	it("blocks republish and shows the number of variables with no value", () => {
+		render(
+			<StatusModal
+				hasChanges={true}
+				onOpenChange={vi.fn()}
+				onUpdatePublished={vi.fn()}
+				open={true}
+				status="PUBLISHED"
+				unsetVariableCount={2}
+			/>
+		);
+
+		expect(
+			screen.getByTestId("republish-content-placeholders")
+		).toHaveTextContent("2 variables with no value");
 		expect(
 			screen.queryByRole("button", { name: "Update Published" })
 		).not.toBeInTheDocument();

@@ -10,8 +10,11 @@ import {
 	parseReferences,
 	plainContextEntry,
 	plainReferenceText,
+	referenceDisplay,
 	termsInReach,
 	toPlainCase,
+	unsetVariablesMentioned,
+	variableNote,
 } from "../defined-terms";
 
 const WINDOW_ID = "k3f9x2m7qa";
@@ -325,5 +328,212 @@ describe("caseUsesDefinedTerms", () => {
 				])
 			)
 		).toBe(true);
+	});
+});
+
+describe("variables", () => {
+	const SYSTEM_ID = "sysaaaaaaa";
+	const unset = {
+		id: SYSTEM_ID,
+		name: "system",
+		text: "the system under test",
+	};
+	const set = { ...unset, value: "AcmeBot" };
+
+	function termsOf(...entries: Record<string, unknown>[]) {
+		return termsInReach([
+			{ id: "g1", name: "G1", context: parseContextEntries(entries) },
+		]);
+	}
+
+	describe("the flag", () => {
+		it("is kept when a stored list is read and put onto the term", () => {
+			const [entry] = parseContextEntries([{ ...set, variable: true }]);
+			expect(entry).toEqual({ ...set, variable: true });
+			expect(termsOf({ ...set, variable: true })[0]?.variable).toBe(true);
+		});
+
+		it("is dropped unless it is exactly true, and absent on an ordinary term", () => {
+			for (const variable of [false, "true", 1, null]) {
+				expect(parseContextEntries([{ ...set, variable }])).toEqual([set]);
+			}
+			expect(termsOf(set)[0]).not.toHaveProperty("variable");
+		});
+	});
+
+	describe("referenceDisplay", () => {
+		const reach = (entry: Record<string, unknown>) => termsOf(entry)[0];
+
+		it("shows an ordinary term, or one out of reach, by name", () => {
+			expect(referenceDisplay(reach(set), "old")).toMatchObject({
+				text: "system",
+				variable: false,
+				unfilled: false,
+			});
+			expect(referenceDisplay(undefined, "old")).toMatchObject({
+				text: "old",
+				variable: false,
+			});
+		});
+
+		it("shows a variable's value, trimmed", () => {
+			expect(
+				referenceDisplay(
+					reach({ ...set, value: "  AcmeBot ", variable: true }),
+					"x"
+				)
+			).toMatchObject({ text: "AcmeBot", variable: true, unfilled: false });
+		});
+
+		it("shows [name] for a variable with no value, or only blanks", () => {
+			for (const entry of [unset, { ...unset, value: "   " }]) {
+				expect(
+					referenceDisplay(reach({ ...entry, variable: true }), "x")
+				).toMatchObject({ text: "[system]", variable: true, unfilled: true });
+			}
+		});
+	});
+
+	describe("plain text", () => {
+		const text = `Tested on {sys#${SYSTEM_ID}} and {win#${WINDOW_ID}}.`;
+		const window = { id: WINDOW_ID, name: "window", text: "the interval" };
+
+		it("writes a variable as its value and an ordinary term as {name}", () => {
+			const terms = termsOf({ ...set, variable: true }, window);
+			expect(plainReferenceText(text, terms)).toBe(
+				"Tested on AcmeBot and {window}."
+			);
+		});
+
+		it("writes a variable with no value as [name]", () => {
+			const terms = termsOf({ ...unset, variable: true }, window);
+			expect(plainReferenceText(text, terms)).toBe(
+				"Tested on [system] and {window}."
+			);
+		});
+
+		it("leaves a term that is not a variable as {name}, with or without a value", () => {
+			expect(plainReferenceText(text, termsOf(set, window))).toBe(
+				"Tested on {system} and {window}."
+			);
+		});
+
+		it("writes the marked form for a model: {name = value} and {name = (not set)}", () => {
+			const marked = { marked: true };
+			expect(
+				plainReferenceText(
+					text,
+					termsOf({ ...set, variable: true }, window),
+					marked
+				)
+			).toBe("Tested on {system = AcmeBot} and {window}.");
+			expect(
+				plainReferenceText(
+					text,
+					termsOf({ ...unset, variable: true }, window),
+					marked
+				)
+			).toBe("Tested on {system = (not set)} and {window}.");
+		});
+
+		it("writes a variable's definition line with its value, or that it is not set", () => {
+			expect(plainContextEntry({ ...set, variable: true })).toBe(
+				"system: the system under test (variable: AcmeBot)"
+			);
+			expect(plainContextEntry({ ...unset, variable: true })).toBe(
+				"system: the system under test (variable, not set)"
+			);
+			expect(variableNote(" AcmeBot ")).toBe("variable: AcmeBot");
+			expect(variableNote("")).toBe("variable, not set");
+			expect(plainContextEntry(set)).toBe(
+				"system: the system under test (value: AcmeBot)"
+			);
+		});
+	});
+
+	describe("toPlainCase", () => {
+		function variableCase(): CaseExportNested {
+			const claim = node("p1", "P1", {
+				description: `Safe on {sys#${SYSTEM_ID}}.`,
+				isPlaceholder: true,
+				placeholderHint: "Say how it is safe",
+			});
+			const blank = node("p2", "P2", { description: "", isPlaceholder: true });
+			return exportOf(
+				node(
+					"g1",
+					"G1",
+					{
+						type: "GOAL",
+						description: "The system is safe",
+						context: [{ ...set, variable: true }],
+					},
+					[claim, blank]
+				)
+			);
+		}
+
+		it("shows the value in the plain copy and adds nothing about placeholders", () => {
+			const [claim, blank] = toPlainCase(variableCase()).tree.children;
+			expect(claim?.description).toBe("Safe on AcmeBot.");
+			expect(blank?.description).toBe("");
+		});
+
+		it("marks variables and placeholders in the marked copy, leaving ordinary text alone", () => {
+			const plain = toPlainCase(variableCase(), { marked: true });
+			const [claim, blank] = plain.tree.children;
+			expect(claim?.description).toBe(
+				"Safe on {system = AcmeBot}. {to fill in: Say how it is safe}"
+			);
+			expect(blank?.description).toBe("{to fill in}");
+			expect(plain.tree.description).toBe("The system is safe");
+		});
+	});
+
+	describe("unsetVariablesMentioned", () => {
+		const terms = termsOf(
+			{ ...unset, variable: true },
+			{
+				id: WINDOW_ID,
+				name: "window",
+				text: "the interval",
+			}
+		);
+
+		it("lists a variable with no value that any text field or context entry mentions, once", () => {
+			const mention = `{sys#${SYSTEM_ID}}`;
+			expect(
+				unsetVariablesMentioned(
+					{
+						description: `On ${mention}`,
+						assumption: `Also ${mention}`,
+						justification: null,
+						context: [
+							`about ${mention}`,
+							{ id: "ctxaaaaaaa", name: "c", text: `uses ${mention}` },
+						],
+					},
+					terms
+				)
+			).toEqual([SYSTEM_ID]);
+		});
+
+		it("ignores a variable with a value, an ordinary term and a definition out of reach", () => {
+			expect(
+				unsetVariablesMentioned(
+					{ description: `{win#${WINDOW_ID}} {gone#${NARROW_ID}}` },
+					terms
+				)
+			).toEqual([]);
+			expect(
+				unsetVariablesMentioned(
+					{ description: `{sys#${SYSTEM_ID}}` },
+					termsOf({ ...set, variable: true })
+				)
+			).toEqual([]);
+			expect(
+				unsetVariablesMentioned({ description: `{sys#${SYSTEM_ID}}` }, [])
+			).toEqual([]);
+		});
 	});
 });

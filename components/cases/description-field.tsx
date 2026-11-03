@@ -39,7 +39,7 @@ interface DescriptionFieldProps {
 }
 
 /**
- * The description of a goal, strategy or property claim: a text field in which
+ * The description of a goal, strategy, property claim or piece of evidence: a text field in which
  * typing `{` offers the terms in reach. As a form field it is labelled by its
  * label, carries the form's error state, and takes focus from the form's
  * first-error logic.

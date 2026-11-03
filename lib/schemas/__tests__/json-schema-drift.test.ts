@@ -25,6 +25,17 @@ describe("json-schema-v1.1.json drift", () => {
 		expect(named?.additionalProperties).toBe(false);
 	});
 
+	it("lets a named entry carry the variable marker, as true only", () => {
+		const [, named] =
+			committedSchema.definitions.TreeNode.properties.context.items.anyOf ?? [];
+
+		expect(named?.properties?.variable).toMatchObject({
+			type: "boolean",
+			const: true,
+		});
+		expect(named?.required).not.toContain("variable");
+	});
+
 	it("targets draft-07, the dialect the JSON editor's resolver supports", () => {
 		// codemirror-json-schema -> json-schema-library only ships draft-04/06/07
 		// resolvers; draft 2020-12 ($defs, prefixItems) would break $ref

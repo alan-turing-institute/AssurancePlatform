@@ -77,7 +77,7 @@ function pickNamedEntry(raw: unknown): NamedContextEntry | null {
 	if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
 		return null;
 	}
-	const { id, name, text, value } = raw as Record<string, unknown>;
+	const { id, name, text, value, variable } = raw as Record<string, unknown>;
 	if (
 		typeof id !== "string" ||
 		typeof name !== "string" ||
@@ -85,16 +85,21 @@ function pickNamedEntry(raw: unknown): NamedContextEntry | null {
 	) {
 		return null;
 	}
-	return typeof value === "string"
-		? { id, name, text, value }
-		: { id, name, text };
+	const entry: NamedContextEntry = { id, name, text };
+	if (typeof value === "string") {
+		entry.value = value;
+	}
+	if (variable === true) {
+		entry.variable = true;
+	}
+	return entry;
 }
 
 /**
  * Turns whatever the database holds in an element's `context` column into a
  * list of entries. Strings pass through; a record is rebuilt from its `id`,
- * `name`, `text` and `value` alone, so no stray key can travel into an
- * export, a snapshot or an API response; anything else is dropped. It never
+ * `name`, `text`, `value` and `variable` alone, so no stray key can travel
+ * into an export, a snapshot or an API response; anything else is dropped. It never
  * throws, because a read must not fail on an odd stored value.
  */
 export function parseContextEntries(raw: unknown): ContextEntry[] {
@@ -134,6 +139,8 @@ export interface DefinedTerm {
 	/** What the name means: the entry's text. */
 	text: string;
 	value?: string;
+	/** Set when the entry is a variable: a reference shows its value in place of its name. */
+	variable?: true;
 }
 
 /**
@@ -158,6 +165,9 @@ export function termsInReach(chain: readonly TermSource[]): DefinedTerm[] {
 			if (entry.value !== undefined) {
 				term.value = entry.value;
 			}
+			if (entry.variable) {
+				term.variable = true;
+			}
 			terms.push(term);
 		}
 	}
@@ -176,14 +186,67 @@ export function findTermById(
 // The plain-text copy
 // ---------------------------------------------------------------------------
 
+/** What a reference to a term is read as. */
+interface ReferenceDisplay {
+	/** The term's current name, or the name stored in the reference when the term is out of reach. */
+	name: string;
+	/** The words to read: the name; for a variable, its value, or `[name]` while it has none. */
+	text: string;
+	/** Whether the variable has no value yet. */
+	unfilled: boolean;
+	/** Whether the term is a variable, so `text` is its value or `[name]` and not a name. */
+	variable: boolean;
+}
+
 /**
- * Text with every reference written as `{name}`. The name is the entry's
- * current name when the entry is in `terms`, otherwise the name stored in the
- * token.
+ * How a reference shows: the one rule behind every card, list and plain-text
+ * copy. An ordinary term, or one out of reach, shows its name. A variable
+ * shows its value, taken as it is and never read for references of its own;
+ * one without a value (blank counts as none) shows `[name]` and is unfilled.
+ */
+export function referenceDisplay(
+	term: DefinedTerm | undefined,
+	storedName: string
+): ReferenceDisplay {
+	const name = term?.name ?? storedName;
+	if (!term?.variable) {
+		return { name, text: name, variable: false, unfilled: false };
+	}
+	const value = term.value?.trim();
+	return {
+		name,
+		text: value || `[${name}]`,
+		variable: true,
+		unfilled: !value,
+	};
+}
+
+/** How a definition line says a name is a variable: `variable: AcmeBot`, or `variable, not set`. */
+export function variableNote(value: string | undefined): string {
+	const shown = value?.trim();
+	return shown ? `variable: ${shown}` : "variable, not set";
+}
+
+/** How plain text is written. */
+interface PlainTextOptions {
+	/**
+	 * Write each variable as `{name = value}` (`{name = (not set)}` while it has
+	 * none) instead of its value, for a reader that must tell a variable from
+	 * fixed wording, such as a model.
+	 */
+	marked?: boolean;
+}
+
+/**
+ * Text with every reference written as `{name}`, except a variable, which is
+ * written as its value (or `[name]` while it has none). The name is the
+ * entry's current name when the entry is in `terms`, otherwise the name stored
+ * in the token.
  */
 export function plainReferenceText(
 	text: string,
-	terms: readonly DefinedTerm[] = []
+	terms: readonly DefinedTerm[] = [],
+	options: PlainTextOptions = {}
 ): string {
 	if (!text.includes("{")) {
 		return text;
@@ -193,7 +256,17 @@ export function plainReferenceText(
 			if (segment.type === "text") {
 				return segment.text;
 			}
-			return `{${findTermById(terms, segment.id)?.name ?? segment.name}}`;
+			const shown = referenceDisplay(
+				findTermById(terms, segment.id),
+				segment.name
+			);
+			if (!shown.variable) {
+				return `{${shown.text}}`;
+			}
+			if (options.marked) {
+				return `{${shown.name} = ${shown.unfilled ? "(not set)" : shown.text}}`;
+			}
+			return shown.text;
 		})
 		.join("");
 }
@@ -211,16 +284,23 @@ export function noticeElementName(element: {
 	return element.name || plainReferenceText(element.description);
 }
 
-/** A context entry as one string: `window: meaning (value: 5 minutes)`. */
+/**
+ * A context entry as one string: `window: meaning (value: 5 minutes)`, or for a
+ * variable `system: meaning (variable: AcmeBot)` and `(variable, not set)`.
+ */
 export function plainContextEntry(
 	entry: ContextEntry,
-	terms: readonly DefinedTerm[] = []
+	terms: readonly DefinedTerm[] = [],
+	options: PlainTextOptions = {}
 ): string {
 	if (!isNamedContextEntry(entry)) {
-		return plainReferenceText(entry, terms);
+		return plainReferenceText(entry, terms, options);
 	}
-	const meaning = plainReferenceText(entry.text, terms);
+	const meaning = plainReferenceText(entry.text, terms, options);
 	const head = meaning.trim() ? `${entry.name}: ${meaning}` : entry.name;
+	if (entry.variable) {
+		return `${head} (${variableNote(entry.value)})`;
+	}
 	return entry.value?.trim() ? `${head} (value: ${entry.value})` : head;
 }
 
@@ -241,9 +321,16 @@ export type PlainCase = Omit<CaseExportNested, "tree"> & {
 	tree: PlainTreeNode;
 };
 
+/** How an element still to fill in is marked in the text a model reads: `{to fill in: hint}`. */
+function placeholderMarker(hint: string | null | undefined): string {
+	const guidance = hint?.trim();
+	return guidance ? `{to fill in: ${guidance}}` : "{to fill in}";
+}
+
 function plainNode(
 	node: TreeNode,
-	ancestors: readonly TermSource[]
+	ancestors: readonly TermSource[],
+	options: PlainTextOptions
 ): PlainTreeNode {
 	const chain: TermSource[] = [
 		{ id: node.id, name: node.name, context: node.context },
@@ -253,31 +340,96 @@ function plainNode(
 	const { context, children, ...rest } = node;
 	const plain: PlainTreeNode = {
 		...rest,
-		children: children?.map((child) => plainNode(child, chain)),
+		children: children?.map((child) => plainNode(child, chain, options)),
 	};
 	// A field is only converted when the node has it as text, so a node keeps
 	// exactly the fields it came with.
 	if (typeof node.description === "string") {
-		plain.description = plainReferenceText(node.description, terms);
+		const description = plainReferenceText(node.description, terms, options);
+		plain.description =
+			options.marked && node.isPlaceholder
+				? [description, placeholderMarker(node.placeholderHint)]
+						.filter(Boolean)
+						.join(" ")
+				: description;
 	}
 	if (typeof node.assumption === "string") {
-		plain.assumption = plainReferenceText(node.assumption, terms);
+		plain.assumption = plainReferenceText(node.assumption, terms, options);
 	}
 	if (typeof node.justification === "string") {
-		plain.justification = plainReferenceText(node.justification, terms);
+		plain.justification = plainReferenceText(
+			node.justification,
+			terms,
+			options
+		);
 	}
 	if (context !== undefined) {
-		plain.context = context.map((entry) => plainContextEntry(entry, terms));
+		plain.context = context.map((entry) =>
+			plainContextEntry(entry, terms, options)
+		);
 	}
 	return plain;
 }
 
-/** Converts an exported case to its plain-text copy; the input is untouched. */
-export function toPlainCase(caseExport: CaseExportNested): PlainCase {
+/**
+ * Converts an exported case to its plain-text copy; the input is untouched.
+ * The `marked` form is for a model: it writes each variable as
+ * `{name = value}` and adds `{to fill in: hint}` to the description of an
+ * element still to fill in, so the model can tell both from fixed wording.
+ */
+export function toPlainCase(
+	caseExport: CaseExportNested,
+	options: PlainTextOptions = {}
+): PlainCase {
 	return {
 		...caseExport,
-		tree: plainNode(caseExport.tree as TreeNode, []),
+		tree: plainNode(caseExport.tree as TreeNode, [], options),
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Variables that still have no value
+// ---------------------------------------------------------------------------
+
+/** The text of an element in which a reference can appear. */
+interface ElementTexts {
+	assumption?: string | null;
+	context?: readonly ContextEntry[] | null;
+	description?: string | null;
+	justification?: string | null;
+}
+
+/**
+ * The ids of the variables with no value that an element's text refers to,
+ * resolved with the terms in its reach. A reference whose term is out of reach
+ * is not a variable and does not count.
+ */
+export function unsetVariablesMentioned(
+	element: ElementTexts,
+	terms: readonly DefinedTerm[]
+): string[] {
+	const unset = new Set<string>();
+	const scan = (text: string | null | undefined) => {
+		if (!text?.includes("{")) {
+			return;
+		}
+		for (const segment of parseReferences(text)) {
+			if (segment.type !== "reference") {
+				continue;
+			}
+			const term = findTermById(terms, segment.id);
+			if (referenceDisplay(term, segment.name).unfilled) {
+				unset.add(segment.id);
+			}
+		}
+	};
+	scan(element.description);
+	scan(element.assumption);
+	scan(element.justification);
+	for (const entry of element.context ?? []) {
+		scan(isNamedContextEntry(entry) ? entry.text : entry);
+	}
+	return [...unset];
 }
 
 // ---------------------------------------------------------------------------

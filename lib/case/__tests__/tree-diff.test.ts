@@ -77,6 +77,30 @@ describe("computeTreeDiff and context", () => {
 
 		expect(changes).toHaveLength(1);
 	});
+
+	it("sends an update when a named entry is marked as a variable, or the mark is taken off", () => {
+		const variable = { ...NAMED_ENTRY, variable: true as const };
+
+		const marked = computeTreeDiff(
+			exportWith([NAMED_ENTRY]),
+			exportWith([variable])
+		).changes;
+		const unmarked = computeTreeDiff(
+			exportWith([variable]),
+			exportWith([NAMED_ENTRY])
+		).changes;
+
+		expect(marked).toEqual([
+			{ type: "update", elementId: GOAL_ID, data: { context: [variable] } },
+		]);
+		expect(unmarked).toEqual([
+			{ type: "update", elementId: GOAL_ID, data: { context: [NAMED_ENTRY] } },
+		]);
+		expect(
+			computeTreeDiff(exportWith([variable]), exportWith([{ ...variable }]))
+				.changes
+		).toEqual([]);
+	});
 });
 
 /**

@@ -42,7 +42,10 @@ export async function resolveSelectedElement(
 	if (!("data" in result)) {
 		return null;
 	}
-	const node = find(toPlainCase(result.data).tree as Node, elementId);
+	const node = find(
+		toPlainCase(result.data, { marked: true }).tree as Node,
+		elementId
+	);
 	return node
 		? {
 				id: node.id,

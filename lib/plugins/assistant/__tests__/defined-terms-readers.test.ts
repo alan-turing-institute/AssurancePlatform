@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toPlainCase } from "@/lib/case/defined-terms";
 import { lintCase } from "@/lib/plugins/assistant/linter/lint-case";
 import { resolveSelectedElement } from "@/lib/plugins/assistant/selected-element";
-import { createCaseTools } from "@/lib/plugins/assistant/tools";
+import {
+	buildSystemPrompt,
+	createCaseTools,
+} from "@/lib/plugins/assistant/tools";
 import type { CaseExportNested } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
 
@@ -12,6 +15,13 @@ vi.mock("@/lib/services/case-export-service", () => ({
 vi.mock("@/lib/services/health-status-service", () => ({
 	readHealthStatusesForCase: vi.fn(),
 }));
+vi.mock("@/lib/plugins/assistant/linter/lint-case", async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import("@/lib/plugins/assistant/linter/lint-case")
+		>();
+	return { ...actual, lintCase: vi.fn(actual.lintCase) };
+});
 
 const options = { toolCallId: "t", messages: [] };
 const WINDOW_ID = "k3f9x2m7qa";
@@ -121,5 +131,126 @@ describe("the rules check on a case with named entries", () => {
 
 		expect(fromNamed.findings.some((f) => f.ruleId === "SCOP02")).toBe(true);
 		expect(fromNamed).toEqual(fromPlain);
+	});
+});
+
+describe("the Case Assistant's tools on a case with a variable and a placeholder", () => {
+	const SYSTEM_ID = "sysaaaaaaa";
+
+	function caseWithVariable(value?: string): CaseExportNested {
+		const stored = storedCase();
+		return {
+			...stored,
+			tree: {
+				...stored.tree,
+				context: [
+					{
+						id: SYSTEM_ID,
+						name: "system",
+						text: "the system under test",
+						variable: true,
+						...(value ? { value } : {}),
+					},
+				],
+				children: [
+					{
+						...stored.tree.children[0],
+						id: "p1",
+						type: "PROPERTY_CLAIM",
+						name: "P1",
+						description: `Safe on {sys#${SYSTEM_ID}}.`,
+						inSandbox: false,
+						context: [],
+						children: [],
+					},
+					{
+						id: "p2",
+						type: "PROPERTY_CLAIM",
+						name: "P2",
+						description: "",
+						inSandbox: false,
+						isPlaceholder: true,
+						placeholderHint: "Say how it is tested",
+						children: [],
+					},
+				],
+			},
+		};
+	}
+
+	it("read_case marks a variable as {name = value} and a placeholder as {to fill in: hint}", async () => {
+		vi.mocked(exportCase).mockResolvedValue({
+			data: caseWithVariable("AcmeBot"),
+		});
+
+		const result = (await createCaseTools("u", "c").read_case.execute?.(
+			{},
+			options
+		)) as { tree: CaseExportNested["tree"] };
+
+		expect(result.tree.context).toEqual([
+			"system: the system under test (variable: AcmeBot)",
+		]);
+		expect(result.tree.children[0]?.description).toBe(
+			"Safe on {system = AcmeBot}."
+		);
+		expect(result.tree.children[1]?.description).toBe(
+			"{to fill in: Say how it is tested}"
+		);
+	});
+
+	it("read_element marks a variable with no value as not set, and its children's placeholders too", async () => {
+		vi.mocked(exportCase).mockResolvedValue({ data: caseWithVariable() });
+
+		const claim = await createCaseTools("u", "c").read_element.execute?.(
+			{ elementId: "p1" },
+			options
+		);
+		const goal = await createCaseTools("u", "c").read_element.execute?.(
+			{ elementId: "g1" },
+			options
+		);
+
+		expect(claim).toMatchObject({
+			element: { description: "Safe on {system = (not set)}." },
+		});
+		expect(goal).toMatchObject({
+			element: {
+				children: [
+					{ id: "p1", description: "Safe on {system = (not set)}." },
+					{ id: "p2", description: "{to fill in: Say how it is tested}" },
+				],
+			},
+		});
+	});
+
+	it("hands the selected element's text to the prompt in the marked form", async () => {
+		vi.mocked(exportCase).mockResolvedValue({
+			data: caseWithVariable("AcmeBot"),
+		});
+
+		const selection = await resolveSelectedElement("u", "c", "p2");
+
+		expect(selection?.text).toBe("{to fill in: Say how it is tested}");
+	});
+
+	it("gives the rules check the plain form, with the value where the card shows it", async () => {
+		vi.mocked(exportCase).mockResolvedValue({
+			data: caseWithVariable("AcmeBot"),
+		});
+
+		await createCaseTools("u", "c").lint_case.execute?.({}, options);
+
+		const checked = vi.mocked(lintCase).mock.calls.at(-1)?.[0];
+		expect(checked?.tree.children[0]?.description).toBe("Safe on AcmeBot.");
+		expect(checked?.tree.children[1]?.description).toBe("");
+	});
+
+	it("explains the markers to the model and tells it not to copy them", () => {
+		const prompt = buildSystemPrompt(["read_case"]);
+
+		expect(prompt).toContain("{name = value}");
+		expect(prompt).toContain("{to fill in");
+		expect(prompt).toContain("Never write these markers");
 	});
 });

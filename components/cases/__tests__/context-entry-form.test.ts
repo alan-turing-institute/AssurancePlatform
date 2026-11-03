@@ -62,11 +62,27 @@ describe("finaliseContextEntries", () => {
 		expect(finaliseContextEntries(["  a ", "   ", "b"])).toEqual(["a", "b"]);
 	});
 
-	it("rebuilds a named entry from its four fields and leaves out an empty value", () => {
+	it("rebuilds a named entry from its own fields and leaves out an empty value", () => {
 		const stray = { ...WINDOW, name: " window ", value: "  ", hidden: true };
 		expect(finaliseContextEntries([stray])).toEqual([
 			{ id: WINDOW.id, name: "window", text: WINDOW.text },
 		]);
+	});
+
+	it("keeps the variable marker, even without a value, and nothing that is not exactly true", () => {
+		const [kept, withoutValue, dropped] = finaliseContextEntries([
+			{ ...WINDOW, variable: true },
+			{ ...WINDOW, id: "b2c3d4e5f6", value: undefined, variable: true },
+			{ ...WINDOW, id: "c3d4e5f6a7", variable: undefined },
+		]);
+		expect(kept).toEqual({ ...WINDOW, variable: true });
+		expect(withoutValue).toEqual({
+			id: "b2c3d4e5f6",
+			name: WINDOW.name,
+			text: WINDOW.text,
+			variable: true,
+		});
+		expect(dropped).not.toHaveProperty("variable");
 	});
 
 	it("drops an empty slot the form can briefly hold", () => {

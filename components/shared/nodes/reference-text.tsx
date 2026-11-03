@@ -2,11 +2,12 @@
 
 /**
  * Element text on a card, with each reference to a defined term drawn as a
- * highlighted word. On an expanded card hovering the word shows the term's
- * meaning, its value and the element it is defined on; a reference whose
- * definition is out of reach is marked as not found. On a collapsed card the
- * words are highlighted without a tooltip of their own, because the card
- * already has one for the whole text.
+ * highlighted word. A variable's word is its value, or `[name]` in the
+ * placeholder style while it has none. On an expanded card hovering the word
+ * shows the term's meaning, its value and the element it is defined on; a
+ * reference whose definition is out of reach is marked as not found. On a
+ * collapsed card the words are highlighted without a tooltip of their own,
+ * because the card already has one for the whole text.
  *
  * The words are not focusable, so a card adds no control for keyboard users;
  * the meanings are read in the expanded card's context section and in the
@@ -39,7 +40,13 @@ function TermTooltipBody({ part }: { part: ReferencePart }) {
 		<span className="block space-y-1">
 			<span className="block font-medium">{term.name}</span>
 			{term.text.trim() && <span className="block">{term.text}</span>}
-			{term.value?.trim() && <span className="block">Value: {term.value}</span>}
+			{term.variable ? (
+				<span className="block">
+					{term.value?.trim() ? `Value: ${term.value.trim()}` : "Not set yet"}
+				</span>
+			) : (
+				term.value?.trim() && <span className="block">Value: {term.value}</span>
+			)}
 			<span className="block text-muted-foreground text-xs">
 				Defined on {term.definedOn.elementName ?? "an element above"}
 			</span>
@@ -55,14 +62,17 @@ function ReferenceWord({
 	withTooltip: boolean;
 }) {
 	const found = part.term !== undefined;
+	const unfilled = part.unfilled === true;
 	const word = (
 		<span
-			className={buildReferenceClasses(found)}
+			className={buildReferenceClasses(found, unfilled)}
 			data-reference-id={part.id}
 			data-reference-state={found ? "found" : "not-found"}
+			data-reference-unfilled={unfilled ? "" : undefined}
 		>
 			{part.name}
 			{!found && <span className="sr-only"> (definition not found)</span>}
+			{unfilled && <span className="sr-only"> (variable not set)</span>}
 		</span>
 	);
 	if (!withTooltip) {

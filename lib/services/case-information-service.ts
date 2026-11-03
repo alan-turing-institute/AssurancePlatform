@@ -1,6 +1,7 @@
 import {
 	countPlaceholders,
-	placeholderCountMessage,
+	countUnsetVariables,
+	fillInCountMessage,
 	treeNodes,
 } from "@/lib/case/placeholders";
 import { logger } from "@/lib/logger";
@@ -246,8 +247,9 @@ export async function checkCaseInformationCompleteness(
  * (`PATCH /api/cases/[id]/status`, `targetStatus: "PUBLISHED"` against an
  * already-published case). Wraps `checkCaseInformationCompleteness` and adds
  * the field-error formatting each of those routes used to duplicate inline.
- * A case with placeholders left in its argument fails the gate too, with the
- * number still to fill in as the message and no field errors.
+ * A case with placeholders left in its argument, or with a variable that has
+ * no value mentioned in it, fails the gate too, with the numbers still to fill
+ * in as the message and no field errors.
  *
  * Callers should treat `{ data: true }` as "proceed" and, on failure, prefer
  * `fieldErrors` (via `validationError`) when present — its absence means the
@@ -293,13 +295,14 @@ const EXPORT_ERRORS_FOR_PUBLISH_TO_REPORT: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The placeholder half of the publish gate: a case cannot be published while
- * an element of the argument that would be published is still to fill in.
- * Counted on the exported tree, which leaves out detached sandbox elements; a
- * pattern is never held back by its own placeholders. Fails with the number
- * still to fill in. The export errors listed above pass, because the publish
- * that follows reports them with its own errors; any other failure to export
- * refuses.
+ * The fill-in half of the publish gate: a case cannot be published while an
+ * element of the argument that would be published is still to fill in, or the
+ * text of that argument mentions a variable that has no value. Counted on the
+ * exported tree, which leaves out detached sandbox elements; a pattern is never
+ * held back by its own placeholders or empty variables. Fails with the number
+ * of each still to fill in. The export errors listed above pass, because the
+ * publish that follows reports them with its own errors; any other failure to
+ * export refuses.
  */
 async function requireNoPlaceholders(
 	userId: string,
@@ -316,10 +319,11 @@ async function requireNoPlaceholders(
 	if (exported.data.case.kind === "PATTERN") {
 		return { data: true };
 	}
-	const remaining = countPlaceholders(treeNodes(exported.data.tree));
-	return remaining > 0
-		? { error: placeholderCountMessage(remaining) }
-		: { data: true };
+	const remaining = fillInCountMessage({
+		placeholders: countPlaceholders(treeNodes(exported.data.tree)),
+		unsetVariables: countUnsetVariables(exported.data.tree),
+	});
+	return remaining ? { error: remaining } : { data: true };
 }
 
 /** Case-information fields frozen verbatim into a publish snapshot. */

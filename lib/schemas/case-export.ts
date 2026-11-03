@@ -459,7 +459,8 @@ function placeholderIn(node: Record<string, unknown>): TreePath | null {
  *
  * Version "1.0" is the first officially versioned export format (the legacy
  * Django format had no version field); every context entry in it is plain
- * text. Version "1.1" lets a context entry also be a named entry, lets
+ * text. Version "1.1" lets a context entry also be a named entry (which can
+ * be marked as a variable, so that text which mentions it shows its value), lets
  * element text hold references to named entries, lets the case say it is a
  * pattern (`case.kind`), and lets an element be a placeholder
  * (`isPlaceholder`, `placeholderHint`). A 1.0 file is already valid 1.1, so
@@ -482,7 +483,7 @@ export const CaseExportNestedSchema = z
 		version: z
 			.enum(["1.0", "1.1"])
 			.describe(
-				'Schema version identifier. "1.1" adds named context entries, references in element text, case.kind and placeholders'
+				'Schema version identifier. "1.1" adds named context entries (which can be variables), references in element text, case.kind and placeholders'
 			),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
 		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.

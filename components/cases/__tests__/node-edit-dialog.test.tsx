@@ -61,6 +61,7 @@ const NODE: Node = {
 const CONTEXT_ENTRY_LABEL_PATTERN = /^Context entry \d+$/;
 const ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
 const NO_TERMS_PATTERN = /^None yet\./;
+const NAME_IN_BRACKETS_PATTERN = /shows its name in square brackets/;
 
 function FakePanel({ elementId }: ElementSlotContext) {
 	return <div data-testid="fake-panel-content">{`panel for ${elementId}`}</div>;
@@ -1533,5 +1534,128 @@ describe("NodeEditDialog — defined terms", () => {
 			expect.objectContaining({ title: "Check the context entries" })
 		);
 		expect(captured.body).toBeUndefined();
+	});
+	it("marks a named entry as a variable, sends the flag, and keeps it on an untouched save", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		await user.click(
+			await screen.findByRole("switch", {
+				name: "Variable: show its value wherever it is mentioned (context entry 1)",
+			})
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([
+			{ ...NAMED_ENTRY, variable: true },
+		]);
+	});
+
+	it("keeps a variable on an untouched save, and drops the flag when the switch goes off", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const variable = { ...NAMED_ENTRY, variable: true };
+		const onOpenChange = renderClaim(claimWith({ context: [variable] }));
+
+		const toggle = await screen.findByRole("switch", {
+			name: "Variable: show its value wherever it is mentioned (context entry 1)",
+		});
+		expect(toggle).toBeChecked();
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(1));
+		expect(captured.body?.context).toEqual([variable]);
+
+		await user.click(toggle);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(2));
+		expect(captured.body?.context).toEqual([NAMED_ENTRY]);
+	});
+
+	it("says a variable without a value shows its name in square brackets", async () => {
+		renderClaim(
+			claimWith({
+				context: [{ ...NAMED_ENTRY, value: undefined, variable: true }],
+			})
+		);
+
+		expect(
+			await screen.findByText(NAME_IN_BRACKETS_PATTERN)
+		).toBeInTheDocument();
+	});
+
+	it("lists a variable's value beside its name, or that it is not set", async () => {
+		renderClaim(
+			claimWith({
+				termsInReach: [
+					{
+						id: "a1b2c3d4e5",
+						name: "system",
+						text: "the system",
+						value: "AcmeBot",
+						variable: true,
+						definedOn: { elementId: "1", elementName: "G1" },
+					},
+					{
+						id: "b2c3d4e5f6",
+						name: "rate",
+						text: "events per second",
+						variable: true,
+						definedOn: { elementId: "1", elementName: "G1" },
+					},
+				],
+			})
+		);
+
+		const list = (await screen.findByText("Terms you can use here")).closest(
+			"section"
+		);
+		if (!list) {
+			throw new Error("Expected the terms list to sit in a section");
+		}
+		const items = within(list).getAllByRole("listitem");
+		expect(items[0]).toHaveTextContent(
+			"system (variable: AcmeBot) defined on G1"
+		);
+		expect(items[1]).toHaveTextContent(
+			"rate (variable, not set) defined on G1"
+		);
+	});
+
+	it("edits a piece of evidence's description with the terms in reach of its claim", async () => {
+		mockPluginsResponse(true);
+		render(
+			<NodeEditDialog
+				node={{
+					id: "3",
+					type: "evidence",
+					position: { x: 0, y: 0 },
+					data: {
+						id: 3,
+						name: "E1",
+						description: "Tested on {system#a1b2c3d4e5}",
+						urls: [],
+						termsInReach: [
+							{
+								id: "a1b2c3d4e5",
+								name: "system",
+								text: "the system",
+								variable: true,
+								definedOn: { elementId: "1", elementName: "G1" },
+							},
+						],
+					},
+				}}
+				nodeType="evidence"
+				onOpenChange={vi.fn()}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const list = (await screen.findByText("Terms you can use here")).closest(
+			"section"
+		);
+		expect(list).toHaveTextContent("system (variable, not set)");
 	});
 });

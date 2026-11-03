@@ -3,7 +3,10 @@
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Node } from "reactflow";
-import { plainDescription } from "@/components/shared/nodes/reference-text-utils";
+import {
+	plainDescription,
+	searchableDescription,
+} from "@/components/shared/nodes/reference-text-utils";
 import {
 	Dialog,
 	DialogContent,
@@ -30,7 +33,9 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 			return nodes;
 		}
 		return nodes.filter((node) =>
-			plainDescription(node.data).toLowerCase().includes(value.toLowerCase())
+			searchableDescription(node.data)
+				.toLowerCase()
+				.includes(value.toLowerCase())
 		);
 	}, [nodes, value]);
 
