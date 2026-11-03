@@ -48,7 +48,7 @@ export const dashboardTour: Tour = {
 		tourStep({
 			title: "Discover",
 			content:
-				"Published cases from other users are listed here. Reading a few is a good way to see how an argument is laid out before you write your own.",
+				"Published cases and patterns from other users are listed here. Reading a few is a good way to see how an argument is laid out before you write your own.",
 			target: "sidebar-discover",
 			side: "right",
 		}),

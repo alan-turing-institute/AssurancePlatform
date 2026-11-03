@@ -29,7 +29,7 @@ export function ArchivedOnNotice({ archivedAt }: ArchivedProps) {
 	}
 	return (
 		<p className="mt-2 text-muted-foreground text-sm">
-			Archived on {formatShortDate(archivedAt)}. This case no longer receives
+			Archived on {formatShortDate(archivedAt)}. This copy no longer receives
 			updates.
 		</p>
 	);

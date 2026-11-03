@@ -10,9 +10,8 @@ interface PublishableItemTypeBadgeProps {
 
 /**
  * Renders a publishable item's type as a badge (ADR 0003 §5 — "worked
- * example" vs "reusable template"). Only `ASSURANCE_CASE` ships in 1.0, but
- * the component is generic over the full `PublishableItemTypeResponse`
- * union so a future argument-pattern item needs no new component.
+ * example" for a published case, "reusable template" for a published
+ * pattern).
  */
 const PublishableItemTypeBadge = ({
 	className,

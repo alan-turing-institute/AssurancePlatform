@@ -18,7 +18,7 @@ test.describe("Publishing", () => {
 	test("discover page loads with community heading", async ({ page }) => {
 		// Public route — uses chris's saved auth state but that's fine
 		await page.goto("/discover");
-		await expect(page.getByText("Community Case Studies")).toBeVisible();
+		await expect(page.getByText("Community Cases and Patterns")).toBeVisible();
 	});
 
 	test("status button shows Draft for a draft case", async ({ page }) => {

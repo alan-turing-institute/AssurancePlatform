@@ -189,12 +189,15 @@ export function TeamPermissionRow({
 
 interface AvailableTeamsListProps {
 	className?: string;
+	/** What is being shared, named in the message shown when every team already has access. */
+	itemName: "case" | "pattern";
 	onShareWithTeam: (teamId: string, permission: string) => void;
 	teams: Team[];
 	userTeamsCount: number;
 }
 
 export function AvailableTeamsList({
+	itemName,
 	teams,
 	userTeamsCount,
 	onShareWithTeam,
@@ -204,7 +207,7 @@ export function AvailableTeamsList({
 			<p className="py-4 text-center text-muted-foreground text-sm">
 				{userTeamsCount === 0
 					? "You are not a member of any teams"
-					: "This case is already shared with all your teams"}
+					: `This ${itemName} is already shared with all your teams`}
 			</p>
 		);
 	}

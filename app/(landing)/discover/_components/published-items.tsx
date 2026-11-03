@@ -15,12 +15,28 @@ import {
 import { formatShortDate } from "@/lib/date";
 import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
+import type { PublishableItemTypeResponse } from "@/lib/schemas/publishable-item";
 import type { PublishableItemSummaryResponse } from "@/lib/services/discover-transforms";
 import { ArchivedBadge } from "./archived-status";
 import PublishableItemTypeBadge from "./publishable-item-type-badge";
 
 interface PublishedItemsProps {
 	items: PublishableItemSummaryResponse[];
+}
+
+type TypeFilter = "all" | PublishableItemTypeResponse;
+
+const TYPE_FILTER_OPTIONS: { label: string; value: TypeFilter }[] = [
+	{ value: "all", label: "All types" },
+	{ value: "ASSURANCE_CASE", label: "Cases" },
+	{ value: "ARGUMENT_PATTERN", label: "Patterns" },
+];
+
+/** The filter a select value names; anything unrecognised shows every type. */
+function toTypeFilter(value: string): TypeFilter {
+	return (
+		TYPE_FILTER_OPTIONS.find((option) => option.value === value)?.value ?? "all"
+	);
 }
 
 /**
@@ -32,6 +48,7 @@ interface PublishedItemsProps {
 function PublishedItems({ items }: PublishedItemsProps) {
 	const [searchKeyword, setSearchKeyword] = useState("");
 	const [selectedSector, setSelectedSector] = useState("");
+	const [selectedType, setSelectedType] = useState<TypeFilter>("all");
 
 	const sectors = Array.from(
 		new Set(
@@ -47,13 +64,14 @@ function PublishedItems({ items }: PublishedItemsProps) {
 				item.title.toLowerCase().includes(searchKeyword.toLowerCase())) &&
 			(selectedSector === "all" ||
 				selectedSector === "" ||
-				item.sector === selectedSector)
+				item.sector === selectedSector) &&
+			(selectedType === "all" || item.type === selectedType)
 	);
 
 	return (
 		<>
-			<div className="mx-auto mb-24 max-w-2xl text-foreground">
-				<div className="flex items-center gap-4">
+			<div className="mx-auto mb-24 max-w-3xl px-6 text-foreground">
+				<div className="flex flex-col gap-4 md:flex-row md:items-center">
 					<Input
 						className="h-12 border-border bg-muted ring-offset-primary"
 						onChange={(e) => setSearchKeyword(e.target.value)}
@@ -63,10 +81,29 @@ function PublishedItems({ items }: PublishedItemsProps) {
 					/>
 
 					<Select
+						onValueChange={(value) => setSelectedType(toTypeFilter(value))}
+						value={selectedType}
+					>
+						<SelectTrigger
+							aria-label="Filter by type"
+							className="w-full rounded-lg border border-border bg-muted shadow-xs focus:border-primary focus:ring-3 focus:ring-ring md:w-40 md:shrink-0"
+						>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{TYPE_FILTER_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+
+					<Select
 						onValueChange={(value) => setSelectedSector(value)}
 						value={selectedSector}
 					>
-						<SelectTrigger className="w-56 rounded-lg border border-border bg-muted shadow-xs focus:border-primary focus:ring-3 focus:ring-ring">
+						<SelectTrigger className="w-full rounded-lg border border-border bg-muted shadow-xs focus:border-primary focus:ring-3 focus:ring-ring md:w-56 md:shrink-0">
 							<SelectValue placeholder="Select a sector" />
 						</SelectTrigger>
 						<SelectContent>

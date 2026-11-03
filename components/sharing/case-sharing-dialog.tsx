@@ -32,6 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
+import useStore from "@/store/store";
 import {
 	AvailableTeamsList,
 	TeamPermissionRow,
@@ -45,6 +46,11 @@ import {
 
 export function CaseSharingDialog() {
 	const sharingModal = useCaseSharingModal();
+	// The share panel is opened from the editor, so the case on screen is the
+	// one being shared; a pattern is named as a pattern.
+	const itemName = useStore((state) =>
+		state.assuranceCase?.kind === "PATTERN" ? "pattern" : "case"
+	);
 
 	const form = useForm<ShareFormValues>({
 		resolver: zodResolver(shareFormSchema),
@@ -104,9 +110,11 @@ export function CaseSharingDialog() {
 				}}
 			>
 				<DialogHeader>
-					<DialogTitle>Share Case</DialogTitle>
+					<DialogTitle>
+						{itemName === "pattern" ? "Share Pattern" : "Share Case"}
+					</DialogTitle>
 					<DialogDescription>
-						Share this case with individuals or teams
+						{`Share this ${itemName} with individuals or teams`}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -218,6 +226,7 @@ export function CaseSharingDialog() {
 
 						<TabsContent className="space-y-4" value="team">
 							<AvailableTeamsList
+								itemName={itemName}
 								onShareWithTeam={onShareWithTeam}
 								teams={availableTeams}
 								userTeamsCount={userTeams.length}
