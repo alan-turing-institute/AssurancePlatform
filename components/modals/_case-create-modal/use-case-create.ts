@@ -83,20 +83,6 @@ function chosenPattern(
 	return listed ?? (preset?.key === patternKey ? preset : undefined);
 }
 
-/**
- * Names the pattern itself, which can be read in two ways: as the published
- * snapshot, and as the pattern case that was published. Both give the same
- * identity, so a change from one to the other is not a change of pattern.
- */
-function patternIdentity({ publishedSlug, source }: ViewablePattern): string {
-	if (publishedSlug) {
-		return `published:${publishedSlug}`;
-	}
-	return "publishedSlug" in source
-		? `published:${source.publishedSlug}`
-		: `case:${source.patternCaseId}`;
-}
-
 /** The picker key of a published pattern's own entry. */
 function presetKey(preset: PublishedPatternPreset): string {
 	return `published:${preset.slug}`;
@@ -245,10 +231,8 @@ export function useCaseCreate({
 	);
 
 	const chosen = chosenPattern(choices, patternKey, presetChoice);
-	const pickedPattern = start === "pattern" ? chosen : undefined;
 	const variables = usePatternVariables(
-		pickedPattern?.source,
-		pickedPattern && patternIdentity(pickedPattern)
+		start === "pattern" ? chosen : undefined
 	);
 
 	// Counts the loads started, so that only the latest one is used: a load
@@ -290,7 +274,6 @@ export function useCaseCreate({
 		setPending(null);
 		setErrors([]);
 		setPatternError(null);
-		variables.forget();
 	};
 
 	const selectPattern = (key: string) => {
@@ -299,9 +282,6 @@ export function useCaseCreate({
 		// when the loaded list replaces the preset with its own entry for it.
 		if (!key) {
 			return;
-		}
-		if (key !== patternKey) {
-			variables.forget();
 		}
 		setPatternKey(key);
 		setPatternError(null);
