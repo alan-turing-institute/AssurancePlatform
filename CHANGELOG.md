@@ -9,6 +9,16 @@ All notable changes to the TEA Platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.8.0...v0.8.1) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* **discover:** extract card text without parsing HTML into the document ([880d19d](https://github.com/alan-turing-institute/AssurancePlatform/commit/880d19d84f677f4db45fddd3954344f1288a6519))
+
+### 🔧 CI/CD
+
+* rebuild the shared demo account in the staging reseed ([0e71b56](https://github.com/alan-turing-institute/AssurancePlatform/commit/0e71b5617ffe05f92bb4ee254b575daeaf343322))
+
 ## [0.8.0](https://github.com/alan-turing-institute/AssurancePlatform/compare/v0.7.0...v0.8.0) (2026-10-01)
 
 ### ✨ Features
