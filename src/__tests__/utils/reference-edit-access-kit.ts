@@ -139,7 +139,7 @@ async function teamCaseEditorLeft(world: World) {
 	return made.id;
 }
 
-export const TARGETS: Target[] = [
+const TARGETS: Target[] = [
 	// ---- the editor can view these --------------------------------------
 	{
 		label: "a case the editor owns",
