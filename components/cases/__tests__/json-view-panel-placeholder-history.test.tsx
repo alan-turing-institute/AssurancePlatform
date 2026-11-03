@@ -15,6 +15,7 @@ const ROOT_ID = "11111111-1111-4111-8111-111111111111";
 const CLAIM_ID = "22222222-2222-4222-8222-222222222222";
 const HINT = "Describe your top-level assurance goal";
 const APPLY_PATTERN = /^Apply$/;
+const SLOW_WAIT_MS = 5000;
 
 type Kind = "CASE" | "PATTERN";
 
@@ -155,13 +156,22 @@ async function applyEditedDocument(edited: Doc): Promise<void> {
 	await user.keyboard("{Control>}a{/Control}");
 	// Paste, not keyboard(): the text is full of braces.
 	await user.paste(JSON.stringify(edited, null, 2));
-	await waitFor(() => {
-		expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
-	});
+	// Apply enables once the debounced validation has run, and the entry is
+	// recorded once the batch request has answered: both can outlast the
+	// default wait on a slow machine.
+	await waitFor(
+		() => {
+			expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeEnabled();
+		},
+		{ timeout: SLOW_WAIT_MS }
+	);
 	await user.click(screen.getByRole("button", { name: APPLY_PATTERN }));
-	await waitFor(() => {
-		expect(useHistoryStore.getState().undoStack).toHaveLength(1);
-	});
+	await waitFor(
+		() => {
+			expect(useHistoryStore.getState().undoStack).toHaveLength(1);
+		},
+		{ timeout: SLOW_WAIT_MS }
+	);
 }
 
 function recordedCommand(elementId = ROOT_ID): HistoryCommand {
