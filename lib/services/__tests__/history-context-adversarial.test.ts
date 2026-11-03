@@ -53,6 +53,17 @@ describe("an element snapshot taken for undo and redo", () => {
 		expect(snapshot.description).toBe("Within the {window#aaaaaaaaaa}");
 	});
 
+	it("keeps the variable marker on a named entry", () => {
+		const snapshot = createSnapshot({
+			id: "e1",
+			type: "property",
+			name: "P1",
+			context: [{ ...BROAD, variable: true, hidden: false }],
+		});
+
+		expect(snapshot.context).toEqual([{ ...BROAD, variable: true }]);
+	});
+
 	it("leaves context out when the element has none, rather than inventing a list", () => {
 		expect(createSnapshot({ id: "e1", name: "P1" }).context).toBeUndefined();
 		expect(
@@ -113,5 +124,31 @@ describe("undo and redo of an edit to an element with a named entry", () => {
 				context: [{ ...BROAD, name: "interval" }],
 			},
 		});
+	});
+	it("send a variable back as it was, and as it became, when its value is changed", async () => {
+		const before = {
+			id: "e1",
+			type: "property",
+			name: "P1",
+			description: "On {window#aaaaaaaaaa}",
+			context: [{ ...BROAD, variable: true }],
+		};
+		const after = {
+			...before,
+			context: [{ ...BROAD, value: "10 minutes", variable: true }],
+		};
+		recordUpdate("e1", "property", before, after);
+		const command = useHistoryStore.getState().undoStack[0]?.commands[0];
+		if (!command) {
+			throw new Error("no command was recorded");
+		}
+
+		const [undone] = await sentBodies(() => applyUndo(command));
+		const [redone] = await sentBodies(() => applyRedo(command));
+
+		expect(undone?.body.context).toEqual([{ ...BROAD, variable: true }]);
+		expect(redone?.body.context).toEqual([
+			{ ...BROAD, value: "10 minutes", variable: true },
+		]);
 	});
 });

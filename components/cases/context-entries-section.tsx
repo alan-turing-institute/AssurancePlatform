@@ -12,6 +12,8 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import type {
 	ContextEntry,
 	NamedContextEntry,
@@ -224,6 +226,50 @@ function UnnameWarning({
 	);
 }
 
+const VARIABLE_SWITCH_WORDS =
+	"Variable: show its value wherever it is mentioned";
+
+interface VariableSwitchProps {
+	checked: boolean;
+	hasValue: boolean;
+	label: string;
+	onChange: (checked: boolean) => void;
+	readOnly: boolean;
+}
+
+/** Marks a named entry as a variable: its value shows wherever the name is mentioned. */
+function VariableSwitch({
+	checked,
+	hasValue,
+	label,
+	onChange,
+	readOnly,
+}: VariableSwitchProps) {
+	const switchId = useId();
+	return (
+		<div className="space-y-1">
+			<div className="flex items-center justify-between gap-3">
+				<Label className="font-normal" htmlFor={switchId}>
+					{VARIABLE_SWITCH_WORDS}
+				</Label>
+				<Switch
+					aria-label={`${VARIABLE_SWITCH_WORDS} (${label.toLowerCase()})`}
+					checked={checked}
+					disabled={readOnly}
+					id={switchId}
+					onCheckedChange={onChange}
+				/>
+			</div>
+			{checked && !hasValue && (
+				<p className="text-muted-foreground text-xs">
+					Until you give it a value, text that mentions it shows its name in
+					square brackets.
+				</p>
+			)}
+		</div>
+	);
+}
+
 function NamedEntryRow({
 	entry,
 	idx,
@@ -339,6 +385,15 @@ function NamedEntryRow({
 							readOnly={readOnly}
 							value={current.value ?? ""}
 						/>
+						<VariableSwitch
+							checked={current.variable === true}
+							hasValue={!!current.value?.trim()}
+							label={label}
+							onChange={(checked) =>
+								update({ variable: checked ? true : undefined })
+							}
+							readOnly={readOnly}
+						/>
 					</div>
 				);
 			}}
@@ -349,7 +404,8 @@ function NamedEntryRow({
 /**
  * The dialog's context section. An entry is plain text unless it has been
  * given a name, which lets text on this element and the ones below refer to
- * it, and an optional value. A named entry shows its name above its text.
+ * it, and an optional value. A named entry shows its name above its text, and
+ * can be marked as a variable, so that text which mentions it shows its value.
  */
 export default function ContextEntriesSection({
 	contextItems,

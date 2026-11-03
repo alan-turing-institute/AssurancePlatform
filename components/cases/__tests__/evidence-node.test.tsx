@@ -48,27 +48,57 @@ function nodeProps(data: Record<string, unknown>): NodeProps {
 	} as NodeProps;
 }
 
+const WINDOW = {
+	id: "k3f9x2m7qa",
+	name: "window",
+	text: "the moving interval",
+	definedOn: { elementId: "g1", elementName: "G1" },
+};
+
 describe("EvidenceNode", () => {
-	it("shows a stored reference as {name} without resolving or highlighting it, even when terms are in reach", () => {
+	it("resolves a reference with the terms in reach and highlights it", () => {
 		const { container } = renderWithReactFlow(
 			<EvidenceNode
 				{...nodeProps({
 					id: "el-1",
 					name: "E1",
 					description: "Measured over the {win#k3f9x2m7qa}",
-					termsInReach: [
-						{
-							id: "k3f9x2m7qa",
-							name: "window",
-							text: "the moving interval",
-							definedOn: { elementId: "g1", elementName: "G1" },
-						},
-					],
+					termsInReach: [WINDOW],
 				})}
 			/>
 		);
 
-		expect(screen.getByText("Measured over the {win}")).toBeInTheDocument();
-		expect(container.querySelector("[data-reference-id]")).toBeNull();
+		const word = container.querySelector("[data-reference-id]");
+		expect(word).toHaveTextContent("window");
+		expect(word).toHaveAttribute("data-reference-state", "found");
+	});
+
+	it("shows a variable's value, and [name] while it has none", () => {
+		const system = { ...WINDOW, name: "system", variable: true as const };
+		const { container, rerender } = renderWithReactFlow(
+			<EvidenceNode
+				{...nodeProps({
+					id: "el-1",
+					name: "E1",
+					description: "Tested on {system#k3f9x2m7qa}",
+					termsInReach: [{ ...system, value: "AcmeBot" }],
+				})}
+			/>
+		);
+		expect(screen.getByText("AcmeBot")).toBeInTheDocument();
+
+		rerender(
+			<EvidenceNode
+				{...nodeProps({
+					id: "el-1",
+					name: "E1",
+					description: "Tested on {system#k3f9x2m7qa}",
+					termsInReach: [system],
+				})}
+			/>
+		);
+		expect(
+			container.querySelector("[data-reference-unfilled]")
+		).toHaveTextContent("[system]");
 	});
 });

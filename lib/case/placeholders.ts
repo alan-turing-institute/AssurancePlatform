@@ -5,7 +5,13 @@
  * history apply the same rules.
  */
 
-import { parseContextEntries } from "@/lib/case/defined-terms";
+import {
+	type DefinedTerm,
+	parseContextEntries,
+	type TermSource,
+	termsInReach,
+	unsetVariablesMentioned,
+} from "@/lib/case/defined-terms";
 import { contextEqual } from "@/lib/case/tree-diff";
 import type { CaseKind, TreeNode } from "@/lib/schemas/case-export";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
@@ -13,6 +19,53 @@ import type { ContextEntry } from "@/lib/schemas/context-entry";
 /** The words for the number of elements a case still has to fill in. */
 export function placeholderCountMessage(count: number): string {
 	return `${count} ${count === 1 ? "element" : "elements"} still to fill in`;
+}
+
+/** The words for the number of variables, mentioned in a case, that have no value. */
+export function unsetVariableCountMessage(count: number): string {
+	return `${count} ${count === 1 ? "variable" : "variables"} with no value`;
+}
+
+/**
+ * The reason a case cannot be published, from what is left to fill in: the
+ * placeholders and the mentioned variables with no value, each with its count
+ * and left out when there are none. Empty when nothing is left.
+ */
+export function fillInCountMessage(counts: {
+	placeholders: number;
+	unsetVariables: number;
+}): string {
+	return [
+		counts.placeholders > 0 ? placeholderCountMessage(counts.placeholders) : "",
+		counts.unsetVariables > 0
+			? unsetVariableCountMessage(counts.unsetVariables)
+			: "",
+	]
+		.filter(Boolean)
+		.join("; ");
+}
+
+/**
+ * How many variables with no value the text of an exported tree mentions. A
+ * variable counts once however often it is mentioned, and a mention counts
+ * only where the variable is in reach of the element that makes it.
+ */
+export function countUnsetVariables(root: TreeNode): number {
+	const unset = new Set<string>();
+	const visit = (node: TreeNode, ancestors: readonly TermSource[]) => {
+		const chain: TermSource[] = [
+			{ id: node.id, name: node.name, context: node.context },
+			...ancestors,
+		];
+		for (const id of unsetVariablesMentioned(node, termsInReach(chain))) {
+			unset.add(id);
+		}
+		for (const child of node.children) {
+			visit(child, chain);
+		}
+	};
+	visit(root, []);
+	return unset.size;
 }
 
 /**
@@ -29,6 +82,50 @@ export function countPlaceholders(
 		}
 	}
 	return placeholderIds.size;
+}
+
+/** What a card on the diagram carries of its element's text, and the terms in its reach. */
+interface CardData {
+	assumption?: unknown;
+	context?: unknown;
+	description?: unknown;
+	justification?: unknown;
+	termsInReach?: unknown;
+}
+
+function textOrUndefined(value: unknown): string | undefined {
+	return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * `countUnsetVariables` for the cards of the open diagram, which each carry
+ * the terms in their reach.
+ */
+export function countUnsetVariablesOnCards(
+	cards: Iterable<CardData | undefined>
+): number {
+	const unset = new Set<string>();
+	for (const card of cards) {
+		if (!card) {
+			continue;
+		}
+		const terms = Array.isArray(card.termsInReach)
+			? (card.termsInReach as DefinedTerm[])
+			: [];
+		const mentioned = unsetVariablesMentioned(
+			{
+				description: textOrUndefined(card.description),
+				assumption: textOrUndefined(card.assumption),
+				justification: textOrUndefined(card.justification),
+				context: parseContextEntries(card.context),
+			},
+			terms
+		);
+		for (const id of mentioned) {
+			unset.add(id);
+		}
+	}
+	return unset.size;
 }
 
 /** Every node of an exported tree. */

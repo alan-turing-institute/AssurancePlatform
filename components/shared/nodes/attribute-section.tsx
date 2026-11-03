@@ -9,7 +9,11 @@
 
 import { BookmarkCheck, Layers, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
-import { type DefinedTerm, plainReferenceText } from "@/lib/case/defined-terms";
+import {
+	type DefinedTerm,
+	plainReferenceText,
+	variableNote,
+} from "@/lib/case/defined-terms";
 import {
 	type ContextEntry,
 	isNamedContextEntry,
@@ -73,7 +77,8 @@ interface AttributeSectionProps {
 /**
  * One context entry as a line of text. A named entry reads
  * `window — meaning (value)`, which is how a keyboard or screen-reader user
- * reads the meaning the diagram shows on hover.
+ * reads the meaning the diagram shows on hover. A variable reads
+ * `system — meaning (variable: AcmeBot)`, or `(variable, not set)`.
  */
 function describeContextEntry(
 	entry: ContextEntry,
@@ -84,6 +89,9 @@ function describeContextEntry(
 	}
 	const meaning = plainReferenceText(entry.text, terms).trim();
 	const head = meaning ? `${entry.name} — ${meaning}` : entry.name;
+	if (entry.variable) {
+		return `${head} (${variableNote(entry.value)})`;
+	}
 	return entry.value?.trim() ? `${head} (${entry.value})` : head;
 }
 

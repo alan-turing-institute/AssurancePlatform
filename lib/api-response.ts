@@ -332,10 +332,13 @@ const ERROR_MAPPINGS: Array<{
 	// failure (400), not a 500.
 	{ pattern: /^featureImageUrl must be/, factory: () => validationError("") },
 	// `case-information-service.ts`'s publish gate: a case with placeholders
-	// left in its argument is refused with the number still to fill in — a
-	// validation failure (400), as for incomplete case information, not a 500.
+	// left in its argument, or variables with no value mentioned in it, is
+	// refused with the numbers still to fill in — a validation failure (400),
+	// as for incomplete case information, not a 500. The message is either
+	// count or both, "2 elements still to fill in; 1 variable with no value".
 	{
-		pattern: /^\d+ elements? still to fill in$/,
+		pattern:
+			/^\d+ elements? still to fill in(; \d+ variables? with no value)?$|^\d+ variables? with no value$/,
 		factory: () => validationError(""),
 	},
 ];

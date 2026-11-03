@@ -24,6 +24,8 @@ const PLAIN_TAIL =
 	/It is measured over each \{window\} of use and reported again for each \{window\} of review\./;
 const NAMED_CONTEXT_LINE = /window — the moving interval \(5 minutes\)/;
 const PLAIN_CONTEXT_LINE = /Operating in the UK/;
+const VARIABLE_CONTEXT_LINE = /system — the system \(variable: AcmeBot\)/;
+const UNSET_VARIABLE_CONTEXT_LINE = /rate — the rate \(variable, not set\)/;
 
 describe("ReferenceText", () => {
 	it("draws a reference as a highlighted word using the entry's current name", () => {
@@ -75,6 +77,68 @@ describe("ReferenceText", () => {
 		await user.hover(screen.getByText("window"));
 
 		expect(screen.queryByText(WINDOW.text)).not.toBeInTheDocument();
+	});
+
+	describe("a variable", () => {
+		const SYSTEM: DefinedTerm = {
+			id: "k3f9x2m7qa",
+			name: "system",
+			text: "the system under test",
+			variable: true,
+			definedOn: { elementId: "g1", elementName: "G1" },
+		};
+
+		it("draws its value in place of its name", () => {
+			render(
+				<ReferenceText
+					terms={[{ ...SYSTEM, value: "AcmeBot" }]}
+					text="Tested on {system#k3f9x2m7qa}."
+				/>,
+				{ withProviders: false }
+			);
+
+			const word = screen.getByText("AcmeBot");
+			expect(word).toHaveAttribute("data-reference-state", "found");
+			expect(word).not.toHaveAttribute("data-reference-unfilled");
+			expect(screen.queryByText("system")).not.toBeInTheDocument();
+		});
+
+		it("draws [name] in the placeholder style while it has no value, and says so to a screen reader", async () => {
+			const user = userEvent.setup();
+			render(
+				<ReferenceText
+					terms={[SYSTEM]}
+					text="Tested on {system#k3f9x2m7qa}."
+					withTooltips
+				/>,
+				{ withProviders: false }
+			);
+
+			const word = screen.getByText("[system]", { exact: false });
+			expect(word).toHaveAttribute("data-reference-unfilled");
+			expect(word).toHaveClass("border-dashed");
+			expect(screen.getByText("(variable not set)")).toHaveClass("sr-only");
+
+			await user.hover(word);
+			expect(await screen.findByText("Not set yet")).toBeInTheDocument();
+		});
+
+		it("shows its value in the tooltip as well", async () => {
+			const user = userEvent.setup();
+			render(
+				<ReferenceText
+					terms={[{ ...SYSTEM, value: "AcmeBot" }]}
+					text="Tested on {system#k3f9x2m7qa}."
+					withTooltips
+				/>,
+				{ withProviders: false }
+			);
+
+			await user.hover(screen.getByText("AcmeBot"));
+
+			expect(await screen.findByText("Value: AcmeBot")).toBeInTheDocument();
+			expect(screen.getByText("the system under test")).toBeInTheDocument();
+		});
 	});
 
 	it("keeps text without a reference as the single piece of text it was", () => {
@@ -170,6 +234,30 @@ describe("BaseNode — defined terms", () => {
 
 		expect(await screen.findByText(WINDOW.text)).toBeInTheDocument();
 		expect(screen.getByText("Defined on G1")).toBeInTheDocument();
+	});
+
+	it("reads a variable in the expanded context section with its value, or that it is not set", () => {
+		renderWithReactFlow(
+			<BaseNode
+				context={[
+					{
+						id: WINDOW.id,
+						name: "system",
+						text: "the system",
+						value: "AcmeBot",
+						variable: true,
+					},
+					{ id: "b2c3d4e5f6", name: "rate", text: "the rate", variable: true },
+				]}
+				description="A goal"
+				initialExpanded
+				name="G1"
+				nodeType="goal"
+			/>
+		);
+
+		expect(screen.getByText(VARIABLE_CONTEXT_LINE)).toBeInTheDocument();
+		expect(screen.getByText(UNSET_VARIABLE_CONTEXT_LINE)).toBeInTheDocument();
 	});
 
 	it("reads a named entry in the expanded context section as name, meaning and value", () => {

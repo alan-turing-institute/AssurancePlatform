@@ -34,6 +34,35 @@ describe("NamedContextEntrySchema", () => {
 		).toBe(true);
 	});
 
+	it("accepts the variable marker as a boolean, and stores false as no marker", () => {
+		expect(
+			NamedContextEntrySchema.parse({
+				id: ID,
+				name: "w",
+				text: "",
+				variable: true,
+			})
+		).toEqual({ id: ID, name: "w", text: "", variable: true });
+		const unmarked = NamedContextEntrySchema.parse({
+			id: ID,
+			name: "w",
+			text: "",
+			variable: false,
+		});
+		expect(unmarked).toEqual({ id: ID, name: "w", text: "" });
+		expect(unmarked).not.toHaveProperty("variable");
+		for (const variable of ["true", 1, null]) {
+			expect(
+				NamedContextEntrySchema.safeParse({
+					id: ID,
+					name: "w",
+					text: "",
+					variable,
+				}).success
+			).toBe(false);
+		}
+	});
+
 	it.each([
 		["an empty name", { id: ID, name: "  ", text: "x" }],
 		["a name over 40 characters", { id: ID, name: "a".repeat(41), text: "x" }],
@@ -159,6 +188,21 @@ describe("a version 1.0 export file", () => {
 			'A version "1.0" file cannot hold named context entries; set the version to "1.1"'
 		);
 		expect(result.error?.issues[0]?.path).toEqual(["tree", "context", 0]);
+	});
+
+	it("is rejected when it holds a variable, which is a named entry", () => {
+		const result = CaseExportNestedSchema.safeParse(
+			file("1.0", [{ ...record, variable: true }])
+		);
+		expect(result.success).toBe(false);
+		expect(result.error?.issues[0]?.message).toContain(
+			'set the version to "1.1"'
+		);
+		expect(
+			CaseExportNestedSchema.safeParse(
+				file("1.1", [{ ...record, variable: true }])
+			).success
+		).toBe(true);
 	});
 
 	it("is accepted when every entry is plain text", () => {

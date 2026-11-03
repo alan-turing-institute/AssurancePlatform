@@ -60,7 +60,7 @@ The `ElementType` enum contains `GOAL`, `STRATEGY`, `PROPERTY_CLAIM`, `EVIDENCE`
 
 An entry in an element's `context` list is either plain text or a named entry.
 A plain entry is a string, as it always was.
-A named entry is a record with four keys:
+A named entry is a record with four keys, and a fifth that marks a variable:
 
 ```json
 {
@@ -72,12 +72,14 @@ A named entry is a record with four keys:
 ```
 
 `text` is what the name means, and `value` is optional.
+`variable` is optional and a boolean.
+The schema takes `false` and stores the entry without the key, so a variable is unmarked by changing `true` to `false` (in the JSON editor, for example); an entry without the key is an ordinary defined term.
 The `id` is ten lowercase letters or digits and is unique within a case, counting elements in the bin.
 A name is 1 to 40 characters, starts with a letter, and uses letters, digits, spaces, hyphens and underscores.
 A value is at most 500 characters.
 Names on one element are unique when compared without regard to case.
 Every write path applies these rules: the element routes, the JSON editor's batch and case import.
-The `context` column is `jsonb`, and `parseContextEntries` in `lib/case/defined-terms.ts` is the one place that turns a stored value into entries, picking out only those four keys.
+The `context` column is `jsonb`, and `parseContextEntries` in `lib/case/defined-terms.ts` is the one place that turns a stored value into entries, picking out only those keys, and keeping `variable` only when it is exactly `true`.
 
 Text refers to a named entry with a reference of the form `{name#id}`.
 The id decides what the reference points at.
@@ -87,7 +89,7 @@ Text that merely contains braces, such as `{like this}`, is ordinary text.
 Which entries a reference can reach is worked out when the case is read and is never stored.
 An element's text can refer to the named entries on that element and on every element above it in the parent chain, nearest first.
 `convertAssuranceCase` puts the result on each card's data as `termsInReach`, and the goal, strategy and property claim cards read it from there.
-Evidence, away goal and module cards are given no terms, so they resolve nothing and show any reference they hold as `{name}`.
+Evidence cards read it the same way, so they resolve the terms of the claim they are drawn under; away goal and module cards are given no terms, so they resolve nothing and show any reference they hold as `{name}`.
 Moving an element or deleting an entry therefore changes what a reference resolves to without any stored flag to update.
 A reference with no definition in reach is shown as not found.
 
@@ -96,15 +98,45 @@ In it every reference is written `{name}` using the entry's current name, and ev
 Document exports, the Case Assistant and the rules check read that copy, so they see the same shapes as before named entries existed.
 Machine formats keep the stored form: the export file, the Google Drive backup, GitHub import, published snapshots and the public Discover API.
 
+### Variables
+
+An entry with `"variable": true` is a variable.
+One helper, `referenceDisplay` in `lib/case/defined-terms.ts`, decides how a reference to a term reads.
+It is called by `previewParts`, which draws the card's text; by `plainReferenceText`, which every plain-text reader uses (`plainDescription` for the search results and the move and options lists, the attribute lines, `toPlainCase` for document exports, the rules check and the Case Assistant, and the away-goal picker); and by `unsetVariablesMentioned`, which the publish gate and the status dialog use.
+A reference to an ordinary term, or to a term out of reach, reads as its name.
+A reference to a variable reads as its value, trimmed, or as `[name]` when the value is empty or only blanks; the card draws `[name]` in the placeholder style.
+The value is inserted as text and is not parsed for references.
+Text that has been made plain is not converted a second time, so a value that looks like `{name#id}` stays as typed: the health settings view takes the edit dialog's plain text as it is, and the attach list holds each detached element's description in plain form, converted once when the list is loaded or when the element is detached.
+The Markdown report writes descriptions as they are, a variable's value included.
+`previewParts` cuts a value like ordinary text when it counts the visible characters, and leaves a name or `[name]` out whole when it does not fit.
+Search matches a variable by its value and by its name.
+
+The definition line of a variable ends in `(variable: value)`, or `(variable, not set)`, in the plain copy (`name: meaning (variable: AcmeBot)`) and on the expanded card.
+
+`toPlainCase` takes a `marked` option, which the Case Assistant uses for what the model reads.
+In it a variable is written `{name = "value"}`, or `{name = (not set)}`, and the description of an element that is still a placeholder ends with `{to fill in}` or `{to fill in: "hint"}`.
+The value and the hint are written as JSON strings, so that quotation marks, braces and line breaks in them cannot be taken for the end of the marker.
+The rules check receives the unmarked copy, with the value where a card shows it.
+
+The flag is kept in four places: `pickNamedEntry` and `termsInReach` (onto `DefinedTerm`) in `lib/case/defined-terms.ts`, `finaliseNamedEntry` in the edit dialog's form, and the entry comparison in `lib/case/tree-diff.ts`, which decides what the JSON editor and undo send.
+The reference editor shows names and writes `{name#id}`; it is given the terms for their names and never writes a value.
+Evidence is edited in that editor, with the terms of the claim it sits under.
+
+Publishing counts variables as well as placeholders.
+`requireCaseInformationComplete` counts, over the exported tree, the distinct variables with no value that the text of any element mentions where the variable is in reach (`countUnsetVariables` in `lib/case/placeholders.ts`), and the status dialog counts the same from the cards on the diagram.
+The refusal message gives each count that is left, joined by a semicolon: "1 element still to fill in; 2 variables with no value".
+A pattern is not held back by either.
+Change detection for "Update published version" also compares the variables each element defines (id, name and value), so changing a value counts as a change although no element's own text changed.
+
 ### The export file
 
-A case export carries `"version": "1.1"` when the case holds a named entry or a reference, when the case is a pattern, or when an element is a placeholder, and `"version": "1.0"` otherwise.
+A case export carries `"version": "1.1"` when the case holds a named entry (a variable is a named entry) or a reference, when the case is a pattern, or when an element is a placeholder, and `"version": "1.0"` otherwise.
 `exportCase` makes that choice from one check, so anything else added to 1.1 extends it there.
 Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries, kinds and placeholders.
 Import accepts both versions.
 A file that says `"1.0"` but holds a named entry, holds a placeholder or marks the case as a pattern is rejected with a message saying so.
 A `"1.0"` file with `"kind": "CASE"` is accepted.
-The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry.
+The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry, which can carry `"variable": true`.
 
 An element that is a placeholder carries `"isPlaceholder": true` and, when it has one, a `"placeholderHint"`; an element that is not a placeholder carries neither key.
 Importing the file restores both, so a case started from a pattern, which is an export of the pattern imported with `markFromPattern`, keeps the pattern's placeholders.
@@ -123,8 +155,9 @@ No import route reads these from a request, and a `sourcePatternId` written insi
 
 ## Published records
 
-The publish gate, `requireCaseInformationComplete`, refuses a case whose exported tree still holds placeholders, with the message "N elements still to fill in".
-It counts each element once and leaves out detached sandbox elements, which the tree does not contain, and it does not count a pattern's placeholders.
+The publish gate, `requireCaseInformationComplete`, refuses a case whose exported tree still holds placeholders, with the message "N elements still to fill in", or whose text mentions a variable with no value, with "N variables with no value"; when both are left the message carries both, separated by a semicolon.
+It counts each element once and leaves out detached sandbox elements, which the tree does not contain, and it counts a variable once however often it is mentioned.
+It does not count a pattern's placeholders or empty variables.
 Both the publish route and the status route call it, so first publication and republication are held back alike.
 
 Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.

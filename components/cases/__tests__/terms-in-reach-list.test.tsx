@@ -26,4 +26,22 @@ describe("TermsInReachList", () => {
 		expect(consoleError).not.toHaveBeenCalled();
 		consoleError.mockRestore();
 	});
+	it("lets a long unbroken value wrap inside the list instead of running past it", () => {
+		const value = "x".repeat(160);
+		render(
+			<TermsInReachList
+				terms={[
+					{ ...term("G1"), variable: true, value },
+					{ ...term("S2"), id: "a1b2c3d4e5", value },
+				]}
+			/>,
+			{ withProviders: false }
+		);
+
+		for (const item of screen.getAllByRole("listitem")) {
+			expect(item).toHaveClass("wrap-anywhere");
+		}
+		expect(screen.getByText(`(variable: ${value})`)).toBeInTheDocument();
+		expect(screen.getByText(`Value: ${value}`)).toBeInTheDocument();
+	});
 });

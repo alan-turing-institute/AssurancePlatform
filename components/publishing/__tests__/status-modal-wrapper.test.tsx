@@ -4,6 +4,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCaseInformation } from "@/hooks/use-case-information";
 import { useStatusModal } from "@/hooks/use-status-modal";
+import { countUnsetVariablesOnCards } from "@/lib/case/placeholders";
 import { server } from "@/src/__tests__/mocks/server";
 import useStore from "@/store/store";
 import { StatusModalWrapper } from "../status-modal-wrapper";
@@ -11,6 +12,15 @@ import { StatusModalWrapper } from "../status-modal-wrapper";
 vi.mock("@/hooks/use-case-information", () => ({
 	useCaseInformation: vi.fn(),
 }));
+
+vi.mock("@/lib/case/placeholders", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/case/placeholders")>();
+	return {
+		...actual,
+		countUnsetVariablesOnCards: vi.fn(actual.countUnsetVariablesOnCards),
+	};
+});
 
 vi.mock("@/lib/toast", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/toast")>();
@@ -173,6 +183,84 @@ describe("StatusModalWrapper — Draft: placeholders on the diagram", () => {
 		render(<StatusModalWrapper />);
 
 		expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
+	});
+
+	it("reads the cards for variables only while the dialog is open", () => {
+		useStore.setState({ nodes: NODES });
+		useStatusModal.getState().onClose();
+
+		const { unmount } = render(<StatusModalWrapper />);
+		expect(countUnsetVariablesOnCards).not.toHaveBeenCalled();
+		unmount();
+
+		useStatusModal.getState().onOpen({ caseId: CASE_ID, status: "DRAFT" });
+		render(<StatusModalWrapper />);
+		expect(countUnsetVariablesOnCards).toHaveBeenCalled();
+	});
+
+	describe("a variable with no value", () => {
+		const VARIABLE = {
+			id: "sysaaaaaaa",
+			name: "system",
+			text: "the system",
+			variable: true,
+			definedOn: { elementId: "1", elementName: "G1" },
+		};
+		const MENTIONS = [
+			{
+				id: "goal-1",
+				data: {
+					id: "1",
+					description: "Safe on {system#sysaaaaaaa}",
+					termsInReach: [VARIABLE],
+				},
+			},
+			{
+				id: "evidence-1",
+				data: {
+					id: "2",
+					description: "Tested on {system#sysaaaaaaa}",
+					termsInReach: [VARIABLE],
+				},
+			},
+		].map((node) => ({ ...node, position: { x: 0, y: 0 } }));
+
+		it("holds a case back from publishing, counted once however often it is mentioned", () => {
+			useStore.setState({ nodes: MENTIONS });
+
+			render(<StatusModalWrapper />);
+
+			expect(
+				screen.getByTestId("publish-content-placeholders")
+			).toHaveTextContent("1 variable with no value");
+			expect(
+				screen.queryByRole("button", { name: "Publish" })
+			).not.toBeInTheDocument();
+		});
+
+		it("lets the case go once it has a value, and never holds a pattern back", () => {
+			const withValue = MENTIONS.map((node) => ({
+				...node,
+				data: {
+					...node.data,
+					termsInReach: [{ ...VARIABLE, value: "AcmeBot" }],
+				},
+			}));
+			useStore.setState({ nodes: withValue });
+			const { unmount } = render(<StatusModalWrapper />);
+			expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
+			unmount();
+
+			useStore.setState({
+				nodes: MENTIONS,
+				assuranceCase: {
+					...useStore.getState().assuranceCase!,
+					kind: "PATTERN",
+				},
+			});
+			render(<StatusModalWrapper />);
+			expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled();
+		});
 	});
 });
 

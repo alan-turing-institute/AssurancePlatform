@@ -404,8 +404,8 @@ function keepWhatHangsFromEvidenceNoLongerShown(
 
 /**
  * Whether two context entries are the same. A named entry is compared by its
- * four fields, so the order of its keys does not matter (the database returns
- * keys in its own order).
+ * fields, so the order of its keys does not matter (the database returns keys
+ * in its own order); being a variable is part of what it is.
  */
 function contextEntriesEqual(a: ContextEntry, b: ContextEntry): boolean {
 	if (typeof a === "string" || typeof b === "string") {
@@ -415,7 +415,8 @@ function contextEntriesEqual(a: ContextEntry, b: ContextEntry): boolean {
 		a.id === b.id &&
 		a.name === b.name &&
 		a.text === b.text &&
-		a.value === b.value
+		a.value === b.value &&
+		(a.variable === true) === (b.variable === true)
 	);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import type { DefinedTerm } from "@/lib/case/defined-terms";
+import { type DefinedTerm, variableNote } from "@/lib/case/defined-terms";
 
 interface TermsInReachListProps {
 	terms: readonly DefinedTerm[];
@@ -9,7 +9,8 @@ interface TermsInReachListProps {
 
 /**
  * Every definition the element's text can refer to: the name, what it means,
- * its value and the element it is defined on. It is also how a keyboard or
+ * its value and the element it is defined on. A variable shows its current
+ * value beside its name, or that it is not set. It is also how a keyboard or
  * screen-reader user reads the meanings, since the diagram shows them only on
  * hover.
  */
@@ -28,8 +29,17 @@ export default function TermsInReachList({ terms }: TermsInReachListProps) {
 			) : (
 				<ul className="space-y-1.5 text-xs">
 					{terms.map((term) => (
-						<li key={`${term.definedOn.elementId}:${term.id}`}>
+						<li
+							className="wrap-anywhere"
+							key={`${term.definedOn.elementId}:${term.id}`}
+						>
 							<span className="font-medium">{term.name}</span>
+							{term.variable && (
+								<span className="text-muted-foreground">
+									{" "}
+									({variableNote(term.value)})
+								</span>
+							)}
 							<span className="text-muted-foreground">
 								{" "}
 								defined on {term.definedOn.elementName ?? "an element above"}
@@ -37,7 +47,7 @@ export default function TermsInReachList({ terms }: TermsInReachListProps) {
 							{term.text.trim() && (
 								<span className="block text-muted-foreground">{term.text}</span>
 							)}
-							{term.value?.trim() && (
+							{!term.variable && term.value?.trim() && (
 								<span className="block text-muted-foreground">
 									Value: {term.value}
 								</span>

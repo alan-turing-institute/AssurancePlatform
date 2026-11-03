@@ -15,7 +15,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCaseInformation } from "@/hooks/use-case-information";
-import { placeholderCountMessage } from "@/lib/case/placeholders";
+import {
+	placeholderCountMessage,
+	unsetVariableCountMessage,
+} from "@/lib/case/placeholders";
 import {
 	CASE_INFORMATION_FIELD_LABELS,
 	getMissingCaseInformationFields,
@@ -38,6 +41,8 @@ interface StatusModalProps {
 	publishLoading?: boolean;
 	status: PublishStatusType;
 	unpublishLoading?: boolean;
+	/** How many variables the case's text mentions that have no value; they hold the case back from publishing too. */
+	unsetVariableCount?: number;
 }
 
 /**
@@ -65,6 +70,7 @@ export function StatusModal({
 	placeholderCount = 0,
 	publishLoading = false,
 	unpublishLoading = false,
+	unsetVariableCount = 0,
 }: StatusModalProps) {
 	const [loading, setLoading] = useState(false);
 
@@ -116,6 +122,7 @@ export function StatusModal({
 						onPublish={onPublish}
 						onRequestCaseInformation={onRequestCaseInformation}
 						placeholderCount={placeholderCount}
+						unsetVariableCount={unsetVariableCount}
 					/>
 				)}
 
@@ -131,6 +138,7 @@ export function StatusModal({
 						onUpdatePublished={onUpdatePublished}
 						placeholderCount={placeholderCount}
 						unpublishLoading={unpublishLoading}
+						unsetVariableCount={unsetVariableCount}
 					/>
 				)}
 
@@ -221,32 +229,47 @@ function MissingFieldsGate({
 }
 
 // ============================================
-// Shared — placeholders still to fill in
+// Shared — placeholders and variables still to fill in
 // ============================================
 
 interface PlaceholdersGateProps {
 	count: number;
 	testId: string;
 	trailingCopy: string;
+	variableCount: number;
 }
 
 /**
- * "N elements still to fill in" — shown in place of the Publish action (Draft)
- * or the Update Published action (Published) while a case has placeholders left
- * in its argument. The same count the server refuses with.
+ * "N elements still to fill in" and "N variables with no value" — shown in
+ * place of the Publish action (Draft) or the Update Published action
+ * (Published) while a case has placeholders left in its argument or mentions a
+ * variable that has no value. A line appears for each that is left. The same
+ * counts the server refuses with.
  */
 function PlaceholdersGate({
 	count,
 	testId,
 	trailingCopy,
+	variableCount,
 }: PlaceholdersGateProps) {
 	return (
 		<div data-testid={testId}>
 			<Alert>
 				<Info className="h-4 w-4" />
-				<AlertDescription>
-					{placeholderCountMessage(count)}. Write each element marked{" "}
-					<strong>To fill in</strong> on the diagram {trailingCopy}
+				<AlertDescription className="space-y-1">
+					{count > 0 && (
+						<p>
+							{placeholderCountMessage(count)}. Write each element marked{" "}
+							<strong>To fill in</strong> on the diagram {trailingCopy}
+						</p>
+					)}
+					{variableCount > 0 && (
+						<p>
+							{unsetVariableCountMessage(variableCount)}. Give a value to each
+							variable that shows its name in square brackets on the diagram{" "}
+							{trailingCopy}
+						</p>
+					)}
 				</AlertDescription>
 			</Alert>
 		</div>
@@ -263,6 +286,7 @@ interface PublishContentProps {
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	placeholderCount: number;
+	unsetVariableCount: number;
 }
 
 /**
@@ -277,6 +301,7 @@ function PublishContent({
 	onPublish,
 	onRequestCaseInformation,
 	placeholderCount,
+	unsetVariableCount,
 }: PublishContentProps) {
 	const { information, loading: infoLoading } = useCaseInformation(caseId);
 
@@ -292,7 +317,11 @@ function PublishContent({
 
 	const missingFields = getMissingCaseInformationFields(information);
 
-	if (missingFields.length > 0 || placeholderCount > 0) {
+	if (
+		missingFields.length > 0 ||
+		placeholderCount > 0 ||
+		unsetVariableCount > 0
+	) {
 		return (
 			<div className="space-y-4">
 				{missingFields.length > 0 && (
@@ -303,11 +332,12 @@ function PublishContent({
 						trailingCopy="before publishing."
 					/>
 				)}
-				{placeholderCount > 0 && (
+				{(placeholderCount > 0 || unsetVariableCount > 0) && (
 					<PlaceholdersGate
 						count={placeholderCount}
 						testId="publish-content-placeholders"
 						trailingCopy="before publishing."
+						variableCount={unsetVariableCount}
 					/>
 				)}
 			</div>
@@ -346,6 +376,7 @@ interface PublishedContentProps {
 	onUpdatePublished?: () => Promise<void>;
 	placeholderCount: number;
 	unpublishLoading: boolean;
+	unsetVariableCount: number;
 }
 
 /**
@@ -367,13 +398,15 @@ function PublishedContent({
 	onRequestCaseInformation,
 	placeholderCount,
 	unpublishLoading,
+	unsetVariableCount,
 	handleAction,
 }: PublishedContentProps) {
 	const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
 	const { information } = useCaseInformation(caseId ?? undefined);
 	const missingFields = getMissingCaseInformationFields(information);
+	const fillInLeft = placeholderCount > 0 || unsetVariableCount > 0;
 	const republishBlocked =
-		hasChanges && (missingFields.length > 0 || placeholderCount > 0);
+		hasChanges && (missingFields.length > 0 || fillInLeft);
 
 	return (
 		<div className="space-y-4">
@@ -401,11 +434,12 @@ function PublishedContent({
 				/>
 			)}
 
-			{republishBlocked && placeholderCount > 0 && (
+			{republishBlocked && fillInLeft && (
 				<PlaceholdersGate
 					count={placeholderCount}
 					testId="republish-content-placeholders"
 					trailingCopy="before updating the published version."
+					variableCount={unsetVariableCount}
 				/>
 			)}
 

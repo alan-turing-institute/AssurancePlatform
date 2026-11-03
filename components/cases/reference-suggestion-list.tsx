@@ -7,7 +7,7 @@ import {
 	PopoverContent,
 } from "@/components/ui/popover";
 import type { ReferenceListState } from "@/hooks/use-reference-suggestion";
-import type { DefinedTerm } from "@/lib/case/defined-terms";
+import { type DefinedTerm, variableNote } from "@/lib/case/defined-terms";
 import { cn } from "@/lib/utils";
 
 export function referenceOptionId(listId: string, index: number): string {
@@ -65,8 +65,14 @@ function TermOption({
 			{term.text.trim() && (
 				<div className={cn("truncate", secondary)}>{term.text}</div>
 			)}
-			{term.value?.trim() && (
-				<div className={cn("truncate", secondary)}>Value: {term.value}</div>
+			{term.variable ? (
+				<div className={cn("truncate", secondary)}>
+					{variableNote(term.value)}
+				</div>
+			) : (
+				term.value?.trim() && (
+					<div className={cn("truncate", secondary)}>Value: {term.value}</div>
+				)
 			)}
 		</div>
 	);

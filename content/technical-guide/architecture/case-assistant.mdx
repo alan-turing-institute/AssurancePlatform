@@ -384,6 +384,13 @@ The tool then refuses and tells the model to ask the user to select the element,
 The tools work on the case as stored, and not on the plain copy that the read tools return.
 The plain copy writes defined-term references and named context entries as text, so only the stored form shows whether a field refers to a term.
 
+The read tools and the prompt's text for the selected element use the marked form of the plain copy (`toPlainCase` with `marked`).
+In it a variable is written `{name = "value"}`, or `{name = (not set)}` while its value is empty, and the description of an element that is still a placeholder ends with `{to fill in}` or `{to fill in: "hint"}`.
+The value and the hint are JSON strings, so quotation marks, braces and line breaks in them cannot be taken for the end of the marker.
+`lint_case` reads the unmarked plain copy, with each variable as its value, so the rules see the text a card shows.
+The techniques search uses the selected element's plain text, so a marker is never sent as a query, and an empty placeholder sends none.
+The system prompt explains the markers and tells the model not to write them, a variable's value, or a name in square brackets into the text it suggests.
+
 `suggest_edit` takes an element and the complete new text of any of the description, assumption, justification and context fields.
 It refuses, with a reason in plain words, when:
 

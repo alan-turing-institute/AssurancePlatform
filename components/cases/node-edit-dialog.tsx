@@ -85,6 +85,12 @@ const DETAILS_TAB = "details";
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
 	["goal", "strategy", "property"].includes(nodeType);
 
+// Helper to check if the description is written in the reference editor, where
+// typing `{` offers the terms in reach. Evidence has no context of its own but
+// can refer to the terms of the claim it supports.
+const usesReferenceEditor = (nodeType: DiagramNodeType): boolean =>
+	supportsAttributes(nodeType) || nodeType === "evidence";
+
 /**
  * Whether the description editor takes the caret when the dialog opens. It
  * does where the description is the first field, as it was when it was a text
@@ -96,7 +102,7 @@ const focusesDescriptionOnOpen = (
 	nodeType: DiagramNodeType,
 	readOnly: boolean,
 	hasTabs: boolean
-): boolean => supportsAttributes(nodeType) && !(readOnly || hasTabs);
+): boolean => usesReferenceEditor(nodeType) && !(readOnly || hasTabs);
 
 /**
  * Resolves a node's current `assertionStatus` to one of the five
@@ -797,7 +803,7 @@ export default function NodeEditDialog({
 					isPattern={isPattern}
 					isPlaceholder={initialPlaceholder.isPlaceholder}
 				/>
-				{supportsAttributes(nodeType) ? (
+				{usesReferenceEditor(nodeType) ? (
 					<>
 						<DescriptionField
 							autoFocus={focusDescriptionOnOpen}

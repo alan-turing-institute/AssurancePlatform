@@ -56,6 +56,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				nodeType="evidence"
 				placeholderHint={data.placeholderHint}
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={withPlaceholderIndicator(data, badgeSlot)}
 			>
 				{urls.length > 0 && (

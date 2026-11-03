@@ -98,12 +98,15 @@ function finaliseNamedEntry(entry: NamedContextEntry): NamedContextEntry {
 	if (value) {
 		finished.value = value;
 	}
+	if (entry.variable) {
+		finished.variable = true;
+	}
 	return finished;
 }
 
 /**
  * The list the dialog sends back: text trimmed, blank text entries left out,
- * and each named entry rebuilt from its four fields so nothing else travels
+ * and each named entry rebuilt from its own fields so nothing else travels
  * with it.
  */
 export function finaliseContextEntries(

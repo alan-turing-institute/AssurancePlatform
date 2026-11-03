@@ -191,4 +191,23 @@ describe("textToDocument and documentToText", () => {
 			"{interval#k3f9x2m7qa}"
 		);
 	});
+	it("shows a variable by its name and writes it back as {name#id}, never as its value", () => {
+		const terms: DefinedTerm[] = [
+			{
+				id: "k3f9x2m7qa",
+				name: "system",
+				text: "the system",
+				value: "AcmeBot",
+				variable: true,
+				definedOn: { elementId: "g1", elementName: "G1" },
+			},
+		];
+		const text = "tested on {system#k3f9x2m7qa}";
+
+		const document = textToDocument(text, terms);
+
+		expect(JSON.stringify(document)).not.toContain("AcmeBot");
+		expect(documentToText(document, terms)).toBe(text);
+		expect(throughEditor(text)).toBe(text);
+	});
 });

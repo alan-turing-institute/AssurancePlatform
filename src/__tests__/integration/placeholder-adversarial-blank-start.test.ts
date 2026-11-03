@@ -136,7 +136,7 @@ describe.each(KINDS)("a new blank %s", (kind) => {
 		expect(listed.map((summary) => summary.id)).toContain(caseId);
 	});
 
-	it("is read by the Case Assistant's tools, including the rules check, which does not fail", async () => {
+	it("is read by the Case Assistant's tools as an element still to fill in, including the rules check, which does not fail", async () => {
 		const { user, caseId } = await blankStart(kind);
 		const tools = createCaseTools(user.id, caseId);
 		const options = { toolCallId: "call", messages: [] };
@@ -150,7 +150,11 @@ describe.each(KINDS)("a new blank %s", (kind) => {
 
 		expect(read).toMatchObject({
 			found: true,
-			tree: { name: "G1", description: "", isPlaceholder: true },
+			tree: {
+				name: "G1",
+				description: `{to fill in: ${JSON.stringify(TOP_GOAL_HINT)}}`,
+				isPlaceholder: true,
+			},
 		});
 		expect(lint).toMatchObject({
 			found: true,

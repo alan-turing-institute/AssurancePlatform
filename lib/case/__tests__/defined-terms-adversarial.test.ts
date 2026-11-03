@@ -416,3 +416,76 @@ describe("caseUsesDefinedTerms", () => {
 		}
 	});
 });
+
+describe("a variable's value", () => {
+	const reach = (value: string) =>
+		termsInReach([
+			{
+				id: "g1",
+				name: "G1",
+				context: [
+					{
+						id: ID_A,
+						name: "system",
+						text: "the system",
+						value,
+						variable: true,
+					},
+					named(ID_B, "window", "the interval", "5 minutes"),
+				],
+			},
+		]);
+
+	it("is shown as it is and never read for references of its own", () => {
+		const value = `{window#${ID_B}} and {system#${ID_A}}`;
+		const text = `On {system#${ID_A}}.`;
+		expect(plainReferenceText(text, reach(value))).toBe(`On ${value}.`);
+		expect(plainReferenceText(text, reach(value), { marked: true })).toBe(
+			`On {system = ${JSON.stringify(value)}}.`
+		);
+		expect(
+			toPlainCase(
+				caseOf(
+					node("G1", {
+						type: "GOAL",
+						description: text,
+						context: [
+							{ id: ID_A, name: "system", text: "x", value, variable: true },
+						],
+						children: [],
+					})
+				)
+			).tree.description
+		).toBe(`On ${value}.`);
+	});
+
+	it("passes markup through as characters", () => {
+		const hostile = "<img src=x onerror=alert(1)><script>alert(2)</script>";
+		expect(plainReferenceText(`On {s#${ID_A}}.`, reach(hostile))).toBe(
+			`On ${hostile}.`
+		);
+	});
+
+	it("is not trusted as a flag: a variable marker that is not exactly true is dropped", () => {
+		const parsed = parseContextEntries([
+			{ id: ID_A, name: "w", text: "t", variable: "true", extra: 1 },
+			{ id: ID_B, name: "w2", text: "t2", variable: true, extra: 1 },
+		]);
+		expect(parsed).toEqual([
+			{ id: ID_A, name: "w", text: "t" },
+			{ id: ID_B, name: "w2", text: "t2", variable: true },
+		]);
+	});
+
+	it("writes the same text for a case of ordinary terms with and without the marked option", () => {
+		const tree = node("G1", {
+			type: "GOAL",
+			description: `Within the {window#${ID_B}}`,
+			context: [named(ID_B, "window", "the interval", "5 minutes")],
+			children: [],
+		});
+		expect(toPlainCase(caseOf(tree), { marked: true })).toEqual(
+			toPlainCase(caseOf(tree))
+		);
+	});
+});

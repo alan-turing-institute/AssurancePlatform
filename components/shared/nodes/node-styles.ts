@@ -222,16 +222,21 @@ export function buildFooterIdClasses(): string {
  * term is a tinted word. A term whose definition is out of reach gets a dashed
  * underline in the warning colour on top of a tint, so it does not rely on
  * colour alone; the text keeps the foreground colour to stay readable on a
- * tinted card.
+ * tinted card. A variable with no value yet (`unfilled`) is drawn like a
+ * placeholder, with a dashed outline in the warning colour.
  */
-export function buildReferenceClasses(found: boolean): string {
+export function buildReferenceClasses(
+	found: boolean,
+	unfilled = false
+): string {
 	return cn(
 		"rounded-sm",
 		"px-0.5",
 		"font-medium",
 		"text-foreground",
-		found
-			? "bg-primary/15"
-			: "bg-warning/20 underline decoration-warning decoration-dashed underline-offset-2"
+		unfilled && "border border-warning/60 border-dashed bg-warning/10",
+		!unfilled && found && "bg-primary/15",
+		!(unfilled || found) &&
+			"bg-warning/20 underline decoration-warning decoration-dashed underline-offset-2"
 	);
 }
