@@ -386,7 +386,12 @@ describe("variables", () => {
 		});
 
 		it("shows [name] for a variable with no value, or only blanks", () => {
-			for (const entry of [unset, { ...unset, value: "   " }]) {
+			for (const entry of [
+				unset,
+				{ ...unset, value: "   " },
+				{ ...unset, value: "\u200B\u200C\u200D\u2060" },
+				{ ...unset, value: " \u200B \u2060 " },
+			]) {
 				expect(
 					referenceDisplay(reach({ ...entry, variable: true }), "x")
 				).toMatchObject({ text: "[system]", variable: true, unfilled: true });

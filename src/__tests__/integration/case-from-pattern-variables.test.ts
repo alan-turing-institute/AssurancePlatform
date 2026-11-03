@@ -176,6 +176,25 @@ describe.each(
 			]);
 		});
 
+		it("leaves a variable unset when its value is only zero-width characters, and trims them from the ends of a value", async () => {
+			const { owner, source } = await world();
+
+			const outcome = await startWith(starter, owner, source, {
+				[SYS]: "\u200B\u200C\u200D\u2060",
+				[MORE]: "\u200B Eve \u2060",
+			});
+
+			if (!outcome.ok) {
+				throw new Error(outcome.error);
+			}
+			expect((await entriesOf(outcome.id, "G1")).context[0]).toEqual(
+				variableEntry()
+			);
+			expect((await entriesOf(outcome.id, "P1")).context).toEqual([
+				variableEntry("Eve", "owner", MORE, "Who is responsible"),
+			]);
+		});
+
 		it("stores a value as entered, never as a reference or markup", async () => {
 			const { owner, source } = await world();
 			const entered = `${ref("window", OTHER)} <img src=x onerror=alert(1)> [system]`;

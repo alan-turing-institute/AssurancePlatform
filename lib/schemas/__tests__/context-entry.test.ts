@@ -5,6 +5,7 @@ import {
 	findContextIdProblem,
 	findContextListProblem,
 	NamedContextEntrySchema,
+	trimEntryValue,
 } from "../context-entry";
 
 const ID = "k3f9x2m7qa";
@@ -82,6 +83,23 @@ describe("NamedContextEntrySchema", () => {
 		["an id with capitals", { id: "K3F9X2M7QA", name: "w", text: "x" }],
 	])("rejects %s", (_label, entry) => {
 		expect(NamedContextEntrySchema.safeParse(entry).success).toBe(false);
+	});
+});
+
+describe("trimEntryValue", () => {
+	it.each([
+		["spaces", "  AcmeBot \n", "AcmeBot"],
+		[
+			"zero-width characters at either end",
+			"\u200BAcme\u2060Bot\u200D",
+			"Acme\u2060Bot",
+		],
+		["only spaces", "   ", ""],
+		["only zero-width characters", "\u200B\u200C\u200D\u2060", ""],
+		["spaces mixed with zero-width characters", " \u200B \u2060 ", ""],
+		["a visible character between zero-width ones", "\u200B.\u200B", "."],
+	])("removes %s", (_label, given, trimmed) => {
+		expect(trimEntryValue(given)).toBe(trimmed);
 	});
 });
 

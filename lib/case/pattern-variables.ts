@@ -2,11 +2,12 @@
  * The variables a pattern offers, and setting their values.
  *
  * A pattern's variables are its named context entries marked as variables, on
- * any element of its tree. They are read from an exported case file as it is
- * stored, which may come from the database or a client, so every read here
- * tolerates a shape it does not expect and never throws. Nothing in this file
- * touches the store or the database, so it runs in the browser and on the
- * server alike.
+ * any element of its tree. They are read from an exported case file: the
+ * export of a pattern case, or the snapshot frozen when a pattern was
+ * published. A snapshot can be older than the code that reads it, so every
+ * read here tolerates a shape it does not expect and never throws. Nothing in
+ * this file touches the store or the database, so it runs in the browser and
+ * on the server alike.
  */
 
 import {
@@ -19,6 +20,7 @@ import {
 	type ContextEntry,
 	isNamedContextEntry,
 	type NamedContextEntry,
+	trimEntryValue,
 } from "@/lib/schemas/context-entry";
 
 /** One variable of a pattern: what it is called, what it means and any value it already has. */
@@ -62,7 +64,7 @@ function toVariable(
 		name: entry.name,
 		meaning: plainReferenceText(entry.text, termsInReach(chain)).trim(),
 	};
-	const value = entry.value?.trim();
+	const value = entry.value && trimEntryValue(entry.value);
 	if (value) {
 		variable.value = value;
 	}
@@ -117,7 +119,7 @@ function withValue(
 		return entry;
 	}
 	const { value: _replaced, ...rest } = entry;
-	const value = given.trim();
+	const value = trimEntryValue(given);
 	return value ? { ...rest, value } : rest;
 }
 

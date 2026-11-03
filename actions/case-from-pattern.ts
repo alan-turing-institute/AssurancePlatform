@@ -7,6 +7,7 @@ import {
 	type CreateCaseFromPatternInput,
 	createCaseFromPatternSchema,
 	patternSourceSchema,
+	protoKeyProblem,
 } from "@/lib/schemas/case-from-pattern";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import { validateInput } from "@/lib/validation/input-validation";
@@ -77,6 +78,11 @@ export const createCaseFromPattern = async (
 	const validated = await validateSession();
 	if (!validated) {
 		return { success: false, error: "Invalid session" };
+	}
+
+	const protoProblem = protoKeyProblem(variableValues);
+	if (protoProblem) {
+		return { success: false, error: protoProblem };
 	}
 
 	const validation = validateInput(

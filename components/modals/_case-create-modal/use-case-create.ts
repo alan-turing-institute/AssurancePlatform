@@ -8,6 +8,7 @@ import {
 } from "@/actions/case-from-pattern";
 import type { PublishedPatternPreset } from "@/hooks/modal-hooks";
 import type { ActionResult } from "@/lib/errors";
+import { NOT_A_VARIABLE } from "@/lib/schemas/case-from-pattern";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
 import type {
 	PatternChoices,
@@ -18,6 +19,8 @@ import { usePatternVariables } from "./use-pattern-variables";
 
 const GENERIC_ERROR = "An error occurred, please try again later";
 const CHOOSE_A_PATTERN = "Choose a pattern to start from";
+const PATTERN_CHANGED =
+	"The pattern has changed since its variables were shown. They have been reloaded: check the fields, then submit again.";
 
 /** A case that was created but is held on screen until the user opens it. */
 interface PendingCase {
@@ -81,6 +84,25 @@ function chosenPattern(
 			? choices.patterns.find((pattern) => pattern.key === patternKey)
 			: undefined;
 	return listed ?? (preset?.key === patternKey ? preset : undefined);
+}
+
+/**
+ * Names the pattern itself, which can be read in two ways: as the published
+ * snapshot, and as the pattern case that was published. Both give the same
+ * identity, so a change from one to the other is not a change of pattern.
+ */
+function patternIdentity({ publishedSlug, source }: ViewablePattern): string {
+	if (publishedSlug) {
+		return `published:${publishedSlug}`;
+	}
+	return "publishedSlug" in source
+		? `published:${source.publishedSlug}`
+		: `case:${source.patternCaseId}`;
+}
+
+/** What the dialog says when the server refuses a request. */
+function refusalMessages(message: string): string[] {
+	return message === NOT_A_VARIABLE ? [message, PATTERN_CHANGED] : [message];
 }
 
 /** The picker key of a published pattern's own entry. */
@@ -231,8 +253,10 @@ export function useCaseCreate({
 	);
 
 	const chosen = chosenPattern(choices, patternKey, presetChoice);
+	const pickedPattern = start === "pattern" ? chosen : undefined;
 	const variables = usePatternVariables(
-		start === "pattern" ? chosen?.source : undefined
+		pickedPattern?.source,
+		pickedPattern && patternIdentity(pickedPattern)
 	);
 
 	// Counts the loads started, so that only the latest one is used: a load
@@ -284,6 +308,9 @@ export function useCaseCreate({
 		if (!key) {
 			return;
 		}
+		if (key !== patternKey) {
+			variables.forget();
+		}
 		setPatternKey(key);
 		setPatternError(null);
 	};
@@ -319,7 +346,10 @@ export function useCaseCreate({
 		setLoading(false);
 
 		if (outcome.status === "error") {
-			setErrors([outcome.message]);
+			setErrors(refusalMessages(outcome.message));
+			if (outcome.message === NOT_A_VARIABLE) {
+				variables.retry();
+			}
 		} else if (outcome.warnings.length > 0) {
 			setPending({ id: outcome.id, warnings: outcome.warnings });
 		} else {

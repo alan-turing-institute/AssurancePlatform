@@ -8,8 +8,10 @@ import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { extractTextFromHtml } from "@/lib/sanitize-html";
 import {
+	NOT_A_VARIABLE,
 	type PatternSource,
 	patternSourceSchema,
+	protoKeyProblem,
 	startedCaseDescriptionSchema,
 	startedCaseNameSchema,
 	type VariableValues,
@@ -251,8 +253,6 @@ export async function readPatternVariables(
 	}
 }
 
-const NOT_A_VARIABLE = "That pattern has no variable to give that value to";
-
 /**
  * The pattern's file with the values given to its variables, or an error when
  * a value is meant for an entry that is not one of the pattern's variables.
@@ -309,6 +309,10 @@ function parseRequest(
 			error:
 				parsedDescription.error.issues[0]?.message ?? "Invalid description",
 		};
+	}
+	const protoProblem = protoKeyProblem(variableValues);
+	if (protoProblem) {
+		return { error: protoProblem };
 	}
 	const parsedValues = variableValuesSchema.safeParse(variableValues);
 	if (!parsedValues.success) {

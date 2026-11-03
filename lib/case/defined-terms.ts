@@ -19,6 +19,7 @@ import {
 	type ContextEntry,
 	isNamedContextEntry,
 	type NamedContextEntry,
+	trimEntryValue,
 } from "@/lib/schemas/context-entry";
 
 // ---------------------------------------------------------------------------
@@ -212,7 +213,7 @@ export function referenceDisplay(
 	if (!term?.variable) {
 		return { name, text: name, variable: false, unfilled: false };
 	}
-	const value = term.value?.trim();
+	const value = term.value && trimEntryValue(term.value);
 	return {
 		name,
 		text: value || `[${name}]`,
@@ -223,7 +224,7 @@ export function referenceDisplay(
 
 /** How a definition line says a name is a variable: `variable: AcmeBot`, or `variable, not set`. */
 export function variableNote(value: string | undefined): string {
-	const shown = value?.trim();
+	const shown = value && trimEntryValue(value);
 	return shown ? `variable: ${shown}` : "variable, not set";
 }
 

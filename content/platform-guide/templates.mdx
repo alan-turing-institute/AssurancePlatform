@@ -78,12 +78,16 @@ The value can stay empty, or hold an example for the person using the pattern to
 ### Give values when you start a case
 
 Choose a pattern in the new case dialog, and a **Variables** list appears under **Description**.
-It has one field for each variable the pattern defines, on any of its elements, showing the variable's name and what it means.
+It has one field for each variable the pattern defines, on any element of its argument, showing the variable's name and what it means.
+An element detached from the argument, in the sandbox, is not part of the pattern's argument, so a variable defined only there is not listed.
 If the pattern gives a variable a value, the field starts with that value; keep it, change it, or clear it.
 Every field is optional.
-A variable left empty, or cleared, shows its name in square brackets in the new case and counts as a variable with no value when the case is published.
-A value can be up to 500 characters.
-It is saved with the spaces at either end removed, and as text: it is not read for references or markup.
+A variable left empty, or cleared, shows its name in square brackets in the new case.
+It holds back publishing the new case only while the case's text mentions it; a variable that nothing mentions does not.
+A value can be up to 500 characters, and a field shows a count as it nears that limit.
+It is saved with the spaces and invisible zero-width characters at either end removed, so a value of nothing else is left empty.
+It is saved as text: it is not read for references or markup.
+If the pattern is changed while the dialog is open, so that a field no longer matches one of its variables, the platform refuses the request, reloads the variables and says so; what you typed for the variables that remain is kept.
 The values fill in the variables themselves, so every mention in the new case shows them and none of the case's text is rewritten.
 The pattern is not changed.
 A pattern published on Discover asks for its values in the same way, from its own page; see [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).

@@ -87,6 +87,18 @@ describe("patternVariables", () => {
 		]);
 	});
 
+	it("gives no value for one of only zero-width characters", () => {
+		const pattern = file(
+			node("g1", {
+				context: [{ ...system, value: "\u200B\u200C\u200D\u2060" }],
+			})
+		);
+
+		expect(patternVariables(pattern)).toEqual([
+			{ id: SYSTEM_ID, name: "system", meaning: "The system" },
+		]);
+	});
+
 	it("shows references in a meaning as they are shown in the case, and a value as it is", () => {
 		const pattern = file(
 			node("g1", {
@@ -156,6 +168,15 @@ describe("setVariableValues", () => {
 				[SYSTEM_ID, ""],
 				[OWNER_ID, "   "],
 			])
+		);
+
+		expect(contextOf(result)).toEqual([system, owner]);
+	});
+
+	it("leaves a variable without a value when the value is only zero-width characters", () => {
+		const result = setVariableValues(
+			pattern,
+			new Map([[SYSTEM_ID, " \u200B\u2060 "]])
 		);
 
 		expect(contextOf(result)).toEqual([system, owner]);

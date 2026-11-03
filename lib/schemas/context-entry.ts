@@ -13,6 +13,17 @@ import { z } from "zod";
 const CONTEXT_ENTRY_NAME_MAX_LENGTH = 40;
 export const CONTEXT_ENTRY_VALUE_MAX_LENGTH = 500;
 
+/** Spaces, and the zero-width characters that draw nothing: U+200B to U+200D and U+2060. */
+const VALUE_PADDING = /^[\s\u200B-\u200D\u2060]+|[\s\u200B-\u200D\u2060]+$/g;
+
+/**
+ * A value without the spaces and zero-width characters at either end. A value
+ * of nothing else is blank: it shows as nothing, so it counts as no value.
+ */
+export function trimEntryValue(value: string): string {
+	return value.replace(VALUE_PADDING, "");
+}
+
 /** Ten lowercase letters or digits. */
 const CONTEXT_ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
 
