@@ -51,20 +51,30 @@ export function getElementTitle(node: PlainTreeNode): string {
  * @returns Markdown-safe text
  */
 export function escapeMarkdown(text: string): string {
-	return text.replace(/([*_`~[\]()#>+\-=|{}!\\<])/g, "\\$1");
+	return text.replace(/([*_`~[\]()#>+\-=|{}!\\<&])/g, "\\$1");
 }
+
+/** Characters escaped in free text, matched in one pass. */
+const FREE_TEXT_SPECIAL = /[\\<[\]&`~]/g;
 
 /**
  * Escape free text so Markdown shows it as typed, without reading it as
  * markup.
  *
- * Only the characters that start HTML, links, images or character references
- * are escaped: backslash, `<`, `[`, `]` and `&`. Braces and hyphens are left
- * alone, so `{term}` references and hyphenated words stay readable in the file.
+ * Only the characters that start HTML, links, images, code or character
+ * references are escaped. A `<` is written as the reference `&lt;`, not with a
+ * backslash: a viewer that links a web address on sight reads a backslash as
+ * part of the address, which would leave a tag written straight after it
+ * standing. Every other special character gets a backslash, and a typed `&`
+ * is escaped in the same pass so a reference is never read twice. Braces and
+ * hyphens are left alone, so `{term}` references and hyphenated words stay
+ * readable in the file.
  *
  * @param text - Text to escape
  * @returns Text that Markdown shows literally
  */
 export function escapeMarkdownText(text: string): string {
-	return text.replace(/([\\<[\]&])/g, "\\$1");
+	return text.replace(FREE_TEXT_SPECIAL, (character) =>
+		character === "<" ? "&lt;" : `\\${character}`
+	);
 }

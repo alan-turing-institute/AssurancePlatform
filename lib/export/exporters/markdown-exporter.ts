@@ -22,6 +22,29 @@ const LINKABLE_URL = /^(?:https?:\/\/|mailto:)\S+$/i;
 /** Characters that cannot appear unencoded inside a `<...>` link target. */
 const UNSAFE_LINK_TARGET_CHARACTER = /[<>\\]|[\s\p{Cc}]/gu;
 
+/** Characters written as escapes inside a double-quoted YAML value. */
+const YAML_ESCAPED_CHARACTER = /[\\"<[\]&]|[\p{Cc}\u2028\u2029]/gu;
+
+const YAML_NAMED_ESCAPES: Record<string, string> = {
+	"\\": "\\\\",
+	'"': '\\"',
+	"\n": "\\n",
+	"\r": "\\r",
+	"\t": "\\t",
+};
+
+function escapeYamlCharacter(character: string): string {
+	const named = YAML_NAMED_ESCAPES[character];
+	if (named !== undefined) {
+		return named;
+	}
+	const code = character.codePointAt(0) ?? 0;
+	const hex = code.toString(16).toUpperCase();
+	return code > 0xff
+		? `\\u${hex.padStart(4, "0")}`
+		: `\\x${hex.padStart(2, "0")}`;
+}
+
 /**
  * Exporter that converts RenderedDocument to Markdown format.
  *
@@ -114,13 +137,13 @@ export class MarkdownExporter extends AbstractExporter {
 	}
 
 	/**
-	 * Escape special characters in YAML strings.
+	 * Escape a value for a double-quoted YAML string. Front matter is data, not
+	 * Markdown, so the characters a viewer could read as markup (`<`, `[`, `]`
+	 * and `&`) are written as YAML escapes, and so are line breaks and every
+	 * other control character. The value reads back exactly as it was.
 	 */
 	private escapeYamlString(text: string): string {
-		return text
-			.replace(/\\/g, "\\\\")
-			.replace(/"/g, '\\"')
-			.replace(/\n/g, "\\n");
+		return text.replace(YAML_ESCAPED_CHARACTER, escapeYamlCharacter);
 	}
 
 	/**
@@ -255,7 +278,7 @@ export class MarkdownExporter extends AbstractExporter {
 	private escapeTableCell(text: string): string {
 		return escapeMarkdownText(text)
 			.replace(/\|/g, "\\|")
-			.replace(/\n/g, " ")
+			.replace(/\r\n|\r|\n/g, " ")
 			.trim();
 	}
 

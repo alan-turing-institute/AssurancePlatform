@@ -525,7 +525,7 @@ describe("MarkdownExporter", () => {
 			const content = await exportText(document);
 
 			expect(content).toContain(
-				"See \\<img src=x onerror=1> and \\[here\\](https://example.test) \\&amp; C:\\\\temp"
+				"See &lt;img src=x onerror=1> and \\[here\\](https://example.test) \\&amp; C:\\\\temp"
 			);
 		});
 
@@ -536,7 +536,7 @@ describe("MarkdownExporter", () => {
 				})
 			);
 
-			expect(content).toContain("Top-level \\<b>{interval}\\</b> holds");
+			expect(content).toContain("Top-level &lt;b>{interval}&lt;/b> holds");
 		});
 
 		it("escapes tags in a table cell without losing the pipe escape", async () => {
@@ -558,7 +558,7 @@ describe("MarkdownExporter", () => {
 			const content = await exportText(document);
 
 			expect(content).toContain(
-				"| \\<i>x\\</i> \\| y | \\[a\\](https://example.test) |"
+				"| &lt;i>x&lt;/i> \\| y | \\[a\\](https://example.test) |"
 			);
 		});
 
@@ -586,7 +586,7 @@ describe("MarkdownExporter", () => {
 				},
 			];
 			expect(await exportText(document)).toContain(
-				"me: Look \\<script>1\\</script>"
+				"me: Look &lt;script>1&lt;/script>"
 			);
 		});
 
@@ -673,6 +673,32 @@ describe("MarkdownExporter", () => {
 			);
 			expect(content).toContain(
 				"**URL:** [https://example.com/p](<https://example.com/p>)"
+			);
+		});
+
+		it("escapes backticks and tildes so text never opens a code span or fence", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Info",
+					blocks: [{ type: "paragraph", text: "`code` and ~~struck~~" }],
+				},
+			];
+
+			expect(await exportText(document)).toContain(
+				"\\`code\\` and \\~\\~struck\\~\\~"
+			);
+		});
+
+		it("writes markup characters and line breaks in the frontmatter as YAML escapes", async () => {
+			const document = createSampleDocument();
+			document.metadata.caseDescription = "<b>[x]</b> & y\r\nz\u0001";
+
+			const content = await exportText(document);
+
+			expect(content).toContain(
+				'description: "\\x3Cb>\\x5Bx\\x5D\\x3C/b> \\x26 y\\r\\nz\\x01"'
 			);
 		});
 
