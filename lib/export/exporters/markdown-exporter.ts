@@ -16,6 +16,7 @@ import type {
 import {
 	escapeMarkdown,
 	escapeMarkdownCharacters,
+	escapeMarkdownTableCell,
 	escapeMarkdownText,
 	getElementTitle,
 } from "../utils";
@@ -281,10 +282,7 @@ export class MarkdownExporter extends AbstractExporter {
 	 * Escape special characters for table cells.
 	 */
 	private escapeTableCell(text: string): string {
-		return escapeMarkdownText(text)
-			.replace(/\|/g, "\\|")
-			.replace(/\r\n|\r|\n/g, " ")
-			.trim();
+		return escapeMarkdownTableCell(text);
 	}
 
 	/**

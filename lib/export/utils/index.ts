@@ -5,6 +5,7 @@
 export {
 	escapeMarkdown,
 	escapeMarkdownCharacters,
+	escapeMarkdownTableCell,
 	escapeMarkdownText,
 	getElementTitle,
 } from "./content-helpers";

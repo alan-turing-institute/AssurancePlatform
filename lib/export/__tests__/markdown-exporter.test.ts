@@ -3,6 +3,7 @@ import type { PlainTreeNode } from "@/lib/case/defined-terms";
 import { MarkdownExporter } from "../exporters/markdown-exporter";
 import type { RenderedDocument } from "../types";
 
+const UNESCAPED_PIPE = /(?<!\\)\|/g;
 const MARKDOWN_FILENAME_PATTERN = /^test-case-\d{4}-\d{2}-\d{2}\.md$/;
 
 /**
@@ -700,6 +701,38 @@ describe("MarkdownExporter", () => {
 			expect(content).toContain(
 				'description: "\\x3Cb>\\x5Bx\\x5D\\x3C/b> \\x26 y\\r\\nz\\x01"'
 			);
+		});
+
+		it("keeps a table cell whole when an address in it holds a pipe or a backslash", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Data",
+					blocks: [
+						{
+							type: "table",
+							headers: ["Key", "Value"],
+							rows: [
+								["a", "https://x.example/a|b"],
+								["b", "https://x.example/a\\|b"],
+								["c", "x | y https://x.example/a|b"],
+							],
+						},
+					],
+				},
+			];
+
+			const content = await exportText(document);
+
+			expect(content).toContain("| a | <https://x.example/a%7Cb> |");
+			expect(content).toContain("| b | <https://x.example/a%5C%7Cb> |");
+			expect(content).toContain("| c | x \\| y <https://x.example/a%7Cb> |");
+			const rows = content.split("\n").filter((line) => line.startsWith("| "));
+			expect(rows).toHaveLength(5);
+			for (const row of rows) {
+				expect(row.match(UNESCAPED_PIPE)).toHaveLength(3);
+			}
 		});
 
 		it("escapes backslashes in the frontmatter values", async () => {

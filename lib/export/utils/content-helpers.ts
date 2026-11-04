@@ -86,7 +86,8 @@ function addressWithin(candidate: string): string | null {
  */
 function withAddressesAsAutolinks(
 	text: string,
-	escapeRest: (rest: string) => string
+	escapeRest: (rest: string) => string,
+	writeAddress: (address: string) => string = (address) => address
 ): string {
 	let written = "";
 	let cursor = 0;
@@ -95,7 +96,7 @@ function withAddressesAsAutolinks(
 		if (address === null || JOINS_ADDRESS.test(text.charAt(match.index - 1))) {
 			continue;
 		}
-		written += `${escapeRest(text.slice(cursor, match.index))}<${address}>`;
+		written += `${escapeRest(text.slice(cursor, match.index))}<${writeAddress(address)}>`;
 		cursor = match.index + address.length;
 	}
 	return written + escapeRest(text.slice(cursor));
@@ -149,4 +150,36 @@ function escapeFreeTextCharacters(text: string): string {
  */
 export function escapeMarkdownText(text: string): string {
 	return withAddressesAsAutolinks(text, escapeFreeTextCharacters);
+}
+
+const CELL_BREAKING_CHARACTER = /\\(?=\|)|\|/g;
+const LINE_BREAK = /\r\n|\r|\n/g;
+
+/** Inside an autolink in a table cell, `|` and a `\` that comes just before one are written as percent codes. */
+function encodeCellAddress(address: string): string {
+	return address.replace(CELL_BREAKING_CHARACTER, (character) =>
+		character === "|" ? "%7C" : "%5C"
+	);
+}
+
+function escapeCellText(text: string): string {
+	return escapeFreeTextCharacters(text).replaceAll("|", "\\|");
+}
+
+/**
+ * Escape free text for one cell of a Markdown table. It is written as
+ * {@link escapeMarkdownText} writes it, with line breaks turned into spaces
+ * and every `|` outside an address escaped, so the cell cannot split. An
+ * address cannot hold an escape, because viewers disagree about whether the
+ * backslash stays in the link, so a `|` inside one, and a `\` just before it,
+ * are written as the percent codes of the same characters. The link target
+ * stays equivalent and the row keeps its cells.
+ *
+ * @param text - Cell text to escape
+ * @returns Text for one table cell
+ */
+export function escapeMarkdownTableCell(text: string): string {
+	return withAddressesAsAutolinks(text, escapeCellText, encodeCellAddress)
+		.replace(LINE_BREAK, " ")
+		.trim();
 }
