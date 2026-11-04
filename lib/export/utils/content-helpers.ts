@@ -51,5 +51,20 @@ export function getElementTitle(node: PlainTreeNode): string {
  * @returns Markdown-safe text
  */
 export function escapeMarkdown(text: string): string {
-	return text.replace(/([*_`~[\]()#>+\-=|{}!\\])/g, "\\$1");
+	return text.replace(/([*_`~[\]()#>+\-=|{}!\\<])/g, "\\$1");
+}
+
+/**
+ * Escape free text so Markdown shows it as typed, without reading it as
+ * markup.
+ *
+ * Only the characters that start HTML, links, images or character references
+ * are escaped: backslash, `<`, `[`, `]` and `&`. Braces and hyphens are left
+ * alone, so `{term}` references and hyphenated words stay readable in the file.
+ *
+ * @param text - Text to escape
+ * @returns Text that Markdown shows literally
+ */
+export function escapeMarkdownText(text: string): string {
+	return text.replace(/([\\<[\]&])/g, "\\$1");
 }

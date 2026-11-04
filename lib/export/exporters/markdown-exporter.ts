@@ -13,8 +13,14 @@ import type {
 	RenderedDocument,
 	RenderedSection,
 } from "../types";
-import { escapeMarkdown, getElementTitle } from "../utils";
+import { escapeMarkdown, escapeMarkdownText, getElementTitle } from "../utils";
 import { AbstractExporter } from "./base-exporter";
+
+/** An address that may be written as a link: no whitespace, web or mail scheme. */
+const LINKABLE_URL = /^(?:https?:\/\/|mailto:)\S+$/i;
+
+/** Characters that cannot appear unencoded inside a `<...>` link target. */
+const UNSAFE_LINK_TARGET_CHARACTER = /[<>\\]|[\s\p{Cc}]/gu;
 
 /**
  * Exporter that converts RenderedDocument to Markdown format.
@@ -88,7 +94,9 @@ export class MarkdownExporter extends AbstractExporter {
 		lines.push(`exportedAt: "${document.metadata.exportedAt}"`);
 
 		if (document.metadata.exportedBy) {
-			lines.push(`exportedBy: "${document.metadata.exportedBy}"`);
+			lines.push(
+				`exportedBy: "${this.escapeYamlString(document.metadata.exportedBy)}"`
+			);
 		}
 
 		lines.push(`version: "${document.metadata.version}"`);
@@ -109,7 +117,10 @@ export class MarkdownExporter extends AbstractExporter {
 	 * Escape special characters in YAML strings.
 	 */
 	private escapeYamlString(text: string): string {
-		return text.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+		return text
+			.replace(/\\/g, "\\\\")
+			.replace(/"/g, '\\"')
+			.replace(/\n/g, "\\n");
 	}
 
 	/**
@@ -188,7 +199,7 @@ export class MarkdownExporter extends AbstractExporter {
 		if (!block.text.trim()) {
 			return "";
 		}
-		return `${block.text}\n`;
+		return `${escapeMarkdownText(block.text)}\n`;
 	}
 
 	/**
@@ -242,7 +253,10 @@ export class MarkdownExporter extends AbstractExporter {
 	 * Escape special characters for table cells.
 	 */
 	private escapeTableCell(text: string): string {
-		return text.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
+		return escapeMarkdownText(text)
+			.replace(/\|/g, "\\|")
+			.replace(/\n/g, " ")
+			.trim();
 	}
 
 	/**
@@ -306,13 +320,26 @@ export class MarkdownExporter extends AbstractExporter {
 
 	/**
 	 * Render a metadata key-value block.
-	 * URLs are not escaped to preserve working links.
+	 * A web or mail address stays a working link; any other value is text.
 	 */
 	private renderMetadata(block: { key: string; value: string }): string {
-		const isUrl =
-			block.value.startsWith("http://") || block.value.startsWith("https://");
-		const displayValue = isUrl ? block.value : escapeMarkdown(block.value);
-		return `**${escapeMarkdown(block.key)}:** ${displayValue}\n`;
+		return `**${escapeMarkdown(block.key)}:** ${this.renderAddress(block.value)}\n`;
+	}
+
+	/**
+	 * Render an address as a link when it is a web or mail address, and as
+	 * escaped text otherwise. The link target is written inside `<...>` with
+	 * the characters that would end it encoded, so no address can close the
+	 * link early or add markup after it.
+	 */
+	private renderAddress(address: string): string {
+		if (!LINKABLE_URL.test(address)) {
+			return escapeMarkdown(address);
+		}
+		const target = address.replace(UNSAFE_LINK_TARGET_CHARACTER, (character) =>
+			encodeURIComponent(character)
+		);
+		return `[${escapeMarkdown(address)}](<${target}>)`;
 	}
 
 	/**
@@ -329,7 +356,7 @@ export class MarkdownExporter extends AbstractExporter {
 
 		// Description
 		if (node.description) {
-			parts.push(`${node.description}\n`);
+			parts.push(`${escapeMarkdownText(node.description)}\n`);
 		}
 
 		// Context (for goals, strategies, property claims)
@@ -349,7 +376,7 @@ export class MarkdownExporter extends AbstractExporter {
 
 		// URL (for evidence)
 		if (node.url) {
-			parts.push(`**URL:** [${escapeMarkdown(node.url)}](${node.url})\n`);
+			parts.push(`**URL:** ${this.renderAddress(node.url)}\n`);
 		}
 
 		// Sandbox indicator
