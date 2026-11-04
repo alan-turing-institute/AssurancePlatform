@@ -129,6 +129,11 @@ function showEventToast(event: SSEEvent): void {
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const [loading, setLoading] = useState(true);
+	// Whether the first load found the case. It is not cleared when the case is
+	// dropped from the store after access is removed, so the live-update stream
+	// opens only for a case this viewer could see, and stays subscribed to say
+	// why it ended.
+	const [caseLoaded, setCaseLoaded] = useState(false);
 	const {
 		assuranceCase,
 		setAssuranceCase,
@@ -276,7 +281,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	// Subscribe to real-time case events via SSE
 	const { status: eventsStatus } = useCaseEvents({
 		caseId: effectiveCaseId || "",
-		enabled: Boolean(effectiveCaseId) && !loading,
+		enabled: Boolean(effectiveCaseId) && !loading && caseLoaded,
 		onEvent: (event) => {
 			// Suppress toasts for self-events (acting user)
 			const isSelfEvent = event.userId && event.userId === session?.user?.id;
@@ -303,6 +308,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 					const result = await fetchSingleCase(idValue);
 					setAssuranceCase((result as AssuranceCaseResponse) || null);
+					setCaseLoaded(Boolean(result));
 					setLoading(false);
 				} catch {
 					setLoading(false);
