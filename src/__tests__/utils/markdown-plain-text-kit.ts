@@ -91,7 +91,7 @@ export function createDocument(
 	};
 }
 
-export function createNode(overrides: Partial<PlainTreeNode>): PlainTreeNode {
+function createNode(overrides: Partial<PlainTreeNode>): PlainTreeNode {
 	return {
 		id: "node-1",
 		type: "GOAL",
@@ -281,6 +281,22 @@ function readAngleTarget(markdown: string, start: number): ReadTarget | null {
 	return null;
 }
 
+/** True when a backslash at `index` escapes the punctuation mark after it. */
+function isEscape(markdown: string, index: number): boolean {
+	return (
+		markdown.charAt(index) === "\\" &&
+		ASCII_PUNCTUATION.test(markdown.charAt(index + 1))
+	);
+}
+
+/** How a character moves the depth of nested parentheses. */
+function parenthesisChange(character: string): number {
+	if (character === "(") {
+		return 1;
+	}
+	return character === ")" ? -1 : 0;
+}
+
 function readBareTarget(markdown: string, start: number): ReadTarget | null {
 	let target = "";
 	let depth = 0;
@@ -291,10 +307,7 @@ function readBareTarget(markdown: string, start: number): ReadTarget | null {
 			const end = endOfLink(markdown, index);
 			return end === null ? null : { target, end };
 		}
-		if (
-			character === "\\" &&
-			ASCII_PUNCTUATION.test(markdown.charAt(index + 1))
-		) {
+		if (isEscape(markdown, index)) {
 			target += markdown.charAt(index + 1);
 			index += 2;
 			continue;
@@ -302,8 +315,7 @@ function readBareTarget(markdown: string, start: number): ReadTarget | null {
 		if (character === ")" && depth === 0) {
 			return { target, end: index + 1 };
 		}
-		depth += character === "(" ? 1 : 0;
-		depth -= character === ")" ? 1 : 0;
+		depth += parenthesisChange(character);
 		target += character;
 		index += 1;
 	}
