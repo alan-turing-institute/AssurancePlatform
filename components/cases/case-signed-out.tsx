@@ -22,9 +22,9 @@ export function CaseSignedOut() {
 	}, [router, setAssuranceCase]);
 
 	return (
-		<div className="flex min-h-[60vh] items-center justify-center gap-2 px-4 text-muted-foreground">
+		<output className="flex min-h-[60vh] items-center justify-center gap-2 px-4 text-muted-foreground">
 			<Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
-			<p>Your session has ended. Taking you to the sign-in page.</p>
-		</div>
+			<span>Your session has ended. Taking you to the sign-in page.</span>
+		</output>
 	);
 }

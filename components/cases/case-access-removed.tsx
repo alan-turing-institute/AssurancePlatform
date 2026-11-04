@@ -22,6 +22,7 @@ export function CaseAccessRemoved() {
 			role="alert"
 		>
 			<ErrorCard
+				focusTitle
 				message="Your access to this case was removed. It may have been deleted, or the owner may have stopped sharing it with you."
 				showDashboardLink
 				title="Access removed"

@@ -84,6 +84,18 @@ describe("a case whose access was removed while it was open", () => {
 		});
 	});
 
+	it("moves keyboard focus to the message's heading, so it is not left on the page body", async () => {
+		streamStatus("access-removed");
+
+		render(<CaseContainer caseId="c1" />);
+
+		const heading = await screen.findByRole("heading", {
+			name: "Access removed",
+		});
+		expect(document.activeElement).toBe(heading);
+		expect(heading.getAttribute("tabindex")).toBe("-1");
+	});
+
 	it("sends the user to the sign-in page, and clears the case, when the session ended", async () => {
 		streamStatus("signed-out");
 
@@ -93,6 +105,9 @@ describe("a case whose access was removed while it was open", () => {
 			expect(mockReplace).toHaveBeenCalledWith("/login");
 		});
 		expect(mockReplace).toHaveBeenCalledTimes(1);
+		expect(screen.getByRole("status").textContent).toContain(
+			"Your session has ended"
+		);
 		expect(screen.queryByTestId("flow")).toBeNull();
 		expect(screen.queryByRole("alert")).toBeNull();
 		await waitFor(() => {
