@@ -1,4 +1,7 @@
+import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
 import { convertCaseKind } from "@/lib/services/case-kind-service";
 import {
 	archivePublishedCopies,
@@ -9,6 +12,7 @@ import {
 } from "@/lib/services/publish-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import { mockNoAuth } from "../utils/auth-helpers";
+import { createTestCaseInformation } from "../utils/prisma-factories";
 import {
 	holdCaseRow,
 	inconsistencies,
@@ -44,6 +48,29 @@ beforeEach(async () => {
 const CHANGED = {
 	error: "The case changed while it was being published. Try again.",
 };
+
+/** Writes the stored feature image a case's information points at, and returns its key. */
+async function seedLiveFeatureImage(caseId: string): Promise<string> {
+	const key = `cases/${caseId}/case-information/original.png`;
+	const filePath = join(UPLOADS_DIR, key);
+	await mkdir(join(filePath, ".."), { recursive: true });
+	await writeFile(filePath, Buffer.from("fake-png-bytes"));
+	return key;
+}
+
+/** Every publish-time image copy on disk, as `<folder>/<file>`, sorted. */
+async function listPublishedFiles(): Promise<string[]> {
+	const publishedDir = join(UPLOADS_DIR, "published");
+	const folders = await readdir(publishedDir).catch(() => []);
+	const files = await Promise.all(
+		folders.map(async (folder) =>
+			(await readdir(join(publishedDir, folder)).catch(() => [])).map(
+				(file) => `${folder}/${file}`
+			)
+		)
+	);
+	return files.flat().sort();
+}
 
 describe.each(
 	KINDS
@@ -322,8 +349,13 @@ describe.each(
 		expect(inconsistencies(state)).toEqual([]);
 	});
 
-	it("leaves the case and its rows in agreement whichever of a queued update and a real unpublish wins", async () => {
-		const { caseId, ownerId } = await publishedCase();
+	it("takes down both versions, and deletes the new image copy, when a real unpublish queues behind a real update", async () => {
+		const open = await openCase(kind);
+		const { caseId, ownerId } = open;
+		const liveKey = await seedLiveFeatureImage(caseId);
+		await createTestCaseInformation(caseId, { featureImageUrl: liveKey });
+		const filesBefore = await listPublishedFiles();
+		expectSuccess(await publishAssuranceCase(ownerId, caseId));
 		const holder = await holdCaseRow(caseId);
 
 		const updating = updatePublishedCase(ownerId, caseId);
@@ -331,10 +363,19 @@ describe.each(
 		const unpublishing = unpublishAssuranceCase(ownerId, caseId);
 		await waitForLockWait(5000, 2);
 		await holder.rollback();
-		const results = await Promise.all([updating, unpublishing]);
+		const [updated, unpublished] = await Promise.all([updating, unpublishing]);
 
-		expect(results.some((result) => "data" in result)).toBe(true);
-		expect(inconsistencies(await storedState(caseId))).toEqual([]);
+		expect(updated).toHaveProperty("data");
+		expect(unpublished).toHaveProperty("data");
+		const state = await storedState(caseId);
+		expect(state.stored).toMatchObject({
+			published: false,
+			publishStatus: "DRAFT",
+			publishedAt: null,
+		});
+		expect(state.rows).toHaveLength(0);
+		expect(inconsistencies(state)).toEqual([]);
+		expect(await listPublishedFiles()).toEqual(filesBefore);
 	});
 
 	it("leaves one current row, all of the same type, when two updates run together", async () => {

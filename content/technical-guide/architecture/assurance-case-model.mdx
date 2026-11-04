@@ -164,6 +164,10 @@ Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. 
 The row's `type` is `ARGUMENT_PATTERN` when the case is a pattern and `ASSURANCE_CASE` when it is a case.
 `swapCurrentPublishedVersion` in `lib/services/publish-service.ts` sets it from the case's kind when it creates the row, and a republish keeps it.
 A republish is refused, with "The case changed while it was being published. Try again.", if the case was unpublished or converted after the snapshot was composed.
+Every transaction that writes a case and its published rows takes the case row first: publish, republish, unpublish, moving a case to Trash, restoring it, removing an archived copy, a permanent delete and an account deletion.
+No two of them can wait on each other's locks in opposite orders, so none can deadlock with another.
+An unpublish that meets a republish waits for it, then takes the version it wrote down as well, so the case ends as a draft with no published version.
+An unpublish that was waiting for a move to Trash is refused with "Case not found" and leaves the archived copy alone.
 
 ## Working with the schema
 
