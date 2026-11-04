@@ -129,43 +129,60 @@ export async function observe(caseId: string): Promise<Observed> {
 	};
 }
 
-/** What is wrong with a case and its published rows taken together; empty when they agree. */
-export function disagreements(state: Observed): string[] {
+type ObservedRow = Observed["rows"][number];
+
+function orphanedRowProblems(state: Observed): string[] {
+	return state.rows.length > 0 ? ["published rows outlive their case"] : [];
+}
+
+function archivedCopyProblems(state: Observed): string[] {
+	return state.rows.some((row) => row.archived)
+		? ["a case out of Trash holds an archived copy"]
+		: [];
+}
+
+function trashedPublishedProblems(current: ObservedRow[]): string[] {
+	return current.length === 1
+		? []
+		: [`a published case in Trash holds ${current.length} current rows`];
+}
+
+function trashedDraftProblems(state: Observed): string[] {
+	return state.rows.length > 0
+		? ["a draft in Trash still holds published rows"]
+		: [];
+}
+
+function trashedCaseProblems(
+	state: Observed,
+	current: ObservedRow[],
+	live: ObservedRow[]
+): string[] {
 	const problems: string[] = [];
-	const current = state.rows.filter((row) => row.isCurrent);
-	const live = current.filter((row) => !row.archived);
-	if (!state.exists) {
-		if (state.rows.length > 0) {
-			problems.push("published rows outlive their case");
-		}
-		return problems;
+	if (live.length > 0) {
+		problems.push("a case in Trash has a live copy");
 	}
-	if (state.trashed) {
-		if (live.length > 0) {
-			problems.push("a case in Trash has a live copy");
-		}
-		if (state.published && current.length !== 1) {
-			problems.push(
-				`a published case in Trash holds ${current.length} current rows`
-			);
-		}
-		if (!state.published && state.rows.length > 0) {
-			problems.push("a draft in Trash still holds published rows");
-		}
-		return problems;
+	problems.push(
+		...(state.published
+			? trashedPublishedProblems(current)
+			: trashedDraftProblems(state))
+	);
+	return problems;
+}
+
+function publishedCaseProblems(state: Observed, live: ObservedRow[]): string[] {
+	const problems: string[] = [];
+	if (live.length !== 1) {
+		problems.push(`published with ${live.length} live copies`);
 	}
-	if (state.rows.some((row) => row.archived)) {
-		problems.push("a case out of Trash holds an archived copy");
+	if (state.publishStatus !== "PUBLISHED" || !state.hasPublishedAt) {
+		problems.push("published but not marked so");
 	}
-	if (state.published) {
-		if (live.length !== 1) {
-			problems.push(`published with ${live.length} live copies`);
-		}
-		if (state.publishStatus !== "PUBLISHED" || !state.hasPublishedAt) {
-			problems.push("published but not marked so");
-		}
-		return problems;
-	}
+	return problems;
+}
+
+function draftCaseProblems(state: Observed): string[] {
+	const problems: string[] = [];
 	if (state.rows.length > 0) {
 		problems.push(`a draft holds ${state.rows.length} published rows`);
 	}
@@ -173,6 +190,24 @@ export function disagreements(state: Observed): string[] {
 		problems.push("not published but marked so");
 	}
 	return problems;
+}
+
+/** What is wrong with a case and its published rows taken together; empty when they agree. */
+export function disagreements(state: Observed): string[] {
+	if (!state.exists) {
+		return orphanedRowProblems(state);
+	}
+	const current = state.rows.filter((row) => row.isCurrent);
+	const live = current.filter((row) => !row.archived);
+	if (state.trashed) {
+		return trashedCaseProblems(state, current, live);
+	}
+	return [
+		...archivedCopyProblems(state),
+		...(state.published
+			? publishedCaseProblems(state, live)
+			: draftCaseProblems(state)),
+	];
 }
 
 /**
@@ -274,23 +309,36 @@ export interface ErrorLog {
 	text: string;
 }
 
+/** The value to record for one already-seen object: itself the first time, a marker after. */
+function firstSightOf(seen: WeakSet<object>, value: object): unknown {
+	if (seen.has(value)) {
+		return "[Circular]";
+	}
+	seen.add(value);
+	return value;
+}
+
+/** An object as the log text records it: itself the first time it is met, a marker after; anything else as it is. */
+function recordedObject(seen: WeakSet<object>, value: unknown): unknown {
+	if (typeof value !== "object" || value === null) {
+		return value;
+	}
+	return firstSightOf(seen, value);
+}
+
+/** One value as the log text records it: errors as name and message, big integers as strings, repeats of an object as a marker. */
+function recordedValue(seen: WeakSet<object>, value: unknown): unknown {
+	if (value instanceof Error) {
+		return { name: value.name, message: value.message };
+	}
+	return typeof value === "bigint"
+		? value.toString()
+		: recordedObject(seen, value);
+}
+
 function textOf(entry: LogEntry): string {
 	const seen = new WeakSet<object>();
-	return JSON.stringify(entry, (_key, value) => {
-		if (value instanceof Error) {
-			return { name: value.name, message: value.message };
-		}
-		if (typeof value === "bigint") {
-			return value.toString();
-		}
-		if (typeof value === "object" && value !== null) {
-			if (seen.has(value)) {
-				return "[Circular]";
-			}
-			seen.add(value);
-		}
-		return value;
-	});
+	return JSON.stringify(entry, (_key, value) => recordedValue(seen, value));
 }
 
 /** Collects the error-level log entries emitted from now until `stop()`. */
