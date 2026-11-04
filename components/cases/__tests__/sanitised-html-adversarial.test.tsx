@@ -20,9 +20,7 @@ function problemsIn(container: HTMLElement): string[] {
 			problems.push(`element <${tag}>`);
 		}
 		for (const name of element.getAttributeNames()) {
-			const allowed =
-				name === "class" ||
-				(tag === "a" && ["href", "target", "rel"].includes(name));
+			const allowed = tag === "a" && ["href", "target", "rel"].includes(name);
 			if (!allowed) {
 				problems.push(`attribute ${name} on <${tag}>`);
 			}
@@ -268,7 +266,7 @@ describe("the item page description (SanitisedHtml)", () => {
 			"ol > li",
 			"blockquote",
 			"pre > code",
-			"p.note",
+			"p",
 		]) {
 			expect(container.querySelector(selector)).not.toBeNull();
 		}

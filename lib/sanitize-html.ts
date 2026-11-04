@@ -48,7 +48,6 @@ export function sanitizeDescription(html: string): string {
 		],
 		allowedAttributes: {
 			a: ["href", "target", "rel"],
-			"*": ["class"],
 		},
 		// Ensure javascript: URLs are stripped
 		allowedSchemes: ["http", "https", "mailto"],
