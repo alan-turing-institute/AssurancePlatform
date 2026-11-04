@@ -6,6 +6,7 @@ import {
 	emitSSEEvent,
 	sseConnectionManager,
 } from "@/lib/services/sse-connection-manager";
+import { HEARTBEAT_INTERVAL_MS } from "@/lib/sse-heartbeat";
 import { mockAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -30,7 +31,18 @@ vi.mock("@/lib/permissions", async (importOriginal) => {
 	return { ...actual, canAccessCase: vi.fn(actual.canAccessCase) };
 });
 
-const HEARTBEAT_MS = 30_000;
+// Each stream's heartbeat period is random. These tests reach a heartbeat by
+// advancing the clock by exactly one period, so it is pinned to the interval.
+vi.mock("@/lib/sse-heartbeat", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/sse-heartbeat")>();
+	return {
+		...actual,
+		heartbeatPeriodMs: vi.fn(() => actual.HEARTBEAT_INTERVAL_MS),
+	};
+});
+
+const HEARTBEAT_MS = HEARTBEAT_INTERVAL_MS;
+const CLOSING_EVENT = "event: stream:closed";
 const decoder = new TextDecoder();
 
 interface OpenedStream {
@@ -207,6 +219,8 @@ describe("a heartbeat on a stream whose user may still view the case", () => {
 		);
 		expect(ownerStream.ended).toBe(false);
 		expect(viewerStream.ended).toBe(false);
+		expect(heartbeatsIn(ownerStream)).toBe(1);
+		expect(heartbeatsIn(viewerStream)).toBe(1);
 		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(2);
 
 		emitSSEEvent("case:updated", assuranceCase.id, { action: "later" });
@@ -229,6 +243,8 @@ describe("a heartbeat on a stream whose user has lost access", () => {
 		await until(() => viewerStream.ended);
 
 		expect(ownerStream.ended).toBe(false);
+		expect(viewerStream.text()).toContain(CLOSING_EVENT);
+		expect(ownerStream.text()).not.toContain(CLOSING_EVENT);
 		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(1);
 		expect(vi.getTimerCount()).toBe(timersBeforeOpening + 1);
 
@@ -249,6 +265,8 @@ describe("a heartbeat on a stream whose user has lost access", () => {
 		await beat(2);
 		await until(() => ownerStream.ended && viewerStream.ended);
 
+		expect(ownerStream.text()).toContain(CLOSING_EVENT);
+		expect(viewerStream.text()).toContain(CLOSING_EVENT);
 		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(0);
 		expect(vi.getTimerCount()).toBe(timersBeforeOpening);
 	});

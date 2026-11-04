@@ -6,10 +6,21 @@ import type {
 	SSEEvent,
 	SSEEventType,
 } from "@/lib/services/sse-connection-manager";
+import { STREAM_CLOSED_EVENT } from "@/lib/sse-stream-closed";
 
 const log = logger.child({ component: "use-case-events" });
 
-type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+/**
+ * `"access-removed"` is final: the server ended the stream because the user can
+ * no longer view the case, so nothing reconnects it. Only `reconnect()` opens
+ * the stream again.
+ */
+type ConnectionStatus =
+	| "disconnected"
+	| "connecting"
+	| "connected"
+	| "error"
+	| "access-removed";
 
 export interface UseCaseEventsOptions {
 	/** Case ID to subscribe to */
@@ -41,6 +52,12 @@ interface UseCaseEventsReturn {
 
 const DEFAULT_MAX_RECONNECT_ATTEMPTS = 5;
 const DEFAULT_RECONNECT_DELAY = 1000;
+
+/** `EventSource.CLOSED`: the browser gave up on the connection and will not retry it. */
+const EVENT_SOURCE_CLOSED = 2;
+
+/** What the events route answers when the user cannot view the case. */
+const ACCESS_GONE_HTTP_STATUS = 404;
 
 /**
  * Every event type this hook registers an `EventSource.addEventListener` for
@@ -101,6 +118,8 @@ interface CaseStream {
 	attempts: number;
 	closeTimer: ReturnType<typeof setTimeout> | null;
 	maxReconnectAttempts: number;
+	/** Set while the events URL is being asked, once, why the source failed. */
+	probe: AbortController | null;
 	reconnectDelay: number;
 	reconnectTimer: ReturnType<typeof setTimeout> | null;
 	source: EventSource | null;
@@ -153,25 +172,19 @@ function connectStream(caseId: string, stream: CaseStream) {
 		if (streams.get(caseId) !== stream || stream.source !== source) {
 			return;
 		}
-		if (stream.subscribers.size === 0) {
-			source.close();
-			stream.source = null;
-			return;
-		}
+		// The browser only gives up on a connection of its own accord when the
+		// server answered the request with an error status.
+		const refused = source.readyState === EVENT_SOURCE_CLOSED;
 		source.close();
 		stream.source = null;
+		if (stream.subscribers.size === 0) {
+			return;
+		}
 
-		// Reconnect with exponential backoff, once for the whole case.
-		if (stream.attempts < stream.maxReconnectAttempts) {
-			setStreamStatus(stream, "connecting");
-			const delay = stream.reconnectDelay * 2 ** stream.attempts;
-			stream.attempts += 1;
-			stream.reconnectTimer = setTimeout(() => {
-				stream.reconnectTimer = null;
-				connectStream(caseId, stream);
-			}, delay);
+		if (refused) {
+			probeEventsUrl(caseId, stream);
 		} else {
-			setStreamStatus(stream, "error");
+			scheduleReconnect(caseId, stream);
 		}
 	};
 
@@ -181,6 +194,16 @@ function connectStream(caseId: string, stream: CaseStream) {
 		} catch {
 			// Ignore parsing errors for connection event
 		}
+	});
+
+	// The server ends the stream on purpose only to say access has gone, so
+	// this stops it for good instead of leaving it to reconnect.
+	source.addEventListener(STREAM_CLOSED_EVENT, () => {
+		if (streams.get(caseId) !== stream || stream.source !== source) {
+			return;
+		}
+		closeStream(stream);
+		setStreamStatus(stream, "access-removed");
 	});
 
 	// Set up event type handlers — see `CASE_EVENT_TYPES`'s doc comment.
@@ -198,10 +221,61 @@ function connectStream(caseId: string, stream: CaseStream) {
 	}
 }
 
+/** Reconnects with exponential backoff, once for the whole case, until the attempts run out. */
+function scheduleReconnect(caseId: string, stream: CaseStream) {
+	if (stream.attempts >= stream.maxReconnectAttempts) {
+		setStreamStatus(stream, "error");
+		return;
+	}
+	setStreamStatus(stream, "connecting");
+	const delay = stream.reconnectDelay * 2 ** stream.attempts;
+	stream.attempts += 1;
+	stream.reconnectTimer = setTimeout(() => {
+		stream.reconnectTimer = null;
+		connectStream(caseId, stream);
+	}, delay);
+}
+
+/**
+ * Asks the events URL once why the browser refused the connection, reading
+ * only the status. A 404 means the user can no longer view the case, which is
+ * how a client that missed the closing event finds out. Any other answer, or
+ * none, leaves it to the ordinary reconnect. A stream the probe opened is
+ * dropped as soon as its status is read.
+ */
+async function probeEventsUrl(caseId: string, stream: CaseStream) {
+	const probe = new AbortController();
+	stream.probe = probe;
+	let status: number | null = null;
+	try {
+		const response = await fetch(`/api/cases/${caseId}/events`, {
+			signal: probe.signal,
+		});
+		status = response.status;
+	} catch {
+		// No answer: the ordinary reconnect decides what happens next.
+	}
+	probe.abort();
+	if (stream.probe !== probe) {
+		return;
+	}
+	stream.probe = null;
+
+	if (status === ACCESS_GONE_HTTP_STATUS) {
+		setStreamStatus(stream, "access-removed");
+	} else {
+		scheduleReconnect(caseId, stream);
+	}
+}
+
 function closeStream(stream: CaseStream) {
 	if (stream.reconnectTimer) {
 		clearTimeout(stream.reconnectTimer);
 		stream.reconnectTimer = null;
+	}
+	if (stream.probe) {
+		stream.probe.abort();
+		stream.probe = null;
 	}
 	if (stream.source) {
 		stream.source.close();
@@ -218,6 +292,16 @@ function reconnectStream(caseId: string, stream: CaseStream) {
 	disconnectStream(stream);
 	stream.attempts = 0;
 	connectStream(caseId, stream);
+}
+
+/** True when nothing is connecting, waiting to reconnect or probing, and the server has not ended the stream for good. */
+function needsConnection(stream: CaseStream): boolean {
+	return !(
+		stream.source ||
+		stream.reconnectTimer ||
+		stream.probe ||
+		stream.status === "access-removed"
+	);
 }
 
 /**
@@ -239,6 +323,7 @@ function subscribe(
 			attempts: 0,
 			closeTimer: null,
 			maxReconnectAttempts,
+			probe: null,
 			reconnectDelay,
 			reconnectTimer: null,
 			source: null,
@@ -254,7 +339,7 @@ function subscribe(
 	}
 	shared.subscribers.add(subscriber);
 	subscriber.onStatus(shared.status);
-	if (!(shared.source || shared.reconnectTimer)) {
+	if (needsConnection(shared)) {
 		shared.attempts = 0;
 		connectStream(caseId, shared);
 	}

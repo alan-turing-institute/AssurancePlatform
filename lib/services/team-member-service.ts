@@ -5,6 +5,7 @@ import {
 	validateTeamMember,
 } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
 import type { TeamRole } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -300,6 +301,10 @@ export async function removeMember(
 			},
 		});
 
+		// Close the member's open streams on cases the team gave them, unless
+		// they have another route to the case
+		sseConnectionManager.recheckConnections({ userId: targetUserId });
+
 		return { data: true };
 	} catch (error) {
 		log.error("Failed to remove member", { error });
@@ -339,6 +344,10 @@ export async function leaveTeam(userId: string, teamId: string): ServiceResult {
 				teamId_userId: { teamId, userId },
 			},
 		});
+
+		// Close the user's open streams on cases the team gave them, unless
+		// they have another route to the case
+		sseConnectionManager.recheckConnections({ userId });
 
 		return { data: true };
 	} catch (error) {

@@ -5,6 +5,7 @@ import type {
 	CreateTeamSchemaOutput,
 	UpdateTeamSchemaOutput,
 } from "@/lib/schemas/team";
+import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
 import type { TeamRole } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -343,10 +344,22 @@ export async function deleteTeam(
 	}
 
 	try {
+		// The members go with the team, so they are read first
+		const members = await prisma.teamMember.findMany({
+			where: { teamId },
+			select: { userId: true },
+		});
+
 		// Delete team (cascade deletes members and permissions)
 		await prisma.team.delete({
 			where: { id: teamId },
 		});
+
+		// Close the members' open streams on cases the team gave them, unless
+		// they have another route to the case
+		for (const { userId: memberId } of members) {
+			sseConnectionManager.recheckConnections({ userId: memberId });
+		}
 
 		return { data: true };
 	} catch (error) {

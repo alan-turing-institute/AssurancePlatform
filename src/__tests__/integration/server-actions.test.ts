@@ -18,7 +18,7 @@ vi.mock("@/lib/auth/validate-session", () => ({
  */
 vi.mock("@/lib/services/sse-connection-manager", () => ({
 	emitSSEEvent: vi.fn(),
-	sseConnectionManager: { broadcast: vi.fn() },
+	sseConnectionManager: { broadcast: vi.fn(), recheckConnections: vi.fn() },
 }));
 
 const FAILED_TO_LOAD_PATTERN = /Failed to load case data/;

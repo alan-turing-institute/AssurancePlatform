@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { createCaseInvite } from "@/lib/services/case-invite-service";
+import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
 import type { PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -592,6 +593,13 @@ export async function revokeUserPermission(
 			where: { id: permissionId },
 		});
 
+		// Close the user's open streams on the case now if this was their last
+		// route to it
+		sseConnectionManager.recheckConnections({
+			caseId,
+			userId: existingPermission.userId,
+		});
+
 		return { data: true };
 	} catch (error) {
 		log.error("Failed to revoke permission", { error });
@@ -627,6 +635,16 @@ export async function revokeTeamPermission(
 		await prisma.caseTeamPermission.delete({
 			where: { id: permissionId },
 		});
+
+		// Close the open streams on the case of any team member who has no other
+		// route to it
+		const members = await prisma.teamMember.findMany({
+			where: { teamId: existingPermission.teamId },
+			select: { userId: true },
+		});
+		for (const { userId: memberId } of members) {
+			sseConnectionManager.recheckConnections({ caseId, userId: memberId });
+		}
 
 		return { data: true };
 	} catch (error) {

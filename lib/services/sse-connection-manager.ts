@@ -41,8 +41,18 @@ interface SSEConnection {
 	id: string;
 	/** Runs once, when the connection is removed by any route to removal. */
 	onRemove?: () => void;
+	/** Checks again whether the connection's user may still view the case. */
+	recheck?: () => void | Promise<void>;
 	userId: string;
 }
+
+/**
+ * Which connections `recheckConnections` acts on. It must name a case, a
+ * user, or both; there is no way to ask for every connection.
+ */
+export type RecheckFilter =
+	| { caseId: string; userId?: string }
+	| { caseId?: string; userId: string };
 
 type CaseConnections = Map<string, SSEConnection>;
 
@@ -57,14 +67,16 @@ class SSEConnectionManager {
 	/**
 	 * Adds a new SSE connection for a case. `onRemove` runs once when the
 	 * connection leaves the manager, whether the client closed it, the server
-	 * ended it or a write to it failed.
+	 * ended it or a write to it failed. `recheck` is what
+	 * `recheckConnections` calls to have the connection's access checked again.
 	 */
 	addConnection(
 		caseId: string,
 		connectionId: string,
 		controller: ReadableStreamDefaultController<Uint8Array>,
 		userId: string,
-		onRemove?: () => void
+		onRemove?: () => void,
+		recheck?: () => void | Promise<void>
 	): void {
 		if (!this.connections.has(caseId)) {
 			this.connections.set(caseId, new Map());
@@ -78,6 +90,7 @@ class SSEConnectionManager {
 				userId,
 				createdAt: new Date(),
 				onRemove,
+				recheck,
 			});
 		}
 
@@ -126,10 +139,12 @@ class SSEConnectionManager {
 
 		const eventData = this.formatEvent(event);
 		const deadConnections: string[] = [];
+		let recipients = 0;
 
 		for (const [connectionId, connection] of caseConnections) {
 			try {
 				connection.controller.enqueue(eventData);
+				recipients += 1;
 			} catch {
 				// Connection is dead, mark for removal
 				deadConnections.push(connectionId);
@@ -144,32 +159,84 @@ class SSEConnectionManager {
 		log.info("SSE broadcast event", {
 			eventType: event.type,
 			caseId: event.caseId,
-			recipients: caseConnections.size - deadConnections.length,
+			recipients,
 		});
 	}
 
 	/**
-	 * Sends a heartbeat to all connections for a case.
+	 * Sends a heartbeat to one connection, and removes it if the write fails.
+	 * Each stream runs its own heartbeat timer, so a heartbeat never goes to
+	 * the case's other connections.
 	 */
-	sendHeartbeat(caseId: string): void {
-		const caseConnections = this.connections.get(caseId);
-		if (!caseConnections) {
+	sendHeartbeat(caseId: string, connectionId: string): void {
+		const connection = this.connections.get(caseId)?.get(connectionId);
+		if (!connection) {
 			return;
 		}
 
-		const heartbeat = this.encoder.encode(": heartbeat\n\n");
-		const deadConnections: string[] = [];
+		try {
+			connection.controller.enqueue(this.encoder.encode(": heartbeat\n\n"));
+		} catch {
+			this.removeConnection(caseId, connectionId);
+		}
+	}
 
-		for (const [connectionId, connection] of caseConnections) {
-			try {
-				connection.controller.enqueue(heartbeat);
-			} catch {
-				deadConnections.push(connectionId);
-			}
+	/**
+	 * Has the access of the matching connections checked again now, rather than
+	 * at their next heartbeat. Call it after a change that may have taken away
+	 * someone's access has committed. It acts only on the connections held by
+	 * this process, and returns before any check finishes. A filter that names
+	 * neither a case nor a user matches nothing.
+	 */
+	recheckConnections(filter: RecheckFilter): void {
+		const { caseId, userId } = filter;
+		if (!(caseId || userId)) {
+			return;
 		}
 
-		for (const connectionId of deadConnections) {
-			this.removeConnection(caseId, connectionId);
+		const matching = this.connectionsMatching(caseId, userId);
+		if (matching.length === 0) {
+			return;
+		}
+		for (const connection of matching) {
+			this.runRecheck(connection);
+		}
+		log.info("SSE access re-check requested", {
+			caseId,
+			userId,
+			connections: matching.length,
+		});
+	}
+
+	/** The connections on `caseId` (or on every case) that belong to `userId` (or to anyone). */
+	private connectionsMatching(
+		caseId: string | undefined,
+		userId: string | undefined
+	): SSEConnection[] {
+		const cases = caseId
+			? [this.connections.get(caseId)]
+			: [...this.connections.values()];
+		return cases.flatMap((caseConnections) =>
+			[...(caseConnections?.values() ?? [])].filter(
+				(connection) => !userId || connection.userId === userId
+			)
+		);
+	}
+
+	/**
+	 * Starts one connection's re-check. A re-check that fails does not reach
+	 * the caller that asked for it, nor the connections after it.
+	 */
+	private runRecheck(connection: SSEConnection): void {
+		const failed = (error: unknown) =>
+			log.warn("SSE access re-check failed", {
+				connectionId: connection.id,
+				error,
+			});
+		try {
+			Promise.resolve(connection.recheck?.()).catch(failed);
+		} catch (error) {
+			failed(error);
 		}
 	}
 

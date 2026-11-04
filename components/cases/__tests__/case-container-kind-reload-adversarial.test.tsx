@@ -25,7 +25,7 @@ vi.mock("@/actions/case-kind", () => ({
 }));
 vi.mock("@/hooks/use-case-events", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/hooks/use-case-events")>()),
-	useCaseEvents: vi.fn(),
+	useCaseEvents: vi.fn(() => ({ status: "connected" })),
 }));
 vi.mock("@/lib/case", () => ({
 	addHiddenProp: (value: unknown) => value,

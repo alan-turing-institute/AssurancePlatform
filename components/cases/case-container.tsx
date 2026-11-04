@@ -20,6 +20,7 @@ import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 import { ErrorBoundary } from "../ui/error-boundary";
+import { CaseAccessRemoved } from "./case-access-removed";
 import CaseDetails from "./case-details";
 import Flow from "./flow";
 import Header from "./header";
@@ -272,7 +273,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	);
 
 	// Subscribe to real-time case events via SSE
-	useCaseEvents({
+	const { status: eventsStatus } = useCaseEvents({
 		caseId: effectiveCaseId || "",
 		enabled: Boolean(effectiveCaseId) && !loading,
 		onEvent: (event) => {
@@ -346,6 +347,10 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				</div>
 			</div>
 		);
+	}
+
+	if (eventsStatus === "access-removed") {
+		return <CaseAccessRemoved />;
 	}
 
 	if (assuranceCase) {

@@ -10,7 +10,7 @@ vi.mock("@/actions/unsupported-markers", () => ({
 }));
 vi.mock("@/hooks/use-case-events", () => ({
 	CASE_RELOAD_EVENT_TYPES: [],
-	useCaseEvents: vi.fn(),
+	useCaseEvents: vi.fn(() => ({ status: "connected" })),
 }));
 vi.mock("@/lib/case", () => ({
 	addHiddenProp: (value: unknown) => value,
