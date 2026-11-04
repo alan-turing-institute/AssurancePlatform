@@ -1,9 +1,3 @@
-import {
-	countPlaceholders,
-	countUnsetVariables,
-	fillInCountMessage,
-	treeNodes,
-} from "@/lib/case/placeholders";
 import { logger } from "@/lib/logger";
 import {
 	isCaseFeatureImageKey,
@@ -23,7 +17,6 @@ import {
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
-import { exportCase } from "@/lib/services/case-export-service";
 import { deleteFile, readMedia } from "@/lib/services/file-storage-service";
 import type { CaseInformation, PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -241,15 +234,18 @@ export async function checkCaseInformationCompleteness(
 }
 
 /**
- * The publish-readiness gate itself (ADR 0003 §4), shared by every route
- * that can move a case to PUBLISHED — first publish
+ * The case-information half of the publish-readiness gate, shared by every
+ * route that can move a case to PUBLISHED — first publish
  * (`POST /api/cases/[id]/publish`) and republish
  * (`PATCH /api/cases/[id]/status`, `targetStatus: "PUBLISHED"` against an
  * already-published case). Wraps `checkCaseInformationCompleteness` and adds
  * the field-error formatting each of those routes used to duplicate inline.
- * A case with placeholders left in its argument, or with a variable that has
- * no value mentioned in it, fails the gate too, with the numbers still to fill
- * in as the message and no field errors.
+ *
+ * It does not look at the argument. A case with placeholders left in it, or
+ * with a variable that has no value mentioned in it, is refused by the publish
+ * itself (`publishSnapshot` in `publish-service.ts`), which counts them on the
+ * snapshot it is about to write, so the rule cannot disagree with what is
+ * published.
  *
  * Callers should treat `{ data: true }` as "proceed" and, on failure, prefer
  * `fieldErrors` (via `validationError`) when present — its absence means the
@@ -280,50 +276,7 @@ export async function requireCaseInformationComplete(
 		};
 	}
 
-	return await requireNoPlaceholders(userId, caseId);
-}
-
-/**
- * The export errors the gate leaves to the publish step, which reports them
- * itself: the person cannot read the case, it does not exist, or it has no
- * elements (so no placeholders).
- */
-const EXPORT_ERRORS_FOR_PUBLISH_TO_REPORT: ReadonlySet<string> = new Set([
-	"Permission denied",
-	"Case not found",
-	"Case has no elements to export",
-]);
-
-/**
- * The fill-in half of the publish gate: a case cannot be published while an
- * element of the argument that would be published is still to fill in, or the
- * text of that argument mentions a variable that has no value. Counted on the
- * exported tree, which leaves out detached sandbox elements; a pattern is never
- * held back by its own placeholders or empty variables. Fails with the number
- * of each still to fill in. The export errors listed above pass, because the
- * publish that follows reports them with its own errors; any other failure to
- * export refuses.
- */
-async function requireNoPlaceholders(
-	userId: string,
-	caseId: string
-): Promise<{ data: true } | CaseInformationGateFailure> {
-	const exported = await exportCase(userId, caseId, {
-		includeComments: false,
-	});
-	if ("error" in exported) {
-		return EXPORT_ERRORS_FOR_PUBLISH_TO_REPORT.has(exported.error)
-			? { data: true }
-			: exported;
-	}
-	if (exported.data.case.kind === "PATTERN") {
-		return { data: true };
-	}
-	const remaining = fillInCountMessage({
-		placeholders: countPlaceholders(treeNodes(exported.data.tree)),
-		unsetVariables: countUnsetVariables(exported.data.tree),
-	});
-	return remaining ? { error: remaining } : { data: true };
+	return { data: true };
 }
 
 /** Case-information fields frozen verbatim into a publish snapshot. */

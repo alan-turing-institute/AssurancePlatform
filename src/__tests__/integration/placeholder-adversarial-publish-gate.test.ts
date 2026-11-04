@@ -1,7 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { requireCaseInformationComplete } from "@/lib/services/case-information-service";
 import { convertCaseKind } from "@/lib/services/case-kind-service";
+import {
+	publishAssuranceCase,
+	updatePublishedCase,
+} from "@/lib/services/publish-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	openWorld,
@@ -341,5 +346,58 @@ describe("a case converted to a pattern and back", () => {
 		const response = await publishCase(world.caseId);
 
 		expect(response.status).toBe(200);
+	});
+});
+
+describe("a case that changes after the gate has passed", () => {
+	const STILL_TO_FILL_IN = { error: "1 element still to fill in" };
+
+	it("is refused when a pattern is converted to a case, and publishes nothing", async () => {
+		const world = await readyWorld("PATTERN");
+		await seedPlaceholderClaim(world);
+		expect(
+			await requireCaseInformationComplete(world.ownerId, world.caseId)
+		).toEqual({ data: true });
+		expect(
+			"data" in (await convertCaseKind(world.ownerId, world.caseId, "CASE"))
+		).toBe(true);
+
+		const result = await publishAssuranceCase(world.ownerId, world.caseId);
+
+		expect(result).toEqual(STILL_TO_FILL_IN);
+		expect(await snapshotCount(world.caseId)).toBe(0);
+		expect(await publishStatusOf(world.caseId)).toBe("DRAFT");
+	});
+
+	it("is refused on a first publish when an element is marked, and publishes nothing", async () => {
+		const world = await readyWorld();
+		expect(
+			await requireCaseInformationComplete(world.ownerId, world.caseId)
+		).toEqual({ data: true });
+		expect(
+			(await putElement(world.goalId, { isPlaceholder: true })).status
+		).toBe(200);
+
+		const result = await publishAssuranceCase(world.ownerId, world.caseId);
+
+		expect(result).toEqual(STILL_TO_FILL_IN);
+		expect(await snapshotCount(world.caseId)).toBe(0);
+		expect(await publishStatusOf(world.caseId)).toBe("DRAFT");
+	});
+
+	it("is refused on a republish when an element is marked, and keeps the published version as it was", async () => {
+		const world = await readyWorld();
+		expect((await publishCase(world.caseId)).status).toBe(200);
+		expect(
+			await requireCaseInformationComplete(world.ownerId, world.caseId)
+		).toEqual({ data: true });
+		expect(
+			(await putElement(world.goalId, { isPlaceholder: true })).status
+		).toBe(200);
+
+		const result = await updatePublishedCase(world.ownerId, world.caseId);
+
+		expect(result).toEqual(STILL_TO_FILL_IN);
+		expect(await snapshotCount(world.caseId)).toBe(1);
 	});
 });

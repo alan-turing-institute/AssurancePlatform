@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
+import {
+	countPlaceholders,
+	countUnsetVariables,
+	fillInCountMessage,
+	treeNodes,
+} from "@/lib/case/placeholders";
 import { logger } from "@/lib/logger";
 import {
 	isCaseFeatureImageKey,
@@ -8,6 +14,7 @@ import {
 } from "@/lib/media-key";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import type { TreeNode } from "@/lib/schemas/case-export";
 import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
 import { exportCase } from "@/lib/services/case-export-service";
 import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
@@ -286,6 +293,13 @@ export async function archivePublishedCopies(
 // Shared helpers — publish / republish
 // ============================================
 
+/** A composed snapshot: its content, the typed tree it was composed from, and the kind it records. */
+interface ComposedSnapshot {
+	data: Record<string, unknown>;
+	kind: CaseKind;
+	tree: TreeNode;
+}
+
 /**
  * Composes the JSON snapshot content shared by every publish flow: the
  * exported case tree plus captured plugin data (ADR 0002 v2 §3) and case
@@ -302,6 +316,10 @@ export async function archivePublishedCopies(
  * for authenticated export use elsewhere (e.g. `actions/export-document.ts`,
  * `app/api/cases/export/route.ts`) — only this publish-time call opts out.
  *
+ * Also returns the typed tree the snapshot was composed from and the kind
+ * the snapshot records (absent means a case), so the checks that must hold
+ * for what is written are made on the same export, not on a read of their own.
+ *
  * Shared verbatim between `publishAssuranceCase` (first publish) and
  * `updatePublishedCase` (republish) — both must freeze identical content
  * shapes, so this is the single place that composition happens.
@@ -309,7 +327,7 @@ export async function archivePublishedCopies(
 async function composeSnapshotContent(
 	userId: string,
 	caseId: string
-): Promise<{ data: Record<string, unknown> } | { error: string }> {
+): Promise<ComposedSnapshot | { error: string }> {
 	const exportResult = await exportCase(userId, caseId, {
 		includeComments: false,
 	});
@@ -333,6 +351,8 @@ async function composeSnapshotContent(
 			...(pluginData && { pluginData }),
 			...(caseInformation && { caseInformation }),
 		},
+		kind: exportResult.data.case.kind ?? "CASE",
+		tree: exportResult.data.tree,
 	};
 }
 
@@ -423,26 +443,43 @@ async function swapCurrentPublishedVersion(
 }
 
 /**
- * Shared body for `publishAssuranceCase` and `updatePublishedCase`: copies
- * the case's current feature image into its own publish-time key before
- * anything is written to the database (so a republish or a live edit
+ * Shared body for `publishAssuranceCase` and `updatePublishedCase`: refuses a
+ * case whose snapshot still has placeholders or unset variables to fill in,
+ * copies the case's current feature image into its own publish-time key
+ * before anything is written to the database (so a republish or a live edit
  * afterwards can never touch this snapshot's picture), runs the caller's own
  * transaction, and on any failure deletes the copy it just made — the copy
  * happens outside the transaction, so a failure after it but before commit
  * would otherwise leave it orphaned. Translates a case trashed
  * mid-transaction into "Case not found"; anything else into `failureMessage`.
+ *
+ * The fill-in check counts the tree the snapshot was composed from, so it
+ * judges exactly the content that is written, whatever happens to the case
+ * afterwards. A pattern is never held back. The kind it goes by, and passes to
+ * the transaction for its guarded write, is the one the snapshot records, so
+ * the content and the row's type cannot disagree.
  */
 async function publishSnapshot(
 	caseId: string,
-	contentResult: { data: Record<string, unknown> } | { error: string },
+	contentResult: ComposedSnapshot | { error: string },
 	runTransaction: (
 		content: Prisma.InputJsonValue,
-		now: Date
+		now: Date,
+		kind: CaseKind
 	) => Promise<{ id: string }>,
 	failureMessage: string
 ): Promise<PublishResult> {
 	if ("error" in contentResult) {
 		return { error: contentResult.error };
+	}
+	if (contentResult.kind === "CASE") {
+		const remaining = fillInCountMessage({
+			placeholders: countPlaceholders(treeNodes(contentResult.tree)),
+			unsetVariables: countUnsetVariables(contentResult.tree),
+		});
+		if (remaining) {
+			return { error: remaining };
+		}
 	}
 	const { content: preparedContent, copiedKey } =
 		await copyFeatureImageForSnapshot(caseId, contentResult.data);
@@ -457,7 +494,7 @@ async function publishSnapshot(
 	const now = new Date();
 
 	try {
-		const row = await runTransaction(content, now);
+		const row = await runTransaction(content, now, contentResult.kind);
 		return { data: { publishedId: row.id, publishedAt: now } };
 	} catch (error) {
 		if (copiedKey) {
@@ -549,7 +586,6 @@ export async function publishAssuranceCase(
 			id: true,
 			name: true,
 			published: true,
-			kind: true,
 		},
 	});
 
@@ -565,7 +601,7 @@ export async function publishAssuranceCase(
 	return publishSnapshot(
 		caseId,
 		contentResult,
-		(content, now) =>
+		(content, now, kind) =>
 			// The case-row update runs FIRST, before any published-row write. Every
 			// transaction that writes both a case and its published rows takes the
 			// case row first: this one, a republish, an unpublish, a trash, a
@@ -579,11 +615,11 @@ export async function publishAssuranceCase(
 			// trashed in between; `publishSnapshot` maps that to "Case not found",
 			// and nothing about the published row is written.
 			//
-			// The same condition names the kind the snapshot was composed from, so
-			// a conversion that committed after that read leaves no matching row:
-			// the snapshot would be of the other kind. A second read tells the two
-			// causes apart — a case still out of Trash was converted, and the
-			// caller is asked to try again with nothing written.
+			// The same condition names the kind the snapshot records, so a
+			// conversion that committed after the snapshot was composed leaves no
+			// matching row: the snapshot would be of the other kind. A second read
+			// tells the two causes apart — a case still out of Trash was converted,
+			// and the caller is asked to try again with nothing written.
 			//
 			// Generating the slug and creating the row must share this same
 			// transaction — otherwise a concurrent first-publish of a same-named
@@ -593,7 +629,7 @@ export async function publishAssuranceCase(
 			// numeric-suffix behaviour ADR 0003 §6 promises).
 			prisma.$transaction(async (tx) => {
 				const updateResult = await tx.assuranceCase.updateMany({
-					where: { id: caseId, deletedAt: null, kind: assuranceCase.kind },
+					where: { id: caseId, deletedAt: null, kind },
 					data: {
 						published: true,
 						publishedAt: now,
@@ -814,7 +850,6 @@ export async function updatePublishedCase(
 		select: {
 			id: true,
 			name: true,
-			kind: true,
 			published: true,
 			publishStatus: true,
 			publishedVersions: {
@@ -851,7 +886,7 @@ export async function updatePublishedCase(
 	return publishSnapshot(
 		caseId,
 		contentResult,
-		(content, now) =>
+		(content, now, kind) =>
 			// Create the new version in a transaction. The case-row update runs
 			// FIRST — see `publishAssuranceCase` above for why: every transaction
 			// that writes both a case and its published rows, an unpublish and a
@@ -859,18 +894,18 @@ export async function updatePublishedCase(
 			// published row.
 			//
 			// The condition also names `published: true` and the kind the snapshot
-			// was composed from: an unpublish or a conversion that committed after
-			// that read leaves no matching row, so no published row is written for
-			// a case that is no longer published or is of the other kind. A case
-			// still out of Trash is then refused with the same "changed while it
-			// was being published" message as a first publish.
+			// records: an unpublish or a conversion that committed after the
+			// snapshot was composed leaves no matching row, so no published row is
+			// written for a case that is no longer published or is of the other
+			// kind. A case still out of Trash is then refused with the same
+			// "changed while it was being published" message as a first publish.
 			prisma.$transaction(async (tx) => {
 				const updateResult = await tx.assuranceCase.updateMany({
 					where: {
 						id: caseId,
 						deletedAt: null,
 						published: true,
-						kind: assuranceCase.kind,
+						kind,
 					},
 					data: { publishedAt: now },
 				});

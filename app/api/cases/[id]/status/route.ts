@@ -106,6 +106,9 @@ export async function PATCH(
 		);
 
 		if (targetStatus === "PUBLISHED") {
+			// Checks the case information only. Placeholders and unset variables
+			// are refused by the publish and the republish themselves, on the
+			// snapshot they are about to write.
 			const completeness = await requireCaseInformationComplete(userId, id);
 			if ("error" in completeness) {
 				return apiError(
