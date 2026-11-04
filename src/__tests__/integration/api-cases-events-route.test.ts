@@ -83,6 +83,7 @@ async function drain(stream: OpenedStream) {
 
 async function openStream(caseId: string, userId: string) {
 	await mockAuth(userId);
+	vi.mocked(canAccessCase).mockClear();
 	const { GET } = await import("@/app/api/cases/[id]/events/route");
 	const abort = new AbortController();
 	const response = await GET(
@@ -103,7 +104,10 @@ async function openStream(caseId: string, userId: string) {
 	};
 	opened.push(stream);
 	drain(stream);
-	// The access check made on opening is not one of a heartbeat's.
+	// The access checks made on opening, the one that let the stream in and the
+	// one the server makes straight after it, are not a heartbeat's.
+	await until(() => vi.mocked(canAccessCase).mock.calls.length >= 2);
+	await afterChecks();
 	vi.mocked(canAccessCase).mockClear();
 	return stream;
 }

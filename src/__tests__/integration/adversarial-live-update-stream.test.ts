@@ -180,6 +180,7 @@ async function openStream(
 	if (response.status !== 200 || !response.body) {
 		throw new Error(`Expected an open stream, got ${response.status}`);
 	}
+	const checksBefore = settledChecks();
 
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
@@ -207,6 +208,9 @@ async function openStream(
 		cancel: () => reader.cancel().catch(() => undefined),
 	};
 	opened.push(viewer);
+	if (!options.preAborted) {
+		await afterOpeningCheck(checksBefore);
+	}
 	return viewer;
 }
 
@@ -252,6 +256,19 @@ function sessionReadsInFlight(): number {
 			(result) => result.type !== "incomplete"
 		).length
 	);
+}
+
+/**
+ * Waits for the access check, and the session read after it, that the server
+ * makes straight after a stream opens. Tests that follow change data and
+ * count checks, so the opening check must be over before they start.
+ */
+async function afterOpeningCheck(settledBefore: number): Promise<void> {
+	await until(
+		() => settledChecks() > settledBefore,
+		"the check made on opening"
+	);
+	await untilSessionReadsDone();
 }
 
 /** Waits for the session read a passing access check goes on to make. */
@@ -488,6 +505,30 @@ describe("opening a live-update stream", () => {
 		expect(response.status).toBe(401);
 		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
 		expect(startedTimers()).toBe(0);
+	});
+
+	it("closes a stream, with no heartbeat due, whose access was removed after the opening check and before the stream registered", async () => {
+		const world = await newWorld();
+		const { user, grant } = await directGrant(world);
+		const actual =
+			await vi.importActual<typeof import("@/lib/permissions")>(
+				"@/lib/permissions"
+			);
+		// The opening check passes; the grant is removed straight after it, with
+		// no re-check requested, before the connection is registered.
+		canAccess.mockImplementationOnce(async (...args) => {
+			const allowed = await actual.canAccessCase(...args);
+			await deleteGrantQuietly(grant.id);
+			return allowed;
+		});
+
+		const viewer = await openStream(user.id, world.caseId);
+		await until(viewer.isClosed, "the stream to close");
+
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+		expect(heartbeatsSeen(viewer)).toBe(0);
+		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
+		expect(liveTimers()).toBe(0);
 	});
 
 	it("starts exactly one heartbeat timer per stream", async () => {

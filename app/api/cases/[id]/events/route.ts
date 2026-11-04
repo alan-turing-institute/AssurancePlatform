@@ -167,11 +167,17 @@ function createAccessRecheck(
 ): (trigger: RecheckTrigger) => Promise<void> {
 	let running: Promise<void> | undefined;
 	let rerunQueued = false;
+	// `running` is cleared in the same step that leaves the loop, so a re-check
+	// requested after the last pass has started its own.
 	const runChecks = async () => {
-		do {
-			rerunQueued = false;
-			await checkAccessOnce(options);
-		} while (rerunQueued && !options.isClosed());
+		try {
+			do {
+				rerunQueued = false;
+				await checkAccessOnce(options);
+			} while (rerunQueued && !options.isClosed());
+		} finally {
+			running = undefined;
+		}
 	};
 	return (trigger) => {
 		if (options.isClosed()) {
@@ -181,11 +187,8 @@ function createAccessRecheck(
 			rerunQueued ||= trigger === "requested";
 			return running;
 		}
-		const started = runChecks().finally(() => {
-			running = undefined;
-		});
-		running = started;
-		return started;
+		running = runChecks();
+		return running;
 	};
 }
 
@@ -196,7 +199,7 @@ function createAccessRecheck(
  *
  * @pathParam id - Case ID (UUID)
  * @responseSet none
- * @add 401,404
+ * @add 401,404,500
  * @auth SessionAuth
  * @tag Cases
  */
@@ -290,6 +293,11 @@ export async function GET(
 				})}\n\n`
 			);
 			controller.enqueue(connectEvent);
+
+			// A change that removed this user's access may have committed after
+			// the access check that let the stream open and before the connection
+			// was registered, so no re-check requested for it reached this stream.
+			recheckAccess("requested");
 		},
 		cancel() {
 			// This is called when the client disconnects
