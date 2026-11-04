@@ -45,10 +45,10 @@ function twoByTwo() {
 }
 
 describe("sseConnectionManager re-checks", () => {
-	it("re-checks every connection on a case, and none on another case", () => {
+	it("re-checks every connection on a case, and none on another case", async () => {
 		const world = twoByTwo();
 
-		sseConnectionManager.recheckConnections({ caseId: world.caseA });
+		await sseConnectionManager.recheckConnections({ caseId: world.caseA });
 
 		expect(world.aliceOnA).toHaveBeenCalledTimes(1);
 		expect(world.bobOnA).toHaveBeenCalledTimes(1);
@@ -56,10 +56,10 @@ describe("sseConnectionManager re-checks", () => {
 		expect(world.bobOnB).not.toHaveBeenCalled();
 	});
 
-	it("re-checks every connection of a user, on every case, and none of anyone else's", () => {
+	it("re-checks every connection of a user, on every case, and none of anyone else's", async () => {
 		const world = twoByTwo();
 
-		sseConnectionManager.recheckConnections({ userId: world.alice });
+		await sseConnectionManager.recheckConnections({ userId: world.alice });
 
 		expect(world.aliceOnA).toHaveBeenCalledTimes(1);
 		expect(world.aliceOnB).toHaveBeenCalledTimes(1);
@@ -67,10 +67,10 @@ describe("sseConnectionManager re-checks", () => {
 		expect(world.bobOnB).not.toHaveBeenCalled();
 	});
 
-	it("re-checks only the connections of one user on one case when given both", () => {
+	it("re-checks only the connections of one user on one case when given both", async () => {
 		const world = twoByTwo();
 
-		sseConnectionManager.recheckConnections({
+		await sseConnectionManager.recheckConnections({
 			caseId: world.caseB,
 			userId: world.bob,
 		});
@@ -81,32 +81,30 @@ describe("sseConnectionManager re-checks", () => {
 		expect(world.aliceOnB).not.toHaveBeenCalled();
 	});
 
-	it("re-checks each of a user's several connections to a case", () => {
+	it("re-checks each of a user's several connections to a case", async () => {
 		const caseId = freshCase();
 		const first = connect(caseId, "tab-1", "carol");
 		const second = connect(caseId, "tab-2", "carol");
 
-		sseConnectionManager.recheckConnections({ caseId, userId: "carol" });
+		await sseConnectionManager.recheckConnections({ caseId, userId: "carol" });
 
 		expect(first).toHaveBeenCalledTimes(1);
 		expect(second).toHaveBeenCalledTimes(1);
 	});
 
-	it("ignores a case or user it has no connection for", () => {
+	it("ignores a case or user it has no connection for", async () => {
 		const world = twoByTwo();
 
-		expect(() => {
-			sseConnectionManager.recheckConnections({ caseId: freshCase() });
-			sseConnectionManager.recheckConnections({ userId: "nobody" });
-			sseConnectionManager.recheckConnections({
-				caseId: world.caseA,
-				userId: "nobody",
-			});
-			sseConnectionManager.recheckConnections({
-				caseId: freshCase(),
-				userId: world.alice,
-			});
-		}).not.toThrow();
+		await sseConnectionManager.recheckConnections({ caseId: freshCase() });
+		await sseConnectionManager.recheckConnections({ userId: "nobody" });
+		await sseConnectionManager.recheckConnections({
+			caseId: world.caseA,
+			userId: "nobody",
+		});
+		await sseConnectionManager.recheckConnections({
+			caseId: freshCase(),
+			userId: world.alice,
+		});
 
 		for (const recheck of [
 			world.aliceOnA,
@@ -118,11 +116,11 @@ describe("sseConnectionManager re-checks", () => {
 		}
 	});
 
-	it("never re-checks every connection: a filter that names neither a case nor a user matches nothing", () => {
+	it("never re-checks every connection: a filter that names neither a case nor a user matches nothing", async () => {
 		const world = twoByTwo();
 
-		sseConnectionManager.recheckConnections({} as RecheckFilter);
-		sseConnectionManager.recheckConnections({
+		await sseConnectionManager.recheckConnections({} as RecheckFilter);
+		await sseConnectionManager.recheckConnections({
 			caseId: "",
 			userId: "",
 		} as RecheckFilter);
@@ -137,7 +135,7 @@ describe("sseConnectionManager re-checks", () => {
 		}
 	});
 
-	it("skips a connection that was added without a re-check", () => {
+	it("skips a connection that was added without a re-check", async () => {
 		const caseId = freshCase();
 		sseConnectionManager.addConnection(
 			caseId,
@@ -149,28 +147,27 @@ describe("sseConnectionManager re-checks", () => {
 		);
 		const other = connect(caseId, "other", "dave");
 
-		expect(() =>
-			sseConnectionManager.recheckConnections({ caseId })
-		).not.toThrow();
+		await sseConnectionManager.recheckConnections({ caseId });
 
 		expect(other).toHaveBeenCalledTimes(1);
 	});
 
-	it("does not re-check a connection that has been removed", () => {
+	it("does not re-check a connection that has been removed", async () => {
 		const caseId = freshCase();
 		const gone = connect(caseId, "gone", "erin");
 		const kept = connect(caseId, "kept", "erin");
 		sseConnectionManager.removeConnection(caseId, "gone");
 
-		sseConnectionManager.recheckConnections({ caseId });
+		await sseConnectionManager.recheckConnections({ caseId });
 
 		expect(gone).not.toHaveBeenCalled();
 		expect(kept).toHaveBeenCalledTimes(1);
 	});
 
-	it("returns without waiting for a re-check to finish", () => {
+	it("starts every re-check at once and settles only when all have finished", async () => {
 		const caseId = freshCase();
-		const recheck = vi.fn(() => new Promise<void>(() => undefined));
+		const slow = Promise.withResolvers<void>();
+		const slowRecheck = vi.fn(() => slow.promise);
 		sseConnectionManager.addConnection(
 			caseId,
 			"slow",
@@ -179,12 +176,25 @@ describe("sseConnectionManager re-checks", () => {
 			} as unknown as ReadableStreamDefaultController<Uint8Array>,
 			"frank",
 			undefined,
-			recheck
+			slowRecheck
 		);
+		const quick = connect(caseId, "quick", "frank");
+		let settled = false;
 
-		sseConnectionManager.recheckConnections({ caseId });
+		const pending = sseConnectionManager
+			.recheckConnections({ caseId })
+			.then(() => {
+				settled = true;
+			});
+		await Promise.resolve();
 
-		expect(recheck).toHaveBeenCalledTimes(1);
+		expect(slowRecheck).toHaveBeenCalledTimes(1);
+		expect(quick).toHaveBeenCalledTimes(1);
+		expect(settled).toBe(false);
+
+		slow.resolve();
+		await pending;
+		expect(settled).toBe(true);
 	});
 
 	it("still re-checks the other connections when one re-check throws or rejects", async () => {
@@ -210,10 +220,9 @@ describe("sseConnectionManager re-checks", () => {
 			);
 		}
 
-		expect(() =>
+		await expect(
 			sseConnectionManager.recheckConnections({ caseId })
-		).not.toThrow();
-		await Promise.resolve();
+		).resolves.toBeUndefined();
 
 		expect(throwing).toHaveBeenCalledTimes(1);
 		expect(rejecting).toHaveBeenCalledTimes(1);

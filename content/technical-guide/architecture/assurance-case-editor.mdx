@@ -31,6 +31,7 @@ The toolbar has Undo and Redo controls for people with editing access. `use-keyb
 
 `CaseContainer` subscribes to case events over server-sent events. On a relevant event it refetches the case, with a short debounce, and shows a toast for another user's change. There is no `lockUuid` field or edit-lock flow in this implementation. Changes can still arrive while someone is working, so the editor should be understood as a live shared view, not an exclusive editing session.
 When the server ends the stream because the viewer can no longer see the case, the hook moves to the final `access-removed` status and does not reconnect, and `CaseContainer` clears the case from the store and shows an **Access removed** message.
+When it ends the stream because the viewer's session has ended with a password change or reset, the hook moves to the final `signed-out` status and `CaseContainer` sends the browser to `/login`.
 
 ## Key files
 

@@ -357,9 +357,11 @@ export async function deleteTeam(
 
 		// Close the members' open streams on cases the team gave them, unless
 		// they have another route to the case
-		for (const { userId: memberId } of members) {
-			sseConnectionManager.recheckConnections({ userId: memberId });
-		}
+		await Promise.all(
+			members.map(({ userId: memberId }) =>
+				sseConnectionManager.recheckConnections({ userId: memberId })
+			)
+		);
 
 		return { data: true };
 	} catch (error) {

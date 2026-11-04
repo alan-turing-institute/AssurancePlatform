@@ -184,11 +184,14 @@ class SSEConnectionManager {
 	/**
 	 * Has the access of the matching connections checked again now, rather than
 	 * at their next heartbeat. Call it after a change that may have taken away
-	 * someone's access has committed. It acts only on the connections held by
-	 * this process, and returns before any check finishes. A filter that names
-	 * neither a case nor a user matches nothing.
+	 * someone's access has committed, and wait for it: a stream that has lost
+	 * access is then closed before anything that follows the change, such as an
+	 * event announcing it, is sent. It acts only on the connections held by this
+	 * process, and settles once every check it started has finished. A check
+	 * that fails is logged, never thrown. A filter that names neither a case nor
+	 * a user matches nothing.
 	 */
-	recheckConnections(filter: RecheckFilter): void {
+	async recheckConnections(filter: RecheckFilter): Promise<void> {
 		const { caseId, userId } = filter;
 		if (!(caseId || userId)) {
 			return;
@@ -198,14 +201,14 @@ class SSEConnectionManager {
 		if (matching.length === 0) {
 			return;
 		}
-		for (const connection of matching) {
-			this.runRecheck(connection);
-		}
 		log.info("SSE access re-check requested", {
 			caseId,
 			userId,
 			connections: matching.length,
 		});
+		await Promise.all(
+			matching.map((connection) => this.runRecheck(connection))
+		);
 	}
 
 	/** The connections on `caseId` (or on every case) that belong to `userId` (or to anyone). */
@@ -223,20 +226,15 @@ class SSEConnectionManager {
 		);
 	}
 
-	/**
-	 * Starts one connection's re-check. A re-check that fails does not reach
-	 * the caller that asked for it, nor the connections after it.
-	 */
-	private runRecheck(connection: SSEConnection): void {
-		const failed = (error: unknown) =>
+	/** Runs one connection's re-check; one that fails is logged and does not reach the caller. */
+	private async runRecheck(connection: SSEConnection): Promise<void> {
+		try {
+			await connection.recheck?.();
+		} catch (error) {
 			log.warn("SSE access re-check failed", {
 				connectionId: connection.id,
 				error,
 			});
-		try {
-			Promise.resolve(connection.recheck?.()).catch(failed);
-		} catch (error) {
-			failed(error);
 		}
 	}
 

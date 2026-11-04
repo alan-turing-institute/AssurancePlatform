@@ -594,8 +594,8 @@ export async function revokeUserPermission(
 		});
 
 		// Close the user's open streams on the case now if this was their last
-		// route to it
-		sseConnectionManager.recheckConnections({
+		// route to it, before the caller announces the change to the others
+		await sseConnectionManager.recheckConnections({
 			caseId,
 			userId: existingPermission.userId,
 		});
@@ -637,14 +637,16 @@ export async function revokeTeamPermission(
 		});
 
 		// Close the open streams on the case of any team member who has no other
-		// route to it
+		// route to it, before the caller announces the change to the others
 		const members = await prisma.teamMember.findMany({
 			where: { teamId: existingPermission.teamId },
 			select: { userId: true },
 		});
-		for (const { userId: memberId } of members) {
-			sseConnectionManager.recheckConnections({ caseId, userId: memberId });
-		}
+		await Promise.all(
+			members.map(({ userId: memberId }) =>
+				sseConnectionManager.recheckConnections({ caseId, userId: memberId })
+			)
+		);
 
 		return { data: true };
 	} catch (error) {

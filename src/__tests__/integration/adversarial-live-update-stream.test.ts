@@ -9,6 +9,8 @@ import {
 	vi,
 } from "vitest";
 import { GET } from "@/app/api/cases/[id]/events/route";
+import { getSessionVersion } from "@/lib/auth/session-version";
+import { validateSession } from "@/lib/auth/validate-session";
 import { canAccessCase } from "@/lib/permissions";
 import {
 	revokeTeamPermission,
@@ -45,6 +47,14 @@ vi.mock("@/lib/permissions", async (importOriginal) => {
 	return { ...actual, canAccessCase: vi.fn(actual.canAccessCase) };
 });
 
+// The session check wraps the real read the same way, so a test can tell when
+// a check that has passed the access step has also finished the session step.
+vi.mock("@/lib/auth/session-version", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/auth/session-version")>();
+	return { ...actual, getSessionVersion: vi.fn(actual.getSessionVersion) };
+});
+
 // Each stream's heartbeat period is random. These tests find a stream's timer
 // by its exact period, so the period is pinned to the full interval unless a
 // test lets the real draw through.
@@ -62,7 +72,10 @@ const KEEPING_OPEN = /keeping stream open/;
 const EVENT_LINE = /^event: (.+)$/gm;
 const CLOSING_EVENT =
 	'event: stream:closed\ndata: {"reason":"access-removed"}\n\n';
+const SIGNED_OUT_EVENT =
+	'event: stream:closed\ndata: {"reason":"signed-out"}\n\n';
 const canAccess = vi.mocked(canAccessCase);
+const sessionReads = vi.mocked(getSessionVersion);
 
 // ---------------------------------------------------------------------------
 // Timers: only the interval timers are faked, so the database driver and the
@@ -89,6 +102,7 @@ beforeEach(() => {
 	clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
 	baselineTimers = vi.getTimerCount();
 	canAccess.mockReset();
+	sessionReads.mockClear();
 	vi.mocked(heartbeatPeriodMs).mockReset();
 	logs = captureLogs();
 });
@@ -230,6 +244,22 @@ function settledChecks(): number {
 	).length;
 }
 
+/** Session reads that have started and not yet finished. */
+function sessionReadsInFlight(): number {
+	return (
+		sessionReads.mock.results.length -
+		sessionReads.mock.settledResults.filter(
+			(result) => result.type !== "incomplete"
+		).length
+	);
+}
+
+/** Waits for the session read a passing access check goes on to make. */
+async function untilSessionReadsDone(): Promise<void> {
+	await flush();
+	await until(() => sessionReadsInFlight() === 0, "the session reads");
+}
+
 /**
  * Lets one heartbeat fall due and waits for `checks` access checks to finish.
  * Several streams on one case each have their own timer, so each runs a check.
@@ -238,6 +268,7 @@ async function passHeartbeat(checks = 1): Promise<void> {
 	const before = settledChecks();
 	await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
 	await until(() => settledChecks() >= before + checks, "the access checks");
+	await untilSessionReadsDone();
 	await flushAll();
 }
 
@@ -245,6 +276,15 @@ async function passHeartbeat(checks = 1): Promise<void> {
 async function afterRecheck(checks = 1): Promise<void> {
 	await until(() => settledChecks() >= checks, "the access checks");
 	await flushAll();
+}
+
+/** Raises a user's session version, as a password change or reset does. */
+async function bumpSessionVersion(userId: string): Promise<void> {
+	const { default: prisma } = await import("@/lib/prisma");
+	await prisma.user.update({
+		where: { id: userId },
+		data: { sessionVersion: { increment: 1 } },
+	});
 }
 
 /** Removes a direct grant with a database write, so nothing asks for a re-check. */
@@ -424,6 +464,30 @@ describe("opening a live-update stream", () => {
 		expect(liveTimers()).toBe(0);
 		expect(eventsSeen(viewer)).not.toContain("case:updated");
 		expect(canAccess).not.toHaveBeenCalled();
+	});
+
+	it("refuses a stream when the user's session version changes between the two session reads", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const session = { userId: user.id, username: "viewer", email: "v@x.test" };
+		// The first read passes. The password change lands right after it, before
+		// the session version is read, so the version read is the new one; the
+		// second read, made with the old token, fails.
+		vi.mocked(validateSession)
+			.mockImplementationOnce(async () => {
+				await bumpSessionVersion(user.id);
+				return session;
+			})
+			.mockResolvedValueOnce(null);
+
+		const response = await GET(
+			new Request(`http://localhost:3000/api/cases/${world.caseId}/events`),
+			{ params: Promise.resolve({ id: world.caseId }) }
+		);
+
+		expect(response.status).toBe(401);
+		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
+		expect(startedTimers()).toBe(0);
 	});
 
 	it("starts exactly one heartbeat timer per stream", async () => {
@@ -815,6 +879,13 @@ describe("closing the stream of a user who has lost access", () => {
 		canAccess.mockClear();
 
 		await revoke();
+
+		// The stream is gone by the time the change returns, so an event the
+		// caller announces next does not reach it.
+		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
+			world.owner.id,
+		]);
+		emitMarker(world.caseId);
 		await until(viewer.isClosed, "the stream to close");
 
 		// No heartbeat was due: the change itself asked for the check.
@@ -833,7 +904,6 @@ describe("closing the stream of a user who has lost access", () => {
 		).toHaveLength(1);
 
 		// A stream whose user kept access carries on.
-		emitMarker(world.caseId);
 		await flushAll();
 		expect(bystander.isClosed()).toBe(false);
 		expect(eventsSeen(bystander)).toContain("case:updated");
@@ -1042,6 +1112,88 @@ describe("the heartbeat as a backstop for a change that asks for no re-check", (
 	});
 });
 
+describe("closing the stream of a user whose session has ended", () => {
+	it("closes every stream the user has open at the next heartbeat, and says so, once the session version changes", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const firstTab = await openStream(user.id, world.caseId);
+		const secondTab = await openStream(user.id, world.caseId);
+		const bystander = await openStream(world.owner.id, world.caseId);
+
+		await bumpSessionVersion(user.id);
+		canAccess.mockClear();
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS - 1);
+		await flushAll();
+		expect(firstTab.isClosed()).toBe(false);
+
+		await vi.advanceTimersByTimeAsync(1);
+		await until(
+			() => firstTab.isClosed() && secondTab.isClosed(),
+			"both streams to close"
+		);
+
+		for (const tab of [firstTab, secondTab]) {
+			expect(tab.chunks.at(-1)).toBe(SIGNED_OUT_EVENT);
+		}
+		expect(bystander.isClosed()).toBe(false);
+		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
+			world.owner.id,
+		]);
+		expect(liveTimers()).toBe(1);
+		expect(clearCounts()).toEqual([1, 1, 0]);
+		expect(
+			logs.entries.filter(
+				(entry) => entry.msg === "Closing stream: session ended"
+			)
+		).toHaveLength(2);
+	});
+
+	it("leaves the stream open while the session version is unchanged", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+
+		await passHeartbeat();
+		await passHeartbeat();
+
+		expect(viewer.isClosed()).toBe(false);
+		expect(heartbeatsSeen(viewer)).toBe(2);
+	});
+
+	it("says access was removed, not that the session ended, when both have happened", async () => {
+		const world = await newWorld();
+		const { user, grant } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+
+		await bumpSessionVersion(user.id);
+		await deleteGrantQuietly(grant.id);
+		canAccess.mockClear();
+		await passHeartbeat();
+		await until(viewer.isClosed, "the stream to close");
+
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+	});
+
+	it("keeps the stream open when the session read fails, and looks again at the next heartbeat", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+		sessionReads.mockRejectedValueOnce(new Error("database unavailable"));
+
+		await passHeartbeat();
+
+		expect(viewer.isClosed()).toBe(false);
+		expect(
+			logs.entries.filter((entry) => KEEPING_OPEN.test(entry.msg))
+		).toHaveLength(1);
+
+		await bumpSessionVersion(user.id);
+		await passHeartbeat();
+		await until(viewer.isClosed, "the stream to close");
+		expect(viewer.chunks.at(-1)).toBe(SIGNED_OUT_EVENT);
+	});
+});
+
 describe("a re-check requested while a heartbeat check is running", () => {
 	it("runs again once the running check ends, so a check that began before the change cannot keep the stream open", async () => {
 		const world = await newWorld();
@@ -1054,10 +1206,19 @@ describe("a re-check requested while a heartbeat check is running", () => {
 		await flushAll();
 		expect(canAccess).toHaveBeenCalledTimes(1);
 
-		await mustSucceed(
-			revokeUserPermission(world.owner.id, world.caseId, grant.id)
+		// The change waits for the re-check it asked for, so it is not awaited yet.
+		const revoking = revokeUserPermission(
+			world.owner.id,
+			world.caseId,
+			grant.id
 		);
-		await flushAll();
+		await until(
+			() =>
+				logs.entries.some(
+					(entry) => entry.msg === "SSE access re-check requested"
+				),
+			"the re-check to be requested"
+		);
 		canAccess.mockClear();
 		await flushAll();
 		expect(canAccess).not.toHaveBeenCalled();
@@ -1065,6 +1226,7 @@ describe("a re-check requested while a heartbeat check is running", () => {
 
 		// The running check read the grant before it was removed.
 		beforeChange.resolve(true);
+		await mustSucceed(revoking);
 		await until(viewer.isClosed, "the stream to close");
 
 		expect(canAccess).toHaveBeenCalledTimes(1);
@@ -1209,6 +1371,7 @@ describe("when the access re-check goes wrong", () => {
 		expect(canAccess).toHaveBeenCalledTimes(1);
 
 		slow.resolve(true);
+		await untilSessionReadsDone();
 		await flushAll();
 		expect(viewer.isClosed()).toBe(false);
 

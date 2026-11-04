@@ -206,7 +206,7 @@ export async function softDeleteCase(
 
 		// A case in the bin is hidden from everyone, so every open stream on it
 		// ends; this does not wait for the stored copies to be deleted
-		sseConnectionManager.recheckConnections({ caseId });
+		await sseConnectionManager.recheckConnections({ caseId });
 		await deleteMediaKeys(removedKeys);
 
 		return { data: true };

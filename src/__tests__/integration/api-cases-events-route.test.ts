@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getSessionVersion } from "@/lib/auth/session-version";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
@@ -29,6 +30,14 @@ vi.mock("@/lib/auth/validate-session", () => ({
 vi.mock("@/lib/permissions", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/permissions")>();
 	return { ...actual, canAccessCase: vi.fn(actual.canAccessCase) };
+});
+
+// The session check wraps the real read the same way, so a test can wait for
+// the session step a passing access check goes on to make.
+vi.mock("@/lib/auth/session-version", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/auth/session-version")>();
+	return { ...actual, getSessionVersion: vi.fn(actual.getSessionVersion) };
 });
 
 // Each stream's heartbeat period is random. These tests reach a heartbeat by
@@ -114,10 +123,13 @@ async function until(condition: () => boolean) {
 	}
 }
 
-/** Lets the continuations of a finished access check run. */
+/** Lets the continuations of a finished access check run, including its session read. */
 async function afterChecks() {
 	const results = vi.mocked(canAccessCase).mock.results;
 	await Promise.allSettled(results.map((result) => result.value));
+	await new Promise((resolve) => setImmediate(resolve));
+	const reads = vi.mocked(getSessionVersion).mock.results;
+	await Promise.allSettled(reads.map((result) => result.value));
 	await new Promise((resolve) => setImmediate(resolve));
 }
 

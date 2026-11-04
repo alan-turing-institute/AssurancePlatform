@@ -708,7 +708,7 @@
       "get": {
         "operationId": "get-cases-{id}-events",
         "summary": "Stream live updates for a case",
-        "description": "Server-sent events for real-time case updates. Requires a session and VIEW access to the case; a missing case, a case in Trash and a case the caller cannot view all answer 404. The stream sends a heartbeat comment every 25 to 30 seconds and checks the caller's VIEW access again each time, and the server also checks straight after a change that may have removed that access. When access is lost, or the case is moved to Trash or deleted, the server sends a `stream:closed` event with data `{\"reason\":\"access-removed\"}` and then ends the stream.",
+        "description": "Server-sent events for real-time case updates. Requires a session and VIEW access to the case; a missing case, a case in Trash and a case the caller cannot view all answer 404. The stream sends a heartbeat comment every 25 to 30 seconds and checks the caller's VIEW access and session again each time, and the server also checks straight after a change that may have removed that access. When access is lost, or the case is moved to Trash or deleted, the server sends a `stream:closed` event with data `{\"reason\":\"access-removed\"}` and then ends the stream. When the caller's session has ended because their password was changed or reset, it does the same with the reason `signed-out`.",
         "tags": [
           "Cases"
         ],

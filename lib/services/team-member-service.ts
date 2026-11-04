@@ -303,7 +303,7 @@ export async function removeMember(
 
 		// Close the member's open streams on cases the team gave them, unless
 		// they have another route to the case
-		sseConnectionManager.recheckConnections({ userId: targetUserId });
+		await sseConnectionManager.recheckConnections({ userId: targetUserId });
 
 		return { data: true };
 	} catch (error) {
@@ -347,7 +347,7 @@ export async function leaveTeam(userId: string, teamId: string): ServiceResult {
 
 		// Close the user's open streams on cases the team gave them, unless
 		// they have another route to the case
-		sseConnectionManager.recheckConnections({ userId });
+		await sseConnectionManager.recheckConnections({ userId });
 
 		return { data: true };
 	} catch (error) {

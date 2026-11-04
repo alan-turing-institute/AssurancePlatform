@@ -22,6 +22,7 @@ import useStore from "@/store/store";
 import { ErrorBoundary } from "../ui/error-boundary";
 import { CaseAccessRemoved } from "./case-access-removed";
 import CaseDetails from "./case-details";
+import { CaseSignedOut } from "./case-signed-out";
 import Flow from "./flow";
 import Header from "./header";
 
@@ -351,6 +352,10 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 
 	if (eventsStatus === "access-removed") {
 		return <CaseAccessRemoved />;
+	}
+
+	if (eventsStatus === "signed-out") {
+		return <CaseSignedOut />;
 	}
 
 	if (assuranceCase) {

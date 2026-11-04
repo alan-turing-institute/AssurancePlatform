@@ -19,8 +19,10 @@ Removing your last access also starts that check at once, so you do not wait for
 This covers a direct share being removed, a team being unshared from the case, you being removed from a team or leaving it, a team being deleted, and the case being moved to Trash.
 Any other change that removes access, such as deleting an account, is picked up at the next heartbeat.
 Just before the server ends your stream it sends a `stream:closed` event, and the editor replaces the case with an **Access removed** message and a link back to the dashboard.
-If your browser misses that event, for example because the server restarted, the editor asks the events route once for its status, and shows the same message when the answer is that you can no longer view the case.
-The editor does not try to reconnect after either of these.
+Each heartbeat check also looks at whether your session is still the current one.
+Changing or resetting your password ends your sessions, so within 30 seconds the server closes every stream you have open, with a `stream:closed` event whose reason is `signed-out`, and the editor takes you to the sign-in page.
+If your browser misses either event, for example because the server restarted, the editor asks the events route once for its status: a 404 shows the **Access removed** message, and a 401 takes you to the sign-in page.
+The editor does not try to reconnect after any of these.
 The browser's event source can reconnect after a temporary interruption, but the stream is a notification channel rather than a durable record of every historical edit.
 
 The connection manager holds subscribers in server memory, grouped by case. It has no shared broker across independent server processes, so deployment topology matters for delivery between people connected to different processes. If a view appears stale, reopen the case or refresh before relying on it for a review decision. Comment events and health plugin state changes are distinct event types; the client has specific handling for each surface rather than treating every event as a full document replacement.

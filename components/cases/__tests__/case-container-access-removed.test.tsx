@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchShowUnsupportedMarkers } from "@/actions/unsupported-markers";
 import { useCaseEvents } from "@/hooks/use-case-events";
+import { mockReplace } from "@/src/__tests__/mocks/next-navigation-mocks";
 import useStore from "@/store/store";
 import CaseContainer from "../case-container";
 
@@ -32,6 +33,7 @@ vi.mock("../case-details", () => ({ default: () => null }));
  */
 
 beforeEach(() => {
+	mockReplace.mockClear();
 	useStore.setState({ assuranceCase: null });
 	vi.mocked(fetchShowUnsupportedMarkers).mockResolvedValue(true);
 	vi.stubGlobal(
@@ -48,7 +50,7 @@ beforeEach(() => {
 	);
 });
 
-function streamStatus(status: "connected" | "access-removed") {
+function streamStatus(status: "connected" | "access-removed" | "signed-out") {
 	vi.mocked(useCaseEvents).mockReturnValue({
 		status,
 		isConnected: status === "connected",
@@ -77,6 +79,22 @@ describe("a case whose access was removed while it was open", () => {
 				.getAttribute("href")
 		).toBe("/dashboard");
 		expect(screen.queryByTestId("flow")).toBeNull();
+		await waitFor(() => {
+			expect(useStore.getState().assuranceCase).toBeNull();
+		});
+	});
+
+	it("sends the user to the sign-in page, and clears the case, when the session ended", async () => {
+		streamStatus("signed-out");
+
+		render(<CaseContainer caseId="c1" />);
+
+		await waitFor(() => {
+			expect(mockReplace).toHaveBeenCalledWith("/login");
+		});
+		expect(mockReplace).toHaveBeenCalledTimes(1);
+		expect(screen.queryByTestId("flow")).toBeNull();
+		expect(screen.queryByRole("alert")).toBeNull();
 		await waitFor(() => {
 			expect(useStore.getState().assuranceCase).toBeNull();
 		});

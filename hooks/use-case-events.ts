@@ -6,21 +6,35 @@ import type {
 	SSEEvent,
 	SSEEventType,
 } from "@/lib/services/sse-connection-manager";
-import { STREAM_CLOSED_EVENT } from "@/lib/sse-stream-closed";
+import {
+	STREAM_CLOSED_EVENT,
+	type StreamClosedReason,
+} from "@/lib/sse-stream-closed";
 
 const log = logger.child({ component: "use-case-events" });
 
 /**
- * `"access-removed"` is final: the server ended the stream because the user can
- * no longer view the case, so nothing reconnects it. Only `reconnect()` opens
- * the stream again.
+ * `"access-removed"` and `"signed-out"` are final: the server ended the stream
+ * because the user can no longer view the case, or because their session ended
+ * with a password change or reset, so nothing reconnects it. Only
+ * `reconnect()` opens the stream again.
  */
 type ConnectionStatus =
 	| "disconnected"
 	| "connecting"
 	| "connected"
 	| "error"
-	| "access-removed";
+	| "access-removed"
+	| "signed-out";
+
+/** The reason the server gives when a stream ends because the session has. */
+const SIGNED_OUT_REASON: StreamClosedReason = "signed-out";
+
+/** The final statuses: nothing reconnects a stream that has reached one. */
+const FINAL_STATUSES: readonly ConnectionStatus[] = [
+	"access-removed",
+	"signed-out",
+];
 
 export interface UseCaseEventsOptions {
 	/** Case ID to subscribe to */
@@ -58,6 +72,9 @@ const EVENT_SOURCE_CLOSED = 2;
 
 /** What the events route answers when the user cannot view the case. */
 const ACCESS_GONE_HTTP_STATUS = 404;
+
+/** What the events route answers when the user's session has ended. */
+const SIGNED_OUT_HTTP_STATUS = 401;
 
 /**
  * Every event type this hook registers an `EventSource.addEventListener` for
@@ -196,14 +213,14 @@ function connectStream(caseId: string, stream: CaseStream) {
 		}
 	});
 
-	// The server ends the stream on purpose only to say access has gone, so
-	// this stops it for good instead of leaving it to reconnect.
-	source.addEventListener(STREAM_CLOSED_EVENT, () => {
+	// The server ends the stream on purpose only to say the user can no longer
+	// have it, so this stops it for good instead of leaving it to reconnect.
+	source.addEventListener(STREAM_CLOSED_EVENT, (e) => {
 		if (streams.get(caseId) !== stream || stream.source !== source) {
 			return;
 		}
 		closeStream(stream);
-		setStreamStatus(stream, "access-removed");
+		setStreamStatus(stream, finalStatusFor(e.data));
 	});
 
 	// Set up event type handlers — see `CASE_EVENT_TYPES`'s doc comment.
@@ -218,6 +235,19 @@ function connectStream(caseId: string, stream: CaseStream) {
 				log.error("Failed to parse SSE event", { error });
 			}
 		});
+	}
+}
+
+/**
+ * The final status for a closing event's data. A reason this client does not
+ * know, or data that cannot be read, is treated as access removed.
+ */
+function finalStatusFor(data: string): ConnectionStatus {
+	try {
+		const { reason } = JSON.parse(data) as { reason?: unknown };
+		return reason === SIGNED_OUT_REASON ? "signed-out" : "access-removed";
+	} catch {
+		return "access-removed";
 	}
 }
 
@@ -238,10 +268,11 @@ function scheduleReconnect(caseId: string, stream: CaseStream) {
 
 /**
  * Asks the events URL once why the browser refused the connection, reading
- * only the status. A 404 means the user can no longer view the case, which is
- * how a client that missed the closing event finds out. Any other answer, or
- * none, leaves it to the ordinary reconnect. A stream the probe opened is
- * dropped as soon as its status is read.
+ * only the status. A 404 means the user can no longer view the case and a 401
+ * that their session has ended, which is how a client that missed the closing
+ * event finds out. Any other answer, or none, leaves it to the ordinary
+ * reconnect. A stream the probe opened is dropped as soon as its status is
+ * read.
  */
 async function probeEventsUrl(caseId: string, stream: CaseStream) {
 	const probe = new AbortController();
@@ -263,6 +294,8 @@ async function probeEventsUrl(caseId: string, stream: CaseStream) {
 
 	if (status === ACCESS_GONE_HTTP_STATUS) {
 		setStreamStatus(stream, "access-removed");
+	} else if (status === SIGNED_OUT_HTTP_STATUS) {
+		setStreamStatus(stream, "signed-out");
 	} else {
 		scheduleReconnect(caseId, stream);
 	}
@@ -300,7 +333,7 @@ function needsConnection(stream: CaseStream): boolean {
 		stream.source ||
 		stream.reconnectTimer ||
 		stream.probe ||
-		stream.status === "access-removed"
+		FINAL_STATUSES.includes(stream.status)
 	);
 }
 
