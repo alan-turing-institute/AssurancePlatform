@@ -59,9 +59,11 @@ import {
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
 }));
-vi.mock("@/lib/services/sse-connection-manager", () => ({
+vi.mock("@/lib/services/sse-connection-manager", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("@/lib/services/sse-connection-manager")
+	>()),
 	emitSSEEvent: vi.fn(),
-	sseConnectionManager: { broadcast: vi.fn() },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
