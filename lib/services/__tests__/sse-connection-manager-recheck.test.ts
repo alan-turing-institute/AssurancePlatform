@@ -12,6 +12,15 @@ function freshCase(): string {
 	return `recheck-case-${nextCase}`;
 }
 
+/** A promise that the test settles by hand. */
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((res) => {
+		resolve = res;
+	});
+	return { promise, resolve };
+}
+
 /** Registers a connection whose re-check is a spy, and returns the spy. */
 function connect(caseId: string, connectionId: string, userId: string) {
 	const recheck = vi.fn();
@@ -166,7 +175,7 @@ describe("sseConnectionManager re-checks", () => {
 
 	it("starts every re-check at once and settles only when all have finished", async () => {
 		const caseId = freshCase();
-		const slow = Promise.withResolvers<void>();
+		const slow = deferred<void>();
 		const slowRecheck = vi.fn(() => slow.promise);
 		sseConnectionManager.addConnection(
 			caseId,

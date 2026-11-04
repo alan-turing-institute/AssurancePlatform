@@ -83,6 +83,15 @@ const passTime = (ms: number) =>
 		await vi.advanceTimersByTimeAsync(ms);
 	});
 
+/** A promise that the test settles by hand. */
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((res) => {
+		resolve = res;
+	});
+	return { promise, resolve };
+}
+
 interface Probe {
 	fetch: ReturnType<typeof vi.fn>;
 	signals: AbortSignal[];
@@ -309,7 +318,7 @@ describe("a connection the browser refused", () => {
 	});
 
 	it("opens nothing, and ignores the answer, when the last subscriber leaves while the probe is out", async () => {
-		const answer = Promise.withResolvers<Response>();
+		const answer = deferred<Response>();
 		const signals: AbortSignal[] = [];
 		vi.stubGlobal(
 			"fetch",
@@ -338,7 +347,7 @@ describe("a connection the browser refused", () => {
 	});
 
 	it("does not open a second source for a subscriber who joins while the probe is out", async () => {
-		const answer = Promise.withResolvers<Response>();
+		const answer = deferred<Response>();
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(() => answer.promise)
