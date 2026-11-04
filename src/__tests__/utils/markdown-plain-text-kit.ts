@@ -14,6 +14,11 @@ const NAMED_REFERENCE = /^&([A-Za-z][A-Za-z0-9]{1,31});/;
 const FRONT_MATTER = /^---\n([\s\S]*?)\n---\n/;
 const SPACE_OR_TAB = /[ \t]/;
 const CONTROL_OR_SPACE = /[\s\p{Cc}]/u;
+const URI_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]{1,31}:/;
+const EMAIL_ADDRESS =
+	/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$/;
+const WEB_OR_MAIL_SCHEME = /^(?:https?|mailto):/i;
+const BARE_ADDRESS = /(?:https?:\/\/|mailto:)[^\s<]+/gi;
 
 /** The character references a viewer decodes, as far as the tests need. */
 const NAMED_CHARACTERS: Record<string, string> = {
@@ -147,50 +152,143 @@ function decodeReference(
 		: null;
 }
 
+/** True when a backslash at `index` escapes the punctuation mark after it. */
+function isEscape(markdown: string, index: number): boolean {
+	return (
+		markdown.charAt(index) === "\\" &&
+		ASCII_PUNCTUATION.test(markdown.charAt(index + 1))
+	);
+}
+
+interface Autolink {
+	/** The text between the angle brackets, which a viewer shows as it is. */
+	content: string;
+	/** Index just after the closing `>`. */
+	end: number;
+	/** Where a viewer sends the link; an email address gets `mailto:`. */
+	target: string;
+}
+
+/** A character that may stand inside an autolink: not a space, control character or angle bracket. */
+function isAutolinkCharacter(character: string): boolean {
+	const code = character.charCodeAt(0);
+	return code > 0x20 && code !== 0x7f && character !== "<" && character !== ">";
+}
+
+/**
+ * The CommonMark autolink that starts at `index`, if there is one: `<`, a
+ * scheme and address or an email address, then `>`. A viewer shows and links
+ * the content exactly as written; nothing inside it is read as markup.
+ */
+function autolinkAt(text: string, index: number): Autolink | null {
+	if (text.charAt(index) !== "<") {
+		return null;
+	}
+	let close = index + 1;
+	while (close < text.length && isAutolinkCharacter(text.charAt(close))) {
+		close += 1;
+	}
+	if (text.charAt(close) !== ">") {
+		return null;
+	}
+	const content = text.slice(index + 1, close);
+	if (URI_SCHEME.test(content)) {
+		return { content, end: close + 1, target: content };
+	}
+	return EMAIL_ADDRESS.test(content)
+		? { content, end: close + 1, target: `mailto:${content}` }
+		: null;
+}
+
+/**
+ * An autolink to a web or mail address. The exporter writes these around each
+ * address it finds in case text, so its opening `<` is the exporter's own
+ * link, not markup from the text. Any other autolink is not covered.
+ */
+function ownAutolinkAt(text: string, index: number): Autolink | null {
+	const autolink = autolinkAt(text, index);
+	return autolink && WEB_OR_MAIL_SCHEME.test(autolink.content)
+		? autolink
+		: null;
+}
+
+/** What the text at `index` shows, and how many characters of the source that takes. */
+function shownAt(
+	text: string,
+	index: number
+): { length: number; text: string } {
+	if (isEscape(text, index)) {
+		return { length: 2, text: text.charAt(index + 1) };
+	}
+	const autolink = ownAutolinkAt(text, index);
+	if (autolink) {
+		return { length: autolink.end - index, text: autolink.content };
+	}
+	const character = text.charAt(index);
+	const reference =
+		character === "&" ? decodeReference(text.slice(index)) : null;
+	return reference ?? { length: 1, text: character };
+}
+
 /**
  * What a viewer shows for a piece of Markdown text: a backslash before a
- * punctuation mark gives the mark itself, and a character reference gives its
- * character. A reference whose ampersand is escaped stays as written.
+ * punctuation mark gives the mark itself, a character reference gives its
+ * character, and an autolink to a web or mail address gives the address as
+ * written. A reference whose ampersand is escaped stays as written.
  */
 export function readAs(text: string): string {
 	let shown = "";
 	let index = 0;
 	while (index < text.length) {
-		const character = text.charAt(index);
-		if (character === "\\" && ASCII_PUNCTUATION.test(text.charAt(index + 1))) {
-			shown += text.charAt(index + 1);
-			index += 2;
-			continue;
-		}
-		const reference =
-			character === "&" ? decodeReference(text.slice(index)) : null;
-		if (reference) {
-			shown += reference.text;
-			index += reference.length;
-			continue;
-		}
-		shown += character;
-		index += 1;
+		const step = shownAt(text, index);
+		shown += step.text;
+		index += step.length;
 	}
 	return shown;
 }
 
-/** Positions of `character` that no backslash escapes. */
+/** How many characters the exporter's own syntax covers at `index`: an escape, an autolink to a web or mail address, or one character. */
+function coveredLength(text: string, index: number): number {
+	if (isEscape(text, index)) {
+		return 2;
+	}
+	const autolink = ownAutolinkAt(text, index);
+	return autolink ? autolink.end - index : 1;
+}
+
+/**
+ * Positions of `character` that nothing covers: no backslash escapes it, and
+ * it is not inside an autolink to a web or mail address, the exporter's own
+ * link. An autolink to any other scheme is not covered.
+ */
 export function unescapedPositions(text: string, character: string): number[] {
 	const positions: number[] = [];
 	let index = 0;
 	while (index < text.length) {
-		const current = text.charAt(index);
-		if (current === "\\" && ASCII_PUNCTUATION.test(text.charAt(index + 1))) {
-			index += 2;
-			continue;
-		}
-		if (current === character) {
+		const length = coveredLength(text, index);
+		if (length === 1 && text.charAt(index) === character) {
 			positions.push(index);
 		}
-		index += 1;
+		index += length;
 	}
 	return positions;
+}
+
+/**
+ * The web and mail addresses a viewer that links text on sight would link:
+ * those left in the text once the autolinks are taken out. The exporter wraps
+ * every address in an autolink, so there should be none.
+ */
+export function bareAddresses(text: string): string[] {
+	let outside = "";
+	let index = 0;
+	while (index < text.length) {
+		const length = coveredLength(text, index);
+		const isAutolink = length > 1 && !isEscape(text, index);
+		outside += isAutolink ? " " : text.slice(index, index + length);
+		index += length;
+	}
+	return outside.match(BARE_ADDRESS) ?? [];
 }
 
 interface ReadTarget {
@@ -199,48 +297,84 @@ interface ReadTarget {
 }
 
 interface Link {
-	/** Index just after the `](`. */
+	/** An inline link starts after its `](`; an autolink starts at its `<`. */
 	from: number;
+	kind: "autolink" | "inline";
+	/** Where scanning resumes. */
+	next: number;
 	target: string;
-	/** Index of the `)` that closes the link. */
+	/** An inline link ends at its closing `)`; an autolink after its `>`. */
 	to: number;
 }
 
+/** The link that starts at `index`: an autolink at its `<`, or an inline link at the `]` before its `(`. */
+function linkAt(markdown: string, index: number): Link | null {
+	const autolink = autolinkAt(markdown, index);
+	if (autolink) {
+		return {
+			from: index,
+			kind: "autolink",
+			next: autolink.end,
+			target: autolink.target,
+			to: autolink.end,
+		};
+	}
+	if (markdown.charAt(index) !== "]" || markdown.charAt(index + 1) !== "(") {
+		return null;
+	}
+	const read = readTarget(markdown, index + 2);
+	return read
+		? {
+				from: index + 2,
+				kind: "inline",
+				next: read.end,
+				target: read.target,
+				to: read.end - 1,
+			}
+		: null;
+}
+
 /**
- * Where a viewer would take a link or image target: the text between the
- * parentheses after an unescaped `]`. A target in angle brackets runs to the
- * closing bracket; any other runs to the first space or the parenthesis that
- * closes it. A target that cannot end properly is not a link and is skipped.
- * Scanning resumes after each link, so text inside a target is never read as
- * a second link.
+ * Every link a viewer would make: autolinks of any scheme, and the target
+ * between the parentheses after an unescaped `]`. A target in angle brackets
+ * runs to the closing bracket; any other runs to the first space or the
+ * parenthesis that closes it. A target that cannot end properly is not a link
+ * and is skipped. Scanning resumes after each link, so text inside one is
+ * never read as a second link.
  */
 function parseLinks(markdown: string): Link[] {
 	const links: Link[] = [];
-	let resumeAt = 0;
-	for (const position of unescapedPositions(markdown, "]")) {
-		if (position < resumeAt || markdown.charAt(position + 1) !== "(") {
-			continue;
+	let index = 0;
+	while (index < markdown.length) {
+		const escaped = isEscape(markdown, index);
+		const link = escaped ? null : linkAt(markdown, index);
+		if (link) {
+			links.push(link);
 		}
-		const read = readTarget(markdown, position + 2);
-		if (read) {
-			links.push({ from: position + 2, target: read.target, to: read.end - 1 });
-			resumeAt = read.end;
-		}
+		index = link ? link.next : index + (escaped ? 2 : 1);
 	}
 	return links;
 }
 
+/** The target of every link, in the order they appear. */
 export function linkTargets(markdown: string): string[] {
 	return parseLinks(markdown).map((link) => link.target);
 }
 
-/** The text with every link target cut out, leaving the link text and syntax. */
+/** How many links have the `[text](target)` form, and so their own brackets. */
+export function inlineLinkCount(markdown: string): number {
+	return parseLinks(markdown).filter((link) => link.kind === "inline").length;
+}
+
+/** The text with the target of every `[text](target)` link cut out, leaving the link text and syntax. */
 export function withoutLinkTargets(markdown: string): string {
 	let rest = "";
 	let cursor = 0;
 	for (const link of parseLinks(markdown)) {
-		rest += markdown.slice(cursor, link.from);
-		cursor = link.to;
+		if (link.kind === "inline") {
+			rest += markdown.slice(cursor, link.from);
+			cursor = link.to;
+		}
 	}
 	return rest + markdown.slice(cursor);
 }
@@ -263,10 +397,7 @@ function readAngleTarget(markdown: string, start: number): ReadTarget | null {
 		if (character === "\n" || character === "<") {
 			return null;
 		}
-		if (
-			character === "\\" &&
-			ASCII_PUNCTUATION.test(markdown.charAt(index + 1))
-		) {
+		if (isEscape(markdown, index)) {
 			target += markdown.charAt(index + 1);
 			index += 2;
 			continue;
@@ -279,14 +410,6 @@ function readAngleTarget(markdown: string, start: number): ReadTarget | null {
 		index += 1;
 	}
 	return null;
-}
-
-/** True when a backslash at `index` escapes the punctuation mark after it. */
-function isEscape(markdown: string, index: number): boolean {
-	return (
-		markdown.charAt(index) === "\\" &&
-		ASCII_PUNCTUATION.test(markdown.charAt(index + 1))
-	);
 }
 
 /** How a character moves the depth of nested parentheses. */

@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import {
 	ADDRESS_PLACES,
+	bareAddresses,
 	createDocument,
 	exportMarkdown,
 	FRONT_MATTER_FIELDS,
+	inlineLinkCount,
 	linkTargets,
 	MARK,
 	readAs,
@@ -43,6 +45,8 @@ const TYPED_TEXT = [
 	"back\\slash",
 	"ends with a backslash\\",
 	"a | b | c",
+	"`code` and ~~struck~~ text",
+	"``` fence ``` and ~~~ tilde ~~~",
 ];
 
 const WEB_OR_MAIL = /^(?:https?:|mailto:)/i;
@@ -55,6 +59,13 @@ function linesWithMark(body: string): string[] {
 
 function targetsOtherThanTheImage(body: string): string[] {
 	return linkTargets(body).filter((target) => target !== IMAGE_TARGET);
+}
+
+/** Link targets that are not the image, not a web or mail address, or not an address typed in `value`. */
+function targetsNotTypedIn(body: string, value: string): string[] {
+	return targetsOtherThanTheImage(body).filter(
+		(target) => !(WEB_OR_MAIL.test(target) && value.includes(target))
+	);
 }
 
 describe("a Markdown report shows case text as typed", () => {
@@ -79,12 +90,14 @@ describe("a Markdown report shows case text as typed", () => {
 			for (const line of linesWithMark(body)) {
 				const fromValue = line.slice(line.indexOf(MARK));
 				expect(unescapedPositions(fromValue, "<")).toEqual([]);
+				expect(unescapedPositions(fromValue, "`")).toEqual([]);
+				expect(unescapedPositions(fromValue, "~")).toEqual([]);
 				if (!field.hasImageSyntax) {
 					expect(unescapedPositions(fromValue, "[")).toEqual([]);
 					expect(unescapedPositions(fromValue, "]")).toEqual([]);
 				}
 			}
-			expect(targetsOtherThanTheImage(body)).toEqual([]);
+			expect(targetsNotTypedIn(body, value)).toEqual([]);
 		});
 
 		it("starts no markup from a value that spans several lines", async () => {
@@ -119,6 +132,117 @@ describe("a Markdown report shows case text as typed", () => {
 			);
 
 			expect(body).toContain(text);
+		});
+	});
+});
+
+/** Typed text, and the addresses in it that must be the only links. */
+const ADDRESSES_IN_TEXT: [string, string[]][] = [
+	[
+		"See https://example.com/search?a=1&b=2 for details",
+		["https://example.com/search?a=1&b=2"],
+	],
+	["https://example.com/~user/page", ["https://example.com/~user/page"]],
+	["https://example.com/a[1]", ["https://example.com/a[1]"]],
+	["https://example.com/my_report-v2", ["https://example.com/my_report-v2"]],
+	[
+		"https://example.com/p?q=*x*&r=`y`&s=~z~",
+		["https://example.com/p?q=*x*&r=`y`&s=~z~"],
+	],
+	["Visit https://example.com/page.", ["https://example.com/page"]],
+	['say "http://example.com/q",', ["http://example.com/q"]],
+	["(see https://c.example/x.)", ["https://c.example/x"]],
+	[
+		"https://example.com/wiki/Foo_(bar)",
+		["https://example.com/wiki/Foo_(bar)"],
+	],
+	["https://c.example)", ["https://c.example"]],
+	[
+		"https://a.example/x and https://b.example/y?q=1&r=2",
+		["https://a.example/x", "https://b.example/y?q=1&r=2"],
+	],
+	[
+		"https://a.example/x then mailto:me@example.com",
+		["https://a.example/x", "mailto:me@example.com"],
+	],
+	[
+		"see https://example.com/a?b=c, then https://example.com/d; and https://example.com/e!",
+		[
+			"https://example.com/a?b=c",
+			"https://example.com/d",
+			"https://example.com/e",
+		],
+	],
+	["HTTPS://EXAMPLE.COM/A", ["HTTPS://EXAMPLE.COM/A"]],
+	["Is it https://example.com/q?", ["https://example.com/q"]],
+	["'https://example.com/q' and more", ["https://example.com/q"]],
+	["see https://example.com/q: details", ["https://example.com/q"]],
+	["https://example.com/a>b", ["https://example.com/a"]],
+	[
+		"see https://e.example/a\u0007b and https://e.example/c\u007fd and https://e.example/e\u0085f",
+		["https://e.example/a", "https://e.example/c", "https://e.example/e"],
+	],
+	["https://e.example/a\u00a0b", ["https://e.example/a"]],
+	["https://example.com/a\\b", ["https://example.com/a\\b"]],
+	[
+		"https://example.com/&lt;x&gt;&amp;y",
+		["https://example.com/&lt;x&gt;&amp;y"],
+	],
+	[
+		"https://example.com/?q=[x](javascript:alert(1))",
+		["https://example.com/?q=[x](javascript:alert(1))"],
+	],
+];
+
+/** Text that looks like an address but is not a web or mail address, so it must not become a link. */
+const NOT_ADDRESSES_IN_TEXT = [
+	"https://",
+	"https://.",
+	"mailto:",
+	"ftp://example.com/x",
+	"www.example.com/a",
+	"x-https://example.com/",
+	"blob:https://example.com/1234",
+	"javascript:alert(1)",
+	"ahttps://example.com/x",
+	"1https://example.com/x",
+	".https://example.com/x",
+	"/https://example.com/x",
+	"_https://example.com/x",
+	"@https://example.com/x",
+	":https://example.com/x",
+	"-https://example.com/x",
+];
+
+describe("a web or mail address in text is shown and linked exactly as typed", () => {
+	describe.each(TEXT_FIELDS)("$name", (field) => {
+		it.each(
+			ADDRESSES_IN_TEXT
+		)("writes %j so its addresses are the only links", async (typed, addresses) => {
+			const { body } = splitFrontMatter(
+				await exportMarkdown(field.build(`${MARK} ${typed}`))
+			);
+
+			const lines = linesWithMark(body);
+			expect(lines.length).toBeGreaterThan(0);
+			for (const line of lines) {
+				expect(readAs(line)).toContain(`${MARK} ${typed}`);
+			}
+			expect(targetsOtherThanTheImage(body)).toEqual(addresses);
+			expect(bareAddresses(body)).toEqual([]);
+		});
+
+		it.each(
+			NOT_ADDRESSES_IN_TEXT
+		)("writes %j as text, not as a link", async (typed) => {
+			const { body } = splitFrontMatter(
+				await exportMarkdown(field.build(`${MARK} ${typed}`))
+			);
+
+			for (const line of linesWithMark(body)) {
+				expect(readAs(line)).toContain(`${MARK} ${typed}`);
+			}
+			expect(targetsOtherThanTheImage(body)).toEqual([]);
 		});
 	});
 });
@@ -223,6 +347,8 @@ describe("a Markdown report links only web and mail addresses", () => {
 		"www.example.com/a",
 		"example.com/a",
 		"x-https://example.com/",
+		"https://",
+		"mailto:",
 		"[x](javascript:alert(1))",
 	];
 
@@ -285,18 +411,20 @@ describe("a Markdown report links only web and mail addresses", () => {
 		)("never lets %j end a link early or add a second one", async (url) => {
 			const { body } = splitFrontMatter(await exportMarkdown(build(url)));
 
+			// The address up to any whitespace is the one link; the rest is text.
 			const targets = linkTargets(body);
-			expect(targets.length).toBeLessThanOrEqual(1);
-			for (const target of targets) {
-				expect(target).toMatch(WEB_OR_MAIL);
-				expect(target).not.toMatch(WHITESPACE);
-				expect(target).not.toContain("javascript:");
-			}
-			expect(unescapedPositions(body, "[")).toHaveLength(targets.length);
-			expect(unescapedPositions(body, "]")).toHaveLength(targets.length);
+			expect(targets).toHaveLength(1);
+			expect(targets[0]).toMatch(WEB_OR_MAIL);
+			// A control character that is not whitespace is percent-encoded in the target.
+			expect(url.startsWith(safeDecode(targets[0] ?? ""))).toBe(true);
+			expect(targets[0]).not.toMatch(WHITESPACE);
+			expect(targets[0]).not.toContain("javascript:");
+			expect(unescapedPositions(body, "[")).toHaveLength(inlineLinkCount(body));
+			expect(unescapedPositions(body, "]")).toHaveLength(inlineLinkCount(body));
 			for (const position of unescapedPositions(body, "<")) {
 				expect(body.slice(position - 2, position)).toBe("](");
 			}
+			expect(readAs(withoutLinkTargets(body))).toContain(url);
 		});
 	});
 });

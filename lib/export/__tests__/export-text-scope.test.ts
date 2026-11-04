@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
 import {
 	exportMarkdown,
+	inlineLinkCount,
 	linkTargets,
 	readAs,
 	splitFrontMatter,
@@ -232,8 +233,8 @@ describe("a Markdown report built from the templates", () => {
 		for (const target of targets) {
 			expect(target).toMatch(WEB_OR_MAIL);
 		}
-		expect(unescapedPositions(body, "[")).toHaveLength(targets.length);
-		expect(unescapedPositions(body, "]")).toHaveLength(targets.length);
+		expect(unescapedPositions(body, "[")).toHaveLength(inlineLinkCount(body));
+		expect(unescapedPositions(body, "]")).toHaveLength(inlineLinkCount(body));
 		for (const position of unescapedPositions(body, "<")) {
 			expect(body.slice(position - 2, position)).toBe("](");
 		}
