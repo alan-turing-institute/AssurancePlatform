@@ -60,6 +60,8 @@ const SVG_DATA_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent('<sv
 const CITED_CASE = "CapturedCaseName-5d2e90";
 const CITED_ELEMENT = "CapturedElement-3b7f18";
 const REFERENCED_CASE = "CapturedReferencedCase-8a4c66";
+const CITED_LINK = "View cited case";
+const REFERENCED_LINK = "View referenced case";
 
 const CASE = {
 	id: "case-1",
@@ -248,12 +250,14 @@ describe.each(
 			expect(text).toContain(CITED_CASE);
 			expect(text).toContain(CITED_ELEMENT);
 			expect(text).toContain(REFERENCED_CASE);
+			expect(text).toContain(CITED_LINK);
+			expect(text).toContain(REFERENCED_LINK);
 		}
 	});
 });
 
 describe("the dashboard thumbnail, which other people are shown", () => {
-	it("leaves out every cited name and keeps the cards' own words", async () => {
+	it("leaves out every cited name and link and keeps the cards' own words", async () => {
 		const { result } = renderHook(() =>
 			useAutoScreenshot({ caseId: "case-1", canEdit: true })
 		);
@@ -267,6 +271,8 @@ describe("the dashboard thumbnail, which other people are shown", () => {
 			expect(text).not.toContain(CITED_CASE);
 			expect(text).not.toContain(CITED_ELEMENT);
 			expect(text).not.toContain(REFERENCED_CASE);
+			expect(text).not.toContain(CITED_LINK);
+			expect(text).not.toContain(REFERENCED_LINK);
 		}
 	});
 
@@ -281,6 +287,8 @@ describe("the dashboard thumbnail, which other people are shown", () => {
 			screen.getByText(`${CITED_CASE} — ${CITED_ELEMENT}`)
 		).toBeInTheDocument();
 		expect(screen.getByText(REFERENCED_CASE)).toBeInTheDocument();
+		expect(screen.getByText(CITED_LINK)).toBeInTheDocument();
+		expect(screen.getByText(REFERENCED_LINK)).toBeInTheDocument();
 	});
 
 	it("leaves them out of the picture taken when the page is closed", async () => {
@@ -298,6 +306,8 @@ describe("the dashboard thumbnail, which other people are shown", () => {
 			expect(text).not.toContain(CITED_CASE);
 			expect(text).not.toContain(CITED_ELEMENT);
 			expect(text).not.toContain(REFERENCED_CASE);
+			expect(text).not.toContain(CITED_LINK);
+			expect(text).not.toContain(REFERENCED_LINK);
 		}
 	});
 
@@ -315,6 +325,8 @@ describe("the dashboard thumbnail, which other people are shown", () => {
 			expect(text).not.toContain(CITED_CASE);
 			expect(text).not.toContain(CITED_ELEMENT);
 			expect(text).not.toContain(REFERENCED_CASE);
+			expect(text).not.toContain(CITED_LINK);
+			expect(text).not.toContain(REFERENCED_LINK);
 		}
 	});
 
@@ -330,6 +342,7 @@ describe("the dashboard thumbnail, which other people are shown", () => {
 		expect(copied.length).toBeGreaterThan(0);
 		for (const text of copied) {
 			expect(text).toContain(CITED_CASE);
+			expect(text).toContain(CITED_LINK);
 		}
 	});
 });

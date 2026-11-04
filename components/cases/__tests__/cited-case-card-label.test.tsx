@@ -191,12 +191,13 @@ describe("an away goal card the viewer can open the cited case of", () => {
 			awayGoal({
 				...STALE_AWAY_GOAL,
 				citedCaseAccessible: true,
-				citedElementName: null,
+				citedElementName: "",
 			})
 		);
 
 		expect(screen.getByText(STALE_CASE)).toBeInTheDocument();
 		expect(screen.queryByText(UNAVAILABLE)).not.toBeInTheDocument();
+		expect(screen.queryByText(ELEMENT_UNRESOLVED)).not.toBeInTheDocument();
 	});
 });
 

@@ -15,10 +15,11 @@ import NodeEditDialog from "./node-edit-dialog";
 /**
  * The "Cites" line's text, in priority order: the viewer cannot view the cited
  * case (it is in the bin, deleted, never shared, no longer shared, or its
- * reference was cleared), so no name is shown; the case resolved but the cited
- * ELEMENT did not; both resolved. The name line is left out of the dashboard
- * thumbnail, which other people see. Extracted to avoid nesting ternaries in
- * the JSX below.
+ * reference was cleared), so no name is shown; the case is viewable but the
+ * cited ELEMENT did not resolve (none is cited, or it was not found under that
+ * case; an element with no name comes back as an empty string and resolves);
+ * both resolved. The name line is left out of the dashboard thumbnail, which
+ * other people see. Extracted to avoid nesting ternaries in the JSX below.
  */
 function citationLine(
 	citedCaseAccessible: boolean,
@@ -33,7 +34,7 @@ function citationLine(
 			</p>
 		);
 	}
-	if (!citedElementId) {
+	if (!citedElementId || citedElementName === null) {
 		return (
 			<p className="text-muted-foreground text-sm italic">
 				Cited element not resolved

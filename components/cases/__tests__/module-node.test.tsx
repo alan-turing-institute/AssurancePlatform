@@ -118,7 +118,7 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 		).not.toBeInTheDocument();
 	});
 
-	it("marks the referenced case's name line as left out of the dashboard thumbnail", () => {
+	it("marks the referenced case's name line and link as left out of the dashboard thumbnail", () => {
 		renderWithReactFlow(
 			<ModuleNode
 				{...nodeProps({
@@ -135,6 +135,9 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 		expect(screen.getByText("Referenced Case")).toHaveAttribute(
 			"data-left-out-of-shared-thumbnail"
 		);
+		expect(
+			screen.getByRole("link", { name: VIEW_REFERENCED_CASE_LINK_PATTERN })
+		).toHaveAttribute("data-left-out-of-shared-thumbnail");
 	});
 
 	it("shows 'Cited case not available' and no link when moduleReferenceDangling is set (Chris's ruling, 2026-09-16)", () => {

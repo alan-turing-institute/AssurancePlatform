@@ -127,7 +127,7 @@ describe("AwayGoalNode (ADR 0005 D3)", () => {
 		).not.toBeInTheDocument();
 	});
 
-	it("marks the cited name line as left out of the dashboard thumbnail", () => {
+	it("marks the cited name line and link as left out of the dashboard thumbnail", () => {
 		renderWithReactFlow(
 			<AwayGoalNode
 				{...nodeProps({
@@ -146,6 +146,32 @@ describe("AwayGoalNode (ADR 0005 D3)", () => {
 		expect(screen.getByText("Cited Case — G3")).toHaveAttribute(
 			"data-left-out-of-shared-thumbnail"
 		);
+		expect(
+			screen.getByRole("link", { name: VIEW_CITED_CASE_LINK_PATTERN })
+		).toHaveAttribute("data-left-out-of-shared-thumbnail");
+	});
+
+	it("says the cited element is unresolved when the cited case is viewable but the element was not found under it", () => {
+		renderWithReactFlow(
+			<AwayGoalNode
+				{...nodeProps({
+					id: "el-1",
+					name: "AG1",
+					description: "An away goal",
+					citedCaseName: "Cited Case",
+					citedElementName: null,
+					citedCaseAccessible: true,
+					moduleReferenceId: "case-2",
+					citedElementId: "goal-3",
+				})}
+			/>
+		);
+
+		expect(screen.getByText("Cited element not resolved")).toBeInTheDocument();
+		expect(screen.queryByText("Cited Case")).not.toBeInTheDocument();
+		expect(
+			screen.getByRole("link", { name: VIEW_CITED_CASE_LINK_PATTERN })
+		).toBeInTheDocument();
 	});
 
 	it("says the cited element is unresolved when citedElementId is null (dangling citation)", () => {
