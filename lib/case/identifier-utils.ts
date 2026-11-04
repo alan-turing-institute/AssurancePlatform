@@ -2,7 +2,7 @@
  * Identifier Utilities
  *
  * Shared utilities for parsing and comparing element identifiers (e.g., S1, P1.2, G3).
- * Used by reset identifiers API and layout helper to ensure consistent ordering.
+ * Used by reset identifiers API, layout helper and the case export to ensure consistent ordering.
  *
  * @module identifier-utils
  */
@@ -111,42 +111,42 @@ function compareByCharacterCode(a: string, b: string): number {
 /**
  * Orders two runs of digits by value, however long: the digits left after
  * leading zeros are compared by length, then digit by digit. Runs of equal
- * value ("01" and "1") are ordered by their text.
+ * value ("01" and "1") compare as equal here.
  */
-function compareDigitRuns(a: string, b: string): number {
+function compareDigitValues(a: string, b: string): number {
 	const aDigits = a.replace(LEADING_ZEROS, "");
 	const bDigits = b.replace(LEADING_ZEROS, "");
 	return (
-		aDigits.length - bDigits.length ||
-		compareByCharacterCode(aDigits, bDigits) ||
-		compareByCharacterCode(a, b)
+		aDigits.length - bDigits.length || compareByCharacterCode(aDigits, bDigits)
 	);
 }
 
-/** Orders two runs of text by lower-cased character code, then by their own. */
-function compareTextRuns(a: string, b: string): number {
-	return (
-		compareByCharacterCode(a.toLowerCase(), b.toLowerCase()) ||
-		compareByCharacterCode(a, b)
-	);
-}
-
-/** Orders two runs of a name: a run of digits comes before a run of text. */
-function compareRuns(a: string, b: string): number {
+/**
+ * Orders two runs of a name by value alone: a run of digits comes before a
+ * run of text, digits compare as numbers, and text compares lower-cased by
+ * character code, so runs that differ only in letter case or leading zeros
+ * compare as equal.
+ */
+function compareRunValues(a: string, b: string): number {
 	const aIsDigits = isDigitRun(a);
 	if (aIsDigits !== isDigitRun(b)) {
 		return aIsDigits ? -1 : 1;
 	}
-	return aIsDigits ? compareDigitRuns(a, b) : compareTextRuns(a, b);
+	return aIsDigits
+		? compareDigitValues(a, b)
+		: compareByCharacterCode(a.toLowerCase(), b.toLowerCase());
 }
 
 /**
  * Orders two element names the way a person reads a list of identifiers:
  * "P2" before "P10", and "P1.2" before "P1.10". A name is read as runs of
- * digits and runs of text. The runs are compared from the left, digits by
- * value and text without regard to case, a run of digits before a run of text,
- * and the name with fewer runs first when one is the start of the other. A
- * missing name comes before an empty one, and both come before any other.
+ * digits and runs of text. The runs are compared from the left by value alone,
+ * digits as numbers and text without regard to case, a run of digits before a
+ * run of text. If every shared run is equal in value, the name with fewer runs
+ * comes first. Only then do letter case and leading zeros count: names equal
+ * in every run are ordered by their characters, so "P01.2" still comes after
+ * "P1.1" and "p2" before "P10". A missing name comes before an empty one, and
+ * both come before any other.
  *
  * Unlike `compareIdentifiers`, it gives one consistent order for any pair of
  * strings, identifiers or not, uses no locale, and returns 0 only for
@@ -177,10 +177,10 @@ export function compareElementNames(
 	const bRuns = b.match(NAME_RUNS) ?? [];
 	const shared = Math.min(aRuns.length, bRuns.length);
 	for (let i = 0; i < shared; i++) {
-		const order = compareRuns(aRuns[i] ?? "", bRuns[i] ?? "");
+		const order = compareRunValues(aRuns[i] ?? "", bRuns[i] ?? "");
 		if (order !== 0) {
 			return order;
 		}
 	}
-	return aRuns.length - bRuns.length;
+	return aRuns.length - bRuns.length || compareByCharacterCode(a, b);
 }
