@@ -2009,6 +2009,31 @@
         }
       }
     },
+    "/public/discover/{slug}": {
+      "get": {
+        "operationId": "get-public-discover-{slug}",
+        "summary": "GET /api/public/discover/[slug]",
+        "description": "Returns the current published version of a Discover item by slug; no sign-in needed. Text fields, including description and every description inside content, are returned exactly as the publisher stored them, without cleaning, and may contain HTML markup: escape or sanitise them before showing them as HTML.",
+        "tags": [
+          "Discover"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/public/discover/{slug}/image/{versionId}": {
       "get": {
         "operationId": "get-public-discover-{slug}-image-{versionId}",
@@ -3611,31 +3636,6 @@
           },
           "404": {
             "$ref": "#/components/responses/404"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
-    },
-    "/public/discover/{slug}": {
-      "get": {
-        "operationId": "get-public-discover-{slug}",
-        "summary": "GET /api/public/discover/[slug]",
-        "description": "",
-        "tags": [
-          "Public"
-        ],
-        "parameters": [],
-        "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
           },
           "500": {
             "$ref": "#/components/responses/500"
