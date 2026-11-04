@@ -24,7 +24,6 @@ interface RouteParams {
  * Text fields are the stored snapshot, passed through without cleaning.
  *
  * @description Returns the current published version of a Discover item by slug; no sign-in needed. Text fields, including description and every description inside content, are returned exactly as the publisher stored them, without cleaning, and may contain HTML markup: escape or sanitise them before showing them as HTML.
- * @pathParam slug - Published item slug
  * @tag Discover
  */
 export async function GET(_request: NextRequest, { params }: RouteParams) {
