@@ -9,6 +9,7 @@ import {
 	vi,
 } from "vitest";
 import { DELETE as deletePermission } from "@/app/api/cases/[id]/permissions/[permissionId]/route";
+import { getSessionVersion } from "@/lib/auth/session-version";
 import { canAccessCase } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 import {
@@ -58,11 +59,20 @@ vi.mock("@/lib/permissions", async (importOriginal) => {
 	return { ...actual, canAccessCase: vi.fn(actual.canAccessCase) };
 });
 
+// The session read that follows a passing access check is wrapped the same
+// way, so a test can tell when a check has finished both of its steps.
+vi.mock("@/lib/auth/session-version", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/auth/session-version")>();
+	return { ...actual, getSessionVersion: vi.fn(actual.getSessionVersion) };
+});
+
 const { canAccessCase: realCanAccess } =
 	await vi.importActual<typeof import("@/lib/permissions")>(
 		"@/lib/permissions"
 	);
 const canAccess = vi.mocked(canAccessCase);
+const sessionReads = vi.mocked(getSessionVersion);
 
 let setIntervalSpy: MockInstance<typeof globalThis.setInterval>;
 let baselineTimers = 0;
@@ -81,6 +91,7 @@ beforeEach(() => {
 	setIntervalSpy = vi.spyOn(globalThis, "setInterval");
 	baselineTimers = vi.getTimerCount();
 	canAccess.mockReset();
+	sessionReads.mockClear();
 	logs = captureLogs();
 });
 
@@ -104,9 +115,15 @@ afterEach(async () => {
 /** Heartbeat timers that are still pending. */
 const liveTimers = (): number => vi.getTimerCount() - baselineTimers;
 
+/**
+ * Opens a stream and waits for the access check, and the session read after
+ * it, that the server makes straight after the stream registers. Tests that
+ * follow count heartbeat checks, so the opening check must be over first.
+ */
 async function open(userId: string, caseId: string): Promise<Viewer> {
 	const viewer = await openViewer(userId, caseId);
 	opened.push(viewer);
+	await afterOpeningCheck(settledChecks());
 	return viewer;
 }
 
@@ -122,6 +139,22 @@ async function mustSucceed(
 const settledChecks = (): number =>
 	canAccess.mock.settledResults.filter((result) => result.type !== "incomplete")
 		.length;
+
+/** Session reads that have started and not yet finished. */
+const sessionReadsInFlight = (): number =>
+	sessionReads.mock.results.length -
+	sessionReads.mock.settledResults.filter(
+		(result) => result.type !== "incomplete"
+	).length;
+
+async function afterOpeningCheck(settledBefore: number): Promise<void> {
+	await until(
+		() => settledChecks() > settledBefore,
+		"the check made on opening"
+	);
+	await flushAll();
+	await until(() => sessionReadsInFlight() === 0, "the session read");
+}
 
 /**
  * Lets one heartbeat fall due for every stream, waits for `checks` access
@@ -812,8 +845,9 @@ describe("a revocation that meets a check already in progress", () => {
 		const viewChecks = canAccess.mock.calls.filter(
 			([identity, level]) => identity.userId === user.id && level === "VIEW"
 		);
-		// The opening request, the running heartbeat check and one more
-		expect(viewChecks).toHaveLength(3);
+		// The opening request, the check made as the stream registers, the running
+		// heartbeat check and one more
+		expect(viewChecks).toHaveLength(4);
 		expect(viewer.isClosed()).toBe(false);
 	});
 
@@ -944,7 +978,7 @@ describe("access removed behind the manager's back", () => {
 		expect(endsWithClosingEvent(viewer)).toBe(true);
 	});
 
-	it("closes a stream opened while the revocation was committing at the next heartbeat at the latest", async () => {
+	it("closes a stream opened while the revocation was committing from the check made as it opens, without a heartbeat", async () => {
 		const world = await newWorld();
 		const { user, grant } = await directGrant(world);
 		const release = deferred<void>();
@@ -967,11 +1001,14 @@ describe("access removed behind the manager's back", () => {
 		);
 		release.resolve();
 		const viewer = await opening;
-		await flushAll();
-		await passHeartbeat(1);
+		await until(viewer.isClosed, "the stream to close");
 
-		expect(viewer.isClosed()).toBe(true);
+		// No heartbeat was due: the check made as the stream registered found
+		// the share gone.
+		expect(heartbeatsSeen(viewer)).toBe(0);
 		expect(closingReason(viewer)).toBe("access-removed");
+		expect(endsWithClosingEvent(viewer)).toBe(true);
+		expect(liveTimers()).toBe(0);
 	});
 
 	it("closes the stream of a user who is deleted, at the next heartbeat", async () => {
