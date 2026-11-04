@@ -872,6 +872,87 @@ describe("a cited case that is a pattern", () => {
 // Many references at once
 // ---------------------------------------------------------------------------
 
+interface ExpectedCard {
+	dressed: Dressed;
+	kind: RefKind;
+	visible: boolean;
+}
+
+/** Stores one reference to a dressed case in the home case, citing its element when the kind is an away goal. */
+function storeCitation(
+	world: World,
+	kind: RefKind,
+	cited: Dressed,
+	name: string
+) {
+	return storeReference(world, kind, cited.caseId, {
+		citedElementId: kind === "AWAY_GOAL" ? cited.elementId : undefined,
+		name,
+	});
+}
+
+/**
+ * Stores, for each position, one reference to the open case and one to the
+ * hidden case, and returns what each card should tell the viewer by name.
+ * Which kind cites the open and which the hidden case alternates, so neither
+ * kind is all one answer.
+ */
+async function storeMixedReferences(
+	world: World,
+	open: readonly Dressed[],
+	hidden: readonly Dressed[]
+): Promise<Map<string, ExpectedCard>> {
+	const expected = new Map<string, ExpectedCard>();
+	for (let i = 0; i < open.length; i++) {
+		const awayKind = i % 2 === 0;
+		const openKind: RefKind = awayKind ? "AWAY_GOAL" : "MODULE";
+		const hiddenKind: RefKind = awayKind ? "MODULE" : "AWAY_GOAL";
+		const openName = `${openKind === "AWAY_GOAL" ? "AG" : "M"}${10 + i}`;
+		const hiddenName = `${hiddenKind === "AWAY_GOAL" ? "AG" : "M"}${20 + i}`;
+		const openCase = nth(open, i);
+		const hiddenCase = nth(hidden, i);
+		await storeCitation(world, openKind, openCase, openName);
+		await storeCitation(world, hiddenKind, hiddenCase, hiddenName);
+		expected.set(openName, {
+			dressed: openCase,
+			visible: true,
+			kind: openKind,
+		});
+		expected.set(hiddenName, {
+			dressed: hiddenCase,
+			visible: false,
+			kind: hiddenKind,
+		});
+	}
+	return expected;
+}
+
+/** Checks that every card in the fetched case tells the viewer exactly what `expected` says for its name. */
+function expectEachCardItsOwnAnswer(
+	goals: unknown,
+	expected: ReadonlyMap<string, ExpectedCard>
+) {
+	for (const [cardName, want] of expected) {
+		const card = cardNamed(goals, cardName);
+		if (want.visible) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: Called from within test blocks
+			expect(told(card), cardName).toEqual({
+				accessible: true,
+				caseName: want.dressed.caseName,
+				elementName:
+					want.kind === "AWAY_GOAL" ? want.dressed.elementName : null,
+			});
+		} else {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: Called from within test blocks
+			expect(told(card), cardName).toEqual({
+				accessible: false,
+				caseName: null,
+				elementName: null,
+			});
+		}
+	}
+}
+
 describe("many references of both kinds to a mix of open and hidden cases", () => {
 	it("gives each card its own case's answer and mixes nothing up", async () => {
 		const world = await makeWorld();
@@ -883,61 +964,11 @@ describe("many references of both kinds to a mix of open and hidden cases", () =
 			const hiddenId = (await createStoredCase(world.stranger.id)).id;
 			hidden.push(await dress(hiddenId, world.stranger.id));
 		}
-		const expected = new Map<
-			string,
-			{ dressed: Dressed; visible: boolean; kind: RefKind }
-		>();
-		for (let i = 0; i < 6; i++) {
-			// Alternate which kind cites the open and the hidden case so neither
-			// kind is all one answer.
-			const awayKind = i % 2 === 0;
-			const openKind: RefKind = awayKind ? "AWAY_GOAL" : "MODULE";
-			const hiddenKind: RefKind = awayKind ? "MODULE" : "AWAY_GOAL";
-			const openName = `${openKind === "AWAY_GOAL" ? "AG" : "M"}${10 + i}`;
-			const hiddenName = `${hiddenKind === "AWAY_GOAL" ? "AG" : "M"}${20 + i}`;
-			const openCase = nth(open, i);
-			const hiddenCase = nth(hidden, i);
-			await storeReference(world, openKind, openCase.caseId, {
-				citedElementId:
-					openKind === "AWAY_GOAL" ? openCase.elementId : undefined,
-				name: openName,
-			});
-			await storeReference(world, hiddenKind, hiddenCase.caseId, {
-				citedElementId:
-					hiddenKind === "AWAY_GOAL" ? hiddenCase.elementId : undefined,
-				name: hiddenName,
-			});
-			expected.set(openName, {
-				dressed: openCase,
-				visible: true,
-				kind: openKind,
-			});
-			expected.set(hiddenName, {
-				dressed: hiddenCase,
-				visible: false,
-				kind: hiddenKind,
-			});
-		}
+		const expected = await storeMixedReferences(world, open, hidden);
 
 		const data = await fetchAs(world.editor.id, world.homeCaseId);
 
-		for (const [cardName, want] of expected) {
-			const card = cardNamed(data.goals, cardName);
-			if (want.visible) {
-				expect(told(card), cardName).toEqual({
-					accessible: true,
-					caseName: want.dressed.caseName,
-					elementName:
-						want.kind === "AWAY_GOAL" ? want.dressed.elementName : null,
-				});
-			} else {
-				expect(told(card), cardName).toEqual({
-					accessible: false,
-					caseName: null,
-					elementName: null,
-				});
-			}
-		}
+		expectEachCardItsOwnAnswer(data.goals, expected);
 		const serialised = JSON.stringify(data);
 		for (const dressed of hidden) {
 			expectNothingOf(serialised, dressed);
