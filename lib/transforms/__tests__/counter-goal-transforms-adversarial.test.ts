@@ -365,7 +365,7 @@ describe("buildTreeFromElements sibling order", () => {
 		}
 	});
 
-	it("chooses the same root among stray goals for every order of the rows", () => {
+	it("chooses the top-level goal among stray goals for every order of the rows", () => {
 		const strays = [
 			counterGoal("CG8", null),
 			element("G2", { name: "G2" }),
@@ -374,7 +374,7 @@ describe("buildTreeFromElements sibling order", () => {
 		];
 
 		for (const order of permutations(strays)) {
-			expect(buildTreeFromElements(order).id).toBe("G0");
+			expect(buildTreeFromElements(order).id).toBe("G1");
 		}
 	});
 

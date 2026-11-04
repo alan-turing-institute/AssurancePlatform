@@ -240,10 +240,15 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 		return buildNode(firstAnyRoot, childrenMap, new Set());
 	}
 
-	// A case has one ordinary root goal. A goal defeater with no parent (stored
-	// before such goals were refused) never stands in for it, whatever order
-	// the rows come back in.
-	const firstRoot = roots.find((root) => !root.isDefeater) ?? roots[0];
+	// A case has one ordinary root goal, the one marked as the top-level goal if
+	// any is, otherwise the first in sibling order. A goal defeater with no
+	// parent (stored before such goals were refused) never stands in for it,
+	// whatever order the rows come back in.
+	const ordinaryRoots = roots.filter((root) => !root.isDefeater);
+	const firstRoot =
+		ordinaryRoots.find((root) => root.role === "TOP_LEVEL") ??
+		ordinaryRoots[0] ??
+		roots[0];
 	if (!firstRoot) {
 		throw new Error("No root element found");
 	}
