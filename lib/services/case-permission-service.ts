@@ -631,6 +631,13 @@ export async function revokeTeamPermission(
 			return { error: "Permission not found" };
 		}
 
+		// The members who lose a route to the case are read before the delete, so
+		// a failed read cannot report a committed unshare as a failure
+		const members = await prisma.teamMember.findMany({
+			where: { teamId: existingPermission.teamId },
+			select: { userId: true },
+		});
+
 		// Delete permission
 		await prisma.caseTeamPermission.delete({
 			where: { id: permissionId },
@@ -638,10 +645,6 @@ export async function revokeTeamPermission(
 
 		// Close the open streams on the case of any team member who has no other
 		// route to it, before the caller announces the change to the others
-		const members = await prisma.teamMember.findMany({
-			where: { teamId: existingPermission.teamId },
-			select: { userId: true },
-		});
 		await Promise.all(
 			members.map(({ userId: memberId }) =>
 				sseConnectionManager.recheckConnections({ caseId, userId: memberId })
